@@ -1,16 +1,16 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
-using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.Abstractions.Components.Identity;
 
 /// <summary>
 /// Turns whatever the user pasted — a work id, a store page URL, a gallery link — into the
-/// <see cref="ResourceSource"/> and source key that identify a resource.
+/// <see cref="ThirdPartyId"/> and external key that identify a work.
 /// <para>
 /// The same patterns used to live in four resolvers and services, each recognising a slightly
 /// different subset. They are here so "paste a link or an id" means the same thing everywhere, and
-/// so a new source only has to be taught once.
+/// so a new site only has to be taught once.
 /// </para>
 /// </summary>
 public static class ExternalIdentityParser
@@ -35,7 +35,7 @@ public static class ExternalIdentityParser
         new(@"pixiv\.net/(?:[a-z]{2}/)?artworks/(\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     // VNDB's ids carry their own type letter — v17 is a visual novel, p17 a producer, r17 a
-    // release — so unlike everywhere else here, the bare id is unambiguous.
+    // release. Bare ids are accepted only with explicit VNDB context.
     private static readonly Regex VndbVisualNovel =
         new(@"\b(v\d+)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -51,7 +51,7 @@ public static class ExternalIdentityParser
     /// platform. URL forms are matched first for the same reason — a Steam page URL says which
     /// platform it is, a naked id does not.
     /// </remarks>
-    public static bool TryExtract(string input, out ResourceSource source,
+    public static bool TryExtract(string input, out ThirdPartyId source,
         [NotNullWhen(true)] out string? sourceKey)
     {
         source = default;
@@ -67,7 +67,7 @@ public static class ExternalIdentityParser
         var exHentai = ExHentaiGallery.Match(text);
         if (exHentai.Success)
         {
-            source = ResourceSource.ExHentai;
+            source = ThirdPartyId.ExHentai;
             sourceKey = $"{exHentai.Groups[1].Value}/{exHentai.Groups[2].Value.ToLowerInvariant()}";
             return true;
         }
@@ -75,7 +75,7 @@ public static class ExternalIdentityParser
         var steam = SteamAppUrl.Match(text);
         if (steam.Success)
         {
-            source = ResourceSource.Steam;
+            source = ThirdPartyId.Steam;
             sourceKey = steam.Groups[1].Value;
             return true;
         }
@@ -83,7 +83,7 @@ public static class ExternalIdentityParser
         var bangumi = BangumiSubjectUrl.Match(text);
         if (bangumi.Success)
         {
-            source = ResourceSource.Bangumi;
+            source = ThirdPartyId.Bangumi;
             sourceKey = bangumi.Groups[1].Value;
             return true;
         }
@@ -91,7 +91,7 @@ public static class ExternalIdentityParser
         var pixiv = PixivArtworkUrl.Match(text);
         if (pixiv.Success)
         {
-            source = ResourceSource.Pixiv;
+            source = ThirdPartyId.Pixiv;
             sourceKey = pixiv.Groups[1].Value;
             return true;
         }
@@ -99,7 +99,7 @@ public static class ExternalIdentityParser
         var vndbUrl = VndbUrl.Match(text);
         if (vndbUrl.Success)
         {
-            source = ResourceSource.Vndb;
+            source = ThirdPartyId.Vndb;
             sourceKey = vndbUrl.Groups[1].Value.ToLowerInvariant();
             return true;
         }
@@ -107,7 +107,7 @@ public static class ExternalIdentityParser
         var dlsite = DLsiteWorkId.Match(text);
         if (dlsite.Success)
         {
-            source = ResourceSource.DLsite;
+            source = ThirdPartyId.DLsite;
             sourceKey = dlsite.Groups[1].Value.ToUpperInvariant();
             return true;
         }
@@ -116,10 +116,10 @@ public static class ExternalIdentityParser
     }
 
     /// <summary>
-    /// Recognises an identity belonging to one specific source, so a caller who already knows which
+    /// Recognises an identity belonging to one specific site, so a caller who already knows which
     /// platform is meant can accept a bare id that would be ambiguous on its own.
     /// </summary>
-    public static bool TryExtractFor(ResourceSource source, string input,
+    public static bool TryExtractFor(ThirdPartyId source, string input,
         [NotNullWhen(true)] out string? sourceKey)
     {
         sourceKey = null;
@@ -138,7 +138,7 @@ public static class ExternalIdentityParser
         }
 
         // The source is known, so a bare number is no longer ambiguous.
-        if (source is ResourceSource.Steam or ResourceSource.Bangumi or ResourceSource.Pixiv &&
+        if (source is ThirdPartyId.Steam or ThirdPartyId.Bangumi or ThirdPartyId.Pixiv &&
             long.TryParse(text, out _))
         {
             sourceKey = text;
@@ -147,7 +147,7 @@ public static class ExternalIdentityParser
 
         // A VNDB id looks like v17, which reads as "volume 17" in half the file names in a library
         // — so it is only an identity once somebody has said VNDB is what they mean.
-        if (source is ResourceSource.Vndb && VndbVisualNovel.Match(text) is {Success: true} vndb)
+        if (source is ThirdPartyId.Vndb && VndbVisualNovel.Match(text) is {Success: true} vndb)
         {
             sourceKey = vndb.Groups[1].Value.ToLowerInvariant();
             return true;

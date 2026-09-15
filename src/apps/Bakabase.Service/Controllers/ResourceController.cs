@@ -738,20 +738,20 @@ public class ResourceController(
     }
 
     /// <summary>
-    /// Picks the shape of one requested item. An explicit source wins; then an explicit shared link;
+    /// Picks the shape of one requested item. An explicit site identity wins; then an explicit shared link;
     /// then whatever the free-text field turns out to be, so a client can offer one box and let the
     /// user paste a name, a work id or a link into it.
     /// </summary>
     private static async Task<PlaceholderResourceResult> ResolveItem(IPlaceholderResourceService service,
         ResourcePlaceholderItemInputModel item, CancellationToken ct)
     {
-        if (item.Source.HasValue && !string.IsNullOrWhiteSpace(item.SourceKey))
+        if (item.ThirdPartyId.HasValue && !string.IsNullOrWhiteSpace(item.ExternalId))
         {
             // Accepts the platform's page URL as well as a bare id.
-            var key = ExternalIdentityParser.TryExtractFor(item.Source.Value, item.SourceKey, out var extracted)
+            var key = ExternalIdentityParser.TryExtractFor(item.ThirdPartyId.Value, item.ExternalId, out var extracted)
                 ? extracted
-                : item.SourceKey;
-            return await service.CreateOrMatchByExternalIdentity(item.Source.Value, key, ct: ct);
+                : item.ExternalId;
+            return await service.CreateOrMatchByExternalIdentity(item.ThirdPartyId.Value, key, ct: ct);
         }
 
         if (!string.IsNullOrWhiteSpace(item.SharedUrl))

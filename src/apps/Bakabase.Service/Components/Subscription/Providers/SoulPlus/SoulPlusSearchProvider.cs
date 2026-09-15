@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,7 +48,7 @@ public class SoulPlusSearchProvider : ISubscriptionProvider
     /// None. A forum post is an act of sharing; treating a thread id as an identity would claim
     /// the post is the work, and the next post about the same game would be a second copy of it.
     /// </summary>
-    public ResourceSource? ResourceSource => null;
+    public ThirdPartyId? ThirdPartyId => null;
 
     public Task<SubscriptionValidationResult> ValidateTargetAsync(string targetJson, CancellationToken ct)
     {

@@ -300,7 +300,7 @@ public sealed class DownloadResultWorkflowTests
         var definition = await Definition(null, DownloadResultWorkflow.PrepareResource,
             AcquisitionStepKinds.Place, AcquisitionStepKinds.Materialize);
         var original = await _sp.GetRequiredService<IPlaceholderResourceService>().CreateOrMatchByExternalIdentity(
-            ResourceSource.ExHentai, "123/abc", new KnownItemDetail("Gallery"));
+            ThirdPartyId.ExHentai, "123/abc", new KnownItemDetail("Gallery"));
         var shared = Path.Combine(_root, "shared");
         Directory.CreateDirectory(Path.Combine(shared, "chapter"));
         var included = Path.Combine(shared, "chapter", "page.txt");

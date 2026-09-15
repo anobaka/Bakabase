@@ -35,5 +35,5 @@
   "resourceFilter.group.remove": "移除条件组",
   "resourceFilter.group.addCondition": "添加条件",
   "resourceFilter.source.about": "了解来源筛选",
-  "resourceFilter.source.help": "按资源关联的内容平台或资料来源筛选，不代表能从该平台下载。同一资源可以关联多个来源。"
+  "resourceFilter.source.help": "按发现资源内容的位置或内容所在平台筛选。Bangumi、VNDB 等作品信息关联不计入来源。一个资源可以有多个来源，来源不代表支持自动下载。"
 }

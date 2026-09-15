@@ -7676,10 +7676,10 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.ClientMode": 0 | 1 | 2;
         /**
          * Format: int32
-         * @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai]
+         * @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.DataOrigin": 1 | 2 | 3 | 4 | 5;
+        "Bakabase.Abstractions.Models.Domain.Constants.DataOrigin": 1 | 2 | 3 | 4 | 5 | 6;
         /**
          * Format: int32
          * @description [1: NotStarted, 2: Ready, 3: Failed]
@@ -7814,10 +7814,10 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceMoveRecordStatus": 1 | 2 | 3 | 4 | 5 | 6;
         /**
          * Format: int32
-         * @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb]
+         * @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.ResourceSource": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceSource": 1 | 2 | 3 | 4 | 5 | 7;
         /**
          * Format: int32
          * @description [1: Active, 2: Absent, 3: Unavailable]
@@ -8120,6 +8120,7 @@ export interface components {
             mediaLibraryId: number;
             status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceStatus"];
             sourceLinks?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSourceLink"][];
+            externalIdentities?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceExternalIdentity"][];
             readonly fileName?: string;
             readonly directory?: string;
             path?: string;
@@ -8197,6 +8198,21 @@ export interface components {
             dataType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceDataType"];
             origin: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
             status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataStatus"];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceExternalIdentity": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            resourceId: number;
+            thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+            externalId: string;
+            /** Format: date-time */
+            createDt: string;
+            coverUrls?: string[];
+            localCoverPaths?: string[];
+            /** Format: date-time */
+            coverDownloadFailedAt?: string;
+            metadataJson?: string;
         };
         "Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache": {
             coverPaths?: string[];
@@ -11324,7 +11340,7 @@ export interface components {
             displayName: string;
             icon?: string;
             sourceKind: components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.Domain.Constants.SubscriptionSourceKind"];
-            resourceSource?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            thirdPartyId?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
         };
         "Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel": {
             /** Format: int32 */
@@ -11894,8 +11910,8 @@ export interface components {
         };
         "Bakabase.Service.Models.Input.ResourcePlaceholderItemInputModel": {
             title?: string;
-            source?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
-            sourceKey?: string;
+            thirdPartyId?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+            externalId?: string;
             sharedUrl?: string;
         };
         "Bakabase.Service.Models.Input.ResourceProfileInputModel": {
@@ -25637,7 +25653,7 @@ export interface operations {
     StartSyncBySource: {
         parameters: {
             query?: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
                 source?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             header?: never;
@@ -27518,7 +27534,7 @@ export interface operations {
     PlayResourceItem: {
         parameters: {
             query?: {
-                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
                 origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
                 key?: string;
             };
@@ -28686,7 +28702,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -28711,7 +28727,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -28743,7 +28759,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -28768,7 +28784,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;

@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,7 +40,7 @@ public partial class VndbDeveloperProvider(VndbClient client) : ISubscriptionPro
     public string Kind => "vndb.developer";
     public string DisplayName => "VNDB Developer";
     public SubscriptionSourceKind SourceKind => SubscriptionSourceKind.Catalog;
-    public ResourceSource? ResourceSource => Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.Vndb;
+    public ThirdPartyId? ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.Vndb;
 
     public Task<SubscriptionValidationResult> ValidateTargetAsync(string targetJson, CancellationToken ct)
     {

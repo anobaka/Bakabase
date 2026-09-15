@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,7 +58,7 @@ public partial class BangumiSubjectRelationsProvider : ISubscriptionProvider
     public string Kind => "bangumi.subjectRelations";
     public string DisplayName => "Bangumi Series";
     public SubscriptionSourceKind SourceKind => SubscriptionSourceKind.Catalog;
-    public ResourceSource? ResourceSource => Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.Bangumi;
+    public ThirdPartyId? ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.Bangumi;
 
     public Task<SubscriptionValidationResult> ValidateTargetAsync(string targetJson, CancellationToken ct)
     {

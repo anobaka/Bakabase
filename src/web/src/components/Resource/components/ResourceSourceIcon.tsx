@@ -6,9 +6,7 @@ import {
   DLsiteIcon,
   ExHentaiIcon,
   AigcIcon,
-  BangumiIcon,
   PixivIcon,
-  VndbIcon,
 } from "@/components/SourceIcons";
 
 interface Props {
@@ -26,12 +24,8 @@ const ResourceSourceIcon: React.FC<Props> = ({ source, className = "" }) => {
       return <ExHentaiIcon className={className} />;
     case ResourceSource.Aigc:
       return <AigcIcon className={`text-base ${className}`} />;
-    case ResourceSource.Bangumi:
-      return <BangumiIcon className={className} />;
     case ResourceSource.Pixiv:
       return <PixivIcon className={className} />;
-    case ResourceSource.Vndb:
-      return <VndbIcon className={`text-base ${className}`} />;
     default:
       return null;
   }

@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -40,7 +41,7 @@ public class ExHentaiGalleryProvider : ISubscriptionProvider
     public string DisplayName => "ExHentai Gallery";
     public string? Icon => null;
     public SubscriptionSourceKind SourceKind => SubscriptionSourceKind.PlatformHolding;
-    public ResourceSource? ResourceSource => Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.ExHentai;
+    public ThirdPartyId? ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.ExHentai;
 
     public Task<SubscriptionValidationResult> ValidateTargetAsync(string targetJson, CancellationToken ct)
     {

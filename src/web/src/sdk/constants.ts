@@ -1524,7 +1524,8 @@ export enum DataOrigin {
   FileSystem = 2,
   Steam = 3,
   DLsite = 4,
-  ExHentai = 5
+  ExHentai = 5,
+  ExternalIdentity = 6
 }
 
 export const dataOrigins = [
@@ -1532,7 +1533,8 @@ export const dataOrigins = [
   { label: 'FileSystem', value: DataOrigin.FileSystem },
   { label: 'Steam', value: DataOrigin.Steam },
   { label: 'DLsite', value: DataOrigin.DLsite },
-  { label: 'ExHentai', value: DataOrigin.ExHentai }
+  { label: 'ExHentai', value: DataOrigin.ExHentai },
+  { label: 'ExternalIdentity', value: DataOrigin.ExternalIdentity }
 ] as const;
 
 export const DataOriginLabel: Record<DataOrigin, string> = {
@@ -1540,7 +1542,8 @@ export const DataOriginLabel: Record<DataOrigin, string> = {
   [DataOrigin.FileSystem]: 'FileSystem',
   [DataOrigin.Steam]: 'Steam',
   [DataOrigin.DLsite]: 'DLsite',
-  [DataOrigin.ExHentai]: 'ExHentai'
+  [DataOrigin.ExHentai]: 'ExHentai',
+  [DataOrigin.ExternalIdentity]: 'ExternalIdentity'
 };
 
 export enum DataStatus {
@@ -2158,9 +2161,7 @@ export enum ResourceSource {
   DLsite = 3,
   ExHentai = 4,
   Aigc = 5,
-  Bangumi = 6,
-  Pixiv = 7,
-  Vndb = 8
+  Pixiv = 7
 }
 
 export const resourceSources = [
@@ -2169,9 +2170,7 @@ export const resourceSources = [
   { label: 'DLsite', value: ResourceSource.DLsite },
   { label: 'ExHentai', value: ResourceSource.ExHentai },
   { label: 'Aigc', value: ResourceSource.Aigc },
-  { label: 'Bangumi', value: ResourceSource.Bangumi },
-  { label: 'Pixiv', value: ResourceSource.Pixiv },
-  { label: 'Vndb', value: ResourceSource.Vndb }
+  { label: 'Pixiv', value: ResourceSource.Pixiv }
 ] as const;
 
 export const ResourceSourceLabel: Record<ResourceSource, string> = {
@@ -2180,9 +2179,7 @@ export const ResourceSourceLabel: Record<ResourceSource, string> = {
   [ResourceSource.DLsite]: 'DLsite',
   [ResourceSource.ExHentai]: 'ExHentai',
   [ResourceSource.Aigc]: 'Aigc',
-  [ResourceSource.Bangumi]: 'Bangumi',
-  [ResourceSource.Pixiv]: 'Pixiv',
-  [ResourceSource.Vndb]: 'Vndb'
+  [ResourceSource.Pixiv]: 'Pixiv'
 };
 
 export enum ResourceStatus {

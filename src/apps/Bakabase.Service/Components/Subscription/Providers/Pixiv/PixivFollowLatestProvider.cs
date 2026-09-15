@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,7 +39,7 @@ public class PixivFollowLatestProvider : ISubscriptionProvider
     public string Kind => "pixiv.followLatest";
     public string DisplayName => "Pixiv Follow Feed";
     public SubscriptionSourceKind SourceKind => SubscriptionSourceKind.PlatformHolding;
-    public ResourceSource? ResourceSource => Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.Pixiv;
+    public ThirdPartyId? ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.Pixiv;
 
     public Task<SubscriptionValidationResult> ValidateTargetAsync(string targetJson, CancellationToken ct)
     {

@@ -267,13 +267,7 @@
   <data name="ResourceSourceName_Aigc" xml:space="preserve">
     <value>AIGC</value>
   </data>
-  <data name="ResourceSourceName_Bangumi" xml:space="preserve">
-    <value>Bangumi</value>
-  </data>
   <data name="ResourceSourceName_Pixiv" xml:space="preserve">
     <value>Pixiv</value>
-  </data>
-  <data name="ResourceSourceName_Vndb" xml:space="preserve">
-    <value>VNDB</value>
   </data>
 </root>

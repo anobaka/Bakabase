@@ -256,7 +256,7 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
         if (state.ResourceId == null)
         {
             var resource = result.ThirdPartyId == ThirdPartyId.ExHentai
-                ? await placeholders.CreateOrMatchByExternalIdentity(ResourceSource.ExHentai, result.SourceKey,
+                ? await placeholders.CreateOrMatchByExternalIdentity(ThirdPartyId.ExHentai, result.SourceKey,
                     new KnownItemDetail(result.Name), ct)
                 : await placeholders.CreateByTitle(result.Name, ct);
             state.ResourceId = resource.ResourceId;

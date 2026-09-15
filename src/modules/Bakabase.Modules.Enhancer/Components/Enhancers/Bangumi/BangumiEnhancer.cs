@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
@@ -140,20 +141,20 @@ public class BangumiEnhancer(
     {
         if (detail.SubjectId is not { } subjectId) return;
 
-        var links = serviceProvider.GetService(typeof(IResourceSourceLinkService))
-            as IResourceSourceLinkService;
+        var identities = serviceProvider.GetService(typeof(IResourceExternalIdentityService))
+            as IResourceExternalIdentityService;
 
-        if (links == null) return;
+        if (identities == null) return;
 
         try
         {
-            await links.EnsureLinks(resource.Id,
+            await identities.EnsureIdentities(resource.Id,
             [
-                new ResourceSourceLink
+                new ResourceExternalIdentity
                 {
                     ResourceId = resource.Id,
-                    Source = ResourceSource.Bangumi,
-                    SourceKey = subjectId,
+                    ThirdPartyId = ThirdPartyId.Bangumi,
+                    ExternalId = subjectId,
                     CoverUrls = string.IsNullOrEmpty(detail.CoverUrl) ? null : [detail.CoverUrl],
                 }
             ]);

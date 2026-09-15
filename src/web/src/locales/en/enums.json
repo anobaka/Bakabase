@@ -74,7 +74,6 @@
   "enum.resourceSource.dlsite": "DLsite",
   "enum.resourceSource.exHentai": "ExHentai",
   "enum.resourceSource.aigc": "AIGC",
-  "enum.resourceSource.bangumi": "Bangumi",
   "enum.resourceSource.pixiv": "Pixiv",
   "enum.resourceStatus.active": "Active",
   "enum.resourceStatus.absent": "Absent",
@@ -231,6 +230,5 @@
   "enum.resourceMoveRecordStatus.failed": "Failed",
   "enum.resourceMoveRecordStatus.cancelled": "Cancelled",
   "enum.resourceMoveRecordStatus.interrupted": "Interrupted",
-  "enum.resourceSource.vndb": "VNDB",
   "enum.thirdPartyId.vndb": "VNDB"
 }

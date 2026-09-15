@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Collection.Abstractions.Services;
 using Bakabase.Modules.Notification.Abstractions.Services;
@@ -35,14 +37,15 @@ public sealed class SubscriptionAsCollectionSourceTests
         public static readonly List<SubscriptionItem> Items = [];
 
         public static SubscriptionSourceKind Kind_ = SubscriptionSourceKind.PlatformHolding;
+        public static ThirdPartyId IdentityNamespace = Bakabase.InsideWorld.Models.Constants.ThirdPartyId.DLsite;
 
         public static int FetchCount;
 
         public string Kind => "test.source";
         public string DisplayName => "Test source";
         public SubscriptionSourceKind SourceKind => Kind_;
-        public ResourceSource? ResourceSource =>
-            Kind_ == SubscriptionSourceKind.SharingChannel ? null : Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.DLsite;
+        public ThirdPartyId? ThirdPartyId =>
+            Kind_ == SubscriptionSourceKind.SharingChannel ? null : IdentityNamespace;
 
         public Task<SubscriptionValidationResult> ValidateTargetAsync(string targetJson, CancellationToken ct) =>
             Task.FromResult(SubscriptionValidationResult.Valid);
@@ -81,6 +84,7 @@ public sealed class SubscriptionAsCollectionSourceTests
         FakeSource.Items.Clear();
         FakeSource.FetchCount = 0;
         FakeSource.Kind_ = SubscriptionSourceKind.PlatformHolding;
+        FakeSource.IdentityNamespace = ThirdPartyId.DLsite;
 
         _sp = await TestServiceBuilder.BuildServiceProvider(services =>
         {
@@ -174,6 +178,43 @@ public sealed class SubscriptionAsCollectionSourceTests
 
         Assert.AreEqual(0, second!.NewItemCount);
         Assert.AreEqual(0, await NotificationCount());
+    }
+
+    [TestMethod]
+    [DataRow(ThirdPartyId.Bangumi, "12345")]
+    [DataRow(ThirdPartyId.Vndb, "v17")]
+    public async Task AMetadataCatalogStoresAndMatchesAnIdentityWithoutAResourceSource(
+        ThirdPartyId thirdPartyId, string externalId)
+    {
+        FakeSource.Kind_ = SubscriptionSourceKind.Catalog;
+        FakeSource.IdentityNamespace = thirdPartyId;
+        const string cover = "https://images.example/catalog.jpg";
+        const string metadata = """{"catalog":"series","position":2}""";
+        FakeSource.Items.Add(new SubscriptionItem(externalId, "Catalog work", CoverUrls: [cover],
+            MetadataJson: metadata));
+
+        var first = await NewSubscription("First catalog");
+        await Subscriptions.RunCheckAsync(first.Id);
+        var resourceId = (await MemberIds(first.CollectionId!.Value)).Single();
+        var identities = await _sp.GetRequiredService<IResourceExternalIdentityService>()
+            .GetByResourceId(resourceId);
+        Assert.AreEqual(1, identities.Count);
+        var identity = identities.Single();
+        Assert.AreEqual(thirdPartyId, identity.ThirdPartyId);
+        Assert.AreEqual(externalId, identity.ExternalId);
+        CollectionAssert.AreEqual(new[] {cover}, identity.CoverUrls);
+        Assert.AreEqual(metadata, identity.MetadataJson);
+        Assert.AreEqual(0, (await _sp.GetRequiredService<IResourceSourceLinkService>()
+            .GetByResourceId(resourceId)).Count,
+            "knowing a catalog entry must not claim the resource came from that site");
+        Assert.AreEqual(0, (await _sp.GetRequiredService<IAcquisitionLeadService>()
+            .GetByResourceId(resourceId)).Count,
+            "a metadata identity is not itself a way to download files");
+
+        var second = await NewSubscription("Same work in another catalog");
+        await Subscriptions.RunCheckAsync(second.Id);
+        CollectionAssert.AreEqual(new[] {resourceId}, await MemberIds(second.CollectionId!.Value),
+            "the shared identity must match the existing resource across subscriptions");
     }
 
     /// <summary>

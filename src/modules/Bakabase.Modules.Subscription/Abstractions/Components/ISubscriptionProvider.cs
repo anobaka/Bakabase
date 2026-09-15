@@ -1,4 +1,4 @@
-using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Subscription.Abstractions.Models.Domain;
 using Bakabase.Modules.Subscription.Abstractions.Models.Domain.Constants;
 
@@ -27,10 +27,11 @@ public interface ISubscriptionProvider
     SubscriptionSourceKind SourceKind { get; }
 
     /// <summary>
-    /// The identity namespace this source's keys belong to. Null for a sharing channel: an act of
-    /// sharing is not an identity, and writing one would claim the post is the work.
+    /// The site's identity namespace, independent of a resource's acquisition source.
+    /// Null for a sharing channel: an act of sharing is not an identity, and writing one
+    /// would claim the post is the work.
     /// </summary>
-    ResourceSource? ResourceSource { get; }
+    ThirdPartyId? ThirdPartyId { get; }
 
     /// <summary>Validate a target payload before persistence.</summary>
     Task<SubscriptionValidationResult> ValidateTargetAsync(string targetJson, CancellationToken ct);

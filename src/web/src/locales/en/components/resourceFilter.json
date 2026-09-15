@@ -35,5 +35,5 @@
   "resourceFilter.group.remove": "Remove condition group",
   "resourceFilter.group.addCondition": "Add condition",
   "resourceFilter.source.about": "About source filtering",
-  "resourceFilter.source.help": "Filter by the content platforms or metadata sources linked to resources. This does not mean downloads are supported from those platforms. A resource can have multiple sources."
+  "resourceFilter.source.help": "Filter by where resource content was discovered or is available. Metadata associations such as Bangumi and VNDB are not resource sources. A resource can have multiple sources; this does not guarantee automatic downloading."
 }

@@ -299,13 +299,13 @@ public class SubscriptionService<TDbContext> : ISubscriptionService
             return (await _placeholders.CreateOrMatchBySharedUrl(url, known, ct)).ResourceId;
         }
 
-        if (provider.ResourceSource is not { } source)
+        if (provider.ThirdPartyId is not { } thirdPartyId)
         {
             throw new InvalidOperationException(
                 $"{provider.Kind} lists works but names no identity namespace.");
         }
 
-        return (await _placeholders.CreateOrMatchByExternalIdentity(source, item.SourceKey, known, ct))
+        return (await _placeholders.CreateOrMatchByExternalIdentity(thirdPartyId, item.SourceKey, known, ct))
             .ResourceId;
     }
 

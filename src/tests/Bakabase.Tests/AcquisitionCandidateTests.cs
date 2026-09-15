@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -87,7 +88,8 @@ public sealed class AcquisitionCandidateTests
         var catalog = await Missing("Metadata only");
         await Identity(dlsite, ResourceSource.DLsite, "RJ00000001");
         await Identity(pixiv, ResourceSource.Pixiv, "12345");
-        await Identity(catalog, ResourceSource.Bangumi, "67890");
+        await _sp.GetRequiredService<IResourceExternalIdentityService>().EnsureIdentities(catalog,
+            [new ResourceExternalIdentity {ThirdPartyId = ThirdPartyId.Bangumi, ExternalId = "67890"}]);
         var before = await Db.Set<AcquisitionTaskDbModel>().CountAsync();
 
         var page = await Candidates.SearchAsync();

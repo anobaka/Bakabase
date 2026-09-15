@@ -164,10 +164,10 @@ export type BakabaseAbstractionsModelsDomainConstantsAppNotificationSeverity = 0
 export type BakabaseAbstractionsModelsDomainConstantsClientMode = 0 | 1 | 2;
 
 /**
- * [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai]
+ * [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsDataOrigin = 1 | 2 | 3 | 4 | 5;
+export type BakabaseAbstractionsModelsDomainConstantsDataOrigin = 1 | 2 | 3 | 4 | 5 | 6;
 
 /**
  * [1: NotStarted, 2: Ready, 3: Failed]
@@ -336,10 +336,10 @@ export type BakabaseAbstractionsModelsDomainConstantsResourceMoveRecordStatus =
   | 6;
 
 /**
- * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb]
+ * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4 | 5 | 7;
 
 /**
  * [1: Active, 2: Absent, 3: Unavailable]
@@ -644,7 +644,7 @@ export interface BakabaseAbstractionsModelsDomainPathPropertyExtractor {
 }
 
 export interface BakabaseAbstractionsModelsDomainPlayableItem {
-  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
   origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
   key: string;
   displayName?: string;
@@ -653,7 +653,7 @@ export interface BakabaseAbstractionsModelsDomainPlayableItem {
 export interface BakabaseAbstractionsModelsDomainPlayableItemPick {
   /** @format int32 */
   resourceId: number;
-  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
   origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
   key: string;
 }
@@ -720,6 +720,7 @@ export interface BakabaseAbstractionsModelsDomainResource {
   /** [1: Active, 2: Absent, 3: Unavailable] */
   status: BakabaseAbstractionsModelsDomainConstantsResourceStatus;
   sourceLinks?: BakabaseAbstractionsModelsDomainResourceSourceLink[];
+  externalIdentities?: BakabaseAbstractionsModelsDomainResourceExternalIdentity[];
   fileName?: string;
   directory?: string;
   path?: string;
@@ -800,10 +801,27 @@ export interface BakabaseAbstractionsModelsDomainResourceDataState {
   resourceId: number;
   /** [1: Cover, 2: PlayableItem, 3: Metadata] */
   dataType: BakabaseAbstractionsModelsDomainConstantsResourceDataType;
-  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
   origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
   /** [1: NotStarted, 2: Ready, 3: Failed] */
   status: BakabaseAbstractionsModelsDomainConstantsDataStatus;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceExternalIdentity {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  resourceId: number;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  externalId: string;
+  /** @format date-time */
+  createDt: string;
+  coverUrls?: string[];
+  localCoverPaths?: string[];
+  /** @format date-time */
+  coverDownloadFailedAt?: string;
+  metadataJson?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceFileSystemCache {
@@ -888,7 +906,7 @@ export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
   id: number;
   /** @format int32 */
   resourceId: number;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   sourceKey: string;
   /** @format date-time */
@@ -922,7 +940,7 @@ export interface BakabaseAbstractionsModelsDomainSourceMetadataFieldInfo {
 export interface BakabaseAbstractionsModelsDomainSourceMetadataMapping {
   /** @format int32 */
   id: number;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   metadataField: string;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
@@ -4644,8 +4662,8 @@ export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionPr
   icon?: string;
   /** [1: PlatformHolding, 2: Catalog, 3: SharingChannel] */
   sourceKind: BakabaseModulesSubscriptionAbstractionsModelsDomainConstantsSubscriptionSourceKind;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
-  resourceSource?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
 }
 
 export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel {
@@ -5063,7 +5081,7 @@ export interface BakabaseServiceControllersCollectionRulePreviewInputModel {
 export interface BakabaseServiceControllersDiscoverySubscribeRequest {
   /** @format int32 */
   resourceId: number;
-  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
   origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
   /** [1: Cover, 2: PlayableItem, 3: Metadata] */
   dataType: BakabaseAbstractionsModelsDomainConstantsResourceDataType;
@@ -5351,9 +5369,9 @@ export interface BakabaseServiceModelsInputResourcePlaceholderInputModel {
 
 export interface BakabaseServiceModelsInputResourcePlaceholderItemInputModel {
   title?: string;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
-  source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
-  sourceKey?: string;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  externalId?: string;
   sharedUrl?: string;
 }
 
@@ -10664,7 +10682,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     playResourceItem: (
       resourceId: number,
       query?: {
-        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
         origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
         key?: string;
       },
@@ -22933,7 +22951,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     startSyncBySource: (
       query?: {
-        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       },
       params: RequestParams = {},
@@ -22951,7 +22969,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name startSyncBySourceUrl
      */
     startSyncBySourceUrl: (query?: {
-        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       }) => {
       const baseUrl = this.baseUrl || "";

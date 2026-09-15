@@ -14,6 +14,7 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Models.Input;
 using Microsoft.Extensions.Logging;
+using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Business.Services;
 
@@ -22,10 +23,11 @@ public class PlaceholderResourceService : IPlaceholderResourceService
 {
     private readonly IResourceService _resourceService;
     private readonly IResourceSourceLinkService _sourceLinkService;
+    private readonly IResourceExternalIdentityService _identityService;
     private readonly IReservedPropertyValueService _reservedPropertyValueService;
     private readonly IAcquisitionLeadService _acquisitionLeadService;
     private readonly ITextOps _textOps;
-    private readonly Dictionary<ResourceSource, IExternalIdentityLookup> _lookups;
+    private readonly Dictionary<ThirdPartyId, IExternalIdentityLookup> _lookups;
     private readonly ISharedUrlTitleResolver? _sharedUrlTitleResolver;
     private readonly IResourceMatchSuggestionService? _matchSuggestionService;
     private readonly ILogger<PlaceholderResourceService> _logger;
@@ -39,6 +41,7 @@ public class PlaceholderResourceService : IPlaceholderResourceService
     public PlaceholderResourceService(
         IResourceService resourceService,
         IResourceSourceLinkService sourceLinkService,
+        IResourceExternalIdentityService identityService,
         IReservedPropertyValueService reservedPropertyValueService,
         IAcquisitionLeadService acquisitionLeadService,
         ITextOps textOps,
@@ -49,13 +52,14 @@ public class PlaceholderResourceService : IPlaceholderResourceService
     {
         _resourceService = resourceService;
         _sourceLinkService = sourceLinkService;
+        _identityService = identityService;
         _reservedPropertyValueService = reservedPropertyValueService;
         _acquisitionLeadService = acquisitionLeadService;
         _textOps = textOps;
         _logger = logger;
         _sharedUrlTitleResolver = sharedUrlTitleResolver;
         _matchSuggestionService = matchSuggestionService;
-        _lookups = lookups.ToDictionary(l => l.Source, l => l);
+        _lookups = lookups.ToDictionary(l => l.ThirdPartyId, l => l);
     }
 
     public async Task<PlaceholderResourceResult> CreateByTitle(string title, CancellationToken ct = default)
@@ -80,7 +84,7 @@ public class PlaceholderResourceService : IPlaceholderResourceService
         return new PlaceholderResourceResult(resource.Id, true, trimmed);
     }
 
-    public async Task<PlaceholderResourceResult> CreateOrMatchByExternalIdentity(ResourceSource source,
+    public async Task<PlaceholderResourceResult> CreateOrMatchByExternalIdentity(ThirdPartyId thirdPartyId,
         string sourceKey, KnownItemDetail? known = null, CancellationToken ct = default)
     {
         var key = sourceKey.Trim();
@@ -89,9 +93,18 @@ public class PlaceholderResourceService : IPlaceholderResourceService
             throw new ArgumentException("An external identity needs a key.", nameof(sourceKey));
         }
 
-        // The identity is the strongest possible match: two resources carrying the same source link
-        // are the same work by definition.
-        var existingId = await _sourceLinkService.FindResourceBySourceLinks([(source, key)]);
+        if (!Enum.IsDefined(thirdPartyId))
+            throw new ArgumentOutOfRangeException(nameof(thirdPartyId));
+
+        // Match this exact work even when the resource also has other identities or a local path.
+        var existingId = await _identityService.FindResource(thirdPartyId, key);
+        if (existingId == null && thirdPartyId.ToResourceSource() is { } source)
+        {
+            existingId = (await _sourceLinkService.GetAll())
+                .Where(link => link.Source == source && link.SourceKey == key)
+                .OrderBy(link => link.ResourceId)
+                .Select(link => (int?)link.ResourceId).FirstOrDefault();
+        }
         if (existingId.HasValue)
         {
             return new PlaceholderResourceResult(existingId.Value, false, await ReadName(existingId.Value));
@@ -102,7 +115,7 @@ public class PlaceholderResourceService : IPlaceholderResourceService
 
         // Only ask the platform for what the caller did not already read. A source that just
         // listed twenty works knows all twenty titles.
-        if (string.IsNullOrEmpty(name) && _lookups.TryGetValue(source, out var lookup))
+        if (string.IsNullOrEmpty(name) && _lookups.TryGetValue(thirdPartyId, out var lookup))
         {
             try
             {
@@ -115,7 +128,7 @@ public class PlaceholderResourceService : IPlaceholderResourceService
             {
                 // Knowing what you are missing does not depend on the platform being up.
                 _logger.LogWarning(ex, "[Placeholder] Could not read {Source} {SourceKey}; creating the resource anyway",
-                    source, key);
+                    thirdPartyId, key);
             }
         }
 
@@ -125,13 +138,13 @@ public class PlaceholderResourceService : IPlaceholderResourceService
         // work under a name something else here happens to share is not evidence about anything,
         // and scanning every name in the library per listed work would make a two-hundred-work
         // circle page an expensive sync for no answer.
-        var resource = ResourceFactory.CreateForExternalIdentity(source, key, title, coverUrls,
+        var resource = ResourceFactory.CreateForExternalIdentity(thirdPartyId, key, title, coverUrls,
             metadataJson: known?.MetadataJson);
         await _resourceService.AddOrPutRange([resource]);
 
         // The source's own scope, so a later sync from that platform updates its own value instead
         // of fighting with something the user typed.
-        await WriteName(resource.Id, source.GetPropertyValueScope(), title);
+        await WriteName(resource.Id, thirdPartyId.GetPropertyValueScope(), title);
 
         return new PlaceholderResourceResult(resource.Id, true, title);
     }

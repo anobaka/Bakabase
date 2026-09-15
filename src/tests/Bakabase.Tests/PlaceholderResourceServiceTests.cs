@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -81,7 +82,7 @@ public sealed class PlaceholderResourceServiceTests
         _dlsite.Details["RJ00000123"] = new ExternalIdentityDetail("RJ00000123", "とある作品",
             ["https://img.dlsite.jp/RJ00000123.jpg"]);
 
-        var result = await Service.CreateOrMatchByExternalIdentity(ResourceSource.DLsite, "RJ00000123");
+        var result = await Service.CreateOrMatchByExternalIdentity(ThirdPartyId.DLsite, "RJ00000123");
 
         Assert.IsTrue(result.Created);
         Assert.AreEqual("とある作品", result.Name);
@@ -101,8 +102,8 @@ public sealed class PlaceholderResourceServiceTests
     {
         _dlsite.Details["RJ00000123"] = new ExternalIdentityDetail("RJ00000123", "とある作品", null);
 
-        var first = await Service.CreateOrMatchByExternalIdentity(ResourceSource.DLsite, "RJ00000123");
-        var second = await Service.CreateOrMatchByExternalIdentity(ResourceSource.DLsite, "RJ00000123");
+        var first = await Service.CreateOrMatchByExternalIdentity(ThirdPartyId.DLsite, "RJ00000123");
+        var second = await Service.CreateOrMatchByExternalIdentity(ThirdPartyId.DLsite, "RJ00000123");
 
         Assert.IsFalse(second.Created, "the identity is the same, so the resource is the same");
         Assert.AreEqual(first.ResourceId, second.ResourceId);
@@ -114,7 +115,7 @@ public sealed class PlaceholderResourceServiceTests
     {
         _dlsite.Throw = true;
 
-        var result = await Service.CreateOrMatchByExternalIdentity(ResourceSource.DLsite, "RJ00000999");
+        var result = await Service.CreateOrMatchByExternalIdentity(ThirdPartyId.DLsite, "RJ00000999");
 
         Assert.IsTrue(result.Created, "knowing what you are missing does not depend on the site being up");
         Assert.AreEqual("RJ00000999", await ReadName(result.ResourceId),
@@ -176,13 +177,52 @@ public sealed class PlaceholderResourceServiceTests
     }
 
     [TestMethod]
+    [DataRow(ThirdPartyId.Bangumi, "https://bgm.tv/subject/8", "8")]
+    [DataRow(ThirdPartyId.Vndb, "https://vndb.org/v17", "v17")]
+    public async Task MetadataIdentity_RecordsTheWorkWithoutInventingAContentSource(
+        ThirdPartyId thirdPartyId, string url, string externalId)
+    {
+        var first = await Service.CreateOrMatchBySharedUrl(url,
+            new KnownItemDetail("A catalog work", ["https://example.org/cover.jpg"], "{\"title\":\"A catalog work\"}"));
+        var identities = await _sp.GetRequiredService<IResourceExternalIdentityService>()
+            .GetByResourceId(first.ResourceId);
+        Assert.AreEqual(1, identities.Count);
+        Assert.AreEqual(thirdPartyId, identities[0].ThirdPartyId);
+        Assert.AreEqual(externalId, identities[0].ExternalId);
+        CollectionAssert.AreEqual(new[] { "https://example.org/cover.jpg" }, identities[0].CoverUrls!.ToArray());
+        Assert.IsFalse(string.IsNullOrEmpty(identities[0].MetadataJson));
+        Assert.AreEqual(0, (await _sp.GetRequiredService<IResourceSourceLinkService>().GetByResourceId(first.ResourceId)).Count);
+        Assert.AreEqual(0, (await _sp.GetRequiredService<IAcquisitionLeadService>().GetByResourceId(first.ResourceId)).Count);
+
+        // A later file binding must not break identity-based matching.
+        await _sp.GetRequiredService<IResourceSourceLinkService>().EnsureLinks(first.ResourceId,
+            [new ResourceSourceLink {Source = ResourceSource.PathMark, SourceKey = "/library/catalog-work"}]);
+        var second = await Service.CreateOrMatchByExternalIdentity(thirdPartyId, externalId);
+        Assert.IsFalse(second.Created);
+        Assert.AreEqual(first.ResourceId, second.ResourceId);
+        Assert.AreEqual("A catalog work", second.Name);
+    }
+
+    [TestMethod]
+    public async Task PlatformIdentity_StillMatchesWhenTheResourceAlsoHasAPathSource()
+    {
+        var first = await Service.CreateOrMatchByExternalIdentity(ThirdPartyId.DLsite, "RJ00000987",
+            new KnownItemDetail("An installed work"));
+        await _sp.GetRequiredService<IResourceSourceLinkService>().EnsureLinks(first.ResourceId,
+            [new ResourceSourceLink {Source = ResourceSource.PathMark, SourceKey = "/library/installed-work"}]);
+        var second = await Service.CreateOrMatchByExternalIdentity(ThirdPartyId.DLsite, "RJ00000987");
+        Assert.IsFalse(second.Created);
+        Assert.AreEqual(first.ResourceId, second.ResourceId);
+    }
+
+    [TestMethod]
     public async Task SyncingASourceWithNoResolver_DoesNothingAtAll()
     {
-        var result = await Service.CreateOrMatchByExternalIdentity(ResourceSource.Bangumi, "12345");
+        var result = await Service.CreateOrMatchByExternalIdentity(ThirdPartyId.Pixiv, "12345");
         var before = (await ResourceService.Get(result.ResourceId))!;
 
         var syncResult = await _sp.GetRequiredService<ResourceSyncService>().SyncResources(
-            ResourceSource.Bangumi, null, null, new PauseToken(), CancellationToken.None);
+            ResourceSource.Pixiv, null, null, new PauseToken(), CancellationToken.None);
 
         Assert.AreEqual(0, syncResult.ResourcesCreated);
         Assert.AreEqual(0, syncResult.ResourcesDeleted);
@@ -195,15 +235,15 @@ public sealed class PlaceholderResourceServiceTests
     [TestMethod]
     public void ExternalIdentityParser_RecognisesIdsAndPageLinks()
     {
-        AssertExtracts("RJ01234567", ResourceSource.DLsite, "RJ01234567");
-        AssertExtracts("rj01234567", ResourceSource.DLsite, "RJ01234567");
+        AssertExtracts("RJ01234567", ThirdPartyId.DLsite, "RJ01234567");
+        AssertExtracts("rj01234567", ThirdPartyId.DLsite, "RJ01234567");
         AssertExtracts("https://www.dlsite.com/maniax/work/=/product_id/RJ01234567.html",
-            ResourceSource.DLsite, "RJ01234567");
-        AssertExtracts("https://store.steampowered.com/app/570/Dota_2/", ResourceSource.Steam, "570");
-        AssertExtracts("https://exhentai.org/g/123456/abcdef0123/", ResourceSource.ExHentai,
+            ThirdPartyId.DLsite, "RJ01234567");
+        AssertExtracts("https://store.steampowered.com/app/570/Dota_2/", ThirdPartyId.Steam, "570");
+        AssertExtracts("https://exhentai.org/g/123456/abcdef0123/", ThirdPartyId.ExHentai,
             "123456/abcdef0123");
-        AssertExtracts("https://bgm.tv/subject/8", ResourceSource.Bangumi, "8");
-        AssertExtracts("https://www.pixiv.net/en/artworks/98765", ResourceSource.Pixiv, "98765");
+        AssertExtracts("https://bgm.tv/subject/8", ThirdPartyId.Bangumi, "8");
+        AssertExtracts("https://www.pixiv.net/en/artworks/98765", ThirdPartyId.Pixiv, "98765");
 
         // A bare number could be a Steam app, a Bangumi subject or a Pixiv artwork; guessing would
         // attach the resource to the wrong platform.
@@ -211,11 +251,11 @@ public sealed class PlaceholderResourceServiceTests
         Assert.IsFalse(ExternalIdentityParser.TryExtract("Some Game Title", out _, out _));
 
         // Once the platform is known it is no longer ambiguous.
-        Assert.IsTrue(ExternalIdentityParser.TryExtractFor(ResourceSource.Steam, "570", out var steamKey));
+        Assert.IsTrue(ExternalIdentityParser.TryExtractFor(ThirdPartyId.Steam, "570", out var steamKey));
         Assert.AreEqual("570", steamKey);
     }
 
-    private static void AssertExtracts(string input, ResourceSource expectedSource, string expectedKey)
+    private static void AssertExtracts(string input, ThirdPartyId expectedSource, string expectedKey)
     {
         Assert.IsTrue(ExternalIdentityParser.TryExtract(input, out var source, out var key),
             $"'{input}' should be recognised");
@@ -229,7 +269,7 @@ public sealed class PlaceholderResourceServiceTests
         public bool Throw { get; set; }
         public int LookupCount { get; private set; }
 
-        public ResourceSource Source => ResourceSource.DLsite;
+        public ThirdPartyId ThirdPartyId => ThirdPartyId.DLsite;
 
         public Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
         {

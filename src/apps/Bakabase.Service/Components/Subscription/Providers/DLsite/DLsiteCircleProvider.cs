@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,7 +52,7 @@ public class DLsiteCircleProvider : ISubscriptionProvider
     public string Kind => "dlsite.circle";
     public string DisplayName => "DLsite Circle / Series";
     public SubscriptionSourceKind SourceKind => SubscriptionSourceKind.Catalog;
-    public ResourceSource? ResourceSource => Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.DLsite;
+    public ThirdPartyId? ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.DLsite;
 
     public Task<SubscriptionValidationResult> ValidateTargetAsync(string targetJson, CancellationToken ct)
     {

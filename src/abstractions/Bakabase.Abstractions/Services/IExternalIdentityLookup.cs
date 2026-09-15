@@ -1,4 +1,4 @@
-using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.Abstractions.Services;
 
@@ -14,7 +14,7 @@ public record ExternalIdentityDetail(string SourceKey, string? Title, List<strin
 /// </summary>
 public interface IExternalIdentityLookup
 {
-    ResourceSource Source { get; }
+    ThirdPartyId ThirdPartyId { get; }
 
     /// <summary>
     /// Returns what the platform says, or null when it does not know this id or cannot be reached.

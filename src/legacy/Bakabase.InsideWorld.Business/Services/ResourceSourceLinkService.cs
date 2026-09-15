@@ -23,13 +23,13 @@ public class ResourceSourceLinkService<TDbContext>(
     public async Task<List<ResourceSourceLink>> GetAll()
     {
         var dbModels = await orm.GetAll();
-        return dbModels.Select(d => d.ToDomainModel()).ToList();
+        return dbModels.Where(HasKnownSource).Select(d => d.ToDomainModel()).ToList();
     }
 
     public async Task<List<ResourceSourceLink>> GetByResourceId(int resourceId)
     {
         var dbModels = await orm.GetAll(m => m.ResourceId == resourceId);
-        return dbModels.Select(d => d.ToDomainModel()).ToList();
+        return dbModels.Where(HasKnownSource).Select(d => d.ToDomainModel()).ToList();
     }
 
     public async Task<List<ResourceSourceLink>> GetByResourceIds(int[] resourceIds)
@@ -38,7 +38,7 @@ public class ResourceSourceLinkService<TDbContext>(
         // Keep membership O(1) when a large incremental index batch is being rebuilt.
         var resourceIdSet = resourceIds.ToHashSet();
         var dbModels = await orm.GetAll(m => resourceIdSet.Contains(m.ResourceId));
-        return dbModels.Select(d => d.ToDomainModel()).ToList();
+        return dbModels.Where(HasKnownSource).Select(d => d.ToDomainModel()).ToList();
     }
 
     public async Task<Dictionary<int, List<ResourceSourceLink>>> GetByResourceIdsGrouped(int[] resourceIds)
@@ -50,16 +50,16 @@ public class ResourceSourceLinkService<TDbContext>(
 
     public async Task<int?> FindResourceBySourceLinks(List<(ResourceSource Source, string SourceKey)> sourceLinks)
     {
-        if (sourceLinks.Count == 0) return null;
+        var inputSet = sourceLinks.Where(l => Enum.IsDefined(l.Source)).ToHashSet();
+        if (inputSet.Count == 0) return null;
 
         var allLinks = await orm.GetAll();
 
         // Group by resource ID
-        var resourceLinks = allLinks.GroupBy(l => l.ResourceId)
+        var resourceLinks = allLinks.Where(HasKnownSource).GroupBy(l => l.ResourceId)
             .ToDictionary(g => g.Key, g => g.Select(l => (l.Source, l.SourceKey)).ToHashSet());
 
         // Find a resource whose ALL source links are contained in the given sourceLinks
-        var inputSet = sourceLinks.ToHashSet();
         foreach (var (resourceId, existingLinks) in resourceLinks)
         {
             if (existingLinks.All(el => inputSet.Contains(el)))
@@ -76,7 +76,8 @@ public class ResourceSourceLinkService<TDbContext>(
         var resourceLinks = await orm.GetAll(m => m.ResourceId == resourceId);
         if (resourceLinks.Count == 0) return [];
 
-        var sourceKeys = resourceLinks.Select(l => (l.Source, l.SourceKey)).ToHashSet();
+        var sourceKeys = resourceLinks.Where(HasKnownSource).Select(l => (l.Source, l.SourceKey)).ToHashSet();
+        if (sourceKeys.Count == 0) return [];
 
         // Find all links that match any of this resource's source+key pairs
         var allLinks = await orm.GetAll();
@@ -91,6 +92,7 @@ public class ResourceSourceLinkService<TDbContext>(
 
     public async Task<ResourceSourceLink> Add(ResourceSourceLink link)
     {
+        ValidateSource(link.Source);
         link.CreateDt = DateTime.UtcNow;
         var dbModel = link.ToDbModel();
         await orm.Add(dbModel);
@@ -101,8 +103,10 @@ public class ResourceSourceLinkService<TDbContext>(
 
     public async Task AddRange(IEnumerable<ResourceSourceLink> links)
     {
+        var linkList = links.ToList();
+        foreach (var link in linkList) ValidateSource(link.Source);
         var now = DateTime.UtcNow;
-        var dbModels = links.Select(l =>
+        var dbModels = linkList.Select(l =>
         {
             l.CreateDt = now;
             return l.ToDbModel();
@@ -116,13 +120,15 @@ public class ResourceSourceLinkService<TDbContext>(
 
     public async Task EnsureLinks(int resourceId, IEnumerable<ResourceSourceLink> links)
     {
+        var linkList = links.ToList();
+        foreach (var link in linkList) ValidateSource(link.Source);
         var existing = await orm.GetAll(m => m.ResourceId == resourceId);
         var existingDict = existing.ToDictionary(l => (l.Source, l.SourceKey));
 
         var toAdd = new List<ResourceSourceLink>();
         var toUpdate = new List<ResourceSourceLinkDbModel>();
 
-        foreach (var link in links)
+        foreach (var link in linkList)
         {
             if (existingDict.TryGetValue((link.Source, link.SourceKey), out var existingDb))
             {
@@ -184,11 +190,12 @@ public class ResourceSourceLinkService<TDbContext>(
             m.CoverUrls != null && m.CoverUrls != "" &&
             (m.LocalCoverPaths == null || m.LocalCoverPaths == "") &&
             (m.CoverDownloadFailedAt == null || m.CoverDownloadFailedAt.Value.AddHours(24) < now));
-        return dbModels.Select(d => d.ToDomainModel()).ToList();
+        return dbModels.Where(HasKnownSource).Select(d => d.ToDomainModel()).ToList();
     }
 
     public async Task Update(ResourceSourceLink link)
     {
+        ValidateSource(link.Source);
         var dbModel = link.ToDbModel();
         await orm.Update(dbModel);
     }
@@ -221,7 +228,7 @@ public class ResourceSourceLinkService<TDbContext>(
     {
         var dbModels = await orm.GetAll(m =>
             m.Source != ResourceSource.PathMark && m.MetadataFetchedAt == null);
-        return dbModels.Select(d => d.ToDomainModel()).ToList();
+        return dbModels.Where(HasKnownSource).Select(d => d.ToDomainModel()).ToList();
     }
 
     public async Task ClearAllMetadata(ResourceSource source)
@@ -237,5 +244,13 @@ public class ResourceSourceLinkService<TDbContext>(
         {
             await orm.UpdateRange(dbModels);
         }
+    }
+
+    private static bool HasKnownSource(ResourceSourceLinkDbModel link) => Enum.IsDefined(link.Source);
+
+    private static void ValidateSource(ResourceSource source)
+    {
+        if (!Enum.IsDefined(source))
+            throw new ArgumentOutOfRangeException(nameof(source), source, "Unknown resource source.");
     }
 }

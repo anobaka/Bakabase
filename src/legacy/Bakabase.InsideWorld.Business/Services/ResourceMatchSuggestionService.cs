@@ -21,6 +21,7 @@ public class ResourceMatchSuggestionService(
     IResourceService resources,
     IReservedPropertyValueService reservedPropertyValues,
     IResourceSourceLinkService sourceLinks,
+    IResourceExternalIdentityService externalIdentities,
     IAcquisitionLeadService leads,
     ICollectionResourceMappingService collectionMappings,
     ILogger<ResourceMatchSuggestionService> logger) : IResourceMatchSuggestionService
@@ -147,6 +148,8 @@ public class ResourceMatchSuggestionService(
         }
 
         await MoveSourceLinks(fromResourceId, intoResourceId);
+        await externalIdentities.EnsureIdentities(intoResourceId,
+            await externalIdentities.GetByResourceId(fromResourceId));
         await MoveLeads(fromResourceId, intoResourceId);
         await MoveCollectionMemberships(fromResourceId, intoResourceId, ct);
 

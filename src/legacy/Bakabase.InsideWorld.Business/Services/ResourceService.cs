@@ -400,6 +400,17 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                 }
 
+                // Known external covers and work identities are needed independently of source icons.
+                using (MiniProfiler.Current.Step("ExternalIdentities"))
+                {
+                    var identitiesGrouped = await GetRequiredService<IResourceExternalIdentityService>()
+                        .GetByResourceIdsGrouped(resourceIds.ToArray());
+                    foreach (var r in doList)
+                    {
+                        r.ExternalIdentities = identitiesGrouped.GetValueOrDefault(r.Id) ?? [];
+                    }
+                }
+
                 // Pre-fetch unified profile data if needed (optimization to avoid multiple index service calls)
                 Dictionary<int, ResourceProfileEffectiveData>? unifiedProfileData = null;
                 var needsNameTemplate = additionalItems.HasFlag(ResourceAdditionalItem.DisplayName);
@@ -1093,6 +1104,15 @@ namespace Bakabase.InsideWorld.Business.Services
                     if (resource.SourceLinks is { Count: > 0 })
                     {
                         await sourceLinkService.EnsureLinks(resource.Id, resource.SourceLinks);
+                    }
+                }
+
+                var externalIdentityService = GetRequiredService<IResourceExternalIdentityService>();
+                foreach (var resource in resources)
+                {
+                    if (resource.ExternalIdentities is { Count: > 0 })
+                    {
+                        await externalIdentityService.EnsureIdentities(resource.Id, resource.ExternalIdentities);
                     }
                 }
 
@@ -2463,6 +2483,9 @@ namespace Bakabase.InsideWorld.Business.Services
                 conflictIds.Add(id);
             }
 
+            conflictIds.UnionWith(await GetRequiredService<IResourceExternalIdentityService>()
+                .FindConflictingResourceIds(resourceId));
+
             // 2. Find conflicts by same Path
             var resource = await _orm.GetByKey(resourceId);
             if (resource != null && !string.IsNullOrEmpty(resource.Path))
@@ -2489,6 +2512,10 @@ namespace Bakabase.InsideWorld.Business.Services
             var mergeSourceIds = model.SourceResourceIds.Concat([model.TargetResourceId]).Distinct().ToArray();
             var sourceLinks = await sourceLinkService.GetByResourceIds(mergeSourceIds);
             await sourceLinkService.EnsureLinks(model.TargetResourceId, sourceLinks);
+
+            var identityService = GetRequiredService<IResourceExternalIdentityService>();
+            var identities = await identityService.GetByResourceIdsGrouped(mergeSourceIds);
+            await identityService.EnsureIdentities(model.TargetResourceId, identities.Values.SelectMany(x => x));
 
             // 2. Transfer media library mappings from source resources to target
             var mappingService = MediaLibraryResourceMappingService;
@@ -2522,6 +2549,7 @@ namespace Bakabase.InsideWorld.Business.Services
             await _customPropertyValueService.RemoveAll(x => ids.Contains(x.ResourceId));
             var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
             await sourceLinkService.DeleteByResourceIds(ids);
+            await GetRequiredService<IResourceExternalIdentityService>().DeleteByResourceIds(ids);
             var scopePreferenceService = GetRequiredService<IPropertyValueScopePreferenceService>();
             await scopePreferenceService.RemoveByResourceIds(ids);
             // Leads are keyed by ResourceId with no FK, like the cache row below. Left behind they

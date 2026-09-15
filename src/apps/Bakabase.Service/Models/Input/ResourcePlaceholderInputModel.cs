@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.Service.Models.Input;
 
@@ -15,10 +15,10 @@ public record ResourcePlaceholderItemInputModel
     public string? Title { get; set; }
 
     /// <summary>The platform, when the client already knows which one is meant.</summary>
-    public ResourceSource? Source { get; set; }
+    public ThirdPartyId? ThirdPartyId { get; set; }
 
     /// <summary>The id on that platform. Accepts the platform's page URL too.</summary>
-    public string? SourceKey { get; set; }
+    public string? ExternalId { get; set; }
 
     /// <summary>A link someone shared. Never an identity — it is stored as an acquisition lead.</summary>
     public string? SharedUrl { get; set; }

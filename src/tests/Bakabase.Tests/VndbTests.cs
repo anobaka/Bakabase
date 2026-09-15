@@ -1,12 +1,13 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bakabase.Abstractions.Components.Identity;
 using Bakabase.Abstractions.Extensions;
-using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.ThirdParty.ThirdParties.Vndb;
 using Bakabase.Modules.ThirdParty.ThirdParties.Vndb.Models;
 using Bakabase.Service.Components.Subscription.Providers.Vndb;
+using Bakabase.Modules.Subscription.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Tests;
 
@@ -114,7 +115,7 @@ public sealed class VndbTests
         Assert.IsFalse(ExternalIdentityParser.TryExtract("Some Work v17", out _, out _));
         Assert.IsFalse(ExternalIdentityParser.TryExtract("v17", out _, out _));
 
-        Assert.IsTrue(ExternalIdentityParser.TryExtractFor(ResourceSource.Vndb, "v17", out var key));
+        Assert.IsTrue(ExternalIdentityParser.TryExtractFor(ThirdPartyId.Vndb, "v17", out var key));
         Assert.AreEqual("v17", key);
     }
 
@@ -122,7 +123,7 @@ public sealed class VndbTests
     public void AVndbLinkIsAnIdentity()
     {
         Assert.IsTrue(ExternalIdentityParser.TryExtract("https://vndb.org/v17", out var source, out var key));
-        Assert.AreEqual(ResourceSource.Vndb, source);
+        Assert.AreEqual(ThirdPartyId.Vndb, source);
         Assert.AreEqual("v17", key);
     }
 
@@ -145,7 +146,13 @@ public sealed class VndbTests
     [TestMethod]
     public void VndbIsACatalogRatherThanSomewhereThingsAreHeld()
     {
-        Assert.IsFalse(ResourceSource.Vndb.IsPlatformHolding(),
+        Assert.IsNull(ThirdPartyId.Vndb.ToResourceSource(),
             "VNDB knows what a work is and nothing about where to get it");
+        var series = new VndbSeriesProvider(null!);
+        var developer = new VndbDeveloperProvider(null!);
+        Assert.AreEqual(SubscriptionSourceKind.Catalog, series.SourceKind);
+        Assert.AreEqual(SubscriptionSourceKind.Catalog, developer.SourceKind);
+        Assert.AreEqual(ThirdPartyId.Vndb, series.ThirdPartyId);
+        Assert.AreEqual(ThirdPartyId.Vndb, developer.ThirdPartyId);
     }
 }

@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -38,12 +39,16 @@ public sealed class PlatformFetchTests
         public static string? Local;
 
         public static int Fetches;
+        public static int HoldingReads;
 
         public ResourceSource Source => ResourceSource.Steam;
         public bool CanFetch => true;
 
-        public Task<IReadOnlyList<PlatformHolding>> EnumerateHoldingsAsync(CancellationToken ct) =>
-            Task.FromResult<IReadOnlyList<PlatformHolding>>([]);
+        public Task<IReadOnlyList<PlatformHolding>> EnumerateHoldingsAsync(CancellationToken ct)
+        {
+            HoldingReads++;
+            return Task.FromResult<IReadOnlyList<PlatformHolding>>([]);
+        }
 
         public Task<PlatformFetchOutcome> FetchAsync(string sourceKey, string workDirectory,
             Func<int, string?, Task>? onProgress, CancellationToken ct)
@@ -63,6 +68,7 @@ public sealed class PlatformFetchTests
         FakePlatform.Answer = new PlatformFetchOutcome.Started("working on it");
         FakePlatform.Local = null;
         FakePlatform.Fetches = 0;
+        FakePlatform.HoldingReads = 0;
 
         _sp = await TestServiceBuilder.BuildServiceProvider(services =>
             services.AddKeyedScoped<IPlatformConnector, FakePlatform>(ResourceSource.Steam));
@@ -227,13 +233,34 @@ public sealed class PlatformFetchTests
             Assert.AreEqual(
                 Bakabase.Modules.Subscription.Abstractions.Models.Domain.Constants
                     .SubscriptionSourceKind.PlatformHolding, provider.SourceKind);
-            Assert.IsNotNull(provider.ResourceSource,
+            Assert.IsNotNull(provider.ThirdPartyId,
                 "what the user holds carries the platform's identity");
 
             // Nothing to fill in: the account is in the platform's own settings, and a second
             // place to configure it is a second place to get it wrong.
             Assert.IsTrue((await provider.ValidateTargetAsync("{}", CancellationToken.None)).IsValid);
         }
+    }
+
+    [TestMethod]
+    public async Task APlatformSubscriptionMapsItsSiteIdentityToTheExistingConnector()
+    {
+        var provider = _sp
+            .GetServices<Bakabase.Modules.Subscription.Abstractions.Components.ISubscriptionProvider>()
+            .Single(p => p.Kind == "steam.ownedGames");
+
+        Assert.AreEqual(ThirdPartyId.Steam, provider.ThirdPartyId);
+        await provider.FetchAllItemsAsync(new Bakabase.Modules.Subscription.Abstractions.Models.Domain.SubscriptionRecord
+        {
+            Kind = provider.Kind,
+            DisplayName = "Steam library",
+            TargetJson = "{}"
+        }, CancellationToken.None);
+
+        Assert.AreEqual(1, FakePlatform.HoldingReads,
+            "a ThirdPartyId must map to ResourceSource before looking up its keyed platform connector");
+        Assert.AreEqual(0, FakePlatform.Fetches,
+            "checking a platform subscription lists holdings and does not download them");
     }
 
     /// <summary>
@@ -252,7 +279,7 @@ public sealed class PlatformFetchTests
 
         Assert.AreEqual(ResourceSource.Steam, registry.Get(ResourceSource.Steam)!.Source,
             "the fake stands in for Steam here");
-        Assert.IsNull(registry.Get(ResourceSource.Bangumi),
-            "a catalog holds nothing, so nothing speaks for it");
+        Assert.IsNull(registry.Get(ResourceSource.Pixiv),
+            "Pixiv is a content source, but it does not yet have an acquisition connector");
     }
 }

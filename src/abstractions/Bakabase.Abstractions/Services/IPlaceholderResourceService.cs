@@ -1,4 +1,4 @@
-using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.Abstractions.Services;
 
@@ -20,7 +20,7 @@ public record PlaceholderResourceResult(int ResourceId, bool Created, string? Na
 /// </summary>
 /// <param name="Title">What the source calls it.</param>
 /// <param name="CoverUrls">Cover images the source offers, best first.</param>
-/// <param name="MetadataJson">The source's own fields, kept verbatim on the resource's source link.</param>
+/// <param name="MetadataJson">The source's own fields, kept verbatim with the resource identity.</param>
 public record KnownItemDetail(string? Title = null, List<string>? CoverUrls = null,
     string? MetadataJson = null);
 
@@ -50,7 +50,7 @@ public interface IPlaceholderResourceService
     /// <param name="known">
     /// What the caller already read. Absent asks the platform; present takes its word for it.
     /// </param>
-    Task<PlaceholderResourceResult> CreateOrMatchByExternalIdentity(ResourceSource source, string sourceKey,
+    Task<PlaceholderResourceResult> CreateOrMatchByExternalIdentity(ThirdPartyId thirdPartyId, string sourceKey,
         KnownItemDetail? known = null, CancellationToken ct = default);
 
     /// <summary>

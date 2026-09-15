@@ -1,8 +1,8 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
@@ -17,7 +17,7 @@ namespace Bakabase.Service.Components.IdentityLookups;
 /// </summary>
 public class DLsiteIdentityLookup(DLsiteClient client) : IExternalIdentityLookup
 {
-    public ResourceSource Source => ResourceSource.DLsite;
+    public ThirdPartyId ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.DLsite;
 
     public async Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
     {
@@ -31,7 +31,7 @@ public class DLsiteIdentityLookup(DLsiteClient client) : IExternalIdentityLookup
 
 public class SteamIdentityLookup(SteamClient client) : IExternalIdentityLookup
 {
-    public ResourceSource Source => ResourceSource.Steam;
+    public ThirdPartyId ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.Steam;
 
     public async Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
     {
@@ -50,7 +50,7 @@ public class SteamIdentityLookup(SteamClient client) : IExternalIdentityLookup
 
 public class BangumiIdentityLookup(BangumiClient client) : IExternalIdentityLookup
 {
-    public ResourceSource Source => ResourceSource.Bangumi;
+    public ThirdPartyId ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.Bangumi;
 
     public async Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
     {
@@ -64,7 +64,7 @@ public class BangumiIdentityLookup(BangumiClient client) : IExternalIdentityLook
 
 public class ExHentaiIdentityLookup(ExHentaiClient client) : IExternalIdentityLookup
 {
-    public ResourceSource Source => ResourceSource.ExHentai;
+    public ThirdPartyId ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.ExHentai;
 
     public async Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
     {
@@ -90,7 +90,7 @@ public class ExHentaiIdentityLookup(ExHentaiClient client) : IExternalIdentityLo
 /// </summary>
 public class VndbIdentityLookup(VndbClient client) : IExternalIdentityLookup
 {
-    public ResourceSource Source => ResourceSource.Vndb;
+    public ThirdPartyId ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.Vndb;
 
     public async Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
     {

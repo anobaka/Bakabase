@@ -385,7 +385,7 @@
   "helpCenter.unmaterializedResource.way.title.title": "一个名称",
   "helpCenter.unmaterializedResource.way.title.desc": "就是它叫什么。如果库里已经有同名资源，会直接用那一条，而不是再建一条重复的。",
   "helpCenter.unmaterializedResource.way.identity.title": "编号或商店页",
-  "helpCenter.unmaterializedResource.way.identity.desc": "RJ 号、Steam 或 Bangumi 页面。系统会去平台查这部作品叫什么，封面也一并带回来。",
+  "helpCenter.unmaterializedResource.way.identity.desc": "可以输入 RJ 号、Steam、Bangumi 或 VNDB 条目链接来记录作品名称和封面。Bangumi、VNDB 只关联作品信息，不表示文件来源或下载地址。",
   "helpCenter.unmaterializedResource.way.sharedLink.title": "一条分享链接",
   "helpCenter.unmaterializedResource.way.sharedLink.desc": "论坛帖子或推文。页面标题用来命名资源，链接则作为「获取线索」留下——那是文件能拿到的地方。",
   "helpCenter.unmaterializedResource.step.title": "进入库之后",

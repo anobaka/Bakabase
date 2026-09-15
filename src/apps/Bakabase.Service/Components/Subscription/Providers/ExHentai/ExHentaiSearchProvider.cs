@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,7 +36,7 @@ public class ExHentaiSearchProvider : ISubscriptionProvider
     public string Kind => "exhentai.search";
     public string DisplayName => "ExHentai Search";
     public SubscriptionSourceKind SourceKind => SubscriptionSourceKind.PlatformHolding;
-    public ResourceSource? ResourceSource => Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.ExHentai;
+    public ThirdPartyId? ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.ExHentai;
 
     public Task<SubscriptionValidationResult> ValidateTargetAsync(string targetJson, CancellationToken ct)
     {

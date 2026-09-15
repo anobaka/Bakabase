@@ -86,7 +86,7 @@ public sealed class SoulPlusBoardParsingTests
         var provider = new SoulPlusSearchProvider(null!);
 
         Assert.AreEqual(SubscriptionSourceKind.SharingChannel, provider.SourceKind);
-        Assert.IsNull(provider.ResourceSource);
+        Assert.IsNull(provider.ThirdPartyId);
     }
 
     [TestMethod]

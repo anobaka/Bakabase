@@ -19,6 +19,9 @@ public record Resource
     /// </summary>
     public List<ResourceSourceLink>? SourceLinks { get; set; }
 
+    /// <summary>External work identities, independent of where the resource's files came from.</summary>
+    public List<ResourceExternalIdentity>? ExternalIdentities { get; set; }
+
     public string? FileName => string.IsNullOrEmpty(Path) ? null : System.IO.Path.GetFileName(Path);
 
     public string? Directory => string.IsNullOrEmpty(Path) ? null : System.IO.Path.GetDirectoryName(Path).StandardizePath()!;

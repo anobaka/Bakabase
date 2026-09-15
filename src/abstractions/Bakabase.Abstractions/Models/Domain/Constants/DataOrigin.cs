@@ -31,4 +31,10 @@ public enum DataOrigin
     /// Data from ExHentai (cover images, gallery links).
     /// </summary>
     ExHentai = 5,
+
+    /// <summary>
+    /// Cover images supplied by an associated external work identity.
+    /// This does not imply that the site provides the resource's files.
+    /// </summary>
+    ExternalIdentity = 6,
 }

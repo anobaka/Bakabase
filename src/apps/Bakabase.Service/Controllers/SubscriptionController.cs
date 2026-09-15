@@ -90,7 +90,7 @@ public class SubscriptionController(
             DisplayName = p.DisplayName,
             Icon = p.Icon,
             SourceKind = p.SourceKind,
-            ResourceSource = p.ResourceSource,
+            ThirdPartyId = p.ThirdPartyId,
         }));
     }
 }

@@ -1,3 +1,5 @@
+using Bakabase.Abstractions.Extensions;
+using Bakabase.InsideWorld.Models.Constants;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -32,7 +34,7 @@ public abstract class PlatformHoldingProvider(IServiceScopeFactory scopes) : ISu
     /// </summary>
     public SubscriptionSourceKind SourceKind => SubscriptionSourceKind.PlatformHolding;
 
-    public abstract ResourceSource? ResourceSource { get; }
+    public abstract ThirdPartyId? ThirdPartyId { get; }
 
     /// <summary>
     /// Nothing to validate: the account lives in the platform's own settings, and a subscription
@@ -46,7 +48,9 @@ public abstract class PlatformHoldingProvider(IServiceScopeFactory scopes) : ISu
     public async Task<IReadOnlyList<SubscriptionItem>> FetchAllItemsAsync(SubscriptionRecord subscription,
         CancellationToken ct)
     {
-        var source = ResourceSource!.Value;
+        var source = ThirdPartyId!.Value.ToResourceSource()
+                     ?? throw new System.InvalidOperationException(
+                         $"{Kind} has no platform connector for {ThirdPartyId}.");
 
         // A provider is a singleton and a connector reads the database, so the connector is
         // resolved per check rather than held: holding one would keep a scope alive forever.
@@ -70,7 +74,7 @@ public class DLsitePurchasesProvider(IServiceScopeFactory scopes) : PlatformHold
 {
     public override string Kind => "dlsite.purchases";
     public override string DisplayName => "DLsite Purchases";
-    public override ResourceSource? ResourceSource => Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.DLsite;
+    public override ThirdPartyId? ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.DLsite;
 }
 
 /// <summary>Every game in the Steam library.</summary>
@@ -78,7 +82,7 @@ public class SteamOwnedGamesProvider(IServiceScopeFactory scopes) : PlatformHold
 {
     public override string Kind => "steam.ownedGames";
     public override string DisplayName => "Steam Library";
-    public override ResourceSource? ResourceSource => Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.Steam;
+    public override ThirdPartyId? ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.Steam;
 }
 
 /// <summary>Every gallery in the ExHentai favourites.</summary>
@@ -86,5 +90,5 @@ public class ExHentaiFavoritesProvider(IServiceScopeFactory scopes) : PlatformHo
 {
     public override string Kind => "exhentai.favorites";
     public override string DisplayName => "ExHentai Favorites";
-    public override ResourceSource? ResourceSource => Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.ExHentai;
+    public override ThirdPartyId? ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.ExHentai;
 }

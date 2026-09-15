@@ -59,6 +59,9 @@ public static class MediaLibraryTemplateExtensions
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, ResourceSourceLinkDbModel, int>>();
         services.AddScoped<IResourceSourceLinkService, ResourceSourceLinkService<TDbContext>>();
 
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, ResourceExternalIdentityDbModel, int>>();
+        services.AddScoped<IResourceExternalIdentityService, ResourceExternalIdentityService<TDbContext>>();
+
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, ResourceProfileDbModel, int>>();
         services.AddScoped<IResourceProfileService, ResourceProfileService<TDbContext>>();
 

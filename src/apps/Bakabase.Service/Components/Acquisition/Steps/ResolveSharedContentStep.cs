@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Identity;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
@@ -255,14 +256,19 @@ public class ResolveSharedContentStep : IAcquisitionStep
         {
             var text = string.Join("\n", new[] {content.Title, content.MainHtml}
                 .Concat(content.CommentHtmlList ?? []));
-            var found = ExternalIdentityParser.TryExtract(text, out var source, out var key) && key != null
-                ? new ResourceSourceLink {Source = source, SourceKey = key}
-                : null;
+            if (!ExternalIdentityParser.TryExtract(text, out var thirdPartyId, out var key)) return;
 
-            if (found == null) return;
-
-            await ctx.ServiceProvider.GetRequiredService<IResourceSourceLinkService>()
-                .EnsureLinks(resourceId, [found]);
+            if (thirdPartyId.ToResourceSource() is { } source)
+            {
+                await ctx.ServiceProvider.GetRequiredService<IResourceSourceLinkService>()
+                    .EnsureLinks(resourceId, [new ResourceSourceLink {Source = source, SourceKey = key}]);
+            }
+            else
+            {
+                await ctx.ServiceProvider.GetRequiredService<IResourceExternalIdentityService>()
+                    .EnsureIdentities(resourceId,
+                        [new ResourceExternalIdentity {ThirdPartyId = thirdPartyId, ExternalId = key}]);
+            }
         }
         catch (Exception ex)
         {

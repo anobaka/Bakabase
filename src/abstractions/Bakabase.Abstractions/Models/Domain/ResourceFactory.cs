@@ -1,4 +1,6 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Extensions;
+using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.Abstractions.Models.Domain;
 
@@ -21,20 +23,34 @@ public static class ResourceFactory
     /// The source's own fields, verbatim. Kept because a platform-specific reader can make sense of
     /// them later and nothing else will ever have them again.
     /// </param>
-    public static Resource CreateForExternalIdentity(ResourceSource source, string sourceKey,
+    public static Resource CreateForExternalIdentity(ThirdPartyId thirdPartyId, string sourceKey,
         string? displayName, List<string>? coverUrls = null, string? path = null,
         string? metadataJson = null)
     {
         var resource = CreateBase(displayName);
         resource.Path = path;
-        resource.SourceLinks =
-        [
-            new ResourceSourceLink
-            {
-                Source = source, SourceKey = sourceKey, CoverUrls = coverUrls,
-                MetadataJson = metadataJson
-            }
-        ];
+        if (thirdPartyId.ToResourceSource() is { } source)
+        {
+            resource.SourceLinks =
+            [
+                new ResourceSourceLink
+                {
+                    Source = source, SourceKey = sourceKey, CoverUrls = coverUrls,
+                    MetadataJson = metadataJson
+                }
+            ];
+        }
+        else
+        {
+            resource.ExternalIdentities =
+            [
+                new ResourceExternalIdentity
+                {
+                    ThirdPartyId = thirdPartyId, ExternalId = sourceKey, CoverUrls = coverUrls,
+                    MetadataJson = metadataJson
+                }
+            ];
+        }
         return resource;
     }
 

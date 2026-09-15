@@ -4,8 +4,8 @@ namespace Bakabase.Modules.Subscription.Abstractions.Models.Domain;
 /// One entry a source is currently listing.
 /// </summary>
 /// <param name="SourceKey">
-/// For a platform or catalog source, the same key a <c>ResourceSourceLink</c> stores, so an item
-/// and a resource can recognise each other. For a sharing channel, a key unique within the channel
+/// For a platform or catalog source, the site's work identifier, used to match an external identity
+/// or platform source link. For a sharing channel, a key unique within the channel
 /// (a thread id) used only to tell one act of sharing from another.
 /// </param>
 /// <param name="Title">What the source calls it. Becomes the resource's name when one is created.</param>
@@ -15,8 +15,8 @@ namespace Bakabase.Modules.Subscription.Abstractions.Models.Domain;
 /// </param>
 /// <param name="CoverUrls">Cover images the source offers, best first.</param>
 /// <param name="MetadataJson">
-/// The source's own fields, kept verbatim. Stored on the resource's source link, where a
-/// platform-specific reader can make sense of it later.
+/// The site's own fields, kept verbatim on the external identity or platform source link,
+/// where a site-specific reader can make sense of them later.
 /// </param>
 public record SubscriptionItem(
     string SourceKey,

@@ -96,6 +96,7 @@ namespace Bakabase.InsideWorld.Business
 
         // Resource source tables
         public DbSet<ResourceSourceLinkDbModel> ResourceSourceLinks { get; set; }
+        public DbSet<ResourceExternalIdentityDbModel> ResourceExternalIdentities { get; set; }
         public DbSet<SourceMetadataMappingDbModel> SourceMetadataMappings { get; set; }
         public DbSet<SteamAppDbModel> SteamApps { get; set; }
         public DbSet<DLsiteWorkDbModel> DLsiteWorks { get; set; }
@@ -433,6 +434,14 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => x.ResourceId);
                 t.HasIndex(x => new { x.Source, x.SourceKey });
                 t.HasIndex(x => new { x.ResourceId, x.Source, x.SourceKey }).IsUnique();
+            });
+
+            // A work may have multiple local variants, so identity uniqueness is per resource.
+            modelBuilder.Entity<ResourceExternalIdentityDbModel>(t =>
+            {
+                t.HasIndex(x => x.ResourceId);
+                t.HasIndex(x => new { x.ThirdPartyId, x.ExternalId });
+                t.HasIndex(x => new { x.ResourceId, x.ThirdPartyId, x.ExternalId }).IsUnique();
             });
 
             // Resource source tables

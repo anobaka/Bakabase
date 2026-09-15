@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.IO;
 using System.Linq;
@@ -5,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Modules.Subscription.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi.Models;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
@@ -66,7 +68,8 @@ public sealed class CatalogSourceTests
         var provider = new DLsiteCircleProvider(null!);
 
         Assert.AreEqual(SubscriptionSourceKind.Catalog, provider.SourceKind);
-        Assert.AreEqual(ResourceSource.DLsite, provider.ResourceSource);
+        Assert.AreEqual(ThirdPartyId.DLsite, provider.ThirdPartyId);
+        Assert.AreEqual(ResourceSource.DLsite, provider.ThirdPartyId!.Value.ToResourceSource());
     }
 
     [TestMethod]
@@ -89,7 +92,9 @@ public sealed class CatalogSourceTests
         var provider = new BangumiSubjectRelationsProvider(null!);
 
         Assert.AreEqual(SubscriptionSourceKind.Catalog, provider.SourceKind);
-        Assert.AreEqual(ResourceSource.Bangumi, provider.ResourceSource);
+        Assert.AreEqual(ThirdPartyId.Bangumi, provider.ThirdPartyId);
+        Assert.IsNull(provider.ThirdPartyId!.Value.ToResourceSource(),
+            "a metadata catalog identifies a work without claiming it is a download source");
     }
 
     /// <summary>
