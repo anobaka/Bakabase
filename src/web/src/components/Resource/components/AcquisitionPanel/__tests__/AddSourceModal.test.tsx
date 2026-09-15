@@ -218,6 +218,7 @@ describe("AddSourceModal", () => {
       kind: AcquisitionLeadKind.Torrent,
       value: "https://example.com/download?id=42",
       origin: AcquisitionLeadOrigin.User,
+      isResolved: false,
     });
     expect(addTorrent).not.toHaveBeenCalled();
     expect(createAcquisition).not.toHaveBeenCalled();
@@ -282,6 +283,7 @@ describe("AddSourceModal", () => {
         kind,
         value,
         origin: AcquisitionLeadOrigin.User,
+        isResolved: false,
       });
       expect(createAcquisition).not.toHaveBeenCalled();
       expect(onAdded).toHaveBeenCalledOnce();

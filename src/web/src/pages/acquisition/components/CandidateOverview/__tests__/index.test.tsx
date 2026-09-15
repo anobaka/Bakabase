@@ -628,7 +628,16 @@ describe("CandidateOverview", () => {
       (element) => element.textContent === "Required setting is missing",
     )!;
 
-    expect(diagnostic.closest("details")).toBeNull();
+    const details = diagnostic.closest("details")!;
+    const summary = details.querySelector("summary")!;
+
+    expect(summary).toHaveTextContent("workflow.diagnostics.needsAttention");
+    expect(summary).toBeVisible();
+    expect(details).not.toHaveAttribute("open");
+    expect(diagnostic).not.toBeVisible();
+    await click(summary);
+    expect(details).toHaveAttribute("open");
+    expect(diagnostic).toBeVisible();
     expect(container.querySelector("[data-chip]")).toHaveTextContent(
       "acquisition.overview.unverified",
     );

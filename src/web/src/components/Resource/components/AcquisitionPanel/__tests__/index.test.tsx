@@ -193,7 +193,7 @@ afterEach(async () => {
 });
 
 describe("AcquisitionPanel", () => {
-  it("shows configuration problems outside collapsed details and blocks starting", async () => {
+  it("shows a visible configuration warning with expandable diagnostics and blocks starting", async () => {
     const result = response();
 
     getCandidate.mockResolvedValueOnce({
@@ -223,7 +223,16 @@ describe("AcquisitionPanel", () => {
     );
 
     expect(message).toBeDefined();
-    expect(message!.closest("details")).toBeNull();
+    const details = message!.closest("details")!;
+    const summary = details.querySelector("summary")!;
+
+    expect(summary).toHaveTextContent("workflow.diagnostics.needsAttention");
+    expect(summary).toBeVisible();
+    expect(details).not.toHaveAttribute("open");
+    expect(message).not.toBeVisible();
+    await click(summary);
+    expect(details).toHaveAttribute("open");
+    expect(message).toBeVisible();
     await click(button("acquisition.overview.start"));
     expect(createAcquisition).not.toHaveBeenCalled();
   });

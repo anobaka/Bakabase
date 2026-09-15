@@ -42,6 +42,8 @@ vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal: vi.fn() }),
 }));
 vi.mock("@/config/env.ts", () => ({ toAbsoluteBackendUrl: (url: string) => url }));
+// Workflow help has its own configuration dependencies, outside task selection and filtering.
+vi.mock("@/components/Workflow/WorkflowIntegrationHint", () => ({ default: () => null }));
 vi.mock("../components/Configurations", () => ({ default: () => null }));
 vi.mock("../components/TaskDetailModal", () => ({ default: () => null }));
 vi.mock("../components/BatchEditModal", () => ({ default: () => null }));

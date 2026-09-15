@@ -55,6 +55,8 @@ vi.mock("@/stores/options", () => ({
     select({ data: { automaticallyParsingPosts: false } }),
 }));
 vi.mock("../components/ConfigurationModal", () => ({ default: () => null }));
+// Keep workflow help's platform settings separate from the parsing and import interactions.
+vi.mock("@/components/Workflow/WorkflowIntegrationHint", () => ({ default: () => null }));
 vi.mock("@/components/ThirdPartyConfig/base/TampermonkeyInstallButton", () => ({
   default: () => null,
 }));

@@ -3,6 +3,7 @@
 import type { SearchFilter, SearchFilterGroup } from "../../models";
 import type { FilterLayout } from "../Filter";
 import type { SearchCriteria } from "../../hooks/useFilterCriteria";
+import type { FilterDisplayMode } from "@/sdk/constants";
 
 import { useMemo, useState } from "react";
 import { SearchOutlined } from "@ant-design/icons";
@@ -15,7 +16,6 @@ import { FilterProvider } from "../../context/FilterContext";
 import { createDefaultFilterConfig } from "../../presets/DefaultFilterPreset";
 import { GroupCombinator } from "../../models";
 
-import { FilterDisplayMode } from "@/sdk/constants";
 import { Button, Chip, Input, Popover } from "@/components/bakaui";
 import { resourceTags } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
