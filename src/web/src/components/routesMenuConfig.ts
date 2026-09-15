@@ -549,6 +549,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     component: Test,
     icon: AiOutlineBug,
     layout: "basic",
-    menu: process.env.NODE_ENV === "development",
+    // Allow deployed test instances to show component demos without a dev server.
+    menu: import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_PAGE === "true",
   },
 ];

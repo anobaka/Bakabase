@@ -561,7 +561,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
   return (
     <>
-      <Button isIconOnly size={"sm"} variant={"light"} onPress={() => setVisible(true)}>
+      <Button isIconOnly aria-label={t("resource.display.title")} size={"sm"} variant={"light"} onPress={() => setVisible(true)}>
         <AiOutlineSetting className={"text-xl"} />
       </Button>
       {visible && (

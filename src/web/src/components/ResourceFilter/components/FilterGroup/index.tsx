@@ -19,7 +19,6 @@ import FilterAddPopoverContent from "../FilterAddPopoverContent";
 import { FilterDisplayMode } from "@/sdk/constants";
 import { Button, Popover } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
-import { getEnumKey } from "@/i18n";
 
 type Props = {
   group: SearchFilterGroup;
@@ -116,44 +115,34 @@ const FilterGroup = ({
     combinator,
   });
 
-  // Combinator button/text component
-  const renderCombinator = (index: number) => {
+  const renderCombinator = () => {
     if (isSimpleMode) return null;
-
-    const combinatorText = t<string>(getEnumKey("Combinator", GroupCombinator[combinator]));
     const isAnd = combinator === GroupCombinator.And;
+    const label = t<string>(
+      isAnd ? "resourceFilter.group.matchAll" : "resourceFilter.group.matchAny",
+    );
 
-    const handleClick = () => {
-      if (isReadonly) return;
-      changeGroup({
-        ...group,
-        combinator: isAnd ? GroupCombinator.Or : GroupCombinator.And,
-      });
-    };
+    if (isReadonly) {
+      return (
+        <span className="inline-flex min-h-8 items-center text-xs font-medium text-default-600">
+          {label}
+        </span>
+      );
+    }
 
-    // Use consistent chip-style for both layouts
     return (
-      <span
-        key={`c-${index}`}
-        className={`text-xs font-medium px-1.5 py-0.5 rounded select-none ${isReadonly ? "" : "cursor-pointer transition-opacity hover:opacity-80"}`}
-        role="button"
-        style={{
-          backgroundColor: isAnd
-            ? "hsl(var(--heroui-primary) / 0.2)"
-            : "hsl(var(--heroui-warning) / 0.2)",
-          color: isAnd ? "hsl(var(--heroui-primary))" : "hsl(var(--heroui-warning))",
-        }}
-        tabIndex={0}
-        onClick={handleClick}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleClick();
-          }
-        }}
+      <Button
+        aria-label={t<string>("resourceFilter.group.changeLogic", { logic: label })}
+        className="h-8 min-w-0 px-2 text-xs font-medium text-default-600"
+        size="sm"
+        title={t<string>("resourceFilter.group.logicHint")}
+        variant="flat"
+        onPress={() =>
+          changeGroup({ ...group, combinator: isAnd ? GroupCombinator.Or : GroupCombinator.And })
+        }
       >
-        {combinatorText}
-      </span>
+        {label}
+      </Button>
     );
   };
 
@@ -233,38 +222,6 @@ const FilterGroup = ({
       }),
     );
 
-  // Final elements to render based on layout and mode
-  const renderedElements = (() => {
-    if (isVerticalLayout) {
-      if (isSimpleMode) {
-        // Vertical + simple: just stack elements vertically without combinators
-        return conditionElements.map((item) => item.element);
-      }
-
-      // Vertical + advanced: wrap each filter with combinator prefix in a row
-      return conditionElements.map((item, i) => {
-        const isNotFirst = i > 0;
-
-        return (
-          <div key={`row-${item.index}`} className="flex items-center gap-1 w-full">
-            {isNotFirst && renderCombinator(item.index)}
-            <div className="flex-1">{item.element}</div>
-          </div>
-        );
-      });
-    }
-
-    // Horizontal layout: interleave combinators between elements
-    return conditionElements.reduce((acc: React.ReactNode[], item, i) => {
-      acc.push(item.element);
-      if (i < conditionElements.length - 1 && !isSimpleMode) {
-        acc.push(renderCombinator(item.index));
-      }
-
-      return acc;
-    }, []);
-  })();
-
   // Group actions menu (delete/disable) - only for non-root groups
   const renderGroupActionsMenu = () => {
     if (isRoot || isReadonly) return null;
@@ -274,7 +231,13 @@ const FilterGroup = ({
         isOpen={actionsPopoverOpen}
         placement="bottom-start"
         trigger={
-          <Button isIconOnly className="min-w-6 w-6 h-6" size="sm" variant="light">
+          <Button
+            isIconOnly
+            aria-label={t<string>("resourceFilter.group.actions")}
+            className="h-8 w-8 min-w-8 text-default-500"
+            size="sm"
+            variant="light"
+          >
             <MoreOutlined className="text-base" />
           </Button>
         }
@@ -297,12 +260,12 @@ const FilterGroup = ({
             {group.disabled ? (
               <>
                 <MdOutlineFilterAlt className="text-lg" />
-                {t<string>("Enable group")}
+                {t<string>("resourceFilter.group.enable")}
               </>
             ) : (
               <>
                 <MdOutlineFilterAltOff className="text-lg" />
-                {t<string>("Disable group")}
+                {t<string>("resourceFilter.group.disable")}
               </>
             )}
           </Button>
@@ -317,7 +280,7 @@ const FilterGroup = ({
             }}
           >
             <DeleteOutlined className="text-base" />
-            {t<string>("Delete group")}
+            {t<string>("resourceFilter.group.remove")}
           </Button>
         </div>
       </Popover>
@@ -325,54 +288,31 @@ const FilterGroup = ({
   };
 
   const renderGroup = () => {
-    log("render group");
-
-    // For vertical layout, wrap actions menu with first element on same line
-    const renderElementsWithActionsMenu = () => {
-      const actionsMenu = renderGroupActionsMenu();
-
-      if (!actionsMenu || !isVerticalLayout) {
-        // Horizontal mode or root group: render actions menu and elements separately
-        return (
-          <>
-            {actionsMenu}
-            {renderedElements}
-          </>
-        );
-      }
-
-      // Vertical mode with actions menu: put actions menu on same line as first element
-      if (renderedElements.length === 0) {
-        return actionsMenu;
-      }
-
-      const [firstElement, ...restElements] = renderedElements;
-
-      return (
-        <>
-          <div className="flex items-center gap-1 w-full">
-            {actionsMenu}
-            <div className="flex-1">{firstElement}</div>
-          </div>
-          {restElements}
-        </>
-      );
-    };
-
     return (
       <div
-        className={`flex ${isVerticalLayout ? "flex-col" : "items-center flex-wrap"} gap-[5px] rounded text-sm relative ${isRoot ? "" : "border border-default-200 bg-[var(--bakaui-overlap-background)] px-1 py-1"}`}
+        className={`flex min-w-0 max-w-full flex-col gap-2 text-sm ${isRoot ? "w-full" : "rounded-r-xl border-l-2 border-default-200/70 bg-default-50/50 p-2 pl-3"}`}
       >
-        {group.disabled && (
-          <div
-            className={
-              "absolute top-0 left-0 w-full h-full flex items-center justify-center z-20 group/group-disable-cover rounded cursor-not-allowed"
-            }
-          >
-            <MdOutlineFilterAltOff className={"text-lg text-warning"} />
+        {(!isSimpleMode || !isRoot || group.disabled) && (
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {renderCombinator()}
+            {isSimpleMode && !isRoot && (
+              <span className="text-xs font-medium text-default-500">
+                {t<string>("resourceFilter.group.label")}
+              </span>
+            )}
+            {group.disabled && (
+              <span className="text-xs text-default-400">
+                {t<string>("resourceFilter.condition.disabled")}
+              </span>
+            )}
+            <div className="ml-auto">{renderGroupActionsMenu()}</div>
           </div>
         )}
-        {renderElementsWithActionsMenu()}
+        <div
+          className={`flex min-w-0 gap-2 ${isVerticalLayout ? "flex-col" : "flex-wrap items-start"} ${group.disabled ? "opacity-60" : ""}`}
+        >
+          {conditionElements.map((item) => item.element)}
+        </div>
         {/* Hide add filter button in Simple mode - use FilterPortal instead */}
         {!isSimpleMode &&
           !isReadonly &&
@@ -382,8 +322,14 @@ const FilterGroup = ({
               isOpen={popoverOpen}
               placement={"bottom"}
               trigger={
-                <Button isIconOnly size={"sm"}>
-                  <TbFilterPlus className={"text-lg"} />
+                <Button
+                  aria-label={t<string>("resourceFilter.group.addCondition")}
+                  className="h-8 min-w-0 self-start text-default-600"
+                  size="sm"
+                  startContent={<TbFilterPlus aria-hidden className="text-base" />}
+                  variant="light"
+                >
+                  {t<string>("resourceFilter.group.addCondition")}
                 </Button>
               }
               onOpenChange={setPopoverOpen}

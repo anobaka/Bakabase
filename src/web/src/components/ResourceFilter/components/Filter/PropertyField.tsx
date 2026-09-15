@@ -4,8 +4,13 @@ import type { IProperty } from "@/components/Property/models";
 import type { SearchOperation } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
+import { AiOutlineInfoCircle } from "react-icons/ai";
 
 import { useFilterConfig } from "../../context/FilterContext";
+
+import { Button, Tooltip } from "@/components/bakaui";
+import { PropertyPool, ResourceProperty } from "@/sdk/constants";
+import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 
 export interface PropertyFieldProps {
   /** Current property. Used for display and as current selection in selector. */
@@ -28,8 +33,8 @@ const PropertyField = ({ property, isReadonly, onSelect, onCancel }: PropertyFie
   const config = useFilterConfig();
 
   const displayText = property
-    ? (property.name ?? t<string>("Unknown property"))
-    : t<string>("Property");
+    ? (property.name ?? t<string>("resourceFilter.condition.unknownProperty"))
+    : t<string>("resourceFilter.condition.selectProperty");
 
   const handlePress = () => {
     config.renderers.openPropertySelector(
@@ -41,18 +46,47 @@ const PropertyField = ({ property, isReadonly, onSelect, onCancel }: PropertyFie
     );
   };
 
-  if (isReadonly) {
-    return <span className="text-sm font-medium text-foreground">{displayText}</span>;
-  }
+  const label = (
+    <>
+      {property && (
+        <span className="inline-flex shrink-0 text-default-400">
+          <PropertyTypeIcon textVariant="none" type={property.type} />
+        </span>
+      )}
+      <span className="min-w-0 break-words">{displayText}</span>
+    </>
+  );
 
   return (
-    <button
-      className="text-sm font-medium text-foreground hover:text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
-      type="button"
-      onClick={handlePress}
-    >
-      {displayText}
-    </button>
+    <span className="inline-flex min-w-0 max-w-full items-center gap-0.5">
+      {isReadonly ? (
+        <span className="inline-flex min-h-8 min-w-0 items-center gap-1.5 py-1 text-sm font-medium text-foreground">
+          {label}
+        </span>
+      ) : (
+        <Button
+          className="h-auto min-h-8 min-w-0 max-w-full justify-start gap-1.5 px-1.5 py-1 text-left text-sm font-medium whitespace-normal"
+          size="sm"
+          variant="light"
+          onPress={handlePress}
+        >
+          {label}
+        </Button>
+      )}
+      {property?.pool === PropertyPool.Internal && property.id === ResourceProperty.Source && (
+        <Tooltip content={t<string>("resourceFilter.source.help")}>
+          <Button
+            isIconOnly
+            aria-label={t<string>("resourceFilter.source.about")}
+            className="h-8 w-8 min-w-8 shrink-0 text-default-400"
+            size="sm"
+            variant="light"
+          >
+            <AiOutlineInfoCircle aria-hidden className="text-base" />
+          </Button>
+        </Tooltip>
+      )}
+    </span>
   );
 };
 

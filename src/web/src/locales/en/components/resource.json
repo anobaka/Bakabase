@@ -39,12 +39,12 @@
   "resource.tip.notMaterialized": "Bakabase knows this resource but has no local files for it yet.",
   "resource.tip.acquire": "How to get this",
   "resource.tip.linkLocalFolder": "Point this resource at a folder",
-  "resource.unmaterialized.title": "Resources you are missing",
-  "resource.unmaterialized.tip": "Track something you do not have yet — by name, by work id, or by a link someone shared.",
-  "resource.unmaterialized.action.open": "Missing something?",
+  "resource.unmaterialized.title": "Record resources first",
+  "resource.unmaterialized.tip": "Add a name or link now, then attach the local files when you have them.",
+  "resource.unmaterialized.action.open": "Record a resource",
   "resource.unmaterialized.action.create": "Add {{count}}",
   "resource.unmaterialized.input.label": "One per line",
-  "resource.unmaterialized.input.description": "A name, a work id (RJ01234567), a store page, or a link someone shared. Each line is recognised on its own.",
+  "resource.unmaterialized.input.description": "Enter one name, ID (such as RJ01234567), or link per line. This records resources without starting a download.",
   "resource.unmaterialized.input.placeholder": "Some Game\nRJ01234567\nhttps://example.com/thread/1",
   "resource.unmaterialized.result.title": "Results",
   "resource.unmaterialized.result.created": "Added",
@@ -297,5 +297,9 @@
   "acquisition.sourcePicker.torrent.fileLabel": ".torrent file",
   "acquisition.sourcePicker.torrent.fileHint": "Up to 4 MiB. This uploads metadata only, not the resource files referenced by the torrent.",
   "acquisition.sourcePicker.validation.torrentRequired": "Choose a .torrent file.",
-  "acquisition.sourcePicker.validation.torrentSize": "Choose a nonempty torrent file no larger than 4 MiB."
+  "acquisition.sourcePicker.validation.torrentSize": "Choose a nonempty torrent file no larger than 4 MiB.",
+  "resource.search.panelTitle": "Filter resources",
+  "resource.search.resultCount": "{{loaded}} / {{total}} loaded",
+  "resource.search.playlists": "Playlists",
+  "resource.unmaterialized.later": "Add files later"
 }

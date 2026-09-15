@@ -1,6 +1,7 @@
 "use client";
 
 import { AiOutlineClose } from "react-icons/ai";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/bakaui";
 
@@ -13,16 +14,21 @@ export interface DeleteButtonProps {
  * Used in Simple mode where delete button is shown inline.
  */
 const DeleteButton = ({ onDelete }: DeleteButtonProps) => {
+  const { t } = useTranslation();
+  const label = t<string>("resourceFilter.condition.remove");
+
   return (
     <Button
       isIconOnly
-      className="min-w-6 w-6 h-6"
+      aria-label={label}
+      className="h-8 w-8 min-w-8 shrink-0 text-default-400 hover:text-danger"
       color="danger"
       size="sm"
+      title={label}
       variant="light"
       onPress={onDelete}
     >
-      <AiOutlineClose className="text-sm" />
+      <AiOutlineClose aria-hidden className="text-base" />
     </Button>
   );
 };
