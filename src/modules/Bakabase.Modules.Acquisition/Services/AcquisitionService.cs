@@ -368,7 +368,9 @@ public class AcquisitionService<TDbContext>(
 
     private static AcquisitionStatus FromRunStatus(WorkflowRunStatus status) => status switch
     {
-        WorkflowRunStatus.Pending => AcquisitionStatus.Pending,
+        // A workflow that has been enqueued already owns an acquisition slot, even before the
+        // task daemon starts executing it. Only acquisitions without a run are still queued.
+        WorkflowRunStatus.Pending => AcquisitionStatus.Running,
         WorkflowRunStatus.Running => AcquisitionStatus.Running,
         WorkflowRunStatus.Waiting => AcquisitionStatus.Waiting,
         WorkflowRunStatus.Success => AcquisitionStatus.Completed,
