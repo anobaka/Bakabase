@@ -4,6 +4,10 @@ import { create } from "zustand";
 
 interface DownloadTasksState {
   tasks: DownloadTask[];
+  /** A complete snapshot has arrived on the current connection; an empty array alone cannot prove this. */
+  initialized: boolean;
+  /** Keep cached rows available while waiting for a fresh snapshot after reconnecting. */
+  resetInitialization: () => void;
   setTasks: (tasks: DownloadTask[]) => void;
   updateTask: (task: DownloadTask) => void;
   /**
@@ -27,7 +31,9 @@ interface DownloadTasksState {
 
 export const useDownloadTasksStore = create<DownloadTasksState>((set) => ({
   tasks: [],
-  setTasks: (tasks) => set({ tasks: tasks.slice() }),
+  initialized: false,
+  resetInitialization: () => set({ initialized: false }),
+  setTasks: (tasks) => set({ tasks: tasks.slice(), initialized: true }),
   updateTask: (task) =>
     set((state) => {
       const idx = state.tasks.findIndex((t) => t.id == task.id);

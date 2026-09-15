@@ -1,551 +1,331 @@
 "use client";
 
-import type { BakabaseInsideWorldModelsModelsDtosDashboardStatistics } from "@/sdk/Api";
-import type { Resource as ResourceModel } from "@/core/models/Resource";
+import type { ReactNode } from "react";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
   AiOutlineArrowRight,
-  AiOutlineClockCircle,
+  AiOutlineCloudDownload,
   AiOutlineDatabase,
   AiOutlineEdit,
   AiOutlineFolderOpen,
-  AiOutlinePlayCircle,
-  AiOutlinePushpin,
-  AiOutlineRise,
+  AiOutlineRead,
+  AiOutlineReload,
   AiOutlineSearch,
-  AiOutlineThunderbolt,
 } from "react-icons/ai";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import { Line } from "react-chartjs-2";
 
-import BApi from "@/sdk/BApi";
-import {
-  InternalProperty,
-  PropertyPool,
-  ResourceSearchSortableProperty,
-  ResourceTag,
-  SearchOperation,
-  StandardValueType,
-} from "@/sdk/constants";
-import { progressiveSearch } from "@/hooks/useResourceSearch";
-import {
-  Button,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-  Spinner,
-} from "@/components/bakaui";
-import Resource from "@/components/Resource";
-import { serializeStandardValue } from "@/components/StandardValue";
+import { DataMigrationHintModal } from "./components/DataMigrationHintModal";
+import RecentResources from "./components/RecentResources";
+import ActivityOverview from "./components/ActivityOverview";
+import { useDashboardOverview } from "./hooks/useDashboardOverview";
+import { dashboardResourceSearch } from "./dashboardSearch";
+
+import { Button, Card, CardBody, Input, Tooltip } from "@/components/bakaui";
 import {
   GETTING_STARTED_FIRST_RUN_KEY,
   HelpCenterModal,
   useFirstRunHelp,
 } from "@/components/HelpCenter";
-import { DataMigrationHintModal } from "@/pages/dashboard/components/DataMigrationHintModal";
+import { usePendingSearchStore } from "@/stores/pendingSearch";
 
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-);
-
-type ResourceTab = "added" | "played" | "pinned";
-
-const DashboardPage = () => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  // First run opens the help center at "getting started" instead of a bespoke
-  // carousel, so the same content stays reachable afterwards from the left menu.
-  const { showFirstRun, completeFirstRun } = useFirstRunHelp(GETTING_STARTED_FIRST_RUN_KEY);
-
-  const [data, setData] = useState<BakabaseInsideWorldModelsModelsDtosDashboardStatistics>(
-    {} as BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
-  );
-  const [property, setProperty] = useState<any>();
-  const [activeTab, setActiveTab] = useState<ResourceTab>("added");
-  const [recentlyAdded, setRecentlyAdded] = useState<ResourceModel[]>([]);
-  const [recentlyPlayed, setRecentlyPlayed] = useState<ResourceModel[]>([]);
-  const [pinnedResources, setPinnedResources] = useState<ResourceModel[]>([]);
-  const [resourcesLoading, setResourcesLoading] = useState({
-    added: true,
-    played: true,
-    pinned: true,
-  });
-  const [mediaLibraries, setMediaLibraries] = useState<Array<{ id: number; name: string }>>([]);
-  const initializedRef = useRef(false);
-
-  useEffect(() => {
-    BApi.dashboard.getStatistics().then((res) => {
-      initializedRef.current = true;
-      setData(res.data || ({} as BakabaseInsideWorldModelsModelsDtosDashboardStatistics));
-    });
-
-    BApi.dashboard.getPropertyStatistics().then((r) => {
-      setProperty(r.data);
-    });
-
-    // Fetch recently added with progressive loading
-    progressiveSearch(
-      {
-        page: 1,
-        pageSize: 20,
-        orders: [{ property: ResourceSearchSortableProperty.AddDt, asc: false }],
-      },
-      setRecentlyAdded,
-    ).finally(() => setResourcesLoading((prev) => ({ ...prev, added: false })));
-
-    // Fetch recently played with progressive loading
-    progressiveSearch(
-      {
-        page: 1,
-        pageSize: 20,
-        orders: [{ property: ResourceSearchSortableProperty.PlayedAt, asc: false }],
-      },
-      setRecentlyPlayed,
-      (resources) => resources.filter((r) => r.playedAt),
-    ).finally(() => setResourcesLoading((prev) => ({ ...prev, played: false })));
-
-    // Fetch pinned resources with progressive loading
-    progressiveSearch(
-      {
-        page: 1,
-        pageSize: 20,
-        tags: [ResourceTag.Pinned],
-        orders: [{ property: ResourceSearchSortableProperty.AddDt, asc: false }],
-      },
-      setPinnedResources,
-    ).finally(() => setResourcesLoading((prev) => ({ ...prev, pinned: false })));
-
-    // Fetch media libraries for Browse Libraries dropdown
-    BApi.mediaLibraryV2.getAllMediaLibraryV2().then((res) => {
-      const libs = (res.data ?? []).map((lib) => ({
-        id: lib.id!,
-        name: lib.name ?? "",
-      }));
-
-      setMediaLibraries(libs);
-    });
-  }, []);
-
-  // Calculate stats
-  const totalResources = (data.mediaLibraryResourceCounts ?? []).reduce(
-    (sum, item) => sum + item.count,
-    0,
-  );
-  const libraryCount = (data.mediaLibraryResourceCounts ?? []).length;
-  const thisWeekCount = data.resourceTrending?.find((r) => r.offset === 0)?.count ?? 0;
-  const lastWeekCount = data.resourceTrending?.find((r) => r.offset === -1)?.count ?? 0;
-  const weekGrowth =
-    lastWeekCount > 0 ? (((thisWeekCount - lastWeekCount) / lastWeekCount) * 100).toFixed(0) : 0;
-  const propertyCoverage =
-    property?.totalExpectedPropertyValueCount > 0
-      ? (
-          (property.totalFilledPropertyValueCount / property.totalExpectedPropertyValueCount) *
-          100
-        ).toFixed(1)
-      : 0;
-
-  const resourceScrollRef = useRef<HTMLDivElement>(null);
-
-  const handleWheelScroll = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
-    if (resourceScrollRef.current && e.deltaY !== 0) {
-      e.preventDefault();
-      resourceScrollRef.current.scrollLeft += e.deltaY;
-    }
-  }, []);
-
-  // Get current tab resources
-  const getCurrentResources = () => {
-    switch (activeTab) {
-      case "added":
-        return recentlyAdded;
-      case "played":
-        return recentlyPlayed;
-      case "pinned":
-        return pinnedResources;
-      default:
-        return [];
-    }
-  };
-
-  const currentResources = getCurrentResources();
-
-  // Stat Card Component
-  const StatCard = ({
-    icon,
-    label,
-    value,
-    subValue,
-    color = "primary",
-  }: {
-    icon: React.ReactNode;
-    label: string;
-    value: string | number;
-    subValue?: string;
-    color?: "primary" | "success" | "warning" | "secondary";
-  }) => {
-    const colorClasses = {
-      primary: "text-primary bg-primary/10",
-      success: "text-success bg-success/10",
-      warning: "text-warning bg-warning/10",
-      secondary: "text-secondary bg-secondary/10",
-    };
-
-    return (
-      <div className="flex items-center gap-4 p-5 bg-[var(--theme-block-background)] rounded-xl">
-        <div className={`p-3 rounded-lg ${colorClasses[color]}`}>{icon}</div>
-        <div className="flex flex-col">
-          <span className="text-sm text-[var(--theme-text-subtle)]">{label}</span>
-          <span className="text-2xl font-semibold">{value}</span>
-          {subValue && <span className="text-xs text-[var(--theme-text-subtle)]">{subValue}</span>}
-        </div>
-      </div>
-    );
-  };
-
-  // Mini Trend Chart
-  const TrendChart = () => {
-    const getCssVariable = (variableName: string) => {
-      if (typeof document === "undefined") return "";
-
-      return getComputedStyle(document.documentElement).getPropertyValue(variableName);
-    };
-
-    const chartData = data.resourceTrending?.slice().reverse() ?? [];
-
-    if (chartData.length === 0) return null;
-
-    const primaryColor = getCssVariable("--theme-text-primary") || "#6366f1";
-
-    const chartConfig = {
-      labels: chartData.map((_, i) => i.toString()),
-      datasets: [
-        {
-          data: chartData.map((item) => item.count),
-          borderColor: primaryColor,
-          backgroundColor: `${primaryColor}20`,
-          borderWidth: 2,
-          fill: true,
-          tension: 0.4,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-        },
-      ],
-    };
-
-    const options = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { enabled: false },
-      },
-      scales: {
-        y: { display: false },
-        x: { display: false },
-      },
-    };
-
-    return (
-      <div className="h-12 w-24">
-        <Line data={chartConfig} options={options} />
-      </div>
-    );
-  };
-
-  // Tab Button Component
-  const TabButton = ({
-    tab,
-    icon,
-    label,
-    count,
-  }: {
-    tab: ResourceTab;
-    icon: React.ReactNode;
-    label: string;
-    count: number;
-  }) => (
-    <button
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-        activeTab === tab
-          ? "bg-primary text-primary-foreground"
-          : "hover:bg-[var(--theme-block-background-accent)]"
-      }`}
-      onClick={() => setActiveTab(tab)}
+function SummaryCard({
+  label,
+  value,
+  description,
+  icon,
+  onPress,
+  tone = "text-primary bg-primary/10",
+}: {
+  label: string;
+  value?: number;
+  description: string;
+  icon: ReactNode;
+  onPress: () => void;
+  tone?: string;
+}) {
+  return (
+    <Card
+      isPressable
+      className="w-full min-w-0 border border-default-200/50 bg-content1 text-left"
+      shadow="none"
+      onPress={onPress}
     >
-      {icon}
-      <span>{label}</span>
-      {count > 0 && (
-        <span
-          className={`text-xs px-1.5 py-0.5 rounded-full ${
-            activeTab === tab ? "bg-primary-foreground/20" : "bg-default-200"
-          }`}
-        >
-          {count}
-        </span>
-      )}
-    </button>
+      <CardBody className="gap-3 p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm text-default-500">{label}</span>
+          <span aria-hidden className={`hidden rounded-lg p-2 text-lg sm:inline-flex ${tone}`}>
+            {icon}
+          </span>
+        </div>
+        <div className="text-3xl font-semibold tabular-nums tracking-tight">
+          {value === undefined ? "—" : value.toLocaleString()}
+        </div>
+        <div className="flex items-center justify-between gap-2 text-xs text-default-500">
+          <span>{description}</span>
+          <AiOutlineArrowRight aria-hidden className="shrink-0" />
+        </div>
+      </CardBody>
+    </Card>
   );
+}
 
-  // Handle random play
-  const handleRandomPlay = async () => {
-    await BApi.resource.playRandomResource();
+const shortcuts = [
+  {
+    path: "/path-mark-config",
+    icon: AiOutlineFolderOpen,
+    title: "dashboard.shortcuts.local.title",
+    description: "dashboard.shortcuts.local.description",
+  },
+  {
+    path: "/file-processor",
+    icon: AiOutlineEdit,
+    title: "dashboard.shortcuts.organize.title",
+    description: "dashboard.shortcuts.organize.description",
+  },
+  {
+    path: "/post-parser",
+    icon: AiOutlineRead,
+    title: "dashboard.shortcuts.parse.title",
+    description: "dashboard.shortcuts.parse.description",
+  },
+];
+
+export default function DashboardPage() {
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const { showFirstRun, completeFirstRun } = useFirstRunHelp(GETTING_STARTED_FIRST_RUN_KEY);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [keyword, setKeyword] = useState("");
+  const { data, loading, error, updatedAt } = useDashboardOverview(refreshKey);
+  const setPendingSearch = usePendingSearchStore((s) => s.setPendingSearch);
+  const refresh = () => setRefreshKey((value) => value + 1);
+  const browse = (options: Parameters<typeof dashboardResourceSearch>[0] = {}) => {
+    setPendingSearch(dashboardResourceSearch(options));
+    navigate("/resource");
   };
-
-  // Handle browse library navigation
-  const handleBrowseLibrary = (libraryId: number, libraryName: string) => {
-    const searchForm = {
-      group: {
-        combinator: 1,
-        disabled: false,
-        filters: [
-          {
-            propertyPool: PropertyPool.Internal,
-            propertyId: InternalProperty.MediaLibraryV2Multi,
-            operation: SearchOperation.In,
-            dbValue: serializeStandardValue([libraryId.toString()], StandardValueType.ListString),
-            bizValue: serializeStandardValue([libraryName], StandardValueType.ListString),
-            disabled: false,
-          },
-        ],
-      },
-      page: 1,
-      pageSize: 100,
-    };
-
-    navigate(`/resource?query=${encodeURIComponent(JSON.stringify(searchForm))}`);
-  };
-
-  if (!initializedRef.current) {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
 
   return (
-    <div className="h-full flex flex-col gap-5 p-5 overflow-auto">
-      {showFirstRun && (
-        <HelpCenterModal
-          firstRun
-          topic="gettingStarted"
-          visible={showFirstRun}
-          onClose={completeFirstRun}
-        />
-      )}
-      <DataMigrationHintModal />
-
-      {/* Stats Row */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          color="primary"
-          icon={<AiOutlineDatabase className="text-2xl" />}
-          label={t<string>("dashboard.stat.totalResources")}
-          subValue={t<string>("dashboard.stat.libraryCount", { count: libraryCount })}
-          value={totalResources.toLocaleString()}
-        />
-        <StatCard
-          color="success"
-          icon={<AiOutlineFolderOpen className="text-2xl" />}
-          label={t<string>("dashboard.stat.thisWeek")}
-          subValue={
-            Number(weekGrowth) >= 0 ? `↑ ${weekGrowth}%` : `↓ ${Math.abs(Number(weekGrowth))}%`
-          }
-          value={`+${thisWeekCount}`}
-        />
-        <div className="flex items-center gap-4 p-5 bg-[var(--theme-block-background)] rounded-xl">
-          <div className="p-3 rounded-lg text-warning bg-warning/10">
-            <AiOutlineRise className="text-2xl" />
-          </div>
-          <div className="flex flex-col flex-1">
-            <span className="text-sm text-[var(--theme-text-subtle)]">
-              {t<string>("dashboard.stat.trend")}
-            </span>
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-semibold">{t<string>("dashboard.stat.weeks")}</span>
-              <TrendChart />
-            </div>
-          </div>
+    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 p-4 sm:p-6">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{t<string>("dashboard.title")}</h1>
+          <p className="mt-1 text-sm text-default-500">{t<string>("dashboard.description")}</p>
         </div>
-        <StatCard
-          color="secondary"
-          icon={<div className="text-xl font-bold">{propertyCoverage}%</div>}
-          label={t<string>("dashboard.stat.dataCompleteness")}
-          value={`${property?.totalFilledPropertyValueCount ?? 0} / ${property?.totalExpectedPropertyValueCount ?? 0}`}
-        />
-      </section>
-
-      {/* Quick Actions */}
-      <section className="flex gap-3">
-        <Button className="flex-1" variant="flat" onPress={() => navigate("/resource")}>
-          <AiOutlineSearch className="text-lg" />
-          {t<string>("dashboard.action.search")}
-        </Button>
-        <Dropdown>
-          <DropdownTrigger>
-            <Button className="flex-1" variant="flat">
-              <AiOutlineFolderOpen className="text-lg" />
-              {t<string>("dashboard.action.browseLibraries")}
-            </Button>
-          </DropdownTrigger>
-          <DropdownMenu
-            aria-label="Library selection"
-            onAction={(key) => {
-              const lib = mediaLibraries.find((l) => l.id === Number(key));
-
-              if (lib) {
-                handleBrowseLibrary(lib.id, lib.name);
-              }
-            }}
-          >
-            {mediaLibraries.map((lib) => {
-              const count =
-                data.mediaLibraryResourceCounts?.find((c) => c.name === lib.name)?.count ?? 0;
-
-              return (
-                <DropdownItem key={lib.id}>
-                  {lib.name} ({count})
-                </DropdownItem>
-              );
-            })}
-          </DropdownMenu>
-        </Dropdown>
-        <Button className="flex-1" variant="flat" onPress={() => navigate("/file-processor")}>
-          <AiOutlineEdit className="text-lg" />
-          {t<string>("dashboard.action.fileProcessor")}
-        </Button>
-        <Button
-          className="flex-1"
-          color="primary"
-          isDisabled={totalResources === 0}
-          variant="flat"
-          onPress={handleRandomPlay}
+        <form
+          className="flex w-full items-center gap-2 sm:w-auto"
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            browse({ keyword });
+          }}
         >
-          <AiOutlineThunderbolt className="text-lg" />
-          {t<string>("dashboard.action.randomPick")}
-        </Button>
-      </section>
-
-      {/* Resources Section with Tabs */}
-      <section className="bg-[var(--theme-block-background)] rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <TabButton
-              count={recentlyAdded.length}
-              icon={<AiOutlineClockCircle />}
-              label={t<string>("dashboard.tab.recentlyAdded")}
-              tab="added"
-            />
-            <TabButton
-              count={recentlyPlayed.length}
-              icon={<AiOutlinePlayCircle />}
-              label={t<string>("dashboard.tab.recentlyPlayed")}
-              tab="played"
-            />
-            <TabButton
-              count={pinnedResources.length}
-              icon={<AiOutlinePushpin />}
-              label={t<string>("dashboard.tab.pinned")}
-              tab="pinned"
-            />
-          </div>
-          <Button size="sm" variant="light" onPress={() => navigate("/resource")}>
-            {t<string>("dashboard.action.viewAll")}
-            <AiOutlineArrowRight className="ml-1" />
-          </Button>
-        </div>
-
-        {resourcesLoading[activeTab] ? (
-          <div className="flex items-center justify-center py-8">
-            <Spinner size="lg" />
-          </div>
-        ) : currentResources.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-4 py-8 opacity-60">
-            {activeTab === "added" && <AiOutlineClockCircle className="text-5xl" />}
-            {activeTab === "played" && <AiOutlinePlayCircle className="text-5xl" />}
-            {activeTab === "pinned" && <AiOutlinePushpin className="text-5xl" />}
-            <p>
-              {activeTab === "added" && t<string>("dashboard.empty.noResources")}
-              {activeTab === "played" && t<string>("dashboard.empty.noPlayHistory")}
-              {activeTab === "pinned" && t<string>("dashboard.empty.noPinned")}
-            </p>
-            {activeTab === "added" && (
-              <Button color="primary" variant="flat" onPress={() => navigate("/media-library")}>
-                {t<string>("dashboard.action.addResources")}
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div
-            ref={resourceScrollRef}
-            className="flex items-start gap-3 overflow-x-auto pb-2"
-            style={{
-              scrollbarWidth: "thin",
-              scrollbarColor: "transparent transparent",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.scrollbarColor = "var(--theme-text-subtle) transparent";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.scrollbarColor = "transparent transparent";
-            }}
-            onWheel={handleWheelScroll}
+          <Input
+            aria-label={t<string>("dashboard.search.label")}
+            className="min-w-0 flex-1 sm:w-64"
+            classNames={{ inputWrapper: "bg-content1 shadow-none border border-default-200" }}
+            placeholder={t<string>("dashboard.search.placeholder")}
+            size="md"
+            value={keyword}
+            onValueChange={setKeyword}
+          />
+          <Button
+            isIconOnly
+            aria-label={t<string>("dashboard.action.search")}
+            color="primary"
+            type="submit"
           >
-            {currentResources.map((resource) => (
-              <Resource key={resource.id} className="flex-shrink-0 w-36" resource={resource} />
-            ))}
+            <AiOutlineSearch className="text-xl" />
+          </Button>
+          <Tooltip content={t<string>("dashboard.action.refresh")}>
+            <Button
+              isIconOnly
+              aria-label={t<string>("dashboard.action.refresh")}
+              isLoading={loading}
+              variant="flat"
+              onPress={refresh}
+            >
+              <AiOutlineReload className="text-xl" />
+            </Button>
+          </Tooltip>
+        </form>
+      </header>
+
+      <section
+        aria-busy={loading}
+        aria-label={t<string>("dashboard.overview.title")}
+        className="flex flex-col gap-3"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-default-500">
+          <span>
+            {data
+              ? t<string>("dashboard.stat.addedThisWeek", { count: data.thisWeekAddedCount })
+              : t<string>("dashboard.overview.title")}
+          </span>
+          {updatedAt && (
+            <span>
+              {t<string>("dashboard.updatedAt", {
+                time: updatedAt.toLocaleTimeString(i18n.language, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              })}
+            </span>
+          )}
+        </div>
+        {error && (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-warning/10 px-4 py-3 text-sm text-warning-700"
+            role="alert"
+          >
+            <span>{t<string>(data ? "dashboard.error.stale" : "dashboard.error.load")}</span>
+            <Button size="sm" variant="light" onPress={refresh}>
+              {t<string>("dashboard.action.retry")}
+            </Button>
           </div>
         )}
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <SummaryCard
+            description={t<string>("dashboard.stat.totalDescription")}
+            icon={<AiOutlineDatabase />}
+            label={t<string>("dashboard.stat.totalResources")}
+            value={data?.totalResourceCount}
+            onPress={() => browse()}
+          />
+          <SummaryCard
+            description={t<string>("dashboard.stat.localDescription")}
+            icon={<AiOutlineFolderOpen />}
+            label={t<string>("dashboard.stat.localResources")}
+            tone="text-success bg-success/10"
+            value={data?.localResourceCount}
+            onPress={() => browse({ localOnly: true })}
+          />
+          <SummaryCard
+            description={t<string>("dashboard.stat.pendingDescription")}
+            icon={<AiOutlineCloudDownload />}
+            label={t<string>("dashboard.stat.pendingResources")}
+            tone="text-warning bg-warning/10"
+            value={data?.pendingResourceCount}
+            onPress={() => navigate("/acquisitions")}
+          />
+          <SummaryCard
+            description={t<string>("dashboard.stat.collectionsDescription")}
+            icon={<AiOutlineRead />}
+            label={t<string>("dashboard.stat.collections")}
+            tone="text-secondary bg-secondary/10"
+            value={data?.collectionCount}
+            onPress={() => navigate("/collections")}
+          />
+        </div>
       </section>
 
-      {/* Bottom Row: Needs Attention + Library Distribution */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Library Distribution */}
-        {(data.mediaLibraryResourceCounts ?? []).length > 0 && (
-          <div className="bg-[var(--theme-block-background)] rounded-xl p-5">
-            <h3 className="text-lg font-semibold mb-3">
-              {t<string>("dashboard.section.libraryDistribution")}
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {data.mediaLibraryResourceCounts?.map((lib) => (
-                <div
-                  key={lib.name}
-                  className="flex items-center gap-2 px-3 py-2 bg-[var(--theme-block-background-accent)] rounded-lg"
-                >
-                  <span className="text-sm">{lib.name}</span>
-                  <span className="text-sm font-semibold text-primary">{lib.count}</span>
-                </div>
-              ))}
+      <nav
+        aria-label={t<string>("dashboard.shortcuts.title")}
+        className="grid gap-2 sm:grid-cols-3"
+      >
+        {shortcuts.map(({ path, title, description, icon: Icon }) => (
+          <Card
+            key={path}
+            isPressable
+            className="w-full bg-content1 text-left"
+            shadow="none"
+            onPress={() => navigate(path)}
+          >
+            <CardBody className="flex-row items-center gap-3 px-4 py-3">
+              <Icon aria-hidden className="shrink-0 text-xl text-default-500" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium">{t<string>(title)}</div>
+                <div className="mt-0.5 text-xs text-default-500">{t<string>(description)}</div>
+              </div>
+              <AiOutlineArrowRight aria-hidden className="shrink-0 text-default-400" />
+            </CardBody>
+          </Card>
+        ))}
+      </nav>
+
+      <RecentResources refreshKey={refreshKey} />
+      {data && <ActivityOverview workflows={data.workflows} />}
+
+      {data && (
+        <section
+          aria-labelledby="dashboard-libraries"
+          className="rounded-2xl bg-content1 p-4 sm:p-5"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold" id="dashboard-libraries">
+                {t<string>("dashboard.libraries.title")}
+              </h2>
+              <span className="text-sm tabular-nums text-default-500">
+                {data.mediaLibraryCount}
+              </span>
             </div>
+            <Button
+              endContent={<AiOutlineArrowRight className="text-base" />}
+              size="sm"
+              variant="light"
+              onPress={() => navigate("/media-library")}
+            >
+              {t<string>("dashboard.libraries.manage")}
+            </Button>
           </div>
-        )}
-      </section>
+          {data.mediaLibraries.length ? (
+            <>
+              <p className="mt-1 text-xs text-default-500">
+                {t<string>("dashboard.libraries.description")}
+              </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {data.mediaLibraries.map((library) => (
+                  <Card
+                    key={library.id}
+                    isPressable
+                    className="w-full bg-default-100/60 text-left"
+                    shadow="none"
+                    onPress={() => browse({ libraryId: library.id })}
+                  >
+                    <CardBody className="flex-row items-center gap-3 p-3">
+                      <AiOutlineFolderOpen
+                        aria-hidden
+                        className="shrink-0 text-lg text-default-500"
+                      />
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        {library.name || t<string>("dashboard.libraries.unnamed")}
+                      </span>
+                      <span className="text-sm tabular-nums text-default-500">
+                        {library.resourceCount.toLocaleString()}
+                      </span>
+                      <AiOutlineArrowRight aria-hidden className="shrink-0 text-default-400" />
+                    </CardBody>
+                  </Card>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3 py-4">
+              <p className="max-w-lg text-sm text-default-500">
+                {t<string>("dashboard.libraries.empty")}
+              </p>
+              <Button
+                color="primary"
+                size="sm"
+                startContent={<AiOutlineFolderOpen />}
+                variant="flat"
+                onPress={() => navigate("/media-library")}
+              >
+                {t<string>("dashboard.libraries.create")}
+              </Button>
+            </div>
+          )}
+        </section>
+      )}
+      <HelpCenterModal
+        firstRun
+        topic="gettingStarted"
+        visible={showFirstRun}
+        onClose={completeFirstRun}
+      />
+      <DataMigrationHintModal />
     </div>
   );
-};
-
-DashboardPage.displayName = "DashboardPage";
-
-export default DashboardPage;
+}

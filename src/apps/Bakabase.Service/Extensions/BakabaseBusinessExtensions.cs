@@ -77,6 +77,7 @@ namespace Bakabase.Service.Extensions
         public static IServiceCollection AddInsideWorldBusinesses(this IServiceCollection services)
         {
             services.AddScoped<PasswordService>();
+            services.AddScoped<Bakabase.Service.Services.DashboardOverviewService>();
 
             services.TryAddSingleton<IwFsWatcher>();
             services.AddSingleton<Bakabase.Service.Services.FileSystemEntryGroupingService>();

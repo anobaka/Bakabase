@@ -81,6 +81,7 @@ export const UIHubConnection = () => {
   const isRunningRef = useRef(true);
 
   useEffect(() => {
+    useDownloadTasksStore.getState().resetInitialization();
     const conn = new HubConnectionBuilder()
       .withUrl(hubEndpoint)
       .configureLogging(LogLevel.Information)
@@ -299,6 +300,8 @@ export const UIHubConnection = () => {
 
     // 监听连接关闭事件
     conn.onclose(async () => {
+      useDownloadTasksStore.getState().resetInitialization();
+      pendingDownloadTasks.clear();
       log("connection closed, attempting to reconnect...");
     });
 
@@ -312,6 +315,7 @@ export const UIHubConnection = () => {
               await conn.start();
               await onConnected();
             } catch (err) {
+              useDownloadTasksStore.getState().resetInitialization();
               log("start failed:", err);
             }
           }
@@ -328,6 +332,7 @@ export const UIHubConnection = () => {
     connRef.current = conn;
 
     return () => {
+      useDownloadTasksStore.getState().resetInitialization();
       isRunningRef.current = false;
       if (downloadTaskFlushTimer != null) {
         clearTimeout(downloadTaskFlushTimer);

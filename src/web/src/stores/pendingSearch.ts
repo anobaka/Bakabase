@@ -2,7 +2,7 @@ import type { components } from "@/sdk/BApi2";
 
 import { create } from "zustand";
 
-type SearchForm = components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchDbModel"];
+type SearchForm = components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
 
 interface PendingSearchState {
   /** Pending search to be applied when navigating to resource page */

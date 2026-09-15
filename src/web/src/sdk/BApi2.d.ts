@@ -2068,6 +2068,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dashboard/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDashboardOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dashboard": {
         parameters: {
             query?: never;
@@ -12201,6 +12217,37 @@ export interface components {
             /** Format: int32 */
             valueCount?: number;
         };
+        "Bakabase.Service.Models.View.DashboardMediaLibraryViewModel": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            /** Format: int32 */
+            resourceCount: number;
+        };
+        "Bakabase.Service.Models.View.DashboardOverviewViewModel": {
+            /** Format: int32 */
+            totalResourceCount: number;
+            /** Format: int32 */
+            localResourceCount: number;
+            /** Format: int32 */
+            pendingResourceCount: number;
+            /** Format: int32 */
+            collectionCount: number;
+            /** Format: int32 */
+            mediaLibraryCount: number;
+            /** Format: int32 */
+            thisWeekAddedCount: number;
+            mediaLibraries: components["schemas"]["Bakabase.Service.Models.View.DashboardMediaLibraryViewModel"][];
+            workflows: components["schemas"]["Bakabase.Service.Models.View.DashboardWorkflowsViewModel"];
+        };
+        "Bakabase.Service.Models.View.DashboardWorkflowsViewModel": {
+            /** Format: int32 */
+            runningCount: number;
+            /** Format: int32 */
+            waitingCount: number;
+            /** Format: int32 */
+            failedRecentlyCount: number;
+        };
         "Bakabase.Service.Models.View.DecompressionResultViewModel": {
             key: string;
             status: components["schemas"]["Bakabase.Service.Models.View.Constants.DecompressionStatus"];
@@ -13959,6 +14006,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CustomPropertyViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DashboardOverviewViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.DashboardOverviewViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FilePlayabilityViewModel]": {
             /** Format: int32 */
@@ -18986,6 +19039,28 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel]"];
+                };
+            };
+        };
+    };
+    GetDashboardOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DashboardOverviewViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DashboardOverviewViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DashboardOverviewViewModel]"];
                 };
             };
         };

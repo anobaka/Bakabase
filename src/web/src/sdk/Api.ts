@@ -5731,6 +5731,40 @@ export interface BakabaseServiceModelsViewCustomPropertyViewModel {
   valueCount?: number;
 }
 
+export interface BakabaseServiceModelsViewDashboardMediaLibraryViewModel {
+  /** @format int32 */
+  id: number;
+  name: string;
+  /** @format int32 */
+  resourceCount: number;
+}
+
+export interface BakabaseServiceModelsViewDashboardOverviewViewModel {
+  /** @format int32 */
+  totalResourceCount: number;
+  /** @format int32 */
+  localResourceCount: number;
+  /** @format int32 */
+  pendingResourceCount: number;
+  /** @format int32 */
+  collectionCount: number;
+  /** @format int32 */
+  mediaLibraryCount: number;
+  /** @format int32 */
+  thisWeekAddedCount: number;
+  mediaLibraries: BakabaseServiceModelsViewDashboardMediaLibraryViewModel[];
+  workflows: BakabaseServiceModelsViewDashboardWorkflowsViewModel;
+}
+
+export interface BakabaseServiceModelsViewDashboardWorkflowsViewModel {
+  /** @format int32 */
+  runningCount: number;
+  /** @format int32 */
+  waitingCount: number;
+  /** @format int32 */
+  failedRecentlyCount: number;
+}
+
 export interface BakabaseServiceModelsViewDecompressionResultViewModel {
   key: string;
   /** [1: Pending, 2: Decompressing, 3: Success, 4: Error] */
@@ -7774,6 +7808,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCustomPropertyViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewDashboardOverviewViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewDashboardOverviewViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFilePlayabilityViewModel {
@@ -15239,6 +15280,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     },
   };
   dashboard = {
+    /**
+     * No description
+     *
+     * @tags Dashboard
+     * @name GetDashboardOverview
+     * @request GET:/dashboard/overview
+     */
+    getDashboardOverview: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewDashboardOverviewViewModel,
+        any
+      >({
+        path: `/dashboard/overview`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDashboardOverview
+     * @name getDashboardOverviewUrl
+     */
+    getDashboardOverviewUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/dashboard/overview`;
+
+      return baseUrl + path;
+    },
+
     /**
      * No description
      *
