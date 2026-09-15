@@ -1,12 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { SearchFilter, SearchFilterGroup } from "../../models";
+import type { FilterConfig, SearchFilter, SearchFilterGroup } from "../../models";
 import type { FilterLayout } from "../Filter";
 import type { ResourceTag } from "@/sdk/constants";
 
 import { useMemo, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
+import { SearchOutlined } from "@ant-design/icons";
 
 import FilterPortal from "../FilterPortal";
 import FilterGroupWithContext from "../FilterGroupWithContext";
@@ -19,6 +21,8 @@ import { FilterDisplayMode } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 export interface ResourceFilterControllerProps {
+  /** Optional adapters for hosts with their own property catalog and value renderer. */
+  config?: FilterConfig;
   /** Current keyword value */
   keyword?: string;
   /** Called when keyword changes */
@@ -132,6 +136,7 @@ const ResourceFilterControllerInner = ({
   autoCreateMediaLibraryFilter = false,
   isReadonly = false,
 }: ResourceFilterControllerProps) => {
+  const { t } = useTranslation();
   const [internalNewFilterIndex, setInternalNewFilterIndex] = useState<number | null>(null);
 
   // Internal keyword state for uncontrolled mode
@@ -250,7 +255,10 @@ const ResourceFilterControllerInner = ({
   const keywordElement = (
     <ResourceKeywordAutocomplete
       isClearable
-      className={`${keywordClassName} ${!keywordContainer && !filterPortalContainer ? "flex-1 min-w-0" : ""}`}
+      aria-label={t<string>("resourceFilter.toolbar.keyword")}
+      size="sm"
+      className={`min-w-0 ${keywordClassName} ${!keywordContainer && !filterPortalContainer ? "flex-1 basis-52" : ""}`}
+      startContent={<SearchOutlined className="text-base text-default-400" />}
       placeholder={keywordPlaceholder}
       value={keyword}
       onKeyDown={(e) => {
@@ -282,7 +290,7 @@ const ResourceFilterControllerInner = ({
   const filterGroupsElement = (
     <FilterGroupWithContext
       autoCreateMediaLibraryFilter={autoCreateMediaLibraryFilter}
-      className={filterGroupsClassName}
+      className={`min-w-0 ${filterGroupsClassName}`}
       externalNewFilterIndex={newFilterIndex}
       filterDisplayMode={filterDisplayMode}
       filterLayout={filterLayout}
@@ -318,7 +326,7 @@ const ResourceFilterControllerInner = ({
       {!isReadonly &&
         (shouldRenderKeywordAndFilterPortalTogether ? (
           <div
-            className={`flex items-center gap-2 ${hasFilterGroupContent && !filterGroupsContainer ? "mb-2" : ""}`}
+            className={`flex min-w-0 flex-wrap items-center gap-2 ${hasFilterGroupContent && !filterGroupsContainer ? "mb-3" : ""}`}
           >
             {keywordElement}
             {filterPortalElement}
@@ -342,7 +350,7 @@ const ResourceFilterController = (props: ResourceFilterControllerProps) => {
   const filterConfig = useMemo(() => createDefaultFilterConfig(createPortal), [createPortal]);
 
   return (
-    <FilterProvider config={filterConfig}>
+    <FilterProvider config={props.config ?? filterConfig}>
       <ResourceFilterControllerInner {...props} />
     </FilterProvider>
   );

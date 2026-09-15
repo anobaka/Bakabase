@@ -7,19 +7,20 @@ import { useTranslation } from "react-i18next";
 
 import WhatIsSection from "./WhatIsSection";
 import ExamplesSection from "./ExamplesSection";
+import TriggersSection from "./TriggersSection";
 
 import { Tab, Tabs } from "@/components/bakaui";
 
-const sectionIds: WorkflowHelpSectionId[] = ["whatIs", "examples"];
+const sectionIds: WorkflowHelpSectionId[] = ["whatIs", "examples", "triggers"];
 
-const WorkflowTopic = ({ section }: HelpTopicContentProps) => {
+const WorkflowTopic = ({ section, onNavigate }: HelpTopicContentProps) => {
   const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState<WorkflowHelpSectionId>(
-    section === "examples" ? "examples" : "whatIs",
+    section === "examples" || section === "triggers" ? section : "whatIs",
   );
 
   useEffect(() => {
-    if (section === "whatIs" || section === "examples") {
+    if (section === "whatIs" || section === "examples" || section === "triggers") {
       setActiveSection(section);
     }
   }, [section]);
@@ -40,6 +41,7 @@ const WorkflowTopic = ({ section }: HelpTopicContentProps) => {
 
       {activeSection === "whatIs" && <WhatIsSection />}
       {activeSection === "examples" && <ExamplesSection />}
+      {activeSection === "triggers" && <TriggersSection onNavigate={onNavigate} />}
     </div>
   );
 };

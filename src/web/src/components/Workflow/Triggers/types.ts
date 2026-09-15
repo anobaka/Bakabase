@@ -1,4 +1,12 @@
 import type React from "react";
+import type { HelpTarget } from "@/components/HelpCenter/types";
+
+export interface WorkflowTriggerGuide {
+  sourceEntry: { path: string; labelKey: string };
+  inputKey: string;
+  configureKey: string;
+  helpTarget: HelpTarget;
+}
 
 /**
  * Per-trigger UI bundle. Keyed by the backend's trigger kind (e.g. "subscription.updated").
@@ -30,4 +38,12 @@ export interface WorkflowTriggerUI<TFilter = unknown> {
   resolveOutputItemType: (filter: TFilter) => string;
   FilterForm: React.FC<{ value: TFilter; onChange: (v: TFilter) => void }>;
   FilterSummary: React.FC<{ filter: TFilter }>;
+  /** Optional friendly input for a manual run; other triggers retain the JSON editor. */
+  ManualRunForm?: React.FC<{ value: string; onChange: (json: string) => void }>;
+  defaultManualPayload?: () => string;
+  isManualPayloadValid?: (json: string) => boolean;
+  /** The feature that supplies the managed input for this trigger. */
+  runEntry?: { path: string; labelKey: string; descriptionKey: string };
+  /** Navigation and usage copy only. Activation mode comes from the server descriptor. */
+  guide?: WorkflowTriggerGuide;
 }

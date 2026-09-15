@@ -45,6 +45,27 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
         };
     }
 
+    /// <summary>
+    /// Collections as choices, so "everything in this series" is an ordinary resource search. The
+    /// provider is optional: a build without the collection module offers no choices rather than
+    /// failing to answer at all.
+    /// </summary>
+    private async Task<MultipleChoicePropertyOptions> BuildOptionsForCollections()
+    {
+        var provider = serviceProvider.GetService<ICollectionNameProvider>();
+        var collections = provider == null ? [] : await provider.GetAllAsync();
+
+        return new MultipleChoicePropertyOptions
+        {
+            Choices = collections.Select(c => new ChoiceOptions
+            {
+                Color = null,
+                Label = c.Name,
+                Value = c.Id.ToString()
+            }).ToList(),
+        };
+    }
+
     private MultipleChoicePropertyOptions BuildOptionsForSource()
     {
         return new MultipleChoicePropertyOptions
@@ -93,6 +114,11 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                     case InternalProperty.Source:
                     {
                         tmpProperty.Options = BuildOptionsForSource();
+                        break;
+                    }
+                    case InternalProperty.CollectionMulti:
+                    {
+                        tmpProperty.Options = await BuildOptionsForCollections();
                         break;
                     }
                     case InternalProperty.RootPath:
@@ -148,6 +174,11 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                             var mediaLibraryServiceV2 = serviceProvider.GetRequiredService<IMediaLibraryV2Service>();
                             mediaLibrariesV2 = await mediaLibraryServiceV2.GetAll();
                         }
+
+                        // Fetched before the projection: the projection below is synchronous, and
+                        // awaiting inside it would be a query per property rather than one.
+                        var collectionOptions = await BuildOptionsForCollections();
+
                         var internalProperties = PropertyInternals.InternalPropertyMap.Values
                             .Where(v => includeDeprecated || !deprecatedProperties.Contains((InternalProperty)v.Id))
                             .Select(v =>
@@ -177,6 +208,11 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                                     case InternalProperty.Source:
                                     {
                                         tmpProperty.Options = BuildOptionsForSource();
+                                        break;
+                                    }
+                                    case InternalProperty.CollectionMulti:
+                                    {
+                                        tmpProperty.Options = collectionOptions;
                                         break;
                                     }
                                     case InternalProperty.ParentResource:

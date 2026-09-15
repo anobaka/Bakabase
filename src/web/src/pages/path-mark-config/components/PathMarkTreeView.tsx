@@ -11,6 +11,7 @@ import { AiOutlineAim, AiOutlineCopy } from "react-icons/ai";
 import usePathMarks from "../hooks/usePathMarks";
 
 import PathMarks from "./PathMarks";
+import MarkByExampleModal from "./MarkByExampleModal";
 import MarkConfigModal from "./MarkConfigModal";
 import PasteMarksButton from "./PasteMarksButton";
 import CopyMarksSidebar from "./CopyMarksSidebar";
@@ -234,6 +235,34 @@ const PathMarkTreeView = ({ rootPath, onMarksChanged, onInitialized }: PathMarkT
     [getMarksForPath, handlePasteMarks],
   );
 
+  // Handle marking by example: the user points at one folder they already have, and the mark that
+  // describes every folder at that level is created on an ancestor of it.
+  const handleMarkByExample = useCallback(
+    (entry: Entry) => {
+      createPortal(MarkByExampleModal, {
+        samplePath: entry.path,
+        pathHasMarks: (path: string) => getMarksForPath(path).length > 0,
+        onConfirm: async (rootPath: string, configJson: string) => {
+          try {
+            await BApi.pathMark.addPathMark({
+              path: rootPath,
+              type: PathMarkType.Resource,
+              configJson,
+              priority: 10,
+            } as BakabaseAbstractionsModelsDomainPathMark);
+
+            toast.success(t("pathMarkConfig.success.markAddedToCount", { count: 1 }));
+            notifyMarksChanged();
+          } catch (error) {
+            console.error("Failed to mark by example", error);
+            toast.danger(t("pathMarkConfig.error.addMarks"));
+          }
+        },
+      });
+    },
+    [createPortal, getMarksForPath, notifyMarksChanged, t],
+  );
+
   // Handle entering copy mode from context menu
   const handleEnterCopyModeFromContextMenu = useCallback(
     (entry: Entry) => {
@@ -309,6 +338,18 @@ const PathMarkTreeView = ({ rootPath, onMarksChanged, onInitialized }: PathMarkT
               {t("pathMarkConfig.action.addMediaLibraryMark", { count: entries.length })}
             </div>
           </MenuItem>
+          {singleEntry && (
+            <MenuItem
+              onClick={() => {
+                handleMarkByExample(singleEntry);
+              }}
+            >
+              <div className="flex items-center gap-2 text-success">
+                <AiOutlineAim className="text-base" />
+                {t("pathMarkConfig.action.markByExample")}
+              </div>
+            </MenuItem>
+          )}
           {canCopyMarks && (
             <MenuItem
               onClick={() => {
@@ -329,6 +370,7 @@ const PathMarkTreeView = ({ rootPath, onMarksChanged, onInitialized }: PathMarkT
       t,
       handleAddMarksFromContextMenu,
       getMarksForPath,
+      handleMarkByExample,
       handleEnterCopyModeFromContextMenu,
     ],
   );

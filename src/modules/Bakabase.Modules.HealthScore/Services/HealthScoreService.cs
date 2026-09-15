@@ -451,9 +451,9 @@ public class HealthScoreService<TDbContext> :
             foreach (var resource in resources)
             {
                 ct.ThrowIfCancellationRequested();
-                if (string.IsNullOrEmpty(resource.Path)) continue;
+                if (!resource.HasLocalPath) continue;
 
-                var snapshot = new ResourceFsSnapshot(resource.Path, resource.Covers);
+                var snapshot = new ResourceFsSnapshot(resource.Path!, resource.Covers);
 
                 List<object?>? GetPropertyValues(PropertyPool pool, int pid)
                 {

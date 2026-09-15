@@ -1,4 +1,12 @@
-﻿using Bakabase.Abstractions.Components.Events;
+﻿using Bakabase.Modules.Downloader.Extensions;
+using Bakabase.Infrastructures.Components.App;
+using System.IO;
+using Bakabase.Abstractions.Components.Events;
+using Bakabase.Service.Components.Workflow.Resources;
+using Bakabase.Service.Components.IdentityLookups;
+using Bakabase.Modules.Acquisition.Extensions;
+using Bakabase.Modules.Collection.Abstractions.Services;
+using Bakabase.Modules.Collection.Extensions;
 using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
@@ -69,6 +77,7 @@ namespace Bakabase.Service.Extensions
         public static IServiceCollection AddInsideWorldBusinesses(this IServiceCollection services)
         {
             services.AddScoped<PasswordService>();
+            services.AddScoped<Bakabase.Service.Services.DashboardOverviewService>();
 
             services.TryAddSingleton<IwFsWatcher>();
             services.AddSingleton<Bakabase.Service.Services.FileSystemEntryGroupingService>();
@@ -154,9 +163,95 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<ISubscriptionProvider, ExHentaiSearchProvider>();
             services.AddSingleton<ISubscriptionProvider, ExHentaiGalleryProvider>();
             services.AddSingleton<ISubscriptionProvider, PixivFollowLatestProvider>();
+            // The platforms the user already holds things on. Each wraps the service that
+            // already knows how to talk to it rather than reimplementing any of it, and each is
+            // keyed so asking for one does not build the other two.
+            services.AddKeyedScoped<Bakabase.Abstractions.Components.Platform.IPlatformConnector,
+                Components.Acquisition.Connectors.DLsiteConnector>(Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.DLsite);
+            services.AddKeyedScoped<Bakabase.Abstractions.Components.Platform.IPlatformConnector,
+                Components.Acquisition.Connectors.SteamConnector>(Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.Steam);
+            services.AddSingleton<Components.Acquisition.Connectors.IPlatformClientLauncher,
+                Components.Acquisition.Connectors.PlatformClientLauncher>();
+            services.AddKeyedScoped<Bakabase.Abstractions.Components.Platform.IPlatformConnector,
+                Components.Acquisition.Connectors.ExHentaiConnector>(Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.ExHentai);
+            services.AddScoped<Bakabase.Abstractions.Components.Platform.IPlatformConnectorRegistry,
+                Components.Acquisition.Connectors.PlatformConnectorRegistry>();
+
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.SoulPlus.SoulPlusSearchProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.DLsite.DLsiteCircleProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Bangumi.BangumiSubjectRelationsProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Vndb.VndbSeriesProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Vndb.VndbDeveloperProvider>();
+            // What the user already holds, as sources. They take no configuration: the account
+            // lives in each platform's own settings.
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Platform.DLsitePurchasesProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Platform.SteamOwnedGamesProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Platform.ExHentaiFavoritesProvider>();
+            // Shared transfer services are also used by dependency installers and other modules.
+            // Keep the existing cache location so metadata from earlier runs remains reusable.
+            services.AddDownloader(sp => Path.Combine(sp.GetRequiredService<AppService>().AppDataDirectory,
+                "acquisition-torrent-cache"));
             services.AddWorkflow<BakabaseDbContext>();
+            services.AddAcquisition<BakabaseDbContext>();
+            services.AddCollections<BakabaseDbContext>();
+            // The app-layer subclass supplies the two things the module deliberately does not know:
+            // how to run a resource search, and what is currently being acquired.
+            services.AddScoped<ICollectionService, Components.Collections.BakabaseCollectionService>();
+            services.AddScoped<Bakabase.Abstractions.Services.ICollectionNameProvider,
+                Components.Collections.CollectionNameProvider>();
+            // Acquisition steps. Each registers its workflow activity alongside itself, so a step
+            // added here becomes something a recipe can name.
+            services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.SelectLinkStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.ResolveSharedContentStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchHttpStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.WaitForInboxStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchMagnetStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchTorrentStep>();
+            services.AddSingleton<Components.Acquisition.Downloads.IAcquisitionTorrentMetadataStore,
+                Components.Acquisition.Downloads.AcquisitionTorrentMetadataStore>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchFromPlatformStep>();
+            services.AddScoped<Components.Acquisition.Downloads.IExHentaiAcquisitionQueue,
+                Components.Acquisition.Downloads.ExHentaiAcquisitionQueue>();
+            services.AddScoped<Components.Acquisition.Downloads.ExHentaiAcquisitionService>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchExHentaiStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchResultTorrentStep>();
+            Components.Downloader.DownloadResultWorkflow.AddDownloadResultWorkflows(services);
+            services.AddScoped<Components.Acquisition.SharedListImportService>();
+            services.AddScoped<Components.Acquisition.PostParserAcquisitionService>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
+            services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PickLocalDirectoryStep>();
+            services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PlaceStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.MaterializeStep>();
+            services.AddScoped<Components.Acquisition.AcquisitionInboxService>();
+            services.AddScoped<Components.Acquisition.AcquisitionSetupService>();
+            services.AddScoped<Components.Acquisition.AcquisitionCandidateService>();
+            services.AddHostedService<Components.Acquisition.AcquisitionInboxWatcher>();
+
+            // "I am missing this" — creating resources for things the user does not have yet.
+            services.AddScoped<IPlaceholderResourceService, PlaceholderResourceService>();
+            services.AddScoped<IExternalIdentityLookup, DLsiteIdentityLookup>();
+            services.AddScoped<IExternalIdentityLookup, SteamIdentityLookup>();
+            services.AddScoped<IExternalIdentityLookup, BangumiIdentityLookup>();
+            services.AddScoped<IExternalIdentityLookup, VndbIdentityLookup>();
+            services.AddScoped<IExternalIdentityLookup, ExHentaiIdentityLookup>();
+            services.AddScoped<ISharedUrlTitleResolver, SharedUrlTitleResolver>();
+
+            // "…or is this the one I already have?" — the pairs a person still has to decide.
+            services
+                .AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceMatchSuggestionDbModel, int>>();
+            services.AddScoped<IResourceMatchSuggestionService, ResourceMatchSuggestionService>();
+
             services.AddSingleton<IWorkflowTrigger, SubscriptionUpdatedTrigger>();
             services.AddSingleton<IWorkflowTrigger, DownloaderCompletedTrigger>();
+            services.AddSingleton<IWorkflowTrigger, ResourceMaterializedTrigger>();
             // Item type descriptors — give the editor type info to render and the AI
             // transform shape info for prompts.
             services.AddSingleton<IWorkflowItemTypeDescriptor, SubscriptionAnyItemTypeDescriptor>();
@@ -164,12 +259,17 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<IWorkflowItemTypeDescriptor, ExHentaiGalleryItemTypeDescriptor>();
             services.AddSingleton<IWorkflowItemTypeDescriptor, SearchQueryItemTypeDescriptor>();
             services.AddSingleton<IWorkflowItemTypeDescriptor, DownloaderCompletedItemTypeDescriptor>();
+            services.AddSingleton<IWorkflowItemTypeDescriptor, ResourceItemTypeDescriptor>();
             // Activities.
             services.AddSingleton<IWorkflowActivity, SubscriptionItemTitleContainsActivity>();
             services.AddSingleton<IWorkflowActivity, AiTransformActivity>();
             services.AddSingleton<IWorkflowActivity, ExHentaiQueryToGalleryActivity>();
             services.AddSingleton<IWorkflowActivity, ExHentaiEnqueueDownloadActivity>();
+            services.AddSingleton<IWorkflowActivity, DownloaderEnqueueActivity>();
             services.AddSingleton<IWorkflowActivity, CreateNotificationActivity>();
+            services.AddSingleton<IWorkflowActivity, ResourceSetPropertyValueActivity>();
+            services.AddSingleton<IWorkflowActivity, EnhancerEnhanceActivity>();
+            services.AddSingleton<IWorkflowActivity, PathMarkEnqueueSyncActivity>();
             // File-cleaning vertical (fs domain).
             services.AddSingleton<IWorkflowTrigger, FsManualScanTrigger>();
             services.AddSingleton<IWorkflowItemTypeDescriptor, Components.Workflow.Fs.FsEntryItemTypeDescriptor>();
@@ -245,6 +345,10 @@ namespace Bakabase.Service.Extensions
             // Resource data change event hub (singleton for event pub/sub)
             services.AddSingleton<ResourceDataChangeEventHub>();
             services.AddSingleton<IResourceDataChangeEvent>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
+            // A collection's rule can only give a different answer because a resource changed, so
+            // that is exactly when the cached answer stops being usable.
+            services.AddSingleton<Components.Collections.CollectionRuleIndex>();
+            services.AddSingleton<Components.Collections.CollectionRuleIndexInvalidator>();
             services.AddSingleton<IResourceDataChangeEventPublisher>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
 
             // Resource search index service (singleton for in-memory caching)

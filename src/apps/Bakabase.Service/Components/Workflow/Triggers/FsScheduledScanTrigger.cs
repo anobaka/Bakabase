@@ -1,3 +1,4 @@
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -27,6 +28,10 @@ public class FsScheduledScanTrigger : IWorkflowScheduledTrigger
 
     public string Kind { get; } = FsWorkflowKinds.TriggerScheduledScan;
     public string DisplayName => "Scheduled filesystem scan";
+    public WorkflowActivationMode ActivationMode => WorkflowActivationMode.Schedule;
+    public string SourceModule => "fs";
+    public string Description => "Scan configured existing directories on the configured interval, or run manually. An interval below one minute disables automatic scheduling. A queued, running or waiting execution prevents another scheduled run.";
+    public string DescriptionKey => "workflow.trigger.fsScheduledScan.description";
     public Type PayloadType => typeof(FsManualScanPayload);
 
     // Nothing publishes this kind either — runs come from the scheduler and the manual button.

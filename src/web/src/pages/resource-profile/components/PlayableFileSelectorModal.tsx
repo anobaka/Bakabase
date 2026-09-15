@@ -1,23 +1,23 @@
 "use client";
 
-import type { DestroyableProps } from "@/components/bakaui/types.ts";
+import type { DestroyableProps } from "@/components/bakaui/types";
 import type { BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions } from "@/sdk/Api";
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { AiOutlineFileSearch, AiOutlinePlus } from "react-icons/ai";
 
-import { Modal, Input, Chip, Divider } from "@/components/bakaui";
+import { normalizeProfileExtensions, useProfileModalSave } from "./useProfileModalSave";
+
+import { Button, Input, Modal } from "@/components/bakaui";
 import ExtensionsInput from "@/components/ExtensionsInput";
 
 type PlayableFileOptions = BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions;
-
 type Props = {
   options?: PlayableFileOptions;
-  onSubmit?: (options: PlayableFileOptions) => any;
+  onSubmit?: (options: PlayableFileOptions) => unknown | Promise<unknown>;
 } & DestroyableProps;
 
-// Common extension presets
 const extensionPresets = {
   video: ["mp4", "mkv", "avi", "wmv", "mov", "flv", "webm", "m4v", "rmvb", "rm"],
   audio: ["mp3", "flac", "wav", "aac", "ogg", "wma", "m4a", "ape"],
@@ -28,180 +28,162 @@ const extensionPresets = {
 
 const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed }: Props) => {
   const { t } = useTranslation();
-
-  const [options, setOptions] = useState<PlayableFileOptions>(propOptions ?? {});
-
-  const addPresetExtensions = (preset: keyof typeof extensionPresets) => {
-    const currentExts = new Set(options.extensions ?? []);
-
-    extensionPresets[preset].forEach((ext) => currentExts.add(ext));
-    setOptions({
-      ...options,
-      extensions: Array.from(currentExts),
-    });
+  const editor = useProfileModalSave(onSubmit, t<string>("resourceProfile.editor.saveFailed"));
+  const [options, setOptions] = useState<PlayableFileOptions>(() => ({
+    ...propOptions,
+    extensions: normalizeProfileExtensions(propOptions?.extensions),
+  }));
+  // ExtensionsInput owns its text draft. Remount only for preset/clear actions, never while typing.
+  const [inputVersion, setInputVersion] = useState(0);
+  const extensions = normalizeProfileExtensions(options.extensions);
+  const missingExtensions = extensions.length === 0;
+  const patternWithoutExtensions = missingExtensions && !!options.fileNamePattern;
+  const replaceExtensions = (value: string[]) => {
+    setOptions((current) => ({ ...current, extensions: normalizeProfileExtensions(value) }));
+    setInputVersion((version) => version + 1);
   };
+  const save = () => {
+    if (patternWithoutExtensions) return;
 
-  const clearExtensions = () => {
-    setOptions({
+    return editor.save({
       ...options,
-      extensions: [],
+      extensions,
+      fileNamePattern: options.fileNamePattern || undefined,
     });
   };
 
   return (
     <Modal
-      defaultVisible
-      size="xl"
-      title={t("resourceProfile.modal.playableFileOptionsTitle")}
+      classNames={{ base: "max-w-2xl", body: "gap-5", footer: "border-t border-default-200/60" }}
+      footer={
+        <div className="flex w-full items-center justify-end gap-2">
+          <Button isDisabled={editor.saving} variant="light" onPress={editor.close}>
+            {t<string>("common.action.cancel")}
+          </Button>
+          <Button
+            color="primary"
+            isDisabled={patternWithoutExtensions}
+            isLoading={editor.saving}
+            onPress={save}
+          >
+            {t<string>("common.action.save")}
+          </Button>
+        </div>
+      }
+      hideCloseButton={editor.saving}
+      isDismissable={!editor.saving}
+      isKeyboardDismissDisabled={editor.saving}
+      size="3xl"
+      title={t<string>("resourceProfile.modal.playableFileOptionsTitle")}
+      visible={editor.visible}
+      onClose={editor.close}
       onDestroyed={onDestroyed}
-      onOk={() => onSubmit?.(options)}
     >
-      <div className="flex flex-col gap-4">
-        {/* Quick presets */}
-        <div>
-          <div className="text-sm font-medium mb-2">
-            {t("resourceProfile.label.quickAddPresets")}
-          </div>
+      <p className="text-sm leading-6 text-default-600">
+        {t<string>("resourceProfile.playable.description")}
+      </p>
+      <fieldset className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0" disabled={editor.saving}>
+        <section className="space-y-2.5">
+          <h3 className="text-sm font-medium">
+            {t<string>("resourceProfile.label.quickAddPresets")}
+          </h3>
           <div className="flex flex-wrap gap-2">
-            <Chip
-              className="cursor-pointer hover:opacity-80"
-              color="primary"
-              size="sm"
-              variant="flat"
-              onClick={() => addPresetExtensions("video")}
-            >
-              {t("resourceProfile.label.video")}
-            </Chip>
-            <Chip
-              className="cursor-pointer hover:opacity-80"
-              color="secondary"
-              size="sm"
-              variant="flat"
-              onClick={() => addPresetExtensions("audio")}
-            >
-              {t("resourceProfile.label.audio")}
-            </Chip>
-            <Chip
-              className="cursor-pointer hover:opacity-80"
-              color="success"
-              size="sm"
-              variant="flat"
-              onClick={() => addPresetExtensions("image")}
-            >
-              {t("resourceProfile.label.image")}
-            </Chip>
-            <Chip
-              className="cursor-pointer hover:opacity-80"
-              color="warning"
-              size="sm"
-              variant="flat"
-              onClick={() => addPresetExtensions("document")}
-            >
-              {t("resourceProfile.label.document")}
-            </Chip>
-            <Chip
-              className="cursor-pointer hover:opacity-80"
-              color="default"
-              size="sm"
-              variant="flat"
-              onClick={() => addPresetExtensions("archive")}
-            >
-              {t("resourceProfile.label.archive")}
-            </Chip>
-            {(options.extensions?.length ?? 0) > 0 && (
-              <Chip
-                className="cursor-pointer hover:opacity-80"
-                color="danger"
+            {(Object.keys(extensionPresets) as (keyof typeof extensionPresets)[]).map((preset) => (
+              <Button
+                key={preset}
+                isDisabled={editor.saving}
                 size="sm"
+                startContent={<AiOutlinePlus aria-hidden />}
                 variant="flat"
-                onClick={clearExtensions}
+                onPress={() => replaceExtensions([...extensions, ...extensionPresets[preset]])}
               >
-                {t("resourceProfile.action.clearAll")}
-              </Chip>
+                {t<string>(`resourceProfile.label.${preset}`)}
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs leading-5 text-default-500">
+            {t<string>("resourceProfile.playable.presetsHint")}
+          </p>
+        </section>
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-medium">
+              {t<string>("resourceProfile.playable.extensionsTitle")}
+            </h3>
+            {!missingExtensions && (
+              <Button
+                color="danger"
+                isDisabled={editor.saving}
+                size="sm"
+                variant="light"
+                onPress={() => replaceExtensions([])}
+              >
+                {t<string>("resourceProfile.action.clearAll")}
+              </Button>
             )}
           </div>
-        </div>
-
-        <Divider />
-
-        {/* Extensions input */}
-        <div>
           <ExtensionsInput
-            key={options.extensions?.join(",") ?? ""}
+            key={inputVersion}
             defaultValue={options.extensions}
-            label={t("resourceProfile.label.fileExtensions")}
-            onValueChange={(v) => {
-              setOptions({
-                ...options,
-                extensions: v,
-              });
-            }}
+            label={t<string>("resourceProfile.label.fileExtensions")}
+            minRows={2}
+            onValueChange={(extensions) => setOptions((current) => ({ ...current, extensions }))}
           />
-          <div className="text-xs text-default-400 mt-1">
-            <InfoCircleOutlined className="mr-1" />
-            {t("resourceProfile.tip.filesWithExtensionsPlayable")}
+          <p className="text-xs leading-5 text-default-500">
+            {t<string>("resourceProfile.playable.extensionsHint")}
+          </p>
+        </section>
+        <details
+          className="group border-t border-default-200/60 pt-3"
+          open={propOptions?.fileNamePattern ? true : undefined}
+        >
+          <summary className="flex cursor-pointer list-none items-center gap-2 py-1 text-sm font-medium text-default-600">
+            <AiOutlineFileSearch aria-hidden className="text-lg" />
+            {t<string>("resourceProfile.playable.patternTitle")}
+            <span aria-hidden className="ml-auto text-default-400 group-open:rotate-90">
+              ›
+            </span>
+          </summary>
+          <div className="mt-3 space-y-2">
+            <Input
+              description={t<string>("resourceProfile.playable.patternHint")}
+              errorMessage={t<string>("resourceProfile.playable.patternNeedsExtensions")}
+              isDisabled={editor.saving}
+              isInvalid={patternWithoutExtensions}
+              label={t<string>("resourceProfile.label.fileNamePattern")}
+              placeholder={t<string>("resourceProfile.input.fileNamePatternPlaceholder")}
+              value={options.fileNamePattern || ""}
+              onValueChange={(fileNamePattern) =>
+                setOptions((current) => ({
+                  ...current,
+                  fileNamePattern: fileNamePattern || undefined,
+                }))
+              }
+            />
+          </div>
+        </details>
+      </fieldset>
+      {missingExtensions && (
+        <div className="flex gap-3 rounded-xl bg-default-50 px-4 py-3">
+          <AiOutlineFileSearch aria-hidden className="mt-0.5 shrink-0 text-xl text-default-400" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium">
+              {t<string>("resourceProfile.playable.emptyTitle")}
+            </p>
+            <p className="text-xs leading-5 text-default-500">
+              {t<string>("resourceProfile.playable.emptyDescription")}
+            </p>
           </div>
         </div>
-
-        {/* File name pattern */}
-        <div>
-          <Input
-            label={t("resourceProfile.label.fileNamePattern")}
-            placeholder={t("resourceProfile.input.fileNamePatternPlaceholder")}
-            value={options.fileNamePattern || ""}
-            onValueChange={(v) => {
-              setOptions({
-                ...options,
-                fileNamePattern: v || undefined,
-              });
-            }}
-          />
-          <div className="text-xs text-default-400 mt-1">
-            <InfoCircleOutlined className="mr-1" />
-            {t("resourceProfile.tip.regexPatternPlayable")}
-          </div>
-        </div>
-
-        {/* Preview */}
-        {((options.extensions?.length ?? 0) > 0 || options.fileNamePattern) && (
-          <>
-            <Divider />
-            <div>
-              <div className="text-sm font-medium mb-2">
-                {t("resourceProfile.label.currentConfiguration")}
-              </div>
-              <div className="p-3 bg-default-100 rounded-lg">
-                {(options.extensions?.length ?? 0) > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    <span className="text-sm text-default-500 mr-2">
-                      {t("resourceProfile.label.extensionsLabel")}:
-                    </span>
-                    {options.extensions?.map((ext) => (
-                      <Chip key={ext} color="secondary" size="sm" variant="flat">
-                        .{ext}
-                      </Chip>
-                    ))}
-                  </div>
-                )}
-                {options.fileNamePattern && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-default-500">
-                      {t("resourceProfile.label.pattern")}:
-                    </span>
-                    <Chip color="warning" size="sm" variant="flat">
-                      {options.fileNamePattern}
-                    </Chip>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      )}
+      {editor.error && (
+        <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
+          {editor.error}
+        </p>
+      )}
     </Modal>
   );
 };
 
 PlayableFileSelectorModal.displayName = "PlayableFileSelectorModal";
-
 export default PlayableFileSelectorModal;

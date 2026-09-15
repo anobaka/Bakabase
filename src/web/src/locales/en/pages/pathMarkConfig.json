@@ -161,5 +161,13 @@
   "pathMarkConfig.label.nextStepHint": "Next step: View all configured marks, or configure Resource Profiles to define enhancers, players, and other settings",
   "pathMarkConfig.action.goToResourceProfile": "Configure Resource Profiles",
   "pathMarkConfig.label.keepResourcesOnPathChange": "Keep resource identity on path change",
-  "pathMarkConfig.tip.keepResourcesOnPathChange": "Normally, a resource record is created for each resource path. When enabled, a marker file (bakabase.json) will be generated in resource folders. During the next sync, if the resource path has changed, the system will not create a new resource record for the new path. Instead, it will use the marker file to locate the original resource record and update its path."
+  "pathMarkConfig.tip.keepResourcesOnPathChange": "Normally, a resource record is created for each resource path. When enabled, a marker file (bakabase.json) will be generated in resource folders. During the next sync, if the resource path has changed, the system will not create a new resource record for the new path. Instead, it will use the marker file to locate the original resource record and update its path.",
+  "pathMarkConfig.action.markByExample": "Mark every folder at this level",
+  "pathMarkConfig.markByExample.title": "Mark every folder at this level",
+  "pathMarkConfig.markByExample.description": "You pointed at {{path}}. Choose the folder the rule should sit on, and every folder at the same depth below it becomes a resource.",
+  "pathMarkConfig.markByExample.root.label": "Put the rule on",
+  "pathMarkConfig.markByExample.layer": "level {{layer}} below this folder",
+  "pathMarkConfig.markByExample.alreadyMarked": "already marked",
+  "pathMarkConfig.markByExample.noAncestors": "That folder has nothing above it, so there is nowhere to put the rule.",
+  "pathMarkConfig.markByExample.confirm": "Create the mark"
 }

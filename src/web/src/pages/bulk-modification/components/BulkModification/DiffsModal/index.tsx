@@ -27,7 +27,8 @@ import PropertyValueRenderer from "@/components/Property/components/PropertyValu
 import BApi from "@/sdk/BApi";
 
 type BulkModificationDiff = {
-  resourcePath: string;
+  /** Absent when the resource has no local files — it is known to Bakabase but not on disk yet. */
+  resourcePath?: string;
   diffs: Diff[];
 };
 
@@ -137,7 +138,13 @@ const DiffsModal = ({ bmId, deleteResources, onDestroyed }: Props) => {
                 return (
                   <TableRow key={di}>
                     <TableCell>
-                      <div className={"max-w-[600px] break-all"}>{d.resourcePath}</div>
+                      <div className={"max-w-[600px] break-all"}>
+                        {d.resourcePath ?? (
+                          <span className={"text-default-400"}>
+                            {t<string>("bulkModification.diff.resourceHasNoLocalFiles")}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {deleteResources ? (

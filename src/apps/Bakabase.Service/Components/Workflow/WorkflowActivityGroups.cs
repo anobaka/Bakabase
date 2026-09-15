@@ -15,4 +15,7 @@ public static class WorkflowActivityGroups
     public const string Downloader = "downloader";
     public const string Fs = "fs";
     public const string Text = "text";
+
+    /// <summary>Acting on a resource itself, whatever brought it into the chain.</summary>
+    public const string Resource = "resource";
 }

@@ -14,6 +14,7 @@ public record SubscriptionViewModel
     public DateTime? LastChangeAt { get; set; }
     public string? LastError { get; set; }
     public int? IntervalMinutes { get; set; }
+    public int? CollectionId { get; set; }
 
     /// <summary>Provider-rendered short summary of <see cref="TargetJson"/>; provided by the server so the UI doesn't reparse.</summary>
     public string? TargetSummary { get; set; }
@@ -30,6 +31,7 @@ public record SubscriptionViewModel
         LastChangeAt = s.LastChangeAt,
         LastError = s.LastError,
         IntervalMinutes = s.IntervalMinutes,
+        CollectionId = s.CollectionId,
         TargetSummary = targetSummary,
     };
 }

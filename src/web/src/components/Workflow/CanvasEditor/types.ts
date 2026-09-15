@@ -5,6 +5,7 @@ export interface ActivityDraft {
   clientId: string;
   kind: string;
   configJson: string;
+  notes?: string;
   onItemError: WorkflowActivityErrorBehavior;
 }
 
@@ -19,6 +20,7 @@ export interface EditorSeedLike {
   name?: string;
   /** i18n key used when no literal name is given. */
   nameKey?: string;
+  descriptionKey?: string;
   triggerKind: string;
   drafts: ActivityDraft[];
 }

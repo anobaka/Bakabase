@@ -1,5 +1,7 @@
 import type { ActivityDraft } from "./types";
 
+import { v4 as uuidv4 } from "uuid";
+
 import { getWorkflowActivityUI } from "../Activities";
 
 import { WorkflowActivityErrorBehavior } from "@/sdk/constants";
@@ -15,6 +17,8 @@ export interface EditorSeed {
   nameKey?: string;
   /** Literal name (wins over nameKey) — used by the File Name Modifier hand-off. */
   name?: string;
+  /** Usage, configuration and expected outcome, copied into the new definition. */
+  descriptionKey?: string;
   triggerKind: string;
   activities: Array<{ kind: string; configJson?: string }>;
 }
@@ -26,7 +30,7 @@ const draftOf = (kind: string, configJson?: string): ActivityDraft => {
   const ui = getWorkflowActivityUI(kind);
 
   return {
-    clientId: crypto.randomUUID(),
+    clientId: uuidv4(),
     kind,
     configJson: configJson ?? (ui ? ui.serializeConfig(ui.defaultConfig()) : "{}"),
     onItemError: WorkflowActivityErrorBehavior.Fail,
@@ -34,15 +38,38 @@ const draftOf = (kind: string, configJson?: string): ActivityDraft => {
 };
 
 export const EDITOR_TEMPLATES: Record<string, EditorSeed> = {
+  acquisition: {
+    nameKey: "workflow.template.acquisition.name",
+    triggerKind: "acquisition.requested",
+    activities: [
+      { kind: "acquisition.resolveSharedContent" },
+      { kind: "acquisition.selectLink" },
+      { kind: "acquisition.waitForInbox" },
+      { kind: "acquisition.unpack" },
+      { kind: "acquisition.place" },
+      { kind: "acquisition.materialize" },
+    ],
+  },
   // Scan → rename ops → trim leftovers → record the plan: the basicClean recipe from the
   // help center, ready to point at a folder.
   fileCleaning: {
     nameKey: "workflow.template.fileCleaning.name",
+    descriptionKey: "workflow.preset.fileCleaning.description",
     triggerKind: "fs.manualScan",
     activities: [
       { kind: "transform.fs.fileNameOp" },
       { kind: "transform.text.trim" },
       { kind: "action.fs.saveName" },
+    ],
+  },
+  externalDownload: {
+    nameKey: "workflow.template.externalDownload.name",
+    descriptionKey: "workflow.preset.externalDownload.description",
+    triggerKind: "acquisition.requested",
+    activities: [
+      { kind: "acquisition.waitForInbox" },
+      { kind: "acquisition.place" },
+      { kind: "acquisition.materialize" },
     ],
   },
 };

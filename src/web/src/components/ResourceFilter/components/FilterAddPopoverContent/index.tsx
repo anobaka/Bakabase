@@ -9,8 +9,8 @@ import { TbSwitch2 } from "react-icons/tb";
 
 import RecentFilters from "../RecentFilters";
 
-import { Button, Checkbox, CheckboxGroup, Divider } from "@/components/bakaui";
-import { resourceTags, ResourceTag as ResourceTagEnum } from "@/sdk/constants";
+import { Button, Checkbox, CheckboxGroup } from "@/components/bakaui";
+import { resourceTags } from "@/sdk/constants";
 import { getEnumKey } from "@/i18n";
 
 export interface FilterAddPopoverContentProps {
@@ -48,101 +48,99 @@ const FilterAddPopoverContent = ({
   const { t } = useTranslation();
 
   return (
-    <div
-      className="grid items-center gap-2 my-3 mx-1 max-w-[480px]"
-      style={{ gridTemplateColumns: "auto auto" }}
-    >
-      <div>{t<string>("resourceFilter.advanceFilter")}</div>
-      <div className="flex items-center gap-2">
+    <div className="w-80 max-w-[calc(100vw-2rem)] max-h-[75vh] space-y-4 overflow-y-auto p-2">
+      <div>
+        <h3 className="text-sm font-semibold">
+          {t<string>("resourceFilter.toolbar.addCondition")}
+        </h3>
+        <p className="mt-1 text-xs leading-relaxed text-default-500">
+          {t<string>("resourceFilter.add.description")}
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
         <Button
+          className="h-auto min-h-16 items-start justify-start whitespace-normal px-3 py-2.5 text-left"
           size="sm"
+          variant="flat"
           onPress={() => {
             onClose?.();
             onAddFilter(true);
           }}
         >
-          <FilterOutlined className="text-base" />
-          {t<string>("resourceFilter.filter")}
+          <FilterOutlined className="mt-0.5 shrink-0 text-base text-primary" />
+          <span className="min-w-0">
+            <span className="block font-medium">{t<string>("resourceFilter.filter")}</span>
+            <span className="mt-1 block text-xs leading-relaxed text-default-500">
+              {t<string>("resourceFilter.add.conditionHint")}
+            </span>
+          </span>
         </Button>
         <Button
+          className="h-auto min-h-16 items-start justify-start whitespace-normal px-3 py-2.5 text-left"
           size="sm"
+          variant="flat"
           onPress={() => {
             onClose?.();
             onAddFilterGroup();
           }}
         >
-          <AppstoreOutlined className="text-base" />
-          {t<string>("resourceFilter.filterGroup")}
+          <AppstoreOutlined className="mt-0.5 shrink-0 text-base text-primary" />
+          <span className="min-w-0">
+            <span className="block font-medium">{t<string>("resourceFilter.filterGroup")}</span>
+            <span className="mt-1 block text-xs leading-relaxed text-default-500">
+              {t<string>("resourceFilter.add.groupHint")}
+            </span>
+          </span>
         </Button>
       </div>
-
       {showTags && onTagsChange && (
-        <>
-          <div />
-          <Divider orientation="horizontal" />
-          <div>{t<string>("resourceFilter.specialFilters")}</div>
-          <div>
-            <CheckboxGroup
-              size="sm"
-              value={selectedTags?.map((tag) => tag.toString())}
-              onChange={(ts) => {
-                const newTags = ts.map((tag) => parseInt(tag, 10) as ResourceTag);
-
-                onTagsChange(newTags);
-              }}
-            >
-              {resourceTags
-                .filter(
-                  (rt) =>
-                    rt.value != ResourceTagEnum.PathDoesNotExist &&
-                    rt.value != ResourceTagEnum.UnknownMediaLibrary,
-                )
-                .map((rt) => (
-                  <Checkbox key={rt.value} value={rt.value.toString()}>
-                    {t<string>(getEnumKey("ResourceTag", rt.label))}
-                  </Checkbox>
-                ))}
-            </CheckboxGroup>
-          </div>
-        </>
+        <section>
+          <h4 className="mb-2 text-xs font-medium text-default-500">
+            {t<string>("resourceFilter.specialFilters")}
+          </h4>
+          <CheckboxGroup
+            aria-label={t<string>("resourceFilter.specialFilters")}
+            classNames={{ wrapper: "gap-2" }}
+            size="sm"
+            value={selectedTags?.map((tag) => tag.toString()) ?? []}
+            onChange={(tags) => onTagsChange(tags.map((tag) => parseInt(tag, 10) as ResourceTag))}
+          >
+            {resourceTags.map((tag) => (
+              <Checkbox key={tag.value} value={tag.value.toString()}>
+                {t<string>(getEnumKey("ResourceTag", tag.label))}
+              </Checkbox>
+            ))}
+          </CheckboxGroup>
+        </section>
       )}
-
       {showRecentFilters && (
-        <>
-          <div />
-          <Divider />
-          <div>{t<string>("resourceFilter.recentFilters")}</div>
-          <div>
-            <RecentFilters
-              onSelectFilter={(filter) => {
-                onClose?.();
-                onSelectFilters([filter]);
-              }}
-            />
-          </div>
-        </>
+        <section>
+          <h4 className="mb-2 text-xs font-medium text-default-500">
+            {t<string>("resourceFilter.recentFilters")}
+          </h4>
+          <RecentFilters
+            onSelectFilter={(filter) => {
+              onClose?.();
+              onSelectFilters([filter]);
+            }}
+          />
+        </section>
       )}
-
       {onSwitchToSimpleMode && (
-        <>
-          <div />
-          <Divider />
-          <div />
-          <div className="flex justify-end">
-            <Button
-              color="primary"
-              size="sm"
-              variant="light"
-              onPress={() => {
-                onClose?.();
-                onSwitchToSimpleMode();
-              }}
-            >
-              <TbSwitch2 className="text-lg" />
-              {t<string>("resourceFilter.switchToSimpleMode")}
-            </Button>
-          </div>
-        </>
+        <div className="flex justify-end">
+          <Button
+            color="primary"
+            size="sm"
+            variant="light"
+            onPress={() => {
+              onClose?.();
+              onSwitchToSimpleMode();
+            }}
+          >
+            <TbSwitch2 className="text-base" />
+            {t<string>("resourceFilter.switchToSimpleMode")}
+          </Button>
+        </div>
       )}
     </div>
   );

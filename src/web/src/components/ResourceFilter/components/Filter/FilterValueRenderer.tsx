@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useFilterChoiceCounts } from "../../hooks/useFilterChoiceCounts";
 
 import ChoiceResourceCount, { ChoiceResourceCountsStatus } from "./ChoiceResourceCount";
+import styles from "./value.module.scss";
 
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { isReferenceValueType } from "@/components/Property/PropertySystem";
@@ -17,10 +18,14 @@ import { useReferenceValueSearch } from "@/hooks/useReferenceValueResourceCounts
 
 /** Adds resource-search behavior to the ordinary property value renderer. */
 export default function FilterValueRenderer(props: Props) {
-  return isReferenceValueType(props.property.type) ? (
-    <FilterValueWithChoiceCounts {...props} />
-  ) : (
-    <PropertyValueRenderer {...props} />
+  return (
+    <div className={styles.value}>
+      {isReferenceValueType(props.property.type) ? (
+        <FilterValueWithChoiceCounts {...props} />
+      ) : (
+        <PropertyValueRenderer {...props} />
+      )}
+    </div>
   );
 }
 

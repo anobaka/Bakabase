@@ -104,14 +104,14 @@ public class DLsiteResolver : IResourceResolver
 
         foreach (var resource in fileSystemResources)
         {
-            if (string.IsNullOrEmpty(resource.Path)) continue;
+            if (!resource.HasLocalPath) continue;
 
             // Check filename and path for DLsite Work ID pattern (RJ/BJ/VJ + digits)
             var fileName = resource.FileName ?? "";
             var match = WorkIdPattern.Match(fileName);
             if (!match.Success)
             {
-                match = WorkIdPattern.Match(resource.Path);
+                match = WorkIdPattern.Match(resource.Path!);
             }
 
             if (match.Success)

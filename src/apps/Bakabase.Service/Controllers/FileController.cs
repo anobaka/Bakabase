@@ -67,6 +67,7 @@ namespace Bakabase.Service.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly BTaskManager _taskManager;
         private readonly CompressedFileService _compressedFileService;
+        private readonly IArchiveExtractionService _archiveExtraction;
         private readonly IBOptionsManager<FileSystemOptions> _fsOptionsManager;
         private readonly BakabaseLocalizer _localizer;
         private readonly IwFsWatcher _fileProcessorWatcher;
@@ -81,7 +82,8 @@ namespace Bakabase.Service.Controllers
         private readonly Bakabase.Service.Services.FileSystemEntryGroupingService _groupingService;
 
         public FileController(ITextOps textOps, IWebHostEnvironment env,
-            CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
+            CompressedFileService compressedFileService, IArchiveExtractionService archiveExtraction,
+            IBOptionsManager<FileSystemOptions> fsOptionsManager,
             IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger,
             BakabaseLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter,
             FfMpegService ffMpegService, HardwareAccelerationService hardwareAccelerationService,
@@ -91,6 +93,7 @@ namespace Bakabase.Service.Controllers
             _textOps = textOps;
             _env = env;
             _compressedFileService = compressedFileService;
+            _archiveExtraction = archiveExtraction;
             _fsOptionsManager = fsOptionsManager;
             _fileProcessorWatcher = fileProcessorWatcher;
             _passwordService = passwordService;
@@ -203,52 +206,36 @@ namespace Bakabase.Service.Controllers
                 vm.Status = CompressedFileDetectionResultStatus.Inprogress;
                 await YieldReturn(vm);
                 
-                var password = default(string);
-                // Try without password first, then candidates
                 var sampleGroups = new List<CompressedFileDetectionResultViewModel.SampleGroup>();
-                var wrongPasswords = new HashSet<string>();
                 try
                 {
                     var entry = group.Files.First();
-                    var passwordCandidates = group.Files[0].GetPasswordsFromPath();
-                    var pickedTestStdOut = default(string);
+                    // No password first, then whatever the file name suggests.
+                    var candidates = new[] {(string?) null}
+                        .Concat(group.Files[0].GetPasswordsFromPath())
+                        .ToList();
 
-                    foreach (var candidate in new[] { (string)null! }.Concat(passwordCandidates))
-                    {
-                        ct.ThrowIfCancellationRequested();
-
-                        var result = await _compressedFileService.TestCompressedFile(
-                            entry,
-                            candidate,
-                            Path.GetDirectoryName(entry),
-                            onStandardOutput: null,
-                            onStandardError: (line) =>
-                            {
-                                if (line.Contains("Wrong password") && candidate.IsNotEmpty())
-                                {
-                                    wrongPasswords.Add(candidate);
-                                }
-                            },
-                            ct);
-
-                        vm.Message += $"{result.StandardOutput}{Environment.NewLine}{result.StandardError}";
-                        await YieldReturn(vm);
-
-                        if (result.ExitCode == 0)
+                    var probe = await _archiveExtraction.ProbePasswordAsync(entry, candidates,
+                        message =>
                         {
-                            pickedTestStdOut = result.StandardOutput;
-                            vm.Password = password;
-                            vm.Status = CompressedFileDetectionResultStatus.Complete;
-                            break;
-                        }
+                            vm.Message = message;
+                        }, ct);
 
-                        vm.Status = CompressedFileDetectionResultStatus.Error;
-                    }
+                    vm.Message = probe.Message;
+                    vm.Status = probe.Succeeded
+                        ? CompressedFileDetectionResultStatus.Complete
+                        : CompressedFileDetectionResultStatus.Error;
+                    await YieldReturn(vm);
 
                     if (vm.Status == CompressedFileDetectionResultStatus.Complete)
                     {
+                        var pickedTestStdOut = probe.StandardOutput;
+
+                        // The password that actually opened it. This used to report an unassigned
+                        // local, so a correct password was found and then never shown.
+                        vm.Password = probe.Password;
                         vm.PasswordCandidates = [];
-                        vm.WrongPasswords = wrongPasswords.ToArray();
+                        vm.WrongPasswords = probe.WrongPasswords.ToArray();
                         await YieldReturn(vm);
 
                         // Build sample groups from 't' output to avoid a separate 'l' call
@@ -349,109 +336,32 @@ namespace Bakabase.Service.Controllers
 
                 try
                 {
-                    // Determine target directory
-                    var targetDir = item.DecompressToNewFolder
-                        ? Path.Combine(item.Directory, Path.GetFileNameWithoutExtension(item.Files[0]))
-                        : item.Directory;
-
-                    var processRegex = new Regex(@"\d+\%");
-
                     vm.Status = DecompressionStatus.Decompressing;
                     vm.Percentage = 0;
                     // Send decompressing status
                     await YieldReturn(vm);
 
-                    var result = await _compressedFileService.ExtractWithProgress(
-                        item.Files[0], // Use first file as entry point for multi-part archives
-                        targetDir,
-                        item.Password,
-                        usePasswordSwitch: true,
-                        overwriteMode: item.OverwriteExistFiles
-                            ? CompressedFileService.OverwriteMode.OverwriteAll
-                            : CompressedFileService.OverwriteMode.None,
-                        progressOutput: CompressedFileService.ProgressOutputTarget.StandardOutput,
-                        workingDirectory: item.Directory,
-                        onStandardOutput: (line) =>
+                    var result = await _archiveExtraction.ExtractAsync(
+                        new ArchiveExtractionRequest(
+                            item.Files,
+                            item.Directory,
+                            item.Password,
+                            item.DecompressToNewFolder,
+                            item.OverwriteExistFiles,
+                            item.DeleteAfterDecompression,
+                            item.MoveToParent),
+                        percentage =>
                         {
-                            var match = processRegex.Match(line);
-                            if (match.Success)
-                            {
-                                var percentageStr = match.Value.TrimEnd('%');
-                                if (int.TryParse(percentageStr, out var percentage))
-                                {
-                                    vm.Status = DecompressionStatus.Decompressing;
-                                    vm.Percentage = percentage;
-                                    YieldReturn(vm).GetAwaiter().GetResult();
-                                }
-                            }
+                            vm.Status = DecompressionStatus.Decompressing;
+                            vm.Percentage = percentage;
+                            YieldReturn(vm).GetAwaiter().GetResult();
                         },
-                        onStandardError: null,
                         ct);
 
-                    vm.Message += $"{result.StandardOutput}{Environment.NewLine}{result.StandardError}";
+                    vm.Message += result.Message;
 
-                    if (result.ExitCode != 0)
+                    if (!result.Succeeded)
                     {
-                        vm.Status = DecompressionStatus.Error;
-                        await YieldReturn(vm);
-
-                        if (!model.OnFailureContinue)
-                        {
-                            break;
-                        }
-
-                        continue;
-                    }
-
-                    // Post-decompression operations
-                    try
-                    {
-                        if (item.DeleteAfterDecompression)
-                        {
-                            foreach (var file in item.Files)
-                            {
-                                var path = Path.Combine(item.Directory, file);
-                                if (System.IO.File.Exists(path))
-                                {
-                                    FileUtils.Delete(path, true, true);
-                                }
-                            }
-                        }
-
-                        if (item.MoveToParent)
-                        {
-                            if (Directory.Exists(targetDir))
-                            {
-                                var targetDirName = Path.GetFileName(targetDir);
-                                var canDeleteTargetDir = true;
-
-                                foreach (var p in Directory.GetFileSystemEntries(targetDir))
-                                {
-                                    var entryName = Path.GetFileName(p);
-                                    var dest = Path.Combine(Path.GetDirectoryName(targetDir)!, entryName);
-
-                                    // If this entry has the same name as targetDir, don't delete targetDir later
-                                    if (entryName.Equals(targetDirName, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        canDeleteTargetDir = false;
-                                    }
-
-                                    if (Directory.Exists(p))
-                                        Directory.Move(p, dest);
-                                    else
-                                        System.IO.File.Move(p, dest);
-                                }
-
-                                if (canDeleteTargetDir)
-                                {
-                                    DirectoryUtils.Delete(targetDir, true, true);
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        vm.Message += $"{Environment.NewLine}Post-processing error: {ex.Message}";
                         vm.Status = DecompressionStatus.Error;
                         await YieldReturn(vm);
 

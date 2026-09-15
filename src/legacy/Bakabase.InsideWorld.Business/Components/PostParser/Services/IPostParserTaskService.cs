@@ -12,10 +12,13 @@ public interface IPostParserTaskService
 {
     Task<List<PostParserTask>> GetAll();
     Task AddRange(Dictionary<PostParserSource, List<string>> sourceLinksMap, List<PostParseTarget> targets);
+    Task AddInputs(Dictionary<PostParserSource, List<string>> sourceLinksMap, List<PostParseTarget> targets,
+        List<string> links, string? text, string? title);
     Task Delete(int id);
     Task<int> DeleteByLinks(PostParserSource source, List<string> links);
     Task DeleteAll();
     Task ReParse(int id);
+    Task Retry(int id);
     Task Put(int id, PostParserTask pdt);
     Task ParseAll(Func<int, Task>? onProgress, Func<string, Task>? onProcessChange, PauseToken pt, CancellationToken ct);
     Task<Dictionary<string, PostParserTaskStatus>> GetStatusesByLinks(PostParserSource source, List<string> links);

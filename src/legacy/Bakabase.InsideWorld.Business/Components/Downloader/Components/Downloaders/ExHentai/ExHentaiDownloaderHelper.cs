@@ -24,17 +24,19 @@ public class ExHentaiDownloaderHelper(
     public override async Task<DownloadTask[]> BuildTasks(DownloadTaskAddInputModel model)
     {
         var tasks = await base.BuildTasks(model);
-        var preferTorrentDefault = optionsManager.Value.PreferTorrent;
+        var defaults = optionsManager.Value;
+        var preferTorrentDefault = defaults.PreferTorrent;
+        var resultWorkflowDefault = defaults.DownloadResultWorkflowId;
         foreach (var task in tasks)
         {
-            task.Options = ApplyDefaultTaskOptions(task.Options, preferTorrentDefault);
+            task.Options = ApplyDefaultTaskOptions(task.Options, preferTorrentDefault, resultWorkflowDefault);
         }
 
         return tasks;
     }
 
     // Freeze the global PreferTorrent default onto the task at creation; an explicit per-task value is kept.
-    private static string ApplyDefaultTaskOptions(string? rawOptions, bool preferTorrentDefault)
+    internal static string ApplyDefaultTaskOptions(string? rawOptions, bool preferTorrentDefault, int? resultWorkflowDefault)
     {
         ExHentaiTaskOptionsPatch? patch = null;
         if (!string.IsNullOrWhiteSpace(rawOptions))
@@ -49,9 +51,12 @@ public class ExHentaiDownloaderHelper(
             }
         }
 
+        var resultWorkflowId = patch?.DownloadResultWorkflowSpecified == true
+            ? patch.DownloadResultWorkflowId : resultWorkflowDefault;
         var options = new ExHentaiTaskOptions
         {
             PreferTorrent = patch?.PreferTorrent ?? preferTorrentDefault,
+            DownloadResultWorkflowId = resultWorkflowId is > 0 ? resultWorkflowId : null,
             // Carried over rather than reset, so re-submitting a task does not throw away a
             // still-valid torrent verdict.
             NoTorrentCheckedAt = patch?.NoTorrentCheckedAt,

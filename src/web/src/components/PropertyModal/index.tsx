@@ -9,7 +9,6 @@ import { useTranslation } from "react-i18next";
 
 import ModalContent from "./components/ModalContent";
 
-import { buildLogger } from "@/components/utils";
 import "./index.scss";
 import BApi from "@/sdk/BApi";
 import { Modal } from "@/components/bakaui";
@@ -27,7 +26,6 @@ type CustomPropertyForm = {
   options?: any;
 };
 
-const log = buildLogger("PropertyModal");
 const PropertyModal = ({ value, onSaved, validValueTypes, ...props }: Props) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
@@ -37,18 +35,20 @@ const PropertyModal = ({ value, onSaved, validValueTypes, ...props }: Props) => 
     setVisible(false);
   };
 
-  log(property);
-
   return (
     <Modal
+      className="property-editor-dialog"
       footer={{
         actions: ["ok", "cancel"],
         okProps: {
           isDisabled: !property,
+          children: t<string>("property.editor.save"),
         },
+        cancelProps: { children: t<string>("property.editor.cancel"), color: "default" },
       }}
-      size={"lg"}
-      title={t<string>("Custom property")}
+      scrollBehavior="inside"
+      size="4xl"
+      title={t<string>(value?.id ? "property.editor.editTitle" : "property.editor.createTitle")}
       visible={visible}
       onClose={close}
       onOk={async () => {

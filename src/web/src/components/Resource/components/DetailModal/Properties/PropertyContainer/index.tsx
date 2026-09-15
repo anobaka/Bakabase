@@ -12,7 +12,7 @@ import { AiOutlinePlusCircle } from "react-icons/ai";
 import ScopePreferencePopover from "./ScopePreferencePopover";
 
 import BApi from "@/sdk/BApi";
-import { propertyValueScopes } from "@/sdk/constants";
+import { propertyValueScopes, PropertyType } from "@/sdk/constants";
 import { selectScopedValue } from "@/core/models/Resource";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { buildLogger } from "@/components/utils";
@@ -91,61 +91,75 @@ const PropertyContainer = (props: PropertyContainerProps) => {
   };
 
   const titleNode = (
-    <div className={`flex items-center gap-1 ${classNames?.name ?? ""}`}>
-      <BriefProperty
-        chipProps={
-          layout === "vertical"
-            ? {
-                variant: "light",
-                className: "px-0 leading-none",
-                classNames: { content: "px-0", base: "h-auto" },
-              }
-            : undefined
-        }
-        fields={["pool", "name"]}
-        property={property}
-        showPoolChip={false}
-      />
-      {canBindToProfiles && (
-        <Tooltip color={"foreground"} content={t("property.bindToProfiles.title")}>
-          <button
-            aria-label={t<string>("property.bindToProfiles.title")}
-            className="inline-flex items-center justify-center leading-none p-0 m-0 cursor-pointer text-secondary hover:opacity-80 outline-none focus-visible:opacity-100"
-            type="button"
-            onClick={handleBindToProfiles}
+    <div className={`flex min-w-0 items-start gap-2 ${classNames?.name ?? ""}`}>
+      <div className="min-w-0">
+        <BriefProperty
+          chipProps={
+            layout === "vertical"
+              ? {
+                  variant: "light",
+                  color: "default",
+                  className: "h-auto min-w-0 max-w-full px-0",
+                  classNames: {
+                    content:
+                      "min-w-0 whitespace-normal px-0 text-xs font-medium leading-5 text-default-500 [overflow-wrap:anywhere]",
+                    base: "h-auto min-w-0 max-w-full",
+                  },
+                }
+              : undefined
+          }
+          fields={["pool", "name"]}
+          property={property}
+          showPoolChip={false}
+        />
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        {canBindToProfiles && (
+          <Tooltip color={"foreground"} content={t("property.bindToProfiles.title")}>
+            <button
+              aria-label={t<string>("property.bindToProfiles.title")}
+              className="inline-flex h-5 w-5 items-center justify-center rounded text-default-400 transition-colors hover:bg-default-100 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              type="button"
+              onClick={handleBindToProfiles}
+            >
+              <AiOutlinePlusCircle size={14} />
+            </button>
+          </Tooltip>
+        )}
+        {canShowPopover && (
+          <span
+            className={`transition-opacity duration-150 ${
+              isScopePopoverOpen
+                ? "opacity-100"
+                : "opacity-40 group-hover/property:opacity-100 group-focus-within/property:opacity-100"
+            }`}
           >
-            <AiOutlinePlusCircle size={14} />
-          </button>
-        </Tooltip>
-      )}
-      {canShowPopover && (
-        <span
-          className={`transition-opacity duration-150 ${
-            isScopePopoverOpen
-              ? "opacity-100"
-              : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
-          }`}
-        >
-          <ScopePreferencePopover
-            effectivePriority={valueScopePriority}
-            preference={scopePreference}
-            propertyId={property.id}
-            propertyPool={propertyPool!}
-            resourceId={resourceId!}
-            values={values}
-            onChanged={() => onValueScopePriorityChange(valueScopePriority)}
-            onOpenChange={setIsScopePopoverOpen}
-          />
-        </span>
-      )}
+            <ScopePreferencePopover
+              effectivePriority={valueScopePriority}
+              preference={scopePreference}
+              property={property}
+              propertyId={property.id}
+              propertyPool={propertyPool!}
+              resourceId={resourceId!}
+              values={values}
+              onChanged={() => onValueScopePriorityChange(valueScopePriority)}
+              onOpenChange={setIsScopePopoverOpen}
+            />
+          </span>
+        )}
+      </div>
     </div>
   );
 
   if (layout === "vertical") {
     return (
-      <div className="flex flex-col gap-0.5 group">
+      <div
+        className={`group group/property flex min-w-0 flex-col gap-1.5 rounded-lg transition-colors ${hidePropertyName ? "" : "-mx-2 px-2 py-2 hover:bg-default-50/60 focus-within:bg-default-50/60"}`}
+      >
         {!hidePropertyName && titleNode}
-        <div className={`flex items-center gap-2 break-all ${classNames?.value}`}>
+        <div
+          className={`flex min-w-0 max-w-full items-center gap-2 text-sm leading-relaxed text-default-700 [overflow-wrap:anywhere] [&>*]:min-w-0 [&>*]:max-w-full ${classNames?.value ?? ""}`}
+        >
           <PropertyValueRenderer
             bizValue={serializeStandardValue(
               convertFromApiValue(bizValue, property.bizValueType),
@@ -156,6 +170,13 @@ const PropertyContainer = (props: PropertyContainerProps) => {
               property.dbValueType,
             )}
             property={property}
+            size={
+              hidePropertyName ||
+              property.type === PropertyType.Attachment ||
+              property.type === PropertyType.Rating
+                ? "md"
+                : "sm"
+            }
             variant={"default"}
             onValueChange={onValueChange}
           />

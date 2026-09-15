@@ -251,6 +251,49 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     /// <summary>
     /// Get the total count of purchased works from DLsite Play.
     /// </summary>
+    /// <summary>
+    /// Every work a circle or series page lists, following the pager to the end.
+    /// <para>
+    /// This is what makes DLsite a catalog as well as a shop: it says what a circle has made,
+    /// whether or not the user owns any of it.
+    /// </para>
+    /// </summary>
+    /// <param name="listUrl">A circle profile or series page, as the user would paste it.</param>
+    /// <param name="maxPages">How far to follow. A prolific circle has a lot of history.</param>
+    public async Task<List<DLsiteListedWork>> GetListedWorksAsync(string listUrl, int maxPages,
+        CancellationToken ct = default)
+    {
+        var works = new List<DLsiteListedWork>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var url = listUrl;
+
+        for (var page = 0; page < maxPages && !string.IsNullOrEmpty(url); page++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            // The same age gate the detail pages need; without it a listing of R-18 works is an
+            // "are you 18?" page with no works on it at all.
+            request.Headers.Add("Cookie", AgeBypassCookie);
+
+            var response = await HttpClient.SendAsync(request, ct);
+
+            response.EnsureSuccessStatusCode();
+
+            var html = await response.Content.ReadAsStringAsync(ct);
+
+            foreach (var work in DLsiteListParser.Parse(html))
+            {
+                if (seen.Add(work.WorkId)) works.Add(work);
+            }
+
+            url = DLsiteListParser.FindNextPageUrl(html, url);
+        }
+
+        return works;
+    }
+
     public async Task<int> GetPurchaseCountAsync(string cookie, CancellationToken ct = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{PlayApiContentCount}?last=0");

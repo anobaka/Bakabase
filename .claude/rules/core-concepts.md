@@ -9,7 +9,14 @@ paths:
 # Core Data Model
 
 ## Resource
-A managed file or folder with metadata.
+A managed work with metadata and an optional local file or folder. A resource can exist before its files have been obtained.
+
+## ResourceSource and External Identity
+- `ResourceSource` describes content origins (PathMark, Steam, DLsite, ExHentai, Aigc, Pixiv), not metadata sites or a guarantee of automatic downloading.
+- `ThirdPartyId` identifies a site. `ResourceExternalIdentity` associates a resource with a site's work via `(ThirdPartyId, ExternalId)`; Bangumi and VNDB belong here.
+- Platform identities already carried by `ResourceSourceLink.SourceKey` are not duplicated into the external identity table.
+- Subscription and placeholder identity inputs use `ThirdPartyId`; metadata associations must survive local file binding and resource merging without becoming content sources.
+- Acquisition leads separately describe where to obtain the files.
 
 ## Property
 Resource attribute with 3 pools (via `PropertyPool`):

@@ -45,6 +45,9 @@ import enHealthScore from "@/locales/en/pages/healthScore.json";
 import enAvSources from "@/locales/en/pages/avSources.json";
 import enSubscription from "@/locales/en/pages/subscription.json";
 import enWorkflow from "@/locales/en/pages/workflow.json";
+import enWorkflowTriggers from "@/locales/en/pages/workflowTriggers.json";
+import enAcquisition from "@/locales/en/pages/acquisition.json";
+import enCollection from "@/locales/en/pages/collection.json";
 
 // English - Components
 import enFileExplorer from "@/locales/en/components/fileExplorer.json";
@@ -63,6 +66,9 @@ import enResourceMove from "@/locales/en/components/resourceMove.json";
 import enBakaChat from "@/locales/en/components/bakaChat.json";
 import enNotificationCenter from "@/locales/en/components/notificationCenter.json";
 import enHelpCenter from "@/locales/en/components/helpCenter.json";
+import enHelpCollection from "@/locales/en/components/helpCollection.json";
+import enHelpSubscription from "@/locales/en/components/helpSubscription.json";
+import enHelpAcquisition from "@/locales/en/components/helpAcquisition.json";
 
 // New modular imports - Chinese
 import cnCommon from "@/locales/cn/common.json";
@@ -108,6 +114,9 @@ import cnHealthScore from "@/locales/cn/pages/healthScore.json";
 import cnAvSources from "@/locales/cn/pages/avSources.json";
 import cnSubscription from "@/locales/cn/pages/subscription.json";
 import cnWorkflow from "@/locales/cn/pages/workflow.json";
+import cnWorkflowTriggers from "@/locales/cn/pages/workflowTriggers.json";
+import cnAcquisition from "@/locales/cn/pages/acquisition.json";
+import cnCollection from "@/locales/cn/pages/collection.json";
 
 // Chinese - Components
 import cnFileExplorer from "@/locales/cn/components/fileExplorer.json";
@@ -126,6 +135,9 @@ import cnResourceMove from "@/locales/cn/components/resourceMove.json";
 import cnBakaChat from "@/locales/cn/components/bakaChat.json";
 import cnNotificationCenter from "@/locales/cn/components/notificationCenter.json";
 import cnHelpCenter from "@/locales/cn/components/helpCenter.json";
+import cnHelpCollection from "@/locales/cn/components/helpCollection.json";
+import cnHelpSubscription from "@/locales/cn/components/helpSubscription.json";
+import cnHelpAcquisition from "@/locales/cn/components/helpAcquisition.json";
 
 // Merge all English resources
 const enResources = {
@@ -171,6 +183,9 @@ const enResources = {
   ...enAvSources,
   ...enSubscription,
   ...enWorkflow,
+  ...enWorkflowTriggers,
+  ...enAcquisition,
+  ...enCollection,
   // Components
   ...enFileExplorer,
   ...enResourceFilter,
@@ -188,6 +203,9 @@ const enResources = {
   ...enBakaChat,
   ...enNotificationCenter,
   ...enHelpCenter,
+  ...enHelpCollection,
+  ...enHelpSubscription,
+  ...enHelpAcquisition,
 };
 
 // Merge all Chinese resources
@@ -234,6 +252,9 @@ const cnResources = {
   ...cnAvSources,
   ...cnSubscription,
   ...cnWorkflow,
+  ...cnWorkflowTriggers,
+  ...cnAcquisition,
+  ...cnCollection,
   // Components
   ...cnFileExplorer,
   ...cnResourceFilter,
@@ -251,6 +272,9 @@ const cnResources = {
   ...cnBakaChat,
   ...cnNotificationCenter,
   ...cnHelpCenter,
+  ...cnHelpCollection,
+  ...cnHelpSubscription,
+  ...cnHelpAcquisition,
 };
 
 // 只初始化一次，防止热更新或多次 import 时重复初始化

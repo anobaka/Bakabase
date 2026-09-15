@@ -10,243 +10,287 @@ import type {
 } from "@/sdk/Api";
 import type { EnhancerId } from "@/sdk/constants";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PlusOutlined, DeleteOutlined, OrderedListOutlined } from "@ant-design/icons";
+import {
+  AiOutlineClose,
+  AiOutlineGlobal,
+  AiOutlineLink,
+  AiOutlinePlus,
+  AiOutlineSearch,
+} from "react-icons/ai";
 
 import ScopePriorityEditor from "../ScopePriorityEditor";
 import GlobalScopePriorityModal from "../GlobalScopePriorityModal";
 import { enhancerIdToScope } from "../EnhancementConfigPanel/utils";
 
-import {
-  Button,
-  Chip,
-  Modal,
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-  Tooltip,
-} from "@/components/bakaui";
+import { Button, Input, Modal, Tooltip } from "@/components/bakaui";
 import { PropertyPool, PropertyTypeLabel, PropertyValueScope } from "@/sdk/constants";
 import { PropertyLabel } from "@/components/Property";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { useResourceOptionsStore } from "@/stores/options";
 
 type PropertyRef = BakabaseAbstractionsModelsDomainPropertyKeyWithScopePriority;
-
+type PropertyOptions = BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions;
 type Props = {
-  propertyOptions?: BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions;
+  propertyOptions?: PropertyOptions;
   allProperties: IProperty[];
   enhancerOptions: BakabaseAbstractionsModelsDomainEnhancerFullOptions[];
   enhancerDescriptors: EnhancerDescriptor[];
-  onSubmit?: (
-    options: BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions | undefined,
-  ) => any;
+  onSubmit?: (options: PropertyOptions | undefined) => unknown | Promise<unknown>;
 } & DestroyableProps;
 
-const PropertyPoolModal = ({
+const propertyKey = (property: { pool?: number; id?: number }) => `${property.pool}:${property.id}`;
+
+export default function PropertyPoolModal({
   propertyOptions,
   allProperties,
   enhancerOptions,
-  enhancerDescriptors,
   onSubmit,
   onDestroyed,
-}: Props) => {
+}: Props) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const [propertyRefs, setPropertyRefs] = useState<PropertyRef[]>(
-    propertyOptions?.properties ?? [],
+  const globalPriority = useResourceOptionsStore((store) => store.data?.propertyValueScopePriority);
+  const [propertyRefs, setPropertyRefs] = useState<PropertyRef[]>(() =>
+    (propertyOptions?.properties ?? []).map((ref) => ({
+      ...ref,
+      scopePriority: ref.scopePriority?.slice(),
+    })),
+  );
+  const [keyword, setKeyword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const propertyMap = useMemo(
+    () => new Map(allProperties.map((property) => [propertyKey(property), property])),
+    [allProperties],
   );
 
-  // Compute relevant scopes for a property based on enhancer configurations
-  const getAvailableScopes = (pool: PropertyPool, id: number): PropertyValueScope[] => {
-    const scopes: PropertyValueScope[] = [
-      PropertyValueScope.Manual,
-      PropertyValueScope.Synchronization,
-    ];
+  const getAvailableScopes = (ref: PropertyRef): PropertyValueScope[] => {
+    const available = [PropertyValueScope.Manual, PropertyValueScope.Synchronization];
 
-    for (const opt of enhancerOptions) {
-      if (!opt.targetOptions) continue;
-      const hasTarget = opt.targetOptions.some(
-        (to) => to.propertyPool === pool && to.propertyId === id,
-      );
+    for (const option of enhancerOptions) {
+      if (
+        !option.targetOptions?.some(
+          (target) => target.propertyPool === ref.pool && target.propertyId === ref.id,
+        )
+      )
+        continue;
+      const scope = enhancerIdToScope(option.enhancerId as EnhancerId);
 
-      if (hasTarget && opt.enhancerId != null) {
-        const scope = enhancerIdToScope(opt.enhancerId as EnhancerId);
-
-        if (scope && !scopes.includes(scope)) {
-          scopes.push(scope);
-        }
-      }
+      if (scope !== undefined && !available.includes(scope)) available.push(scope);
     }
 
-    return scopes;
+    return [
+      ...new Set([
+        ...(globalPriority ?? []).filter((scope) => available.includes(scope)),
+        ...available,
+      ]),
+    ];
   };
 
-  const findProperty = (pool: PropertyPool, id: number): IProperty | undefined => {
-    return allProperties.find((p) => p.pool === pool && p.id === id);
-  };
-
-  const handleAddProperties = () => {
+  const addProperties = () =>
     createPortal(PropertySelector, {
+      title: t<string>("resourceProfile.propertyPool.title"),
       v2: true,
       pool: PropertyPool.Custom,
       multiple: true,
-      selection: propertyRefs.map((ref) => ({ pool: ref.pool!, id: ref.id! })),
-      onSubmit: async (selectedProperties: IProperty[]) => {
-        // Merge: keep existing refs with their scopePriority, add new ones
-        const newRefs: PropertyRef[] = selectedProperties.map((p) => {
-          const existing = propertyRefs.find((r) => r.pool === p.pool && r.id === p.id);
+      selection: propertyRefs
+        .filter((ref) => ref.pool === PropertyPool.Custom && propertyMap.has(propertyKey(ref)))
+        .map((ref) => ({ pool: ref.pool, id: ref.id })),
+      onSubmit: async (selected: IProperty[]) => {
+        setPropertyRefs((current) => {
+          const selectedKeys = new Set(selected.map(propertyKey));
+          // The custom-property selector cannot represent missing or non-custom refs.
+          // Keep those until the user explicitly unlinks them in this list.
+          const next = current.filter(
+            (ref) =>
+              selectedKeys.has(propertyKey(ref)) ||
+              ref.pool !== PropertyPool.Custom ||
+              !propertyMap.has(propertyKey(ref)),
+          );
+          const retainedKeys = new Set(next.map(propertyKey));
 
-          return existing ?? { pool: p.pool, id: p.id };
+          for (const property of selected) {
+            if (!retainedKeys.has(propertyKey(property))) {
+              next.push({ pool: property.pool, id: property.id });
+              retainedKeys.add(propertyKey(property));
+            }
+          }
+
+          return next;
         });
-
-        setPropertyRefs(newRefs);
       },
     });
-  };
 
-  const handleRemoveProperty = (pool: PropertyPool, id: number) => {
-    setPropertyRefs((prev) => prev.filter((r) => !(r.pool === pool && r.id === id)));
-  };
-
-  const handleScopePriorityChange = (
-    pool: PropertyPool,
-    id: number,
-    scopePriority: PropertyValueScope[] | null,
-  ) => {
-    setPropertyRefs((prev) =>
-      prev.map((r) => {
-        if (r.pool === pool && r.id === id) {
-          return { ...r, scopePriority: scopePriority ?? undefined };
-        }
-
-        return r;
-      }),
+  const changePriority = (key: string, scopePriority: PropertyValueScope[] | null) =>
+    setPropertyRefs((current) =>
+      current.map((ref) =>
+        propertyKey(ref) === key ? { ...ref, scopePriority: scopePriority ?? undefined } : ref,
+      ),
     );
+  const submit = async () => {
+    setSaving(true);
+    try {
+      await onSubmit?.(
+        propertyRefs.length ? { ...propertyOptions, properties: propertyRefs } : undefined,
+      );
+    } finally {
+      setSaving(false);
+    }
   };
+  const filteredRefs = propertyRefs.filter((ref) => {
+    const property = propertyMap.get(propertyKey(ref));
+    const type =
+      property?.type !== undefined
+        ? t<string>(`PropertyType.${PropertyTypeLabel[property.type]}`)
+        : "";
+    const name = property?.name ?? t<string>("resourceProfile.propertyPool.unknownProperty");
 
-  const handleSubmit = () => {
-    const result = propertyRefs.length > 0 ? { properties: propertyRefs } : undefined;
-
-    onSubmit?.(result);
-  };
+    return `${name} ${type} ${ref.id}`
+      .toLocaleLowerCase()
+      .includes(keyword.trim().toLocaleLowerCase());
+  });
 
   return (
     <Modal
       defaultVisible
-      classNames={{ base: "max-w-[80vw]" }}
+      classNames={{ base: "max-w-4xl" }}
+      footer={{
+        actions: ["ok", "cancel"],
+        okProps: { children: t<string>("common.action.save") },
+        cancelProps: { children: t<string>("common.action.cancel"), isDisabled: saving },
+      }}
+      hideCloseButton={saving}
+      isDismissable={!saving}
+      isKeyboardDismissDisabled={saving}
       size="3xl"
       title={t<string>("resourceProfile.propertyPool.title")}
       onDestroyed={onDestroyed}
-      onOk={handleSubmit}
+      onOk={submit}
     >
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-default-500">
-            {t("resourceProfile.propertyPool.description")}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              startContent={<OrderedListOutlined />}
-              variant="flat"
-              onPress={() => createPortal(GlobalScopePriorityModal, {})}
-            >
-              {t<string>("resourceProfile.propertyPool.globalScopePriority")}
-            </Button>
-            <Button
-              color="primary"
-              size="sm"
-              startContent={<PlusOutlined />}
-              onPress={handleAddProperties}
-            >
-              {t<string>("resourceProfile.propertyPool.addProperty")}
-            </Button>
-          </div>
+      <p className="text-sm leading-6 text-default-500">
+        {t<string>("resourceProfile.propertyPool.description")}
+      </p>
+      <div className="sticky top-0 z-10 my-2 flex flex-wrap items-center gap-2 bg-content1 py-2">
+        <Input
+          aria-label={t<string>("resourceProfile.propertyPool.search")}
+          className="w-full min-w-0 sm:w-auto sm:max-w-xs sm:flex-1"
+          isDisabled={saving}
+          placeholder={t<string>("resourceProfile.propertyPool.search")}
+          size="sm"
+          startContent={<AiOutlineSearch className="shrink-0 text-default-400" />}
+          value={keyword}
+          onValueChange={setKeyword}
+        />
+        <span className="mr-auto text-xs tabular-nums text-default-400">
+          {t<string>("resourceProfile.propertyPool.count", {
+            shown: filteredRefs.length,
+            total: propertyRefs.length,
+          })}
+        </span>
+        <Button
+          color="primary"
+          isDisabled={saving}
+          size="sm"
+          startContent={<AiOutlinePlus />}
+          onPress={addProperties}
+        >
+          {t<string>("resourceProfile.propertyPool.addProperty")}
+        </Button>
+      </div>
+      {propertyRefs.length === 0 ? (
+        <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-default-500">
+          <AiOutlineLink aria-hidden className="text-3xl" />
+          <p className="text-sm">{t<string>("resourceProfile.propertyPool.empty")}</p>
         </div>
+      ) : filteredRefs.length === 0 ? (
+        <p className="py-10 text-center text-sm text-default-500">
+          {t<string>("resourceProfile.propertyPool.noMatches")}
+        </p>
+      ) : (
+        <div
+          aria-label={t<string>("resourceProfile.propertyPool.listLabel")}
+          className="divide-y divide-default-100"
+          role="list"
+        >
+          {filteredRefs.map((ref) => {
+            const key = propertyKey(ref);
+            const property = propertyMap.get(key);
+            const name =
+              property?.name ?? t<string>("resourceProfile.propertyPool.unknownProperty");
 
-        {propertyRefs.length === 0 ? (
-          <div className="py-8 text-center text-default-400">
-            {t("resourceProfile.propertyPool.empty")}
-          </div>
-        ) : (
-          <Table removeWrapper aria-label="Property Pool Table">
-            <TableHeader>
-              <TableColumn>{t("resourceProfile.propertyPool.columnProperty")}</TableColumn>
-              <TableColumn>{t("resourceProfile.propertyPool.columnType")}</TableColumn>
-              <TableColumn width={300}>
-                {t("resourceProfile.propertyPool.columnScopePriority")}
-              </TableColumn>
-              <TableColumn width={60}>{""}</TableColumn>
-            </TableHeader>
-            <TableBody>
-              {propertyRefs.map((ref) => {
-                const property = findProperty(ref.pool!, ref.id!);
-                const availableScopes = getAvailableScopes(ref.pool!, ref.id!);
-
-                return (
-                  <TableRow key={`${ref.pool}-${ref.id}`}>
-                    <TableCell>
-                      {property ? (
-                        <PropertyLabel
-                          property={{
-                            name: property.name!,
-                            type: property.type!,
-                            pool: property.pool!,
-                          }}
-                        />
-                      ) : (
-                        <span className="text-default-400">
-                          {t("resourceProfile.propertyPool.unknownProperty")}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {property && (
-                        <Chip size="sm" variant="flat">
-                          {property.type != null
-                            ? t(`PropertyType.${PropertyTypeLabel[property.type]}`)
-                            : "-"}
-                        </Chip>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <ScopePriorityEditor
-                        availableScopes={availableScopes}
-                        value={ref.scopePriority ?? null}
-                        onChange={(newPriority) =>
-                          handleScopePriorityChange(ref.pool!, ref.id!, newPriority)
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip content={t("common.action.delete")}>
-                        <Button
-                          isIconOnly
-                          color="danger"
-                          size="sm"
-                          variant="light"
-                          onPress={() => handleRemoveProperty(ref.pool!, ref.id!)}
-                        >
-                          <DeleteOutlined className="text-xs" />
-                        </Button>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
+            return (
+              <div
+                key={key}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(12rem,1fr)_auto]"
+                role="listitem"
+              >
+                <div
+                  className="min-w-0 break-words [&>div]:max-w-full [&>div>span]:truncate"
+                  title={name}
+                >
+                  {property ? (
+                    <PropertyLabel property={property} />
+                  ) : (
+                    <span className="text-sm text-warning-700">{name}</span>
+                  )}
+                  <div className="mt-1 text-xs text-default-400">
+                    {property
+                      ? t<string>(`PropertyType.${PropertyTypeLabel[property.type]}`)
+                      : t<string>("resourceProfile.propertyPool.missingHint", {
+                          id: ref.id,
+                          pool: t<string>(`PropertyPool.${PropertyPool[ref.pool]}`),
+                        })}
+                  </div>
+                </div>
+                <div className="col-start-1 row-start-2 min-w-0 sm:col-start-auto sm:row-start-auto">
+                  <ScopePriorityEditor
+                    availableScopes={getAvailableScopes(ref)}
+                    isDisabled={saving}
+                    value={ref.scopePriority ?? null}
+                    onChange={(priority) => changePriority(key, priority)}
+                  />
+                </div>
+                <Tooltip content={t<string>("resourceProfile.propertyPool.unlink")}>
+                  <Button
+                    isIconOnly
+                    aria-label={t<string>("resourceProfile.propertyPool.unlinkNamed", {
+                      name,
+                      id: ref.id,
+                    })}
+                    className="col-start-2 row-start-1 text-default-400 sm:col-start-auto sm:row-start-auto"
+                    isDisabled={saving}
+                    size="sm"
+                    variant="light"
+                    onPress={() =>
+                      setPropertyRefs((current) =>
+                        current.filter((item) => propertyKey(item) !== key),
+                      )
+                    }
+                  >
+                    <AiOutlineClose className="text-base" />
+                  </Button>
+                </Tooltip>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-default-100 pt-3">
+        <p className="max-w-lg text-xs leading-5 text-default-500">
+          {t<string>("resourceProfile.propertyPool.unlinkHint")}
+        </p>
+        <Button
+          isDisabled={saving}
+          size="sm"
+          startContent={<AiOutlineGlobal />}
+          variant="light"
+          onPress={() => createPortal(GlobalScopePriorityModal, {})}
+        >
+          {t<string>("resourceProfile.propertyPool.globalScopePriority")}
+        </Button>
       </div>
     </Modal>
   );
-};
-
-PropertyPoolModal.displayName = "PropertyPoolModal";
-
-export default PropertyPoolModal;
+}

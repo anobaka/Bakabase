@@ -18,6 +18,9 @@ public record AddPostParserTasksInput
 {
     public Dictionary<int, List<string>> SourceLinksMap { get; set; } = new();
     public List<PostParseTarget> Targets { get; set; } = [];
+    public List<string> Links { get; set; } = [];
+    public string? Text { get; set; }
+    public string? Title { get; set; }
 }
 
 public record QueryPostParserTaskStatusesInput
@@ -60,9 +63,9 @@ public class PostParserController(
     [SwaggerOperation(OperationId = "AddPostParserTasks")]
     public async Task<BaseResponse> AddRange([FromBody] AddPostParserTasksInput input)
     {
-        await service.AddRange(
+        await service.AddInputs(
             input.SourceLinksMap.ToDictionary(d => (PostParserSource) d.Key, d => d.Value),
-            input.Targets);
+            input.Targets, input.Links, input.Text, input.Title);
         return BaseResponseBuilder.Ok;
     }
 

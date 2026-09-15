@@ -142,6 +142,9 @@
   "resource.detailLayout.sample.actions.open": "打开",
   "resource.detailLayout.sample.actions.refresh": "刷新",
   "resource.detailLayout.sample.actions.enhance": "增强",
+  "resource.detailLayout.sample.acquisition.title": "获取方式",
+  "resource.detailLayout.sample.acquisition.lead": "https://example.com/thread/1",
+  "resource.detailLayout.sample.acquisition.hint": "或者关联一个已有的目录",
   "resource.detailLayout.sample.basicInfo.createdLabel": "创建于",
   "resource.detailLayout.sample.basicInfo.createdValue": "2024-03-15",
   "resource.detailLayout.sample.basicInfo.modifiedLabel": "修改于",
@@ -174,5 +177,17 @@
   "resource.detailLayout.sample.profiles.audioLabel": "音轨",
   "resource.detailLayout.sample.profiles.audioValue": "DTS-HD MA 5.1",
   "resource.detailLayout.sample.profiles.subsLabel": "字幕",
-  "resource.detailLayout.sample.profiles.subsValue": "中、英、日"
+  "resource.detailLayout.sample.profiles.subsValue": "中、英、日",
+  "resource.detailLayout.section.collections": "集合",
+  "resource.detailLayout.sample.collections.first": "全集",
+  "resource.detailLayout.sample.collections.second": "待读",
+  "resource.contextMenu.addToCollections": "加入集合…",
+  "resource.contextMenu.addToCollectionsForCount": "将 {{count}} 个资源加入集合…",
+  "resource.collections.label": "所属集合",
+  "resource.collections.added": "已加入。",
+  "resource.collections.removed": "已移出。",
+  "resource.collections.remove": "移出该集合",
+  "resource.collections.fromRule": "因匹配规则而属于该集合，如需变更请修改规则。",
+  "resource.collections.ruleShort": "规则",
+  "resource.collections.pick": "选择集合"
 }

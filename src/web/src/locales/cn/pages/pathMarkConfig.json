@@ -161,5 +161,13 @@
   "pathMarkConfig.label.nextStepHint": "下一步：查看所有已配置的标记，或配置资源扩展来定义增强器、播放器等设置",
   "pathMarkConfig.action.goToResourceProfile": "配置资源扩展",
   "pathMarkConfig.label.keepResourcesOnPathChange": "保持资源身份标识",
-  "pathMarkConfig.tip.keepResourcesOnPathChange": "通常情况下，系统会为每个资源路径创建一条资源数据。启用此选项后，系统会在资源文件夹中生成标记文件（bakabase.json）。下次同步资源标记时，如果资源路径发生变动，系统将不会为新路径创建新的资源数据，而是通过标记文件找到原有资源数据并更新其路径。"
+  "pathMarkConfig.tip.keepResourcesOnPathChange": "通常情况下，系统会为每个资源路径创建一条资源数据。启用此选项后，系统会在资源文件夹中生成标记文件（bakabase.json）。下次同步资源标记时，如果资源路径发生变动，系统将不会为新路径创建新的资源数据，而是通过标记文件找到原有资源数据并更新其路径。",
+  "pathMarkConfig.action.markByExample": "把这一层的目录都标记为资源",
+  "pathMarkConfig.markByExample.title": "把这一层的目录都标记为资源",
+  "pathMarkConfig.markByExample.description": "你选中的是 {{path}}。选择规则挂在哪个目录上，它下面同一深度的所有目录都会成为资源。",
+  "pathMarkConfig.markByExample.root.label": "规则挂在",
+  "pathMarkConfig.markByExample.layer": "该目录下第 {{layer}} 层",
+  "pathMarkConfig.markByExample.alreadyMarked": "已有标记",
+  "pathMarkConfig.markByExample.noAncestors": "该目录没有上级目录，规则无处安放。",
+  "pathMarkConfig.markByExample.confirm": "创建标记"
 }

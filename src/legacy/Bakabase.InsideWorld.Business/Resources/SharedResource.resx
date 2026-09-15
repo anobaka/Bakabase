@@ -621,6 +621,12 @@ The version of lux is not limited.</value>
   <data name="ResourceProfileIndex_UpdatingResourceMappings" xml:space="preserve">
     <value>Updating profile mappings for {0} resources...</value>
   </data>
+  <data name="BTask_Name_AcquisitionQueue" xml:space="preserve">
+    <value>Acquisition queue</value>
+  </data>
+  <data name="BTask_Description_AcquisitionQueue" xml:space="preserve">
+    <value>Keep acquisitions in step with the workflows running them, and start queued ones as room becomes available.</value>
+  </data>
   <data name="BTask_Name_SearchIndex" xml:space="preserve">
     <value>Build search index</value>
   </data>
@@ -857,5 +863,14 @@ The version of lux is not limited.</value>
   </data>
   <data name="BTask_MessageOnInterruption_WorkflowScheduler" xml:space="preserve">
     <value>Scheduled workflows will not start until the app runs again</value>
+  </data>
+  <data name="BTask_Name_DownloadResultDispatch" xml:space="preserve">
+    <value>Continue download results</value>
+  </data>
+  <data name="BTask_Description_DownloadResultDispatch" xml:space="preserve">
+    <value>Starts the configured workflow for each saved work result and recovers pending deliveries.</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DownloadResultDispatch" xml:space="preserve">
+    <value>Download-result processing will resume on the next scheduled pass.</value>
   </data>
 </root>

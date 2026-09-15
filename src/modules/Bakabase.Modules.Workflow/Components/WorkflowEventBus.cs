@@ -2,6 +2,8 @@ using System.Text.Json;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Services;
+using Bakabase.Modules.Workflow.Extensions;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -12,12 +14,13 @@ namespace Bakabase.Modules.Workflow.Components;
 /// Default <see cref="IWorkflowEventBus"/>. On Publish:
 /// 1) load enabled definitions matching the trigger kind,
 /// 2) evaluate each one's trigger filter against the payload,
-/// 3) create a WorkflowRun row per matching definition,
-/// 4) enqueue one BTask per run that hands it off to the runner.
+/// 3) record failed automatic starts or create a pending run per matching definition,
+/// 4) enqueue only pending runs; rejected starts remain visible in the same run history.
 /// </summary>
 public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext : DbContext
 {
     private readonly TDbContext _db;
+    private readonly IWorkflowValidationService _validation;
     private readonly IWorkflowTriggerRegistry _triggers;
     private readonly BTaskManager _taskManager;
     private readonly WorkflowRunner<TDbContext> _runner;
@@ -28,9 +31,11 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
         IWorkflowTriggerRegistry triggers,
         BTaskManager taskManager,
         WorkflowRunner<TDbContext> runner,
-        ILogger<WorkflowEventBus<TDbContext>> logger)
+        ILogger<WorkflowEventBus<TDbContext>> logger,
+        IWorkflowValidationService validation)
     {
         _db = db;
+        _validation = validation;
         _triggers = triggers;
         _taskManager = taskManager;
         _runner = runner;
@@ -59,19 +64,62 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
         var payloadJson = JsonSerializer.Serialize<object>(payload, WorkflowJson.Options);
         var payloadSummary = SummarizePayload(payload);
         var matched = new List<WorkflowRunDbModel>();
+        var recordedFailure = false;
+
+        void RecordFailure(WorkflowDefinitionDbModel definition, string message)
+        {
+            var now = DateTime.Now;
+            _db.Set<WorkflowRunDbModel>().Add(new WorkflowRunDbModel
+            {
+                WorkflowDefinitionId = definition.Id,
+                Status = WorkflowRunStatus.Failed,
+                StartedAt = now,
+                CompletedAt = now,
+                PayloadJson = payloadJson,
+                PayloadSummary = payloadSummary,
+                ErrorMessage = message,
+            });
+            definition.LastError = message;
+            definition.LastRunAt = now;
+            recordedFailure = true;
+        }
 
         foreach (var def in defs)
         {
             bool matches;
             try { matches = trigger.Matches(payload, def.TriggerFilterJson); }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "Trigger {Kind} filter evaluation failed for workflow #{DefId}, skipping",
+                    "Trigger {Kind} filter evaluation failed for workflow #{DefId}",
                     triggerKind, def.Id);
+                RecordFailure(def, $"Automatic start failed while evaluating the trigger filter: {ex.Message}");
                 continue;
             }
             if (!matches) continue;
+
+            var nodes = await _db.Set<WorkflowActivityDbModel>()
+                .AsNoTracking().Where(a => a.WorkflowDefinitionId == def.Id).ToListAsync(ct);
+            try
+            {
+                var check = await _validation.ValidateAsync(def.ToDomainModel(nodes), true, payload, ct);
+                if (!check.IsValid)
+                {
+                    var errors = string.Join("; ", check.Diagnostics
+                        .Where(d => d.Severity == "error").Select(d => d.Message));
+                    _logger.LogWarning("Workflow #{DefId} failed preflight: {Errors}", def.Id, errors);
+                    RecordFailure(def, $"Automatic start failed validation: {errors}");
+                    continue;
+                }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Workflow #{DefId} could not complete preflight", def.Id);
+                RecordFailure(def, $"Automatic start could not complete validation: {ex.Message}");
+                continue;
+            }
 
             var run = new WorkflowRunDbModel
             {
@@ -85,7 +133,7 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
             matched.Add(run);
         }
 
-        if (matched.Count == 0) return;
+        if (matched.Count == 0 && !recordedFailure) return;
         await _db.SaveChangesAsync(ct);
 
         // Enqueue BTasks AFTER SaveChanges so we have stable run.Ids.

@@ -12,7 +12,10 @@ public record BulkModificationDiff
     /// <summary>
     /// redundancy
     /// </summary>
-    public string ResourcePath { get; set; } = null!;
+    /// <summary>
+    /// Null when the resource has no local files.
+    /// </summary>
+    public string? ResourcePath { get; set; }
 
     public int ResourceId { get; set; }
 

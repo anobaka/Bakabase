@@ -219,6 +219,7 @@
   "bulkModification.process.deleteFiles": "同时删除文件",
   "bulkModification.process.deleteDataOnlyWarning": "此操作仅删除资源数据，如果您的资源标记和对应的文件依旧存在，那资源可能依旧会在下次资源标记同步时出现。",
   "bulkModification.diff.resourceWillBeDeleted": "资源将被删除",
+  "bulkModification.diff.resourceHasNoLocalFiles": "尚未落地",
   "bulkModification.filter.noResults": "未筛选到任何资源",
   "Position.Beginning": "开头",
   "Position.End": "末尾",

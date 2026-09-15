@@ -6,6 +6,8 @@ public record WorkflowDefinitionViewModel
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
+    public string? Description { get; set; }
+    public string? DescriptionKey { get; set; }
     public string TriggerKind { get; set; } = null!;
     public string? TriggerFilterJson { get; set; }
     public bool Enabled { get; set; }
@@ -14,12 +16,17 @@ public record WorkflowDefinitionViewModel
     public DateTime? LastRunAt { get; set; }
     public string? LastError { get; set; }
 
+    /// <summary>Shipped with Bakabase; read-only in the editor, copy to change.</summary>
+    public bool IsBuiltin { get; set; }
+
     public List<WorkflowActivityViewModel> Activities { get; set; } = [];
 
     public static WorkflowDefinitionViewModel From(WorkflowDefinition d) => new()
     {
         Id = d.Id,
         Name = d.Name,
+        Description = d.Description,
+        DescriptionKey = d.DescriptionKey,
         TriggerKind = d.TriggerKind,
         TriggerFilterJson = d.TriggerFilterJson,
         Enabled = d.Enabled,
@@ -27,6 +34,7 @@ public record WorkflowDefinitionViewModel
         UpdatedAt = d.UpdatedAt,
         LastRunAt = d.LastRunAt,
         LastError = d.LastError,
+        IsBuiltin = d.IsBuiltin,
         Activities = d.Activities.Select(WorkflowActivityViewModel.From).ToList(),
     };
 }

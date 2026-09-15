@@ -8,6 +8,7 @@ using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Input;
 using Bakabase.Modules.Workflow.Abstractions.Models.View;
 using Bakabase.Modules.Workflow.Abstractions.Services;
+using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -18,9 +19,11 @@ namespace Bakabase.Service.Controllers;
 [Route("workflow")]
 public class WorkflowController(
     IWorkflowDefinitionService service,
+    IWorkflowValidationService validation,
     IWorkflowTriggerRegistry triggers,
     IWorkflowActivityRegistry activities,
     IWorkflowItemTypeRegistry itemTypes,
+    IWorkflowRunResumer runResumer,
     Bakabase.Abstractions.Services.IFileRenameEntryService fileRenameEntries) : Controller
 {
     [HttpGet]
@@ -39,6 +42,23 @@ public class WorkflowController(
         var row = await service.GetAsync(id);
         return new SingletonResponse<WorkflowDefinitionViewModel?>(
             row is null ? null : WorkflowDefinitionViewModel.From(row));
+    }
+
+    [HttpPost("validate")]
+    [SwaggerOperation(OperationId = "ValidateWorkflow")]
+    [RemoteAccessible]
+    public async Task<SingletonResponse<WorkflowValidationResult>> ValidateDraft(
+        [FromBody] WorkflowValidationInputModel model, CancellationToken ct) =>
+        new(await validation.ValidateAsync(model, ct: ct));
+
+    [HttpGet("{id:int}/validation")]
+    [SwaggerOperation(OperationId = "ValidateSavedWorkflow")]
+    [RemoteAccessible]
+    public async Task<SingletonResponse<WorkflowValidationResult>> ValidateSaved(int id, CancellationToken ct)
+    {
+        var definition = await service.GetAsync(id)
+            ?? throw new InvalidOperationException($"Workflow #{id} not found");
+        return new(await validation.ValidateAsync(definition, ct: ct));
     }
 
     [HttpPost]
@@ -90,13 +110,19 @@ public class WorkflowController(
             {
                 Kind = t.Kind,
                 DisplayName = t.DisplayName,
+                Description = t.Description,
+                DescriptionKey = t.DescriptionKey,
+                ActivationMode = t.ActivationMode,
+                SourceModule = t.SourceModule,
+                SupportsManualRun = t.SupportsManualRun,
                 RequiresManualPayload = t.RequiresManualPayload,
-                PayloadFields = t.RequiresManualPayload ? BuildFieldVms(t.PayloadType) : [],
+                PayloadFields = t.SupportsManualRun && t.RequiresManualPayload ? BuildFieldVms(t.PayloadType) : [],
             }));
     }
 
     /// <summary>
-    /// Start a run of this definition now. Neither the trigger filter nor the enabled flag
+    /// Start a manually runnable definition now. Managed triggers must use their source module.
+    /// Neither the trigger filter nor the enabled flag
     /// applies — the user named this definition, and one being switched off is exactly when
     /// running it by hand is most useful.
     /// </summary>
@@ -120,6 +146,8 @@ public class WorkflowController(
             {
                 Kind = a.Kind,
                 DisplayName = a.DisplayName,
+                Description = a.Description,
+                DescriptionKey = a.DescriptionKey,
                 Category = a.Category,
                 Group = a.Group,
                 AcceptedInputItemTypes = a.AcceptedInputItemTypes.ToList(),
@@ -243,6 +271,28 @@ public class WorkflowController(
         var rows = await fileRenameEntries.UndoRun(runId);
         return new ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>(
             rows.Select(Bakabase.Service.Models.View.FileRenameEntryViewModel.FromDb));
+    }
+
+    /// <summary>
+    /// Answer a run that is waiting. The signal is opaque to the engine — it goes straight back to
+    /// the activity that suspended, which is the only thing that knows what it means.
+    /// </summary>
+    [HttpPost("run/{runId:int}/resume")]
+    [SwaggerOperation(OperationId = "ResumeWorkflowRun")]
+    public async Task<BaseResponse> ResumeRun(int runId, [FromBody] WorkflowRunResumeInputModel model)
+    {
+        try
+        {
+            await runResumer.ResumeAsync(runId, model.SignalJson);
+        }
+        catch (InvalidOperationException e)
+        {
+            // The run finished, was cancelled, or someone else answered it first — a stale
+            // resume button, not a server fault.
+            return BaseResponseBuilder.BuildBadRequest(e.Message);
+        }
+
+        return BaseResponseBuilder.Ok;
     }
 
     [HttpGet("{id:int}/runs")]

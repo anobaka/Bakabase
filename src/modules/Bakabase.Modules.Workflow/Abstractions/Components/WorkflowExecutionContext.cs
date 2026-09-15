@@ -40,6 +40,16 @@ public sealed class WorkflowExecutionContext
 
     public required ILogger Logger { get; init; }
 
+    /// <summary>
+    /// Progress within this one step, 0-100, plus a line describing what it is doing. The runner
+    /// already advances the run's own progress a step at a time; this is for an activity whose
+    /// single step takes long enough that a step boundary is far too coarse — downloading a file,
+    /// unpacking an archive. It is scaled into this step's share of the run, so an activity
+    /// reporting 0-100 never fights the runner's own accounting.
+    /// <para>Defaults to doing nothing, so no activity has to check whether it is set.</para>
+    /// </summary>
+    public Func<int, string?, Task> ReportProgress { get; init; } = (_, _) => Task.CompletedTask;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

@@ -8,9 +8,15 @@ interface DiffHighlightProps {
   original: string;
   modified: string;
   className?: string;
+  mode?: "combined" | "original" | "modified";
 }
 
-const DiffHighlight: React.FC<DiffHighlightProps> = ({ original, modified, className = "" }) => {
+const DiffHighlight: React.FC<DiffHighlightProps> = ({
+  original,
+  modified,
+  className = "",
+  mode = "combined",
+}) => {
   const diff = computeDiff(original, modified);
 
   // 如果没有变化，直接显示原文
@@ -21,12 +27,12 @@ const DiffHighlight: React.FC<DiffHighlightProps> = ({ original, modified, class
   return (
     <span className={className}>
       <span>{diff.commonPrefix}</span>
-      {diff.removedPart && (
+      {mode !== "modified" && diff.removedPart && (
         <span className="bg-red-200 text-red-800 line-through dark:bg-red-900 dark:text-red-200">
           {diff.removedPart}
         </span>
       )}
-      {diff.addedPart && (
+      {mode !== "original" && diff.addedPart && (
         <span className="bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-200">
           {diff.addedPart}
         </span>

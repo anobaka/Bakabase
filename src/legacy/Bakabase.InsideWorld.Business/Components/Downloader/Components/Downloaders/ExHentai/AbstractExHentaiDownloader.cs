@@ -16,6 +16,8 @@ using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
+using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai
 {
@@ -40,7 +42,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.ExHentai;
 
 
-        protected async Task DownloadSingleWork(string url, string checkpoint, string downloadPath,
+        protected async Task DownloadSingleWork(int downloadTaskId, string url, string checkpoint, string downloadPath,
             Func<string, Task> onNameAcquired,
             Func<string, Task> onCurrentChanged,
             Func<decimal, Task> onProgress,
@@ -50,8 +52,24 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             bool deferIfNoTorrent = false,
             Func<Task>? onNoTorrentDetected = null,
             Func<Task>? onTorrentDetected = null,
-            Func<Task>? onTorrentDownloaded = null)
+            Func<Task>? onTorrentDownloaded = null,
+            int? resultWorkflowId = null)
         {
+            var results = GetRequiredService<DownloadResultService>();
+            var sourceKey = ExHentaiDownloadResultHelper.NormalizeSourceKey(url);
+            var previous = await results.GetLatestBySourceAsync(downloadTaskId, sourceKey, ct);
+            if (previous != null)
+            {
+                // The source work has already been durably handed off. A workflow retry must not
+                // scrape the gallery again, even after the workflow moved its actual files.
+                if (onNameAcquired != null) await onNameAcquired(previous.Name);
+                if (previous.Kind == DownloadResultKind.TorrentMetadata && onTorrentDownloaded != null)
+                    await onTorrentDownloaded();
+                if (onProgress != null) await onProgress(100);
+                if (onCheckpointChanged != null) await onCheckpointChanged("completed");
+                return;
+            }
+
             // Only fetch torrent info when preferTorrent is true
             var detail = await Client.ParseDetail(url, preferTorrent, ct);
             if (detail == null)
@@ -89,7 +107,21 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     await onCurrentChanged(Localizer["Downloader_ExHentai_DownloadingTorrent"]);
                 }
 
-                await Client.DownloadTorrent(bestTorrent.DownloadUrl, path, ct);
+                Directory.CreateDirectory(downloadPath);
+                var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                try
+                {
+                    await Client.DownloadTorrent(bestTorrent.DownloadUrl, temporary, ct);
+                    // Recording validates and copies metadata to managed storage before any
+                    // completion checkpoint can make the source task disappear from the queue.
+                    await results.RecordTorrentAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
+                        temporary, resultWorkflowId, ct);
+                    File.Move(temporary, path, true);
+                }
+                finally
+                {
+                    if (File.Exists(temporary)) File.Delete(temporary);
+                }
 
                 // Only now — the file is on disk. This is the stamp that lets a later run skip the
                 // task without touching the network or the folder, so it must not be written
@@ -145,9 +177,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             //}
 
             var checkpointContext = new RangeCheckpointContext(checkpoint);
-
+            var workFiles = new ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
             var doneCount = 0;
-            var taskIsDone = false;
 
             for (var page = 0; page < detail.PageCount; page++)
             {
@@ -158,44 +189,25 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
                 foreach (var (title, pageUrl) in imageTitleAndPageUrls)
                 {
-                    var action = checkpointContext.Analyze(title);
-                    switch (action)
+                    // Inspect only this work's expected files. Reconstructing ownership from
+                    // page titles also recovers downloads interrupted after writing a checkpoint.
+                    checkpointContext.Analyze(title);
+                    var extension = Path.GetExtension(title);
+                    var fullNameSegmentsValues = new Dictionary<ExHentaiNamingFields, object?>(baseNameSegmentsValues)
                     {
-                        case RangeCheckpointContext.AnalyzeResult.AllTaskIsDone:
-                            if (onProgress != null)
-                            {
-                                await onProgress(100);
-                            }
-
-                            taskIsDone = true;
-                            break;
-                        case RangeCheckpointContext.AnalyzeResult.Skip:
-                            doneCount++;
-                            break;
-                        case RangeCheckpointContext.AnalyzeResult.Download:
-                            var extension = Path.GetExtension(title);
-
-                            var fullNameSegmentsValues = new Dictionary<ExHentaiNamingFields, object?>(baseNameSegmentsValues)
-                            {
-                                [ExHentaiNamingFields.PageTitle] = Path.GetFileNameWithoutExtension(title),
-                                [ExHentaiNamingFields.Extension] = extension
-                            };
-
-                            var keyFilename = await BuildDownloadFilename(fullNameSegmentsValues);
-                            var keyFullname = Path.Combine(downloadPath, keyFilename);
-
-                            if (!File.Exists(keyFullname))
-                            {
-                                taskDataList.Add((keyFullname, pageUrl));
-                            }
-                            else
-                            {
-                                doneCount++;
-                            }
-
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
+                        [ExHentaiNamingFields.PageTitle] = Path.GetFileNameWithoutExtension(title),
+                        [ExHentaiNamingFields.Extension] = extension
+                    };
+                    var keyFilename = await BuildDownloadFilename(fullNameSegmentsValues);
+                    var keyFullname = Path.GetFullPath(Path.Combine(downloadPath, keyFilename));
+                    if (File.Exists(keyFullname))
+                    {
+                        workFiles[keyFullname] = 0;
+                        doneCount++;
+                    }
+                    else
+                    {
+                        taskDataList.Add((keyFullname, pageUrl));
                     }
                 }
 
@@ -337,6 +349,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 }
                             }
 
+                            workFiles[Path.GetFullPath(wrotePath)] = 0;
                             doneStates[wrotePath] = true;
                             if (onProgress != null)
                             {
@@ -363,17 +376,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
                 if (onCheckpointChanged != null)
                 {
-                    var newCheckpoint = taskIsDone
-                        ? checkpointContext.BuildCheckpointOnComplete()
-                        : checkpointContext.BuildCheckpoint(imageTitleAndPageUrls.Last().Title);
-                    await onCheckpointChanged(newCheckpoint);
-                }
-
-                if (taskIsDone)
-                {
-                    break;
+                    // The final checkpoint follows result persistence below.
+                    if (page < detail.PageCount - 1 && imageTitleAndPageUrls.Length > 0)
+                        await onCheckpointChanged(checkpointContext.BuildCheckpoint(imageTitleAndPageUrls.Last().Title));
                 }
             }
+
+            await results.RecordFilesAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
+                downloadPath, workFiles.Keys.ToArray(), resultWorkflowId, ct);
+            if (onCheckpointChanged != null)
+                await onCheckpointChanged(checkpointContext.BuildCheckpointOnComplete());
         }
     }
 }

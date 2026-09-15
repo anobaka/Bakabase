@@ -243,6 +243,12 @@
   <data name="BuiltinPropertyName_HealthScore" xml:space="preserve">
     <value>Health score</value>
   </data>
+  <data name="BuiltinPropertyName_CollectionMulti" xml:space="preserve">
+    <value>Collections</value>
+  </data>
+  <data name="BuiltinPropertyName_HasLocalPath" xml:space="preserve">
+    <value>Has local files</value>
+  </data>
   <data name="ResourceSourceName_FileSystem" xml:space="preserve">
     <value>File System</value>
   </data>
@@ -260,5 +266,8 @@
   </data>
   <data name="ResourceSourceName_Aigc" xml:space="preserve">
     <value>AIGC</value>
+  </data>
+  <data name="ResourceSourceName_Pixiv" xml:space="preserve">
+    <value>Pixiv</value>
   </data>
 </root>

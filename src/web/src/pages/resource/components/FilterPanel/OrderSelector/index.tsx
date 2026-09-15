@@ -69,11 +69,12 @@ const OrderSelector = ({ value: propsValue, onChange, ...otherProps }: IProps) =
 
   return (
     <div
-      className={`flex items-center gap-1 ${otherProps?.className ?? ""}`.trim()}
+      className={`flex min-w-0 items-center gap-2 ${otherProps?.className ?? ""}`.trim()}
       style={otherProps?.style}
     >
       <Select
         aria-label={t<string>("resource.order.label")}
+        className="min-w-0 flex-1"
         dataSource={propertyDataSource}
         placeholder={t<string>("resource.order.placeholder")}
         renderValue={(items) => {
@@ -93,10 +94,6 @@ const OrderSelector = ({ value: propsValue, onChange, ...otherProps }: IProps) =
         selectedKeys={[currentProperty.toString()]}
         selectionMode={"single"}
         size={"sm"}
-        style={{
-          maxWidth: 320,
-          minWidth: 180,
-        }}
         onSelectionChange={(keys) => {
           const first = Array.from((keys as Set<string>) || [])[0];
           const property = parseInt(first as string, 10);
@@ -117,13 +114,15 @@ const OrderSelector = ({ value: propsValue, onChange, ...otherProps }: IProps) =
           return rest;
         })()}
       />
-      <ButtonGroup>
+      <ButtonGroup className="shrink-0 rounded-lg bg-default-50">
         <Tooltip content={t<string>("resource.order.asc")}>
           <Button
             isIconOnly
+            aria-label={t("resource.order.asc")}
+            aria-pressed={currentAsc}
             color={currentAsc ? "primary" : "default"}
             size={"sm"}
-            variant={currentAsc ? "solid" : "flat"}
+            variant={currentAsc ? "flat" : "light"}
             onPress={() =>
               commit([
                 {
@@ -139,9 +138,11 @@ const OrderSelector = ({ value: propsValue, onChange, ...otherProps }: IProps) =
         <Tooltip content={t<string>("resource.order.desc")}>
           <Button
             isIconOnly
+            aria-label={t("resource.order.desc")}
+            aria-pressed={!currentAsc}
             color={!currentAsc ? "primary" : "default"}
             size={"sm"}
-            variant={!currentAsc ? "solid" : "flat"}
+            variant={!currentAsc ? "flat" : "light"}
             onPress={() =>
               commit([
                 {

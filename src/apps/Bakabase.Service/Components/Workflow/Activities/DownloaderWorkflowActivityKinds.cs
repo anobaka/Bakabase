@@ -9,7 +9,15 @@ namespace Bakabase.Service.Components.Workflow.Activities;
 /// </summary>
 public static class DownloaderWorkflowActivityKinds
 {
-    private const string Module = "downloader.exhentai";
+    private const string Module = "downloader";
+    private const string ExHentaiModule = "downloader.exhentai";
 
-    public static readonly string EnqueueGallery = WorkflowActivityKinds.Action(Module, "enqueue");
+    /// <summary>Hand a link to whichever downloader can fetch it.</summary>
+    public static readonly string Enqueue = WorkflowActivityKinds.Action(Module, "enqueue");
+
+    /// <summary>
+    /// The ExHentai-only predecessor of <see cref="Enqueue"/>. Kept because saved workflows name
+    /// their activities by kind: dropping it would silently break every recipe that uses it.
+    /// </summary>
+    public static readonly string EnqueueGallery = WorkflowActivityKinds.Action(ExHentaiModule, "enqueue");
 }

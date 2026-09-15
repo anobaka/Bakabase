@@ -621,6 +621,12 @@
   <data name="ResourceProfileIndex_UpdatingResourceMappings" xml:space="preserve">
     <value>正在更新 {0} 个资源的配置映射...</value>
   </data>
+  <data name="BTask_Name_AcquisitionQueue" xml:space="preserve">
+    <value>获取队列</value>
+  </data>
+  <data name="BTask_Description_AcquisitionQueue" xml:space="preserve">
+    <value>让获取任务与执行它们的工作流保持一致，并在有空位时启动排队中的获取。</value>
+  </data>
   <data name="BTask_Name_SearchIndex" xml:space="preserve">
     <value>构建搜索索引</value>
   </data>
@@ -857,5 +863,14 @@
   </data>
   <data name="BTask_MessageOnInterruption_WorkflowScheduler" xml:space="preserve">
     <value>应用未运行期间定时工作流不会启动</value>
+  </data>
+  <data name="BTask_Name_DownloadResultDispatch" xml:space="preserve">
+    <value>处理下载结果</value>
+  </data>
+  <data name="BTask_Description_DownloadResultDispatch" xml:space="preserve">
+    <value>为每个作品的下载结果启动已配置的后续工作流，并恢复尚未派发的结果。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DownloadResultDispatch" xml:space="preserve">
+    <value>下载结果处理将在下一次调度时继续。</value>
   </data>
 </root>

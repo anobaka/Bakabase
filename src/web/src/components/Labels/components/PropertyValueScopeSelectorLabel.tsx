@@ -9,15 +9,11 @@ const PropertyValueScopeSelectorLabel = () => {
 
   return (
     <div className={"flex items-center gap-1"}>
-      {t<string>("Scope")}
+      {t<string>("property.valueScope.label")}
       <Tooltip
         content={
           <div className={"flex flex-col gap-1"}>
-            <div>
-              {t<string>(
-                "A property may have multiple dimensional values, and you can choose one of the dimensions as the base data.",
-              )}
-            </div>
+            <div>{t<string>("property.valueScope.description")}</div>
           </div>
         }
       >

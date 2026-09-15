@@ -19,11 +19,22 @@ public record Resource
     /// </summary>
     public List<ResourceSourceLink>? SourceLinks { get; set; }
 
+    /// <summary>External work identities, independent of where the resource's files came from.</summary>
+    public List<ResourceExternalIdentity>? ExternalIdentities { get; set; }
+
     public string? FileName => string.IsNullOrEmpty(Path) ? null : System.IO.Path.GetFileName(Path);
 
     public string? Directory => string.IsNullOrEmpty(Path) ? null : System.IO.Path.GetDirectoryName(Path).StandardizePath()!;
 
     public string? Path { get; set; }
+
+    /// <summary>
+    /// Whether this resource currently has local files. False means the resource is known
+    /// to Bakabase but not materialized on disk yet — an uninstalled Steam game, a work the
+    /// user intends to acquire. Prefer this over inspecting <see cref="Path"/> directly so
+    /// the rule lives in one place.
+    /// </summary>
+    public bool HasLocalPath => !string.IsNullOrEmpty(Path);
 
     private string? _displayName;
 
@@ -104,6 +115,12 @@ public record Resource
         public StandardValueType BizValueType => PropertyTypeValueTypes.GetBizValueType(Type);
         public bool Visible { get; set; } = Visible;
         public int Order { get; set; } = Order;
+        /// <summary>
+        /// Scope order from this property's effective resource profile. Null/empty uses the global
+        /// order; a per-resource ScopePreference still takes precedence. This is derived response
+        /// metadata, not a saved per-resource override.
+        /// </summary>
+        public PropertyValueScope[]? ProfileScopePriority { get; set; }
 
         public record PropertyValue(
             int Scope,
@@ -140,5 +157,13 @@ public record Resource
 
     public List<MediaLibraryInfo>? MediaLibraries { get; set; }
 
+    /// <summary>
+    /// Which collections this belongs to — written-down memberships and rule matches alike. Loaded
+    /// only when asked for (<c>ResourceAdditionalItem.CollectionName</c>).
+    /// </summary>
+    public List<CollectionInfo>? Collections { get; set; }
+
     public record MediaLibraryInfo(int Id, string Name, string? Color);
+
+    public record CollectionInfo(int Id, string Name, string? Color);
 }

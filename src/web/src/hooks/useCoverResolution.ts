@@ -28,6 +28,7 @@ const COVER_PRIORITY: DataOrigin[] = [
   DataOrigin.Steam,
   DataOrigin.DLsite,
   DataOrigin.ExHentai,
+  DataOrigin.ExternalIdentity,
   DataOrigin.FileSystem,
 ];
 

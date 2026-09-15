@@ -14,6 +14,26 @@ const CAPTURE_KIND = "transform.text.capture";
 /** System variables every fs entry answers (FsEntryItem.GetWorkflowSystemVariables). */
 export const FS_SYSTEM_VARIABLES = ["extension", "originalName", "parentName"];
 
+/** System variables every resource answers (ResourceWorkflowItem.GetWorkflowSystemVariables). */
+export const RESOURCE_SYSTEM_VARIABLES = [
+  "id",
+  "name",
+  "path",
+  "directoryName",
+  "hasLocalPath",
+  "sources",
+];
+
+/**
+ * The union of every domain's system variables. A template form sits at a position in the chain
+ * without knowing which domain the items came from, so it hints all of them; a variable from
+ * another domain simply does not resolve at run time.
+ */
+export const ALL_SYSTEM_VARIABLES = [
+  ...FS_SYSTEM_VARIABLES,
+  ...RESOURCE_SYSTEM_VARIABLES.filter((v) => !FS_SYSTEM_VARIABLES.includes(v)),
+];
+
 /** Named groups a capture pattern would write into the bag. */
 export function namedGroupsOf(pattern: string): string[] {
   return Array.from(pattern.matchAll(NAMED_GROUP_REGEX), (m) => m[1]).filter(

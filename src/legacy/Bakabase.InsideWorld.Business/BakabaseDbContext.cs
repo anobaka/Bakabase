@@ -34,6 +34,9 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
 
         public DbSet<DownloadRecordDbModel> DownloadRecords { get; set; }
+        public DbSet<DownloadResultDbModel> DownloadResults { get; set; }
+        public DbSet<DownloadResultOwnerDbModel> DownloadResultOwners { get; set; }
+        public DbSet<DownloadResultProcessingDbModel> DownloadResultProcessing { get; set; }
 
         public DbSet<PasswordDbModel> Passwords { get; set; }
 
@@ -93,6 +96,7 @@ namespace Bakabase.InsideWorld.Business
 
         // Resource source tables
         public DbSet<ResourceSourceLinkDbModel> ResourceSourceLinks { get; set; }
+        public DbSet<ResourceExternalIdentityDbModel> ResourceExternalIdentities { get; set; }
         public DbSet<SourceMetadataMappingDbModel> SourceMetadataMappings { get; set; }
         public DbSet<SteamAppDbModel> SteamApps { get; set; }
         public DbSet<DLsiteWorkDbModel> DLsiteWorks { get; set; }
@@ -127,6 +131,18 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<Modules.Text.Abstractions.Models.Db.TextEntry> TextEntries { get; set; }
         public DbSet<FileRenameEntry> FileRenameEntries { get; set; }
 
+        // Acquisition module tables
+        public DbSet<Modules.Acquisition.Abstractions.Models.Db.AcquisitionLeadDbModel> AcquisitionLeads { get; set; }
+        public DbSet<Modules.Acquisition.Abstractions.Models.Db.AcquisitionTaskDbModel> AcquisitionTasks { get; set; }
+
+        // Collection module tables
+        public DbSet<Modules.Collection.Abstractions.Models.Db.CollectionDbModel> Collections { get; set; }
+
+        public DbSet<Modules.Collection.Abstractions.Models.Db.CollectionResourceMappingDbModel>
+            CollectionResourceMappings { get; set; }
+
+        public DbSet<ResourceMatchSuggestionDbModel> ResourceMatchSuggestions { get; set; }
+
         public BakabaseDbContext()
         {
         }
@@ -154,6 +170,24 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => a.Status);
             });
 
+            modelBuilder.Entity<DownloadResultDbModel>(t =>
+            {
+                t.HasIndex(a => a.DeduplicationKey).IsUnique();
+                t.HasIndex(a => new {a.DownloadTaskId, a.SourceKey});
+            });
+
+            modelBuilder.Entity<DownloadResultProcessingDbModel>(t =>
+            {
+                t.HasKey(a => a.DownloadResultId);
+                t.Property(a => a.DownloadResultId).ValueGeneratedNever();
+            });
+
+            modelBuilder.Entity<DownloadResultOwnerDbModel>(t =>
+            {
+                t.HasKey(a => a.DownloadTaskId);
+                t.HasIndex(a => a.AcquisitionTaskId).IsUnique();
+            });
+
             modelBuilder.Entity<DownloadRecordDbModel>(t =>
             {
                 t.HasIndex(a => new {a.ThirdPartyId, a.Key}).IsUnique();
@@ -179,6 +213,38 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => a.RunId);
                 // Apply/undo iterate a run's rows by status; the composite spares a scan per click.
                 t.HasIndex(a => new {a.RunId, a.Status});
+            });
+
+            modelBuilder.Entity<Modules.Acquisition.Abstractions.Models.Db.AcquisitionLeadDbModel>(t =>
+            {
+                // A shared link describes exactly one resource. The unique index is what makes
+                // importing the same list twice a no-op instead of a pile of duplicates.
+                t.HasIndex(a => new {a.Kind, a.Value}).IsUnique();
+                t.HasIndex(a => a.ResourceId);
+            });
+
+            modelBuilder.Entity<Modules.Acquisition.Abstractions.Models.Db.AcquisitionTaskDbModel>(t =>
+            {
+                // The acquisitions page opens on "what is happening now", and every resource card
+                // asks "is this one being got?" — both are one indexed lookup.
+                t.HasIndex(a => a.Status);
+                t.HasIndex(a => a.ResourceId);
+            });
+
+            modelBuilder.Entity<Modules.Collection.Abstractions.Models.Db.CollectionResourceMappingDbModel>(t =>
+            {
+                // A resource belongs to a collection once. The unique index is what makes adding
+                // the same thing twice a no-op rather than a duplicate member.
+                t.HasIndex(m => new {m.CollectionId, m.ResourceId}).IsUnique();
+                t.HasIndex(m => m.ResourceId);
+            });
+
+            modelBuilder.Entity<ResourceMatchSuggestionDbModel>(t =>
+            {
+                // A pair is asked about once, whatever the answer was — the unique index is what
+                // stops a source that lists the same thing every week from asking every week.
+                t.HasIndex(s => new {s.ResourceId, s.CandidateResourceId}).IsUnique();
+                t.HasIndex(s => s.Status);
             });
 
             modelBuilder.Entity<PasswordDbModel>(t =>
@@ -368,6 +434,14 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => x.ResourceId);
                 t.HasIndex(x => new { x.Source, x.SourceKey });
                 t.HasIndex(x => new { x.ResourceId, x.Source, x.SourceKey }).IsUnique();
+            });
+
+            // A work may have multiple local variants, so identity uniqueness is per resource.
+            modelBuilder.Entity<ResourceExternalIdentityDbModel>(t =>
+            {
+                t.HasIndex(x => x.ResourceId);
+                t.HasIndex(x => new { x.ThirdPartyId, x.ExternalId });
+                t.HasIndex(x => new { x.ResourceId, x.ThirdPartyId, x.ExternalId }).IsUnique();
             });
 
             // Resource source tables

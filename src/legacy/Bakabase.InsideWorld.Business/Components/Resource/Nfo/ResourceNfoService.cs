@@ -93,8 +93,17 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo
             return dto;
         }
 
-        public static string GetFullname(Abstractions.Models.Domain.Resource resource)
+        /// <summary>
+        /// Where this resource's nfo file lives. Null when the resource has no local files — there
+        /// is no folder to write one next to.
+        /// </summary>
+        public static string? GetFullname(Abstractions.Models.Domain.Resource resource)
         {
+            if (!resource.HasLocalPath)
+            {
+                return null;
+            }
+
             return resource.IsFile
                 ? Path.Combine(resource.Directory, $"{Path.GetFileNameWithoutExtension(resource.FileName)}{Extension}")
                 : Path.Combine(resource.Path, DefaultFilename);

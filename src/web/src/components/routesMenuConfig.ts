@@ -29,6 +29,8 @@ import {
   AiOutlineAudit,
   AiOutlineBell,
   AiOutlineCloudServer,
+  AiOutlineCloudDownload,
+  AiOutlineFolderOpen,
   AiOutlinePartition,
   AiOutlineMobile,
   AiOutlineLaptop,
@@ -79,6 +81,9 @@ import ExHentaiGalleriesPage from "@/pages/exhentai-galleries";
 import DataCardPage from "@/pages/data-card";
 import HealthScorePage from "@/pages/health-score";
 import SubscriptionPage from "@/pages/subscription";
+import AcquisitionPage from "@/pages/acquisition";
+import CollectionPage from "@/pages/collection";
+import CollectionDetailPage from "@/pages/collection/detail";
 import WorkflowPage from "@/pages/workflow";
 import WorkflowEditorPage from "@/pages/workflow/editor";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
@@ -188,6 +193,22 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: AiOutlineHdd,
         layout: "basic",
         menu: true,
+      },
+      {
+        name: "menu.collection",
+        path: "/collections",
+        component: CollectionPage,
+        icon: AiOutlineFolderOpen,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
+      },
+      {
+        name: "menu.collection",
+        path: "/collections/detail",
+        component: CollectionDetailPage,
+        layout: "basic",
+        menu: false,
       },
       {
         name: "menu.text",
@@ -326,6 +347,15 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/subscriptions",
         component: SubscriptionPage,
         icon: AiOutlineBell,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
+      },
+      {
+        name: "menu.acquisition",
+        path: "/acquisitions",
+        component: AcquisitionPage,
+        icon: AiOutlineCloudDownload,
         layout: "basic",
         menu: true,
         isBeta: true,
@@ -519,6 +549,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     component: Test,
     icon: AiOutlineBug,
     layout: "basic",
-    menu: process.env.NODE_ENV === "development",
+    // Allow deployed test instances to show component demos without a dev server.
+    menu: import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_PAGE === "true",
   },
 ];

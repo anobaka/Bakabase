@@ -3,6 +3,12 @@ import type { SubscriptionProviderUI } from "./types";
 import { ExHentaiSearchUI } from "./ExHentaiSearch";
 import { ExHentaiGalleryUI } from "./ExHentaiGallery";
 import { PixivFollowLatestUI } from "./PixivFollowLatest";
+import { SoulPlusSearchUI } from "./SoulPlusSearch";
+import { DLsiteCircleUI } from "./DLsiteCircle";
+import { BangumiSubjectRelationsUI } from "./BangumiSubjectRelations";
+import { VndbSeriesUI } from "./VndbSeries";
+import { VndbDeveloperUI } from "./VndbDeveloper";
+import { DLsitePurchasesUI, ExHentaiFavoritesUI, SteamOwnedGamesUI } from "./DLsitePurchases";
 
 /**
  * Registry of provider UIs keyed by their backend `kind`.
@@ -17,6 +23,14 @@ export const subscriptionProviderRegistry: Record<string, SubscriptionProviderUI
   [ExHentaiSearchUI.kind]: ExHentaiSearchUI,
   [ExHentaiGalleryUI.kind]: ExHentaiGalleryUI,
   [PixivFollowLatestUI.kind]: PixivFollowLatestUI,
+  [SoulPlusSearchUI.kind]: SoulPlusSearchUI,
+  [DLsiteCircleUI.kind]: DLsiteCircleUI,
+  [BangumiSubjectRelationsUI.kind]: BangumiSubjectRelationsUI,
+  [VndbSeriesUI.kind]: VndbSeriesUI,
+  [VndbDeveloperUI.kind]: VndbDeveloperUI,
+  [DLsitePurchasesUI.kind]: DLsitePurchasesUI,
+  [SteamOwnedGamesUI.kind]: SteamOwnedGamesUI,
+  [ExHentaiFavoritesUI.kind]: ExHentaiFavoritesUI,
 };
 
 export function getProviderUI(kind: string): SubscriptionProviderUI<any> | undefined {

@@ -1,6 +1,6 @@
 import React from "react";
 import { FaSteam } from "react-icons/fa6";
-import { RiRobot2Line } from "react-icons/ri";
+import { RiBookOpenLine, RiRobot2Line } from "react-icons/ri";
 
 import dlsiteLogo from "@/assets/logo/dlsite.png";
 import exhentaiLogo from "@/assets/logo/exhentai.png";
@@ -8,6 +8,8 @@ import fanboxLogo from "@/assets/logo/fanbox.png";
 import fantiaLogo from "@/assets/logo/fantia.png";
 import cienLogo from "@/assets/logo/cien.png";
 import patreonLogo from "@/assets/logo/patreon.png";
+import bangumiLogo from "@/assets/logo/bangumi.png";
+import pixivLogo from "@/assets/logo/pixiv.png";
 
 export const SteamIcon = FaSteam;
 
@@ -19,6 +21,18 @@ export const DLsiteIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 export const ExHentaiIcon: React.FC<{ className?: string }> = ({ className }) => (
   <img alt="ExHentai" className={`h-[1em] ${className ?? ""}`} src={exhentaiLogo} />
+);
+
+export const BangumiIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <img alt="Bangumi" className={`h-[1em] ${className ?? ""}`} src={bangumiLogo} />
+);
+
+export const PixivIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <img alt="Pixiv" className={`h-[1em] ${className ?? ""}`} src={pixivLogo} />
+);
+
+export const VndbIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <RiBookOpenLine aria-label="VNDB" className={className} role="img" />
 );
 
 export const FanboxIcon: React.FC<{ className?: string }> = ({ className }) => (

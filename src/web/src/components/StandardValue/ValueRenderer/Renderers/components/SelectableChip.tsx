@@ -80,7 +80,9 @@ const SelectableChip = ({
   return (
     <Chip
       key={itemKey}
+      data-value-option
       className={classNames.join(" ")}
+      classNames={{ content: "standard-value-option-content" }}
       color={chipColor}
       isDisabled={isDisabled}
       size={size}

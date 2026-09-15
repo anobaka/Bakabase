@@ -3,17 +3,17 @@
 import type { DragEndEvent } from "@dnd-kit/core";
 import type { OperationWithId } from "./useFileNameModifier";
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
   AiOutlineEdit,
-  AiOutlineEye,
-  AiOutlineEyeInvisible,
   AiOutlineFolderAdd,
   AiOutlinePartition,
-  AiOutlinePlusCircle,
+  AiOutlinePlus,
+  AiOutlineReload,
   AiOutlineUndo,
+  AiOutlineCheckCircle,
 } from "react-icons/ai";
 import {
   DndContext,
@@ -30,16 +30,22 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
-import { Button, Textarea, Modal, Card } from "../bakaui";
+import { Button, Textarea, Modal, Checkbox, Chip } from "../bakaui";
 
 import SortableOperationCard from "./SortableOperationCard";
 import PreviewList from "./PreviewList";
-import { useFileNameModifier } from "./useFileNameModifier";
+import { normalizeFilePaths, useFileNameModifier } from "./useFileNameModifier";
+import { detectCommonPrefix } from "./utils";
 
-import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import { EDITOR_SEED_STORAGE_KEY } from "@/components/Workflow/CanvasEditor/templates";
+import {
+  FileNameModifierOperationType,
+  FileNameModifierFileNameTarget,
+  FileNameModifierPosition,
+  FileNameModifierCaseType,
+} from "@/sdk/constants";
 
 export interface FileNameModificationResult {
   originalPath: string;
@@ -53,34 +59,31 @@ export interface FileNameModificationResult {
 
 let operationIdCounter = 0;
 const generateOperationId = () => `op-${Date.now()}-${operationIdCounter++}`;
-
 const createDefaultOperation = (): OperationWithId => ({
   id: generateOperationId(),
-  target: 2, // FileNameWithoutExtension
-  operation: 1,
-  position: 1,
+  target: FileNameModifierFileNameTarget.FileNameWithoutExtension,
+  operation: FileNameModifierOperationType.Insert,
+  position: FileNameModifierPosition.Start,
   positionIndex: 0,
   targetText: "",
   text: "",
   deleteCount: 0,
   deleteStartPosition: 0,
-  caseType: 1,
+  caseType: FileNameModifierCaseType.TitleCase,
   dateTimeFormat: "",
   alphabetStartChar: "A",
-  alphabetCount: 0,
+  alphabetCount: 1,
   replaceEntire: false,
   regex: false,
 });
 
-interface FileNameModifierProps {
+interface Props {
   initialFilePaths?: string[];
   onClose?: () => void;
 }
+const k = (key: string) => `fileNameModifier.${key}`;
 
-import { validateOperation } from "./validation";
-import { detectCommonPrefix } from "./utils";
-
-const FileNameModifier: React.FC<FileNameModifierProps> = ({ initialFilePaths = [], onClose }) => {
+const FileNameModifier = ({ initialFilePaths = [] }: Props) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { createPortal } = useBakabaseContext();
@@ -89,297 +92,297 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({ initialFilePaths = 
     setOperations,
     filePaths,
     setFilePaths,
-    previewResults,
-    setPreviewResults,
-    error,
-    setError,
-    isPreviewLoading,
-    setIsPreviewLoading,
     lastFilePaths,
     setLastFilePaths,
+    previewResults,
+    isPreviewLoading,
+    hasInvalidOperations,
+    validationErrors,
+    changedCount,
+    canExecute,
+    modifying,
+    error,
+    execute,
+    refreshPreview,
   } = useFileNameModifier(initialFilePaths);
-
-  const [showTextarea, setShowTextarea] = useState(false);
+  const [pathDraft, setPathDraft] = useState<string>();
   const [showFullPaths, setShowFullPaths] = useState(false);
-  const [modifying, setModifying] = useState(false);
-
-  // 拖拽排序 sensors
+  const [onlyChanges, setOnlyChanges] = useState(false);
+  const editingPaths = pathDraft != null;
   const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  // 拖拽结束处理
   const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
+    ({ active, over }: DragEndEvent) => {
+      if (modifying || !over || active.id === over.id) return;
+      setOperations((previous) => {
+        const from = previous.findIndex((item) => item.id === active.id);
+        const to = previous.findIndex((item) => item.id === over.id);
 
-      if (over && active.id !== over.id) {
-        setOperations((ops) => {
-          const oldIndex = ops.findIndex((op) => op.id === active.id);
-          const newIndex = ops.findIndex((op) => op.id === over.id);
-
-          return arrayMove(ops, oldIndex, newIndex);
-        });
-      }
-    },
-    [setOperations],
-  );
-
-  // 操作项增删改、复制
-  const handleOperationChange = useCallback(
-    (id: string, op: OperationWithId) => {
-      setOperations((ops) => ops.map((item) => (item.id === id ? op : item)));
-    },
-    [setOperations],
-  );
-
-  const handleOperationDelete = useCallback(
-    (id: string) => {
-      setOperations((ops) => ops.filter((op) => op.id !== id));
-    },
-    [setOperations],
-  );
-
-  const handleOperationCopy = useCallback(
-    (id: string) => {
-      setOperations((ops) => {
-        const idx = ops.findIndex((op) => op.id === id);
-
-        if (idx === -1) return ops;
-        const next = [...ops];
-        const copy: OperationWithId = {
-          ...ops[idx],
-          id: generateOperationId(),
-        };
-
-        next.splice(idx + 1, 0, copy);
-
-        return next;
+        return from < 0 || to < 0 ? previous : arrayMove(previous, from, to);
       });
     },
-    [setOperations],
+    [modifying, setOperations],
   );
+  const addOperation = () => setOperations((previous) => [...previous, createDefaultOperation()]);
+  const copyOperation = (id: string) =>
+    setOperations((previous) => {
+      const index = previous.findIndex((item) => item.id === id);
 
-  const handleAddOperation = useCallback(() => {
-    setOperations((ops) => [...ops, createDefaultOperation()]);
-  }, [setOperations]);
-
-  // 撤销功能：恢复上次的文件路径
-  const handleRestoreFilePaths = useCallback(() => {
-    if (lastFilePaths) {
-      setFilePaths(lastFilePaths);
-      setLastFilePaths(null);
-    }
-  }, [lastFilePaths, setFilePaths, setLastFilePaths]);
-
-  // 文件路径输入
-  const handleConfirmPaths = () => {
-    const paths = filePaths
-      .join("\n")
-      .split("\n")
-      .map((f) => f.trim())
-      .filter(Boolean);
-
-    setFilePaths(paths);
-    setShowTextarea(false);
-  };
-  const handleShowFileListEdit = () => {
-    setShowTextarea(true);
-  };
-  // 新增：去重、清空、粘贴
-  const handleDeduplicatePaths = () => {
-    setFilePaths((paths) => Array.from(new Set(paths.map((f) => f.trim()).filter(Boolean))));
-  };
-
-  const handleAddPathsFromFileSystem = () => {
+      return index < 0
+        ? previous
+        : [
+            ...previous.slice(0, index + 1),
+            { ...previous[index], id: generateOperationId() },
+            ...previous.slice(index + 1),
+          ];
+    });
+  const addPaths = () =>
     createPortal(FileSystemSelectorModal, {
       multiple: true,
       onMultipleSelected: (entries) => {
-        const incoming = entries.map((e) => e.path).filter(Boolean) as string[];
+        const incoming = normalizeFilePaths(
+          entries.map((entry) => entry.path).filter((path): path is string => !!path),
+        );
 
-        setFilePaths((prev) => {
-          const existing = new Set(prev.map((p) => p.trim()).filter(Boolean));
-          const merged = [...prev];
-
-          for (const p of incoming) {
-            const trimmed = p.trim();
-
-            if (trimmed && !existing.has(trimmed)) {
-              existing.add(trimmed);
-              merged.push(trimmed);
-            }
-          }
-
-          return merged;
-        });
+        if (editingPaths)
+          setPathDraft((previous) =>
+            [...new Set([...normalizeFilePaths((previous ?? "").split("\n")), ...incoming])].join(
+              "\n",
+            ),
+          );
+        else setFilePaths((previous) => [...new Set([...previous, ...incoming])]);
       },
     });
-  };
-  // 预览区公共前缀
-  const commonPrefix = useMemo(
-    () => detectCommonPrefix(previewResults.map((r) => r.originalPath)),
-    [previewResults],
-  );
+  const commonPrefix = useMemo(() => detectCommonPrefix(filePaths), [filePaths]);
+  const visibleResults = onlyChanges
+    ? previewResults.filter((item) => item.originalPath !== item.modifiedPath)
+    : previewResults;
+  const previewState = modifying
+    ? "executing"
+    : editingPaths
+      ? "editingPaths"
+      : hasInvalidOperations
+        ? "invalidRules"
+        : isPreviewLoading
+          ? "updating"
+          : filePaths.length === 0
+            ? "needsFiles"
+            : operations.length === 0
+              ? "needsRules"
+              : changedCount > 0
+                ? "ready"
+                : "unchanged";
 
-  // 检查预览结果中是否有任何变更
-  const hasAnyChanges = useMemo(
-    () => previewResults.some((r) => r.originalPath !== r.modifiedPath),
-    [previewResults],
-  );
+  const executeModification = async () => {
+    if (editingPaths) return;
+    const result = await execute();
 
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+    if (!result) return;
+    const failures = result.filter((item) => !item.success);
+    const changed = result.filter((item) => item.success && item.oldPath !== item.newPath).length;
 
-  useEffect(() => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-
-    if (filePaths.length === 0) {
-      setPreviewResults([]);
-
-      return;
-    }
-    // 只用合法操作预览
-    const validOperations = operations.filter((op) => !validateOperation(op));
-
-    debounceTimer.current = setTimeout(() => {
-      (async () => {
-        try {
-          setError("");
-          setIsPreviewLoading(true);
-          const rsp = await BApi.fileNameModifier.previewFileNameModification({
-            filePaths,
-            operations: validOperations,
-          });
-          let modifiedPaths: string[] = rsp.data ?? [];
-          // 构建 previewResults
-          const results = filePaths.map((originalPath, i) => {
-            const modifiedPath = modifiedPaths[i] || originalPath;
-            const getFileName = (p: string) => p.split(/[\\/]/).pop() || "";
-
-            return {
-              originalPath,
-              modifiedPath,
-              originalFileName: getFileName(originalPath),
-              modifiedFileName: getFileName(modifiedPath),
-              commonPrefix: "",
-              originalRelative: "",
-              modifiedRelative: "",
-            };
-          });
-
-          setPreviewResults(results);
-        } catch (e: any) {
-          setError(e?.message || t<string>("FileNameModifier.PreviewFailed"));
-        } finally {
-          setIsPreviewLoading(false);
-        }
-      })();
-    }, 300);
-
-    // 清理定时器
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
-  }, [filePaths, operations]);
-
-  const handleExecuteModification = async () => {
-    const validOperations = operations.filter((op) => !validateOperation(op));
-
-    if (validOperations.length === 0) {
-      setError(t<string>("FileNameModifier.Error.NoValidOperation"));
-
-      return;
-    }
-
-    try {
-      setModifying(true);
-      setError("");
-
-      // 保存当前文件路径用于撤销
-      setLastFilePaths([...filePaths]);
-
-      const rsp = await BApi.fileNameModifier.modifyFileNames({
-        filePaths,
-        operations: validOperations,
-      });
-      const result = rsp.data ?? [];
-
-      // 更新文件路径为新路径
-      const newFilePaths = filePaths.map((oldPath) => {
-        const resultItem = result.find((r) => r.oldPath === oldPath);
-
-        return resultItem?.success && resultItem.newPath ? resultItem.newPath : oldPath;
-      });
-
-      setFilePaths(newFilePaths);
-
-      createPortal(Modal, {
-        defaultVisible: true,
-        title: t<string>("FileNameModifier.ModificationResult"),
-        size: "xl",
-        footer: {
-          actions: ["cancel"],
-        },
-        children: (
-          <>
-            <div className="mb-2">
-              <span className="text-green-600 font-semibold mr-4">
-                {t<string>("FileNameModifier.ModificationSuccessCount", {
-                  count: result.filter((r) => r.success).length,
-                })}
-              </span>
-              <span className="text-red-600 font-semibold">
-                {t<string>("FileNameModifier.ModificationFailCount", {
-                  count: result.filter((r) => !r.success).length,
-                })}
-              </span>
-            </div>
-            {result.filter((r) => !r.success).length > 0 && (
-              <div className="max-h-48 overflow-y-auto border rounded p-2 bg-background border border-default">
-                <div className="font-semibold mb-1">
-                  {t<string>("FileNameModifier.ModificationFailList")}
+    createPortal(Modal, {
+      defaultVisible: true,
+      title: t<string>("FileNameModifier.ModificationResult"),
+      size: "lg",
+      footer: { actions: ["cancel"] },
+      children: (
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Chip color="success" variant="flat">
+              {t<string>("FileNameModifier.ModificationSuccessCount", { count: changed })}
+            </Chip>
+            <Chip color={failures.length > 0 ? "danger" : "default"} variant="flat">
+              {t<string>("FileNameModifier.ModificationFailCount", { count: failures.length })}
+            </Chip>
+          </div>
+          {failures.length > 0 && (
+            <div className="max-h-72 space-y-2 overflow-y-auto">
+              {failures.map((item) => (
+                <div key={item.oldPath} className="rounded-lg bg-danger/5 p-3 text-sm">
+                  <p className="break-all">{item.oldPath}</p>
+                  <p className="mt-1 break-words text-danger">{item.error}</p>
                 </div>
-                <ul className="text-xs">
-                  {result
-                    .filter((r) => !r.success)
-                    .map((item) => (
-                      <li key={item.oldPath} className="mb-1">
-                        <span className="text-foreground">{item.oldPath}</span>
-                        <span className="text-red-500 ml-2">
-                          {t<string>("FileNameModifier.ModificationFailReason")}: {item.error}
-                        </span>
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            )}
-          </>
-        ),
-      });
-
-      setModifying(false);
-    } catch (e: any) {
-      setModifying(false);
-      setLastFilePaths(null); // 失败时清除撤销状态
-      setError(e?.message || t<string>("FileNameModifier.ModificationFailed"));
-    }
+              ))}
+            </div>
+          )}
+          <p className="text-xs leading-relaxed text-default-500">
+            {t<string>(k("result.nextStep"))}
+          </p>
+        </div>
+      ),
+    });
   };
 
   return (
-    <div className="flex flex-col min-h-0 grow md:flex-row gap-4">
-      {/* 左侧：操作配置区域 */}
-      <Card className="flex-1 flex flex-col min-w-0 p-4">
-        <div className="flex items-center justify-between mb-2 gap-2">
-          <h5 className="font-semibold">{t<string>("FileNameModifier.OperationsList")}</h5>
-          {/* The design's "upgrade to a cleaning workflow" entry (file-cleaning §6): the
-              current operation set becomes a fileNameOp node in a prefilled workflow. */}
+    <div className="flex h-full min-h-[34rem] min-w-0 flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-default-50 px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">
+            {t<string>(k("files.count"), { count: filePaths.length })}
+          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-default-500">
+            {t<string>(k("files.description"))}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <Button
+            color="primary"
+            isDisabled={modifying}
             size="sm"
-            startContent={<AiOutlinePartition />}
+            startContent={<AiOutlineFolderAdd aria-hidden className="text-base" />}
+            variant="flat"
+            onPress={addPaths}
+          >
+            {t<string>("FileNameModifier.AddFromFileSystem")}
+          </Button>
+          <Button
+            isDisabled={modifying || editingPaths}
+            size="sm"
+            startContent={<AiOutlineEdit aria-hidden />}
             variant="light"
-            onClick={() => {
+            onPress={() => setPathDraft(filePaths.join("\n"))}
+          >
+            {t<string>("FileNameModifier.EditFileList")}
+          </Button>
+        </div>
+      </div>
+      {editingPaths && (
+        <section
+          aria-label={t<string>("FileNameModifier.EditFileList")}
+          className="rounded-xl bg-default-50 p-4"
+        >
+          <Textarea
+            aria-label={t<string>("FileNameModifier.FilePathsTextarea")}
+            description={t<string>(k("files.draftHint"))}
+            isDisabled={modifying}
+            maxRows={8}
+            minRows={4}
+            placeholder={t<string>("FileNameModifier.FilePathsPlaceholder")}
+            value={pathDraft}
+            onValueChange={setPathDraft}
+          />
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button
+              color="primary"
+              size="sm"
+              onPress={() => {
+                setFilePaths(normalizeFilePaths(pathDraft.split("\n")));
+                setPathDraft(undefined);
+              }}
+            >
+              {t<string>("FileNameModifier.ConfirmPaths")}
+            </Button>
+            <Button
+              size="sm"
+              variant="flat"
+              onPress={() =>
+                setPathDraft((value) =>
+                  [...new Set(normalizeFilePaths((value ?? "").split("\n")))].join("\n"),
+                )
+              }
+            >
+              {t<string>("FileNameModifier.Deduplicate")}
+            </Button>
+            <Button size="sm" variant="light" onPress={() => setPathDraft(undefined)}>
+              {t<string>("FileNameModifier.Cancel")}
+            </Button>
+          </div>
+        </section>
+      )}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-[minmax(20rem,23rem)_minmax(0,1fr)]">
+        <section
+          aria-label={t<string>("FileNameModifier.OperationsList")}
+          className="flex min-h-0 min-w-0 flex-col"
+        >
+          <div className="flex items-center justify-between gap-2 pb-3">
+            <div>
+              <h2 className="text-sm font-semibold">
+                {t<string>("FileNameModifier.OperationsList")}
+              </h2>
+              <p className="mt-1 text-xs text-default-500">{t<string>(k("rules.orderHint"))}</p>
+            </div>
+            <Button
+              isIconOnly
+              aria-label={t<string>("FileNameModifier.AddOperation")}
+              isDisabled={modifying}
+              size="sm"
+              variant="flat"
+              onPress={addOperation}
+            >
+              <AiOutlinePlus aria-hidden />
+            </Button>
+          </div>
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+            {operations.length === 0 ? (
+              <div className="flex min-h-48 flex-col items-center justify-center gap-3 rounded-xl bg-default-50 p-4 text-center">
+                <AiOutlinePlus aria-hidden className="text-2xl text-default-400" />
+                <p className="text-sm text-default-500">
+                  {t<string>("FileNameModifier.EmptyOperationsHint")}
+                </p>
+                <Button color="primary" size="sm" variant="flat" onPress={addOperation}>
+                  {t<string>("FileNameModifier.AddFirstOperation")}
+                </Button>
+              </div>
+            ) : (
+              <DndContext
+                collisionDetection={closestCenter}
+                sensors={sensors}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={operations.map((item) => item.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {operations.map((operation, index) => (
+                    <SortableOperationCard
+                      key={operation.id}
+                      errors={validationErrors[index] ? t<string>(validationErrors[index]) : ""}
+                      id={operation.id}
+                      index={index}
+                      isDisabled={modifying}
+                      operation={operation}
+                      onChange={(next) =>
+                        setOperations((previous) =>
+                          previous.map((item) =>
+                            item.id === operation.id ? { ...next, id: item.id } : item,
+                          ),
+                        )
+                      }
+                      onCopy={() => copyOperation(operation.id)}
+                      onDelete={() =>
+                        setOperations((previous) =>
+                          previous.filter((item) => item.id !== operation.id),
+                        )
+                      }
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            )}
+            {operations.length > 0 && (
+              <Button
+                className="w-full"
+                isDisabled={modifying}
+                size="sm"
+                startContent={<AiOutlinePlus aria-hidden />}
+                variant="light"
+                onPress={addOperation}
+              >
+                {t<string>("FileNameModifier.AddOperation")}
+              </Button>
+            )}
+          </div>
+          <Button
+            className="mt-2 shrink-0 justify-start"
+            isDisabled={modifying || operations.length === 0 || hasInvalidOperations}
+            size="sm"
+            startContent={<AiOutlinePartition aria-hidden />}
+            variant="light"
+            onPress={() => {
               sessionStorage.setItem(
                 EDITOR_SEED_STORAGE_KEY,
                 JSON.stringify({
@@ -389,7 +392,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({ initialFilePaths = 
                     {
                       kind: "transform.fs.fileNameOp",
                       configJson: JSON.stringify({
-                        operations: operations.map(({ id, ...op }) => op),
+                        operations: operations.map(({ id: _id, ...operation }) => operation),
                       }),
                     },
                     { kind: "transform.text.trim" },
@@ -402,197 +405,91 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({ initialFilePaths = 
           >
             {t<string>("FileNameModifier.UpgradeToWorkflow")}
           </Button>
-        </div>
-        <div className="flex-1 overflow-y-auto rounded p-2">
-          {operations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-              <AiOutlinePlusCircle className="text-4xl mb-2" />
-              <p className="text-sm mb-3">{t<string>("FileNameModifier.EmptyOperationsHint")}</p>
-              <Button color="primary" variant="flat" onClick={handleAddOperation}>
-                {t<string>("FileNameModifier.AddFirstOperation")}
-              </Button>
+        </section>
+        <section
+          aria-label={t<string>("FileNameModifier.PreviewResults")}
+          className="flex min-h-[20rem] min-w-0 flex-col overflow-hidden rounded-xl bg-default-50/50"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
+            <div>
+              <h2 className="text-sm font-semibold">
+                {t<string>("FileNameModifier.PreviewResults")}
+              </h2>
+              <p className="mt-1 text-xs text-default-500">
+                {t<string>(k("preview.count"), { changed: changedCount, total: filePaths.length })}
+              </p>
             </div>
-          ) : (
-            <DndContext
-              collisionDetection={closestCenter}
-              sensors={sensors}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={operations.map((op) => op.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {operations.map((op, idx) => {
-                  const validationError = validateOperation(op);
-
-                  return (
-                    <SortableOperationCard
-                      key={op.id}
-                      errors={validationError ? t<string>(validationError) : ""}
-                      id={op.id}
-                      index={idx}
-                      operation={op}
-                      onChange={(op2) => handleOperationChange(op.id, { ...op2, id: op.id })}
-                      onCopy={() => handleOperationCopy(op.id)}
-                      onDelete={() => handleOperationDelete(op.id)}
-                    />
-                  );
-                })}
-              </SortableContext>
-            </DndContext>
-          )}
-          {operations.length > 0 && (
-            <Button
-              aria-label={t<string>("FileNameModifier.AddOperation")}
-              className="w-full mt-2"
-              variant="light"
-              onClick={handleAddOperation}
-            >
-              <AiOutlinePlusCircle className="text-lg" />
-              {t<string>("FileNameModifier.AddOperation")}
-            </Button>
-          )}
-        </div>
-        {/* 操作按钮 */}
-        <div className="mt-4">
-          <div className="flex gap-2">
-            <Button
-              aria-label={t<string>("FileNameModifier.ExecuteModification")}
-              color="primary"
-              isDisabled={!hasAnyChanges || isPreviewLoading}
-              isLoading={modifying}
-              variant="solid"
-              onClick={handleExecuteModification}
-            >
-              {t<string>("FileNameModifier.ExecuteModification")}
-            </Button>
-            {lastFilePaths && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Checkbox isSelected={onlyChanges} size="sm" onValueChange={setOnlyChanges}>
+                {t<string>(k("preview.onlyChanges"))}
+              </Checkbox>
+              <Checkbox isSelected={showFullPaths} size="sm" onValueChange={setShowFullPaths}>
+                {t<string>(k("preview.fullPaths"))}
+              </Checkbox>
               <Button
-                aria-label={t<string>("FileNameModifier.RestoreOriginalPaths")}
-                color="warning"
-                variant="flat"
-                onClick={handleRestoreFilePaths}
-              >
-                <AiOutlineUndo className="text-lg" />
-                {t<string>("FileNameModifier.RestoreOriginalPaths")}
-              </Button>
-            )}
-          </div>
-          {error && <div className="text-red-500 text-xs mt-2">{error}</div>}
-        </div>
-      </Card>
-      {/* 右侧：文件路径输入/预览区域 */}
-      <Card className="flex-1 flex flex-col min-w-0 p-4">
-        <div className="mb-2 flex justify-between items-center">
-          <h5 className="font-semibold mb-0 flex items-center gap-1">
-            {showTextarea
-              ? t<string>("FileNameModifier.EditFileList")
-              : t<string>("FileNameModifier.PreviewResults")}
-            {!showTextarea && (
-              <Button
-                aria-label={
-                  showFullPaths
-                    ? t<string>("FileNameModifier.HideFullPaths")
-                    : t<string>("FileNameModifier.ShowFullPaths")
+                isIconOnly
+                aria-label={t<string>(k("preview.refresh"))}
+                isDisabled={
+                  modifying ||
+                  hasInvalidOperations ||
+                  filePaths.length === 0 ||
+                  operations.length === 0
                 }
-                className="text-xs"
                 size="sm"
                 variant="light"
-                onClick={() => setShowFullPaths(!showFullPaths)}
+                onPress={refreshPreview}
               >
-                {showFullPaths ? (
-                  <AiOutlineEyeInvisible className="text-base" />
-                ) : (
-                  <AiOutlineEye className="text-base" />
-                )}
-                {showFullPaths
-                  ? t<string>("FileNameModifier.HideFullPaths")
-                  : t<string>("FileNameModifier.ShowFullPaths")}
-              </Button>
-            )}
-          </h5>
-          {!showTextarea && (
-            <div className="flex items-center gap-1">
-              <Button
-                aria-label={t<string>("FileNameModifier.AddFromFileSystem")}
-                size="sm"
-                variant="light"
-                onClick={handleAddPathsFromFileSystem}
-              >
-                <AiOutlineFolderAdd className="text-base" />
-                {t<string>("FileNameModifier.AddFromFileSystem")}
-              </Button>
-              <Button
-                aria-label={t<string>("FileNameModifier.EditFileList")}
-                size="sm"
-                variant="light"
-                onClick={handleShowFileListEdit}
-              >
-                <AiOutlineEdit className="text-base" />
-                {t<string>("FileNameModifier.EditFileList")}
+                <AiOutlineReload aria-hidden className="text-base" />
               </Button>
             </div>
-          )}
-        </div>
-        <div className="flex-1 rounded min-h-0">
-          {showTextarea ? (
-            <div className="h-full flex flex-col min-h-0">
-              <Textarea
-                aria-label={t<string>("FileNameModifier.FilePathsTextarea")}
-                maxRows={15}
-                minRows={10}
-                placeholder={t<string>("FileNameModifier.FilePathsPlaceholder")}
-                value={filePaths.join("\n")}
-                onValueChange={(e) => setFilePaths(e.split("\n"))}
-              />
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button
-                  aria-label={t<string>("FileNameModifier.ConfirmPaths")}
-                  color="primary"
-                  size="sm"
-                  variant="solid"
-                  onClick={handleConfirmPaths}
-                >
-                  {t<string>("FileNameModifier.ConfirmPaths")}
-                </Button>
-                <Button
-                  aria-label={t<string>("FileNameModifier.AddFromFileSystem")}
-                  size="sm"
-                  variant="light"
-                  onClick={handleAddPathsFromFileSystem}
-                >
-                  <AiOutlineFolderAdd className="text-base" />
-                  {t<string>("FileNameModifier.AddFromFileSystem")}
-                </Button>
-                <Button
-                  aria-label={t<string>("FileNameModifier.Deduplicate")}
-                  color="secondary"
-                  size="sm"
-                  variant="light"
-                  onClick={handleDeduplicatePaths}
-                >
-                  {t<string>("FileNameModifier.Deduplicate")}
-                </Button>
-                <Button
-                  aria-label={t<string>("FileNameModifier.Cancel")}
-                  size="sm"
-                  variant="flat"
-                  onClick={() => setShowTextarea(false)}
-                >
-                  {t<string>("FileNameModifier.Cancel")}
-                </Button>
-              </div>
-            </div>
-          ) : (
+          </div>
+          <div className="min-h-0 flex-1">
             <PreviewList
               commonPrefix={commonPrefix}
               isLoading={isPreviewLoading}
-              results={previewResults}
+              results={visibleResults}
               showFullPaths={showFullPaths}
             />
-          )}
+          </div>
+        </section>
+      </div>
+      <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-default-100 pt-3">
+        <div className="min-w-0 flex-1">
+          <p
+            className={`text-sm ${hasInvalidOperations || error ? "text-danger" : "text-default-600"}`}
+            role={error ? "alert" : "status"}
+          >
+            {error || t<string>(k(`state.${previewState}`))}
+          </p>
+          <p className="mt-1 text-xs text-default-400">{t<string>(k("execution.hint"))}</p>
         </div>
-      </Card>
+        <div className="flex flex-wrap gap-2">
+          {lastFilePaths && (
+            <Button
+              isDisabled={modifying || editingPaths}
+              size="sm"
+              startContent={<AiOutlineUndo aria-hidden />}
+              title={t<string>(k("files.restoreHint"))}
+              variant="light"
+              onPress={() => {
+                setFilePaths(lastFilePaths);
+                setLastFilePaths(null);
+              }}
+            >
+              {t<string>("FileNameModifier.RestoreOriginalPaths")}
+            </Button>
+          )}
+          <Button
+            color="primary"
+            isDisabled={!canExecute || editingPaths}
+            isLoading={modifying}
+            startContent={<AiOutlineCheckCircle aria-hidden />}
+            onPress={executeModification}
+          >
+            {t<string>(k("execution.apply"), { count: changedCount })}
+          </Button>
+        </div>
+      </footer>
     </div>
   );
 };

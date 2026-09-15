@@ -3,6 +3,7 @@
 import type { SearchFilter, SearchFilterGroup } from "../../models";
 import type { FilterLayout } from "../Filter";
 import type { SearchCriteria } from "../../hooks/useFilterCriteria";
+import type { FilterDisplayMode } from "@/sdk/constants";
 
 import { useMemo, useState } from "react";
 import { SearchOutlined } from "@ant-design/icons";
@@ -15,8 +16,7 @@ import { FilterProvider } from "../../context/FilterContext";
 import { createDefaultFilterConfig } from "../../presets/DefaultFilterPreset";
 import { GroupCombinator } from "../../models";
 
-import { FilterDisplayMode } from "@/sdk/constants";
-import { Button, Input, Popover } from "@/components/bakaui";
+import { Button, Chip, Input, Popover } from "@/components/bakaui";
 import { resourceTags } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { getEnumKey } from "@/i18n";
@@ -123,14 +123,16 @@ const ResourceSearchPanelInner = ({
   const showAddFilterButton = showRecentFilters || showTags;
 
   return (
-    <div className="flex gap-3 flex-wrap">
+    <div className={`flex min-w-0 flex-wrap items-center ${compact ? "gap-2" : "gap-3"}`}>
       {/* 关键词搜索 */}
       {showKeyword && (
         <Input
           isClearable
-          className="grow"
-          placeholder={t<string>("Search everything")}
-          startContent={<SearchOutlined className="text-lg" />}
+          aria-label={t<string>("resourceFilter.toolbar.keyword")}
+          className="min-w-0 flex-1 basis-52"
+          size="sm"
+          placeholder={t<string>("resourceFilter.toolbar.keyword")}
+          startContent={<SearchOutlined className="text-base text-default-400" />}
           value={criteria.keyword || ""}
           onValueChange={(v) => {
             onChange({ ...criteria, keyword: v || undefined });
@@ -140,14 +142,18 @@ const ResourceSearchPanelInner = ({
 
       {/* 筛选器添加按钮 - only show if any content would be displayed */}
       {showAddFilterButton && (
-        <div className="flex items-center gap-2">
+        <div className="flex max-w-full flex-wrap items-center gap-2">
           <Popover
-            showArrow
             isOpen={popoverOpen}
-            placement="bottom"
+            placement="bottom-start"
             trigger={
-              <Button isIconOnly size={compact ? "md" : "md"}>
-                <TbFilterPlus className="text-lg" />
+              <Button
+                color="primary"
+                size="sm"
+                variant="flat"
+                startContent={<TbFilterPlus className="text-base" />}
+              >
+                {t<string>("resourceFilter.toolbar.addCondition")}
               </Button>
             }
             onOpenChange={setPopoverOpen}
@@ -175,9 +181,7 @@ const ResourceSearchPanelInner = ({
 
       {/* 筛选器分组预览 */}
       {showFilterGroupPreview && hasFilters && criteria.group && (
-        <div
-          className={`${filterDisplayMode === FilterDisplayMode.Simple ? "" : "border border-default-200 rounded"} w-full`}
-        >
+        <div className="min-w-0 w-full">
           <FilterGroup
             isRoot
             externalNewFilterIndex={newFilterIndex}
@@ -197,7 +201,7 @@ const ResourceSearchPanelInner = ({
 
       {/* 标签显示 */}
       {criteria.tags && criteria.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex min-w-0 w-full flex-wrap gap-1.5">
           {criteria.tags.map((tag) => {
             const handleRemoveTag = () => {
               onChange({
@@ -207,24 +211,11 @@ const ResourceSearchPanelInner = ({
             };
 
             return (
-              <span
-                key={tag}
-                className="px-2 py-1 text-xs bg-default-100 rounded cursor-pointer hover:bg-default-200"
-                role="button"
-                tabIndex={0}
-                onClick={handleRemoveTag}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleRemoveTag();
-                  }
-                }}
-              >
+              <Chip key={tag} size="sm" variant="flat" onClose={handleRemoveTag}>
                 {t<string>(
                   getEnumKey("ResourceTag", resourceTags.find((rt) => rt.value === tag)?.label!),
-                )}{" "}
-                &times;
-              </span>
+                )}
+              </Chip>
             );
           })}
         </div>

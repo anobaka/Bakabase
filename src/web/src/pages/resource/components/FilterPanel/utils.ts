@@ -1,7 +1,15 @@
 import type { SearchForm } from "@/pages/resource/models.ts";
 import type { SearchFilter, SearchFilterGroup } from "@/components/ResourceFilter";
 
-import { GroupCombinator } from "@/components/ResourceFilter";
+import { GroupCombinator } from "@/components/ResourceFilter/models";
+
+/** A restored query must show every grouping and disabled-state control it uses. */
+export const requiresAdvancedFilterMode = (group?: SearchFilterGroup): boolean =>
+  !!group &&
+  (group.combinator === GroupCombinator.Or ||
+    group.disabled ||
+    !!group.groups?.length ||
+    !!group.filters?.some((filter) => filter.disabled));
 
 export const addFilterGroup = (form: SearchForm, group?: SearchFilterGroup) => {
   if (!group) {

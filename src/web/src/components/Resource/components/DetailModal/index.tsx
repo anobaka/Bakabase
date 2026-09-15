@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next";
 import {
   AppstoreOutlined,
   CloseCircleOutlined,
-  DisconnectOutlined,
   FolderOpenOutlined,
   LayoutOutlined,
   LoadingOutlined,
@@ -29,9 +28,14 @@ import ChildrenModal from "../ChildrenModal";
 import BasicInfo from "./BasicInfo";
 import Properties from "./Properties";
 import MediaLibraryMappings from "./MediaLibraryMappings";
+import CollectionMemberships from "./CollectionMemberships";
 import IntroductionSummary from "./IntroductionSummary";
 import ResourceProfiles from "./ResourceProfiles";
 import ResourceHierarchy from "./ResourceHierarchy";
+import CustomPropertiesEmptyState from "./CustomPropertiesEmptyState";
+import DetailTimestamp from "./DetailTimestamp";
+
+import AcquisitionPanel from "@/components/Resource/components/AcquisitionPanel";
 
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import DataCardAssociationPanel from "@/components/DataCardAssociationPanel";
@@ -41,8 +45,6 @@ import type { Resource as ResourceModel } from "@/core/models/Resource";
 import {
   Button,
   ButtonGroup,
-  Chip,
-  Divider,
   Listbox,
   ListboxItem,
   Modal,
@@ -100,9 +102,7 @@ const PlayControlPortal = ({
         isIconOnly
         color="primary"
         isDisabled={status === "loading" || status === "idle"}
-        onPress={() =>
-          mainSource ? onPlaySource(mainSource.source) : onNotFound()
-        }
+        onPress={() => (mainSource ? onPlaySource(mainSource.source) : onNotFound())}
       >
         {status === "loading" || status === "idle" ? (
           <LoadingOutlined spin className="text-lg" />
@@ -208,6 +208,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
           return (
             <Properties
               hidePropertyName
+              propertyClassNames={{ value: "justify-center" }}
               propertyInnerDirection={"ver"}
               reload={loadResource}
               resource={resource}
@@ -219,22 +220,21 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
           return (
             <div className="flex items-center justify-center">
               <ButtonGroup size={"sm"}>
-                <PlayControl
-                  PortalComponent={PlayControlPortal}
-                  resource={resource}
-                />
-                <Tooltip content={t("common.action.openFolder")}>
-                  <Button
-                    isIconOnly
-                    color="default"
-                    variant="light"
-                    onPress={() => {
-                      BApi.resource.openResourceDirectory({ id: resource.id });
-                    }}
-                  >
-                    <FolderOpenOutlined className="text-lg" />
-                  </Button>
-                </Tooltip>
+                <PlayControl PortalComponent={PlayControlPortal} resource={resource} />
+                {resource.hasLocalPath && (
+                  <Tooltip content={t("common.action.openFolder")}>
+                    <Button
+                      isIconOnly
+                      color="default"
+                      variant="light"
+                      onPress={() => {
+                        BApi.resource.openResourceDirectory({ id: resource.id });
+                      }}
+                    >
+                      <FolderOpenOutlined className="text-lg" />
+                    </Button>
+                  </Tooltip>
+                )}
                 {resource.hasChildren && (
                   <Tooltip content={t("common.action.viewChildren")}>
                     <Button
@@ -306,6 +306,16 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
               </ButtonGroup>
             </div>
           );
+        case "acquisition":
+          // Only worth a block while there is something to acquire; once the files are here the
+          // filesystem sections say everything.
+          return resource.hasLocalPath ? null : (
+            <AcquisitionPanel
+              resource={resource}
+              onChanged={() => loadResource()}
+              onNavigate={props.onDestroyed}
+            />
+          );
         case "basicInfo":
           return hideTimeInfo ? null : <BasicInfo resource={resource} />;
         case "hierarchy":
@@ -314,23 +324,12 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
           return <IntroductionSummary resource={resource} onReload={loadResource} />;
         case "playedAt":
           return resource.playedAt ? (
-            <div
-              className={"grid gap-x-4 gap-y-1 items-center overflow-visible"}
-              style={{ gridTemplateColumns: "calc(120px) minmax(0, 1fr)" }}
-            >
-              <Chip
-                className={"text-right justify-self-end"}
-                color={"default"}
-                radius={"sm"}
-                size={"sm"}
-              >
-                {t<string>("resource.label.lastPlayedAt")}
-              </Chip>
-              <div className={"flex items-center gap-1"}>
-                {resource.playedAt}
+            <DetailTimestamp
+              action={
                 <Tooltip content={t<string>("resource.action.markAsNotPlayed")}>
                   <Button
                     isIconOnly
+                    aria-label={t<string>("resource.action.markAsNotPlayed")}
                     size={"sm"}
                     variant={"light"}
                     onPress={() => {
@@ -342,12 +341,14 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                     <CloseCircleOutlined className={"text-base opacity-60"} />
                   </Button>
                 </Tooltip>
-              </div>
-            </div>
+              }
+              label={t<string>("resource.label.lastPlayedAt")}
+              value={resource.playedAt}
+            />
           ) : null;
         case "properties":
           return (
-            <div className={"flex flex-col gap-1"}>
+            <div className="flex min-w-0 flex-col gap-4">
               <Properties
                 columns={1}
                 reload={loadResource}
@@ -355,20 +356,43 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 restrictedPropertyIds={[ReservedProperty.Cover]}
                 restrictedPropertyPool={PropertyPool.Reserved}
               />
-              <Properties
-                columns={columns}
-                noPropertyContent={
-                  <div className={"flex flex-col items-center gap-2 justify-center"}>
-                    <div className={"w-4/5"}>
-                      <DisconnectOutlined className={"text-base mr-1"} />
-                      {t<string>("resource.empty.noCustomPropertyBound")}
-                    </div>
-                  </div>
-                }
-                reload={loadResource}
-                resource={resource}
-                restrictedPropertyPool={PropertyPool.Custom}
-              />
+              <section className="min-w-0 border-t border-default-200/60 pt-4">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-medium text-default-700">
+                    {t<string>("resource.detail.customProperties")}
+                  </h3>
+                  <ButtonGroup
+                    aria-label={t<string>("resource.detail.customPropertiesColumns")}
+                    size="sm"
+                  >
+                    {[
+                      { col: 1 as const, icon: <TbColumns1 className="text-base" /> },
+                      { col: 2 as const, icon: <TbColumns2 className="text-base" /> },
+                      { col: 3 as const, icon: <TbColumns3 className="text-base" /> },
+                    ].map(({ col, icon }) => (
+                      <Tooltip key={col} content={t("resource.detail.columnCount", { count: col })}>
+                        <Button
+                          isIconOnly
+                          aria-label={t<string>("resource.detail.columnCount", { count: col })}
+                          aria-pressed={columns === col}
+                          color={columns === col ? "primary" : "default"}
+                          variant={columns === col ? "flat" : "light"}
+                          onPress={() => setColumns(col)}
+                        >
+                          {icon}
+                        </Button>
+                      </Tooltip>
+                    ))}
+                  </ButtonGroup>
+                </div>
+                <Properties
+                  columns={columns}
+                  noPropertyContent={<CustomPropertiesEmptyState onNavigate={props.onDestroyed} />}
+                  reload={loadResource}
+                  resource={resource}
+                  restrictedPropertyPool={PropertyPool.Custom}
+                />
+              </section>
             </div>
           );
         case "relatedDataCards":
@@ -386,6 +410,8 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
               onMappingsChange={loadResource}
             />
           );
+        case "collections":
+          return <CollectionMemberships compact resourceId={resource.id} onChange={loadResource} />;
         case "profiles":
           return <ResourceProfiles compact resourceId={resource.id} />;
         default:
@@ -396,6 +422,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
       resource,
       hideTimeInfo,
       columns,
+      setColumns,
       uiOptions,
       refreshingCache,
       createPortal,
@@ -475,27 +502,6 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
               }
             >
               <div className="flex flex-col gap-2 p-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-default-500">{t("resource.label.columns")}</span>
-                  <ButtonGroup size="sm">
-                    {[
-                      { col: 1 as const, icon: <TbColumns1 /> },
-                      { col: 2 as const, icon: <TbColumns2 /> },
-                      { col: 3 as const, icon: <TbColumns3 /> },
-                    ].map(({ col, icon }) => (
-                      <Button
-                        key={col}
-                        isIconOnly
-                        color={columns === col ? "primary" : "default"}
-                        variant={columns === col ? "solid" : "flat"}
-                        onPress={() => setColumns(col)}
-                      >
-                        {icon}
-                      </Button>
-                    ))}
-                  </ButtonGroup>
-                </div>
-                <Divider />
                 <Listbox
                   aria-label="Actions"
                   onAction={(key) => {

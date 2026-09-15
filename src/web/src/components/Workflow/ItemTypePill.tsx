@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Popover, PopoverContent, PopoverTrigger } from "@heroui/react";
 import { AiOutlineQuestion } from "react-icons/ai";
 
+import { workflowItemTypeDisplayName } from "./itemTypes";
+
 import { Chip } from "@/components/bakaui";
 
 interface Props {
@@ -28,9 +30,7 @@ const ItemTypePill: React.FC<Props> = ({ itemType, index, fromTrigger, invalid, 
   const descriptor = index.get(itemType);
   // The server ships an English display name; the editor prefers a localized version keyed
   // by `itemType`, falling back to the server's value and finally the raw tag.
-  const label = t<string>(`workflow.itemType.${itemType}.displayName`, {
-    defaultValue: descriptor?.displayName ?? itemType,
-  });
+  const label = workflowItemTypeDisplayName(t, itemType, descriptor?.displayName);
 
   return (
     <div

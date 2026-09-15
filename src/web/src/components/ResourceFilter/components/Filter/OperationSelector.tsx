@@ -3,6 +3,7 @@
 import type { PropertyType, SearchOperation } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
+import { AiOutlineDown } from "react-icons/ai";
 
 import { getOperationDisplay, getOperationDropdownDisplay } from "./utils";
 
@@ -12,6 +13,7 @@ import {
   DropdownMenu,
   DropdownTrigger,
   Tooltip,
+  Button,
 } from "@/components/bakaui";
 
 export interface OperationSelectorProps {
@@ -46,19 +48,25 @@ const OperationSelector = ({
 
   const displayText =
     operation === undefined
-      ? t<string>("Condition")
+      ? t<string>("resourceFilter.condition.selectOperation")
       : getOperationDisplay(operation, propertyType, t);
 
   // Readonly mode: plain text
   if (isReadonly) {
-    return <span className="text-sm text-secondary">{displayText}</span>;
+    return (
+      <span className="inline-flex min-h-8 items-center py-1 text-sm text-default-500">
+        {displayText}
+      </span>
+    );
   }
 
   // No property selected: disabled text with tooltip
   if (!hasProperty) {
     return (
-      <Tooltip content={t<string>("Please select a property first")}>
-        <span className="text-sm text-default-400 cursor-not-allowed">{displayText}</span>
+      <Tooltip content={t<string>("resourceFilter.condition.propertyRequired")}>
+        <span className="inline-flex min-h-8 items-center py-1 text-sm text-default-400">
+          {displayText}
+        </span>
       </Tooltip>
     );
   }
@@ -66,8 +74,10 @@ const OperationSelector = ({
   // No available operations: disabled text with tooltip
   if (!availableOperations || availableOperations.length === 0) {
     return (
-      <Tooltip content={t<string>("Can not operate on this property")}>
-        <span className="text-sm text-default-400 cursor-not-allowed">{displayText}</span>
+      <Tooltip content={t<string>("resourceFilter.condition.noOperations")}>
+        <span className="inline-flex min-h-8 items-center py-1 text-sm text-default-400">
+          {displayText}
+        </span>
       </Tooltip>
     );
   }
@@ -76,14 +86,24 @@ const OperationSelector = ({
   return (
     <Dropdown placement="bottom-start">
       <DropdownTrigger>
-        <button
-          className="text-sm text-secondary hover:text-secondary-600 hover:underline cursor-pointer bg-transparent border-none p-0"
-          type="button"
+        <Button
+          aria-label={t<string>("resourceFilter.condition.changeOperation", {
+            operation: displayText,
+          })}
+          className="h-auto min-h-8 min-w-0 gap-1 px-2 py-1 text-sm text-default-600 whitespace-normal"
+          endContent={<AiOutlineDown aria-hidden className="shrink-0 text-xs text-default-400" />}
+          size="sm"
+          variant="light"
         >
           {displayText}
-        </button>
+        </Button>
       </DropdownTrigger>
-      <DropdownMenu>
+      <DropdownMenu
+        aria-label={t<string>("resourceFilter.condition.selectOperation")}
+        selectedKeys={new Set(operation === undefined ? [] : [String(operation)])}
+        selectionMode="single"
+        onAction={(key) => onSelect?.(Number(key) as SearchOperation)}
+      >
         {availableOperations.map((op) => {
           const { displayText: itemText, description } = getOperationDropdownDisplay(
             op,
@@ -92,7 +112,7 @@ const OperationSelector = ({
           );
 
           return (
-            <DropdownItem key={op} description={description} onClick={() => onSelect?.(op)}>
+            <DropdownItem key={op} description={description} textValue={itemText}>
               {itemText}
             </DropdownItem>
           );

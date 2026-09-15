@@ -5,6 +5,7 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Models.Input;
+using Bakabase.Modules.Workflow.Abstractions.Models.View;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Modules.Workflow.Extensions;
@@ -18,23 +19,20 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 {
     private readonly TDbContext _db;
     private readonly IWorkflowTriggerRegistry _triggers;
-    private readonly IWorkflowActivityRegistry _activities;
-    private readonly IWorkflowItemTypeRegistry _itemTypes;
+    private readonly IWorkflowValidationService _validation;
     private readonly BTaskManager _taskManager;
     private readonly WorkflowRunner<TDbContext> _runner;
 
     public WorkflowDefinitionService(
         TDbContext db,
         IWorkflowTriggerRegistry triggers,
-        IWorkflowActivityRegistry activities,
-        IWorkflowItemTypeRegistry itemTypes,
         BTaskManager taskManager,
-        WorkflowRunner<TDbContext> runner)
+        WorkflowRunner<TDbContext> runner,
+        IWorkflowValidationService validation)
     {
         _db = db;
         _triggers = triggers;
-        _activities = activities;
-        _itemTypes = itemTypes;
+        _validation = validation;
         _taskManager = taskManager;
         _runner = runner;
     }
@@ -51,6 +49,8 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         var entity = new WorkflowDefinitionDbModel
         {
             Name = input.Name,
+            Description = input.Description,
+            DescriptionKey = input.DescriptionKey,
             TriggerKind = input.TriggerKind,
             TriggerFilterJson = input.TriggerFilterJson,
             Enabled = input.Enabled,
@@ -69,7 +69,31 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         var entity = await Defs.FirstOrDefaultAsync(d => d.Id == id, ct)
             ?? throw new InvalidOperationException($"Workflow #{id} not found");
 
+        // A built-in definition is a seed, not a document: a later release adds a step to it, and
+        // that must not silently overwrite someone's edits or silently fail to reach them. Turning
+        // one off is still theirs to decide — that is a choice about their setup, not about the seed.
+        if (entity.IsBuiltin &&
+            (input.Name is not null || input.Description is not null || input.TriggerFilterJson is not null || input.Activities is not null))
+        {
+            throw new InvalidOperationException(
+                $"\"{entity.Name}\" ships with Bakabase and cannot be edited. Copy it and change the copy.");
+        }
+
+        // Validate the effective chain before touching tracked fields or cancelling queued runs.
+        if (input.Activities is not null || input.TriggerFilterJson is not null)
+        {
+            var nodes = input.Activities ?? (await Acts.AsNoTracking()
+                .Where(a => a.WorkflowDefinitionId == id).OrderBy(a => a.Order).ToListAsync(ct))
+                .Select(a => new WorkflowActivityInputModel { Kind = a.Kind, ConfigJson = a.ConfigJson }).ToList();
+            ValidateActivities(nodes, entity.TriggerKind, input.TriggerFilterJson ?? entity.TriggerFilterJson);
+        }
+
         if (input.Name is not null) entity.Name = input.Name;
+        if (input.Description is not null)
+        {
+            entity.Description = input.Description;
+            entity.DescriptionKey = null;
+        }
         if (input.TriggerFilterJson is not null) entity.TriggerFilterJson = input.TriggerFilterJson;
         if (input.Enabled is { } enabled)
         {
@@ -91,9 +115,6 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
         if (input.Activities is not null)
         {
-            // Validate against the effective filter — the just-applied one if the update
-            // changed it, otherwise the stored one (entity was mutated above).
-            ValidateActivities(input.Activities, entity.TriggerKind, entity.TriggerFilterJson);
             await ReplaceActivities(entity.Id, input.Activities, ct);
         }
 
@@ -104,6 +125,12 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
     public async Task DeleteAsync(int id)
     {
+        if (await Defs.AnyAsync(d => d.Id == id && d.IsBuiltin))
+        {
+            throw new InvalidOperationException(
+                "This workflow ships with Bakabase and cannot be deleted. Switch it off instead.");
+        }
+
         // A run mid-execution keeps producing side effects after its rows vanish, and its final
         // save then targets deleted data — refuse instead of racing it (capability map §5·发现 9).
         // Pending rows don't block: deleting them makes their stale BTasks no-ops.
@@ -169,14 +196,50 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
             throw new InvalidOperationException($"Unknown trigger kind: {def.TriggerKind}");
         }
 
+        if (!trigger.SupportsManualRun)
+            throw new InvalidOperationException(
+                $"This workflow must be started from its source module. {trigger.Description}");
+
         // Built before the row is written so an unusable payload surfaces as a failed request
         // rather than a persisted run that dies the moment it starts.
+        var definition = await LoadDomain(definitionId, ct)
+            ?? throw new InvalidOperationException($"Workflow #{definitionId} not found");
+        // Reject structural and unconditional configuration errors before the trigger does any
+        // payload preparation. Only explicitly input-dependent requirements may be reconsidered
+        // once the actual payload is known; an ordinary invalid configuration remains fail-fast.
+        var preparationCheck = await _validation.ValidateAsync(definition, isExecution: true, ct: ct);
+        var preparationErrors = preparationCheck.Diagnostics
+            .Where(d => d.Severity == "error" && !d.DependsOnPayload).ToList();
+        if (preparationErrors.Count > 0)
+            throw new WorkflowValidationException(new WorkflowValidationResult {Diagnostics = preparationErrors});
         var payload = trigger.BuildManualPayload(def.TriggerFilterJson, argsJson);
+        return await StartPreparedRunAsync(definition, payload, ct);
+    }
+
+    public async Task<WorkflowRun> RunManagedAsync(int definitionId, object payload,
+        CancellationToken ct = default)
+    {
+        var definition = await LoadDomain(definitionId, ct)
+            ?? throw new InvalidOperationException($"Workflow #{definitionId} not found");
+        if (!_triggers.TryGet(definition.TriggerKind, out var trigger))
+            throw new InvalidOperationException($"Unknown trigger kind: {definition.TriggerKind}");
+        if (trigger.SupportsManualRun)
+            throw new InvalidOperationException("This workflow accepts manual input; use its manual-run entry point.");
+        if (!trigger.PayloadType.IsInstanceOfType(payload))
+            throw new InvalidOperationException($"The input does not match {trigger.PayloadType.Name}.");
+        return await StartPreparedRunAsync(definition, payload, ct);
+    }
+
+    private async Task<WorkflowRun> StartPreparedRunAsync(WorkflowDefinition definition, object payload,
+        CancellationToken ct)
+    {
+        var check = await _validation.ValidateAsync(definition, isExecution: true, payload: payload, ct: ct);
+        if (!check.IsValid) throw new WorkflowValidationException(check);
         var payloadJson = JsonSerializer.Serialize(payload, WorkflowJson.Options);
 
         var run = new WorkflowRunDbModel
         {
-            WorkflowDefinitionId = def.Id,
+            WorkflowDefinitionId = definition.Id,
             Status = WorkflowRunStatus.Pending,
             StartedAt = DateTime.Now,
             PayloadJson = payloadJson,
@@ -187,8 +250,8 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
         var runId = run.Id;
         await _taskManager.Enqueue(BTaskBuilder.Create($"workflow.run.{runId}")
-            .Named($"Workflow #{def.Id} run #{runId}")
-            .ConflictsWith($"workflow.definition.{def.Id}")
+            .Named($"Workflow #{definition.Id} run #{runId}")
+            .ConflictsWith($"workflow.definition.{definition.Id}")
             .Run(args => _runner.ExecuteAsync(runId, args)));
 
         return run.ToDomainModel();
@@ -208,70 +271,12 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
     private void ValidateActivities(
         IReadOnlyList<WorkflowActivityInputModel> activities, string triggerKind, string? triggerFilterJson)
     {
-        if (!_triggers.TryGet(triggerKind, out var trigger))
-            throw new InvalidOperationException($"Unknown trigger kind: {triggerKind}");
-
-        // Walk the chain tracking the item type. Each activity must accept the type produced
-        // by everything before it; transforms then change the type for what follows.
-        var currentType = trigger.ResolveOutputItemType(triggerFilterJson);
-
-        for (var i = 0; i < activities.Count; i++)
+        var result = _validation.ValidateStructure(new WorkflowValidationInputModel
         {
-            var a = activities[i];
-            if (!_activities.TryGet(a.Kind, out var impl))
-                throw new InvalidOperationException($"Unknown activity kind: {a.Kind}");
-
-            var contract = impl.AcceptedItemInterface;
-            if (contract is not null && impl.OutputBehavior != WorkflowItemTypeBehavior.Passthrough)
-                throw new InvalidOperationException(
-                    $"Activity {a.Kind} declares a capability contract ({contract.Name}) but is not " +
-                    "Passthrough — a contract-accepting activity works on whatever type arrives and " +
-                    "cannot change it. The activity's declaration is broken.");
-
-            // Accepted when the tag is listed, OR the tag's CLR shape implements the activity's
-            // capability contract (capability map E3). Both surfaces empty = accepts any type.
-            var accepted = impl.AcceptedInputItemTypes;
-            var acceptsByContract = contract is not null &&
-                                    _itemTypes.Get(currentType)?.ClrType is { } clr &&
-                                    contract.IsAssignableFrom(clr);
-            if ((accepted.Count > 0 || contract is not null) &&
-                !accepted.Contains(currentType) && !acceptsByContract)
-                throw new InvalidOperationException(
-                    $"Activity {a.Kind} (index {i}) accepts [{string.Join(", ", accepted)}]" +
-                    (contract is null ? "" : $" or any type implementing {contract.Name}") +
-                    $" but the item type at that position is \"{currentType}\". " +
-                    "Insert a transform that produces a compatible type before it.");
-
-            if (impl.IsDestructive && i > 0 &&
-                _activities.TryGet(activities[i - 1].Kind, out var prev) &&
-                prev.OutputBehavior == WorkflowItemTypeBehavior.AdaptToNext)
-                throw new InvalidOperationException(
-                    $"Activity {a.Kind} (index {i}) is destructive and cannot directly consume " +
-                    "model-generated items — put a validating step between them.");
-
-            currentType = impl.OutputBehavior switch
-            {
-                WorkflowItemTypeBehavior.Passthrough => currentType,
-                WorkflowItemTypeBehavior.Fixed => impl.FixedOutputItemType
-                    ?? throw new InvalidOperationException(
-                        $"Activity {impl.Kind} declares Fixed output but no FixedOutputItemType"),
-                WorkflowItemTypeBehavior.AdaptToNext => impl.ResolveAdaptedOutputType(
-                        a.ConfigJson, PeekNextSingleAcceptedType(i, activities))
-                    ?? throw new InvalidOperationException(
-                        $"Activity {impl.Kind} (index {i}) needs a target item type — " +
-                        "configure one explicitly, or follow it with an activity that accepts a single type"),
-                _ => throw new InvalidOperationException(
-                    $"Unhandled OutputBehavior {impl.OutputBehavior} on {impl.Kind}"),
-            };
-        }
-    }
-
-    /// <summary>Peek the next activity's single accepted type, if exactly one — else null.</summary>
-    private string? PeekNextSingleAcceptedType(int index, IReadOnlyList<WorkflowActivityInputModel> activities)
-    {
-        if (index + 1 >= activities.Count) return null;
-        if (!_activities.TryGet(activities[index + 1].Kind, out var next)) return null;
-        return next.AcceptedInputItemTypes.Count == 1 ? next.AcceptedInputItemTypes[0] : null;
+            TriggerKind = triggerKind, TriggerFilterJson = triggerFilterJson, Activities = activities.ToList(),
+        });
+        if (!result.IsValid)
+            throw new InvalidOperationException(string.Join("; ", result.Diagnostics.Select(d => d.Message)));
     }
 
     private async Task ReplaceActivities(int defId, IReadOnlyList<WorkflowActivityInputModel> activities, CancellationToken ct)
@@ -285,6 +290,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
                 WorkflowDefinitionId = defId,
                 Order = i,
                 Kind = a.Kind,
+                Notes = a.Notes,
                 ConfigJson = string.IsNullOrEmpty(a.ConfigJson) ? "{}" : a.ConfigJson,
                 OnItemError = a.OnItemError,
             });

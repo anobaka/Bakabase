@@ -70,7 +70,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 await OnCurrentChangedInternal();
                                 break;
                             case RangeCheckpointContext.AnalyzeResult.Download:
-                                await DownloadSingleWork(r.Url, null, task.DownloadPath, async name =>
+                                // A follow-up workflow may move files while this list continues.
+                                // Give each gallery its own root, even when the naming convention
+                                // is flat or two galleries share the same title.
+                                var workPath = ExHentaiDownloadResultHelper.GetWorkDirectory(task.DownloadPath,
+                                    r.Url, options.DownloadResultWorkflowId);
+                                await DownloadSingleWork(task.Id, r.Url, null, workPath, async name =>
                                 {
                                     betterName = name;
                                     Current = $"[{doneCount + 1}/{totalCount}]{betterName}";
@@ -83,7 +88,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 {
                                     var newProgress = unitWorkProgress * (doneCount + p / 100m);
                                     await OnProgressInternal(newProgress);
-                                }, null, ct, options.PreferTorrent);
+                                }, null, ct, options.PreferTorrent,
+                                    resultWorkflowId: options.DownloadResultWorkflowId);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();

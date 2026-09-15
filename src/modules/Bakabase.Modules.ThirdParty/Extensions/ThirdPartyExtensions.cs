@@ -19,6 +19,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.DMM;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
+using Bakabase.Modules.ThirdParty.ThirdParties.Vndb;
 using Bakabase.Modules.ThirdParty.ThirdParties.Faleno;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fantastica;
 using Bakabase.Modules.ThirdParty.ThirdParties.FC2;
@@ -76,6 +77,9 @@ public static class ThirdPartyExtensions
 
         services.TryAddSingleton<SteamClient>();
         services.TryAddSingleton<SteamLocalLibrary>();
+
+        // VNDB reads without an account, so it needs no options and no handler of its own.
+        services.TryAddSingleton<VndbClient>();
 
         services.AddBakabaseHttpClient<PixivHttpMessageHandler<TPixivOptions>>(InternalOptions
             .HttpClientNames

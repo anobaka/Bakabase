@@ -19,6 +19,7 @@ namespace Bakabase.InsideWorld.Models.Constants
         Cien = 9,
         Patreon = 10,
         Tmdb = 11,
-        Steam = 12
+        Steam = 12,
+        Vndb = 13
     }
 }

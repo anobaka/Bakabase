@@ -9,3 +9,12 @@ root = true
 [**/ReservedPropertyValueAccessor.cs]
 dotnet_diagnostic.CS8509.severity = error
 dotnet_diagnostic.CS8524.severity = none
+
+# Resource-source relationship registry.
+# ResourceSourceExtensions.IsPlatformHolding is a switch expression with no discard (`_`) arm, so a
+# new ResourceSource that does not answer "does a platform hold this?" produces CS8509. It is
+# promoted to a build error for this file: the question decides whether the source becomes a
+# retrievable acquisition lead, and guessing it silently would be worse than failing to compile.
+[**/ResourceSourceExtensions.cs]
+dotnet_diagnostic.CS8509.severity = error
+dotnet_diagnostic.CS8524.severity = none

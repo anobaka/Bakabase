@@ -3,6 +3,8 @@ import type { AiTransformConfig } from "./types";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { workflowItemTypeDisplayName } from "../../itemTypes";
+
 import BApi from "@/sdk/BApi";
 import { Select, Spinner, Textarea } from "@/components/bakaui";
 
@@ -35,7 +37,7 @@ const ConfigForm: React.FC<Props> = ({ value, onChange }) => {
       if (cancelled) return;
       const opts = (rsp.data ?? []).map((d) => ({
         value: d.itemType,
-        label: `${d.displayName}  ·  ${d.itemType}`,
+        label: workflowItemTypeDisplayName(t, d.itemType, d.displayName),
       }));
       // Reserve an empty value for "let the next activity decide".
       setTypes([

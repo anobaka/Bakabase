@@ -219,6 +219,7 @@
   "bulkModification.process.deleteFiles": "Also delete files",
   "bulkModification.process.deleteDataOnlyWarning": "This operation only deletes resource data. If your resource markers and corresponding files still exist, the resources may reappear during the next resource marker sync.",
   "bulkModification.diff.resourceWillBeDeleted": "Resource will be deleted",
+  "bulkModification.diff.resourceHasNoLocalFiles": "No local files",
   "bulkModification.filter.noResults": "No resources matched the filter criteria",
   "Position.Beginning": "beginning",
   "Position.End": "end",

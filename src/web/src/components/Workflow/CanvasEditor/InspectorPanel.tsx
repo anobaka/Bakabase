@@ -2,6 +2,7 @@
 
 import type { ActivityDraft, CanvasSelection } from "./types";
 import type { components } from "@/sdk/BApi2";
+import type { WorkflowDescription } from "../metadata";
 import type { WorkflowActivityCategory } from "@/sdk/constants";
 
 import React from "react";
@@ -10,11 +11,13 @@ import { useTranslation } from "react-i18next";
 import { getWorkflowActivityUI } from "../Activities";
 import { getWorkflowTriggerUI } from "../Triggers";
 import { activityDisplayName, triggerDisplayName } from "../displayNames";
+import { workflowDescription } from "../metadata";
+import TriggerUsageSummary from "../TriggerUsageSummary";
 
 import { CategoryTone } from "./CanvasNode";
 
 import { HelpCenterButton } from "@/components/HelpCenter";
-import { Select, Switch } from "@/components/bakaui";
+import { Select, Switch, Textarea } from "@/components/bakaui";
 import { WorkflowActivityErrorBehavior } from "@/sdk/constants";
 
 type TriggerDescriptorVm =
@@ -30,6 +33,7 @@ interface Props {
   onTriggerKindChange: (kind: string) => void;
   onFilterChange: (filter: unknown) => void;
   // Activity side
+  descriptors: (WorkflowDescription & { kind: string })[];
   drafts: ActivityDraft[];
   onDraftChange: (idx: number, next: ActivityDraft) => void;
 }
@@ -48,6 +52,7 @@ const InspectorPanel: React.FC<Props> = ({
   onTriggerKindChange,
   onFilterChange,
   drafts,
+  descriptors,
   onDraftChange,
 }) => {
   const { t } = useTranslation();
@@ -63,21 +68,14 @@ const InspectorPanel: React.FC<Props> = ({
   if (selection === "trigger") {
     const ui = getWorkflowTriggerUI(triggerKind);
     const FilterForm = ui?.FilterForm;
+    const trigger = triggers.find((item) => item.kind === triggerKind);
 
     return (
       <div className="flex flex-col gap-3">
-        <div>
-          <div className="text-[10px] tracking-wide text-secondary">
-            {t<string>("workflow.editor.category.trigger")}
-          </div>
-          <div className="text-sm font-semibold">
-            {triggerDisplayName(
-              t,
-              triggerKind,
-              triggers.find((x) => x.kind === triggerKind)?.displayName,
-            )}
-          </div>
+        <div className="text-[10px] tracking-wide text-secondary">
+          {t<string>("workflow.editor.category.trigger")}
         </div>
+        <TriggerUsageSummary compact trigger={trigger} triggerKind={triggerKind} />
         <Select
           dataSource={triggers
             .filter((tr) => !!getWorkflowTriggerUI(tr.kind))
@@ -103,9 +101,6 @@ const InspectorPanel: React.FC<Props> = ({
         {ui && FilterForm && filter != null && (
           <FilterForm value={filter} onChange={onFilterChange} />
         )}
-        <div className="border-t border-default-200 pt-2">
-          <HelpCenterButton label={t<string>("workflow.editor.inspector.help")} topic="workflow" />
-        </div>
       </div>
     );
   }
@@ -114,6 +109,10 @@ const InspectorPanel: React.FC<Props> = ({
 
   if (!draft) return null;
   const ui = getWorkflowActivityUI(draft.kind);
+  const description = workflowDescription(
+    descriptors.find((item) => item.kind === draft.kind) ?? {},
+    t,
+  );
   const tone =
     ui?.category != null ? CategoryTone[ui.category as WorkflowActivityCategory] : undefined;
 
@@ -125,6 +124,15 @@ const InspectorPanel: React.FC<Props> = ({
         </div>
         <div className="text-sm font-semibold">{activityDisplayName(t, draft.kind)}</div>
       </div>
+
+      {description && <p className="text-xs leading-relaxed text-default-500">{description}</p>}
+      <Textarea
+        description={t<string>("workflow.field.nodeNotesDescription")}
+        label={t<string>("workflow.field.nodeNotes")}
+        minRows={2}
+        value={draft.notes ?? ""}
+        onValueChange={(notes) => onDraftChange(selection, { ...draft, notes })}
+      />
 
       {ui ? (
         <ui.ConfigForm

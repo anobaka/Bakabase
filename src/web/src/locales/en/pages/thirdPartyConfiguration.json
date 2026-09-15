@@ -57,5 +57,16 @@
   "thirdPartyConfig.field.requestTimeout.description": "Maximum time to wait for a response before timing out.",
   "thirdPartyConfig.field.namingConvention.label": "Naming Convention",
   "thirdPartyConfig.field.namingConvention.description": "Define how downloaded files and folders should be named. Use available variables below.",
-  "thirdPartyConfig.tip.cookieCapturedHereUsedThere": "The sign-in window opens on this machine, so the site sees this machine's address. The requests that use the cookie afterwards are made by the server, from its address — a site that ties a session to one address will refuse them."
+  "thirdPartyConfig.tip.cookieCapturedHereUsedThere": "The sign-in window opens on this machine, so the site sees this machine's address. The requests that use the cookie afterwards are made by the server, from its address — a site that ties a session to one address will refuse them.",
+  "thirdPartyConfig.downloadResultWorkflow.title": "Process download results",
+  "thirdPartyConfig.downloadResultWorkflow.label": "Follow-up workflow",
+  "thirdPartyConfig.downloadResultWorkflow.saveOnly": "Only save download results",
+  "thirdPartyConfig.downloadResultWorkflow.description": "Obtaining a torrent does not download its contents. Choose a workflow to continue the BT download as each gallery result becomes ready. The built-in workflow only downloads files; duplicate it and add organization and materialization steps if you want to add them to your library.",
+  "thirdPartyConfig.downloadResultWorkflow.scope": "Applies to new standalone downloader tasks; existing tasks keep their original setting. Tasks started from Get resources continue in their original workflow. If BT fails, retry the follow-up workflow from the task’s download results without fetching the torrent again.",
+  "thirdPartyConfig.downloadResultWorkflow.refresh": "Refresh available workflows",
+  "thirdPartyConfig.downloadResultWorkflow.view": "View workflow",
+  "thirdPartyConfig.downloadResultWorkflow.loadFailed": "Could not load workflows. Refresh to retry. Your current setting has not changed.",
+  "thirdPartyConfig.downloadResultWorkflow.unavailable": "The configured workflow is disabled, deleted, or no longer handles download results. Choose another workflow.",
+  "thirdPartyConfig.downloadResultWorkflow.unavailableSelection": "Current workflow #{{id}}",
+  "thirdPartyConfig.downloadResultWorkflow.saveFailed": "Could not save this setting. Try again; the current selection has not changed."
 }

@@ -3,6 +3,7 @@ export type SectionId =
   | "name"
   | "rating"
   | "actions"
+  | "acquisition"
   | "basicInfo"
   | "hierarchy"
   | "introduction"
@@ -10,6 +11,7 @@ export type SectionId =
   | "properties"
   | "relatedDataCards"
   | "mediaLibs"
+  | "collections"
   | "profiles";
 
 // A single section placed on the grid. Width (colSpan) and column position

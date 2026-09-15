@@ -11,6 +11,7 @@
   "resourceMove.warning.destInsideSource": "目标目录不能位于待移动资源内部。",
   "resourceMove.warning.alreadyAtDestination": "资源已经位于该目录中。",
   "resourceMove.warning.lockedDuringMove": "移动过程中将无法对相关资源进行其他操作。",
+  "resourceMove.warning.skippedUnmaterialized": "所选资源中有 {{count}} 条尚未落地（没有本地文件），未被移动。",
   "resourceMove.confirm.title": "确认移动资源文件",
   "resourceMove.confirm.summary": "将 {{count}} 个资源移动至：",
   "resourceMove.confirm.coveredResources": "该目录内另有 {{count}} 个资源将随之一起移动（即使未被选中）：",

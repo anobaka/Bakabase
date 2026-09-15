@@ -1,537 +1,6 @@
 // AUTO-GENERATED FROM server enums. Do not edit manually.
 /* eslint-disable */
 
-export enum CloseBehavior {
-  Prompt = 0,
-  Exit = 1,
-  Minimize = 2,
-  Cancel = 1000
-}
-
-export const closeBehaviors = [
-  { label: 'Prompt', value: CloseBehavior.Prompt },
-  { label: 'Exit', value: CloseBehavior.Exit },
-  { label: 'Minimize', value: CloseBehavior.Minimize },
-  { label: 'Cancel', value: CloseBehavior.Cancel }
-] as const;
-
-export const CloseBehaviorLabel: Record<CloseBehavior, string> = {
-  [CloseBehavior.Prompt]: 'Prompt',
-  [CloseBehavior.Exit]: 'Exit',
-  [CloseBehavior.Minimize]: 'Minimize',
-  [CloseBehavior.Cancel]: 'Cancel'
-};
-
-export enum IconType {
-  UnknownFile = 1,
-  Directory = 2,
-  Dynamic = 3
-}
-
-export const iconTypes = [
-  { label: 'UnknownFile', value: IconType.UnknownFile },
-  { label: 'Directory', value: IconType.Directory },
-  { label: 'Dynamic', value: IconType.Dynamic }
-] as const;
-
-export const IconTypeLabel: Record<IconType, string> = {
-  [IconType.UnknownFile]: 'UnknownFile',
-  [IconType.Directory]: 'Directory',
-  [IconType.Dynamic]: 'Dynamic'
-};
-
-export enum UiTheme {
-  FollowSystem = 0,
-  Light = 1,
-  Dark = 2
-}
-
-export const uiThemes = [
-  { label: 'FollowSystem', value: UiTheme.FollowSystem },
-  { label: 'Light', value: UiTheme.Light },
-  { label: 'Dark', value: UiTheme.Dark }
-] as const;
-
-export const UiThemeLabel: Record<UiTheme, string> = {
-  [UiTheme.FollowSystem]: 'FollowSystem',
-  [UiTheme.Light]: 'Light',
-  [UiTheme.Dark]: 'Dark'
-};
-
-export enum UpdaterStatus {
-  Idle = 1,
-  Running = 2,
-  PendingRestart = 3,
-  UpToDate = 4,
-  Failed = 5,
-  Unavailable = 6
-}
-
-export const updaterStatuses = [
-  { label: 'Idle', value: UpdaterStatus.Idle },
-  { label: 'Running', value: UpdaterStatus.Running },
-  { label: 'PendingRestart', value: UpdaterStatus.PendingRestart },
-  { label: 'UpToDate', value: UpdaterStatus.UpToDate },
-  { label: 'Failed', value: UpdaterStatus.Failed },
-  { label: 'Unavailable', value: UpdaterStatus.Unavailable }
-] as const;
-
-export const UpdaterStatusLabel: Record<UpdaterStatus, string> = {
-  [UpdaterStatus.Idle]: 'Idle',
-  [UpdaterStatus.Running]: 'Running',
-  [UpdaterStatus.PendingRestart]: 'PendingRestart',
-  [UpdaterStatus.UpToDate]: 'UpToDate',
-  [UpdaterStatus.Failed]: 'Failed',
-  [UpdaterStatus.Unavailable]: 'Unavailable'
-};
-
-export enum RelocationMode {
-  UseTarget = 1,
-  MergeOverwrite = 3
-}
-
-export const relocationModes = [
-  { label: 'UseTarget', value: RelocationMode.UseTarget },
-  { label: 'MergeOverwrite', value: RelocationMode.MergeOverwrite }
-] as const;
-
-export const RelocationModeLabel: Record<RelocationMode, string> = {
-  [RelocationMode.UseTarget]: 'UseTarget',
-  [RelocationMode.MergeOverwrite]: 'MergeOverwrite'
-};
-
-export enum RelocationOutcomeKind {
-  NoOp = 0,
-  Success = 1,
-  Error = 2,
-  UnknownSchemaVersion = 3
-}
-
-export const relocationOutcomeKinds = [
-  { label: 'NoOp', value: RelocationOutcomeKind.NoOp },
-  { label: 'Success', value: RelocationOutcomeKind.Success },
-  { label: 'Error', value: RelocationOutcomeKind.Error },
-  { label: 'UnknownSchemaVersion', value: RelocationOutcomeKind.UnknownSchemaVersion }
-] as const;
-
-export const RelocationOutcomeKindLabel: Record<RelocationOutcomeKind, string> = {
-  [RelocationOutcomeKind.NoOp]: 'NoOp',
-  [RelocationOutcomeKind.Success]: 'Success',
-  [RelocationOutcomeKind.Error]: 'Error',
-  [RelocationOutcomeKind.UnknownSchemaVersion]: 'UnknownSchemaVersion'
-};
-
-export enum RelocationPhase {
-  Starting = 0,
-  Copying = 1,
-  Validating = 2,
-  Replacing = 3,
-  Finalizing = 4,
-  Done = 5
-}
-
-export const relocationPhases = [
-  { label: 'Starting', value: RelocationPhase.Starting },
-  { label: 'Copying', value: RelocationPhase.Copying },
-  { label: 'Validating', value: RelocationPhase.Validating },
-  { label: 'Replacing', value: RelocationPhase.Replacing },
-  { label: 'Finalizing', value: RelocationPhase.Finalizing },
-  { label: 'Done', value: RelocationPhase.Done }
-] as const;
-
-export const RelocationPhaseLabel: Record<RelocationPhase, string> = {
-  [RelocationPhase.Starting]: 'Starting',
-  [RelocationPhase.Copying]: 'Copying',
-  [RelocationPhase.Validating]: 'Validating',
-  [RelocationPhase.Replacing]: 'Replacing',
-  [RelocationPhase.Finalizing]: 'Finalizing',
-  [RelocationPhase.Done]: 'Done'
-};
-
-export enum AppDistributionType {
-  WindowsApp = 0,
-  MacOsApp = 1,
-  LinuxApp = 2,
-  Android = 3,
-  Ios = 4,
-  WindowsServer = 5,
-  LinuxServer = 6
-}
-
-export const appDistributionTypes = [
-  { label: 'WindowsApp', value: AppDistributionType.WindowsApp },
-  { label: 'MacOsApp', value: AppDistributionType.MacOsApp },
-  { label: 'LinuxApp', value: AppDistributionType.LinuxApp },
-  { label: 'Android', value: AppDistributionType.Android },
-  { label: 'Ios', value: AppDistributionType.Ios },
-  { label: 'WindowsServer', value: AppDistributionType.WindowsServer },
-  { label: 'LinuxServer', value: AppDistributionType.LinuxServer }
-] as const;
-
-export const AppDistributionTypeLabel: Record<AppDistributionType, string> = {
-  [AppDistributionType.WindowsApp]: 'WindowsApp',
-  [AppDistributionType.MacOsApp]: 'MacOsApp',
-  [AppDistributionType.LinuxApp]: 'LinuxApp',
-  [AppDistributionType.Android]: 'Android',
-  [AppDistributionType.Ios]: 'Ios',
-  [AppDistributionType.WindowsServer]: 'WindowsServer',
-  [AppDistributionType.LinuxServer]: 'LinuxServer'
-};
-
-export enum DataPathSource {
-  Default = 0,
-  UserConfigured = 1,
-  Environment = 2
-}
-
-export const dataPathSources = [
-  { label: 'Default', value: DataPathSource.Default },
-  { label: 'UserConfigured', value: DataPathSource.UserConfigured },
-  { label: 'Environment', value: DataPathSource.Environment }
-] as const;
-
-export const DataPathSourceLabel: Record<DataPathSource, string> = {
-  [DataPathSource.Default]: 'Default',
-  [DataPathSource.UserConfigured]: 'UserConfigured',
-  [DataPathSource.Environment]: 'Environment'
-};
-
-export enum MigrationTiming {
-  BeforeDbMigration = 1,
-  AfterDbMigration = 2
-}
-
-export const migrationTimings = [
-  { label: 'BeforeDbMigration', value: MigrationTiming.BeforeDbMigration },
-  { label: 'AfterDbMigration', value: MigrationTiming.AfterDbMigration }
-] as const;
-
-export const MigrationTimingLabel: Record<MigrationTiming, string> = {
-  [MigrationTiming.BeforeDbMigration]: 'BeforeDbMigration',
-  [MigrationTiming.AfterDbMigration]: 'AfterDbMigration'
-};
-
-export enum OsPlatform {
-  Unknown = 0,
-  Windows = 1,
-  Osx = 2,
-  Linux = 3,
-  FreeBsd = 4
-}
-
-export const osPlatforms = [
-  { label: 'Unknown', value: OsPlatform.Unknown },
-  { label: 'Windows', value: OsPlatform.Windows },
-  { label: 'Osx', value: OsPlatform.Osx },
-  { label: 'Linux', value: OsPlatform.Linux },
-  { label: 'FreeBsd', value: OsPlatform.FreeBsd }
-] as const;
-
-export const OsPlatformLabel: Record<OsPlatform, string> = {
-  [OsPlatform.Unknown]: 'Unknown',
-  [OsPlatform.Windows]: 'Windows',
-  [OsPlatform.Osx]: 'Osx',
-  [OsPlatform.Linux]: 'Linux',
-  [OsPlatform.FreeBsd]: 'FreeBsd'
-};
-
-export enum SteamMetadataField {
-  Name = 1,
-  Type = 2,
-  ShortDescription = 3,
-  DetailedDescription = 4,
-  HeaderImage = 5,
-  CapsuleImage = 6,
-  Developers = 7,
-  Publishers = 8,
-  Genres = 9,
-  Categories = 10,
-  MetacriticScore = 11,
-  ReleaseDate = 12
-}
-
-export const steamMetadataFields = [
-  { label: 'Name', value: SteamMetadataField.Name },
-  { label: 'Type', value: SteamMetadataField.Type },
-  { label: 'ShortDescription', value: SteamMetadataField.ShortDescription },
-  { label: 'DetailedDescription', value: SteamMetadataField.DetailedDescription },
-  { label: 'HeaderImage', value: SteamMetadataField.HeaderImage },
-  { label: 'CapsuleImage', value: SteamMetadataField.CapsuleImage },
-  { label: 'Developers', value: SteamMetadataField.Developers },
-  { label: 'Publishers', value: SteamMetadataField.Publishers },
-  { label: 'Genres', value: SteamMetadataField.Genres },
-  { label: 'Categories', value: SteamMetadataField.Categories },
-  { label: 'MetacriticScore', value: SteamMetadataField.MetacriticScore },
-  { label: 'ReleaseDate', value: SteamMetadataField.ReleaseDate }
-] as const;
-
-export const SteamMetadataFieldLabel: Record<SteamMetadataField, string> = {
-  [SteamMetadataField.Name]: 'Name',
-  [SteamMetadataField.Type]: 'Type',
-  [SteamMetadataField.ShortDescription]: 'ShortDescription',
-  [SteamMetadataField.DetailedDescription]: 'DetailedDescription',
-  [SteamMetadataField.HeaderImage]: 'HeaderImage',
-  [SteamMetadataField.CapsuleImage]: 'CapsuleImage',
-  [SteamMetadataField.Developers]: 'Developers',
-  [SteamMetadataField.Publishers]: 'Publishers',
-  [SteamMetadataField.Genres]: 'Genres',
-  [SteamMetadataField.Categories]: 'Categories',
-  [SteamMetadataField.MetacriticScore]: 'MetacriticScore',
-  [SteamMetadataField.ReleaseDate]: 'ReleaseDate'
-};
-
-export enum ExHentaiMetadataField {
-  Name = 1,
-  RawName = 2,
-  Introduction = 3,
-  Rate = 4,
-  Category = 5,
-  CoverUrl = 6,
-  FileCount = 7,
-  PageCount = 8
-}
-
-export const exHentaiMetadataFields = [
-  { label: 'Name', value: ExHentaiMetadataField.Name },
-  { label: 'RawName', value: ExHentaiMetadataField.RawName },
-  { label: 'Introduction', value: ExHentaiMetadataField.Introduction },
-  { label: 'Rate', value: ExHentaiMetadataField.Rate },
-  { label: 'Category', value: ExHentaiMetadataField.Category },
-  { label: 'CoverUrl', value: ExHentaiMetadataField.CoverUrl },
-  { label: 'FileCount', value: ExHentaiMetadataField.FileCount },
-  { label: 'PageCount', value: ExHentaiMetadataField.PageCount }
-] as const;
-
-export const ExHentaiMetadataFieldLabel: Record<ExHentaiMetadataField, string> = {
-  [ExHentaiMetadataField.Name]: 'Name',
-  [ExHentaiMetadataField.RawName]: 'RawName',
-  [ExHentaiMetadataField.Introduction]: 'Introduction',
-  [ExHentaiMetadataField.Rate]: 'Rate',
-  [ExHentaiMetadataField.Category]: 'Category',
-  [ExHentaiMetadataField.CoverUrl]: 'CoverUrl',
-  [ExHentaiMetadataField.FileCount]: 'FileCount',
-  [ExHentaiMetadataField.PageCount]: 'PageCount'
-};
-
-export enum ExHentaiCategory {
-  Unknown = 0,
-  Misc = 1,
-  Doushijin = 2,
-  Manga = 4,
-  ArtistCG = 8,
-  GameCG = 16,
-  ImageSet = 32,
-  Cosplay = 64,
-  AsianPorn = 128,
-  NonH = 256,
-  Western = 512
-}
-
-export const exHentaiCategories = [
-  { label: 'Unknown', value: ExHentaiCategory.Unknown },
-  { label: 'Misc', value: ExHentaiCategory.Misc },
-  { label: 'Doushijin', value: ExHentaiCategory.Doushijin },
-  { label: 'Manga', value: ExHentaiCategory.Manga },
-  { label: 'ArtistCG', value: ExHentaiCategory.ArtistCG },
-  { label: 'GameCG', value: ExHentaiCategory.GameCG },
-  { label: 'ImageSet', value: ExHentaiCategory.ImageSet },
-  { label: 'Cosplay', value: ExHentaiCategory.Cosplay },
-  { label: 'AsianPorn', value: ExHentaiCategory.AsianPorn },
-  { label: 'NonH', value: ExHentaiCategory.NonH },
-  { label: 'Western', value: ExHentaiCategory.Western }
-] as const;
-
-export const ExHentaiCategoryLabel: Record<ExHentaiCategory, string> = {
-  [ExHentaiCategory.Unknown]: 'Unknown',
-  [ExHentaiCategory.Misc]: 'Misc',
-  [ExHentaiCategory.Doushijin]: 'Doushijin',
-  [ExHentaiCategory.Manga]: 'Manga',
-  [ExHentaiCategory.ArtistCG]: 'ArtistCG',
-  [ExHentaiCategory.GameCG]: 'GameCG',
-  [ExHentaiCategory.ImageSet]: 'ImageSet',
-  [ExHentaiCategory.Cosplay]: 'Cosplay',
-  [ExHentaiCategory.AsianPorn]: 'AsianPorn',
-  [ExHentaiCategory.NonH]: 'NonH',
-  [ExHentaiCategory.Western]: 'Western'
-};
-
-export enum ExHentaiConnectionStatus {
-  Ok = 1,
-  InvalidCookie = 2,
-  IpBanned = 3,
-  UnknownError = 4
-}
-
-export const exHentaiConnectionStatuses = [
-  { label: 'Ok', value: ExHentaiConnectionStatus.Ok },
-  { label: 'InvalidCookie', value: ExHentaiConnectionStatus.InvalidCookie },
-  { label: 'IpBanned', value: ExHentaiConnectionStatus.IpBanned },
-  { label: 'UnknownError', value: ExHentaiConnectionStatus.UnknownError }
-] as const;
-
-export const ExHentaiConnectionStatusLabel: Record<ExHentaiConnectionStatus, string> = {
-  [ExHentaiConnectionStatus.Ok]: 'Ok',
-  [ExHentaiConnectionStatus.InvalidCookie]: 'InvalidCookie',
-  [ExHentaiConnectionStatus.IpBanned]: 'IpBanned',
-  [ExHentaiConnectionStatus.UnknownError]: 'UnknownError'
-};
-
-export enum DLsiteMetadataField {
-  Name = 1,
-  Introduction = 2,
-  Rating = 3,
-  CoverUrls = 4
-}
-
-export const dLsiteMetadataFields = [
-  { label: 'Name', value: DLsiteMetadataField.Name },
-  { label: 'Introduction', value: DLsiteMetadataField.Introduction },
-  { label: 'Rating', value: DLsiteMetadataField.Rating },
-  { label: 'CoverUrls', value: DLsiteMetadataField.CoverUrls }
-] as const;
-
-export const DLsiteMetadataFieldLabel: Record<DLsiteMetadataField, string> = {
-  [DLsiteMetadataField.Name]: 'Name',
-  [DLsiteMetadataField.Introduction]: 'Introduction',
-  [DLsiteMetadataField.Rating]: 'Rating',
-  [DLsiteMetadataField.CoverUrls]: 'CoverUrls'
-};
-
-export enum BangumiSubjectType {
-  All = 0,
-  Anime = 1,
-  Book = 2,
-  Music = 3,
-  Game = 4,
-  Real = 5
-}
-
-export const bangumiSubjectTypes = [
-  { label: 'All', value: BangumiSubjectType.All },
-  { label: 'Anime', value: BangumiSubjectType.Anime },
-  { label: 'Book', value: BangumiSubjectType.Book },
-  { label: 'Music', value: BangumiSubjectType.Music },
-  { label: 'Game', value: BangumiSubjectType.Game },
-  { label: 'Real', value: BangumiSubjectType.Real }
-] as const;
-
-export const BangumiSubjectTypeLabel: Record<BangumiSubjectType, string> = {
-  [BangumiSubjectType.All]: 'All',
-  [BangumiSubjectType.Anime]: 'Anime',
-  [BangumiSubjectType.Book]: 'Book',
-  [BangumiSubjectType.Music]: 'Music',
-  [BangumiSubjectType.Game]: 'Game',
-  [BangumiSubjectType.Real]: 'Real'
-};
-
-export enum ThirdPartyRequestResultType {
-  Succeed = 1,
-  TimedOut = 2,
-  Banned = 3,
-  Canceled = 4,
-  Failed = 1000
-}
-
-export const thirdPartyRequestResultTypes = [
-  { label: 'Succeed', value: ThirdPartyRequestResultType.Succeed },
-  { label: 'TimedOut', value: ThirdPartyRequestResultType.TimedOut },
-  { label: 'Banned', value: ThirdPartyRequestResultType.Banned },
-  { label: 'Canceled', value: ThirdPartyRequestResultType.Canceled },
-  { label: 'Failed', value: ThirdPartyRequestResultType.Failed }
-] as const;
-
-export const ThirdPartyRequestResultTypeLabel: Record<ThirdPartyRequestResultType, string> = {
-  [ThirdPartyRequestResultType.Succeed]: 'Succeed',
-  [ThirdPartyRequestResultType.TimedOut]: 'TimedOut',
-  [ThirdPartyRequestResultType.Banned]: 'Banned',
-  [ThirdPartyRequestResultType.Canceled]: 'Canceled',
-  [ThirdPartyRequestResultType.Failed]: 'Failed'
-};
-
-export enum BatchPlaySkipReason {
-  NoPlayableFiles = 1,
-  AllFilesMissing = 2,
-  ResourceNotFound = 3,
-  NoFilesMatchingPlayer = 4
-}
-
-export const batchPlaySkipReasons = [
-  { label: 'NoPlayableFiles', value: BatchPlaySkipReason.NoPlayableFiles },
-  { label: 'AllFilesMissing', value: BatchPlaySkipReason.AllFilesMissing },
-  { label: 'ResourceNotFound', value: BatchPlaySkipReason.ResourceNotFound },
-  { label: 'NoFilesMatchingPlayer', value: BatchPlaySkipReason.NoFilesMatchingPlayer }
-] as const;
-
-export const BatchPlaySkipReasonLabel: Record<BatchPlaySkipReason, string> = {
-  [BatchPlaySkipReason.NoPlayableFiles]: 'NoPlayableFiles',
-  [BatchPlaySkipReason.AllFilesMissing]: 'AllFilesMissing',
-  [BatchPlaySkipReason.ResourceNotFound]: 'ResourceNotFound',
-  [BatchPlaySkipReason.NoFilesMatchingPlayer]: 'NoFilesMatchingPlayer'
-};
-
-export enum BatchPlayCandidateType {
-  ProfilePlayer = 1,
-  KnownPlayer = 2
-}
-
-export const batchPlayCandidateTypes = [
-  { label: 'ProfilePlayer', value: BatchPlayCandidateType.ProfilePlayer },
-  { label: 'KnownPlayer', value: BatchPlayCandidateType.KnownPlayer }
-] as const;
-
-export const BatchPlayCandidateTypeLabel: Record<BatchPlayCandidateType, string> = {
-  [BatchPlayCandidateType.ProfilePlayer]: 'ProfilePlayer',
-  [BatchPlayCandidateType.KnownPlayer]: 'KnownPlayer'
-};
-
-export enum BatchPlayCapability {
-  None = 0,
-  PlaylistFile = 1,
-  MultiFileArguments = 2
-}
-
-export const batchPlayCapabilities = [
-  { label: 'None', value: BatchPlayCapability.None },
-  { label: 'PlaylistFile', value: BatchPlayCapability.PlaylistFile },
-  { label: 'MultiFileArguments', value: BatchPlayCapability.MultiFileArguments }
-] as const;
-
-export const BatchPlayCapabilityLabel: Record<BatchPlayCapability, string> = {
-  [BatchPlayCapability.None]: 'None',
-  [BatchPlayCapability.PlaylistFile]: 'PlaylistFile',
-  [BatchPlayCapability.MultiFileArguments]: 'MultiFileArguments'
-};
-
-export enum BatchPlayFileSelectionMode {
-  FirstFilePerResource = 1,
-  AllFiles = 2
-}
-
-export const batchPlayFileSelectionModes = [
-  { label: 'FirstFilePerResource', value: BatchPlayFileSelectionMode.FirstFilePerResource },
-  { label: 'AllFiles', value: BatchPlayFileSelectionMode.AllFiles }
-] as const;
-
-export const BatchPlayFileSelectionModeLabel: Record<BatchPlayFileSelectionMode, string> = {
-  [BatchPlayFileSelectionMode.FirstFilePerResource]: 'FirstFilePerResource',
-  [BatchPlayFileSelectionMode.AllFiles]: 'AllFiles'
-};
-
-export enum BatchPlayLaunchMethod {
-  PlaylistFile = 1,
-  MultiFileArguments = 2
-}
-
-export const batchPlayLaunchMethods = [
-  { label: 'PlaylistFile', value: BatchPlayLaunchMethod.PlaylistFile },
-  { label: 'MultiFileArguments', value: BatchPlayLaunchMethod.MultiFileArguments }
-] as const;
-
-export const BatchPlayLaunchMethodLabel: Record<BatchPlayLaunchMethod, string> = {
-  [BatchPlayLaunchMethod.PlaylistFile]: 'PlaylistFile',
-  [BatchPlayLaunchMethod.MultiFileArguments]: 'MultiFileArguments'
-};
-
 export enum BackgroundTaskName {
   SyncMediaLibrary = 1,
   PrepareCache = 2,
@@ -1147,6 +616,21 @@ export const BilibiliNamingFieldsLabel: Record<BilibiliNamingFields, string> = {
   [BilibiliNamingFields.Extension]: 'Extension'
 };
 
+export enum DownloadResultKind {
+  TorrentMetadata = 1,
+  LocalFiles = 2
+}
+
+export const downloadResultKinds = [
+  { label: 'TorrentMetadata', value: DownloadResultKind.TorrentMetadata },
+  { label: 'LocalFiles', value: DownloadResultKind.LocalFiles }
+] as const;
+
+export const DownloadResultKindLabel: Record<DownloadResultKind, string> = {
+  [DownloadResultKind.TorrentMetadata]: 'TorrentMetadata',
+  [DownloadResultKind.LocalFiles]: 'LocalFiles'
+};
+
 export enum DownloaderStatus {
   JustCreated = 0,
   Starting = 100,
@@ -1339,6 +823,537 @@ export const DependentComponentStatusLabel: Record<DependentComponentStatus, str
   [DependentComponentStatus.Installing]: 'Installing'
 };
 
+export enum CloseBehavior {
+  Prompt = 0,
+  Exit = 1,
+  Minimize = 2,
+  Cancel = 1000
+}
+
+export const closeBehaviors = [
+  { label: 'Prompt', value: CloseBehavior.Prompt },
+  { label: 'Exit', value: CloseBehavior.Exit },
+  { label: 'Minimize', value: CloseBehavior.Minimize },
+  { label: 'Cancel', value: CloseBehavior.Cancel }
+] as const;
+
+export const CloseBehaviorLabel: Record<CloseBehavior, string> = {
+  [CloseBehavior.Prompt]: 'Prompt',
+  [CloseBehavior.Exit]: 'Exit',
+  [CloseBehavior.Minimize]: 'Minimize',
+  [CloseBehavior.Cancel]: 'Cancel'
+};
+
+export enum IconType {
+  UnknownFile = 1,
+  Directory = 2,
+  Dynamic = 3
+}
+
+export const iconTypes = [
+  { label: 'UnknownFile', value: IconType.UnknownFile },
+  { label: 'Directory', value: IconType.Directory },
+  { label: 'Dynamic', value: IconType.Dynamic }
+] as const;
+
+export const IconTypeLabel: Record<IconType, string> = {
+  [IconType.UnknownFile]: 'UnknownFile',
+  [IconType.Directory]: 'Directory',
+  [IconType.Dynamic]: 'Dynamic'
+};
+
+export enum UiTheme {
+  FollowSystem = 0,
+  Light = 1,
+  Dark = 2
+}
+
+export const uiThemes = [
+  { label: 'FollowSystem', value: UiTheme.FollowSystem },
+  { label: 'Light', value: UiTheme.Light },
+  { label: 'Dark', value: UiTheme.Dark }
+] as const;
+
+export const UiThemeLabel: Record<UiTheme, string> = {
+  [UiTheme.FollowSystem]: 'FollowSystem',
+  [UiTheme.Light]: 'Light',
+  [UiTheme.Dark]: 'Dark'
+};
+
+export enum UpdaterStatus {
+  Idle = 1,
+  Running = 2,
+  PendingRestart = 3,
+  UpToDate = 4,
+  Failed = 5,
+  Unavailable = 6
+}
+
+export const updaterStatuses = [
+  { label: 'Idle', value: UpdaterStatus.Idle },
+  { label: 'Running', value: UpdaterStatus.Running },
+  { label: 'PendingRestart', value: UpdaterStatus.PendingRestart },
+  { label: 'UpToDate', value: UpdaterStatus.UpToDate },
+  { label: 'Failed', value: UpdaterStatus.Failed },
+  { label: 'Unavailable', value: UpdaterStatus.Unavailable }
+] as const;
+
+export const UpdaterStatusLabel: Record<UpdaterStatus, string> = {
+  [UpdaterStatus.Idle]: 'Idle',
+  [UpdaterStatus.Running]: 'Running',
+  [UpdaterStatus.PendingRestart]: 'PendingRestart',
+  [UpdaterStatus.UpToDate]: 'UpToDate',
+  [UpdaterStatus.Failed]: 'Failed',
+  [UpdaterStatus.Unavailable]: 'Unavailable'
+};
+
+export enum RelocationMode {
+  UseTarget = 1,
+  MergeOverwrite = 3
+}
+
+export const relocationModes = [
+  { label: 'UseTarget', value: RelocationMode.UseTarget },
+  { label: 'MergeOverwrite', value: RelocationMode.MergeOverwrite }
+] as const;
+
+export const RelocationModeLabel: Record<RelocationMode, string> = {
+  [RelocationMode.UseTarget]: 'UseTarget',
+  [RelocationMode.MergeOverwrite]: 'MergeOverwrite'
+};
+
+export enum RelocationOutcomeKind {
+  NoOp = 0,
+  Success = 1,
+  Error = 2,
+  UnknownSchemaVersion = 3
+}
+
+export const relocationOutcomeKinds = [
+  { label: 'NoOp', value: RelocationOutcomeKind.NoOp },
+  { label: 'Success', value: RelocationOutcomeKind.Success },
+  { label: 'Error', value: RelocationOutcomeKind.Error },
+  { label: 'UnknownSchemaVersion', value: RelocationOutcomeKind.UnknownSchemaVersion }
+] as const;
+
+export const RelocationOutcomeKindLabel: Record<RelocationOutcomeKind, string> = {
+  [RelocationOutcomeKind.NoOp]: 'NoOp',
+  [RelocationOutcomeKind.Success]: 'Success',
+  [RelocationOutcomeKind.Error]: 'Error',
+  [RelocationOutcomeKind.UnknownSchemaVersion]: 'UnknownSchemaVersion'
+};
+
+export enum RelocationPhase {
+  Starting = 0,
+  Copying = 1,
+  Validating = 2,
+  Replacing = 3,
+  Finalizing = 4,
+  Done = 5
+}
+
+export const relocationPhases = [
+  { label: 'Starting', value: RelocationPhase.Starting },
+  { label: 'Copying', value: RelocationPhase.Copying },
+  { label: 'Validating', value: RelocationPhase.Validating },
+  { label: 'Replacing', value: RelocationPhase.Replacing },
+  { label: 'Finalizing', value: RelocationPhase.Finalizing },
+  { label: 'Done', value: RelocationPhase.Done }
+] as const;
+
+export const RelocationPhaseLabel: Record<RelocationPhase, string> = {
+  [RelocationPhase.Starting]: 'Starting',
+  [RelocationPhase.Copying]: 'Copying',
+  [RelocationPhase.Validating]: 'Validating',
+  [RelocationPhase.Replacing]: 'Replacing',
+  [RelocationPhase.Finalizing]: 'Finalizing',
+  [RelocationPhase.Done]: 'Done'
+};
+
+export enum AppDistributionType {
+  WindowsApp = 0,
+  MacOsApp = 1,
+  LinuxApp = 2,
+  Android = 3,
+  Ios = 4,
+  WindowsServer = 5,
+  LinuxServer = 6
+}
+
+export const appDistributionTypes = [
+  { label: 'WindowsApp', value: AppDistributionType.WindowsApp },
+  { label: 'MacOsApp', value: AppDistributionType.MacOsApp },
+  { label: 'LinuxApp', value: AppDistributionType.LinuxApp },
+  { label: 'Android', value: AppDistributionType.Android },
+  { label: 'Ios', value: AppDistributionType.Ios },
+  { label: 'WindowsServer', value: AppDistributionType.WindowsServer },
+  { label: 'LinuxServer', value: AppDistributionType.LinuxServer }
+] as const;
+
+export const AppDistributionTypeLabel: Record<AppDistributionType, string> = {
+  [AppDistributionType.WindowsApp]: 'WindowsApp',
+  [AppDistributionType.MacOsApp]: 'MacOsApp',
+  [AppDistributionType.LinuxApp]: 'LinuxApp',
+  [AppDistributionType.Android]: 'Android',
+  [AppDistributionType.Ios]: 'Ios',
+  [AppDistributionType.WindowsServer]: 'WindowsServer',
+  [AppDistributionType.LinuxServer]: 'LinuxServer'
+};
+
+export enum DataPathSource {
+  Default = 0,
+  UserConfigured = 1,
+  Environment = 2
+}
+
+export const dataPathSources = [
+  { label: 'Default', value: DataPathSource.Default },
+  { label: 'UserConfigured', value: DataPathSource.UserConfigured },
+  { label: 'Environment', value: DataPathSource.Environment }
+] as const;
+
+export const DataPathSourceLabel: Record<DataPathSource, string> = {
+  [DataPathSource.Default]: 'Default',
+  [DataPathSource.UserConfigured]: 'UserConfigured',
+  [DataPathSource.Environment]: 'Environment'
+};
+
+export enum MigrationTiming {
+  BeforeDbMigration = 1,
+  AfterDbMigration = 2
+}
+
+export const migrationTimings = [
+  { label: 'BeforeDbMigration', value: MigrationTiming.BeforeDbMigration },
+  { label: 'AfterDbMigration', value: MigrationTiming.AfterDbMigration }
+] as const;
+
+export const MigrationTimingLabel: Record<MigrationTiming, string> = {
+  [MigrationTiming.BeforeDbMigration]: 'BeforeDbMigration',
+  [MigrationTiming.AfterDbMigration]: 'AfterDbMigration'
+};
+
+export enum OsPlatform {
+  Unknown = 0,
+  Windows = 1,
+  Osx = 2,
+  Linux = 3,
+  FreeBsd = 4
+}
+
+export const osPlatforms = [
+  { label: 'Unknown', value: OsPlatform.Unknown },
+  { label: 'Windows', value: OsPlatform.Windows },
+  { label: 'Osx', value: OsPlatform.Osx },
+  { label: 'Linux', value: OsPlatform.Linux },
+  { label: 'FreeBsd', value: OsPlatform.FreeBsd }
+] as const;
+
+export const OsPlatformLabel: Record<OsPlatform, string> = {
+  [OsPlatform.Unknown]: 'Unknown',
+  [OsPlatform.Windows]: 'Windows',
+  [OsPlatform.Osx]: 'Osx',
+  [OsPlatform.Linux]: 'Linux',
+  [OsPlatform.FreeBsd]: 'FreeBsd'
+};
+
+export enum SteamMetadataField {
+  Name = 1,
+  Type = 2,
+  ShortDescription = 3,
+  DetailedDescription = 4,
+  HeaderImage = 5,
+  CapsuleImage = 6,
+  Developers = 7,
+  Publishers = 8,
+  Genres = 9,
+  Categories = 10,
+  MetacriticScore = 11,
+  ReleaseDate = 12
+}
+
+export const steamMetadataFields = [
+  { label: 'Name', value: SteamMetadataField.Name },
+  { label: 'Type', value: SteamMetadataField.Type },
+  { label: 'ShortDescription', value: SteamMetadataField.ShortDescription },
+  { label: 'DetailedDescription', value: SteamMetadataField.DetailedDescription },
+  { label: 'HeaderImage', value: SteamMetadataField.HeaderImage },
+  { label: 'CapsuleImage', value: SteamMetadataField.CapsuleImage },
+  { label: 'Developers', value: SteamMetadataField.Developers },
+  { label: 'Publishers', value: SteamMetadataField.Publishers },
+  { label: 'Genres', value: SteamMetadataField.Genres },
+  { label: 'Categories', value: SteamMetadataField.Categories },
+  { label: 'MetacriticScore', value: SteamMetadataField.MetacriticScore },
+  { label: 'ReleaseDate', value: SteamMetadataField.ReleaseDate }
+] as const;
+
+export const SteamMetadataFieldLabel: Record<SteamMetadataField, string> = {
+  [SteamMetadataField.Name]: 'Name',
+  [SteamMetadataField.Type]: 'Type',
+  [SteamMetadataField.ShortDescription]: 'ShortDescription',
+  [SteamMetadataField.DetailedDescription]: 'DetailedDescription',
+  [SteamMetadataField.HeaderImage]: 'HeaderImage',
+  [SteamMetadataField.CapsuleImage]: 'CapsuleImage',
+  [SteamMetadataField.Developers]: 'Developers',
+  [SteamMetadataField.Publishers]: 'Publishers',
+  [SteamMetadataField.Genres]: 'Genres',
+  [SteamMetadataField.Categories]: 'Categories',
+  [SteamMetadataField.MetacriticScore]: 'MetacriticScore',
+  [SteamMetadataField.ReleaseDate]: 'ReleaseDate'
+};
+
+export enum ExHentaiMetadataField {
+  Name = 1,
+  RawName = 2,
+  Introduction = 3,
+  Rate = 4,
+  Category = 5,
+  CoverUrl = 6,
+  FileCount = 7,
+  PageCount = 8
+}
+
+export const exHentaiMetadataFields = [
+  { label: 'Name', value: ExHentaiMetadataField.Name },
+  { label: 'RawName', value: ExHentaiMetadataField.RawName },
+  { label: 'Introduction', value: ExHentaiMetadataField.Introduction },
+  { label: 'Rate', value: ExHentaiMetadataField.Rate },
+  { label: 'Category', value: ExHentaiMetadataField.Category },
+  { label: 'CoverUrl', value: ExHentaiMetadataField.CoverUrl },
+  { label: 'FileCount', value: ExHentaiMetadataField.FileCount },
+  { label: 'PageCount', value: ExHentaiMetadataField.PageCount }
+] as const;
+
+export const ExHentaiMetadataFieldLabel: Record<ExHentaiMetadataField, string> = {
+  [ExHentaiMetadataField.Name]: 'Name',
+  [ExHentaiMetadataField.RawName]: 'RawName',
+  [ExHentaiMetadataField.Introduction]: 'Introduction',
+  [ExHentaiMetadataField.Rate]: 'Rate',
+  [ExHentaiMetadataField.Category]: 'Category',
+  [ExHentaiMetadataField.CoverUrl]: 'CoverUrl',
+  [ExHentaiMetadataField.FileCount]: 'FileCount',
+  [ExHentaiMetadataField.PageCount]: 'PageCount'
+};
+
+export enum ExHentaiCategory {
+  Unknown = 0,
+  Misc = 1,
+  Doushijin = 2,
+  Manga = 4,
+  ArtistCG = 8,
+  GameCG = 16,
+  ImageSet = 32,
+  Cosplay = 64,
+  AsianPorn = 128,
+  NonH = 256,
+  Western = 512
+}
+
+export const exHentaiCategories = [
+  { label: 'Unknown', value: ExHentaiCategory.Unknown },
+  { label: 'Misc', value: ExHentaiCategory.Misc },
+  { label: 'Doushijin', value: ExHentaiCategory.Doushijin },
+  { label: 'Manga', value: ExHentaiCategory.Manga },
+  { label: 'ArtistCG', value: ExHentaiCategory.ArtistCG },
+  { label: 'GameCG', value: ExHentaiCategory.GameCG },
+  { label: 'ImageSet', value: ExHentaiCategory.ImageSet },
+  { label: 'Cosplay', value: ExHentaiCategory.Cosplay },
+  { label: 'AsianPorn', value: ExHentaiCategory.AsianPorn },
+  { label: 'NonH', value: ExHentaiCategory.NonH },
+  { label: 'Western', value: ExHentaiCategory.Western }
+] as const;
+
+export const ExHentaiCategoryLabel: Record<ExHentaiCategory, string> = {
+  [ExHentaiCategory.Unknown]: 'Unknown',
+  [ExHentaiCategory.Misc]: 'Misc',
+  [ExHentaiCategory.Doushijin]: 'Doushijin',
+  [ExHentaiCategory.Manga]: 'Manga',
+  [ExHentaiCategory.ArtistCG]: 'ArtistCG',
+  [ExHentaiCategory.GameCG]: 'GameCG',
+  [ExHentaiCategory.ImageSet]: 'ImageSet',
+  [ExHentaiCategory.Cosplay]: 'Cosplay',
+  [ExHentaiCategory.AsianPorn]: 'AsianPorn',
+  [ExHentaiCategory.NonH]: 'NonH',
+  [ExHentaiCategory.Western]: 'Western'
+};
+
+export enum ExHentaiConnectionStatus {
+  Ok = 1,
+  InvalidCookie = 2,
+  IpBanned = 3,
+  UnknownError = 4
+}
+
+export const exHentaiConnectionStatuses = [
+  { label: 'Ok', value: ExHentaiConnectionStatus.Ok },
+  { label: 'InvalidCookie', value: ExHentaiConnectionStatus.InvalidCookie },
+  { label: 'IpBanned', value: ExHentaiConnectionStatus.IpBanned },
+  { label: 'UnknownError', value: ExHentaiConnectionStatus.UnknownError }
+] as const;
+
+export const ExHentaiConnectionStatusLabel: Record<ExHentaiConnectionStatus, string> = {
+  [ExHentaiConnectionStatus.Ok]: 'Ok',
+  [ExHentaiConnectionStatus.InvalidCookie]: 'InvalidCookie',
+  [ExHentaiConnectionStatus.IpBanned]: 'IpBanned',
+  [ExHentaiConnectionStatus.UnknownError]: 'UnknownError'
+};
+
+export enum DLsiteMetadataField {
+  Name = 1,
+  Introduction = 2,
+  Rating = 3,
+  CoverUrls = 4
+}
+
+export const dLsiteMetadataFields = [
+  { label: 'Name', value: DLsiteMetadataField.Name },
+  { label: 'Introduction', value: DLsiteMetadataField.Introduction },
+  { label: 'Rating', value: DLsiteMetadataField.Rating },
+  { label: 'CoverUrls', value: DLsiteMetadataField.CoverUrls }
+] as const;
+
+export const DLsiteMetadataFieldLabel: Record<DLsiteMetadataField, string> = {
+  [DLsiteMetadataField.Name]: 'Name',
+  [DLsiteMetadataField.Introduction]: 'Introduction',
+  [DLsiteMetadataField.Rating]: 'Rating',
+  [DLsiteMetadataField.CoverUrls]: 'CoverUrls'
+};
+
+export enum BangumiSubjectType {
+  All = 0,
+  Anime = 1,
+  Book = 2,
+  Music = 3,
+  Game = 4,
+  Real = 5
+}
+
+export const bangumiSubjectTypes = [
+  { label: 'All', value: BangumiSubjectType.All },
+  { label: 'Anime', value: BangumiSubjectType.Anime },
+  { label: 'Book', value: BangumiSubjectType.Book },
+  { label: 'Music', value: BangumiSubjectType.Music },
+  { label: 'Game', value: BangumiSubjectType.Game },
+  { label: 'Real', value: BangumiSubjectType.Real }
+] as const;
+
+export const BangumiSubjectTypeLabel: Record<BangumiSubjectType, string> = {
+  [BangumiSubjectType.All]: 'All',
+  [BangumiSubjectType.Anime]: 'Anime',
+  [BangumiSubjectType.Book]: 'Book',
+  [BangumiSubjectType.Music]: 'Music',
+  [BangumiSubjectType.Game]: 'Game',
+  [BangumiSubjectType.Real]: 'Real'
+};
+
+export enum ThirdPartyRequestResultType {
+  Succeed = 1,
+  TimedOut = 2,
+  Banned = 3,
+  Canceled = 4,
+  Failed = 1000
+}
+
+export const thirdPartyRequestResultTypes = [
+  { label: 'Succeed', value: ThirdPartyRequestResultType.Succeed },
+  { label: 'TimedOut', value: ThirdPartyRequestResultType.TimedOut },
+  { label: 'Banned', value: ThirdPartyRequestResultType.Banned },
+  { label: 'Canceled', value: ThirdPartyRequestResultType.Canceled },
+  { label: 'Failed', value: ThirdPartyRequestResultType.Failed }
+] as const;
+
+export const ThirdPartyRequestResultTypeLabel: Record<ThirdPartyRequestResultType, string> = {
+  [ThirdPartyRequestResultType.Succeed]: 'Succeed',
+  [ThirdPartyRequestResultType.TimedOut]: 'TimedOut',
+  [ThirdPartyRequestResultType.Banned]: 'Banned',
+  [ThirdPartyRequestResultType.Canceled]: 'Canceled',
+  [ThirdPartyRequestResultType.Failed]: 'Failed'
+};
+
+export enum BatchPlaySkipReason {
+  NoPlayableFiles = 1,
+  AllFilesMissing = 2,
+  ResourceNotFound = 3,
+  NoFilesMatchingPlayer = 4
+}
+
+export const batchPlaySkipReasons = [
+  { label: 'NoPlayableFiles', value: BatchPlaySkipReason.NoPlayableFiles },
+  { label: 'AllFilesMissing', value: BatchPlaySkipReason.AllFilesMissing },
+  { label: 'ResourceNotFound', value: BatchPlaySkipReason.ResourceNotFound },
+  { label: 'NoFilesMatchingPlayer', value: BatchPlaySkipReason.NoFilesMatchingPlayer }
+] as const;
+
+export const BatchPlaySkipReasonLabel: Record<BatchPlaySkipReason, string> = {
+  [BatchPlaySkipReason.NoPlayableFiles]: 'NoPlayableFiles',
+  [BatchPlaySkipReason.AllFilesMissing]: 'AllFilesMissing',
+  [BatchPlaySkipReason.ResourceNotFound]: 'ResourceNotFound',
+  [BatchPlaySkipReason.NoFilesMatchingPlayer]: 'NoFilesMatchingPlayer'
+};
+
+export enum BatchPlayCandidateType {
+  ProfilePlayer = 1,
+  KnownPlayer = 2
+}
+
+export const batchPlayCandidateTypes = [
+  { label: 'ProfilePlayer', value: BatchPlayCandidateType.ProfilePlayer },
+  { label: 'KnownPlayer', value: BatchPlayCandidateType.KnownPlayer }
+] as const;
+
+export const BatchPlayCandidateTypeLabel: Record<BatchPlayCandidateType, string> = {
+  [BatchPlayCandidateType.ProfilePlayer]: 'ProfilePlayer',
+  [BatchPlayCandidateType.KnownPlayer]: 'KnownPlayer'
+};
+
+export enum BatchPlayCapability {
+  None = 0,
+  PlaylistFile = 1,
+  MultiFileArguments = 2
+}
+
+export const batchPlayCapabilities = [
+  { label: 'None', value: BatchPlayCapability.None },
+  { label: 'PlaylistFile', value: BatchPlayCapability.PlaylistFile },
+  { label: 'MultiFileArguments', value: BatchPlayCapability.MultiFileArguments }
+] as const;
+
+export const BatchPlayCapabilityLabel: Record<BatchPlayCapability, string> = {
+  [BatchPlayCapability.None]: 'None',
+  [BatchPlayCapability.PlaylistFile]: 'PlaylistFile',
+  [BatchPlayCapability.MultiFileArguments]: 'MultiFileArguments'
+};
+
+export enum BatchPlayFileSelectionMode {
+  FirstFilePerResource = 1,
+  AllFiles = 2
+}
+
+export const batchPlayFileSelectionModes = [
+  { label: 'FirstFilePerResource', value: BatchPlayFileSelectionMode.FirstFilePerResource },
+  { label: 'AllFiles', value: BatchPlayFileSelectionMode.AllFiles }
+] as const;
+
+export const BatchPlayFileSelectionModeLabel: Record<BatchPlayFileSelectionMode, string> = {
+  [BatchPlayFileSelectionMode.FirstFilePerResource]: 'FirstFilePerResource',
+  [BatchPlayFileSelectionMode.AllFiles]: 'AllFiles'
+};
+
+export enum BatchPlayLaunchMethod {
+  PlaylistFile = 1,
+  MultiFileArguments = 2
+}
+
+export const batchPlayLaunchMethods = [
+  { label: 'PlaylistFile', value: BatchPlayLaunchMethod.PlaylistFile },
+  { label: 'MultiFileArguments', value: BatchPlayLaunchMethod.MultiFileArguments }
+] as const;
+
+export const BatchPlayLaunchMethodLabel: Record<BatchPlayLaunchMethod, string> = {
+  [BatchPlayLaunchMethod.PlaylistFile]: 'PlaylistFile',
+  [BatchPlayLaunchMethod.MultiFileArguments]: 'MultiFileArguments'
+};
+
 export enum CategoryResourceDisplayNameSegmentType {
   StaticText = 1,
   Property = 2,
@@ -1509,7 +1524,8 @@ export enum DataOrigin {
   FileSystem = 2,
   Steam = 3,
   DLsite = 4,
-  ExHentai = 5
+  ExHentai = 5,
+  ExternalIdentity = 6
 }
 
 export const dataOrigins = [
@@ -1517,7 +1533,8 @@ export const dataOrigins = [
   { label: 'FileSystem', value: DataOrigin.FileSystem },
   { label: 'Steam', value: DataOrigin.Steam },
   { label: 'DLsite', value: DataOrigin.DLsite },
-  { label: 'ExHentai', value: DataOrigin.ExHentai }
+  { label: 'ExHentai', value: DataOrigin.ExHentai },
+  { label: 'ExternalIdentity', value: DataOrigin.ExternalIdentity }
 ] as const;
 
 export const DataOriginLabel: Record<DataOrigin, string> = {
@@ -1525,7 +1542,8 @@ export const DataOriginLabel: Record<DataOrigin, string> = {
   [DataOrigin.FileSystem]: 'FileSystem',
   [DataOrigin.Steam]: 'Steam',
   [DataOrigin.DLsite]: 'DLsite',
-  [DataOrigin.ExHentai]: 'ExHentai'
+  [DataOrigin.ExHentai]: 'ExHentai',
+  [DataOrigin.ExternalIdentity]: 'ExternalIdentity'
 };
 
 export enum DataStatus {
@@ -1676,7 +1694,9 @@ export enum InternalProperty {
   MediaLibraryV2 = 24,
   MediaLibraryV2Multi = 25,
   Source = 26,
-  HealthScore = 28
+  HealthScore = 28,
+  CollectionMulti = 29,
+  HasLocalPath = 30
 }
 
 export const internalProperties = [
@@ -1692,7 +1712,9 @@ export const internalProperties = [
   { label: 'MediaLibraryV2', value: InternalProperty.MediaLibraryV2 },
   { label: 'MediaLibraryV2Multi', value: InternalProperty.MediaLibraryV2Multi },
   { label: 'Source', value: InternalProperty.Source },
-  { label: 'HealthScore', value: InternalProperty.HealthScore }
+  { label: 'HealthScore', value: InternalProperty.HealthScore },
+  { label: 'CollectionMulti', value: InternalProperty.CollectionMulti },
+  { label: 'HasLocalPath', value: InternalProperty.HasLocalPath }
 ] as const;
 
 export const InternalPropertyLabel: Record<InternalProperty, string> = {
@@ -1708,7 +1730,9 @@ export const InternalPropertyLabel: Record<InternalProperty, string> = {
   [InternalProperty.MediaLibraryV2]: 'MediaLibraryV2',
   [InternalProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
   [InternalProperty.Source]: 'Source',
-  [InternalProperty.HealthScore]: 'HealthScore'
+  [InternalProperty.HealthScore]: 'HealthScore',
+  [InternalProperty.CollectionMulti]: 'CollectionMulti',
+  [InternalProperty.HasLocalPath]: 'HasLocalPath'
 };
 
 export enum MediaLibraryTemplateAdditionalItem {
@@ -2089,6 +2113,21 @@ export const ResourceDataTypeLabel: Record<ResourceDataType, string> = {
   [ResourceDataType.Metadata]: 'Metadata'
 };
 
+export enum ResourceMatchSuggestionStatus {
+  Pending = 1,
+  Dismissed = 2
+}
+
+export const resourceMatchSuggestionStatuses = [
+  { label: 'Pending', value: ResourceMatchSuggestionStatus.Pending },
+  { label: 'Dismissed', value: ResourceMatchSuggestionStatus.Dismissed }
+] as const;
+
+export const ResourceMatchSuggestionStatusLabel: Record<ResourceMatchSuggestionStatus, string> = {
+  [ResourceMatchSuggestionStatus.Pending]: 'Pending',
+  [ResourceMatchSuggestionStatus.Dismissed]: 'Dismissed'
+};
+
 export enum ResourceMoveRecordStatus {
   Pending = 1,
   Moving = 2,
@@ -2121,7 +2160,8 @@ export enum ResourceSource {
   Steam = 2,
   DLsite = 3,
   ExHentai = 4,
-  Aigc = 5
+  Aigc = 5,
+  Pixiv = 7
 }
 
 export const resourceSources = [
@@ -2129,7 +2169,8 @@ export const resourceSources = [
   { label: 'Steam', value: ResourceSource.Steam },
   { label: 'DLsite', value: ResourceSource.DLsite },
   { label: 'ExHentai', value: ResourceSource.ExHentai },
-  { label: 'Aigc', value: ResourceSource.Aigc }
+  { label: 'Aigc', value: ResourceSource.Aigc },
+  { label: 'Pixiv', value: ResourceSource.Pixiv }
 ] as const;
 
 export const ResourceSourceLabel: Record<ResourceSource, string> = {
@@ -2137,7 +2178,8 @@ export const ResourceSourceLabel: Record<ResourceSource, string> = {
   [ResourceSource.Steam]: 'Steam',
   [ResourceSource.DLsite]: 'DLsite',
   [ResourceSource.ExHentai]: 'ExHentai',
-  [ResourceSource.Aigc]: 'Aigc'
+  [ResourceSource.Aigc]: 'Aigc',
+  [ResourceSource.Pixiv]: 'Pixiv'
 };
 
 export enum ResourceStatus {
@@ -2479,6 +2521,7 @@ export enum BTaskType {
   MoveResources = 3,
   CopyFiles = 4,
   Download = 5,
+  Acquisition = 6,
   Any = 1000
 }
 
@@ -2488,6 +2531,7 @@ export const bTaskTypes = [
   { label: 'MoveResources', value: BTaskType.MoveResources },
   { label: 'CopyFiles', value: BTaskType.CopyFiles },
   { label: 'Download', value: BTaskType.Download },
+  { label: 'Acquisition', value: BTaskType.Acquisition },
   { label: 'Any', value: BTaskType.Any }
 ] as const;
 
@@ -2497,6 +2541,7 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.MoveResources]: 'MoveResources',
   [BTaskType.CopyFiles]: 'CopyFiles',
   [BTaskType.Download]: 'Download',
+  [BTaskType.Acquisition]: 'Acquisition',
   [BTaskType.Any]: 'Any'
 };
 
@@ -2689,7 +2734,9 @@ export enum ResourceProperty {
   MediaLibraryV2Multi = 25,
   Source = 26,
   Name = 27,
-  HealthScore = 28
+  HealthScore = 28,
+  CollectionMulti = 29,
+  HasLocalPath = 30
 }
 
 export const resourceProperties = [
@@ -2710,7 +2757,9 @@ export const resourceProperties = [
   { label: 'MediaLibraryV2Multi', value: ResourceProperty.MediaLibraryV2Multi },
   { label: 'Source', value: ResourceProperty.Source },
   { label: 'Name', value: ResourceProperty.Name },
-  { label: 'HealthScore', value: ResourceProperty.HealthScore }
+  { label: 'HealthScore', value: ResourceProperty.HealthScore },
+  { label: 'CollectionMulti', value: ResourceProperty.CollectionMulti },
+  { label: 'HasLocalPath', value: ResourceProperty.HasLocalPath }
 ] as const;
 
 export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
@@ -2731,7 +2780,9 @@ export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
   [ResourceProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
   [ResourceProperty.Source]: 'Source',
   [ResourceProperty.Name]: 'Name',
-  [ResourceProperty.HealthScore]: 'HealthScore'
+  [ResourceProperty.HealthScore]: 'HealthScore',
+  [ResourceProperty.CollectionMulti]: 'CollectionMulti',
+  [ResourceProperty.HasLocalPath]: 'HasLocalPath'
 };
 
 export enum SearchableReservedProperty {
@@ -2746,7 +2797,9 @@ export enum SearchableReservedProperty {
   MediaLibraryV2 = 24,
   MediaLibraryV2Multi = 25,
   Source = 26,
-  Name = 27
+  Name = 27,
+  CollectionMulti = 29,
+  HasLocalPath = 30
 }
 
 export const searchableReservedProperties = [
@@ -2761,7 +2814,9 @@ export const searchableReservedProperties = [
   { label: 'MediaLibraryV2', value: SearchableReservedProperty.MediaLibraryV2 },
   { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi },
   { label: 'Source', value: SearchableReservedProperty.Source },
-  { label: 'Name', value: SearchableReservedProperty.Name }
+  { label: 'Name', value: SearchableReservedProperty.Name },
+  { label: 'CollectionMulti', value: SearchableReservedProperty.CollectionMulti },
+  { label: 'HasLocalPath', value: SearchableReservedProperty.HasLocalPath }
 ] as const;
 
 export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty, string> = {
@@ -2776,7 +2831,9 @@ export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty,
   [SearchableReservedProperty.MediaLibraryV2]: 'MediaLibraryV2',
   [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
   [SearchableReservedProperty.Source]: 'Source',
-  [SearchableReservedProperty.Name]: 'Name'
+  [SearchableReservedProperty.Name]: 'Name',
+  [SearchableReservedProperty.CollectionMulti]: 'CollectionMulti',
+  [SearchableReservedProperty.HasLocalPath]: 'HasLocalPath'
 };
 
 export enum StartupPage {
@@ -2806,7 +2863,8 @@ export enum ThirdPartyId {
   Cien = 9,
   Patreon = 10,
   Tmdb = 11,
-  Steam = 12
+  Steam = 12,
+  Vndb = 13
 }
 
 export const thirdPartyIds = [
@@ -2821,7 +2879,8 @@ export const thirdPartyIds = [
   { label: 'Cien', value: ThirdPartyId.Cien },
   { label: 'Patreon', value: ThirdPartyId.Patreon },
   { label: 'Tmdb', value: ThirdPartyId.Tmdb },
-  { label: 'Steam', value: ThirdPartyId.Steam }
+  { label: 'Steam', value: ThirdPartyId.Steam },
+  { label: 'Vndb', value: ThirdPartyId.Vndb }
 ] as const;
 
 export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
@@ -2836,7 +2895,8 @@ export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
   [ThirdPartyId.Cien]: 'Cien',
   [ThirdPartyId.Patreon]: 'Patreon',
   [ThirdPartyId.Tmdb]: 'Tmdb',
-  [ThirdPartyId.Steam]: 'Steam'
+  [ThirdPartyId.Steam]: 'Steam',
+  [ThirdPartyId.Vndb]: 'Vndb'
 };
 
 export enum PasswordSearchOrder {
@@ -2920,7 +2980,8 @@ export enum ResourceAdditionalItem {
   MediaLibraryName = 2048,
   Cover = 16416,
   PlayableItem = 32768,
-  All = 52064
+  CollectionName = 65536,
+  All = 117600
 }
 
 export const resourceAdditionalItems = [
@@ -2932,6 +2993,7 @@ export const resourceAdditionalItems = [
   { label: 'MediaLibraryName', value: ResourceAdditionalItem.MediaLibraryName },
   { label: 'Cover', value: ResourceAdditionalItem.Cover },
   { label: 'PlayableItem', value: ResourceAdditionalItem.PlayableItem },
+  { label: 'CollectionName', value: ResourceAdditionalItem.CollectionName },
   { label: 'All', value: ResourceAdditionalItem.All }
 ] as const;
 
@@ -2944,6 +3006,7 @@ export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string>
   [ResourceAdditionalItem.MediaLibraryName]: 'MediaLibraryName',
   [ResourceAdditionalItem.Cover]: 'Cover',
   [ResourceAdditionalItem.PlayableItem]: 'PlayableItem',
+  [ResourceAdditionalItem.CollectionName]: 'CollectionName',
   [ResourceAdditionalItem.All]: 'All'
 };
 
@@ -3814,6 +3877,339 @@ export const EnhancerTargetOptionsItemLabel: Record<EnhancerTargetOptionsItem, s
   [EnhancerTargetOptionsItem.CoverSelectOrder]: 'CoverSelectOrder'
 };
 
+export enum AcquisitionRunState {
+  Completed = 1,
+  Waiting = 2,
+  Failed = 3
+}
+
+export const acquisitionRunStates = [
+  { label: 'Completed', value: AcquisitionRunState.Completed },
+  { label: 'Waiting', value: AcquisitionRunState.Waiting },
+  { label: 'Failed', value: AcquisitionRunState.Failed }
+] as const;
+
+export const AcquisitionRunStateLabel: Record<AcquisitionRunState, string> = {
+  [AcquisitionRunState.Completed]: 'Completed',
+  [AcquisitionRunState.Waiting]: 'Waiting',
+  [AcquisitionRunState.Failed]: 'Failed'
+};
+
+export enum PlacementConflictPolicy {
+  Rename = 1,
+  Merge = 2,
+  Ask = 3
+}
+
+export const placementConflictPolicies = [
+  { label: 'Rename', value: PlacementConflictPolicy.Rename },
+  { label: 'Merge', value: PlacementConflictPolicy.Merge },
+  { label: 'Ask', value: PlacementConflictPolicy.Ask }
+] as const;
+
+export const PlacementConflictPolicyLabel: Record<PlacementConflictPolicy, string> = {
+  [PlacementConflictPolicy.Rename]: 'Rename',
+  [PlacementConflictPolicy.Merge]: 'Merge',
+  [PlacementConflictPolicy.Ask]: 'Ask'
+};
+
+export enum AcquisitionDriveKind {
+  Unknown = 0,
+  DirectUrl = 1,
+  Baidu = 2,
+  Xunlei = 3,
+  Feimao = 4,
+  Cloudflare = 5,
+  Mega = 6,
+  PikPak = 7,
+  GoogleDrive = 8,
+  OneDrive = 9,
+  Magnet = 10,
+  OneOneFive = 11
+}
+
+export const acquisitionDriveKinds = [
+  { label: 'Unknown', value: AcquisitionDriveKind.Unknown },
+  { label: 'DirectUrl', value: AcquisitionDriveKind.DirectUrl },
+  { label: 'Baidu', value: AcquisitionDriveKind.Baidu },
+  { label: 'Xunlei', value: AcquisitionDriveKind.Xunlei },
+  { label: 'Feimao', value: AcquisitionDriveKind.Feimao },
+  { label: 'Cloudflare', value: AcquisitionDriveKind.Cloudflare },
+  { label: 'Mega', value: AcquisitionDriveKind.Mega },
+  { label: 'PikPak', value: AcquisitionDriveKind.PikPak },
+  { label: 'GoogleDrive', value: AcquisitionDriveKind.GoogleDrive },
+  { label: 'OneDrive', value: AcquisitionDriveKind.OneDrive },
+  { label: 'Magnet', value: AcquisitionDriveKind.Magnet },
+  { label: 'OneOneFive', value: AcquisitionDriveKind.OneOneFive }
+] as const;
+
+export const AcquisitionDriveKindLabel: Record<AcquisitionDriveKind, string> = {
+  [AcquisitionDriveKind.Unknown]: 'Unknown',
+  [AcquisitionDriveKind.DirectUrl]: 'DirectUrl',
+  [AcquisitionDriveKind.Baidu]: 'Baidu',
+  [AcquisitionDriveKind.Xunlei]: 'Xunlei',
+  [AcquisitionDriveKind.Feimao]: 'Feimao',
+  [AcquisitionDriveKind.Cloudflare]: 'Cloudflare',
+  [AcquisitionDriveKind.Mega]: 'Mega',
+  [AcquisitionDriveKind.PikPak]: 'PikPak',
+  [AcquisitionDriveKind.GoogleDrive]: 'GoogleDrive',
+  [AcquisitionDriveKind.OneDrive]: 'OneDrive',
+  [AcquisitionDriveKind.Magnet]: 'Magnet',
+  [AcquisitionDriveKind.OneOneFive]: 'OneOneFive'
+};
+
+export enum AcquisitionLeadKind {
+  PlatformHolding = 1,
+  SharedPage = 2,
+  SharedDocument = 3,
+  DirectUrl = 4,
+  Magnet = 5,
+  Manual = 6,
+  Torrent = 7
+}
+
+export const acquisitionLeadKinds = [
+  { label: 'PlatformHolding', value: AcquisitionLeadKind.PlatformHolding },
+  { label: 'SharedPage', value: AcquisitionLeadKind.SharedPage },
+  { label: 'SharedDocument', value: AcquisitionLeadKind.SharedDocument },
+  { label: 'DirectUrl', value: AcquisitionLeadKind.DirectUrl },
+  { label: 'Magnet', value: AcquisitionLeadKind.Magnet },
+  { label: 'Manual', value: AcquisitionLeadKind.Manual },
+  { label: 'Torrent', value: AcquisitionLeadKind.Torrent }
+] as const;
+
+export const AcquisitionLeadKindLabel: Record<AcquisitionLeadKind, string> = {
+  [AcquisitionLeadKind.PlatformHolding]: 'PlatformHolding',
+  [AcquisitionLeadKind.SharedPage]: 'SharedPage',
+  [AcquisitionLeadKind.SharedDocument]: 'SharedDocument',
+  [AcquisitionLeadKind.DirectUrl]: 'DirectUrl',
+  [AcquisitionLeadKind.Magnet]: 'Magnet',
+  [AcquisitionLeadKind.Manual]: 'Manual',
+  [AcquisitionLeadKind.Torrent]: 'Torrent'
+};
+
+export enum AcquisitionLeadOrigin {
+  User = 1,
+  Subscription = 2,
+  SharedListImport = 3,
+  PostParser = 4
+}
+
+export const acquisitionLeadOrigins = [
+  { label: 'User', value: AcquisitionLeadOrigin.User },
+  { label: 'Subscription', value: AcquisitionLeadOrigin.Subscription },
+  { label: 'SharedListImport', value: AcquisitionLeadOrigin.SharedListImport },
+  { label: 'PostParser', value: AcquisitionLeadOrigin.PostParser }
+] as const;
+
+export const AcquisitionLeadOriginLabel: Record<AcquisitionLeadOrigin, string> = {
+  [AcquisitionLeadOrigin.User]: 'User',
+  [AcquisitionLeadOrigin.Subscription]: 'Subscription',
+  [AcquisitionLeadOrigin.SharedListImport]: 'SharedListImport',
+  [AcquisitionLeadOrigin.PostParser]: 'PostParser'
+};
+
+export enum AcquisitionLeadResult {
+  Succeeded = 1,
+  Failed = 2
+}
+
+export const acquisitionLeadResults = [
+  { label: 'Succeeded', value: AcquisitionLeadResult.Succeeded },
+  { label: 'Failed', value: AcquisitionLeadResult.Failed }
+] as const;
+
+export const AcquisitionLeadResultLabel: Record<AcquisitionLeadResult, string> = {
+  [AcquisitionLeadResult.Succeeded]: 'Succeeded',
+  [AcquisitionLeadResult.Failed]: 'Failed'
+};
+
+export enum AcquisitionStatus {
+  Pending = 1,
+  Running = 2,
+  Waiting = 3,
+  Completed = 4,
+  Failed = 5,
+  Cancelled = 6
+}
+
+export const acquisitionStatuses = [
+  { label: 'Pending', value: AcquisitionStatus.Pending },
+  { label: 'Running', value: AcquisitionStatus.Running },
+  { label: 'Waiting', value: AcquisitionStatus.Waiting },
+  { label: 'Completed', value: AcquisitionStatus.Completed },
+  { label: 'Failed', value: AcquisitionStatus.Failed },
+  { label: 'Cancelled', value: AcquisitionStatus.Cancelled }
+] as const;
+
+export const AcquisitionStatusLabel: Record<AcquisitionStatus, string> = {
+  [AcquisitionStatus.Pending]: 'Pending',
+  [AcquisitionStatus.Running]: 'Running',
+  [AcquisitionStatus.Waiting]: 'Waiting',
+  [AcquisitionStatus.Completed]: 'Completed',
+  [AcquisitionStatus.Failed]: 'Failed',
+  [AcquisitionStatus.Cancelled]: 'Cancelled'
+};
+
+export enum AcquisitionWaitReason {
+  WaitingForFile = 1,
+  AmbiguousInboxFile = 2,
+  PaidContent = 3,
+  NoLinks = 4,
+  ChooseLink = 5,
+  PasswordUnknown = 6,
+  TargetExists = 7,
+  PickDirectory = 8,
+  PlatformFetch = 9
+}
+
+export const acquisitionWaitReasons = [
+  { label: 'WaitingForFile', value: AcquisitionWaitReason.WaitingForFile },
+  { label: 'AmbiguousInboxFile', value: AcquisitionWaitReason.AmbiguousInboxFile },
+  { label: 'PaidContent', value: AcquisitionWaitReason.PaidContent },
+  { label: 'NoLinks', value: AcquisitionWaitReason.NoLinks },
+  { label: 'ChooseLink', value: AcquisitionWaitReason.ChooseLink },
+  { label: 'PasswordUnknown', value: AcquisitionWaitReason.PasswordUnknown },
+  { label: 'TargetExists', value: AcquisitionWaitReason.TargetExists },
+  { label: 'PickDirectory', value: AcquisitionWaitReason.PickDirectory },
+  { label: 'PlatformFetch', value: AcquisitionWaitReason.PlatformFetch }
+] as const;
+
+export const AcquisitionWaitReasonLabel: Record<AcquisitionWaitReason, string> = {
+  [AcquisitionWaitReason.WaitingForFile]: 'WaitingForFile',
+  [AcquisitionWaitReason.AmbiguousInboxFile]: 'AmbiguousInboxFile',
+  [AcquisitionWaitReason.PaidContent]: 'PaidContent',
+  [AcquisitionWaitReason.NoLinks]: 'NoLinks',
+  [AcquisitionWaitReason.ChooseLink]: 'ChooseLink',
+  [AcquisitionWaitReason.PasswordUnknown]: 'PasswordUnknown',
+  [AcquisitionWaitReason.TargetExists]: 'TargetExists',
+  [AcquisitionWaitReason.PickDirectory]: 'PickDirectory',
+  [AcquisitionWaitReason.PlatformFetch]: 'PlatformFetch'
+};
+
+export enum WorkflowActivationMode {
+  Unknown = 0,
+  Manual = 1,
+  Module = 2,
+  SystemEvent = 3,
+  Schedule = 4,
+  Watch = 5
+}
+
+export const workflowActivationModes = [
+  { label: 'Unknown', value: WorkflowActivationMode.Unknown },
+  { label: 'Manual', value: WorkflowActivationMode.Manual },
+  { label: 'Module', value: WorkflowActivationMode.Module },
+  { label: 'SystemEvent', value: WorkflowActivationMode.SystemEvent },
+  { label: 'Schedule', value: WorkflowActivationMode.Schedule },
+  { label: 'Watch', value: WorkflowActivationMode.Watch }
+] as const;
+
+export const WorkflowActivationModeLabel: Record<WorkflowActivationMode, string> = {
+  [WorkflowActivationMode.Unknown]: 'Unknown',
+  [WorkflowActivationMode.Manual]: 'Manual',
+  [WorkflowActivationMode.Module]: 'Module',
+  [WorkflowActivationMode.SystemEvent]: 'SystemEvent',
+  [WorkflowActivationMode.Schedule]: 'Schedule',
+  [WorkflowActivationMode.Watch]: 'Watch'
+};
+
+export enum WorkflowActivityCardinality {
+  OneToOne = 1,
+  OneToMany = 2
+}
+
+export const workflowActivityCardinalities = [
+  { label: 'OneToOne', value: WorkflowActivityCardinality.OneToOne },
+  { label: 'OneToMany', value: WorkflowActivityCardinality.OneToMany }
+] as const;
+
+export const WorkflowActivityCardinalityLabel: Record<WorkflowActivityCardinality, string> = {
+  [WorkflowActivityCardinality.OneToOne]: 'OneToOne',
+  [WorkflowActivityCardinality.OneToMany]: 'OneToMany'
+};
+
+export enum WorkflowActivityCategory {
+  Filter = 1,
+  Action = 2,
+  Transform = 3
+}
+
+export const workflowActivityCategories = [
+  { label: 'Filter', value: WorkflowActivityCategory.Filter },
+  { label: 'Action', value: WorkflowActivityCategory.Action },
+  { label: 'Transform', value: WorkflowActivityCategory.Transform }
+] as const;
+
+export const WorkflowActivityCategoryLabel: Record<WorkflowActivityCategory, string> = {
+  [WorkflowActivityCategory.Filter]: 'Filter',
+  [WorkflowActivityCategory.Action]: 'Action',
+  [WorkflowActivityCategory.Transform]: 'Transform'
+};
+
+export enum WorkflowActivityErrorBehavior {
+  Fail = 1,
+  Skip = 2
+}
+
+export const workflowActivityErrorBehaviors = [
+  { label: 'Fail', value: WorkflowActivityErrorBehavior.Fail },
+  { label: 'Skip', value: WorkflowActivityErrorBehavior.Skip }
+] as const;
+
+export const WorkflowActivityErrorBehaviorLabel: Record<WorkflowActivityErrorBehavior, string> = {
+  [WorkflowActivityErrorBehavior.Fail]: 'Fail',
+  [WorkflowActivityErrorBehavior.Skip]: 'Skip'
+};
+
+export enum WorkflowItemTypeBehavior {
+  Passthrough = 1,
+  Fixed = 2,
+  AdaptToNext = 3
+}
+
+export const workflowItemTypeBehaviors = [
+  { label: 'Passthrough', value: WorkflowItemTypeBehavior.Passthrough },
+  { label: 'Fixed', value: WorkflowItemTypeBehavior.Fixed },
+  { label: 'AdaptToNext', value: WorkflowItemTypeBehavior.AdaptToNext }
+] as const;
+
+export const WorkflowItemTypeBehaviorLabel: Record<WorkflowItemTypeBehavior, string> = {
+  [WorkflowItemTypeBehavior.Passthrough]: 'Passthrough',
+  [WorkflowItemTypeBehavior.Fixed]: 'Fixed',
+  [WorkflowItemTypeBehavior.AdaptToNext]: 'AdaptToNext'
+};
+
+export enum WorkflowRunStatus {
+  Pending = 1,
+  Running = 2,
+  Success = 3,
+  Failed = 4,
+  Cancelled = 5,
+  Interrupted = 6,
+  Waiting = 7
+}
+
+export const workflowRunStatuses = [
+  { label: 'Pending', value: WorkflowRunStatus.Pending },
+  { label: 'Running', value: WorkflowRunStatus.Running },
+  { label: 'Success', value: WorkflowRunStatus.Success },
+  { label: 'Failed', value: WorkflowRunStatus.Failed },
+  { label: 'Cancelled', value: WorkflowRunStatus.Cancelled },
+  { label: 'Interrupted', value: WorkflowRunStatus.Interrupted },
+  { label: 'Waiting', value: WorkflowRunStatus.Waiting }
+] as const;
+
+export const WorkflowRunStatusLabel: Record<WorkflowRunStatus, string> = {
+  [WorkflowRunStatus.Pending]: 'Pending',
+  [WorkflowRunStatus.Running]: 'Running',
+  [WorkflowRunStatus.Success]: 'Success',
+  [WorkflowRunStatus.Failed]: 'Failed',
+  [WorkflowRunStatus.Cancelled]: 'Cancelled',
+  [WorkflowRunStatus.Interrupted]: 'Interrupted',
+  [WorkflowRunStatus.Waiting]: 'Waiting'
+};
+
 export enum AttachmentLayout {
   Tile = 0,
   Carousel = 1
@@ -4606,6 +5002,48 @@ export const AliasExceptionTypeLabel: Record<AliasExceptionType, string> = {
   [AliasExceptionType.ConflictAliasGroup]: 'ConflictAliasGroup'
 };
 
+export enum CollectionMemberFilter {
+  All = 0,
+  Owned = 1,
+  Missing = 2,
+  Acquiring = 3,
+  Ignored = 4,
+  GoneFromSource = 5
+}
+
+export const collectionMemberFilters = [
+  { label: 'All', value: CollectionMemberFilter.All },
+  { label: 'Owned', value: CollectionMemberFilter.Owned },
+  { label: 'Missing', value: CollectionMemberFilter.Missing },
+  { label: 'Acquiring', value: CollectionMemberFilter.Acquiring },
+  { label: 'Ignored', value: CollectionMemberFilter.Ignored },
+  { label: 'GoneFromSource', value: CollectionMemberFilter.GoneFromSource }
+] as const;
+
+export const CollectionMemberFilterLabel: Record<CollectionMemberFilter, string> = {
+  [CollectionMemberFilter.All]: 'All',
+  [CollectionMemberFilter.Owned]: 'Owned',
+  [CollectionMemberFilter.Missing]: 'Missing',
+  [CollectionMemberFilter.Acquiring]: 'Acquiring',
+  [CollectionMemberFilter.Ignored]: 'Ignored',
+  [CollectionMemberFilter.GoneFromSource]: 'GoneFromSource'
+};
+
+export enum CollectionMembershipOrigin {
+  Manual = 1,
+  Subscription = 2
+}
+
+export const collectionMembershipOrigins = [
+  { label: 'Manual', value: CollectionMembershipOrigin.Manual },
+  { label: 'Subscription', value: CollectionMembershipOrigin.Subscription }
+] as const;
+
+export const CollectionMembershipOriginLabel: Record<CollectionMembershipOrigin, string> = {
+  [CollectionMembershipOrigin.Manual]: 'Manual',
+  [CollectionMembershipOrigin.Subscription]: 'Subscription'
+};
+
 export enum StandardValueConversionRule {
   Directly = 1,
   Incompatible = 2,
@@ -4999,97 +5437,22 @@ export const PresetResourceTypeLabel: Record<PresetResourceType, string> = {
   [PresetResourceType.Tool]: 'Tool'
 };
 
-export enum WorkflowActivityCardinality {
-  OneToOne = 1,
-  OneToMany = 2
+export enum SubscriptionSourceKind {
+  PlatformHolding = 1,
+  Catalog = 2,
+  SharingChannel = 3
 }
 
-export const workflowActivityCardinalities = [
-  { label: 'OneToOne', value: WorkflowActivityCardinality.OneToOne },
-  { label: 'OneToMany', value: WorkflowActivityCardinality.OneToMany }
+export const subscriptionSourceKinds = [
+  { label: 'PlatformHolding', value: SubscriptionSourceKind.PlatformHolding },
+  { label: 'Catalog', value: SubscriptionSourceKind.Catalog },
+  { label: 'SharingChannel', value: SubscriptionSourceKind.SharingChannel }
 ] as const;
 
-export const WorkflowActivityCardinalityLabel: Record<WorkflowActivityCardinality, string> = {
-  [WorkflowActivityCardinality.OneToOne]: 'OneToOne',
-  [WorkflowActivityCardinality.OneToMany]: 'OneToMany'
-};
-
-export enum WorkflowActivityCategory {
-  Filter = 1,
-  Action = 2,
-  Transform = 3
-}
-
-export const workflowActivityCategories = [
-  { label: 'Filter', value: WorkflowActivityCategory.Filter },
-  { label: 'Action', value: WorkflowActivityCategory.Action },
-  { label: 'Transform', value: WorkflowActivityCategory.Transform }
-] as const;
-
-export const WorkflowActivityCategoryLabel: Record<WorkflowActivityCategory, string> = {
-  [WorkflowActivityCategory.Filter]: 'Filter',
-  [WorkflowActivityCategory.Action]: 'Action',
-  [WorkflowActivityCategory.Transform]: 'Transform'
-};
-
-export enum WorkflowActivityErrorBehavior {
-  Fail = 1,
-  Skip = 2
-}
-
-export const workflowActivityErrorBehaviors = [
-  { label: 'Fail', value: WorkflowActivityErrorBehavior.Fail },
-  { label: 'Skip', value: WorkflowActivityErrorBehavior.Skip }
-] as const;
-
-export const WorkflowActivityErrorBehaviorLabel: Record<WorkflowActivityErrorBehavior, string> = {
-  [WorkflowActivityErrorBehavior.Fail]: 'Fail',
-  [WorkflowActivityErrorBehavior.Skip]: 'Skip'
-};
-
-export enum WorkflowItemTypeBehavior {
-  Passthrough = 1,
-  Fixed = 2,
-  AdaptToNext = 3
-}
-
-export const workflowItemTypeBehaviors = [
-  { label: 'Passthrough', value: WorkflowItemTypeBehavior.Passthrough },
-  { label: 'Fixed', value: WorkflowItemTypeBehavior.Fixed },
-  { label: 'AdaptToNext', value: WorkflowItemTypeBehavior.AdaptToNext }
-] as const;
-
-export const WorkflowItemTypeBehaviorLabel: Record<WorkflowItemTypeBehavior, string> = {
-  [WorkflowItemTypeBehavior.Passthrough]: 'Passthrough',
-  [WorkflowItemTypeBehavior.Fixed]: 'Fixed',
-  [WorkflowItemTypeBehavior.AdaptToNext]: 'AdaptToNext'
-};
-
-export enum WorkflowRunStatus {
-  Pending = 1,
-  Running = 2,
-  Success = 3,
-  Failed = 4,
-  Cancelled = 5,
-  Interrupted = 6
-}
-
-export const workflowRunStatuses = [
-  { label: 'Pending', value: WorkflowRunStatus.Pending },
-  { label: 'Running', value: WorkflowRunStatus.Running },
-  { label: 'Success', value: WorkflowRunStatus.Success },
-  { label: 'Failed', value: WorkflowRunStatus.Failed },
-  { label: 'Cancelled', value: WorkflowRunStatus.Cancelled },
-  { label: 'Interrupted', value: WorkflowRunStatus.Interrupted }
-] as const;
-
-export const WorkflowRunStatusLabel: Record<WorkflowRunStatus, string> = {
-  [WorkflowRunStatus.Pending]: 'Pending',
-  [WorkflowRunStatus.Running]: 'Running',
-  [WorkflowRunStatus.Success]: 'Success',
-  [WorkflowRunStatus.Failed]: 'Failed',
-  [WorkflowRunStatus.Cancelled]: 'Cancelled',
-  [WorkflowRunStatus.Interrupted]: 'Interrupted'
+export const SubscriptionSourceKindLabel: Record<SubscriptionSourceKind, string> = {
+  [SubscriptionSourceKind.PlatformHolding]: 'PlatformHolding',
+  [SubscriptionSourceKind.Catalog]: 'Catalog',
+  [SubscriptionSourceKind.SharingChannel]: 'SharingChannel'
 };
 
 export enum LogLevel {

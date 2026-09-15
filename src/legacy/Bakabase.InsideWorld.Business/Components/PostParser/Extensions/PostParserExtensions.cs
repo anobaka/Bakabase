@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,6 +10,9 @@ using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.PostParser.Services;
+using Bakabase.InsideWorld.Business.Components.PostParser.Workflow;
+using Bakabase.Modules.PostParser.Extensions;
+using Bakabase.Modules.PostParser.Services;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -28,28 +32,47 @@ public static class PostParserExtensions
         services.AddScoped<IPostParserTaskService, PostParserTaskService<TDbContext>>();
         services.AddSingleton<PostParserTaskTrigger>();
 
-        var currentAssemblyTypes = Assembly.GetExecutingAssembly().GetTypes();
-
-        var fetcherTypes = currentAssemblyTypes.Where(s =>
-                s.IsAssignableTo(SpecificTypeUtils<IPostContentFetcher>.Type) &&
-                s is {IsPublic: true, IsAbstract: false})
+        // Every loaded assembly, not just this one: readers and extractors now come from the
+        // acquisition side too, and a reader nobody scanned for is a reader that silently does not
+        // exist. Assemblies that refuse to enumerate (native, dynamic) are skipped rather than
+        // taking startup down.
+        var types = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(a =>
+            {
+                try { return a.GetTypes(); }
+                catch { return []; }
+            })
             .ToList();
-        foreach (var ft in fetcherTypes)
+
+        foreach (var rt in Concrete<ISharedContentReader>(types))
         {
-            services.AddScoped(SpecificTypeUtils<IPostContentFetcher>.Type, ft);
+            services.AddScoped(SpecificTypeUtils<ISharedContentReader>.Type, rt);
         }
 
-        var handlerTypes = currentAssemblyTypes.Where(s =>
-                s.IsAssignableTo(SpecificTypeUtils<IPostParseTargetHandler>.Type) &&
-                s is {IsPublic: true, IsAbstract: false})
-            .ToList();
-        foreach (var ht in handlerTypes)
+        foreach (var pt in Concrete<ISharedContentPurchaser>(types))
+        {
+            services.AddScoped(SpecificTypeUtils<ISharedContentPurchaser>.Type, pt);
+        }
+
+        foreach (var ht in Concrete<IPostParseTargetHandler>(types))
         {
             services.AddScoped(SpecificTypeUtils<IPostParseTargetHandler>.Type, ht);
         }
 
+        services.AddScoped<SharedContentReaderResolver>();
+        services.AddPostParserCapabilities();
+        services.AddScoped<IPostContentService, LegacyPostContentService>();
+        services.AddPostParserWorkflows<TDbContext>();
+        services.AddHttpClient(nameof(GenericHtmlReader));
+
         return services;
     }
+
+    private static List<Type> Concrete<TContract>(IEnumerable<Type> types) =>
+        types.Where(t => t.IsAssignableTo(SpecificTypeUtils<TContract>.Type) &&
+                         t is {IsPublic: true, IsAbstract: false, IsInterface: false})
+            .Distinct()
+            .ToList();
 
     public static async Task ConfigurePostParser(this IApplicationBuilder app)
     {
@@ -78,6 +101,10 @@ public static class PostParserExtensions
             Id = task.Id,
             Source = task.Source,
             Link = task.Link,
+            Text = task.Text,
+            Revision = task.Revision,
+            WorkflowDefinitionId = task.WorkflowDefinitionId,
+            WorkflowRunId = task.WorkflowRunId,
             Title = task.Title,
             Targets = task.Targets.Count > 0 ? JsonConvert.SerializeObject(task.Targets) : null,
             Results = resultsJson,
@@ -129,6 +156,10 @@ public static class PostParserExtensions
             Id = dbModel.Id,
             Source = dbModel.Source,
             Link = dbModel.Link,
+            Text = dbModel.Text,
+            Revision = dbModel.Revision,
+            WorkflowDefinitionId = dbModel.WorkflowDefinitionId,
+            WorkflowRunId = dbModel.WorkflowRunId,
             Title = dbModel.Title,
             Targets = targets ?? [],
             Results = results,

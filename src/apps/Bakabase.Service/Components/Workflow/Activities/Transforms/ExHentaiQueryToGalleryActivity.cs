@@ -52,9 +52,9 @@ public class ExHentaiQueryToGalleryActivity : IWorkflowActivity
         }
 
         return WorkflowItemOutcome.ReplaceWith(new SubscriptionItem(
-            Id: first.Id.ToString(),
-            Title: string.IsNullOrEmpty(first.Name) ? first.RawName : first.Name,
-            Url: first.Url,
-            ThumbnailUrl: first.CoverUrl));
+            first.Id.ToString(),
+            string.IsNullOrEmpty(first.Name) ? first.RawName : first.Name,
+            first.Url,
+            first.CoverUrl == null ? null : [first.CoverUrl]));
     }
 }

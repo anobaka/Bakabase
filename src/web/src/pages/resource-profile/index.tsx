@@ -1,897 +1,826 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type {
-  BakabaseServiceModelsViewResourceProfileViewModel,
-  BakabaseAbstractionsModelsDomainEnhancerFullOptions,
-  BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions,
-  BakabaseAbstractionsModelsDomainMediaLibraryPlayer,
-  BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions,
+  BakabaseServiceModelsViewResourceProfileViewModel as ResourceProfile,
+  BakabaseServiceModelsInputResourceProfileInputModel,
 } from "@/sdk/Api";
-import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 import type { IProperty } from "@/components/Property/models";
+import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
 
-import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  SearchOutlined,
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  CopyOutlined,
-  ExperimentOutlined,
-  ClearOutlined,
-  MoreOutlined,
-  InfoCircleOutlined,
-  QuestionCircleOutlined,
+  AppstoreOutlined,
   CheckOutlined,
+  ClearOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileTextOutlined,
+  FilterOutlined,
+  InfoCircleOutlined,
+  MoreOutlined,
+  PlayCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  SettingOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
-import { BsController } from "react-icons/bs";
 
 import ResourceProfileModal from "./components/ResourceProfileModal";
 import ResourceProfileTestModal from "./components/ResourceProfileTestModal";
 import DisplayNameTemplateEditorModal from "./components/DisplayNameTemplateEditorModal";
 import EnhancementConfigPanel from "./components/EnhancementConfigPanel";
 import PlayableFileSelectorModal from "./components/PlayableFileSelectorModal";
-
 import PlayerSelectorModal from "./components/PlayerSelectorModal";
-import BApi from "@/sdk/BApi";
+import PropertyPoolModal from "./components/PropertyPoolModal";
+import DeleteEnhancementsModal from "./components/DeleteEnhancementsModal";
+import { checkProfileResponse, hasProfileConditions, toProfileInputModel } from "./profileUtils";
 
 import {
   Button,
-  Input,
-  Table,
-  TableHeader,
-  TableBody,
-  TableColumn,
-  TableRow,
-  TableCell,
+  Card,
+  CardBody,
   Chip,
-  Tooltip,
-  Popover,
+  Input,
   Listbox,
   ListboxItem,
+  Popover,
   Spinner,
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import ConfirmModal from "@/components/ConfirmModal";
-
-import DeleteEnhancementsModal from "./components/DeleteEnhancementsModal";
-import PropertyPoolModal from "./components/PropertyPoolModal";
-
-import { ResourceFilterController, toSearchInputModel } from "@/components/ResourceFilter";
-import { getEnumKey } from "@/i18n";
-import {
-  PropertyPool,
-  resourceTags,
-  builtinPropertyForDisplayNames,
-  FilterDisplayMode,
-} from "@/sdk/constants";
-import { splitPathIntoSegments } from "@/components/utils";
-import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
 import { HelpCenterButton } from "@/components/HelpCenter";
-import { EnhancerDescription } from "@/components/Chips/Terms";
+import { PropertyLabel } from "@/components/Property";
+import { ResourceFilterController } from "@/components/ResourceFilter";
+import { FilterDisplayMode, PropertyPool, ResourceTagLabel } from "@/sdk/constants";
+import BApi from "@/sdk/BApi";
+import ConfirmModal from "@/components/ConfirmModal";
+import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
 
+function ConfigSection({
+  title,
+  description,
+  icon,
+  action,
+  children,
+}: {
+  title: string;
+  description: string;
+  icon: ReactNode;
+  action: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <section className="min-w-0 py-5 first:pt-0 last:pb-0">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 gap-3">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-default-100 text-default-500">
+            {icon}
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold">{title}</h3>
+            <p className="mt-1 text-xs leading-relaxed text-default-500">{description}</p>
+          </div>
+        </div>
+        {action}
+      </div>
+      {children && <div className="mt-3 lg:ml-11">{children}</div>}
+    </section>
+  );
+}
 
-// Parse template and render with highlighted properties
-const parseTemplateSegments = (
-  template: string,
-  validPropertyNames: Set<string>,
-): Array<{ type: "text" | "valid" | "invalid"; content: string }> => {
-  const segments: Array<{ type: "text" | "valid" | "invalid"; content: string }> = [];
-  const regex = /\{([^}]+)\}/g;
-  let lastIndex = 0;
-  let match;
-
-  while ((match = regex.exec(template)) !== null) {
-    // Add text before the match
-    if (match.index > lastIndex) {
-      segments.push({ type: "text", content: template.slice(lastIndex, match.index) });
-    }
-    // Check if property name is valid
-    const propName = match[1];
-    const isValid = validPropertyNames.has(propName);
-
-    segments.push({ type: isValid ? "valid" : "invalid", content: propName });
-    lastIndex = regex.lastIndex;
-  }
-
-  // Add remaining text
-  if (lastIndex < template.length) {
-    segments.push({ type: "text", content: template.slice(lastIndex) });
-  }
-
-  return segments;
-};
-
-type ResourceProfile = BakabaseServiceModelsViewResourceProfileViewModel;
-
-/**
- * Convert ResourceProfile to API input model format
- * This ensures search.group.filters[].dbValue is serialized string
- *
- * IMPORTANT: We use explicit null for optional fields to ensure they are included in JSON.
- * If we use undefined, JSON.stringify will omit the field, and the backend will
- * interpret missing fields as null, potentially clearing existing data unexpectedly.
- */
-const toProfileInputModel = (profile: Partial<ResourceProfile>) => {
-  return {
-    name: profile.name ?? "",
-    search: profile.search ? toSearchInputModel(profile.search) : null,
-    nameTemplate: profile.nameTemplate ?? null,
-    enhancerOptions: profile.enhancerOptions ?? null,
-    playableFileOptions: profile.playableFileOptions ?? null,
-    playerOptions: profile.playerOptions ?? null,
-    propertyOptions: profile.propertyOptions ?? null,
-    priority: profile.priority ?? 0,
-  };
-};
-
-const ResourceProfilePage = () => {
+export default function ResourceProfilePage() {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [profiles, setProfiles] = useState<ResourceProfile[]>([]);
+  const profilesRef = useRef(profiles);
+  const [selectedId, setSelectedId] = useState<number>();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [error, setError] = useState("");
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [enhancerDescriptors, setEnhancerDescriptors] = useState<EnhancerDescriptor[]>([]);
-  const [editingProfileIds, setEditingProfileIds] = useState<Set<number>>(new Set());
-  // Store pending filter group changes while editing (profileId -> pending group)
-  const [pendingFilterGroups, setPendingFilterGroups] = useState<Map<number, SearchFilterGroup>>(
-    new Map(),
-  );
+  const [metadataReady, setMetadataReady] = useState(false);
+  const [draft, setDraft] = useState<{
+    id: number;
+    search: NonNullable<ResourceProfile["search"]>;
+  }>();
 
-  // Use ref to always access the latest profiles in callbacks (avoids stale closure issues)
-  const profilesRef = useRef<ResourceProfile[]>(profiles);
+  const acceptProfiles = (data: ResourceProfile[]) => {
+    const sorted = [...data].sort((a, b) => b.priority - a.priority);
 
-  profilesRef.current = profiles;
-
+    profilesRef.current = sorted;
+    setProfiles(sorted);
+    setSelectedId((id) => (sorted.some((p) => p.id === id) ? id : sorted[0]?.id));
+  };
   const loadProfiles = async () => {
     setLoading(true);
+    setError("");
     try {
-      const rsp = await BApi.resourceProfile.getAllResourceProfiles();
+      const response = await BApi.resourceProfile.getAllResourceProfiles();
 
-      setProfiles(((rsp.data || []) as ResourceProfile[]).sort((a, b) => b.priority - a.priority));
+      checkProfileResponse(response, t("resourceProfile.error.load"));
+      acceptProfiles(response.data ?? []);
     } catch (e) {
-      console.error("Failed to load resource profiles", e);
+      setError(e instanceof Error ? e.message : t("resourceProfile.error.load"));
     } finally {
       setLoading(false);
     }
   };
+  const loadMetadata = async () => {
+    try {
+      const [propertyResponse, enhancerResponse] = await Promise.all([
+        BApi.property.getPropertiesByPool(PropertyPool.All),
+        BApi.enhancer.getAllEnhancerDescriptors(),
+      ]);
+
+      checkProfileResponse(propertyResponse, t("resourceProfile.error.load"));
+      checkProfileResponse(enhancerResponse, t("resourceProfile.error.load"));
+      setProperties((propertyResponse.data ?? []) as IProperty[]);
+      setEnhancerDescriptors((enhancerResponse.data ?? []) as EnhancerDescriptor[]);
+      setMetadataReady(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("resourceProfile.error.load"));
+    }
+  };
 
   useEffect(() => {
-    loadProfiles();
-    BApi.property.getPropertiesByPool(PropertyPool.All).then((r) => {
-      setProperties((r.data || []) as IProperty[]);
-    });
-    BApi.enhancer.getAllEnhancerDescriptors().then((r) => {
-      setEnhancerDescriptors((r.data || []) as EnhancerDescriptor[]);
-    });
+    void loadProfiles();
+    void loadMetadata();
   }, []);
 
-  const filteredProfiles = profiles.filter(
-    (p) => keyword === "" || p.name?.toLowerCase().includes(keyword.toLowerCase()),
+  const updateProfile = async (id: number, updates: Partial<ResourceProfile>) => {
+    if (busyRef.current) throw new Error(t("resourceProfile.error.busy"));
+    const current = profilesRef.current.find((profile) => profile.id === id);
+
+    if (!current) throw new Error(t("resourceProfile.error.missing"));
+    busyRef.current = true;
+    setBusy(true);
+    try {
+      const merged = { ...current, ...updates };
+      const response = await BApi.resourceProfile.updateResourceProfile(
+        id,
+        toProfileInputModel(merged) as BakabaseServiceModelsInputResourceProfileInputModel,
+      );
+
+      checkProfileResponse(response, t("resourceProfile.error.save"));
+      // Apply only after the server accepts the complete update. A later modal
+      // always reads this ref, including scope priorities added by other edits.
+      acceptProfiles(profilesRef.current.map((profile) => (profile.id === id ? merged : profile)));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
+  const onCreated = (profile: ResourceProfile) => {
+    acceptProfiles([...profilesRef.current, profile]);
+    setSelectedId(profile.id);
+    setKeyword("");
+    setDraft({ id: profile.id, search: profile.search ?? { page: 1, pageSize: 100 } });
+  };
+  const create = () =>
+    createPortal(ResourceProfileModal, {
+      existingNames: profiles.map((p) => p.name),
+      onSaved: onCreated,
+    });
+  const filtered = profiles.filter((profile) =>
+    profile.name.toLocaleLowerCase().includes(keyword.trim().toLocaleLowerCase()),
+  );
+  const selected = profiles.find((profile) => profile.id === selectedId);
+  const search = draft?.id === selected?.id ? draft?.search : selected?.search;
+  const scopeEditing = !!draft && draft.id === selected?.id;
+  const action = (label: string, onPress: () => void, needsMetadata = false) => (
+    <Button
+      isDisabled={busy || (needsMetadata && !metadataReady)}
+      size="sm"
+      startContent={<EditOutlined />}
+      variant="flat"
+      onPress={onPress}
+    >
+      {label}
+    </Button>
+  );
+  const fallback = (
+    <p className="text-xs text-default-400">{t("resourceProfile.status.inherit")}</p>
   );
 
-  const handleDelete = (id: number) => {
-    createPortal(ConfirmModal, {
-      title: t<string>("common.action.delete"),
-      message: t<string>("resourceProfile.confirm.delete"),
-      destructive: true,
-      onConfirm: async () => {
-        try {
-          await BApi.resourceProfile.deleteResourceProfile(id);
-          loadProfiles();
-        } catch (e) {
-          console.error("Failed to delete resource profile", e);
-        }
-      },
+  const openProperties = (profile: ResourceProfile) =>
+    createPortal(PropertyPoolModal, {
+      propertyOptions: profile.propertyOptions,
+      allProperties: properties,
+      enhancerOptions: profile.enhancerOptions?.enhancers ?? [],
+      enhancerDescriptors,
+      onSubmit: (propertyOptions) => updateProfile(profile.id, { propertyOptions }),
     });
-  };
+  const openEnhancers = (profile: ResourceProfile) =>
+    createPortal(EnhancementConfigPanel, {
+      enhancerOptions: profile.enhancerOptions?.enhancers ?? [],
+      onSubmit: (options) => {
+        const current = profilesRef.current.find((p) => p.id === profile.id)!;
+        const refs = [...(current.propertyOptions?.properties ?? [])];
+        const seen = new Set(refs.map((ref) => `${ref.pool}:${ref.id}`));
 
-  const handleDuplicate = async (profile: ResourceProfile) => {
-    try {
-      const inputModel = toProfileInputModel({
-        ...profile,
-        name: `${profile.name} (Copy)`,
-      });
+        for (const enhancer of options)
+          for (const target of enhancer.targetOptions ?? []) {
+            if (!target.propertyPool || !target.propertyId) continue;
+            const key = `${target.propertyPool}:${target.propertyId}`;
 
-      await BApi.resourceProfile.addResourceProfile(inputModel as any);
-      loadProfiles();
-    } catch (e) {
-      console.error("Failed to duplicate resource profile", e);
-    }
-  };
-
-  const handleTest = (profile: ResourceProfile) => {
-    createPortal(ResourceProfileTestModal, {
-      profile,
-    });
-  };
-
-  const updateProfile = async (
-    profileOrId: ResourceProfile | number,
-    updates: Partial<ResourceProfile>,
-  ) => {
-    try {
-      const id = typeof profileOrId === "number" ? profileOrId : profileOrId.id;
-      // Always get the latest profile from ref to avoid stale closure issues
-      const currentProfile = profilesRef.current.find((p) => p.id === id);
-
-      if (!currentProfile) {
-        console.error("Profile not found", id);
-
-        return;
-      }
-      const merged = { ...currentProfile, ...updates };
-      const inputModel = toProfileInputModel(merged);
-
-      await BApi.resourceProfile.updateResourceProfile(id, inputModel as any);
-      loadProfiles();
-    } catch (e) {
-      console.error("Failed to update resource profile", e);
-    }
-  };
-
-  const renderNameTemplate = (profile: ResourceProfile) => {
-    const hasTemplate = !!profile.nameTemplate;
-
-    const openModal = () => {
-      createPortal(DisplayNameTemplateEditorModal, {
-        template: profile.nameTemplate,
-        properties,
-        onSubmit: (template: string) => {
-          updateProfile(profile, { nameTemplate: template || undefined });
-        },
-      });
-    };
-
-    if (!hasTemplate) {
-      return (
-        <Button className="min-w-0 px-2 h-auto py-1" size="sm" variant="light" onPress={openModal}>
-          <span className="text-default-400">-</span>
-          <EditOutlined className="ml-1 text-xs opacity-50 flex-shrink-0" />
-        </Button>
-      );
-    }
-
-    // Build valid property names set
-    const builtinNames = builtinPropertyForDisplayNames.map((v) =>
-      t(getEnumKey("BuiltinPropertyForDisplayName", v.label)),
-    );
-    const customNames = properties
-      .filter((p) => p.pool === PropertyPool.Custom)
-      .map((p) => p.name!);
-    const validPropertyNames = new Set([...builtinNames, ...customNames]);
-
-    // Parse template into segments
-    const segments = parseTemplateSegments(profile.nameTemplate!, validPropertyNames);
-
-    return (
-      <Button
-        className="min-w-0 px-2 h-auto py-1 flex-wrap"
-        size="sm"
-        variant="light"
-        onPress={openModal}
-      >
-        <div className="text-sm text-left flex flex-wrap items-center gap-0.5">
-          {segments.map((seg, idx) => {
-            if (seg.type === "text") {
-              return <span key={idx}>{seg.content}</span>;
-            }
-            if (seg.type === "valid") {
-              return (
-                <Chip
-                  key={idx}
-                  className="h-5 px-1 text-xs"
-                  color="primary"
-                  size="sm"
-                  variant="flat"
-                >
-                  {seg.content}
-                </Chip>
-              );
-            }
-
-            // invalid
-            return (
-              <Chip key={idx} className="h-5 px-1 text-xs" color="danger" size="sm" variant="flat">
-                {seg.content}
-              </Chip>
-            );
-          })}
-        </div>
-        <EditOutlined className="ml-1 text-xs opacity-50 flex-shrink-0" />
-      </Button>
-    );
-  };
-
-  const renderEnhancers = (profile: ResourceProfile) => {
-    const enhancerOptions = profile.enhancerOptions?.enhancers ?? [];
-    const hasEnhancers = enhancerOptions.length > 0;
-
-    const openEnhancerModal = () => {
-      createPortal(EnhancementConfigPanel, {
-        enhancerOptions: enhancerOptions,
-        onSubmit: (options: BakabaseAbstractionsModelsDomainEnhancerFullOptions[]) => {
-          // Merge enhancer target properties into bound properties (add only, never remove).
-          const existingRefs = profile.propertyOptions?.properties ?? [];
-          const seen = new Set(existingRefs.map((r) => `${r.pool}-${r.id}`));
-          const merged = [...existingRefs];
-
-          for (const e of options) {
-            for (const to of e.targetOptions ?? []) {
-              if (!to.propertyPool || !to.propertyId) continue;
-              const key = `${to.propertyPool}-${to.propertyId}`;
-
-              if (seen.has(key)) continue;
+            if (!seen.has(key)) {
+              refs.push({ pool: target.propertyPool, id: target.propertyId });
               seen.add(key);
-              merged.push({ pool: to.propertyPool, id: to.propertyId });
             }
           }
 
-          updateProfile(profile, {
-            enhancerOptions: options.length > 0 ? { enhancers: options } : undefined,
-            propertyOptions:
-              merged.length > existingRefs.length
-                ? { properties: merged }
-                : profile.propertyOptions,
-          });
-        },
-      });
-    };
-
-    if (!hasEnhancers) {
-      return (
-        <Tooltip content={t("resourceProfile.tip.configureEnhancers")}>
-          <Button className="min-w-0" size="sm" variant="light" onPress={openEnhancerModal}>
-            <span className="text-default-400">-</span>
-            <EditOutlined className="ml-1 text-xs opacity-50" />
-          </Button>
-        </Tooltip>
-      );
-    }
-
-    // Get enhancer descriptors for the selected enhancers
-    const selectedEnhancers = enhancerOptions
-      .map((opt: BakabaseAbstractionsModelsDomainEnhancerFullOptions) =>
-        enhancerDescriptors.find((e: EnhancerDescriptor) => e.id === opt.enhancerId),
-      )
-      .filter((e): e is EnhancerDescriptor => e != null);
-
-    return (
-      <div className="flex flex-wrap gap-1">
-        {selectedEnhancers.map((enhancer: EnhancerDescriptor) => (
-          <Button
-            key={enhancer.id}
-            className="min-w-0 h-auto py-1 px-2"
-            size="sm"
-            variant="light"
-            onPress={openEnhancerModal}
-          >
-            <BriefEnhancer enhancer={enhancer} />
-          </Button>
-        ))}
-      </div>
-    );
-  };
-
-  const renderPlayableFiles = (profile: ResourceProfile) => {
-    const options = profile.playableFileOptions;
-    const hasOptions = !!(options?.extensions?.length || options?.fileNamePattern);
-
-    const openModal = () => {
-      createPortal(PlayableFileSelectorModal, {
-        options: profile.playableFileOptions,
-        onSubmit: (opts: BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions) => {
-          const hasOpts = !!(opts.extensions?.length || opts.fileNamePattern);
-
-          updateProfile(profile, {
-            playableFileOptions: hasOpts ? opts : undefined,
-          });
-        },
-      });
-    };
-
-    if (!hasOptions) {
-      return (
-        <Button className="min-w-0" size="sm" variant="light" onPress={openModal}>
-          <span className="text-default-400">-</span>
-          <EditOutlined className="ml-1 text-xs opacity-50" />
-        </Button>
-      );
-    }
-
-    return (
-      <div className="flex flex-wrap gap-1 items-center">
-        {/* Extensions */}
-        {options?.extensions?.map((ext: string) => (
-          <Chip
-            key={ext}
-            className="cursor-pointer h-5 text-xs"
-            color="secondary"
-            size="sm"
-            variant="flat"
-            onClick={openModal}
-          >
-            {ext}
-          </Chip>
-        ))}
-        {/* File name pattern */}
-        {options?.fileNamePattern && (
-          <Chip
-            className="cursor-pointer h-5 text-xs"
-            color="warning"
-            size="sm"
-            variant="flat"
-            onClick={openModal}
-          >
-            {options.fileNamePattern}
-          </Chip>
-        )}
-        <Button
-          isIconOnly
-          className="min-w-0 w-6 h-6"
-          size="sm"
-          variant="light"
-          onPress={openModal}
-        >
-          <EditOutlined className="text-xs opacity-50" />
-        </Button>
-      </div>
-    );
-  };
-
-  const renderPlayers = (profile: ResourceProfile) => {
-    const players = profile.playerOptions?.players ?? [];
-    const hasPlayers = players.length > 0;
-
-    const openModal = () => {
-      createPortal(PlayerSelectorModal, {
-        players: players,
-        onSubmit: async (newPlayers: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[]) => {
-          updateProfile(profile, {
-            playerOptions: newPlayers.length > 0 ? { players: newPlayers } : undefined,
-          });
-        },
-      });
-    };
-
-    if (!hasPlayers) {
-      return (
-        <Button className="min-w-0" size="sm" variant="light" onPress={openModal}>
-          <span className="text-default-400">-</span>
-          <EditOutlined className="ml-1 text-xs opacity-50" />
-        </Button>
-      );
-    }
-
-    return (
-      <div className="flex flex-wrap gap-1 items-center">
-        {players.map(
-          (player: BakabaseAbstractionsModelsDomainMediaLibraryPlayer, index: number) => {
-            const executablePathSegments = splitPathIntoSegments(player.executablePath);
-            const playerName = executablePathSegments[executablePathSegments.length - 1];
-            const extCount = player.extensions?.length ?? 0;
-
-            return (
-              <Tooltip
-                key={index}
-                content={
-                  <div className="flex flex-col gap-1">
-                    <div className="font-medium">{playerName}</div>
-                    {extCount > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {player.extensions?.map((ext: string) => (
-                          <Chip key={ext} size="sm" variant="flat">
-                            {ext}
-                          </Chip>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                }
-              >
-                <Chip
-                  className="cursor-pointer h-5 text-xs"
-                  color="success"
-                  size="sm"
-                  startContent={<BsController className="text-xs" />}
-                  variant="flat"
-                  onClick={openModal}
-                >
-                  {playerName}
-                  {extCount > 0 && <span className="ml-1 opacity-60">({extCount})</span>}
-                </Chip>
-              </Tooltip>
-            );
-          },
-        )}
-        <Button
-          isIconOnly
-          className="min-w-0 w-6 h-6"
-          size="sm"
-          variant="light"
-          onPress={openModal}
-        >
-          <EditOutlined className="text-xs opacity-50" />
-        </Button>
-      </div>
-    );
-  };
-
-  const renderProperties = (profile: ResourceProfile) => {
-    const propertyRefs = profile.propertyOptions?.properties ?? [];
-    const hasProperties = propertyRefs.length > 0;
-
-    const openModal = () => {
-      createPortal(PropertyPoolModal, {
-        propertyOptions: profile.propertyOptions,
-        allProperties: properties,
-        enhancerOptions: profile.enhancerOptions?.enhancers ?? [],
-        enhancerDescriptors,
-        onSubmit: (
-          newPropertyOptions:
-            | BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions
-            | undefined,
-        ) => {
-          updateProfile(profile, {
-            propertyOptions: newPropertyOptions,
-          });
-        },
-      });
-    };
-
-    if (!hasProperties) {
-      return (
-        <Button className="min-w-0" size="sm" variant="light" onPress={openModal}>
-          <span className="text-default-400">-</span>
-          <EditOutlined className="ml-1 text-xs opacity-50" />
-        </Button>
-      );
-    }
-
-    // Find property objects for the references
-    const selectedProperties = propertyRefs
-      .map((ref) => properties.find((p) => p.pool === ref.pool && p.id === ref.id))
-      .filter((p): p is NonNullable<typeof p> => p != null);
-
-    return (
-      <div className="flex flex-wrap gap-1 items-center">
-        {selectedProperties.map((property) => (
-          <Chip
-            key={`${property.pool}-${property.id}`}
-            className="cursor-pointer h-5 text-xs"
-            color="secondary"
-            size="sm"
-            variant="flat"
-            onClick={openModal}
-          >
-            {property.name}
-          </Chip>
-        ))}
-        <Button
-          isIconOnly
-          className="min-w-0 w-6 h-6"
-          size="sm"
-          variant="light"
-          onPress={openModal}
-        >
-          <EditOutlined className="text-xs opacity-50" />
-        </Button>
-      </div>
-    );
-  };
-
-  const columns = [
-    {
-      key: "priority",
-      label: t("resourceProfile.label.priority"),
-      description: t("resourceProfile.tip.priority"),
-      width: 80,
-    },
-    {
-      key: "name",
-      label: t("resourceProfile.label.name"),
-      description: t("resourceProfile.tip.name"),
-      width: 150,
-    },
-    {
-      key: "search",
-      label: t("resourceProfile.label.searchCriteria"),
-      description: t("resourceProfile.tip.searchCriteria"),
-      render: (profile: ResourceProfile) => {
-        const savedGroup = profile.search?.group ?? { combinator: 1, disabled: false };
-        const isEditing = editingProfileIds.has(profile.id!);
-        // Use pending group if editing, otherwise use saved group
-        const group =
-          isEditing && pendingFilterGroups.has(profile.id!)
-            ? pendingFilterGroups.get(profile.id!)!
-            : savedGroup;
-
-        return (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-start gap-2">
-              <div className="flex-1">
-                <ResourceFilterController
-                  autoCreateMediaLibraryFilter
-                  defaultFilterDisplayMode={FilterDisplayMode.Simple}
-                  filterLayout="horizontal"
-                  group={group as SearchFilterGroup}
-                  isReadonly={!isEditing}
-                  onGroupChange={(newGroup) => {
-                    // Store changes locally while editing
-                    setPendingFilterGroups((prev) => {
-                      const next = new Map(prev);
-
-                      next.set(profile.id!, newGroup);
-
-                      return next;
-                    });
-                  }}
-                />
-              </div>
-              <Tooltip content={isEditing ? t("common.action.save") : t("common.action.edit")}>
-                <Button
-                  isIconOnly
-                  color={isEditing ? "success" : "default"}
-                  size="sm"
-                  variant="light"
-                  onPress={() => {
-                    if (isEditing) {
-                      // Save pending changes when exiting edit mode
-                      const pendingGroup = pendingFilterGroups.get(profile.id!);
-
-                      if (pendingGroup) {
-                        updateProfile(profile, {
-                          search: {
-                            ...profile.search,
-                            group: pendingGroup,
-                          } as typeof profile.search,
-                        });
-                        // Clear pending changes
-                        setPendingFilterGroups((prev) => {
-                          const next = new Map(prev);
-
-                          next.delete(profile.id!);
-
-                          return next;
-                        });
-                      }
-                      setEditingProfileIds((prev) => {
-                        const next = new Set(prev);
-
-                        next.delete(profile.id!);
-
-                        return next;
-                      });
-                    } else {
-                      // Enter edit mode
-                      setEditingProfileIds((prev) => {
-                        const next = new Set(prev);
-
-                        next.add(profile.id!);
-
-                        return next;
-                      });
-                    }
-                  }}
-                >
-                  {isEditing ? <CheckOutlined /> : <EditOutlined />}
-                </Button>
-              </Tooltip>
-            </div>
-            {profile.search?.tags && profile.search.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {profile.search.tags.map((tag) => (
-                  <Chip key={tag} color="warning" size="sm" variant="flat">
-                    {t(
-                      getEnumKey(
-                        "ResourceTag",
-                        resourceTags.find((rt) => rt.value === tag)?.label!,
-                      ),
-                    )}
-                  </Chip>
-                ))}
-              </div>
-            )}
-          </div>
-        );
+        return updateProfile(profile.id, {
+          enhancerOptions: options.length ? { enhancers: options } : undefined,
+          propertyOptions:
+            refs.length > (current.propertyOptions?.properties?.length ?? 0)
+              ? { ...current.propertyOptions, properties: refs }
+              : current.propertyOptions,
+        });
       },
-    },
-    {
-      key: "nameTemplate",
-      label: t("resourceProfile.label.nameTemplate"),
-      description: t("resourceProfile.tip.nameTemplate"),
-      render: renderNameTemplate,
-    },
-    {
-      key: "enhancers",
-      label: t("resourceProfile.label.enhancers"),
-      description: <EnhancerDescription />,
-      width: 130,
-      render: renderEnhancers,
-    },
-    {
-      key: "playableFiles",
-      label: t("resourceProfile.label.playableFiles"),
-      description: t("resourceProfile.tip.playableFiles"),
-      width: 130,
-      render: renderPlayableFiles,
-    },
-    {
-      key: "players",
-      label: t("resourceProfile.label.players"),
-      description: t("resourceProfile.tip.players"),
-      width: 200,
-      render: renderPlayers,
-    },
-    {
-      key: "properties",
-      label: t("resourceProfile.label.properties"),
-      description: t("resourceProfile.tip.properties"),
-      width: 200,
-      render: renderProperties,
-    },
-    {
-      key: "actions",
-      label: t("resourceProfile.label.actions"),
-      width: 180,
-      render: (profile: ResourceProfile) => (
-        <div className="flex gap-1">
-          <Tooltip content={t("resourceProfile.action.testCriteria")}>
-            <Button isIconOnly size="sm" variant="light" onPress={() => handleTest(profile)}>
-              <ExperimentOutlined />
-            </Button>
-          </Tooltip>
-          <Tooltip content={t("resourceProfile.action.editBasicInfo")}>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={() => {
-                createPortal(ResourceProfileModal, {
-                  profile,
-                  onSaved: loadProfiles,
-                  onUpdate: updateProfile,
-                });
-              }}
-            >
-              <EditOutlined />
-            </Button>
-          </Tooltip>
-          <Tooltip content={t("resourceProfile.action.duplicate")}>
-            <Button isIconOnly size="sm" variant="light" onPress={() => handleDuplicate(profile)}>
-              <CopyOutlined />
-            </Button>
-          </Tooltip>
-          <Popover
-            placement="bottom-end"
-            trigger={
-              <Button isIconOnly size="sm" variant="light">
-                <MoreOutlined />
-              </Button>
-            }
-          >
-            <Listbox
-              aria-label="More actions"
-              onAction={(key) => {
-                switch (key) {
-                  case "delete-enhancements":
-                    createPortal(DeleteEnhancementsModal, {
-                      profile,
-                    });
-                    break;
-                  case "delete":
-                    handleDelete(profile.id);
-                    break;
-                }
-              }}
-            >
-              <ListboxItem
-                key="delete-enhancements"
-                color="warning"
-                startContent={<ClearOutlined />}
-              >
-                {t("resourceProfile.action.deleteEnhancements")}
-              </ListboxItem>
-              <ListboxItem
-                key="delete"
-                className="text-danger"
-                color="danger"
-                startContent={<DeleteOutlined />}
-              >
-                {t("common.action.delete")}
-              </ListboxItem>
-            </Listbox>
-          </Popover>
-        </div>
-      ),
-    },
-  ];
+    });
+  const duplicate = async (profile: ResourceProfile) => {
+    setBusy(true);
+    try {
+      const response = await BApi.resourceProfile.addResourceProfile(
+        toProfileInputModel({
+          ...profile,
+          name: t("resourceProfile.label.copyName", { name: profile.name }),
+        }) as BakabaseServiceModelsInputResourceProfileInputModel,
+      );
+
+      checkProfileResponse(response, t("resourceProfile.error.save"));
+      if (response.data) {
+        acceptProfiles([...profilesRef.current, response.data]);
+        setSelectedId(response.data.id);
+        setKeyword("");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("resourceProfile.error.save"));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
-    <div className="p-2">
-      <div className="flex items-center justify-between gap-2 mb-4">
+    <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 p-4 md:p-6">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold">{t("menu.resourceProfile")}</h1>
+            <HelpCenterButton topic="resourceProfile" />
+          </div>
+          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-default-500">
+            {t("resourceProfile.page.description")}
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <Button
-            className="tour-add-profile"
-            color="primary"
-            size="sm"
-            startContent={<PlusOutlined />}
+            isIconOnly
+            aria-label={t("common.action.refresh")}
+            isDisabled={busy || !!draft}
+            isLoading={loading}
+            variant="light"
             onPress={() => {
-              createPortal(ResourceProfileModal, {
-                existingNames: profiles.map((p) => p.name),
-                onSaved: loadProfiles,
-              });
+              void loadProfiles();
+              void loadMetadata();
             }}
+          >
+            <ReloadOutlined />
+          </Button>
+          <Button
+            color="primary"
+            isDisabled={busy || !!draft}
+            startContent={<PlusOutlined />}
+            onPress={create}
           >
             {t("resourceProfile.action.addProfile")}
           </Button>
-          <HelpCenterButton topic="resourceProfile" />
-          <Input
-            className="w-64"
-            placeholder={t("resourceProfile.action.searchByName")}
-            size="sm"
-            startContent={<SearchOutlined className="text-small" />}
-            value={keyword}
-            onValueChange={setKeyword}
-          />
         </div>
-        <div className="text-sm text-default-500">
-          {t("resourceProfile.label.total")}: {filteredProfiles.length}
-        </div>
-      </div>
-
-      <Table
-        isHeaderSticky
-        removeWrapper
-        aria-label="Resource Profiles Table"
-        className="tour-profile-table"
-        classNames={{
-          wrapper: "max-h-[calc(100vh-200px)]",
-        }}
-      >
-        <TableHeader>
-          {columns.map((column) => (
-            <TableColumn
-              key={column.key}
-              data-tour={column.description ? `col-${column.key}` : undefined}
-              width={column.width}
-            >
-              <div className="flex items-center gap-1">
-                {column.label}
-                {column.description && (
-                  <Tooltip content={column.description}>
-                    <InfoCircleOutlined className="text-xs opacity-50 cursor-help" />
-                  </Tooltip>
-                )}
-              </div>
-            </TableColumn>
-          ))}
-        </TableHeader>
-        <TableBody
-          emptyContent={t("resourceProfile.empty.noProfiles")}
-          isLoading={loading}
-          loadingContent={<Spinner label={t("resourceProfile.status.loading")} />}
+      </header>
+      {error && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-danger-50 px-4 py-3 text-sm text-danger"
+          role="alert"
         >
-          {filteredProfiles.map((profile) => (
-            <TableRow key={profile.id}>
-              {columns.map((column) => (
-                <TableCell key={column.key}>
-                  {column.render
-                    ? column.render(profile)
-                    : String(profile[column.key as keyof ResourceProfile] ?? "")}
-                </TableCell>
+          {error}
+          <Button
+            size="sm"
+            variant="light"
+            onPress={() => {
+              void loadProfiles();
+              void loadMetadata();
+            }}
+          >
+            {t("resourceProfile.action.retry")}
+          </Button>
+        </div>
+      )}
+      <details className="rounded-xl bg-primary-50/50 px-4 py-3 text-sm">
+        <summary className="cursor-pointer text-primary">
+          <InfoCircleOutlined className="mr-2" />
+          {t("resourceProfile.page.howItWorks")}
+        </summary>
+        <div className="mt-3 space-y-2 text-xs leading-relaxed text-default-600">
+          <p>{t("resourceProfile.tip.priority")}</p>
+          <p>{t("resourceProfile.tip.enhancerMerge")}</p>
+        </div>
+      </details>
+      {loading && !profiles.length ? (
+        <div className="flex justify-center py-20">
+          <Spinner />
+        </div>
+      ) : !profiles.length && !error ? (
+        <Card className="border border-divider" shadow="none">
+          <CardBody className="items-center gap-3 py-14 text-center">
+            <SettingOutlined className="text-3xl text-primary" />
+            <h2 className="font-semibold">{t("resourceProfile.empty.title")}</h2>
+            <p className="max-w-lg text-sm text-default-500">
+              {t("resourceProfile.empty.description")}
+            </p>
+            <Button color="primary" startContent={<PlusOutlined />} onPress={create}>
+              {t("resourceProfile.action.addProfile")}
+            </Button>
+          </CardBody>
+        </Card>
+      ) : (
+        <div className="flex min-w-0 flex-col items-start gap-5 lg:flex-row">
+          <aside className="w-full shrink-0 lg:sticky lg:top-4 lg:w-64">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <h2 className="text-sm font-medium">{t("resourceProfile.label.profiles")}</h2>
+              <span className="text-xs text-default-400">{profiles.length}</span>
+            </div>
+            <Input
+              isClearable
+              aria-label={t("resourceProfile.input.search")}
+              placeholder={t("resourceProfile.input.search")}
+              size="sm"
+              startContent={<SearchOutlined className="text-default-400" />}
+              value={keyword}
+              onClear={() => setKeyword("")}
+              onValueChange={setKeyword}
+            />
+            <div
+              aria-label={t("resourceProfile.label.profiles")}
+              className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto lg:max-h-[calc(100vh-280px)]"
+            >
+              {filtered.map((profile) => (
+                <button
+                  key={profile.id}
+                  aria-pressed={profile.id === selectedId}
+                  className={`w-full rounded-xl px-4 py-3 text-left transition-colors focus-visible:outline-primary disabled:opacity-50 ${profile.id === selectedId ? "bg-primary-50 text-primary ring-1 ring-inset ring-primary-200" : "bg-content1 hover:bg-default-100"}`}
+                  disabled={busy || (!!draft && draft.id !== profile.id)}
+                  type="button"
+                  onClick={() => setSelectedId(profile.id)}
+                >
+                  <div className="break-words text-sm font-medium">{profile.name}</div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-default-500">
+                    <span>
+                      {t("resourceProfile.label.priority")} {profile.priority}
+                    </span>
+                    <span>
+                      {t(
+                        hasProfileConditions(profile.search)
+                          ? "resourceProfile.status.filtered"
+                          : "resourceProfile.status.allResources",
+                      )}
+                    </span>
+                  </div>
+                </button>
               ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              {!filtered.length && (
+                <p className="p-4 text-center text-sm text-default-400">
+                  {t("resourceProfile.empty.noProfilesFound")}
+                </p>
+              )}
+            </div>
+          </aside>
+          {selected && (
+            <Card className="min-w-0 w-full flex-1 border border-divider" shadow="none">
+              <CardBody className="gap-5 p-4 md:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-divider pb-5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="break-words text-lg font-semibold">{selected.name}</h2>
+                      <Chip size="sm" variant="flat">
+                        {t("resourceProfile.label.priority")} {selected.priority}
+                      </Chip>
+                    </div>
+                    <p className="mt-2 text-xs text-default-500">
+                      {t("resourceProfile.page.selectedHint")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {action(t("resourceProfile.action.editBasicInfo"), () =>
+                      createPortal(ResourceProfileModal, {
+                        profile: selected,
+                        onUpdate: updateProfile,
+                      }),
+                    )}
+                    <Popover
+                      placement="bottom-end"
+                      trigger={
+                        <Button
+                          isIconOnly
+                          aria-label={t("resourceProfile.label.more")}
+                          isDisabled={busy || !!draft}
+                          size="sm"
+                          variant="light"
+                        >
+                          <MoreOutlined />
+                        </Button>
+                      }
+                      visible={menuOpen}
+                      onVisibleChange={setMenuOpen}
+                    >
+                      <Listbox
+                        aria-label={t("resourceProfile.label.more")}
+                        onAction={(key) => {
+                          setMenuOpen(false);
+                          if (key === "copy") void duplicate(selected);
+                          if (key === "clear")
+                            createPortal(DeleteEnhancementsModal, { profile: selected });
+                          if (key === "delete")
+                            createPortal(ConfirmModal, {
+                              title: t("common.action.delete"),
+                              message: t("resourceProfile.confirm.delete"),
+                              destructive: true,
+                              onConfirm: async () => {
+                                const response = await BApi.resourceProfile.deleteResourceProfile(
+                                  selected.id,
+                                );
+
+                                checkProfileResponse(response, t("resourceProfile.error.save"));
+                                acceptProfiles(
+                                  profilesRef.current.filter((p) => p.id !== selected.id),
+                                );
+                              },
+                            });
+                        }}
+                      >
+                        <ListboxItem key="copy" startContent={<CopyOutlined />}>
+                          {t("resourceProfile.action.duplicate")}
+                        </ListboxItem>
+                        <ListboxItem key="clear" startContent={<ClearOutlined />}>
+                          {t("resourceProfile.action.deleteEnhancements")}
+                        </ListboxItem>
+                        <ListboxItem
+                          key="delete"
+                          className="text-danger"
+                          color="danger"
+                          startContent={<DeleteOutlined />}
+                        >
+                          {t("common.action.delete")}
+                        </ListboxItem>
+                      </Listbox>
+                    </Popover>
+                  </div>
+                </div>
+                <section className="rounded-xl bg-default-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <FilterOutlined className="text-primary" />
+                      <h3 className="text-sm font-semibold">
+                        {t("resourceProfile.label.appliesTo")}
+                      </h3>
+                      <Chip
+                        color={hasProfileConditions(search) ? "primary" : "default"}
+                        size="sm"
+                        variant="flat"
+                      >
+                        {t(
+                          hasProfileConditions(search)
+                            ? "resourceProfile.status.filtered"
+                            : "resourceProfile.status.allResources",
+                        )}
+                      </Chip>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        size="sm"
+                        startContent={<EyeOutlined />}
+                        variant="light"
+                        onPress={() =>
+                          createPortal(ResourceProfileTestModal, {
+                            profile: { ...selected, search },
+                            isDraft: scopeEditing,
+                          })
+                        }
+                      >
+                        {t("resourceProfile.action.testCriteria")}
+                      </Button>
+                      {!scopeEditing ? (
+                        action(t("resourceProfile.action.editScope"), () =>
+                          setDraft({
+                            id: selected.id,
+                            search: structuredClone(selected.search ?? { page: 1, pageSize: 100 }),
+                          }),
+                        )
+                      ) : (
+                        <>
+                          <Button
+                            isDisabled={busy}
+                            size="sm"
+                            variant="light"
+                            onPress={() => setDraft(undefined)}
+                          >
+                            {t("common.action.cancel")}
+                          </Button>
+                          <Button
+                            color="primary"
+                            isLoading={busy}
+                            size="sm"
+                            startContent={<CheckOutlined />}
+                            onPress={async () => {
+                              try {
+                                await updateProfile(selected.id, { search: draft!.search });
+                                setDraft(undefined);
+                                setError("");
+                              } catch (e) {
+                                setError(
+                                  e instanceof Error ? e.message : t("resourceProfile.error.save"),
+                                );
+                              }
+                            }}
+                          >
+                            {t("common.action.save")}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-default-500">
+                    {t("resourceProfile.tip.scope")}
+                  </p>
+                  {(scopeEditing || hasProfileConditions(search)) && (
+                    <div className="mt-4 space-y-3">
+                      <div className={busy ? "pointer-events-none opacity-60" : ""}>
+                        <ResourceFilterController
+                          key={`${selected.id}-${scopeEditing}`}
+                          defaultFilterDisplayMode={FilterDisplayMode.Simple}
+                          filterLayout="horizontal"
+                          group={
+                            (search?.group ?? {
+                              combinator: 1,
+                              disabled: false,
+                            }) as SearchFilterGroup
+                          }
+                          isReadonly={!scopeEditing}
+                          onGroupChange={(group) =>
+                            setDraft(
+                              (current) =>
+                                current && {
+                                  ...current,
+                                  search: { ...current.search, group } as typeof current.search,
+                                },
+                            )
+                          }
+                        />
+                      </div>
+                      {!!search?.tags?.length && (
+                        <div className="flex flex-wrap gap-2">
+                          {search.tags.map((tag) => (
+                            <Chip
+                              key={tag}
+                              size="sm"
+                              variant="flat"
+                              onClose={
+                                scopeEditing
+                                  ? () =>
+                                      setDraft(
+                                        (current) =>
+                                          current && {
+                                            ...current,
+                                            search: {
+                                              ...current.search,
+                                              tags: current.search.tags?.filter(
+                                                (value) => value !== tag,
+                                              ),
+                                            },
+                                          },
+                                      )
+                                  : undefined
+                              }
+                            >
+                              {t(`ResourceTag.${ResourceTagLabel[tag]}`)}
+                            </Chip>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
+                <div className="divide-y divide-divider">
+                  <ConfigSection
+                    action={action(
+                      t("resourceProfile.action.configureProperties"),
+                      () => openProperties(selected),
+                      true,
+                    )}
+                    description={t("resourceProfile.tip.properties")}
+                    icon={<AppstoreOutlined />}
+                    title={t("resourceProfile.label.properties")}
+                  >
+                    {selected.propertyOptions?.properties?.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {selected.propertyOptions.properties.slice(0, 12).map((ref) => {
+                          const property = properties.find(
+                            (p) => p.pool === ref.pool && p.id === ref.id,
+                          );
+
+                          return (
+                            <span
+                              key={`${ref.pool}:${ref.id}`}
+                              className="max-w-full rounded-lg bg-default-100 px-2.5 py-1.5 text-xs"
+                            >
+                              {property ? (
+                                <PropertyLabel property={property} />
+                              ) : (
+                                t("resourceProfile.propertyPool.unknownProperty", { id: ref.id })
+                              )}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : selected.propertyOptions ? (
+                      <p className="text-xs text-default-400">
+                        {t("resourceProfile.status.emptyProperties")}
+                      </p>
+                    ) : (
+                      fallback
+                    )}
+                    {(selected.propertyOptions?.properties?.length ?? 0) > 12 && (
+                      <Button
+                        className="mt-2"
+                        isDisabled={!metadataReady || busy}
+                        size="sm"
+                        variant="light"
+                        onPress={() => openProperties(selected)}
+                      >
+                        {t("resourceProfile.action.viewAllProperties", {
+                          count: selected.propertyOptions!.properties!.length,
+                        })}
+                      </Button>
+                    )}
+                  </ConfigSection>
+                  <ConfigSection
+                    action={action(
+                      t("resourceProfile.action.configureName"),
+                      () =>
+                        createPortal(DisplayNameTemplateEditorModal, {
+                          template: selected.nameTemplate,
+                          properties,
+                          onSubmit: (nameTemplate) =>
+                            updateProfile(selected.id, { nameTemplate: nameTemplate || undefined }),
+                        }),
+                      true,
+                    )}
+                    description={t("resourceProfile.tip.nameTemplate")}
+                    icon={<FileTextOutlined />}
+                    title={t("resourceProfile.label.nameTemplate")}
+                  >
+                    {selected.nameTemplate ? (
+                      <code className="block whitespace-pre-wrap break-words rounded-lg bg-default-100 px-3 py-2 text-sm">
+                        {selected.nameTemplate}
+                      </code>
+                    ) : (
+                      fallback
+                    )}
+                  </ConfigSection>
+                  <ConfigSection
+                    action={null}
+                    description={t("resourceProfile.tip.playback")}
+                    icon={<PlayCircleOutlined />}
+                    title={t("resourceProfile.label.playback")}
+                  >
+                    <div className="grid gap-3 xl:grid-cols-2">
+                      <div className="rounded-xl bg-default-50 p-3">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <h4 className="text-xs font-medium">
+                            {t("resourceProfile.label.playableFiles")}
+                          </h4>
+                          {action(t("common.action.configure"), () =>
+                            createPortal(PlayableFileSelectorModal, {
+                              options: selected.playableFileOptions,
+                              onSubmit: (options) =>
+                                updateProfile(selected.id, {
+                                  playableFileOptions:
+                                    options.extensions?.length || options.fileNamePattern
+                                      ? options
+                                      : undefined,
+                                }),
+                            }),
+                          )}
+                        </div>
+                        {selected.playableFileOptions ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {selected.playableFileOptions.extensions?.map((extension) => (
+                              <Chip key={extension} size="sm" variant="flat">
+                                {extension}
+                              </Chip>
+                            ))}
+                            {selected.playableFileOptions.fileNamePattern && (
+                              <code className="w-full break-all text-xs text-default-500">
+                                {selected.playableFileOptions.fileNamePattern}
+                              </code>
+                            )}
+                          </div>
+                        ) : (
+                          fallback
+                        )}
+                      </div>
+                      <div className="rounded-xl bg-default-50 p-3">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <h4 className="text-xs font-medium">
+                            {t("resourceProfile.label.players")}
+                          </h4>
+                          {action(t("common.action.configure"), () =>
+                            createPortal(PlayerSelectorModal, {
+                              players: selected.playerOptions?.players ?? [],
+                              onSubmit: (players) =>
+                                updateProfile(selected.id, {
+                                  playerOptions: players.length ? { players } : undefined,
+                                }),
+                            }),
+                          )}
+                        </div>
+                        {selected.playerOptions?.players?.length ? (
+                          <div className="space-y-2">
+                            {selected.playerOptions.players.map((player, index) => (
+                              <div
+                                key={index}
+                                className="break-all text-xs"
+                                title={player.executablePath}
+                              >
+                                {player.executablePath?.split(/[\\/]/).pop()}
+                                <span className="ml-2 text-default-400">
+                                  {player.extensions?.join(", ") ||
+                                    t("resourceProfile.status.allExtensions")}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-default-400">
+                            {t(
+                              selected.playerOptions
+                                ? "resourceProfile.status.emptyPlayers"
+                                : "resourceProfile.status.defaultPlayer",
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </ConfigSection>
+                  <ConfigSection
+                    action={action(
+                      t("resourceProfile.action.configureEnhancers"),
+                      () => openEnhancers(selected),
+                      true,
+                    )}
+                    description={t("resourceProfile.tip.enhancers")}
+                    icon={<ThunderboltOutlined />}
+                    title={t("resourceProfile.label.enhancers")}
+                  >
+                    {selected.enhancerOptions?.enhancers?.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {selected.enhancerOptions.enhancers.map((option) => {
+                          const descriptor = enhancerDescriptors.find(
+                            (e) => e.id === option.enhancerId,
+                          );
+
+                          return (
+                            <div
+                              key={option.enhancerId}
+                              className="rounded-lg bg-default-100 px-3 py-2"
+                            >
+                              {descriptor ? (
+                                <BriefEnhancer enhancer={descriptor} />
+                              ) : (
+                                <span>#{option.enhancerId}</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      fallback
+                    )}
+                  </ConfigSection>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
-};
-
-ResourceProfilePage.displayName = "ResourceProfilePage";
-
-export default ResourceProfilePage;
+}

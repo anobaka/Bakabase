@@ -7,6 +7,7 @@ import type { components } from "@/sdk/BApi2";
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
 import {
   AiOutlineArrowLeft,
   AiOutlineExpand,
@@ -16,23 +17,29 @@ import {
   AiOutlinePlus,
 } from "react-icons/ai";
 
-import CanvasNode from "./CanvasNode";
-import InspectorPanel from "./InspectorPanel";
-import NodePalette from "./NodePalette";
-import { useCanvasView } from "./useCanvasView";
-import { useChainDrag } from "./useChainDrag";
 import { getWorkflowActivityUI } from "../Activities";
 import { getWorkflowTriggerUI } from "../Triggers";
 import ItemTypePill from "../ItemTypePill";
 import ManualRunModal from "../ManualRunModal";
 import WorkflowRunsDrawer from "../WorkflowRunsDrawer";
-import { activityDisplayName, triggerDisplayName } from "../displayNames";
+import { triggerDisplayName } from "../displayNames";
 import { classifyActivity } from "../activityFit";
 import { descriptorAccepts, walkChain } from "../chainWalk";
 import { WorkflowItemTypeIndex } from "../itemTypeRegistry";
+import { workflowItemTypeDisplayName } from "../itemTypes";
+import { workflowLabel } from "../builtinLabels";
+import { workflowDescription } from "../metadata";
+import WorkflowDiagnostics from "../WorkflowDiagnostics";
+import { useDraftWorkflowValidation } from "../useWorkflowValidation";
+
+import { useChainDrag } from "./useChainDrag";
+import { useCanvasView } from "./useCanvasView";
+import NodePalette from "./NodePalette";
+import InspectorPanel from "./InspectorPanel";
+import CanvasNode from "./CanvasNode";
 
 import BApi from "@/sdk/BApi";
-import { Button, Input, Spinner, Switch, toast } from "@/components/bakaui";
+import { Button, Input, Spinner, Switch, Textarea, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { WorkflowActivityErrorBehavior } from "@/sdk/constants";
 
@@ -58,9 +65,10 @@ interface Props {
 
 function activityVmToDraft(a: ActivityVm): ActivityDraft {
   return {
-    clientId: crypto.randomUUID(),
+    clientId: uuidv4(),
     kind: a.kind,
     configJson: a.configJson,
+    notes: a.notes ?? undefined,
     onItemError: a.onItemError as WorkflowActivityErrorBehavior,
   };
 }
@@ -86,6 +94,15 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
 
   const [name, setName] = useState(
     workflow?.name ?? seed?.name ?? (seed?.nameKey ? t<string>(seed.nameKey) : ""),
+  );
+  // Existing user workflows keep their names; built-in edits create a localized copy.
+  const displayName = workflowLabel({ name, isBuiltin: workflow?.isBuiltin }, t);
+  const [description, setDescription] = useState(
+    workflow
+      ? workflowDescription(workflow, t)
+      : seed?.descriptionKey
+        ? t<string>(seed.descriptionKey)
+        : "",
   );
   const [triggerKind, setTriggerKind] = useState(initialTriggerKind);
   const [enabled, setEnabled] = useState(workflow?.enabled ?? true);
@@ -168,9 +185,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
   );
 
   const itemTypeName = (tag: string) =>
-    t<string>(`workflow.itemType.${tag}.displayName`, {
-      defaultValue: itemTypes?.get(tag)?.displayName ?? tag,
-    });
+    workflowItemTypeDisplayName(t, tag, itemTypes?.get(tag)?.displayName);
 
   // Palette: every activity (except the hidden AI bridge) grouped, with tail-fit / reason.
   const paletteEntries = useMemo<PaletteEntry[]>(() => {
@@ -183,9 +198,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
       .map((d) => {
         const fitResult = classifyActivity(d, tail, itemTypes);
         const fit =
-          fitResult === null || (fitResult.fit === "bridge" && !aiAvailable)
-            ? null
-            : fitResult.fit;
+          fitResult === null || (fitResult.fit === "bridge" && !aiAvailable) ? null : fitResult.fit;
 
         return {
           descriptor: d,
@@ -208,7 +221,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
     const ui = getWorkflowActivityUI(kind);
 
     return {
-      clientId: crypto.randomUUID(),
+      clientId: uuidv4(),
       kind,
       configJson: configJson ?? (ui ? ui.serializeConfig(ui.defaultConfig()) : "{}"),
       onItemError: WorkflowActivityErrorBehavior.Fail,
@@ -221,7 +234,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
     if (!aiUi) return null;
 
     return {
-      clientId: crypto.randomUUID(),
+      clientId: uuidv4(),
       kind: AI_TRANSFORM_KIND,
       configJson: aiUi.serializeConfig({
         ...(aiUi.defaultConfig() as object),
@@ -338,27 +351,39 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
             : ""
           : "";
 
+  const validation = useDraftWorkflowValidation({
+    triggerKind,
+    triggerFilterJson: triggerUi?.serializeFilter(filter) ?? undefined,
+    activities: drafts.map(({ clientId, ...draft }) => ({ ...draft, nodeId: clientId })),
+  });
+
   const handleSave = async () => {
     if (!isValid || !triggerUi || saving) return;
     setSaving(true);
     const payload = {
-      name,
+      name: workflow?.isBuiltin
+        ? t<string>("workflow.editor.copyName", { name: displayName })
+        : name,
+      description,
       triggerFilterJson: triggerUi.serializeFilter(filter) ?? undefined,
       enabled,
       activities: drafts.map((a) => ({
         kind: a.kind,
         configJson: a.configJson,
+        notes: a.notes ?? undefined,
         onItemError: a.onItemError,
       })),
     };
 
     try {
-      if (isEditing) {
-        await BApi.workflow.patchWorkflow(workflow!.id, payload);
+      if (isEditing && !workflow?.isBuiltin) {
+        const rsp = await BApi.workflow.patchWorkflow(workflow!.id, payload);
+
+        if (rsp.code) throw new Error(rsp.message ?? "save failed");
       } else {
         const rsp = await BApi.workflow.addWorkflow({ ...payload, triggerKind });
 
-        if (rsp.code) throw new Error(rsp.message ?? "save failed");
+        if (rsp.code || !rsp.data) throw new Error(rsp.message ?? "save failed");
         // Stay in the editor, now editing the created definition.
         navigate(`/workflows/editor?id=${rsp.data!.id}`, { replace: true });
       }
@@ -374,10 +399,18 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
     if (!workflow) return;
     const trigger = triggers.find((x) => x.kind === workflow.triggerKind);
 
+    if (trigger?.supportsManualRun === false) {
+      const entry = getWorkflowTriggerUI(workflow.triggerKind)?.runEntry;
+
+      if (entry) navigate(entry.path);
+
+      return;
+    }
+
     if (trigger?.requiresManualPayload) {
       createPortal(ManualRunModal, {
         workflowId: workflow.id,
-        workflowName: name,
+        workflowName: displayName,
         trigger,
         onRan: () => setRunsOpen(true),
       });
@@ -410,6 +443,9 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
   }
 
   const TriggerSummary = triggerUi?.FilterSummary;
+  const runTrigger = triggers.find((item) => item.kind === workflow?.triggerKind);
+  const managedRun = runTrigger?.supportsManualRun === false;
+  const runEntry = getWorkflowTriggerUI(workflow?.triggerKind ?? "")?.runEntry;
 
   return (
     <div className="flex flex-col gap-0 h-[calc(100vh-16px)] min-h-0">
@@ -421,9 +457,10 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
         <Input
           className="w-56"
           isInvalid={!isNameValid}
+          isReadOnly={workflow?.isBuiltin}
           placeholder={t<string>("workflow.field.name")}
           size="sm"
-          value={name}
+          value={displayName}
           onValueChange={setName}
         />
         <Switch isSelected={enabled} size="sm" onValueChange={setEnabled}>
@@ -442,12 +479,17 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
               {t<string>("workflow.runs.title")}
             </Button>
             <Button
+              isDisabled={!runTrigger || (managedRun && !runEntry)}
               size="sm"
               startContent={<AiOutlinePlayCircle />}
               variant="flat"
               onPress={handleRun}
             >
-              {t<string>("workflow.manualRun.tooltip")}
+              {t<string>(
+                managedRun
+                  ? (runEntry?.labelKey ?? "workflow.entry.managed")
+                  : "workflow.manualRun.tooltip",
+              )}
             </Button>
           </>
         )}
@@ -458,10 +500,29 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
           size="sm"
           onPress={handleSave}
         >
-          {t<string>("workflow.editor.save")}
+          {t<string>(workflow?.isBuiltin ? "workflow.editor.saveAsCopy" : "workflow.editor.save")}
         </Button>
       </div>
 
+      {workflow?.isBuiltin && (
+        <p className="mb-2 px-1 text-xs leading-relaxed text-default-500">
+          {t<string>("workflow.editor.builtinCopyHint")}
+        </p>
+      )}
+      <details className="mb-2 rounded-lg bg-default-50 px-3 py-2">
+        <summary className="w-fit cursor-pointer text-xs font-medium text-default-600">
+          {t<string>("workflow.field.description")}
+        </summary>
+        <Textarea
+          className="mt-2"
+          isReadOnly={workflow?.isBuiltin}
+          label={t<string>("workflow.field.description")}
+          minRows={2}
+          placeholder={t<string>("workflow.field.descriptionPlaceholder")}
+          value={description}
+          onValueChange={setDescription}
+        />
+      </details>
       {/* Three zones */}
       <div className="flex-1 min-h-0 grid grid-cols-[230px_1fr_300px] max-md:grid-cols-1 gap-0 border border-default-200 rounded-xl overflow-hidden">
         {/* Palette */}
@@ -488,74 +549,79 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
           onPointerDown={canvasView.onPanPointerDown}
         >
           <div ref={canvasView.worldRef} className="w-max origin-top-left will-change-transform">
-          <div className="flex items-center min-h-[140px] w-max pr-8">
-            {/* Trigger node */}
-            <div
-              className={`rounded-xl border-1.5 border-secondary/50 bg-content1 px-3 py-2 min-w-[150px] max-w-[220px]
+            <div className="flex items-center min-h-[140px] w-max pr-8">
+              {/* Trigger node */}
+              <div
+                className={`rounded-xl border-1.5 border-secondary/50 bg-content1 px-3 py-2 min-w-[150px] max-w-[220px]
                 cursor-pointer select-none shrink-0 ${selection === "trigger" ? "ring-2 ring-primary/60" : ""}`}
-              role="button"
-              tabIndex={0}
-              onClick={() => setSelection("trigger")}
-              onKeyDown={(e) => e.key === "Enter" && setSelection("trigger")}
-            >
-              <div className="text-[10px] tracking-wide text-secondary">
-                {t<string>("workflow.editor.category.trigger")}
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelection("trigger")}
+                onKeyDown={(e) => e.key === "Enter" && setSelection("trigger")}
+              >
+                <div className="text-[10px] tracking-wide text-secondary">
+                  {t<string>("workflow.editor.category.trigger")}
+                </div>
+                <div className="text-[13px] font-semibold leading-tight">
+                  {triggerDisplayName(
+                    t,
+                    triggerKind,
+                    triggers.find((x) => x.kind === triggerKind)?.displayName,
+                  )}
+                </div>
+                <div className="text-[10.5px] text-default-500 truncate max-w-[200px]">
+                  {TriggerSummary && filter != null ? <TriggerSummary filter={filter} /> : null}
+                </div>
               </div>
-              <div className="text-[13px] font-semibold leading-tight">
-                {triggerDisplayName(
-                  t,
-                  triggerKind,
-                  triggers.find((x) => x.kind === triggerKind)?.displayName,
-                )}
-              </div>
-              <div className="text-[10.5px] text-default-500 truncate max-w-[200px]">
-                {TriggerSummary && filter != null ? <TriggerSummary filter={filter} /> : null}
-              </div>
-            </div>
 
-            {startItemType && (
-              <ItemTypePill horizontal index={itemTypes} itemType={startItemType} />
-            )}
+              {startItemType && (
+                <ItemTypePill horizontal index={itemTypes} itemType={startItemType} />
+              )}
 
-            <Slot active={drag.activeSlot?.index === 0} index={0} />
+              <Slot active={drag.activeSlot?.index === 0} index={0} />
 
-            {drafts.map((draft, i) => (
-              <React.Fragment key={draft.clientId}>
-                <CanvasNode
-                  descriptor={descriptorByKind.get(draft.kind)}
-                  dragSource={drag.dragging?.fromIdx === i}
-                  draft={draft}
-                  incompatible={chain ? !chain.steps[i]?.compatible : false}
-                  index={i}
-                  selected={selection === i}
-                  onDelete={() => removeAt(i)}
-                  onMove={(direction) => {
-                    const to = direction === -1 ? i - 1 : i + 2;
+              {drafts.map((draft, i) => (
+                <React.Fragment key={draft.clientId}>
+                  <CanvasNode
+                    descriptor={descriptorByKind.get(draft.kind)}
+                    draft={draft}
+                    dragSource={drag.dragging?.fromIdx === i}
+                    hasValidationError={validation.result?.diagnostics.some(
+                      (diagnostic) =>
+                        diagnostic.severity === "error" &&
+                        (diagnostic.nodeId === draft.clientId || diagnostic.nodeIndex === i),
+                    )}
+                    incompatible={chain ? !chain.steps[i]?.compatible : false}
+                    index={i}
+                    selected={selection === i}
+                    onDelete={() => removeAt(i)}
+                    onMove={(direction) => {
+                      const to = direction === -1 ? i - 1 : i + 2;
 
-                    if (to >= 0 && to <= drafts.length) moveTo(i, to);
-                  }}
-                  onPointerDown={(ev) => drag.startNodeDrag(ev, draft.kind, i)}
-                  onSelect={() => setSelection(i)}
-                />
-                {chain && (
-                  <ItemTypePill
-                    horizontal
-                    index={itemTypes}
-                    invalid={i + 1 < drafts.length && !chain.steps[i + 1]?.compatible}
-                    itemType={chain.steps[i].typeAfter}
+                      if (to >= 0 && to <= drafts.length) moveTo(i, to);
+                    }}
+                    onPointerDown={(ev) => drag.startNodeDrag(ev, draft.kind, i)}
+                    onSelect={() => setSelection(i)}
                   />
-                )}
-                <Slot active={drag.activeSlot?.index === i + 1} index={i + 1} />
-              </React.Fragment>
-            ))}
+                  {chain && (
+                    <ItemTypePill
+                      horizontal
+                      index={itemTypes}
+                      invalid={i + 1 < drafts.length && !chain.steps[i + 1]?.compatible}
+                      itemType={chain.steps[i].typeAfter}
+                    />
+                  )}
+                  <Slot active={drag.activeSlot?.index === i + 1} index={i + 1} />
+                </React.Fragment>
+              ))}
 
-            {/* End cap / empty-state guidance */}
-            <div className="rounded-xl border-1.5 border-dashed border-default-300 px-3 py-2 text-[11.5px] text-default-500 min-w-[130px] max-w-[210px] shrink-0">
-              {drafts.length === 0
-                ? t<string>("workflow.editor.canvas.empty")
-                : t<string>("workflow.editor.canvas.end")}
+              {/* End cap / empty-state guidance */}
+              <div className="rounded-xl border-1.5 border-dashed border-default-300 px-3 py-2 text-[11.5px] text-default-500 min-w-[130px] max-w-[210px] shrink-0">
+                {drafts.length === 0
+                  ? t<string>("workflow.editor.canvas.empty")
+                  : t<string>("workflow.editor.canvas.end")}
+              </div>
             </div>
-          </div>
           </div>
 
           {/* View toolbar — fixed to the canvas, outside the transformed world. */}
@@ -600,11 +666,11 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
 
           {/* Remove zone — appears while dragging an existing node; pinned to the canvas. */}
           <div
+            data-remove-zone
             className={`absolute bottom-2 left-1/2 -translate-x-1/2 z-10 rounded-lg border-1.5 border-dashed border-danger
               px-5 py-1 text-xs text-danger transition-opacity
               ${drag.dragging && drag.dragging.fromIdx != null ? "opacity-100" : "opacity-0 pointer-events-none"}
               ${drag.overRemove ? "bg-danger/20" : "bg-danger/5"}`}
-            data-remove-zone
           >
             {t<string>("workflow.editor.canvas.removeZone")}
           </div>
@@ -612,7 +678,17 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
 
         {/* Inspector */}
         <div className="border-l border-default-200 max-md:border-l-0 max-md:border-t p-3 min-h-0 overflow-y-auto">
+          <div className="mb-4 border-b border-default-200 pb-3">
+            <WorkflowDiagnostics
+              failed={validation.failed}
+              loading={validation.loading}
+              result={validation.result}
+              onCheck={validation.retry}
+              onSelectNode={setSelection}
+            />
+          </div>
           <InspectorPanel
+            descriptors={allDescriptors}
             drafts={drafts}
             filter={filter}
             selection={selection}
@@ -633,7 +709,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
           isOpen={runsOpen}
           triggerKind={workflow.triggerKind}
           workflowDefinitionId={workflow.id}
-          workflowName={name}
+          workflowName={displayName}
           onClose={() => setRunsOpen(false)}
         />
       )}

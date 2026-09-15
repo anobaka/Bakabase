@@ -5,7 +5,7 @@ import type { ResourceTag } from "@/sdk/constants";
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TbSwitch2, TbFilter, TbFilterStar } from "react-icons/tb";
+import { TbFilterPlus } from "react-icons/tb";
 
 import FilterAddPopoverContent from "../FilterAddPopoverContent";
 import { useFilterConfig } from "../../context/FilterContext";
@@ -14,7 +14,7 @@ import {
   getRangeFilterOperations,
 } from "../../utils/simpleFilterOperations";
 
-import { Button, Popover, Tooltip } from "@/components/bakaui";
+import { Button, Popover } from "@/components/bakaui";
 import { FilterDisplayMode } from "@/sdk/constants";
 
 export interface FilterPortalProps {
@@ -113,68 +113,79 @@ const FilterPortal = ({
     });
   };
 
-  if (mode === FilterDisplayMode.Simple) {
-    // Simple mode: button with tooltip for mode switch
-    return (
-      <Tooltip
-        content={
+  return (
+    <div className="flex max-w-full flex-wrap items-center gap-2">
+      {mode === FilterDisplayMode.Simple ? (
+        <Button
+          color="primary"
+          size="sm"
+          variant="flat"
+          startContent={<TbFilterPlus className="text-base" />}
+          onPress={handleSimpleModeAddFilter}
+        >
+          {t<string>("resourceFilter.toolbar.addCondition")}
+        </Button>
+      ) : (
+        <Popover
+          isOpen={popoverOpen}
+          placement="bottom-start"
+          trigger={
+            <Button
+              color="primary"
+              size="sm"
+              variant="flat"
+              startContent={<TbFilterPlus className="text-base" />}
+            >
+              {t<string>("resourceFilter.toolbar.addCondition")}
+            </Button>
+          }
+          onOpenChange={setPopoverOpen}
+        >
+          <FilterAddPopoverContent
+            selectedTags={selectedTags}
+            showRecentFilters={showRecentFilters}
+            showTags={showTags}
+            onAddFilter={onAddFilter}
+            onAddFilterGroup={onAddFilterGroup}
+            onClose={() => setPopoverOpen(false)}
+            onSelectFilters={onSelectFilters}
+            onTagsChange={onTagsChange}
+          />
+        </Popover>
+      )}
+      <div
+        role="group"
+        aria-label={t<string>("resourceFilter.toolbar.mode")}
+        className="inline-flex items-center rounded-lg bg-default-100/70 p-0.5"
+      >
+        {[FilterDisplayMode.Simple, FilterDisplayMode.Advanced].map((value) => (
           <Button
-            color="primary"
+            key={value}
+            aria-pressed={mode === value}
             size="sm"
             variant="light"
-            onPress={() => onModeChange(FilterDisplayMode.Advanced)}
+            className={`h-7 min-w-0 px-2.5 text-xs ${mode === value ? "bg-content1 font-medium text-foreground shadow-sm" : "text-default-500"}`}
+            title={t<string>(
+              value === FilterDisplayMode.Simple
+                ? "resourceFilter.toolbar.simpleHint"
+                : "resourceFilter.toolbar.advancedHint",
+            )}
+            onPress={() => {
+              if (mode !== value) {
+                setPopoverOpen(false);
+                onModeChange(value);
+              }
+            }}
           >
-            <TbSwitch2 className="text-lg" />
-            {t<string>("resourceFilter.switchToAdvancedMode")}
+            {t<string>(
+              value === FilterDisplayMode.Simple
+                ? "resourceFilter.toolbar.simple"
+                : "resourceFilter.toolbar.advanced",
+            )}
           </Button>
-        }
-        delay={1000}
-        placement="right"
-      >
-        <Button isIconOnly size="md" onPress={handleSimpleModeAddFilter}>
-          <TbFilter className="text-lg" />
-        </Button>
-      </Tooltip>
-    );
-  }
-
-  // Advanced mode: button with popover for all options
-  return (
-    <Popover
-      showArrow
-      isOpen={popoverOpen}
-      placement="bottom"
-      trigger={
-        <Button isIconOnly color="primary" size="md">
-          <TbFilterStar className="text-lg" />
-        </Button>
-      }
-      onOpenChange={setPopoverOpen}
-    >
-      <FilterAddPopoverContent
-        selectedTags={selectedTags}
-        showRecentFilters={showRecentFilters}
-        showTags={showTags}
-        onAddFilter={(autoTrigger) => {
-          setPopoverOpen(false);
-          onAddFilter(autoTrigger);
-        }}
-        onAddFilterGroup={() => {
-          setPopoverOpen(false);
-          onAddFilterGroup();
-        }}
-        onClose={() => setPopoverOpen(false)}
-        onSelectFilters={(filters) => {
-          setPopoverOpen(false);
-          onSelectFilters(filters);
-        }}
-        onSwitchToSimpleMode={() => {
-          setPopoverOpen(false);
-          onModeChange(FilterDisplayMode.Simple);
-        }}
-        onTagsChange={onTagsChange}
-      />
-    </Popover>
+        ))}
+      </div>
+    </div>
   );
 };
 

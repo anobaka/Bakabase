@@ -1,4 +1,5 @@
-"use client";
+import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
+("use client");
 
 import type { components } from "@/sdk/BApi2";
 
@@ -15,6 +16,7 @@ import SubscriptionEditor from "@/components/Subscription/SubscriptionEditor";
 import { getProviderUI } from "@/components/Subscription/Providers";
 import ThirdPartyLabel from "@/components/ThirdPartyLabel";
 import BApi from "@/sdk/BApi";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import { Button, Chip, Modal, Spinner, Switch, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -130,21 +132,16 @@ const SubscriptionPage: React.FC = () => {
 
   const handleToggleEnabled = async (sub: SubscriptionVm, next: boolean) => {
     await BApi.subscription.patchSubscription(sub.id, { enabled: next });
-    setSubscriptions((s) =>
-      s.map((x) => (x.id === sub.id ? { ...x, enabled: next } : x)),
-    );
+    setSubscriptions((s) => s.map((x) => (x.id === sub.id ? { ...x, enabled: next } : x)));
   };
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-lg font-semibold">{t<string>("subscription.title")}</h2>
-        <Button
-          color="primary"
-          size="sm"
-          startContent={<PlusCircleOutlined />}
-          onPress={handleAdd}
-        >
+        <HelpCenterButton topic="subscription" />
+        <WorkflowIntegrationHint surface="subscription" />
+        <Button color="primary" size="sm" startContent={<PlusCircleOutlined />} onPress={handleAdd}>
           {t<string>("subscription.action.add")}
         </Button>
       </div>
@@ -154,17 +151,13 @@ const SubscriptionPage: React.FC = () => {
           <Spinner size="lg" />
         </div>
       ) : subscriptions.length === 0 ? (
-        <div className="text-center text-default-500 py-10">
-          {t<string>("subscription.empty")}
-        </div>
+        <div className="text-center text-default-500 py-10">{t<string>("subscription.empty")}</div>
       ) : (
         <div className="flex flex-col gap-2">
           {subscriptions.map((sub) => {
             const providerUi = getProviderUI(sub.kind);
             const providerVm = providers.find((p) => p.kind === sub.kind);
-            const targetObj = providerUi
-              ? providerUi.parseTarget(sub.targetJson)
-              : null;
+            const targetObj = providerUi ? providerUi.parseTarget(sub.targetJson) : null;
             const SummaryComponent = providerUi?.Summary;
 
             return (
@@ -197,9 +190,7 @@ const SubscriptionPage: React.FC = () => {
                       })}
                     </Chip>
                   </div>
-                  {SummaryComponent && targetObj && (
-                    <SummaryComponent target={targetObj} />
-                  )}
+                  {SummaryComponent && targetObj && <SummaryComponent target={targetObj} />}
                   <div className="text-xs text-default-400 flex flex-wrap gap-x-3 gap-y-1">
                     <span>
                       {t<string>("subscription.status.lastChecked")}:{" "}
@@ -231,12 +222,7 @@ const SubscriptionPage: React.FC = () => {
                   >
                     <ReloadOutlined className="text-lg" />
                   </Button>
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    onPress={() => handleEdit(sub)}
-                  >
+                  <Button isIconOnly size="sm" variant="light" onPress={() => handleEdit(sub)}>
                     <EditOutlined className="text-lg" />
                   </Button>
                   <Button

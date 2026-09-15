@@ -83,6 +83,10 @@ internal static class PropertyInternals
                     (int) ResourceProperty.Source, PropertyType.MultipleChoice),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
                     (int) ResourceProperty.HealthScore, PropertyType.Number),
+                new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
+                    (int) ResourceProperty.CollectionMulti, PropertyType.MultipleChoice),
+                new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
+                    (int) ResourceProperty.HasLocalPath, PropertyType.Boolean),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
                     (int) ResourceProperty.Rating, PropertyType.Rating),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
@@ -111,6 +115,8 @@ internal static class PropertyInternals
                 ResourceProperty.ParentResource,
                 ResourceProperty.Source,
                 ResourceProperty.HealthScore,
+                ResourceProperty.CollectionMulti,
+                ResourceProperty.HasLocalPath,
             }.ToDictionary(d => d, d => BuiltinPropertyMap[d]));
 
     /// <summary>

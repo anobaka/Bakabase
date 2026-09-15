@@ -15,6 +15,7 @@ using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.Infrastructures.Resources;
 using Bakabase.InsideWorld.Business;
+using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.HealthScore.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
@@ -42,6 +43,7 @@ namespace Bakabase.Service.Components
                 Assembly.GetAssembly(SpecificTypeUtils<ResourceOptions>.Type)!,
                 Assembly.GetAssembly(SpecificTypeUtils<UIOptions>.Type)!,
                 Assembly.GetAssembly(SpecificTypeUtils<TaskOptions>.Type)!,
+                typeof(AcquisitionOptions).Assembly,
             ];
 
         protected override string OverrideFeAddress(string feAddress)
@@ -141,6 +143,9 @@ namespace Bakabase.Service.Components
             // during host start before MigrateDb has executed.
             await serviceProvider.GetRequiredService<IHealthScoreCacheWarmer>().WarmAsync();
 
+            // Resolved so it exists and has subscribed; it has no other job.
+            serviceProvider.GetRequiredService<Components.Collections.CollectionRuleIndexInvalidator>();
+
             var dynamicTaskRegistry = serviceProvider.GetRequiredService<DynamicTaskRegistry>();
             var taskManager = serviceProvider.GetRequiredService<BTaskManager>();
 
@@ -159,6 +164,22 @@ namespace Bakabase.Service.Components
                     .GetRequiredService<Bakabase.Modules.Workflow.Components.WorkflowRunRehydrator<BakabaseDbContext>>();
                 await rehydrator.MarkInterruptedRunsAsync();
                 await rehydrator.ReEnqueuePendingRunsAsync();
+            }
+
+            // The built-in acquisition recipes are seeded by name, once each. A recipe whose steps
+            // this build does not have yet is skipped and seeded by a later release instead.
+            await using (var acquisitionScope = serviceProvider.CreateAsyncScope())
+            {
+                await acquisitionScope.ServiceProvider
+                    .GetRequiredService<Bakabase.Modules.Acquisition.Components.AcquisitionRecipeSeeder<
+                        BakabaseDbContext>>()
+                    .SeedAsync();
+                await acquisitionScope.ServiceProvider
+                    .GetRequiredService<Components.Downloader.DownloadResultWorkflowService>()
+                    .SeedAsync();
+                await acquisitionScope.ServiceProvider
+                    .GetRequiredService<Bakabase.InsideWorld.Business.Components.PostParser.Workflow.PostParserWorkflowService<BakabaseDbContext>>()
+                    .SeedAsync();
             }
 
             // Resource move records survive restarts too, but a half-done physical move is not

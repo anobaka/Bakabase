@@ -10,16 +10,14 @@ import { MdSavedSearch, MdEdit } from "react-icons/md";
 import { Button, Input, Tooltip } from "@/components/bakaui";
 import { useResourceOptionsStore } from "@/stores/options";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
+import { FilterDisplayMode } from "@/sdk/constants";
 import BApi from "@/sdk/BApi.tsx";
 import ResourceTabContent from "@/pages/resource/components/ResourceTabContent";
 import RecentlyPlayedDrawer from "@/pages/resource/components/RecentlyPlayedDrawer";
 import SearchSummary from "@/pages/resource/components/SearchSummary";
 import { buildAutoTabName } from "@/pages/resource/utils/buildAutoTabName";
 
-type SavedSearch =
-  components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SavedSearch"];
-
-type SearchForm = components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchDbModel"];
+type SearchForm = components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
 
 const MaxMountedTabs = 10;
 
@@ -86,6 +84,7 @@ const ResourcePage = () => {
   }, []);
 
   const creatingTabRef = useRef(false);
+  const [isCreatingTab, setIsCreatingTab] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -107,48 +106,19 @@ const ResourcePage = () => {
 
   const handleOpenRecentlyPlayed = useCallback(() => setRecentlyPlayedOpen(true), []);
 
-  // Handle initial options loading
-  useEffect(() => {
-    if (optionsInitialized.current) {
-      return;
-    }
-    if (resourceOptions.initialized) {
-      const ss1 = resourceOptions.data.savedSearches ?? [];
-
-      if (ss1.length == 0) {
-        searchInNewTab({ page: 1, pageSize: 50 });
-      } else {
-        setSavedSearches(ss1);
-
-        // Try to restore the previously active tab from localStorage
-        const savedActiveTabId = localStorage.getItem("resource-active-tab-id");
-        const savedTabExists = savedActiveTabId && ss1.some((s) => s.id === savedActiveTabId);
-
-        // Use saved tab if it exists, otherwise default to first tab
-        changeTab(savedTabExists ? savedActiveTabId : ss1[0].id);
-      }
-      optionsInitialized.current = true;
-    }
-  }, [resourceOptions.initialized]);
-
-  // Handle pending search from store (e.g., from ChildrenModal)
-  useEffect(() => {
-    if (!optionsInitialized.current) {
-      return;
-    }
-    if (pendingSearch) {
-      consumePendingSearch(); // Clear the pending search
-      searchInNewTab(pendingSearch);
-    }
-  }, [pendingSearch]);
-
   const searchInNewTab = useCallback(
     async (f: SearchForm) => {
       if (creatingTabRef.current) return;
       creatingTabRef.current = true;
+      setIsCreatingTab(true);
 
       try {
-        const newSearch = (await BApi.resource.saveNewResourceSearch({ search: f })).data;
+        const newSearch = (
+          await BApi.resource.saveNewResourceSearch({
+            search: f,
+            displayMode: FilterDisplayMode.Simple,
+          })
+        ).data;
 
         if (!newSearch) return;
 
@@ -156,10 +126,50 @@ const ResourcePage = () => {
         changeTab(newSearch.id);
       } finally {
         creatingTabRef.current = false;
+        setIsCreatingTab(false);
       }
     },
     [changeTab],
   );
+
+  // Initialize saved tabs and apply incoming searches in one place. An incoming
+  // search must win over the default tab, including when options arrive later.
+  useEffect(() => {
+    if (!resourceOptions.initialized) return;
+    let needsInitialTab = false;
+
+    if (!optionsInitialized.current) {
+      optionsInitialized.current = true;
+      const saved = resourceOptions.data.savedSearches ?? [];
+
+      setSavedSearches(saved);
+      needsInitialTab = saved.length === 0;
+      if (saved.length > 0) {
+        const savedActiveTabId = localStorage.getItem("resource-active-tab-id");
+        const savedTabExists = savedActiveTabId && saved.some((s) => s.id === savedActiveTabId);
+
+        changeTab(savedTabExists ? savedActiveTabId : saved[0].id);
+      }
+    }
+
+    // Leave a newly arrived search in the store while another tab is saving.
+    // Completion changes isCreatingTab so it can be picked up without being lost.
+    if (creatingTabRef.current) return;
+    // Read and consume the live store value, not a closure from an earlier render.
+    const incoming = consumePendingSearch();
+
+    if (incoming || needsInitialTab) {
+      void searchInNewTab(incoming ?? { page: 1, pageSize: 50 });
+    }
+  }, [
+    resourceOptions.initialized,
+    resourceOptions.data.savedSearches,
+    pendingSearch,
+    isCreatingTab,
+    consumePendingSearch,
+    searchInNewTab,
+    changeTab,
+  ]);
 
   // The displayed name uses the user-set name when present, otherwise an
   // auto-generated combination of the current filter values reported by the
@@ -272,14 +282,13 @@ const ResourcePage = () => {
               >
                 <Button
                   className="gap-1 pr-1"
+                  color={isActive ? "primary" : "default"}
+                  size="sm"
                   onPress={() => {
                     if (!isActive) {
                       changeTab(s.id);
                     }
                   }}
-                  size="sm"
-                  // variant="flat"
-                  color={isActive ? "primary" : "default"}
                 >
                   {/* The tab name is renameable, but nothing said so. Swapping the
                       saved-search glyph for a pencil on hover advertises it, and makes

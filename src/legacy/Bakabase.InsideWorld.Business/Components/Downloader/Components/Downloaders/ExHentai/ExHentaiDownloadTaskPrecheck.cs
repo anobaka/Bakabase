@@ -95,7 +95,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             IDictionary<string, HashSet<string>> torrentsByFolder)
         {
             // A task that opted out of torrents downloads images; none of this says anything about it.
-            if (!taskOptions.PreferTorrent || task.Type != (int) ExHentaiDownloadTaskType.SingleWork)
+            // A configured handoff must pass through the producer, which durably records or
+            // recovers the metadata before completion. A file or old stamp alone is insufficient.
+            if (taskOptions.DownloadResultWorkflowId.HasValue ||
+                !taskOptions.PreferTorrent || task.Type != (int) ExHentaiDownloadTaskType.SingleWork)
             {
                 return null;
             }

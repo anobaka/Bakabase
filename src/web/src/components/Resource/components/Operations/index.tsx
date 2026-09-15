@@ -177,7 +177,8 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
   // resource has a backing local path (see ContextMenuItems/index.tsx).
   const showOpenFolder = displayOperations.includes("openFolder") && !!resource.path;
   const showEnhancements = displayOperations.includes("enhancements");
-  const showPreview = displayOperations.includes("preview");
+  // Previewing means opening the resource's files; a resource with none has nothing to show.
+  const showPreview = displayOperations.includes("preview") && !!resource.path;
   const showAddToPlaylist = displayOperations.includes("addToPlaylist");
   const showMove = displayOperations.includes("move") && !!resource.path;
   const showDelete = displayOperations.includes("delete");
@@ -316,12 +317,6 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
           },
         },
         {
-          key: "preview",
-          icon: <AiOutlinePicture />,
-          label: t<string>("resource.operation.preview"),
-          onAction: showResourceMediaPlayer,
-        },
-        {
           key: "addToPlaylist",
           icon: <VideoCameraAddOutlined />,
           label: t<string>("resource.operation.addToPlaylist"),
@@ -339,6 +334,14 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
         },
       ];
       if (resource.path) {
+        // Both of these act on the resource's files; a resource with none has nothing to show or
+        // move, the same reason the explicit-selection path gates them.
+        items.push({
+          key: "preview",
+          icon: <AiOutlinePicture />,
+          label: t<string>("resource.operation.preview"),
+          onAction: showResourceMediaPlayer,
+        });
         items.push({
           key: "move",
           icon: <ExportOutlined />,

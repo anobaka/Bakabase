@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
@@ -13,6 +14,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi.Models;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 using Bakabase.Abstractions.Components.Text;
+using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
 
@@ -87,6 +89,8 @@ public class BangumiEnhancer(
 
         if (detail != null)
         {
+            await RememberWhichSubject(resource, detail, logCollector, ct);
+
             var ctx = new BangumiEnhancerContext
             {
                 Name = detail.Name,
@@ -120,6 +124,52 @@ public class BangumiEnhancer(
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Records which subject this resource turned out to be.
+    /// <para>
+    /// The enhancer has just done the hardest part — deciding that this folder is that work — and
+    /// without writing it down the answer is thrown away and re-derived by search every time.
+    /// With it, the resource has an identity: a series subscription recognises it instead of
+    /// creating a second copy, and a later enhancement starts from the subject rather than the
+    /// filename.
+    /// </para>
+    /// </summary>
+    private async Task RememberWhichSubject(Resource resource, BangumiDetail detail,
+        EnhancementLogCollector logCollector, CancellationToken ct)
+    {
+        if (detail.SubjectId is not { } subjectId) return;
+
+        var identities = serviceProvider.GetService(typeof(IResourceExternalIdentityService))
+            as IResourceExternalIdentityService;
+
+        if (identities == null) return;
+
+        try
+        {
+            await identities.EnsureIdentities(resource.Id,
+            [
+                new ResourceExternalIdentity
+                {
+                    ResourceId = resource.Id,
+                    ThirdPartyId = ThirdPartyId.Bangumi,
+                    ExternalId = subjectId,
+                    CoverUrls = string.IsNullOrEmpty(detail.CoverUrl) ? null : [detail.CoverUrl],
+                }
+            ]);
+
+            logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                $"Identified as Bangumi subject {subjectId}",
+                new {SubjectId = subjectId, detail.DetailUrl});
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The identity is a bonus, not the job. Failing to record it must not lose the
+            // metadata the enhancer actually came for.
+            Logger.LogWarning(ex, "[Bangumi] Could not record subject {SubjectId} for resource {ResourceId}",
+                subjectId, resource.Id);
+        }
     }
 
     protected override EnhancerId TypedId => EnhancerId.Bangumi;

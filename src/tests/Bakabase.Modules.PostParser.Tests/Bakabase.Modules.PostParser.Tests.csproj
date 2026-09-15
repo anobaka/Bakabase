@@ -1,0 +1,5 @@
+<Project Sdk="MSTest.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../modules/Bakabase.Modules.PostParser/Bakabase.Modules.PostParser.csproj" />
+  </ItemGroup>
+</Project>

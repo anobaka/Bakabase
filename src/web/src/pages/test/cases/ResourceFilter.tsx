@@ -1,8 +1,9 @@
 "use client";
 
-import type { SearchFilterGroup } from "@/components/ResourceFilter";
+import type { FilterConfig, SearchFilterGroup } from "@/components/ResourceFilter";
+import type { IProperty } from "@/components/Property/models";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import ReactJson from "react-json-view";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
@@ -15,8 +16,10 @@ import {
   SearchOperation,
   StandardValueType,
 } from "@/sdk/constants";
-import { Card, CardBody, CardHeader, Tabs, Tab } from "@/components/bakaui";
+import { Button, Modal, Card, CardBody, CardHeader, Tabs, Tab } from "@/components/bakaui";
 import { serializeStandardValue } from "@/components/StandardValue/helpers";
+
+import { createResourceFilterFixtureConfig, getFixtureOperations } from "./resourceFilterFixtures";
 
 dayjs.extend(duration);
 
@@ -819,7 +822,23 @@ const createComprehensiveFilterGroup = (): SearchFilterGroup => ({
   ],
 });
 
+const mockProperties: IProperty[] = [
+  mockSingleLineTextProperty, mockMultilineTextProperty, mockSingleChoiceProperty,
+  mockSingleChoiceNoOptionsProperty, mockMultipleChoiceProperty, mockMultipleChoiceNoOptionsProperty,
+  mockNumberProperty, mockPercentageProperty, mockRatingProperty, mockBooleanProperty,
+  mockDateProperty, mockDateTimeProperty, mockTimeProperty, mockTagsProperty,
+  mockTagsNoOptionsProperty, mockMultilevelProperty, mockMultilevelNoOptionsProperty,
+];
+
+type PropertySelection = Parameters<FilterConfig["renderers"]["openPropertySelector"]>;
+
 const ResourceFilterPage = () => {
+  const [propertySelection, setPropertySelection] = useState<PropertySelection>();
+  const fixtureConfig = useMemo(() => createResourceFilterFixtureConfig(
+    mockProperties,
+    (...args) => setPropertySelection(args),
+  ), []);
+
   // Single comprehensive group state for all demos
   const [group, setGroup] = useState<SearchFilterGroup>(createComprehensiveFilterGroup);
 
@@ -836,17 +855,10 @@ const ResourceFilterPage = () => {
     SearchFilterGroup | undefined
   >(undefined);
 
-  // Refs for portal containers
-  const keywordContainerRef = useRef<HTMLDivElement>(null);
-  const filterPortalContainerRef = useRef<HTMLDivElement>(null);
-  const filterGroupsContainerRef = useRef<HTMLDivElement>(null);
-
-  // Force re-render after refs are set
-  const [refsReady, setRefsReady] = useState(false);
-
-  useEffect(() => {
-    setRefsReady(true);
-  }, []);
+  // The tab mounts lazily, so each container must trigger a render when it appears.
+  const [keywordContainer, setKeywordContainer] = useState<HTMLDivElement | null>(null);
+  const [filterPortalContainer, setFilterPortalContainer] = useState<HTMLDivElement | null>(null);
+  const [filterGroupsContainer, setFilterGroupsContainer] = useState<HTMLDivElement | null>(null);
 
   // Get the comprehensive group (static, no state needed for display-only)
   const comprehensiveGroup = createComprehensiveFilterGroup();
@@ -855,9 +867,37 @@ const ResourceFilterPage = () => {
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-2">ResourceFilter Test Page</h1>
       <p className="text-default-500 mb-4">
-        Comprehensive test: All property types + Nested groups (3 levels) + AND/OR combinators
+        Local fixtures: property types, nested groups, AND/OR combinators and sample resource counts.
+        Editing these filters does not save mock properties or recent filters to the server.
       </p>
 
+      {propertySelection && (
+        <Modal
+          visible
+          footer={false}
+          title="Choose a fixture property"
+          onClose={() => {
+            propertySelection[2]?.();
+            setPropertySelection(undefined);
+          }}
+        >
+          <div className="grid grid-cols-2 gap-2">
+            {mockProperties.map((property) => (
+              <Button
+                key={`${property.pool}:${property.id}`}
+                variant="flat"
+                isDisabled={propertySelection[3]?.some((p) => p.pool === property.pool && p.id === property.id)}
+                onPress={() => {
+                  propertySelection[1](property, getFixtureOperations(property.type));
+                  setPropertySelection(undefined);
+                }}
+              >
+                {property.name}
+              </Button>
+            ))}
+          </div>
+        </Modal>
+      )}
       <Tabs aria-label="Filter test sections">
         {/* Comprehensive Comparison Tab - All 4 modes in one view */}
         <Tab key="comprehensive" title="All Modes Comparison">
@@ -874,6 +914,7 @@ const ResourceFilterPage = () => {
               <div className="border border-default-200 rounded p-3">
                 <div className="font-semibold text-primary mb-2">Vertical + Simple</div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="vertical"
                   group={comprehensiveGroup}
@@ -887,6 +928,7 @@ const ResourceFilterPage = () => {
               <div className="border border-default-200 rounded p-3">
                 <div className="font-semibold text-secondary mb-2">Horizontal + Simple</div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="horizontal"
                   group={comprehensiveGroup}
@@ -900,6 +942,7 @@ const ResourceFilterPage = () => {
               <div className="border border-default-200 rounded p-3">
                 <div className="font-semibold text-primary mb-2">Vertical + Advanced</div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="vertical"
                   group={comprehensiveGroup}
@@ -913,6 +956,7 @@ const ResourceFilterPage = () => {
               <div className="border border-default-200 rounded p-3">
                 <div className="font-semibold text-secondary mb-2">Horizontal + Advanced</div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="horizontal"
                   group={comprehensiveGroup}
@@ -940,6 +984,7 @@ const ResourceFilterPage = () => {
                   Vertical + Simple (Interactive)
                 </div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="vertical"
                   group={group}
@@ -955,6 +1000,7 @@ const ResourceFilterPage = () => {
                   Horizontal + Simple (Interactive)
                 </div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="horizontal"
                   group={group}
@@ -970,6 +1016,7 @@ const ResourceFilterPage = () => {
                   Vertical + Advanced (Interactive)
                 </div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="vertical"
                   group={group}
@@ -985,6 +1032,7 @@ const ResourceFilterPage = () => {
                   Horizontal + Advanced (Interactive)
                 </div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="horizontal"
                   group={group}
@@ -1015,13 +1063,13 @@ const ResourceFilterPage = () => {
                   {/* Keyword Container */}
                   <div className="border rounded p-3">
                     <div className="text-xs text-default-400 mb-2">Keyword Container</div>
-                    <div ref={keywordContainerRef} />
+                    <div ref={setKeywordContainer} />
                   </div>
 
                   {/* Filter Portal Container */}
                   <div className="border rounded p-3">
                     <div className="text-xs text-default-400 mb-2">Filter Portal Container</div>
-                    <div ref={filterPortalContainerRef} className="flex justify-center" />
+                    <div ref={setFilterPortalContainer} className="flex justify-center" />
                   </div>
 
                   {/* Mode indicator */}
@@ -1038,20 +1086,21 @@ const ResourceFilterPage = () => {
                   <div className="text-xs text-default-400 mb-2">
                     Filter Groups Container (Scrollable)
                   </div>
-                  <div ref={filterGroupsContainerRef} className="max-h-[200px] overflow-y-auto" />
+                  <div ref={setFilterGroupsContainer} className="max-h-[200px] overflow-y-auto" />
                 </div>
 
                 {/* The controller renders parts to the containers above */}
-                {refsReady && (
+                {keywordContainer && filterPortalContainer && filterGroupsContainer && (
                   <ResourceFilterController
+                    config={fixtureConfig}
                     filterDisplayMode={portalMode}
-                    filterGroupsContainer={filterGroupsContainerRef.current}
+                    filterGroupsContainer={filterGroupsContainer}
                     filterLayout="vertical"
-                    filterPortalContainer={filterPortalContainerRef.current}
+                    filterPortalContainer={filterPortalContainer}
                     group={portalGroup}
                     keyword={portalKeyword}
                     keywordClassName="w-full"
-                    keywordContainer={keywordContainerRef.current}
+                    keywordContainer={keywordContainer}
                     onFilterDisplayModeChange={setPortalMode}
                     onGroupChange={setPortalGroup}
                     onKeywordChange={setPortalKeyword}
@@ -1080,6 +1129,7 @@ const ResourceFilterPage = () => {
                   Initial group: undefined. Should auto-create media library filter.
                 </p>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   autoCreateMediaLibraryFilter
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="vertical"
@@ -1103,6 +1153,7 @@ const ResourceFilterPage = () => {
                   Initial group: undefined. Should auto-create media library filter.
                 </p>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   autoCreateMediaLibraryFilter
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="vertical"
@@ -1151,6 +1202,7 @@ const ResourceFilterPage = () => {
               <div className="border border-default-200 rounded p-3">
                 <div className="font-semibold text-primary mb-2">Vertical + Simple (Readonly)</div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   isReadonly
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="vertical"
@@ -1167,6 +1219,7 @@ const ResourceFilterPage = () => {
                   Horizontal + Simple (Readonly)
                 </div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   isReadonly
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="horizontal"
@@ -1183,6 +1236,7 @@ const ResourceFilterPage = () => {
                   Vertical + Advanced (Readonly)
                 </div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   isReadonly
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="vertical"
@@ -1199,6 +1253,7 @@ const ResourceFilterPage = () => {
                   Horizontal + Advanced (Readonly)
                 </div>
                 <ResourceFilterController
+                  config={fixtureConfig}
                   isReadonly
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="horizontal"

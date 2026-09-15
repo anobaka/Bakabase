@@ -1,7 +1,13 @@
 import React from "react";
 
 import { ResourceSource } from "@/sdk/constants";
-import { SteamIcon, DLsiteIcon, ExHentaiIcon, AigcIcon } from "@/components/SourceIcons";
+import {
+  SteamIcon,
+  DLsiteIcon,
+  ExHentaiIcon,
+  AigcIcon,
+  PixivIcon,
+} from "@/components/SourceIcons";
 
 interface Props {
   source: ResourceSource;
@@ -18,6 +24,8 @@ const ResourceSourceIcon: React.FC<Props> = ({ source, className = "" }) => {
       return <ExHentaiIcon className={className} />;
     case ResourceSource.Aigc:
       return <AigcIcon className={`text-base ${className}`} />;
+    case ResourceSource.Pixiv:
+      return <PixivIcon className={className} />;
     default:
       return null;
   }

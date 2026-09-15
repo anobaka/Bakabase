@@ -32,7 +32,7 @@ public class PostParserTaskTrigger
             .IgnoreIfExists()
             .Run(async args =>
             {
-                var scope = args.RootServiceProvider.CreateAsyncScope();
+                await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 var service = scope.ServiceProvider.GetRequiredService<IPostParserTaskService>();
                 await service.ParseAll(p => args.UpdateTask(x => x.Percentage = p),
                     p => args.UpdateTask(x => x.Process = p),

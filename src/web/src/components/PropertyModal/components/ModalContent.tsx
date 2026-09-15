@@ -4,24 +4,20 @@ import type { Key } from "@react-types/shared";
 
 import { Radio, RadioGroup, TableHeader } from "@heroui/react";
 import { useTranslation } from "react-i18next";
-import { useRef, useState } from "react";
-import AceEditor from "react-ace";
-import "ace-builds/src-noconflict/mode-javascript";
-import "ace-builds/src-noconflict/theme-monokai";
-import "ace-builds/src-noconflict/ext-language_tools";
-import { useUpdate } from "react-use";
+import { useState } from "react";
+import { FiChevronDown, FiCheck } from "react-icons/fi";
 
 import MultilevelData from "./MultilevelData";
+import PropertyPreview from "./PropertyPreview";
 import { ReferenceValueUsageProvider } from "./ReferenceValueUsage";
-import { isReferenceValueType } from "@/components/Property/PropertySystem";
 
+import { isReferenceValueType } from "@/components/Property/PropertySystem";
 import {
   Button,
   Chip,
   Input,
   Modal,
   Popover,
-  Progress,
   Select,
   Switch,
   Table,
@@ -31,10 +27,10 @@ import {
   TableRow,
   Tooltip,
 } from "@/components/bakaui";
-import FeatureStatusTip from "@/components/FeatureStatusTip";
 import { AttachmentLayout, PropertyPool, PropertyType } from "@/sdk/constants";
 import {
-  type ChoicePropertyOptions,
+  type SingleChoicePropertyOptions,
+  type MultipleChoicePropertyOptions,
   type NumberPropertyOptions,
   type PercentagePropertyOptions,
   type RatingPropertyOptions,
@@ -47,7 +43,7 @@ import ChoiceList from "@/components/PropertyModal/components/ChoiceList";
 import TagList from "@/components/PropertyModal/components/TagList";
 import { optimizeOptions } from "@/components/PropertyModal/helpers";
 import BApi from "@/sdk/BApi";
-import { buildLogger } from "@/components/utils";
+import { getEnumKey } from "@/i18n";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -75,43 +71,60 @@ type CustomPropertyForm = {
   options?: any;
 };
 
-const NumberPrecisions = [0, 1, 2, 3, 4].map((x) => ({
-  value: x,
-  label: Number(1).toFixed(x),
-}));
+const withDefaultOptions = (property: CustomPropertyForm): CustomPropertyForm => {
+  if (
+    (property.id ?? 0) > 0 ||
+    property.type == undefined ||
+    !isReferenceValueType(property.type)
+  ) {
+    return property;
+  }
+
+  return {
+    ...property,
+    options: { ...property.options, ignoreCase: property.options?.ignoreCase ?? true },
+  };
+};
+
+const NumberPrecisions = [0, 1, 2, 3, 4];
 
 const RatingMaxValueDataSource = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((x) => ({
   value: x,
   label: x,
 }));
 
-const log = buildLogger("ModalContent");
 const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const forceUpdate = useUpdate();
+  const precisionOptions = NumberPrecisions.map((value) => ({
+    value,
+    label: t("property.editor.decimalPlacesOption", {
+      count: value,
+      example: Number(1).toFixed(value),
+    }),
+  }));
 
   const [typeGroupsVisible, settypeGroupsVisible] = useState(false);
-  const typePopoverDomRef = useRef<HTMLDivElement>(null);
 
-  const [property, setProperty] = useState<CustomPropertyForm>(
-    JSON.parse(
-      JSON.stringify({
-        ...(value || {}),
-        options: optimizeOptions(value?.options),
-      }),
-    ),
-  );
+  const [property, setProperty] = useState<CustomPropertyForm>(() => {
+    const draft = JSON.parse(JSON.stringify(value ?? {}));
 
-  // log(property);
+    return withDefaultOptions({ ...draft, options: optimizeOptions(draft.options) });
+  });
 
   const checkValueUsage = property.id
-    ? async (value: string) => {
-        const rsp = await BApi.customProperty.getCustomPropertyValueUsage(property.id!, {
-          value: value,
-        });
+    ? async (optionId: string) => {
+        const rsp = await BApi.property.getPropertyValueResourceCounts(
+          PropertyPool.Custom,
+          property.id!,
+          { page: 1, pageSize: 100 },
+        );
 
-        return rsp.data!;
+        if (rsp.code || !rsp.data?.isReady || !rsp.data.counts) {
+          throw new Error(t("property.editor.usageUnavailable"));
+        }
+
+        return rsp.data.counts[optionId] ?? 0;
       }
     : undefined;
 
@@ -123,16 +136,20 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
           break;
         case PropertyType.SingleChoice:
         case PropertyType.MultipleChoice: {
-          const options = property.options as ChoicePropertyOptions;
+          const options = property.options as
+            | SingleChoicePropertyOptions
+            | MultipleChoicePropertyOptions
+            | undefined;
           const multiple = property.type === PropertyType.MultipleChoice;
 
           // console.log(options);
           return (
             <>
               <ChoiceList
+                key={`${property.id ?? "new"}-${property.type}`}
                 checkUsage={checkValueUsage}
                 choices={options?.choices}
-                className={"mt-4"}
+                className="min-w-0"
                 onChange={(choices) => {
                   patchProperty({
                     options: {
@@ -142,30 +159,21 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                   });
                 }}
               />
-              {/* <Switch */}
-              {/*   className={'mt-4'} */}
-              {/*   size={'sm'} */}
-              {/*   isSelected={options?.allowAddingNewDataDynamically} */}
-              {/*   onValueChange={c => { */}
-              {/*     patchProperty({ */}
-              {/*       options: { */}
-              {/*         ...options, */}
-              {/*         allowAddingNewDataDynamically: c, */}
-              {/*       }, */}
-              {/*     }); */}
-              {/*   }} */}
-              {/* > */}
-              {/*   {t<string>('Allow adding new options while choosing')} */}
-              {/* </Switch> */}
               <Select
-                className={"mt-2"}
+                className="max-w-sm"
                 dataSource={options?.choices}
                 label={t<string>("Default value")}
                 selectedKeys={
                   options?.defaultValue
                     ? multiple
-                      ? options.defaultValue
-                      : [options.defaultValue]
+                      ? Array.isArray(options.defaultValue)
+                        ? options.defaultValue
+                        : [options.defaultValue]
+                      : [
+                          Array.isArray(options.defaultValue)
+                            ? options.defaultValue[0]
+                            : options.defaultValue,
+                        ]
                     : undefined
                 }
                 selectionMode={multiple ? "multiple" : "single"}
@@ -186,18 +194,14 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
         }
         case PropertyType.Number: {
           const options = (property.options as NumberPropertyOptions) ?? {};
-          const previewValue = 80;
-          const previewValueStr = Number(previewValue).toFixed(options?.precision || 0);
-
-          // console.log(previewValue, options?.precision, previewValueStr);
-          options.precision ??= 0;
 
           return (
             <>
               <Select
-                dataSource={NumberPrecisions}
-                label={t<string>("Precision")}
-                selectedKeys={[options.precision.toString()]}
+                className="max-w-xs"
+                dataSource={precisionOptions}
+                label={t<string>("property.editor.decimalPlaces")}
+                selectedKeys={[(options.precision ?? 0).toString()]}
                 onSelectionChange={(c) => {
                   patchProperty({
                     options: {
@@ -207,23 +211,20 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                   });
                 }}
               />
-              <Input disabled label={t<string>("Preview")} value={previewValueStr} />
             </>
           );
         }
         case PropertyType.Percentage: {
-          const options = (property.options as PercentagePropertyOptions) ?? {};
-          const previewValue = 80;
-          const previewValueStr = `${Number(previewValue).toFixed(options?.precision || 0)}%`;
-
-          options.precision ??= 0;
+          const options =
+            (property.options as PercentagePropertyOptions & { showProgressBar?: boolean }) ?? {};
 
           return (
             <>
               <Select
-                dataSource={NumberPrecisions}
-                label={t<string>("Precision")}
-                selectedKeys={[options.precision.toString()]}
+                className="max-w-xs"
+                dataSource={precisionOptions}
+                label={t<string>("property.editor.decimalPlaces")}
+                selectedKeys={[(options.precision ?? 0).toString()]}
                 onSelectionChange={(c) => {
                   patchProperty({
                     options: {
@@ -234,47 +235,33 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                 }}
               />
               <Switch
-                isSelected={options?.showProgressbar}
+                isSelected={options.showProgressBar ?? options.showProgressbar ?? false}
                 size={"sm"}
                 onValueChange={(c) => {
                   patchProperty({
                     options: {
                       ...options,
-                      showProgressbar: c,
+                      showProgressBar: c,
+                      showProgressbar: undefined,
                     },
                   });
                 }}
               >
                 {t<string>("Show progressbar")}
               </Switch>
-              {options?.showProgressbar ? (
-                <div>
-                  <div>{t<string>("Preview")}</div>
-                  <Progress
-                    className={"max-w-[70%]"}
-                    label={
-                      <div className={"text-[color:var(--bakaui-color)]"}>{previewValueStr}</div>
-                    }
-                    value={previewValue}
-                  />
-                </div>
-              ) : (
-                <Input disabled label={t<string>("Preview")} value={previewValueStr} />
-              )}
             </>
           );
         }
         case PropertyType.Rating: {
           const options = (property.options as RatingPropertyOptions) ?? {};
 
-          options.maxValue ??= 5;
-
           return (
             <>
               <Select
+                className="max-w-xs"
                 dataSource={RatingMaxValueDataSource}
-                label={t<string>("Max value")}
-                selectedKeys={[options.maxValue.toString()]}
+                label={t<string>("property.editor.maximumRating")}
+                selectedKeys={[(options.maxValue ?? 5).toString()]}
                 onSelectionChange={(c) => {
                   patchProperty({
                     options: {
@@ -325,28 +312,14 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
           break;
         case PropertyType.Time:
           break;
-        case PropertyType.Formula: {
+        case PropertyType.Formula:
           return (
-            <>
-              <RadioGroup label={t<string>("Formula syntax")} orientation="horizontal">
-                <Radio value="buenos-aires">Javascript</Radio>
-              </RadioGroup>
-              <AceEditor
-                wrapEnabled
-                editorProps={{ $blockScrolling: true }}
-                mode="javascript"
-                name="UNIQUE_ID_OF_DIV"
-                theme="monokai"
-                onChange={(v) => {
-                  console.log(v);
-                }}
-              />
-            </>
+            <p className="text-sm text-default-500">{t("property.editor.formulaUnavailable")}</p>
           );
-        }
         case PropertyType.Multilevel: {
           return (
             <MultilevelData
+              key={`${property.id ?? "new"}-${property.type}`}
               options={property.options}
               onChange={(options) => {
                 patchProperty({
@@ -362,8 +335,9 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
           return (
             <>
               <TagList
+                key={`${property.id ?? "new"}-${property.type}`}
                 checkUsage={checkValueUsage}
-                className={"mt-4"}
+                className="min-w-0"
                 tags={options?.tags}
                 onChange={(tags) => {
                   patchProperty({
@@ -374,21 +348,6 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                   });
                 }}
               />
-              {/* <Switch */}
-              {/*   className={'mt-4'} */}
-              {/*   size={'sm'} */}
-              {/*   isSelected={options?.allowAddingNewDataDynamically} */}
-              {/*   onValueChange={c => { */}
-              {/*     patchProperty({ */}
-              {/*       options: { */}
-              {/*         ...options, */}
-              {/*         allowAddingNewDataDynamically: c, */}
-              {/*       }, */}
-              {/*     }); */}
-              {/*   }} */}
-              {/* > */}
-              {/*   {t<string>('Allow adding new options while choosing')} */}
-              {/* </Switch> */}
             </>
           );
         }
@@ -397,49 +356,53 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
 
     return;
   };
-  const renderPropertyTypeButton = () => {
-    const btn = (
-      <Button
-        color={"default"}
-        size={"lg"}
-        onClick={() => {
-          // console.log(13456577, true);
-          settypeGroupsVisible(true);
-        }}
-      >
-        {property.type == undefined ? (
-          t<string>("Select a type")
-        ) : (
-          <PropertyTypeIcon textVariant={"default"} type={property.type} />
-        )}
-      </Button>
-    );
-
-    if (property && property.id != undefined && property.id > 0) {
-      // return btn;
-      return (
-        <div>
-          <Tooltip content={t<string>("Click to change type")}>
-            <div>{btn}</div>
-          </Tooltip>
-        </div>
-      );
-    } else {
-      return <div>{btn}</div>;
-    }
-  };
-
   const patchProperty = (patches: Partial<CustomPropertyForm>) => {
-    const newProperties = {
+    const newProperties = withDefaultOptions({
       ...property,
       ...patches,
-    };
+    });
+
+    // A removed option must not remain selected as the draft's default.
+    if (newProperties.options) {
+      const options = { ...newProperties.options };
+      const isChoice =
+        newProperties.type === PropertyType.SingleChoice ||
+        newProperties.type === PropertyType.MultipleChoice;
+
+      if (isChoice || newProperties.type === PropertyType.Multilevel) {
+        const ids = new Set<string>();
+        const collect = (items: { value: string; children?: any[] }[]) => {
+          for (const item of items) {
+            ids.add(item.value);
+            if (item.children) collect(item.children);
+          }
+        };
+
+        collect(isChoice ? (options.choices ?? []) : (options.data ?? []));
+        const defaults = Array.isArray(options.defaultValue)
+          ? options.defaultValue
+          : options.defaultValue
+            ? [options.defaultValue]
+            : [];
+        const retained = defaults.filter((id: string) => ids.has(id));
+
+        options.defaultValue =
+          newProperties.type === PropertyType.SingleChoice ? retained[0] : retained;
+      }
+      if (newProperties.type === PropertyType.Percentage) {
+        if (options.showProgressBar !== undefined || options.showProgressbar !== undefined) {
+          options.showProgressBar = options.showProgressBar ?? options.showProgressbar;
+        }
+        delete options.showProgressbar;
+      }
+      newProperties.options = options;
+    }
 
     setProperty(newProperties);
 
     if (
       newProperties.name == undefined ||
-      newProperties.name.length == 0 ||
+      newProperties.name.trim().length == 0 ||
       newProperties.type == undefined ||
       !(newProperties.type > 0)
     ) {
@@ -449,274 +412,307 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
     }
   };
 
-  return (
-    <div className={"flex flex-col gap-2"}>
-      <div className={"flex gap-2 items-center"}>
-        <Popover
-          isDismissable
-          showArrow
-          closeMode={["mask", "esc"]}
-          placement={"right"}
-          trigger={renderPropertyTypeButton()}
-          visible={typeGroupsVisible}
-          onOpenChange={(isOpen) => {
-            settypeGroupsVisible(isOpen);
-          }}
-          onVisibleChange={(visible) => {
-            settypeGroupsVisible(visible);
-          }}
-        >
-          <div ref={typePopoverDomRef} className={"p-2 flex flex-col gap-2"}>
-            {Object.keys(PropertyTypeGroup).map((group) => {
-              return (
-                <div
-                  key={group}
-                  className={"pb-2 mb-2 border-b-1 last:mb-0 last:border-b-0 last:pb-0"}
-                >
-                  <div className={"mb-2 font-bold"}>{t<string>(group)}</div>
-                  <div className="grid grid-cols-3 gap-x-2 text-sm leading-5">
-                    {PropertyTypeGroup[group]!.map((type) => {
-                      if (group == UnderDevelopmentGroupKey) {
+  const selectType = (type: PropertyType) => {
+    if (validValueTypes?.includes(type) === false || type === PropertyType.Formula) return;
+    if (type === property.type) {
+      settypeGroupsVisible(false);
+
+      return;
+    }
+    if (property.id != undefined && property.id > 0) {
+      BApi.customProperty.getCustomPropertyConversionRules().then((r) => {
+        const rules = r.data?.[property.type!]?.[type] ?? [];
+
+        // change property type
+        createPortal(Modal, {
+          defaultVisible: true,
+          title: t<string>("You are changing property type"),
+          children: (
+            <div>
+              <div>
+                {t<string>(
+                  "Changing the property type may cause the loss of existing data. Click 'continue' to check.",
+                )}
+              </div>
+              {rules.length > 0 && (
+                <div className={"mt-2"}>
+                  <div className={"font-bold"}>
+                    {t<string>("Following rule(s) will be applied")}
+                  </div>
+                  <div className={"flex flex-wrap gap-2 items-center mt-1"}>
+                    {rules.map((r, i) => {
+                      if (r.description == null) {
                         return (
-                          <Tooltip
-                            key={type}
-                            content={
-                              <FeatureStatusTip
-                                name={t<string>(PropertyType[type])}
-                                status={"developing"}
-                              />
-                            }
-                          >
-                            <Button
-                              className={"justify-start"}
-                              disabled={validValueTypes?.includes(type) === false}
-                              variant={"light"}
-                            >
-                              <PropertyTypeIcon textVariant={"default"} type={type} />
-                            </Button>
-                          </Tooltip>
+                          <Chip key={i} size={"sm"}>
+                            {r.name}
+                          </Chip>
                         );
                       }
 
                       return (
-                        <Button
-                          key={type}
-                          className={"justify-start"}
-                          disabled={validValueTypes?.includes(type) === false}
-                          variant={"light"}
-                          onClick={() => {
-                            if (property.id != undefined && property.id > 0) {
-                              BApi.customProperty.getCustomPropertyConversionRules().then((r) => {
-                                const rules = r.data?.[property.type!]?.[type] ?? [];
-                                // change property type
-                                const model = createPortal(Modal, {
-                                  defaultVisible: true,
-                                  title: t<string>("You are changing property type"),
-                                  children: (
-                                    <div>
-                                      <div>
-                                        {t<string>(
-                                          "Changing the property type may cause the loss of existing data. Click 'continue' to check.",
-                                        )}
-                                      </div>
-                                      {rules.length > 0 && (
-                                        <div className={"mt-2"}>
-                                          <div className={"font-bold"}>
-                                            {t<string>("Following rule(s) will be applied")}
-                                          </div>
-                                          <div className={"flex flex-wrap gap-2 items-center mt-1"}>
-                                            {rules.map((r, i) => {
-                                              if (r.description == null) {
-                                                return (
-                                                  <Chip key={i} size={"sm"}>
-                                                    {r.name}
-                                                  </Chip>
-                                                );
-                                              }
-
-                                              return (
-                                                <Tooltip
-                                                  key={i}
-                                                  content={<pre>{r.description}</pre>}
-                                                >
-                                                  <Chip size={"sm"}>{r.name}</Chip>
-                                                </Tooltip>
-                                              );
-                                            })}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ),
-                                  footer: {
-                                    actions: ["ok", "cancel"],
-                                    okProps: {
-                                      children: t<string>("Continue"),
-                                    },
-                                  },
-                                  onOk: async () => {
-                                    const rsp =
-                                      await BApi.customProperty.previewCustomPropertyTypeConversion(
-                                        property.id!,
-                                        type,
-                                      );
-
-                                    if (rsp.data) {
-                                      const changes = rsp.data?.changes || [];
-                                      const { dataCount, toType, fromType } = rsp.data;
-
-                                      createPortal(Modal, {
-                                        defaultVisible: true,
-                                        title: t<string>("Final check"),
-                                        size: changes.length! > 0 ? "lg" : undefined,
-                                        children: (
-                                          <div>
-                                            <div className={"text-base"}>
-                                              {changes.length > 0
-                                                ? t<string>(
-                                                    "Found {{count}} data, and {{changedDataCount}} data will be modified or deleted",
-                                                    {
-                                                      count: dataCount,
-                                                      changedDataCount: changes.length!,
-                                                    },
-                                                  )
-                                                : t<string>(
-                                                    "Found {{count}} data, and all of them will be retained",
-                                                    { count: dataCount! },
-                                                  )}
-                                            </div>
-                                            <div className={"font-bold"}>
-                                              {t<string>(
-                                                "Be careful, this process is irreversible",
-                                              )}
-                                            </div>
-                                            {changes.length > 0 && (
-                                              <Table>
-                                                <TableHeader>
-                                                  <TableColumn>
-                                                    {t<string>("Source value")}
-                                                  </TableColumn>
-                                                  <TableColumn>
-                                                    {t<string>("Converted value")}
-                                                  </TableColumn>
-                                                </TableHeader>
-                                                <TableBody>
-                                                  {changes.map((c, i) => {
-                                                    return (
-                                                      <TableRow key={i}>
-                                                        <TableCell>
-                                                          <ValueRenderer
-                                                            type={fromType!}
-                                                            value={deserializeStandardValue(
-                                                              c.serializedFromValue ?? null,
-                                                              fromType!,
-                                                            )}
-                                                            variant={"light"}
-                                                          />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                          <ValueRenderer
-                                                            type={toType!}
-                                                            value={deserializeStandardValue(
-                                                              c.serializedToValue ?? null,
-                                                              toType!,
-                                                            )}
-                                                            variant={"light"}
-                                                          />
-                                                        </TableCell>
-                                                      </TableRow>
-                                                    );
-                                                  })}
-                                                </TableBody>
-                                              </Table>
-                                            )}
-                                          </div>
-                                        ),
-                                        onOk: async () => {
-                                          await BApi.customProperty.changeCustomPropertyType(
-                                            property.id!,
-                                            type,
-                                          );
-                                          await BApi.customProperty
-                                            .getCustomPropertyByKeys({
-                                              ids: [property.id!],
-                                            })
-                                            .then((r) => {
-                                              patchProperty(r.data![0]!);
-                                            });
-                                        },
-                                        footer: {
-                                          actions: ["ok", "cancel"],
-                                          okProps: {
-                                            children: t<string>("Convert"),
-                                          },
-                                        },
-                                      });
-                                    }
-                                  },
-                                });
-                              });
-                            } else {
-                              patchProperty({
-                                ...property,
-                                type,
-                              });
-                            }
-                            settypeGroupsVisible(false);
-                          }}
-                        >
-                          <PropertyTypeIcon textVariant={"default"} type={type} />
-                        </Button>
+                        <Tooltip key={i} content={<pre>{r.description}</pre>}>
+                          <Chip size={"sm"}>{r.name}</Chip>
+                        </Tooltip>
                       );
                     })}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </Popover>
+              )}
+            </div>
+          ),
+          footer: {
+            actions: ["ok", "cancel"],
+            okProps: {
+              children: t<string>("Continue"),
+            },
+          },
+          onOk: async () => {
+            const rsp = await BApi.customProperty.previewCustomPropertyTypeConversion(
+              property.id!,
+              type,
+            );
+
+            if (rsp.data) {
+              const changes = rsp.data?.changes || [];
+              const { dataCount, toType, fromType } = rsp.data;
+
+              createPortal(Modal, {
+                defaultVisible: true,
+                title: t<string>("Final check"),
+                size: changes.length! > 0 ? "lg" : undefined,
+                children: (
+                  <div>
+                    <div className={"text-base"}>
+                      {changes.length > 0
+                        ? t<string>(
+                            "Found {{count}} data, and {{changedDataCount}} data will be modified or deleted",
+                            {
+                              count: dataCount,
+                              changedDataCount: changes.length!,
+                            },
+                          )
+                        : t<string>("Found {{count}} data, and all of them will be retained", {
+                            count: dataCount!,
+                          })}
+                    </div>
+                    <div className={"font-bold"}>
+                      {t<string>("Be careful, this process is irreversible")}
+                    </div>
+                    {changes.length > 0 && (
+                      <Table>
+                        <TableHeader>
+                          <TableColumn>{t<string>("Source value")}</TableColumn>
+                          <TableColumn>{t<string>("Converted value")}</TableColumn>
+                        </TableHeader>
+                        <TableBody>
+                          {changes.map((c, i) => {
+                            return (
+                              <TableRow key={i}>
+                                <TableCell>
+                                  <ValueRenderer
+                                    type={fromType!}
+                                    value={deserializeStandardValue(
+                                      c.serializedFromValue ?? null,
+                                      fromType!,
+                                    )}
+                                    variant={"light"}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <ValueRenderer
+                                    type={toType!}
+                                    value={deserializeStandardValue(
+                                      c.serializedToValue ?? null,
+                                      toType!,
+                                    )}
+                                    variant={"light"}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
+                ),
+                onOk: async () => {
+                  await BApi.customProperty.changeCustomPropertyType(property.id!, type);
+                  await BApi.customProperty
+                    .getCustomPropertyByKeys({
+                      ids: [property.id!],
+                    })
+                    .then((r) => {
+                      patchProperty(r.data![0]!);
+                    });
+                },
+                footer: {
+                  actions: ["ok", "cancel"],
+                  okProps: {
+                    children: t<string>("Convert"),
+                  },
+                },
+              });
+            }
+          },
+        });
+      });
+    } else {
+      patchProperty({
+        ...property,
+        type,
+      });
+    }
+    settypeGroupsVisible(false);
+  };
+
+  const isReference = property.type != undefined && isReferenceValueType(property.type);
+  const optionsContent = renderOptions();
+
+  return (
+    <div className="property-editor flex min-w-0 flex-col gap-4">
+      <div className="property-editor-identity">
         <Input
-          className={"flex-1"}
-          label={t<string>("Name")}
-          size={"sm"}
-          value={property.name}
-          onValueChange={(name) =>
-            patchProperty({
-              ...property,
-              name,
-            })
-          }
+          isRequired
+          className="min-w-0"
+          label={t<string>("property.editor.name")}
+          labelPlacement="outside"
+          placeholder={t<string>("property.editor.namePlaceholder")}
+          value={property.name ?? ""}
+          onValueChange={(name) => patchProperty({ name })}
         />
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className="text-sm font-medium">{t("property.editor.type")}</span>
+          <Popover
+            isDismissable
+            showArrow
+            closeMode={["mask", "esc"]}
+            placement="bottom-end"
+            trigger={
+              <Button
+                aria-label={t<string>("property.editor.chooseType")}
+                className="h-10 w-full justify-between gap-3"
+                endContent={<FiChevronDown className="shrink-0" />}
+                variant="flat"
+                onPress={() => settypeGroupsVisible(true)}
+              >
+                {property.type == undefined ? (
+                  t("property.editor.chooseType")
+                ) : (
+                  <span className="flex min-w-0 items-center gap-2">
+                    <PropertyTypeIcon textVariant="none" type={property.type} />
+                    <span className="truncate">
+                      {t(getEnumKey("PropertyType", PropertyType[property.type]))}
+                    </span>
+                  </span>
+                )}
+              </Button>
+            }
+            visible={typeGroupsVisible}
+            onOpenChange={settypeGroupsVisible}
+            onVisibleChange={settypeGroupsVisible}
+          >
+            <div className="property-editor-types">
+              {Object.entries(PropertyTypeGroup).map(([group, types]) => (
+                <section key={group} className="min-w-0">
+                  <h4 className="mb-1 px-2 text-xs font-medium text-default-500">
+                    {t(`property.editor.group.${group}`)}
+                  </h4>
+                  <div className="property-editor-type-grid">
+                    {types.map((type) => {
+                      const developing = group === UnderDevelopmentGroupKey;
+                      const disabled = developing || validValueTypes?.includes(type) === false;
+
+                      return (
+                        <Button
+                          key={type}
+                          aria-pressed={property.type === type}
+                          className="h-auto min-h-16 min-w-0 justify-start whitespace-normal px-2 py-2 text-left"
+                          color={property.type === type ? "primary" : "default"}
+                          isDisabled={disabled}
+                          variant={property.type === type ? "flat" : "light"}
+                          onPress={() => selectType(type)}
+                        >
+                          <span className="mt-0.5 shrink-0 self-start text-lg">
+                            <PropertyTypeIcon textVariant="none" type={type} />
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                            <span className="flex items-center gap-2 text-sm font-medium">
+                              {t(getEnumKey("PropertyType", PropertyType[type]))}
+                              {property.type === type && <FiCheck className="shrink-0" />}
+                            </span>
+                            <span className="text-xs font-normal leading-relaxed text-default-500">
+                              {t(`property.editor.typeDescription.${PropertyType[type]}`)}
+                            </span>
+                          </span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </Popover>
+        </div>
       </div>
-      {property.type != undefined && isReferenceValueType(property.type) && (
-        <div className="mt-2 flex flex-col gap-1">
-          <Switch
-            size="sm"
-            isSelected={property.options?.ignoreCase ?? false}
-            onValueChange={(ignoreCase) =>
-              patchProperty({ options: { ...property.options, ignoreCase } })
+      {property.type == undefined ? (
+        <p className="py-5 text-sm text-default-500">{t("property.editor.chooseTypeHint")}</p>
+      ) : (
+        <div className="flex min-w-0 flex-col gap-3">
+          <p className="text-sm leading-relaxed text-default-500">
+            {t(`property.editor.typeDescription.${PropertyType[property.type]}`)}
+          </p>
+          <ReferenceValueUsageProvider
+            options={property.options}
+            property={
+              property.id && isReference
+                ? {
+                    id: property.id,
+                    type: property.type,
+                    name: property.name,
+                    pool: PropertyPool.Custom,
+                  }
+                : undefined
             }
           >
-            {t("property.reference.ignoreCase")}
-          </Switch>
-          <p className="text-xs text-default-500">{t("property.reference.ignoreCaseHelp")}</p>
+            <div
+              className={`property-editor-workspace ${isReference ? "property-editor-workspace-reference" : ""}`}
+            >
+              <section className="flex min-w-0 flex-col gap-3">
+                {!isReference && (
+                  <h3 className="text-sm font-medium">{t("property.editor.configuration")}</h3>
+                )}
+                {optionsContent ?? (
+                  <p className="text-sm leading-relaxed text-default-500">
+                    {t("property.editor.noOptions")}
+                  </p>
+                )}
+                {isReference && (
+                  <div className="flex flex-col gap-1.5 pt-1">
+                    <Switch
+                      isSelected={property.options?.ignoreCase ?? false}
+                      size="sm"
+                      onValueChange={(ignoreCase) =>
+                        patchProperty({ options: { ...property.options, ignoreCase } })
+                      }
+                    >
+                      {t("property.reference.ignoreCase")}
+                    </Switch>
+                    <p className="text-xs leading-relaxed text-default-500">
+                      {t("property.reference.ignoreCaseHelp")}
+                    </p>
+                  </div>
+                )}
+              </section>
+              <PropertyPreview
+                name={property.name}
+                options={property.options}
+                type={property.type}
+              />
+            </div>
+          </ReferenceValueUsageProvider>
         </div>
       )}
-      <ReferenceValueUsageProvider
-        options={property.options}
-        property={
-          property.id && property.type != undefined && isReferenceValueType(property.type)
-            ? {
-                id: property.id,
-                type: property.type,
-                name: property.name,
-                pool: PropertyPool.Custom,
-              }
-            : undefined
-        }
-      >
-        {renderOptions()}
-      </ReferenceValueUsageProvider>
     </div>
   );
 };

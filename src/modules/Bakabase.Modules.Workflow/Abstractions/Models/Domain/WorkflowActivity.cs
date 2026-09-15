@@ -14,6 +14,7 @@ public record WorkflowActivity
     public int WorkflowDefinitionId { get; set; }
     public int Order { get; set; }
     public string Kind { get; set; } = null!;
+    public string? Notes { get; set; }
     public string ConfigJson { get; set; } = "{}";
     public WorkflowActivityErrorBehavior OnItemError { get; set; } = WorkflowActivityErrorBehavior.Fail;
 }

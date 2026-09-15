@@ -5,20 +5,22 @@ import type { SearchForm } from "@/pages/resource/models";
 import { useTranslation } from "react-i18next";
 import React, { useEffect, useRef, useState } from "react";
 import { useUpdateEffect } from "react-use";
-import { AiOutlineExport, AiOutlineSearch } from "react-icons/ai";
+import { AiOutlineExport, AiOutlineFilter, AiOutlinePlus, AiOutlineSearch } from "react-icons/ai";
 import { MdPlaylistPlay } from "react-icons/md";
 import { HistoryOutlined } from "@ant-design/icons";
 
 import { ReferenceValueSearchProvider } from "@/hooks/useReferenceValueResourceCounts";
 
-import styles from "./index.module.scss";
 import OrderSelector from "./OrderSelector";
 import ShortcutsButton from "./ShortcutsButton";
+import { requiresAdvancedFilterMode } from "./utils";
 
 import { FilterDisplayMode } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
-import { Button, Checkbox, Chip, Popover, Spinner, Tooltip } from "@/components/bakaui";
+import { Button, Checkbox, Popover, Spinner, Tooltip } from "@/components/bakaui";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
+import CreatePlaceholderResourcesModal from "@/components/Resource/components/CreatePlaceholderResourcesModal";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { ResourceFilterController, GroupCombinator } from "@/components/ResourceFilter";
 import { buildLogger, useTraceUpdate } from "@/components/utils.tsx";
 
@@ -77,12 +79,17 @@ const FilterPanel = (props: IProps) => {
   });
 
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
   const [selectedAll, setSelectedAll] = useState(false);
 
   const [searchForm, setSearchForm] = useState<SearchForm>(propsSearchForm || defaultSearchForm());
   const [searching, setSearching] = useState(false);
-  const [filterMode, setFilterMode] = useState<FilterDisplayMode>(FilterDisplayMode.Simple);
+  const [filterMode, setFilterMode] = useState<FilterDisplayMode>(() =>
+    requiresAdvancedFilterMode(propsSearchForm?.group)
+      ? FilterDisplayMode.Advanced
+      : FilterDisplayMode.Simple,
+  );
 
   const [selectingAllFilteredResources, setSelectingAllFilteredResources] = useState(false);
 
@@ -117,6 +124,10 @@ const FilterPanel = (props: IProps) => {
 
   useUpdateEffect(() => {
     setSearchForm(propsSearchForm || defaultSearchForm());
+    // Restoring a query changes presentation only: never flatten or discard its conditions.
+    if (requiresAdvancedFilterMode(propsSearchForm?.group)) {
+      setFilterMode(FilterDisplayMode.Advanced);
+    }
   }, [propsSearchForm]);
 
   const onSearchFormLiveChange = props.onSearchFormLiveChange;
@@ -170,39 +181,73 @@ const FilterPanel = (props: IProps) => {
   console.log("resource page filter panel rerender", searchForm);
 
   return (
-    <div className={`${styles.filterPanel} flex flex-col h-full`}>
-      {/* Top Actions */}
-      <div className="flex items-center justify-between mb-3 flex-shrink-0">
-        <div />
-        <div className="flex items-center gap-1">
-          <ShortcutsButton />
-          <Popover
-            className="min-w-[160px]"
-            trigger={
-              <Button isIconOnly color={"default"} size={"sm"} variant={"light"}>
-                <MdPlaylistPlay className={"text-xl"} />
+    <section
+      aria-label={t("resource.search.panelTitle")}
+      className="flex h-full min-h-0 min-w-0 flex-col"
+    >
+      <header className="flex shrink-0 flex-col gap-3 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
+            <AiOutlineFilter aria-hidden className="text-base text-primary" />
+            {t("resource.search.panelTitle")}
+          </h2>
+          <div className="flex items-center gap-1">
+            <ShortcutsButton />
+            <Popover
+              className="min-w-[160px]"
+              trigger={
+                <Button
+                  isIconOnly
+                  aria-label={t("resource.search.playlists")}
+                  color={"default"}
+                  size={"sm"}
+                  variant={"light"}
+                >
+                  <MdPlaylistPlay className={"text-xl"} />
+                </Button>
+              }
+            >
+              <PlaylistCollection />
+            </Popover>
+            <Tooltip content={t<string>("resource.search.recentlyPlayed")}>
+              <Button
+                isIconOnly
+                aria-label={t("resource.search.recentlyPlayed")}
+                color={"default"}
+                size={"sm"}
+                variant={"light"}
+                onPress={onOpenRecentlyPlayed}
+              >
+                <HistoryOutlined className={"text-base"} />
               </Button>
+            </Tooltip>
+            <MiscellaneousOptions rearrangeResources={rearrangeResources} />
+          </div>
+        </div>
+        <Tooltip content={t<string>("resource.unmaterialized.tip")}>
+          <Button
+            className="w-full justify-start"
+            color={"default"}
+            size={"sm"}
+            startContent={<AiOutlinePlus className={"text-base"} />}
+            variant={"flat"}
+            onPress={() =>
+              createPortal(CreatePlaceholderResourcesModal, {
+                // Re-run the current search so the new resources appear where the user is looking.
+                onCreated: () => onSearch?.({}, false),
+              })
             }
           >
-            <PlaylistCollection />
-          </Popover>
-          <Tooltip content={t<string>("resource.search.recentlyPlayed")}>
-            <Button
-              isIconOnly
-              color={"default"}
-              size={"sm"}
-              variant={"light"}
-              onPress={onOpenRecentlyPlayed}
-            >
-              <HistoryOutlined className={"text-base"} />
-            </Button>
-          </Tooltip>
-          <MiscellaneousOptions rearrangeResources={rearrangeResources} />
-        </div>
-      </div>
+            {t<string>("resource.unmaterialized.action.open")}
+            <span className="ml-auto text-xs font-normal text-default-500">
+              {t("resource.unmaterialized.later")}
+            </span>
+          </Button>
+        </Tooltip>
+      </header>
 
       {/* Scrollable Filters Area */}
-      <div className="flex-grow overflow-y-auto min-h-0">
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         <ReferenceValueSearchProvider search={searchForm}>
           <ResourceFilterController
             autoCreateMediaLibraryFilter
@@ -245,7 +290,7 @@ const FilterPanel = (props: IProps) => {
       </div>
 
       {/* Order Selector - Fixed */}
-      <div className="flex-shrink-0 mt-3">
+      <div className="mt-3 shrink-0">
         <OrderSelector
           value={searchForm.orders}
           onChange={(orders) => {
@@ -262,9 +307,9 @@ const FilterPanel = (props: IProps) => {
       </div>
 
       {/* Fixed Bottom Actions */}
-      <div className="flex-shrink-0 pt-3 mt-3 border-t border-divider space-y-2">
+      <div className="mt-3 shrink-0 space-y-3 border-t border-default-100 pt-3">
         {/* Selection Info */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Tooltip
             content={
               <div className={"flex items-center gap-1"}>
@@ -315,27 +360,18 @@ const FilterPanel = (props: IProps) => {
                 : t<string>("resource.search.selectAll")}
             </Checkbox>
           </Tooltip>
-          {totalFilteredResourceCount && totalFilteredResourceCount > 0 ? (
-            <div className={"flex items-center gap-1"}>
-              <Tooltip content={t<string>("resource.search.loadedResources")}>
-                <Chip color={"success"} size="sm" variant="light">
-                  {resourceCount}
-                </Chip>
-              </Tooltip>
-              /
-              <Tooltip content={t<string>("resource.search.allFiltered")}>
-                <Chip color={"secondary"} size="sm" variant="light">
-                  {totalFilteredResourceCount}
-                </Chip>
-              </Tooltip>
-            </div>
-          ) : null}
+          <span className="text-xs tabular-nums text-default-500">
+            {t("resource.search.resultCount", {
+              loaded: resourceCount ?? 0,
+              total: totalFilteredResourceCount ?? 0,
+            })}
+          </span>
         </div>
 
         {/* Search Buttons */}
         <div className="flex items-center gap-2">
           <Button
-            className="flex-1"
+            className="min-w-0 flex-1"
             color={"primary"}
             isLoading={searching}
             size={"sm"}
@@ -353,6 +389,7 @@ const FilterPanel = (props: IProps) => {
           <Button
             isLoading={searching}
             size={"sm"}
+            variant="flat"
             onPress={async () => {
               await search(
                 {
@@ -368,7 +405,7 @@ const FilterPanel = (props: IProps) => {
           </Button>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

@@ -6,7 +6,7 @@ import type { SearchFilter } from "../../models";
 
 import { useEffect, useState } from "react";
 import { useUpdateEffect } from "react-use";
-import { MdOutlineFilterAltOff } from "react-icons/md";
+import { useTranslation } from "react-i18next";
 
 import { useFilterConfig } from "../../context/FilterContext";
 import { getSimpleFilterOperation } from "../../utils/simpleFilterOperations";
@@ -15,7 +15,7 @@ import PropertyField from "./PropertyField";
 import OperationSelector from "./OperationSelector";
 import DeleteButton from "./DeleteButton";
 import DisableButton from "./DisableButton";
-import { isCompactValueType, isInlineValueType } from "./utils";
+import { isCompactValueType } from "./utils";
 
 import { FilterDisplayMode, PropertyType, SearchOperation } from "@/sdk/constants";
 import { buildLogger } from "@/components/utils";
@@ -33,7 +33,7 @@ interface IProps {
   autoTriggerPropertySelector?: boolean;
   /** Called when user cancels property selection for a new filter */
   onCancelNewFilter?: () => void;
-  /** Display mode: Simple hides operation selector and uses inline value editing */
+  /** Simple mode keeps inline value editors open and the selected property fixed. */
   filterDisplayMode?: FilterDisplayMode;
   /** Layout: horizontal (default) keeps all in one row, vertical puts value on new line */
   layout?: FilterLayout;
@@ -57,9 +57,10 @@ const Filter = ({
   hideInternalActions,
 }: IProps) => {
   const config = useFilterConfig();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<SearchFilter>(propsFilter);
 
-  // In Simple mode, use inline editing and hide operation selector
+  // Keep the existing operation visible in both modes; Simple opens inline value editors.
   const isSimpleMode = filterDisplayMode === FilterDisplayMode.Simple;
   const isVertical = layout === "vertical";
 
@@ -68,7 +69,7 @@ const Filter = ({
   // re-run whenever propsFilter is replaced (e.g., the parent reloaded data
   // from the server and reset us to a bare filter without property/valueProperty).
   useEffect(() => {
-    if ((isNew || autoTriggerPropertySelector) && !filter.propertyId) {
+    if (!isReadonly && (isNew || autoTriggerPropertySelector) && !filter.propertyId) {
       openPropertySelector();
     }
   }, []);
@@ -240,7 +241,7 @@ const Filter = ({
         propertyType === PropertyType.Date ||
         propertyType === PropertyType.DateTime ||
         propertyType === PropertyType.Time;
-      const widthClass = isDateTimeType ? "w-auto" : "w-16";
+      const widthClass = isDateTimeType ? "max-w-full" : "w-24 max-w-full";
 
       return <div className={widthClass}>{valueElement}</div>;
     }
@@ -260,61 +261,48 @@ const Filter = ({
   // In Simple mode, compact value types (Number, Rating, Percentage, Boolean) use single row
   const isCompact = isSimpleMode && isCompactValueType(filter.property?.type);
   const useVerticalLayout = isVertical && !isCompact;
-  // Don't use full width for inline value types (Tags, Multilevel, Choice) - they have inline selectors
-  const useFullWidth = useVerticalLayout && !isInlineValueType(filter.property?.type);
+  const actionsVisible = !isReadonly && !hideInternalActions;
 
   return (
     <div
-      className={`flex ${useVerticalLayout ? "flex-col" : ""} ${useFullWidth ? "w-full" : ""} rounded p-1 ${useVerticalLayout ? "gap-1" : "items-center"} relative`}
-      style={removeBackground ? undefined : { backgroundColor: "var(--bakaui-overlap-background)" }}
+      className={`grid min-w-0 max-w-full items-start gap-x-2 gap-y-1 rounded-xl p-2 text-sm ${actionsVisible ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-1"} ${isVertical ? "w-full" : ""} ${removeBackground ? "" : "bg-default-100/60"}`}
     >
-      {/* Disabled overlay */}
-      {filter.disabled && (
-        <div
-          className="absolute top-0 left-0 w-full h-full flex items-center justify-center z-10 rounded pointer-events-none"
-          style={{ backgroundColor: "var(--bakaui-overlap-background)" }}
-        >
-          <MdOutlineFilterAltOff className="text-lg text-warning" />
+      <div className={`min-w-0 flex-1 ${filter.disabled ? "opacity-60" : ""}`}>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <PropertyField
+            isReadonly={isReadonly || isSimpleMode}
+            property={filter.property}
+            onCancel={onCancelNewFilter}
+            onSelect={handlePropertySelect}
+          />
+          <OperationSelector
+            availableOperations={filter.availableOperations}
+            hasProperty={filter.propertyId !== undefined}
+            isReadonly={isReadonly}
+            operation={filter.operation}
+            propertyType={filter.property?.type}
+            onSelect={(op) => refreshValue({ ...filter, operation: op })}
+          />
+          {!useVerticalLayout && (
+            <div className="min-w-0 max-w-full break-words whitespace-normal">{renderValue()}</div>
+          )}
+          {filter.disabled && (
+            <span className="text-xs text-default-500">
+              {t("resourceFilter.condition.disabled")}
+            </span>
+          )}
         </div>
-      )}
-
-      {/* Action buttons - top right corner */}
-      {!isReadonly && !hideInternalActions && (
-        <div className="absolute top-1 right-1 flex items-center z-20">
+      </div>
+      {actionsVisible && (
+        <div className="flex shrink-0 items-center gap-0.5">
           <DisableButton disabled={filter.disabled} onToggle={toggleDisabled} />
           <DeleteButton onDelete={onRemove} />
         </div>
       )}
-
-      {/* First row: Property + Operation */}
-      <div
-        className={`flex items-center gap-1 ${useFullWidth ? "w-full" : ""} ${filter.disabled ? "opacity-40" : ""}`}
-      >
-        {/* Property field */}
-        <PropertyField
-          isReadonly={isReadonly || isSimpleMode}
-          property={filter.property}
-          onCancel={onCancelNewFilter}
-          onSelect={handlePropertySelect}
-        />
-
-        {/* Operation selector */}
-        <OperationSelector
-          availableOperations={filter.availableOperations}
-          hasProperty={filter.propertyId !== undefined}
-          isReadonly={isReadonly}
-          operation={filter.operation}
-          propertyType={filter.property?.type}
-          onSelect={(op) => refreshValue({ ...filter, operation: op })}
-        />
-
-        {/* Value in same row for horizontal layout or compact types */}
-        {!useVerticalLayout && <div className="pr-2">{renderValue()}</div>}
-      </div>
-
-      {/* Second row: Value (only in vertical layout for non-compact types) */}
       {useVerticalLayout && (
-        <div className={`${useFullWidth ? "w-full" : ""} ${filter.disabled ? "opacity-40" : ""}`}>
+        <div
+          className={`col-span-full min-w-0 max-w-full break-words whitespace-normal ${filter.disabled ? "opacity-60" : ""}`}
+        >
           {renderValue()}
         </div>
       )}

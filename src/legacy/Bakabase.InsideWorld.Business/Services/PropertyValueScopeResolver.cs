@@ -13,18 +13,18 @@ namespace Bakabase.InsideWorld.Business.Services;
 /// <summary>
 /// Resolves a resource property's per-scope values to the single effective value. Owns where the
 /// global scope priority comes from (ResourceOptions.PropertyValueScopePriority), so callers never
-/// pass priority configuration. The per-resource preference wins, the configured global priority is
-/// the fallback, empty scopes are skipped. C# counterpart of the frontend core/models/Resource.ts
+/// pass priority configuration. The per-resource preference wins over profile and global priority;
+/// empty scopes are skipped. C# counterpart of the frontend core/models/Resource.ts
 /// resolver — keep the two in sync.
 /// </summary>
 public class PropertyValueScopeResolver(IBOptions<ResourceOptions> resourceOptions) : IPropertyValueScopeResolver
 {
     public Resource.Property.PropertyValue? Resolve(Resource resource, PropertyPool pool, int propertyId)
     {
-        var values = resource.Properties?
+        var property = resource.Properties?
             .GetValueOrDefault((int)pool)?
-            .GetValueOrDefault(propertyId)?
-            .Values;
+            .GetValueOrDefault(propertyId);
+        var values = property?.Values;
         if (values is not { Count: > 0 })
         {
             return null;
@@ -33,7 +33,8 @@ public class PropertyValueScopeResolver(IBOptions<ResourceOptions> resourceOptio
         var preference = resource.ScopePreferences?
             .FirstOrDefault(p => p.PropertyPool == pool && p.PropertyId == propertyId);
         var effectivePriority = BuildEffectiveScopePriority(
-            NormalizeGlobalPriority(resourceOptions.Value.PropertyValueScopePriority), preference);
+            NormalizeGlobalPriority(resourceOptions.Value.PropertyValueScopePriority), preference,
+            property?.ProfileScopePriority);
 
         foreach (var scope in effectivePriority)
         {
@@ -98,15 +99,19 @@ public class PropertyValueScopeResolver(IBOptions<ResourceOptions> resourceOptio
     }
 
     // Builds the effective scope chain for one property. When a per-resource preference carries
-    // priorities it fully replaces the global priority; an entry with FallbackOnEmpty == false
-    // truncates the chain there. Mirrors the frontend buildEffectiveScopePriority.
+    // priorities it fully replaces the profile/global order; an entry with FallbackOnEmpty == false
+    // truncates the chain there. Otherwise profile scopes lead, followed by remaining global scopes.
+    // Mirrors the frontend buildEffectiveScopePriority.
     private static IReadOnlyList<PropertyValueScope> BuildEffectiveScopePriority(
-        IReadOnlyList<PropertyValueScope> globalPriority, PropertyValueScopePreference? preference)
+        IReadOnlyList<PropertyValueScope> globalPriority, PropertyValueScopePreference? preference,
+        PropertyValueScope[]? profilePriority)
     {
         var priorities = preference?.Priorities;
         if (priorities is not { Length: > 0 })
         {
-            return globalPriority;
+            return profilePriority is { Length: > 0 }
+                ? profilePriority.Concat(globalPriority).Distinct().ToArray()
+                : globalPriority;
         }
 
         var chain = new List<PropertyValueScope>(priorities.Length);

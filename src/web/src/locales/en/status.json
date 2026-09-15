@@ -4,6 +4,8 @@
   "status.paused": "Paused",
   "status.stopped": "Stopped",
   "status.pending": "Pending",
+  "status.waiting": "Waiting",
+  "status.cancelled": "Cancelled",
   "status.failed": "Failed",
   "status.success": "Success",
   "status.downloading": "Downloading",

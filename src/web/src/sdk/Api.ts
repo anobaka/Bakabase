@@ -164,10 +164,10 @@ export type BakabaseAbstractionsModelsDomainConstantsAppNotificationSeverity = 0
 export type BakabaseAbstractionsModelsDomainConstantsClientMode = 0 | 1 | 2;
 
 /**
- * [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai]
+ * [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsDataOrigin = 1 | 2 | 3 | 4 | 5;
+export type BakabaseAbstractionsModelsDomainConstantsDataOrigin = 1 | 2 | 3 | 4 | 5 | 6;
 
 /**
  * [1: NotStarted, 2: Ready, 3: Failed]
@@ -318,6 +318,12 @@ export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 1 | 2 |
 export type BakabaseAbstractionsModelsDomainConstantsResourceDataType = 1 | 2 | 3;
 
 /**
+ * [1: Pending, 2: Dismissed]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsResourceMatchSuggestionStatus = 1 | 2;
+
+/**
  * [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted]
  * @format int32
  */
@@ -330,10 +336,10 @@ export type BakabaseAbstractionsModelsDomainConstantsResourceMoveRecordStatus =
   | 6;
 
 /**
- * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc]
+ * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4 | 5;
+export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4 | 5 | 7;
 
 /**
  * [1: Active, 2: Absent, 3: Unavailable]
@@ -638,7 +644,7 @@ export interface BakabaseAbstractionsModelsDomainPathPropertyExtractor {
 }
 
 export interface BakabaseAbstractionsModelsDomainPlayableItem {
-  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
   origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
   key: string;
   displayName?: string;
@@ -647,7 +653,7 @@ export interface BakabaseAbstractionsModelsDomainPlayableItem {
 export interface BakabaseAbstractionsModelsDomainPlayableItemPick {
   /** @format int32 */
   resourceId: number;
-  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
   origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
   key: string;
 }
@@ -714,9 +720,11 @@ export interface BakabaseAbstractionsModelsDomainResource {
   /** [1: Active, 2: Absent, 3: Unavailable] */
   status: BakabaseAbstractionsModelsDomainConstantsResourceStatus;
   sourceLinks?: BakabaseAbstractionsModelsDomainResourceSourceLink[];
+  externalIdentities?: BakabaseAbstractionsModelsDomainResourceExternalIdentity[];
   fileName?: string;
   directory?: string;
   path?: string;
+  hasLocalPath: boolean;
   displayName?: string;
   /** @format int32 */
   parentId?: number;
@@ -747,6 +755,14 @@ export interface BakabaseAbstractionsModelsDomainResource {
   /** @deprecated */
   mediaLibraryColor?: string;
   mediaLibraries?: BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo[];
+  collections?: BakabaseAbstractionsModelsDomainResourceCollectionInfo[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceCollectionInfo {
+  /** @format int32 */
+  id: number;
+  name: string;
+  color?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo {
@@ -768,6 +784,7 @@ export interface BakabaseAbstractionsModelsDomainResourceProperty {
   visible: boolean;
   /** @format int32 */
   order: number;
+  profileScopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
 }
 
 export interface BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue {
@@ -784,16 +801,51 @@ export interface BakabaseAbstractionsModelsDomainResourceDataState {
   resourceId: number;
   /** [1: Cover, 2: PlayableItem, 3: Metadata] */
   dataType: BakabaseAbstractionsModelsDomainConstantsResourceDataType;
-  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
   origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
   /** [1: NotStarted, 2: Ready, 3: Failed] */
   status: BakabaseAbstractionsModelsDomainConstantsDataStatus;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceExternalIdentity {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  resourceId: number;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  externalId: string;
+  /** @format date-time */
+  createDt: string;
+  coverUrls?: string[];
+  localCoverPaths?: string[];
+  /** @format date-time */
+  coverDownloadFailedAt?: string;
+  metadataJson?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceFileSystemCache {
   coverPaths?: string[];
   playableFilePaths?: string[];
   cachedTypes: BakabaseAbstractionsModelsDomainConstantsResourceCacheType[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceMatchSuggestion {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  resourceId: number;
+  resourceName?: string;
+  /** @format int32 */
+  candidateResourceId: number;
+  candidateResourceName?: string;
+  /** @format double */
+  score: number;
+  reason?: string;
+  /** [1: Pending, 2: Dismissed] */
+  status: BakabaseAbstractionsModelsDomainConstantsResourceMatchSuggestionStatus;
+  /** @format date-time */
+  createdAt: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions {
@@ -854,7 +906,7 @@ export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
   id: number;
   /** @format int32 */
   resourceId: number;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   sourceKey: string;
   /** @format date-time */
@@ -888,7 +940,7 @@ export interface BakabaseAbstractionsModelsDomainSourceMetadataFieldInfo {
 export interface BakabaseAbstractionsModelsDomainSourceMetadataMapping {
   /** @format int32 */
   id: number;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   metadataField: string;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
@@ -1153,6 +1205,12 @@ export interface BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigu
   uniqueExtensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
 }
 
+export interface BakabaseAbstractionsModelsViewResourceMoveBatchViewModel {
+  batchId: string;
+  /** @format int32 */
+  skippedResourceCount: number;
+}
+
 export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModel {
   items: BakabaseAbstractionsModelsViewResourceMovePreviewViewModelItem[];
 }
@@ -1202,6 +1260,13 @@ export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusVie
   viewedAt?: string;
   isViewed: boolean;
   hasUpdate: boolean;
+}
+
+export interface BakabaseAbstractionsServicesPlaceholderResourceResult {
+  /** @format int32 */
+  resourceId: number;
+  created: boolean;
+  name?: string;
 }
 
 /**
@@ -1465,6 +1530,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   defaultPath?: string;
   namingConvention?: string;
   preferTorrent: boolean;
+  /** @format int32 */
+  downloadResultWorkflowId?: number;
   prioritizeTasksWithTorrent: boolean;
   /** @format int32 */
   torrentCheckValidityHours?: number;
@@ -1724,6 +1791,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
   defaultPath?: string;
   namingConvention?: string;
   preferTorrent?: boolean;
+  /** @format int32 */
+  downloadResultWorkflowId?: number;
   prioritizeTasksWithTorrent?: boolean;
   skipExisting?: boolean;
   /** @format int32 */
@@ -1923,12 +1992,20 @@ export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsCon
 export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskStatus =
   100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
 
+/**
+ * [1: TorrentMetadata, 2: LocalFiles]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadResultKind =
+  | 1
+  | 2;
+
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask {
   /** @format int32 */
   id: number;
   key: string;
   name?: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -1981,7 +2058,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   taskType: number;
@@ -2018,13 +2095,13 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadRecordQueryInputModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   keys: string[];
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskAddInputModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -2046,7 +2123,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskDeleteInputModel {
   ids?: number[];
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
 }
 
@@ -2079,7 +2156,7 @@ export type BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloaders
 export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadRecordDbModel {
   /** @format int32 */
   id: number;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @minLength 1 */
   key: string;
@@ -2244,6 +2321,9 @@ export interface BakabaseInsideWorldBusinessComponentsPlayListModelsInputPlayLis
 export interface BakabaseInsideWorldBusinessComponentsPostParserControllersAddPostParserTasksInput {
   sourceLinksMap: Record<string, string[]>;
   targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
+  links: string[];
+  text?: string;
+  title?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsPostParserControllersDeletePostParserTasksByLinksInput {
@@ -2286,6 +2366,15 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
   link: string;
   title?: string;
   content?: string;
+  text?: string;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowDefinitionId?: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting] */
+  workflowStatus?: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus;
   targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
   results?: {
     DownloadInfo: SystemTextJsonNodesJsonNode;
@@ -2461,7 +2550,7 @@ export type BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource =
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem = 0 | 2;
 
 /**
- * [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All]
+ * [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
@@ -2473,7 +2562,8 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalI
   | 2048
   | 16416
   | 32768
-  | 52064;
+  | 65536
+  | 117600;
 
 /**
  * [1: Latest, 2: Frequency]
@@ -2546,7 +2636,7 @@ export type BakabaseInsideWorldModelsConstantsPlaylistItemType = 1 | 2 | 3 | 4;
 export type BakabaseInsideWorldModelsConstantsStartupPage = 0 | 1;
 
 /**
- * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam]
+ * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsThirdPartyId =
@@ -2561,7 +2651,8 @@ export type BakabaseInsideWorldModelsConstantsThirdPartyId =
   | 9
   | 10
   | 11
-  | 12;
+  | 12
+  | 13;
 
 export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
   filePath: string;
@@ -2572,7 +2663,7 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
 }
 
 export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   counts?: Record<string, number>;
 }
@@ -2607,7 +2698,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   statusAndCounts: Record<string, number>;
 }
@@ -2627,7 +2718,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCo
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   resultType: number;
@@ -3262,6 +3353,239 @@ export interface BakabaseModulesAIServicesTranslationResult {
   targetLanguage: string;
 }
 
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  resourceId: number;
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
+  kind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
+  value: string;
+  /** [1: User, 2: Subscription, 3: SharedListImport, 4: PostParser] */
+  origin: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadOrigin;
+  note?: string;
+  accessCode?: string;
+  password?: string;
+  sourceReference?: string;
+  isResolved: boolean;
+  /** @format date-time */
+  lastUsedAt?: string;
+  /** [1: Succeeded, 2: Failed] */
+  lastResult?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadResult;
+  /** @format date-time */
+  createdAt: string;
+  isDerived: boolean;
+  sourceName?: string;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  resourceId: number;
+  /** @format int32 */
+  collectionId?: number;
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
+  leadKind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
+  leadValue?: string;
+  /** @format int32 */
+  acquisitionLeadId?: number;
+  /** @format int32 */
+  recipeDefinitionId: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
+  status: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus;
+  /** [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch] */
+  waitReason?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionWaitReason;
+  targetDirectory?: string;
+  error?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  /** @format date-time */
+  completedAt?: string;
+  purchases: BakabaseModulesAcquisitionAbstractionsModelsDomainPurchaseRecord[];
+  resourceName?: string;
+  recipeName?: string;
+  waitPromptJson?: string;
+  /** @format date-time */
+  waitingSince?: string;
+  /** @format int32 */
+  currentStepIndex?: number;
+  isFinished: boolean;
+}
+
+/**
+ * [0: Unknown, 1: DirectUrl, 2: Baidu, 3: Xunlei, 4: Feimao, 5: Cloudflare, 6: Mega, 7: PikPak, 8: GoogleDrive, 9: OneDrive, 10: Magnet, 11: OneOneFive]
+ * @format int32
+ */
+export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionDriveKind =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11;
+
+/**
+ * [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent]
+ * @format int32
+ */
+export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7;
+
+/**
+ * [1: User, 2: Subscription, 3: SharedListImport, 4: PostParser]
+ * @format int32
+ */
+export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadOrigin =
+  | 1
+  | 2
+  | 3
+  | 4;
+
+/**
+ * [1: Succeeded, 2: Failed]
+ * @format int32
+ */
+export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadResult =
+  | 1
+  | 2;
+
+/**
+ * [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled]
+ * @format int32
+ */
+export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6;
+
+/**
+ * [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch]
+ * @format int32
+ */
+export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionWaitReason =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9;
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainPurchaseRecord {
+  /** @format double */
+  price: number;
+  /** @format date-time */
+  purchasedAt: string;
+  where: string;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary {
+  /** @format int32 */
+  definitionId: number;
+  name: string;
+  isBuiltin: boolean;
+  stepKinds: string[];
+  description?: string;
+  descriptionKey?: string;
+  applicableLeadKinds: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind[];
+  validation: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult;
+}
+
+export interface BakabaseModulesAcquisitionModelsDomainAcquisitionOptions {
+  inboxDirectory?: string;
+  libraryRootDirectory?: string;
+  directoryTemplate: string;
+  preferredDriveKinds: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionDriveKind[];
+  recipeByLeadKind: {
+    PlatformHolding: string;
+    SharedPage: string;
+    SharedDocument: string;
+    DirectUrl: string;
+    Magnet: string;
+    Manual: string;
+    Torrent: string;
+  };
+  /** @format double */
+  autoPurchaseLimit: number;
+  deleteArchiveAfterExtraction: boolean;
+  tryRecentPasswords: boolean;
+  /** @format int32 */
+  recentPasswordCandidateCount: number;
+  /** @format int32 */
+  concurrency: number;
+}
+
+export interface BakabaseModulesAcquisitionModelsInputAcquisitionCreationInputModel {
+  /** @format int32 */
+  resourceId: number;
+  /** @format int32 */
+  acquisitionLeadId?: number;
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
+  leadKind?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
+  leadValue?: string;
+  /** @format int32 */
+  recipeDefinitionId?: number;
+  /** @format int32 */
+  collectionId?: number;
+}
+
+export interface BakabaseModulesAcquisitionModelsInputAcquisitionFromUrlInputModel {
+  /** @minLength 1 */
+  url: string;
+  /** @format int32 */
+  recipeDefinitionId?: number;
+  /** @format int32 */
+  collectionId?: number;
+}
+
+export interface BakabaseModulesAcquisitionModelsInputAcquisitionLeadAddInputModel {
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
+  kind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
+  /**
+   * @minLength 1
+   * @maxLength 2048
+   */
+  value: string;
+  /** [1: User, 2: Subscription, 3: SharedListImport, 4: PostParser] */
+  origin: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadOrigin;
+  /** @maxLength 512 */
+  note?: string;
+  /** @maxLength 512 */
+  accessCode?: string;
+  /** @maxLength 2048 */
+  password?: string;
+  /** @maxLength 2048 */
+  sourceReference?: string;
+  isResolved: boolean;
+}
+
+export interface BakabaseModulesAcquisitionModelsInputAcquisitionResumeInputModel {
+  /** @minLength 1 */
+  signalJson: string;
+}
+
 export interface BakabaseModulesAliasAbstractionsModelsDomainAlias {
   text: string;
   preferred?: string;
@@ -3278,6 +3602,106 @@ export interface BakabaseModulesAliasModelsInputAliasAddInputModel {
 export interface BakabaseModulesAliasModelsInputAliasPatchInputModel {
   text?: string;
   isPreferred: boolean;
+}
+
+export interface BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember {
+  /** @format int32 */
+  collectionId: number;
+  /** @format int32 */
+  resourceId: number;
+  /** [1: Manual, 2: Subscription] */
+  origin?: BakabaseModulesCollectionAbstractionsModelsDomainConstantsCollectionMembershipOrigin;
+  /** @format int32 */
+  subscriptionId?: number;
+  /** @format date-time */
+  lastSeenAt?: string;
+  isIgnored: boolean;
+  /** @format int32 */
+  order?: number;
+  isFromRule: boolean;
+}
+
+export interface BakabaseModulesCollectionAbstractionsModelsDomainCollectionProgress {
+  /** @format int32 */
+  total: number;
+  /** @format int32 */
+  owned: number;
+  /** @format int32 */
+  acquiring: number;
+  /** @format int32 */
+  ignored: number;
+  /** @format double */
+  ratio: number;
+}
+
+/**
+ * [0: All, 1: Owned, 2: Missing, 3: Acquiring, 4: Ignored, 5: GoneFromSource]
+ * @format int32
+ */
+export type BakabaseModulesCollectionAbstractionsModelsDomainConstantsCollectionMemberFilter =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5;
+
+/**
+ * [1: Manual, 2: Subscription]
+ * @format int32
+ */
+export type BakabaseModulesCollectionAbstractionsModelsDomainConstantsCollectionMembershipOrigin =
+  | 1
+  | 2;
+
+export interface BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection {
+  /** @format int32 */
+  id: number;
+  name: string;
+  description?: string;
+  color?: string;
+  coverPath?: string;
+  ruleSearchJson?: string;
+  autoAcquire: boolean;
+  acquisitionSettingsJson?: string;
+  /** @format int32 */
+  order: number;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  progress?: BakabaseModulesCollectionAbstractionsModelsDomainCollectionProgress;
+  hasRule: boolean;
+}
+
+export interface BakabaseModulesCollectionAbstractionsServicesCollectionMemberPage {
+  resourceIds: number[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BakabaseModulesCollectionModelsInputCollectionInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  name: string;
+  description?: string;
+  color?: string;
+  coverPath?: string;
+  ruleSearchJson?: string;
+  autoAcquire: boolean;
+  acquisitionSettingsJson?: string;
+  /** @format int32 */
+  order: number;
+}
+
+export interface BakabaseModulesCollectionModelsInputCollectionMembersInputModel {
+  resourceIds: number[];
 }
 
 export interface BakabaseModulesComparisonModelsDomainComparisonPlan {
@@ -4193,6 +4617,15 @@ export interface BakabaseModulesStandardValueModelsViewStandardValueConversionRu
   description?: string;
 }
 
+/**
+ * [1: PlatformHolding, 2: Catalog, 3: SharingChannel]
+ * @format int32
+ */
+export type BakabaseModulesSubscriptionAbstractionsModelsDomainConstantsSubscriptionSourceKind =
+  | 1
+  | 2
+  | 3;
+
 export interface BakabaseModulesSubscriptionAbstractionsModelsInputSubscriptionCreationInputModel {
   kind: string;
   displayName: string;
@@ -4200,6 +4633,8 @@ export interface BakabaseModulesSubscriptionAbstractionsModelsInputSubscriptionC
   enabled: boolean;
   /** @format int32 */
   intervalMinutes?: number;
+  /** @format int32 */
+  collectionId?: number;
 }
 
 export interface BakabaseModulesSubscriptionAbstractionsModelsInputSubscriptionUpdateInputModel {
@@ -4208,6 +4643,8 @@ export interface BakabaseModulesSubscriptionAbstractionsModelsInputSubscriptionU
   enabled?: boolean;
   /** @format int32 */
   intervalMinutes?: number;
+  /** @format int32 */
+  collectionId?: number;
 }
 
 export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionCheckSummaryViewModel {
@@ -4223,6 +4660,10 @@ export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionPr
   kind: string;
   displayName: string;
   icon?: string;
+  /** [1: PlatformHolding, 2: Catalog, 3: SharingChannel] */
+  sourceKind: BakabaseModulesSubscriptionAbstractionsModelsDomainConstantsSubscriptionSourceKind;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
 }
 
 export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel {
@@ -4241,6 +4682,8 @@ export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionVi
   lastError?: string;
   /** @format int32 */
   intervalMinutes?: number;
+  /** @format int32 */
+  collectionId?: number;
   targetSummary?: string;
 }
 
@@ -4262,6 +4705,18 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   /** @format int32 */
   mediaCount: number;
 }
+
+/**
+ * [0: Unknown, 1: Manual, 2: Module, 3: SystemEvent, 4: Schedule, 5: Watch]
+ * @format int32
+ */
+export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivationMode =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5;
 
 /**
  * [1: OneToOne, 2: OneToMany]
@@ -4298,7 +4753,7 @@ export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowItem
   | 3;
 
 /**
- * [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted]
+ * [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting]
  * @format int32
  */
 export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus =
@@ -4307,7 +4762,8 @@ export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunS
   | 3
   | 4
   | 5
-  | 6;
+  | 6
+  | 7;
 
 export interface BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepStat {
   /** @format int32 */
@@ -4322,7 +4778,9 @@ export interface BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepS
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel {
+  nodeId?: string;
   kind: string;
+  notes?: string;
   configJson: string;
   /** [1: Fail, 2: Skip] */
   onItemError: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityErrorBehavior;
@@ -4330,6 +4788,8 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityI
 
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionCreationInputModel {
   name: string;
+  description?: string;
+  descriptionKey?: string;
   triggerKind: string;
   triggerFilterJson?: string;
   enabled: boolean;
@@ -4338,6 +4798,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitio
 
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionUpdateInputModel {
   name?: string;
+  description?: string;
   triggerFilterJson?: string;
   enabled?: boolean;
   activities?: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel[];
@@ -4347,9 +4808,22 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowManualRun
   argsJson?: string;
 }
 
+export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowRunResumeInputModel {
+  /** @minLength 1 */
+  signalJson: string;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowValidationInputModel {
+  triggerKind: string;
+  triggerFilterJson?: string;
+  activities: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel[];
+}
+
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDescriptorViewModel {
   kind: string;
   displayName: string;
+  description?: string;
+  descriptionKey?: string;
   /** [1: Filter, 2: Action, 3: Transform] */
   category: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityCategory;
   group: string;
@@ -4369,6 +4843,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityVi
   /** @format int32 */
   order: number;
   kind: string;
+  notes?: string;
   configJson: string;
   /** [1: Fail, 2: Skip] */
   onItemError: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityErrorBehavior;
@@ -4378,6 +4853,8 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinition
   /** @format int32 */
   id: number;
   name: string;
+  description?: string;
+  descriptionKey?: string;
   triggerKind: string;
   triggerFilterJson?: string;
   enabled: boolean;
@@ -4388,6 +4865,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinition
   /** @format date-time */
   lastRunAt?: string;
   lastError?: string;
+  isBuiltin: boolean;
   activities: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityViewModel[];
 }
 
@@ -4409,7 +4887,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewMod
   id: number;
   /** @format int32 */
   workflowDefinitionId: number;
-  /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted] */
+  /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting] */
   status: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus;
   /** @format date-time */
   startedAt: string;
@@ -4420,17 +4898,110 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewMod
   inputCount: number;
   /** @format int32 */
   outputCount: number;
+  outputItemsJson?: string;
+  outputPreviewTruncated: boolean;
   /** @format int32 */
   failedItemCount: number;
   stepStats: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepStat[];
   errorMessage?: string;
+  waitReason?: string;
+  waitPromptJson?: string;
+  /** @format date-time */
+  waitingSince?: string;
+  /** @format int32 */
+  currentStepIndex?: number;
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel {
   kind: string;
   displayName: string;
+  description?: string;
+  descriptionKey?: string;
+  /** [0: Unknown, 1: Manual, 2: Module, 3: SystemEvent, 4: Schedule, 5: Watch] */
+  activationMode: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivationMode;
+  sourceModule: string;
+  supportsManualRun: boolean;
   requiresManualPayload: boolean;
   payloadFields: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel[];
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationDiagnostic {
+  code: string;
+  message: string;
+  messageKey?: string;
+  severity: string;
+  dependsOnPayload: boolean;
+  nodeId?: string;
+  /** @format int32 */
+  nodeIndex?: number;
+  kind?: string;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult {
+  isValid: boolean;
+  diagnostics: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationDiagnostic[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionAcquisitionSetupInputModel {
+  inboxDirectory?: string;
+  libraryRootDirectory?: string;
+  directoryTemplate?: string;
+  preferredDriveKinds?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionDriveKind[];
+  /** @format double */
+  autoPurchaseLimit?: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionAcquisitionSetupResult {
+  createdInbox: boolean;
+  createdLibrary: boolean;
+  /** @format int32 */
+  pathMarkId?: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionInboxCandidate {
+  path: string;
+  fileName: string;
+  /** @format int64 */
+  length: number;
+  /** @format date-time */
+  createdAt: string;
+  isStable: boolean;
+  scores: BakabaseServiceComponentsAcquisitionInboxCandidateScore[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionInboxCandidateScore {
+  /** @format int32 */
+  acquisitionTaskId: number;
+  resourceName?: string;
+  /** @format int32 */
+  score: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPostParserAcquisitionResult {
+  /** @format int32 */
+  resourceId: number;
+  created: boolean;
+  /** @format int32 */
+  leadCount: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionSharedListImportResult {
+  /** @format int32 */
+  created: number;
+  /** @format int32 */
+  matched: number;
+  /** @format int32 */
+  started: number;
+  problems: string[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
+  title?: string;
+  url?: string;
+  password?: string;
+  /** @format int32 */
+  lineNumber: number;
+  alreadyKnown: boolean;
 }
 
 export interface BakabaseServiceControllersAppDataPathControllerRelocateRequest {
@@ -4483,10 +5054,34 @@ export interface BakabaseServiceControllersChatControllerUpdateTitleRequest {
   title: string;
 }
 
+export interface BakabaseServiceControllersCollectionAcquireMissingResult {
+  /** @format int32 */
+  started: number;
+  /** @format int32 */
+  withoutLead: number;
+  problems: string[];
+}
+
+export interface BakabaseServiceControllersCollectionPlaceholderInputModel {
+  title: string;
+}
+
+export interface BakabaseServiceControllersCollectionRulePreview {
+  /** @format int32 */
+  totalCount: number;
+  sampleResourceIds: number[];
+}
+
+export interface BakabaseServiceControllersCollectionRulePreviewInputModel {
+  ruleSearchJson?: string;
+  /** @format int32 */
+  sampleSize: number;
+}
+
 export interface BakabaseServiceControllersDiscoverySubscribeRequest {
   /** @format int32 */
   resourceId: number;
-  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
   origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
   /** [1: Cover, 2: PlayableItem, 3: Metadata] */
   dataType: BakabaseAbstractionsModelsDomainConstantsResourceDataType;
@@ -4517,6 +5112,14 @@ export interface BakabaseServiceControllersPathMigrationRequest {
   newPath: string;
 }
 
+export interface BakabaseServiceControllersPostParserAcquisitionInput {
+  /** @maxLength 1024 */
+  title?: string;
+  resourceIndices: number[];
+  /** @format int32 */
+  revision: number;
+}
+
 export interface BakabaseServiceControllersResourceHealthScoreRowViewModel {
   /** @format int32 */
   profileId: number;
@@ -4526,6 +5129,21 @@ export interface BakabaseServiceControllersResourceHealthScoreRowViewModel {
   matchedRulesJson?: string;
   /** @format date-time */
   evaluatedAt: string;
+}
+
+export interface BakabaseServiceControllersSharedListImportInputModel {
+  rows: BakabaseServiceControllersSharedListImportRow[];
+  /** @format int32 */
+  collectionId?: number;
+  startAcquiring: boolean;
+}
+
+export interface BakabaseServiceControllersSharedListImportRow {
+  title?: string;
+  url?: string;
+  password?: string;
+  /** @format int32 */
+  lineNumber: number;
 }
 
 export interface BakabaseServiceModelsInputAvSourceTestInputModel {
@@ -4717,6 +5335,12 @@ export interface BakabaseServiceModelsInputResourceCoverSaveInputModel {
   saveMode: BakabaseInsideWorldModelsConstantsCoverSaveMode;
 }
 
+export interface BakabaseServiceModelsInputResourceMaterializeInputModel {
+  /** @minLength 1 */
+  path: string;
+  mergeIfOccupied: boolean;
+}
+
 export interface BakabaseServiceModelsInputResourceMediaLibraryMappingInputModel {
   mediaLibraryIds: number[];
 }
@@ -4736,6 +5360,19 @@ export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   recentFilters?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsResourceFilter[];
   keepResourcesOnPathChange?: boolean;
   deleteKeepResourceMarkers?: boolean;
+}
+
+export interface BakabaseServiceModelsInputResourcePlaceholderInputModel {
+  items: BakabaseServiceModelsInputResourcePlaceholderItemInputModel[];
+  acquireImmediately: boolean;
+}
+
+export interface BakabaseServiceModelsInputResourcePlaceholderItemInputModel {
+  title?: string;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  externalId?: string;
+  sharedUrl?: string;
 }
 
 export interface BakabaseServiceModelsInputResourceProfileInputModel {
@@ -4823,6 +5460,50 @@ export interface BakabaseServiceModelsInputTextTypePatchInputModel {
   name: string;
 }
 
+export interface BakabaseServiceModelsViewAcquisitionCandidateLeadViewModel {
+  /** @format int32 */
+  id: number;
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
+  kind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
+  value: string;
+  sourceName?: string;
+  isDerived: boolean;
+  note?: string;
+  availability: string;
+  capability: string;
+  method: string;
+  defaultRecipeName: string;
+  /** @format int32 */
+  defaultRecipeDefinitionId?: number;
+  applicableRecipeDefinitionIds: number[];
+  recipeValidations: Record<
+    string,
+    BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult
+  >;
+}
+
+export interface BakabaseServiceModelsViewAcquisitionCandidatePageViewModel {
+  items: BakabaseServiceModelsViewAcquisitionCandidateViewModel[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  page: number;
+  /** @format int32 */
+  pageSize: number;
+  recipes: BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary[];
+}
+
+export interface BakabaseServiceModelsViewAcquisitionCandidateViewModel {
+  /** @format int32 */
+  resourceId: number;
+  resourceName: string;
+  leads: BakabaseServiceModelsViewAcquisitionCandidateLeadViewModel[];
+  /** @format int32 */
+  activeTaskId?: number;
+  /** [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
+  activeTaskStatus?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus;
+}
+
 export interface BakabaseServiceModelsViewAnalyticsAppInfoViewModel {
   enableAnonymousDataTracking: boolean;
   deviceId: string;
@@ -4899,7 +5580,7 @@ export interface BakabaseServiceModelsViewBulkModificationDiffViewModel {
   id: number;
   /** @format int32 */
   bulkModificationId: number;
-  resourcePath: string;
+  resourcePath?: string;
   /** @format int32 */
   resourceId: number;
   diffs: BakabaseServiceModelsViewResourceDiffViewModel[];
@@ -5084,6 +5765,40 @@ export interface BakabaseServiceModelsViewCustomPropertyViewModel {
   valueCount?: number;
 }
 
+export interface BakabaseServiceModelsViewDashboardMediaLibraryViewModel {
+  /** @format int32 */
+  id: number;
+  name: string;
+  /** @format int32 */
+  resourceCount: number;
+}
+
+export interface BakabaseServiceModelsViewDashboardOverviewViewModel {
+  /** @format int32 */
+  totalResourceCount: number;
+  /** @format int32 */
+  localResourceCount: number;
+  /** @format int32 */
+  pendingResourceCount: number;
+  /** @format int32 */
+  collectionCount: number;
+  /** @format int32 */
+  mediaLibraryCount: number;
+  /** @format int32 */
+  thisWeekAddedCount: number;
+  mediaLibraries: BakabaseServiceModelsViewDashboardMediaLibraryViewModel[];
+  workflows: BakabaseServiceModelsViewDashboardWorkflowsViewModel;
+}
+
+export interface BakabaseServiceModelsViewDashboardWorkflowsViewModel {
+  /** @format int32 */
+  runningCount: number;
+  /** @format int32 */
+  waitingCount: number;
+  /** @format int32 */
+  failedRecentlyCount: number;
+}
+
 export interface BakabaseServiceModelsViewDecompressionResultViewModel {
   key: string;
   /** [1: Pending, 2: Decompressing, 3: Success, 4: Error] */
@@ -5091,6 +5806,36 @@ export interface BakabaseServiceModelsViewDecompressionResultViewModel {
   /** @format int32 */
   percentage?: number;
   message?: string;
+}
+
+export interface BakabaseServiceModelsViewDownloadResultViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  downloadTaskId: number;
+  sourceKey: string;
+  name: string;
+  /** [1: TorrentMetadata, 2: LocalFiles] */
+  kind: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadResultKind;
+  /** @format date-time */
+  createdAt: string;
+  /** @format int32 */
+  workflowDefinitionId?: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting] */
+  workflowStatus?: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus;
+  workflowName?: string;
+  workflowIsBuiltin: boolean;
+  /** @format int32 */
+  acquisitionTaskId?: number;
+  contentsReady: boolean;
+  contentsDirectory?: string;
+  /** @format int32 */
+  resourceId?: number;
+  error?: string;
+  filterDidNotMatch: boolean;
+  canRetry: boolean;
 }
 
 export interface BakabaseServiceModelsViewEnhancementViewModel {
@@ -5395,11 +6140,30 @@ export interface BakabaseServiceModelsViewResourceHierarchyContextViewModel {
   childrenCount?: number;
 }
 
+export interface BakabaseServiceModelsViewResourceMaterializeResultViewModel {
+  materialized: boolean;
+  path?: string;
+  /** @format int32 */
+  occupiedByResourceId?: number;
+  occupiedByResourceName?: string;
+  merged: boolean;
+}
+
 export interface BakabaseServiceModelsViewResourcePathInfoViewModel {
   /** @format int32 */
   id: number;
   path: string;
   fileName: string;
+}
+
+export interface BakabaseServiceModelsViewResourcePlaceholderResultViewModel {
+  /** @format int32 */
+  index: number;
+  /** @format int32 */
+  resourceId?: number;
+  created: boolean;
+  name?: string;
+  error?: string;
 }
 
 export interface BakabaseServiceModelsViewResourceProfileViewModel {
@@ -5570,6 +6334,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainPropertyValueScopePreference[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceMatchSuggestion {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainResourceMatchSuggestion[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceSourceLink {
@@ -5761,6 +6532,41 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIMode
   data?: BakabaseModulesAIModelsDomainLlmModelInfo[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCardType {
   /** @format int32 */
   code: number;
@@ -5859,6 +6665,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkfl
   data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionInboxCandidate {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionInboxCandidate[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionSharedListPreviewRow[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceControllersChatControllerChatToolViewModel {
   /** @format int32 */
   code: number;
@@ -5906,6 +6726,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCustomPropertyViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewDownloadResultViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewDownloadResultViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel {
@@ -5976,6 +6803,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewResourcePathInfoViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourcePlaceholderResultViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourcePlaceholderResultViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel {
@@ -6324,6 +7158,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewResourceMoveBatchViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewResourceMoveBatchViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewResourceMovePreviewViewModel {
   /** @format int32 */
   code: number;
@@ -6336,6 +7177,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsServicesPlaceholderResourceResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsServicesPlaceholderResourceResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
@@ -6702,6 +7550,48 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   data?: BakabaseModulesAIServicesTranslationResult;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionModelsDomainAcquisitionOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAcquisitionModelsDomainAcquisitionOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionProgress {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesCollectionAbstractionsModelsDomainCollectionProgress;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsServicesCollectionMemberPage {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesCollectionAbstractionsServicesCollectionMemberPage;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesComparisonModelsDomainComparisonPlan {
   /** @format int32 */
   code: number;
@@ -6835,11 +7725,53 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesW
   data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionAcquisitionSetupResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionAcquisitionSetupResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPostParserAcquisitionResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPostParserAcquisitionResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionSharedListImportResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionSharedListImportResult;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersAppDataPathControllerValidateResponse {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseServiceControllersAppDataPathControllerValidateResponse;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCollectionAcquireMissingResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersCollectionAcquireMissingResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCollectionRulePreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersCollectionRulePreview;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersMediaLibraryStatistics {
@@ -6854,6 +7786,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceControllersPathMarkSyncStatusResponse;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAcquisitionCandidatePageViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewAcquisitionCandidatePageViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAnalyticsAppInfoViewModel {
@@ -6903,6 +7842,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCustomPropertyViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewDashboardOverviewViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewDashboardOverviewViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFilePlayabilityViewModel {
@@ -6975,6 +7921,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   data?: BakabaseServiceModelsViewResourceHierarchyContextViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceMaterializeResultViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceMaterializeResultViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel {
   /** @format int32 */
   code: number;
@@ -7018,6 +7971,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
     string,
     Record<string, BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel[]>
   >;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1SystemInt32 {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: Record<string, number[] | null>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemDecimal {
@@ -7810,7 +8770,8 @@ export interface FullRequestParams extends Omit<RequestInit, "body"> {
   /** request cancellation token */
   cancelToken?: CancelToken;
 
-  showErrorToast?: (response: BaseResponse) => boolean;
+  /** Set false when the caller presents errors inline; callbacks control API business errors. */
+  showErrorToast?: boolean | ((response: BaseResponse) => boolean);
 }
 
 export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path">;
@@ -7971,6 +8932,7 @@ export class HttpClient<SecurityDataType = unknown> {
     const queryString = query && this.toQueryString(query);
     const payloadFormatter = this.contentFormatters[type || ContentType.Json];
     const responseFormat = format || requestParams.format;
+    const requestSignal = cancelToken ? this.createAbortSignal(cancelToken) : requestParams.signal;
 
     return this.customFetch(
       `${baseUrl || this.baseUrl || ""}${path}${queryString ? `?${queryString}` : ""}`,
@@ -7980,7 +8942,7 @@ export class HttpClient<SecurityDataType = unknown> {
           ...(requestParams.headers || {}),
           ...(type && type !== ContentType.FormData ? { "Content-Type": type } : {}),
         },
-        signal: cancelToken ? this.createAbortSignal(cancelToken) : requestParams.signal,
+        signal: requestSignal,
         body: typeof body === "undefined" || body === null ? null : payloadFormatter(body),
       },
     ).then(async (response) => {
@@ -8008,14 +8970,19 @@ export class HttpClient<SecurityDataType = unknown> {
         this.abortControllers.delete(cancelToken);
       }
 
-      
+
+      if (requestSignal?.aborted) {
+        throw requestSignal.reason ?? new DOMException("Request was aborted", "AbortError");
+      }
       if (!response.ok) {
         this.processResponseError(data, fullRequestParams, response);
         throw data;
       }
       return this.processResponseData(data.data as BaseResponse, fullRequestParams);
     }).catch((error) => {
-      this.processResponseError(error, fullRequestParams);
+      if (!requestSignal?.aborted && error?.name !== "AbortError") {
+        this.processResponseError(error, fullRequestParams);
+      }
       throw error;
     });
   };
@@ -8031,6 +8998,8 @@ export class HttpClient<SecurityDataType = unknown> {
   protected static readonly reportedMarker = "__bakabaseErrorReported";
 
   protected processResponseError = (error: any, params: FullRequestParams, response?: Response) => {
+    if (params.showErrorToast === false) return;
+
     if (error && typeof error === "object") {
       if ((error as any)[HttpClient.reportedMarker]) {
         return;
@@ -8067,8 +9036,8 @@ export class HttpClient<SecurityDataType = unknown> {
         case 0:
           break;
         default:
-          const showErrorToast = params.showErrorToast || ((error: BaseResponse) => error.code >= 400 || error.code < 200);
-          if (showErrorToast(response)) {
+          const showErrorToast = params.showErrorToast ?? ((error: BaseResponse) => error.code >= 400 || error.code < 200);
+          if (typeof showErrorToast === "function" ? showErrorToast(response) : showErrorToast) {
             const title = `[${response.code}]${params.method} ${params.path}`;
 
             toast.danger({
@@ -8082,7 +9051,7 @@ export class HttpClient<SecurityDataType = unknown> {
     return response as T;
   };
 
-        
+
 }
 
 /**
@@ -8090,6 +9059,2440 @@ export class HttpClient<SecurityDataType = unknown> {
  * @version v1
  */
 export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
+  acquisition = {
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name SearchAcquisitionCandidates
+     * @request GET:/acquisition/candidates
+     */
+    searchAcquisitionCandidates: (
+      query?: {
+        keyword?: string;
+        /**
+         * @format int32
+         * @default 1
+         */
+        page?: number;
+        /**
+         * @format int32
+         * @default 24
+         */
+        pageSize?: number;
+        /** @default "all" */
+        filter?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAcquisitionCandidatePageViewModel,
+        any
+      >({
+        path: `/acquisition/candidates`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchAcquisitionCandidates
+     * @name searchAcquisitionCandidatesUrl
+     */
+    searchAcquisitionCandidatesUrl: (query?: {
+        keyword?: string;
+        /**
+         * @format int32
+         * @default 1
+         */
+        page?: number;
+        /**
+         * @format int32
+         * @default 24
+         */
+        pageSize?: number;
+        /** @default "all" */
+        filter?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/candidates`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name GetAcquisitionCandidate
+     * @request GET:/acquisition/candidates/{resourceId}
+     */
+    getAcquisitionCandidate: (resourceId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAcquisitionCandidatePageViewModel,
+        any
+      >({
+        path: `/acquisition/candidates/${resourceId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name CreateAcquisitionFromUrl
+     * @request POST:/acquisition/from-url
+     */
+    createAcquisitionFromUrl: (
+      data: BakabaseModulesAcquisitionModelsInputAcquisitionFromUrlInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask,
+        any
+      >({
+        path: `/acquisition/from-url`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createAcquisitionFromUrl
+     * @name createAcquisitionFromUrlUrl
+     */
+    createAcquisitionFromUrlUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/from-url`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name PreviewSharedList
+     * @request POST:/acquisition/shared-list/preview
+     */
+    previewSharedList: (
+      data: {
+        /** @format binary */
+        file?: File;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionSharedListPreviewRow,
+        any
+      >({
+        path: `/acquisition/shared-list/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.FormData,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewSharedList
+     * @name previewSharedListUrl
+     */
+    previewSharedListUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/shared-list/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name ImportSharedList
+     * @request POST:/acquisition/shared-list/import
+     */
+    importSharedList: (
+      data: BakabaseServiceControllersSharedListImportInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionSharedListImportResult,
+        any
+      >({
+        path: `/acquisition/shared-list/import`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for importSharedList
+     * @name importSharedListUrl
+     */
+    importSharedListUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/shared-list/import`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name CreateAcquisition
+     * @request POST:/acquisition
+     */
+    createAcquisition: (
+      data: BakabaseModulesAcquisitionModelsInputAcquisitionCreationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask,
+        any
+      >({
+        path: `/acquisition`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createAcquisition
+     * @name createAcquisitionUrl
+     */
+    createAcquisitionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name SearchAcquisitions
+     * @request GET:/acquisition
+     */
+    searchAcquisitions: (
+      query?: {
+        /** [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
+        status?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus;
+        /** @format int32 */
+        resourceId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask,
+        any
+      >({
+        path: `/acquisition`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchAcquisitions
+     * @name searchAcquisitionsUrl
+     */
+    searchAcquisitionsUrl: (query?: {
+        /** [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
+        status?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus;
+        /** @format int32 */
+        resourceId?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name GetAcquisition
+     * @request GET:/acquisition/{id}
+     */
+    getAcquisition: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask,
+        any
+      >({
+        path: `/acquisition/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name ResumeAcquisition
+     * @request POST:/acquisition/{id}/resume
+     */
+    resumeAcquisition: (
+      id: number,
+      data: BakabaseModulesAcquisitionModelsInputAcquisitionResumeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/acquisition/${id}/resume`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name RetryAcquisition
+     * @request POST:/acquisition/{id}/retry
+     */
+    retryAcquisition: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask,
+        any
+      >({
+        path: `/acquisition/${id}/retry`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name CancelAcquisition
+     * @request POST:/acquisition/{id}/cancel
+     */
+    cancelAcquisition: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/acquisition/${id}/cancel`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name GetAcquisitionInbox
+     * @request GET:/acquisition/inbox
+     */
+    getAcquisitionInbox: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionInboxCandidate,
+        any
+      >({
+        path: `/acquisition/inbox`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionInbox
+     * @name getAcquisitionInboxUrl
+     */
+    getAcquisitionInboxUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/inbox`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name UnclaimAcquisitionFiles
+     * @request POST:/acquisition/{id}/unclaim
+     */
+    unclaimAcquisitionFiles: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/acquisition/${id}/unclaim`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name GetAcquisitionOptions
+     * @request GET:/acquisition/options
+     */
+    getAcquisitionOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionModelsDomainAcquisitionOptions,
+        any
+      >({
+        path: `/acquisition/options`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionOptions
+     * @name getAcquisitionOptionsUrl
+     */
+    getAcquisitionOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/options`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name PutAcquisitionOptions
+     * @request PUT:/acquisition/options
+     */
+    putAcquisitionOptions: (
+      data: BakabaseModulesAcquisitionModelsDomainAcquisitionOptions,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/acquisition/options`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for putAcquisitionOptions
+     * @name putAcquisitionOptionsUrl
+     */
+    putAcquisitionOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/options`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name SetUpAcquisition
+     * @request POST:/acquisition/setup
+     */
+    setUpAcquisition: (
+      data: BakabaseServiceComponentsAcquisitionAcquisitionSetupInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionAcquisitionSetupResult,
+        any
+      >({
+        path: `/acquisition/setup`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setUpAcquisition
+     * @name setUpAcquisitionUrl
+     */
+    setUpAcquisitionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/setup`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name GetAcquisitionRecipes
+     * @request GET:/acquisition/recipes
+     */
+    getAcquisitionRecipes: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary,
+        any
+      >({
+        path: `/acquisition/recipes`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionRecipes
+     * @name getAcquisitionRecipesUrl
+     */
+    getAcquisitionRecipesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/recipes`;
+
+      return baseUrl + path;
+    },
+  };
+  resource = {
+    /**
+     * No description
+     *
+     * @tags AcquisitionLead
+     * @name GetResourceAcquisitionLeads
+     * @request GET:/resource/{resourceId}/acquisition-leads
+     */
+    getResourceAcquisitionLeads: (resourceId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead,
+        any
+      >({
+        path: `/resource/${resourceId}/acquisition-leads`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLead
+     * @name AddResourceAcquisitionLead
+     * @request POST:/resource/{resourceId}/acquisition-leads
+     */
+    addResourceAcquisitionLead: (
+      resourceId: number,
+      data: BakabaseModulesAcquisitionModelsInputAcquisitionLeadAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead,
+        any
+      >({
+        path: `/resource/${resourceId}/acquisition-leads`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLead
+     * @name AddResourceAcquisitionTorrent
+     * @request POST:/resource/{resourceId}/acquisition-leads/torrent
+     */
+    addResourceAcquisitionTorrent: (
+      resourceId: number,
+      data: {
+        /** @format binary */
+        file?: File;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead,
+        any
+      >({
+        path: `/resource/${resourceId}/acquisition-leads/torrent`,
+        method: "POST",
+        body: data,
+        type: ContentType.FormData,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLead
+     * @name DeleteResourceAcquisitionLead
+     * @request DELETE:/resource/{resourceId}/acquisition-leads/{id}
+     */
+    deleteResourceAcquisitionLead: (resourceId: number, id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/acquisition-leads/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name GetCollectionIdsByResourceIds
+     * @request GET:/resource/collections
+     */
+    getCollectionIdsByResourceIds: (
+      query?: {
+        resourceIds?: number[];
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1SystemInt32,
+        any
+      >({
+        path: `/resource/collections`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getCollectionIdsByResourceIds
+     * @name getCollectionIdsByResourceIdsUrl
+     */
+    getCollectionIdsByResourceIdsUrl: (query?: {
+        resourceIds?: number[];
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/collections`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name GetResourceEnhancements
+     * @request GET:/resource/{resourceId}/enhancement
+     */
+    getResourceEnhancements: (
+      resourceId: number,
+      query?: {
+        /** [0: None, 1: GeneratedPropertyValue] */
+        additionalItem?: BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceEnhancements,
+        any
+      >({
+        path: `/resource/${resourceId}/enhancement`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name DeleteResourceEnhancement
+     * @request DELETE:/resource/{resourceId}/enhancer/{enhancerId}/enhancement
+     */
+    deleteResourceEnhancement: (
+      resourceId: number,
+      enhancerId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name EnhanceResourceByEnhancer
+     * @request POST:/resource/{resourceId}/enhancer/{enhancerId}/enhancement
+     */
+    enhanceResourceByEnhancer: (
+      resourceId: number,
+      enhancerId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name ApplyEnhancementContextDataForResourceByEnhancer
+     * @request POST:/resource/{resourceId}/enhancer/{enhancerId}/enhancement/apply
+     */
+    applyEnhancementContextDataForResourceByEnhancer: (
+      resourceId: number,
+      enhancerId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement/apply`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name ValidateEnhancerConfiguration
+     * @request POST:/resource/{resourceId}/enhancement/validate
+     */
+    validateEnhancerConfiguration: (
+      resourceId: number,
+      data: BakabaseAbstractionsModelsDomainEnhancerFullOptions[],
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/enhancement/validate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetSearchOperationsForProperty
+     * @request GET:/resource/search-operation
+     */
+    getSearchOperationsForProperty: (
+      query?: {
+        /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+        propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+        /** @format int32 */
+        propertyId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainConstantsSearchOperation,
+        any
+      >({
+        path: `/resource/search-operation`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSearchOperationsForProperty
+     * @name getSearchOperationsForPropertyUrl
+     */
+    getSearchOperationsForPropertyUrl: (query?: {
+        /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+        propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+        /** @format int32 */
+        propertyId?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/search-operation`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetSearchOperationsByPropertyType
+     * @request GET:/resource/search-operation/by-type
+     */
+    getSearchOperationsByPropertyType: (
+      query?: {
+        /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+        propertyType?: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainConstantsSearchOperation,
+        any
+      >({
+        path: `/resource/search-operation/by-type`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSearchOperationsByPropertyType
+     * @name getSearchOperationsByPropertyTypeUrl
+     */
+    getSearchOperationsByPropertyTypeUrl: (query?: {
+        /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+        propertyType?: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/search-operation/by-type`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetFilterValueProperty
+     * @request GET:/resource/filter-value-property
+     */
+    getFilterValueProperty: (
+      query?: {
+        /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+        propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+        /** @format int32 */
+        propertyId?: number;
+        /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+        operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/resource/filter-value-property`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFilterValueProperty
+     * @name getFilterValuePropertyUrl
+     */
+    getFilterValuePropertyUrl: (query?: {
+        /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+        propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+        /** @format int32 */
+        propertyId?: number;
+        /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+        operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/filter-value-property`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetLastResourceSearch
+     * @request GET:/resource/last-search
+     */
+    getLastResourceSearch: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel,
+        any
+      >({
+        path: `/resource/last-search`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getLastResourceSearch
+     * @name getLastResourceSearchUrl
+     */
+    getLastResourceSearchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/last-search`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name SaveNewResourceSearch
+     * @request POST:/resource/saved-search
+     */
+    saveNewResourceSearch: (
+      data: BakabaseServiceModelsInputSavedSearchAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewSavedSearchViewModel,
+        any
+      >({
+        path: `/resource/saved-search`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for saveNewResourceSearch
+     * @name saveNewResourceSearchUrl
+     */
+    saveNewResourceSearchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/saved-search`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PutSavedSearchName
+     * @request PUT:/resource/saved-search
+     */
+    putSavedSearchName: (
+      data: string,
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/saved-search`,
+        method: "PUT",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for putSavedSearchName
+     * @name putSavedSearchNameUrl
+     */
+    putSavedSearchNameUrl: (query?: {
+        id?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/saved-search`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetSavedSearch
+     * @request GET:/resource/saved-search
+     */
+    getSavedSearch: (
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewSavedSearchViewModel,
+        any
+      >({
+        path: `/resource/saved-search`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSavedSearch
+     * @name getSavedSearchUrl
+     */
+    getSavedSearchUrl: (query?: {
+        id?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/saved-search`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name DeleteSavedSearch
+     * @request DELETE:/resource/saved-search
+     */
+    deleteSavedSearch: (
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/saved-search`,
+        method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for deleteSavedSearch
+     * @name deleteSavedSearchUrl
+     */
+    deleteSavedSearchUrl: (query?: {
+        id?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/saved-search`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PutSavedSearchDisplayMode
+     * @request PUT:/resource/saved-search/display-mode
+     */
+    putSavedSearchDisplayMode: (
+      data: BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode,
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/saved-search/display-mode`,
+        method: "PUT",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for putSavedSearchDisplayMode
+     * @name putSavedSearchDisplayModeUrl
+     */
+    putSavedSearchDisplayModeUrl: (query?: {
+        id?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/saved-search/display-mode`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name SearchResources
+     * @request POST:/resource/search
+     */
+    searchResources: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      query?: {
+        saveSearch?: boolean;
+        searchId?: string;
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDomainResource,
+        any
+      >({
+        path: `/resource/search`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchResources
+     * @name searchResourcesUrl
+     */
+    searchResourcesUrl: (query?: {
+        saveSearch?: boolean;
+        searchId?: string;
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/search`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name SearchAllResourceIds
+     * @request POST:/resource/search/ids
+     */
+    searchAllResourceIds: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemInt32, any>({
+        path: `/resource/search/ids`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchAllResourceIds
+     * @name searchAllResourceIdsUrl
+     */
+    searchAllResourceIdsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/search/ids`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourcesByKeys
+     * @request GET:/resource/keys
+     */
+    getResourcesByKeys: (
+      query?: {
+        ids?: number[];
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource,
+        any
+      >({
+        path: `/resource/keys`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourcesByKeys
+     * @name getResourcesByKeysUrl
+     */
+    getResourcesByKeysUrl: (query?: {
+        ids?: number[];
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/keys`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceHierarchyContext
+     * @request GET:/resource/{id}/hierarchy-context
+     */
+    getResourceHierarchyContext: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceHierarchyContextViewModel,
+        any
+      >({
+        path: `/resource/${id}/hierarchy-context`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name OpenResourceDirectory
+     * @request GET:/resource/directory
+     */
+    openResourceDirectory: (
+      query?: {
+        /** @format int32 */
+        id?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/directory`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for openResourceDirectory
+     * @name openResourceDirectoryUrl
+     */
+    openResourceDirectoryUrl: (query?: {
+        /** @format int32 */
+        id?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/directory`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name SetResourceMediaLibraries
+     * @request PUT:/resource/media-libraries
+     */
+    setResourceMediaLibraries: (
+      data: BakabaseInsideWorldModelsRequestModelsResourceSetMediaLibrariesRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/media-libraries`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setResourceMediaLibraries
+     * @name setResourceMediaLibrariesUrl
+     */
+    setResourceMediaLibrariesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/media-libraries`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceMediaLibraryMappings
+     * @request POST:/resource/media-library-mappings
+     */
+    getResourceMediaLibraryMappings: (data: number[], params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32,
+        any
+      >({
+        path: `/resource/media-library-mappings`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceMediaLibraryMappings
+     * @name getResourceMediaLibraryMappingsUrl
+     */
+    getResourceMediaLibraryMappingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/media-library-mappings`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceDataForPreviewer
+     * @request GET:/resource/{id}/previewer
+     */
+    getResourceDataForPreviewer: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem,
+        any
+      >({
+        path: `/resource/${id}/previewer`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PutResourcePropertyValue
+     * @request PUT:/resource/{id}/property-value
+     */
+    putResourcePropertyValue: (
+      id: number,
+      data: BakabaseAbstractionsModelsInputResourcePropertyValuePutInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/property-value`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourcePropertyValueScopePreferences
+     * @request GET:/resource/{id}/property-value-scope-preference
+     */
+    getResourcePropertyValueScopePreferences: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPropertyValueScopePreference,
+        any
+      >({
+        path: `/resource/${id}/property-value-scope-preference`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PutResourcePropertyValueScopePreference
+     * @request PUT:/resource/{id}/property-value-scope-preference
+     */
+    putResourcePropertyValueScopePreference: (
+      id: number,
+      data: BakabaseAbstractionsModelsInputResourcePropertyValueScopePreferencePutInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPropertyValueScopePreference,
+        any
+      >({
+        path: `/resource/${id}/property-value-scope-preference`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name DeleteResourcePropertyValueScopePreference
+     * @request DELETE:/resource/{id}/property-value-scope-preference
+     */
+    deleteResourcePropertyValueScopePreference: (
+      id: number,
+      query?: {
+        /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+        propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+        /** @format int32 */
+        propertyId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/property-value-scope-preference`,
+        method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name BulkPutResourcePropertyValue
+     * @request PUT:/resource/bulk/property-value
+     */
+    bulkPutResourcePropertyValue: (
+      data: BakabaseServiceModelsInputBulkResourcePropertyValuePutInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/bulk/property-value`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for bulkPutResourcePropertyValue
+     * @name bulkPutResourcePropertyValueUrl
+     */
+    bulkPutResourcePropertyValueUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/bulk/property-value`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PlayResourceFile
+     * @request GET:/resource/{resourceId}/play
+     */
+    playResourceFile: (
+      resourceId: number,
+      query?: {
+        file?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/play`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PlayResourceItem
+     * @request GET:/resource/{resourceId}/play-item
+     */
+    playResourceItem: (
+      resourceId: number,
+      query?: {
+        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+        origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+        key?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/play-item`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourcePlayableItems
+     * @request GET:/resource/{id}/playable-items
+     */
+    getResourcePlayableItems: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPlayableItem,
+        any
+      >({
+        path: `/resource/${id}/playable-items`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceEffectivePlayerOptions
+     * @request GET:/resource/{id}/effective-player-options
+     */
+    getResourceEffectivePlayerOptions: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions,
+        any
+      >({
+        path: `/resource/${id}/effective-player-options`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PlayRandomResource
+     * @request GET:/resource/play/random
+     */
+    playRandomResource: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/play/random`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for playRandomResource
+     * @name playRandomResourceUrl
+     */
+    playRandomResourceUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/play/random`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PickRandomPlayableItem
+     * @request GET:/resource/play/random/candidate
+     */
+    pickRandomPlayableItem: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPlayableItemPick,
+        any
+      >({
+        path: `/resource/play/random/candidate`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for pickRandomPlayableItem
+     * @name pickRandomPlayableItemUrl
+     */
+    pickRandomPlayableItemUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/play/random/candidate`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name BulkDeleteResources
+     * @request POST:/resource/bulk-delete
+     */
+    bulkDeleteResources: (
+      data: BakabaseAbstractionsModelsInputBulkDeleteResourcesInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/bulk-delete`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for bulkDeleteResources
+     * @name bulkDeleteResourcesUrl
+     */
+    bulkDeleteResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/bulk-delete`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PinResource
+     * @request PUT:/resource/{id}/pin
+     */
+    pinResource: (
+      id: number,
+      query?: {
+        pin?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/pin`,
+        method: "PUT",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name TransferResourceData
+     * @request PUT:/resource/transfer
+     */
+    transferResourceData: (
+      data: BakabaseAbstractionsModelsInputResourceTransferInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/transfer`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for transferResourceData
+     * @name transferResourceDataUrl
+     */
+    transferResourceDataUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/transfer`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name MaterializeResource
+     * @request POST:/resource/{id}/materialize
+     */
+    materializeResource: (
+      id: number,
+      data: BakabaseServiceModelsInputResourceMaterializeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceMaterializeResultViewModel,
+        any
+      >({
+        path: `/resource/${id}/materialize`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name DematerializeResource
+     * @request POST:/resource/{id}/dematerialize
+     */
+    dematerializeResource: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/dematerialize`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name CreatePlaceholderResources
+     * @request POST:/resource/placeholder
+     */
+    createPlaceholderResources: (
+      data: BakabaseServiceModelsInputResourcePlaceholderInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourcePlaceholderResultViewModel,
+        any
+      >({
+        path: `/resource/placeholder`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createPlaceholderResources
+     * @name createPlaceholderResourcesUrl
+     */
+    createPlaceholderResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/placeholder`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name SearchResourcePaths
+     * @request GET:/resource/paths
+     */
+    searchResourcePaths: (
+      query?: {
+        keyword?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourcePathInfoViewModel,
+        any
+      >({
+        path: `/resource/paths`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchResourcePaths
+     * @name searchResourcePathsUrl
+     */
+    searchResourcePathsUrl: (query?: {
+        keyword?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/paths`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name SaveCover
+     * @request PUT:/resource/{id}/cover
+     */
+    saveCover: (
+      id: number,
+      data: BakabaseServiceModelsInputResourceCoverSaveInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/cover`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name MarkResourceAsNotPlayed
+     * @request DELETE:/resource/{id}/played-at
+     */
+    markResourceAsNotPlayed: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/played-at`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name MarkResourceAsPlayed
+     * @request POST:/resource/{id}/played-at
+     */
+    markResourceAsPlayed: (
+      id: number,
+      query?: {
+        item?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/played-at`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name MarkResourcesAsPlayed
+     * @request POST:/resource/played-at/bulk
+     */
+    markResourcesAsPlayed: (
+      data: BakabaseAbstractionsModelsInputMarkResourcesPlayedInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/played-at/bulk`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for markResourcesAsPlayed
+     * @name markResourcesAsPlayedUrl
+     */
+    markResourcesAsPlayedUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/played-at/bulk`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceSearchKeywordRecommendation
+     * @request GET:/resource/search/keyword-recommendation
+     */
+    getResourceSearchKeywordRecommendation: (
+      query?: {
+        keyword?: string;
+        /**
+         * @format int32
+         * @default 10
+         */
+        maxCount?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+        path: `/resource/search/keyword-recommendation`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceSearchKeywordRecommendation
+     * @name getResourceSearchKeywordRecommendationUrl
+     */
+    getResourceSearchKeywordRecommendationUrl: (query?: {
+        keyword?: string;
+        /**
+         * @format int32
+         * @default 10
+         */
+        maxCount?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/search/keyword-recommendation`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceMediaLibraries
+     * @request GET:/resource/{id}/media-libraries
+     */
+    getResourceMediaLibraries: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping,
+        any
+      >({
+        path: `/resource/${id}/media-libraries`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name ReplaceResourceMediaLibraryMappings
+     * @request PUT:/resource/{id}/media-libraries
+     */
+    replaceResourceMediaLibraryMappings: (
+      id: number,
+      data: BakabaseServiceModelsInputResourceMediaLibraryMappingInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/media-libraries`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name AddResourceMediaLibraryMapping
+     * @request POST:/resource/{id}/media-libraries/{mediaLibraryId}
+     */
+    addResourceMediaLibraryMapping: (
+      id: number,
+      mediaLibraryId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/media-libraries/${mediaLibraryId}`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name RemoveResourceMediaLibraryMapping
+     * @request DELETE:/resource/{id}/media-libraries/{mediaLibraryId}
+     */
+    removeResourceMediaLibraryMapping: (
+      id: number,
+      mediaLibraryId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/media-libraries/${mediaLibraryId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name BulkAddResourceMediaLibraryMappings
+     * @request POST:/resource/bulk/media-libraries
+     */
+    bulkAddResourceMediaLibraryMappings: (
+      data: BakabaseServiceControllersBulkResourceMediaLibraryMappingInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/bulk/media-libraries`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for bulkAddResourceMediaLibraryMappings
+     * @name bulkAddResourceMediaLibraryMappingsUrl
+     */
+    bulkAddResourceMediaLibraryMappingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/bulk/media-libraries`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceSourceLinks
+     * @request GET:/resource/{id}/source-links
+     */
+    getResourceSourceLinks: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceSourceLink,
+        any
+      >({
+        path: `/resource/${id}/source-links`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceConflicts
+     * @request GET:/resource/{id}/conflicts
+     */
+    getResourceConflicts: (
+      id: number,
+      query?: {
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource,
+        any
+      >({
+        path: `/resource/${id}/conflicts`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name MergeResources
+     * @request POST:/resource/merge
+     */
+    mergeResources: (
+      data: BakabaseAbstractionsModelsInputResourceMergeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/merge`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for mergeResources
+     * @name mergeResourcesUrl
+     */
+    mergeResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/merge`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceDiscovery
+     * @name StreamResourceDiscovery
+     * @request GET:/resource/discovery/stream
+     */
+    streamResourceDiscovery: (params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/resource/discovery/stream`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for streamResourceDiscovery
+     * @name streamResourceDiscoveryUrl
+     */
+    streamResourceDiscoveryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/discovery/stream`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceDiscovery
+     * @name SubscribeResourceDiscovery
+     * @request POST:/resource/discovery/subscribe
+     */
+    subscribeResourceDiscovery: (
+      data: BakabaseServiceControllersDiscoverySubscribeRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/discovery/subscribe`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for subscribeResourceDiscovery
+     * @name subscribeResourceDiscoveryUrl
+     */
+    subscribeResourceDiscoveryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/discovery/subscribe`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceDiscovery
+     * @name SubscribeResourceDiscoveryBatch
+     * @request POST:/resource/discovery/subscribe/batch
+     */
+    subscribeResourceDiscoveryBatch: (
+      data: BakabaseServiceControllersDiscoverySubscribeRequest[],
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/discovery/subscribe/batch`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for subscribeResourceDiscoveryBatch
+     * @name subscribeResourceDiscoveryBatchUrl
+     */
+    subscribeResourceDiscoveryBatchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/discovery/subscribe/batch`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMatchSuggestion
+     * @name GetPendingResourceMatchSuggestions
+     * @request GET:/resource/match-suggestion
+     */
+    getPendingResourceMatchSuggestions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceMatchSuggestion,
+        any
+      >({
+        path: `/resource/match-suggestion`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPendingResourceMatchSuggestions
+     * @name getPendingResourceMatchSuggestionsUrl
+     */
+    getPendingResourceMatchSuggestionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/match-suggestion`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMatchSuggestion
+     * @name CountPendingResourceMatchSuggestions
+     * @request GET:/resource/match-suggestion/count
+     */
+    countPendingResourceMatchSuggestions: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/resource/match-suggestion/count`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for countPendingResourceMatchSuggestions
+     * @name countPendingResourceMatchSuggestionsUrl
+     */
+    countPendingResourceMatchSuggestionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/match-suggestion/count`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMatchSuggestion
+     * @name ConfirmResourceMatchSuggestion
+     * @request POST:/resource/match-suggestion/{id}/confirm
+     */
+    confirmResourceMatchSuggestion: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/match-suggestion/${id}/confirm`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceMatchSuggestion
+     * @name DismissResourceMatchSuggestion
+     * @request POST:/resource/match-suggestion/{id}/dismiss
+     */
+    dismissResourceMatchSuggestion: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/match-suggestion/${id}/dismiss`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+  };
   ai = {
     /**
      * No description
@@ -8121,7 +11524,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addAiProviderUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/providers`;
-      
+
       return baseUrl + path;
     },
 
@@ -8150,7 +11553,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllAiProvidersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/providers`;
-      
+
       return baseUrl + path;
     },
 
@@ -8272,7 +11675,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAiProviderKindsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/provider-kinds`;
-      
+
       return baseUrl + path;
     },
 
@@ -8343,7 +11746,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/usage`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -8355,7 +11758,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -8384,7 +11787,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getLlmUsageSummaryUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/usage/summary`;
-      
+
       return baseUrl + path;
     },
 
@@ -8413,7 +11816,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllLlmCacheEntriesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/cache`;
-      
+
       return baseUrl + path;
     },
 
@@ -8439,7 +11842,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearAllLlmCacheUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/cache`;
-      
+
       return baseUrl + path;
     },
 
@@ -8483,7 +11886,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllAiFeatureConfigsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/features`;
-      
+
       return baseUrl + path;
     },
 
@@ -8580,7 +11983,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiTranslateUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/translate`;
-      
+
       return baseUrl + path;
     },
 
@@ -8614,7 +12017,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiTranslateBatchUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/translate/batch`;
-      
+
       return baseUrl + path;
     },
 
@@ -8672,7 +12075,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiAnalyzeFileStructureUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/analyze-structure`;
-      
+
       return baseUrl + path;
     },
 
@@ -8706,7 +12109,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiAnalyzeNamingConventionUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/analyze-naming`;
-      
+
       return baseUrl + path;
     },
 
@@ -8740,7 +12143,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiSuggestFileNameCorrectionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/suggest-names`;
-      
+
       return baseUrl + path;
     },
 
@@ -8774,7 +12177,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiGroupByPathSimilarityUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/group-by-similarity`;
-      
+
       return baseUrl + path;
     },
 
@@ -8808,7 +12211,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiSuggestDirectoryCorrectionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/suggest-directory-corrections`;
-      
+
       return baseUrl + path;
     },
 
@@ -8842,7 +12245,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiApplyFileOperationsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/apply-operations`;
-      
+
       return baseUrl + path;
     },
   };
@@ -8872,7 +12275,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getEnabledAigcProvidersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/providers`;
-      
+
       return baseUrl + path;
     },
 
@@ -8901,7 +12304,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllAigcGeneratorsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/generators`;
-      
+
       return baseUrl + path;
     },
 
@@ -8935,7 +12338,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addAigcGeneratorUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/generators`;
-      
+
       return baseUrl + path;
     },
 
@@ -9068,7 +12471,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     importComfyUiWorkflowsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/generators/import-comfyui`;
-      
+
       return baseUrl + path;
     },
 
@@ -9107,7 +12510,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/runs`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9119,7 +12522,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9210,7 +12613,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/artifacts`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9222,7 +12625,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9338,7 +12741,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9350,7 +12753,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9387,7 +12790,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9399,7 +12802,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9430,7 +12833,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addAliasUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias`;
-      
+
       return baseUrl + path;
     },
 
@@ -9464,7 +12867,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9476,7 +12879,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9510,7 +12913,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias/groups`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9522,7 +12925,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9556,7 +12959,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias/merge`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9568,7 +12971,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9593,7 +12996,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     exportAliasesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias/xlsx`;
-      
+
       return baseUrl + path;
     },
 
@@ -9627,7 +13030,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias/import`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9639,7 +13042,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -9669,7 +13072,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     checkAppInitializedUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/initialized`;
-      
+
       return baseUrl + path;
     },
 
@@ -9698,7 +13101,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAppInfoUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/info`;
-      
+
       return baseUrl + path;
     },
 
@@ -9727,7 +13130,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAnalyticsAppInfoUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/analytics-info`;
-      
+
       return baseUrl + path;
     },
 
@@ -9756,7 +13159,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAppTelemetrySnapshotUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/telemetry-snapshot`;
-      
+
       return baseUrl + path;
     },
 
@@ -9782,7 +13185,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     acceptTermsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/terms`;
-      
+
       return baseUrl + path;
     },
 
@@ -9808,7 +13211,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     restartAppUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/restart`;
-      
+
       return baseUrl + path;
     },
 
@@ -9842,7 +13245,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     validateAppDataPathUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/validate`;
-      
+
       return baseUrl + path;
     },
 
@@ -9873,7 +13276,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     relocateAppDataPathUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/relocate`;
-      
+
       return baseUrl + path;
     },
 
@@ -9899,7 +13302,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     cancelAppDataPathRelocationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/relocate`;
-      
+
       return baseUrl + path;
     },
 
@@ -9925,7 +13328,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     dismissLegacyInstallNoticeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/legacy-notice/dismiss`;
-      
+
       return baseUrl + path;
     },
   };
@@ -9955,7 +13358,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAvSourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/av/sources`;
-      
+
       return baseUrl + path;
     },
 
@@ -9989,7 +13392,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     testAvSourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/av/test`;
-      
+
       return baseUrl + path;
     },
   };
@@ -10084,7 +13487,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     cleanInactiveBackgroundTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/background-task`;
-      
+
       return baseUrl + path;
     },
 
@@ -10129,7 +13532,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getBiliBiliFavoritesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/bilibili/favorites`;
-      
+
       return baseUrl + path;
     },
   };
@@ -10228,7 +13631,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllBulkModificationsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/bulk-modification/all`;
-      
+
       return baseUrl + path;
     },
 
@@ -10254,7 +13657,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addBulkModificationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/bulk-modification`;
-      
+
       return baseUrl + path;
     },
 
@@ -10379,7 +13782,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getCacheOverviewUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/cache`;
-      
+
       return baseUrl + path;
     },
 
@@ -10503,7 +13906,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     refreshResourcesCacheUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/cache/resources/refresh`;
-      
+
       return baseUrl + path;
     },
   };
@@ -10533,7 +13936,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getChangelogReleasesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/changelog/releases`;
-      
+
       return baseUrl + path;
     },
 
@@ -10572,7 +13975,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/changelog/range`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -10584,7 +13987,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -10621,7 +14024,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/changelog/content`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -10633,7 +14036,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -10663,7 +14066,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createChatConversationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/chat/conversations`;
-      
+
       return baseUrl + path;
     },
 
@@ -10692,7 +14095,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getChatConversationsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/chat/conversations`;
-      
+
       return baseUrl + path;
     },
 
@@ -10816,7 +14219,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getChatToolsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/chat/tools`;
-      
+
       return baseUrl + path;
     },
 
@@ -10837,6 +14240,383 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  collection = {
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name GetAllCollections
+     * @request GET:/collection
+     */
+    getAllCollections: (
+      query?: {
+        /** @default true */
+        withProgress?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection,
+        any
+      >({
+        path: `/collection`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllCollections
+     * @name getAllCollectionsUrl
+     */
+    getAllCollectionsUrl: (query?: {
+        /** @default true */
+        withProgress?: boolean;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/collection`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name AddCollection
+     * @request POST:/collection
+     */
+    addCollection: (
+      data: BakabaseModulesCollectionModelsInputCollectionInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection,
+        any
+      >({
+        path: `/collection`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addCollection
+     * @name addCollectionUrl
+     */
+    addCollectionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/collection`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name GetCollection
+     * @request GET:/collection/{id}
+     */
+    getCollection: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection,
+        any
+      >({
+        path: `/collection/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name PutCollection
+     * @request PUT:/collection/{id}
+     */
+    putCollection: (
+      id: number,
+      data: BakabaseModulesCollectionModelsInputCollectionInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection,
+        any
+      >({
+        path: `/collection/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name DeleteCollection
+     * @request DELETE:/collection/{id}
+     */
+    deleteCollection: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name SearchCollectionMembers
+     * @request GET:/collection/{id}/members
+     */
+    searchCollectionMembers: (
+      id: number,
+      query?: {
+        /** [0: All, 1: Owned, 2: Missing, 3: Acquiring, 4: Ignored, 5: GoneFromSource] */
+        filter?: BakabaseModulesCollectionAbstractionsModelsDomainConstantsCollectionMemberFilter;
+        /**
+         * @format int32
+         * @default 1
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 60
+         */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsServicesCollectionMemberPage,
+        any
+      >({
+        path: `/collection/${id}/members`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name AddCollectionMembers
+     * @request POST:/collection/{id}/members
+     */
+    addCollectionMembers: (
+      id: number,
+      data: BakabaseModulesCollectionModelsInputCollectionMembersInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection/${id}/members`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name RemoveCollectionMembers
+     * @request DELETE:/collection/{id}/members
+     */
+    removeCollectionMembers: (
+      id: number,
+      data: BakabaseModulesCollectionModelsInputCollectionMembersInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection/${id}/members`,
+        method: "DELETE",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name GetCollectionMemberships
+     * @request GET:/collection/{id}/memberships
+     */
+    getCollectionMemberships: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember,
+        any
+      >({
+        path: `/collection/${id}/memberships`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name SetCollectionMemberIgnored
+     * @request PUT:/collection/{id}/members/{resourceId}/ignored
+     */
+    setCollectionMemberIgnored: (
+      id: number,
+      resourceId: number,
+      query?: {
+        ignored?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection/${id}/members/${resourceId}/ignored`,
+        method: "PUT",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name ReorderCollectionMembers
+     * @request PUT:/collection/{id}/members/order
+     */
+    reorderCollectionMembers: (
+      id: number,
+      data: BakabaseModulesCollectionModelsInputCollectionMembersInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection/${id}/members/order`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name AddCollectionPlaceholderMember
+     * @request POST:/collection/{id}/members/placeholder
+     */
+    addCollectionPlaceholderMember: (
+      id: number,
+      data: BakabaseServiceControllersCollectionPlaceholderInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsServicesPlaceholderResourceResult,
+        any
+      >({
+        path: `/collection/${id}/members/placeholder`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name PreviewCollectionRule
+     * @request POST:/collection/rule/preview
+     */
+    previewCollectionRule: (
+      data: BakabaseServiceControllersCollectionRulePreviewInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCollectionRulePreview,
+        any
+      >({
+        path: `/collection/rule/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewCollectionRule
+     * @name previewCollectionRuleUrl
+     */
+    previewCollectionRuleUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/collection/rule/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name AcquireMissingCollectionMembers
+     * @request POST:/collection/{id}/acquire-missing
+     */
+    acquireMissingCollectionMembers: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCollectionAcquireMissingResult,
+        any
+      >({
+        path: `/collection/${id}/acquire-missing`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name GetCollectionProgress
+     * @request GET:/collection/{id}/progress
+     */
+    getCollectionProgress: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionProgress,
+        any
+      >({
+        path: `/collection/${id}/progress`,
+        method: "GET",
         format: "json",
         ...params,
       }),
@@ -10867,7 +14647,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllComparisonPlansUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/comparison/plan`;
-      
+
       return baseUrl + path;
     },
 
@@ -10901,7 +14681,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createComparisonPlanUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/comparison/plan`;
-      
+
       return baseUrl + path;
     },
 
@@ -11214,7 +14994,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/all`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -11226,7 +15006,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -11267,7 +15047,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/ids`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -11279,7 +15059,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -11313,7 +15093,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addCustomPropertyUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property`;
-      
+
       return baseUrl + path;
     },
 
@@ -11347,7 +15127,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addCustomPropertyBatchUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/batch`;
-      
+
       return baseUrl + path;
     },
 
@@ -11417,7 +15197,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     sortCustomPropertiesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/order`;
-      
+
       return baseUrl + path;
     },
 
@@ -11468,7 +15248,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getCustomPropertyConversionRulesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/conversion-rule`;
-      
+
       return baseUrl + path;
     },
 
@@ -11538,11 +15318,40 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     testCustomPropertyTypeConversionUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/type-conversion-overview`;
-      
+
       return baseUrl + path;
     },
   };
   dashboard = {
+    /**
+     * No description
+     *
+     * @tags Dashboard
+     * @name GetDashboardOverview
+     * @request GET:/dashboard/overview
+     */
+    getDashboardOverview: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewDashboardOverviewViewModel,
+        any
+      >({
+        path: `/dashboard/overview`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDashboardOverview
+     * @name getDashboardOverviewUrl
+     */
+    getDashboardOverviewUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/dashboard/overview`;
+
+      return baseUrl + path;
+    },
+
     /**
      * No description
      *
@@ -11568,7 +15377,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getStatisticsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/dashboard`;
-      
+
       return baseUrl + path;
     },
 
@@ -11597,7 +15406,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPropertyStatisticsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/dashboard/property`;
-      
+
       return baseUrl + path;
     },
   };
@@ -11659,7 +15468,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-card/search`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -11671,7 +15480,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -11759,7 +15568,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addDataCardUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-card`;
-      
+
       return baseUrl + path;
     },
 
@@ -11793,7 +15602,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     findDataCardByIdentityUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-card/find-by-identity`;
-      
+
       return baseUrl + path;
     },
 
@@ -11916,7 +15725,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllDataCardTypesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-card-type`;
-      
+
       return baseUrl + path;
     },
 
@@ -11950,7 +15759,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addDataCardTypeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-card-type`;
-      
+
       return baseUrl + path;
     },
 
@@ -12087,7 +15896,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/dlsite-work`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -12099,7 +15908,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -12168,7 +15977,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/dlsite-work/sync`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -12180,7 +15989,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -12284,7 +16093,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     scanDLsiteFoldersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/dlsite-work/scan-folders`;
-      
+
       return baseUrl + path;
     },
 
@@ -12352,6 +16161,73 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  downloader = {
+    /**
+     * No description
+     *
+     * @tags DownloadResult
+     * @name GetDownloadResults
+     * @request GET:/downloader/result
+     */
+    getDownloadResults: (
+      query?: {
+        /** @format int32 */
+        taskId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewDownloadResultViewModel,
+        any
+      >({
+        path: `/downloader/result`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDownloadResults
+     * @name getDownloadResultsUrl
+     */
+    getDownloadResultsUrl: (query?: {
+        /** @format int32 */
+        taskId?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/downloader/result`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadResult
+     * @name RetryDownloadResultWorkflow
+     * @request POST:/downloader/result/{id}/retry
+     */
+    retryDownloadResultWorkflow: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/downloader/result/${id}/retry`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+  };
   downloadTask = {
     /**
      * No description
@@ -12378,7 +16254,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllDownloaderDefinitionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/downloaders/definitions`;
-      
+
       return baseUrl + path;
     },
 
@@ -12407,7 +16283,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllDownloadTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task`;
-      
+
       return baseUrl + path;
     },
 
@@ -12441,7 +16317,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addDownloadTaskUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task`;
-      
+
       return baseUrl + path;
     },
 
@@ -12472,7 +16348,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteDownloadTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task`;
-      
+
       return baseUrl + path;
     },
 
@@ -12560,7 +16436,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     queryDownloadRecordsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/records/query`;
-      
+
       return baseUrl + path;
     },
 
@@ -12594,7 +16470,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     queryDownloadTaskKeyStatusesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/keys/query`;
-      
+
       return baseUrl + path;
     },
 
@@ -12625,7 +16501,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startDownloadTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/download`;
-      
+
       return baseUrl + path;
     },
 
@@ -12653,7 +16529,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     stopDownloadTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/download`;
-      
+
       return baseUrl + path;
     },
 
@@ -12681,7 +16557,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearDownloadTaskCheckpointsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/checkpoint`;
-      
+
       return baseUrl + path;
     },
 
@@ -12706,7 +16582,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     exportAllDownloadTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/xlsx`;
-      
+
       return baseUrl + path;
     },
 
@@ -12789,1625 +16665,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addExHentaiDownloadTaskUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/exhentai`;
-      
-      return baseUrl + path;
-    },
-  };
-  resource = {
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name GetResourceEnhancements
-     * @request GET:/resource/{resourceId}/enhancement
-     */
-    getResourceEnhancements: (
-      resourceId: number,
-      query?: {
-        /** [0: None, 1: GeneratedPropertyValue] */
-        additionalItem?: BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceEnhancements,
-        any
-      >({
-        path: `/resource/${resourceId}/enhancement`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
 
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name DeleteResourceEnhancement
-     * @request DELETE:/resource/{resourceId}/enhancer/{enhancerId}/enhancement
-     */
-    deleteResourceEnhancement: (
-      resourceId: number,
-      enhancerId: number,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name EnhanceResourceByEnhancer
-     * @request POST:/resource/{resourceId}/enhancer/{enhancerId}/enhancement
-     */
-    enhanceResourceByEnhancer: (
-      resourceId: number,
-      enhancerId: number,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name ApplyEnhancementContextDataForResourceByEnhancer
-     * @request POST:/resource/{resourceId}/enhancer/{enhancerId}/enhancement/apply
-     */
-    applyEnhancementContextDataForResourceByEnhancer: (
-      resourceId: number,
-      enhancerId: number,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement/apply`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name ValidateEnhancerConfiguration
-     * @request POST:/resource/{resourceId}/enhancement/validate
-     */
-    validateEnhancerConfiguration: (
-      resourceId: number,
-      data: BakabaseAbstractionsModelsDomainEnhancerFullOptions[],
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${resourceId}/enhancement/validate`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetSearchOperationsForProperty
-     * @request GET:/resource/search-operation
-     */
-    getSearchOperationsForProperty: (
-      query?: {
-        /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-        propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-        /** @format int32 */
-        propertyId?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainConstantsSearchOperation,
-        any
-      >({
-        path: `/resource/search-operation`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getSearchOperationsForProperty
-     * @name getSearchOperationsForPropertyUrl
-     */
-    getSearchOperationsForPropertyUrl: (query?: {
-        /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-        propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-        /** @format int32 */
-        propertyId?: number;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/search-operation`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetSearchOperationsByPropertyType
-     * @request GET:/resource/search-operation/by-type
-     */
-    getSearchOperationsByPropertyType: (
-      query?: {
-        /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
-        propertyType?: BakabaseAbstractionsModelsDomainConstantsPropertyType;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainConstantsSearchOperation,
-        any
-      >({
-        path: `/resource/search-operation/by-type`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getSearchOperationsByPropertyType
-     * @name getSearchOperationsByPropertyTypeUrl
-     */
-    getSearchOperationsByPropertyTypeUrl: (query?: {
-        /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
-        propertyType?: BakabaseAbstractionsModelsDomainConstantsPropertyType;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/search-operation/by-type`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetFilterValueProperty
-     * @request GET:/resource/filter-value-property
-     */
-    getFilterValueProperty: (
-      query?: {
-        /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-        propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-        /** @format int32 */
-        propertyId?: number;
-        /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-        operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
-        any
-      >({
-        path: `/resource/filter-value-property`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getFilterValueProperty
-     * @name getFilterValuePropertyUrl
-     */
-    getFilterValuePropertyUrl: (query?: {
-        /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-        propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-        /** @format int32 */
-        propertyId?: number;
-        /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-        operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/filter-value-property`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetLastResourceSearch
-     * @request GET:/resource/last-search
-     */
-    getLastResourceSearch: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel,
-        any
-      >({
-        path: `/resource/last-search`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getLastResourceSearch
-     * @name getLastResourceSearchUrl
-     */
-    getLastResourceSearchUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/last-search`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name SaveNewResourceSearch
-     * @request POST:/resource/saved-search
-     */
-    saveNewResourceSearch: (
-      data: BakabaseServiceModelsInputSavedSearchAddInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewSavedSearchViewModel,
-        any
-      >({
-        path: `/resource/saved-search`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for saveNewResourceSearch
-     * @name saveNewResourceSearchUrl
-     */
-    saveNewResourceSearchUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/saved-search`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name PutSavedSearchName
-     * @request PUT:/resource/saved-search
-     */
-    putSavedSearchName: (
-      data: string,
-      query?: {
-        id?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/saved-search`,
-        method: "PUT",
-        query: query,
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for putSavedSearchName
-     * @name putSavedSearchNameUrl
-     */
-    putSavedSearchNameUrl: (query?: {
-        id?: string;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/saved-search`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetSavedSearch
-     * @request GET:/resource/saved-search
-     */
-    getSavedSearch: (
-      query?: {
-        id?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewSavedSearchViewModel,
-        any
-      >({
-        path: `/resource/saved-search`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getSavedSearch
-     * @name getSavedSearchUrl
-     */
-    getSavedSearchUrl: (query?: {
-        id?: string;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/saved-search`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name DeleteSavedSearch
-     * @request DELETE:/resource/saved-search
-     */
-    deleteSavedSearch: (
-      query?: {
-        id?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/saved-search`,
-        method: "DELETE",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for deleteSavedSearch
-     * @name deleteSavedSearchUrl
-     */
-    deleteSavedSearchUrl: (query?: {
-        id?: string;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/saved-search`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name PutSavedSearchDisplayMode
-     * @request PUT:/resource/saved-search/display-mode
-     */
-    putSavedSearchDisplayMode: (
-      data: BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode,
-      query?: {
-        id?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/saved-search/display-mode`,
-        method: "PUT",
-        query: query,
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for putSavedSearchDisplayMode
-     * @name putSavedSearchDisplayModeUrl
-     */
-    putSavedSearchDisplayModeUrl: (query?: {
-        id?: string;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/saved-search/display-mode`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name SearchResources
-     * @request POST:/resource/search
-     */
-    searchResources: (
-      data: BakabaseServiceModelsInputResourceSearchInputModel,
-      query?: {
-        saveSearch?: boolean;
-        searchId?: string;
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDomainResource,
-        any
-      >({
-        path: `/resource/search`,
-        method: "POST",
-        query: query,
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for searchResources
-     * @name searchResourcesUrl
-     */
-    searchResourcesUrl: (query?: {
-        saveSearch?: boolean;
-        searchId?: string;
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/search`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name SearchAllResourceIds
-     * @request POST:/resource/search/ids
-     */
-    searchAllResourceIds: (
-      data: BakabaseServiceModelsInputResourceSearchInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1SystemInt32, any>({
-        path: `/resource/search/ids`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for searchAllResourceIds
-     * @name searchAllResourceIdsUrl
-     */
-    searchAllResourceIdsUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/search/ids`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourcesByKeys
-     * @request GET:/resource/keys
-     */
-    getResourcesByKeys: (
-      query?: {
-        ids?: number[];
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource,
-        any
-      >({
-        path: `/resource/keys`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getResourcesByKeys
-     * @name getResourcesByKeysUrl
-     */
-    getResourcesByKeysUrl: (query?: {
-        ids?: number[];
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/keys`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourceHierarchyContext
-     * @request GET:/resource/{id}/hierarchy-context
-     */
-    getResourceHierarchyContext: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceHierarchyContextViewModel,
-        any
-      >({
-        path: `/resource/${id}/hierarchy-context`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name OpenResourceDirectory
-     * @request GET:/resource/directory
-     */
-    openResourceDirectory: (
-      query?: {
-        /** @format int32 */
-        id?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/directory`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for openResourceDirectory
-     * @name openResourceDirectoryUrl
-     */
-    openResourceDirectoryUrl: (query?: {
-        /** @format int32 */
-        id?: number;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/directory`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name SetResourceMediaLibraries
-     * @request PUT:/resource/media-libraries
-     */
-    setResourceMediaLibraries: (
-      data: BakabaseInsideWorldModelsRequestModelsResourceSetMediaLibrariesRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/media-libraries`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for setResourceMediaLibraries
-     * @name setResourceMediaLibrariesUrl
-     */
-    setResourceMediaLibrariesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/media-libraries`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourceMediaLibraryMappings
-     * @request POST:/resource/media-library-mappings
-     */
-    getResourceMediaLibraryMappings: (data: number[], params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32,
-        any
-      >({
-        path: `/resource/media-library-mappings`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getResourceMediaLibraryMappings
-     * @name getResourceMediaLibraryMappingsUrl
-     */
-    getResourceMediaLibraryMappingsUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/media-library-mappings`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourceDataForPreviewer
-     * @request GET:/resource/{id}/previewer
-     */
-    getResourceDataForPreviewer: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem,
-        any
-      >({
-        path: `/resource/${id}/previewer`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name PutResourcePropertyValue
-     * @request PUT:/resource/{id}/property-value
-     */
-    putResourcePropertyValue: (
-      id: number,
-      data: BakabaseAbstractionsModelsInputResourcePropertyValuePutInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/property-value`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourcePropertyValueScopePreferences
-     * @request GET:/resource/{id}/property-value-scope-preference
-     */
-    getResourcePropertyValueScopePreferences: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPropertyValueScopePreference,
-        any
-      >({
-        path: `/resource/${id}/property-value-scope-preference`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name PutResourcePropertyValueScopePreference
-     * @request PUT:/resource/{id}/property-value-scope-preference
-     */
-    putResourcePropertyValueScopePreference: (
-      id: number,
-      data: BakabaseAbstractionsModelsInputResourcePropertyValueScopePreferencePutInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPropertyValueScopePreference,
-        any
-      >({
-        path: `/resource/${id}/property-value-scope-preference`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name DeleteResourcePropertyValueScopePreference
-     * @request DELETE:/resource/{id}/property-value-scope-preference
-     */
-    deleteResourcePropertyValueScopePreference: (
-      id: number,
-      query?: {
-        /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-        propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-        /** @format int32 */
-        propertyId?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/property-value-scope-preference`,
-        method: "DELETE",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name BulkPutResourcePropertyValue
-     * @request PUT:/resource/bulk/property-value
-     */
-    bulkPutResourcePropertyValue: (
-      data: BakabaseServiceModelsInputBulkResourcePropertyValuePutInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/bulk/property-value`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for bulkPutResourcePropertyValue
-     * @name bulkPutResourcePropertyValueUrl
-     */
-    bulkPutResourcePropertyValueUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/bulk/property-value`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name PlayResourceFile
-     * @request GET:/resource/{resourceId}/play
-     */
-    playResourceFile: (
-      resourceId: number,
-      query?: {
-        file?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${resourceId}/play`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name PlayResourceItem
-     * @request GET:/resource/{resourceId}/play-item
-     */
-    playResourceItem: (
-      resourceId: number,
-      query?: {
-        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
-        origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
-        key?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${resourceId}/play-item`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourcePlayableItems
-     * @request GET:/resource/{id}/playable-items
-     */
-    getResourcePlayableItems: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPlayableItem,
-        any
-      >({
-        path: `/resource/${id}/playable-items`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourceEffectivePlayerOptions
-     * @request GET:/resource/{id}/effective-player-options
-     */
-    getResourceEffectivePlayerOptions: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions,
-        any
-      >({
-        path: `/resource/${id}/effective-player-options`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name PlayRandomResource
-     * @request GET:/resource/play/random
-     */
-    playRandomResource: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/play/random`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for playRandomResource
-     * @name playRandomResourceUrl
-     */
-    playRandomResourceUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/play/random`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name PickRandomPlayableItem
-     * @request GET:/resource/play/random/candidate
-     */
-    pickRandomPlayableItem: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPlayableItemPick,
-        any
-      >({
-        path: `/resource/play/random/candidate`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for pickRandomPlayableItem
-     * @name pickRandomPlayableItemUrl
-     */
-    pickRandomPlayableItemUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/play/random/candidate`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name BulkDeleteResources
-     * @request POST:/resource/bulk-delete
-     */
-    bulkDeleteResources: (
-      data: BakabaseAbstractionsModelsInputBulkDeleteResourcesInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/bulk-delete`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for bulkDeleteResources
-     * @name bulkDeleteResourcesUrl
-     */
-    bulkDeleteResourcesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/bulk-delete`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name PinResource
-     * @request PUT:/resource/{id}/pin
-     */
-    pinResource: (
-      id: number,
-      query?: {
-        pin?: boolean;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/pin`,
-        method: "PUT",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name TransferResourceData
-     * @request PUT:/resource/transfer
-     */
-    transferResourceData: (
-      data: BakabaseAbstractionsModelsInputResourceTransferInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/transfer`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for transferResourceData
-     * @name transferResourceDataUrl
-     */
-    transferResourceDataUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/transfer`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name SearchResourcePaths
-     * @request GET:/resource/paths
-     */
-    searchResourcePaths: (
-      query?: {
-        keyword?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourcePathInfoViewModel,
-        any
-      >({
-        path: `/resource/paths`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for searchResourcePaths
-     * @name searchResourcePathsUrl
-     */
-    searchResourcePathsUrl: (query?: {
-        keyword?: string;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/paths`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name SaveCover
-     * @request PUT:/resource/{id}/cover
-     */
-    saveCover: (
-      id: number,
-      data: BakabaseServiceModelsInputResourceCoverSaveInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/cover`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name MarkResourceAsNotPlayed
-     * @request DELETE:/resource/{id}/played-at
-     */
-    markResourceAsNotPlayed: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/played-at`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name MarkResourceAsPlayed
-     * @request POST:/resource/{id}/played-at
-     */
-    markResourceAsPlayed: (
-      id: number,
-      query?: {
-        item?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/played-at`,
-        method: "POST",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name MarkResourcesAsPlayed
-     * @request POST:/resource/played-at/bulk
-     */
-    markResourcesAsPlayed: (
-      data: BakabaseAbstractionsModelsInputMarkResourcesPlayedInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/played-at/bulk`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for markResourcesAsPlayed
-     * @name markResourcesAsPlayedUrl
-     */
-    markResourcesAsPlayedUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/played-at/bulk`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourceSearchKeywordRecommendation
-     * @request GET:/resource/search/keyword-recommendation
-     */
-    getResourceSearchKeywordRecommendation: (
-      query?: {
-        keyword?: string;
-        /**
-         * @format int32
-         * @default 10
-         */
-        maxCount?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
-        path: `/resource/search/keyword-recommendation`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getResourceSearchKeywordRecommendation
-     * @name getResourceSearchKeywordRecommendationUrl
-     */
-    getResourceSearchKeywordRecommendationUrl: (query?: {
-        keyword?: string;
-        /**
-         * @format int32
-         * @default 10
-         */
-        maxCount?: number;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/search/keyword-recommendation`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourceMediaLibraries
-     * @request GET:/resource/{id}/media-libraries
-     */
-    getResourceMediaLibraries: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping,
-        any
-      >({
-        path: `/resource/${id}/media-libraries`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name ReplaceResourceMediaLibraryMappings
-     * @request PUT:/resource/{id}/media-libraries
-     */
-    replaceResourceMediaLibraryMappings: (
-      id: number,
-      data: BakabaseServiceModelsInputResourceMediaLibraryMappingInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/media-libraries`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name AddResourceMediaLibraryMapping
-     * @request POST:/resource/{id}/media-libraries/{mediaLibraryId}
-     */
-    addResourceMediaLibraryMapping: (
-      id: number,
-      mediaLibraryId: number,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/media-libraries/${mediaLibraryId}`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name RemoveResourceMediaLibraryMapping
-     * @request DELETE:/resource/{id}/media-libraries/{mediaLibraryId}
-     */
-    removeResourceMediaLibraryMapping: (
-      id: number,
-      mediaLibraryId: number,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/media-libraries/${mediaLibraryId}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name BulkAddResourceMediaLibraryMappings
-     * @request POST:/resource/bulk/media-libraries
-     */
-    bulkAddResourceMediaLibraryMappings: (
-      data: BakabaseServiceControllersBulkResourceMediaLibraryMappingInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/bulk/media-libraries`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for bulkAddResourceMediaLibraryMappings
-     * @name bulkAddResourceMediaLibraryMappingsUrl
-     */
-    bulkAddResourceMediaLibraryMappingsUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/bulk/media-libraries`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourceSourceLinks
-     * @request GET:/resource/{id}/source-links
-     */
-    getResourceSourceLinks: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceSourceLink,
-        any
-      >({
-        path: `/resource/${id}/source-links`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourceConflicts
-     * @request GET:/resource/{id}/conflicts
-     */
-    getResourceConflicts: (
-      id: number,
-      query?: {
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource,
-        any
-      >({
-        path: `/resource/${id}/conflicts`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name MergeResources
-     * @request POST:/resource/merge
-     */
-    mergeResources: (
-      data: BakabaseAbstractionsModelsInputResourceMergeInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/merge`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for mergeResources
-     * @name mergeResourcesUrl
-     */
-    mergeResourcesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/merge`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags ResourceDiscovery
-     * @name StreamResourceDiscovery
-     * @request GET:/resource/discovery/stream
-     */
-    streamResourceDiscovery: (params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/resource/discovery/stream`,
-        method: "GET",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for streamResourceDiscovery
-     * @name streamResourceDiscoveryUrl
-     */
-    streamResourceDiscoveryUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/discovery/stream`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags ResourceDiscovery
-     * @name SubscribeResourceDiscovery
-     * @request POST:/resource/discovery/subscribe
-     */
-    subscribeResourceDiscovery: (
-      data: BakabaseServiceControllersDiscoverySubscribeRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/discovery/subscribe`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for subscribeResourceDiscovery
-     * @name subscribeResourceDiscoveryUrl
-     */
-    subscribeResourceDiscoveryUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/discovery/subscribe`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags ResourceDiscovery
-     * @name SubscribeResourceDiscoveryBatch
-     * @request POST:/resource/discovery/subscribe/batch
-     */
-    subscribeResourceDiscoveryBatch: (
-      data: BakabaseServiceControllersDiscoverySubscribeRequest[],
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/discovery/subscribe/batch`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for subscribeResourceDiscoveryBatch
-     * @name subscribeResourceDiscoveryBatchUrl
-     */
-    subscribeResourceDiscoveryBatchUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/discovery/subscribe/batch`;
-      
       return baseUrl + path;
     },
   };
@@ -14436,7 +16694,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteEnhancementsByResourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resources/enhancements`;
-      
+
       return baseUrl + path;
     },
   };
@@ -14534,7 +16792,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllEnhancerDescriptorsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/enhancer/descriptor`;
-      
+
       return baseUrl + path;
     },
   };
@@ -14609,7 +16867,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllResourceProfilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-profile`;
-      
+
       return baseUrl + path;
     },
 
@@ -14643,7 +16901,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addResourceProfileUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-profile`;
-      
+
       return baseUrl + path;
     },
 
@@ -14794,7 +17052,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/exhentai-gallery`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -14806,7 +17064,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -14898,7 +17156,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/exhentai-gallery/sync`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -14910,7 +17168,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -14940,7 +17198,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllExtensionGroupsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/extension-group`;
-      
+
       return baseUrl + path;
     },
 
@@ -14974,7 +17232,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addExtensionGroupUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/extension-group`;
-      
+
       return baseUrl + path;
     },
 
@@ -15059,7 +17317,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     detectCompressedFilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/decompression/detect`;
-      
+
       return baseUrl + path;
     },
 
@@ -15089,7 +17347,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     decompressCompressedFilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/decompression/decompress`;
-      
+
       return baseUrl + path;
     },
 
@@ -15130,7 +17388,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/top-level-file-system-entries`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15142,7 +17400,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15191,7 +17449,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/search-fs-entries`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15203,7 +17461,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15248,7 +17506,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/iwfs-info`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15260,7 +17518,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15297,7 +17555,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/iwfs-entry`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15309,7 +17567,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15343,7 +17601,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/directory`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15355,7 +17613,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15396,7 +17654,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/children/iwfs-info`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15408,7 +17666,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15439,7 +17697,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     removeFilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file`;
-      
+
       return baseUrl + path;
     },
 
@@ -15470,7 +17728,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     renameFileUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/name`;
-      
+
       return baseUrl + path;
     },
 
@@ -15496,7 +17754,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     openRecycleBinUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/recycle-bin`;
-      
+
       return baseUrl + path;
     },
 
@@ -15530,7 +17788,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/extract-and-remove-directory`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15542,7 +17800,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15573,7 +17831,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     moveEntriesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/move-entries`;
-      
+
       return baseUrl + path;
     },
 
@@ -15604,7 +17862,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     copyEntriesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/copy-entries`;
-      
+
       return baseUrl + path;
     },
 
@@ -15638,7 +17896,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getSameNameEntriesInWorkingDirectoryUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/same-name-entries-in-working-directory`;
-      
+
       return baseUrl + path;
     },
 
@@ -15669,7 +17927,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     removeSameNameEntryInWorkingDirectoryUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/same-name-entry-in-working-directory`;
-      
+
       return baseUrl + path;
     },
 
@@ -15703,7 +17961,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/standardize`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15715,7 +17973,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15752,7 +18010,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/playability`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15764,7 +18022,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15797,7 +18055,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/raw`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15809,7 +18067,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15842,7 +18100,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/play`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15854,7 +18112,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15885,7 +18143,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     decompressFilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/decompression`;
-      
+
       return baseUrl + path;
     },
 
@@ -15923,7 +18181,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/icon`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15935,7 +18193,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15969,7 +18227,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/all-files`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15981,7 +18239,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -16018,7 +18276,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/compressed-file/entries`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -16030,7 +18288,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -16069,7 +18327,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/file-extension-counts`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -16081,7 +18339,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -16115,7 +18373,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     previewFileSystemEntriesGroupResultUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/group-preview`;
-      
+
       return baseUrl + path;
     },
 
@@ -16146,7 +18404,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getFileSystemEntriesGroupSimilarityBreakpointsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/group-similarity-breakpoints`;
-      
+
       return baseUrl + path;
     },
 
@@ -16177,7 +18435,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     groupFileSystemEntriesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/group`;
-      
+
       return baseUrl + path;
     },
 
@@ -16211,7 +18469,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/file-processor-watcher`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -16223,7 +18481,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -16249,7 +18507,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     stopWatchingChangesInFileProcessorWorkspaceUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/file-processor-watcher`;
-      
+
       return baseUrl + path;
     },
 
@@ -16275,7 +18533,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     keepAliveFileProcessorWatcherUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/file-processor-watcher/keep-alive`;
-      
+
       return baseUrl + path;
     },
 
@@ -16309,7 +18567,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/is-file`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -16321,7 +18579,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -16350,7 +18608,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getHardwareAccelerationInfoUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/hardware-acceleration`;
-      
+
       return baseUrl + path;
     },
 
@@ -16376,7 +18634,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearHardwareAccelerationCacheUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/hardware-acceleration/clear-cache`;
-      
+
       return baseUrl + path;
     },
 
@@ -16410,7 +18668,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/first-file-by-ext`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -16422,7 +18680,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -16456,7 +18714,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     uploadFileUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/upload`;
-      
+
       return baseUrl + path;
     },
   };
@@ -16488,7 +18746,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     previewFileNameModificationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file-name-modifier/preview`;
-      
+
       return baseUrl + path;
     },
 
@@ -16522,7 +18780,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     modifyFileNamesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file-name-modifier/modify`;
-      
+
       return baseUrl + path;
     },
   };
@@ -16557,7 +18815,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/gui/url`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -16569,7 +18827,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -16600,7 +18858,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     sendTestNotificationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/gui/test-notification`;
-      
+
       return baseUrl + path;
     },
   };
@@ -16630,7 +18888,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllHealthScoreProfilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/profiles`;
-      
+
       return baseUrl + path;
     },
 
@@ -16659,7 +18917,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addHealthScoreProfileUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/profiles`;
-      
+
       return baseUrl + path;
     },
 
@@ -16769,7 +19027,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearAllHealthScoreCachesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/clear-all-caches`;
-      
+
       return baseUrl + path;
     },
 
@@ -16795,7 +19053,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     runHealthScoringNowUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/run`;
-      
+
       return baseUrl + path;
     },
 
@@ -16832,7 +19090,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/scores`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -16844,7 +19102,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -16891,7 +19149,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllFilePredicatesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/predicates`;
-      
+
       return baseUrl + path;
     },
   };
@@ -16921,7 +19179,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllLogsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/log`;
-      
+
       return baseUrl + path;
     },
 
@@ -16947,7 +19205,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearAllLogUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/log`;
-      
+
       return baseUrl + path;
     },
 
@@ -17020,7 +19278,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/log/filtered`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17032,7 +19290,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17058,7 +19316,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getUnreadLogCountUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/log/unread/count`;
-      
+
       return baseUrl + path;
     },
 
@@ -17099,7 +19357,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     readAllLogUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/log/read`;
-      
+
       return baseUrl + path;
     },
   };
@@ -17129,7 +19387,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllMediaLibraryResourceMappingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-resource-mapping`;
-      
+
       return baseUrl + path;
     },
 
@@ -17163,7 +19421,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addMediaLibraryResourceMappingUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-resource-mapping`;
-      
+
       return baseUrl + path;
     },
 
@@ -17260,7 +19518,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ensureMediaLibraryResourceMappingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-resource-mapping/ensure`;
-      
+
       return baseUrl + path;
     },
 
@@ -17291,7 +19549,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     replaceMediaLibraryResourceMappingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-resource-mapping/replace`;
-      
+
       return baseUrl + path;
     },
   };
@@ -17332,7 +19590,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17344,7 +19602,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17376,7 +19634,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addMediaLibraryTemplateUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template`;
-      
+
       return baseUrl + path;
     },
 
@@ -17489,7 +19747,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getMediaLibraryTemplateImportConfigurationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template/share-code/import-configuration`;
-      
+
       return baseUrl + path;
     },
 
@@ -17521,7 +19779,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     importMediaLibraryTemplateUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template/share-code/import`;
-      
+
       return baseUrl + path;
     },
 
@@ -17567,7 +19825,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getMediaLibraryTemplatePresetDataPoolUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template/preset-data-pool`;
-      
+
       return baseUrl + path;
     },
 
@@ -17599,7 +19857,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addMediaLibraryTemplateFromPresetBuilderUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template/from-preset-builder`;
-      
+
       return baseUrl + path;
     },
 
@@ -17660,7 +19918,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-v2`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17672,7 +19930,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17703,7 +19961,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addMediaLibraryV2Url: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-v2`;
-      
+
       return baseUrl + path;
     },
 
@@ -17734,7 +19992,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     saveAllMediaLibrariesV2Url: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-v2`;
-      
+
       return baseUrl + path;
     },
 
@@ -17923,7 +20181,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17935,7 +20193,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17966,7 +20224,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteNotificationsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification`;
-      
+
       return baseUrl + path;
     },
 
@@ -17992,7 +20250,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getUnreadNotificationCountUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification/unread-count`;
-      
+
       return baseUrl + path;
     },
 
@@ -18023,7 +20281,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     markNotificationsAsReadUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification/mark-read`;
-      
+
       return baseUrl + path;
     },
 
@@ -18049,7 +20307,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearReadNotificationsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification/clear-read`;
-      
+
       return baseUrl + path;
     },
 
@@ -18080,7 +20338,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createTestNotificationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification/test`;
-      
+
       return baseUrl + path;
     },
   };
@@ -18110,7 +20368,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAppOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/app`;
-      
+
       return baseUrl + path;
     },
 
@@ -18141,7 +20399,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchAppOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/app`;
-      
+
       return baseUrl + path;
     },
 
@@ -18172,7 +20430,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     putAppOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/app`;
-      
+
       return baseUrl + path;
     },
 
@@ -18201,7 +20459,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getUiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui`;
-      
+
       return baseUrl + path;
     },
 
@@ -18232,7 +20490,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchUiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui`;
-      
+
       return baseUrl + path;
     },
 
@@ -18258,7 +20516,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     resetResourceDetailLayoutUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui/resource-detail-layout`;
-      
+
       return baseUrl + path;
     },
 
@@ -18289,7 +20547,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addLatestUsedPropertyUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui/latest-used-property`;
-      
+
       return baseUrl + path;
     },
 
@@ -18318,7 +20576,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getUiStyleOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui-style`;
-      
+
       return baseUrl + path;
     },
 
@@ -18349,7 +20607,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchUiStyleOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui-style`;
-      
+
       return baseUrl + path;
     },
 
@@ -18378,7 +20636,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getDownloaderGlobalOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/downloader`;
-      
+
       return baseUrl + path;
     },
 
@@ -18409,7 +20667,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchDownloaderGlobalOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/downloader`;
-      
+
       return baseUrl + path;
     },
 
@@ -18438,7 +20696,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getBilibiliOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/bilibili`;
-      
+
       return baseUrl + path;
     },
 
@@ -18469,7 +20727,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchBilibiliOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/bilibili`;
-      
+
       return baseUrl + path;
     },
 
@@ -18498,7 +20756,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getExHentaiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/exhentai`;
-      
+
       return baseUrl + path;
     },
 
@@ -18529,7 +20787,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchExHentaiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/exhentai`;
-      
+
       return baseUrl + path;
     },
 
@@ -18558,7 +20816,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getFileSystemOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/filesystem`;
-      
+
       return baseUrl + path;
     },
 
@@ -18589,7 +20847,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchFileSystemOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/filesystem`;
-      
+
       return baseUrl + path;
     },
 
@@ -18617,7 +20875,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addLatestMovingDestinationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/filesystem/latest-moving-destination`;
-      
+
       return baseUrl + path;
     },
 
@@ -18646,7 +20904,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getJavLibraryOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/javlibrary`;
-      
+
       return baseUrl + path;
     },
 
@@ -18677,7 +20935,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchJavLibraryOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/javlibrary`;
-      
+
       return baseUrl + path;
     },
 
@@ -18706,7 +20964,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPixivOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/pixiv`;
-      
+
       return baseUrl + path;
     },
 
@@ -18737,7 +20995,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchPixivOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/pixiv`;
-      
+
       return baseUrl + path;
     },
 
@@ -18766,7 +21024,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourceOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/resource`;
-      
+
       return baseUrl + path;
     },
 
@@ -18797,7 +21055,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchResourceOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/resource`;
-      
+
       return baseUrl + path;
     },
 
@@ -18822,7 +21080,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteResourceMarkersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/resource/delete-markers`;
-      
+
       return baseUrl + path;
     },
 
@@ -18851,7 +21109,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRecentResourceFiltersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/resource/recent-filters`;
-      
+
       return baseUrl + path;
     },
 
@@ -18882,7 +21140,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addRecentResourceFilterUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/resource/recent-filters`;
-      
+
       return baseUrl + path;
     },
 
@@ -18911,7 +21169,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getThirdPartyOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/thirdparty`;
-      
+
       return baseUrl + path;
     },
 
@@ -18942,7 +21200,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchThirdPartyOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/thirdparty`;
-      
+
       return baseUrl + path;
     },
 
@@ -18973,7 +21231,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     putThirdPartyOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/thirdparty`;
-      
+
       return baseUrl + path;
     },
 
@@ -19002,7 +21260,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getNetworkOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/network`;
-      
+
       return baseUrl + path;
     },
 
@@ -19033,7 +21291,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchNetworkOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/network`;
-      
+
       return baseUrl + path;
     },
 
@@ -19064,7 +21322,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     testProxyUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/network/proxy-test`;
-      
+
       return baseUrl + path;
     },
 
@@ -19093,7 +21351,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getTaskOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/task`;
-      
+
       return baseUrl + path;
     },
 
@@ -19124,7 +21382,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchTaskOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/task`;
-      
+
       return baseUrl + path;
     },
 
@@ -19153,7 +21411,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ai`;
-      
+
       return baseUrl + path;
     },
 
@@ -19184,7 +21442,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchAiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ai`;
-      
+
       return baseUrl + path;
     },
 
@@ -19215,7 +21473,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     putAiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ai`;
-      
+
       return baseUrl + path;
     },
 
@@ -19244,7 +21502,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getSoulPlusOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/soulplus`;
-      
+
       return baseUrl + path;
     },
 
@@ -19275,7 +21533,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchSoulPlusOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/soulplus`;
-      
+
       return baseUrl + path;
     },
 
@@ -19306,7 +21564,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     putSoulPlusOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/soulplus`;
-      
+
       return baseUrl + path;
     },
 
@@ -19335,7 +21593,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getBangumiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/bangumi`;
-      
+
       return baseUrl + path;
     },
 
@@ -19366,7 +21624,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchBangumiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/bangumi`;
-      
+
       return baseUrl + path;
     },
 
@@ -19395,7 +21653,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getCienOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/cien`;
-      
+
       return baseUrl + path;
     },
 
@@ -19426,7 +21684,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchCienOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/cien`;
-      
+
       return baseUrl + path;
     },
 
@@ -19455,7 +21713,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getDLsiteOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/dlsite`;
-      
+
       return baseUrl + path;
     },
 
@@ -19486,7 +21744,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchDLsiteOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/dlsite`;
-      
+
       return baseUrl + path;
     },
 
@@ -19515,7 +21773,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getSteamOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/steam`;
-      
+
       return baseUrl + path;
     },
 
@@ -19546,7 +21804,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchSteamOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/steam`;
-      
+
       return baseUrl + path;
     },
 
@@ -19575,7 +21833,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getFanboxOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/fanbox`;
-      
+
       return baseUrl + path;
     },
 
@@ -19606,7 +21864,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchFanboxOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/fanbox`;
-      
+
       return baseUrl + path;
     },
 
@@ -19635,7 +21893,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getFantiaOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/fantia`;
-      
+
       return baseUrl + path;
     },
 
@@ -19666,7 +21924,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchFantiaOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/fantia`;
-      
+
       return baseUrl + path;
     },
 
@@ -19695,7 +21953,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPatreonOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/patreon`;
-      
+
       return baseUrl + path;
     },
 
@@ -19726,7 +21984,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchPatreonOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/patreon`;
-      
+
       return baseUrl + path;
     },
 
@@ -19755,7 +22013,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getTmdbOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/tmdb`;
-      
+
       return baseUrl + path;
     },
 
@@ -19786,7 +22044,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchTmdbOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/tmdb`;
-      
+
       return baseUrl + path;
     },
 
@@ -19815,7 +22073,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAvSourceOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/av-sources`;
-      
+
       return baseUrl + path;
     },
 
@@ -19846,7 +22104,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchAvSourceOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/av-sources`;
-      
+
       return baseUrl + path;
     },
   };
@@ -19876,7 +22134,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getOtherDeviceDownloadsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/other-devices/downloads`;
-      
+
       return baseUrl + path;
     },
   };
@@ -19936,7 +22194,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/password`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -19948,7 +22206,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -19977,7 +22235,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllPasswordsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/password/all`;
-      
+
       return baseUrl + path;
     },
 
@@ -20032,7 +22290,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -20044,7 +22302,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -20075,7 +22333,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addPathMarkUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark`;
-      
+
       return baseUrl + path;
     },
 
@@ -20178,7 +22436,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/by-path`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -20190,7 +22448,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -20224,7 +22482,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/by-path`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -20236,7 +22494,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -20262,7 +22520,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllPathMarkPathsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/paths`;
-      
+
       return baseUrl + path;
     },
 
@@ -20291,7 +22549,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPendingPathMarksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/pending`;
-      
+
       return baseUrl + path;
     },
 
@@ -20317,7 +22575,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPendingPathMarksCountUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/pending/count`;
-      
+
       return baseUrl + path;
     },
 
@@ -20369,7 +22627,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addPathMarksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/batch`;
-      
+
       return baseUrl + path;
     },
 
@@ -20460,7 +22718,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPathMarkSyncStatusUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync-status`;
-      
+
       return baseUrl + path;
     },
 
@@ -20494,7 +22752,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     previewPathMarkMatchedPathsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/preview`;
-      
+
       return baseUrl + path;
     },
 
@@ -20523,7 +22781,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     checkPathMarkPathsExistUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/check-paths-exist`;
-      
+
       return baseUrl + path;
     },
 
@@ -20554,7 +22812,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     migratePathMarkPathUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/migrate-path`;
-      
+
       return baseUrl + path;
     },
 
@@ -20580,7 +22838,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startPathMarkSyncAllUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync/start-all`;
-      
+
       return baseUrl + path;
     },
 
@@ -20608,7 +22866,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startPathMarkSyncUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync/start`;
-      
+
       return baseUrl + path;
     },
 
@@ -20642,7 +22900,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync/by-path`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -20654,7 +22912,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -20680,7 +22938,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     forceResyncAllPathMarksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync/force-all`;
-      
+
       return baseUrl + path;
     },
 
@@ -20693,7 +22951,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     startSyncBySource: (
       query?: {
-        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       },
       params: RequestParams = {},
@@ -20711,12 +22969,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name startSyncBySourceUrl
      */
     startSyncBySourceUrl: (query?: {
-        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync/by-source`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -20728,7 +22986,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -20763,7 +23021,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getBatchPlayResourceSnapshotUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/player/batch-play/resource-snapshot`;
-      
+
       return baseUrl + path;
     },
 
@@ -20815,7 +23073,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getBatchPlayCandidatesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/player/batch-play/candidates`;
-      
+
       return baseUrl + path;
     },
 
@@ -20849,7 +23107,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     batchPlayResourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/player/batch-play`;
-      
+
       return baseUrl + path;
     },
 
@@ -20947,7 +23205,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/play-history`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -20959,7 +23217,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -21064,7 +23322,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllPlaylistsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/playlist`;
-      
+
       return baseUrl + path;
     },
 
@@ -21095,7 +23353,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addPlaylistUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/playlist`;
-      
+
       return baseUrl + path;
     },
 
@@ -21143,7 +23401,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPostParseTargetsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/targets`;
-      
+
       return baseUrl + path;
     },
 
@@ -21172,7 +23430,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllPostParserTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/task/all`;
-      
+
       return baseUrl + path;
     },
 
@@ -21198,7 +23456,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteAllPostParserTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/task/all`;
-      
+
       return baseUrl + path;
     },
 
@@ -21229,7 +23487,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addPostParserTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/task`;
-      
+
       return baseUrl + path;
     },
 
@@ -21275,7 +23533,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deletePostParserTasksByLinksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/task/by-links`;
-      
+
       return baseUrl + path;
     },
 
@@ -21316,7 +23574,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startAllPostParserTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/start`;
-      
+
       return baseUrl + path;
     },
 
@@ -21350,9 +23608,48 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPostParserTaskStatusesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/task/statuses`;
-      
+
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags PostParserAcquisition
+     * @name RetryPostParserTaskWorkflow
+     * @request POST:/post-parser/task/{id}/retry
+     */
+    retryPostParserTaskWorkflow: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/task/${id}/retry`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParserAcquisition
+     * @name ImportPostParserTaskToAcquisition
+     * @request POST:/post-parser/task/{id}/acquisition
+     */
+    importPostParserTaskToAcquisition: (
+      id: number,
+      data: BakabaseServiceControllersPostParserAcquisitionInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPostParserAcquisitionResult,
+        any
+      >({
+        path: `/post-parser/task/${id}/acquisition`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   property = {
     /**
@@ -21431,7 +23728,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAvailablePropertyTypesForManuallySettingValueUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/property/property-types-for-manually-setting-value`;
-      
+
       return baseUrl + path;
     },
 
@@ -21518,7 +23815,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/property/best-matching`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -21530,7 +23827,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -21560,7 +23857,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRemoteAccessContextUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/context`;
-      
+
       return baseUrl + path;
     },
 
@@ -21589,7 +23886,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRemoteAccessServerInfoUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/server-info`;
-      
+
       return baseUrl + path;
     },
 
@@ -21618,7 +23915,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRemoteAccessSettingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/settings`;
-      
+
       return baseUrl + path;
     },
 
@@ -21649,7 +23946,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setRemoteAccessModeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/mode`;
-      
+
       return baseUrl + path;
     },
 
@@ -21680,7 +23977,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setRemoteAccessLiveTranscodeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/live-transcode`;
-      
+
       return baseUrl + path;
     },
 
@@ -21711,7 +24008,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setRemoteAccessRequirePairingUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/require-pairing`;
-      
+
       return baseUrl + path;
     },
 
@@ -21745,7 +24042,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     pairRemoteDeviceWithCodeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/pair/code`;
-      
+
       return baseUrl + path;
     },
 
@@ -21779,7 +24076,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     requestRemoteDevicePairingUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/pair/request`;
-      
+
       return baseUrl + path;
     },
 
@@ -21813,7 +24110,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     claimRemoteDevicePairingUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/pair/claim`;
-      
+
       return baseUrl + path;
     },
 
@@ -21842,7 +24139,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     issueRemoteAccessPairingCodeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/pairing/code`;
-      
+
       return baseUrl + path;
     },
 
@@ -21901,7 +24198,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRemoteAccessDevicesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/devices`;
-      
+
       return baseUrl + path;
     },
 
@@ -21930,7 +24227,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRemoteAccessPairingRequestsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/pairing/requests`;
-      
+
       return baseUrl + path;
     },
 
@@ -21982,7 +24279,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       data: BakabaseServiceModelsInputResourceMoveInputModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewResourceMoveBatchViewModel,
+        any
+      >({
         path: `/resource-move`,
         method: "POST",
         body: data,
@@ -21998,7 +24298,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     moveResourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-move`;
-      
+
       return baseUrl + path;
     },
 
@@ -22032,7 +24332,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     previewResourceMoveUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-move/preview`;
-      
+
       return baseUrl + path;
     },
 
@@ -22077,7 +24377,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-move/records`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -22089,7 +24389,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -22145,7 +24445,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteInactiveResourceMoveRecordsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-move/records/inactive`;
-      
+
       return baseUrl + path;
     },
   };
@@ -22285,7 +24585,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/steam-app`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -22297,7 +24597,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -22383,7 +24683,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/steam-app/sync`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -22395,7 +24695,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -22435,7 +24735,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/subscription`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -22447,7 +24747,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -22481,7 +24781,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addSubscriptionUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/subscription`;
-      
+
       return baseUrl + path;
     },
 
@@ -22585,7 +24885,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getSubscriptionProvidersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/subscription/providers`;
-      
+
       return baseUrl + path;
     },
   };
@@ -22612,7 +24912,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     tampermonkeyHealthUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/Tampermonkey/health`;
-      
+
       return baseUrl + path;
     },
 
@@ -22638,7 +24938,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     installTampermonkeyScriptUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/Tampermonkey/install`;
-      
+
       return baseUrl + path;
     },
 
@@ -22663,7 +24963,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getTampermonkeyScriptUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/Tampermonkey/script/bakabase.user.js`;
-      
+
       return baseUrl + path;
     },
   };
@@ -22693,7 +24993,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllTextTypesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/text/type`;
-      
+
       return baseUrl + path;
     },
 
@@ -22727,7 +25027,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addTextTypeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/text/type`;
-      
+
       return baseUrl + path;
     },
 
@@ -22906,7 +25206,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addTextPrefabEntriesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/text/prefabs`;
-      
+
       return baseUrl + path;
     },
 
@@ -22940,7 +25240,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/text/clean`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -22952,7 +25252,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -22982,7 +25282,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllThirdPartyRequestStatisticsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/third-party/request-statistics`;
-      
+
       return baseUrl + path;
     },
   };
@@ -23017,7 +25317,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     queryThirdPartyContentStatusUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/third-party-content-tracker/query`;
-      
+
       return baseUrl + path;
     },
 
@@ -23048,7 +25348,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     markThirdPartyContentAsViewedUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/third-party-content-tracker/mark-viewed`;
-      
+
       return baseUrl + path;
     },
 
@@ -23089,7 +25389,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/third-party-content-tracker/nearest-viewed`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -23101,7 +25401,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -23138,7 +25438,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/open`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -23150,7 +25450,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -23189,7 +25489,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/cookie-capture`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -23201,7 +25501,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -23227,7 +25527,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getTlsPresetsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/tls-presets`;
-      
+
       return baseUrl + path;
     },
 
@@ -23269,7 +25569,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/cookie-validation`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -23281,7 +25581,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -23322,7 +25622,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/thumbnail`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -23334,7 +25634,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -23373,7 +25673,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/match-all`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -23385,7 +25685,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -23419,7 +25719,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/open-file`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -23431,7 +25731,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -23465,7 +25765,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/generate-files-to-embedded`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -23477,7 +25777,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -23507,7 +25807,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getNewAppVersionUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/updater/app/new-version`;
-      
+
       return baseUrl + path;
     },
 
@@ -23533,7 +25833,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startUpdatingAppUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/updater/app/update`;
-      
+
       return baseUrl + path;
     },
 
@@ -23559,7 +25859,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     stopUpdatingAppUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/updater/app/update`;
-      
+
       return baseUrl + path;
     },
 
@@ -23585,7 +25885,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     restartAndUpdateAppUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/updater/app/restart`;
-      
+
       return baseUrl + path;
     },
   };
@@ -23625,7 +25925,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/workflow`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -23637,7 +25937,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -23671,7 +25971,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addWorkflowUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/workflow`;
-      
+
       return baseUrl + path;
     },
 
@@ -23736,6 +26036,58 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Workflow
+     * @name ValidateWorkflow
+     * @request POST:/workflow/validate
+     */
+    validateWorkflow: (
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowValidationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult,
+        any
+      >({
+        path: `/workflow/validate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for validateWorkflow
+     * @name validateWorkflowUrl
+     */
+    validateWorkflowUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow/validate`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name ValidateSavedWorkflow
+     * @request GET:/workflow/{id}/validation
+     */
+    validateSavedWorkflow: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult,
+        any
+      >({
+        path: `/workflow/${id}/validation`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
      * @name GetWorkflowTriggers
      * @request GET:/workflow/triggers
      */
@@ -23757,7 +26109,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getWorkflowTriggersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/workflow/triggers`;
-      
+
       return baseUrl + path;
     },
 
@@ -23810,7 +26162,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getWorkflowActivitiesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/workflow/activities`;
-      
+
       return baseUrl + path;
     },
 
@@ -23839,7 +26191,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getWorkflowItemTypesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/workflow/item-types`;
-      
+
       return baseUrl + path;
     },
 
@@ -23918,6 +26270,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/workflow/run/${runId}/file-rename-entries/undo`,
         method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name ResumeWorkflowRun
+     * @request POST:/workflow/run/{runId}/resume
+     */
+    resumeWorkflowRun: (
+      runId: number,
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowRunResumeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/workflow/run/${runId}/resume`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

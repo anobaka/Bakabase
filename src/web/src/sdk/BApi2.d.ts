@@ -4,6 +4,294 @@
  */
 
 export interface paths {
+    "/acquisition/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchAcquisitionCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/candidates/{resourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisitionCandidate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/from-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateAcquisitionFromUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/shared-list/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewSharedList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/shared-list/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ImportSharedList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchAcquisitions"];
+        put?: never;
+        post: operations["CreateAcquisition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResumeAcquisition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetryAcquisition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CancelAcquisition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisitionInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/{id}/unclaim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UnclaimAcquisitionFiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisitionOptions"];
+        put: operations["PutAcquisitionOptions"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SetUpAcquisition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisitionRecipes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{resourceId}/acquisition-leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceAcquisitionLeads"];
+        put?: never;
+        post: operations["AddResourceAcquisitionLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{resourceId}/acquisition-leads/torrent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddResourceAcquisitionTorrent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{resourceId}/acquisition-leads/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteResourceAcquisitionLead"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/providers": {
         parameters: {
             query?: never;
@@ -1236,6 +1524,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/collection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllCollections"];
+        put?: never;
+        post: operations["AddCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCollection"];
+        put: operations["PutCollection"];
+        post?: never;
+        delete: operations["DeleteCollection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchCollectionMembers"];
+        put?: never;
+        post: operations["AddCollectionMembers"];
+        delete: operations["RemoveCollectionMembers"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/memberships": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCollectionMemberships"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/members/{resourceId}/ignored": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetCollectionMemberIgnored"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/members/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["ReorderCollectionMembers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/members/placeholder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddCollectionPlaceholderMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/rule/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewCollectionRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/acquire-missing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AcquireMissingCollectionMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCollectionProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCollectionIdsByResourceIds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/comparison/plan": {
         parameters: {
             query?: never;
@@ -1596,6 +2060,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["TestCustomPropertyTypeConversion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dashboard/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDashboardOverview"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2030,6 +2510,38 @@ export interface paths {
         get?: never;
         put: operations["SetDLsiteWorkUseLocaleEmulator"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/downloader/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDownloadResults"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/downloader/result/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetryDownloadResultWorkflow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4912,6 +5424,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/post-parser/task/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetryPostParserTaskWorkflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task/{id}/acquisition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ImportPostParserTaskToAcquisition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/property/pool/{pool}/id/{id}/value-resource-counts": {
         parameters: {
             query?: never;
@@ -5680,6 +6224,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/{id}/materialize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterializeResource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{id}/dematerialize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DematerializeResource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/placeholder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreatePlaceholderResources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/paths": {
         parameters: {
             query?: never;
@@ -5898,6 +6490,70 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["SubscribeResourceDiscoveryBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/match-suggestion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPendingResourceMatchSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/match-suggestion/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CountPendingResourceMatchSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/match-suggestion/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ConfirmResourceMatchSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/match-suggestion/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DismissResourceMatchSuggestion"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6688,6 +7344,38 @@ export interface paths {
         patch: operations["PatchWorkflow"];
         trace?: never;
     };
+    "/workflow/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ValidateWorkflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow/{id}/validation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ValidateSavedWorkflow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflow/triggers": {
         parameters: {
             query?: never;
@@ -6810,6 +7498,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["UndoWorkflowRunFileRenames"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow/run/{runId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResumeWorkflowRun"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6972,10 +7676,10 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.ClientMode": 0 | 1 | 2;
         /**
          * Format: int32
-         * @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai]
+         * @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.DataOrigin": 1 | 2 | 3 | 4 | 5;
+        "Bakabase.Abstractions.Models.Domain.Constants.DataOrigin": 1 | 2 | 3 | 4 | 5 | 6;
         /**
          * Format: int32
          * @description [1: NotStarted, 2: Ready, 3: Failed]
@@ -7098,16 +7802,22 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceDataType": 1 | 2 | 3;
         /**
          * Format: int32
+         * @description [1: Pending, 2: Dismissed]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceMatchSuggestionStatus": 1 | 2;
+        /**
+         * Format: int32
          * @description [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted]
          * @enum {integer}
          */
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceMoveRecordStatus": 1 | 2 | 3 | 4 | 5 | 6;
         /**
          * Format: int32
-         * @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc]
+         * @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.ResourceSource": 1 | 2 | 3 | 4 | 5;
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceSource": 1 | 2 | 3 | 4 | 5 | 7;
         /**
          * Format: int32
          * @description [1: Active, 2: Absent, 3: Unavailable]
@@ -7410,9 +8120,11 @@ export interface components {
             mediaLibraryId: number;
             status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceStatus"];
             sourceLinks?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSourceLink"][];
+            externalIdentities?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceExternalIdentity"][];
             readonly fileName?: string;
             readonly directory?: string;
             path?: string;
+            readonly hasLocalPath: boolean;
             displayName?: string;
             /** Format: int32 */
             parentId?: number;
@@ -7447,6 +8159,13 @@ export interface components {
             /** @deprecated */
             mediaLibraryColor?: string;
             mediaLibraries?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource+MediaLibraryInfo"][];
+            collections?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource+CollectionInfo"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.Resource+CollectionInfo": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            color?: string;
         };
         "Bakabase.Abstractions.Models.Domain.Resource+MediaLibraryInfo": {
             /** Format: int32 */
@@ -7463,6 +8182,7 @@ export interface components {
             visible: boolean;
             /** Format: int32 */
             order: number;
+            profileScopePriority?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
         };
         "Bakabase.Abstractions.Models.Domain.Resource+Property+PropertyValue": {
             /** Format: int32 */
@@ -7479,10 +8199,41 @@ export interface components {
             origin: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
             status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataStatus"];
         };
+        "Bakabase.Abstractions.Models.Domain.ResourceExternalIdentity": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            resourceId: number;
+            thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+            externalId: string;
+            /** Format: date-time */
+            createDt: string;
+            coverUrls?: string[];
+            localCoverPaths?: string[];
+            /** Format: date-time */
+            coverDownloadFailedAt?: string;
+            metadataJson?: string;
+        };
         "Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache": {
             coverPaths?: string[];
             playableFilePaths?: string[];
             cachedTypes: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            resourceId: number;
+            resourceName?: string;
+            /** Format: int32 */
+            candidateResourceId: number;
+            candidateResourceName?: string;
+            /** Format: double */
+            score: number;
+            reason?: string;
+            status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceMatchSuggestionStatus"];
+            /** Format: date-time */
+            createdAt: string;
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions": {
             enhancers?: components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
@@ -7761,6 +8512,11 @@ export interface components {
             uniqueCustomProperties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"][];
             uniqueExtensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
         };
+        "Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel": {
+            batchId: string;
+            /** Format: int32 */
+            skippedResourceCount: number;
+        };
         "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel": {
             items: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+Item"][];
         };
@@ -7804,6 +8560,12 @@ export interface components {
             viewedAt?: string;
             readonly isViewed: boolean;
             readonly hasUpdate: boolean;
+        };
+        "Bakabase.Abstractions.Services.PlaceholderResourceResult": {
+            /** Format: int32 */
+            resourceId: number;
+            created: boolean;
+            name?: string;
         };
         /**
          * Format: int32
@@ -8044,6 +8806,8 @@ export interface components {
             defaultPath?: string;
             namingConvention?: string;
             preferTorrent: boolean;
+            /** Format: int32 */
+            downloadResultWorkflowId?: number;
             prioritizeTasksWithTorrent: boolean;
             /** Format: int32 */
             torrentCheckValidityHours?: number;
@@ -8290,6 +9054,8 @@ export interface components {
             defaultPath?: string;
             namingConvention?: string;
             preferTorrent?: boolean;
+            /** Format: int32 */
+            downloadResultWorkflowId?: number;
             prioritizeTasksWithTorrent?: boolean;
             skipExisting?: boolean;
             /** Format: int32 */
@@ -8471,6 +9237,12 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskStatus": 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
+        /**
+         * Format: int32
+         * @description [1: TorrentMetadata, 2: LocalFiles]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadResultKind": 1 | 2;
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask": {
             /** Format: int32 */
             id: number;
@@ -8730,6 +9502,9 @@ export interface components {
                 [key: string]: string[];
             };
             targets: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget"][];
+            links: string[];
+            text?: string;
+            title?: string;
         };
         "Bakabase.InsideWorld.Business.Components.PostParser.Controllers.DeletePostParserTasksByLinksInput": {
             source: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserSource"];
@@ -8764,6 +9539,14 @@ export interface components {
             link: string;
             title?: string;
             content?: string;
+            text?: string;
+            /** Format: int32 */
+            revision: number;
+            /** Format: int32 */
+            workflowDefinitionId?: number;
+            /** Format: int32 */
+            workflowRunId?: number;
+            workflowStatus?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus"];
             targets: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget"][];
             results?: {
                 DownloadInfo: components["schemas"]["System.Text.Json.Nodes.JsonNode"];
@@ -8919,10 +9702,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.AdditionalItems.CustomPropertyAdditionalItem": 0 | 2;
         /**
          * Format: int32
-         * @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All]
+         * @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 32 | 64 | 288 | 512 | 2048 | 16416 | 32768 | 52064;
+        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 32 | 64 | 288 | 512 | 2048 | 16416 | 32768 | 65536 | 117600;
         /**
          * Format: int32
          * @description [1: Latest, 2: Frequency]
@@ -8979,10 +9762,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.StartupPage": 0 | 1;
         /**
          * Format: int32
-         * @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam]
+         * @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.ThirdPartyId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+        "Bakabase.InsideWorld.Models.Constants.ThirdPartyId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
         "Bakabase.InsideWorld.Models.Models.Aos.PreviewerItem": {
             filePath: string;
             type: components["schemas"]["Bakabase.InsideWorld.Models.Constants.MediaType"];
@@ -9593,6 +10376,171 @@ export interface components {
             detectedSourceLanguage?: string;
             targetLanguage: string;
         };
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            resourceId: number;
+            kind: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
+            value: string;
+            origin: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadOrigin"];
+            note?: string;
+            accessCode?: string;
+            password?: string;
+            sourceReference?: string;
+            isResolved: boolean;
+            /** Format: date-time */
+            lastUsedAt?: string;
+            lastResult?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadResult"];
+            /** Format: date-time */
+            createdAt: string;
+            isDerived: boolean;
+            sourceName?: string;
+        };
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            resourceId: number;
+            /** Format: int32 */
+            collectionId?: number;
+            leadKind: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
+            leadValue?: string;
+            /** Format: int32 */
+            acquisitionLeadId?: number;
+            /** Format: int32 */
+            recipeDefinitionId: number;
+            /** Format: int32 */
+            workflowRunId?: number;
+            status: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus"];
+            waitReason?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionWaitReason"];
+            targetDirectory?: string;
+            error?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            completedAt?: string;
+            purchases: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.PurchaseRecord"][];
+            resourceName?: string;
+            recipeName?: string;
+            waitPromptJson?: string;
+            /** Format: date-time */
+            waitingSince?: string;
+            /** Format: int32 */
+            currentStepIndex?: number;
+            readonly isFinished: boolean;
+        };
+        /**
+         * Format: int32
+         * @description [0: Unknown, 1: DirectUrl, 2: Baidu, 3: Xunlei, 4: Feimao, 5: Cloudflare, 6: Mega, 7: PikPak, 8: GoogleDrive, 9: OneDrive, 10: Magnet, 11: OneOneFive]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionDriveKind": 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+        /**
+         * Format: int32
+         * @description [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind": 1 | 2 | 3 | 4 | 5 | 6 | 7;
+        /**
+         * Format: int32
+         * @description [1: User, 2: Subscription, 3: SharedListImport, 4: PostParser]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadOrigin": 1 | 2 | 3 | 4;
+        /**
+         * Format: int32
+         * @description [1: Succeeded, 2: Failed]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadResult": 1 | 2;
+        /**
+         * Format: int32
+         * @description [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus": 1 | 2 | 3 | 4 | 5 | 6;
+        /**
+         * Format: int32
+         * @description [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionWaitReason": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.PurchaseRecord": {
+            /** Format: double */
+            price: number;
+            /** Format: date-time */
+            purchasedAt: string;
+            where: string;
+        };
+        "Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary": {
+            /** Format: int32 */
+            definitionId: number;
+            name: string;
+            isBuiltin: boolean;
+            stepKinds: string[];
+            description?: string;
+            descriptionKey?: string;
+            applicableLeadKinds: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"][];
+            validation: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult"];
+        };
+        "Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions": {
+            inboxDirectory?: string;
+            libraryRootDirectory?: string;
+            directoryTemplate: string;
+            preferredDriveKinds: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionDriveKind"][];
+            recipeByLeadKind: {
+                PlatformHolding: string;
+                SharedPage: string;
+                SharedDocument: string;
+                DirectUrl: string;
+                Magnet: string;
+                Manual: string;
+                Torrent: string;
+            };
+            /** Format: double */
+            autoPurchaseLimit: number;
+            deleteArchiveAfterExtraction: boolean;
+            tryRecentPasswords: boolean;
+            /** Format: int32 */
+            recentPasswordCandidateCount: number;
+            /** Format: int32 */
+            concurrency: number;
+        };
+        "Bakabase.Modules.Acquisition.Models.Input.AcquisitionCreationInputModel": {
+            /** Format: int32 */
+            resourceId: number;
+            /** Format: int32 */
+            acquisitionLeadId?: number;
+            leadKind?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
+            leadValue?: string;
+            /** Format: int32 */
+            recipeDefinitionId?: number;
+            /** Format: int32 */
+            collectionId?: number;
+        };
+        "Bakabase.Modules.Acquisition.Models.Input.AcquisitionFromUrlInputModel": {
+            url: string;
+            /** Format: int32 */
+            recipeDefinitionId?: number;
+            /** Format: int32 */
+            collectionId?: number;
+        };
+        "Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel": {
+            kind: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
+            value: string;
+            origin: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadOrigin"];
+            note?: string;
+            accessCode?: string;
+            password?: string;
+            sourceReference?: string;
+            isResolved: boolean;
+        };
+        "Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel": {
+            signalJson: string;
+        };
         "Bakabase.Modules.Alias.Abstractions.Models.Domain.Alias": {
             text: string;
             preferred?: string;
@@ -9605,6 +10553,87 @@ export interface components {
         "Bakabase.Modules.Alias.Models.Input.AliasPatchInputModel": {
             text?: string;
             isPreferred: boolean;
+        };
+        "Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember": {
+            /** Format: int32 */
+            collectionId: number;
+            /** Format: int32 */
+            resourceId: number;
+            origin?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants.CollectionMembershipOrigin"];
+            /** Format: int32 */
+            subscriptionId?: number;
+            /** Format: date-time */
+            lastSeenAt?: string;
+            isIgnored: boolean;
+            /** Format: int32 */
+            order?: number;
+            readonly isFromRule: boolean;
+        };
+        "Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress": {
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            owned: number;
+            /** Format: int32 */
+            acquiring: number;
+            /** Format: int32 */
+            ignored: number;
+            /** Format: double */
+            readonly ratio: number;
+        };
+        /**
+         * Format: int32
+         * @description [0: All, 1: Owned, 2: Missing, 3: Acquiring, 4: Ignored, 5: GoneFromSource]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants.CollectionMemberFilter": 0 | 1 | 2 | 3 | 4 | 5;
+        /**
+         * Format: int32
+         * @description [1: Manual, 2: Subscription]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants.CollectionMembershipOrigin": 1 | 2;
+        "Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            description?: string;
+            color?: string;
+            coverPath?: string;
+            ruleSearchJson?: string;
+            autoAcquire: boolean;
+            acquisitionSettingsJson?: string;
+            /** Format: int32 */
+            order: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            progress?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress"];
+            readonly hasRule: boolean;
+        };
+        "Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage": {
+            resourceIds: number[];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        "Bakabase.Modules.Collection.Models.Input.CollectionInputModel": {
+            name: string;
+            description?: string;
+            color?: string;
+            coverPath?: string;
+            ruleSearchJson?: string;
+            autoAcquire: boolean;
+            acquisitionSettingsJson?: string;
+            /** Format: int32 */
+            order: number;
+        };
+        "Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel": {
+            resourceIds: number[];
         };
         "Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan": {
             /** Format: int32 */
@@ -10273,6 +11302,12 @@ export interface components {
             name: string;
             description?: string;
         };
+        /**
+         * Format: int32
+         * @description [1: PlatformHolding, 2: Catalog, 3: SharingChannel]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Subscription.Abstractions.Models.Domain.Constants.SubscriptionSourceKind": 1 | 2 | 3;
         "Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionCreationInputModel": {
             kind: string;
             displayName: string;
@@ -10280,6 +11315,8 @@ export interface components {
             enabled: boolean;
             /** Format: int32 */
             intervalMinutes?: number;
+            /** Format: int32 */
+            collectionId?: number;
         };
         "Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionUpdateInputModel": {
             displayName?: string;
@@ -10287,6 +11324,8 @@ export interface components {
             enabled?: boolean;
             /** Format: int32 */
             intervalMinutes?: number;
+            /** Format: int32 */
+            collectionId?: number;
         };
         "Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionCheckSummaryViewModel": {
             firstRun: boolean;
@@ -10300,6 +11339,8 @@ export interface components {
             kind: string;
             displayName: string;
             icon?: string;
+            sourceKind: components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.Domain.Constants.SubscriptionSourceKind"];
+            thirdPartyId?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
         };
         "Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel": {
             /** Format: int32 */
@@ -10317,6 +11358,8 @@ export interface components {
             lastError?: string;
             /** Format: int32 */
             intervalMinutes?: number;
+            /** Format: int32 */
+            collectionId?: number;
             targetSummary?: string;
         };
         "Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie.CookieCaptureResult": {
@@ -10335,6 +11378,12 @@ export interface components {
             /** Format: int32 */
             mediaCount: number;
         };
+        /**
+         * Format: int32
+         * @description [0: Unknown, 1: Manual, 2: Module, 3: SystemEvent, 4: Schedule, 5: Watch]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivationMode": 0 | 1 | 2 | 3 | 4 | 5;
         /**
          * Format: int32
          * @description [1: OneToOne, 2: OneToMany]
@@ -10361,10 +11410,10 @@ export interface components {
         "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowItemTypeBehavior": 1 | 2 | 3;
         /**
          * Format: int32
-         * @description [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted]
+         * @description [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting]
          * @enum {integer}
          */
-        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus": 1 | 2 | 3 | 4 | 5 | 6;
+        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus": 1 | 2 | 3 | 4 | 5 | 6 | 7;
         "Bakabase.Modules.Workflow.Abstractions.Models.Domain.WorkflowRunStepStat": {
             /** Format: int32 */
             stepIndex: number;
@@ -10377,12 +11426,16 @@ export interface components {
             failedCount: number;
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel": {
+            nodeId?: string;
             kind: string;
+            notes?: string;
             configJson: string;
             onItemError: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityErrorBehavior"];
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionCreationInputModel": {
             name: string;
+            description?: string;
+            descriptionKey?: string;
             triggerKind: string;
             triggerFilterJson?: string;
             enabled: boolean;
@@ -10390,6 +11443,7 @@ export interface components {
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionUpdateInputModel": {
             name?: string;
+            description?: string;
             triggerFilterJson?: string;
             enabled?: boolean;
             activities?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel"][];
@@ -10397,9 +11451,19 @@ export interface components {
         "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel": {
             argsJson?: string;
         };
+        "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowRunResumeInputModel": {
+            signalJson: string;
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowValidationInputModel": {
+            triggerKind: string;
+            triggerFilterJson?: string;
+            activities: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel"][];
+        };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel": {
             kind: string;
             displayName: string;
+            description?: string;
+            descriptionKey?: string;
             category: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityCategory"];
             group: string;
             acceptedInputItemTypes: string[];
@@ -10415,6 +11479,7 @@ export interface components {
             /** Format: int32 */
             order: number;
             kind: string;
+            notes?: string;
             configJson: string;
             onItemError: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityErrorBehavior"];
         };
@@ -10422,6 +11487,8 @@ export interface components {
             /** Format: int32 */
             id: number;
             name: string;
+            description?: string;
+            descriptionKey?: string;
             triggerKind: string;
             triggerFilterJson?: string;
             enabled: boolean;
@@ -10432,6 +11499,7 @@ export interface components {
             /** Format: date-time */
             lastRunAt?: string;
             lastError?: string;
+            isBuiltin: boolean;
             activities: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityViewModel"][];
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel": {
@@ -10460,16 +11528,99 @@ export interface components {
             inputCount: number;
             /** Format: int32 */
             outputCount: number;
+            outputItemsJson?: string;
+            outputPreviewTruncated: boolean;
             /** Format: int32 */
             failedItemCount: number;
             stepStats: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.WorkflowRunStepStat"][];
             errorMessage?: string;
+            waitReason?: string;
+            waitPromptJson?: string;
+            /** Format: date-time */
+            waitingSince?: string;
+            /** Format: int32 */
+            currentStepIndex?: number;
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel": {
             kind: string;
             displayName: string;
+            description?: string;
+            descriptionKey?: string;
+            activationMode: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivationMode"];
+            sourceModule: string;
+            supportsManualRun: boolean;
             requiresManualPayload: boolean;
             payloadFields: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel"][];
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationDiagnostic": {
+            code: string;
+            message: string;
+            messageKey?: string;
+            severity: string;
+            dependsOnPayload: boolean;
+            nodeId?: string;
+            /** Format: int32 */
+            nodeIndex?: number;
+            kind?: string;
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult": {
+            readonly isValid: boolean;
+            diagnostics: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationDiagnostic"][];
+        };
+        "Bakabase.Service.Components.Acquisition.AcquisitionSetupInputModel": {
+            inboxDirectory?: string;
+            libraryRootDirectory?: string;
+            directoryTemplate?: string;
+            preferredDriveKinds?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionDriveKind"][];
+            /** Format: double */
+            autoPurchaseLimit?: number;
+        };
+        "Bakabase.Service.Components.Acquisition.AcquisitionSetupResult": {
+            createdInbox: boolean;
+            createdLibrary: boolean;
+            /** Format: int32 */
+            pathMarkId?: number;
+        };
+        "Bakabase.Service.Components.Acquisition.InboxCandidate": {
+            path: string;
+            fileName: string;
+            /** Format: int64 */
+            length: number;
+            /** Format: date-time */
+            createdAt: string;
+            isStable: boolean;
+            scores: components["schemas"]["Bakabase.Service.Components.Acquisition.InboxCandidateScore"][];
+        };
+        "Bakabase.Service.Components.Acquisition.InboxCandidateScore": {
+            /** Format: int32 */
+            acquisitionTaskId: number;
+            resourceName?: string;
+            /** Format: int32 */
+            score: number;
+        };
+        "Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult": {
+            /** Format: int32 */
+            resourceId: number;
+            created: boolean;
+            /** Format: int32 */
+            leadCount: number;
+        };
+        "Bakabase.Service.Components.Acquisition.SharedListImportResult": {
+            /** Format: int32 */
+            created: number;
+            /** Format: int32 */
+            matched: number;
+            /** Format: int32 */
+            started: number;
+            problems: string[];
+        };
+        "Bakabase.Service.Components.Acquisition.SharedListPreviewRow": {
+            title?: string;
+            url?: string;
+            password?: string;
+            /** Format: int32 */
+            lineNumber: number;
+            alreadyKnown: boolean;
         };
         "Bakabase.Service.Controllers.AppDataPathController+RelocateRequest": {
             targetPath: string;
@@ -10510,6 +11661,26 @@ export interface components {
         "Bakabase.Service.Controllers.ChatController+UpdateTitleRequest": {
             title: string;
         };
+        "Bakabase.Service.Controllers.CollectionAcquireMissingResult": {
+            /** Format: int32 */
+            started: number;
+            /** Format: int32 */
+            withoutLead: number;
+            problems: string[];
+        };
+        "Bakabase.Service.Controllers.CollectionPlaceholderInputModel": {
+            title: string;
+        };
+        "Bakabase.Service.Controllers.CollectionRulePreview": {
+            /** Format: int32 */
+            totalCount: number;
+            sampleResourceIds: number[];
+        };
+        "Bakabase.Service.Controllers.CollectionRulePreviewInputModel": {
+            ruleSearchJson?: string;
+            /** Format: int32 */
+            sampleSize: number;
+        };
         "Bakabase.Service.Controllers.DiscoverySubscribeRequest": {
             /** Format: int32 */
             resourceId: number;
@@ -10537,6 +11708,12 @@ export interface components {
             oldPath: string;
             newPath: string;
         };
+        "Bakabase.Service.Controllers.PostParserAcquisitionInput": {
+            title?: string;
+            resourceIndices: number[];
+            /** Format: int32 */
+            revision: number;
+        };
         "Bakabase.Service.Controllers.ResourceHealthScoreRowViewModel": {
             /** Format: int32 */
             profileId: number;
@@ -10546,6 +11723,19 @@ export interface components {
             matchedRulesJson?: string;
             /** Format: date-time */
             evaluatedAt: string;
+        };
+        "Bakabase.Service.Controllers.SharedListImportInputModel": {
+            rows: components["schemas"]["Bakabase.Service.Controllers.SharedListImportRow"][];
+            /** Format: int32 */
+            collectionId?: number;
+            startAcquiring: boolean;
+        };
+        "Bakabase.Service.Controllers.SharedListImportRow": {
+            title?: string;
+            url?: string;
+            password?: string;
+            /** Format: int32 */
+            lineNumber: number;
         };
         "Bakabase.Service.Models.Input.AvSourceTestInputModel": {
             number?: string;
@@ -10693,6 +11883,10 @@ export interface components {
             base64String: string;
             saveMode: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverSaveMode"];
         };
+        "Bakabase.Service.Models.Input.ResourceMaterializeInputModel": {
+            path: string;
+            mergeIfOccupied: boolean;
+        };
         "Bakabase.Service.Models.Input.ResourceMediaLibraryMappingInputModel": {
             mediaLibraryIds: number[];
         };
@@ -10709,6 +11903,16 @@ export interface components {
             recentFilters?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+ResourceFilter"][];
             keepResourcesOnPathChange?: boolean;
             deleteKeepResourceMarkers?: boolean;
+        };
+        "Bakabase.Service.Models.Input.ResourcePlaceholderInputModel": {
+            items: components["schemas"]["Bakabase.Service.Models.Input.ResourcePlaceholderItemInputModel"][];
+            acquireImmediately: boolean;
+        };
+        "Bakabase.Service.Models.Input.ResourcePlaceholderItemInputModel": {
+            title?: string;
+            thirdPartyId?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+            externalId?: string;
+            sharedUrl?: string;
         };
         "Bakabase.Service.Models.Input.ResourceProfileInputModel": {
             name: string;
@@ -10764,6 +11968,44 @@ export interface components {
         };
         "Bakabase.Service.Models.Input.TextTypePatchInputModel": {
             name: string;
+        };
+        "Bakabase.Service.Models.View.AcquisitionCandidateLeadViewModel": {
+            /** Format: int32 */
+            id: number;
+            kind: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
+            value: string;
+            sourceName?: string;
+            isDerived: boolean;
+            note?: string;
+            availability: string;
+            capability: string;
+            method: string;
+            defaultRecipeName: string;
+            /** Format: int32 */
+            defaultRecipeDefinitionId?: number;
+            applicableRecipeDefinitionIds: number[];
+            recipeValidations: {
+                [key: string]: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult"];
+            };
+        };
+        "Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel": {
+            items: components["schemas"]["Bakabase.Service.Models.View.AcquisitionCandidateViewModel"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            recipes: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary"][];
+        };
+        "Bakabase.Service.Models.View.AcquisitionCandidateViewModel": {
+            /** Format: int32 */
+            resourceId: number;
+            resourceName: string;
+            leads: components["schemas"]["Bakabase.Service.Models.View.AcquisitionCandidateLeadViewModel"][];
+            /** Format: int32 */
+            activeTaskId?: number;
+            activeTaskStatus?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus"];
         };
         "Bakabase.Service.Models.View.AnalyticsAppInfoViewModel": {
             enableAnonymousDataTracking: boolean;
@@ -10840,7 +12082,7 @@ export interface components {
             id: number;
             /** Format: int32 */
             bulkModificationId: number;
-            resourcePath: string;
+            resourcePath?: string;
             /** Format: int32 */
             resourceId: number;
             diffs: components["schemas"]["Bakabase.Service.Models.View.ResourceDiffViewModel"][];
@@ -11000,12 +12242,70 @@ export interface components {
             /** Format: int32 */
             valueCount?: number;
         };
+        "Bakabase.Service.Models.View.DashboardMediaLibraryViewModel": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            /** Format: int32 */
+            resourceCount: number;
+        };
+        "Bakabase.Service.Models.View.DashboardOverviewViewModel": {
+            /** Format: int32 */
+            totalResourceCount: number;
+            /** Format: int32 */
+            localResourceCount: number;
+            /** Format: int32 */
+            pendingResourceCount: number;
+            /** Format: int32 */
+            collectionCount: number;
+            /** Format: int32 */
+            mediaLibraryCount: number;
+            /** Format: int32 */
+            thisWeekAddedCount: number;
+            mediaLibraries: components["schemas"]["Bakabase.Service.Models.View.DashboardMediaLibraryViewModel"][];
+            workflows: components["schemas"]["Bakabase.Service.Models.View.DashboardWorkflowsViewModel"];
+        };
+        "Bakabase.Service.Models.View.DashboardWorkflowsViewModel": {
+            /** Format: int32 */
+            runningCount: number;
+            /** Format: int32 */
+            waitingCount: number;
+            /** Format: int32 */
+            failedRecentlyCount: number;
+        };
         "Bakabase.Service.Models.View.DecompressionResultViewModel": {
             key: string;
             status: components["schemas"]["Bakabase.Service.Models.View.Constants.DecompressionStatus"];
             /** Format: int32 */
             percentage?: number;
             message?: string;
+        };
+        "Bakabase.Service.Models.View.DownloadResultViewModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            downloadTaskId: number;
+            sourceKey: string;
+            name: string;
+            kind: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadResultKind"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int32 */
+            workflowDefinitionId?: number;
+            /** Format: int32 */
+            workflowRunId?: number;
+            workflowStatus?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus"];
+            workflowName?: string;
+            workflowIsBuiltin: boolean;
+            /** Format: int32 */
+            acquisitionTaskId?: number;
+            contentsReady: boolean;
+            contentsDirectory?: string;
+            /** Format: int32 */
+            resourceId?: number;
+            error?: string;
+            filterDidNotMatch: boolean;
+            canRetry: boolean;
         };
         "Bakabase.Service.Models.View.EnhancementViewModel": {
             /** Format: int32 */
@@ -11261,11 +12561,28 @@ export interface components {
             /** Format: int32 */
             childrenCount?: number;
         };
+        "Bakabase.Service.Models.View.ResourceMaterializeResultViewModel": {
+            materialized: boolean;
+            path?: string;
+            /** Format: int32 */
+            occupiedByResourceId?: number;
+            occupiedByResourceName?: string;
+            merged: boolean;
+        };
         "Bakabase.Service.Models.View.ResourcePathInfoViewModel": {
             /** Format: int32 */
             id: number;
             path: string;
             fileName: string;
+        };
+        "Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel": {
+            /** Format: int32 */
+            index: number;
+            /** Format: int32 */
+            resourceId?: number;
+            created: boolean;
+            name?: string;
+            error?: string;
         };
         "Bakabase.Service.Models.View.ResourceProfileViewModel": {
             /** Format: int32 */
@@ -11412,6 +12729,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceSourceLink]": {
             /** Format: int32 */
@@ -11575,6 +12898,36 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmModelInfo"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]": {
             /** Format: int32 */
             code: number;
@@ -11659,6 +13012,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.InboxCandidate]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.InboxCandidate"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.SharedListPreviewRow]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.SharedListPreviewRow"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ChatController+ChatToolViewModel]": {
             /** Format: int32 */
             code: number;
@@ -11700,6 +13065,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CustomPropertyViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadResultViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.DownloadResultViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]": {
             /** Format: int32 */
@@ -11760,6 +13131,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourcePathInfoViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]": {
             /** Format: int32 */
@@ -12067,6 +13444,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel]": {
             /** Format: int32 */
             code: number;
@@ -12078,6 +13461,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Services.PlaceholderResourceResult"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Infrastructures.Components.App.Models.ResponseModels.AppInfo]": {
             /** Format: int32 */
@@ -12391,6 +13780,42 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Services.TranslationResult"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]": {
             /** Format: int32 */
             code: number;
@@ -12505,11 +13930,47 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.AcquisitionSetupResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.SharedListImportResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.SharedListImportResult"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+ValidateResponse"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionAcquireMissingResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Controllers.CollectionAcquireMissingResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreview"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.MediaLibraryStatistics]": {
             /** Format: int32 */
@@ -12522,6 +13983,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Controllers.PathMarkSyncStatusResponse"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AnalyticsAppInfoViewModel]": {
             /** Format: int32 */
@@ -12564,6 +14031,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CustomPropertyViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DashboardOverviewViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.DashboardOverviewViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FilePlayabilityViewModel]": {
             /** Format: int32 */
@@ -12625,6 +14098,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourceHierarchyContextViewModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMaterializeResultViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceMaterializeResultViewModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]": {
             /** Format: int32 */
             code: number;
@@ -12663,6 +14142,14 @@ export interface components {
                 [key: string]: {
                     [key: string]: components["schemas"]["Bakabase.Modules.StandardValue.Models.View.StandardValueConversionRuleViewModel"][];
                 } | null;
+            };
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[System.Int32]]]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: {
+                [key: string]: number[] | null;
             };
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Decimal]]": {
@@ -13317,6 +14804,561 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    SearchAcquisitionCandidates: {
+        parameters: {
+            query?: {
+                keyword?: string;
+                page?: number;
+                pageSize?: number;
+                filter?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                };
+            };
+        };
+    };
+    GetAcquisitionCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                };
+            };
+        };
+    };
+    CreateAcquisitionFromUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionFromUrlInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionFromUrlInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionFromUrlInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionFromUrlInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                };
+            };
+        };
+    };
+    PreviewSharedList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.SharedListPreviewRow]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.SharedListPreviewRow]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.SharedListPreviewRow]"];
+                };
+            };
+        };
+    };
+    ImportSharedList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.SharedListImportInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.SharedListImportInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.SharedListImportInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.SharedListImportInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.SharedListImportResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.SharedListImportResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.SharedListImportResult]"];
+                };
+            };
+        };
+    };
+    SearchAcquisitions: {
+        parameters: {
+            query?: {
+                /** @description [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
+                status?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus"];
+                resourceId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                };
+            };
+        };
+    };
+    CreateAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionCreationInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionCreationInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionCreationInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionCreationInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                };
+            };
+        };
+    };
+    GetAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                };
+            };
+        };
+    };
+    ResumeAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    RetryAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                };
+            };
+        };
+    };
+    CancelAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAcquisitionInbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.InboxCandidate]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.InboxCandidate]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.InboxCandidate]"];
+                };
+            };
+        };
+    };
+    UnclaimAcquisitionFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAcquisitionOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions]"];
+                };
+            };
+        };
+    };
+    PutAcquisitionOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
+                "application/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
+                "text/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetUpAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.AcquisitionSetupResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.AcquisitionSetupResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.AcquisitionSetupResult]"];
+                };
+            };
+        };
+    };
+    GetAcquisitionRecipes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary]"];
+                };
+            };
+        };
+    };
+    GetResourceAcquisitionLeads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                };
+            };
+        };
+    };
+    AddResourceAcquisitionLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                };
+            };
+        };
+    };
+    AddResourceAcquisitionTorrent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                };
+            };
+        };
+    };
+    DeleteResourceAcquisitionLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetAllAiProviders: {
         parameters: {
             query?: never;
@@ -15844,6 +17886,443 @@ export interface operations {
             };
         };
     };
+    GetAllCollections: {
+        parameters: {
+            query?: {
+                withProgress?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                };
+            };
+        };
+    };
+    AddCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                };
+            };
+        };
+    };
+    GetCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                };
+            };
+        };
+    };
+    PutCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                };
+            };
+        };
+    };
+    DeleteCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SearchCollectionMembers: {
+        parameters: {
+            query?: {
+                /** @description [0: All, 1: Owned, 2: Missing, 3: Acquiring, 4: Ignored, 5: GoneFromSource] */
+                filter?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants.CollectionMemberFilter"];
+                pageIndex?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage]"];
+                };
+            };
+        };
+    };
+    AddCollectionMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    RemoveCollectionMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetCollectionMemberships: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember]"];
+                };
+            };
+        };
+    };
+    SetCollectionMemberIgnored: {
+        parameters: {
+            query?: {
+                ignored?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ReorderCollectionMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    AddCollectionPlaceholderMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.CollectionPlaceholderInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.CollectionPlaceholderInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.CollectionPlaceholderInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.CollectionPlaceholderInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]"];
+                };
+            };
+        };
+    };
+    PreviewCollectionRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreviewInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreviewInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreviewInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreviewInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]"];
+                };
+            };
+        };
+    };
+    AcquireMissingCollectionMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionAcquireMissingResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionAcquireMissingResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionAcquireMissingResult]"];
+                };
+            };
+        };
+    };
+    GetCollectionProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress]"];
+                };
+            };
+        };
+    };
+    GetCollectionIdsByResourceIds: {
+        parameters: {
+            query?: {
+                resourceIds?: number[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[System.Int32]]]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[System.Int32]]]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[System.Int32]]]"];
+                };
+            };
+        };
+    };
     GetAllComparisonPlans: {
         parameters: {
             query?: never;
@@ -16585,6 +19064,28 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel]"];
+                };
+            };
+        };
+    };
+    GetDashboardOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DashboardOverviewViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DashboardOverviewViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DashboardOverviewViewModel]"];
                 };
             };
         };
@@ -17444,6 +19945,54 @@ export interface operations {
             };
         };
     };
+    GetDownloadResults: {
+        parameters: {
+            query?: {
+                taskId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadResultViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadResultViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadResultViewModel]"];
+                };
+            };
+        };
+    };
+    RetryDownloadResultWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetAllDownloaderDefinitions: {
         parameters: {
             query?: never;
@@ -17795,7 +20344,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
                 thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
             };
             cookie?: never;
@@ -17822,7 +20371,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
                 thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
             };
             cookie?: never;
@@ -23104,7 +25653,7 @@ export interface operations {
     StartSyncBySource: {
         parameters: {
             query?: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
                 source?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             header?: never;
@@ -23722,6 +26271,61 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
+                };
+            };
+        };
+    };
+    RetryPostParserTaskWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ImportPostParserTaskToAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.PostParserAcquisitionInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.PostParserAcquisitionInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.PostParserAcquisitionInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.PostParserAcquisitionInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
                 };
             };
         };
@@ -24544,7 +27148,7 @@ export interface operations {
             query?: {
                 saveSearch?: boolean;
                 searchId?: string;
-                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -24606,7 +27210,7 @@ export interface operations {
         parameters: {
             query?: {
                 ids?: number[];
-                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -24930,7 +27534,7 @@ export interface operations {
     PlayResourceItem: {
         parameters: {
             query?: {
-                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
                 origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
                 key?: string;
             };
@@ -25127,6 +27731,90 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    MaterializeResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMaterializeInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMaterializeInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMaterializeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMaterializeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMaterializeResultViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMaterializeResultViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMaterializeResultViewModel]"];
+                };
+            };
+        };
+    };
+    DematerializeResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    CreatePlaceholderResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourcePlaceholderInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourcePlaceholderInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourcePlaceholderInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourcePlaceholderInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel]"];
                 };
             };
         };
@@ -25451,7 +28139,7 @@ export interface operations {
     GetResourceConflicts: {
         parameters: {
             query?: {
-                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -25580,6 +28268,98 @@ export interface operations {
             };
         };
     };
+    GetPendingResourceMatchSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion]"];
+                };
+            };
+        };
+    };
+    CountPendingResourceMatchSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                };
+            };
+        };
+    };
+    ConfirmResourceMatchSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DismissResourceMatchSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     MoveResources: {
         parameters: {
             query?: never;
@@ -25602,9 +28382,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]"];
                 };
             };
         };
@@ -25922,7 +28702,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -25947,7 +28727,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -25979,7 +28759,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -26004,7 +28784,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -27233,6 +30013,59 @@ export interface operations {
             };
         };
     };
+    ValidateWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowValidationInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowValidationInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowValidationInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowValidationInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
+                };
+            };
+        };
+    };
+    ValidateSavedWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
+                };
+            };
+        };
+    };
     GetWorkflowTriggers: {
         parameters: {
             query?: never;
@@ -27424,6 +30257,37 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                };
+            };
+        };
+    };
+    ResumeWorkflowRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowRunResumeInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowRunResumeInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowRunResumeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowRunResumeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };

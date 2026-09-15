@@ -3,6 +3,10 @@ import { join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { WorkflowItemTypes } from "@/components/Workflow/itemTypes";
+import { acquisitionWaitReasons } from "@/sdk/constants";
+import i18n from "@/i18n";
+
 /**
  * Guards against a translation key that no locale file answers.
  *
@@ -66,6 +70,8 @@ const loadLocale = (locale: string): Set<string> => {
  * resolved statically, so it is left to the reader.
  */
 const LOOKUP = /\bt(?:<[^>]*>)?\(\s*["']([a-zA-Z][\w]*(?:\.[\w]+)+)["']/g;
+// Registry labels are passed to t() through a variable, so the literal-call scan misses them.
+const WORKFLOW_LABEL = /\b(?:displayNameKey|nameKey):\s*["'](workflow\.[\w.]+)["']/g;
 
 const collectUsedKeys = (): Map<string, string> => {
   const used = new Map<string, string>();
@@ -73,11 +79,21 @@ const collectUsedKeys = (): Map<string, string> => {
   for (const file of walk(srcDir, (p) => p.endsWith(".tsx") || p.endsWith(".ts"))) {
     const text = readFileSync(file, "utf8");
 
-    for (const [, key] of text.matchAll(LOOKUP)) {
-      if (!used.has(key)) {
-        used.set(key, file.slice(srcDir.length + 1));
+    for (const pattern of [LOOKUP, WORKFLOW_LABEL]) {
+      for (const [, key] of text.matchAll(pattern)) {
+        if (!used.has(key)) {
+          used.set(key, file.slice(srcDir.length + 1));
+        }
       }
     }
+  }
+
+  // ItemTypePill and the canvas interpolate these tags into translation keys.
+  for (const itemType of Object.values(WorkflowItemTypes)) {
+    used.set(`workflow.itemType.${itemType}.displayName`, "components/Workflow/itemTypes.ts");
+  }
+  for (const { label } of acquisitionWaitReasons) {
+    used.set(`workflow.waitReason.${label}`, "components/Workflow/ResumeRunModal.tsx");
   }
 
   return used;
@@ -115,5 +131,22 @@ describe("translation keys", () => {
     const stale = [...KNOWN_MISSING].filter((key) => en.has(key) && cn.has(key));
 
     expect(stale, `translated but still allowlisted: ${stale.join(", ")}`).toEqual([]);
+  });
+
+  it("loads the new help guides into the runtime translation bundles", () => {
+    for (const [locale, language] of [
+      ["cn", "zh-CN"],
+      ["en", "en-US"],
+    ]) {
+      for (const topic of ["Collection", "Subscription", "Acquisition"]) {
+        const translations = JSON.parse(
+          readFileSync(join(localesDir, locale, "components", `help${topic}.json`), "utf8"),
+        );
+
+        for (const [key, value] of Object.entries(translations)) {
+          expect(i18n.getResource(language, "translation", key), `${language}: ${key}`).toBe(value);
+        }
+      }
+    }
   });
 });

@@ -6,4 +6,5 @@ public record SubscriptionUpdateInputModel
     public string? TargetJson { get; set; }
     public bool? Enabled { get; set; }
     public int? IntervalMinutes { get; set; }
+    public int? CollectionId { get; set; }
 }

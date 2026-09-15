@@ -4,7 +4,7 @@ import type { Resource } from "@/core/models/Resource";
 
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { EditOutlined, FileTextOutlined } from "@ant-design/icons";
+import { EditOutlined, FileTextOutlined, RightOutlined } from "@ant-design/icons";
 import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from "@heroui/react";
 
 import { isNonEmptyValue } from "@/core/models/Resource";
@@ -20,6 +20,8 @@ interface Props {
 }
 
 const MAX_SUMMARY_LENGTH = 100;
+const contentClassName =
+  "whitespace-pre-line break-words text-sm leading-relaxed text-default-700 [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0";
 
 const IntroductionSummary = ({ resource, onReload }: Props) => {
   const { t } = useTranslation();
@@ -79,32 +81,35 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
     <>
       <Card
         isPressable
-        className="w-full cursor-pointer hover:bg-default-100 transition-colors"
+        aria-label={t<string>("common.label.introduction")}
+        className="w-full cursor-pointer border border-default-200 bg-default-50/60 text-left transition-colors hover:bg-default-100"
+        radius="lg"
+        shadow="none"
         onPress={handleOpenDrawer}
       >
-        <CardBody className="py-2 px-3">
-          <div className="flex items-start gap-2">
-            {/* <FileTextOutlined className="text-default-500 mt-0.5 flex-shrink-0" /> */}
-            <div className="flex-1 min-w-0">
-              {hasIntroduction ? (
-                <>
-                  <div
-                    dangerouslySetInnerHTML={{ __html: introduction }}
-                    className="text-sm text-default-600 line-clamp-2"
-                  />
-                  {isTruncated && (
-                    <p className="text-xs text-primary mt-1">
-                      {t("resource.tip.clickToViewFullIntroduction")}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-default-400 italic">
-                  {t("resource.tip.clickToAddIntroduction")}
+        <CardBody className="gap-2 p-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-default-700">
+            <FileTextOutlined aria-hidden className="text-default-500" />
+            <span className="flex-1">{t<string>("common.label.introduction")}</span>
+            <RightOutlined aria-hidden className="text-xs text-default-400" />
+          </div>
+          {hasIntroduction ? (
+            <>
+              <div
+                dangerouslySetInnerHTML={{ __html: introduction }}
+                className={`${contentClassName} line-clamp-2`}
+              />
+              {isTruncated && (
+                <p className="text-xs text-primary">
+                  {t("resource.tip.clickToViewFullIntroduction")}
                 </p>
               )}
-            </div>
-          </div>
+            </>
+          ) : (
+            <p className="text-sm leading-relaxed text-default-400">
+              {t("resource.tip.clickToAddIntroduction")}
+            </p>
+          )}
         </CardBody>
       </Card>
 
@@ -124,10 +129,11 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
               {t("common.label.introduction")}
             </div>
           </DrawerHeader>
-          <DrawerBody>
+          <DrawerBody className="pb-6">
             {isEditing ? (
               <div className="flex flex-col gap-4 h-full">
                 <Textarea
+                  aria-label={t<string>("common.label.introduction")}
                   className="flex-1"
                   minRows={10}
                   placeholder={t<string>("resource.placeholder.enterIntroduction")}
@@ -136,6 +142,7 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
                 />
                 <div className="flex gap-2 justify-end">
                   <Button
+                    size="sm"
                     variant="light"
                     onPress={() => {
                       setIsEditing(false);
@@ -144,20 +151,27 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
                   >
                     {t("common.action.cancel")}
                   </Button>
-                  <Button color="primary" isLoading={isSaving} onPress={handleSave}>
+                  <Button color="primary" isLoading={isSaving} size="sm" onPress={handleSave}>
                     {t("common.action.save")}
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col h-full">
-                <div
-                  dangerouslySetInnerHTML={{ __html: introduction ?? "" }}
-                  className="flex-1 text-default-700"
-                />
-                <div className="flex justify-end pt-4">
+              <div className="flex min-h-0 flex-1 flex-col gap-4">
+                {hasIntroduction ? (
+                  <div
+                    dangerouslySetInnerHTML={{ __html: introduction }}
+                    className={`flex-1 ${contentClassName}`}
+                  />
+                ) : (
+                  <p className="flex-1 text-sm text-default-400">
+                    {t<string>("resource.state.noIntroductionYet")}
+                  </p>
+                )}
+                <div className="flex justify-end border-t border-default-200 pt-3">
                   <Button
                     color="primary"
+                    size="sm"
                     startContent={<EditOutlined />}
                     variant="flat"
                     onPress={() => {

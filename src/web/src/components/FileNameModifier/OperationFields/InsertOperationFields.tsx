@@ -1,5 +1,7 @@
 "use client";
 
+import type { Operation, OperationFieldsProps } from "./types";
+
 import React from "react";
 
 import { Input, Select, NumberInput } from "../../bakaui";
@@ -13,15 +15,16 @@ const PositionTypeOptions = fileNameModifierPositions.map((opt) => ({
   value: opt.value,
 }));
 
-const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
-  const handleChangeField = (key: string, value: any) => onChange({ ...operation, [key]: value });
+const InsertOperationFields: React.FC<OperationFieldsProps> = ({ operation, t, onChange }) => {
+  const handleChangeField = <K extends keyof Operation>(key: K, value: Operation[K]) =>
+    onChange({ ...operation, [key]: value });
 
   const requirements = getFieldRequirements(operation);
 
   return (
     <>
       <Input
-        className="w-[240px]"
+        className="w-full min-w-0"
         isRequired={requirements.text}
         label={t<string>("FileNameModifier.Label.Text")}
         placeholder={t<string>("FileNameModifier.Placeholder.Text")}
@@ -32,7 +35,7 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
       {(operation.position === PositionType.BeforeText ||
         operation.position === PositionType.AfterText) && (
         <Input
-          className="w-[240px]"
+          className="w-full min-w-0"
           isRequired={requirements.targetText}
           label={t<string>("FileNameModifier.Label.TargetText")}
           placeholder={t<string>("FileNameModifier.Placeholder.TargetText")}
@@ -43,7 +46,7 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
       )}
       <Select
         disallowEmptySelection
-        className="w-[160px]"
+        className="w-full min-w-0"
         dataSource={PositionTypeOptions.map((opt) => ({
           label: t<string>(opt.label),
           value: opt.value,
@@ -57,13 +60,13 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
           const key = parseInt(Array.from(keys)[0] as string);
 
           if (key !== operation.position) {
-            handleChangeField("position", key);
+            handleChangeField("position", key as Operation["position"]);
           }
         }}
       />
       {operation.position === PositionType.AtPosition && (
         <NumberInput
-          className="w-[120px]"
+          className="w-full min-w-0"
           isRequired={requirements.positionIndex}
           label={t<string>("FileNameModifier.Label.PositionIndex")}
           placeholder={t<string>("FileNameModifier.Placeholder.PositionIndex")}

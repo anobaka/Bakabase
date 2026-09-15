@@ -12,6 +12,7 @@ public static class WorkflowExtensions
         WorkflowDefinitionId = db.WorkflowDefinitionId,
         Order = db.Order,
         Kind = db.Kind,
+        Notes = db.Notes,
         ConfigJson = db.ConfigJson,
         OnItemError = db.OnItemError,
     };
@@ -24,6 +25,8 @@ public static class WorkflowExtensions
         {
             Id = db.Id,
             Name = db.Name,
+            Description = db.Description,
+            DescriptionKey = db.DescriptionKey,
             TriggerKind = db.TriggerKind,
             TriggerFilterJson = db.TriggerFilterJson,
             Enabled = db.Enabled,
@@ -31,6 +34,7 @@ public static class WorkflowExtensions
             UpdatedAt = db.UpdatedAt,
             LastRunAt = db.LastRunAt,
             LastError = db.LastError,
+            IsBuiltin = db.IsBuiltin,
             Activities = activities.OrderBy(a => a.Order).Select(ToDomainModel).ToList(),
         };
     }
@@ -46,9 +50,15 @@ public static class WorkflowExtensions
         PayloadSummary = db.PayloadSummary,
         InputCount = db.InputCount,
         OutputCount = db.OutputCount,
+        OutputItemsJson = db.OutputItemsJson,
+        OutputPreviewTruncated = db.OutputPreviewTruncated,
         FailedItemCount = db.FailedItemCount,
         StepStats = ParseStepStats(db.StepStatsJson),
         ErrorMessage = db.ErrorMessage,
+        CurrentStepIndex = db.CurrentStepIndex,
+        WaitReason = db.WaitReason,
+        WaitPromptJson = db.WaitPromptJson,
+        WaitingSince = db.WaitingSince,
     };
 
     private static readonly JsonSerializerOptions StepStatsJsonOptions = new()

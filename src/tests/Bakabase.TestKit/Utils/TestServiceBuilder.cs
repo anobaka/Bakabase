@@ -120,6 +120,7 @@ public static class TestServiceBuilder
 
         // === Compression ===
         services.TryAddSingleton<CompressedFileService>();
+        services.TryAddSingleton<IArchiveExtractionService, ArchiveExtractionService>();
 
         // === File Mover ===
         services.TryAddSingleton<IFileMover, FileMover>();
@@ -211,8 +212,9 @@ public static class TestServiceBuilder
         var scope = sp.CreateAsyncScope();
         var scopeSp = scope.ServiceProvider;
 
-        var ctx = scopeSp.GetRequiredService<BakabaseDbContext>();
-        await ctx.Database.MigrateAsync();
+        // Match production's database initialization, including WAL, so concurrent scheduler
+        // reads and writes use the host's journal mode instead of the rollback-journal default.
+        await scopeSp.MigrateSqliteDbContexts<BakabaseDbContext>();
 
         return scopeSp;
     }

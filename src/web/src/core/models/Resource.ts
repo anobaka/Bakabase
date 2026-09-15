@@ -39,6 +39,8 @@ export type Property = {
   values?: Value[];
   visible?: boolean;
   order: number;
+  /** Derived profile order for this property; resource-specific preferences still take precedence. */
+  profileScopePriority?: PropertyValueScope[] | null;
 };
 
 export type PlayableItem = {
@@ -70,17 +72,20 @@ export type PropertyValueScopePreference = {
 
 /**
  * Resolve the effective scope chain for one property. A per-resource preference, when it carries
- * priorities, fully replaces the global priority. Within a preference an entry with
+ * priorities, fully replaces the profile/global priority. Within a preference an entry with
  * `fallbackOnEmpty: false` truncates the chain there — later scopes become unreachable, so an
- * empty value at that scope renders blank instead of falling through. The global priority has no
- * flags and always falls through.
+ * empty value at that scope renders blank instead of falling through. Otherwise profile scopes
+ * come first, followed by scopes not listed there in global order; both layers skip empty values.
  */
 export const buildEffectiveScopePriority = (
   globalPriority: PropertyValueScope[],
   preference?: PropertyValueScopePreference,
+  profilePriority?: PropertyValueScope[] | null,
 ): PropertyValueScope[] => {
   if (!preference?.priorities || preference.priorities.length === 0) {
-    return globalPriority;
+    return profilePriority?.length
+      ? [...new Set([...profilePriority, ...globalPriority])]
+      : globalPriority;
   }
 
   const chain: PropertyValueScope[] = [];
@@ -114,8 +119,12 @@ export const resolveScopedValue = (
   values: Value[] | undefined,
   globalPriority: PropertyValueScope[],
   preference?: PropertyValueScopePreference,
+  profilePriority?: PropertyValueScope[] | null,
 ): Value | undefined =>
-  selectScopedValue(values, buildEffectiveScopePriority(globalPriority, preference));
+  selectScopedValue(
+    values,
+    buildEffectiveScopePriority(globalPriority, preference, profilePriority),
+  );
 
 export type ResourceSourceLink = {
   id: number;
@@ -136,6 +145,12 @@ export type Resource = {
   directory?: string;
   displayName?: string;
   path?: string;
+  /**
+   * Whether the resource currently has local files. False means Bakabase knows the
+   * resource but it is not materialized on disk yet — an uninstalled Steam game, a work
+   * the user intends to acquire.
+   */
+  hasLocalPath: boolean;
   parentId?: number;
   hasChildren: boolean;
   isFile: boolean;
@@ -150,6 +165,8 @@ export type Resource = {
   /** @deprecated */
   mediaLibraryColor?: string;
   mediaLibraries?: { id: number; name: string; color?: string }[];
+  /** Which collections this belongs to — written-down memberships and rule matches alike. */
+  collections?: { id: number; name: string; color?: string }[];
   /** @deprecated */
   category?: { id: number; name: string };
   pinned: boolean;

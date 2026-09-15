@@ -18,12 +18,14 @@ import {
   ThunderboltOutlined,
   VideoCameraAddOutlined,
 } from "@ant-design/icons";
+import { HiOutlineCollection } from "react-icons/hi";
 import React, { useCallback, useEffect, useState } from "react";
 
 import PropertyValuePanel from "./PropertyValuePanel";
 import BatchPlayMenuItems from "./BatchPlayMenuItems";
 
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
+import CollectionMultiSelector from "@/components/CollectionMultiSelector";
 import { EnhancementAdditionalItem, PropertyPool, ResourceAdditionalItem } from "@/sdk/constants";
 import ResourceTransferModal from "@/components/ResourceTransferModal";
 import ResourceMoveModal from "@/components/ResourceMoveModal";
@@ -356,6 +358,23 @@ const ContextMenuItems = ({
                 count: selectedResourceIds.length,
               })
             : t<string>("resource.contextMenu.setMediaLibraries")}
+        </div>
+      </MenuItem>
+      <MenuItem
+        onClick={() => {
+          createPortal(CollectionMultiSelector, {
+            resourceIds: selectedResourceIds,
+            onSubmit: () => onSelectedResourcesChanged?.(selectedResourceIds),
+          });
+        }}
+      >
+        <div className={"flex items-center gap-2"}>
+          <HiOutlineCollection className={"text-base"} />
+          {selectedResourceIds.length > 1
+            ? t<string>("resource.contextMenu.addToCollectionsForCount", {
+                count: selectedResourceIds.length,
+              })
+            : t<string>("resource.contextMenu.addToCollections")}
         </div>
       </MenuItem>
       <MenuItem

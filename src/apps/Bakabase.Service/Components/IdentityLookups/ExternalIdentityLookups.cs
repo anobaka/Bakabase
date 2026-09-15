@@ -1,0 +1,104 @@
+using Bakabase.InsideWorld.Models.Constants;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Bakabase.Abstractions.Services;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
+using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
+using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
+using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
+using Bakabase.Modules.ThirdParty.ThirdParties.Vndb;
+
+namespace Bakabase.Service.Components.IdentityLookups;
+
+/// <summary>
+/// Asks DLsite what a work id refers to.
+/// </summary>
+public class DLsiteIdentityLookup(DLsiteClient client) : IExternalIdentityLookup
+{
+    public ThirdPartyId ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.DLsite;
+
+    public async Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
+    {
+        var detail = await client.ParseWorkDetailById(sourceKey);
+        return detail == null
+            ? null
+            : new ExternalIdentityDetail(sourceKey, detail.Name,
+                detail.CoverUrls == null ? null : [..detail.CoverUrls]);
+    }
+}
+
+public class SteamIdentityLookup(SteamClient client) : IExternalIdentityLookup
+{
+    public ThirdPartyId ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.Steam;
+
+    public async Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
+    {
+        if (!int.TryParse(sourceKey, out var appId))
+        {
+            return null;
+        }
+
+        var details = await client.GetAppDetails(appId, ct: ct);
+        return details == null
+            ? null
+            : new ExternalIdentityDetail(sourceKey, details.Name,
+                string.IsNullOrEmpty(details.HeaderImage) ? null : [details.HeaderImage]);
+    }
+}
+
+public class BangumiIdentityLookup(BangumiClient client) : IExternalIdentityLookup
+{
+    public ThirdPartyId ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.Bangumi;
+
+    public async Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
+    {
+        var detail = await client.ParseDetail($"https://bgm.tv/subject/{sourceKey}");
+        return detail == null
+            ? null
+            : new ExternalIdentityDetail(sourceKey, detail.Name,
+                string.IsNullOrEmpty(detail.CoverUrl) ? null : [detail.CoverUrl]);
+    }
+}
+
+public class ExHentaiIdentityLookup(ExHentaiClient client) : IExternalIdentityLookup
+{
+    public ThirdPartyId ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.ExHentai;
+
+    public async Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
+    {
+        // A gallery is addressed by both its number and its token, which is how the source key is
+        // stored; either half alone cannot be fetched.
+        var parts = sourceKey.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2)
+        {
+            return null;
+        }
+
+        var gallery = await client.ParseDetail($"https://exhentai.org/g/{parts[0]}/{parts[1]}/", false);
+        return gallery == null
+            ? null
+            : new ExternalIdentityDetail(sourceKey, gallery.Name,
+                string.IsNullOrEmpty(gallery.CoverUrl) ? null : [gallery.CoverUrl]);
+    }
+}
+
+/// <summary>
+/// VNDB, which answers in JSON and needs no account for reading — so putting a name to a v-number
+/// costs one request and never a login.
+/// </summary>
+public class VndbIdentityLookup(VndbClient client) : IExternalIdentityLookup
+{
+    public ThirdPartyId ThirdPartyId => Bakabase.InsideWorld.Models.Constants.ThirdPartyId.Vndb;
+
+    public async Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
+    {
+        var vn = await client.GetAsync(sourceKey, ct);
+
+        return vn == null
+            ? null
+            : new ExternalIdentityDetail(sourceKey, vn.DisplayName,
+                vn.Image?.Url is { } cover ? [cover] : null);
+    }
+}

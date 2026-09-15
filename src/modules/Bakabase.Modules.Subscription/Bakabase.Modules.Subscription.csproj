@@ -9,5 +9,7 @@
 		<ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
 		<ProjectReference Include="..\Bakabase.Modules.Notification\Bakabase.Modules.Notification.csproj" />
 		<ProjectReference Include="..\Bakabase.Modules.Workflow\Bakabase.Modules.Workflow.csproj" />
+		<ProjectReference Include="..\Bakabase.Modules.Collection\Bakabase.Modules.Collection.csproj" />
+		<ProjectReference Include="..\Bakabase.Modules.Acquisition\Bakabase.Modules.Acquisition.csproj" />
 	</ItemGroup>
 </Project>

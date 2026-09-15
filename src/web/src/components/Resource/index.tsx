@@ -35,7 +35,7 @@ import {
   QuestionCircleOutlined,
 } from "@ant-design/icons";
 import { ControlledMenu } from "@szhsin/react-menu";
-import { AiOutlineFolderOpen, AiOutlinePlayCircle } from "react-icons/ai";
+import { AiOutlineCloudDownload, AiOutlineFolderOpen, AiOutlinePlayCircle } from "react-icons/ai";
 import moment from "moment";
 
 import StandardValueRenderer from "../StandardValue/ValueRenderer";
@@ -51,6 +51,7 @@ import HealthScoreBadge from "@/components/HealthScoreBadge";
 import BApi from "@/sdk/BApi";
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import Operations from "@/components/Resource/components/Operations";
+import AcquisitionModal from "@/components/Resource/components/AcquisitionModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, Chip, Link, Spinner, Tooltip } from "@/components/bakaui";
 import { selectResourceMovingTask, useBTasksStore } from "@/stores/bTasks";
@@ -498,6 +499,13 @@ const Resource = React.forwardRef((props: Props, ref) => {
         </div>
         {/* lef-top */}
         <div className={"absolute top-1 left-1 right-1 flex gap-1 items-center flex-wrap"}>
+          {!resource.hasLocalPath && (
+            <Tooltip content={t<string>("resource.tip.notMaterialized")}>
+              <Chip color="primary" radius={"sm"} size={"sm"} variant={"flat"}>
+                {t<string>("resource.label.notMaterialized")}
+              </Chip>
+            </Tooltip>
+          )}
           {resource.tags.includes(ResourceTag.Pinned) && <PushpinOutlined />}
           {resource.tags.includes(ResourceTag.IsParent) && (
             <Tooltip content={t<string>("resource.tip.isParentResource")}>
@@ -581,6 +589,38 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 switch (dpk.pool) {
                   case PropertyPool.Internal:
                     switch (dpk.id) {
+                      case ResourceProperty.CollectionMulti:
+                        // One chip per collection. Rule members are in here too — the server does
+                        // not distinguish, because a member is a member.
+                        if (resource.collections && resource.collections.length > 0) {
+                          return resource.collections.map((c) => {
+                            const cStyle: CSSProperties = {};
+
+                            if (c.color) {
+                              cStyle.color = c.color;
+                              cStyle.backgroundColor = autoBackgroundColor(c.color);
+                            }
+
+                            return (
+                              <Chip
+                                key={`${dpk.pool}-${dpk.id}-${c.id}`}
+                                className={"h-auto w-fit resource-display-property-chip"}
+                                radius={"sm"}
+                                size={"sm"}
+                                style={cStyle}
+                                variant={"flat"}
+                              >
+                                <StandardValueRenderer
+                                  type={StandardValueType.String}
+                                  value={c.name}
+                                  variant="light"
+                                />
+                              </Chip>
+                            );
+                          });
+                        }
+
+                        return [];
                       case ResourceProperty.MediaLibraryV2:
                       case ResourceProperty.MediaLibraryV2Multi:
                         // Render multiple chips for multiple media libraries
@@ -646,6 +686,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                       property?.values,
                       valueScopePriority,
                       scopePreferenceMap.get(`${dpk.pool}-${dpk.id}`),
+                      property?.profileScopePriority,
                     );
                     const rawBizValue =
                       selectedValue?.aliasAppliedBizValue ?? selectedValue?.bizValue;
@@ -712,12 +753,40 @@ const Resource = React.forwardRef((props: Props, ref) => {
             </div>
           );
         })()}
-        <PlayControl
-          ref={playControlRef}
-          PortalComponent={PlayButton}
-          afterPlaying={reload}
-          resource={resource}
-        />
+        {resource.hasLocalPath ? (
+          <PlayControl
+            ref={playControlRef}
+            PortalComponent={PlayButton}
+            afterPlaying={reload}
+            resource={resource}
+          />
+        ) : (
+          // There is nothing to play. What the user wants here is the way to get the files, so
+          // the play button's place is taken by the acquisition entry point.
+          <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
+            <Tooltip
+              content={t<string>(
+                resource.sourceLinks?.length
+                  ? "resource.tip.acquire"
+                  : "resource.tip.linkLocalFolder",
+              )}
+            >
+              <Button
+                isIconOnly
+                className={"!p-0"}
+                onPress={() =>
+                  createPortal(AcquisitionModal, { resource, onChanged: () => reload() })
+                }
+              >
+                {resource.sourceLinks?.length ? (
+                  <AiOutlineCloudDownload className={"text-2xl"} />
+                ) : (
+                  <AiOutlineFolderOpen className={"text-2xl"} />
+                )}
+              </Button>
+            </Tooltip>
+          </div>
+        )}
       </div>
     );
   };
@@ -737,6 +806,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
           p.values,
           valueScopePriority,
           scopePreferenceMap.get(`${PropertyPool.Custom}-${id}`),
+          p.profileScopePriority,
         );
         const tags = (selectedValue?.aliasAppliedBizValue ?? selectedValue?.bizValue) as
           | TagValue[]

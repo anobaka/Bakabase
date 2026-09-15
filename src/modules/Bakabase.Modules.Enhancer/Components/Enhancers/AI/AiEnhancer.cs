@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.Modules.AI.Models.Domain;
@@ -31,6 +32,21 @@ public class AiEnhancer(
     {
         var fileName = Path.GetFileNameWithoutExtension(resource.Path);
         var directoryName = Path.GetFileName(Path.GetDirectoryName(resource.Path));
+
+        if (string.IsNullOrEmpty(fileName))
+        {
+            // No local files, so no filename. What the resource is known by is its name.
+            fileName = resource.GetReservedName();
+        }
+
+        if (string.IsNullOrEmpty(fileName) && string.IsNullOrEmpty(directoryName))
+        {
+            // Nothing at all to describe. Asking the model about an empty string would spend a
+            // request to be told nothing.
+            logCollector.LogWarning(EnhancementLogEvent.DataFetching,
+                "Resource has neither a path nor a name, there is nothing for the model to work from");
+            return null;
+        }
 
         logCollector.LogInfo(EnhancementLogEvent.DataFetching,
             $"Analyzing resource with AI: {fileName}",

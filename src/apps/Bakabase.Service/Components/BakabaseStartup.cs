@@ -166,6 +166,7 @@ namespace Bakabase.Service.Components
 
             services.TryAddSingleton<WebGuiHubConfigurationAdapter>();
             services.TryAddSingleton<CompressedFileService>();
+            services.TryAddSingleton<IArchiveExtractionService, ArchiveExtractionService>();
 
             services.AddTransient<IBakabaseLocalizer, BakabaseLocalizer>(x =>
                 x.GetRequiredService<BakabaseLocalizer>());

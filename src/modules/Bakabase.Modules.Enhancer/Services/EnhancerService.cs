@@ -150,6 +150,45 @@ namespace Bakabase.Modules.Enhancer.Services
             return enhancementTargetOptionsMap;
         }
 
+        public async Task<int> ClearEmptyEnhancementRecords(IReadOnlyCollection<int> resourceIds,
+            CancellationToken ct)
+        {
+            if (resourceIds.Count == 0)
+            {
+                return 0;
+            }
+
+            var ids = resourceIds.Distinct().ToList();
+            var records = await _enhancementRecordService.GetAll(r =>
+                ids.Contains(r.ResourceId) && r.Status == EnhancementRecordStatus.ContextApplied);
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var enhancements = await _enhancementService.GetAll(e => ids.Contains(e.ResourceId));
+            var producedSomething = enhancements.Select(e => (e.ResourceId, e.EnhancerId)).ToHashSet();
+
+            var emptyRecords = records
+                .Where(r => !producedSomething.Contains((r.ResourceId, r.EnhancerId)))
+                .ToList();
+            if (emptyRecords.Count == 0)
+            {
+                return 0;
+            }
+
+            var map = emptyRecords
+                .GroupBy(r => r.ResourceId)
+                .ToDictionary(g => g.Key, g => g.Select(r => r.EnhancerId).ToHashSet());
+            await _enhancementRecordService.DeleteByResourceAndEnhancers(map);
+
+            _logger.LogInformation(
+                "Cleared {Count} empty enhancement records across {ResourceCount} resources so their enhancers run again",
+                emptyRecords.Count, map.Count);
+
+            return emptyRecords.Count;
+        }
+
         public async Task ApplyEnhancementsToResources(Dictionary<int, HashSet<int>> resourceIdEnhancerIdsMap,
             List<Enhancement> enhancements, CancellationToken ct)
         {
@@ -444,6 +483,15 @@ namespace Bakabase.Modules.Enhancer.Services
                     foreach (var (eId, eos) in eosMap)
                     {
                         if (restrictedEnhancerIds != null && !restrictedEnhancerIds.Contains(eId))
+                        {
+                            continue;
+                        }
+
+                        // An enhancer that reads the resource's files has nothing to read on a
+                        // resource that has none. Skipping it here — rather than letting it run and
+                        // store an empty result — is what keeps it able to run once the files
+                        // arrive, since an applied record is never retried.
+                        if (!tr.HasLocalPath && EnhancerRequirements.RequiresLocalFiles(eId))
                         {
                             continue;
                         }

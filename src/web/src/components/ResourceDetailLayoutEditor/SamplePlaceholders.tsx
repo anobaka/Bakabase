@@ -89,6 +89,22 @@ function PlaceholderContent({ id }: { id: SectionId }) {
           </div>
         </PlaceholderCard>
       );
+    case "acquisition":
+      return (
+        <PlaceholderCard color="bg-teal-100" tone="text-teal-900">
+          <div className="flex flex-col gap-1">
+            <div className="text-xs font-medium">
+              {t<string>("resource.detailLayout.sample.acquisition.title")}
+            </div>
+            <div className="px-2 py-1 rounded-small bg-teal-300/40 text-xs truncate">
+              {t<string>("resource.detailLayout.sample.acquisition.lead")}
+            </div>
+            <div className="text-xs opacity-70">
+              {t<string>("resource.detailLayout.sample.acquisition.hint")}
+            </div>
+          </div>
+        </PlaceholderCard>
+      );
     case "basicInfo":
       return (
         <PlaceholderCard color="bg-violet-100" tone="text-violet-900">
@@ -195,6 +211,21 @@ function PlaceholderContent({ id }: { id: SectionId }) {
             ].map((l) => (
               <span key={l} className="px-2 py-0.5 rounded-small bg-cyan-300/40 text-xs">
                 {l}
+              </span>
+            ))}
+          </div>
+        </PlaceholderCard>
+      );
+    case "collections":
+      return (
+        <PlaceholderCard color="bg-teal-100" tone="text-teal-900">
+          <div className="flex flex-wrap gap-1">
+            {[
+              t<string>("resource.detailLayout.sample.collections.first"),
+              t<string>("resource.detailLayout.sample.collections.second"),
+            ].map((c) => (
+              <span key={c} className="px-2 py-0.5 rounded-small bg-teal-300/40 text-xs">
+                {c}
               </span>
             ))}
           </div>

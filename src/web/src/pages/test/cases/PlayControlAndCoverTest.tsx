@@ -36,6 +36,7 @@ const baseResource = (overrides: Partial<Resource> = {}): Resource => ({
   status: ResourceStatus.Active,
   fileName: "test-resource",
   path: "/fake/path/test-resource",
+  hasLocalPath: true,
   hasChildren: false,
   isFile: false,
   createdAt: new Date().toISOString(),

@@ -243,6 +243,12 @@
   <data name="BuiltinPropertyName_HealthScore" xml:space="preserve">
     <value>健康分</value>
   </data>
+  <data name="BuiltinPropertyName_CollectionMulti" xml:space="preserve">
+    <value>集合</value>
+  </data>
+  <data name="BuiltinPropertyName_HasLocalPath" xml:space="preserve">
+    <value>已落地</value>
+  </data>
   <data name="ResourceSourceName_FileSystem" xml:space="preserve">
     <value>文件系统</value>
   </data>
@@ -260,5 +266,8 @@
   </data>
   <data name="ResourceSourceName_Aigc" xml:space="preserve">
     <value>AIGC</value>
+  </data>
+  <data name="ResourceSourceName_Pixiv" xml:space="preserve">
+    <value>Pixiv</value>
   </data>
 </root>

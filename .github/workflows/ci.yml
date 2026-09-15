@@ -60,7 +60,9 @@ jobs:
           # the rest. Live-network ThirdParty tests are [Ignore]d and skipped.
           projects=(
             "src/tests/Bakabase.Tests/Bakabase.Tests.csproj"
+            "src/tests/Bakabase.Modules.Acquisition.Tests/Bakabase.Modules.Acquisition.Tests.csproj"
             "src/tests/Bakabase.Modules.Alias.Tests/Bakabase.Modules.Alias.Tests.csproj"
+            "src/tests/Bakabase.Modules.Collection.Tests/Bakabase.Modules.Collection.Tests.csproj"
             "src/tests/Bakabase.Modules.BulkModification.Tests/Bakabase.Modules.BulkModification.Tests.csproj"
             "src/tests/Bakabase.Modules.Comparison.Tests/Bakabase.Modules.Comparison.Tests.csproj"
             "src/tests/Bakabase.Modules.Enhancer.Tests/Bakabase.Modules.Enhancer.Tests.csproj"

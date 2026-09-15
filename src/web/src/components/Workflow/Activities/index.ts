@@ -1,6 +1,7 @@
 import type { WorkflowActivityUI } from "./types";
 
 import { ExHentaiEnqueueDownloadUI } from "./ExHentaiEnqueueDownload";
+import { DownloaderEnqueueUI } from "./DownloaderEnqueue";
 import { SubscriptionItemTitleContainsUI } from "./SubscriptionItemTitleContains";
 import { AiTransformUI } from "./AiTransform";
 import { ExHentaiQueryToGalleryUI } from "./ExHentaiQueryToGallery";
@@ -13,12 +14,35 @@ import { TextTrimUI } from "./TextOps/Trim";
 import { TextCaptureUI } from "./TextOps/Capture";
 import { TextTemplateUI } from "./TextOps/Template";
 import { FsExpandChildrenUI } from "./FsExpandChildren";
+import { acquisitionStepUI, isAcquisitionStepKind } from "./AcquisitionStep";
+import { AcquisitionResolveSharedContentUI } from "./AcquisitionResolveSharedContent";
+import { AcquisitionSelectLinkUI } from "./AcquisitionSelectLink";
+import { AcquisitionWaitForInboxUI } from "./AcquisitionWaitForInbox";
+import { AcquisitionFetchHttpUI } from "./AcquisitionFetchHttp";
+import { AcquisitionFetchTorrentUI } from "./AcquisitionFetchTorrent";
+import { AcquisitionFetchMagnetUI } from "./AcquisitionFetchMagnet";
+import { AcquisitionUnpackUI } from "./AcquisitionUnpack";
+import { AcquisitionPlaceUI } from "./AcquisitionPlace";
+import { AcquisitionPickDirectoryUI } from "./AcquisitionPickDirectory";
+import { AcquisitionMaterializeUI } from "./AcquisitionMaterialize";
+import { CollectionAddResourceUI } from "./CollectionAddResource";
+import { ResourceSetPropertyValueUI } from "./ResourceSetPropertyValue";
+import { EnhancerEnhanceUI } from "./EnhancerEnhance";
+import { PathMarkEnqueueSyncUI } from "./PathMarkEnqueueSync";
+import { DownloaderFetchTorrentResultUI } from "./DownloaderFetchTorrentResult";
+import { DownloaderPrepareResourceUI } from "./DownloaderPrepareResource";
+import { AcquisitionFetchExHentaiUI } from "./AcquisitionFetchExHentai";
+import { AcquisitionFetchResultTorrentUI } from "./AcquisitionFetchResultTorrent";
+import { PostParserReadContentUI, PostParserExtractDownloadInfoUI } from "./PostParser";
 
 export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> = {
+  [PostParserReadContentUI.kind]: PostParserReadContentUI,
+  [PostParserExtractDownloadInfoUI.kind]: PostParserExtractDownloadInfoUI,
   [SubscriptionItemTitleContainsUI.kind]: SubscriptionItemTitleContainsUI,
   [AiTransformUI.kind]: AiTransformUI,
   [ExHentaiQueryToGalleryUI.kind]: ExHentaiQueryToGalleryUI,
   [ExHentaiEnqueueDownloadUI.kind]: ExHentaiEnqueueDownloadUI,
+  [DownloaderEnqueueUI.kind]: DownloaderEnqueueUI,
   [CreateNotificationUI.kind]: CreateNotificationUI,
   [FsFileNameOpUI.kind]: FsFileNameOpUI,
   [FsSaveNameUI.kind]: FsSaveNameUI,
@@ -28,10 +52,41 @@ export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> =
   [TextCaptureUI.kind]: TextCaptureUI,
   [TextTemplateUI.kind]: TextTemplateUI,
   [FsExpandChildrenUI.kind]: FsExpandChildrenUI,
+  [AcquisitionResolveSharedContentUI.kind]: AcquisitionResolveSharedContentUI,
+  [AcquisitionSelectLinkUI.kind]: AcquisitionSelectLinkUI,
+  [AcquisitionWaitForInboxUI.kind]: AcquisitionWaitForInboxUI,
+  [AcquisitionFetchMagnetUI.kind]: AcquisitionFetchMagnetUI,
+  [AcquisitionFetchTorrentUI.kind]: AcquisitionFetchTorrentUI,
+  [AcquisitionFetchHttpUI.kind]: AcquisitionFetchHttpUI,
+  [AcquisitionUnpackUI.kind]: AcquisitionUnpackUI,
+  [AcquisitionPlaceUI.kind]: AcquisitionPlaceUI,
+  [AcquisitionPickDirectoryUI.kind]: AcquisitionPickDirectoryUI,
+  [AcquisitionMaterializeUI.kind]: AcquisitionMaterializeUI,
+  [CollectionAddResourceUI.kind]: CollectionAddResourceUI,
+  [ResourceSetPropertyValueUI.kind]: ResourceSetPropertyValueUI,
+  [EnhancerEnhanceUI.kind]: EnhancerEnhanceUI,
+  [PathMarkEnqueueSyncUI.kind]: PathMarkEnqueueSyncUI,
+  [DownloaderFetchTorrentResultUI.kind]: DownloaderFetchTorrentResultUI,
+  [DownloaderPrepareResourceUI.kind]: DownloaderPrepareResourceUI,
+  [AcquisitionFetchExHentaiUI.kind]: AcquisitionFetchExHentaiUI,
+  [AcquisitionFetchResultTorrentUI.kind]: AcquisitionFetchResultTorrentUI,
 };
 
+/** Built once per kind so the editor's forms keep their state across renders. */
+const acquisitionStepCache: Record<string, WorkflowActivityUI<any>> = {};
+
 export function getWorkflowActivityUI(kind: string): WorkflowActivityUI<any> | undefined {
-  return workflowActivityRegistry[kind];
+  const registered = workflowActivityRegistry[kind];
+
+  if (registered) return registered;
+
+  // The acquisition steps share one generic package until a step earns a form of its own; an
+  // explicit entry above always wins, so adding one is how a step graduates.
+  if (isAcquisitionStepKind(kind)) {
+    return (acquisitionStepCache[kind] ??= acquisitionStepUI(kind));
+  }
+
+  return undefined;
 }
 
 export type { WorkflowActivityUI } from "./types";

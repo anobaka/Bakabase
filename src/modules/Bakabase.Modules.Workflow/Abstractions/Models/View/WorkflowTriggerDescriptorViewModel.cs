@@ -1,9 +1,18 @@
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+
 namespace Bakabase.Modules.Workflow.Abstractions.Models.View;
 
 public record WorkflowTriggerDescriptorViewModel
 {
     public string Kind { get; set; } = null!;
     public string DisplayName { get; set; } = null!;
+    public string? Description { get; set; }
+    public string? DescriptionKey { get; set; }
+    public WorkflowActivationMode ActivationMode { get; set; }
+    public string SourceModule { get; set; } = "";
+
+    /// <summary>False when runs must be started by the trigger's source module.</summary>
+    public bool SupportsManualRun { get; set; } = true;
 
     /// <summary>
     /// Whether starting a run by hand needs the user to supply a payload. Drives which panel the
@@ -14,7 +23,7 @@ public record WorkflowTriggerDescriptorViewModel
     /// <summary>
     /// Shape of the payload this trigger publishes, reflected the same way item types are, so the
     /// manual-run editor can tell the user what to type instead of leaving them to guess.
-    /// Empty when <see cref="RequiresManualPayload"/> is false.
+    /// Empty when manual running is unavailable or <see cref="RequiresManualPayload"/> is false.
     /// </summary>
     public List<WorkflowItemTypeFieldViewModel> PayloadFields { get; set; } = [];
 }

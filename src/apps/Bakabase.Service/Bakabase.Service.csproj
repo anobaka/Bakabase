@@ -5,6 +5,11 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
+        <!-- So a helper can stay internal and still be tested, rather than being made public to
+             suit the tests. -->
+        <InternalsVisibleTo Include="Bakabase.Tests" />
+    </ItemGroup>
+    <ItemGroup>
         <Compile Remove="logs\**" />
         <Compile Remove="wwwroot\**" />
         <Content Remove="logs\**" />
@@ -39,6 +44,7 @@
         <PackageReference Include="Sentry.AspNetCore" Version="4.13.0" />
     </ItemGroup>
     <ItemGroup>
+        <ProjectReference Include="..\..\modules\Bakabase.Modules.Downloader\Bakabase.Modules.Downloader.csproj" />
         <ProjectReference Include="..\..\legacy\Bakabase.InsideWorld.Business\Bakabase.InsideWorld.Business.csproj" />
         <ProjectReference Include="..\..\legacy\Bakabase.Migrations\Bakabase.Migrations.csproj" />
         <ProjectReference Include="..\..\modules\Bakabase.Modules.Comparison\Bakabase.Modules.Comparison.csproj" />

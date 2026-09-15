@@ -1,93 +1,92 @@
 "use client";
 
 import type { FC } from "react";
+import type { DownloadInfoData } from "../results";
 
 import { useTranslation } from "react-i18next";
 import { AiOutlineCopy, AiOutlineLink } from "react-icons/ai";
 
-import { Button, Chip, toast } from "@/components/bakaui";
+import { copyParserText } from "../results";
+
+import { Button, toast } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 
-interface DownloadResource {
-  link?: string;
-  code?: string | null;
-  password?: string | null;
-}
-
-interface DownloadInfoData {
-  title?: string;
-  resources?: DownloadResource[] | null;
-}
-
-interface DownloadInfoResultRendererProps {
+interface Props {
   data: DownloadInfoData;
 }
 
-const copyToClipboard = async (text: string, label: string, t: (key: string) => string) => {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(t("postParser.result.copied"));
-  } catch {
-    // Fallback
-    const textarea = document.createElement("textarea");
-
-    textarea.value = text;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    document.body.removeChild(textarea);
-    toast.success(t("postParser.result.copied"));
-  }
-};
-
-const DownloadInfoResultRenderer: FC<DownloadInfoResultRendererProps> = ({ data }) => {
+const DownloadInfoResultRenderer: FC<Props> = ({ data }) => {
   const { t } = useTranslation();
 
-  if (!data.resources || data.resources.length === 0) {
-    return <div className="text-default-400 text-sm">{t("postParser.result.noResources")}</div>;
+  const copy = async (value: string) => {
+    try {
+      await copyParserText(value);
+      toast.success(t<string>("postParser.result.copied"));
+    } catch {
+      toast.danger(t<string>("postParser.result.copyFailed"));
+    }
+  };
+
+  if (!Array.isArray(data.resources) || data.resources.length === 0) {
+    return <div className="text-sm text-default-400">{t("postParser.result.noResources")}</div>;
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2">
+      {data.title && <p className="text-sm font-medium">{data.title}</p>}
       {data.resources.map((resource, index) => (
-        <div key={index} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <div key={index} className="flex min-w-0 flex-col gap-1 text-sm">
           {resource.link && (
-            <Button
-              className="max-w-[300px] truncate"
-              color="primary"
-              size="sm"
-              startContent={<AiOutlineLink className="text-base shrink-0" />}
-              variant="light"
-              onPress={() => {
-                BApi.gui.openUrlInDefaultBrowser({ url: resource.link! });
-              }}
-            >
-              <span className="truncate">{resource.link}</span>
-            </Button>
+            <div className="flex min-w-0 items-center gap-1">
+              <Button
+                className="h-auto min-w-0 max-w-full justify-start px-1 py-1"
+                color="primary"
+                size="sm"
+                startContent={<AiOutlineLink aria-hidden className="shrink-0 text-base" />}
+                variant="light"
+                onPress={() => BApi.gui.openUrlInDefaultBrowser({ url: resource.link! })}
+              >
+                <span className="break-all whitespace-normal text-left">{resource.link}</span>
+              </Button>
+              <Button
+                isIconOnly
+                aria-label={t<string>("postParser.action.copyLink")}
+                className="shrink-0"
+                size="sm"
+                variant="light"
+                onPress={() => copy(resource.link!)}
+              >
+                <AiOutlineCopy aria-hidden className="text-base" />
+              </Button>
+            </div>
           )}
-          {resource.code && (
-            <Chip
-              className="cursor-pointer"
-              size="sm"
-              startContent={<AiOutlineCopy className="text-xs ml-1" />}
-              variant="flat"
-              onClick={() => copyToClipboard(resource.code!, "code", t)}
-            >
-              {t("postParser.label.accessCode")}: {resource.code}
-            </Chip>
-          )}
-          {resource.password && (
-            <Chip
-              className="cursor-pointer"
-              color="warning"
-              size="sm"
-              startContent={<AiOutlineCopy className="text-xs ml-1" />}
-              variant="flat"
-              onClick={() => copyToClipboard(resource.password!, "password", t)}
-            >
-              {t("postParser.label.decompressionPassword")}: {resource.password}
-            </Chip>
-          )}
+          <div className="flex flex-wrap gap-1">
+            {resource.code && (
+              <Button
+                aria-label={t<string>("postParser.action.copyCode")}
+                className="h-auto min-h-6 min-w-0 whitespace-normal px-2 py-1 text-xs"
+                size="sm"
+                startContent={<AiOutlineCopy aria-hidden />}
+                variant="flat"
+                onPress={() => copy(resource.code!)}
+              >
+                {t("postParser.label.accessCode")}: {resource.code}
+              </Button>
+            )}
+            {resource.password && (
+              <Button
+                aria-label={t<string>("postParser.action.copyPassword")}
+                className="h-auto min-h-6 min-w-0 whitespace-normal px-2 py-1 text-xs"
+                color="warning"
+                size="sm"
+                startContent={<AiOutlineCopy aria-hidden />}
+                variant="flat"
+                onPress={() => copy(resource.password!)}
+              >
+                {t("postParser.label.decompressionPassword")}: {resource.password}
+              </Button>
+            )}
+          </div>
         </div>
       ))}
     </div>

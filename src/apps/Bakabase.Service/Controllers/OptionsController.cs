@@ -339,10 +339,22 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("exhentai")]
         [SwaggerOperation(OperationId = "PatchExHentaiOptions")]
-        public async Task<BaseResponse> PatchExHentaiOptions([FromBody] ExHentaiOptionsPatchInputModel model)
+        public async Task<BaseResponse> PatchExHentaiOptions([FromBody] ExHentaiOptionsPatchInputModel model,
+            [FromServices] Bakabase.Modules.Workflow.Abstractions.Services.IWorkflowDefinitionService workflows)
         {
+            if (model.DownloadResultWorkflowId is < 0)
+                return BaseResponseBuilder.BuildBadRequest("Choose a valid download result workflow.");
+            if (model.DownloadResultWorkflowId is > 0)
+            {
+                var workflow = await workflows.GetAsync(model.DownloadResultWorkflowId.Value);
+                if (workflow == null || !workflow.Enabled ||
+                    workflow.TriggerKind != Components.Downloader.DownloadResultWorkflow.Trigger)
+                    return BaseResponseBuilder.BuildBadRequest("Choose an enabled workflow with the download-result-ready trigger.");
+            }
             await _bakabaseOptionsManager.Get<ExHentaiOptions>().SaveAsync(options =>
             {
+                if (model.DownloadResultWorkflowId.HasValue)
+                    options.DownloadResultWorkflowId = model.DownloadResultWorkflowId > 0 ? model.DownloadResultWorkflowId : null;
                 if (model.Accounts != null)
                 {
                     options.Accounts = model.Accounts;
@@ -653,10 +665,13 @@ namespace Bakabase.Service.Controllers
                 }
 
                 var resourceIds = cache.Select(r => r.ResourceId).ToArray();
-                var resources = await _resourceService.GetAllDbModels(x => resourceIds.Contains(x.Id));
+                // A resource with no local files has no folder to hold a marker file, and
+                // Path.Combine would throw on its null path.
+                var resources = await _resourceService.GetAllDbModels(x =>
+                    resourceIds.Contains(x.Id) && x.Path != null && x.Path != "");
 
                 // Group resources by path - multiple resources can share the same path
-                var resourcesByPath = resources.GroupBy(r => r.Path).ToDictionary(g => g.Key, g => g.ToList());
+                var resourcesByPath = resources.GroupBy(r => r.Path!).ToDictionary(g => g.Key, g => g.ToList());
                 var uniquePaths = resourcesByPath.Keys.ToList();
                 var total = uniquePaths.Count;
                 var deleted = 0;

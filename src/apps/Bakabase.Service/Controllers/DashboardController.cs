@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Extensions;
@@ -22,6 +23,9 @@ using Bootstrap.Models.ResponseModels;
 using DotNext.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using Bakabase.Service.Components.RemoteAccess;
+using Bakabase.Service.Models.View;
+using Bakabase.Service.Services;
 
 namespace Bakabase.Service.Controllers
 {
@@ -57,6 +61,13 @@ namespace Bakabase.Service.Controllers
             _mediaLibraryV2Service = mediaLibraryV2Service;
             _mediaLibraryResourceMappingService = mediaLibraryResourceMappingService;
         }
+
+        [HttpGet("overview")]
+        [SwaggerOperation(OperationId = "GetDashboardOverview")]
+        [RemoteAccessible]
+        public async Task<SingletonResponse<DashboardOverviewViewModel>> GetOverview(
+            [FromServices] DashboardOverviewService overview, CancellationToken ct) =>
+            new(await overview.GetAsync(ct));
 
         [HttpGet]
         [SwaggerOperation(OperationId = "GetStatistics")]

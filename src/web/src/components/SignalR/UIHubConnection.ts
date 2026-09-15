@@ -24,6 +24,7 @@ import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { useThirdPartyRequestStatisticsStore } from "@/stores/thirdPartyRequestStatistics";
 import { optionsStores } from "@/stores/options";
 import { usePathMarksStore } from "@/stores/pathMarks";
+import { useCollectionsStore } from "@/stores/collections";
 import { useNotificationsStore, type NotificationViewModel } from "@/stores/notifications";
 import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
 
@@ -80,6 +81,7 @@ export const UIHubConnection = () => {
   const isRunningRef = useRef(true);
 
   useEffect(() => {
+    useDownloadTasksStore.getState().resetInitialization();
     const conn = new HubConnectionBuilder()
       .withUrl(hubEndpoint)
       .configureLogging(LogLevel.Information)
@@ -140,6 +142,11 @@ export const UIHubConnection = () => {
         case "PathMark":
           usePathMarksStore.getState().updateMark(data);
           break;
+        case "Collection":
+          // Its numbers move whenever a member is added, ignored, or acquired — the page
+          // showing them should not have to poll to find out.
+          useCollectionsStore.getState().updateCollection(data);
+          break;
         case "Resource":
           // Backend announced these resource ids changed (e.g. cache rebuilt).
           // Fan out to the active resource list, which reloads just the ones it shows.
@@ -151,6 +158,9 @@ export const UIHubConnection = () => {
     conn.on("DeleteData", (key, id) => {
       if (key === "PostParserTask") {
         usePostParserTasksStore.getState().deleteTask(id);
+      }
+      if (key === "Collection") {
+        useCollectionsStore.getState().removeCollection(id as number);
       }
     });
     conn.on("DeleteAllData", (key) => {
@@ -290,6 +300,8 @@ export const UIHubConnection = () => {
 
     // 监听连接关闭事件
     conn.onclose(async () => {
+      useDownloadTasksStore.getState().resetInitialization();
+      pendingDownloadTasks.clear();
       log("connection closed, attempting to reconnect...");
     });
 
@@ -303,6 +315,7 @@ export const UIHubConnection = () => {
               await conn.start();
               await onConnected();
             } catch (err) {
+              useDownloadTasksStore.getState().resetInitialization();
               log("start failed:", err);
             }
           }
@@ -319,6 +332,7 @@ export const UIHubConnection = () => {
     connRef.current = conn;
 
     return () => {
+      useDownloadTasksStore.getState().resetInitialization();
       isRunningRef.current = false;
       if (downloadTaskFlushTimer != null) {
         clearTimeout(downloadTaskFlushTimer);

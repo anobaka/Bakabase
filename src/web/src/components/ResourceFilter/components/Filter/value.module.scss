@@ -1,0 +1,48 @@
+.value {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+
+  > *,
+  :global([data-slot="base"]) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  // Keep shared editors and user-authored option colors; only adapt their inline
+  // surfaces inside a filter. Portal editors remain outside this scope.
+  :global(button),
+  :global([role="button"]) {
+    min-height: 2rem;
+    min-width: 2rem;
+  }
+
+  :global([role="button"]:not(:has(button))) {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  :global([data-value-option]) {
+    min-height: 2rem;
+    height: auto;
+    max-width: 100%;
+    padding: 0.25rem 0.5rem;
+    border-width: 0;
+    border-radius: 0.5rem;
+    flex-shrink: 1;
+
+    > :global(.standard-value-option-content) {
+      overflow: visible;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  :global([data-slot="input-wrapper"]) {
+    min-height: 2rem;
+    background-color: hsl(var(--heroui-content1));
+    box-shadow: none;
+  }
+}

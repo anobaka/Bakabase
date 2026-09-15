@@ -13,6 +13,7 @@ import TampermonkeyInstallButton from "../base/TampermonkeyInstallButton";
 import AutoSyncPanel from "../base/AutoSyncPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 import ProxyField from "../base/ProxyField";
+import DownloadResultWorkflowField from "../base/DownloadResultWorkflowField";
 
 import { Checkbox, Chip, NumberInput, toast } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
@@ -148,6 +149,10 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
         title: t("thirdPartyConfig.group.download"),
         content: (
           <div className="space-y-4">
+            <DownloadResultWorkflowField
+              value={options?.downloadResultWorkflowId}
+              onChange={(workflowId) => patch({ downloadResultWorkflowId: workflowId ?? 0 })}
+            />
             <div>
               <span className="text-sm font-medium">
                 {t<string>("thirdPartyConfig.field.defaultPath.label")}

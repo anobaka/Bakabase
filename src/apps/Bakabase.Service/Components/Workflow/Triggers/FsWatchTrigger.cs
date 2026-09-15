@@ -1,3 +1,4 @@
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -46,6 +47,10 @@ public class FsWatchTrigger : IWorkflowTrigger
 
     public string Kind { get; } = FsWorkflowKinds.TriggerWatch;
     public string DisplayName => "Directory watch";
+    public WorkflowActivationMode ActivationMode => WorkflowActivationMode.Watch;
+    public string SourceModule => "fs";
+    public string Description => "Watch direct children of configured existing directories. Created, modified or renamed entries trigger after they remain quiet for the configured time. Existing entries are not scanned initially and subdirectories are not watched recursively; manual input replays supplied paths.";
+    public string DescriptionKey => "workflow.trigger.fsWatch.description";
     public Type PayloadType => typeof(FsWatchPayload);
 
     public bool Matches(object payload, string? triggerFilterJson) =>

@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Tracing;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
@@ -96,13 +97,26 @@ public abstract class
             }
         }
 
-        if (keyword.IsNullOrEmpty())
+        if (keyword.IsNullOrEmpty() && resource.HasLocalPath)
         {
             keyword = resource.IsFile ? Path.GetFileNameWithoutExtension(resource.FileName) : resource.FileName;
             TracingContext?.AddTrace(LogLevel.Information, Localizer.Enhance(), Localizer.Enhancer_UseFilenameAsKeyword(keyword));
             logCollector.LogInfo(EnhancementLogEvent.KeywordResolved,
                 $"Using filename as keyword: {keyword}",
                 new { Keyword = keyword, Source = "Filename" });
+        }
+
+        if (keyword.IsNullOrEmpty())
+        {
+            // No local files means no filename. The reserved Name is what such a resource is known
+            // by — for a work the user has not downloaded yet it is the only thing to search on.
+            keyword = resource.GetReservedName();
+            if (!keyword.IsNullOrEmpty())
+            {
+                logCollector.LogInfo(EnhancementLogEvent.KeywordResolved,
+                    $"Using name as keyword: {keyword}",
+                    new { Keyword = keyword, Source = "Name" });
+            }
         }
 
         if (keyword.IsNullOrEmpty())

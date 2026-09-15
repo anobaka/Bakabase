@@ -114,5 +114,37 @@ public class SoulPlusClient(
         await GetHtml(url, ct);
     }
 
+    /// <summary>
+    /// The threads on a board, following the pager to the end.
+    /// </summary>
+    /// <param name="listUrl">A board's list page, as the user would paste it.</param>
+    /// <param name="maxPages">
+    /// How far to follow. A board with ten years of history is not something to walk on every
+    /// check, and the newest pages are where new shares are.
+    /// </param>
+    public async Task<List<SoulPlusThread>> GetThreadsAsync(string listUrl, int maxPages,
+        CancellationToken ct)
+    {
+        var threads = new List<SoulPlusThread>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var url = listUrl;
+
+        for (var page = 0; page < maxPages && !string.IsNullOrEmpty(url); page++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var html = await GetHtml(url, ct);
+
+            foreach (var thread in SoulPlusListParser.Parse(html, url))
+            {
+                if (seen.Add(thread.Tid)) threads.Add(thread);
+            }
+
+            url = SoulPlusListParser.FindNextPageUrl(html, url);
+        }
+
+        return threads;
+    }
+
     protected override string HttpClientName => HttpClientNames.SoulPlus;
 }

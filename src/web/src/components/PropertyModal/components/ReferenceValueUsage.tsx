@@ -51,8 +51,9 @@ export function ReferenceValueUsageProvider({
 
   return (
     <UsageContext.Provider value={property ? { property, persistedValues, ...usage } : undefined}>
+      {children}
       {property && (
-        <div className="flex items-center gap-2 text-xs text-default-500 mt-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs leading-relaxed text-default-500">
           <span>
             {t(
               usage.loading ? "property.reference.loadingCounts" : "property.reference.countsHelp",
@@ -65,7 +66,6 @@ export function ReferenceValueUsageProvider({
           )}
         </div>
       )}
-      {children}
     </UsageContext.Provider>
   );
 }
@@ -80,10 +80,10 @@ export default function ReferenceValueUsage({ value, label }: { value: string; l
   const exists = usage.persistedValues.has(value);
 
   return (
-    <div className="flex shrink-0 items-center gap-1">
+    <div className="flex shrink-0 items-center gap-0.5">
       {count !== 0 && (
         <span
-          className="text-xs text-default-500 tabular-nums"
+          className="min-w-5 rounded-md bg-default-100 px-1.5 py-0.5 text-center text-xs text-default-500 tabular-nums"
           title={
             count === undefined
               ? t("property.reference.countUnavailable")

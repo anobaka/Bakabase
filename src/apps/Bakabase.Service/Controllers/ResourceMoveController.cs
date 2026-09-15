@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Models.View;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Db;
@@ -15,7 +16,7 @@ public class ResourceMoveController(IResourceMoveService service) : ControllerBa
 {
     [HttpPost]
     [SwaggerOperation(OperationId = "MoveResources")]
-    public async Task<SingletonResponse<string>> CreateBatch([FromBody] ResourceMoveInputModel model)
+    public async Task<SingletonResponse<ResourceMoveBatchViewModel>> CreateBatch([FromBody] ResourceMoveInputModel model)
     {
         return await service.CreateBatch(model.ResourceIds, model.DestDir);
     }

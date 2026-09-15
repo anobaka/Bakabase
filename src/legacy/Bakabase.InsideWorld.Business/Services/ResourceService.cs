@@ -1,4 +1,5 @@
 ﻿using System;
+using Bakabase.Modules.Acquisition.Abstractions.Services;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -399,6 +400,17 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                 }
 
+                // Known external covers and work identities are needed independently of source icons.
+                using (MiniProfiler.Current.Step("ExternalIdentities"))
+                {
+                    var identitiesGrouped = await GetRequiredService<IResourceExternalIdentityService>()
+                        .GetByResourceIdsGrouped(resourceIds.ToArray());
+                    foreach (var r in doList)
+                    {
+                        r.ExternalIdentities = identitiesGrouped.GetValueOrDefault(r.Id) ?? [];
+                    }
+                }
+
                 // Pre-fetch unified profile data if needed (optimization to avoid multiple index service calls)
                 Dictionary<int, ResourceProfileEffectiveData>? unifiedProfileData = null;
                 var needsNameTemplate = additionalItems.HasFlag(ResourceAdditionalItem.DisplayName);
@@ -628,6 +640,16 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                                 // Sort property values by scope for this resource (with per-property overrides)
                                                 resourceProfilePropertyOptions.TryGetValue(r.Id, out var profilePropOptions);
+                                                foreach (var prop in profilePropOptions?.Properties ?? [])
+                                                {
+                                                    if (prop.ScopePriority is not { Length: > 0 }) continue;
+                                                    var property = r.Properties.GetValueOrDefault((int)prop.Pool)?
+                                                        .GetValueOrDefault(prop.Id);
+                                                    if (property != null)
+                                                    {
+                                                        property.ProfileScopePriority = prop.ScopePriority.ToArray();
+                                                    }
+                                                }
                                                 SortPropertyValuesByScope(r, scopePriorityMap, profilePropOptions);
 
                                                 // Attach per-resource scope preferences (most granular layer): used by the
@@ -777,6 +799,32 @@ namespace Bakabase.InsideWorld.Business.Services
                                             {
                                                 resource.MediaLibraryName = firstLibrary.Name;
                                                 resource.MediaLibraryColor = firstLibrary.Color;
+                                            }
+                                        }
+                                    }
+
+                                    break;
+                                }
+                                case ResourceAdditionalItem.CollectionName:
+                                {
+                                    // Optional by design: a build without the collection module
+                                    // simply leaves the field null.
+                                    var collectionNames = _serviceProvider.GetService<ICollectionNameProvider>();
+
+                                    if (collectionNames != null)
+                                    {
+                                        var byResource = await collectionNames.GetByResourceIdsAsync(
+                                            doList.Select(d => d.Id).ToArray());
+
+                                        foreach (var resource in doList)
+                                        {
+                                            var names = byResource.GetValueOrDefault(resource.Id);
+
+                                            if (names is {Count: > 0})
+                                            {
+                                                resource.Collections = names
+                                                    .Select(c => new Resource.CollectionInfo(c.Id, c.Name, null))
+                                                    .ToList();
                                             }
                                         }
                                     }
@@ -1059,6 +1107,15 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                 }
 
+                var externalIdentityService = GetRequiredService<IResourceExternalIdentityService>();
+                foreach (var resource in resources)
+                {
+                    if (resource.ExternalIdentities is { Count: > 0 })
+                    {
+                        await externalIdentityService.EnsureIdentities(resource.Id, resource.ExternalIdentities);
+                    }
+                }
+
                 // Publish resource data changed event (triggers index updates via event subscription)
                 var allChangedIds = dbResources.Select(r => r.Id).ToArray();
                 ResourceDataChangeEventPublisher.PublishResourcesChanged(allChangedIds);
@@ -1184,7 +1241,12 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<PlayableItemPick?> PickRandomPlayableItem()
         {
-            var existingResourceIds = (await GetAllDbModels(null, false)).Select(r => r.Id).ToHashSet();
+            // Only resources with local files can be played. One without a path is known to
+            // Bakabase but not materialized on disk yet, so it has nothing to open and would
+            // waste a live probe.
+            var existingResourceIds = (await GetAllDbModels(null, false))
+                .Where(r => !string.IsNullOrEmpty(r.Path))
+                .Select(r => r.Id).ToHashSet();
             if (existingResourceIds.Count == 0)
             {
                 return null;
@@ -1769,6 +1831,55 @@ namespace Bakabase.InsideWorld.Business.Services
         }
 
         /// <summary>
+        /// Puts these resources in exactly these collections — the bulk editor's "set the value",
+        /// which for a multi-valued property means replace rather than add.
+        /// <para>
+        /// Rule membership is untouched: it is not a value anyone can set, and a resource that
+        /// matches a rule stays a member whatever this does.
+        /// </para>
+        /// </summary>
+        public async Task<BaseResponse> SetCollections(int[] resourceIds, int[] collectionIds)
+        {
+            if (resourceIds.Length == 0) return BaseResponseBuilder.Ok;
+
+            var collectionService = _serviceProvider
+                .GetService<Modules.Collection.Abstractions.Services.ICollectionService>();
+            var mappingService = _serviceProvider
+                .GetService<Modules.Collection.Abstractions.Services.ICollectionResourceMappingService>();
+
+            if (collectionService == null || mappingService == null) return BaseResponseBuilder.Ok;
+
+            var all = (await collectionService.GetAll()).Select(c => c.Id).ToHashSet();
+            var invalid = collectionIds.Where(id => !all.Contains(id)).ToList();
+
+            if (invalid.Count > 0)
+            {
+                return BaseResponseBuilder.BuildBadRequest(
+                    $"Invalid collection IDs: [{string.Join(',', invalid)}]");
+            }
+
+            var wanted = collectionIds.ToHashSet();
+
+            foreach (var resourceId in resourceIds)
+            {
+                var current = (await mappingService.GetByResourceId(resourceId))
+                    .Select(m => m.CollectionId).ToHashSet();
+
+                foreach (var collectionId in wanted.Except(current))
+                {
+                    await collectionService.AddMembers(collectionId, [resourceId]);
+                }
+
+                foreach (var collectionId in current.Except(wanted))
+                {
+                    await collectionService.RemoveMembers(collectionId, [resourceId]);
+                }
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        /// <summary>
         /// When IsBizValue is true, converts bizValue to dbValue via PrepareDbValue and auto-creates options if needed.
         /// </summary>
         private async Task<string?> ConvertBizValueToDbValueIfNeeded(ResourcePropertyValuePutInputModel model)
@@ -1957,6 +2068,14 @@ namespace Bakabase.InsideWorld.Business.Services
                         var mediaLibraryIds = model.Value?.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString)?
                             .Select(int.Parse).ToArray() ?? [];
                         return await SetMediaLibraries(resourceIds, mediaLibraryIds);
+                    }
+                    case ResourceProperty.CollectionMulti:
+                    {
+                        var collectionIds = model.Value
+                            ?.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString)
+                            ?.Select(int.Parse).ToArray() ?? [];
+
+                        return await SetCollections(resourceIds, collectionIds);
                     }
                     case ResourceProperty.Introduction:
                     case ResourceProperty.Cover:
@@ -2364,6 +2483,9 @@ namespace Bakabase.InsideWorld.Business.Services
                 conflictIds.Add(id);
             }
 
+            conflictIds.UnionWith(await GetRequiredService<IResourceExternalIdentityService>()
+                .FindConflictingResourceIds(resourceId));
+
             // 2. Find conflicts by same Path
             var resource = await _orm.GetByKey(resourceId);
             if (resource != null && !string.IsNullOrEmpty(resource.Path))
@@ -2390,6 +2512,10 @@ namespace Bakabase.InsideWorld.Business.Services
             var mergeSourceIds = model.SourceResourceIds.Concat([model.TargetResourceId]).Distinct().ToArray();
             var sourceLinks = await sourceLinkService.GetByResourceIds(mergeSourceIds);
             await sourceLinkService.EnsureLinks(model.TargetResourceId, sourceLinks);
+
+            var identityService = GetRequiredService<IResourceExternalIdentityService>();
+            var identities = await identityService.GetByResourceIdsGrouped(mergeSourceIds);
+            await identityService.EnsureIdentities(model.TargetResourceId, identities.Values.SelectMany(x => x));
 
             // 2. Transfer media library mappings from source resources to target
             var mappingService = MediaLibraryResourceMappingService;
@@ -2423,8 +2549,32 @@ namespace Bakabase.InsideWorld.Business.Services
             await _customPropertyValueService.RemoveAll(x => ids.Contains(x.ResourceId));
             var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
             await sourceLinkService.DeleteByResourceIds(ids);
+            await GetRequiredService<IResourceExternalIdentityService>().DeleteByResourceIds(ids);
             var scopePreferenceService = GetRequiredService<IPropertyValueScopePreferenceService>();
             await scopePreferenceService.RemoveByResourceIds(ids);
+            // Leads are keyed by ResourceId with no FK, like the cache row below. Left behind they
+            // would hold their link's unique index hostage, so the same link could never be
+            // attached to anything again.
+            var acquisitionLeadService = GetRequiredService<IAcquisitionLeadService>();
+            await acquisitionLeadService.DeleteByResourceIds(ids);
+
+            // Collection memberships are keyed by ResourceId with no FK too. One left behind would
+            // count towards a collection's rate forever, for something that no longer exists.
+            await GetRequiredService<Bakabase.Modules.Collection.Abstractions.Services
+                .ICollectionResourceMappingService>().RemoveByResourceIds(ids);
+
+            // A pending "are these two the same?" naming a resource that is gone can never be
+            // answered, and its unique index would keep the pair from ever being raised again.
+            if (_serviceProvider.GetService<IResourceMatchSuggestionService>() is { } matchSuggestionService)
+            {
+                await matchSuggestionService.DeleteByResourceIds(ids);
+            }
+
+            // Acquisition tasks are keyed the same way. One left behind would keep showing on the
+            // acquisitions page as something being got for a resource that is gone.
+            await DbContext.Set<Bakabase.Modules.Acquisition.Abstractions.Models.Db.AcquisitionTaskDbModel>()
+                .Where(t => ids.Contains(t.ResourceId))
+                .ExecuteDeleteAsync();
 
             // The cache row is keyed by ResourceId with no FK, so it survives the resource
             // unless we drop it here. Leftovers are not just dead weight: PlayRandomResource
@@ -2493,8 +2643,8 @@ namespace Bakabase.InsideWorld.Business.Services
             return ResourceUtils.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
         }
 
-        // The scope resolver applies the per-resource preference over the configured global scope
-        // priority and skips empty scopes (see IPropertyValueScopeResolver).
+        // The scope resolver applies resource preference > profile > global priority and skips
+        // empty scopes (see IPropertyValueScopeResolver).
         private string? GetReservedNameForDisplayName(Resource resource) =>
             _scopeResolver.Resolve(resource, PropertyPool.Reserved, (int)ResourceProperty.Name)?.BizValue as string;
 

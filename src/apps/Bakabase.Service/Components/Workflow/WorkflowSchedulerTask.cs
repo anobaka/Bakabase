@@ -59,7 +59,8 @@ public class WorkflowSchedulerTask(IServiceProvider serviceProvider, IBakabaseLo
             // stacking another behind it would burn a slot to produce the same plan.
             var hasActive = await db.Set<WorkflowRunDbModel>().AnyAsync(r =>
                     r.WorkflowDefinitionId == def.Id &&
-                    (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running),
+                    (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running ||
+                     r.Status == WorkflowRunStatus.Waiting),
                 args.CancellationToken);
             if (hasActive) continue;
 

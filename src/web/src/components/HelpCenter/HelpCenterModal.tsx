@@ -2,7 +2,7 @@
 
 import type { HelpTarget, HelpTopicId } from "./types";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 
@@ -42,6 +42,9 @@ const HelpCenterModal = ({
     topicId: initialTopicId,
     conceptId: concept,
   });
+  const revealActiveEntry = useCallback((element: HTMLButtonElement | null) => {
+    element?.scrollIntoView({ block: "nearest" });
+  }, []);
 
   const activeTopic = helpTopics.find((item) => item.id === active.topicId) ?? helpTopics[0]!;
   const { Content, ConceptContent } = activeTopic;
@@ -80,6 +83,7 @@ const HelpCenterModal = ({
             return (
               <div key={topicDef.id} className="flex flex-col gap-0.5">
                 <Button
+                  ref={isOverviewActive ? revealActiveEntry : undefined}
                   className="justify-start"
                   color={isOverviewActive ? "primary" : "default"}
                   size="sm"
@@ -104,6 +108,7 @@ const HelpCenterModal = ({
                       return (
                         <Button
                           key={item.id}
+                          ref={isActive ? revealActiveEntry : undefined}
                           className={`justify-start pl-5 h-7 min-h-7 ${
                             isActive ? "" : "text-default-600"
                           }`}
@@ -130,6 +135,10 @@ const HelpCenterModal = ({
           ) : (
             <Content
               firstRun={firstRun}
+              onNavigate={(path) => {
+                window.location.hash = path;
+                onClose();
+              }}
               section={active.topicId === initialTopicId ? section : undefined}
             />
           )}
