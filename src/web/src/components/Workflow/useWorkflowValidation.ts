@@ -113,6 +113,7 @@ export function useSavedWorkflowValidation(workflows: Definition[]) {
           try {
             const response = await BApi.workflow.validateSavedWorkflow(id, {
               signal: controller.signal,
+              showErrorToast: false,
             });
 
             if (!active || controller.signal.aborted) return;
@@ -196,6 +197,7 @@ export function useDraftWorkflowValidation(draft: Draft) {
         try {
           const response = await BApi.workflow.validateWorkflow(draft, {
             signal: controller.signal,
+            showErrorToast: false,
           });
 
           if (!active) return;

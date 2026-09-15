@@ -8752,7 +8752,8 @@ export interface FullRequestParams extends Omit<RequestInit, "body"> {
   /** request cancellation token */
   cancelToken?: CancelToken;
 
-  showErrorToast?: (response: BaseResponse) => boolean;
+  /** Set false when the caller presents errors inline; callbacks control API business errors. */
+  showErrorToast?: boolean | ((response: BaseResponse) => boolean);
 }
 
 export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path">;
@@ -8913,6 +8914,7 @@ export class HttpClient<SecurityDataType = unknown> {
     const queryString = query && this.toQueryString(query);
     const payloadFormatter = this.contentFormatters[type || ContentType.Json];
     const responseFormat = format || requestParams.format;
+    const requestSignal = cancelToken ? this.createAbortSignal(cancelToken) : requestParams.signal;
 
     return this.customFetch(
       `${baseUrl || this.baseUrl || ""}${path}${queryString ? `?${queryString}` : ""}`,
@@ -8922,7 +8924,7 @@ export class HttpClient<SecurityDataType = unknown> {
           ...(requestParams.headers || {}),
           ...(type && type !== ContentType.FormData ? { "Content-Type": type } : {}),
         },
-        signal: cancelToken ? this.createAbortSignal(cancelToken) : requestParams.signal,
+        signal: requestSignal,
         body: typeof body === "undefined" || body === null ? null : payloadFormatter(body),
       },
     ).then(async (response) => {
@@ -8951,13 +8953,18 @@ export class HttpClient<SecurityDataType = unknown> {
       }
 
 
+      if (requestSignal?.aborted) {
+        throw requestSignal.reason ?? new DOMException("Request was aborted", "AbortError");
+      }
       if (!response.ok) {
         this.processResponseError(data, fullRequestParams, response);
         throw data;
       }
       return this.processResponseData(data.data as BaseResponse, fullRequestParams);
     }).catch((error) => {
-      this.processResponseError(error, fullRequestParams);
+      if (!requestSignal?.aborted && error?.name !== "AbortError") {
+        this.processResponseError(error, fullRequestParams);
+      }
       throw error;
     });
   };
@@ -8973,6 +8980,8 @@ export class HttpClient<SecurityDataType = unknown> {
   protected static readonly reportedMarker = "__bakabaseErrorReported";
 
   protected processResponseError = (error: any, params: FullRequestParams, response?: Response) => {
+    if (params.showErrorToast === false) return;
+
     if (error && typeof error === "object") {
       if ((error as any)[HttpClient.reportedMarker]) {
         return;
@@ -9009,8 +9018,8 @@ export class HttpClient<SecurityDataType = unknown> {
         case 0:
           break;
         default:
-          const showErrorToast = params.showErrorToast || ((error: BaseResponse) => error.code >= 400 || error.code < 200);
-          if (showErrorToast(response)) {
+          const showErrorToast = params.showErrorToast ?? ((error: BaseResponse) => error.code >= 400 || error.code < 200);
+          if (typeof showErrorToast === "function" ? showErrorToast(response) : showErrorToast) {
             const title = `[${response.code}]${params.method} ${params.path}`;
 
             toast.danger({

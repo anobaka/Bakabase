@@ -208,6 +208,10 @@ describe("saved workflow automatic validation", () => {
     api.saved.mockResolvedValueOnce({ code: 500, data: valid.data });
     await render(<Saved definitions={[workflow(40)]} />);
     expect(saved.getState(40)).toEqual({ failed: true });
+    expect(api.saved).toHaveBeenLastCalledWith(40, {
+      signal: expect.any(AbortSignal),
+      showErrorToast: false,
+    });
     const retry = deferred();
 
     api.saved.mockReturnValueOnce(retry.promise);
@@ -251,6 +255,10 @@ describe("draft automatic validation", () => {
     await render(<Draft />);
     await advance(500);
     expect(draft.failed).toBe(true);
+    expect(api.draft).toHaveBeenLastCalledWith(
+      { triggerKind: "fs.manualScan", activities: [] },
+      { signal: expect.any(AbortSignal), showErrorToast: false },
+    );
     await act(async () => draft.retry());
     await advance(500);
     expect(draft.result?.isValid).toBe(true);

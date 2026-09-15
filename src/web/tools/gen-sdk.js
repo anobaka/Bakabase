@@ -39,7 +39,8 @@ const BASE_RESPONSE_TYPE = `type BaseResponse = {
 };
 `;
 
-const SHOW_ERROR_TOAST = `  showErrorToast?: (response: BaseResponse) => boolean;`;
+const SHOW_ERROR_TOAST = `  /** Set false when the caller presents errors inline; callbacks control API business errors. */
+  showErrorToast?: boolean | ((response: BaseResponse) => boolean);`;
 
 function buildUrlBuilders(content) {
   const methodRegex =
@@ -203,18 +204,34 @@ async function buildApiTs() {
 
   content = content.replace("}: FullRequestParams): Promise<T> => {", "  } = fullRequestParams;");
 
+  // Keep the effective signal, including SDK cancel tokens and security-worker overrides,
+  // so normal cancellation remains observable to callers without a failure notification.
+  content = content.replace(
+    "const responseFormat = format || requestParams.format;",
+    "const responseFormat = format || requestParams.format;\n    const requestSignal = cancelToken ? this.createAbortSignal(cancelToken) : requestParams.signal;",
+  );
+  content = content.replace(
+    "signal: cancelToken ? this.createAbortSignal(cancelToken) : requestParams.signal,",
+    "signal: requestSignal,",
+  );
+
   const errorTitleTpl = "`${params.method} ${params.path} failed`";
   const apiErrorTitleTpl = "`[${response.code}]${params.method} ${params.path}`";
   content = content.replace(
     "if (!response.ok) throw data;\n      return data.data;\n    });\n  };",
     `
+      if (requestSignal?.aborted) {
+        throw requestSignal.reason ?? new DOMException("Request was aborted", "AbortError");
+      }
       if (!response.ok) {
         this.processResponseError(data, fullRequestParams, response);
         throw data;
       }
       return this.processResponseData(data.data as BaseResponse, fullRequestParams);
     }).catch((error) => {
-      this.processResponseError(error, fullRequestParams);
+      if (!requestSignal?.aborted && error?.name !== "AbortError") {
+        this.processResponseError(error, fullRequestParams);
+      }
       throw error;
     });
   };
@@ -230,6 +247,8 @@ async function buildApiTs() {
   protected static readonly reportedMarker = "__bakabaseErrorReported";
 
   protected processResponseError = (error: any, params: FullRequestParams, response?: Response) => {
+    if (params.showErrorToast === false) return;
+
     if (error && typeof error === "object") {
       if ((error as any)[HttpClient.reportedMarker]) {
         return;
@@ -266,8 +285,8 @@ async function buildApiTs() {
         case 0:
           break;
         default:
-          const showErrorToast = params.showErrorToast || ((error: BaseResponse) => error.code >= 400 || error.code < 200);
-          if (showErrorToast(response)) {
+          const showErrorToast = params.showErrorToast ?? ((error: BaseResponse) => error.code >= 400 || error.code < 200);
+          if (typeof showErrorToast === "function" ? showErrorToast(response) : showErrorToast) {
             const title = ${apiErrorTitleTpl};
 
             toast.danger({

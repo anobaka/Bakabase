@@ -72,6 +72,7 @@ vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorModal: () 
 vi.mock("@/components/Workflow/Activities", () => ({ getWorkflowActivityUI: () => undefined }));
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@heroui/react")),
+  ...(await import("@/components/bakaui/components/Tabs")),
   Button: (await import("@/components/bakaui/components/Button")).Button,
   toast: { success: vi.fn(), danger: vi.fn() },
   // Keep production controls and forms; only replace modal positioning/animation.
