@@ -79,6 +79,23 @@ public partial class NativeWebViewHost : NativeControlHost
     }
 
     /// <summary>
+    /// Tells the platform WebView whether anyone can currently see it.
+    /// </summary>
+    /// <remarks>
+    /// A WebView hosted in a child window is not told that the window it sits in went to
+    /// the tray or was minimised. It goes on producing frames for a surface nobody is
+    /// looking at, so every animation on the page keeps compositing at the display's
+    /// refresh rate — which is how an idle app holds a browser process at double-digit
+    /// CPU in the background. Only the Windows backend implements it so far; the other
+    /// two need their own call and are left alone rather than faked.
+    /// </remarks>
+    public void SetRendererVisible(bool visible)
+    {
+        if (OperatingSystem.IsWindows())
+            SetRendererVisibleWindows(visible);
+    }
+
+    /// <summary>
     /// Gets the current URL displayed in the WebView.
     /// </summary>
     public string? GetCurrentUrl()

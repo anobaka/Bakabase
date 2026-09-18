@@ -15,7 +15,7 @@ vi.mock("@/services/ResourceDiscoveryChannel", () => ({ resourceDiscoveryChannel
 let root: ReturnType<typeof createRoot>;
 let container: HTMLDivElement;
 let latest: ReturnType<typeof useCoverResolution>;
-const listeners = new Map<DataOrigin, (data: DiscoveryData) => void>();
+const listeners = new Map<DataOrigin, (data: DiscoveryData | null, error?: string) => void>();
 
 function Probe({ resource }: { resource: Resource }) {
   latest = useCoverResolution(resource);
@@ -56,6 +56,13 @@ async function discover(origin: DataOrigin, path: string) {
   );
 }
 
+/** Discovery answered, and the answer was "there is no cover here". */
+async function discoverNothing(origin: DataOrigin, error?: string) {
+  await act(async () =>
+    listeners.get(origin)!(error ? null : { origin, dataType: ResourceDataType.Cover }, error),
+  );
+}
+
 describe("external work identity covers", () => {
   it("displays a catalog cover delivered by discovery without a content source", async () => {
     await act(async () =>
@@ -83,5 +90,61 @@ describe("external work identity covers", () => {
     expect(latest.covers).toEqual(["/covers/catalog.jpg"]);
     await discover(DataOrigin.Steam, "/covers/steam.jpg");
     expect(latest.covers).toEqual(["/covers/steam.jpg"]);
+  });
+});
+
+describe("discovery that finds nothing", () => {
+  it("settles to not-found instead of spinning forever", async () => {
+    // dataStates is a prop and stays NotStarted for the life of the resource object, so
+    // without recording that discovery answered, a resource that simply has no cover sat
+    // at "loading" for the rest of the session — one spinner per card, animating in a
+    // WebView nobody was looking at.
+    await act(async () =>
+      root.render(<Probe resource={resourceWithOrigins(DataOrigin.FileSystem)} />),
+    );
+    expect(latest.status).toBe("loading");
+
+    await discoverNothing(DataOrigin.FileSystem);
+
+    expect(latest).toEqual({ covers: null, status: "not-found" });
+  });
+
+  it("keeps waiting while another origin has not answered", async () => {
+    await act(async () =>
+      root.render(
+        <Probe resource={resourceWithOrigins(DataOrigin.FileSystem, DataOrigin.Steam)} />,
+      ),
+    );
+
+    await discoverNothing(DataOrigin.FileSystem);
+    expect(latest.status).toBe("loading");
+
+    await discoverNothing(DataOrigin.Steam);
+    expect(latest.status).toBe("not-found");
+  });
+
+  it("treats a failed discovery as answered too", async () => {
+    // A stream that errors is never coming back with a cover. Leaving it "loading" is
+    // both a lie and a permanent animation.
+    await act(async () =>
+      root.render(<Probe resource={resourceWithOrigins(DataOrigin.FileSystem)} />),
+    );
+
+    await discoverNothing(DataOrigin.FileSystem, "stream closed");
+
+    expect(latest.status).toBe("not-found");
+  });
+
+  it("still prefers a cover that arrives from a lower-priority origin", async () => {
+    await act(async () =>
+      root.render(
+        <Probe resource={resourceWithOrigins(DataOrigin.FileSystem, DataOrigin.Steam)} />,
+      ),
+    );
+
+    await discoverNothing(DataOrigin.Steam);
+    await discover(DataOrigin.FileSystem, "/covers/local.jpg");
+
+    expect(latest).toEqual({ covers: ["/covers/local.jpg"], status: "ready" });
   });
 });

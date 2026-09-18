@@ -17,6 +17,40 @@ public partial class NativeWebViewHost
     private object? _winController; // CoreWebView2Controller (typed via dynamic to avoid hard compile-time dep)
     private object? _winWebView; // CoreWebView2
     private bool _winWebView2Ready;
+    private bool _winRendererVisible = true;
+
+    /// <summary>
+    /// Mirrors the host window's visibility onto <c>CoreWebView2Controller.IsVisible</c>.
+    /// </summary>
+    /// <remarks>
+    /// WebView2 in a child HWND does not work this out for itself, and while it believes
+    /// it is on screen it keeps compositing the page. Recorded even before the controller
+    /// exists, so a window that was already in the tray when WebView2 finished
+    /// initialising never starts rendering in the first place.
+    /// </remarks>
+    private void SetRendererVisibleWindows(bool visible)
+    {
+        if (_winRendererVisible == visible) return;
+
+        _winRendererVisible = visible;
+        ApplyRendererVisibilityWindows();
+    }
+
+    private void ApplyRendererVisibilityWindows()
+    {
+        if (_winController == null) return;
+
+        try
+        {
+            _winController.GetType().GetProperty("IsVisible")?.SetValue(_winController, _winRendererVisible);
+        }
+        catch (Exception ex)
+        {
+            // Never fatal: the worst case of a failed set is the CPU cost this avoids,
+            // and a WebView left permanently invisible would be far worse.
+            System.Diagnostics.Debug.WriteLine($"Failed to set WebView2 visibility: {ex.Message}");
+        }
+    }
 
     private IPlatformHandle CreateWindows(IPlatformHandle parent)
     {
@@ -94,6 +128,9 @@ public partial class NativeWebViewHost
 
             // Get CoreWebView2
             _winWebView = _winController!.GetType().GetProperty("CoreWebView2")!.GetValue(_winController);
+
+            // The window may already have gone to the tray while this was initialising.
+            ApplyRendererVisibilityWindows();
 
             // Set a modern User-Agent to avoid "browser version too low" errors on sites like Bilibili
             try
