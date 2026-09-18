@@ -158,8 +158,19 @@ class _PairPageState extends ConsumerState<PairPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    // Nothing pushed this route — the app shows it because of the connection state —
+    // so leaving means putting that state back, not popping.
+    final leave = ref.read(connectionProvider.notifier).cancelPairing;
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.pairTitle)),
+      appBar: AppBar(
+        title: Text(l10n.pairTitle),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          tooltip: l10n.pairCancel,
+          onPressed: leave,
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -167,7 +178,11 @@ class _PairPageState extends ConsumerState<PairPage> {
           const SizedBox(height: 4),
           Text(widget.target.baseUrl, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 16),
-          Text(l10n.pairIntro),
+          // Two different situations reach this page and they need different words:
+          // one has been refused and has to pair, the other is already being served
+          // and is choosing to. Telling the second one the server "only serves devices
+          // it knows" is simply false.
+          Text(widget.target.resumeTo == null ? l10n.pairIntro : l10n.pairVoluntaryIntro),
           const SizedBox(height: 24),
           TextField(
             controller: _deviceName,

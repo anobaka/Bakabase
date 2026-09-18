@@ -7,11 +7,26 @@ import 'features/connect/pair_page.dart';
 import 'features/library/library_page.dart';
 import 'l10n/app_localizations.dart';
 
-class BakabaseApp extends ConsumerWidget {
+class BakabaseApp extends ConsumerStatefulWidget {
   const BakabaseApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BakabaseApp> createState() => _BakabaseAppState();
+}
+
+class _BakabaseAppState extends ConsumerState<BakabaseApp> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Once, at startup, rather than whenever the picker appears: reconnecting from
+    // the picker would make "switch server" bounce straight back to the server the
+    // user just left.
+    ref.read(connectionProvider.notifier).resumeLastServer();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final connection = ref.watch(connectionProvider);
 
     return MaterialApp(

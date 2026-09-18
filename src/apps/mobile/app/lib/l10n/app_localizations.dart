@@ -319,6 +319,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Resource #{id} (removed)'**
   String removedResource(int id);
+
   /// No description provided for @pairTitle.
   ///
   /// In en, this message translates to:
@@ -499,6 +500,24 @@ abstract class AppLocalizations {
   /// **'Seen just now'**
   String get devicesSeenJustNow;
 
+  /// No description provided for @devicesSeenMinutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Seen {minutes} min ago'**
+  String devicesSeenMinutesAgo(int minutes);
+
+  /// No description provided for @devicesSeenHoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Seen {hours} h ago'**
+  String devicesSeenHoursAgo(int hours);
+
+  /// No description provided for @devicesSeenDaysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Seen {days} d ago'**
+  String devicesSeenDaysAgo(int days);
+
   /// No description provided for @deviceRenameTitle.
   ///
   /// In en, this message translates to:
@@ -510,6 +529,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove access'**
   String get deviceRevoke;
+
+  /// No description provided for @deviceRevokeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}?'**
+  String deviceRevokeTitle(String name);
 
   /// No description provided for @deviceRevokeBody.
   ///
@@ -523,30 +548,59 @@ abstract class AppLocalizations {
   /// **'This is the device you are using. Removing its access disconnects you from this server, and you will have to pair again to come back.'**
   String get deviceRevokeSelfBody;
 
-  /// No description provided for @devicesSeenMinutesAgo.
+  /// No description provided for @pairVoluntaryIntro.
   ///
   /// In en, this message translates to:
-  /// **'Seen $minutes min ago'**
-  String devicesSeenMinutesAgo(int minutes);
+  /// **'This server serves this device already. Pairing names it, lets you manage who else has access, and keeps working if the server is later closed to unknown devices.'**
+  String get pairVoluntaryIntro;
 
-  /// No description provided for @devicesSeenHoursAgo.
+  /// No description provided for @pairCancel.
   ///
   /// In en, this message translates to:
-  /// **'Seen $hours h ago'**
-  String devicesSeenHoursAgo(int hours);
+  /// **'Not now'**
+  String get pairCancel;
 
-  /// No description provided for @devicesSeenDaysAgo.
+  /// No description provided for @notPairedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Seen $days d ago'**
-  String devicesSeenDaysAgo(int days);
+  /// **'This device is not paired'**
+  String get notPairedTitle;
 
-  /// No description provided for @deviceRevokeTitle.
+  /// No description provided for @notPairedBody.
   ///
   /// In en, this message translates to:
-  /// **'Remove $name?'**
-  String deviceRevokeTitle(String name);
+  /// **'Pair it to manage devices and keep access if this server stops serving unknown ones.'**
+  String get notPairedBody;
 
+  /// No description provided for @notPairedAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair'**
+  String get notPairedAction;
+
+  /// No description provided for @forgetServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget'**
+  String get forgetServer;
+
+  /// No description provided for @forgetServerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget {name}?'**
+  String forgetServerTitle(String name);
+
+  /// No description provided for @forgetServerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the server from the list. If this device is paired with it, its key is deleted too and pairing again means a new code or approval.'**
+  String get forgetServerBody;
+
+  /// No description provided for @forgetServerConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget'**
+  String get forgetServerConfirm;
 }
 
 class _AppLocalizationsDelegate

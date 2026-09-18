@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'api_client.dart';
@@ -25,19 +27,28 @@ class Connecting extends ServerConnectionState {
 }
 
 class Connected extends ServerConnectionState {
-  const Connected(this.api, this.server);
+  const Connected(this.api, this.server, {this.clockOffset = Duration.zero});
 
   final BakabaseApiClient api;
   final ServerInfo server;
+
+  /// Kept from the handshake so pairing can be entered later without repeating it —
+  /// a device that pairs voluntarily is already connected and has nothing to re-ask.
+  final Duration clockOffset;
 }
 
-/// Reached and understood, but this device has no key and the server insists on one.
+/// Reached and understood, and this device is about to ask for a key.
 ///
-/// A state rather than a failure: nothing is wrong, the user simply has to pair. It
-/// carries what the pairing screen needs so that screen does not have to handshake
-/// again.
+/// A state rather than a failure: nothing is wrong. It carries what the pairing screen
+/// needs so that screen does not have to handshake again.
+///
+/// Two ways in, and [resumeTo] is what tells them apart. A server that refused this
+/// device has nothing to go back to but the picker, so it is null. A user who chose to
+/// pair from a working connection can change their mind, and that connection is still
+/// good — throwing it away to make them find the server again would be a punishment
+/// for looking.
 class NeedsPairing extends ServerConnectionState {
-  const NeedsPairing(this.baseUrl, this.server, this.clockOffset);
+  const NeedsPairing(this.baseUrl, this.server, this.clockOffset, {this.resumeTo});
 
   final String baseUrl;
   final ServerInfo server;
@@ -45,6 +56,10 @@ class NeedsPairing extends ServerConnectionState {
   /// Measured during the handshake that discovered the need to pair, so the very
   /// first signed request is already on the server's clock.
   final Duration clockOffset;
+
+  /// Where backing out lands. Null when this device cannot use the server at all
+  /// without pairing.
+  final Connected? resumeTo;
 }
 
 /// Why a connect attempt failed — as data, so the UI layer owns the wording
@@ -67,12 +82,45 @@ class ConnectionController extends Notifier<ServerConnectionState> {
   final ServerProfileStore _profiles = ServerProfileStore();
   final CredentialStore _credentials = CredentialStore();
 
+  /// How many times a denial has been recovered from without the user asking for
+  /// anything in between. A phone whose clock is genuinely wrong would otherwise
+  /// re-handshake on every refused request forever; two attempts is enough to absorb
+  /// a drift the handshake can actually fix.
+  int _recoveryAttempts = 0;
+
+  static const int _maxRecoveryAttempts = 2;
+
   @override
   ServerConnectionState build() => const Disconnected();
 
+  /// Reconnects to the most recently used server, if there is one.
+  ///
+  /// Called once at startup. Someone who uses one server — which is nearly everyone —
+  /// should not have to pick it out of a list every time they open the app. It gives
+  /// up quietly when there is nothing remembered, and a server that has moved or gone
+  /// away simply surfaces its failure on the picker, which is where they would have
+  /// landed anyway.
+  Future<void> resumeLastServer() async {
+    if (state is! Disconnected) {
+      return;
+    }
+
+    final profiles = await _profiles.load();
+
+    if (profiles.isEmpty || state is! Disconnected) {
+      return;
+    }
+
+    await connect(profiles.first.baseUrl);
+  }
+
   /// The whole connect handshake: reach the server, learn who it is, check
   /// protocol compatibility, remember it on success.
-  Future<void> connect(String baseUrl) async {
+  Future<void> connect(String baseUrl, {bool userInitiated = true}) async {
+    if (userInitiated) {
+      _recoveryAttempts = 0;
+    }
+
     state = Connecting(baseUrl);
 
     // The handshake is unsigned: server-info is reachable without a key, which is
@@ -109,7 +157,8 @@ class ConnectionController extends Notifier<ServerConnectionState> {
       paired: credentials != null,
     ));
 
-    final api = BakabaseApiClient(baseUrl, credentials: credentials, clockOffset: offset);
+    final api = BakabaseApiClient(baseUrl,
+        credentials: credentials, clockOffset: offset, onDenied: _onDenied);
 
     // Unpaired is fine on a server that does not require pairing — most of them, since
     // the switch is off by default. So rather than guessing from flags, ask for
@@ -126,7 +175,32 @@ class ConnectionController extends Notifier<ServerConnectionState> {
       }
     }
 
-    state = Connected(api, info);
+    state = Connected(api, info, clockOffset: offset);
+  }
+
+  /// Enters pairing because the user asked to, not because the server refused.
+  ///
+  /// The refusal route only fires on a server with RequirePairing switched on, which
+  /// is off by default — so without this a phone stays anonymous forever on the
+  /// servers most people run, while the desktop client pairs on first sight. Pairing
+  /// is also what unlocks the device list and the paths outside the libraries, and
+  /// neither of those announces itself by failing.
+  void startPairing() {
+    if (state case final Connected current) {
+      state = NeedsPairing(
+        current.api.baseUrl,
+        current.server,
+        current.clockOffset,
+        resumeTo: current,
+      );
+    }
+  }
+
+  /// Backs out of pairing, to wherever there is to back out to.
+  void cancelPairing() {
+    if (state case NeedsPairing(resumeTo: final resume)) {
+      state = resume ?? const Disconnected();
+    }
   }
 
   /// Stores the credentials a pairing produced and connects with them.
@@ -134,11 +208,52 @@ class ConnectionController extends Notifier<ServerConnectionState> {
       String baseUrl, ServerInfo server, Duration clockOffset, DeviceCredentials credentials) async {
     await _credentials.write(server.id, credentials);
     await _profiles.setPaired(server.id, true);
+    _recoveryAttempts = 0;
 
     state = Connected(
-      BakabaseApiClient(baseUrl, credentials: credentials, clockOffset: clockOffset),
+      BakabaseApiClient(baseUrl,
+          credentials: credentials, clockOffset: clockOffset, onDenied: _onDenied),
       server,
+      clockOffset: clockOffset,
     );
+  }
+
+  /// Reacts to the two refusals that mean this device's credentials stopped working.
+  ///
+  /// They look alike from a request's point of view and need opposite fixes, which is
+  /// why the server distinguishes them and why this does too. A revoked device has to
+  /// pair again — its key is gone from the server and every further request it signs
+  /// can only be refused. An expired signature is not a pairing problem at all: the
+  /// clock drifted, and re-running the handshake re-measures the offset. Telling
+  /// someone their pairing broke when their clock is off sends them to the wrong fix.
+  ///
+  /// Without this, a phone holding a dead key sat in [Connected] showing a raw English
+  /// refusal in the middle of the library, with nothing to tap.
+  void _onDenied(RemoteAccessDenial denial) {
+    if (_recoveryAttempts >= _maxRecoveryAttempts || state is! Connected) {
+      return;
+    }
+
+    _recoveryAttempts++;
+    unawaited(_recover(denial));
+  }
+
+  Future<void> _recover(RemoteAccessDenial denial) async {
+    if (state case final Connected current) {
+      switch (denial) {
+        case RemoteAccessDenial.deviceRevoked:
+          await _credentials.delete(current.server.id);
+          await _profiles.setPaired(current.server.id, false);
+
+          if (state case Connected(server: final s) when s.id == current.server.id) {
+            state = NeedsPairing(current.api.baseUrl, current.server, current.clockOffset);
+          }
+        case RemoteAccessDenial.signatureExpired:
+          await connect(current.api.baseUrl, userInitiated: false);
+        default:
+          return;
+      }
+    }
   }
 
   /// Forgets a server, and its key with it — leaving the key behind would strand a

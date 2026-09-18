@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'credentials.dart';
 import 'list_string.dart';
 import 'models.dart';
+import 'signed_media_url.dart';
 import 'signing_interceptor.dart';
 
 /// Why a request was turned away, from the `X-Bakabase-Remote-Access` header
@@ -46,7 +47,10 @@ class BakabaseApiClient {
     this.baseUrl, {
     DeviceCredentials? credentials,
     Duration clockOffset = Duration.zero,
+    void Function(RemoteAccessDenial denial)? onDenied,
   })  : _credentials = credentials,
+        _clockOffset = clockOffset,
+        _onDenied = onDenied,
         _dio = Dio(BaseOptions(
           baseUrl: baseUrl,
           connectTimeout: const Duration(seconds: 5),
@@ -73,7 +77,39 @@ class BakabaseApiClient {
   /// tell "not paired" from "paired and refused".
   final DeviceCredentials? _credentials;
 
+  /// How far this device's clock sits from the server's, from the handshake. Held
+  /// rather than only closed over by the interceptor, because media-URL tokens carry
+  /// an expiry the server checks against *its* clock: minting them off this phone's
+  /// clock would hand a skewed device links that are already expired on arrival.
+  final Duration _clockOffset;
+
+  /// Told about the refusals that mean this device's credentials stopped working, so
+  /// something above can do the one thing a page cannot: change where the app is.
+  /// Every page would otherwise have to recognise those two denials and agree on what
+  /// to do about them, and none of them did.
+  final void Function(RemoteAccessDenial denial)? _onDenied;
+
   bool get isPaired => _credentials != null;
+
+  /// This URL with a media token appended, or unchanged when this device has no key.
+  ///
+  /// Covers, raw streams and the extracting endpoint all leave this app: they go into
+  /// an `Image.network`, or to VLC/Infuse, and none of those can produce an
+  /// `Authorization` header. On a server that requires pairing, an unsigned one is a
+  /// 401 — a broken cover, or a player that opens on nothing.
+  String _signedUrl(Uri uri) {
+    final credentials = _credentials;
+
+    if (credentials == null) {
+      return uri.toString();
+    }
+
+    return SignedMediaUrl.sign(
+      uri,
+      credentials: credentials,
+      now: DateTime.now().toUtc().add(_clockOffset),
+    ).toString();
+  }
 
   /// ResourceAdditionalItem.All. Must be a value the server's enum DEFINES:
   /// hand-built bit combinations (e.g. DisplayName|MediaLibraryName|Cover)
@@ -281,21 +317,21 @@ class BakabaseApiClient {
       'path': path,
       if (width != null) 'w': width.toString(),
     };
-    return Uri.parse(baseUrl)
-        .replace(path: '/tool/thumbnail', queryParameters: query)
-        .toString();
+    return _signedUrl(
+      Uri.parse(baseUrl).replace(path: '/tool/thumbnail', queryParameters: query),
+    );
   }
 
   /// The raw byte stream with range support — what native players get handed.
   /// Deliberately not archive-aware; use [playFileUrl] for archive entries.
-  String rawFileUrl(String path) => Uri.parse(baseUrl)
-      .replace(path: '/file/raw', queryParameters: {'fullname': path}).toString();
+  String rawFileUrl(String path) => _signedUrl(
+      Uri.parse(baseUrl).replace(path: '/file/raw', queryParameters: {'fullname': path}));
 
   /// The browser-oriented delivery endpoint. The one thing the app needs it
   /// for is entries inside archives (`archive.zip!inner/file`), which the
   /// server extracts and streams — without seeking.
-  String playFileUrl(String path) => Uri.parse(baseUrl)
-      .replace(path: '/file/play', queryParameters: {'fullname': path}).toString();
+  String playFileUrl(String path) => _signedUrl(
+      Uri.parse(baseUrl).replace(path: '/file/play', queryParameters: {'fullname': path}));
 
   /// Best stream URL for a playable item: raw (seekable) for plain files,
   /// the extracting endpoint for archive entries.
@@ -372,9 +408,19 @@ class BakabaseApiClient {
     final denialHeader = response.headers.value('X-Bakabase-Remote-Access');
     if (denialHeader != null &&
         (response.statusCode == 403 || response.statusCode == 401)) {
+      final denial = parseDenial(denialHeader);
+
+      // Reported before the throw, so a caller that swallows the exception — the
+      // pairing probe does exactly that — still cannot hide a dead key from the
+      // connection above it.
+      if (denial == RemoteAccessDenial.deviceRevoked ||
+          denial == RemoteAccessDenial.signatureExpired) {
+        _onDenied?.call(denial);
+      }
+
       throw ApiException(
         _messageOf(response.data) ?? 'The server refused this request.',
-        denial: parseDenial(denialHeader),
+        denial: denial,
       );
     }
 

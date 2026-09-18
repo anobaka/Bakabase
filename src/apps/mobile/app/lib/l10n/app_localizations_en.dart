@@ -133,11 +133,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String removedResource(int id) {
     return 'Resource #$id (removed)';
   }
+
   @override
   String get pairTitle => 'Pair this device';
 
   @override
-  String get pairIntro => 'This server only serves devices it knows. Read the code from Bakabase on the server, or ask someone at a paired device to approve this one.';
+  String get pairIntro =>
+      'This server only serves devices it knows. Read the code from Bakabase on the server, or ask someone at a paired device to approve this one.';
 
   @override
   String get pairCodeLabel => '6-digit code';
@@ -152,13 +154,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pairWaiting => 'Waiting for someone to approve this device…';
 
   @override
-  String get pairCodeRejected => 'That code was wrong or has expired. Read a fresh one from the server.';
+  String get pairCodeRejected =>
+      'That code was wrong or has expired. Read a fresh one from the server.';
 
   @override
-  String get pairRequestRejected => 'The request was turned down, or waited too long.';
+  String get pairRequestRejected =>
+      'The request was turned down, or waited too long.';
 
   @override
-  String get pairTooManyAttempts => 'The server is not taking more attempts from here for now. Try again in a few minutes.';
+  String get pairTooManyAttempts =>
+      'The server is not taking more attempts from here for now. Try again in a few minutes.';
 
   @override
   String get pairUnreachable => 'The server stopped answering.';
@@ -170,16 +175,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pairDeviceNameLabel => 'Device name';
 
   @override
-  String get denialUnauthenticated => 'This device is not paired with that server.';
+  String get denialUnauthenticated =>
+      'This device is not paired with that server.';
 
   @override
-  String get denialSignatureExpired => 'This phone\'s clock is off, so the server rejected the request. Fix the date and time, then try again.';
+  String get denialSignatureExpired =>
+      'This phone\'s clock is off, so the server rejected the request. Fix the date and time, then try again.';
 
   @override
-  String get denialDeviceRevoked => 'This device was unpaired from that server. Pair it again.';
+  String get denialDeviceRevoked =>
+      'This device was unpaired from that server. Pair it again.';
 
   @override
-  String get denialRunsOnUserMachine => 'That happens on the machine holding the files, so it cannot run from here.';
+  String get denialRunsOnUserMachine =>
+      'That happens on the machine holding the files, so it cannot run from here.';
 
   @override
   String get cancel => 'Cancel';
@@ -224,18 +233,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get devicesSeenJustNow => 'Seen just now';
 
   @override
-  String get deviceRenameTitle => 'Rename';
-
-  @override
-  String get deviceRevoke => 'Remove access';
-
-  @override
-  String get deviceRevokeBody => 'That device will have to pair again before it can reach this server.';
-
-  @override
-  String get deviceRevokeSelfBody => 'This is the device you are using. Removing its access disconnects you from this server, and you will have to pair again to come back.';
-
-  @override
   String devicesSeenMinutesAgo(int minutes) {
     return 'Seen $minutes min ago';
   }
@@ -251,7 +248,53 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get deviceRenameTitle => 'Rename';
+
+  @override
+  String get deviceRevoke => 'Remove access';
+
+  @override
   String deviceRevokeTitle(String name) {
     return 'Remove $name?';
   }
+
+  @override
+  String get deviceRevokeBody =>
+      'That device will have to pair again before it can reach this server.';
+
+  @override
+  String get deviceRevokeSelfBody =>
+      'This is the device you are using. Removing its access disconnects you from this server, and you will have to pair again to come back.';
+
+  @override
+  String get pairVoluntaryIntro =>
+      'This server serves this device already. Pairing names it, lets you manage who else has access, and keeps working if the server is later closed to unknown devices.';
+
+  @override
+  String get pairCancel => 'Not now';
+
+  @override
+  String get notPairedTitle => 'This device is not paired';
+
+  @override
+  String get notPairedBody =>
+      'Pair it to manage devices and keep access if this server stops serving unknown ones.';
+
+  @override
+  String get notPairedAction => 'Pair';
+
+  @override
+  String get forgetServer => 'Forget';
+
+  @override
+  String forgetServerTitle(String name) {
+    return 'Forget $name?';
+  }
+
+  @override
+  String get forgetServerBody =>
+      'This removes the server from the list. If this device is paired with it, its key is deleted too and pairing again means a new code or approval.';
+
+  @override
+  String get forgetServerConfirm => 'Forget';
 }
