@@ -30,6 +30,13 @@ namespace Bakabase.Client.Remoting.Components.UserMachine;
 /// page says so — but nothing has to be configured before the first video plays, and a
 /// library that genuinely is not on this machine works at all.
 /// </para>
+/// <para>
+/// The one thing the stream cannot be handed to is the OS default. A path and a URL look
+/// alike to <c>ShellExecute</c> and are not: the default program for <c>http</c> is a
+/// browser, and a browser answers a video stream by offering to download it. So a
+/// streamed target insists on a program this client knows to be a player, and says why
+/// when there is none — a download dialog reported as success is the worst of both.
+/// </para>
 /// </remarks>
 public sealed class LocalPlayback(
     ActiveConnection connection,
@@ -86,12 +93,33 @@ public sealed class LocalPlayback(
         // A mapped file that is actually there beats streaming it back from the server
         // it already lives on. Mapped-but-missing means a stale mount, and streaming is
         // the honest fallback there too.
-        var target = mapped.Mapped && File.Exists(mapped.LocalPath)
-            ? mapped.LocalPath!
-            : loopback.BuildRawFileUrl(serverPath);
+        var onDisk = mapped.Mapped && File.Exists(mapped.LocalPath);
+        var target = onDisk ? mapped.LocalPath! : loopback.BuildRawFileUrl(serverPath);
 
         var options = await upstream.GetEffectivePlayerOptionsAsync(resourceId, context.RequestAborted);
         var player = players.Resolve(options, serverPath);
+
+        if (!onDisk && player.IsSystemDefault)
+        {
+            // "Let the OS decide" is the right answer for a path and the wrong one for a
+            // URL: what answers for http is a browser, and a browser meets a video stream
+            // with a download prompt. That is not playback, and returning OK for it left
+            // the user with a download and no explanation.
+            var installed = players.ResolveInstalled(serverPath);
+
+            if (installed == null)
+            {
+                await UserMachineResponse.WriteAsync(context, HttpStatusCode.NotImplemented,
+                    $"'{serverPath}' is not on this machine, so it would have to be streamed — and no player " +
+                    "this client can recognise is installed here to stream it into. Either map that library " +
+                    "to a local path in the client's settings, or install one of " +
+                    $"{string.Join(", ", KnownPlayerDefinitions.All.Select(d => d.DisplayName))}.");
+
+                return false;
+            }
+
+            player = installed;
+        }
 
         try
         {

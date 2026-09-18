@@ -79,4 +79,38 @@ public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
 
         return here == null ? ResolvedPlayer.SystemDefault : new ResolvedPlayer(here, chosen.Command);
     }
+
+    /// <summary>
+    /// Any player installed on this machine that can open this kind of file, best match
+    /// first, or null when there is none.
+    /// </summary>
+    /// <remarks>
+    /// For when the OS default will not do. Handing a stream URL to the shell starts
+    /// whatever answers for <c>http</c>, which is a browser, and a browser answers a
+    /// video stream with a download prompt — so a target that is a URL needs a program
+    /// known to be a player, not whatever the OS would pick.
+    /// </remarks>
+    public ResolvedPlayer? ResolveInstalled(string fileNameOrPath)
+    {
+        var extension = Path.GetExtension(fileNameOrPath);
+
+        foreach (var definition in KnownPlayerDefinitions.All)
+        {
+            // A null set means the player claims everything; foobar2000 claims audio
+            // only, and starting it on a video is not an improvement on failing.
+            if (definition.SupportedExtensions?.Contains(extension) == false)
+            {
+                continue;
+            }
+
+            var here = locator.Locate(definition).FirstOrDefault();
+
+            if (here != null)
+            {
+                return new ResolvedPlayer(here, null);
+            }
+        }
+
+        return null;
+    }
 }
