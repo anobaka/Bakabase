@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
 import '../../core/connection.dart';
+import '../../core/server_profiles.dart';
 import '../../l10n/app_localizations.dart';
 import '../../discovery/discovered_server.dart';
 import '../../discovery/discovery_service.dart';
@@ -35,6 +36,43 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
 
   void _connect(String baseUrl) {
     ref.read(connectionProvider.notifier).connect(baseUrl);
+  }
+
+  /// Drops a remembered server, and its key with it.
+  ///
+  /// Confirmed rather than immediate: forgetting a paired server throws away the only
+  /// copy of a key the server issues exactly once, so coming back means a fresh code
+  /// or another approval. That is not something to do to someone who meant to tap the
+  /// row next to it.
+  Future<void> _forget(ServerProfile profile) async {
+    final l10n = AppLocalizations.of(context)!;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.forgetServerTitle(profile.name)),
+        content: Text(l10n.forgetServerBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.pairCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.forgetServerConfirm),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed ?? false) {
+      await ref.read(connectionProvider.notifier).forget(profile.id);
+
+      // The remembered list is derived from the connection state, and forgetting a
+      // server this device is not currently on does not change it — so the row would
+      // sit there until something else moved.
+      ref.invalidate(serverProfilesProvider);
+    }
   }
 
   void _connectManual() {
@@ -120,6 +158,11 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
                             leading: const Icon(Icons.history),
                             title: Text(profile.name),
                             subtitle: Text(profile.baseUrl),
+                            trailing: IconButton(
+                              tooltip: l10n.forgetServer,
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () => _forget(profile),
+                            ),
                             onTap: () => _connect(profile.baseUrl),
                           ),
                         ),

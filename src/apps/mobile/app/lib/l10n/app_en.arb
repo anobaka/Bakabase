@@ -144,5 +144,21 @@
     }
   },
   "deviceRevokeBody": "That device will have to pair again before it can reach this server.",
-  "deviceRevokeSelfBody": "This is the device you are using. Removing its access disconnects you from this server, and you will have to pair again to come back."
+  "deviceRevokeSelfBody": "This is the device you are using. Removing its access disconnects you from this server, and you will have to pair again to come back.",
+  "pairVoluntaryIntro": "This server serves this device already. Pairing names it, lets you manage who else has access, and keeps working if the server is later closed to unknown devices.",
+  "pairCancel": "Not now",
+  "notPairedTitle": "This device is not paired",
+  "notPairedBody": "Pair it to manage devices and keep access if this server stops serving unknown ones.",
+  "notPairedAction": "Pair",
+  "forgetServer": "Forget",
+  "forgetServerTitle": "Forget {name}?",
+  "@forgetServerTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "forgetServerBody": "This removes the server from the list. If this device is paired with it, its key is deleted too and pairing again means a new code or approval.",
+  "forgetServerConfirm": "Forget"
 }

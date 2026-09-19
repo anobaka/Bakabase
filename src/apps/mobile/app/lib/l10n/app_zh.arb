@@ -144,5 +144,21 @@
     }
   },
   "deviceRevokeBody": "该设备需要重新配对才能再访问此服务端。",
-  "deviceRevokeSelfBody": "这就是你正在使用的设备。移除它的访问权限会断开与该服务端的连接，需要重新配对才能回来。"
+  "deviceRevokeSelfBody": "这就是你正在使用的设备。移除它的访问权限会断开与该服务端的连接，需要重新配对才能回来。",
+  "pairVoluntaryIntro": "该服务端已经在为这台设备服务。配对会给它一个名字，让你管理谁还有访问权限；以后服务端若改为只服务已知设备，也不会断。",
+  "pairCancel": "暂不配对",
+  "notPairedTitle": "此设备尚未配对",
+  "notPairedBody": "配对后可以管理设备；服务端以后若不再服务未知设备，访问也不会中断。",
+  "notPairedAction": "配对",
+  "forgetServer": "忘记",
+  "forgetServerTitle": "忘记 {name}？",
+  "@forgetServerTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "forgetServerBody": "会把该服务器从列表中移除。如果本设备与它配对过，密钥也会一并删除，再次配对需要新的配对码或批准。",
+  "forgetServerConfirm": "忘记"
 }

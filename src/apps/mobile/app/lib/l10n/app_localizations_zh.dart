@@ -132,11 +132,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String removedResource(int id) {
     return '资源 #$id（已删除）';
   }
+
   @override
   String get pairTitle => '配对此设备';
 
   @override
-  String get pairIntro => '该服务端只服务它认识的设备。在服务端的 Bakabase 里读取配对码，或者请已配对设备旁的人批准这一台。';
+  String get pairIntro =>
+      '该服务端只服务它认识的设备。在服务端的 Bakabase 里读取配对码，或者请已配对设备旁的人批准这一台。';
 
   @override
   String get pairCodeLabel => '6 位配对码';
@@ -223,18 +225,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get devicesSeenJustNow => '刚刚在线';
 
   @override
-  String get deviceRenameTitle => '重命名';
-
-  @override
-  String get deviceRevoke => '移除访问权限';
-
-  @override
-  String get deviceRevokeBody => '该设备需要重新配对才能再访问此服务端。';
-
-  @override
-  String get deviceRevokeSelfBody => '这就是你正在使用的设备。移除它的访问权限会断开与该服务端的连接，需要重新配对才能回来。';
-
-  @override
   String devicesSeenMinutesAgo(int minutes) {
     return '$minutes 分钟前在线';
   }
@@ -250,7 +240,51 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get deviceRenameTitle => '重命名';
+
+  @override
+  String get deviceRevoke => '移除访问权限';
+
+  @override
   String deviceRevokeTitle(String name) {
     return '移除 $name？';
   }
+
+  @override
+  String get deviceRevokeBody => '该设备需要重新配对才能再访问此服务端。';
+
+  @override
+  String get deviceRevokeSelfBody =>
+      '这就是你正在使用的设备。移除它的访问权限会断开与该服务端的连接，需要重新配对才能回来。';
+
+  @override
+  String get pairVoluntaryIntro =>
+      '该服务端已经在为这台设备服务。配对会给它一个名字，让你管理谁还有访问权限；以后服务端若改为只服务已知设备，也不会断。';
+
+  @override
+  String get pairCancel => '暂不配对';
+
+  @override
+  String get notPairedTitle => '此设备尚未配对';
+
+  @override
+  String get notPairedBody => '配对后可以管理设备；服务端以后若不再服务未知设备，访问也不会中断。';
+
+  @override
+  String get notPairedAction => '配对';
+
+  @override
+  String get forgetServer => '忘记';
+
+  @override
+  String forgetServerTitle(String name) {
+    return '忘记 $name？';
+  }
+
+  @override
+  String get forgetServerBody =>
+      '会把该服务器从列表中移除。如果本设备与它配对过，密钥也会一并删除，再次配对需要新的配对码或批准。';
+
+  @override
+  String get forgetServerConfirm => '忘记';
 }

@@ -219,6 +219,15 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       ),
       body: Column(
         children: [
+          // The only route to pairing used to be a server refusing this device, which
+          // never happens on a server with RequirePairing off — so on the servers most
+          // people run, the phone stayed anonymous with no way to ask. The desktop
+          // client shows its pairing panel after every handshake; this is that, sized
+          // for a phone.
+          if (!_api.isPaired && connection.server.pairingSupported)
+            _NotPairedBanner(
+              onPair: () => ref.read(connectionProvider.notifier).startPairing(),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
             child: TextField(
@@ -343,6 +352,59 @@ class _ResourceCell extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Says this device is anonymous, and offers the one thing that changes it.
+///
+/// Deliberately not dismissible: nothing here is persisted per-server, and a banner
+/// that could be dismissed would have to remember that forever or nag on every launch.
+/// It disappears the moment the device pairs, which is the only end state worth having.
+class _NotPairedBanner extends StatelessWidget {
+  const _NotPairedBanner({required this.onPair});
+
+  final VoidCallback onPair;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color: scheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+        child: Row(
+          children: [
+            Icon(Icons.link_off, size: 20, color: scheme.onSecondaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.notPairedTitle,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: scheme.onSecondaryContainer),
+                  ),
+                  Text(
+                    l10n.notPairedBody,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: scheme.onSecondaryContainer),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.tonal(onPressed: onPair, child: Text(l10n.notPairedAction)),
+          ],
+        ),
       ),
     );
   }
