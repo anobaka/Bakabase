@@ -44,6 +44,15 @@ export function useCoverResolution(
 
   // Backend-resolved covers (already priority-selected)
   const [sseCovers, setSseCovers] = useState<Map<DataOrigin, string[]>>(new Map());
+  /**
+   * Origins whose discovery has answered, whether or not it found anything.
+   *
+   * Finding nothing is an answer, and without recording it there was no way to tell
+   * "still looking" from "looked, and there is no cover": `dataStates` is a prop and
+   * stays NotStarted for the life of the resource object, so a cover-less resource sat
+   * at `loading` forever — a spinner per card, animating for the rest of the session.
+   */
+  const [finishedOrigins, setFinishedOrigins] = useState<Set<DataOrigin>>(new Set());
   const subscribedRef = useRef(new Set<DataOrigin>());
 
   // Determine which origins need SSE discovery
@@ -75,6 +84,7 @@ export function useCoverResolution(
               return next;
             });
           }
+          setFinishedOrigins((prev) => (prev.has(origin) ? prev : new Set(prev).add(origin)));
         })
         .then((unsub) => unsubscribes.push(unsub));
     }
@@ -88,6 +98,7 @@ export function useCoverResolution(
   // Reset SSE covers when resource changes
   useEffect(() => {
     setSseCovers(new Map());
+    setFinishedOrigins(new Set());
     subscribedRef.current = new Set();
   }, [resource.id]);
 
@@ -113,7 +124,9 @@ export function useCoverResolution(
     }
 
     // Check if any are still not-started (SSE in progress)
-    const hasNotStarted = coverStates.some((s) => s.status === DataStatus.NotStarted);
+    const hasNotStarted = coverStates.some(
+      (s) => s.status === DataStatus.NotStarted && !finishedOrigins.has(s.origin),
+    );
 
     if (hasNotStarted) {
       return { covers: null, status: "loading" };
@@ -121,7 +134,7 @@ export function useCoverResolution(
 
     // All ready/failed but no covers
     return { covers: null, status: "not-found" };
-  }, [coverStates, resource.covers, sseCovers]);
+  }, [coverStates, resource.covers, sseCovers, finishedOrigins]);
 
   return result;
 }

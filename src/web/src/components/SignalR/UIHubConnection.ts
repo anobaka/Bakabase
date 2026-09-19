@@ -302,6 +302,11 @@ export const UIHubConnection = () => {
     conn.onclose(async () => {
       useDownloadTasksStore.getState().resetInitialization();
       pendingDownloadTasks.clear();
+      // The task list mirrors a live feed, so a dead feed means we no longer know what
+      // is running — and the last thing we heard is almost always "Running". Keeping it
+      // left the assistant animating its working overlay forever behind a client that
+      // had lost its server; the reconnect below asks for the full set again anyway.
+      useBTasksStore.getState().setTasks([]);
       log("connection closed, attempting to reconnect...");
     });
 

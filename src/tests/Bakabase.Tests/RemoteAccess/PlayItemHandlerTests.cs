@@ -157,13 +157,31 @@ public class PlayItemHandlerTests
         // The difference between "set up a path mapping first" and "it plays". The
         // player opens a plain loopback URL; the forwarding layer signs and relays it,
         // so the player needs no credentials of its own.
+        _locator.Installed["Vlc"] = @"C:\Program Files\VideoLAN\VLC\vlc.exe";
+
         var context = Request("?origin=FileSystem&key=%2Fdata%2Fmedia%2Fa.mkv");
 
         await Play(context);
 
         Assert.AreEqual((int) HttpStatusCode.OK, Read(context).Status);
-        Assert.AreEqual(1, _shell.Launched.Count);
-        StringAssert.StartsWith(_shell.Launched[0], "http://127.0.0.1:34568/file/raw?fullname=");
+        Assert.AreEqual(1, _shell.Processes.Count);
+        Assert.AreEqual(@"C:\Program Files\VideoLAN\VLC\vlc.exe", _shell.Processes[0].Executable);
+        StringAssert.Contains(_shell.Processes[0].Arguments, "http://127.0.0.1:34568/file/raw?fullname=");
+    }
+
+    [TestMethod]
+    public async Task A_stream_is_never_handed_to_the_system_default()
+    {
+        // ShellExecute on an http URL starts whatever answers for http, which is a
+        // browser, and a browser meets a video stream with a download prompt. Reporting
+        // that as playback is how "play" turned into "your download has started".
+        var context = Request("?origin=FileSystem&key=%2Fdata%2Fmedia%2Fa.mkv");
+
+        await Play(context);
+
+        Assert.AreEqual((int) HttpStatusCode.NotImplemented, Read(context).Status);
+        Assert.AreEqual(0, _shell.Launched.Count);
+        Assert.AreEqual(0, _shell.Processes.Count);
     }
 
     [TestMethod]
@@ -172,13 +190,31 @@ public class PlayItemHandlerTests
         // A stale mount looks perfectly healthy from the server, and refusing here would
         // strand the user over something the stream can serve anyway.
         await WithLibraryAt("/data/media");
+        _locator.Installed["Mpv"] = "/usr/bin/mpv";
 
         var context = Request("?origin=FileSystem&key=%2Fdata%2Fmedia%2Fmissing.mkv");
 
         await Play(context);
 
         Assert.AreEqual((int) HttpStatusCode.OK, Read(context).Status);
-        StringAssert.StartsWith(_shell.Launched[0], "http://127.0.0.1:34568/file/raw");
+        Assert.AreEqual(0, _shell.Launched.Count);
+        StringAssert.Contains(_shell.Processes[0].Arguments, "http://127.0.0.1:34568/file/raw");
+    }
+
+    [TestMethod]
+    public async Task An_audio_only_player_is_not_offered_a_video_stream()
+    {
+        // Starting foobar2000 on an mkv is not an improvement on saying there is no
+        // player here — the user would get a confused error from a program they did not
+        // choose, and no hint about the mapping that would actually fix it.
+        _locator.Installed["Foobar2000"] = @"C:\Program Files\foobar2000\foobar2000.exe";
+
+        var context = Request("?origin=FileSystem&key=%2Fdata%2Fmedia%2Fa.mkv");
+
+        await Play(context);
+
+        Assert.AreEqual((int) HttpStatusCode.NotImplemented, Read(context).Status);
+        Assert.AreEqual(0, _shell.Processes.Count);
     }
 
     // ---- which player ----
