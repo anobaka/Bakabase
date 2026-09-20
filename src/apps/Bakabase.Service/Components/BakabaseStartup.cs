@@ -43,6 +43,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
 using Bakabase.Modules.RemoteAccess.Extensions;
 using Bakabase.Service.Components;
+using Bakabase.Service.Components.ModelBinding;
 using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Components.Tasks;
 using Bakabase.Service.Extensions;
@@ -122,6 +123,7 @@ namespace Bakabase.Service.Components
             {
                 o.Filters.Add<RemoteAccessAuthorizationFilter>();
                 o.Filters.Add<RemoteAccessPathGuardFilter>();
+                FlagsEnumModelBinderProvider.Register(o.ModelBinderProviders);
             });
 
             // Same reasoning for the hub filter: AppStartup owns AddSignalR, and
