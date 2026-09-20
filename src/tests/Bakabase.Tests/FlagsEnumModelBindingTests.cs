@@ -89,7 +89,7 @@ public class FlagsEnumModelBindingTests
         await new FlagsEnumModelBinder(typeof(ResourceAdditionalItem)).BindModelAsync(context);
 
         Assert.IsFalse(context.Result.IsModelSet);
-        Assert.IsFalse(context.ModelState.IsValid);
+        Assert.AreEqual(1, context.ModelState.ErrorCount);
     }
 
     [TestMethod]
@@ -128,7 +128,9 @@ public class FlagsEnumModelBindingTests
 
         await new FlagsEnumModelBinder(typeof(T)).BindModelAsync(context);
 
-        Assert.IsTrue(context.ModelState.IsValid, string.Join("; ",
+        // ErrorCount, not IsValid: SetModelValue leaves the entry Unvalidated, and an
+        // unvalidated dictionary is never "valid" however few errors it holds.
+        Assert.AreEqual(0, context.ModelState.ErrorCount, string.Join("; ",
             context.ModelState.SelectMany(kv => kv.Value!.Errors).Select(e => e.ErrorMessage)));
         Assert.IsTrue(context.Result.IsModelSet);
 
