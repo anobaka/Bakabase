@@ -2,7 +2,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Player.Abstractions.Components;
 using Bakabase.Modules.Player.Components;
 
-namespace Bakabase.Client.Remoting.Components.UserMachine;
+namespace Bakabase.Modules.Player.Components;
 
 /// <param name="ExecutablePath">Null means "let the OS decide".</param>
 /// <param name="CommandTemplate">The user's argument template, e.g. <c>"{0}" --fullscreen</c>.</param>

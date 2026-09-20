@@ -11,6 +11,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Client.Remoting.Abstractions;
 using Bakabase.Client.Remoting.Abstractions.Models;
 using Bakabase.Client.Remoting.Components;
+using Bakabase.Client.Remoting.Components.Connection;
 using Bakabase.Client.Remoting.Components.Diagnostics;
 using Bakabase.Client.Remoting.Components.Forwarding;
 using Bakabase.Client.Remoting.Components.Shell;
@@ -503,6 +504,50 @@ public class ClientPipelineTests
         var body = await (await Send($"{ClientApiEndpoints.Prefix}/status")).Content.ReadAsStringAsync();
 
         StringAssert.DoesNotMatch(body, new Regex("deviceKey", RegexOptions.IgnoreCase));
+    }
+
+    [TestMethod]
+    public async Task Migration_hints_export_only_names_origin_addresses_and_paths_without_old_credentials()
+    {
+        const string original = "https://legacy-user:legacy-password@192.168.1.10:34567/path-secret?token=query-secret#fragment-secret";
+        var store = _host.Services.GetRequiredService<IClientConnectionStore>();
+        await store.MutateAsync(data => data.Servers =
+        [
+            new ClientServerConnection
+            {
+                ServerId = "server-identity-secret", ServerName = "Home library", BaseAddress = original,
+                DeviceId = "device-identity-secret", DeviceKey = "old-administrator-signing-key",
+                PathMappings = [new ClientPathMapping { ServerPath = "/data/media", LocalPath = "Z:\\media" }]
+            },
+            new ClientServerConnection
+            {
+                ServerId = "unsafe", ServerName = "Invalid protocol", BaseAddress = "file:///secret-file",
+                DeviceId = "device", DeviceKey = "secret"
+            }
+        ]);
+        using var response = await Send($"{ClientApiEndpoints.Prefix}/migration-hints");
+        var text = await response.Content.ReadAsStringAsync();
+        var data = JsonDocument.Parse(text).RootElement.GetProperty("data");
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.IsTrue(response.Headers.CacheControl!.NoStore);
+        Assert.AreEqual("bakabase-client-connection-hints", data.GetProperty("format").GetString());
+        Assert.AreEqual(1, data.GetProperty("version").GetInt32());
+        var servers = data.GetProperty("servers");
+        Assert.AreEqual(1, servers.GetArrayLength());
+        var server = servers[0];
+        CollectionAssert.AreEquivalent(new[] { "name", "address", "pathMappings" },
+            server.EnumerateObject().Select(p => p.Name).ToArray());
+        Assert.AreEqual("Home library", server.GetProperty("name").GetString());
+        Assert.AreEqual("https://192.168.1.10:34567", server.GetProperty("address").GetString());
+        var mapping = server.GetProperty("pathMappings")[0];
+        CollectionAssert.AreEquivalent(new[] { "serverPath", "localPath" }, mapping.EnumerateObject().Select(p => p.Name).ToArray());
+        Assert.AreEqual("/data/media", mapping.GetProperty("serverPath").GetString());
+        Assert.AreEqual("Z:\\media", mapping.GetProperty("localPath").GetString());
+        foreach (var secret in new[] { "legacy-user", "legacy-password", "path-secret", "query-secret", "fragment-secret",
+                     "server-identity-secret", "device-identity-secret", "old-administrator-signing-key", "secret-file" })
+            Assert.IsFalse(text.Contains(secret, StringComparison.Ordinal), "A legacy credential escaped in the migration payload.");
+        Assert.AreEqual(original, store.Read().Servers[0].BaseAddress);
+        Assert.AreEqual("old-administrator-signing-key", store.Read().Servers[0].DeviceKey);
     }
 
     [TestMethod]

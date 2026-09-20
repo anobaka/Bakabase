@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
@@ -28,6 +29,13 @@ namespace Bakabase.Service.Components.RemoteAccess
     {
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
+            // The separate node boundary has already authenticated this explicit protocol action.
+            if (Bakabase.Service.Components.Federation.FederationLocalAccessFilter.HasHandledEndpoint(context))
+            {
+                await next();
+                return;
+            }
+
             var remoteContext = context.HttpContext.GetRemoteAccessContext();
 
             // A paired device is one the operator deliberately let in, and the point of

@@ -13,7 +13,7 @@ import { asideMenuConfig } from "./menuConfig";
 
 import BetaChip from "@/components/Chips/BetaChip";
 import DeprecatedChip from "@/components/Chips/DeprecatedChip";
-import { useIsPureClient } from "@/stores/remoteAccess";
+import { useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -26,6 +26,8 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const isPureClient = useIsPureClient();
+  const isLocalNode =
+    useRemoteAccessStore((state) => state.initialized && state.isLocal) && !isPureClient;
   // console.log(pathname);
 
   const onClick: MenuProps["onClick"] = (e) => {
@@ -71,8 +73,11 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
   // client is answered by the context call, which has not happened when that module
   // loads.
   const visibleMenuConfig = useMemo(
-    () => asideMenuConfig.filter((m) => !m.pureClientOnly || isPureClient),
-    [isPureClient],
+    () =>
+      asideMenuConfig.filter(
+        (m) => (!m.pureClientOnly || isPureClient) && (!m.localNodeOnly || isLocalNode),
+      ),
+    [isPureClient, isLocalNode],
   );
 
   const items: MenuProps["items"] = visibleMenuConfig.map(convertItem);
@@ -101,21 +106,20 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
 
   return (
     <Menu
+      forceSubMenuRender
       defaultOpenKeys={defaultOpenKeysRef.current}
       defaultSelectedKeys={defaultSelectedKeysRef.current}
       inlineCollapsed={collapsed}
       inlineIndent={12}
+      items={items}
       mode="inline"
       selectedKeys={[findSelectedKey()]}
       style={{
-        background: 'none',
-        border: 'none',
-        width: '100%',
+        background: "none",
+        border: "none",
+        width: "100%",
       }}
       onClick={onClick}
-      forceSubMenuRender
-      // inlineIndent={0}
-      items={items}
     />
   );
 };

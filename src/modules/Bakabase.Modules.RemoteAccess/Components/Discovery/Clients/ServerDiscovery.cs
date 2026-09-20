@@ -1,4 +1,4 @@
-namespace Bakabase.Client.Remoting.Components.Discovery;
+namespace Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 
 /// <summary>
 /// Both ways of finding a server, run together.

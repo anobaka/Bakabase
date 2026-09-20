@@ -42,7 +42,7 @@ import { TbToolsKitchen } from "react-icons/tb";
 
 import WelcomePage from "@/pages/welcome";
 import DashboardPage from "@/pages/dashboard";
-import ResourcePage from "@/pages/resource";
+import ResourcePage from "@/pages/resource/entry";
 import MediaLibraryPage from "@/pages/media-library";
 import CustomPropertyPage from "@/pages/custom-property";
 import ExtensionGroup from "@/pages/extension-group";
@@ -90,6 +90,8 @@ import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 
 // Lazy load test page to avoid circular dependency
 const Test = lazy(() => import("@/pages/test"));
+const FederationLibraryPage = lazy(() => import("@/features/federation/LibraryPage"));
+const FederationDevicesPage = lazy(() => import("@/features/federation/DevicesPage"));
 
 export interface RouteMenuItem {
   name: string;
@@ -107,6 +109,8 @@ export interface RouteMenuItem {
    * happened yet at import time.
    */
   pureClientOnly?: boolean;
+  /** The local coordinator belongs to the unified application, never to a forwarded UI. */
+  localNodeOnly?: boolean;
 }
 
 export const routesMenuConfig: RouteMenuItem[] = [
@@ -132,6 +136,22 @@ export const routesMenuConfig: RouteMenuItem[] = [
     icon: AiOutlinePicture,
     layout: "basic",
     menu: true,
+  },
+  {
+    name: "federation.title",
+    path: "/federation",
+    component: FederationLibraryPage,
+    icon: AiOutlineCloudServer,
+    layout: "basic",
+    localNodeOnly: true,
+  },
+  {
+    name: "federation.devices.title",
+    path: "/federation/devices",
+    component: FederationDevicesPage,
+    icon: AiOutlineLaptop,
+    layout: "basic",
+    localNodeOnly: true,
   },
   {
     name: "menu.mediaLibrary",

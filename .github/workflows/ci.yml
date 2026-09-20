@@ -56,8 +56,9 @@ jobs:
 
       - name: Run tests
         run: |
-          # One `dotnet test` per project so a single failure does not mask
-          # the rest. Live-network ThirdParty tests are [Ignore]d and skipped.
+          # Invoke the MSTest.Sdk executable runner directly: on SDK 9,
+          # `dotnet test` can exit successfully without executing these projects.
+          # Live-network ThirdParty tests are [Ignore]d and skipped.
           projects=(
             "src/tests/Bakabase.Tests/Bakabase.Tests.csproj"
             "src/tests/Bakabase.Modules.Acquisition.Tests/Bakabase.Modules.Acquisition.Tests.csproj"
@@ -68,20 +69,34 @@ jobs:
             "src/tests/Bakabase.Modules.Enhancer.Tests/Bakabase.Modules.Enhancer.Tests.csproj"
             "src/tests/Bakabase.Modules.HealthScore.Tests/Bakabase.Modules.HealthScore.Tests.csproj"
             "src/tests/Bakabase.Modules.Player.Tests/Bakabase.Modules.Player.Tests.csproj"
+            "src/tests/Bakabase.Modules.Federation.Tests/Bakabase.Modules.Federation.Tests.csproj"
             "src/tests/Bakabase.Modules.Property.Tests/Bakabase.Modules.Property.Tests.csproj"
             "src/tests/Bakabase.Modules.StandardValue.Tests/Bakabase.Modules.StandardValue.Tests.csproj"
             "src/tests/Bakabase.Modules.ThirdParty.Tests/Bakabase.Modules.ThirdParty.Tests.csproj"
           )
           failed=()
           for proj in "${projects[@]}"; do
-            echo "::group::dotnet test ${proj}"
-            dotnet test "${proj}" || failed+=("${proj}")
+            echo "::group::Tests ${proj}"
+            if [[ "${proj}" == "src/tests/Bakabase.Tests/Bakabase.Tests.csproj" ]]; then
+              # Legacy fixtures retain a SQLite directory per test. Dispose each
+              # class's owned temp directory so full execution cannot fill the disk.
+              python3 src/tests/run-backend-tests.py --project "${proj}" \
+                --results-directory "${RUNNER_TEMP}/bakabase-backend-results" || failed+=("${proj}")
+            else
+              dotnet run --project "${proj}" -- --minimum-expected-tests 1 || failed+=("${proj}")
+            fi
             echo "::endgroup::"
           done
           if [ ${#failed[@]} -gt 0 ]; then
             printf '::error::Test project failed: %s\n' "${failed[@]}"
             exit 1
           fi
+
+      - name: Three-node federation integration
+        if: ${{ !cancelled() }}
+        run: |
+          dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj
+          python3 src/tests/federation-smoke/run.py
 
   frontend:
     name: Frontend lint & tests
@@ -120,3 +135,7 @@ jobs:
       - name: Test
         if: ${{ !cancelled() }}
         run: yarn vitest run
+
+      - name: Production build
+        if: ${{ !cancelled() }}
+        run: yarn build

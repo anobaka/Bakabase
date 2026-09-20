@@ -134,6 +134,8 @@ const post = <T>(path: string, body?: unknown) =>
 
 export const clientApi = {
   status: () => call<ClientStatus>("/status"),
+  /** Deliberately untyped until the strict migration whitelist validates it. */
+  migrationHints: () => call<unknown>("/migration-hints"),
 
   /** Asks an address what it is. Never throws for an unreachable server — that is an answer. */
   connect: (address: string) => post<ClientHandshakeResult>("/connect", { address }),

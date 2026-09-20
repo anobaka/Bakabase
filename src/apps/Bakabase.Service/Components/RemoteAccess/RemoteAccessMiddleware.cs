@@ -71,6 +71,12 @@ namespace Bakabase.Service.Components.RemoteAccess
         public async Task InvokeAsync(HttpContext context, IRemoteAccessService remoteAccessService,
             RemoteDeviceAuthenticator authenticator, IRemoteDeviceService deviceService)
         {
+            if (Bakabase.Modules.Federation.Security.FederationHttpContext.IsHandled(context))
+            {
+                await next(context);
+                return;
+            }
+
             var isLoopback = IsLoopback(context);
             var mode = remoteAccessService.GetEffectiveMode();
 

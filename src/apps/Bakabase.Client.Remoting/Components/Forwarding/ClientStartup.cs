@@ -2,7 +2,7 @@ using System.Net;
 using Bakabase.Client.Remoting.Abstractions;
 using Bakabase.Client.Remoting.Components.Connection;
 using Bakabase.Client.Remoting.Components.Diagnostics;
-using Bakabase.Client.Remoting.Components.Discovery;
+using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Client.Remoting.Components.Shell;
 using Bakabase.Client.Remoting.Components.Updating;
 using Bakabase.Client.Remoting.Components.UserMachine;

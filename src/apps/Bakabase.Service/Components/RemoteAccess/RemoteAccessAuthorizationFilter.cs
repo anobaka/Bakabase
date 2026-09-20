@@ -25,6 +25,12 @@ namespace Bakabase.Service.Components.RemoteAccess
     {
         public void OnAuthorization(AuthorizationFilterContext context)
         {
+            // The separate node boundary has already authenticated this explicit protocol action.
+            if (Bakabase.Service.Components.Federation.FederationLocalAccessFilter.HasHandledEndpoint(context))
+            {
+                return;
+            }
+
             var remoteContext = context.HttpContext.GetRemoteAccessContext();
 
             // (1) The host itself. Everything the all-in-one does arrives here, so this

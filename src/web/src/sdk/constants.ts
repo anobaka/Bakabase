@@ -5119,6 +5119,24 @@ export const DataCardMatchModeLabel: Record<DataCardMatchMode, string> = {
   [DataCardMatchMode.All]: 'All'
 };
 
+export enum FederationEndpointKind {
+  Local = 0,
+  Public = 1,
+  Export = 2
+}
+
+export const federationEndpointKinds = [
+  { label: 'Local', value: FederationEndpointKind.Local },
+  { label: 'Public', value: FederationEndpointKind.Public },
+  { label: 'Export', value: FederationEndpointKind.Export }
+] as const;
+
+export const FederationEndpointKindLabel: Record<FederationEndpointKind, string> = {
+  [FederationEndpointKind.Local]: 'Local',
+  [FederationEndpointKind.Public]: 'Public',
+  [FederationEndpointKind.Export]: 'Export'
+};
+
 export enum ResourceMatcherLeafKind {
   Property = 1,
   File = 2

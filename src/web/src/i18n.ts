@@ -48,6 +48,7 @@ import enWorkflow from "@/locales/en/pages/workflow.json";
 import enWorkflowTriggers from "@/locales/en/pages/workflowTriggers.json";
 import enAcquisition from "@/locales/en/pages/acquisition.json";
 import enCollection from "@/locales/en/pages/collection.json";
+import enFederation from "@/locales/en/pages/federation.json";
 
 // English - Components
 import enFileExplorer from "@/locales/en/components/fileExplorer.json";
@@ -117,6 +118,7 @@ import cnWorkflow from "@/locales/cn/pages/workflow.json";
 import cnWorkflowTriggers from "@/locales/cn/pages/workflowTriggers.json";
 import cnAcquisition from "@/locales/cn/pages/acquisition.json";
 import cnCollection from "@/locales/cn/pages/collection.json";
+import cnFederation from "@/locales/cn/pages/federation.json";
 
 // Chinese - Components
 import cnFileExplorer from "@/locales/cn/components/fileExplorer.json";
@@ -186,6 +188,7 @@ const enResources = {
   ...enWorkflowTriggers,
   ...enAcquisition,
   ...enCollection,
+  ...enFederation,
   // Components
   ...enFileExplorer,
   ...enResourceFilter,
@@ -255,6 +258,7 @@ const cnResources = {
   ...cnWorkflowTriggers,
   ...cnAcquisition,
   ...cnCollection,
+  ...cnFederation,
   // Components
   ...cnFileExplorer,
   ...cnResourceFilter,
