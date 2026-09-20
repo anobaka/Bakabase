@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.App;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.ResponseModels;
@@ -128,6 +129,13 @@ namespace Bakabase.Service.Controllers
         /// stop. Used by the relocation flow (and any future "restart please" UX) so we don't
         /// hijack the Velopack updater for a non-update restart.
         ///
+        /// The child is told which process it is replacing, via
+        /// <see cref="RestartHandoff.FormatArgument"/>. Spawning has to happen before the host
+        /// stops — the response must reach the frontend first — but the single-instance guard
+        /// refuses whoever finds this process's mutex still held, so without that argument a
+        /// child that got going quickly enough would mistake us for a live instance and exit,
+        /// leaving the user with nothing running once we finished stopping.
+        ///
         /// Dev / Visual Studio caveat: when running under a debugger, the spawned child shares
         /// the parent's console and VS keeps the parent alive — so the user sees the parent
         /// linger. We can't fix that from the server; the FE is expected to message this for
@@ -159,6 +167,7 @@ namespace Bakabase.Service.Controllers
                         UseShellExecute = true,
                         WorkingDirectory = System.IO.Path.GetDirectoryName(exePath) ?? string.Empty,
                     };
+                    psi.ArgumentList.Add(RestartHandoff.FormatArgument(Environment.ProcessId));
                     Process.Start(psi);
                 }
                 catch (Exception ex)
