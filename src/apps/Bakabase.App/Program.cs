@@ -1,4 +1,5 @@
 using Avalonia;
+using Bakabase.Abstractions.Components.App;
 using Bakabase.Shell.Components;
 using Bakabase.Service.Components;
 using Bakabase.Infrastructures.Components.App;
@@ -39,6 +40,12 @@ class Program
         // no coverage of a real launch.
         CrashHandler.Install();
 
+        // A restart spawns its replacement before it has stopped itself, and the
+        // single-instance guard refuses whoever finds the mutex still held. Wait here, ahead
+        // of everything that reaches that check, for the process that spawned us to be gone.
+        // Does nothing on an ordinary launch.
+        var restartHandoff = RestartHandoff.WaitForPredecessor(args);
+
         // Touching AppService runs its static constructor, which is what builds the Serilog file
         // sink. That would otherwise happen a step later, inside OnFrameworkInitializationCompleted
         // — leaving Avalonia's XAML load and tray-icon resolution in a window where a throw is
@@ -47,6 +54,13 @@ class Program
         // same property. Deliberately not guarded — the static ctor throws by design when the
         // AppData layout cannot be migrated, and the handler above is already armed to report it.
         _ = AppService.DefaultAppDataDirectory;
+
+        // Reported only now: the line above is what builds the file sink, and before it
+        // Serilog's default logger drops everything.
+        if (restartHandoff != null)
+        {
+            Serilog.Log.Information(restartHandoff);
+        }
 
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
