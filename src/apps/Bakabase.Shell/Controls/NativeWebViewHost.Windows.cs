@@ -1,19 +1,33 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Gui;
 
 namespace Bakabase.Shell.Controls;
 
 public partial class NativeWebViewHost
 {
+    /// <summary>
+    /// Roots the window procedure for the lifetime of the process.
+    /// </summary>
+    /// <remarks>
+    /// <c>lpfnWndProc = Win32.DefWindowProcW</c> creates a delegate, and marshalling it as a
+    /// function pointer creates a native thunk whose lifetime is the delegate's. Held only by
+    /// the local <c>WNDCLASSEXW</c>, it becomes unreachable the moment
+    /// <see cref="CreateWindows"/> returns, and a collection after that leaves every later
+    /// window message calling into freed memory. Static rather than per-instance because the
+    /// window class is never unregistered, so the thunk has to outlive any one host.
+    /// </remarks>
+    private static readonly Win32.WndProcDelegate WinWndProc = Win32.DefWindowProcW;
+
     private IntPtr _winHwnd;
-    private IntPtr _winWndProcDelegate; // prevent GC
     private object? _winController; // CoreWebView2Controller (typed via dynamic to avoid hard compile-time dep)
     private object? _winWebView; // CoreWebView2
     private bool _winWebView2Ready;
@@ -52,6 +66,24 @@ public partial class NativeWebViewHost
         }
     }
 
+    /// <summary>
+    /// Where WebView2 keeps its profile — cookies, localStorage, the lot.
+    /// </summary>
+    /// <remarks>
+    /// Passing null lets WebView2 default to a folder beside the executable, which on an
+    /// installed build is Velopack's <c>current</c> directory: replaced wholesale by every
+    /// update, taking the profile with it. Mascot position, playback device preference and
+    /// anything else the frontend keeps in localStorage were lost on each update, which on the
+    /// beta channel is often.
+    ///
+    /// Anchored at <see cref="AppService.DefaultAppDataDirectory"/> rather than the effective
+    /// data directory, on purpose: the profile then survives a data-path relocation untouched,
+    /// and a cache that routinely runs to hundreds of megabytes is not something the relocation
+    /// runner should be copying.
+    /// </remarks>
+    private static string WindowsUserDataFolder =>
+        Path.Combine(AppService.DefaultAppDataDirectory, "WebView2");
+
     private IPlatformHandle CreateWindows(IPlatformHandle parent)
     {
         // Register a simple window class for hosting WebView2
@@ -59,7 +91,7 @@ public partial class NativeWebViewHost
         var wndClass = new Win32.WNDCLASSEXW
         {
             cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            lpfnWndProc = Win32.DefWindowProcW,
+            lpfnWndProc = WinWndProc,
             hInstance = Win32.GetModuleHandleW(null),
             lpszClassName = className
         };
@@ -114,8 +146,8 @@ public partial class NativeWebViewHost
             var createMethods = envType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
             var createMethod = createMethods.First(m => m.Name == "CreateAsync" && m.GetParameters().Length == 3);
 
-            // CoreWebView2Environment.CreateAsync(null, null, null)
-            var envTask = (Task)createMethod.Invoke(null, new object?[] { null, null, null })!;
+            // CoreWebView2Environment.CreateAsync(browserExecutableFolder, userDataFolder, options)
+            var envTask = (Task)createMethod.Invoke(null, new object?[] { null, WindowsUserDataFolder, null })!;
             await envTask;
             var env = envTask.GetType().GetProperty("Result")!.GetValue(envTask);
 
