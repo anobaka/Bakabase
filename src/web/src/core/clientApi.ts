@@ -136,6 +136,20 @@ export const clientApi = {
   status: () => call<ClientStatus>("/status"),
   /** Deliberately untyped until the strict migration whitelist validates it. */
   migrationHints: () => call<unknown>("/migration-hints"),
+  /** A native save dialog is optional; older/headless clients keep browser downloads. */
+  exportMigrationHints: async (): Promise<{ outcome: "saved" | "cancelled" | "unavailable" }> => {
+    const response = await fetch("/client/migration-hints/export", { method: "POST" });
+
+    if (response.status === 404) return { outcome: "unavailable" };
+    if (!response.ok) throw new Error(`Connection hint export failed with ${response.status}`);
+    const envelope = await response.json();
+    const outcome = envelope?.data?.outcome;
+
+    if (envelope.code !== 0 || !["saved", "cancelled", "unavailable"].includes(outcome))
+      throw new Error("The client returned an invalid export result.");
+
+    return { outcome };
+  },
 
   /** Asks an address what it is. Never throws for an unreachable server — that is an answer. */
   connect: (address: string) => post<ClientHandshakeResult>("/connect", { address }),

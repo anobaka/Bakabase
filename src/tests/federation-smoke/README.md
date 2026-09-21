@@ -31,12 +31,28 @@ python3 src/tests/federation-smoke/player-proxy.py \
   --results-directory /absolute/path/to/player-results
 ```
 
-Requires an existing official VLC build with AVIO, RC and dummy audio modules.
-The test launches separate headless VLC processes with synthetic WAV data and a
-recording proxy: its control proves proxy inheritance, then the production input
-strategy must read directly and seek via Range without reaching that proxy. It
-does not install software, alter OS proxy settings, use real tickets, or control
-an existing player. GUI playback and other players require separate verification.
+Requires an existing official VLC build with HTTP, RC and dummy audio modules
+(AVIO is used only for the inherited-proxy control). Separate headless processes
+must actually pause their playback clock, resume advancing it, then seek via a
+Range request beyond all bytes already received. The synthetic one-hour WAV has
+a virtual size of 345,600,044 bytes, a 4 MiB/s rate limit and a 32 MiB total transfer
+budget; no large media file is created. Exit code or a reported `paused` state
+alone cannot pass the test.
+
+The product uses native HTTP for VLC only when macOS CFNetwork settings establish
+that no HTTP proxy is configured. A configured or unknown proxy state selects an
+installed mpv/IINA instead, or returns `PlayerProxyUnsupported` before launching
+VLC. Windows/Linux proxy detection is not yet supported, so unmapped VLC streams
+also use this fallback; local files and mapped files retain ordinary VLC playback.
+This script's native HTTP check requires a suitable proxy-free test environment;
+it does not override system or player proxy settings. It uses only synthetic
+tickets and never controls an existing player. Other players and GUI playback
+require separate verification.
+
+`--diagnose-avio` runs the rejected AVIO workaround and is expected to fail pause
+validation on VLC 3.0.23. It is a regression diagnostic, not a supported playback
+strategy; `:clock-synchro=1` is also unsuitable because it enables unbounded
+timeshift buffering. Results and cleanup status are written even on failure.
 
 ## Isolated Linux verification from a desktop
 

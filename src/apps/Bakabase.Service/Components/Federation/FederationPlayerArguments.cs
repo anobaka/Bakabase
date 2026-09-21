@@ -24,19 +24,10 @@ public static class FederationPlayerArguments
 
         var known = KnownPlayerDefinitions.MatchByExecutable(player.ExecutablePath);
         var target = uri.AbsoluteUri;
-        if (known == KnownPlayerDefinitions.Vlc)
-        {
-            // VLC 3.x on macOS reads the system HTTP proxy without checking the destination
-            // (src/darwin/netconf.c), so neither localhost nor no_proxy bypasses it. Its AVIO
-            // input uses libavformat instead and retains Range/seek support. An explicitly
-            // non-HTTP proxy value disables libavformat's proxy lookup; an empty value is
-            // discarded by VLC's option parser and would inherit http_proxy again.
-            // The colon option belongs only to this input, not the user's VLC preferences.
-            return BatchPlayArguments.BuildFromTemplate(player.CommandTemplate, "avio://" + target) +
-                   " :avio-options={http_proxy=direct://}";
-        }
-
         var arguments = BatchPlayArguments.BuildFromTemplate(player.CommandTemplate, target);
+        // VLC keeps its native HTTP input: AVIO cannot pause ordinary HTTP streams in
+        // VLC 3.x. FederationPlayerPolicy excludes VLC before launch when Darwin's
+        // system proxy would receive this loopback ticket.
         // mpv passes nonempty http-proxy through to libavformat, which ignores non-HTTP
         // values. Its braces limit the override to this file. IINA's supported CLI
         // applies --mpv-* to a new PlayerCore; its override lasts for that playback

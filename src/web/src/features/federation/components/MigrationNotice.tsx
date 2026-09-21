@@ -14,6 +14,7 @@ export default function MigrationNotice() {
   const isPureClient = useIsPureClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
+  const [outcome, setOutcome] = useState<"saved" | "cancelled">();
 
   return (
     <aside className="rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -37,7 +38,15 @@ export default function MigrationNotice() {
               void (async () => {
                 setBusy(true);
                 setError(undefined);
+                setOutcome(undefined);
                 try {
+                  const native = await clientApi.exportMigrationHints();
+
+                  if (native.outcome !== "unavailable") {
+                    setOutcome(native.outcome);
+
+                    return;
+                  }
                   const hints = parseConnectionHints(await clientApi.migrationHints());
                   const url = URL.createObjectURL(
                     new Blob([JSON.stringify(hints, null, 2)], { type: "application/json" }),
@@ -61,6 +70,11 @@ export default function MigrationNotice() {
             {t("federation.migration.export")}
           </button>
           <p className="mt-2 text-xs text-default-500">{t("federation.migration.exportTip")}</p>
+          {outcome && (
+            <p className="mt-2 text-sm" role="status">
+              {t(`federation.migration.export.${outcome}`)}
+            </p>
+          )}
           <ErrorNotice error={error} />
         </div>
       )}

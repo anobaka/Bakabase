@@ -36,10 +36,15 @@
 | `Media` | 绑定资源与授权的资产票据、路径边界、固定媒体类型 |
 | `src/apps/Bakabase.Service/Components/Federation` | 实际数据库投影、宿主适配、鉴权管线、媒体代理 |
 | `src/web/src/features/federation` | 独立只读视图、设备管理、迁移提示与连接信息导入 |
+| `Client.Remoting/Components/Forwarding/ClientApiEndpoints.cs`、`Shell/Components/AvaloniaGuiAdapter.FileSave.cs` | 旧客户端连接提示白名单、原生保存对话框；共用可选接口位于父仓库 `Bakabase.Abstractions/Components/Gui/ILocalFileSaveDialog.cs` |
 | `src/tests/Bakabase.Federation.TestHost` | 使用正式 Service 启动流程的独立进程夹具 |
 | `src/tests/federation-smoke/run.py` | 三个独立进程之间的真实网络验收 |
 
 共享发现与本机播放器定位已下沉到 RemoteAccess/Player 模块；Service 不引用 Client.Remoting。旧客户端保留原协议和转发器。新增 Node 协议不需要搬动旧签名、JSON 兼容或活动服务器逻辑。
+
+旧客户端的 `GET /client/migration-hints` 继续提供名称、规范化 origin 地址及路径映射提示。原生导出使用新增的 `POST /client/migration-hints/export`：服务端从本机连接存储生成同一份白名单 JSON，固定建议文件名为 `bakabase-connection-hints.json`，通过可选 `ILocalFileSaveDialog` 交给 Avalonia `StorageProvider.SaveFilePickerAsync`。用户选择目的文件后才写入；启用覆盖确认，同一进程同时只允许一个保存对话框。网页不能传入目的路径或任意内容，带请求体的调用返回 400；接口沿用客户端既有回环、Host/Origin 守卫，输出不含旧管理员密钥、设备身份、URL 凭据或活动连接设置。没有修改固定的 Infrastructure 子模块，也没有添加通用 HTTP 写文件接口或全局 WebView 下载处理。
+
+前端只在返回 `saved` 时显示已保存；`cancelled` 显示取消且不再下载。没有原生保存能力的 `unavailable`，或旧客户端缺少该接口的 404，才回退到既有 GET 与浏览器 Blob 下载。其他 HTTP 错误或无效结果明确显示失败。每次操作先清除上次结果；成功、取消、失败均在 `finally` 解除按钮忙碌状态，Shell 也在 `finally` 释放对话框互斥。通过浏览器访问带可用 GUI 的旧客户端时，同样会打开该客户端所在设备的保存对话框；无 GUI 的测试宿主使用浏览器下载。
 
 新增数据统一存于 AppData 下 `federation/state.json`。身份、授权、配对状态使用一次原子替换，避免多文件部分提交；Unix 文件权限为 0600。普通配置导入不覆盖节点身份。损坏状态正常启动时拒绝使用；显式重置可恢复。还原本库使用新 LibraryEpoch，克隆成另一节点同时换 NodeId。直接从外部完整替换 AppData 无法自动识别，仍需按此操作重置。
 
@@ -148,6 +153,11 @@ curl -X POST http://127.0.0.1:PORT/federation/local/peers/invite
 | 第三轮类型检查 | 310 条既有诊断；4 条 AppInfo 诊断仅行列移动，去除行列后与基线全文一致 |
 | 第三轮身份恢复 | 11/11；真实配对后恢复保留访问授权/映射，克隆清空，两者关闭分享和浏览 |
 | 迁移浏览器脚本诊断 | 2/2；构建失败不会遗留 running 状态，清理后仍保留不含密钥的宿主诊断 |
+| 原生迁移导出接口回归 | `ClientPipelineTests` 34/34；错误 Origin/Host、任意请求体均不能弹保存框；取消/不可用不写文件，保存失败不报成功，保存内容与 GET 使用相同白名单 |
+| 原生迁移导出前端回归 | 全量 98 文件、932/932；导出定向 12/12，定向 lint 0 errors / 0 warnings，Shell 与生产前端构建通过 |
+| 原生迁移导出类型检查 | 仍为 310 条既有诊断；去除既有行列移动后与基线全文一致，无新增 |
+| 原生保存不可用时的浏览器回退 | 最新三宿主迁移全流程通过，114 条/2 来源、恢复/克隆及音频仍通过，0 pageErrors |
+| macOS 实际 SavePicker | self-contained portable `0.0.2-federation.4` 实测通过：实际弹框、取消不写文件、选择测试目录保存白名单 JSON；原连接文件字节不变、无业务数据库。统一版原生文件选择导入后显示地址草稿；证据 `/tmp/bakabase-native-validation/native-export-result.json` |
 
 全套后端曾因原测试辅助类留下 321 个临时数据库、累计约 13 GB 耗尽磁盘而中断。仅清理本轮生成的目录后，已明确完成的前 498 项保留记录，余下 125 个 class 在独立进程和临时目录中全部补跑；合并计数与 discovery 的 1,579 个主工程 case 一致。没有改断言，也没有漏掉中断时失败的初始化用例。之后增加的局部回归单独运行，不重复计入全套统计。
 
@@ -161,15 +171,21 @@ TypeScript 基线核验使用 `git archive f1fa1469 src/web` 导出的临时源�
 
 第三轮补充了可复现的真实旧客户端迁移浏览器脚本：生产 ClientHost/ClientStartup 与两个 Service 使用独立数据目录和端口，旧连接页实际配对/导出，统一版导入、刷新恢复、重复导入，再由来源设备界面批准新的只读授权。114 条联合资源、localhost 音频、跨窗口关闭浏览均通过，旧连接文件未变、旧 key 未迁入、0 pageErrors。脚本和独立 Playwright lockfile 在 `src/tests/federation-browser-smoke/`，已接入 CI。下载清单加载中或失败时，现在仍保留旧客户端迁移入口。
 
-最后使用最新生产前端再次执行了上述浏览器链路，并通过实际 UI/POST 验证恢复同一节点和克隆新节点两条路径，结果位于 `/tmp/bakabase-browser-migration-recovery-final/result.json`。当前前端全量结果、构建、lint 和类型基线比较见 `/tmp/bakabase-identity-recovery-*.log` 与 `-tsc-comparison.json`。备份说明现在明确要求覆盖后首次启动保持网络隔离，身份重置不会自动处理旧版管理协议的授权。
+身份恢复补丁完成后，再次执行上述浏览器链路，并通过实际 UI/POST 验证恢复同一节点和克隆新节点两条路径，结果位于 `/tmp/bakabase-browser-migration-recovery-final/result.json`。当轮前端全量结果、构建、lint 和类型基线比较见 `/tmp/bakabase-identity-recovery-*.log` 与 `-tsc-comparison.json`。备份说明现在明确要求覆盖后首次启动保持网络隔离，身份重置不会自动处理旧版管理协议的授权。
+
+随后实际旧客户端 macOS WebView 暴露了 Blob 导出缺口：GET 返回 200，但没有保存对话框或文件。Shell 原先只有上传用的 OpenPanel，没有下载保存实现。上述窄导出接口修复已完成编译及自动化回归，证据为 `/tmp/bakabase-native-migration-pipeline-tests/summary.json`、`/tmp/bakabase-native-migration-{frontend-tests,all-tests,lint,shell-build,web-build,tsc}.log`。最新 Chromium 回退链路结果为 `/tmp/bakabase-browser-native-export-fallback/result.json`；它使用没有原生保存能力的真实 ClientHost，只能证明浏览器回退，不能代替 macOS 保存对话框验收。实际打包客户端保存/取消与导入复验结果待补入[发布验收记录](multi-device-library-release-readiness.md)。
 
 最终三宿主重跑结果在 `/tmp/bakabase-federation-third-round-final-2/result.json`：771 条及全部撤销/媒体/覆盖场景通过。脚本增加恢复后两个开关均关闭、不能生成邀请码、显式重新开启分享后旧引用仍被拒绝的断言。首次重跑暴露脚本仍假设恢复后可立即邀请；现已按新的实际行为更新并完整重跑，没有恢复旧的自动分享行为。
 
-原生 VLC 验证发现 macOS 系统 HTTP 代理会接收 localhost 媒体票据，造成 503。服务端现在只对自己发出的严格 loopback 媒体票据构造单次播放直连参数：VLC 使用 AVIO/libavformat，mpv/IINA 使用对应代理覆盖；本机文件和路径映射沿用原参数，不修改系统代理或播放器偏好。入口拒绝任意目标、userinfo、query、fragment、转义和畸形票据。新回归 6/6、相关旧回归 48/48、Player 72/72 通过。
+原生 VLC 验证发现 macOS 系统 HTTP 代理会接收 localhost 媒体票据，造成 503。最初 AVIO/libavformat 策略通过直连及 seek 测试，但本轮实际 GUI 揭示暂停失败；其普通 HTTP 输入不支持暂停，RC 的 paused 状态不足以证明时钟停止，因此移除该策略。服务端在发送票据前检查本机代理配置，受影响或未知时跳过 VLC，自动选择支持显式直连的 mpv/IINA；无候选则提示预览、映射或安装支持的播放器。VLC 保留正常原生 HTTP 输入；本机文件和路径映射不受该策略影响，不修改系统代理或播放器偏好。入口继续拒绝任意目标、userinfo、query、fragment、转义和畸形票据。
+
+本轮策略/参数 14 / 14、Player 74 / 74、旧播放处理器 20 / 20 通过。实际 self-contained 统一版 `0.0.2-federation.4` 在 VLC-only 代理环境显示中文提示，加入仅测试 PATH 的官方 IINA 1.4.4 后自动选择并播放；暂停时钟保持 `00:08`、恢复/拖动到 `07:00`、继续到 `07:08` 后再次暂停均通过。原生迁移草稿也在关闭旧包、启动新包后保留。Windows/Linux 尚无可信 VLC 代理检测，零映射 VLC 流使用同样替代路径；独立 mpv、视频和物理网络矩阵未记作通过。测试进程及临时发现链接均已清理，完整边界见发布验收记录。
 
 `player-proxy.py` 用官方 VLC 3.0.23 和独立 WAV/诱饵代理验证：控制组经代理失败，修复后代理请求为 0，来源收到 `Range: bytes=0-` 与跳到 90 秒后的 `bytes=8640044-`，退出码 0。证据在 `/tmp/bakabase-player-proxy-results-20260921/result.json`。此脚本不修改系统代理；mpv/IINA 仅核对官方参数契约，未实际运行。
 
 真实 macOS 打包发现两个产品的 plist 缺少 `CFBundleExecutable`，且自定义版本固定为 1.0.0；现已修复并在 Velopack 前生成版本、后审计实际 Portable.zip，14 个 guard/plist 测试通过。Ubuntu 24.04 ARM64 容器中实际执行 Federation 47、Player 72、兼容 131 通过，Service 包审计通过；原生编译及三宿主启动遇到 SIGILL，不能记为完整 Linux 门禁通过。Windows 路径和播放器发现测试夹具另修复了平台依赖，27 项定向回归通过。
+
+继续诊断已在无业务依赖的最小程序中捕获 .NET 9 CoreCLR PAL 执行 `rdvl` 导致的 SIGILL，与 SME-only Linux 信号上下文的官方已知缺陷一致；相同 DLL 在官方 .NET 10.0.12 的三次对照均正常。完整复现和平台范围见 [Linux ARM64 诊断](linux-arm64-runtime-diagnosis.md)。本轮不升级产品框架；Linux x64 发布目标仍须执行其自身 CI，不能用 ARM 失败或 .NET 10 最小程序成功替代。
 
 ## 性能观测
 

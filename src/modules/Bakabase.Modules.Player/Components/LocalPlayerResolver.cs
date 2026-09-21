@@ -93,12 +93,18 @@ public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
     /// video stream with a download prompt — so a target that is a URL needs a program
     /// known to be a player, not whatever the OS would pick.
     /// </remarks>
-    public ResolvedPlayer? ResolveInstalled(string fileNameOrPath)
+    public ResolvedPlayer? ResolveInstalled(string fileNameOrPath,
+        Func<Abstractions.Models.Domain.KnownPlayerDefinition, bool>? isAllowed = null)
     {
         var extension = Path.GetExtension(fileNameOrPath);
 
         foreach (var definition in KnownPlayerDefinitions.All)
         {
+            if (isAllowed?.Invoke(definition) == false)
+            {
+                continue;
+            }
+
             // A null set means the player claims everything; foobar2000 claims audio
             // only, and starting it on a video is not an improvement on failing.
             if (definition.SupportedExtensions?.Contains(extension) == false)

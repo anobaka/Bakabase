@@ -11,11 +11,11 @@ public sealed class FederationPlayerArgumentsTests
     private static readonly string MediaUrl = "http://localhost:34567/federation/local/media/" + new string('a', 64);
 
     [TestMethod]
-    public void VlcTicketUsesSeekableAvioInputAndExplicitDirectProxyValue()
+    public void VlcKeepsNativeHttpInputForPauseAndRangeSeek()
     {
         var arguments = FederationPlayerArguments.Build(new ResolvedPlayer("/Applications/VLC.app/Contents/MacOS/VLC", null),
             null, MediaUrl);
-        Assert.AreEqual($"\"avio://{MediaUrl}\" :avio-options={{http_proxy=direct://}}", arguments);
+        Assert.AreEqual($"\"{MediaUrl}\"", arguments);
     }
 
     [TestMethod]
@@ -67,7 +67,7 @@ public sealed class FederationPlayerArgumentsTests
         {
             var url = MediaUrl.Replace("localhost", host);
             StringAssert.Contains(FederationPlayerArguments.Build(new ResolvedPlayer("vlc", null), null, url),
-                "avio://" + url);
+                url);
         }
     }
 }

@@ -147,6 +147,7 @@
   "federation.error.RequestTooLarge": "请求过大，请减少资源或设备数量。",
   "federation.error.MalformedQuery": "查询格式无效，请检查条件和所选设备。",
   "federation.error.PlayerUnavailable": "无法打开受支持的本机播放器，请使用预览或配置本机播放器。",
+  "federation.error.PlayerProxyUnsupported": "当前播放器与代理设置的组合无法保证直接播放此资源。请使用内置预览、配置本机目录映射，或安装 mpv（macOS 也可使用 IINA）后重试。",
   "federation.error.MediaUnsupported": "当前浏览器无法播放此媒体格式，请尝试受支持的本机播放器。",
   "federation.connection.Online": "在线",
   "federation.connection.online": "在线",
@@ -231,5 +232,7 @@
   "federation.mappings.replace": "替换这些映射",
   "federation.mappings.removed": "移除映射",
   "federation.identity.restore": "恢复旧库后更换代际",
-  "federation.identity.restoreConfirm": "用于同一台设备恢复旧库：关闭分享和联合浏览，更换库代际，撤销所有旧入站节点授权并清除待处理入站请求与邀请。保留本设备身份、访问其他设备的授权和路径映射。请在恢复安装保持断网隔离时执行，复核旧版远程访问授权后再联网、重新分享与授权。"
+  "federation.identity.restoreConfirm": "用于同一台设备恢复旧库：关闭分享和联合浏览，更换库代际，撤销所有旧入站节点授权并清除待处理入站请求与邀请。保留本设备身份、访问其他设备的授权和路径映射。请在恢复安装保持断网隔离时执行，复核旧版远程访问授权后再联网、重新分享与授权。",
+  "federation.migration.export.saved": "连接提示已保存。",
+  "federation.migration.export.cancelled": "已取消保存，未写入文件。"
 }

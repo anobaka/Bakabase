@@ -147,6 +147,7 @@
   "federation.error.RequestTooLarge": "This request is too large. Select fewer items or devices.",
   "federation.error.MalformedQuery": "The query is invalid. Check its filters and selected devices.",
   "federation.error.PlayerUnavailable": "No supported local player could be opened. Use the browser preview or configure a local player.",
+  "federation.error.PlayerProxyUnsupported": "The current player and proxy settings cannot guarantee a direct connection for this resource. Use the built-in preview, configure a local directory mapping, or install mpv (IINA is also available on macOS), then try again.",
   "federation.error.MediaUnsupported": "This browser cannot play the media format. Try a supported local player.",
   "federation.connection.Online": "Online",
   "federation.connection.online": "Online",
@@ -231,5 +232,7 @@
   "federation.mappings.replace": "Replace these mappings",
   "federation.mappings.removed": "Remove mapping",
   "federation.identity.restore": "Change library generation after restoring",
-  "federation.identity.restoreConfirm": "For a restored library on the same device: turn sharing and browsing off, change the library generation, and revoke all previous inbound node grants and pending requests/invitations. The device identity, access to other devices and path mappings are retained. Complete this while the restored installation is isolated from the network; review legacy remote-access permissions before reconnecting, then share and authorize devices again."
+  "federation.identity.restoreConfirm": "For a restored library on the same device: turn sharing and browsing off, change the library generation, and revoke all previous inbound node grants and pending requests/invitations. The device identity, access to other devices and path mappings are retained. Complete this while the restored installation is isolated from the network; review legacy remote-access permissions before reconnecting, then share and authorize devices again.",
+  "federation.migration.export.saved": "Connection hints saved.",
+  "federation.migration.export.cancelled": "Save cancelled; no file was written."
 }

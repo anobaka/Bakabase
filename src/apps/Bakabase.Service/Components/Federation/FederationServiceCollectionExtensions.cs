@@ -31,6 +31,8 @@ public static class FederationServiceCollectionExtensions
         services.AddScoped<FederationDirectoryService>();
         services.TryAddSingleton<IFederationDirectoryOpener, FederationDirectoryOpener>();
         services.TryAddSingleton<LocalPlayerResolver>();
+        services.TryAddSingleton<IFederationPlayerProxyEnvironment, FederationPlayerProxyEnvironment>();
+        services.TryAddSingleton<FederationPlayerPolicy>();
         services.TryAddSingleton<UdpProbeClient>();
         services.TryAddSingleton<MdnsBrowser>();
         services.TryAddSingleton<IServerDiscovery, ServerDiscovery>();

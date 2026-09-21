@@ -21,7 +21,7 @@ namespace Bakabase.Service.Components.Federation;
 
 public sealed class FederationMediaService(INodeIdentityProvider identity, FederationResourceService local,
     IPeerSessionFactory sessions, INodeTransport transport, FederationPeerService peers,
-    FederationMediaSessions mediaSessions, LocalPlayerResolver players,
+    FederationMediaSessions mediaSessions, FederationPlayerPolicy players,
     IBatchPlayProcessLauncher launcher, IResourceService resources, GrantLeaseRegistry leases,
     FederationDirectoryService directories)
 {
@@ -88,9 +88,7 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
             return new PlaybackSessionResponse(url, source.Asset.ContentType, false, source.Asset.ExpiresAt);
         if (source.Asset.Kind == "image")
             throw new FederationQueryException("UnsupportedPlaybackMode", 422, "Use the image preview for this asset.");
-        var player = players.ResolveInstalled(source.Asset.FileName) ??
-                     throw new FederationQueryException("PlayerUnavailable", 501,
-                         "Install a supported media player on this device to open this stream.");
+        var player = players.Resolve(source.Asset.FileName, localPath);
         await launcher.LaunchAsync(player.ExecutablePath!,
             FederationPlayerArguments.Build(player, localPath, url), ct);
         if (source.Peer == null)
