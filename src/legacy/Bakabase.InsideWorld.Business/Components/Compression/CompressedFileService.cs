@@ -63,6 +63,24 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             return null;
         }
 
+        private async Task<string?> GetSevenZipExecutableAsync(CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (_sevenZipService != null)
+            {
+                try
+                {
+                    await _sevenZipService.EnsureReadyAsync(ct);
+                }
+                catch (DependencyNotInstalledException)
+                {
+                    return null;
+                }
+            }
+
+            return GetSevenZipExecutable();
+        }
+
         private Exception CreateDependencyNotInstalledException()
         {
             var sevenZipDisplayName = _sevenZipService?.DisplayName ?? "7-Zip";
@@ -83,7 +101,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
 
         public async Task ExtractToCurrentDirectory(string compressedFilePath, bool overwrite, CancellationToken ct)
         {
-            var sevenZipExe = GetSevenZipExecutable();
+            var sevenZipExe = await GetSevenZipExecutableAsync(ct);
             if (sevenZipExe == null)
             {
                 throw CreateDependencyNotInstalledException();
@@ -107,7 +125,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
 
         private async Task ExtractSingleStage(string compressedFilePath, string outputDir, bool overwrite, CancellationToken ct)
         {
-            var sevenZipExe = GetSevenZipExecutable()!;
+            var sevenZipExe = (await GetSevenZipExecutableAsync(ct))!;
             var password = compressedFilePath.GetPasswordsFromPath().FirstOrDefault();
 
             var arguments = new List<string>
@@ -174,7 +192,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
         public async Task<MemoryStream?> ExtractOneEntry(string compressedFilePath, string entryPath,
             CancellationToken ct)
         {
-            var sevenZipExe = GetSevenZipExecutable();
+            var sevenZipExe = await GetSevenZipExecutableAsync(ct);
             if (sevenZipExe == null)
             {
                 throw CreateDependencyNotInstalledException();
@@ -226,7 +244,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
         {
             if (File.Exists(compressFilePath))
             {
-                var sevenZipExe = GetSevenZipExecutable();
+                var sevenZipExe = await GetSevenZipExecutableAsync(ct);
                 if (sevenZipExe == null)
                 {
                     var ex = CreateDependencyNotInstalledException();
@@ -372,7 +390,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             Action<string>? onStandardError,
             CancellationToken ct)
         {
-            var sevenZipExe = GetSevenZipExecutable();
+            var sevenZipExe = await GetSevenZipExecutableAsync(ct);
             if (sevenZipExe == null)
             {
                 throw CreateDependencyNotInstalledException();
@@ -471,7 +489,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             Action<string>? onStandardError,
             CancellationToken ct)
         {
-            var sevenZipExe = GetSevenZipExecutable();
+            var sevenZipExe = await GetSevenZipExecutableAsync(ct);
             if (sevenZipExe == null)
             {
                 throw CreateDependencyNotInstalledException();

@@ -22,7 +22,8 @@ namespace Bakabase.Service.Components.Federation;
 public sealed class FederationMediaService(INodeIdentityProvider identity, FederationResourceService local,
     IPeerSessionFactory sessions, INodeTransport transport, FederationPeerService peers,
     FederationMediaSessions mediaSessions, LocalPlayerResolver players,
-    IBatchPlayProcessLauncher launcher, IResourceService resources, GrantLeaseRegistry leases)
+    IBatchPlayProcessLauncher launcher, IResourceService resources, GrantLeaseRegistry leases,
+    FederationDirectoryService directories)
 {
     public async Task<ResourceResolveResponse> ResolveAsync(ResourceResolveRequest request, CancellationToken ct)
     {
@@ -64,7 +65,8 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
                     Assets = sourceDetail.Assets.Select(asset => asset with
                         { ExpiresAt = asset.ExpiresAt - peer.ClockOffset }).ToArray()
                 };
-                mediaSessions.Remember(detail, peer);
+                detail = detail with { DirectoryAccess = await directories.GetAccessAsync(detail, peer, ct), Location = null };
+                mediaSessions.Remember(detail, peer, ct);
                 details.Add(detail.Ref, detail);
             }
         }
@@ -80,7 +82,7 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
             throw new FederationQueryException("UnsupportedPlaybackMode", 422);
         var source = mediaSessions.GetAsset(request.AssetRef);
         var localPath = await ValidateAndMapAsync(source, ct);
-        var ticket = mediaSessions.Issue(source, localPath);
+        var ticket = mediaSessions.Issue(source, localPath, ct);
         var url = loopbackOrigin.TrimEnd('/') + "/federation/local/media/" + ticket.Id;
         if (request.Mode == "preview")
             return new PlaybackSessionResponse(url, source.Asset.ContentType, false, source.Asset.ExpiresAt);
@@ -132,7 +134,7 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
                 retryable: (int)response.StatusCode >= 500);
     }
 
-    private static async Task<T> ReadJsonAsync<T>(HttpResponseMessage response, CancellationToken ct)
+    internal static async Task<T> ReadJsonAsync<T>(HttpResponseMessage response, CancellationToken ct)
     {
         EnsureSuccess(response);
         const int limit = 8 * 1024 * 1024;

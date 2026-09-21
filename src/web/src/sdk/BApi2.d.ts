@@ -3076,6 +3076,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/federation/v1/export/resources/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["LocateFederationExportResource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/federation/v1/export/mapping-roots": {
         parameters: {
             query?: never;
@@ -3172,6 +3188,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/federation/local/resources/open-directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenFederatedResourceDirectory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/federation/local/playback-sessions": {
         parameters: {
             query?: never;
@@ -3213,6 +3245,22 @@ export interface paths {
         };
         get: operations["GetFederationPeers"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/peers/browsing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetFederationBrowsing"];
         post?: never;
         delete?: never;
         options?: never;
@@ -11601,6 +11649,13 @@ export interface components {
             collections: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedCollection"][];
             assets: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedAsset"][];
             unavailableReason?: string;
+            directoryAccess?: components["schemas"]["Bakabase.Modules.Federation.Media.FederationDirectoryAccess"];
+            location?: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedResourceLocation"];
+        };
+        "Bakabase.Modules.Federation.Media.FederatedResourceLocation": {
+            sourceRootId: string;
+            relativePath: string;
+            isDirectory: boolean;
         };
         "Bakabase.Modules.Federation.Media.FederatedSource": {
             /** Format: int32 */
@@ -11608,9 +11663,19 @@ export interface components {
             label?: string;
             url?: string;
         };
+        "Bakabase.Modules.Federation.Media.FederationDirectoryAccess": {
+            canOpen: boolean;
+            reason?: string;
+        };
         "Bakabase.Modules.Federation.Media.MappingRoot": {
             sourceRootId: string;
             name: string;
+        };
+        "Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest": {
+            resourceRef: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
+        };
+        "Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse": {
+            opened: boolean;
         };
         "Bakabase.Modules.Federation.Media.PlaybackSessionRequest": {
             assetRef: components["schemas"]["Bakabase.Modules.Federation.Media.AssetRef"];
@@ -11622,6 +11687,13 @@ export interface components {
             launched: boolean;
             /** Format: date-time */
             expiresAt: string;
+        };
+        "Bakabase.Modules.Federation.Media.ResourceLocationRequest": {
+            resourceRef: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
+        };
+        "Bakabase.Modules.Federation.Media.ResourceLocationResponse": {
+            ref: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
+            location?: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedResourceLocation"];
         };
         "Bakabase.Modules.Federation.Media.ResourceResolveRequest": {
             refs: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"][];
@@ -12468,6 +12540,9 @@ export interface components {
             resourceId: number;
             mediaLibraryIds: number[];
         };
+        "Bakabase.Service.Controllers.FederationBrowsingRequest": {
+            enabled: boolean;
+        };
         "Bakabase.Service.Controllers.FederationClaimRequest": {
             requestId: string;
         };
@@ -12480,6 +12555,7 @@ export interface components {
         };
         "Bakabase.Service.Controllers.FederationPathMappingsRequest": {
             mappings: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePathMapping"][];
+            expectedMappings?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePathMapping"][];
         };
         "Bakabase.Service.Controllers.FederationPeerChange": {
             changed: boolean;
@@ -12494,6 +12570,7 @@ export interface components {
             requirePairing: boolean;
             peers: components["schemas"]["Bakabase.Modules.Federation.Peers.FederationPeerView"][];
             requests: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingRequestView"][];
+            browsingEnabled: boolean;
         };
         "Bakabase.Service.Controllers.FederationSharingRequest": {
             enabled: boolean;
@@ -21935,6 +22012,35 @@ export interface operations {
             };
         };
     };
+    LocateFederationExportResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
+                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
+                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationResponse"];
+                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationResponse"];
+                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationResponse"];
+                };
+            };
+        };
+    };
     GetFederationExportMappingRoots: {
         parameters: {
             query?: never;
@@ -22101,6 +22207,35 @@ export interface operations {
             };
         };
     };
+    OpenFederatedResourceDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
+                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
+                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse"];
+                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse"];
+                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse"];
+                };
+            };
+        };
+    };
     CreateFederatedPlaybackSession: {
         parameters: {
             query?: never;
@@ -22188,6 +22323,35 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerStatusResponse"];
                     "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerStatusResponse"];
                     "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerStatusResponse"];
+                };
+            };
+        };
+    };
+    SetFederationBrowsing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
                 };
             };
         };

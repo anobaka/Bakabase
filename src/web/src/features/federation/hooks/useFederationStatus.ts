@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { federationPeerApi } from "../peerApi";
 import { isAbort } from "../transport";
+import { subscribeBrowsingChanged } from "../statusEvents";
 
 /** Local status only: no remote hub or options are attached to the application stores. */
 export function useFederationStatus() {
@@ -39,8 +40,23 @@ export function useFederationStatus() {
 
   useEffect(() => {
     void refresh();
+    const unsubscribe = subscribeBrowsingChanged((enabled) => {
+      // Disabling clears active views immediately; enabling requires a fresh server response.
+      if (!enabled)
+        setStatus((previous) => (previous ? { ...previous, browsingEnabled: false } : previous));
+      void refresh();
+    });
+    const onFocus = () => {
+      if (!document.hidden) void refresh();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
 
     return () => {
+      unsubscribe();
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
       generation.current += 1;
       active.current?.abort();
     };

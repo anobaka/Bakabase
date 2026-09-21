@@ -1,13 +1,32 @@
 import type { FederationStatus, PairingResult, PathMapping } from "./types";
 
 import { federationRequest, jsonBody } from "./transport";
+import { notifyBrowsingChanged } from "./statusEvents";
 
 const prefix = "/peers";
 
 export const federationPeerApi = {
   status: (signal?: AbortSignal) => federationRequest<FederationStatus>(prefix, { signal }),
-  resetIdentity: () =>
-    federationRequest<unknown>(`${prefix}/identity/reset`, jsonBody({ asNewNode: true })),
+  browsing: async (enabled: boolean) => {
+    const result = await federationRequest<unknown>(
+      `${prefix}/browsing`,
+      jsonBody({ enabled }, "PUT"),
+    );
+
+    notifyBrowsingChanged(enabled);
+
+    return result;
+  },
+  resetIdentity: async () => {
+    const result = await federationRequest<unknown>(
+      `${prefix}/identity/reset`,
+      jsonBody({ asNewNode: true }),
+    );
+
+    notifyBrowsingChanged(false);
+
+    return result;
+  },
   discover: (signal?: AbortSignal) =>
     federationRequest<{ nodeId: string; name: string; address: string }[]>(`${prefix}/discover`, {
       signal,
@@ -41,10 +60,10 @@ export const federationPeerApi = {
       `${prefix}/${encodeURIComponent(nodeId)}/enabled`,
       jsonBody({ enabled }, "PUT"),
     ),
-  mappings: (nodeId: string, mappings: PathMapping[]) =>
+  mappings: (nodeId: string, mappings: PathMapping[], expectedMappings: PathMapping[]) =>
     federationRequest<unknown>(
       `${prefix}/${encodeURIComponent(nodeId)}/path-mappings`,
-      jsonBody({ mappings }, "PUT"),
+      jsonBody({ mappings, expectedMappings }, "PUT"),
     ),
   mappingRoots: (nodeId: string, signal?: AbortSignal) =>
     federationRequest<{ sourceRootId: string; name: string }[]>(

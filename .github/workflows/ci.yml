@@ -92,11 +92,94 @@ jobs:
             exit 1
           fi
 
-      - name: Three-node federation integration
-        if: ${{ !cancelled() }}
+      - name: Retain backend class results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-class-results
+          path: ${{ runner.temp }}/bakabase-backend-results
+          if-no-files-found: ignore
+
+  federation-platform:
+    name: Federation and release contracts (${{ matrix.rid }})
+    needs: frontend
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            runtimeMode: WINFORMS
+            desktop: true
+          - os: ubuntu-24.04
+            rid: linux-x64
+            runtimeMode: DOCKER
+            desktop: false
+          - os: macos-15-intel
+            rid: osx-x64
+            runtimeMode: MACOS
+            desktop: true
+          - os: macos-15
+            rid: osx-arm64
+            runtimeMode: MACOS
+            desktop: true
+    defaults:
+      run:
+        shell: bash
+    env:
+      DOTNET_MULTILEVEL_LOOKUP: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source identities and release guard failure cases
+        run: |
+          python src/tests/upgrade-tests/check-release-contract.py --report "$RUNNER_TEMP/federation-results/product-identities.json"
+          python src/tests/upgrade-tests/test_release_contract.py
+      - name: Identity, AppData, relocation and migration whitelist contracts
+        run: python src/tests/upgrade-tests/run-compatibility.py --results-directory "$RUNNER_TEMP/federation-results/compatibility"
+      - name: Federation protocol, budgets and filesystem boundaries
+        run: dotnet run --project src/tests/Bakabase.Modules.Federation.Tests -- --minimum-expected-tests 1 --report-trx --results-directory "$RUNNER_TEMP/federation-results/protocol"
+      - name: Native player discovery and launch arguments
+        run: dotnet run --project src/tests/Bakabase.Modules.Player.Tests -- --minimum-expected-tests 1 --report-trx --results-directory "$RUNNER_TEMP/federation-results/player"
+      - name: Three independent native hosts
         run: |
           dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj
-          python3 src/tests/federation-smoke/run.py
+          python src/tests/federation-smoke/run.py --timeout 300 --results-directory "$RUNNER_TEMP/federation-results/smoke"
+      - uses: actions/download-artifact@v4
+        with:
+          name: federation-ci-web
+          path: ${{ runner.temp }}/federation-web
+      - name: Inspect actual headless publish contents
+        run: |
+          dotnet publish src/apps/Bakabase.Service/Bakabase.Service.csproj -p:RuntimeMode=DOCKER --self-contained false -r ${{ matrix.rid }} -o "$RUNNER_TEMP/publish-server"
+          python -c 'import os, shutil; from pathlib import Path; p=Path(os.environ["RUNNER_TEMP"]); shutil.copytree(p/"federation-web", p/"publish-server/web")'
+          python src/tests/upgrade-tests/check-release-contract.py --role server --publish-dir "$RUNNER_TEMP/publish-server" --require-web --report "$RUNNER_TEMP/federation-results/server-package.json"
+      - name: Inspect actual desktop publish contents
+        if: matrix.desktop
+        run: |
+          dotnet publish src/apps/Bakabase.App/Bakabase.App.csproj -p:RuntimeMode=${{ matrix.runtimeMode }} --self-contained false -r ${{ matrix.rid }} -o "$RUNNER_TEMP/publish-unified"
+          python -c 'import os, shutil; from pathlib import Path; p=Path(os.environ["RUNNER_TEMP"]); shutil.copytree(p/"federation-web", p/"publish-unified/web")'
+          python src/tests/upgrade-tests/check-release-contract.py --role unified --publish-dir "$RUNNER_TEMP/publish-unified" --require-web --report "$RUNNER_TEMP/federation-results/unified-package.json"
+          dotnet publish src/apps/Bakabase.Client.App/Bakabase.Client.App.csproj -p:RuntimeMode=${{ matrix.runtimeMode }} --self-contained false -r ${{ matrix.rid }} -o "$RUNNER_TEMP/publish-client"
+          python src/tests/upgrade-tests/check-release-contract.py --role client --publish-dir "$RUNNER_TEMP/publish-client" --report "$RUNNER_TEMP/federation-results/client-package.json"
+      - name: Retain platform evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: federation-${{ matrix.rid }}-evidence
+          path: ${{ runner.temp }}/federation-results
+          if-no-files-found: warn
+          retention-days: 14
 
   frontend:
     name: Frontend lint & tests
@@ -139,3 +222,9 @@ jobs:
       - name: Production build
         if: ${{ !cancelled() }}
         run: yarn build
+
+      - name: Frontend for package content checks
+        uses: actions/upload-artifact@v4
+        with:
+          name: federation-ci-web
+          path: src/web/dist

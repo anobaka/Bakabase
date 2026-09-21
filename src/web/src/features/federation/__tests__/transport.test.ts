@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { federationRequest } from "../transport";
+import { federationPeerApi } from "../peerApi";
 import { federationQueryApi } from "../queryApi";
 import { federationResourceApi, localMediaUrl } from "../resourceApi";
 import { readResourceRef, withResourceRef } from "../navigation";
@@ -46,10 +47,30 @@ describe("local federation transport", () => {
       expect.objectContaining({ method: "DELETE", keepalive: true }),
     ]);
     expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ refs: [ref] });
+    await federationResourceApi.openDirectory(ref);
+    expect(fetch.mock.calls[3][0]).toBe(
+      "http://localhost:5555/federation/local/resources/open-directory",
+    );
+    expect(fetch.mock.calls[3][1].method).toBe("POST");
+    expect(JSON.parse(fetch.mock.calls[3][1].body)).toEqual({ resourceRef: ref });
     expect(JSON.parse(fetch.mock.calls[2][1].body)).toEqual({
       assetRef: { resourceRef: ref, assetId: "opaque" },
       mode: "player",
     });
+  });
+  it("sends expected mappings so a concurrent edit cannot silently overwrite saved paths", async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+
+    vi.stubGlobal("fetch", fetch);
+    const existing = [{ sourceRootId: "root", localPath: "/Old" }];
+    const next = [{ sourceRootId: "root", localPath: "/New" }];
+
+    await federationPeerApi.mappings("peer", next, existing);
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+      mappings: next,
+      expectedMappings: existing,
+    });
+    expect(fetch.mock.calls[0][1].method).toBe("PUT");
   });
   it("only renders media capabilities issued on this coordinator", () => {
     expect(localMediaUrl("/federation/local/media/opaque")).toBe(

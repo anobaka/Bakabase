@@ -44,6 +44,7 @@ internal sealed class FederationState
     public string? NodeId { get; set; }
     public string? LibraryEpoch { get; set; }
     public bool SharingEnabled { get; set; }
+    public bool BrowsingEnabled { get; set; }
     public Dictionary<string, StoredPeer> Peers { get; set; } = new(StringComparer.Ordinal);
     public Dictionary<string, StoredGrant> InboundGrants { get; set; } = new(StringComparer.Ordinal);
     public Dictionary<string, NodeCredentials> OutboundGrants { get; set; } = new(StringComparer.Ordinal);

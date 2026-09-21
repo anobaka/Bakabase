@@ -48,12 +48,16 @@ export default function ResourceDetail({
   const [playing, setPlaying] = useState(false);
   const [playError, setPlayError] = useState<Error>();
   const [launched, setLaunched] = useState(false);
+  const [openingDirectory, setOpeningDirectory] = useState(false);
+  const [directoryOpened, setDirectoryOpened] = useState(false);
+  const [directoryError, setDirectoryError] = useState<Error>();
   const [media, setMedia] = useState<{
     asset: FederatedAsset;
     session: PlaybackSession;
     url: string;
   }>();
   const playbackRequest = useRef<AbortController>();
+  const directoryRequest = useRef<AbortController>();
   const generation = useRef(0);
   const key = resourceKey(resourceRef);
 
@@ -62,12 +66,16 @@ export default function ResourceDetail({
     const controller = new AbortController();
 
     playbackRequest.current?.abort();
+    directoryRequest.current?.abort();
     setDetail(undefined);
     setError(undefined);
     setMedia(undefined);
     setPlayError(undefined);
     setLaunched(false);
     setPlaying(false);
+    setOpeningDirectory(false);
+    setDirectoryOpened(false);
+    setDirectoryError(undefined);
     void federationResourceApi
       .detail(resourceRef, controller.signal)
       .then((response) => {
@@ -87,6 +95,7 @@ export default function ResourceDetail({
       generation.current += 1;
       controller.abort();
       playbackRequest.current?.abort();
+      directoryRequest.current?.abort();
     };
   }, [key, revision]);
 
@@ -125,6 +134,28 @@ export default function ResourceDetail({
   };
 
   const isLocal = resourceRef.nodeId === localNodeId && resourceRef.libraryEpoch === localEpoch;
+  const openDirectory = async () => {
+    if (!detail?.directoryAccess?.canOpen || openingDirectory) return;
+    const current = generation.current;
+    const controller = new AbortController();
+
+    directoryRequest.current?.abort();
+    directoryRequest.current = controller;
+    setOpeningDirectory(true);
+    setDirectoryOpened(false);
+    setDirectoryError(undefined);
+    try {
+      const result = await federationResourceApi.openDirectory(resourceRef, controller.signal);
+
+      if (current !== generation.current) return;
+      if (!result.opened) throw new FederationError("OpenDirectoryUnavailable", "", 409);
+      setDirectoryOpened(true);
+    } catch (cause) {
+      if (current === generation.current && !isAbort(cause)) setDirectoryError(asError(cause));
+    } finally {
+      if (current === generation.current) setOpeningDirectory(false);
+    }
+  };
 
   return (
     <section
@@ -169,6 +200,31 @@ export default function ResourceDetail({
               {t("federation.manageLocal")}
             </Link>
           )}
+          <div className="space-y-2">
+            <button
+              className={buttonClass}
+              disabled={!detail.directoryAccess?.canOpen || openingDirectory}
+              type="button"
+              onClick={() => void openDirectory()}
+            >
+              {t(openingDirectory ? "federation.directory.opening" : "federation.directory.open")}
+            </button>
+            <p className="text-xs text-default-500">{t("federation.directory.tip")}</p>
+            {!detail.directoryAccess?.canOpen && (
+              <p className="text-xs text-default-500">
+                {t(
+                  `federation.error.${detail.directoryAccess?.reason || "OpenDirectoryUnavailable"}`,
+                  { defaultValue: t("federation.error.OpenDirectoryUnavailable") },
+                )}
+              </p>
+            )}
+            {directoryOpened && (
+              <p className="text-sm text-success" role="status">
+                {t("federation.directory.opened")}
+              </p>
+            )}
+            <ErrorNotice error={directoryError} />
+          </div>
           {detail.properties.length > 0 && (
             <dl className="divide-y divide-default-200">
               {detail.properties.map((property, index) => (

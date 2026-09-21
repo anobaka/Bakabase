@@ -151,6 +151,7 @@ public sealed class FederatedQueryCoordinator : IDisposable
             lock (_gate)
             {
                 ObjectDisposedException.ThrowIf(_disposed, this);
+                cancellationToken.ThrowIfCancellationRequested();
                 var preparedBytes = accepted.Sum(p => p.Reservation?.Bytes ?? 0L);
                 if (_bytes + _workspaceBytes - preparedBytes + session.Bytes > _limits.MaxCoordinatorBytes)
                     throw new FederationQueryException("Busy", 429, retryable: true);
@@ -460,6 +461,17 @@ public sealed class FederatedQueryCoordinator : IDisposable
         try { await client.ReleaseAsync(snapshotId, timeout.Token).WaitAsync(timeout.Token); }
         catch { /* Owner-side absolute TTL bounds orphan retention. */ }
     }
+    public Task ReleaseOwnerAsync(string owner)
+    {
+        Session[] sessions;
+        lock (_gate)
+        {
+            sessions = _sessions.Values.Where(s => s.Owner == owner).ToArray();
+            foreach (var session in sessions) RemoveLocked(session);
+        }
+        return Task.WhenAll(sessions.Select(session => ReleaseStreams(session.Streams)));
+    }
+
     public void Dispose()
     {
         _timer.Dispose();

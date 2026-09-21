@@ -1090,7 +1090,7 @@ namespace Bakabase.Service.Controllers
 
                     try
                     {
-                        var ffprobePath = _ffMpegService.FfProbeExecutable;
+                        var ffprobePath = await _ffMpegService.GetFfProbeExecutableAsync(HttpContext.RequestAborted);
                         var probeResult = await Cli.Wrap(ffprobePath)
                             .WithArguments(args =>
                             {
@@ -1181,7 +1181,7 @@ namespace Bakabase.Service.Controllers
 
             try
             {
-                var ffprobePath = _ffMpegService.FfProbeExecutable;
+                var ffprobePath = await _ffMpegService.GetFfProbeExecutableAsync(HttpContext.RequestAborted);
                 var streamSelector = isVideo ? "v:0" : "a:0";
                 var showEntries = isVideo
                     ? "stream=codec_name,width,height,duration:format=duration"
@@ -1364,7 +1364,7 @@ namespace Bakabase.Service.Controllers
                     string audioCodec;
                     try
                     {
-                        var ffprobePath = _ffMpegService.FfProbeExecutable;
+                        var ffprobePath = await _ffMpegService.GetFfProbeExecutableAsync(HttpContext.RequestAborted);
                         videoCodec = await ProbeCodecName(ffprobePath, fullname, "v:0");
                         audioCodec = await ProbeCodecName(ffprobePath, fullname, "a:0");
                     }
@@ -1421,7 +1421,7 @@ namespace Bakabase.Service.Controllers
                                 .RequestAborted);
                         var preferredCodec = hwAccelInfo.PreferredCodec;
 
-                        var ffmpegPath = _ffMpegService.FfMpegExecutable;
+                        var ffmpegPath = await _ffMpegService.GetFfMpegExecutableAsync(HttpContext.RequestAborted);
 
                         // Transcode to h264 using the given codec. Hardware-specific
                         // tuning is selected based on the codec name.
@@ -1593,7 +1593,7 @@ namespace Bakabase.Service.Controllers
             await FfMpegStreamingSlots.WaitAsync(HttpContext.RequestAborted);
             try
             {
-                var command = Cli.Wrap(_ffMpegService.FfMpegExecutable)
+                var command = Cli.Wrap(await _ffMpegService.GetFfMpegExecutableAsync(HttpContext.RequestAborted))
                     .WithArguments(args =>
                     {
                         args

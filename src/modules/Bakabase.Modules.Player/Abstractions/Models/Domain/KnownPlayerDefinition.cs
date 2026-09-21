@@ -18,6 +18,12 @@ public record KnownPlayerDefinition
     /// </summary>
     public required string[] ExecutableNames { get; init; }
 
+    /// <summary>Executable paths relative to /Applications and ~/Applications on macOS.</summary>
+    public string[] MacAppBundleExecutables { get; init; } = [];
+
+    /// <summary>Built-in CLI switches required when launched without interactive stdin.</summary>
+    public string? ArgumentPrefix { get; init; }
+
     public BatchPlayCapability Capabilities { get; init; }
 
     /// <summary>

@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { parseConnectionHints } from "../migration";
+import {
+  parseConnectionHints,
+  mergeConnectionHints,
+  saveConnectionHintDraft,
+  loadConnectionHintDraft,
+  clearConnectionHintDraft,
+  CONNECTION_HINT_DRAFT_KEY,
+} from "../migration";
 
 const hints = () => ({
   format: "bakabase-client-connection-hints",
@@ -66,5 +73,53 @@ describe("migration credential boundary", () => {
     const result = parseConnectionHints(hints());
 
     expect(Object.keys(result.servers[0].pathMappings[0])).toEqual(["serverPath", "localPath"]);
+  });
+});
+
+describe("persistent migration drafts", () => {
+  beforeEach(() => localStorage.clear());
+  it("restores only whitelisted hints and merges repeat imports by normalized address and path pair", () => {
+    const input = { ...hints(), deviceKey: "secret", options: { updateFeed: "legacy" } };
+    const once = mergeConnectionHints(undefined, input);
+    const twice = mergeConnectionHints(once, {
+      ...input,
+      servers: [{ ...input.servers[0], address: "http://192.168.1.8:34567/" }],
+    });
+
+    expect(twice).toEqual(once);
+    saveConnectionHintDraft(twice);
+    expect(loadConnectionHintDraft()).toEqual(once);
+    expect(localStorage.getItem(CONNECTION_HINT_DRAFT_KEY)).not.toMatch(
+      /secret|deviceKey|options|updateFeed/,
+    );
+    const spy = vi.spyOn(Storage.prototype, "setItem");
+
+    saveConnectionHintDraft(twice);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+  it("keeps conflicting old paths as hints until a user explicitly binds a current root", () => {
+    const previous = parseConnectionHints(hints());
+    const merged = mergeConnectionHints(previous, {
+      ...hints(),
+      servers: [
+        {
+          ...hints().servers[0],
+          pathMappings: [{ serverPath: "D:/Media", localPath: "/Volumes/Other" }],
+        },
+      ],
+    });
+
+    expect(merged.servers).toHaveLength(1);
+    expect(merged.servers[0].pathMappings).toHaveLength(2);
+    expect(JSON.stringify(merged)).not.toContain("sourceRootId");
+  });
+  it("rejects corrupt stored drafts and clearing affects only our hints key", () => {
+    localStorage.setItem("unrelated", "keep");
+    localStorage.setItem(CONNECTION_HINT_DRAFT_KEY, '{"deviceKey":"secret"}');
+    expect(loadConnectionHintDraft).toThrow();
+    clearConnectionHintDraft();
+    expect(loadConnectionHintDraft()).toBeUndefined();
+    expect(localStorage.getItem("unrelated")).toBe("keep");
   });
 });

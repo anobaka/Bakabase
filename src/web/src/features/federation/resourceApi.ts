@@ -5,6 +5,11 @@ import { federationRequest, jsonBody } from "./transport";
 import envConfig from "@/config/env";
 
 export const federationResourceApi = {
+  openDirectory: (resourceRef: ResourceRef, signal?: AbortSignal) =>
+    federationRequest<{ opened: boolean }>(
+      "/resources/open-directory",
+      jsonBody({ resourceRef }, "POST", signal),
+    ),
   detail: (ref: ResourceRef, signal?: AbortSignal) =>
     federationRequest<{ resources: FederatedResourceDetail[] }>(
       "/resources/resolve",

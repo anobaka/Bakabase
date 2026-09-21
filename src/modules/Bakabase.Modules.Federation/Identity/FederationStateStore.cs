@@ -62,6 +62,12 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
     public async Task<bool> IsSharingEnabledAsync(CancellationToken ct = default) =>
         (await ReadAsync(ct)).SharingEnabled;
 
+    public async Task<bool> IsBrowsingEnabledAsync(CancellationToken ct = default) =>
+        (await ReadAsync(ct)).BrowsingEnabled;
+
+    public Task SetBrowsingEnabledAsync(bool enabled, CancellationToken ct = default) =>
+        MutateAsync(state => { state.BrowsingEnabled = enabled; return true; }, ct);
+
     /// <summary>Only the explicit local clone/reset command may replace unreadable node state.</summary>
     internal async Task<NodeIdentity> ResetAsNewNodeAsync(CancellationToken ct)
     {

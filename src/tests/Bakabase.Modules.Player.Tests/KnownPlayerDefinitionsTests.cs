@@ -29,6 +29,9 @@ public class KnownPlayerDefinitionsTests
     [DataRow(@"D:\tools\potplayer64.EXE", "PotPlayer")]
     [DataRow(@"C:\Program Files\VideoLAN\VLC\vlc.exe", "Vlc")]
     [DataRow("/usr/bin/vlc", "Vlc")]
+    [DataRow("/Applications/VLC.app/Contents/MacOS/VLC", "Vlc")]
+    [DataRow("/Applications/IINA.app/Contents/MacOS/iina-cli", "Iina")]
+    [DataRow("/opt/homebrew/bin/iina", "Iina")]
     [DataRow(@"C:\apps\mpv\mpv.exe", "Mpv")]
     [DataRow(@"C:\Program Files\MPC-HC\mpc-hc64.exe", "MpcHc")]
     public void MatchByExecutable_RecognizesKnownExecutables(string path, string expectedId)

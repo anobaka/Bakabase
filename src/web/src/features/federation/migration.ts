@@ -10,6 +10,7 @@ export interface ConnectionHints {
 }
 
 export const MAX_HINT_FILE_BYTES = 256 * 1024;
+export const CONNECTION_HINT_DRAFT_KEY = "federation.connection-hints.v1";
 
 export function parseConnectionHints(value: unknown): ConnectionHints {
   const invalid = () => {
@@ -71,4 +72,57 @@ export function parseConnectionHints(value: unknown): ConnectionHints {
       };
     }),
   };
+}
+
+/** Repeated imports merge only safe hints; they never construct peers, grants or active mappings. */
+export function mergeConnectionHints(
+  previous: ConnectionHints | undefined,
+  incoming: unknown,
+): ConnectionHints {
+  const next = parseConnectionHints(incoming);
+  const servers = new Map<string, ConnectionHints["servers"][number]>();
+
+  for (const server of [
+    ...(previous ? parseConnectionHints(previous).servers : []),
+    ...next.servers,
+  ]) {
+    const existing = servers.get(server.address);
+    const mappings = new Map<string, { serverPath: string; localPath: string }>();
+
+    for (const mapping of [...(existing?.pathMappings ?? []), ...server.pathMappings])
+      mappings.set(JSON.stringify([mapping.serverPath, mapping.localPath]), mapping);
+    servers.set(server.address, {
+      ...(existing?.name || server.name ? { name: existing?.name || server.name } : {}),
+      address: server.address,
+      pathMappings: [...mappings.values()],
+    });
+  }
+  const merged = parseConnectionHints({ ...next, servers: [...servers.values()] });
+
+  if (new TextEncoder().encode(JSON.stringify(merged)).byteLength > MAX_HINT_FILE_BYTES)
+    throw new Error("InvalidConnectionHints");
+
+  return merged;
+}
+
+export function loadConnectionHintDraft(): ConnectionHints | undefined {
+  const raw = localStorage.getItem(CONNECTION_HINT_DRAFT_KEY);
+
+  if (!raw) return undefined;
+  if (new TextEncoder().encode(raw).byteLength > MAX_HINT_FILE_BYTES)
+    throw new Error("InvalidConnectionHints");
+
+  return mergeConnectionHints(undefined, JSON.parse(raw));
+}
+
+export function saveConnectionHintDraft(hints: ConnectionHints) {
+  const safe = mergeConnectionHints(undefined, hints);
+  const json = JSON.stringify(safe);
+
+  if (localStorage.getItem(CONNECTION_HINT_DRAFT_KEY) !== json)
+    localStorage.setItem(CONNECTION_HINT_DRAFT_KEY, json);
+}
+
+export function clearConnectionHintDraft() {
+  localStorage.removeItem(CONNECTION_HINT_DRAFT_KEY);
 }

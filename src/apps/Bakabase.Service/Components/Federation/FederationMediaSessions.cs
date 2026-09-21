@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading;
 using Bakabase.Modules.Federation.Contracts;
 using Bakabase.Modules.Federation.Media;
 using Bakabase.Modules.Federation.Transport;
@@ -23,10 +24,11 @@ public sealed class FederationMediaSessions
     private long _assetBytes;
     private long _ticketBytes;
 
-    public void Remember(FederatedResourceDetail detail, PeerSessionSnapshot? peer)
+    public void Remember(FederatedResourceDetail detail, PeerSessionSnapshot? peer, CancellationToken ct = default)
     {
         lock (_gate)
         {
+            ct.ThrowIfCancellationRequested();
             Prune();
             if (detail.Assets is not { Length: <= 288 } || detail.Ref is null)
                 throw new FederationQueryException("InvalidPeerResponse", 502);
@@ -64,10 +66,11 @@ public sealed class FederationMediaSessions
         }
     }
 
-    public FederationMediaTicket Issue(AvailableFederationAsset source, string? mappedPath)
+    public FederationMediaTicket Issue(AvailableFederationAsset source, string? mappedPath, CancellationToken ct = default)
     {
         lock (_gate)
         {
+            ct.ThrowIfCancellationRequested();
             Prune();
             var bytes = 256 + Estimate(source);
             if (_tickets.Count >= Limit || _assetBytes + _ticketBytes + bytes > ByteLimit)
@@ -87,6 +90,16 @@ public sealed class FederationMediaSessions
             Prune();
             return _tickets.TryGetValue(id, out var ticket) ? ticket :
                 throw new FederationQueryException("AssetExpired", 410, "This media session expired.");
+        }
+    }
+
+    public void Clear()
+    {
+        lock (_gate)
+        {
+            _assets.Clear();
+            _tickets.Clear();
+            _assetBytes = _ticketBytes = 0;
         }
     }
 

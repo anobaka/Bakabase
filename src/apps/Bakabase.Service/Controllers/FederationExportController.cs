@@ -53,6 +53,12 @@ public sealed class FederationExportController(LocalSearchSnapshotService snapsh
     public async Task<IActionResult> Resolve([FromBody] ResourceResolveRequest request, CancellationToken ct) =>
         FederationResult(await resources.ResolveAsync(GrantId, request, ct));
 
+    [HttpPost("resources/location")]
+    [SwaggerOperation(OperationId = "LocateFederationExportResource")]
+    [ProducesResponseType(typeof(ResourceLocationResponse), 200)]
+    public async Task<IActionResult> Location([FromBody] ResourceLocationRequest request, CancellationToken ct) =>
+        FederationResult((await resources.GetLocationAsync(GrantId, request.ResourceRef, ct)).Response);
+
     [HttpGet("mapping-roots")]
     [SwaggerOperation(OperationId = "GetFederationExportMappingRoots")]
     [ProducesResponseType(typeof(MappingRoot[]), 200)]

@@ -198,15 +198,21 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
     }
 
     public async Task SetPathMappingsAsync(string nodeId, IReadOnlyList<NodePathMapping> mappings,
-        CancellationToken ct = default)
+        CancellationToken ct = default, IReadOnlyList<NodePathMapping>? expectedMappings = null)
     {
-        if (mappings.Count > 128 || mappings.Any(m => !NodeRequestSignature.IsIdentifier(m.SourceRootId) ||
-                string.IsNullOrWhiteSpace(m.LocalPath) || !Path.IsPathFullyQualified(m.LocalPath)) ||
+        if (mappings.Count > 128 || expectedMappings is { Count: > 128 } ||
+            mappings.Any(m => m == null || !NodeRequestSignature.IsIdentifier(m.SourceRootId) ||
+                string.IsNullOrWhiteSpace(m.LocalPath) || m.LocalPath.Length > 4096 || !Path.IsPathFullyQualified(m.LocalPath)) ||
             mappings.Select(m => m.SourceRootId).Distinct(StringComparer.Ordinal).Count() != mappings.Count)
             throw BadRequest("Mappings need distinct source root identifiers and absolute paths on this machine.");
         await store.MutateAsync(state =>
         {
             var peer = state.Peers.GetValueOrDefault(nodeId) ?? throw BadRequest("This node is not known here.");
+            if (expectedMappings != null && (expectedMappings.Any(m => m == null) ||
+                !peer.PathMappings.OrderBy(m => m.SourceRootId, StringComparer.Ordinal).SequenceEqual(
+                    expectedMappings.OrderBy(m => m.SourceRootId, StringComparer.Ordinal))))
+                throw new FederationAccessException("PathMappingsChanged", 409,
+                    "Mappings changed on this device. Review the current values before replacing them.");
             peer.PathMappings = mappings.ToList();
             return true;
         }, ct);

@@ -25,8 +25,11 @@ public static class FederationServiceCollectionExtensions
         services.AddSingleton<FederatedQueryCoordinator>();
         services.AddSingleton<AssetLeaseStore>();
         services.AddSingleton<FederationMediaSessions>();
+        services.AddSingleton<FederationBrowsingControl>();
         services.AddScoped<FederationResourceService>();
         services.AddScoped<FederationMediaService>();
+        services.AddScoped<FederationDirectoryService>();
+        services.TryAddSingleton<IFederationDirectoryOpener, FederationDirectoryOpener>();
         services.TryAddSingleton<LocalPlayerResolver>();
         services.TryAddSingleton<UdpProbeClient>();
         services.TryAddSingleton<MdnsBrowser>();

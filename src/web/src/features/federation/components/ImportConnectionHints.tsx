@@ -1,9 +1,15 @@
 import type { ConnectionHints } from "../migration";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { MAX_HINT_FILE_BYTES, parseConnectionHints } from "../migration";
+import {
+  MAX_HINT_FILE_BYTES,
+  clearConnectionHintDraft,
+  loadConnectionHintDraft,
+  mergeConnectionHints,
+  saveConnectionHintDraft,
+} from "../migration";
 import { FederationError } from "../transport";
 
 import { buttonClass, ErrorNotice, panelClass } from "./common";
@@ -16,9 +22,23 @@ export default function ImportConnectionHints({
   busy: boolean;
 }) {
   const { t } = useTranslation();
-  const [hints, setHints] = useState<ConnectionHints>();
-  const [error, setError] = useState<Error>();
+  const [initial] = useState(() => {
+    try {
+      return { hints: loadConnectionHintDraft(), error: undefined };
+    } catch {
+      return { hints: undefined, error: new FederationError("MigrationDraftUnavailable", "", 400) };
+    }
+  });
+  const [hints, setHints] = useState<ConnectionHints | undefined>(initial.hints);
+  const [error, setError] = useState<Error | undefined>(initial.error);
   const generation = useRef(0);
+
+  useEffect(
+    () => () => {
+      generation.current += 1;
+    },
+    [],
+  );
 
   return (
     <section className={panelClass}>
@@ -35,18 +55,37 @@ export default function ImportConnectionHints({
             const file = event.target.files?.[0];
             const current = ++generation.current;
 
-            setHints(undefined);
+            event.currentTarget.value = "";
             setError(undefined);
             if (!file) return;
             void (async () => {
               try {
                 if (file.size > MAX_HINT_FILE_BYTES) throw new Error("InvalidConnectionHints");
-                const parsed = parseConnectionHints(JSON.parse(await file.text()));
+                const contents = JSON.parse(await file.text());
 
-                if (generation.current === current) setHints(parsed);
-              } catch {
+                if (generation.current !== current) return;
+                let previous;
+
+                try {
+                  previous = loadConnectionHintDraft();
+                } catch {
+                  throw new FederationError("MigrationDraftUnavailable", "", 400);
+                }
+                const merged = mergeConnectionHints(previous, contents);
+
+                try {
+                  saveConnectionHintDraft(merged);
+                } catch {
+                  throw new FederationError("MigrationDraftUnavailable", "", 400);
+                }
+                setHints(merged);
+              } catch (cause) {
                 if (generation.current === current)
-                  setError(new FederationError("InvalidConnectionHints", "", 400));
+                  setError(
+                    cause instanceof FederationError
+                      ? cause
+                      : new FederationError("InvalidConnectionHints", "", 400),
+                  );
               }
             })();
           }}
@@ -55,8 +94,30 @@ export default function ImportConnectionHints({
       <div className="mt-3">
         <ErrorNotice error={error} />
       </div>
+      {(hints || error) && (
+        <button
+          className={buttonClass}
+          disabled={busy}
+          type="button"
+          onClick={() => {
+            generation.current += 1;
+            try {
+              clearConnectionHintDraft();
+              setHints(undefined);
+              setError(undefined);
+            } catch {
+              setError(new FederationError("MigrationDraftUnavailable", "", 400));
+            }
+          }}
+        >
+          {t("federation.migration.clearDraft")}
+        </button>
+      )}
       {hints && (
         <div className="mt-3 space-y-3">
+          <p className="text-xs text-default-500" role="status">
+            {t("federation.migration.draftSaved")}
+          </p>
           {!hints.servers.length && (
             <p className="text-sm text-default-500">{t("federation.discovery.none")}</p>
           )}

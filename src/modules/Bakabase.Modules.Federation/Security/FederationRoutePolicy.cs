@@ -29,7 +29,8 @@ public static class FederationRoutePolicy
         {
             if (segments.Length == 4 && Equal(segments[3], "handshake")) return method == "POST";
             if (segments.Length == 4 && Equal(segments[3], "mapping-roots")) return method == "GET";
-            if (segments.Length == 5 && Equal(segments[3], "resources") && Equal(segments[4], "resolve"))
+            if (segments.Length == 5 && Equal(segments[3], "resources") &&
+                (Equal(segments[4], "resolve") || Equal(segments[4], "location")))
                 return method == "POST";
             if (segments.Length == 5 && Equal(segments[3], "assets") && NodeRequestSignature.IsIdentifier(segments[4]))
                 return method is "GET" or "HEAD";
@@ -45,7 +46,7 @@ public static class FederationRoutePolicy
             return segments.Length == 4 && NodeRequestSignature.IsIdentifier(segments[3]) && method is "GET" or "HEAD";
         if (Equal(segments[2], "playback-sessions")) return segments.Length == 3 && method == "POST";
         if (Equal(segments[2], "resources"))
-            return segments.Length == 4 && Equal(segments[3], "resolve") && method == "POST";
+            return segments.Length == 4 && (Equal(segments[3], "resolve") || Equal(segments[3], "open-directory")) && method == "POST";
         if (Equal(segments[2], "queries"))
             return segments.Length == 3 && method == "POST" ||
                    segments.Length == 4 && NodeRequestSignature.IsIdentifier(segments[3]) && method == "DELETE" ||
@@ -54,7 +55,7 @@ public static class FederationRoutePolicy
         if (!Equal(segments[2], "peers")) return false;
         if (segments.Length == 3) return method == "GET";
         if (segments.Length == 4)
-            return Equal(segments[3], "sharing") && method == "PUT" ||
+            return (Equal(segments[3], "sharing") || Equal(segments[3], "browsing")) && method == "PUT" ||
                    Equal(segments[3], "discover") && method == "GET" ||
                    (Equal(segments[3], "invite") || Equal(segments[3], "connect") || Equal(segments[3], "claim")) && method == "POST";
         if (segments.Length == 5)

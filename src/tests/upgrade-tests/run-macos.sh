@@ -21,8 +21,7 @@ if [ "$(uname)" != "Darwin" ]; then
   echo "This script is for macOS only. Use run-linux.sh on Linux." >&2; exit 2
 fi
 
-# Use a per-run scratch HOME so we don't pollute the developer's real
-# ~/Library/Application Support/Bakabase. We point HOME at it for the duration.
+# These are fixture paths only; the GUI is not started and HOME is not changed.
 RUN_ID="$(date +%Y%m%d%H%M%S)-$$"
 RUN_DIR="$WORK_BASE/macos-$SCENARIO-$RUN_ID"
 mkdir -p "$RUN_DIR"
@@ -39,8 +38,10 @@ PUBLISH_B="$RUN_DIR/publish-B"
 trap 'echo; echo "Workspace: $RUN_DIR"' EXIT
 
 # ── Build both versions ───────────────────────────────────────────────────────
-publish_app "$VERSION_A" "$PUBLISH_A" MACOS osx-arm64
-publish_app "$VERSION_B" "$PUBLISH_B" MACOS osx-arm64
+RID="osx-arm64"
+if [ "$(uname -m)" = "x86_64" ]; then RID="osx-x64"; fi
+publish_app "$VERSION_A" "$PUBLISH_A" MACOS "$RID"
+publish_app "$VERSION_B" "$PUBLISH_B" MACOS "$RID"
 
 # ── Stage version A as the "installed" current/ ───────────────────────────────
 cp -R "$PUBLISH_A/." "$INSTALL_ROOT/current/"

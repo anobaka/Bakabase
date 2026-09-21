@@ -27,12 +27,21 @@ public sealed class FederationMediaController(FederationMediaService media, Fede
     public async Task<IActionResult> Resolve([FromBody] ResourceResolveRequest request, CancellationToken ct) =>
         FederationResult(await media.ResolveAsync(request, ct));
 
+    [HttpPost("resources/open-directory")]
+    [SwaggerOperation(OperationId = "OpenFederatedResourceDirectory")]
+    [ProducesResponseType(typeof(OpenResourceDirectoryResponse), 200)]
+    public async Task<IActionResult> OpenDirectory([FromBody] OpenResourceDirectoryRequest request,
+        [FromServices] FederationDirectoryService directories, CancellationToken ct) =>
+        FederationResult(await directories.OpenAsync(request.ResourceRef, ct));
+
     [HttpPost("playback-sessions")]
     [SwaggerOperation(OperationId = "CreateFederatedPlaybackSession")]
     [ProducesResponseType(typeof(PlaybackSessionResponse), 200)]
     public async Task<IActionResult> Prepare([FromBody] PlaybackSessionRequest request, CancellationToken ct) =>
         FederationResult(await media.PrepareAsync(request,
-            $"{Request.Scheme}://127.0.0.1:{HttpContext.Connection.LocalPort}", ct));
+            // The local gate has already validated this loopback Host and port.
+            // Preserve localhost/IPv6 spelling so browser previews remain same-origin.
+            $"{Request.Scheme}://{Request.Host}", ct));
 
     [HttpGet("media/{ticketId}")]
     [SwaggerOperation(OperationId = "ReadFederatedMediaSession")]

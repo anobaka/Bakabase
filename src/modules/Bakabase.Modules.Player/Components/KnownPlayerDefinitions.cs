@@ -41,6 +41,7 @@ public static class KnownPlayerDefinitions
         Id = "Vlc",
         DisplayName = "VLC media player",
         ExecutableNames = ["vlc.exe"],
+        MacAppBundleExecutables = ["VLC.app/Contents/MacOS/VLC"],
         Capabilities = BatchPlayCapability.PlaylistFile | BatchPlayCapability.MultiFileArguments,
         SupportedExtensions = AvExtensions,
         RegistryHints =
@@ -53,6 +54,20 @@ public static class KnownPlayerDefinitions
             @"%ProgramFiles%\VideoLAN\VLC",
             @"%ProgramFiles(x86)%\VideoLAN\VLC",
         ],
+    };
+
+    public static readonly KnownPlayerDefinition Iina = new()
+    {
+        Id = "Iina",
+        DisplayName = "IINA",
+        // Use the supported CLI, not Contents/MacOS/IINA. "iina" is its common PATH symlink.
+        ExecutableNames = ["iina-cli", "iina"],
+        MacAppBundleExecutables = ["IINA.app/Contents/MacOS/iina-cli"],
+        // Official CLI help recommends this for programmatic launches; otherwise
+        // inherited stdin can take precedence over the stream URL.
+        ArgumentPrefix = "--no-stdin",
+        Capabilities = BatchPlayCapability.MultiFileArguments,
+        SupportedExtensions = AvExtensions,
     };
 
     public static readonly KnownPlayerDefinition Mpv = new()
@@ -125,6 +140,7 @@ public static class KnownPlayerDefinitions
     [
         PotPlayer,
         Vlc,
+        Iina,
         Mpv,
         MpcHc,
         MpcBe,

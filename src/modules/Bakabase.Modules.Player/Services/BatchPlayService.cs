@@ -295,18 +295,21 @@ public class BatchPlayService(
         else if (candidate.Capabilities.HasFlag(BatchPlayCapability.MultiFileArguments))
         {
             arguments = BatchPlayArguments.BuildMultiFile(files);
-            if (arguments.Length > options.Value.MaxCommandLineLength)
-            {
-                throw new InvalidOperationException(
-                    "Too many files for this player's command line. Pick a player with playlist support.");
-            }
-
             method = BatchPlayLaunchMethod.MultiFileArguments;
         }
         else
         {
             throw new InvalidOperationException(
                 $"{candidate.DisplayName} does not support opening multiple files at once.");
+        }
+
+        var argumentPrefix = KnownPlayerDefinitions.MatchByExecutable(candidate.ExecutablePath)?.ArgumentPrefix;
+        if (argumentPrefix != null) arguments = $"{argumentPrefix} {arguments}";
+        if (method == BatchPlayLaunchMethod.MultiFileArguments &&
+            arguments.Length > options.Value.MaxCommandLineLength)
+        {
+            throw new InvalidOperationException(
+                "Too many files for this player's command line. Pick a player with playlist support.");
         }
 
         try

@@ -15,6 +15,7 @@ import {
 } from "./components/common";
 import { useFederationStatus } from "./hooks/useFederationStatus";
 import { federationPeerApi } from "./peerApi";
+import { FederationError } from "./transport";
 import ImportConnectionHints from "./components/ImportConnectionHints";
 
 export default function DevicesPage() {
@@ -68,7 +69,11 @@ function Devices() {
 
       return true;
     } catch (cause) {
-      if (mounted.current) setError(cause instanceof Error ? cause : new Error(String(cause)));
+      if (mounted.current) {
+        setError(cause instanceof Error ? cause : new Error(String(cause)));
+        if (cause instanceof FederationError && cause.code === "PathMappingsChanged")
+          await refresh();
+      }
 
       return false;
     } finally {
@@ -183,6 +188,38 @@ function Devices() {
       {!status && loading && <p role="status">{t("federation.loading")}</p>}
       {status && (
         <>
+          <section className={`${panelClass} space-y-3`}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-semibold">{t("federation.browsing.title")}</h2>
+              <span
+                className={`rounded-md px-2 py-1 text-xs ${status.browsingEnabled === true ? "bg-success/10 text-success" : "bg-default-100 text-default-500"}`}
+              >
+                {t(
+                  status.browsingEnabled === true
+                    ? "federation.browsing.on"
+                    : "federation.browsing.off",
+                )}
+              </span>
+            </div>
+            <p className="text-sm text-default-500">{t("federation.browsing.description")}</p>
+            {status.browsingEnabled === true && (
+              <p className="text-xs text-default-500">{t("federation.browsing.disableTip")}</p>
+            )}
+            <button
+              className={buttonClass}
+              disabled={busy}
+              type="button"
+              onClick={() =>
+                void run(() => federationPeerApi.browsing(status.browsingEnabled !== true))
+              }
+            >
+              {t(
+                status.browsingEnabled === true
+                  ? "federation.browsing.disable"
+                  : "federation.browsing.enable",
+              )}
+            </button>
+          </section>
           <section className={`${panelClass} space-y-3`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -498,9 +535,9 @@ function Devices() {
                     () => federationPeerApi.revoke(peer.inboundGrant!.grantId),
                   )
                 }
-                onSaveMappings={(mappings) =>
+                onSaveMappings={(mappings, expectedMappings) =>
                   run(async () => {
-                    await federationPeerApi.mappings(peer.nodeId, mappings);
+                    await federationPeerApi.mappings(peer.nodeId, mappings, expectedMappings);
                     if (mounted.current) setNotice(t("federation.mappings.saved"));
                   })
                 }
@@ -549,11 +586,15 @@ function PeerCard({
   onEnable: (enabled: boolean) => void;
   onForget: () => void;
   onRevoke: () => void;
-  onSaveMappings: (mappings: PathMapping[]) => Promise<boolean>;
+  onSaveMappings: (mappings: PathMapping[], expectedMappings: PathMapping[]) => Promise<boolean>;
 }) {
   const { t } = useTranslation();
   const [mappings, setMappings] = useState(peer.pathMappings);
   const [dirty, setDirty] = useState(false);
+  const [mappingReview, setMappingReview] = useState<{
+    proposed: PathMapping[];
+    baseline: string;
+  }>();
   const [roots, setRoots] = useState<{ sourceRootId: string; name: string }[]>();
   const [rootsError, setRootsError] = useState<Error>();
   const [loadingRoots, setLoadingRoots] = useState(false);
@@ -583,8 +624,53 @@ function PeerCard({
     if (!dirty) setMappings(peer.pathMappings);
   }, [peer.pathMappings, dirty]);
   const update = (index: number, patch: Partial<PathMapping>) => {
+    setMappingReview(undefined);
     setDirty(true);
     setMappings((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  };
+
+  const mappingKey = (rows: PathMapping[]) =>
+    JSON.stringify([...rows].sort((a, b) => a.sourceRootId.localeCompare(b.sourceRootId)));
+  const conflicts = (proposed: PathMapping[]) =>
+    peer.pathMappings.filter(
+      (existing) =>
+        proposed.find((row) => row.sourceRootId === existing.sourceRootId)?.localPath !==
+        existing.localPath,
+    );
+  const persistMappings = async (proposed: PathMapping[]) => {
+    if (await onSaveMappings(proposed, peer.pathMappings)) {
+      setMappingReview(undefined);
+      setMappings(proposed);
+      setDirty(false);
+    }
+  };
+  const reviewMappings = () => {
+    const proposed = mappings.map((mapping) => ({
+      sourceRootId: mapping.sourceRootId.trim(),
+      localPath: mapping.localPath.trim(),
+    }));
+
+    if (conflicts(proposed).length)
+      setMappingReview({ proposed, baseline: mappingKey(peer.pathMappings) });
+    else void persistMappings(proposed);
+  };
+  const applyReview = (keepExisting: boolean) => {
+    if (!mappingReview) return;
+    // A refreshed status invalidates the previous decision; show the latest conflicts first.
+    if (mappingReview.baseline !== mappingKey(peer.pathMappings)) {
+      setMappingReview({ ...mappingReview, baseline: mappingKey(peer.pathMappings) });
+
+      return;
+    }
+    const preserved = keepExisting ? conflicts(mappingReview.proposed) : [];
+    const proposed = [
+      ...mappingReview.proposed.filter(
+        (row) => !preserved.some((existing) => existing.sourceRootId === row.sourceRootId),
+      ),
+      ...preserved,
+    ];
+
+    void persistMappings(proposed);
   };
 
   return (
@@ -662,6 +748,7 @@ function PeerCard({
                   <span>{t("federation.mappings.root")}</span>
                   <select
                     className={fieldClass}
+                    disabled={busy}
                     value={mapping.sourceRootId}
                     onChange={(event) => update(index, { sourceRootId: event.target.value })}
                   >
@@ -683,6 +770,7 @@ function PeerCard({
                   <span>{t("federation.mappings.local")}</span>
                   <input
                     className={fieldClass}
+                    disabled={busy}
                     placeholder="/Volumes/Media"
                     value={mapping.localPath}
                     onChange={(event) => update(index, { localPath: event.target.value })}
@@ -694,6 +782,7 @@ function PeerCard({
                   disabled={busy}
                   type="button"
                   onClick={() => {
+                    setMappingReview(undefined);
                     setDirty(true);
                     setMappings((rows) => rows.filter((_, i) => i !== index));
                   }}
@@ -709,6 +798,7 @@ function PeerCard({
               disabled={busy}
               type="button"
               onClick={() => {
+                setMappingReview(undefined);
                 setDirty(true);
                 setMappings((rows) => [...rows, { sourceRootId: "", localPath: "" }]);
               }}
@@ -725,20 +815,68 @@ function PeerCard({
                 )
               }
               type="button"
-              onClick={() =>
-                void onSaveMappings(
-                  mappings.map((mapping) => ({
-                    sourceRootId: mapping.sourceRootId.trim(),
-                    localPath: mapping.localPath.trim(),
-                  })),
-                ).then((saved) => {
-                  if (saved) setDirty(false);
-                })
-              }
+              onClick={reviewMappings}
             >
               {t("federation.save")}
             </button>
           </div>
+          {mappingReview && (
+            <section
+              aria-label={t("federation.mappings.conflictTitle")}
+              className="mt-3 space-y-3 rounded-lg border border-warning/40 bg-warning/5 p-3"
+              role="alertdialog"
+            >
+              <h4 className="font-medium">{t("federation.mappings.conflictTitle")}</h4>
+              <p className="text-sm">{t("federation.mappings.conflictTip")}</p>
+              {mappingReview.baseline !== mappingKey(peer.pathMappings) && (
+                <p className="text-sm text-warning" role="status">
+                  {t("federation.mappings.changedDuringReview")}
+                </p>
+              )}
+              <ul className="space-y-2 text-xs">
+                {conflicts(mappingReview.proposed).map((existing) => (
+                  <li key={existing.sourceRootId} className="space-y-1 break-all">
+                    <p className="font-medium">
+                      {roots?.find((root) => root.sourceRootId === existing.sourceRootId)?.name ??
+                        t("federation.mappings.unavailableRoot")}
+                    </p>
+                    <p>
+                      {existing.localPath} →{" "}
+                      {mappingReview.proposed.find(
+                        (row) => row.sourceRootId === existing.sourceRootId,
+                      )?.localPath ?? t("federation.mappings.removed")}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className={buttonClass}
+                  disabled={busy}
+                  type="button"
+                  onClick={() => applyReview(true)}
+                >
+                  {t("federation.mappings.keep")}
+                </button>
+                <button
+                  className={primaryClass}
+                  disabled={busy}
+                  type="button"
+                  onClick={() => applyReview(false)}
+                >
+                  {t("federation.mappings.replace")}
+                </button>
+                <button
+                  className={buttonClass}
+                  disabled={busy}
+                  type="button"
+                  onClick={() => setMappingReview(undefined)}
+                >
+                  {t("federation.cancel")}
+                </button>
+              </div>
+            </section>
+          )}
         </details>
       )}
     </article>

@@ -1,12 +1,24 @@
 # 统一桌面端与多设备联合媒体库：落地计划
 
-> 状态：已在 `codex/multi-device-library` 实施首轮代码与本机验收，尚未发布。本文保留原始设计及发布验收清单；实际实现、验证证据和剩余发布门槛见 [实施与验证记录](multi-device-library-implementation.md)。
+> 状态：已在 `codex/multi-device-library` 实施两轮代码与本机验收，尚未发布。本文保留原始设计及发布验收清单；实际实现、验证证据和剩余发布门槛见 [实施与验证记录](multi-device-library-implementation.md) 与 [发布准备与升级验收](multi-device-library-release-readiness.md)。下列原始复选框包含跨平台及最终安装验收，不代表所有代码尚未实施。
 >
 > 基线：2026-09-20 获取的 `origin/main`，`f1fa1469f32f794f17895f5ba886cc14ddd42883`。
 >
 > 实施基线固定为开始执行时获取的主线。工作在独立 worktree 中进行，原工作目录和原有未提交文件保留。实际验证包含编译、后端测试、真实独立进程 HTTP 链路、前端测试与浏览器；打包后的跨平台桌面矩阵另行记录，不能用上述测试替代。
 
 阅读顺序：确认产品边界看 §1/§3；评审核心设计看 §4–§10；安排实施直接看 §11；检查迁移与发布看 §12–§14。共 13 个工作包，每个都有依赖、任务清单、完成标准和回退方式。
+
+### 实施状态索引（2026-09-21）
+
+| 工作包 | 开发分支已有交付 | 尚需外部验证/发布动作 |
+| --- | --- | --- |
+| P00–P06 | 固定基线与子模块、独立模块/契约、身份/配对/授权、每节点连接、严格查询与完整分页；三个生产宿主链路通过 | 多物理设备与各目标平台的矩阵 |
+| P07–P09 | 只读详情、受控媒体、播放器发现、路径映射与本机目录打开、独立 UI；真实双节点浏览器通过 | Windows/macOS 最终桌面包中的播放器、映射、seek/pause |
+| P10 | 浏览和分享分别默认关闭；关闭清理会话/媒体；本机依赖按需初始化、状态恢复 | 实际桌面壳连续流程与启动性能；本机 GUI 验证因锁屏受限 |
+| P11 | 全量及针对性回归、三实例故障/权限测试、性能夹具、四平台 CI、实际 publish 包内容审计 | 远端 CI 首次执行、最终安装包、真实 NAS/跨 OS 与弱网性能 |
+| P12 | 旧端迁移提示/导出，统一版白名单草稿持久化、幂等与映射冲突确认；包/feed/AppData 身份守卫 | 最终安装升级/迁移通过后，发布并收敛新用户下载入口 |
+
+各项测试数量、已知基线诊断和边界以实施记录为准；发布状态不由此索引替代。
 
 背景：[原客户端拆分设计](pc-client-design.html)、[原执行计划](pc-client-execution-plan.html)。本计划继承可复用能力，同时以新的多节点产品目标调整运行方式，不修改历史记录。
 
@@ -737,9 +749,9 @@ cd ../..
 dotnet build src/apps/Bakabase.App/Bakabase.App.csproj
 dotnet build src/apps/Bakabase.Client.App/Bakabase.Client.App.csproj
 dotnet build src/apps/Bakabase.Service/Bakabase.Service.csproj
-dotnet test src/tests/Bakabase.Modules.Federation.Tests/Bakabase.Modules.Federation.Tests.csproj
-dotnet test src/tests/Bakabase.Tests/Bakabase.Tests.csproj --filter 'FullyQualifiedName~Federation'
-dotnet test src/tests/Bakabase.Tests/Bakabase.Tests.csproj --filter 'FullyQualifiedName~RemoteAccess'
+dotnet run --project src/tests/Bakabase.Modules.Federation.Tests -- --minimum-expected-tests 1
+dotnet run --project src/tests/Bakabase.Tests -- --filter 'FullyQualifiedName~Federation' --minimum-expected-tests 1
+dotnet run --project src/tests/Bakabase.Tests -- --filter 'FullyQualifiedName~RemoteAccess' --minimum-expected-tests 1
 ```
 
 工作包先运行相关测试；影响共享启动、授权、播放器或搜索时补对应现有回归。最终发布按 CI 执行仓库登记的后端测试工程、前端 lint/test/build 和打包检查，并执行 `src/tests/upgrade-tests/` 对应平台的升级脚本。此计划本身是文档改动，不需要为它运行上述构建测试。

@@ -18,8 +18,6 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.HealthScore.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
-using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
-using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Service.Components.Tasks;
@@ -110,28 +108,8 @@ namespace Bakabase.Service.Components
             var logService = serviceProvider.GetRequiredService<Bootstrap.Components.Logging.LogService.Services.LogService>();
             await logService.DeleteBefore(DateTime.Now.AddDays(-7));
 
-            var dependencies = serviceProvider.GetRequiredService<IEnumerable<IDependentComponentService>>().ToList();
-            foreach (var d in dependencies)
-            {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        Logger.LogInformation($"Trying to discover dependency [{d.DisplayName}({d.Id})]");
-                        await d.Discover(new CancellationToken());
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.LogError(e, $"Failed to discover dependency [{d.DisplayName}({d.Id})]: {e.Message}");
-                    }
-
-                    if (d is {IsRequired: true, Status: DependentComponentStatus.NotInstalled})
-                    {
-                        Logger.LogInformation($"Dependency [{d.DisplayName}({d.Id})] is not installed, installing...");
-                        await d.Install(new CancellationToken());
-                    }
-                });
-            }
+            // Local-file tools are discovered by their first consumer. Starting an empty
+            // library to browse other devices must not probe or download these components.
 
             // Builtin text types are defined in code, so their rows are an invariant. Creating
             // them here — post-migration, before anything serves a request — keeps reads pure and

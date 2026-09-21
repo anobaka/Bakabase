@@ -20,6 +20,7 @@ import { useFederatedQuery } from "./hooks/useFederatedQuery";
 import { readResourceRef, withResourceRef } from "./navigation";
 import { resourceKey } from "./types";
 import { FederationError } from "./transport";
+import { federationPeerApi } from "./peerApi";
 
 import { resourceSources } from "@/sdk/constants";
 
@@ -63,6 +64,8 @@ function Library() {
   const [sourceKinds, setSourceKinds] = useState<number[]>([]);
   const [submittedText, setSubmittedText] = useState("");
   const [now, setNow] = useState(Date.now());
+  const [enabling, setEnabling] = useState(false);
+  const [enableError, setEnableError] = useState<Error>();
   const initialized = useRef<string>();
   const detailRef = readResourceRef(params);
 
@@ -89,7 +92,7 @@ function Library() {
   if (status) names.set(status.identity.nodeId, status.identity.name);
 
   const submit = () => {
-    if (!nodeIds.length) return;
+    if (status?.browsingEnabled !== true || !nodeIds.length) return;
     setSubmittedText(text.trim());
     void search({
       nodeIds,
@@ -105,6 +108,13 @@ function Library() {
   };
 
   useEffect(() => {
+    if (status && status.browsingEnabled !== true) {
+      initialized.current = undefined;
+      reset();
+      if (detailRef) setParams(withResourceRef(params), { replace: true });
+
+      return;
+    }
     if (!status || initialized.current === scopeKey) return;
     initialized.current = scopeKey;
     if (!nodeIds.length) {
@@ -175,7 +185,35 @@ function Library() {
       </header>
       <ErrorNotice error={error} onRetry={() => void refresh()} />
       {loading && !status && <p role="status">{t("federation.loading")}</p>}
-      {status && (
+      {status && status.browsingEnabled !== true && (
+        <section className={`${panelClass} space-y-3`}>
+          <h2 className="text-lg font-semibold">{t("federation.browsing.off")}</h2>
+          <p className="text-sm text-default-500">{t("federation.browsing.description")}</p>
+          <ErrorNotice error={enableError} />
+          <button
+            className={primaryClass}
+            disabled={enabling}
+            type="button"
+            onClick={() =>
+              void (async () => {
+                setEnabling(true);
+                setEnableError(undefined);
+                try {
+                  await federationPeerApi.browsing(true);
+                  await refresh();
+                } catch (cause) {
+                  setEnableError(cause instanceof Error ? cause : new Error(String(cause)));
+                } finally {
+                  setEnabling(false);
+                }
+              })()
+            }
+          >
+            {t("federation.browsing.enable")}
+          </button>
+        </section>
+      )}
+      {status?.browsingEnabled === true && (
         <>
           <form
             className={`${panelClass} space-y-4`}

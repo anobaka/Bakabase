@@ -40,7 +40,7 @@ function Publish-App {
   if (Test-Path $Out) { Remove-Item -Recurse -Force $Out }
   New-Item -ItemType Directory -Force -Path $Out | Out-Null
   $assemblyVersion = ($Version -split "-")[0]
-  & dotnet publish (Join-Path $RepoRoot "src\apps\Bakabase\Bakabase.csproj") `
+  & dotnet publish (Join-Path $RepoRoot "src\apps\Bakabase.App\Bakabase.App.csproj") `
     -p:RuntimeMode=WINFORMS `
     -p:Version=$Version `
     -p:AssemblyVersion=$assemblyVersion `

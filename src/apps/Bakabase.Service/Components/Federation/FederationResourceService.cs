@@ -78,7 +78,7 @@ public sealed class FederationResourceService(IResourceService resources, IPrope
                 resource.SourceLinks?.Select(x => new FederatedSource((int)x.Source, x.Source.ToString())).ToArray() ?? [],
                 resource.ExternalIdentities?.Select(x => new FederatedExternalIdentity(x.ThirdPartyId.ToString(), x.ExternalId)).ToArray() ?? [],
                 resource.Collections?.Select(x => new FederatedCollection(x.Name, x.Color)).ToArray() ?? [],
-                assets, unavailableReason));
+                assets, unavailableReason, Location: DescribeLocation(resource.Path, resource.IsFile)));
         }
         return new ResourceResolveResponse(results.ToArray());
     }
@@ -95,6 +95,30 @@ public sealed class FederationResourceService(IResourceService resources, IPrope
         if (resource == null || !GetCandidates(resource, ct, out _).Any(x => x.Path == lease.Path))
             throw new FederationQueryException("ResourceGone", 410, "The asset is no longer attached to this resource.");
         return lease;
+    }
+
+    public async Task<(ResourceLocationResponse Response, string? LocalPath)> GetLocationAsync(string grantId,
+        ResourceRef reference, CancellationToken ct)
+    {
+        if (reference == null) throw new FederationQueryException("InvalidResourceRefs", 422);
+        var node = await identity.GetAsync(ct);
+        ValidateOwner(reference, node.NodeId, node.LibraryEpoch);
+        await access.ValidateAsync(grantId, reference.LibraryEpoch, ct);
+        var resource = await db.ResourcesV2.AsNoTracking().Where(r => r.Id == reference.ResourceId)
+            .Select(r => new { Path = r.Path == null ? null : r.Path.Substring(0, MaximumMappingPathChars + 1), r.IsFile })
+            .SingleOrDefaultAsync(ct);
+        if (resource == null) throw new FederationQueryException("ResourceGone", 410);
+        var location = DescribeLocation(resource.Path, resource.IsFile);
+        return (new ResourceLocationResponse(reference, location), location == null ? null : Path.GetFullPath(resource.Path!));
+    }
+
+    private static FederatedResourceLocation? DescribeLocation(string? path, bool isFile)
+    {
+        if (string.IsNullOrWhiteSpace(path) || path.Length > MaximumMappingPathChars ||
+            !Path.IsPathFullyQualified(path) || !(isFile ? File.Exists(path) : Directory.Exists(path))) return null;
+        var root = isFile ? Path.GetDirectoryName(path) : path;
+        return root == null ? null : new FederatedResourceLocation(RootId(root),
+            isFile ? Path.GetFileName(path) : ".", !isFile);
     }
 
     public async Task<MappingRoot[]> GetMappingRootsAsync(CancellationToken ct)

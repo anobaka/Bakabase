@@ -35,14 +35,22 @@ public static class MediaPathBoundary
     }
 
     public static string? Map(string root, string relativePath)
+        => MapLocation(root, relativePath, false);
+
+    public static string? MapLocation(string root, string relativePath, bool isDirectory)
     {
+        if (isDirectory && relativePath == "." && !string.IsNullOrWhiteSpace(root))
+        {
+            try { return Directory.Exists(root) ? ResolvePhysical(root) : null; }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
+        }
         if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(relativePath) ||
             Path.IsPathRooted(relativePath) || relativePath.Contains('\\') || relativePath.Contains(':') ||
             relativePath.Split('/').Any(s => s is "" or "." or "..")) return null;
         try
         {
             var full = Path.GetFullPath(Path.Combine(root, relativePath));
-            return IsWithin(root, full) && File.Exists(full) ? full : null;
+            return IsWithin(root, full) && (isDirectory ? Directory.Exists(full) : File.Exists(full)) ? full : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {

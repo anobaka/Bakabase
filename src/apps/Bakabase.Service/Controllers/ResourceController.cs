@@ -15,7 +15,7 @@ using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
-using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Configs;
@@ -420,7 +420,19 @@ public class ResourceController(
         }
 
         var items = new List<PreviewerItem>();
-        var ffmpegIsReady = ffMpegInstaller.Status == DependentComponentStatus.Installed;
+        var ffmpegIsReady = false;
+        if (filePaths.Any(f => f.InferMediaType() == MediaType.Video))
+        {
+            try
+            {
+                await ffMpegInstaller.EnsureReadyAsync(HttpContext.RequestAborted);
+                ffmpegIsReady = true;
+            }
+            catch (DependencyNotInstalledException)
+            {
+                // Video previews are optional; image previews still work without ffmpeg.
+            }
+        }
 
         foreach (var f in filePaths)
         {

@@ -260,6 +260,25 @@ public class BatchPlayServiceTests
     }
 
     [TestMethod]
+    [DataRow(1)]
+    [DataRow(2)]
+    public async Task Play_Iina_PassesEveryFileWithNoStdin(int resourceCount)
+    {
+        _locator.Set("Iina", "/Applications/IINA.app/Contents/MacOS/iina-cli");
+        for (var id = 1; id <= resourceCount; id++) SeedResourceWithFiles(id, $"video {id}.mp4");
+        await CreateService().PlayAsync(new BatchPlayInputModel
+        {
+            ResourceIds = Enumerable.Range(1, resourceCount).ToArray(),
+            PlayerKey = "known|Iina",
+        }, CancellationToken.None);
+        var launch = _launcher.Launches.Single();
+        launch.ExecutablePath.Should().EndWith("/iina-cli");
+        launch.Arguments.Should().StartWith("--no-stdin ");
+        for (var id = 1; id <= resourceCount; id++)
+            launch.Arguments.Should().Contain($"\"{Path.Combine(_mediaDir, $"video {id}.mp4")}\"");
+    }
+
+    [TestMethod]
     public async Task Play_ProfilePlayerCommandTemplate_IsAppliedToThePlaylistPath()
     {
         SeedResourceWithFiles(1, "a.mp4");

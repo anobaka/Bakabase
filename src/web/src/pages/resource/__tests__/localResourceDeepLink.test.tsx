@@ -33,6 +33,7 @@ beforeEach(() => {
     identity: { nodeId: "local", libraryEpoch: "current", name: "PC" },
     peers: [],
     requests: [],
+    browsingEnabled: false,
     sharingEnabled: false,
     requirePairing: false,
     remoteAccessMode: 0,

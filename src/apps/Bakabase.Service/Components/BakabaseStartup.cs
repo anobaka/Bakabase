@@ -353,6 +353,7 @@ namespace Bakabase.Service.Components
             // through, so this is a no-op for the desktop app.
             app.UseMiddleware<FederationExceptionMiddleware>();
             app.UseMiddleware<FederationAccessMiddleware>();
+            app.UseMiddleware<FederationBrowsingMiddleware>();
             app.UseMiddleware<RemoteAccessMiddleware>();
 
             // Enable MiniProfiler - should be early in the pipeline

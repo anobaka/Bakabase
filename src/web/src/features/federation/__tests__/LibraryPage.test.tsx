@@ -1,13 +1,14 @@
 import type { FederationStatus } from "../types";
 import type { QueryState } from "../hooks/useFederatedQuery";
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import LibraryPage from "../LibraryPage";
 import { useFederatedQuery } from "../hooks/useFederatedQuery";
 import { useFederationStatus } from "../hooks/useFederationStatus";
+import { federationPeerApi } from "../peerApi";
 import { FederationError } from "../transport";
 
 vi.mock("@/stores/remoteAccess", () => ({
@@ -15,10 +16,15 @@ vi.mock("@/stores/remoteAccess", () => ({
     selector({ initialized: true, isLocal: true }),
   useIsPureClient: () => false,
 }));
+vi.mock("../peerApi", () => ({ federationPeerApi: { browsing: vi.fn() } }));
+vi.mock("../components/ResourceDetail", () => ({
+  default: () => <div>Active resource detail</div>,
+}));
 vi.mock("../hooks/useFederatedQuery", () => ({ useFederatedQuery: vi.fn() }));
 vi.mock("../hooks/useFederationStatus", () => ({ useFederationStatus: vi.fn() }));
 const status: FederationStatus = {
   identity: { nodeId: "local", libraryEpoch: "epoch", name: "This PC" },
+  browsingEnabled: true,
   sharingEnabled: false,
   remoteAccessMode: 0,
   requirePairing: false,
@@ -52,6 +58,7 @@ const setState = (state: QueryState) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   localStorage.clear();
   vi.mocked(useFederationStatus).mockReturnValue({
     status,
@@ -116,5 +123,74 @@ describe("visible query coverage", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("No sources completed");
     expect(screen.getByText(/Sleeping PC/)).toBeInTheDocument();
     expect(screen.queryByText("federation.empty.title")).not.toBeInTheDocument();
+  });
+});
+
+describe("explicit browsing opt-in", () => {
+  it.each([false, undefined])(
+    "does not search when browsingEnabled is %s; keeps the device entry available",
+    (enabled) => {
+      vi.mocked(useFederationStatus).mockReturnValue({
+        status: { ...status, browsingEnabled: enabled } as FederationStatus,
+        loading: false,
+        error: undefined,
+        refresh: vi.fn(),
+      });
+      render(
+        <MemoryRouter>
+          <LibraryPage />
+        </MemoryRouter>,
+      );
+      expect(screen.getByText("federation.browsing.off")).toBeInTheDocument();
+      expect(screen.getByText("federation.devices.title")).toBeInTheDocument();
+      expect(search).not.toHaveBeenCalled();
+      expect(screen.queryByText("federation.search")).not.toBeInTheDocument();
+    },
+  );
+  it("keeps browsing off and shows a failed enable request", async () => {
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: { ...status, browsingEnabled: false },
+      loading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    });
+    vi.mocked(federationPeerApi.browsing).mockRejectedValue(new Error("Enable failed"));
+    render(
+      <MemoryRouter>
+        <LibraryPage />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByText("federation.browsing.enable"));
+    expect(await screen.findByText("Enable failed")).toBeInTheDocument();
+    expect(search).not.toHaveBeenCalled();
+  });
+  it("clears active results and unmounts detail/media when browsing is disabled", () => {
+    const reset = vi.fn();
+
+    vi.mocked(useFederatedQuery).mockReturnValue({
+      state,
+      search,
+      nextPage: vi.fn(),
+      cancel: vi.fn(),
+      reset,
+    });
+    const view = () => (
+      <MemoryRouter initialEntries={["/federation?node=remote&epoch=epoch&resource=1"]}>
+        <LibraryPage />
+      </MemoryRouter>
+    );
+    const page = render(view());
+
+    expect(screen.getByText("Active resource detail")).toBeInTheDocument();
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: { ...status, browsingEnabled: false },
+      loading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    });
+    page.rerender(view());
+    expect(reset).toHaveBeenCalled();
+    expect(screen.queryByText("Active resource detail")).not.toBeInTheDocument();
+    expect(screen.getByText("federation.browsing.off")).toBeInTheDocument();
   });
 });

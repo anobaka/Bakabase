@@ -24,6 +24,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
     public abstract class DependentComponentService : IDependentComponentService
     {
         private readonly IServiceProvider _globalServiceProvider;
+        private readonly SemaphoreSlim _operationLock = new(1, 1);
+        private int _completedInstallVersion;
         public abstract string Id { get; }
 
         public string DisplayName =>
@@ -42,12 +44,18 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
         protected DependentComponentService(ILoggerFactory loggerFactory, AppService appService,
             string directoryName, IServiceProvider globalServiceProvider)
+            : this(loggerFactory, appService.ComponentsPath, directoryName, globalServiceProvider)
+        {
+        }
+
+        protected DependentComponentService(ILoggerFactory loggerFactory, string componentsPath,
+            string directoryName, IServiceProvider globalServiceProvider)
         {
             _globalServiceProvider = globalServiceProvider;
             Logger = loggerFactory.CreateLogger(GetType());
 
             DirectoryName = directoryName;
-            DefaultLocation = Path.Combine(appService.ComponentsPath, DirectoryName);
+            DefaultLocation = Path.Combine(componentsPath, DirectoryName);
             TempDirectory = Path.Combine(DefaultLocation, InternalOptions.TempDirectoryName);
         }
 
@@ -79,54 +87,107 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
         protected abstract Task InstallCore(CancellationToken ct);
 
-        public virtual async Task Install(CancellationToken ct)
+        public virtual async Task EnsureReadyAsync(CancellationToken ct)
         {
-            if (Status == DependentComponentStatus.Installing)
-            {
-                return;
-            }
-
-            // Check and install dependencies first
-            var dependencyLocalizer = _globalServiceProvider.GetRequiredService<IDependencyLocalizer>();
-            foreach (var dependencyType in Dependencies)
-            {
-                var dependencyService = _globalServiceProvider.GetRequiredService(dependencyType) as IDependentComponentService;
-                if (dependencyService == null)
-                {
-                    throw new InvalidOperationException($"Dependency type {dependencyType.Name} is not a valid IDependentComponentService");
-                }
-
-                if (dependencyService.Status == DependentComponentStatus.Installing)
-                {
-                    // Expected: the user kicked off this install while a prerequisite is still
-                    // downloading. Not a defect — see CreateNotReadyException.
-                    var message = dependencyLocalizer.Dependency_Installing_Message(dependencyService.DisplayName);
-                    Logger.LogWarning(message);
-                    throw new DependencyNotInstalledException(dependencyService.Id, dependencyService.DisplayName,
-                        message);
-                }
-
-                if (dependencyService.Status != DependentComponentStatus.Installed)
-                {
-                    var message = dependencyLocalizer.Dependency_Required_Message(dependencyService.DisplayName, DisplayName);
-                    Logger.LogInformation(message);
-
-                    // Automatically install the dependency
-                    await dependencyService.Install(ct);
-                }
-            }
-
-            Status = DependentComponentStatus.Installing;
-            await UpdateContext(d =>
-            {
-                d.Error = null;
-                d.InstallationProgress = 0;
-            });
+            await _operationLock.WaitAsync(ct);
             try
             {
+                if (Status == DependentComponentStatus.Installed)
+                {
+                    return;
+                }
+
+                ThrowIfUnsupported();
+                await DiscoverCore(ct);
+                if (Status != DependentComponentStatus.Installed && IsRequired)
+                {
+                    await InstallWhileLocked(ct);
+                }
+
+                if (Status != DependentComponentStatus.Installed)
+                {
+                    throw CreateNotReadyException();
+                }
+            }
+            finally
+            {
+                _operationLock.Release();
+            }
+        }
+
+        public virtual async Task Install(CancellationToken ct)
+        {
+            // Overlapping requests wait for the successful install. A later explicit request
+            // still checks for updates, including when the component is already installed.
+            var observedVersion = Volatile.Read(ref _completedInstallVersion);
+            await _operationLock.WaitAsync(ct);
+            try
+            {
+                if (observedVersion != _completedInstallVersion && Status == DependentComponentStatus.Installed)
+                {
+                    return;
+                }
+
+                ThrowIfUnsupported();
+                await DiscoverCore(ct);
+                await InstallWhileLocked(ct);
+            }
+            finally
+            {
+                _operationLock.Release();
+            }
+        }
+
+        private void ThrowIfUnsupported()
+        {
+            if (!IsAvailableOnCurrentPlatform)
+            {
+                throw new PlatformNotSupportedException($"{DisplayName} is not available on this platform.");
+            }
+        }
+
+        private async Task InstallWhileLocked(CancellationToken ct)
+        {
+            Status = DependentComponentStatus.Installing;
+            try
+            {
+                await UpdateContext(d =>
+                {
+                    d.Error = null;
+                    d.InstallationProgress = 0;
+                });
+
+                foreach (var dependencyType in Dependencies)
+                {
+                    if (_globalServiceProvider.GetRequiredService(dependencyType) is not IDependentComponentService dependency)
+                    {
+                        throw new InvalidOperationException($"Dependency type {dependencyType.Name} is not a valid IDependentComponentService");
+                    }
+
+                    // Installation authorizes its prerequisites too, but reuse an existing
+                    // system installation before downloading another copy.
+                    await dependency.Discover(ct);
+                    if (dependency.Status != DependentComponentStatus.Installed)
+                    {
+                        await dependency.Install(ct);
+                    }
+                }
+
                 await InstallCore(ct);
-                Status = DependentComponentStatus.Installed;
+                await DiscoverCore(ct);
+                if (Status != DependentComponentStatus.Installed)
+                {
+                    throw CreateNotReadyException();
+                }
+
                 await UpdateContext(d => { d.InstallationProgress = 100; });
+                Interlocked.Increment(ref _completedInstallVersion);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                Status = DependentComponentStatus.NotInstalled;
+                await UpdateContext(d => d.Error = null);
+                throw;
             }
             catch (Exception e)
             {
@@ -135,8 +196,6 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
                 var message = $"An error occurred during installing {DisplayName}: {e.Message}";
                 if (IsNetworkException(e))
                 {
-                    // Network failures (offline, DNS, TLS, blocked hosts) are environmental
-                    // rather than code defects; log as a warning so they don't flood Sentry.
                     Logger.LogWarning(e, message);
                 }
                 else
@@ -145,10 +204,6 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
                 }
 
                 throw;
-            }
-            finally
-            {
-                await Discover(ct);
             }
         }
 
@@ -174,22 +229,34 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
         /// <returns></returns>
         public virtual async Task Discover(CancellationToken ct)
         {
-            var r = await Discoverer.Discover(DefaultLocation, ct);
-            if (Status != DependentComponentStatus.Installing)
+            await _operationLock.WaitAsync(ct);
+            try
             {
-                Status = string.IsNullOrEmpty(r?.Version)
-                    ? DependentComponentStatus.NotInstalled
-                    : DependentComponentStatus.Installed;
+                await DiscoverCore(ct);
             }
+            finally
+            {
+                _operationLock.Release();
+            }
+        }
 
-            if (r.HasValue)
+        private async Task DiscoverCore(CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            var r = IsAvailableOnCurrentPlatform ? await Discoverer.Discover(DefaultLocation, ct) : null;
+            ct.ThrowIfCancellationRequested();
+            Status = string.IsNullOrEmpty(r?.Version)
+                ? DependentComponentStatus.NotInstalled
+                : DependentComponentStatus.Installed;
+            await UpdateContext(c =>
             {
-                await UpdateContext(c =>
+                c.Location = r?.Location;
+                c.Version = r?.Version;
+                if (Status == DependentComponentStatus.Installed)
                 {
-                    c.Location = r.Value.Location;
-                    c.Version = r.Value.Version;
-                });
-            }
+                    c.Error = null;
+                }
+            });
         }
 
         protected abstract IDiscoverer Discoverer { get; }

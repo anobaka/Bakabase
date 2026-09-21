@@ -77,8 +77,11 @@ public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
 
         var here = locator.Locate(known).FirstOrDefault();
 
-        return here == null ? ResolvedPlayer.SystemDefault : new ResolvedPlayer(here, chosen.Command);
+        return here == null ? ResolvedPlayer.SystemDefault : new ResolvedPlayer(here, AddRequiredArguments(known, chosen.Command));
     }
+
+    private static string? AddRequiredArguments(Abstractions.Models.Domain.KnownPlayerDefinition definition, string? template) =>
+        definition.ArgumentPrefix == null ? template : $"{definition.ArgumentPrefix} {template ?? "{0}"}";
 
     /// <summary>
     /// Any player installed on this machine that can open this kind of file, best match
@@ -107,7 +110,7 @@ public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
 
             if (here != null)
             {
-                return new ResolvedPlayer(here, null);
+                return new ResolvedPlayer(here, AddRequiredArguments(definition, null));
             }
         }
 

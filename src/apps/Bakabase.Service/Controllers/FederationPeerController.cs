@@ -12,6 +12,7 @@ using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Federation.Transport;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
+using Bakabase.Service.Components.Federation;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -20,12 +21,13 @@ namespace Bakabase.Service.Controllers;
 
 public sealed record FederationPeerStatusResponse(NodeIdentity Identity, bool SharingEnabled,
     RemoteAccessMode RemoteAccessMode, bool RequirePairing, IReadOnlyList<FederationPeerView> Peers,
-    IReadOnlyList<NodePairingRequestView> Requests);
+    IReadOnlyList<NodePairingRequestView> Requests, bool BrowsingEnabled = false);
+public sealed record FederationBrowsingRequest(bool Enabled);
 public sealed record FederationSharingRequest(bool Enabled, bool EnablePairedRemoteAccess = false);
 public sealed record FederationConnectRequest(string Address, string? Code = null);
 public sealed record FederationClaimRequest(string RequestId);
 public sealed record FederationPeerEnabledRequest(bool Enabled);
-public sealed record FederationPathMappingsRequest(NodePathMapping[] Mappings);
+public sealed record FederationPathMappingsRequest(NodePathMapping[] Mappings, NodePathMapping[]? ExpectedMappings = null);
 public sealed record FederationIdentityResetRequest(bool AsNewNode = false);
 public sealed record FederationPeerChange(bool Changed = true);
 
@@ -41,13 +43,23 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
     [HttpGet]
     [SwaggerOperation(OperationId = "GetFederationPeers")]
     [ProducesResponseType(typeof(FederationPeerStatusResponse), 200)]
-    public async Task<IActionResult> Status(CancellationToken ct)
+    public async Task<IActionResult> Status([FromServices] FederationBrowsingControl browsing, CancellationToken ct)
     {
         var status = await peers.GetStatusAsync(ct);
         return FederationResult(new FederationPeerStatusResponse(status.Identity, status.SharingEnabled,
             remoteAccess.GetEffectiveMode(), remoteAccess.GetRequirePairing(), status.Peers.Select(peer =>
                 peer with { ConnectionState = peer.Enabled ? sessions.GetConnectionState(peer.NodeId) : "Disabled" }).ToArray(),
-            status.Requests));
+            status.Requests, await browsing.IsEnabledAsync(ct)));
+    }
+
+    [HttpPut("browsing")]
+    [SwaggerOperation(OperationId = "SetFederationBrowsing")]
+    [ProducesResponseType(typeof(FederationPeerChange), 200)]
+    public async Task<IActionResult> Browsing([FromBody] FederationBrowsingRequest request,
+        [FromServices] FederationBrowsingControl browsing, CancellationToken ct)
+    {
+        await browsing.SetEnabledAsync(request.Enabled, ct);
+        return FederationResult(new FederationPeerChange());
     }
 
     [HttpPut("sharing")]
@@ -160,7 +172,7 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
     public async Task<IActionResult> Mappings(string nodeId, [FromBody] FederationPathMappingsRequest request,
         CancellationToken ct)
     {
-        await peers.SetPathMappingsAsync(nodeId, request.Mappings ?? [], ct);
+        await peers.SetPathMappingsAsync(nodeId, request.Mappings ?? [], ct, request.ExpectedMappings);
         return FederationResult(new FederationPeerChange());
     }
 
@@ -179,8 +191,14 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
     [HttpPost("identity/reset")]
     [SwaggerOperation(OperationId = "ResetFederationIdentity")]
     [ProducesResponseType(typeof(NodeIdentity), 200)]
-    public async Task<IActionResult> Reset([FromBody] FederationIdentityResetRequest request, CancellationToken ct) =>
-        FederationResult(request.AsNewNode ? await peers.ResetAsNewNodeAsync(ct) : await peers.RotateLibraryEpochAsync(ct));
+    public async Task<IActionResult> Reset([FromBody] FederationIdentityResetRequest request,
+        [FromServices] FederationBrowsingControl browsing, CancellationToken ct)
+    {
+        var node = request.AsNewNode ? await peers.ResetAsNewNodeAsync(ct) : await peers.RotateLibraryEpochAsync(ct);
+        // Old local tickets and reads must not survive changing this library's identity either.
+        await browsing.SetEnabledAsync(false, CancellationToken.None);
+        return FederationResult(node);
+    }
 
     [HttpGet("~/federation/v1/info")]
     [FederationEndpoint(FederationEndpointKind.Public)]

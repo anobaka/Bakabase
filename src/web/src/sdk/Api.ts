@@ -4242,6 +4242,14 @@ export interface BakabaseModulesFederationMediaFederatedResourceDetail {
   collections: BakabaseModulesFederationMediaFederatedCollection[];
   assets: BakabaseModulesFederationMediaFederatedAsset[];
   unavailableReason?: string;
+  directoryAccess?: BakabaseModulesFederationMediaFederationDirectoryAccess;
+  location?: BakabaseModulesFederationMediaFederatedResourceLocation;
+}
+
+export interface BakabaseModulesFederationMediaFederatedResourceLocation {
+  sourceRootId: string;
+  relativePath: string;
+  isDirectory: boolean;
 }
 
 export interface BakabaseModulesFederationMediaFederatedSource {
@@ -4251,9 +4259,22 @@ export interface BakabaseModulesFederationMediaFederatedSource {
   url?: string;
 }
 
+export interface BakabaseModulesFederationMediaFederationDirectoryAccess {
+  canOpen: boolean;
+  reason?: string;
+}
+
 export interface BakabaseModulesFederationMediaMappingRoot {
   sourceRootId: string;
   name: string;
+}
+
+export interface BakabaseModulesFederationMediaOpenResourceDirectoryRequest {
+  resourceRef: BakabaseModulesFederationContractsResourceRef;
+}
+
+export interface BakabaseModulesFederationMediaOpenResourceDirectoryResponse {
+  opened: boolean;
 }
 
 export interface BakabaseModulesFederationMediaPlaybackSessionRequest {
@@ -4267,6 +4288,15 @@ export interface BakabaseModulesFederationMediaPlaybackSessionResponse {
   launched: boolean;
   /** @format date-time */
   expiresAt: string;
+}
+
+export interface BakabaseModulesFederationMediaResourceLocationRequest {
+  resourceRef: BakabaseModulesFederationContractsResourceRef;
+}
+
+export interface BakabaseModulesFederationMediaResourceLocationResponse {
+  ref: BakabaseModulesFederationContractsResourceRef;
+  location?: BakabaseModulesFederationMediaFederatedResourceLocation;
 }
 
 export interface BakabaseModulesFederationMediaResourceResolveRequest {
@@ -5391,6 +5421,10 @@ export interface BakabaseServiceControllersEnsureMappingsInput {
   mediaLibraryIds: number[];
 }
 
+export interface BakabaseServiceControllersFederationBrowsingRequest {
+  enabled: boolean;
+}
+
 export interface BakabaseServiceControllersFederationClaimRequest {
   requestId: string;
 }
@@ -5406,6 +5440,7 @@ export interface BakabaseServiceControllersFederationIdentityResetRequest {
 
 export interface BakabaseServiceControllersFederationPathMappingsRequest {
   mappings: BakabaseModulesFederationPeersNodePathMapping[];
+  expectedMappings?: BakabaseModulesFederationPeersNodePathMapping[];
 }
 
 export interface BakabaseServiceControllersFederationPeerChange {
@@ -5424,6 +5459,7 @@ export interface BakabaseServiceControllersFederationPeerStatusResponse {
   requirePairing: boolean;
   peers: BakabaseModulesFederationPeersFederationPeerView[];
   requests: BakabaseModulesFederationPeersNodePairingRequestView[];
+  browsingEnabled: boolean;
 }
 
 export interface BakabaseServiceControllersFederationSharingRequest {
@@ -17745,6 +17781,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags FederationExport
+     * @name LocateFederationExportResource
+     * @request POST:/federation/v1/export/resources/location
+     */
+    locateFederationExportResource: (
+      data: BakabaseModulesFederationMediaResourceLocationRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaResourceLocationResponse, any>({
+        path: `/federation/v1/export/resources/location`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for locateFederationExportResource
+     * @name locateFederationExportResourceUrl
+     */
+    locateFederationExportResourceUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/resources/location`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
      * @name GetFederationExportMappingRoots
      * @request GET:/federation/v1/export/mapping-roots
      */
@@ -17897,6 +17964,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags FederationMedia
+     * @name OpenFederatedResourceDirectory
+     * @request POST:/federation/local/resources/open-directory
+     */
+    openFederatedResourceDirectory: (
+      data: BakabaseModulesFederationMediaOpenResourceDirectoryRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaOpenResourceDirectoryResponse, any>({
+        path: `/federation/local/resources/open-directory`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for openFederatedResourceDirectory
+     * @name openFederatedResourceDirectoryUrl
+     */
+    openFederatedResourceDirectoryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/resources/open-directory`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationMedia
      * @name CreateFederatedPlaybackSession
      * @request POST:/federation/local/playback-sessions
      */
@@ -17974,6 +18072,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getFederationPeersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/federation/local/peers`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name SetFederationBrowsing
+     * @request PUT:/federation/local/peers/browsing
+     */
+    setFederationBrowsing: (
+      data: BakabaseServiceControllersFederationBrowsingRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/browsing`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setFederationBrowsing
+     * @name setFederationBrowsingUrl
+     */
+    setFederationBrowsingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/browsing`;
 
       return baseUrl + path;
     },

@@ -14,7 +14,14 @@ public sealed record FederatedAsset(string AssetId, string Kind, string FileName
 public sealed record FederatedResourceDetail(ResourceRef Ref, string OwnerLabel, string DisplayName,
     string? FileName, string Availability, FederatedProperty[] Properties, FederatedSource[] Sources,
     FederatedExternalIdentity[] ExternalIdentities, FederatedCollection[] Collections,
-    FederatedAsset[] Assets, string? UnavailableReason);
+    FederatedAsset[] Assets, string? UnavailableReason, FederationDirectoryAccess? DirectoryAccess = null,
+    FederatedResourceLocation? Location = null);
+public sealed record FederationDirectoryAccess(bool CanOpen, string? Reason = null);
+public sealed record FederatedResourceLocation(string SourceRootId, string RelativePath, bool IsDirectory);
+public sealed record ResourceLocationRequest(ResourceRef ResourceRef);
+public sealed record ResourceLocationResponse(ResourceRef Ref, FederatedResourceLocation? Location);
+public sealed record OpenResourceDirectoryRequest(ResourceRef ResourceRef);
+public sealed record OpenResourceDirectoryResponse(bool Opened);
 public sealed record PlaybackSessionRequest(AssetRef AssetRef, string Mode = "preview");
 public sealed record PlaybackSessionResponse(string? Url, string ContentType, bool Launched,
     DateTimeOffset ExpiresAt);

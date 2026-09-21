@@ -1,110 +1,75 @@
-# Velopack Upgrade Tests
+# Upgrade and release compatibility checks
 
-End-to-end regression guard for the **AppData survives upgrade** invariant —
-the property whose violation caused issue #1070.
+The automatic checks preserve the identities of `Bakabase` and the legacy
+`Bakabase.Client`. They do not publish, contact an updater feed, install a GUI
+package, or migrate a user's data.
 
-## Status: manual / nightly only
-
-These scripts are **not** wired into CI and should not be. They are slow
-(two full `dotnet publish` + `vpk pack` cycles per scenario) and require
-`vpk` installed on the host.
-
-The primary defense is the C# unit/integration suite in
-[`../Bakabase.Tests/`](../Bakabase.Tests/):
-
-| Concern | Test class |
-|---|---|
-| Default path resolution per platform, env-var override, XDG, debug isolation | `DefaultAppDataPathResolverTests` |
-| Path rebasing across roots, longest-prefix match, `/current/` segment stripping | `AppDataPathRelocationTests` |
-| DataPath validation (system paths, Velopack install, circular containment, free space) | `DataPathValidatorTests` |
-| Legacy install detection + dismissal persistence | `LegacyInstallDetectorTests` |
-| Pending relocation: marker parsing, MergeOverwrite, staging, SQLite integrity | `Relocation/PendingRelocationRunnerTests` |
-
-If a behavior of the AppData mechanism is wrong, those tests will catch it
-faster and more precisely than these scripts.
-
-## What these scripts still earn their keep on
-
-The unit suite mocks the filesystem and resolver. These scripts exercise the
-gaps that mocks cannot reach:
-
-1. **Human-error regressions** — someone adds code that writes user data
-   relative to `AppContext.BaseDirectory` or hardcodes `current/`, bypassing
-   `IAppService.AppDataDirectory` entirely. See
-   [`../../../.claude/rules/appdata-paths.md`](../../../.claude/rules/appdata-paths.md).
-2. **Real publish + vpk pack pipeline** — catches packaging regressions
-   (missing assets, broken Info.plist, wrong RID) that wouldn't surface in
-   unit tests.
-3. **Native platform path semantics** — actual `$HOME`, `XDG_DATA_HOME`,
-   `%LocalAppData%` resolution as the OS sees them, not as a `Func<>` mock
-   reports them.
-
-## When to run
-
-- Before cutting a release.
-- After any change to the publish / vpk pipeline (`.csproj`, `Bakabase.Updater`,
-  CI `_release.yml`).
-- After any change to `DefaultAppDataPathResolver`, `AppService`, or
-  `PendingRelocationRunner`.
-
-For day-to-day development, the unit suite is sufficient.
-
-## What each scenario verifies
-
-| Scenario | Verifies |
-|---|---|
-| `B-self-upgrade` | A new-layout build upgrading to a newer new-layout build leaves `%LocalAppData%\Bakabase` (or platform equivalent) byte-identical |
-| `C-custom-datapath` | When `AppOptions.DataPath` points to an external location, that location is byte-identical after upgrade |
-| `D-env-var` | When `BAKABASE_DATA_DIR=/data` is set, the data dir is byte-identical after upgrade |
-
-`B` is the core invariant. `C` and `D` are also covered by unit tests but
-exercised here against real OS path semantics.
-
-## Why we don't test the **old → new** transition
-
-You can't. The whole reason the relocation work exists is that the old
-layout put AppData inside `current/`, which Velopack removes during upgrade.
-There is no non-destructive path forward; the announcement (issue #1070)
-tells affected users to migrate manually. These scripts only test new → new.
-
-## Prereqs
-
-- .NET SDK matching `global.json` (currently 9.0.313)
-- `vpk` CLI (`dotnet tool install -g vpk`)
-- yarn + node for the frontend build (`cd src/web && yarn install`)
-
-## Running
+## Automatic checks (CI on Windows, Linux and both macOS architectures)
 
 ```bash
-# macOS
-./src/tests/upgrade-tests/run-macos.sh
-
-# Linux (host or in a Docker container)
-./src/tests/upgrade-tests/run-linux.sh
-
-# Linux via Docker (no host pollution)
-./src/tests/upgrade-tests/run-docker.sh
-
-# Windows (PowerShell)
-.\src\tests\upgrade-tests\run-windows.ps1
+python src/tests/upgrade-tests/check-release-contract.py
+python src/tests/upgrade-tests/test_release_contract.py
+python src/tests/upgrade-tests/run-compatibility.py --dotnet /path/to/dotnet
 ```
 
-Each script accepts `--scenario {B|C|D}` (bash) / `-Scenario {B|C|D}`
-(PowerShell). Default is `B`.
+`run-compatibility.py` builds the real test assembly and executes eight existing
+classes covering separate AppData profiles/environment variables, defaults,
+relocation with SQLite integrity and interrupted moves, legacy detection, updater
+feed isolation, and the legacy client's real HTTP migration-hints export. Each
+class runs in its own process and disposable temporary directory. Logs and TRX
+are retained; no test or empty batch may silently pass. Use `--no-build` only when
+the current test assembly is already built, and `--results-directory` to choose
+the evidence directory. The .NET version comes from the repository `global.json`.
 
-## How the simulated upgrade differs from a real one
+The package gate checks **actual publish output**, including transitive
+`.deps.json` libraries, not just project references:
 
-We do **not** invoke `UpdateManager.CheckForUpdates(...)` from inside the app
-— that requires a hosted feed. Instead we replicate Velopack's
-filesystem-level behavior: `current/` is atomically replaced with the new
-version's `publish/` output. This is the exact sequence that historically
-caused data loss.
+```bash
+python src/tests/upgrade-tests/check-release-contract.py --role server --publish-dir /path/to/service-publish --require-web
+python src/tests/upgrade-tests/check-release-contract.py --role unified --publish-dir /path/to/desktop-publish --require-web
+python src/tests/upgrade-tests/check-release-contract.py --role client --publish-dir /path/to/client-publish
+```
 
-If you need higher-fidelity testing (delta packs, signing, post-update
-hooks), extend `_lib.sh` / `_lib.ps1` to use `vpk` to produce a release feed
-and configure each script to point the app at it.
+The real web bundle must have been copied into `publish/web` for `--require-web`.
+The client must have no `web` directory. Service must carry no Client, Shell,
+Avalonia or YARP; the unified desktop must carry no Client/YARP; the legacy client
+must carry no Service, Federation library host or migrations assembly. Package ID,
+main executable, bundle ID, single-instance ID, AppData names, artifact names and
+updater prefixes are checked against their existing release identities. A failure
+is a reason to review a compatibility change, not to automatically update the
+expected identity.
 
-## Failure artefacts
+These checks run in `.github/workflows/ci.yml`; `_build.yml` also runs the actual
+publish-content gate before producing installer artifacts. No feed is changed.
+See [release readiness](../../../docs/multi-device-library-release-readiness.md)
+for the native installation/GUI and mixed-device checks that remain required.
 
-On failure each script copies the install dir + AppData dir to
-`./src/tests/upgrade-tests/failures/<scenario>-<timestamp>/` for inspection.
+## Older filesystem replacement fixtures
+
+`run-macos.sh`, `run-linux.sh`, `run-windows.ps1` and `run-docker.sh` remain manual
+utilities. They publish the current source twice with synthetic version numbers,
+seed files in an isolated directory, replace the simulated `current` directory,
+and compare hashes. B is a default-layout fixture, C a custom-path fixture, and D
+an environment-variable fixture. Example:
+
+```bash
+./src/tests/upgrade-tests/run-macos.sh --scenario B
+./src/tests/upgrade-tests/run-linux.sh --scenario D
+# PowerShell
+./src/tests/upgrade-tests/run-windows.ps1 -Scenario C
+```
+
+They **do not start the application**, resolve its effective AppData at runtime,
+invoke Velopack, exercise a hosted update feed, or prove a real old-installation
+upgrade. Their SQLite-named fixture is random bytes, not an integrity-tested
+SQLite database. They leave their own work directory for inspection. Native
+production resolver/relocation behavior is covered by the automatic real-code
+tests above; actual signed installer upgrades and GUI coexistence require the
+release matrix. The helper `vpk_pack` is available but these scripts do not call
+it. No `vpk` installation is needed to run their current scenarios.
+
+For legacy versions whose data lives inside an updater-managed `current` folder,
+back up and move the data to a supported external AppData location before applying
+an update. Directory-copy fixtures are not proof that upgrading such installations
+is safe. Use the application's supported relocation/recovery procedure and verify
+the backup before proceeding.
