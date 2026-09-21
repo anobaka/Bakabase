@@ -13,6 +13,49 @@ namespace Bakabase.Modules.Federation.Tests.Transport;
 public sealed class PeerTransportTests
 {
     [TestMethod]
+    public async Task RestoreRetainsOutboundAccessAndMappingsWhileCloneClearsThemAndBothDisableSharingAndBrowsing()
+    {
+        using var local = new Node("local", TimeSpan.Zero);
+        using var remote = new Node("remote", TimeSpan.Zero);
+        using var http = new HttpClient(new ProtocolHandler(new Dictionary<string, Node> { ["remote"] = remote }));
+        var wire = new FederationHttpClient(http);
+        var pairing = new NodePairingClient(local.Store, local.Identity, wire, local.Clock, local.Leases);
+        await pairing.ConnectAsync("http://remote", await remote.InviteAsync());
+        var mappings = new[] { new NodePathMapping("root", Path.GetTempPath()) };
+        await local.Peers.SetPathMappingsAsync("remote", mappings);
+        await local.Peers.SetSharingAsync(true);
+        await local.Store.SetBrowsingEnabledAsync(true);
+        var before = await local.Peers.GetStatusAsync();
+
+        var restored = await local.Peers.RotateLibraryEpochAsync();
+        var restartStore = new FederationStateStore(local, local);
+        var restartIdentity = new NodeIdentityProvider(restartStore);
+        var restartPeers = new FederationPeerService(restartStore, restartIdentity, local.Leases, local.Clock);
+        var status = await restartPeers.GetStatusAsync();
+        Assert.AreEqual(before.Identity.NodeId, restored.NodeId);
+        Assert.AreNotEqual(before.Identity.LibraryEpoch, restored.LibraryEpoch);
+        Assert.IsFalse(status.SharingEnabled);
+        Assert.IsFalse(await restartStore.IsBrowsingEnabledAsync());
+        Assert.AreEqual(before.Peers.Single().OutboundGrant, status.Peers.Single().OutboundGrant);
+        CollectionAssert.AreEqual(mappings, status.Peers.Single().PathMappings.ToArray());
+        var sessions = new PeerSessionFactory(restartStore, restartIdentity, wire, local.Clock);
+        Assert.AreEqual("remote", (await sessions.GetAsync("remote")).NodeId);
+
+        await restartPeers.SetSharingAsync(true);
+        await restartStore.SetBrowsingEnabledAsync(true);
+        var clone = await restartPeers.ResetAsNewNodeAsync();
+        var cloneStore = new FederationStateStore(local, local);
+        var clonePeers = new FederationPeerService(cloneStore, new NodeIdentityProvider(cloneStore), local.Leases, local.Clock);
+        var cloneStatus = await clonePeers.GetStatusAsync();
+        Assert.AreNotEqual(restored.NodeId, clone.NodeId);
+        Assert.AreNotEqual(restored.LibraryEpoch, clone.LibraryEpoch);
+        Assert.IsFalse(cloneStatus.SharingEnabled);
+        Assert.IsFalse(await cloneStore.IsBrowsingEnabledAsync());
+        Assert.AreEqual(0, cloneStatus.Peers.Count);
+        Assert.AreEqual(0, cloneStatus.Requests.Count);
+    }
+
+    [TestMethod]
     public async Task TwoOwnersKeepIndependentKeysClocksSessionsAndOutboundPermissionWhenLocalSharingIsOff()
     {
         using var local = new Node("local", TimeSpan.Zero);

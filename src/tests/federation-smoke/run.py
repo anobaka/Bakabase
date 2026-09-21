@@ -73,8 +73,10 @@ def run(args):
             nodes.append({"base": f"http://127.0.0.1:{port}", "directory": directory, "pid": process.pid})
         deadline = min(time.monotonic() + 90, REQUEST_DEADLINE)
         while not all((node["directory"] / "ready").exists() for node in nodes):
-            if any(process.poll() is not None for process in processes):
-                raise AssertionError(f"Host exited during startup. Inspect {root}/*.log")
+            exited = [(node["pid"], process.returncode) for node, process in zip(nodes, processes)
+                      if process.poll() is not None]
+            if exited:
+                raise AssertionError(f"Host exited during startup (pid, exit code): {exited}. Inspect {results}/*.log")
             if time.monotonic() > deadline:
                 raise AssertionError(f"Startup did not finish. Inspect {root}/*.log")
             time.sleep(0.2)
@@ -177,6 +179,14 @@ def run(args):
         pair(a, b)
         # Old incarnation references never resolve to a new row with the same int ID.
         request(b["base"], "/federation/local/peers/identity/reset", "POST", {"asNewNode": False})
+        request(a["base"], "/federation/local/resources/resolve", "POST", {"refs": [remote_ref]}, expected=(401, 403, 409))
+        restored_status = request(b["base"], "/federation/local/peers")
+        assert restored_status["identity"]["nodeId"] == b["id"]
+        assert restored_status["identity"]["libraryEpoch"] != remote_ref["libraryEpoch"]
+        assert not restored_status["sharingEnabled"] and not restored_status["browsingEnabled"]
+        invite_denied = request(b["base"], "/federation/local/peers/invite", "POST", expected=403)
+        assert invite_denied["code"] == "SharingDisabled"
+        request(b["base"], "/federation/local/peers/sharing", "PUT", {"enabled": True})
         request(a["base"], "/federation/local/resources/resolve", "POST", {"refs": [remote_ref]}, expected=(401, 403, 409))
         pair(a, b)
         print("PASS: source revocation invalidates cached pages and streams; epoch rotation invalidates old references", flush=True)

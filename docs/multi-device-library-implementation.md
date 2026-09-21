@@ -144,6 +144,10 @@ curl -X POST http://127.0.0.1:PORT/federation/local/peers/invite
 | 实际 publish 产物 | macOS ARM 的统一版、旧客户端及无界面 Service 内容/角色隔离检查通过 |
 | 续轮 Chromium 双节点 | 默认关闭、显式启用、跨窗口关闭清媒体、迁移刷新恢复/幂等、映射明确确认全部通过；0 pageErrors |
 | localhost 原生壳来源地址 | Chromium 验证媒体 URL 同源、真实音频 metadata 成功；修复原固定 127.0.0.1 的地址不一致 |
+| 第三轮前端完整回归 | 97 文件、922/922；定向 lint 0 errors / 0 warnings、格式及生产构建通过 |
+| 第三轮类型检查 | 310 条既有诊断；4 条 AppInfo 诊断仅行列移动，去除行列后与基线全文一致 |
+| 第三轮身份恢复 | 11/11；真实配对后恢复保留访问授权/映射，克隆清空，两者关闭分享和浏览 |
+| 迁移浏览器脚本诊断 | 2/2；构建失败不会遗留 running 状态，清理后仍保留不含密钥的宿主诊断 |
 
 全套后端曾因原测试辅助类留下 321 个临时数据库、累计约 13 GB 耗尽磁盘而中断。仅清理本轮生成的目录后，已明确完成的前 498 项保留记录，余下 125 个 class 在独立进程和临时目录中全部补跑；合并计数与 discovery 的 1,579 个主工程 case 一致。没有改断言，也没有漏掉中断时失败的初始化用例。之后增加的局部回归单独运行，不重复计入全套统计。
 
@@ -153,7 +157,19 @@ TypeScript 基线核验使用 `git archive f1fa1469 src/web` 导出的临时源�
 
 续轮结果位于 `/tmp/bakabase-federation-continuation-*.log`、`/tmp/bakabase-dependency-*.log`、`/tmp/bakabase-release-readiness/`。最后目录撤销修复后的 Service、三节点及重新生成的三角色产物证据统一位于 `/tmp/bakabase-federation-continuation-final/`。浏览器结构化证据为 `/tmp/bakabase-browser-tests/continuation-result.json` 和 `localhost-result.json`。三节点续轮检查增加默认关闭、关闭后拒绝旧查询/媒体、分享继续可读和重启后旧票据不复活。
 
-另外，以独立测试 AppData 启动了 macOS ARM 的 framework-dependent 统一版 publish；日志确认 Avalonia/WebView 已导航至 `http://localhost:34567`。当前 Mac 锁屏，桌面工具无法操作窗口，因此这不计作 GUI 连续流程或最终安装包验收。未安装或实际启动第三方播放器。
+上一轮以独立测试 AppData 启动 macOS ARM framework-dependent publish，因 Mac 锁屏只确认导航，没有计作 GUI 通过。此后已在实际 Velopack portable `.app` 完成原生配对、257 条联合查询、详情、音频播放/暂停/seek/恢复、Finder 映射目录、离线覆盖提示、本机设置/日志和来源重启恢复，详见[发布验收记录](multi-device-library-release-readiness.md)。新证据不代替 Windows/Intel、签名安装器、真实升级或多物理设备矩阵。
+
+第三轮补充了可复现的真实旧客户端迁移浏览器脚本：生产 ClientHost/ClientStartup 与两个 Service 使用独立数据目录和端口，旧连接页实际配对/导出，统一版导入、刷新恢复、重复导入，再由来源设备界面批准新的只读授权。114 条联合资源、localhost 音频、跨窗口关闭浏览均通过，旧连接文件未变、旧 key 未迁入、0 pageErrors。脚本和独立 Playwright lockfile 在 `src/tests/federation-browser-smoke/`，已接入 CI。下载清单加载中或失败时，现在仍保留旧客户端迁移入口。
+
+最后使用最新生产前端再次执行了上述浏览器链路，并通过实际 UI/POST 验证恢复同一节点和克隆新节点两条路径，结果位于 `/tmp/bakabase-browser-migration-recovery-final/result.json`。当前前端全量结果、构建、lint 和类型基线比较见 `/tmp/bakabase-identity-recovery-*.log` 与 `-tsc-comparison.json`。备份说明现在明确要求覆盖后首次启动保持网络隔离，身份重置不会自动处理旧版管理协议的授权。
+
+最终三宿主重跑结果在 `/tmp/bakabase-federation-third-round-final-2/result.json`：771 条及全部撤销/媒体/覆盖场景通过。脚本增加恢复后两个开关均关闭、不能生成邀请码、显式重新开启分享后旧引用仍被拒绝的断言。首次重跑暴露脚本仍假设恢复后可立即邀请；现已按新的实际行为更新并完整重跑，没有恢复旧的自动分享行为。
+
+原生 VLC 验证发现 macOS 系统 HTTP 代理会接收 localhost 媒体票据，造成 503。服务端现在只对自己发出的严格 loopback 媒体票据构造单次播放直连参数：VLC 使用 AVIO/libavformat，mpv/IINA 使用对应代理覆盖；本机文件和路径映射沿用原参数，不修改系统代理或播放器偏好。入口拒绝任意目标、userinfo、query、fragment、转义和畸形票据。新回归 6/6、相关旧回归 48/48、Player 72/72 通过。
+
+`player-proxy.py` 用官方 VLC 3.0.23 和独立 WAV/诱饵代理验证：控制组经代理失败，修复后代理请求为 0，来源收到 `Range: bytes=0-` 与跳到 90 秒后的 `bytes=8640044-`，退出码 0。证据在 `/tmp/bakabase-player-proxy-results-20260921/result.json`。此脚本不修改系统代理；mpv/IINA 仅核对官方参数契约，未实际运行。
+
+真实 macOS 打包发现两个产品的 plist 缺少 `CFBundleExecutable`，且自定义版本固定为 1.0.0；现已修复并在 Velopack 前生成版本、后审计实际 Portable.zip，14 个 guard/plist 测试通过。Ubuntu 24.04 ARM64 容器中实际执行 Federation 47、Player 72、兼容 131 通过，Service 包审计通过；原生编译及三宿主启动遇到 SIGILL，不能记为完整 Linux 门禁通过。Windows 路径和播放器发现测试夹具另修复了平台依赖，27 项定向回归通过。
 
 ## 性能观测
 
@@ -169,6 +185,23 @@ TypeScript 基线核验使用 `git archive f1fa1469 src/web` 导出的临时源�
 夹具包含两个 Name scope、来源、偏好和 profile。累计分配包含短期 EF 对象，不能解释为同时占用内存。10 万条结果的快照估算促使单快照预算从建议的 32 MiB 调整到 64 MiB，总预算仍有限制。
 
 纯内存投影加协调器：10 万条首屏约 159 ms、完整遍历约 278 ms、后续页 p95 约 0.275 ms。这组数字不含数据库或网络。跨设备网络首屏、弱网首帧、打包桌面 CPU/内存高水位仍须发布验收。
+
+### 双生产宿主 HTTP 基线（2026-09-21）
+
+`src/tests/federation-smoke/benchmark.py` 启动两个独立真实 Service/TestHost 和 SQLite，通过透明 loopback 计数代理记录节点流量，完整遍历而非只取首屏。机器为 Apple M4、10 核、16 GiB、macOS 26.1 ARM64、SDK 9.0.100/runtime 9.0.0。Debug 构建，基于 `cf787d13`；同时有原生 GUI、4 CPU/4 GiB Linux 测试和镜像下载负载，不是空闲机器性能门槛。
+
+| 每节点规模 / 状态 | 联合首屏 | 完整遍历 | 后续页 p50 / p95 | 节点 HTTP 请求 / 响应载荷 |
+| --- | ---: | ---: | ---: | ---: |
+| 10k × 2，进程冷启动 | 540 ms | 3.055 s / 100 页 | 22.2 / 48.9 ms | 182 / 3.41 MB |
+| 10k × 2，热进程 | 133 ms | 4.390 s / 100 页 | 33.2 / 104.1 ms | 180 / 3.41 MB |
+| 100k × 2，进程冷启动 | 2,947 ms | 22.794 s / 1,000 页 | 17.0 / 34.7 ms | 1,785 / 34.22 MB |
+| 100k × 2，热进程 | 1,084 ms | 15.772 s / 1,000 页 | 12.9 / 24.1 ms | 1,783 / 34.22 MB |
+
+每页 200 条；分别完整验证 20,000 和 200,000 条。UI 响应载荷分别 6.79 MB、68.09 MB；请求数含每页权限验证与最终释放。冷启动只重启进程，不清 OS 文件缓存；字节不含 HTTP/TLS 头，计数代理和 RSS 采样本身也有成本。
+
+100k × 2 普通遍历的采样 RSS 峰值 A/B 约 832/905 MiB，两会话额度复用测试中约 1,112/1,205 MiB。关闭浏览时，执行中的请求被中断，旧会话重启后为 410，两个额度立即可复用；两档关闭耗时约 77/31 ms，来源端 3 次创建对应 3 次 DELETE。大库关闭前后 RSS 并未立即回落（A 约 833→841 MiB，B 约 972 MiB），不能把额度释放等同于 OS 立即回收内存，也不能仅凭此推断泄漏。
+
+结构化结果在 `/tmp/bakabase-federation-http-benchmark-final-20260921/result.json`。测试未放大默认预算，已经清理自身进程和数据库；这些是本机 HTTP 观测，物理 LAN/NAS、弱网和视频首帧仍需独立记录。
 
 ## 与原计划的差异及发布门槛
 

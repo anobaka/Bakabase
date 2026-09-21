@@ -11,6 +11,20 @@ vi.mock("@/config/env", () => ({ default: { apiEndpoint: "http://localhost:5555"
 afterEach(() => vi.unstubAllGlobals());
 
 describe("local federation transport", () => {
+  it.each([false, true])(
+    "keeps the restore/clone choice explicit on the wire (new node: %s)",
+    async (asNewNode) => {
+      const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+
+      vi.stubGlobal("fetch", fetch);
+      await federationPeerApi.resetIdentity(asNewNode);
+      expect(fetch.mock.calls[0][0]).toBe(
+        "http://localhost:5555/federation/local/peers/identity/reset",
+      );
+      expect(fetch.mock.calls[0][1].method).toBe("POST");
+      expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ asNewNode });
+    },
+  );
   it("reads raw DTOs and preserves per-node failures rather than claiming an empty result", async () => {
     const omittedNodes = [{ nodeId: "offline", code: "Offline", retryable: true }];
     const fetch = vi

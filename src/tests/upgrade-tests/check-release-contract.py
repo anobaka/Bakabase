@@ -7,6 +7,7 @@ import plistlib
 import re
 import sys
 import xml.etree.ElementTree as ET
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[3]
 PRODUCTS = {
@@ -62,7 +63,9 @@ def check_sources(root):
         tree = ET.parse(directory / (product["project"] + ".csproj"))
         require(tree.findtext(".//AssemblyName") == product["assembly"], f"{role}: executable identity changed")
         with (directory / "Info.plist").open("rb") as stream:
-            require(plistlib.load(stream)["CFBundleIdentifier"] == product["bundle"], f"{role}: macOS bundle identity changed")
+            info = plistlib.load(stream)
+            require(info["CFBundleIdentifier"] == product["bundle"], f"{role}: macOS bundle identity changed")
+            require(info.get("CFBundleExecutable") == product["assembly"], f"{role}: macOS executable missing or incorrect")
         host = (root / product["host"]).read_text(encoding="utf-8")
         require(re.search(r'SingleInstanceId\s*=>\s*"' + re.escape(product["assembly"]) + r'"', host),
                 f"{role}: single-instance identity changed")
@@ -124,26 +127,58 @@ def check_publish(directory, role, require_web=False):
             "dependencyCount": len(dependencies), "localFrontendChecked": require_web, "passed": True}
 
 
+def check_macos_portable(archive, role, version):
+    require(role in PRODUCTS, "Only desktop products have macOS bundles")
+    product = PRODUCTS[role]
+    with zipfile.ZipFile(archive) as package:
+        plists = [name for name in package.namelist() if re.fullmatch(r"[^/]+\.app/Contents/Info.plist", name)]
+        require(len(plists) == 1, "Portable archive needs exactly one application bundle")
+        info = plistlib.loads(package.read(plists[0]))
+        require(info.get("CFBundleIdentifier") == product["bundle"], "Packaged macOS identity changed")
+        require(info.get("CFBundleExecutable") == product["assembly"], "Packaged macOS executable missing or incorrect")
+        require(info.get("CFBundlePackageType") == "APPL", "Portable bundle is not an application")
+        core = version.split("-", 1)[0].split("+", 1)[0]
+        require(info.get("CFBundleVersion") == core and info.get("CFBundleShortVersionString") == core,
+                "Packaged macOS version differs from the release")
+        require(info.get("CFBundleGetInfoString", "").endswith(" " + version), "Full release version missing from bundle")
+        executable = plists[0].removesuffix("Info.plist") + "MacOS/" + product["assembly"]
+        require(executable in package.namelist(), "Bundle executable is absent")
+        entry = package.getinfo(executable)
+        require((entry.external_attr >> 16) & 0o111, "Bundle executable has no execution permission")
+        with package.open(entry) as stream:
+            require(stream.read(4) in (b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"),
+                    "Bundle executable is not a Mach-O binary")
+    return {"archive": str(archive), "role": role, "version": version, "passed": True}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--publish-dir", type=Path)
     parser.add_argument("--role", choices=("server", "unified", "client"))
     parser.add_argument("--require-web", action="store_true")
+    parser.add_argument("--macos-portable-dir", type=Path)
+    parser.add_argument("--version")
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
     if bool(args.publish_dir) != bool(args.role):
         parser.error("--publish-dir and --role must be supplied together")
+    if args.macos_portable_dir and (args.role not in PRODUCTS or not args.version):
+        parser.error("--macos-portable-dir requires a desktop --role and --version")
     try:
         report = check_sources(args.root)
         if args.publish_dir:
             report["publish"] = check_publish(args.publish_dir, args.role, args.require_web)
+        if args.macos_portable_dir:
+            archives = list(args.macos_portable_dir.glob("*-Portable.zip"))
+            require(len(archives) == 1, "Expected exactly one macOS portable archive")
+            report["macosPortable"] = check_macos_portable(archives[0], args.role, args.version)
         if args.report:
             args.report.parent.mkdir(parents=True, exist_ok=True)
             args.report.write_text(json.dumps(report, indent=2), encoding="utf-8")
         print(json.dumps(report, indent=2))
         return 0
-    except (AssertionError, OSError, ValueError, ET.ParseError) as error:
+    except (AssertionError, OSError, ValueError, ET.ParseError, zipfile.BadZipFile) as error:
         print(f"RELEASE CONTRACT FAILED: {error}", file=sys.stderr)
         return 1
 

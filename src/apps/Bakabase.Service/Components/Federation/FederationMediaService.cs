@@ -92,7 +92,7 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
                      throw new FederationQueryException("PlayerUnavailable", 501,
                          "Install a supported media player on this device to open this stream.");
         await launcher.LaunchAsync(player.ExecutablePath!,
-            BatchPlayArguments.BuildFromTemplate(player.CommandTemplate, localPath ?? url), ct);
+            FederationPlayerArguments.Build(player, localPath, url), ct);
         if (source.Peer == null)
             await resources.MarkPlayed(new Dictionary<int, string>
                 { [source.Ref.ResourceRef.ResourceId] = "FileSystem:" + localPath });

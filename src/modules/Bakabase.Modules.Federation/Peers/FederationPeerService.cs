@@ -228,6 +228,8 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
         var result = await store.MutateAsync(state =>
         {
             state.LibraryEpoch = Guid.NewGuid().ToString("N");
+            state.SharingEnabled = false;
+            state.BrowsingEnabled = false;
             foreach (var grant in state.InboundGrants.Values) grant.Revoked = true;
             state.IncomingRequests.Clear();
             state.Invitation = null;

@@ -1,0 +1,7 @@
+{
+  "name": "bakabase-federation-browser-smoke",
+  "private": true,
+  "description": "Isolated test-only Chromium dependency; never part of the web app or shipped products.",
+  "engines": { "node": ">=20" },
+  "dependencies": { "playwright": "1.63.0" }
+}

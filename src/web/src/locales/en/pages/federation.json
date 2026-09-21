@@ -111,7 +111,7 @@
   "federation.requests.reject": "Reject",
   "federation.requests.check": "Check approval",
   "federation.mappings.title": "Local path mappings",
-  "federation.mappings.tip": "Map a shared storage root to its location on this device. These mappings only affect local playback; they do not move or copy files.",
+  "federation.mappings.tip": "Map a shared storage root to its location on this device. These mappings are used for playback and opening containing folders on this device; they do not move or copy files.",
   "federation.mappings.root": "Shared storage root",
   "federation.mappings.local": "Path on this device",
   "federation.mappings.add": "Add mapping",
@@ -174,9 +174,9 @@
   "federation.migration.exportTip": "Exports names, addresses and path mapping hints only. Administrator keys, cookies, library databases and update settings are excluded.",
   "federation.error.InvalidConnectionHints": "This is not a supported connection hint file, or it exceeds the size limits. Export a new hint file from Bakabase Client.",
   "federation.identity.title": "Cloned or restored installation",
-  "federation.identity.tip": "If this data folder was copied from another computer, create a new device identity before using both copies. Review the device ID above first. Browsing will be turned off; enable it again after the reset.",
+  "federation.identity.tip": "Before starting an installation restored from full AppData, isolate it from the network and keep it isolated until the appropriate reset below is complete. Restoring the same device changes its library generation; a copy for another device needs a new device identity. Do not assume sharing was disabled by the restore. Review legacy remote-access permissions before reconnecting, then enable sharing and authorize devices again. Neither action deletes local library data; browsing must be enabled again afterward.",
   "federation.identity.reset": "Create a new device identity",
-  "federation.identity.confirm": "This changes this device’s identity and library epoch, clears its device connections, path mappings and node grants, and stops sharing. Pair with other devices again afterward. Local library data stays in place. Continue only on the cloned installation.",
+  "federation.identity.confirm": "For a copied installation on another device: replace both device identity and library generation, clear device connections, path mappings and node grants, and turn sharing and browsing off. Local library data is retained. Complete this on the copy while it is isolated from the network, review legacy remote-access permissions, then reconnect and pair devices again.",
   "federation.connection.Disabled": "Excluded",
   "federation.error.Offline": "This device is offline.",
   "federation.error.NodeUnreachable": "This device is unreachable. Check its address and remote access settings.",
@@ -229,5 +229,7 @@
   "federation.mappings.changedDuringReview": "The saved mappings changed. Review the latest values below, then choose again to confirm.",
   "federation.mappings.keep": "Keep existing mappings",
   "federation.mappings.replace": "Replace these mappings",
-  "federation.mappings.removed": "Remove mapping"
+  "federation.mappings.removed": "Remove mapping",
+  "federation.identity.restore": "Change library generation after restoring",
+  "federation.identity.restoreConfirm": "For a restored library on the same device: turn sharing and browsing off, change the library generation, and revoke all previous inbound node grants and pending requests/invitations. The device identity, access to other devices and path mappings are retained. Complete this while the restored installation is isolated from the network; review legacy remote-access permissions before reconnecting, then share and authorize devices again."
 }

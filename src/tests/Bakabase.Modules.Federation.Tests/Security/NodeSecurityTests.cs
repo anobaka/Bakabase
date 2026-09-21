@@ -126,11 +126,17 @@ public sealed class NodeSecurityTests
         Assert.AreEqual("GrantRevoked", (await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
             node.Grants.ValidateAsync(grant.GrantId, grant.LibraryEpoch))).ErrorCode);
         grant = await node.GrantAsync();
+        await node.Store.SetBrowsingEnabledAsync(true);
+        await node.Peers.IssueInvitationAsync();
         var before = await node.Identity.GetAsync();
         var after = await node.Peers.RotateLibraryEpochAsync();
         Assert.AreEqual(before.NodeId, after.NodeId);
         Assert.AreNotEqual(before.LibraryEpoch, after.LibraryEpoch);
         Assert.IsFalse(outgoing.IsCancellationRequested);
+        Assert.IsFalse((await node.Peers.GetStatusAsync()).SharingEnabled);
+        Assert.IsFalse(await node.Store.IsBrowsingEnabledAsync());
+        Assert.AreEqual(0, (await node.Peers.GetStatusAsync()).Requests.Count);
+        await node.Peers.SetSharingAsync(true);
         await Assert.ThrowsExactlyAsync<FederationAccessException>(() => node.Grants.ValidateAsync(grant.GrantId, grant.LibraryEpoch));
         var clone = await node.Peers.ResetAsNewNodeAsync();
         Assert.AreNotEqual(before.NodeId, clone.NodeId);

@@ -181,6 +181,49 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  federation-browser:
+    name: Legacy migration and multi-device browser
+    needs: frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/tests/federation-browser-smoke/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: federation-ci-web
+          path: src/web/dist
+      - name: Install isolated browser test dependencies
+        working-directory: src/tests/federation-browser-smoke
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+      - name: Browser runner failure diagnostics
+        run: python3 -m unittest discover -s src/tests/federation-browser-smoke -p 'test*.py'
+      - name: Real legacy export, import, reauthorization and media
+        run: python3 src/tests/federation-browser-smoke/run.py --results-directory "$RUNNER_TEMP/federation-browser-results"
+      - name: Retain browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: federation-browser-evidence
+          path: ${{ runner.temp }}/federation-browser-results
+          if-no-files-found: warn
+          retention-days: 14
+
   frontend:
     name: Frontend lint & tests
     runs-on: ubuntu-latest

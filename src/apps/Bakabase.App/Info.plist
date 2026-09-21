@@ -8,6 +8,8 @@
     <string>Bakabase</string>
     <key>CFBundleIdentifier</key>
     <string>com.anobaka.bakabase</string>
+    <key>CFBundleExecutable</key>
+    <string>Bakabase</string>
     <key>CFBundleVersion</key>
     <string>1.0.0</string>
     <key>CFBundleShortVersionString</key>

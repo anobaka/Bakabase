@@ -46,10 +46,6 @@ const OtherDevicesPage = () => {
       .catch(() => setDownloads(null));
   }, []);
 
-  if (downloads === undefined) {
-    return <div className="p-6 text-sm">{t<string>("otherDevices.loading")}</div>;
-  }
-
   const mobile = downloads?.mobile;
   const client = downloads?.desktopClient;
 
@@ -62,7 +58,12 @@ const OtherDevicesPage = () => {
 
       <MigrationNotice />
 
-      {!mobile && !client && (
+      {downloads === undefined && (
+        <div className="text-sm text-foreground-500" role="status">
+          {t<string>("otherDevices.loading")}
+        </div>
+      )}
+      {downloads !== undefined && !mobile && !client && (
         <div className="text-sm text-foreground-500">{t<string>("otherDevices.unavailable")}</div>
       )}
 

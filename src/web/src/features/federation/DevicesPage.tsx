@@ -2,7 +2,7 @@ import type { PairingResult, PathMapping, Peer } from "./types";
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { AiOutlineLaptop, AiOutlinePlus, AiOutlineReload } from "react-icons/ai";
 
 import {
@@ -29,6 +29,17 @@ export default function DevicesPage() {
 function Devices() {
   const { t } = useTranslation();
   const { status, error: loadError, loading, refresh } = useFederationStatus();
+  const [params] = useSearchParams();
+  const identitySection = useRef<HTMLDetailsElement>(null);
+  const identityRequested = params.get("section") === "identity";
+  const statusReady = !!status;
+
+  useEffect(() => {
+    if (statusReady && identityRequested && identitySection.current) {
+      identitySection.current.open = true;
+      identitySection.current.scrollIntoView?.({ block: "start" });
+    }
+  }, [statusReady, identityRequested]);
   const [error, setError] = useState<Error>();
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
@@ -544,11 +555,28 @@ function Devices() {
               />
             ))}
           </section>
-          <details className={panelClass}>
+          <details ref={identitySection} className={panelClass} id="federation-identity">
             <summary className="cursor-pointer text-sm font-medium">
               {t("federation.identity.title")}
             </summary>
             <p className="mt-2 text-sm text-default-500">{t("federation.identity.tip")}</p>
+            <button
+              className={`${buttonClass} mt-3 mr-2`}
+              disabled={busy}
+              type="button"
+              onClick={() =>
+                confirm(
+                  t("federation.identity.restore"),
+                  t("federation.identity.restoreConfirm"),
+                  async () => {
+                    await federationPeerApi.resetIdentity(false);
+                    if (mounted.current) setInvite(undefined);
+                  },
+                )
+              }
+            >
+              {t("federation.identity.restore")}
+            </button>
             <button
               className={`${buttonClass} mt-3 text-danger`}
               disabled={busy}
@@ -558,7 +586,7 @@ function Devices() {
                   t("federation.identity.reset"),
                   t("federation.identity.confirm"),
                   async () => {
-                    await federationPeerApi.resetIdentity();
+                    await federationPeerApi.resetIdentity(true);
                     if (mounted.current) setInvite(undefined);
                   },
                 )

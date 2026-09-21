@@ -17,10 +17,10 @@ export const federationPeerApi = {
 
     return result;
   },
-  resetIdentity: async () => {
+  resetIdentity: async (asNewNode: boolean) => {
     const result = await federationRequest<unknown>(
       `${prefix}/identity/reset`,
-      jsonBody({ asNewNode: true }),
+      jsonBody({ asNewNode }),
     );
 
     notifyBrowsingChanged(false);

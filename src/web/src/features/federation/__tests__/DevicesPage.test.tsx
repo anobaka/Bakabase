@@ -69,9 +69,9 @@ beforeEach(() => {
   ]);
 });
 afterEach(cleanup);
-const renderPage = () =>
+const renderPage = (entry = "/federation/devices") =>
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <DevicesPage />
     </MemoryRouter>,
   );
@@ -156,7 +156,35 @@ describe("device permission workflows", () => {
     fireEvent.click(screen.getByText("federation.identity.reset"));
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("federation.confirm"));
-    await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledOnce());
+    await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(true));
+    expect(federationPeerApi.sharing).not.toHaveBeenCalled();
+  });
+  it("opens recovery help from configuration without resetting and restores with the original node identity", async () => {
+    renderPage("/federation/devices?section=identity");
+    expect(screen.getByText("federation.identity.title").closest("details")).toHaveAttribute(
+      "open",
+    );
+    expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("federation.identity.restore"));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("federation.identity.restoreConfirm");
+    expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("federation.confirm"));
+    await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(false));
+    expect(federationPeerApi.sharing).not.toHaveBeenCalled();
+  });
+  it("reports a failed recovery without claiming a reset or disabling sharing in a separate request", async () => {
+    vi.mocked(federationPeerApi.resetIdentity).mockRejectedValueOnce(
+      new Error("Storage unavailable"),
+    );
+    renderPage();
+    fireEvent.click(screen.getByText("federation.identity.restore"));
+    fireEvent.click(screen.getByText("federation.confirm"));
+    expect(await screen.findByText("Storage unavailable")).toBeInTheDocument();
+    expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(false);
+    expect(federationPeerApi.sharing).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "federation.identity.restore", hidden: true }),
+    ).not.toBeDisabled();
   });
 });
 

@@ -31,13 +31,16 @@ public class DefaultPlayerExecutableLocatorTests
 
     private TestLocator Locator(bool mac = true, string path = "") => new(_root, mac, path);
 
+    // Bundle/PATH tests exclude the catalog's Windows installation directories:
+    // a real VLC in Program Files on the test host must not enter this fixture.
+
     [TestMethod]
     public void Mac_FindsSystemAndUserBundlesWithoutDependingOnPath()
     {
         var systemVlc = MakeExecutable("system/VLC.app/Contents/MacOS/VLC");
         var userVlc = MakeExecutable("home/Applications/VLC.app/Contents/MacOS/VLC");
         var userIina = MakeExecutable("home/Applications/IINA.app/Contents/MacOS/iina-cli");
-        Locator().Locate(KnownPlayerDefinitions.Vlc).Should().Equal(systemVlc, userVlc);
+        Locator().Locate(KnownPlayerDefinitions.Vlc with { CandidateDirectories = [] }).Should().Equal(systemVlc, userVlc);
         Locator().Locate(KnownPlayerDefinitions.Iina).Should().Equal(userIina);
     }
 
@@ -55,8 +58,8 @@ public class DefaultPlayerExecutableLocatorTests
     {
         var vlc = MakeExecutable("bin/vlc");
         var bin = Path.GetDirectoryName(vlc)!;
-        Locator(false, string.Join(Path.PathSeparator, bin, bin)).Locate(KnownPlayerDefinitions.Vlc).Should().Equal(vlc);
-        Locator(false).Locate(KnownPlayerDefinitions.Vlc).Should().BeEmpty();
+        Locator(false, string.Join(Path.PathSeparator, bin, bin)).Locate(KnownPlayerDefinitions.Vlc with { CandidateDirectories = [] }).Should().Equal(vlc);
+        Locator(false).Locate(KnownPlayerDefinitions.Vlc with { CandidateDirectories = [] }).Should().BeEmpty();
     }
 
     [TestMethod]
@@ -67,7 +70,7 @@ public class DefaultPlayerExecutableLocatorTests
         var fake = Path.Combine(directory, "vlc");
         File.WriteAllText(fake, "not an executable");
         if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(fake, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-        Locator(false, directory).Locate(KnownPlayerDefinitions.Vlc).Should().BeEmpty();
+        Locator(false, directory).Locate(KnownPlayerDefinitions.Vlc with { CandidateDirectories = [] }).Should().BeEmpty();
     }
 
     [TestMethod]
