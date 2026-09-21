@@ -1,6 +1,7 @@
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Domain.Options;
+using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
@@ -10,14 +11,39 @@ using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Service.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Bootstrap.Components.Configuration.Abstractions;
+using Bootstrap.Components.Orm;
 using Microsoft.Extensions.FileProviders;
+using System.Text.Json;
 
 // Each process owns its static AppService, independent SQLite database, options, keys and HTTP port.
 // This executable is never packaged. It uses the production startup, routes, middleware and adapters.
 if (args.Length < 2 || !int.TryParse(args[0], out var port) || !Path.IsPathFullyQualified(args[1]))
     throw new ArgumentException("Usage: Bakabase.Federation.TestHost <port> <absolute-empty-data-directory> [resource-count]");
 var dataDirectory = args[1];
+// Prepare the complete fixture settings before configuration providers/watchers
+// exist. Saving ServerId and then Mode after startup let a delayed options reload
+// temporarily replace the manager's new value with Disabled after "ready".
+var remoteOptionsPath = Path.Combine(dataDirectory, "configs", "remote-access.json");
+if (!File.Exists(remoteOptionsPath))
+{
+    Directory.CreateDirectory(Path.GetDirectoryName(remoteOptionsPath)!);
+    var temporary = remoteOptionsPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+    try
+    {
+        await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(new
+        {
+            RemoteAccess = new RemoteAccessOptions
+            {
+                ServerId = Guid.NewGuid().ToString("N"),
+                Mode = RemoteAccessMode.Enabled,
+                RequirePairing = true
+            }
+        }));
+        File.Move(temporary, remoteOptionsPath);
+    }
+    finally { if (File.Exists(temporary)) File.Delete(temporary); }
+}
+File.Delete(Path.Combine(dataDirectory, "ready"));
 Environment.SetEnvironmentVariable("BAKABASE_FEDERATION_TEST_DATA_DIR", dataDirectory);
 Environment.SetEnvironmentVariable("Analytics__Sentry__BackendDsn", "");
 AppDataAnchor.Use(new AppDataPathProfile("BAKABASE_FEDERATION_TEST_DATA_DIR", "Bakabase.Federation.Test", "Bakabase.Federation.Test"));
@@ -47,6 +73,14 @@ sealed class FederationTestHost(int port, string dataDirectory, int count)
         var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
         if (!await db.ResourcesV2.AnyAsync())
         {
+            var resourceOrm = scope.ServiceProvider.GetRequiredService<
+                FullMemoryCacheResourceService<BakabaseDbContext, ResourceDbModel, int>>();
+            var propertyOrm = scope.ServiceProvider.GetRequiredService<
+                FullMemoryCacheResourceService<BakabaseDbContext, ReservedPropertyValue, int>>();
+            // Deterministically cover background search-index warmup before seeding.
+            // Raw DbContext inserts leave these already-loaded caches empty forever.
+            if (await resourceOrm.GetByKey(1) != null || (await propertyOrm.GetAll()).Count != 0)
+                throw new InvalidOperationException("A fresh fixture must begin with empty resource/property caches.");
             var fixtureMedia = Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_MEDIA_FILE");
             if (fixtureMedia != null && (!Path.IsPathFullyQualified(fixtureMedia) || !File.Exists(fixtureMedia)))
                 throw new ArgumentException("The optional test media must be an existing absolute file path.");
@@ -63,28 +97,31 @@ sealed class FederationTestHost(int port, string dataDirectory, int count)
                 output.Write(16000); output.Write((short)2); output.Write((short)16);
                 output.Write("data"u8); output.Write(payload); output.Write(new byte[payload]);
             }
+            var resources = new List<ResourceDbModel>();
+            var properties = new List<ReservedPropertyValue>();
             for (var id = 1; id <= count; id++)
             {
-                db.ResourcesV2.Add(new ResourceDbModel
+                resources.Add(new ResourceDbModel
                 {
                     Id = id, Path = id == 1 ? mediaPath : null, IsFile = id == 1,
                     Status = ResourceStatus.Active
                 });
-                db.ReservedPropertyValues.Add(new ReservedPropertyValue
+                properties.Add(new ReservedPropertyValue
                 {
                     ResourceId = id, Scope = (int)PropertyValueScope.Manual,
                     Name = id == 1 ? "Shared title" : $"Title {id % 29:D2}"
                 });
             }
-            await db.SaveChangesAsync();
+            await resourceOrm.AddRange(resources);
+            await propertyOrm.AddRange(properties);
+            if (count > 0 && (await scope.ServiceProvider.GetRequiredService<IResourceService>().Get(1) == null ||
+                (await propertyOrm.GetFirstOrDefault(value => value.ResourceId == 1))?.Name != "Shared title"))
+                throw new InvalidOperationException("Seeded fixture data must be visible through production resource/property caches.");
         }
-        var node = await services.GetRequiredService<INodeIdentityProvider>().GetAsync();
-        await services.GetRequiredService<IBOptionsManager<RemoteAccessOptions>>().SaveAsync(options =>
-        {
-            options.ServerId = node.NodeId;
-            options.Mode = RemoteAccessMode.Enabled;
-            options.RequirePairing = true;
-        });
+        await services.GetRequiredService<INodeIdentityProvider>().GetAsync();
+        var remoteAccess = services.GetRequiredService<IRemoteAccessService>();
+        if (remoteAccess.GetEffectiveMode() != RemoteAccessMode.Enabled || !remoteAccess.GetRequirePairing())
+            throw new InvalidOperationException("The fixture requires preconfigured Enabled remote access with pairing.");
         await services.GetRequiredService<FederationPeerService>().SetSharingAsync(true);
         services.GetRequiredService<AppService>().NotAcceptTerms = false;
         File.WriteAllText(Path.Combine(dataDirectory, "ready"), port.ToString());

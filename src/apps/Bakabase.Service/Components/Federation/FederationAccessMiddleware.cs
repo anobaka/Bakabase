@@ -17,7 +17,7 @@ namespace Bakabase.Service.Components.Federation;
 public sealed class FederationAccessMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context, FederationStateStore store,
-        NodeGrantAuthenticator authenticator, IRemoteAccessService remoteAccess)
+        NodeGrantAuthenticator authenticator, IRemoteAccessService remoteAccess, GrantLeaseRegistry leases)
     {
         var path = context.Request.Path.Value ?? "";
         var authorization = context.Request.Headers.Authorization.ToString();
@@ -62,7 +62,18 @@ public sealed class FederationAccessMiddleware(RequestDelegate next)
 
             FederationHttpContext.MarkHandled(context, kind.Value, principal);
             context.Response.Headers.CacheControl = "no-store";
-            await next(context);
+            var originalAborted = context.RequestAborted;
+            using var grantLifetime = principal == null ? null : CancellationTokenSource.CreateLinkedTokenSource(
+                originalAborted, leases.GetCancellationToken(principal.GrantId));
+            try
+            {
+                // Covers every export operation, including detail/location/root
+                // reads which do not create a query snapshot or an asset stream.
+                // Keep the link through MVC result execution and streaming writes.
+                if (grantLifetime != null) context.RequestAborted = grantLifetime.Token;
+                await next(context);
+            }
+            finally { context.RequestAborted = originalAborted; }
         }
         catch (FederationAccessException e)
         {

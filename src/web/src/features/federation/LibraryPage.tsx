@@ -67,6 +67,11 @@ function Library() {
   const [enabling, setEnabling] = useState(false);
   const [enableError, setEnableError] = useState<Error>();
   const initialized = useRef<string>();
+  const lastIdentity = useRef<string>();
+  const identityKey = status
+    ? JSON.stringify([status.identity.nodeId, status.identity.libraryEpoch])
+    : undefined;
+  const queryKey = JSON.stringify([identityKey, scopeKey]);
   const detailRef = readResourceRef(params);
 
   useEffect(() => {
@@ -88,6 +93,23 @@ function Library() {
           ]
         : selected;
   const names = new Map(status?.peers.map((peer) => [peer.nodeId, peer.label]));
+  const sources = status
+    ? [
+        { nodeId: status.identity.nodeId, label: status.identity.name, available: true },
+        ...status.peers.map((peer) => ({
+          nodeId: peer.nodeId,
+          label: peer.label,
+          available: peer.enabled && !!peer.outboundGrant,
+        })),
+      ]
+    : [];
+
+  // Saved selections can outlive a forgotten peer or a cloned local identity.
+  // Keep them visible and removable instead of silently changing query coverage.
+  for (const nodeId of new Set(selected)) {
+    if (!sources.some((source) => source.nodeId === nodeId))
+      sources.push({ nodeId, label: nodeId, available: false });
+  }
 
   if (status) names.set(status.identity.nodeId, status.identity.name);
 
@@ -108,22 +130,31 @@ function Library() {
   };
 
   useEffect(() => {
-    if (status && status.browsingEnabled !== true) {
+    if (!status) return;
+    const identityChanged =
+      lastIdentity.current !== undefined && lastIdentity.current !== identityKey;
+
+    lastIdentity.current = identityKey;
+    if (status.browsingEnabled !== true) {
       initialized.current = undefined;
       reset();
       if (detailRef) setParams(withResourceRef(params), { replace: true });
 
       return;
     }
-    if (!status || initialized.current === scopeKey) return;
-    initialized.current = scopeKey;
+    if (identityChanged) {
+      reset();
+      if (detailRef) setParams(withResourceRef(params), { replace: true });
+    }
+    if (initialized.current === queryKey) return;
+    initialized.current = queryKey;
     if (!nodeIds.length) {
       reset();
 
       return;
     }
     submit();
-  }, [status, scopeKey]);
+  }, [status, queryKey]);
 
   const updateScope = (next: Scope, sources = selected) => {
     if (JSON.stringify([next, sources]) === scopeKey) return;
@@ -243,14 +274,7 @@ function Library() {
             {scope === "selected" && (
               <fieldset className="flex flex-wrap gap-x-4 gap-y-2 rounded-lg bg-default-50 p-3">
                 <legend className="sr-only">{t("federation.scope.select")}</legend>
-                {[
-                  { nodeId: status.identity.nodeId, label: status.identity.name, available: true },
-                  ...status.peers.map((peer) => ({
-                    nodeId: peer.nodeId,
-                    label: peer.label,
-                    available: peer.enabled && !!peer.outboundGrant,
-                  })),
-                ].map((source) => (
+                {sources.map((source) => (
                   <label key={source.nodeId} className="flex items-center gap-2 text-sm">
                     <input
                       checked={selected.includes(source.nodeId)}
@@ -394,64 +418,66 @@ function Library() {
             </div>
           )}
           {firstPage && (
-            <>
-              <section
-                aria-label={t("federation.coverage")}
-                className={`rounded-xl border p-4 ${firstPage.coverageComplete ? "border-default-200 bg-content1" : "border-warning/30 bg-warning/5"}`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium">
-                    {t(
-                      firstPage.coverageComplete
-                        ? "federation.results.complete"
-                        : "federation.results.partial",
-                      {
-                        count: firstPage.totalWithinParticipants,
-                        completed: firstPage.participants.length,
-                        requested: state.requestedNodeIds.length,
-                      },
-                    )}
-                    {submittedText && (
-                      <span className="ml-2 font-normal text-default-500">“{submittedText}”</span>
-                    )}
-                  </p>
-                  <button
-                    className={buttonClass}
-                    disabled={!!state.busy}
-                    type="button"
-                    onClick={submit}
-                  >
-                    {t("federation.refreshResults")}
-                  </button>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {firstPage.participants.map((node) => (
-                    <SourceBadge
-                      key={node.nodeId}
-                      label={`${names.get(node.nodeId) || node.nodeId} · ${node.totalCount}`}
-                      local={node.nodeId === status.identity.nodeId}
-                    />
+            <section
+              aria-label={t("federation.coverage")}
+              className={`rounded-xl border p-4 ${firstPage.coverageComplete ? "border-default-200 bg-content1" : "border-warning/30 bg-warning/5"}`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-medium">
+                  {t(
+                    firstPage.coverageComplete
+                      ? "federation.results.complete"
+                      : "federation.results.partial",
+                    {
+                      count: firstPage.totalWithinParticipants,
+                      completed: firstPage.participants.length,
+                      requested: state.requestedNodeIds.length,
+                    },
+                  )}
+                  {submittedText && (
+                    <span className="ml-2 font-normal text-default-500">“{submittedText}”</span>
+                  )}
+                </p>
+                <button
+                  className={buttonClass}
+                  disabled={!!state.busy}
+                  type="button"
+                  onClick={submit}
+                >
+                  {t("federation.refreshResults")}
+                </button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {firstPage.participants.map((node) => (
+                  <SourceBadge
+                    key={node.nodeId}
+                    label={`${names.get(node.nodeId) || node.nodeId} · ${node.totalCount}`}
+                    local={node.nodeId === status.identity.nodeId}
+                  />
+                ))}
+              </div>
+              {firstPage.omittedNodes.length > 0 && (
+                <ul className="mt-3 space-y-1 text-sm">
+                  {firstPage.omittedNodes.map((node) => (
+                    <li key={node.nodeId}>
+                      {names.get(node.nodeId) || node.nodeId} ·{" "}
+                      {t(`federation.error.${node.code}`, { defaultValue: node.code })}
+                    </li>
                   ))}
-                </div>
-                {firstPage.omittedNodes.length > 0 && (
-                  <ul className="mt-3 space-y-1 text-sm">
-                    {firstPage.omittedNodes.map((node) => (
-                      <li key={node.nodeId}>
-                        {names.get(node.nodeId) || node.nodeId} ·{" "}
-                        {t(`federation.error.${node.code}`, { defaultValue: node.code })}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {!firstPage.coverageComplete && (
-                  <p className="mt-2 text-xs text-default-500">
-                    {t("federation.results.partialTip")}
-                  </p>
-                )}
-              </section>
-              <div
-                className={`grid items-start gap-5 ${detailRef ? "xl:grid-cols-[minmax(0,1fr)_minmax(320px,440px)]" : ""}`}
-              >
+                </ul>
+              )}
+              {!firstPage.coverageComplete && (
+                <p className="mt-2 text-xs text-default-500">
+                  {t("federation.results.partialTip")}
+                </p>
+              )}
+            </section>
+          )}
+          {(firstPage || detailRef) && (
+            <div
+              className={`grid items-start gap-5 ${firstPage && detailRef ? "xl:grid-cols-[minmax(0,1fr)_minmax(320px,440px)]" : ""}`}
+            >
+              {firstPage && (
                 <div className="min-w-0">
                   {!items.length && (
                     <div className={`${panelClass} py-12 text-center`}>
@@ -522,26 +548,17 @@ function Library() {
                     </div>
                   )}
                 </div>
-                {detailRef && (
-                  <ResourceDetail
-                    key={resourceKey(detailRef)}
-                    localEpoch={status.identity.libraryEpoch}
-                    localNodeId={status.identity.nodeId}
-                    resourceRef={detailRef}
-                    onClose={() => openDetail()}
-                  />
-                )}
-              </div>
-            </>
-          )}
-          {!firstPage && detailRef && (
-            <ResourceDetail
-              key={resourceKey(detailRef)}
-              localEpoch={status.identity.libraryEpoch}
-              localNodeId={status.identity.nodeId}
-              resourceRef={detailRef}
-              onClose={() => openDetail()}
-            />
+              )}
+              {detailRef && (
+                <ResourceDetail
+                  key={resourceKey(detailRef)}
+                  localEpoch={status.identity.libraryEpoch}
+                  localNodeId={status.identity.nodeId}
+                  resourceRef={detailRef}
+                  onClose={() => openDetail()}
+                />
+              )}
+            </div>
           )}
         </>
       )}

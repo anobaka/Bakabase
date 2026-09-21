@@ -69,12 +69,15 @@ internal sealed class FaultClient(IPeerSearchClient inner) : IPeerSearchClient
     public int? FailReadCall;
     public bool FailCreate;
     public TimeSpan CreationDelay;
+    public Task? CreationGate;
     public int? BlockSizeOverride;
     public bool IgnoreCreateCancellation;
     public Action? AfterCreate;
+    public Action? AfterRelease;
     public async Task<NodeQueryBlock> CreateAsync(NodeExportQuery query, CancellationToken cancellationToken)
     {
         if (IgnoreCreateCancellation) cancellationToken = CancellationToken.None;
+        if (CreationGate != null) await CreationGate.WaitAsync(cancellationToken);
         if (CreationDelay > TimeSpan.Zero) await Task.Delay(CreationDelay, cancellationToken);
         if (FailCreate) throw new HttpRequestException("offline");
         var block = await inner.CreateAsync(BlockSizeOverride.HasValue ? query with { BlockSize = BlockSizeOverride.Value } : query, cancellationToken);
@@ -87,10 +90,11 @@ internal sealed class FaultClient(IPeerSearchClient inner) : IPeerSearchClient
         return inner.ReadAsync(snapshotId, cursor, cancellationToken);
     }
     public Task ValidateAsync(string snapshotId, CancellationToken cancellationToken) => inner.ValidateAsync(snapshotId, cancellationToken);
-    public Task ReleaseAsync(string snapshotId, CancellationToken cancellationToken)
+    public async Task ReleaseAsync(string snapshotId, CancellationToken cancellationToken)
     {
         ReleaseCalls++;
-        return inner.ReleaseAsync(snapshotId, cancellationToken);
+        await inner.ReleaseAsync(snapshotId, cancellationToken);
+        AfterRelease?.Invoke();
     }
 }
 

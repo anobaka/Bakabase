@@ -85,6 +85,34 @@ public sealed class NodeSecurityTests
     }
 
     [TestMethod]
+    public async Task ValidInvitationCanApproveAnExistingPendingTransactionWithoutRevivingRejectedRequests()
+    {
+        using var node = new TestNode();
+        await node.Peers.SetSharingAsync(true);
+        var invitation = await node.Peers.IssueInvitationAsync();
+        var request = new NodePairRequest("reader-a", "Reader A", "pending-transaction", NodeRequestSignature.RandomToken());
+        Assert.AreEqual("awaitingApproval", (await node.Peers.RequestPairingAsync(request)).Outcome);
+        var coded = new NodePairCodeRequest(request.NodeId, request.NodeName, invitation.Code,
+            request.TransactionId, request.ClaimSecret);
+
+        var granted = await node.Peers.ExchangeCodeAsync(coded);
+
+        Assert.AreEqual("granted", granted.Outcome);
+        Assert.IsNotNull(granted.Credentials);
+        Assert.AreEqual(granted.Credentials, (await node.Peers.ExchangeCodeAsync(coded)).Credentials);
+        Assert.AreEqual(1, (await node.Peers.GetStatusAsync()).Requests.Count);
+        Assert.AreEqual("rejected", (await node.Peers.ExchangeCodeAsync(coded with
+            { TransactionId = "different-transaction" })).Outcome, "The invitation must still be consumed once.");
+
+        invitation = await node.Peers.IssueInvitationAsync();
+        request = request with { TransactionId = "rejected-transaction" };
+        await node.Peers.RequestPairingAsync(request);
+        await node.Peers.RejectAsync(request.TransactionId);
+        Assert.AreEqual("rejected", (await node.Peers.ExchangeCodeAsync(coded with
+            { Code = invitation.Code, TransactionId = request.TransactionId })).Outcome);
+    }
+
+    [TestMethod]
     public async Task SignatureBindsAudienceMethodPathRawQueryBodyAndRejectsReplay()
     {
         using var node = new TestNode();

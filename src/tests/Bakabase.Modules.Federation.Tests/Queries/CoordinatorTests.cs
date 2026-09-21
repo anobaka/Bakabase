@@ -164,15 +164,36 @@ public class CoordinatorTests
         var limits = Limits with { PreparationTimeout = TimeSpan.FromMilliseconds(30) };
         using var a = new TestPeer("a", limits, null, "a", "c");
         using var b = new TestPeer("b", limits, null, "b");
-        b.Client.CreationDelay = TimeSpan.FromMilliseconds(100);
+        var allowCreation = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        b.Client.CreationGate = allowCreation.Task;
         b.Client.IgnoreCreateCancellation = true;
+        b.Client.AfterRelease = () => released.TrySetResult();
         using var coordinator = new FederatedQueryCoordinator(new FixedTargets(a, b), limits);
-        var result = await coordinator.CreateAsync("ui", new() { NodeIds = ["a", "b"], PageSize = 1 });
-        Assert.AreEqual("a", result.Participants.Single().NodeId);
-        await Task.Delay(150);
-        Assert.AreEqual(1, b.Client.ReleaseCalls);
-        var next = await coordinator.ReadAsync("ui", result.SessionId, result.NextCursor!);
-        Assert.AreEqual("c", next.Items.Single().Title);
+        try
+        {
+            var result = await coordinator.CreateAsync("ui", new() { NodeIds = ["a", "b"], PageSize = 1 });
+            Assert.AreEqual("a", result.Participants.Single().NodeId);
+            Assert.AreEqual("b", result.OmittedNodes.Single().NodeId);
+            Assert.AreEqual("QueryDeadlineExceeded", result.OmittedNodes.Single().Code);
+            Assert.AreEqual(0, b.Client.ReleaseCalls);
+
+            // Complete the ignored-cancellation request only after participants
+            // have been sealed, then observe cleanup instead of guessing its timing.
+            allowCreation.SetResult();
+            await released.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.AreEqual(1, b.Client.ReleaseCalls);
+            var next = await coordinator.ReadAsync("ui", result.SessionId, result.NextCursor!);
+            Assert.AreEqual("c", next.Items.Single().Title);
+            Assert.AreEqual("a", next.Participants.Single().NodeId);
+            Assert.AreEqual("b", next.OmittedNodes.Single().NodeId);
+            Assert.AreEqual(1, b.Client.ReleaseCalls);
+        }
+        finally
+        {
+            // Do not strand a background preparation if an earlier assertion fails.
+            allowCreation.TrySetResult();
+        }
     }
 
     [TestMethod]

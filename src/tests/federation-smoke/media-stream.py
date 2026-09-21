@@ -6,6 +6,7 @@ checks decoded browser frames, slow streams, cancellation, interrupted reads,
 idle timeout and revocation. It is network fault injection, not a physical LAN.
 """
 import argparse
+from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import http.client
 import importlib.util
@@ -332,7 +333,7 @@ def main():
         api(reader["base"], path, expected=(401, 403, 409, 410))
         report["revocation"] = {"newRangeDenied": True}
         for node in nodes:
-            with sqlite3.connect(next(node["directory"].rglob("bakabase_insideworld*.db"))) as db:
+            with closing(sqlite3.connect(next(node["directory"].rglob("bakabase_insideworld*.db")))) as db:
                 assert db.execute("select count(*) from ResourcesV2 where PlayedAt is not null").fetchone()[0] == 0
         report["noPlaybackHistoryWrites"] = True
         if time.monotonic() >= deadline:

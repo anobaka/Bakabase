@@ -5,6 +5,15 @@ ports, databases, credentials and temporary directories. Build
 `src/tests/Bakabase.Federation.TestHost` first. Run `python3 run.py --help` for
 result-directory and deadline options. The default run cleans up its own hosts
 and fixture data; `--keep` is for manual debugging only.
+The pairing check first creates a pending approval and then completes the same
+transaction with an invitation code. SQLite inspection connections are explicitly
+closed before fixture cleanup, including on Windows where open files cannot be
+removed.
+The TestHost writes complete fixture remote-access settings atomically before
+configuration watchers start. It intentionally warms empty resource/property
+caches, then seeds through the production cache-aware ORM and checks resource
+visibility before signalling readiness; background index timing cannot leave the
+detail API reading an empty cache while SQL-based federation queries see rows.
 
 ## Two-library HTTP measurements
 
@@ -48,7 +57,8 @@ It never stores authorization headers or media tickets. The optional
 ordinary smoke tests keep their original one-second WAV.
 
 The browser must present an actual video frame (`requestVideoFrameCallback`),
-pause its clock, resume, then present a frame at 90 seconds. Seeking must issue a
+pause its clock, refresh the query without replacing the preview element or media
+session, resume, then present a frame at 90 seconds. Seeking must issue a
 new Range beyond half of the source file. HTTP checks verify a continuous transfer
 beyond the eight-second header deadline, reader cancellation releasing the
 upstream, interrupted transfer detection, matching bytes after a new Range,

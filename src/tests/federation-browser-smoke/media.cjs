@@ -38,6 +38,17 @@ const name = key => new RegExp(`^(?:${locales.map(locale => escape(locale[key]))
     report.video = initial;
     await page.locator('video').evaluate(video => video.pause());
     const paused = await page.locator('video').evaluate(video => video.currentTime);
+    const playingElement = await page.locator('video').elementHandle();
+    const mediaUrl = await playingElement.evaluate(video => video.currentSrc);
+    const refreshed = page.waitForResponse(response => response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/federation/local/queries');
+    await page.getByRole('button', { name: name('federation.refreshResults'), exact: true }).click();
+    assert.ok((await refreshed).ok());
+    await page.getByRole('button', { name: name('federation.refreshResults'), exact: true }).waitFor({ state: 'visible' });
+    assert.ok(await playingElement.evaluate(video => video.isConnected && document.querySelector('video') === video));
+    assert.equal(await playingElement.evaluate(video => video.currentSrc), mediaUrl);
+    assert.ok(await playingElement.evaluate(video => video.paused));
+    report.queryRefreshPreservedPreview = true;
     await page.waitForTimeout(2200); // Deliberate clock-stability assertion, not UI synchronization.
     assert.ok(Math.abs(await page.locator('video').evaluate(video => video.currentTime) - paused) < 0.1);
     report.pauseClockStable = true;

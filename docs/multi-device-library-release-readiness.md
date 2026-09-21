@@ -1,10 +1,12 @@
 # 多设备媒体库：发布准备与迁移验收
 
-记录日期：2026-09-21。对应开发分支 `codex/multi-device-library`；初始实现基线为 `f1fa1469`，后续验收在 `b80ddfbe`、`cf787d13` 的基础上继续，包含其后的工作区修改。没有发布、推送、切换更新 feed 或收敛官方下载入口。
+记录日期：2026-09-21。对应开发分支 `codex/multi-device-library`；初始实现基线为 `f1fa1469`，后续验收在 `b80ddfbe`、`cf787d13` 的基础上继续，包含其后的修改。继续验收时已合入最新 `origin/main`（`86d76392`）并推送开发分支，用于远端测试。没有发布、切换更新 feed 或收敛官方下载入口。
 
 当前设计以[多设备联合媒体库执行计划](multi-device-library-execution-plan.md)为准，功能、预算和已有测试记录见[实施记录](multi-device-library-implementation.md)。[旧拆分设计](pc-client-design.html)与[旧拆分执行计划](pc-client-execution-plan.html)保留历史内容，并增加了当前状态入口。
 
-代码和自动化已提供可执行的发布检查。本机通过不等于所有平台已通过；Windows、Linux x64、macOS Intel 的新矩阵需在 CI 实际运行，签名安装包、跨物理设备、播放器矩阵和升级验收仍是扩大试用前的门禁。
+Windows 数据迁移修复另在基础设施分支 `codex/multi-device-relocation-lock`（`dc6692a9522736969d7d574c980ca98e447570ee`），父仓库已固定引用且远端 CI 可拉取。后续合并顺序为先将基础设施修复合入其主线，再合入本仓库引用，保证子模块提交长期可达。没有改动用户原工作区的基础设施 checkout。
+
+代码和自动化已提供可执行的发布检查。四平台矩阵及最终完整 CI 已通过；签名安装包、跨物理设备、播放器矩阵和升级验收仍是扩大试用前的门禁。
 
 ## 1. 产品身份与包内容
 
@@ -74,9 +76,21 @@ python3 src/tests/federation-smoke/run.py --dotnet /absolute/path/to/dotnet --ti
 
 不要用裸 `dotnet test` 的成功退出码证明这些 MSTest.Sdk 项目执行了测试。`run-compatibility.py --no-build` 只适用于已经构建当前源码的情况。
 
+### 本次远端执行证据
+
+最终代码提交 `ca55d4733d7606807755868f5b04520d4ccdcf98` 的 [CI 35607879124](https://github.com/anobaka/Bakabase/actions/runs/35607879124) **7 个作业全部成功**：前端、全后端、浏览器以及 Windows x64、Linux x64、macOS Intel/ARM 四平台。各 artifact 的源码 SHA 已核对一致。该运行通过同一提交的临时 `codex/multi-device-library-ci-ca55d473` 分支触发，避免中断上一轮全后端；验证完成后临时分支已删除，代码保留在 `codex/multi-device-library`，没有触发部署。后续仅归档文档，不改变已测代码。
+
+全后端作业用时 25 分 59 秒。13 个项目共 2,617 项：通过 2,582、失败 0、跳过 35。主程序集实际发现并执行 184 类、1,641 项，selection、summary、184 份 TRX 的计数/结果以及日志逐类一致；其余 12 个模块每个只计一次真实 MTP 汇总。35 项跳过全部来自 ThirdParty 已显式 `[Ignore]` 的手动联网测试，其余项目没有跳过。artifact `10643378594` 为 718,387 bytes，下载 SHA256 与 GitHub digest 一致；完整索引在 `/tmp/bakabase-ci-ca55d473-backend/summary.json`。
+
+最终四个平台的 artifact 均核对为该 SHA，每个平台仍为兼容性 136、Service Federation 48、Protocol 49、Player 74 项全部通过，零失败/跳过；Intel 的迟到快照释放回归实际通过。四个平台分别完成三节点 / 771 条 smoke，Linux 的 Service 角色以及 Windows、Intel、ARM 的三种发布角色检查均通过。四份小型平台 artifact 共 848,051 bytes，统计、TRX 和角色证据索引在 `/tmp/bakabase-ci-ca55d473-evidence/summary.json`。
+
+最终前端为 98 文件 / 936 测试，lint 与生产构建通过。浏览器迁移为 114 条资源 / 2 个来源、0 页面错误，旧连接不变、导入草稿恢复与新授权、恢复/克隆和跨窗口关闭浏览全部通过。120 秒视频在 256 KiB/s 下约 1,411 ms 呈现首帧；刷新查询保留预览，90 秒实际呈现帧、暂停、9 秒持续流、断流后的 Range 恢复、30 秒 idle、流中关闭浏览和不写播放历史均通过。所有测试进程退出，9 条转发连接释放。结果是单次受控 loopback 样本，不是物理弱网性能分布。浏览器 artifact `10642874403` 为 268,540 bytes，不含原视频或业务数据库，核验记录在 `/tmp/bakabase-ci-ca55d473-browser/summary.json`；脱敏异常类型仍保留，未将断言通过表述为后台没有任何异常。
+
+修复过程另保留 [CI 35604229653](https://github.com/anobaka/Bakabase/actions/runs/35604229653)（`1cfb8752`）的证据：全后端、前端、浏览器和三个平台通过，Intel 的 Protocol 为 48 / 49，其后步骤未执行。失败测试用固定 150 ms 等待推断后台清理完成，调度较慢时会提前断言；`ca55d473` 改为创建阻塞与释放完成信号，仍要求超时节点被省略、迟到快照恰好释放一次、后续分页不加入该节点，已在最终四平台实际通过。更早两轮被新运行取消的后端作业不计为全量通过。
+
 ## 3. 本轮本机证据与适用范围
 
-执行机器为 macOS ARM64，.NET SDK 9.0.100 / runtime 9.0.0。以下证据均是实际执行结果；本机临时路径用于这次审计，CI 将生成自身 artifact，临时日志不是长期发布记录。
+执行机器为 macOS ARM64，.NET SDK 9.0.100 / runtime 9.0.0。以下证据均是实际执行结果；本机临时路径用于这次审计，远端 CI 的独立 artifact 见上一节，临时日志不是长期发布记录。
 
 | 检查 | 结果 | 本机证据 |
 | --- | --- | --- |
@@ -86,7 +100,7 @@ python3 src/tests/federation-smoke/run.py --dotnet /absolute/path/to/dotnet --ti
 | 实际 Service、统一桌面、旧客户端 publish | 三角色通过；前两者带真实 web | `/tmp/bakabase-release-readiness/{server,unified,client}-package.json` |
 | 三真实宿主 HTTP | 771 行遍历及上述故障/开关场景通过 | `/tmp/bakabase-release-readiness/smoke/result.json`、`smoke.log` |
 | Player 模块及本轮策略 | 模块 74 / 74、策略/参数 14 / 14、旧播放处理器 20 / 20 通过 | `/tmp/bakabase-player-policy-results.log`；本轮对应 TRX |
-| 前端当前源码 | 98 文件、932 测试通过；生产构建、定向 lint/格式检查通过 | `/tmp/bakabase-native-migration-{all-tests,web-build}.log` |
+| 原生导出修复时的前端 | 98 文件、932 测试通过；生产构建、定向 lint/格式检查通过 | `/tmp/bakabase-native-migration-{all-tests,web-build}.log` |
 | 前端全量类型检查 | 310 个主线既有诊断，无新增/消失；AppInfo 新增链接使其中 4 条诊断行列移动，去掉行列后全文一致 | `/tmp/bakabase-identity-recovery-tsc-comparison.json` 与 `/tmp/bakabase-tsc-baseline.log` |
 
 较早一轮原生操作曾因 Mac 锁屏受阻；本轮已可操作桌面，使用独立 AppData 和实际 Velopack portable `.app` 验证：空库首启、主动开启浏览、通过设备页配对、257 条 / 2 个来源、完整只读详情、原生音频预览播放/暂停/拖动到 63 秒/恢复、映射后由 Finder 打开真实测试目录、来源离线时明确显示覆盖不完整、本机设置及日志仍可用、来源重启后无需重新配对恢复结果。没有操作用户原媒体库。
@@ -113,12 +127,17 @@ VLC 的原始 localhost 请求实际遇到系统代理 503；[Darwin 代理实�
 | Linux x64 三宿主 | `51601e31`、官方 ASP.NET 9.0.20 x64，771 条全流程约 18.5 秒通过；macOS ARM 交叉构建、OrbStack x64 仿真执行 | `/tmp/bakabase-linux-x64-51601e31-2/smoke/result.json` |
 | Linux x64 补充回归 | Player 74 / 74、兼容性/迁移 135 / 135，0 失败/跳过；独立补测，未把旧 TRX 混入计数 | `/tmp/bakabase-linux-x64-51601e31-tests/result.json` |
 | macOS ARM 真实旧版升级 | `f1fa1469` → `51601e31`；旧应用创建资源、自身 updater 下载、真实 UpdateMac 替换后新应用启动；2 条资源逐字段保留、两次 SQLite 完整性通过 | `/private/tmp/bakabase-real-upgrade-51601e31/run5/report.json`、`velopack-native.log` |
+| 最新主线集成 | 合入 `86d76392` 后 Federation/枚举绑定/重启 57 / 57；三宿主 771 条通过 | `/tmp/bakabase-main-integration-20260921/summary.json`、`/tmp/bakabase-main-smoke-20260921/result.json` |
+| 配对重试与在途撤销修复 | 模块 49 / 49、Service Federation 48 / 48；三宿主验证等待审批后补邀请码可完成配对 | `/tmp/bakabase-federation-review-{module,service}-tests.log`、`/tmp/bakabase-pending-code-revocation-smoke/result.json` |
+| 查询与预览生命周期修复 | 全量 936 / 936、构建及定向 lint/格式通过；类型检查仍为既有 310 条，无新增；真实视频查询刷新保留元素、票据和暂停位置 | `/tmp/bakabase-federation-library-review-all-tests.log`、`/tmp/bakabase-federation-library-review-tsc-comparison.json`、`/tmp/bakabase-ci-fixes-final-media-20260921/result.json` |
+| Windows 迁移文件锁修复 | 远端捕获 SQLite pooling 阻止 staging 数据库移动；基础设施固定到单一修复 `dc6692a`，本机迁移回归 14 / 14；后续 Windows CI 兼容性 136 / 136 | `/tmp/bakabase-windows-relocation-fix-20260921/summary.json`、`/tmp/bakabase-ci-6fbe5b8f-evidence/` |
+| 最新 macOS ARM 候选包及升级 | 代码 `6fbe5b8f`、基础设施 `dc6692a`，self-contained portable `0.0.2-federation.5` 实际内容审计通过；旧源码经真实 UpdateMac 更新到该包，2 条资源/127 条迁移记录保留，两份 SQLite 完整性通过，进程及工作数据清理完成 | `/tmp/bakabase-candidate-6fbe5b8f/report.json` |
 | 真实旧客户端迁移浏览器链路 | 旧连接保持可用且文件未变；白名单导出/草稿恢复/幂等/新授权/114 条联合资源/跨窗口关闭及两种身份恢复；0 pageErrors | `/tmp/bakabase-browser-migration-recovery-final/result.json` |
 | 双大库 HTTP | 2×10k、2×100k 冷/热完整遍历、传输量与 RSS、执行中取消和额度复用通过；只含 loopback 网络 | `/tmp/bakabase-federation-http-benchmark-final-20260921/result.json` |
 | Linux ARM64 实际执行 | Federation 47、Player 72、兼容 131 通过；实际 Service 包角色审计通过。由 macOS SDK 跨平台构建，在 Ubuntu 24.04 实际运行 | `/tmp/bakabase-linux-cross-results/summary.json` |
 | Linux 未完成项 | ARM 容器原生编译及三宿主启动遇 SIGILL；后续无业务依赖最小程序捕获 .NET 9 PAL 的 `rdvl` 已知缺陷。x64 SDK 镜像下载超时，未算通过 | 同上；`/tmp/bakabase-sigill-d4e97c86/` |
 
-Linux runner 使用独立容器、源码副本、资源和总时限，已清理本轮创建的容器和数据；未关闭用户容器。Windows 路径测试现采用当前平台绝对路径，播放器发现测试隔离真实 `%ProgramFiles%` 内容，本机 27 项回归通过；这不等于 Windows CI 已执行。
+Linux runner 使用独立容器、源码副本、资源和总时限，已清理本轮创建的容器和数据；未关闭用户容器。早期 Windows 路径测试改为当前平台绝对路径，播放器发现测试隔离真实 `%ProgramFiles%` 内容，本机 27 项回归通过；后续实际 Windows CI 又捕获混合分隔符的夹具比较问题，`1cfb8752` 将夹具规范化为原生绝对路径，本机完整 Player 74 / 74 通过。
 
 后续 [Linux ARM64 专项诊断](linux-arm64-runtime-diagnosis.md)在不包含 Bakabase 代码的同一 DLL 上得到 .NET 9.0.20 三次 SIGILL、官方 .NET 10.0.12 三次通过；捕获的指令及 SME/no-SVE 环境与官方 CoreCLR PAL 修复吻合。没有因此修改产品框架或把 ARM 诊断当成 Linux x64 CI 通过；当前发布目标仍是 Linux x64。
 
@@ -128,13 +147,17 @@ Linux runner 使用独立容器、源码副本、资源和总时限，已清理�
 
 复现脚本为 `src/tests/upgrade-tests/run-velopack-macos.py`。测试专用 startup hook 将 Velopack cache/log 放进临时目录，并为真实 apply 加入 `--norestart --silent`；替换后由脚本以同一隔离环境启动新程序。没有复制新目录冒充 updater，也没有改产品代码。证据覆盖真实旧源码到新版的 portable 更新与数据保留；不覆盖历史官方签名包、默认用户缓存、LaunchServices 自动重启、生产 feed 或系统安装。macOS 管理的 WebKit/SavedState 缓存不在 AppData/Velopack 隔离范围内，未删除用户系统缓存。完整命令和边界见[升级测试说明](../src/tests/upgrade-tests/README.md)。
 
+完成本轮修复后，又从代码提交 `6fbe5b8f86087189a71494f15c6a2b0ec20bd2b1` 构建最新 self-contained ARM 候选包 `0.0.2-federation.5`（core `2.4.0-beta.351`），并重跑同一真实旧版升级链路。应用 DLL 与下载包一致，2 条资源逐字段相同，原库及外部数据保留；2 次 loopback feed 请求共 89,891,891 bytes。所有应用/更新器进程退出并清理中间目录。便携包保留在 `/tmp/bakabase-candidate-6fbe5b8f/packages/Bakabase-federation-test-Portable.zip`，大小 87,847,615 bytes，SHA256 为 `cfa3467fb982e19a12524a9694e907a3652df2e0c5ec0f7d603765b3b193919c`；内容审计、源码/子模块记录和升级报告位于同目录的上级。该包未签名或公证，仍适用上述隔离 locator/显式重启边界，没有重复宣称所有原生 GUI 或安装器验收通过。
+
+后续提交 `1cfb8752`、`ca55d473` 仅调整 Windows 播放器路径和迟到快照释放的测试夹具；产品源文件与该候选包的构建提交相同，包自身版本和 provenance 仍准确标记为 `6fbe5b8f`。
+
 计划 P00–P10 的行为覆盖、查询基线与全后端回归见实施记录。双大库的新 HTTP 基线补充了本机进程内存、传输量和取消后的额度释放；视频首帧另有受控限速样本，仍不能推导物理局域网或弱网性能。
 
-## 4. 发布前尚需执行的门禁
+## 4. 发布门禁状态
 
 | 门禁 | 必须记录的操作与证据 | 当前状态 |
 | --- | --- | --- |
-| 新 CI 四平台作业 | 同一最终 commit SHA 的四平台 artifact；不得用工作区本机结果替代远端结果 | 已接线，尚未触发远端 CI |
+| 新 CI 四平台作业 | 同一最终 commit SHA 的四平台 artifact；不得用工作区本机结果替代远端结果 | 已通过：`ca55d473` 的全部 7 个 CI 作业成功，artifact SHA 和测试结果已核对 |
 | 最终桌面包 | Windows x64、macOS ARM/Intel 的实际安装包，记录 SHA、版本、架构、签名/公证和启动结果 | 尚未完成整套安装包矩阵 |
 | 三种安装来源 | 全新安装；已有一体版原位升级；只有旧客户端时并装统一版；额外验证两者原本同机安装 | 自动身份/路径、macOS portable 并行运行及真实旧版 updater 替换已过；签名安装器与其他平台路径待执行 |
 | 更新与数据隔离 | stable/beta 各按原 feed 更新，重启后有效 AppData 不变，独立单实例/端口/进程并存，原库 SQLite 完整性可复核 | macOS 隔离 feed 的真实下载/替换和原库保留已过；默认缓存、自动重启与生产通道仍待执行 |

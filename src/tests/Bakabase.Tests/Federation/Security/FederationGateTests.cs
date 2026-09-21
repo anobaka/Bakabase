@@ -125,6 +125,36 @@ public sealed class FederationGateTests
     }
 
     [TestMethod]
+    [DataRow("/federation/v1/export/resources/resolve", "POST", false)]
+    [DataRow("/federation/v1/export/resources/resolve", "POST", true)]
+    [DataRow("/federation/v1/export/resources/location", "POST", false)]
+    [DataRow("/federation/v1/export/resources/location", "POST", true)]
+    [DataRow("/federation/v1/export/mapping-roots", "GET", false)]
+    [DataRow("/federation/v1/export/mapping-roots", "GET", true)]
+    public async Task RevocationDuringExportCancelsRequestAndRejectsLateSuccessfulControlResults(
+        string path, string method, bool disableSharing)
+    {
+        using var fixture = await GateFixture.CreateAsync();
+        using var connection = new CancellationTokenSource();
+        var context = Context(path, method);
+        context.RequestAborted = connection.Token;
+        fixture.Sign(context);
+        await Assert.ThrowsAsync<OperationCanceledException>(() => fixture.RunAsync(context, async http =>
+        {
+            // Model a storage read which began while allowed, then returns without
+            // observing cancellation (the existing resource Get API has no token).
+            if (disableSharing) await fixture.Peers.SetSharingAsync(false);
+            else await fixture.Peers.RevokeAsync(fixture.Grant.GrantId);
+            var controller = new LateResultController
+                { ControllerContext = new ControllerContext { HttpContext = http } };
+            controller.Success();
+        }));
+        Assert.IsFalse(connection.IsCancellationRequested, "Grant cancellation must not cancel the original connection source.");
+        Assert.AreEqual(connection.Token, context.RequestAborted, "The original request token must be restored after unwinding.");
+        Assert.AreEqual(0L, context.Response.Body.Length);
+    }
+
+    [TestMethod]
     public async Task ChunkedControlBodiesAreBoundedBeforeModelBindingOrAuthentication()
     {
         using var fixture = await GateFixture.CreateAsync();
@@ -208,6 +238,10 @@ public sealed class FederationGateTests
         [FederationEndpoint(FederationEndpointKind.Export)] public void Export() { }
         public void Unmarked() { }
     }
+    private sealed class LateResultController : FederationControllerBase
+    {
+        public ContentResult Success() => FederationResult(new { resource = "private result" });
+    }
     private sealed class GateFixture : IFederationDataDirectory, INodeIdSource, IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "federation-gate-" + Guid.NewGuid().ToString("N"));
@@ -218,6 +252,7 @@ public sealed class FederationGateTests
         public FederationStateStore Store { get; private set; } = null!;
         public NodeGrantAuthenticator Auth { get; private set; } = null!;
         public NodeCredentials Grant { get; private set; } = null!;
+        public FederationPeerService Peers { get; private set; } = null!;
         public bool ReachedEndpoint { get; private set; }
         public static async Task<GateFixture> CreateAsync()
         {
@@ -225,6 +260,7 @@ public sealed class FederationGateTests
             f.Store = new(f, f);
             var identity = new NodeIdentityProvider(f.Store);
             var peers = new FederationPeerService(f.Store, identity, f.Leases, TimeProvider.System);
+            f.Peers = peers;
             var grants = new NodeGrantService(f.Store, identity, f.Leases, TimeProvider.System);
             f.Auth = new(grants, new NodeNonceCache(TimeProvider.System), TimeProvider.System);
             await peers.SetSharingAsync(true);
@@ -236,15 +272,15 @@ public sealed class FederationGateTests
         public void Sign(HttpContext context) => context.Request.Headers.Authorization = NodeRequestSignature.Create(
             Grant, context.Request.Method, context.Request.Path, context.Request.QueryString.HasValue ?
                 context.Request.QueryString.Value![1..] : "", NodeRequestSignature.Hash([]), DateTimeOffset.UtcNow);
-        public async Task RunAsync(HttpContext context)
+        public async Task RunAsync(HttpContext context, RequestDelegate? endpoint = null)
         {
             ReachedEndpoint = false;
-            var legacy = new RemoteAccessMiddleware(_ => { ReachedEndpoint = true; return Task.CompletedTask; },
+            var legacy = new RemoteAccessMiddleware(ctx => { ReachedEndpoint = true; return endpoint?.Invoke(ctx) ?? Task.CompletedTask; },
                 NullLogger<RemoteAccessMiddleware>.Instance);
             // A valid node request skips legacy authentication before its null authenticators
             // are touched; anonymous loopback still follows the existing loopback branch.
             var middleware = new FederationAccessMiddleware(ctx => legacy.InvokeAsync(ctx, Remote, null!, null!));
-            await middleware.InvokeAsync(context, Store, Auth, Remote);
+            await middleware.InvokeAsync(context, Store, Auth, Remote, Leases);
         }
         public void Dispose() { Leases.Dispose(); Directory.Delete(Path, true); }
     }

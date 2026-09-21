@@ -18,7 +18,12 @@ vi.mock("@/stores/remoteAccess", () => ({
 }));
 vi.mock("../peerApi", () => ({ federationPeerApi: { browsing: vi.fn() } }));
 vi.mock("../components/ResourceDetail", () => ({
-  default: () => <div>Active resource detail</div>,
+  default: () => (
+    <div>
+      Active resource detail
+      <input aria-label="Preview playback position" defaultValue="0" />
+    </div>
+  ),
 }));
 vi.mock("../hooks/useFederatedQuery", () => ({ useFederatedQuery: vi.fn() }));
 vi.mock("../hooks/useFederationStatus", () => ({ useFederationStatus: vi.fn() }));
@@ -59,7 +64,6 @@ const setState = (state: QueryState) =>
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  localStorage.clear();
   vi.mocked(useFederationStatus).mockReturnValue({
     status,
     loading: false,
@@ -71,6 +75,26 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("visible query coverage", () => {
+  it("lets a saved source be deselected after that device was forgotten", async () => {
+    localStorage.setItem(
+      "federation.scope",
+      JSON.stringify({ scope: "selected", sources: ["forgotten-device"] }),
+    );
+    render(
+      <MemoryRouter>
+        <LibraryPage />
+      </MemoryRouter>,
+    );
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: ["forgotten-device"] }));
+    const source = screen.getByRole("checkbox", { name: /forgotten-device/ });
+
+    expect(source).toBeChecked();
+    expect(source).not.toBeDisabled();
+    fireEvent.click(source);
+    expect(screen.queryByRole("checkbox", { name: /forgotten-device/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "federation.search.action" })).toBeDisabled();
+    expect(JSON.parse(localStorage.getItem("federation.scope")!).sources).toEqual([]);
+  });
   it("keeps offline authorized sources in All so the coordinator can report missing coverage", async () => {
     render(
       <MemoryRouter initialEntries={["/federation?scope=all"]}>
@@ -124,6 +148,80 @@ describe("visible query coverage", () => {
     expect(screen.getByText(/Sleeping PC/)).toBeInTheDocument();
     expect(screen.queryByText("federation.empty.title")).not.toBeInTheDocument();
   });
+});
+
+describe("query and detail lifecycle", () => {
+  it("keeps the detail instance and preview state while the first page arrives or results refresh", () => {
+    const view = () => (
+      <MemoryRouter initialEntries={["/federation?node=remote&epoch=epoch&resource=1"]}>
+        <LibraryPage />
+      </MemoryRouter>
+    );
+    const page = render(view());
+    const preview = screen.getByLabelText("Preview playback position");
+
+    fireEvent.change(preview, { target: { value: "42" } });
+    setState({
+      ...state,
+      pages: [
+        {
+          sessionId: "first",
+          items: [],
+          expiresInMs: 30_000,
+          participants: [{ nodeId: "local", libraryEpoch: "epoch", totalCount: 0 }],
+          omittedNodes: [],
+          totalWithinParticipants: 0,
+          coverageComplete: true,
+        },
+      ],
+    });
+    page.rerender(view());
+    expect(screen.getByLabelText("Preview playback position")).toBe(preview);
+    expect(preview).toHaveValue("42");
+    setState({ ...state, busy: "preparing" });
+    page.rerender(view());
+    expect(screen.getByLabelText("Preview playback position")).toBe(preview);
+    expect(preview).toHaveValue("42");
+  });
+
+  it.each([
+    { nodeId: "local", libraryEpoch: "restored-epoch", name: "This PC" },
+    { nodeId: "cloned-node", libraryEpoch: "cloned-epoch", name: "This PC" },
+  ])(
+    "discards the old snapshot and detail when refreshed local identity changes to $nodeId/$libraryEpoch",
+    (identity) => {
+      const reset = vi.fn();
+
+      vi.mocked(useFederatedQuery).mockReturnValue({
+        state,
+        search,
+        nextPage: vi.fn(),
+        cancel: vi.fn(),
+        reset,
+      });
+      const view = () => (
+        <MemoryRouter initialEntries={["/federation?node=local&epoch=epoch&resource=1"]}>
+          <LibraryPage />
+        </MemoryRouter>
+      );
+      const page = render(view());
+
+      expect(search).toHaveBeenCalledTimes(1);
+      vi.mocked(useFederationStatus).mockReturnValue({
+        status: { ...status, identity },
+        loading: false,
+        error: undefined,
+        refresh: vi.fn(),
+      });
+      page.rerender(view());
+      expect(reset).toHaveBeenCalledOnce();
+      expect(search).toHaveBeenCalledTimes(2);
+      expect(search).toHaveBeenLastCalledWith(
+        expect.objectContaining({ nodeIds: [identity.nodeId] }),
+      );
+      expect(screen.queryByText("Active resource detail")).not.toBeInTheDocument();
+    },
+  );
 });
 
 describe("explicit browsing opt-in", () => {

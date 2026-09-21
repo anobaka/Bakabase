@@ -76,7 +76,10 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
             RequireSharing(state);
             Prune(state, now);
             var existing = FindTransaction(state, request.TransactionId, request.NodeId, request.ClaimSecret);
-            if (existing != null) return Exchange(state, existing);
+            // Retrying a pending request with an invitation is a new approval path
+            // for the same claimant, not merely a status poll. Completed/rejected
+            // transactions remain idempotent and must never be revived by a code.
+            if (existing != null && existing.Status != "awaitingApproval") return Exchange(state, existing);
             if (state.Invitation is not { } invitation || invitation.ExpiresAt <= now ||
                 invitation.FailedAttempts >= 5)
                 return new NodePairExchange("rejected", request.TransactionId, now);
@@ -87,12 +90,12 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
                 invitation.FailedAttempts++;
                 return new NodePairExchange("rejected", request.TransactionId, now);
             }
-            if (state.IncomingRequests.Count >= MaxRequests)
+            if (existing == null && state.IncomingRequests.Count >= MaxRequests)
                 throw new FederationAccessException("PairingBusy", 429, "Too many pairing requests are pending. Try again later.");
             state.Invitation = null;
-            var pending = NewRequest(request.NodeId, request.NodeName, request.TransactionId, request.ClaimSecret, now);
+            var pending = existing ?? NewRequest(request.NodeId, request.NodeName, request.TransactionId, request.ClaimSecret, now);
             IssueGrant(state, pending, local, now, revoked);
-            state.IncomingRequests.Add(pending);
+            if (existing == null) state.IncomingRequests.Add(pending);
             return Exchange(state, pending);
         }, ct);
         foreach (var grantId in revoked) leases.Revoke(grantId);

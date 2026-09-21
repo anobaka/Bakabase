@@ -5,6 +5,7 @@ Build Bakabase.Federation.TestHost first. Run with --dotnet /path/to/dotnet.
 Only temporary fixture directories are used. --keep leaves the three hosts for manual UI checks.
 """
 import argparse
+from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -104,7 +105,9 @@ def run(args):
         def release(node, page):
             request(node["base"], f'/federation/local/queries/{page["sessionId"]}', "DELETE", expected=204)
 
-        pair(a, b)
+        pending = request(a["base"], "/federation/local/peers/connect", "POST", {"address": b["base"]})
+        assert pending["outcome"] == "awaitingApproval"
+        pair(a, b)  # Supplying a code must complete this same pending transaction.
         pair(b, c)
         direct = query(a, [b["id"]])
         assert direct["totalWithinParticipants"] == 257, "B must not recursively export C"
@@ -115,7 +118,7 @@ def run(args):
         assert no_transitive["code"] == "PeerUnavailable"
         pair(a, c)
         pair(b, a)
-        print("PASS: directed pairing, reverse pairing and no transitive export", flush=True)
+        print("PASS: pending pairing completed by code, directed/reverse pairing and no transitive export", flush=True)
 
         first = query(a, [node["id"] for node in nodes])
         assert first["coverageComplete"] and first["totalWithinParticipants"] == 771
@@ -222,7 +225,7 @@ def run(args):
         release(a, partial)
         # Read operations above did not update source play history.
         database = next(b["directory"].rglob("bakabase_insideworld*.db"))
-        with sqlite3.connect(database) as connection:
+        with closing(sqlite3.connect(database)) as connection:
             assert connection.execute('select count(*) from ResourcesV2 where PlayedAt is not null').fetchone()[0] == 0
         print("PASS: offline source is explicitly omitted; other libraries work; remote PlayedAt stays unchanged", flush=True)
         report = {"passed": True, "resources": 771, "nodes": [{"url": n["base"], "nodeId": n["id"], "pid": n["pid"]} for n in nodes]}

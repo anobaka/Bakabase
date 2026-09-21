@@ -2,12 +2,14 @@
 
 执行日期：2026-09-20 至 2026-09-21。开发分支：`codex/multi-device-library`。
 
-开始执行前已 fetch `origin/main`，以 `f1fa1469f32f794f17895f5ba886cc14ddd42883` 新建独立 worktree。执行期间主线若继续推进，不改变这次记录的起始基线。
+开始执行前已 fetch `origin/main`，以 `f1fa1469f32f794f17895f5ba886cc14ddd42883` 新建独立 worktree。起始基线不变；2026-09-21 继续验收时合入最新主线 `86d76392`，保留枚举绑定、Windows WebView2 与重启等待修复。
 
-子模块固定为父仓库版本：
+初始子模块固定为父仓库版本：
 
 - Bakabase.Infrastructures：`a3715f40d7c470ec6610ab1a1fdfb8ce21231893`
 - LazyMortal：`f35a158a8395c09216451f77d04e6fea33b9e77b`
+
+远端 Windows 验收发现迁移完整性检查的 SQLite 连接池保留文件句柄，导致验证后无法移动数据库。基础设施子模块在隔离修复分支从上述版本增加单一修复提交 `dc6692a9522736969d7d574c980ca98e447570ee`：一次性只读检查使用 `Pooling=False`。父仓库引用同步到该提交；没有带入原工作区的其他子模块提交，LazyMortal 保持不变。
 
 原工作区不切分支、不覆盖已有修改。新增模块不修改业务数据库 schema，不互换桌面应用的包名、AppData、单实例标识或更新源。
 
@@ -195,6 +197,25 @@ TypeScript 基线核验使用 `git archive f1fa1469 src/web` 导出的临时源�
 
 `run-velopack-macos.py` 与不随产品发布的 startup hook 将 Velopack cache/log 定位到临时目录，并禁用 apply 的自动重启；脚本在替换完成后以相同显式 AppData 启动新二进制。该结果不是旧目录复制模拟，也不代表历史签名安装包、默认缓存、LaunchServices 自动重启或生产更新通道已通过；WebKit/SavedState 的系统缓存不在隔离范围。所有 owned 应用/updater 进程退出后清理测试工作目录，保留报告、日志和一致性 SQLite 快照。
 
+## 续轮审查与主线集成（2026-09-21）
+
+最新主线合并后，Federation 与新增枚举绑定/重启测试 57 / 57 通过；三宿主 771 条完整链路通过。开发分支已推送，远端四平台 CI 已实际触发；各次提交的准确结果见发布验收记录。
+
+审查修复了以下可复现问题，新增回归先验证旧实现失败，再验证修改通过：
+
+- 先发起人工审批、再补填有效邀请码时，原实现一直返回等待批准。现在同一待处理事务可由邀请码批准，已拒绝事务不会复活，邀请码仍只消耗一次。Federation 模块 49 / 49 通过，三宿主 HTTP 也验证这一实际重试顺序。
+- 详情、位置和映射根导出原先未关联授权取消令牌。现在已认证导出在完整处理及响应期间持有该令牌；撤销或关闭分享后，即使旧存储方法不支持取消，其迟到结果也不能返回成功。Service Federation 48 / 48 通过，包含三条控制路由各自的撤销/关闭分享共 6 个回归。
+- 联合查询的首屏返回或刷新会重建详情，导致预览中断。现在详情保持挂载；已遗忘来源仍可见并可取消；本机身份或代际变化后清理旧查询和详情。前端 98 文件、936 / 936 通过，生产构建和定向 lint/格式检查通过。
+- Windows smoke 在检查播放历史后仍持有 SQLite 连接，可能因文件被占用而无法清理。两个媒体 smoke 改为显式关闭连接，再删除自己的临时数据库。
+
+首轮真实 CI 另暴露两类初始化问题：Linux/macOS Intel 的后台索引先加载空资源缓存，而测试直接灌库绕过缓存，使查询可见、详情却返回 410；夹具现预先加载空缓存，再通过生产缓存 ORM 写入并检查可见性。测试宿主在启动后连写远程配置，还会让延迟配置回调短暂恢复 Disabled；8 次启动中捕获 4 次约 60–75 ms 的内存回退，磁盘配置一直正确。夹具改为配置监视器启动前原子预置完整配置，未靠等待或重试掩盖拒绝。修复后 8 个宿主、465 次状态采样全部稳定，生产资源读取均返回种子 ID，三宿主 771 条重跑通过；证据为 `/tmp/bakabase-options-startup-fixed-20260921/report.json` 与 `/tmp/bakabase-testhost-startup-fixed-smoke-20260921/result.json`。没有声称修复通用配置管理器的运行期延迟回调。
+
+Windows 兼容性作业的迁移失败是生产完整性检查保留 pooled SQLite 句柄所致，已在独立基础设施提交修复，并增加验证后独占访问数据库的回归；本机迁移测试 14 / 14 通过。后续 `6fbe5b8f` 的 Windows 原生 runner 已通过全部 136 项兼容性测试，实际移动行为得到验证。该轮播放器测试另发现 3 个夹具路径分隔符比较失败：夹具返回混合分隔符，生产定位器返回规范化路径。提交 `1cfb8752` 仅规范化夹具路径，保留全部断言；本机 Player 74 / 74 通过，未改生产逻辑。
+
+代码提交 `6fbe5b8f` 已生成 macOS ARM self-contained portable `0.0.2-federation.5`，实际包角色、前端、plist、版本和 Mach-O 架构均通过审计。从真实旧源码 `f1fa1469` 通过应用 updater 下载并由 UpdateMac 替换后，core `2.4.0-beta.342` → `2.4.0-beta.351`，两条资源逐字段保留，SQLite 完整性及外部文件哈希通过，所有测试进程与工作目录清理完成。候选包和报告保留在 `/tmp/bakabase-candidate-6fbe5b8f/`；它仍是未签名便携测试包，使用隔离 locator 和显式重启，不代表生产通道或安装器验收。
+
+真实 Chromium 视频测试增加查询刷新断言，确认原 video 元素、媒体 URL 与暂停位置保持不变，随后继续播放和呈现 90 秒帧。后端修复后的三宿主结果在 `/tmp/bakabase-pending-code-revocation-smoke/result.json`；本机定向回归在 `/tmp/bakabase-federation-review-{module,service}-tests.log`，前端全量与构建在 `/tmp/bakabase-federation-library-review-{all-tests,build}.log`。
+
 ## 性能观测
 
 本机 macOS arm64、10 逻辑处理器、.NET 9.0.0。以下是测试夹具观测值，不是生产保证。
@@ -246,4 +267,4 @@ TypeScript 基线核验使用 `git archive f1fa1469 src/web` 导出的临时源�
 - 未删除旧客户端产物、切换更新 feed、改动公开下载入口或发布安装包。等真实升级/迁移矩阵通过后，再收敛新用户下载入口。
 - 还需在最终 Avalonia 安装包上验证 Windows/macOS 各目标、系统播放器启动、Windows 路径映射、休眠恢复、真实 NAS/Docker 和多机网络条件，以及仅旧客户端/仅统一版/两者同机的升级路径。
 
-四平台 CI 已加入真实三节点链路、兼容契约和实际 publish 角色审计，本轮尚未在远端 CI 执行。详细命令和未完成真机门槛见 [发布准备与升级验收](multi-device-library-release-readiness.md)。当前证据支持开发分支内试用和进一步评审，不等于跨平台发布验收已经完成。
+最终代码提交 `ca55d473` 的 [远端 CI](https://github.com/anobaka/Bakabase/actions/runs/35607879124) 全部 7 个作业通过。Windows 迁移文件锁、Linux/Intel 夹具缓存、Windows 路径和 Intel 迟到快照清理的测试时序问题均已修复并完成跨平台复验。四个平台各 307 项专项测试和 771 条三宿主验收通过；前端 936 项通过；全后端 13 个项目通过 2,582、失败 0，35 项预设手动联网测试跳过。所有 artifact 的源码 SHA 和测试结果已核对，临时验证分支已清理。详细证据和未完成真机门槛见 [发布准备与升级验收](multi-device-library-release-readiness.md)。当前证据支持开发分支内试用和进一步评审，签名安装器和物理设备矩阵仍是发布前的独立门禁。

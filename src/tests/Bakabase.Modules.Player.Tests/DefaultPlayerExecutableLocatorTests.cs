@@ -18,7 +18,9 @@ public class DefaultPlayerExecutableLocatorTests
 
     private string MakeExecutable(string relative)
     {
-        var path = Path.Combine(_root, relative);
+        // Match the locator's absolute native paths even when the portable fixture
+        // name contains forward slashes on Windows.
+        var path = Path.GetFullPath(Path.Combine(_root, relative));
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         if (OperatingSystem.IsWindows()) File.Copy(Environment.ProcessPath!, path);
         else
