@@ -1,0 +1,185 @@
+name: Native package acceptance
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Exact source commit to package and verify
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Source commit (empty uses the selected ref)
+        required: false
+        type: string
+
+# This gate deliberately has no deployment credentials or publishing permissions.
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Build package frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      version: ${{ steps.source.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - name: Record immutable source and synthetic package version
+        id: source
+        shell: bash
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "version=0.0.1-acceptance.${{ github.run_id }}.${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Enable Yarn
+        run: corepack enable yarn
+      - name: Build the actual shipped UI
+        working-directory: src/web
+        run: |
+          yarn install --immutable
+          yarn build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-acceptance-web-${{ github.run_id }}
+          path: src/web/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  packages:
+    name: ${{ matrix.role }} installer (${{ matrix.platform.rid }})
+    needs: frontend
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+    env:
+      DOTNET_MULTILEVEL_LOOKUP: '0'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      PACKAGE_VERSION: ${{ needs.frontend.outputs.version }}
+      PACKAGE_ROLE: ${{ matrix.role }}
+      PACKAGE_RID: ${{ matrix.platform.rid }}
+      PACKAGE_RUNTIME_MODE: ${{ matrix.platform.runtimeMode }}
+    strategy:
+      fail-fast: false
+      matrix:
+        role: [unified, client]
+        platform:
+          - os: windows-latest
+            rid: win-x64
+            runtimeMode: WINFORMS
+          - os: macos-15-intel
+            rid: osx-x64
+            runtimeMode: MACOS
+          - os: macos-15
+            rid: osx-arm64
+            runtimeMode: MACOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.frontend.outputs.sha }}
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check package acceptance guards and source identity
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ needs.frontend.outputs.sha }}"
+          git submodule status --recursive > "$RUNNER_TEMP/package-submodules.txt"
+          python src/tests/upgrade-tests/test_package_acceptance.py 2>&1 | tee "$RUNNER_TEMP/package-guards.log"
+      - name: Download unified frontend
+        if: matrix.role == 'unified'
+        uses: actions/download-artifact@v4
+        with:
+          name: package-acceptance-web-${{ github.run_id }}
+          path: ${{ runner.temp }}/package-acceptance-web
+      - name: Publish the native product and audit its role
+        run: |
+          PROJECT=Bakabase.App
+          WEB_ARGS=()
+          if [[ "$PACKAGE_ROLE" == "client" ]]; then
+            PROJECT=Bakabase.Client.App
+          else
+            WEB_ARGS=(--require-web)
+          fi
+          dotnet publish "src/apps/$PROJECT/$PROJECT.csproj" \
+            --configuration Release --self-contained true -r "$PACKAGE_RID" \
+            -p:RuntimeMode="$PACKAGE_RUNTIME_MODE" -o "$RUNNER_TEMP/package-publish"
+          if [[ "$PACKAGE_ROLE" == "unified" ]]; then
+            python -c 'import os,pathlib,shutil; p=pathlib.Path(os.environ["RUNNER_TEMP"]); shutil.copytree(p/"package-acceptance-web",p/"package-publish/web")'
+          fi
+          python src/tests/upgrade-tests/check-release-contract.py \
+            --role "$PACKAGE_ROLE" --publish-dir "$RUNNER_TEMP/package-publish" \
+            "${WEB_ARGS[@]}" --report "$RUNNER_TEMP/package-publish-audit.json"
+      - name: Install the matching Velopack CLI
+        run: dotnet tool install --tool-path "$RUNNER_TEMP/package-vpk-tools" vpk --version 1.2.0
+      - name: Build actual portable, full update and native installer packages
+        run: |
+          ASSEMBLY=Bakabase
+          TITLE=Bakabase
+          if [[ "$PACKAGE_ROLE" == "client" ]]; then
+            ASSEMBLY=Bakabase.Client
+            TITLE="Bakabase Client"
+          fi
+          PLIST_ARGS=()
+          if [[ "$PACKAGE_RID" == "win-x64" ]]; then
+            MAIN_EXE="$ASSEMBLY.exe"
+            ICON="$RUNNER_TEMP/package-publish/Assets/favicon.ico"
+          else
+            MAIN_EXE="$ASSEMBLY"
+            ICON="$RUNNER_TEMP/package-publish/Assets/app.icns"
+            python src/scripts/prepare-macos-plist.py \
+              --template "$RUNNER_TEMP/package-publish/Info.plist" \
+              --output "$RUNNER_TEMP/package-publish/Info.plist" --version "$PACKAGE_VERSION"
+            PLIST_ARGS=(--plist "$RUNNER_TEMP/package-publish/Info.plist")
+          fi
+          "$RUNNER_TEMP/package-vpk-tools/vpk" pack \
+            --yes true --skip-updates true --legacyConsole true \
+            --packId "$ASSEMBLY" --packTitle "$TITLE" --packVersion "$PACKAGE_VERSION" \
+            --packDir "$RUNNER_TEMP/package-publish" --mainExe "$MAIN_EXE" \
+            --outputDir "$RUNNER_TEMP/package-output" --runtime "$PACKAGE_RID" \
+            --icon "$ICON" "${PLIST_ARGS[@]}" --channel acceptance \
+            2>&1 | tee "$RUNNER_TEMP/package-vpk.log"
+      - name: Install, launch, verify and clean the actual packages
+        run: |
+          python src/tests/upgrade-tests/run-package-acceptance.py \
+            --packages "$RUNNER_TEMP/package-output" --role "$PACKAGE_ROLE" \
+            --rid "$PACKAGE_RID" --version "$PACKAGE_VERSION" \
+            --results-directory "$RUNNER_TEMP/package-acceptance-results"
+      - name: Preserve small acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-acceptance-${{ matrix.role }}-${{ matrix.platform.rid }}-evidence
+          path: |
+            ${{ runner.temp }}/package-acceptance-results/
+            ${{ runner.temp }}/package-publish-audit.json
+            ${{ runner.temp }}/package-submodules.txt
+            ${{ runner.temp }}/package-guards.log
+            ${{ runner.temp }}/package-vpk.log
+          if-no-files-found: error
+          retention-days: 14
+      # These artifact names cannot match the release workflows' product globs.
+      - name: Preserve acceptance packages without publishing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-acceptance-${{ matrix.role }}-${{ matrix.platform.rid }}-packages
+          path: ${{ runner.temp }}/package-output/
+          if-no-files-found: warn
+          compression-level: 0
+          retention-days: 7

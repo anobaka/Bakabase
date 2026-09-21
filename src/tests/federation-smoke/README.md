@@ -105,6 +105,57 @@ validation on VLC 3.0.23. It is a regression diagnostic, not a supported playbac
 strategy; `:clock-synchro=1` is also unsuitable because it enables unbounded
 timeshift buffering. Results and cleanup status are written even on failure.
 
+## Native desktop and production Docker boundary
+
+`docker-boundary.py` runs the actual macOS portable application against a Linux
+x64 Service image built with the repository's `docker/Dockerfile`. It does not
+use TestHost or seed SQLite directly. Prepare the real production publish/image,
+portable package, and the test-only Velopack hook described in
+`../upgrade-tests/README.md` first:
+
+```bash
+python3 src/tests/federation-smoke/docker-boundary.py \
+  --native-portable /absolute/path/to/Bakabase-federation-test-Portable.zip \
+  --hook /absolute/path/to/VelopackIsolationHook.dll \
+  --docker-image bakabase-federation-boundary:tested-commit \
+  --native-host 192.168.1.10 \
+  --provenance /absolute/path/to/provenance.json \
+  --results-directory /tmp/bakabase-docker-boundary-new-run
+```
+
+Provenance must contain full `nativeSourceCommit` and `dockerSourceCommit` SHAs;
+retain the build and package audit evidence alongside it. The runner records
+package/assembly hashes, the immutable Docker index and selected amd64 manifest,
+and the network addresses. It requires a locally cached `curlimages/curl:latest`
+(or `--curl-image`) and never pulls images. Its short curl helpers share only
+the owned Service container's network namespace, so Docker's local management
+API is accessed through its own loopback interface.
+Replace the example `--native-host` with this Mac's actual private LAN IPv4.
+OrbStack's `host.docker.internal` translates the source to host loopback, so it
+cannot validate non-loopback management denial. The explicit LAN route preserves
+that distinction; the runner requires denial even with forged local Host/Origin
+and forwarding headers. The Docker fixture sets `ASPNETCORE_HTTP_PORTS=34567`
+explicitly because its production base image otherwise defaults to port 8080.
+
+Each application creates 17 resources through the business API and materializes
+one synthetic audio file. The check separately authorizes each direction,
+traverses all 34 resources with cursor replay, reads remote detail/media ranges,
+checks remote management denial, stops/restarts Docker, and verifies browsing
+opt-out remains independent from sharing. Revocation must invalidate cached
+pages and media. After both applications stop, both databases must pass integrity
+checks without playback-history writes and the media files must be unchanged.
+
+The runner refuses an existing native Bakabase process, requires a fresh `/tmp`
+result directory, and enforces a 10-minute deadline and 5 GiB free-space floor.
+It removes only its own labelled containers/network, native process and fixture
+files, including on failure. It leaves existing user containers and images alone.
+Only sanitized diagnostics are retained. Run its pure failure/cleanup checks with
+`python3 src/tests/federation-smoke/test_docker_boundary.py`.
+
+This crosses a real container network boundary on one Mac. OrbStack on ARM runs
+the x64 image through emulation; this result does not establish physical LAN/NAS
+performance, firewall behavior on other machines, or signed installer acceptance.
+
 ## Isolated Linux verification from a desktop
 
 With a local .NET 9 SDK, cross-build on the desktop and run only the Linux x64

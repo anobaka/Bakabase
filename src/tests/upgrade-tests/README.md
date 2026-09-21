@@ -132,6 +132,47 @@ the same three-request byte count. Its retained local evidence is
 `/private/tmp/bakabase-real-upgrade-51601e31/run5/report.json` and adjacent logs and
 `evidence/{old,new}.sqlite`; temporary evidence paths are machine-local artifacts.
 
+## Native installer acceptance on disposable runners
+
+Dispatch the existing CI workflow with `suite=packages` and the development
+branch to run `_package_acceptance.yml` at that exact commit:
+
+```bash
+gh workflow run ci.yml --ref codex/multi-device-library -f suite=packages
+```
+
+The default CI selection remains `full`. Package acceptance builds the actual
+production frontend once and self-contained unified/legacy-client packages for
+Windows x64, macOS Intel and macOS ARM. It uses pinned Velopack 1.2.0 and synthetic
+test versions. Package files and evidence are Actions artifacts; this workflow
+does not call deployment, upload a release, or modify an update feed.
+
+`run-package-acceptance.py` checks both portable and full-package identities and
+binary hashes, then starts the portable application and invokes the original
+installer. macOS runs the original `.pkg` system installation and requires its
+postinstall LaunchServices startup to reach the expected default AppData.
+Windows runs Setup in silent mode with an owned installation directory, starts
+the installed binary, then invokes its real uninstaller. Installed binaries must
+match the audited package, serve the correct application UI, and use the expected
+data path. The unified application creates a real resource through its API;
+after shutdown, the database must contain that resource and pass integrity checks.
+
+Execution is restricted to disposable **GitHub-hosted** native runners and
+rejects pre-existing installations, data and caches. It never installs into a
+developer's machine. The script removes only its newly created installation,
+receipts, processes, data and caches; cleanup failures fail the run. Local
+`--audit-only` usage reads the three package artifacts without launching anything.
+The pure guard tests run without native applications:
+
+```bash
+python3 src/tests/upgrade-tests/test_package_acceptance.py
+```
+
+These unsigned fixture packages do not validate production signing, notarization,
+Gatekeeper/SmartScreen trust, historical signed upgrades, or production feeds.
+First-install LaunchServices startup is distinct from updater automatic restart.
+Results must state which of these behaviors actually ran and passed.
+
 ## Older filesystem replacement fixtures
 
 `run-macos.sh`, `run-linux.sh`, `run-windows.ps1` and `run-docker.sh` remain manual

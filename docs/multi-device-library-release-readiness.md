@@ -6,7 +6,7 @@
 
 Windows 数据迁移修复另在基础设施分支 `codex/multi-device-relocation-lock`（`dc6692a9522736969d7d574c980ca98e447570ee`），父仓库已固定引用且远端 CI 可拉取。后续合并顺序为先将基础设施修复合入其主线，再合入本仓库引用，保证子模块提交长期可达。没有改动用户原工作区的基础设施 checkout。
 
-代码和自动化已提供可执行的发布检查。四平台矩阵及最终完整 CI 已通过；签名安装包、跨物理设备、播放器矩阵和升级验收仍是扩大试用前的门禁。
+代码和自动化已提供可执行的发布检查。四平台矩阵、最终完整 CI、六种实际桌面安装及本机原生桌面/Docker 双向互通已通过；签名/公证、跨物理设备、其余播放器矩阵和升级验收仍是扩大试用前的门禁。
 
 ## 1. 产品身份与包内容
 
@@ -88,6 +88,22 @@ python3 src/tests/federation-smoke/run.py --dotnet /absolute/path/to/dotnet --ti
 
 修复过程另保留 [CI 35604229653](https://github.com/anobaka/Bakabase/actions/runs/35604229653)（`1cfb8752`）的证据：全后端、前端、浏览器和三个平台通过，Intel 的 Protocol 为 48 / 49，其后步骤未执行。失败测试用固定 150 ms 等待推断后台清理完成，调度较慢时会提前断言；`ca55d473` 改为创建阻塞与释放完成信号，仍要求超时节点被省略、迟到快照恰好释放一次、后续分页不加入该节点，已在最终四平台实际通过。更早两轮被新运行取消的后端作业不计为全量通过。
 
+### 三个平台、两个产品的真实安装
+
+[安装验收 CI 35618999687](https://github.com/anobaka/Bakabase/actions/runs/35618999687) 在提交 `0e5281e6acd706a9000884e96d78535208714323` 上构建真实生产前端和六种 self-contained 包，前端及六个安装作业全部成功。通过已有 CI 的 `workflow_dispatch suite=packages` 调用新的 `_package_acceptance.yml`；该入口仅构建/测试，只有 `contents: read`，不调用部署或发布 Release，不读取生产签名密钥。常规完整 CI 没有在此选择下重复执行，其前次通过证据仍是上节 `ca55d473`；后续变化仅为验收脚本、工作流和文档，产品源码未变。
+
+| 原生 runner / RID | 统一版 | 旧客户端 | 实际操作 |
+| --- | --- | --- | --- |
+| Windows / win-x64 | 通过 | 通过 | portable 启动；原 Setup.exe 静默安装到独立目录；已安装 EXE 启动；原 Update.exe 卸载 |
+| macOS Intel / osx-x64 | 通过 | 通过 | portable 启动；原 `.pkg` 安装到 `/Applications`；原 postinstall 经 LaunchServices 自动启动 |
+| macOS ARM / osx-arm64 | 通过 | 通过 | 同 Intel；使用原生 ARM runner |
+
+每种组合分别检查 portable/full/installer 产物及哈希、真实主程序与安装内容、产品角色、实际本机进程、有效 AppData 和 UI 响应。macOS 安装版本使用默认 `~/Library/Application Support/Bakabase` 或 `Bakabase.Client`，没有 startup hook 或 AppData 覆盖；Windows 使用已记录的独立测试 AppData。统一版通过正式 API 创建资源，portable 与安装版各保留 1 条，退出后两份 SQLite 均通过完整性检查。六份报告均确认自有安装/数据已清理，没有 cleanup errors；Windows 自卸载延迟删除也已实际等待并确认完成。
+
+小证据 artifact 与安装包分开保留，六份小证据共 309,325 bytes，源码 SHA、角色/RID 和下载 ZIP SHA256 对 GitHub digest 逐项核对；汇总在 `/tmp/bakabase-package-ci-0e5281e6-evidence/summary.json`。大安装包只保留为 Actions artifact，未下载安装到用户 Mac，也未发布给用户。前一轮 [35618018456](https://github.com/anobaka/Bakabase/actions/runs/35618018456) 暴露 Windows Python ZIP 路径规范化的夹具问题及 Velopack 1.2.0 不接受两个同时出现的关闭开关；修复后重跑完整六组合，未跳过失败断言。包装守卫套件通过：macOS 13 项；Windows 12 项，另 1 项 Unix 权限/符号链接检查按平台跳过。
+
+这关闭了各产品各平台的未签名全新安装/启动检查，不代表签名、公证、Gatekeeper/SmartScreen、两个已安装产品同机升级、历史官方包迁移或 updater 自动重启通过。macOS postinstall 的首次自动启动与 updater 重启是不同路径；包/feed 身份保持不变，生产渠道和下载入口未改动。
+
 ## 3. 本轮本机证据与适用范围
 
 执行机器为 macOS ARM64，.NET SDK 9.0.100 / runtime 9.0.0。以下证据均是实际执行结果；本机临时路径用于这次审计，远端 CI 的独立 artifact 见上一节，临时日志不是长期发布记录。
@@ -151,6 +167,16 @@ Linux runner 使用独立容器、源码副本、资源和总时限，已清理�
 
 后续提交 `1cfb8752`、`ca55d473` 仅调整 Windows 播放器路径和迟到快照释放的测试夹具；产品源文件与该候选包的构建提交相同，包自身版本和 provenance 仍准确标记为 `6fbe5b8f`。
 
+### 真实桌面与正式 Docker 服务互通
+
+后续实际使用 `6fbe5b8f` 的 self-contained macOS ARM portable，与 `5a2ab6da` 发布的 Linux x64 Service 双向连接。两者之间仅测试和文档变化，产品源码一致。Docker 镜像使用仓库原始 `docker/Dockerfile`，镜像 `/app` 全部 296 文件与发布目录逐字节一致，33 个前端文件与生产构建一致，Service 角色检查通过。镜像 index 为 `sha256:4f0c08e2084819726ac835520b5994087ee7b355283076a5153d4d7b2fc77040`，amd64 manifest 为 `sha256:751fa42347bbce1b99eeb8154d8375beafd627d9cb550b4a1e380b7ea719ffb1`；实际 .NET/ASP.NET 为 9.0.19，运行于 OrbStack x64 仿真。
+
+`src/tests/federation-smoke/docker-boundary.py` 通过正式资源 API 在两个独立 AppData 中各创建 17 条资源并物化测试音频，不使用 TestHost 或 SQL 灌入。最终 `run7` 用时 24.16 秒，9 项检查全部通过：默认关闭、各方向分别授权、双向 34 条完整分页及 cursor 重放、详情/音频 Range 字节一致、非 loopback 管理接口及伪造请求头拒绝、未授权 export 拒绝、Docker 停止与重启后身份/授权保持、关闭本机浏览仍可向对端分享、撤权使旧页面和媒体失效。停止两端后，各有 17 条资源、0 条 PlayedAt 写入，SQLite 完整性均为 `ok`，测试媒体哈希不变。数据库以 `mode=rw` 打开既有文件，允许 SQLite 恢复残留 journal/WAL；缺失数据库不会被创建，行数和播放历史仍严格检查。
+
+该拓扑同时验证了 Docker 内部 loopback 管理与宿主发布端口。正式 ASP.NET 基础镜像默认端口是 8080，本次显式设置 `ASPNETCORE_HTTP_PORTS=34567`。另实测发现 OrbStack 的 `host.docker.internal` 将请求来源转换为宿主 `127.0.0.1`；这种本机代理路径不能证明远程接口隔离。因此最终使用宿主真实 LAN 地址，确认来源为非 loopback，并保留全部 403/401 断言。没有将同机 NAT 路径或伪造 Host 的本地请求误称为物理远程安全验证。
+
+完整报告为 `/private/tmp/bakabase-docker-boundary-5a2ab6da/run7/report.json`，源码/镜像审计在同目录上级的 `build/report.json` 和 `provenance.json`；地址转换的独立探测在 `/tmp/bakabase-orbstack-source-eaab90ecd4/report.json`。所有自有进程、容器、网络、AppData 和媒体均已清理，未操作用户容器。新增 runner 的 13 项失败/清理守卫通过。该结果覆盖同机真实原生入口与容器网络边界，仍不等于两台物理设备、真实 NAS 或物理弱网验收。
+
 计划 P00–P10 的行为覆盖、查询基线与全后端回归见实施记录。双大库的新 HTTP 基线补充了本机进程内存、传输量和取消后的额度释放；视频首帧另有受控限速样本，仍不能推导物理局域网或弱网性能。
 
 ## 4. 发布门禁状态
@@ -158,11 +184,11 @@ Linux runner 使用独立容器、源码副本、资源和总时限，已清理�
 | 门禁 | 必须记录的操作与证据 | 当前状态 |
 | --- | --- | --- |
 | 新 CI 四平台作业 | 同一最终 commit SHA 的四平台 artifact；不得用工作区本机结果替代远端结果 | 已通过：`ca55d473` 的全部 7 个 CI 作业成功，artifact SHA 和测试结果已核对 |
-| 最终桌面包 | Windows x64、macOS ARM/Intel 的实际安装包，记录 SHA、版本、架构、签名/公证和启动结果 | 尚未完成整套安装包矩阵 |
-| 三种安装来源 | 全新安装；已有一体版原位升级；只有旧客户端时并装统一版；额外验证两者原本同机安装 | 自动身份/路径、macOS portable 并行运行及真实旧版 updater 替换已过；签名安装器与其他平台路径待执行 |
-| 更新与数据隔离 | stable/beta 各按原 feed 更新，重启后有效 AppData 不变，独立单实例/端口/进程并存，原库 SQLite 完整性可复核 | macOS 隔离 feed 的真实下载/替换和原库保留已过；默认缓存、自动重启与生产通道仍待执行 |
+| 最终桌面包 | Windows x64、macOS ARM/Intel 的实际安装包，记录 SHA、版本、架构、签名/公证和启动结果 | 六种未签名 self-contained 实际安装/启动全部通过（`0e5281e6`）；生产签名、公证及系统信任检查待执行 |
+| 三种安装来源 | 全新安装；已有一体版原位升级；只有旧客户端时并装统一版；额外验证两者原本同机安装 | 六组合全新实际安装、自动身份/路径、macOS portable 并行运行及真实旧版 updater 替换已过；签名、已安装双产品并装/升级及其他平台升级路径待执行 |
+| 更新与数据隔离 | stable/beta 各按原 feed 更新，重启后有效 AppData 不变，独立单实例/端口/进程并存，原库 SQLite 完整性可复核 | macOS 隔离 feed 的真实下载/替换和原库保留、默认路径首次安装与 postinstall 自动启动已过；updater 默认缓存/自动重启和生产通道仍待执行 |
 | 完整 GUI 主路径 | 最终桌面壳首启、空库设置/日志、开启浏览、配对、联合查询、详情、播放、离线、恢复、关闭窗口；确认远端不启动播放器 | macOS ARM portable 主路径已实际操作；其他平台及签名安装包仍待执行 |
-| 物理设备和 NAS | Windows ↔ macOS ARM/Intel；至少一组桌面 ↔ Docker/NAS；各方向单独授权、撤销、断网和重启 | 三进程 HTTP 通过不等于跨物理设备通过 |
+| 物理设备和 NAS | Windows ↔ macOS ARM/Intel；至少一组桌面 ↔ Docker/NAS；各方向单独授权、撤销、断网和重启 | 已补真实 macOS ARM 桌面 ↔ 正式 Linux x64 Docker 的双向验收；同机 OrbStack/NAT 仍不能替代跨物理设备/NAS |
 | 媒体和映射 | 真正安装的 VLC/IINA 等零映射流播放，seek、暂停续播、长流；Windows/macOS 映射与打开目录；来源离线与失效映射 | 原生音频、Finder 映射、IINA 播放/暂停/seek，以及浏览器视频呈现/限速/断流/idle 已过；其他平台、外部播放器视频和物理弱网矩阵待执行 |
 | 性能验收 | 10k/100k 与两大库联合，冷/热状态、网络条件、准备/首屏/翻页 p50/p95、请求数/字节、内存高水位、取消后释放、媒体首帧 | 本机 SQLite、双宿主 HTTP/RSS/取消基线及限速下视频首帧样本已有；物理网络与跨平台统计分布待补 |
 | 发布与迁移实际演练 | 从旧客户端导出、统一版刷新恢复草稿、重配对/重绑映射、重复导入、冲突保留/替换；原程序和源文件可继续使用 | 真实 ClientStartup 浏览器链路与 macOS portable 原生导出/导入已过，签名安装版本之间仍待执行 |

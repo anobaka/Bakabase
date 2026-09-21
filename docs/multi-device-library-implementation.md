@@ -268,3 +268,5 @@ Windows 兼容性作业的迁移失败是生产完整性检查保留 pooled SQLi
 - 还需在最终 Avalonia 安装包上验证 Windows/macOS 各目标、系统播放器启动、Windows 路径映射、休眠恢复、真实 NAS/Docker 和多机网络条件，以及仅旧客户端/仅统一版/两者同机的升级路径。
 
 最终代码提交 `ca55d473` 的 [远端 CI](https://github.com/anobaka/Bakabase/actions/runs/35607879124) 全部 7 个作业通过。Windows 迁移文件锁、Linux/Intel 夹具缓存、Windows 路径和 Intel 迟到快照清理的测试时序问题均已修复并完成跨平台复验。四个平台各 307 项专项测试和 771 条三宿主验收通过；前端 936 项通过；全后端 13 个项目通过 2,582、失败 0，35 项预设手动联网测试跳过。所有 artifact 的源码 SHA 和测试结果已核对，临时验证分支已清理。详细证据和未完成真机门槛见 [发布准备与升级验收](multi-device-library-release-readiness.md)。当前证据支持开发分支内试用和进一步评审，签名安装器和物理设备矩阵仍是发布前的独立门禁。
+
+后续 [安装 CI 35618999687](https://github.com/anobaka/Bakabase/actions/runs/35618999687) 在 `0e5281e6` 完成 Windows x64、macOS Intel/ARM × 统一版/旧客户端的六组合实际安装验收：portable 启动、原始安装器、已安装应用及数据路径、SQLite、Windows 实际卸载和 macOS postinstall 自动启动均通过，六份小证据的提交号与 ZIP digest 已核对。另在本机以真实 macOS portable 和正式 Dockerfile 构建的 Linux x64 服务完成 34 条资源的双向授权/分页/媒体/撤权/重启验收，两份库完整且无播放历史写入，测试资源已清理。没有更换产品源码、更新源或发布渠道；未签名安装与同机容器网络验证仍不能关闭签名、已安装产品升级、物理设备和完整播放器矩阵门禁。

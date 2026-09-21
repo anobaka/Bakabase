@@ -9,17 +9,30 @@ name: CI
 on:
   pull_request:
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Test suite to run
+        type: choice
+        options: [full, packages]
+        default: full
 
 # A newer push to the same branch / PR cancels older in-progress runs.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.suite || 'full' }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
+  package-acceptance:
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'packages'
+    uses: ./.github/workflows/_package_acceptance.yml
+    with:
+      ref: ${{ github.sha }}
+
   backend-tests:
+    if: inputs.suite != 'packages'
     name: Backend tests
     runs-on: ubuntu-latest
     env:
@@ -101,6 +114,7 @@ jobs:
           if-no-files-found: ignore
 
   federation-platform:
+    if: inputs.suite != 'packages'
     name: Federation and release contracts (${{ matrix.rid }})
     needs: frontend
     runs-on: ${{ matrix.os }}
@@ -195,6 +209,7 @@ jobs:
           retention-days: 14
 
   federation-browser:
+    if: inputs.suite != 'packages'
     name: Legacy migration and multi-device browser
     needs: frontend
     runs-on: ubuntu-24.04
@@ -231,6 +246,8 @@ jobs:
           # These exercise fixture boundaries only; no Docker or native app starts.
           python3 src/tests/federation-smoke/test_linux_cross_container.py
           python3 src/tests/upgrade-tests/test_velopack_runner.py
+          python3 src/tests/upgrade-tests/test_package_acceptance.py
+          python3 src/tests/federation-smoke/test_docker_boundary.py
       - name: Real legacy export, import, reauthorization and media
         run: python3 src/tests/federation-browser-smoke/run.py --results-directory "$RUNNER_TEMP/federation-browser-results"
       - name: Generate synthetic video for streaming faults
@@ -261,6 +278,7 @@ jobs:
           retention-days: 14
 
   frontend:
+    if: inputs.suite != 'packages'
     name: Frontend lint & tests
     runs-on: ubuntu-latest
     defaults:
