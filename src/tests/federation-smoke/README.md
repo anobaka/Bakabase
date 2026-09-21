@@ -23,6 +23,47 @@ it does not flush filesystem caches or represent physical LAN/NAS performance.
 Use `--concurrent-load` to record other workloads. Production budgets remain
 unchanged, and owned processes and databases are removed even on failure.
 
+## Real video and streaming failures
+
+Build the production web app and `Bakabase.Federation.TestHost`, and install this
+repository's pinned `federation-browser-smoke` Playwright/Chromium dependencies.
+Generate a disposable synthetic video with FFmpeg (no user media):
+
+```bash
+ffmpeg -hide_banner -loglevel error -y \
+  -f lavfi -i 'testsrc2=size=640x360:rate=24' -t 120 -an \
+  -c:v libvpx -deadline realtime -cpu-used 8 -b:v 900k -g 48 \
+  /absolute/temporary/path/fixture.webm
+python3 src/tests/federation-smoke/media-stream.py \
+  --dotnet /absolute/path/to/dotnet --node /absolute/path/to/node \
+  --media /absolute/temporary/path/fixture.webm \
+  --results-directory /absolute/path/to/media-results --timeout 240
+```
+
+Two independent production hosts pair through a test-only relay pinned to one
+loopback destination. The relay preserves signed requests, forwards real media
+bytes, limits transfer to 256 KiB/s, and injects incomplete responses and stalls.
+It never stores authorization headers or media tickets. The optional
+`BAKABASE_FEDERATION_TEST_MEDIA_FILE` is used only by the unpackaged TestHost;
+ordinary smoke tests keep their original one-second WAV.
+
+The browser must present an actual video frame (`requestVideoFrameCallback`),
+pause its clock, resume, then present a frame at 90 seconds. Seeking must issue a
+new Range beyond half of the source file. HTTP checks verify a continuous transfer
+beyond the eight-second header deadline, reader cancellation releasing the
+upstream, interrupted transfer detection, matching bytes after a new Range,
+the product's 30-second idle cutoff, and cancellation of an active stream when
+browsing is disabled. Source revocation must reject new Range requests; playback
+must not update either library's history.
+
+The overall deadline terminates owned hosts/browser processes, and cleanup removes
+the temporary databases and raw host logs. Results retain only metrics, sanitized
+exception types, and a screenshot of the synthetic video. The input fixture must
+be 8–128 MiB and is left for its caller to remove. The Ubuntu browser CI job runs
+this check and uploads its results, not the video. This is deterministic loopback
+rate/failure injection; it does not claim physical-network latency, packet loss,
+NAS throughput, or a native external-player matrix.
+
 ## Actual VLC loopback playback
 
 ```bash
@@ -56,6 +97,36 @@ timeshift buffering. Results and cleanup status are written even on failure.
 
 ## Isolated Linux verification from a desktop
 
+With a local .NET 9 SDK, cross-build on the desktop and run only the Linux x64
+runtime in Docker. This avoids downloading a Linux SDK or compiling under CPU
+emulation:
+
+```bash
+docker pull --platform linux/amd64 mcr.microsoft.com/dotnet/aspnet:9.0-noble
+python3 src/tests/federation-smoke/run-linux-cross-container.py \
+  --dotnet /absolute/path/to/dotnet --ref HEAD \
+  --with-player --with-compatibility \
+  --results-directory /absolute/path/to/new-linux-x64-results
+```
+
+The image must already exist and have an immutable repository digest. The runner
+verifies its x64 architecture and ASP.NET 9 runtime, clones the selected committed
+revision and exact submodule SHAs, and cross-builds `linux-x64`. The default check
+is the three-host smoke; optional flags add Player and compatibility tests.
+`--skip-smoke` reruns only selected optional suites, and the report records that
+selection. Reusing previous result directories is rejected to prevent stale TRX
+files from being counted.
+
+Source/artifact mounts are read-only. Legacy test code that writes next to its
+assembly runs from a disposable container-local copy. CPU/memory/process limits,
+a 20-minute overall deadline and a 5 GiB free-space floor bound the run. Cleanup
+addresses only owned processes, containers and source copies; failures and cleanup
+errors remain in the result. An ARM Docker provider executes x64 through emulation,
+which is recorded explicitly and does not replace native Linux CI. This focused
+runner does not audit a shipping Service package or exercise a physical network.
+
+The alternative below builds and checks the complete Linux role inside a Linux
+SDK container, including the package audit. It needs more disk/download space.
 Start your existing Docker service first, then run from the repository root:
 
 ```bash

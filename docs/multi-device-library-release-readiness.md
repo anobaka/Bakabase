@@ -49,12 +49,14 @@ macOS 标签依据 [GitHub 托管 runner 官方清单](https://docs.github.com/e
 
 1. 产品身份检查和 14 个发布 guard / plist 测试。
 2. `run-compatibility.py` 调用 8 个真实测试类，覆盖 AppData profile、环境变量、路径解析/迁移/失败恢复、旧安装发现、更新源隔离、旧客户端真实 HTTP 白名单导出。
-3. Federation 模块测试、Player 模块测试，均调用实际 MSTest 可执行 runner 并要求至少执行一个测试。
+3. Federation 模块、Player 模块，以及 `Bakabase.Tests.Federation` 的完整命名空间（包含子命名空间）测试，均调用实际 MSTest 可执行 runner 并要求至少执行一个测试。命名空间筛选不存在时失败，不允许空跑成功；原 Ubuntu 全量作业本已覆盖 Service 测试，本轮补齐其四平台执行。
 4. 三进程 HTTP smoke：各有独立 AppData、SQLite、端口、身份和密钥，每库 257 条，合计 771 条；包括配对方向、无信任传递、完整归并与 cursor 重试、资源来源、媒体 HEAD/Range/416、撤销、代际变化、离线覆盖、无远端播放历史写入。
 5. 新安装浏览默认关闭；显式启用后才查询；关闭浏览释放旧本机会话/媒体，但已授权对端仍能读取本机分享。重新启用不复活旧会话。
 6. 用前端作业生成的实际生产构建检查各角色 publish 内容。
 
 另有 Ubuntu Chromium 作业 `federation-browser`，使用相同生产前端和三个独立进程（两个 Service、一个真实 ClientHost/ClientStartup），执行旧端连接与下载提示文件、统一版导入/刷新/重复导入、来源界面重新批准只读访问、媒体和跨窗口关闭浏览。旧客户端使用真实 Client AppData profile，但 GUI adapter 为空；此作业不代替 Avalonia 或安装器验证。Playwright 在测试目录独立锁定，未加入产品依赖。
+
+浏览器作业还运行容器/升级测试脚本的故障与清理守卫（不启动 Docker 或原生应用），并生成一次性 120 秒 WebM，经过两个真实配对宿主及限速/故障转发器，验证真实呈现帧、暂停/恢复、90 秒跳转、超过响应头期限的持续传输、断流后的 Range 恢复、30 秒空闲超时和流中关闭浏览。源视频不上传，结果和截图随既有 artifact 保留。它是受控 loopback 速率/故障注入，不代替物理网络测试。
 
 Smoke 请求/启动总期限默认 300 秒，单次 HTTP 最多 15 秒，启动最多 90 秒；清理时终止并等待自己创建的进程，再删除自己的数据库目录。`--keep` 只用于手动调试。主后端大套件按 class 使用独立进程和临时目录，退出后清理，避免旧 fixture 留存 SQLite 填满磁盘；失败和日志仍保留。
 
@@ -89,7 +91,7 @@ python3 src/tests/federation-smoke/run.py --dotnet /absolute/path/to/dotnet --ti
 
 较早一轮原生操作曾因 Mac 锁屏受阻；本轮已可操作桌面，使用独立 AppData 和实际 Velopack portable `.app` 验证：空库首启、主动开启浏览、通过设备页配对、257 条 / 2 个来源、完整只读详情、原生音频预览播放/暂停/拖动到 63 秒/恢复、映射后由 Finder 打开真实测试目录、来源离线时明确显示覆盖不完整、本机设置及日志仍可用、来源重启后无需重新配对恢复结果。没有操作用户原媒体库。
 
-前两轮三角色 publish 是 framework-dependent 输出；后续统一版以正式 workflow 的 `--self-contained -r osx-arm64 -p:RuntimeMode=MACOS` 生成 portable，无 SDK 环境变量启动成功，重启保留身份/授权，257 条查询和真实音频 Range 206 通过（`/tmp/bakabase-native-validation/final-package-http.json`）。本轮统一版和旧客户端均生成 self-contained Velopack portable `0.0.2-federation.4`，包身份/版本/主程序审计通过，实际并行启动与正常退出通过；SHA256、隔离配置和操作结果见 `native-result.json`。这些合成测试包未签名或公证，未安装 `.pkg` 或执行 updater。原生 portable 验证与安装升级是不同证据；音频 WAV 也不能代替视频解码、长流和弱网体验。
+前两轮三角色 publish 是 framework-dependent 输出；后续统一版以正式 workflow 的 `--self-contained -r osx-arm64 -p:RuntimeMode=MACOS` 生成 portable，无 SDK 环境变量启动成功，重启保留身份/授权，257 条查询和真实音频 Range 206 通过（`/tmp/bakabase-native-validation/final-package-http.json`）。本轮统一版和旧客户端均生成 self-contained Velopack portable `0.0.2-federation.4`，包身份/版本/主程序审计通过，实际并行启动与正常退出通过；SHA256、隔离配置和操作结果见 `native-result.json`。这些合成测试包未签名或公证，未安装 `.pkg`；该轮原生界面操作未执行 updater，后续独立的真实升级证据见下文。音频 WAV 也不能代替视频解码、长流和弱网体验。
 
 解锁后已从 self-contained 统一版界面启动官方 VLC，并验证播放与拖动；真实暂停失败，暴露了此前 headless 测试只确认 Range/seek 的不足。AVIO 不能暂停普通 HTTP 流，RC 的 paused 状态也不代表播放时钟停止；因此移除该策略，测试改为比较暂停前后时钟。原生预览和本机映射不受此限制。较早包与本轮统一版、旧客户端均已通过“关闭 → 退出”正常终止进程；最终验收汇总在 `/tmp/bakabase-native-validation/native-result.json`。
 
@@ -106,6 +108,11 @@ VLC 的原始 localhost 请求实际遇到系统代理 503；[Darwin 代理实�
 | macOS 原生连接提示迁移 | self-contained 旧客户端实际保存/取消对话框、白名单文件检查、旧连接字节不变、无业务数据库、统一版原生文件选择与草稿预览通过 | `/tmp/bakabase-native-validation/native-export-result.json` |
 | macOS 原生播放器策略 | VLC-only 明确拒绝；自动选择官方 IINA，播放、暂停时钟、恢复、拖动和再次暂停通过 | `/tmp/bakabase-native-validation/native-result.json` |
 | 原生导出与浏览器回退回归 | ClientPipeline 34 / 34；真实 Chromium 回退下载/导入/新授权/恢复克隆通过，0 pageErrors | `/tmp/bakabase-native-migration-pipeline-tests/summary.json`；`/tmp/bakabase-browser-native-export-fallback/result.json` |
+| 四平台 Service gate 本机执行 | 完整命名空间 9 类、42 / 42；选择器回归 8 / 8；不存在的命名空间实测非零退出 | `/tmp/bakabase-ci-service-federation-gate/summary.json`、`/tmp/bakabase-ci-service-empty-gate/summary.json` |
+| 真实视频和流故障 | 13 MiB/120 秒 WebM，256 KiB/s 限速下约 772 ms 首帧；呈现 90 秒帧并请求后段 Range；暂停、断流恢复、30 秒 idle、流中关闭和历史不写入通过 | `/tmp/bakabase-media-stream-presented-frames/result.json` |
+| Linux x64 三宿主 | `51601e31`、官方 ASP.NET 9.0.20 x64，771 条全流程约 18.5 秒通过；macOS ARM 交叉构建、OrbStack x64 仿真执行 | `/tmp/bakabase-linux-x64-51601e31-2/smoke/result.json` |
+| Linux x64 补充回归 | Player 74 / 74、兼容性/迁移 135 / 135，0 失败/跳过；独立补测，未把旧 TRX 混入计数 | `/tmp/bakabase-linux-x64-51601e31-tests/result.json` |
+| macOS ARM 真实旧版升级 | `f1fa1469` → `51601e31`；旧应用创建资源、自身 updater 下载、真实 UpdateMac 替换后新应用启动；2 条资源逐字段保留、两次 SQLite 完整性通过 | `/private/tmp/bakabase-real-upgrade-51601e31/run5/report.json`、`velopack-native.log` |
 | 真实旧客户端迁移浏览器链路 | 旧连接保持可用且文件未变；白名单导出/草稿恢复/幂等/新授权/114 条联合资源/跨窗口关闭及两种身份恢复；0 pageErrors | `/tmp/bakabase-browser-migration-recovery-final/result.json` |
 | 双大库 HTTP | 2×10k、2×100k 冷/热完整遍历、传输量与 RSS、执行中取消和额度复用通过；只含 loopback 网络 | `/tmp/bakabase-federation-http-benchmark-final-20260921/result.json` |
 | Linux ARM64 实际执行 | Federation 47、Player 72、兼容 131 通过；实际 Service 包角色审计通过。由 macOS SDK 跨平台构建，在 Ubuntu 24.04 实际运行 | `/tmp/bakabase-linux-cross-results/summary.json` |
@@ -115,7 +122,13 @@ Linux runner 使用独立容器、源码副本、资源和总时限，已清理�
 
 后续 [Linux ARM64 专项诊断](linux-arm64-runtime-diagnosis.md)在不包含 Bakabase 代码的同一 DLL 上得到 .NET 9.0.20 三次 SIGILL、官方 .NET 10.0.12 三次通过；捕获的指令及 SME/no-SVE 环境与官方 CoreCLR PAL 修复吻合。没有因此修改产品框架或把 ARM 诊断当成 Linux x64 CI 通过；当前发布目标仍是 Linux x64。
 
-计划 P00–P10 的行为覆盖、查询基线与全后端回归见实施记录。双大库的新 HTTP 基线补充了本机进程内存、传输量和取消后的额度释放；仍不能推导局域网、弱网或视频首帧性能。
+本轮使用 `run-linux-cross-container.py` 在 macOS 本机交叉构建后，以官方 ASP.NET 9 x64 运行时镜像执行，绕开的是不适用的 ARM 执行环境，没有修改产品运行时。镜像 manifest digest、平台、提交、选择的测试套件与 TRX 计数均保留；宿主挂载只读，测试需要写入的位置使用容器内临时副本。两个阶段各自清理自己的容器与源码副本，未修改用户容器。该 x64 仿真结果补足此前本机 Linux 执行证据，但仍不等于 GitHub 原生 Linux runner 结果。
+
+真实升级使用基线 `f1fa1469` 及其锁定子模块构建旧后端和旧前端，再打包为合成版本 `0.0.1-upgrade.1`。旧应用通过 HTTP 创建两条资源，调用现有检查、下载、重启接口；实际 `UpdateManager` 从 loopback feed 下载校验新版，实际 `UpdateMac` 完成替换。新应用 `51601e31` 的 Service DLL SHA 与新版包一致，有效 AppData 路径不变，两条资源响应逐字段相同，升级前后 SQLite `integrity_check=ok`，外部数据文件 SHA 不变。最终运行的本地 feed 共 3 次请求、89,889,144 bytes（含新应用启动后的检查）；旧/新应用及 updater 进程均已退出，临时安装和数据目录已清理。资源检查另断言恰好返回所创建的两个唯一 ID、两份 SQLite 均有 2 行；空结果或缺项不能误报升级成功。
+
+复现脚本为 `src/tests/upgrade-tests/run-velopack-macos.py`。测试专用 startup hook 将 Velopack cache/log 放进临时目录，并为真实 apply 加入 `--norestart --silent`；替换后由脚本以同一隔离环境启动新程序。没有复制新目录冒充 updater，也没有改产品代码。证据覆盖真实旧源码到新版的 portable 更新与数据保留；不覆盖历史官方签名包、默认用户缓存、LaunchServices 自动重启、生产 feed 或系统安装。macOS 管理的 WebKit/SavedState 缓存不在 AppData/Velopack 隔离范围内，未删除用户系统缓存。完整命令和边界见[升级测试说明](../src/tests/upgrade-tests/README.md)。
+
+计划 P00–P10 的行为覆盖、查询基线与全后端回归见实施记录。双大库的新 HTTP 基线补充了本机进程内存、传输量和取消后的额度释放；视频首帧另有受控限速样本，仍不能推导物理局域网或弱网性能。
 
 ## 4. 发布前尚需执行的门禁
 
@@ -123,12 +136,12 @@ Linux runner 使用独立容器、源码副本、资源和总时限，已清理�
 | --- | --- | --- |
 | 新 CI 四平台作业 | 同一最终 commit SHA 的四平台 artifact；不得用工作区本机结果替代远端结果 | 已接线，尚未触发远端 CI |
 | 最终桌面包 | Windows x64、macOS ARM/Intel 的实际安装包，记录 SHA、版本、架构、签名/公证和启动结果 | 尚未完成整套安装包矩阵 |
-| 三种安装来源 | 全新安装；已有一体版原位升级；只有旧客户端时并装统一版；额外验证两者原本同机安装 | 自动身份/路径测试已过，真实安装升级仍待执行 |
-| 更新与数据隔离 | stable/beta 各按原 feed 更新，重启后有效 AppData 不变，独立单实例/端口/进程并存，原库 SQLite 完整性可复核 | 不访问生产 feed，真实升级待执行 |
+| 三种安装来源 | 全新安装；已有一体版原位升级；只有旧客户端时并装统一版；额外验证两者原本同机安装 | 自动身份/路径、macOS portable 并行运行及真实旧版 updater 替换已过；签名安装器与其他平台路径待执行 |
+| 更新与数据隔离 | stable/beta 各按原 feed 更新，重启后有效 AppData 不变，独立单实例/端口/进程并存，原库 SQLite 完整性可复核 | macOS 隔离 feed 的真实下载/替换和原库保留已过；默认缓存、自动重启与生产通道仍待执行 |
 | 完整 GUI 主路径 | 最终桌面壳首启、空库设置/日志、开启浏览、配对、联合查询、详情、播放、离线、恢复、关闭窗口；确认远端不启动播放器 | macOS ARM portable 主路径已实际操作；其他平台及签名安装包仍待执行 |
 | 物理设备和 NAS | Windows ↔ macOS ARM/Intel；至少一组桌面 ↔ Docker/NAS；各方向单独授权、撤销、断网和重启 | 三进程 HTTP 通过不等于跨物理设备通过 |
-| 媒体和映射 | 真正安装的 VLC/IINA 等零映射流播放，seek、暂停续播、长流；Windows/macOS 映射与打开目录；来源离线与失效映射 | 原生音频预览、Finder 映射、最终包自动选择 IINA 后的播放/暂停/seek 已过；VLC 的 AVIO 策略已移除，其他平台与视频/弱网矩阵待执行 |
-| 性能验收 | 10k/100k 与两大库联合，冷/热状态、网络条件、准备/首屏/翻页 p50/p95、请求数/字节、内存高水位、取消后释放、媒体首帧 | 本机 SQLite 与双生产宿主 HTTP/RSS/取消基线已有；物理网络、视频首帧待补 |
+| 媒体和映射 | 真正安装的 VLC/IINA 等零映射流播放，seek、暂停续播、长流；Windows/macOS 映射与打开目录；来源离线与失效映射 | 原生音频、Finder 映射、IINA 播放/暂停/seek，以及浏览器视频呈现/限速/断流/idle 已过；其他平台、外部播放器视频和物理弱网矩阵待执行 |
+| 性能验收 | 10k/100k 与两大库联合，冷/热状态、网络条件、准备/首屏/翻页 p50/p95、请求数/字节、内存高水位、取消后释放、媒体首帧 | 本机 SQLite、双宿主 HTTP/RSS/取消基线及限速下视频首帧样本已有；物理网络与跨平台统计分布待补 |
 | 发布与迁移实际演练 | 从旧客户端导出、统一版刷新恢复草稿、重配对/重绑映射、重复导入、冲突保留/替换；原程序和源文件可继续使用 | 真实 ClientStartup 浏览器链路与 macOS portable 原生导出/导入已过，签名安装版本之间仍待执行 |
 | 下载入口清单 | 发布后逐一验证 GitHub/CDN 目标确实存在且架构正确；先保留旧下载/feed，再更新推荐入口 | 未发布；不提前改入口或宣布旧端停止维护 |
 

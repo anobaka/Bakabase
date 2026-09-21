@@ -47,9 +47,15 @@ sealed class FederationTestHost(int port, string dataDirectory, int count)
         var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
         if (!await db.ResourcesV2.AnyAsync())
         {
-            var mediaPath = Path.Combine(dataDirectory, "fixture.wav");
+            var fixtureMedia = Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_MEDIA_FILE");
+            if (fixtureMedia != null && (!Path.IsPathFullyQualified(fixtureMedia) || !File.Exists(fixtureMedia)))
+                throw new ArgumentException("The optional test media must be an existing absolute file path.");
+            var mediaPath = Path.Combine(dataDirectory, "fixture" +
+                (fixtureMedia == null ? ".wav" : Path.GetExtension(fixtureMedia)));
+            if (fixtureMedia != null)
+                File.Copy(fixtureMedia, mediaPath, overwrite: false);
             // A valid PCM wave with predictable bytes exercises browser audio and HTTP Range.
-            using (var output = new BinaryWriter(File.Create(mediaPath)))
+            else using (var output = new BinaryWriter(File.Create(mediaPath)))
             {
                 var payload = 16000;
                 output.Write("RIFF"u8); output.Write(payload + 36); output.Write("WAVEfmt "u8);

@@ -28,6 +28,25 @@ REPOSITORY = Path(__file__).resolve().parents[2]
 COUNT_PATTERN = re.compile(r"^  (total|failed|succeeded|skipped): (\d+)", re.MULTILINE)
 
 
+def select_classes(discovered, requested_classes=(), namespaces=()):
+    """Union explicit classes and complete namespace subtrees; every filter must match."""
+    classes = sorted(set(discovered))
+    requested = set(requested_classes or ())
+    namespaces = namespaces or ()
+    missing = requested - set(classes)
+    if missing:
+        raise RuntimeError(f"Requested test classes were not discovered: {', '.join(sorted(missing))}")
+    selected = set(requested)
+    for namespace in namespaces:
+        if not re.fullmatch(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*", namespace):
+            raise RuntimeError(f"Invalid test namespace: {namespace!r}")
+        matches = {name for name in classes if name.startswith(namespace + ".")}
+        if not matches:
+            raise RuntimeError(f"Requested test namespace was not discovered: {namespace}")
+        selected.update(matches)
+    return sorted(selected) if requested or namespaces else classes
+
+
 def run_logged(command, log, *, environment, timeout=1800):
     with log.open("w", encoding="utf-8") as output:
         try:
@@ -68,12 +87,12 @@ def discover(project, args, directory, environment):
     methods = [line.strip() for line in listing.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
     if not methods or any("." not in method for method in methods):
         raise RuntimeError("Discovery did not produce a nonempty list of fully qualified tests.")
-    classes = sorted({method.rsplit(".", 1)[0] for method in methods})
-    if args.classes:
-        missing = set(args.classes) - set(classes)
-        if missing:
-            raise RuntimeError(f"Requested test classes were not discovered: {', '.join(sorted(missing))}")
-        classes = [name for name in classes if name in args.classes]
+    discovered = sorted({method.rsplit(".", 1)[0] for method in methods})
+    classes = select_classes(discovered, args.classes, args.namespaces)
+    (directory / "selection.json").write_text(json.dumps({
+        "classFilters": args.classes or [], "namespaceFilters": args.namespaces or [],
+        "discoveredClassCount": len(discovered), "selectedClasses": classes,
+    }, indent=2), encoding="utf-8")
     return assembly, classes
 
 
@@ -117,6 +136,8 @@ def main():
     parser.add_argument("--no-build", action="store_true", help="Use already built test assemblies.")
     parser.add_argument("--class", dest="classes", action="append",
                         help="Run only this discovered fully qualified class; repeat as needed.")
+    parser.add_argument("--namespace", dest="namespaces", action="append",
+                        help="Run every discovered class in this namespace or its children; repeat or combine with --class. Each filter must match.")
     parser.add_argument("--timeout", type=int, default=1800, help="Maximum seconds per class (default 1800).")
     args = parser.parse_args()
     if args.timeout < 1:

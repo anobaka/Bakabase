@@ -173,7 +173,7 @@ TypeScript 基线核验使用 `git archive f1fa1469 src/web` 导出的临时源�
 
 身份恢复补丁完成后，再次执行上述浏览器链路，并通过实际 UI/POST 验证恢复同一节点和克隆新节点两条路径，结果位于 `/tmp/bakabase-browser-migration-recovery-final/result.json`。当轮前端全量结果、构建、lint 和类型基线比较见 `/tmp/bakabase-identity-recovery-*.log` 与 `-tsc-comparison.json`。备份说明现在明确要求覆盖后首次启动保持网络隔离，身份重置不会自动处理旧版管理协议的授权。
 
-随后实际旧客户端 macOS WebView 暴露了 Blob 导出缺口：GET 返回 200，但没有保存对话框或文件。Shell 原先只有上传用的 OpenPanel，没有下载保存实现。上述窄导出接口修复已完成编译及自动化回归，证据为 `/tmp/bakabase-native-migration-pipeline-tests/summary.json`、`/tmp/bakabase-native-migration-{frontend-tests,all-tests,lint,shell-build,web-build,tsc}.log`。最新 Chromium 回退链路结果为 `/tmp/bakabase-browser-native-export-fallback/result.json`；它使用没有原生保存能力的真实 ClientHost，只能证明浏览器回退，不能代替 macOS 保存对话框验收。实际打包客户端保存/取消与导入复验结果待补入[发布验收记录](multi-device-library-release-readiness.md)。
+随后实际旧客户端 macOS WebView 暴露了 Blob 导出缺口：GET 返回 200，但没有保存对话框或文件。Shell 原先只有上传用的 OpenPanel，没有下载保存实现。上述窄导出接口修复已完成编译及自动化回归，证据为 `/tmp/bakabase-native-migration-pipeline-tests/summary.json`、`/tmp/bakabase-native-migration-{frontend-tests,all-tests,lint,shell-build,web-build,tsc}.log`。最新 Chromium 回退链路结果为 `/tmp/bakabase-browser-native-export-fallback/result.json`；它使用没有原生保存能力的真实 ClientHost，只证明浏览器回退。另已用实际 macOS self-contained 包完成保存/取消、文件白名单检查、原生导入和重启恢复草稿，结果见[发布验收记录](multi-device-library-release-readiness.md)。
 
 最终三宿主重跑结果在 `/tmp/bakabase-federation-third-round-final-2/result.json`：771 条及全部撤销/媒体/覆盖场景通过。脚本增加恢复后两个开关均关闭、不能生成邀请码、显式重新开启分享后旧引用仍被拒绝的断言。首次重跑暴露脚本仍假设恢复后可立即邀请；现已按新的实际行为更新并完整重跑，没有恢复旧的自动分享行为。
 
@@ -181,11 +181,19 @@ TypeScript 基线核验使用 `git archive f1fa1469 src/web` 导出的临时源�
 
 本轮策略/参数 14 / 14、Player 74 / 74、旧播放处理器 20 / 20 通过。实际 self-contained 统一版 `0.0.2-federation.4` 在 VLC-only 代理环境显示中文提示，加入仅测试 PATH 的官方 IINA 1.4.4 后自动选择并播放；暂停时钟保持 `00:08`、恢复/拖动到 `07:00`、继续到 `07:08` 后再次暂停均通过。原生迁移草稿也在关闭旧包、启动新包后保留。Windows/Linux 尚无可信 VLC 代理检测，零映射 VLC 流使用同样替代路径；独立 mpv、视频和物理网络矩阵未记作通过。测试进程及临时发现链接均已清理，完整边界见发布验收记录。
 
-`player-proxy.py` 用官方 VLC 3.0.23 和独立 WAV/诱饵代理验证：控制组经代理失败，修复后代理请求为 0，来源收到 `Range: bytes=0-` 与跳到 90 秒后的 `bytes=8640044-`，退出码 0。证据在 `/tmp/bakabase-player-proxy-results-20260921/result.json`。此脚本不修改系统代理；mpv/IINA 仅核对官方参数契约，未实际运行。
+最初 `player-proxy.py` 用官方 VLC 3.0.23 和独立 WAV/诱饵代理验证直连与 Range，记录在 `/tmp/bakabase-player-proxy-results-20260921/result.json`；该轮未验证真实暂停时钟，不能证明原 AVIO 策略可用。脚本现已补强暂停和大文件实际 Range 断言，`--diagnose-avio` 正确以非零退出捕获旧方案暂停失败；原生 IINA 已按上述步骤实际验证，独立 mpv 仍待验证。
 
 真实 macOS 打包发现两个产品的 plist 缺少 `CFBundleExecutable`，且自定义版本固定为 1.0.0；现已修复并在 Velopack 前生成版本、后审计实际 Portable.zip，14 个 guard/plist 测试通过。Ubuntu 24.04 ARM64 容器中实际执行 Federation 47、Player 72、兼容 131 通过，Service 包审计通过；原生编译及三宿主启动遇到 SIGILL，不能记为完整 Linux 门禁通过。Windows 路径和播放器发现测试夹具另修复了平台依赖，27 项定向回归通过。
 
 继续诊断已在无业务依赖的最小程序中捕获 .NET 9 CoreCLR PAL 执行 `rdvl` 导致的 SIGILL，与 SME-only Linux 信号上下文的官方已知缺陷一致；相同 DLL 在官方 .NET 10.0.12 的三次对照均正常。完整复现和平台范围见 [Linux ARM64 诊断](linux-arm64-runtime-diagnosis.md)。本轮不升级产品框架；Linux x64 发布目标仍须执行其自身 CI，不能用 ARM 失败或 .NET 10 最小程序成功替代。
+
+本轮基于 `51601e31` 在 macOS SDK 交叉构建 Linux x64，再使用官方 ASP.NET 9.0.20 x64 镜像和 OrbStack 仿真执行，三宿主 771 条全流程通过，另补 Player 74 / 74、兼容性/迁移 135 / 135（0 跳过）。`run-linux-cross-container.py` 固定提交、子模块和镜像 digest，保持宿主挂载只读，执行输出使用容器内临时副本，结果保留真实 TRX 与平台信息。这不等于 GitHub 原生 runner 或物理 Linux 设备；没有修改产品目标框架或容器后台服务。
+
+四平台 CI 现另运行整个 `Bakabase.Tests.Federation` 命名空间，包括子命名空间与未来新增类。本机实际发现 9 类、42 / 42 通过；选择器 8 项回归及不存在 namespace 的失败验收通过。原 Ubuntu 全量作业原已覆盖这些 Service 测试，本轮补的是 Windows/macOS/Linux 专项矩阵中的遗漏。
+
+本轮还完成 macOS ARM 的真实旧版更新链路：用基线 `f1fa1469` 及锁定子模块构建旧前后端，合成 portable 版本 `0.0.1-upgrade.1`；旧应用通过真实 API 创建两条资源，自身 updater 从隔离 loopback feed 下载新版，真实 `UpdateMac` 将应用替换为 `51601e31` / `0.0.2-federation.4`。新程序启动后 DLL SHA 与包一致、AppData 相同，两条资源响应逐字段一致，两个 SQLite 快照完整性均通过，数据文件 SHA 保持不变。证据为 `/private/tmp/bakabase-real-upgrade-51601e31/run5/report.json`。
+
+`run-velopack-macos.py` 与不随产品发布的 startup hook 将 Velopack cache/log 定位到临时目录，并禁用 apply 的自动重启；脚本在替换完成后以相同显式 AppData 启动新二进制。该结果不是旧目录复制模拟，也不代表历史签名安装包、默认缓存、LaunchServices 自动重启或生产更新通道已通过；WebKit/SavedState 的系统缓存不在隔离范围。所有 owned 应用/updater 进程退出后清理测试工作目录，保留报告、日志和一致性 SQLite 快照。
 
 ## 性能观测
 
@@ -218,6 +226,14 @@ TypeScript 基线核验使用 `git archive f1fa1469 src/web` 导出的临时源�
 100k × 2 普通遍历的采样 RSS 峰值 A/B 约 832/905 MiB，两会话额度复用测试中约 1,112/1,205 MiB。关闭浏览时，执行中的请求被中断，旧会话重启后为 410，两个额度立即可复用；两档关闭耗时约 77/31 ms，来源端 3 次创建对应 3 次 DELETE。大库关闭前后 RSS 并未立即回落（A 约 833→841 MiB，B 约 972 MiB），不能把额度释放等同于 OS 立即回收内存，也不能仅凭此推断泄漏。
 
 结构化结果在 `/tmp/bakabase-federation-http-benchmark-final-20260921/result.json`。测试未放大默认预算，已经清理自身进程和数据库；这些是本机 HTTP 观测，物理 LAN/NAS、弱网和视频首帧仍需独立记录。
+
+### 真实视频与流故障（2026-09-21）
+
+`media-stream.py` 使用两份真实 Service/SQLite 和固定目标的 loopback 转发器，生产 UI/Chromium 实际解码 120 秒、640×360、13 MiB 的合成 WebM。256 KiB/s 限速下首个呈现帧约 772 ms；暂停时钟稳定、恢复成功，`requestVideoFrameCallback` 确认呈现 `mediaTime=90` 的帧，来源还收到文件后半段的新 Range。
+
+持续传输 2.25 MiB 约 9.43 秒，超过响应头 8 秒期限仍正常；读端断开后上游连接释放。注入截断必须报不完整/RST，重开 Range 的实际字节与源文件一致；停滞约 30.13 秒触发产品 idle 取消；流中关闭浏览约 100 ms 终止请求并释放上游。来源撤销后新 Range 被拒绝，两边播放历史保持为空。
+
+完整结果与实际视频截图在 `/tmp/bakabase-media-stream-presented-frames/`。短截止失败运行 `/tmp/bakabase-media-stream-deadline/result.json` 非零退出并清理自身进程。测试已接入 Ubuntu browser CI，源视频不上传；这些是单机速率/故障注入样本，不声称物理网络延迟、丢包、NAS 吞吐或 p95 性能。
 
 ## 与原计划的差异及发布门槛
 

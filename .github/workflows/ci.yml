@@ -147,6 +147,19 @@ jobs:
           python src/tests/upgrade-tests/test_release_contract.py
       - name: Identity, AppData, relocation and migration whitelist contracts
         run: python src/tests/upgrade-tests/run-compatibility.py --results-directory "$RUNNER_TEMP/federation-results/compatibility"
+      - name: Backend runner selection guards
+        run: python -m unittest discover -s src/tests -p 'test_backend_runner.py'
+      - name: Service federation integration and player policy contracts
+        run: |
+          # Compatibility above builds this assembly. Select the entire namespace
+          # so new Service federation classes join every OS gate automatically:
+          # real library projection, sharing/browsing, mappings, directory/media
+          # security, and stream player arguments/proxy selection.
+          # An empty or misspelled namespace fails; all discovered cases still run.
+          python src/tests/run-backend-tests.py --no-build \
+            --project src/tests/Bakabase.Tests/Bakabase.Tests.csproj \
+            --namespace Bakabase.Tests.Federation \
+            --results-directory "$RUNNER_TEMP/federation-results/service"
       - name: Federation protocol, budgets and filesystem boundaries
         run: dotnet run --project src/tests/Bakabase.Modules.Federation.Tests -- --minimum-expected-tests 1 --report-trx --results-directory "$RUNNER_TEMP/federation-results/protocol"
       - name: Native player discovery and launch arguments
@@ -213,8 +226,31 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Browser runner failure diagnostics
         run: python3 -m unittest discover -s src/tests/federation-browser-smoke -p 'test*.py'
+      - name: Isolated runner failure and cleanup guards
+        run: |
+          # These exercise fixture boundaries only; no Docker or native app starts.
+          python3 src/tests/federation-smoke/test_linux_cross_container.py
+          python3 src/tests/upgrade-tests/test_velopack_runner.py
       - name: Real legacy export, import, reauthorization and media
         run: python3 src/tests/federation-browser-smoke/run.py --results-directory "$RUNNER_TEMP/federation-browser-results"
+      - name: Generate synthetic video for streaming faults
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y ffmpeg
+          fi
+          # Owned fixture only: no user media and no video upload in the evidence artifact.
+          ffmpeg -hide_banner -loglevel error -y \
+            -f lavfi -i "testsrc2=size=640x360:rate=24" -t 120 -an \
+            -c:v libvpx -deadline realtime -cpu-used 8 -b:v 900k -g 48 \
+            "$RUNNER_TEMP/federation-stream-fixture.webm"
+      - name: Decoded video, slow streams, seek, interruption and opt-out
+        run: |
+          # Reuse the production TestHost and web assets built by the browser runner.
+          python3 src/tests/federation-smoke/media-stream.py \
+            --media "$RUNNER_TEMP/federation-stream-fixture.webm" \
+            --results-directory "$RUNNER_TEMP/federation-browser-results/media" \
+            --timeout 240
       - name: Retain browser evidence
         if: always()
         uses: actions/upload-artifact@v4
