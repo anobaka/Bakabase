@@ -5,8 +5,11 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path, PurePosixPath
 import tempfile
+import threading
+import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -232,6 +235,91 @@ class NativeProcessEvidence(unittest.TestCase):
         self.assertEqual(len(diagnostics), actual["stderrCharacters"])
         self.assertTrue(actual["stderrTruncated"])
         self.assertEqual(0, observer.sample_count)
+
+    def test_short_stderr_stage_is_observable_while_pipe_is_open_without_stdout_or_a_sample(self):
+        # A real pipe catches read(1024)'s previous wait-for-EOF behavior without
+        # starting PowerShell, an application or any native process observer.
+        observer = runner.ProcessObserver([Path(tempfile.gettempdir()) / "fixture-native-app"])
+        read_fd, write_fd = os.pipe()
+        reader = os.fdopen(read_fd, "r", encoding="utf-8")
+        writer = os.fdopen(write_fd, "w", encoding="utf-8")
+        observer._helper = SimpleNamespace(stderr=reader)
+        observer._started_monotonic = time.monotonic()
+        thread = threading.Thread(target=observer._windows_stderr_loop, daemon=True)
+        thread.start()
+        try:
+            writer.write("BAKABASE_OBSERVER_STAGE:script-start\nBAKABASE_OBSERVER_STAGE:cim-start\n")
+            writer.flush()
+            deadline = time.monotonic() + 2
+            while observer.diagnostics()["windowsHelper"]["lastStage"] != "cim-start" and time.monotonic() < deadline:
+                time.sleep(0.005)
+            actual = observer.diagnostics()
+            self.assertEqual("cim-start", actual["windowsHelper"]["lastStage"])
+            self.assertIsNotNone(actual["windowsHelper"]["lastStageElapsedSeconds"])
+            self.assertTrue(thread.is_alive(), "The writer is still open, so no EOF was supplied")
+            self.assertEqual(0, actual["windowsStdout"]["lines"])
+            self.assertEqual(0, observer.sample_count)
+            self.assertFalse(observer._ready.is_set())
+            self.assertEqual([], observer.errors)
+        finally:
+            writer.close()
+            thread.join(timeout=2)
+            reader.close()
+        self.assertFalse(thread.is_alive())
+
+    def test_unknown_or_embedded_stage_lines_do_not_replace_last_fixed_stage_and_evidence_stays_bounded(self):
+        observer = runner.ProcessObserver([Path(tempfile.gettempdir()) / "fixture-native-app"])
+        diagnostic = ("BAKABASE_OBSERVER_STAGE:targets-parse\n" + "x" * 1024 +
+                      "BAKABASE_OBSERVER_STAGE:serialized\n" + "BAKABASE_OBSERVER_STAGE:unknown-stage\n" + "y" * 9000 + "\n")
+        observer._helper = SimpleNamespace(stderr=io.StringIO(diagnostic))
+        observer._windows_stderr_loop()
+        actual = observer.diagnostics()
+        self.assertEqual("targets-parse", actual["windowsHelper"]["lastStage"])
+        self.assertEqual(diagnostic[:8192], actual["stderr"])
+        self.assertEqual(len(diagnostic), actual["stderrCharacters"])
+        self.assertTrue(actual["stderrTruncated"])
+        self.assertFalse(observer._ready.is_set())
+
+    def test_stage_diagnostics_do_not_satisfy_or_extend_the_initial_snapshot_deadline(self):
+        observer = runner.ProcessObserver([Path(tempfile.gettempdir()) / "fixture-native-app"])
+        observer._started_monotonic = 0
+        observer._helper = SimpleNamespace(stderr=io.StringIO("BAKABASE_OBSERVER_STAGE:serialized\n"))
+        with patch.object(runner.time, "monotonic", return_value=14):
+            observer._windows_stderr_loop()
+        self.assertFalse(observer._ready.is_set())
+        with patch.object(observer._stop, "wait", side_effect=[False, True]), \
+                patch.object(runner.time, "monotonic", return_value=16), patch.object(observer, "_kill_helper") as kill:
+            observer._watchdog()
+        self.assertEqual(["Observer produced no initial snapshot within 15 seconds"], observer.errors)
+        self.assertEqual(0, observer.sample_count)
+        kill.assert_called_once_with()
+
+    def test_startup_diagnostics_keep_pid_exit_code_and_failed_duration_without_claiming_a_snapshot(self):
+        observer = runner.ProcessObserver([Path(tempfile.gettempdir()) / "fixture-native-app"])
+        observer._started_monotonic = 10
+        observer._windows_helper_pid = 77
+        observer._windows_spawn_seconds = 0.25
+        observer._helper = SimpleNamespace(poll=lambda: 1, wait=lambda timeout: 1, stdout=None, stderr=None)
+        with patch.object(runner.time, "monotonic", return_value=25):
+            observer.close()
+        with patch.object(runner.time, "monotonic", return_value=100):
+            evidence = observer.diagnostics()["windowsHelper"]
+        self.assertEqual({"pid": 77, "exitCode": 1, "spawnElapsedSeconds": 0.25, "startupElapsedSeconds": 15,
+                          "firstSnapshotElapsedSeconds": None, "lastStage": None, "lastStageElapsedSeconds": None}, evidence)
+        self.assertEqual(0, observer.sample_count)
+
+    def test_first_successful_snapshot_freezes_startup_time_despite_later_samples_or_close(self):
+        observer = runner.ProcessObserver([Path(tempfile.gettempdir()) / "fixture-native-app"])
+        observer._started_monotonic = 10
+        with patch.object(runner.time, "monotonic", return_value=12):
+            observer._accept([], 100)
+        with patch.object(runner.time, "monotonic", return_value=20):
+            observer._accept([], 108)
+            observer.close()
+        evidence = observer.diagnostics()["windowsHelper"]
+        self.assertEqual(2, evidence["startupElapsedSeconds"])
+        self.assertEqual(2, evidence["firstSnapshotElapsedSeconds"])
+        self.assertEqual(2, observer.sample_count)
 
     def test_macos_full_paths_with_spaces_and_utc_start_times_are_preserved(self):
         # This is macOS ps wire text even when the test host is Windows.

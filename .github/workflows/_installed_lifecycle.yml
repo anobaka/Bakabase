@@ -7,6 +7,11 @@ on:
         description: Successful package acceptance CI run whose product sources are unchanged
         required: true
         type: string
+      mode:
+        description: updates or coexistence (the latter does not exercise updating)
+        required: false
+        default: updates
+        type: string
 
 permissions:
   contents: read
@@ -14,7 +19,7 @@ permissions:
 
 jobs:
   installed:
-    name: Installed coexistence and update (${{ matrix.rid }})
+    name: Installed ${{ inputs.mode }} (${{ matrix.rid }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
     strategy:
@@ -45,16 +50,23 @@ jobs:
         with:
           dotnet-version: '9.0.x'
       - name: Install bounded updater test tools
+        if: inputs.mode == 'updates'
         run: |
           npm ci --ignore-scripts --prefix src/tests/installed-lifecycle-tools
           dotnet tool install --tool-path "$RUNNER_TEMP/installed-vpk-tools" vpk --version 1.2.0
       - name: Check provenance and lifecycle failure guards
+        env:
+          LIFECYCLE_MODE: ${{ inputs.mode }}
         run: |
+          [[ "$LIFECYCLE_MODE" == 'updates' || "$LIFECYCLE_MODE" == 'coexistence' ]]
           python src/tests/upgrade-tests/test_installed_inputs.py
           python src/tests/upgrade-tests/test_installed_lifecycle.py
           python src/tests/upgrade-tests/test_installed_updates.py
           python src/tests/upgrade-tests/test_installed_update_feed.py
           python src/tests/upgrade-tests/test_installed_update_exercise.py
+          python src/tests/upgrade-tests/test_installed_macos_account.py
+          python src/tests/upgrade-tests/test_installed_macos_auth_diagnostics.py
+          python src/tests/upgrade-tests/test_installed_macos_authorization.py
       - name: Check actual native process observation before installing
         run: |
           python src/tests/upgrade-tests/check-installed-observer.py \
@@ -70,6 +82,7 @@ jobs:
             --repository "$SOURCE_REPOSITORY" --run-id "$SOURCE_RUN" \
             --rid '${{ matrix.rid }}' --output-directory "$RUNNER_TEMP/installed-inputs"
       - name: Repackage unchanged product code for the local updater feed
+        if: inputs.mode == 'updates'
         env:
           UNIFIED_PACKAGES: ${{ steps.inputs.outputs.unified_directory }}
           CLIENT_PACKAGES: ${{ steps.inputs.outputs.client_directory }}
@@ -87,11 +100,19 @@ jobs:
           UNIFIED_PACKAGES: ${{ steps.inputs.outputs.unified_directory }}
           CLIENT_PACKAGES: ${{ steps.inputs.outputs.client_directory }}
           PACKAGE_VERSION: ${{ steps.inputs.outputs.version }}
+          LIFECYCLE_MODE: ${{ inputs.mode }}
         run: |
+          UPDATE_ARGS=()
+          if [[ "$LIFECYCLE_MODE" == 'updates' ]]; then
+            UPDATE_ARGS=(--updates-manifest "$RUNNER_TEMP/installed-updates/updates.json")
+            if [[ '${{ runner.os }}' == 'macOS' ]]; then
+              UPDATE_ARGS+=(--macos-native-authorization)
+            fi
+          fi
           python src/tests/upgrade-tests/run-installed-lifecycle.py \
             --unified-packages "$UNIFIED_PACKAGES" --client-packages "$CLIENT_PACKAGES" \
             --rid '${{ matrix.rid }}' --version "$PACKAGE_VERSION" \
-            --updates-manifest "$RUNNER_TEMP/installed-updates/updates.json" \
+            "${UPDATE_ARGS[@]}" \
             --results-directory "$RUNNER_TEMP/installed-lifecycle-results"
       - name: Keep small lifecycle evidence
         if: always()

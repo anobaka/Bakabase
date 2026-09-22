@@ -19,10 +19,15 @@ on:
         description: Successful packages run to reuse for the installed suite
         type: string
         required: false
+      installed_mode:
+        description: Installed acceptance coverage (coexistence does not exercise updating)
+        type: choice
+        options: [updates, coexistence]
+        default: updates
 
 # A newer push to the same branch / PR cancels older in-progress runs.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.suite || 'full' }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.suite || 'full' }}-${{ inputs.installed_mode || 'updates' }}
   cancel-in-progress: true
 
 permissions:
@@ -37,6 +42,7 @@ jobs:
     uses: ./.github/workflows/_installed_lifecycle.yml
     with:
       package_run_id: ${{ inputs.package_run_id }}
+      mode: ${{ inputs.installed_mode || 'updates' }}
 
   package-acceptance:
     if: github.event_name == 'workflow_dispatch' && inputs.suite == 'packages'
@@ -271,6 +277,7 @@ jobs:
           python3 src/tests/upgrade-tests/test_installed_updates.py
           python3 src/tests/upgrade-tests/test_installed_update_feed.py
           python3 src/tests/upgrade-tests/test_installed_update_exercise.py
+          python3 src/tests/upgrade-tests/test_installed_macos_authorization.py
           python3 src/tests/federation-smoke/test_docker_boundary.py
       - name: Real legacy export, import, reauthorization and media
         run: python3 src/tests/federation-browser-smoke/run.py --results-directory "$RUNNER_TEMP/federation-browser-results"

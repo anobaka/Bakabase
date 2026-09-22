@@ -1,12 +1,12 @@
 # 多设备媒体库：发布准备与迁移验收
 
-记录日期：2026-09-21。对应开发分支 `codex/multi-device-library`；初始实现基线为 `f1fa1469`，后续验收在 `b80ddfbe`、`cf787d13` 的基础上继续，包含其后的修改。继续验收时已合入最新 `origin/main`（`86d76392`）并推送开发分支，用于远端测试。没有发布、切换更新 feed 或收敛官方下载入口。
+记录日期：2026-09-22。对应开发分支 `codex/multi-device-library`；初始实现基线为 `f1fa1469`，后续验收在 `b80ddfbe`、`cf787d13` 的基础上继续，包含其后的修改。继续验收时已合入最新 `origin/main`（`86d76392`）并推送开发分支，用于远端测试。没有发布、切换更新 feed 或收敛官方下载入口。
 
 当前设计以[多设备联合媒体库执行计划](multi-device-library-execution-plan.md)为准，功能、预算和已有测试记录见[实施记录](multi-device-library-implementation.md)。[旧拆分设计](pc-client-design.html)与[旧拆分执行计划](pc-client-execution-plan.html)保留历史内容，并增加了当前状态入口。
 
 Windows 数据迁移修复另在基础设施分支 `codex/multi-device-relocation-lock`（`dc6692a9522736969d7d574c980ca98e447570ee`），父仓库已固定引用且远端 CI 可拉取。后续合并顺序为先将基础设施修复合入其主线，再合入本仓库引用，保证子模块提交长期可达。没有改动用户原工作区的基础设施 checkout。
 
-代码和自动化已提供可执行的发布检查。四平台矩阵、最终完整 CI、六种实际桌面安装及本机原生桌面/Docker 双向互通已通过；签名/公证、跨物理设备、其余播放器矩阵和升级验收仍是扩大试用前的门禁。
+代码和自动化已提供可执行的发布检查。2026-09-22 修复 Intel 原生 WebView 崩溃后，产品提交 `d77021ed` 的完整 CI、六种重建安装包、macOS 两种架构的原生 ABI 回归，以及修复包的三平台双产品并存、原生更新/自动重启和数据保留验收均已通过，包含 Mac 的实际系统授权；本机原生桌面/Docker 双向互通也有实际证据。签名/公证、跨物理设备、其余 GUI/播放器矩阵和历史签名包/生产通道升级仍是扩大试用前的门禁。
 
 ## 1. 产品身份与包内容
 
@@ -78,7 +78,7 @@ python3 src/tests/federation-smoke/run.py --dotnet /absolute/path/to/dotnet --ti
 
 ### 本次远端执行证据
 
-最终代码提交 `ca55d4733d7606807755868f5b04520d4ccdcf98` 的 [CI 35607879124](https://github.com/anobaka/Bakabase/actions/runs/35607879124) **7 个作业全部成功**：前端、全后端、浏览器以及 Windows x64、Linux x64、macOS Intel/ARM 四平台。各 artifact 的源码 SHA 已核对一致。该运行通过同一提交的临时 `codex/multi-device-library-ci-ca55d473` 分支触发，避免中断上一轮全后端；验证完成后临时分支已删除，代码保留在 `codex/multi-device-library`，没有触发部署。后续仅归档文档，不改变已测代码。
+该轮代码提交 `ca55d4733d7606807755868f5b04520d4ccdcf98` 的 [CI 35607879124](https://github.com/anobaka/Bakabase/actions/runs/35607879124) **7 个作业全部成功**：前端、全后端、浏览器以及 Windows x64、Linux x64、macOS Intel/ARM 四平台。各 artifact 的源码 SHA 已核对一致。该运行通过同一提交的临时 `codex/multi-device-library-ci-ca55d473` 分支触发，避免中断上一轮全后端；验证完成后临时分支已删除，代码保留在 `codex/multi-device-library`，没有触发部署。这些结果仅对应该提交，不能替代下述 `d77021ed` 产品修改后的复验。
 
 全后端作业用时 25 分 59 秒。13 个项目共 2,617 项：通过 2,582、失败 0、跳过 35。主程序集实际发现并执行 184 类、1,641 项，selection、summary、184 份 TRX 的计数/结果以及日志逐类一致；其余 12 个模块每个只计一次真实 MTP 汇总。35 项跳过全部来自 ThirdParty 已显式 `[Ignore]` 的手动联网测试，其余项目没有跳过。artifact `10643378594` 为 718,387 bytes，下载 SHA256 与 GitHub digest 一致；完整索引在 `/tmp/bakabase-ci-ca55d473-backend/summary.json`。
 
@@ -90,7 +90,7 @@ python3 src/tests/federation-smoke/run.py --dotnet /absolute/path/to/dotnet --ti
 
 ### 三个平台、两个产品的真实安装
 
-[安装验收 CI 35618999687](https://github.com/anobaka/Bakabase/actions/runs/35618999687) 在提交 `0e5281e6acd706a9000884e96d78535208714323` 上构建真实生产前端和六种 self-contained 包，前端及六个安装作业全部成功。通过已有 CI 的 `workflow_dispatch suite=packages` 调用新的 `_package_acceptance.yml`；该入口仅构建/测试，只有 `contents: read`，不调用部署或发布 Release，不读取生产签名密钥。常规完整 CI 没有在此选择下重复执行，其前次通过证据仍是上节 `ca55d473`；后续变化仅为验收脚本、工作流和文档，产品源码未变。
+[安装验收 CI 35618999687](https://github.com/anobaka/Bakabase/actions/runs/35618999687) 在提交 `0e5281e6acd706a9000884e96d78535208714323` 上构建真实生产前端和六种 self-contained 包，前端及六个安装作业全部成功。通过已有 CI 的 `workflow_dispatch suite=packages` 调用新的 `_package_acceptance.yml`；该入口仅构建/测试，只有 `contents: read`，不调用部署或发布 Release，不读取生产签名密钥。常规完整 CI 没有在此选择下重复执行，其前次通过证据仍是上节 `ca55d473`。本表属于 `0e5281e6` 的包，不能记为 `d77021ed` 修复包已通过。
 
 | 原生 runner / RID | 统一版 | 旧客户端 | 实际操作 |
 | --- | --- | --- | --- |
@@ -102,7 +102,118 @@ python3 src/tests/federation-smoke/run.py --dotnet /absolute/path/to/dotnet --ti
 
 小证据 artifact 与安装包分开保留，六份小证据共 309,325 bytes，源码 SHA、角色/RID 和下载 ZIP SHA256 对 GitHub digest 逐项核对；汇总在 `/tmp/bakabase-package-ci-0e5281e6-evidence/summary.json`。大安装包只保留为 Actions artifact，未下载安装到用户 Mac，也未发布给用户。前一轮 [35618018456](https://github.com/anobaka/Bakabase/actions/runs/35618018456) 暴露 Windows Python ZIP 路径规范化的夹具问题及 Velopack 1.2.0 不接受两个同时出现的关闭开关；修复后重跑完整六组合，未跳过失败断言。包装守卫套件通过：macOS 13 项；Windows 12 项，另 1 项 Unix 权限/符号链接检查按平台跳过。
 
-这关闭了各产品各平台的未签名全新安装/启动检查，不代表签名、公证、Gatekeeper/SmartScreen、两个已安装产品同机升级、历史官方包迁移或 updater 自动重启通过。macOS postinstall 的首次自动启动与 updater 重启是不同路径；包/feed 身份保持不变，生产渠道和下载入口未改动。
+上述结果记录了该批未签名包的全新安装/启动，不代表签名、公证、Gatekeeper/SmartScreen、两个已安装产品同机升级、历史官方包迁移或 updater 自动重启通过。后续 Intel 崩溃要求对修复后的真实包重新验收，不能用首次 HTTP 就绪推断桌面进程持续存活。macOS postinstall 的首次自动启动与 updater 重启是不同路径；包/feed 身份保持不变，生产渠道和下载入口未改动。
+
+### Intel WebView 原生崩溃与 ABI 修复（2026-09-22）
+
+[已安装生命周期 CI 35678757667](https://github.com/anobaka/Bakabase/actions/runs/35678757667) 的执行源码为 `0214b725`，使用的原安装包仍来自 `0e5281e6`。Intel 在 `initial-unified-install` 阶段报客户端连接拒绝；两个产品此前均完成自己的进程、默认 AppData 和 HTTP/UI 初始检查。系统诊断随后确认两者已发生原生崩溃，而非仅观察脚本没有找到 PID：
+
+| 产品 / PID | `.ips` 中的启动时间 / 崩溃捕获时间（UTC） | 原生终止证据 |
+| --- | --- | --- |
+| 旧客户端 / 14827 | 02:19:18.0562 / 02:19:25.7869 | `EXC_BAD_INSTRUCTION` / `SIGILL`；`Invalid view geometry: width is NaN` |
+| 统一版 / 15244 | 02:19:35.0526 / 02:19:54.3037 | 相同异常；主线程 `_NSViewValidateGeometry → NSView initWithFrame: → WKWebView initWithFrame:configuration:` |
+
+客户端实际崩溃早于统一版启动，不能将报告中的粗粒度阶段解释为后者杀死前者。单实例 ID 分别为 `Bakabase.Client` 与 `Bakabase`，Mutex/Pipe 名称据此分开；本次终止原因是原生几何断言，不是单实例冲突或内存回收。两份 crash 及限定进程系统日志已随小证据归档，下载核验目录为 `/tmp/bakabase-installed-0214b725-evidence/osx-x64/installed-lifecycle-results/`：
+
+- `report.json`：失败阶段、实际启动 PID、默认 AppData 与清理结果。
+- `diagnostics/1-Bakabase.Client-2026-09-22-022011.000.ips`、`diagnostics/0-Bakabase-2026-09-22-022011.ips`：上述原生异常与主线程栈。
+- `diagnostics/owned-process-system.log` 及双方 `application-logs/`：本轮进程日志；清理无错误。`.ips` 文件名中的时间不替代文件内部的崩溃捕获时间。
+
+根因在共享 Shell 的 [NativeWebViewHost.MacOS.cs](../src/apps/Bakabase.Shell/Controls/NativeWebViewHost.MacOS.cs)：`initWithFrame:configuration:` 和 `setFrame:` 的 P/Invoke 原先把一个 `CGRect` 写成四个独立 `double`。Darwin x64 把 32 字节结构体按值放在栈上，四个独立浮点参数却进入 `xmm0–3`；因此即使创建调用传四个零，AppKit 也会从错误位置读到几何数据。ARM64 的四成员浮点聚合和四个独立参数恰好都使用 `d0–3`，解释了此前 ARM 成功不能发现这个 Intel 缺陷。
+
+修复提交 `d77021ed0e75325a2466361a1c3694632d0b973a` 增加顺序布局的四字段 `CGRect`，将上述两条生产 P/Invoke 及调用都改为按值传递该结构体。新增 [Bakabase.Shell.NativeAbiProbe](../src/tests/Bakabase.Shell.NativeAbiProbe/Program.cs) 直接反射调用生产声明，由原生 Objective-C Foundation 夹具接收矩形并用 `NSValue getValue:size:` 回写核验，覆盖零值、不同负数/分数、矩形之后的指针参数，以及 void frame setter。它不创建窗口、不加载 WebKit、不启动产品或安装器。
+
+本机 ARM64 / SDK 9.0.100 / runtime 9.0.0 的 Release 构建成功，三组矩形的两条原生调用全部通过；报告 `/tmp/bakabase-native-abi-arm64-20260922.json`，构建日志 `/tmp/bakabase-native-abi-build.log`。`_package_acceptance.yml` 与 `ci.yml` 均已接入 macOS Intel/ARM 原生 runner 的该探针，报告分别归档为 `package-native-abi.json` 和 `federation-results/native-abi.json`。随后 [安装验收 CI 35679854071](https://github.com/anobaka/Bakabase/actions/runs/35679854071) 在同一产品提交 `d77021ed` 重建六种包，前端及六个原生安装作业全部通过。版本为 `0.0.1-acceptance.35679854071.1`，core 为 `2.4.0-beta.366`。四个 macOS 安装作业均先通过真实 ABI 探针，Intel 的创建和调整矩形调用已获得实际 x64 证据；六组合 portable 启动、原始安装器、已安装启动及各自约定的数据路径和清理通过（macOS 默认路径；Windows 独立安装目录和 AppData）。统一版每个平台的 portable/installed 数据库各保留 1 条 API 创建资源且完整性为 `ok`。
+
+六份小证据合计 311,995 bytes，GitHub digest、字节数、源码 SHA、角色、架构、所有清理结果逐项核对。汇总及逐包文件哈希位于 `/tmp/bakabase-package-ci-d77021ed-evidence/summary.json`；大包未下载到用户机器。该结果确认修复后的全新安装，完整 CI 及已安装双产品并存/授权自动更新仍按各自报告单独判定，不能从全新安装推定通过。
+
+### 修复包的已安装双产品并存与移除
+
+[并存 CI 35680717291](https://github.com/anobaka/Bakabase/actions/runs/35680717291) 在测试提交 `55daa0dcf2bf18c1e3d1522e3e7cfbaa7a8ffbeb` 上复用经过来源、ZIP digest 和包文件哈希验证的 `d77021ed` 六种安装包；Windows x64、macOS Intel/ARM 三个原生作业全部通过。产品源码与包来源一致，测试与产品提交分别记录。
+
+每个平台先安装旧客户端，再安装统一版，均使用原始安装器和默认安装/AppData 位置。检查两个真实进程及 API/UI 同时可用、分别重启且另一产品 PID 不变；移除统一版后客户端仍能启动，再恢复统一版并保留库；移除客户端后统一版仍能启动。四个双产品检查点都通过，客户端两份真实配置哈希不变，统一版的 1 条 API 创建资源保留且 SQLite 完整性为 `ok`。Windows 两个方向均使用原生 `Update.exe uninstall`；macOS 只移除测试创建的 bundle/receipt。进程、默认目录和临时文件清理均无错误，没有强杀 updater。
+
+三份小证据共 285,917 bytes，下载后的 GitHub digest、大小、产品源码及测试源码 SHA 均已核验；完整索引为 `/tmp/bakabase-installed-55daa0dc-evidence/summary.json`。报告明确 `automaticUpdatesRequested: false`：此处关闭修复包的并存、独立重启和双向移除门槛，不将结果冒充更新器或历史代码升级通过。默认缓存与真实更新/系统授权流程另行执行。
+
+### Windows 默认安装位置的原生自动更新
+
+[更新 CI 35681121264](https://github.com/anobaka/Bakabase/actions/runs/35681121264) 的 Windows x64 作业通过，执行提交 `870b616d`，原安装包来自 `d77021ed` / run `35679854071`。安装版本 `0.0.1-acceptance.35679854071.1` 经本地受控 feed 更新为 `0.0.2-updater.35681121264.1`。新版本复用相同产品二进制并增加验证标记，因此证明安装更新流程，不代表历史代码迁移或生产 stable/beta 通道验收。
+
+统一版 PID `3920 → 6976`，原生 `Update.exe` PID `1524`；旧客户端 PID `5164 → 8680`，原生 updater PID `9184`。两者都通过真实产品接口检查/下载，达到等待重启状态，默认 `packages` 缓存中的文件大小、SHA 与完整 HTTP 交付一致。原生日志的 `Apply`、`Restart: true`、旧 PID、确切缓存包路径及新版本成功应用，与独立进程观测匹配；最终新进程 API/UI 和有效 AppData 均正确，没有脚本手动启动替代自动重启。观察器会等待该 updater 退出，避免把 Windows 的短暂 `--veloapp-updated` hook 误当最终应用。
+
+更新每个产品时，另一产品分别连续观测 70 / 56 次，PID 和有效 AppData 不变，API 采样无错误；API/UI 在更新后的检查点通过。客户端配置哈希、统一版资源及 SQLite 保留检查通过。后续双向卸载、恢复和自有文件清理通过，未强杀 updater。三平台小证据合计 715,471 bytes，digest/size/产品及测试 SHA 已核验，索引为 `/tmp/bakabase-installed-870b616d-evidence/summary.json`。该 run 的两个 macOS 作业在授权能力预检失败，不能把 Windows 成功写成整个更新矩阵通过；macOS 诊断另记。
+
+### macOS 授权预检的诊断与清理约束
+
+[诊断 CI 35681836766](https://github.com/anobaka/Bakabase/actions/runs/35681836766) 在执行提交 `4a762650` 仅为无凭据预检增加有界 stderr。两种 macOS 架构都准确返回 `UIElementsEnabled is not a valid class for application System Events (-2700)`；系统脚本字典对应的属性是 `uiElementsEnabled`。这次失败是测试脚本的名称大小写错误，不能据此判定 runner 没有 GUI 权限。执行路径停在 `Context` 和 `create_account` 之前，产品也未安装/启动。
+
+同轮 Windows 两产品再次通过默认缓存与原生自动重启，三平台均无遗留 updater 或文件清理错误。三份小证据合计 713,734 bytes，digest/size/来源已核验，索引为 `/tmp/bakabase-installed-4a762650-evidence/summary.json`。`fe41442c` 修正属性名，同时让账号准备失败的异常保留清理上下文：若首次清理失败，生命周期 runner 仍须记录并重查账号和授权写入进程，不能因准备函数未返回而误报清理成功。87 项相关纯测试通过，其中实际调用 runner 的故障测试确认残留授权进程会阻止默认目录和工作目录删除。后续 ARM 真实运行已通过 GUI 能力预检和临时账号创建；授权与更新的最终结论仍须完整链路证据。
+
+随后 [CI 35682239910](https://github.com/anobaka/Bakabase/actions/runs/35682239910) / `fe41442c` 确认 Intel/ARM 均通过 GUI 预检、临时账号创建、原始安装和独立重启；统一版通过默认缓存下载校验并启动真实 `UpdateMac`。两者在确认阶段都观察到同一 updater 的两个同标题/正文窗口，因此报告 `Ambiguous updater elevation confirmation`，未点击确认或输入凭据。账号及家目录、自有测试文件均已移除，最终无残留进程；但 updater 需要强制停止，报告保留清理失败，不能写成正常更新或清理通过。两份实际生成的小证据共 610,475 bytes，digest/size/SHA 已核验，索引为 `/tmp/bakabase-installed-fe41442c-evidence/summary.json`。
+
+同轮 Windows 在新增纯测试清空环境后无法解析 `Path.home()`，尚未取包或执行产品。`be68f192` 将该夹具的主目录明确指向临时目录，87 项本机纯测试通过；真实 Windows updater 的已通过证据仍属于此前两轮。`26242cab` 将 updater 确认限定为精确进程的 `AXFocusedWindow`，读取并在点击前重读焦点窗口内容；原始窗口数量只作诊断，不按相同文字推断原生窗口身份，SecurityAgent 仍保留独立唯一窗口检查。新增同名其他窗口、无焦点、内容变化、正常进程消失等回归，92 项纯测试通过；原生链路另按真实运行验收。
+
+[CI 35683003654](https://github.com/anobaka/Bakabase/actions/runs/35683003654) / `26242cab` 已完成：Windows 两产品再次通过原生更新、自动重启、数据保留、卸载及清理，主目录夹具修复也通过原生 Windows 验证。macOS 两边均记录 `originalWindowCount: 2`、`focusedWindowAvailable: true`，实际只使用 1 个焦点窗口；随后确认动作未成功返回，Intel 为命令失败/超时，ARM 为退出码 1。尚未提交凭据，不能仅凭 `confirmationSubmitted: false` 推断动作从未发出。账号、家目录和自有文件已删除，最终无已识别的残留进程；updater 仍因强制停止记为失败。三份小证据共 963,556 bytes，digest/size/SHA 已核验，索引为 `/tmp/bakabase-installed-26242cab-evidence/summary.json`。纯测试在 Mac 各执行通过 92 项，Windows 通过 89 项，另 3 项既有 Unix 符号链接夹具按平台跳过。
+
+[诊断 CI 35683824133](https://github.com/anobaka/Bakabase/actions/runs/35683824133) / `f89b577e` 的 Windows 原生更新再次通过；三份小证据共 957,676 bytes，digest/size/来源已核验，索引为 `/tmp/bakabase-installed-f89b577e-evidence/summary.json`。固定阶段诊断确认 Intel 在确认操作的 `read-dialog-tree` 超时，未进入原生授权脚本；账号和文件已清理，updater 强停仍记失败。ARM 则由原生日志证实用户确认成功并启动原始提权 `osascript`，随后系统实际提示 `Enter your password to allow this.`，测试错误地要求包含 `administrator` 而拒绝，尚未提交凭据。该等待中的原始 `osascript` 未退出，清理门禁正确阻止账号、家目录和测试文件删除；这轮不能记为清理通过。两种 Mac 都未完成统一版更新，也未进入旧客户端更新。Mac 各 96 项纯测通过；Windows 93 项通过、3 项既有平台跳过。
+
+`5405560d` 针对上述真实失败支持系统的两种已知授权提示，仍要求确切 `osascript` 请求、唯一普通/安全输入框和唯一可用确认按钮。确认操作保留一次完整重读与内容比对，再检查该次读取的焦点窗口引用后使用其控件，移除重复的第二次整树读取；5 秒单次与原有 120 秒总期限不变。失败清理仅可取消从未提交凭据、已核对 PID/启动时间/实际程序/原始命令、原 updater 已停止且未观察到特权写入的自有 `osascript`，单次 `SIGTERM` 后最多等 5 秒；无法确认或已有凭据提交/特权写入时仍阻止账号和路径删除。取消只属于失败后的清理，不计为更新通过。101 项本机纯测试以及 JXA 编译通过，原生结果另记。
+
+[CI 35684811164](https://github.com/anobaka/Bakabase/actions/runs/35684811164) / `5405560d` 的两种 Mac 均完成确认和一次凭据提交操作，之后在等待原始 updater 退出时达到 120 秒期限；Intel 已越过此前的整树读取超时。两者原生日志都停在启动确切 `osascript` 的位置：Intel `15818 → 15930`，ARM `17901 → 17946`。UI 命令返回 `submitted: true` 不能证明系统已接受凭据；尚未发生可验证的 apply/自动重启，也未进入旧客户端更新。原 updater 强停后，授权脚本仍存，已提交凭据的清理门禁阻止取消和账号/家目录/文件删除。Windows 本轮在安装前的观察器首个样本 15 秒超时，stdout 和样本均为 0，尚未取包；现有日志不能区分 PowerShell 启动与第一次 CIM 查询耗时。三份小证据共 627,806 bytes，digest/size/执行 SHA 逐项核验；汇总位于 `/tmp/bakabase-installed-5405560d-evidence/summary.json`。Mac 各 101 项纯测通过，Windows 98 项通过、3 项既有平台跳过。
+
+`e34513b6` 在安装前通过独立 Python 子进程，对刚创建的本地随机账号调用一次 `ODRecordVerifyPassword`；密码仅通过 stdin/内存，精确核验账号、UID、家目录和管理员组，原有 45 秒准备期限内最多使用 5 秒。它验证密码有效性，不替代系统授权或 updater 成功证明。提交一次凭据后另做一次有界、同 PID/启动身份的只读系统窗口记录，不读取或保存输入字段值，不重试提交。Windows 首样本另记录固定 stderr 阶段、helper PID/退出码/启动时间，只查询三个必要 CIM 属性；15/8/3 秒期限不变，诊断输出不能算成功样本。127 项本机纯测试通过；本机仅解析 CF/OD 函数和常量，未调用账号认证或系统授权。原生执行为 [CI 35685780134](https://github.com/anobaka/Bakabase/actions/runs/35685780134)，结果另记。
+
+该轮 Windows 首样本实际为 8.141 秒，两产品再次完成原始 updater 自动更新/重启、数据保留、双向卸载和清理；统一版 `7520 → 7460`、updater `3228`，旧客户端 `5500 → 3584`、updater `4936`。纯测 Windows 124 项通过、3 项平台跳过，Mac 各 127 项通过。两种 Mac 都在安装前的账号验证返回 `VerificationUnavailable`，无原生错误码；无法将该笼统结果解释为密码无效。本轮尚未运行原生更新授权或提交后快照。首次准备清理通过账号枚举/家目录缺失检查，生命周期 finally 的再次清理却又执行删除并收到 `sudo exit 255`；不能据此断言缓存原因或账号仍然存在，最终失败状态和两份默认 seed 数据目录保留属实。三份小证据共 719,644 bytes，digest/size/执行与产品 SHA 已核验，汇总 `/tmp/bakabase-installed-e34513b6-evidence/summary.json`。
+
+`2f72cb21` 为验证器失败增加固定阶段和白名单异常类型；验证密码不要求家目录已物化，但目录服务中的 home 属性仍须准确，已有目录仍须属于该 UID 且不是符号链接。重复清理保留“此前已验证删除”的标记，重新检查进程、账号枚举和家目录缺失，不再执行删除；发现同名/同 UID 账号或路径重现则失败，后续重试也不能删除重建账号。132 项本机纯测试通过，原生复验为 [CI 35686328385](https://github.com/anobaka/Bakabase/actions/runs/35686328385)。
+
+该轮 Windows 两产品原生更新、自动重启、数据保留、双向卸载和清理全部通过，129 项纯测通过、3 项既有平台跳过。两种 Mac 各 132 项纯测通过，临时账号的实际 OD 密码验证成功；确认和凭据操作完成，三秒后的同一系统进程快照仍为原提示，没有明确拒绝文字，也不包含字段值。随后首次失败均为 `ps returned exit 1`，现有错误不能区分全表查询与逐个 root shell 查询；原生日志未记录 apply 或自动重启成功，残留授权脚本及账号/文件继续受清理门禁保护。Intel 原 updater/osascript 为 `11051 → 11360`，ARM 为 `6663 → 6759`；两者尚未进入旧客户端更新。三份小证据共 968,584 bytes，完整性及来源已核验，汇总 `/tmp/bakabase-installed-2f72cb21-evidence/summary.json`。
+
+`81b4e016` 修复静态审查发现的进程观察竞态：逐个读取命令后重新核验 PID/启动时间，只在原身份确已消失时略过；仍活着的进程读取失败、超时或无法复核继续阻断，已记录的 writer 不删除。错误增加固定阶段和 PID，不输出原始命令。授权操作要求两个字段的 `AXValue` 可写，用户名赋值后仅在内存读回比较，失败时不写密码或点击按钮；密码不读回、不重试。142 项纯测试通过，真实结果为 [CI 35687208452](https://github.com/anobaka/Bakabase/actions/runs/35687208452)。
+
+该轮 Windows 再次通过两产品完整原生更新、自动重启、数据/卸载/清理，139 项纯测通过、3 项既有跳过。两种 Mac 各 142 项纯测通过；实际 OD 密码验证、控件可写与用户名回读均通过，但系统提示仍在，最终等待原 updater 超时；本轮没有 `ps` 读取失败。Intel 原 updater/osascript 为 `11008 → 11297`，ARM 为 `17852 → 17918`。没有 apply 或自动重启证据，旧客户端更新未执行，残留授权脚本使账号/家目录和文件保留。三份小证据共 983,303 bytes，完整性及来源已核验，汇总 `/tmp/bakabase-installed-81b4e016-evidence/summary.json`。
+
+随后静态调查发现测试账号本身配置为 `/usr/bin/false`。Apple PAM 源码的 [shell 检查](https://github.com/apple-oss-distributions/pam_modules/blob/a8705983365bdb9b5c6c1ff5fd55c321dc01deec/common/Common.c#L463) 明确拒绝该值，[account 阶段](https://github.com/apple-oss-distributions/pam_modules/blob/a8705983365bdb9b5c6c1ff5fd55c321dc01deec/modules/pam_opendirectory/pam_opendirectory.m#L165) 默认执行这项检查；单独的密码验证不能证明完整授权有效。修复只给新建的临时账号使用 `/bin/zsh`，并在创建后与独立验证器中核验，保留现有单次 AX 输入；不修改系统 PAM、TCC、应用权限或原始 updater。已有日志尚未直接证实本轮经过该拒绝路径，因此实际修复效果仍按下一次原生运行判定。
+
+修复提交 `42787f221c029882d09b5515a3ea19f7d0f9186a` 通过 156 项本机纯测试，并在 [CI 35688589630](https://github.com/anobaka/Bakabase/actions/runs/35688589630) 复用同一批 `d77021ed` 产品包。同时补充仅在授权失败后运行的系统诊断：读取本轮已核验的单个 SecurityAgent PID，从实际观察时间起、最多 180 秒的认证相关日志；总期限 5 秒、输入上限 256 KiB、最多 80 条。解析后再次检查 PID、系统程序路径和时间，先脱敏再截断，原始日志、可编辑字段值和密码均不落盘；诊断失败不能覆盖原更新失败，也不能作为认证成功证据。
+
+该轮 Windows 与 macOS ARM 两产品完整验收通过。ARM 的统一版 `16652 → 17034`、updater `16714`、原提权脚本 `17003`；旧客户端 `16402 → 17535`、updater `17194`、原提权脚本 `17501`。两次实际系统授权均完成，原生日志确认通过 `osascript` 应用 bundle、合成新版成功和 `open -n` 自动重启；另一产品连续 API 采样分别为 41、32 次，无中断或身份变化。默认缓存哈希、更新后清单/标记、原库 1 条资源及客户端配置保留、双向移除与恢复、账号/家目录/文件清理均通过，没有强制终止 updater。ARM 单份小证据 290,833 bytes，独立核验在 `/tmp/bakabase-installed-42787f22-arm-early/independent-native-update-verification.json`。这证明 shell 修复后真实系统授权可以完成，但不是此前失败经过某条 PAM 分支的直接日志证据。
+
+Intel 同样完成统一版系统授权、原生应用新版和自动重启（`9565 → 10209`、updater `9860`）；旧客户端停在确认前的 `validate-snapshot / SnapshotChanged`：同一焦点窗口在两次读取之间从 11 个节点变成 12 个，尚未点击确认或输入凭据。现有差异字段不足以确定新增节点内容，不能将其当作密码或系统授权失败。最终账号、家目录和自有文件已删除、授权进程无残留；但客户端 updater `10815` 需要强制停止，因此 Intel 的完整更新与清理仍记失败。
+
+本轮三份小证据共 973,477 bytes，digest、size、执行 SHA 及产品包源均核验通过，汇总与逐项实际原生日志核验位于 `/tmp/bakabase-installed-42787f22-evidence/{summary,independent-verification}.json`。Windows 统一版 `2848 → 5672`、updater `5228`，旧客户端 `2484 → 8400`、updater `3060`；153 项纯测通过、3 项既有平台跳过。两种 Mac 各 156 项纯测通过，真实验收仍保留上述 ARM 成功、Intel 部分失败的分别结论。
+
+`2a9e254ed478cecb3dce5891b0d6f7e005cc60c0` 修复确认前的观察竞态：只接受结构化且经过白名单验证的 `validate-snapshot / SnapshotChanged`，该固定检查发生在解析按钮和点击之前。前两次变化回到循环起点重新核验进程身份、其他脚本、系统窗口、焦点和完整快照，第三次变化仍失败；保存变化次数，原总期限不变。按钮动作错误、超时、其他阶段或仅含相似文字的异常均立即失败，凭据提交也不重试。163 项纯测试通过；真实三平台复验为 [CI 35689398805](https://github.com/anobaka/Bakabase/actions/runs/35689398805)，仍复用未变的 `d77021ed` 产品包。
+
+### 三平台原生更新最终通过
+
+上述 `2a9e254e` 复验三个原生作业全部成功，六次真实更新均完成默认缓存下载校验、原始 updater 应用新版、旧进程退出和自动启动的新进程 API/UI 验证。合成更新版本为 `0.0.2-updater.35689398805.1`，更新后的清单、验收标记和全部产品文件哈希均核验；没有手动重启替代 updater。
+
+| 平台 | 产品 | 旧 PID → 自动重启 PID | 原 updater PID | 确认前快照变化次数 |
+| --- | --- | --- | --- | --- |
+| Windows x64 | 统一版 | `5916 → 7092` | `2760` | 不适用 |
+| Windows x64 | 旧客户端 | `9808 → 1540` | `3312` | 不适用 |
+| macOS Intel | 统一版 | `6468 → 7048` | `6722` | 1 |
+| macOS Intel | 旧客户端 | `6265 → 7929` | `7545` | 0 |
+| macOS ARM | 统一版 | `20383 → 20835` | `20540` | 1 |
+| macOS ARM | 旧客户端 | `20143 → 21238` | `21143` | 1 |
+
+四次 Mac 更新均通过实际系统授权，原生日志明确记录通过 `osascript` 应用 bundle、新版应用成功与 `open -n` 自动重启；三次实际遇到快照变化，重新完整观察后完成。Windows 原日志同样记录确切旧 PID、包路径、`Apply`、`Restart: true`、新版成功和真实启动。原生日志中的等待旧 PID 警告保留，结论同时依赖独立进程观测与最终 API/UI，而非把警告删除或假定等待成功。
+
+另一产品连续 API 采样均通过且 PID 不变（Windows 69/53 次、Intel 90/61 次、ARM 52/35 次；UI 仅前后检查点验证）。三平台原库 1 条资源保留、SQLite 完整性为 `ok`、客户端配置哈希不变；双向移除/恢复和最终文件清理全部通过。两种 Mac 的临时账号、家目录与自有授权进程全部清理；三个平台均无强制终止或遗留 updater、无 cleanup errors。
+
+本轮 Mac 各 163 项纯测通过，Windows 160 项通过、3 项既有平台跳过。三份小证据合计 945,668 bytes，digest、大小、执行 SHA 与 `d77021ed` 产品包源逐项核验，汇总与原生日志独立核验在 `/tmp/bakabase-installed-2a9e254e-evidence/{summary,independent-verification}.json`。本结果关闭未签名、同代码重打包的三平台系统安装更新验收；模拟用户授权不等于无人值守更新，也不替代历史签名包、生产通道、系统信任和物理多设备检查。
+
+### 修复提交的完整 CI
+
+[完整 CI 35679857625](https://github.com/anobaka/Bakabase/actions/runs/35679857625) 对产品提交 `d77021ed0e75325a2466361a1c3694632d0b973a` 的 7 个实作业全部通过：
+
+- 前端 98 个测试文件、936 项测试通过，lint 与生产构建通过。
+- 后端 13 个项目合计 2,617 项，实际通过 2,582、失败 0；35 项均为原有 ThirdParty 手动联网测试的显式忽略，逐项名称与原因已核对。主程序集 184 类/1,641 项与 TRX、选择记录、执行日志一致。
+- Windows x64、Linux x64、macOS Intel/ARM 各 307 项专项测试全部通过；各平台完成 771 条资源、3 个独立宿主的互通及适用的发布内容检查。两种 macOS 架构均完成 3 组真实生产 P/Invoke ABI 验证。
+- 浏览器完成 114 条资源/2 个来源、迁移与联合浏览，页面错误为 0；实际 120 秒视频、90.509 秒 seek、暂停后刷新查询、限速、断流恢复、idle 超时、关闭浏览取消及撤权均通过，媒体测试进程和 relay 清理完成。
+
+6 份小证据合计 1,838,633 bytes，GitHub digest、大小、源码 SHA 均逐项验证；索引为 `/tmp/bakabase-ci-d77021ed-evidence/summary.json`。该轮使用修复后的产品源码，后续仅测试、工作流及文档变更另记执行提交，不把历史 `ca55d473` 结果当成当前产品证据。
 
 ## 3. 本轮本机证据与适用范围
 
@@ -183,10 +294,10 @@ Linux runner 使用独立容器、源码副本、资源和总时限，已清理�
 
 | 门禁 | 必须记录的操作与证据 | 当前状态 |
 | --- | --- | --- |
-| 新 CI 四平台作业 | 同一最终 commit SHA 的四平台 artifact；不得用工作区本机结果替代远端结果 | 已通过：`ca55d473` 的全部 7 个 CI 作业成功，artifact SHA 和测试结果已核对 |
-| 最终桌面包 | Windows x64、macOS ARM/Intel 的实际安装包，记录 SHA、版本、架构、签名/公证和启动结果 | 六种未签名 self-contained 实际安装/启动全部通过（`0e5281e6`）；生产签名、公证及系统信任检查待执行 |
-| 三种安装来源 | 全新安装；已有一体版原位升级；只有旧客户端时并装统一版；额外验证两者原本同机安装 | 六组合全新实际安装、自动身份/路径、macOS portable 并行运行及真实旧版 updater 替换已过；签名、已安装双产品并装/升级及其他平台升级路径待执行 |
-| 更新与数据隔离 | stable/beta 各按原 feed 更新，重启后有效 AppData 不变，独立单实例/端口/进程并存，原库 SQLite 完整性可复核 | macOS 隔离 feed 的真实下载/替换和原库保留、默认路径首次安装与 postinstall 自动启动已过；updater 默认缓存/自动重启和生产通道仍待执行 |
+| 新 CI 四平台作业 | 同一产品 commit SHA 的四平台 artifact；不得用工作区本机结果替代远端结果 | Shell 修复 `d77021ed` 的 7 个实作业全部通过，6 份小证据的 digest/size/SHA 和实际测试数量已核验 |
+| 最终桌面包 | Windows x64、macOS ARM/Intel 的实际安装包，记录 SHA、版本、架构、签名/公证和启动结果 | `d77021ed` 六种未签名重建包全部通过，Intel/ARM 原生 ABI 回归和原始安装器启动均通过；生产签名、公证及系统信任检查待执行 |
+| 三种安装来源 | 全新安装；已有一体版原位升级；只有旧客户端时并装统一版；额外验证两者原本同机安装 | `d77021ed` 六组合全新安装及三平台已安装双产品并存、独立重启、双向移除/恢复均通过；三平台同代码重新打包的真实 updater 通过，签名与历史代码迁移仍按各自门槛验收 |
+| 更新与数据隔离 | stable/beta 各按原 feed 更新，重启后有效 AppData 不变，独立单实例/端口/进程并存，原库 SQLite 完整性可复核 | Windows 与 macOS Intel/ARM 两产品默认缓存、原生更新和自动重启、另一产品连续 API 和数据保留通过，Mac 实际系统授权与账号清理通过；历史签名包及生产 stable/beta 通道仍未关闭 |
 | 完整 GUI 主路径 | 最终桌面壳首启、空库设置/日志、开启浏览、配对、联合查询、详情、播放、离线、恢复、关闭窗口；确认远端不启动播放器 | macOS ARM portable 主路径已实际操作；其他平台及签名安装包仍待执行 |
 | 物理设备和 NAS | Windows ↔ macOS ARM/Intel；至少一组桌面 ↔ Docker/NAS；各方向单独授权、撤销、断网和重启 | 已补真实 macOS ARM 桌面 ↔ 正式 Linux x64 Docker 的双向验收；同机 OrbStack/NAT 仍不能替代跨物理设备/NAS |
 | 媒体和映射 | 真正安装的 VLC/IINA 等零映射流播放，seek、暂停续播、长流；Windows/macOS 映射与打开目录；来源离线与失效映射 | 原生音频、Finder 映射、IINA 播放/暂停/seek，以及浏览器视频呈现/限速/断流/idle 已过；其他平台、外部播放器视频和物理弱网矩阵待执行 |

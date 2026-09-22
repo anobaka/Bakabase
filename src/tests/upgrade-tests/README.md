@@ -186,7 +186,7 @@ The `installed` selection reuses artifacts from a successful `packages` run:
 
 ```bash
 gh workflow run ci.yml --ref codex/multi-device-library \
-  -f suite=installed -f package_run_id=35618999687
+  -f suite=installed -f package_run_id=35679854071
 ```
 
 `prepare-installed-inputs.py` checks the source run, repository, commit ancestry,
@@ -194,6 +194,9 @@ artifact ZIP digest, and every native package's size and SHA256 against its veri
 acceptance report. Product or build-source changes since the package run reject
 reuse; rebuild with `suite=packages` first. The test checkout may contain later
 test, evidence-documentation and explicitly allowed acceptance-workflow changes.
+Pass `-f installed_mode=coexistence` to run installation, independent restarts and
+removal only. Its report explicitly says `automaticUpdatesRequested: false`; a
+passing coexistence run provides no updater acceptance evidence.
 
 On three disposable native runners, `run-installed-lifecycle.py` installs the
 original legacy client before the unified application. Both use their real
@@ -224,6 +227,55 @@ Windows' transient post-update hook is retained in process evidence but is not
 accepted as the restarted application: selection waits for the observed native
 updater to exit and requires the lasting process to serve the expected API/UI
 within the original startup deadline.
+
+For protected macOS system installations, the update gate may interact with the
+original updater's confirmation and the real system authorization dialog. On a
+disposable hosted runner only, it creates a temporary administrator, keeps its
+credential in memory/stdin, and removes the account and its home afterwards.
+The fixture uses and verifies `/bin/zsh`: macOS PAM's account check rejects
+`/usr/bin/false` even when a separate password verification succeeds. No PAM
+configuration or existing account is changed.
+Before installing, a bounded helper verifies that exact local account's password
+once through OpenDirectory; creation and admin group membership alone do not
+prove that its password is usable. This preflight does not prove authorization
+of the later updater request.
+The helper requires the exact updater PID/product/version, its verified original
+osascript child and an exclusive new system dialog. It records this as simulated
+user authorization, not an unattended or permission-free update. Existing TCC,
+authorization policy, bundle permissions and updater code remain unchanged;
+unavailable UI capability or ambiguous ownership fails the test. Any remaining
+authorization writer prevents removal of installation/data paths.
+Preparation failures also retain their cleanup context, so failed account
+creation cannot bypass the account/process cleanup gate. The updater confirmation
+uses its exact process's `AXFocusedWindow`, re-reading its contents before the
+named action. The raw window count is diagnostic only: equal titles or trees do
+not establish native window identity. The system authorization dialog retains
+its separate unique-window and original-osascript-chain checks.
+If the confirmation's complete snapshot changes before any click, a validated
+`validate-snapshot / SnapshotChanged` result permits a fresh observation under
+the same deadline. The third change fails; each observation repeats process and
+dialog ownership checks. Timeouts, other errors, button actions and credential
+submissions are never retried by this rule.
+Both credential controls must expose a writable AXValue. The ordinary username
+field is read back and compared in memory before the password is written; only
+verification flags are retained. The secure field is never read back.
+After one credential submission, a bounded read of that same system process
+records static labels and control metadata, never editable field values. This
+diagnostic does not retry input or establish that the system accepted it. A
+verified unsubmitted waiting request can be cancelled after its updater exits;
+submitted requests and privileged writers continue to block destructive cleanup.
+Failed attempts can collect a filtered log for the already identified
+SecurityAgent PID and observation window, bounded to five seconds and 256 KiB.
+Only matching authentication-related entries are retained, all strings are
+redacted before truncation, and raw streams are never saved. Collection failures
+do not replace the original update failure or relax cleanup.
+When tracking root shells, a failed command query is ignored only if a fresh
+process table proves that the sampled PID/start identity has disappeared. Query
+timeouts, failed rechecks and errors for the same live process remain failures.
+
+The Windows process observer records fixed first-sample stages separately from
+process samples, plus its helper PID, exit status and startup timings. Diagnostic
+output cannot satisfy or extend the existing 15-second initial-sample deadline.
 
 Only small provenance, package manifests, hashes, reports and bounded logs are
 uploaded. The test feeds never publish to production. These unsigned same-code

@@ -305,6 +305,21 @@ def perform(app, other, prepared, other_prepared, feed, lifecycle, observer, rep
             require(not any(identity(record) == identity(old) for record in observer.current(app["exe"])),
                     "Old application did not exit before the native updater force-stop window")
             deadline = time.monotonic() + 120
+            authorization = app.get("nativeAuthorization")
+            if authorization is not None:
+                module, context = authorization
+                updater_path = update_paths(app)["updater"]
+                while time.monotonic() < deadline:
+                    native = [record for record in observer.seen(updater_path) if record["firstSeenEpoch"] >= trigger]
+                    if native:
+                        require(len(native) == 1, "Native authorization cannot select an ambiguous updater process")
+                        report["nativeAuthorization"] = module.authorize(context, app, native[0]["pid"],
+                            target_version=prepared["newManifest"]["version"], deadline=deadline)
+                        break
+                    require(not observer.errors, "Native process observer failed before authorization")
+                    time.sleep(0.1)
+                else:
+                    raise AssertionError("No observed native updater process for authorization")
             replacement = wait_automatic_replacement(app, prepared, old, observer, trigger, deadline)
             report["automaticStartup"] = lifecycle.observe_app(app, startup=True, deadline=deadline)
             actual = one_process(observer, app["exe"])
@@ -429,12 +444,21 @@ def parse_macos_processes(text, paths, observed_at):
     return result
 
 
+_WINDOWS_STAGES = {"script-start", "targets-parse", "query-ready", "cim-start", "cim-complete", "serialized"}
+_WINDOWS_STAGE_PREFIX = "BAKABASE_OBSERVER_STAGE:"
+
 _WINDOWS_SCRIPT = r"""
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+function Write-ObserverStage([string]$Stage) {
+    [Console]::Error.WriteLine('BAKABASE_OBSERVER_STAGE:' + $Stage)
+    [Console]::Error.Flush()
+}
+Write-ObserverStage 'script-start'
 # Windows PowerShell 5.1 emits a JSON array as one pipeline object. An outer
 # @() would wrap it again and compare each process path with an array.
+Write-ObserverStage 'targets-parse'
 $targets = ConvertFrom-Json -InputObject $env:BAKABASE_OBSERVER_PATHS
 if ($null -eq $targets -or $targets.Count -eq 0) { throw 'Observer has no target paths' }
 foreach ($target in $targets) {
@@ -446,11 +470,14 @@ foreach ($target in $targets) {
 $names = @($targets | ForEach-Object { [IO.Path]::GetFileName($_) } | Select-Object -Unique)
 $filter = ($names | ForEach-Object { "Name='" + $_.Replace("'", "''") + "'" }) -join ' OR '
 $query = [ordered]@{ targets = @($targets); names = @($names); filter = $filter }
+Write-ObserverStage 'query-ready'
 $deadline = [DateTime]::UtcNow.AddMinutes(15)
+$firstSample = $true
 try {
     while ([DateTime]::UtcNow -lt $deadline) {
+        if ($firstSample) { Write-ObserverStage 'cim-start' }
         $rows = @(
-            Get-CimInstance -ClassName Win32_Process -Filter $filter -OperationTimeoutSec 3 | ForEach-Object {
+            Get-CimInstance -ClassName Win32_Process -Filter $filter -Property ProcessId,ExecutablePath,CreationDate -OperationTimeoutSec 3 | ForEach-Object {
                 $proc = $_
                 $matches = $false
                 foreach ($target in $targets) {
@@ -473,10 +500,14 @@ try {
                 }
             }
         )
+        if ($firstSample) { Write-ObserverStage 'cim-complete' }
         $observed = ([DateTime]::UtcNow.Ticks - 621355968000000000) / 10000000.0
         $snapshot = [ordered]@{ observedAt = $observed; processes = @($rows); query = $query }
-        [Console]::WriteLine((ConvertTo-Json -InputObject $snapshot -Depth 5 -Compress))
+        $serialized = ConvertTo-Json -InputObject $snapshot -Depth 5 -Compress
+        if ($firstSample) { Write-ObserverStage 'serialized' }
+        [Console]::WriteLine($serialized)
         [Console]::Out.Flush()
+        $firstSample = $false
         Start-Sleep -Milliseconds 50
     }
     throw 'Observer reached its 15 minute lifetime deadline'
@@ -522,6 +553,12 @@ class ProcessObserver:
         self._entered = False
         self._last_sample = None
         self._started_monotonic = None
+        self._first_sample_monotonic = None
+        self._closed_monotonic = None
+        self._windows_helper_pid = None
+        self._windows_spawn_seconds = None
+        self._windows_last_stage = None
+        self._windows_last_stage_monotonic = None
         self._stderr_text = ""
         self._stderr_characters = 0
         self._stdout_lines = 0
@@ -554,6 +591,8 @@ class ProcessObserver:
             self._current = current
             self.sample_count += 1
             self._last_sample = time.monotonic()
+            if self._first_sample_monotonic is None:
+                self._first_sample_monotonic = self._last_sample
         self._ready.set()
 
     def _mac_loop(self):
@@ -619,11 +658,22 @@ class ProcessObserver:
     def _windows_stderr_loop(self):
         # Keep draining after a stdout failure until close() ends the helper.
         # No diagnostic stream content is accepted as a process snapshot.
+        continued_line = False
         try:
-            for chunk in iter(lambda: self._helper.stderr.read(1024), ""):
+            # A short flushed marker must be visible before EOF. Bounded
+            # readline also drains arbitrarily long non-marker diagnostics.
+            for chunk in iter(lambda: self._helper.stderr.readline(1024), ""):
                 with self._lock:
                     self._stderr_characters += len(chunk)
                     self._stderr_text += chunk[:max(0, 8192 - len(self._stderr_text))]
+                    if not continued_line and chunk.endswith("\n"):
+                        line = chunk.rstrip("\r\n")
+                        if line.startswith(_WINDOWS_STAGE_PREFIX):
+                            stage = line[len(_WINDOWS_STAGE_PREFIX):]
+                            if stage in _WINDOWS_STAGES:
+                                self._windows_last_stage = stage
+                                self._windows_last_stage_monotonic = time.monotonic()
+                continued_line = not chunk.endswith("\n")
         except Exception as error:
             if not self._stop.is_set():
                 self._error("PowerShell diagnostic reader failed: " + str(error))
@@ -632,12 +682,25 @@ class ProcessObserver:
         with self._lock:
             current = [dict(row) for rows in self._current.values() for row in rows]
             seen = [dict(row) for rows in self._seen.values() for row in rows.values()]
+            start = self._started_monotonic
+            startup_end = self._first_sample_monotonic
+            if startup_end is None:
+                startup_end = self._closed_monotonic if self._closed_monotonic is not None else time.monotonic()
+            helper_exit = self._helper.poll() if self._windows_helper_pid is not None and self._helper is not None else None
             return {"stderr": self._stderr_text, "stderrCharacters": self._stderr_characters,
                     "stderrTruncated": self._stderr_characters > len(self._stderr_text),
                     "executablePaths": [str(path) for path in self.paths],
                     "current": current[:64], "seen": seen[:64],
                     "currentCount": len(current), "seenCount": len(seen),
                     "processRecordsTruncated": len(current) > 64 or len(seen) > 64,
+                    "windowsHelper": {"pid": self._windows_helper_pid, "exitCode": helper_exit,
+                                      "spawnElapsedSeconds": self._windows_spawn_seconds,
+                                      "startupElapsedSeconds": startup_end - start if start is not None else None,
+                                      "firstSnapshotElapsedSeconds": self._first_sample_monotonic - start
+                                          if self._first_sample_monotonic is not None and start is not None else None,
+                                      "lastStage": self._windows_last_stage,
+                                      "lastStageElapsedSeconds": self._windows_last_stage_monotonic - start
+                                          if self._windows_last_stage_monotonic is not None and start is not None else None},
                     "windowsStdout": {"lines": self._stdout_lines, "first": self._first_stdout,
                                       "last": self._last_stdout}}
 
@@ -674,11 +737,14 @@ class ProcessObserver:
             if os.name == "nt":
                 encoded = base64.b64encode(_WINDOWS_SCRIPT.encode("utf-16-le")).decode("ascii")
                 environment = dict(os.environ, BAKABASE_OBSERVER_PATHS=json.dumps([str(path) for path in self.paths]))
+                spawn_started = time.monotonic()
                 self._helper = subprocess.Popen(
                     ["powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                     encoding="utf-8-sig", errors="replace", bufsize=1, env=environment,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                self._windows_helper_pid = self._helper.pid
+                self._windows_spawn_seconds = time.monotonic() - spawn_started
                 worker = threading.Thread(target=self._windows_read_loop, daemon=True)
             else:
                 if os.uname().sysname != "Darwin":
@@ -729,6 +795,8 @@ class ProcessObserver:
                 process.stdout.close()
             if process.stderr is not None:
                 process.stderr.close()
+        if self._closed_monotonic is None:
+            self._closed_monotonic = time.monotonic()
 
     def __exit__(self, exc_type, exc, traceback):
         self.close()

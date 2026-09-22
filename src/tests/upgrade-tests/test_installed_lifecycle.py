@@ -8,8 +8,9 @@ import os
 from pathlib import Path
 import sqlite3
 import tempfile
+from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 SPEC = importlib.util.spec_from_file_location("installed_lifecycle", Path(__file__).with_name("run-installed-lifecycle.py"))
 runner = importlib.util.module_from_spec(SPEC)
@@ -60,6 +61,73 @@ class RunnerBoundary(unittest.TestCase):
                 with self.subTest(key=spelling), self.assertRaises(AssertionError):
                     runner.require_pristine([], {spelling: "/external/data-or-hook"})
         runner.require_pristine([], {"HTTP_PROXY": "http://127.0.0.1:1"})
+
+    def test_failed_authorization_prepare_keeps_cleanup_failure_and_prevents_owned_file_removal(self):
+        module = runner.sibling("installed-macos-authorization")
+        remaining = [{"pid": 123, "path": "owned authorization writer"}]
+        failed_cleanup = {"passed": False, "canRemoveOwnedPaths": False, "remainingProcesses": remaining}
+        context = SimpleNamespace(evidence={"preparationFailed": True, "preparationCleanup": failed_cleanup})
+        authorization = SimpleNamespace(PreparationFailure=module.PreparationFailure,
+            prepare=MagicMock(side_effect=module.PreparationFailure(context)), cleanup=MagicMock(return_value=failed_cleanup))
+        with tempfile.TemporaryDirectory() as temporary, contextlib.ExitStack() as stack:
+            root = Path(temporary)
+            home = root / "home"
+            home.mkdir()
+            results = root / "results"
+            results.mkdir()
+            paths = {"absent": [root / "client-data", root / "unified-data"],
+                     "data": {role: root / (role + "-data") for role in runner.ROLES}}
+            args = SimpleNamespace(rid="osx-arm64", version="old", unified_packages=root / "unified",
+                                   client_packages=root / "client", updates_manifest=root / "updates.json", macos_native_authorization=True)
+            feed = SimpleNamespace(environment={}, requests=[], deliveries=[], close=MagicMock())
+            def sibling(name):
+                return {"installed-update-feed": SimpleNamespace(Feed=lambda *_: feed),
+                        "installed-macos-authorization": authorization,
+                        "installed-lifecycle-diagnostics": SimpleNamespace(capture=lambda *_: {})}[name]
+            def prepare_data(path, role):
+                path.mkdir()
+                (path / "client").mkdir()
+                (path / "app.json").write_text('{"App":{}}')
+                return 41001 if role == "client" else 41002
+            def audit(_packages, role, *_):
+                return {"bundleName": "Bakabase Client.app" if role == "client" else "Bakabase.app",
+                        "artifacts": {"installer": {"file": "fixture.pkg"}}}
+            def command(arguments, *_):
+                self.assertEqual(["pkgutil", "--expand-full"], arguments[:2], "Cleanup attempted filesystem mutation despite authorization residuals")
+                expanded = arguments[3]
+                expanded.mkdir()
+                role = Path(arguments[2]).parent.name
+                receipt = runner.base.contract.PRODUCTS[role]["bundle"]
+                (expanded / "PackageInfo").write_text(f'<pkg-info identifier="{receipt}"/>')
+            def updater_cleanup(_apps, report):
+                report["updaterCleanup"] = {"passed": True, "remainingProcesses": []}
+            stack.enter_context(patch.dict(runner.os.environ, {"RUNNER_TEMP": temporary}, clear=True))
+            patches = [(runner.Path, "home", {"return_value": home}),
+                       (runner, "default_paths", {"return_value": paths}),
+                       (runner, "sibling", {"side_effect": sibling}),
+                       (runner.shutil, "disk_usage", {"return_value": SimpleNamespace(free=10 * 1024 ** 3)}),
+                       (runner.base, "audit_packages", {"side_effect": audit}),
+                       (runner.base, "prepare_data", {"side_effect": prepare_data}),
+                       (runner.base, "command", {"side_effect": command}),
+                       (runner.base, "remove_owned_tree", {}),
+                       (runner.subprocess, "run", {"return_value": SimpleNamespace(returncode=1, stdout="")}),
+                       (runner.http.server, "ThreadingHTTPServer", {"return_value": MagicMock(server_port=43111)}),
+                       (runner.threading, "Thread", {}), (runner.socket, "socket", {}),
+                       (runner, "stop_app", {}), (runner.updates, "cleanup", {"side_effect": updater_cleanup})]
+            mocks = {(id(owner), name): stack.enter_context(patch.object(owner, name, **options))
+                     for owner, name, options in patches}
+            report = {}
+            with self.assertRaisesRegex(AssertionError, "Installed lifecycle cleanup failed"):
+                runner.execute(args, results, report)
+            authorization.cleanup.assert_called_once_with(context)
+            self.assertEqual("PreparationFailure", report["failureBeforeCleanup"]["type"])
+            self.assertIs(context.evidence, report["nativeAuthorizationSetup"])
+            self.assertEqual(failed_cleanup, report["nativeAuthorizationCleanup"])
+            self.assertIn("Native authorization fixture cleanup did not pass", report["cleanupErrors"])
+            self.assertTrue(all(path.exists() for path in paths["absent"]))
+            mocks[(id(runner.Path), "home")].assert_called()
+            self.assertEqual([], list(home.iterdir()))
+            mocks[(id(runner.base), "remove_owned_tree")].assert_not_called()
 
 
 class ProductSeparation(unittest.TestCase):

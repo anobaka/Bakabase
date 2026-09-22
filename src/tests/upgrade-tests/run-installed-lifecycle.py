@@ -383,7 +383,7 @@ def execute(args, results, report):
                 "HTTP_PROXY": url, "HTTPS_PROXY": url, "ALL_PROXY": url,
                 "http_proxy": url, "https_proxy": url, "all_proxy": url,
                 "NO_PROXY": "localhost,127.0.0.1,::1", "no_proxy": "localhost,127.0.0.1,::1"}
-    feed = None
+    feed, authorization = None, None
     try:
         if getattr(args, "updates_manifest", None):
             feed = sibling("installed-update-feed").Feed(args.updates_manifest, args.rid, args.version)
@@ -437,6 +437,19 @@ def execute(args, results, report):
         report["apps"] = {role: {"role": role, "rid": app["rid"], "executable": str(app["exe"]), "defaultData": str(app["data"]),
                                  "port": app["port"], "packageAudit": app["packageAudit"], "receiptIds": app["receipts"]}
                           for role, app in apps.items()}
+        if getattr(args, "macos_native_authorization", False):
+            require(mac and feed is not None, "Native authorization requires macOS installed updater acceptance")
+            report["currentStage"] = "prepare-native-update-authorization"
+            authorization_module = sibling("installed-macos-authorization")
+            try:
+                authorization = authorization_module.prepare(apps, results)
+            except authorization_module.PreparationFailure as error:
+                authorization = error.context
+                report["nativeAuthorizationSetup"] = authorization.evidence
+                raise
+            report["nativeAuthorizationSetup"] = authorization.evidence
+            for app in apps.values():
+                app["nativeAuthorization"] = (authorization_module, authorization)
         exercise_coexistence(apps, report, feed)
     except (Exception, KeyboardInterrupt) as error:
         report["failureBeforeCleanup"] = {"stage": report.get("currentStage"), "type": type(error).__name__, "message": str(error)}
@@ -456,6 +469,15 @@ def execute(args, results, report):
         cleanup("Stop native updaters and preserve default logs", lambda: updates.cleanup(apps, report))
         updater_cleanup = report.get("updaterCleanup", {})
         can_remove = "remainingProcesses" in updater_cleanup and not updater_cleanup["remainingProcesses"]
+        if authorization is not None:
+            report["nativeAuthorizationCleanup"] = {"passed": False, "remainingProcesses": [{"verification": "not completed"}]}
+            cleanup("Remove native authorization fixture", lambda: report.update(
+                nativeAuthorizationCleanup=authorization_module.cleanup(authorization)))
+            authorization_cleanup = report["nativeAuthorizationCleanup"]
+            can_remove = (can_remove and authorization_cleanup.get("canRemoveOwnedPaths") is True and
+                          "remainingProcesses" in authorization_cleanup and not authorization_cleanup["remainingProcesses"])
+            if authorization_cleanup.get("passed") is not True:
+                cleanup_errors.append("Native authorization fixture cleanup did not pass")
         for role, app in apps.items():
             cleanup("Stop " + role, lambda: stop_app(app))
             for log in app["childLogs"]:
@@ -522,12 +544,15 @@ def main():
     parser.add_argument("--version", required=True)
     parser.add_argument("--results-directory", required=True, type=Path)
     parser.add_argument("--updates-manifest", type=Path, help="Verified same-code update manifest; enables real automatic restarts")
+    parser.add_argument("--macos-native-authorization", action="store_true",
+                        help="Use an ephemeral hosted-runner administrator for the actual macOS update authorization dialogs")
     args = parser.parse_args()
     base.require_hosted_runner(os.environ, platform.system(), platform.machine(), args.rid)
     results = args.results_directory.resolve()
     require(not results.exists(), "Results must be a new directory")
     results.mkdir(parents=True)
     report = {"passed": False, "rid": args.rid, "packageVersion": args.version,
+              "automaticUpdatesRequested": args.updates_manifest is not None,
               "executionHeadSHA": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=base.ROOT, text=True).strip(),
               "scope": "legacy-client-first-installed-coexistence-and-removal",
               "limitations": ["Package source provenance is provided by the consuming workflow; execution SHA describes this test script.",
