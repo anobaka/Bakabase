@@ -50,6 +50,11 @@ PINS = {
 
 
 def hosted(rid):
+    # platform.system() can itself invoke `ver` on Windows. Reject a local
+    # invocation before even querying the native platform, not just before install.
+    require(os.environ.get("GITHUB_ACTIONS") == "true" and
+            os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted" and os.environ.get("RUNNER_TEMP"),
+            "Historical acceptance requires a disposable GitHub-hosted runner")
     base.require_hosted_runner(os.environ, platform.system(), platform.machine(), rid)
 
 
@@ -151,13 +156,27 @@ def check_old_content(content, role, rid):
     return {"passed": True, "role": role, "originalPublishedPayload": True}
 
 
+def original_bundle_identity(info, role):
+    product = base.contract.PRODUCTS[role]
+    observed = {key: info.get(key) for key in ("CFBundleIdentifier", "CFBundleExecutable", "CFBundlePackageType",
+                                              "CFBundleVersion", "CFBundleShortVersionString")}
+    # v349 supplied a custom plist without CFBundleExecutable. Preserve and test
+    # those original bytes instead of demanding that the old asset already
+    # contains the candidate's packaging fix. The manifest and actual native
+    # executable are independently mandatory below; startup must still succeed.
+    require(info.get("CFBundleIdentifier") == product["bundle"] and info.get("CFBundlePackageType") == "APPL" and
+            ("CFBundleExecutable" not in info or info["CFBundleExecutable"] == product["assembly"]),
+            "Historical application bundle identity differs: " + json.dumps(observed, sort_keys=True))
+    return {"observed": observed, "legacyMissingExecutableKey": "CFBundleExecutable" not in info, "passed": True}
+
+
 def audit_released(packages, role, rid, work, deadline):
     """Expand the original pkg or published Win portable; never execute products."""
     hosted(rid)
     artifacts = {kind: verify_file(packages / pin(role, rid, kind)["file"], pin(role, rid, kind))
                  for kind in (("installer", "portable") if rid == "win-x64" else ("installer",))}
     expanded = work / (role + "-historical-expanded")
-    bundle = None
+    bundle, bundle_identity = None, None
     try:
         if rid == "win-x64":
             base.unpack(packages / artifacts["portable"]["file"], expanded)
@@ -177,9 +196,7 @@ def audit_released(packages, role, rid, work, deadline):
             allowed = ("Bakabase.app",) if role == "unified" else ("Bakabase.Client.app", "Bakabase Client.app")
             require(bundle in allowed, "Historical application bundle name differs")
             info = plistlib.loads((content.parent / "Info.plist").read_bytes())
-            require(info.get("CFBundleIdentifier") == base.contract.PRODUCTS[role]["bundle"] and
-                    info.get("CFBundleExecutable") == assembly and info.get("CFBundlePackageType") == "APPL",
-                    "Historical application bundle identity differs")
+            bundle_identity = original_bundle_identity(info, role)
         check_old_content(content, role, rid)
         manifest = base.read_manifest((content / "sq.version").read_bytes())
         base.validate_manifest(manifest, role, rid, OLD_VERSION)
@@ -187,6 +204,7 @@ def audit_released(packages, role, rid, work, deadline):
         hashes = repack.tree_hashes(content)
         require(repack.MARKER not in hashes, "Historical release unexpectedly contains a test marker")
         return {"passed": True, "artifacts": artifacts, "manifest": manifest, "bundleName": bundle,
+                "bundleIdentity": bundle_identity,
                 "binaryHashes": {name: hashes[name]["sha256"] for name in
                                   (manifest["mainExe"], base.contract.PRODUCTS[role]["assembly"] + ".dll",
                                    base.contract.PRODUCTS[role]["assembly"] + ".deps.json")},

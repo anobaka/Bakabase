@@ -175,6 +175,18 @@ class ReleaseGuards(unittest.TestCase):
 
 
 class PreparationGuards(unittest.TestCase):
+    def test_pinned_legacy_plist_can_lack_executable_key_but_cannot_name_another_product(self):
+        for role in release.ROLES:
+            product = release.base.contract.PRODUCTS[role]
+            legacy = {"CFBundleIdentifier": product["bundle"], "CFBundlePackageType": "APPL", "CFBundleVersion": "1.0.0"}
+            self.assertTrue(release.original_bundle_identity(legacy, role)["legacyMissingExecutableKey"])
+            current = dict(legacy, CFBundleExecutable=product["assembly"])
+            self.assertFalse(release.original_bundle_identity(current, role)["legacyMissingExecutableKey"])
+            for changes in ({"CFBundleExecutable": ""}, {"CFBundleExecutable": None},
+                            {"CFBundleExecutable": "different"}, {"CFBundleIdentifier": "other"}, {"CFBundlePackageType": "other"}):
+                with self.subTest(role=role, changes=changes), self.assertRaises(AssertionError):
+                    release.original_bundle_identity(dict(legacy, **changes), role)
+
     def test_original_pkg_payload_is_read_without_current_federation_requirement_or_installing(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -403,18 +415,18 @@ class RetentionAndCoreGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             path = root / "bakabase_insideworld.db"
-            with sqlite3.connect(path) as db:
+            with contextlib.closing(sqlite3.connect(path)) as db, db:
                 db.execute("CREATE TABLE ResourcesV2 (Id INTEGER PRIMARY KEY, Title TEXT, Payload BLOB)")
                 db.execute("INSERT INTO ResourcesV2 VALUES (7, ?, ?)", (runner.RESOURCE_TITLE, b"fixture"))
             before = runner.resource_state({"data": root}, 7)
-            with sqlite3.connect(path) as db:
+            with contextlib.closing(sqlite3.connect(path)) as db, db:
                 db.execute("ALTER TABLE ResourcesV2 ADD COLUMN NewField INTEGER DEFAULT 0")
             after = runner.resource_state({"data": root}, 7)
             self.assertEqual(["NewField"], runner.verify_resource_retained(before, after)["addedColumns"])
-            with sqlite3.connect(path) as db:
+            with contextlib.closing(sqlite3.connect(path)) as db, db:
                 db.execute("UPDATE ResourcesV2 SET Title = 'lost original title'")
             with self.assertRaises(AssertionError): runner.verify_resource_retained(before, runner.resource_state({"data": root}, 7))
-            with sqlite3.connect(path) as db:
+            with contextlib.closing(sqlite3.connect(path)) as db, db:
                 db.execute("DELETE FROM ResourcesV2")
             with self.assertRaises(AssertionError): runner.resource_state({"data": root}, 7)
 
