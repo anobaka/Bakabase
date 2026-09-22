@@ -33,6 +33,8 @@ import urllib.request
 MAX_TIMEOUT = 900
 MAX_REPETITIONS = 5
 RSS_INTERVAL_SECONDS = .25
+FIXTURE_LABELS = ("benchmark-a", "benchmark-b")
+FIXTURE_LABEL_ENVIRONMENT = "BAKABASE_FEDERATION_TEST_NODE_NAME"
 
 
 class ProcessMemoryCounters(ctypes.Structure):
@@ -123,6 +125,15 @@ class Meter:
 class LinkProxy:
     def __init__(self, upstream_port):
         self.meter = Meter()
+        self.transport_lock = threading.Lock()
+        self.transport = None
+        self.transport_values = Counter()
+        self.upstream_port = upstream_port
+        self.client_lock = threading.Lock()
+        self.clients = set()
+        self.clients_stopped = threading.Event()
+        self.clients_stopped.set()
+        self.worker_slots = threading.BoundedSemaphore(4)
         self.gated = threading.Event()
         self.release = threading.Event()
         self.arm = False
@@ -130,6 +141,11 @@ class LinkProxy:
 
         class Handler(BaseHTTPRequestHandler):
             protocol_version = "HTTP/1.1"
+
+            def setup(self):
+                super().setup()
+                self.connection.settimeout(12)
+                self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
             def log_message(self, *_):
                 pass
@@ -143,16 +159,12 @@ class LinkProxy:
                 headers = {key: value for key, value in self.headers.items()
                            if key.lower() not in ("host", "connection", "transfer-encoding")}
                 headers["Host"] = f"127.0.0.1:{upstream_port}"
-                connection = http.client.HTTPConnection("127.0.0.1", upstream_port, timeout=12)
                 status, content, response_headers = 502, b"", []
+                stage = "upstream"
                 try:
-                    connection.request(self.command, self.path, body=body, headers=headers)
-                    response = connection.getresponse()
-                    status, response_headers = response.status, response.getheaders()
-                    content = response.read(8 * 1024 * 1024 + 1)
-                    if len(content) > 8 * 1024 * 1024:
-                        raise RuntimeError("Benchmark proxy response exceeded its fixed 8 MiB limit")
+                    status, response_headers, content = proxy.forward(self.command, self.path, body, headers)
                     proxy.meter.add(self.command, self.path, status, len(body), len(content))
+                    stage = "downstream"
                     if proxy.arm and self.path.endswith("/validate"):
                         proxy.arm = False
                         proxy.gated.set()
@@ -163,33 +175,106 @@ class LinkProxy:
                         if key.lower() not in ("transfer-encoding", "connection", "content-length"):
                             self.send_header(key, value)
                     self.send_header("Content-Length", str(len(content)))
-                    self.send_header("Connection", "close")
                     self.end_headers()
                     self.wfile.write(content)
-                except (BrokenPipeError, ConnectionResetError):
-                    pass  # Expected when the cancellation check aborts a waiting read.
-                except (OSError, http.client.HTTPException):
-                    proxy.meter.add(self.command, self.path, 502, len(body), 0)
-                    try:
-                        self.send_error(502)
-                    except (BrokenPipeError, ConnectionResetError):
-                        pass
-                finally:
-                    connection.close()
+                except (OSError, http.client.HTTPException, RuntimeError) as error:
+                    proxy.record_transport_error(stage, error)
                     self.close_connection = True
+                    if stage == "upstream":
+                        proxy.meter.add(self.command, self.path, 502, len(body), 0)
+                        try:
+                            self.send_error(502)
+                        except (OSError, http.client.HTTPException):
+                            pass
+                    # A downstream reset/abort is expected after cancelling a read.
 
             do_GET = do_POST = do_PUT = do_DELETE = dispatch
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        class Server(ThreadingHTTPServer):
+            def process_request(self, request, address):
+                if not proxy.worker_slots.acquire(blocking=False):
+                    proxy.record_transport_error("accept", RuntimeError("Proxy worker bound exceeded"))
+                    self.shutdown_request(request)
+                    return
+                with proxy.client_lock:
+                    proxy.clients.add(request)
+                    proxy.clients_stopped.clear()
+                try:
+                    super().process_request(request, address)
+                except Exception:
+                    proxy.finish_client(request)
+                    raise
+
+            def process_request_thread(self, request, address):
+                try:
+                    super().process_request_thread(request, address)
+                finally:
+                    proxy.finish_client(request)
+
+        self.server = Server(("127.0.0.1", 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.base = f"http://127.0.0.1:{self.server.server_port}"
 
+    def forward(self, method, path, body, headers):
+        # Keep one bounded upstream connection. Responses are fully read before
+        # releasing this lock, including before the cancellation gate is entered.
+        # Do not retry a failed request: the measured production operation must fail.
+        with self.transport_lock:
+            if self.transport is None:
+                self.transport = http.client.HTTPConnection("127.0.0.1", self.upstream_port, timeout=12)
+                self.transport_values["upstreamClientsCreated"] += 1
+            try:
+                self.transport.request(method, path, body=body, headers=headers)
+                response = self.transport.getresponse()
+                content = response.read(8 * 1024 * 1024 + 1)
+                if len(content) > 8 * 1024 * 1024:
+                    raise RuntimeError("Benchmark proxy response exceeded its fixed 8 MiB limit")
+                return response.status, response.getheaders(), content
+            except Exception:
+                self.transport.close()
+                self.transport = None
+                raise
+
+    def reset_upstream(self):
+        with self.transport_lock:
+            if self.transport:
+                self.transport.close()
+                self.transport = None
+
+    def record_transport_error(self, stage, error):
+        code = getattr(error, "winerror", None) or getattr(error, "errno", None)
+        with self.transport_lock:
+            self.transport_values[f"{stage}:{type(error).__name__}"] += 1
+            if type(code) is int:
+                self.transport_values[f"{stage}:nativeCode:{code}"] += 1
+
+    def diagnostics(self):
+        with self.transport_lock:
+            return dict(self.transport_values)
+
+    def finish_client(self, connection):
+        with self.client_lock:
+            self.clients.remove(connection)
+            if not self.clients:
+                self.clients_stopped.set()
+        self.worker_slots.release()
+
     def close(self):
         self.release.set()
         self.server.shutdown()
+        with self.client_lock:
+            clients = list(self.clients)
+        for client in clients:
+            try:
+                client.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
         self.server.server_close()
         self.thread.join(timeout=5)
+        self.reset_upstream()
+        if self.thread.is_alive() or not self.clients_stopped.wait(5):
+            raise TimeoutError("Proxy workers did not stop")
 
 
 class RssSampler:
@@ -262,7 +347,7 @@ class Api:
         data = None if body is None else json.dumps(body, separators=(",", ":")).encode()
         request = urllib.request.Request(base + path, data=data, method=method,
                                          headers={"Content-Type": "application/json"})
-        started = time.monotonic()
+        started = time.perf_counter()
         try:
             response = urllib.request.urlopen(request, timeout=remaining)
         except urllib.error.HTTPError as error:
@@ -275,7 +360,7 @@ class Api:
             allowed = (expected,) if isinstance(expected, int) else expected
             if response.status not in allowed:
                 raise AssertionError(f"{method} {path}: {response.status}: {content[:700]!r}")
-            return (json.loads(content) if content else None), (time.monotonic() - started) * 1000
+            return (json.loads(content) if content else None), (time.perf_counter() - started) * 1000
 
 
 def percentile(values, fraction):
@@ -342,6 +427,7 @@ def check_deadline(deadline):
 
 def traverse(api, proxy, sampler, base, ids, count, repetition, temperature):
     began = time.monotonic()
+    started = time.perf_counter()
     sampler.capture()
     sampler.require_coverage()
     rss_before = sampler.latest()
@@ -364,7 +450,7 @@ def traverse(api, proxy, sampler, base, ids, count, repetition, temperature):
             break
         page, elapsed = api.request(base, page_path(page))
         page_times.append(elapsed)
-    traversal_ms = (time.monotonic() - began) * 1000
+    traversal_ms = (time.perf_counter() - started) * 1000
     assert len(seen) == count * 2
     _, release_ms = release(api, base, first)
     time.sleep(.3)
@@ -449,6 +535,7 @@ def cancel_and_release(api, proxy, sampler, base, ids, count):
 def environment_metadata():
     result = {"system": platform.system(), "os": platform.platform(), "architecture": platform.machine(),
               "pythonPointerBits": ctypes.sizeof(ctypes.c_void_p) * 8, "cpuCount": os.cpu_count(),
+              "machineName": platform.node(),
               "cpu": platform.processor(), "githubActions": os.environ.get("GITHUB_ACTIONS") == "true",
               "runnerEnvironment": os.environ.get("RUNNER_ENVIRONMENT", "unspecified"),
               "runnerOs": os.environ.get("RUNNER_OS"), "runnerArch": os.environ.get("RUNNER_ARCH"),
@@ -479,6 +566,21 @@ def environment_metadata():
     return result
 
 
+def fixture_metadata(identity, count):
+    # Read-only arithmetic for the known TestHost rows, mirroring the production
+    # QueryProtocol accounting. Only row 1 has the filename and longer title.
+    # UTF-16 matches .NET String.Length even for a non-ASCII runner name.
+    units = lambda value: len(value.encode("utf-16-le")) // 2
+    base = 384 + 2 * sum(units(identity[key]) for key in ("name", "nodeId", "libraryEpoch"))
+    normal = base + 2 * (3 * len("TITLE 00"))
+    first = base + 2 * (3 * len("SHARED TITLE") + len("fixture.wav"))
+    return {"nodeId": identity["nodeId"], "libraryEpoch": identity["libraryEpoch"],
+            "fixtureLabel": identity["name"], "ownerLabelUtf16Units": units(identity["name"]),
+            "estimatedSnapshotBytes": 256 + first + (count - 1) * normal,
+            "snapshotBudgetBytes": 64 * 1024 * 1024,
+            "accountingSource": "QueryProtocol.EstimateBytes; TestHost metadata-only rows plus fixture.wav"}
+
+
 def run(args):
     repo = Path(__file__).resolve().parents[3]
     dll = repo / "src/tests/Bakabase.Federation.TestHost/bin/Debug/net9.0/Bakabase.Federation.TestHost.dll"
@@ -492,6 +594,7 @@ def run(args):
     api = Api(time.monotonic() + args.timeout)
     report = {"schemaVersion": 2, "passed": False, "counts": args.counts, "repetitions": args.repetitions,
               "timeoutSeconds": args.timeout, "pageSize": 200, "percentileMethod": "nearest-rank",
+              "latencyClock": {"name": "perf_counter", "resolutionSeconds": time.get_clock_info("perf_counter").resolution},
               "scales": [], "cleanupErrors": [],
               "conditions": ["Debug production TestHost; unchanged FederationQueryLimits",
                              "Every repetition restarts both processes before process-cold traversal",
@@ -500,6 +603,8 @@ def run(args):
                              "First-page latency includes query preparation and the first page response",
                              "Small first-page sample counts are descriptive, not a stable tail-latency estimate",
                              "A owns one SQLite library and reads B through a counting loopback HTTP proxy",
+                             "TestHost-only fixed equal-length node labels control per-row metadata across platforms",
+                             "Proxy preserves HTTP keep-alive with one upstream connection and at most four client workers",
                              "CI virtual machines and loopback HTTP do not represent physical LAN or NAS performance",
                              "Proxy buffering/connections and RSS sampling add measurement overhead",
                              "HTTP bytes are payloads only; sampled RSS/Windows working set includes shared pages",
@@ -516,17 +621,19 @@ def run(args):
         (directory / "ready").unlink(missing_ok=True)
         log = (results / f"{label}.log").open("w", encoding="utf-8")
         logs.append(log)
+        environment = dict(os.environ, **{FIXTURE_LABEL_ENVIRONMENT: FIXTURE_LABELS[0 if directory.name == "a" else 1]})
         process = subprocess.Popen([args.dotnet, str(dll), str(port), str(directory), str(count)],
-                                   cwd=repo, stdout=log, stderr=subprocess.STDOUT)
+                                   cwd=repo, stdout=log, stderr=subprocess.STDOUT, env=environment)
         all_processes.append(process)
         began = time.monotonic()
+        started = time.perf_counter()
         while not (directory / "ready").exists():
             if process.poll() is not None:
                 raise AssertionError(f"{label} exited; inspect retained host log")
             if time.monotonic() >= min(began + 180, api.deadline):
                 raise TimeoutError(f"{label} startup exceeded its bound")
             time.sleep(.2)
-        return process, round((time.monotonic() - began) * 1000, 2)
+        return process, round((time.perf_counter() - started) * 1000, 2)
 
     try:
         report["environment"] = environment_metadata()
@@ -550,27 +657,37 @@ def run(args):
             first_owned_process = len(all_processes)
             try:
                 proxy = LinkProxy(ports[1])
-                preparation_started = time.monotonic()
+                preparation_started = time.perf_counter()
                 # Seed once, sequentially; repetitions reuse the same two full databases.
                 for index in range(2):
                     process, elapsed = start(f"{count}-{index}-seed", directories[index], ports[index], count)
                     processes.append(process)
                     scale["preparation"]["seedStartupMsByNode"][str(index)] = elapsed
                 statuses = [api.request(base, "/federation/local/peers")[0] for base in bases]
+                assert [status["identity"]["name"] for status in statuses] == list(FIXTURE_LABELS), "Fixture labels differ"
+                scale["nodes"] = [fixture_metadata(status["identity"], count) for status in statuses]
+                for directory, node, status in zip(directories, scale["nodes"], statuses):
+                    fixture = json.loads((directory / "benchmark-node.json").read_text(encoding="utf-8"))
+                    assert all(fixture[key] == node[key] for key in ("nodeId", "libraryEpoch", "fixtureLabel")), "Fixture identity differs"
+                    assert isinstance(fixture["machineName"], str) and fixture["machineName"], "Native machine name missing"
+                    node["nativeMachineName"] = fixture["machineName"]
+                    original = dict(status["identity"], name=fixture["machineName"])
+                    node["estimatedSnapshotBytesWithNativeMachineName"] = fixture_metadata(original, count)["estimatedSnapshotBytes"]
                 ids = [status["identity"]["nodeId"] for status in statuses]
-                pairing_started = time.monotonic()
+                pairing_started = time.perf_counter()
                 invitation = api.request(bases[1], "/federation/local/peers/invite", "POST")[0]
                 outcome = api.request(bases[0], "/federation/local/peers/connect", "POST",
                                       {"address": proxy.base, "code": invitation["code"]})[0]
                 assert outcome["outcome"] == "granted"
                 api.request(bases[0], "/federation/local/peers/browsing", "PUT", {"enabled": True})
-                scale["preparation"]["pairingMs"] = (time.monotonic() - pairing_started) * 1000
-                scale["preparation"]["totalMs"] = (time.monotonic() - preparation_started) * 1000
+                scale["preparation"]["pairingMs"] = (time.perf_counter() - pairing_started) * 1000
+                scale["preparation"]["totalMs"] = (time.perf_counter() - preparation_started) * 1000
                 for repetition in range(1, args.repetitions + 1):
                     check_deadline(api.deadline)
                     for process in processes:
                         stop_process(process)
                     processes.clear()
+                    proxy.reset_upstream()
                     restart = {"repetition": repetition, "startupMsByNode": {}, "pidsByNode": {}}
                     scale["preparation"]["restarts"].append(restart)
                     for index in range(2):
@@ -604,6 +721,7 @@ def run(args):
                     scale["lastRssSampling"] = sampler.diagnostics()
                     cleanup_step(report["cleanupErrors"], f"rss-{count}", sampler.close)
                 if proxy:
+                    scale["proxyTransport"] = proxy.diagnostics()
                     cleanup_step(report["cleanupErrors"], f"proxy-{count}", proxy.close)
                 # Includes a process which failed before start() returned readiness.
                 for process in all_processes[first_owned_process:]:

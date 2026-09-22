@@ -63,6 +63,18 @@ sealed class FederationTestHost(int port, string dataDirectory, int count)
         {
             // The fixture exercises media serving, never dependency installation or external downloads.
             services.RemoveAll<IDependentComponentService>();
+            // A benchmark must not vary every result row's label with the CI VM
+            // hostname. This optional fixture-only decorator preserves production
+            // persistent identity, epochs, stores, grants and query byte limits.
+            var fixtureName = Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_NODE_NAME");
+            if (fixtureName != null)
+            {
+                if (fixtureName is not ("benchmark-a" or "benchmark-b"))
+                    throw new ArgumentException("Unknown benchmark node label.");
+                services.RemoveAll<INodeIdentityProvider>();
+                services.AddSingleton<INodeIdentityProvider>(provider => new BenchmarkNodeIdentityProvider(
+                    new NodeIdentityProvider(provider.GetRequiredService<FederationStateStore>()), fixtureName));
+            }
             services.AddSingleton<IStartupFilter, FederationTestStaticFiles>();
         });
 
@@ -118,7 +130,15 @@ sealed class FederationTestHost(int port, string dataDirectory, int count)
                 (await propertyOrm.GetFirstOrDefault(value => value.ResourceId == 1))?.Name != "Shared title"))
                 throw new InvalidOperationException("Seeded fixture data must be visible through production resource/property caches.");
         }
-        await services.GetRequiredService<INodeIdentityProvider>().GetAsync();
+        var identity = await services.GetRequiredService<INodeIdentityProvider>().GetAsync();
+        if (Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_NODE_NAME") != null)
+            await File.WriteAllTextAsync(Path.Combine(dataDirectory, "benchmark-node.json"), JsonSerializer.Serialize(new
+            {
+                machineName = Environment.MachineName,
+                fixtureLabel = identity.Name,
+                nodeId = identity.NodeId,
+                libraryEpoch = identity.LibraryEpoch
+            }));
         var remoteAccess = services.GetRequiredService<IRemoteAccessService>();
         if (remoteAccess.GetEffectiveMode() != RemoteAccessMode.Enabled || !remoteAccess.GetRequirePairing())
             throw new InvalidOperationException("The fixture requires preconfigured Enabled remote access with pairing.");
@@ -127,6 +147,12 @@ sealed class FederationTestHost(int port, string dataDirectory, int count)
         File.WriteAllText(Path.Combine(dataDirectory, "ready"), port.ToString());
         Console.WriteLine($"FEDERATION_TEST_READY {port}");
     }
+}
+
+sealed class BenchmarkNodeIdentityProvider(INodeIdentityProvider production, string name) : INodeIdentityProvider
+{
+    public async Task<NodeIdentity> GetAsync(CancellationToken cancellationToken = default) =>
+        (await production.GetAsync(cancellationToken)) with { Name = name };
 }
 
 public sealed class FederationTestStaticFiles : IStartupFilter

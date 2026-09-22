@@ -43,6 +43,144 @@ class BenchmarkTests(unittest.TestCase):
                     benchmark.parse_args(argv)
                 self.assertEqual(result.exception.code, 2)
 
+    def test_fixture_label_estimate_records_long_native_name_budget_boundary(self):
+        identity = {"name": "benchmark-a", "nodeId": "a" * 32, "libraryEpoch": "e" * 32}
+        short = benchmark.fixture_metadata(identity, 100000)
+        long = benchmark.fixture_metadata(dict(identity, name="h" * 63), 100000)
+        self.assertEqual(short["estimatedSnapshotBytes"], 58200302)
+        self.assertEqual(long["estimatedSnapshotBytes"] - short["estimatedSnapshotBytes"], 10400000)
+        self.assertLess(short["estimatedSnapshotBytes"], short["snapshotBudgetBytes"])
+        self.assertGreater(long["estimatedSnapshotBytes"], long["snapshotBudgetBytes"])
+        unicode = benchmark.fixture_metadata(dict(identity, name="\U0001f600"), 100000)
+        self.assertEqual(unicode["ownerLabelUtf16Units"], 2)
+
+    def test_latency_uses_high_resolution_clock_without_changing_deadline_clock(self):
+        response = Mock(status=200)
+        response.read.return_value = b"{}"
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        with patch.object(benchmark.time, "monotonic", return_value=10), \
+                patch.object(benchmark.time, "perf_counter", side_effect=[1, 1.00125]), \
+                patch.object(benchmark.urllib.request, "urlopen", return_value=response) as request:
+            result, elapsed = benchmark.Api(12).request("http://fixture", "/query")
+        self.assertEqual(result, {})
+        self.assertAlmostEqual(elapsed, 1.25)
+        self.assertEqual(request.call_args.kwargs["timeout"], 2)
+
+    def proxy(self):
+        proxy = benchmark.LinkProxy.__new__(benchmark.LinkProxy)
+        proxy.transport_lock = threading.Lock()
+        proxy.transport = None
+        proxy.transport_values = Counter()
+        proxy.upstream_port = 1234
+        return proxy
+
+    def test_proxy_reuses_upstream_and_explicit_restart_reset_closes_it(self):
+        connection = Mock()
+        response = connection.getresponse.return_value
+        response.status = 200
+        response.getheaders.return_value = [("Content-Length", "2")]
+        response.read.return_value = b"{}"
+        proxy = self.proxy()
+        with patch.object(benchmark.http.client, "HTTPConnection", return_value=connection) as create:
+            for _ in range(3):
+                self.assertEqual(proxy.forward("GET", "/fixture", b"", {}),
+                                 (200, [("Content-Length", "2")], b"{}"))
+            create.assert_called_once_with("127.0.0.1", 1234, timeout=12)
+            self.assertEqual(connection.request.call_count, 3)
+            connection.close.assert_not_called()
+            proxy.reset_upstream()
+            connection.close.assert_called_once_with()
+            self.assertIsNone(proxy.transport)
+            proxy.forward("GET", "/fixture", b"", {})
+            self.assertEqual(create.call_count, 2)
+            proxy.reset_upstream()
+        self.assertEqual(proxy.diagnostics(), {"upstreamClientsCreated": 2})
+
+    def test_proxy_failed_request_never_retries_and_records_only_sanitized_diagnostics(self):
+        proxy = self.proxy()
+        connection = Mock()
+        error = OSError(10048, "sensitive fixture URL must not be recorded")
+        connection.request.side_effect = error
+        with patch.object(benchmark.http.client, "HTTPConnection", return_value=connection) as create:
+            with self.assertRaises(OSError) as failure:
+                proxy.forward("POST", "/query", b"sensitive body", {})
+        self.assertIs(failure.exception, error)
+        create.assert_called_once()
+        connection.request.assert_called_once()
+        connection.close.assert_called_once()
+        self.assertIsNone(proxy.transport)
+        proxy.record_transport_error("upstream", error)
+        report = proxy.diagnostics()
+        self.assertEqual(report, {"upstreamClientsCreated": 1, "upstream:OSError": 1,
+                                  "upstream:nativeCode:10048": 1})
+        self.assertNotIn("sensitive", json.dumps(report))
+
+    def test_proxy_close_unblocks_owned_clients_and_closes_upstream(self):
+        proxy = self.proxy()
+        proxy.release, proxy.server, proxy.thread = Mock(), Mock(), Mock()
+        proxy.thread.is_alive.return_value = False
+        proxy.client_lock = threading.Lock()
+        client = Mock()
+        proxy.clients = {client}
+        proxy.clients_stopped = Mock()
+        proxy.clients_stopped.wait.return_value = True
+        transport = proxy.transport = Mock()
+        proxy.close()
+        client.shutdown.assert_called_once_with(benchmark.socket.SHUT_RDWR)
+        transport.close.assert_called_once_with()
+        proxy.clients_stopped.wait.assert_called_once_with(5)
+        proxy.server.shutdown.assert_called_once_with()
+        proxy.server.server_close.assert_called_once_with()
+
+    def test_fixture_http_proxy_keeps_both_legs_alive_and_stops_its_workers(self):
+        accepted = []
+
+        class Handler(benchmark.BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"
+
+            def setup(self):
+                super().setup()
+                accepted.append(self.client_address)
+
+            def do_POST(self):
+                self.rfile.read(int(self.headers.get("Content-Length", 0)))
+                self.send_response(200)
+                self.send_header("Content-Length", "2")
+                self.end_headers()
+                self.wfile.write(b"{}")
+
+            def log_message(self, *_):
+                pass
+
+        upstream = benchmark.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        worker = threading.Thread(target=upstream.serve_forever, daemon=True)
+        worker.start()
+        proxy = benchmark.LinkProxy(upstream.server_port)
+        client = benchmark.http.client.HTTPConnection("127.0.0.1", proxy.server.server_port, timeout=2)
+        try:
+            for _ in range(3):
+                client.request("POST", "/fixture", body=b"{}")
+                response = client.getresponse()
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.read(), b"{}")
+                self.assertFalse(response.will_close)
+            self.assertEqual(len(accepted), 1)
+            self.assertEqual(proxy.meter.snapshot()["requests"], 3)
+            self.assertEqual(proxy.diagnostics(), {"upstreamClientsCreated": 1})
+            # Deliberately leave the client open: cleanup must unblock its worker.
+            proxy.close()
+            self.assertTrue(proxy.clients_stopped.is_set())
+            self.assertFalse(proxy.thread.is_alive())
+            self.assertIsNone(proxy.transport)
+        finally:
+            client.close()
+            if proxy.thread.is_alive():
+                proxy.close()
+            upstream.shutdown()
+            upstream.server_close()
+            worker.join(timeout=2)
+
     def test_nearest_rank_small_sample_tail_and_pooled_pages_are_explicit(self):
         self.assertEqual(benchmark.distribution([8, 2, 4]),
                          {"samples": 3, "p50": 4, "p95": 8, "min": 2, "max": 8})
@@ -297,7 +435,7 @@ class BenchmarkTests(unittest.TestCase):
         source = directory / "repo/src/tests/federation-smoke/benchmark.py"
         result_path = directory / "results"
         args = benchmark.parse_args(["--results-directory", str(result_path)])
-        processes, open_logs = [], []
+        processes, open_logs, identities = [], [], {}
 
         def launch(command, **kwargs):
             process = Mock(pid=100 + len(processes))
@@ -305,8 +443,15 @@ class BenchmarkTests(unittest.TestCase):
             process.wait.side_effect = lambda **_: setattr(process.poll, "return_value", 0)
             processes.append(process)
             open_logs.append(kwargs["stdout"])
+            label = kwargs["env"][benchmark.FIXTURE_LABEL_ENVIRONMENT]
+            self.assertEqual(label, benchmark.FIXTURE_LABELS[0 if Path(command[3]).name == "a" else 1])
+            origin = f"http://127.0.0.1:{command[2]}"
+            identities[origin] = {"nodeId": origin, "libraryEpoch": "epoch", "name": label}
             if ready:
                 (Path(command[3]) / "ready").write_text("ready")
+                (Path(command[3]) / "benchmark-node.json").write_text(json.dumps(
+                    {"nodeId": f"http://127.0.0.1:{command[2]}", "libraryEpoch": "epoch",
+                     "fixtureLabel": label, "machineName": "fixture-native-machine"}))
             return process
 
         def request(base, path, *args, **kwargs):
@@ -315,7 +460,7 @@ class BenchmarkTests(unittest.TestCase):
             if path.endswith("connect"):
                 return {"outcome": "granted"}, 1
             if path.endswith("peers"):
-                return {"identity": {"nodeId": base}}, 1
+                return {"identity": identities[base]}, 1
             return None, 1
 
         def traversal(api, proxy, sampler, base, ids, count, repetition, temperature):
@@ -328,6 +473,7 @@ class BenchmarkTests(unittest.TestCase):
         if sampling_failure:
             sampler.require_coverage.side_effect = AssertionError("Missing RSS")
         proxy = Mock(base="http://fixture")
+        proxy.diagnostics.return_value = {}
         actual_mkdtemp = tempfile.mkdtemp
         fixture_roots = []
 
