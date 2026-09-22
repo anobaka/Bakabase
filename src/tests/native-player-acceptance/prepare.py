@@ -26,6 +26,10 @@ PINNED = {
     "osx-x64": (579992657, 52294445, "008702680e522b77da8e4705e70424f05fc5f78b550c01187c4e1961a40e3592", "macos-15-intel"),
     "osx-arm64": (579992593, 47535265, "d83a063a1315cd5c241e1c8b6b5c963e03819d696dd363078a497bcfea32aea7", "macos-15-arm"),
 }
+PINNED_ARTIFACTS = {"win-x64": 10667534204, "osx-x64": 10667436118, "osx-arm64": 10667356116}
+UPSTREAM_REPOSITORY_ID = 6201092
+UPSTREAM_HEAD_SHA = "c6c4c38d7f4aa82ad2a29a4c3b142f19123f5b9e"
+UPSTREAM_RUN = 35659722192
 
 
 def validate_asset(value, rid):
@@ -35,6 +39,52 @@ def validate_asset(value, rid):
                  value.get("digest") == "sha256:" + digest and value.get("name") == name,
                  "mpv asset differs from the pinned first-party CI build")
     return name
+
+
+def github_metadata(endpoint, allow_not_found=False):
+    try:
+        output = subprocess.check_output(["gh", "api", endpoint], stderr=subprocess.PIPE, timeout=30)
+    except subprocess.CalledProcessError as error:
+        # A missing rolling release attachment may still have its original
+        # immutable Actions artifact. No other status permits a fallback.
+        try:
+            document = json.loads(error.output or b"")
+        except (ValueError, TypeError):
+            document = None
+        if allow_not_found and isinstance(document, dict) and document.get("message") == "Not Found" and \
+                document.get("status") in (404, "404"):
+            return None
+        raise
+    return json.loads(output)
+
+
+def validate_artifact(value, rid):
+    _, size, digest, suffix = PINNED[rid]
+    name = f"mpv-v0.41.0-dev-gc6c4c38d7-{UPSTREAM_RUN}-{suffix}"
+    workflow = value.get("workflow_run") or {}
+    base.require(value.get("id") == PINNED_ARTIFACTS[rid] and value.get("name") == name and
+                 value.get("size_in_bytes") == size and value.get("digest") == "sha256:" + digest and
+                 value.get("expired") is False and workflow.get("id") == UPSTREAM_RUN and
+                 workflow.get("repository_id") == UPSTREAM_REPOSITORY_ID and
+                 workflow.get("head_repository_id") == UPSTREAM_REPOSITORY_ID and
+                 workflow.get("head_sha") == UPSTREAM_HEAD_SHA,
+                 "mpv fallback artifact differs from the original pinned repository/build/bytes")
+    return name + ".zip"
+
+
+def select_source(rid):
+    endpoint = f"repos/mpv-player/mpv/releases/assets/{PINNED[rid][0]}"
+    metadata = github_metadata(endpoint, allow_not_found=True)
+    if metadata is not None:
+        return validate_asset(metadata, rid), endpoint, {
+            "transport": "release-asset", "id": PINNED[rid][0], "repository": "mpv-player/mpv"}
+    identifier = PINNED_ARTIFACTS[rid]
+    endpoint = f"repos/mpv-player/mpv/actions/artifacts/{identifier}"
+    name = validate_artifact(github_metadata(endpoint), rid)
+    return name, endpoint + "/zip", {
+        "transport": "original-actions-artifact", "reason": "release-asset-http-404", "id": identifier,
+        "repository": "mpv-player/mpv", "repositoryID": UPSTREAM_REPOSITORY_ID,
+        "buildRun": UPSTREAM_RUN, "headSHA": UPSTREAM_HEAD_SHA, "identicalPinnedArchive": True}
 
 
 def extract_macos_bundle(payload):
@@ -80,14 +130,12 @@ def main():
     base.require(not root.exists() and root.is_relative_to(Path(os.environ["RUNNER_TEMP"]).resolve()),
                  "mpv extraction must use a fresh runner temporary directory")
     identifier, size, digest, _ = PINNED[args.rid]
-    metadata = json.loads(subprocess.check_output(
-        ["gh", "api", f"repos/mpv-player/mpv/releases/assets/{identifier}"], timeout=30))
-    name = validate_asset(metadata, args.rid)
+    name, download_endpoint, download_source = select_source(args.rid)
     root.mkdir()
     archive = root / name
     with archive.open("xb") as output:
         subprocess.run(["gh", "api", "-H", "Accept: application/octet-stream",
-                        f"repos/mpv-player/mpv/releases/assets/{identifier}"], stdout=output, check=True, timeout=120)
+                        download_endpoint], stdout=output, check=True, timeout=120)
     inputs.verify_archive(archive, {"size_in_bytes": size, "digest": "sha256:" + digest})
     base.unpack(archive, root / "payload")
     archive.unlink()
@@ -98,6 +146,7 @@ def main():
     result = {"passed": True, "rid": args.rid, "repository": "mpv-player/mpv", "sourceCommitPrefix": "c6c4c38d7",
               "buildRun": 35659722192, "assetID": identifier, "assetName": name, "assetBytes": size,
               "assetSHA256": digest, "executable": str(executable), "executableSHA256": base.sha256(executable),
+              "downloadSource": download_source,
               "bundleExtraction": bundle,
               "version": subprocess.check_output([str(executable), "--version"], timeout=20).decode("utf-8", errors="replace")[:2048],
               "scope": "Pinned first-party development CI build; not all installed player versions"}

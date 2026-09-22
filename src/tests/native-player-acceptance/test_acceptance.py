@@ -86,6 +86,69 @@ class PlayerAcceptanceTests(unittest.TestCase):
                 with self.subTest(rid=rid, key=key), self.assertRaises(AssertionError):
                     prepare.validate_asset(dict(valid, **{key: value}), rid)
 
+    def test_original_artifact_requires_exact_repository_build_head_id_and_pinned_bytes(self):
+        for rid, (_, size, digest, suffix) in prepare.PINNED.items():
+            valid = {"id": prepare.PINNED_ARTIFACTS[rid], "size_in_bytes": size, "digest": "sha256:" + digest,
+                "name": f"mpv-v0.41.0-dev-gc6c4c38d7-35659722192-{suffix}", "expired": False,
+                "workflow_run": {"id": prepare.UPSTREAM_RUN, "repository_id": prepare.UPSTREAM_REPOSITORY_ID,
+                    "head_repository_id": prepare.UPSTREAM_REPOSITORY_ID, "head_sha": prepare.UPSTREAM_HEAD_SHA}}
+            self.assertEqual(valid["name"] + ".zip", prepare.validate_artifact(valid, rid))
+            for field, value in (("id", 1), ("size_in_bytes", size - 1), ("digest", "sha256:" + "0" * 64),
+                                 ("name", "different-build"), ("expired", True), ("expired", None)):
+                with self.subTest(rid=rid, field=field), self.assertRaises(AssertionError):
+                    prepare.validate_artifact(dict(valid, **{field: value}), rid)
+            for field, value in (("id", 1), ("repository_id", 1), ("head_repository_id", 1), ("head_sha", "0" * 40)):
+                with self.subTest(rid=rid, workflowField=field), self.assertRaises(AssertionError):
+                    prepare.validate_artifact(dict(valid, workflow_run=dict(valid["workflow_run"], **{field: value})), rid)
+
+    def test_artifact_fallback_is_allowed_only_for_explicit_release_metadata_404(self):
+        for status in ("404", 404):
+            error = prepare.subprocess.CalledProcessError(1, ["gh"],
+                output=json.dumps({"message": "Not Found", "status": status}).encode())
+            with patch.object(prepare.subprocess, "check_output", side_effect=error):
+                self.assertIsNone(prepare.github_metadata("fixture", allow_not_found=True))
+                with self.assertRaises(prepare.subprocess.CalledProcessError): prepare.github_metadata("fixture")
+        for body in ({"message": "Not Found", "status": "403"}, {"message": "Not Found"},
+                     {"status": "404", "message": "Forbidden"}, {}, ["404"], "Not Found"):
+            error = prepare.subprocess.CalledProcessError(1, ["gh"], output=json.dumps(body).encode())
+            with self.subTest(body=body), patch.object(prepare.subprocess, "check_output", side_effect=error), \
+                    self.assertRaises(prepare.subprocess.CalledProcessError):
+                prepare.github_metadata("fixture", allow_not_found=True)
+        with patch.object(prepare.subprocess, "check_output", side_effect=TimeoutError), self.assertRaises(TimeoutError):
+            prepare.github_metadata("fixture", allow_not_found=True)
+
+    def test_source_selection_keeps_release_primary_and_does_not_fallback_on_metadata_mismatch(self):
+        rid = "osx-x64"
+        identifier, size, digest, suffix = prepare.PINNED[rid]
+        valid = {"id": identifier, "size": size, "digest": "sha256:" + digest,
+                 "name": f"mpv-v0.41.0-dev-gc6c4c38d7-35659722192-{suffix}.zip"}
+        with patch.object(prepare, "github_metadata", return_value=valid) as lookup:
+            name, endpoint, source = prepare.select_source(rid)
+            self.assertEqual(valid["name"], name)
+            self.assertEqual(f"repos/mpv-player/mpv/releases/assets/{identifier}", endpoint)
+            self.assertEqual("release-asset", source["transport"])
+            self.assertEqual(1, lookup.call_count)
+        with patch.object(prepare, "github_metadata", return_value=dict(valid, size=1)) as lookup:
+            with self.assertRaises(AssertionError): prepare.select_source(rid)
+            self.assertEqual(1, lookup.call_count)
+
+    def test_source_fallback_uses_only_the_observed_original_artifact_and_records_transport(self):
+        rid = "osx-x64"
+        _, size, digest, suffix = prepare.PINNED[rid]
+        artifact = {"id": prepare.PINNED_ARTIFACTS[rid], "size_in_bytes": size, "digest": "sha256:" + digest,
+            "name": f"mpv-v0.41.0-dev-gc6c4c38d7-35659722192-{suffix}", "expired": False,
+            "workflow_run": {"id": prepare.UPSTREAM_RUN, "repository_id": prepare.UPSTREAM_REPOSITORY_ID,
+                "head_repository_id": prepare.UPSTREAM_REPOSITORY_ID, "head_sha": prepare.UPSTREAM_HEAD_SHA}}
+        with patch.object(prepare, "github_metadata", side_effect=[None, artifact]) as lookup:
+            name, endpoint, source = prepare.select_source(rid)
+        self.assertEqual(artifact["name"] + ".zip", name)
+        self.assertEqual(f"repos/mpv-player/mpv/actions/artifacts/{artifact['id']}/zip", endpoint)
+        self.assertEqual({"allow_not_found": True}, lookup.call_args_list[0].kwargs)
+        self.assertEqual({}, lookup.call_args_list[1].kwargs)
+        self.assertEqual("original-actions-artifact", source["transport"])
+        self.assertTrue(source["identicalPinnedArchive"])
+        self.assertEqual(prepare.UPSTREAM_HEAD_SHA, source["headSHA"])
+
     def test_video_has_exact_avi_index_and_bounded_payload(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "test.avi"
@@ -248,6 +311,8 @@ class PlayerAcceptanceTests(unittest.TestCase):
                     self.assertTrue(report["embeddedReferences"][kind]["passed"])
                     self.assertEqual(0, report["embeddedReferences"][kind]["canary"]["productionRequests"])
                     self.assertEqual(kind == "hls-lavf", "demuxer=lavf\n" in (configuration / "mpv.conf").read_text())
+                    self.assertEqual(kind == "hls-lavf", "demuxer-lavf-format=hls\n" in (configuration / "mpv.conf").read_text())
+                    self.assertEqual("hls" if kind == "hls-lavf" else None, report["embeddedReferences"][kind]["forcedLavfFormat"])
                     self.assertEqual(kind == "hls-lavf", "curl-enabled=no\n" in (configuration / "mpv.conf").read_text())
                     self.assertEqual(kind == "hls-lavf", report["embeddedReferences"][kind]["curlDisabled"])
                     self.assertEqual(kind == "m3u", "playlist-inherit-options=yes\n" in (configuration / "mpv.conf").read_text())

@@ -550,7 +550,7 @@ def exercise_references(kind, context, report):
         # The pinned development mpv routes nested HTTP through curl by default,
         # where direct:// is not a proxy bypass. Exercise FFmpeg nested I/O on
         # both sides so a broken control cannot masquerade as reference denial.
-        extra += ["demuxer=lavf", "demuxer-lavf-allow-mimetype=no", "curl-enabled=no"]
+        extra += ["demuxer=lavf", "demuxer-lavf-format=hls", "demuxer-lavf-allow-mimetype=no", "curl-enabled=no"]
     else:
         # A playlist redirect otherwise loses per-file direct:// and lets the
         # control's child use the adversarial proxy. Keep both sides identical.
@@ -560,6 +560,7 @@ def exercise_references(kind, context, report):
     case = report.setdefault("embeddedReferences", {})[kind] = {
         "passed": False, "fixtureSizeBytes": len(payload), "fixtureSHA256": hashlib.sha256(payload).hexdigest(),
         "forcedLavfDemuxer": kind == "hls-lavf", "curlDisabled": kind == "hls-lavf",
+        "forcedLavfFormat": "hls" if kind == "hls-lavf" else None,
         "playlistInheritsPerFileOptions": kind == "m3u",
         "configurationSHA256": config_hash}
     report["currentStage"] = "reference-control-" + kind
@@ -623,7 +624,7 @@ def run(args):
                         "MPV_HOME supplies bounded cache/IPC/proxy settings and a read-only event observer; not normal user preferences",
                         "Private settings disable ytdl fallback and do not force windows for failed/empty media; actual video must still use a real output",
                         "M3U and forced-lavf HLS references use owned loopback canaries, not exhaustive media-format fuzzing",
-                        "HLS disables curl in both control and production private configs to verify FFmpeg nested I/O; not every default backend combination",
+                        "HLS forces lavf's hls format and disables curl in both private configs to verify FFmpeg nested I/O despite the opaque URL/AVI MIME; not every default backend combination",
                         "M3U enables playlist option inheritance in both private configs so its positive control retains the per-file proxy bypass",
                         "Video screenshots verify decoded frames, not physical display presentation"]}
     children, streams, ipc, trap, observer, native_created = [], [], None, None, None, False
