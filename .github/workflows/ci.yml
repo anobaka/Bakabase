@@ -13,7 +13,7 @@ on:
       suite:
         description: Test suite to run
         type: choice
-        options: [full, packages, installed]
+        options: [full, packages, installed, extended]
         default: full
       package_run_id:
         description: Successful packages run to reuse for the installed suite
@@ -24,16 +24,31 @@ on:
         type: choice
         options: [updates, coexistence]
         default: updates
+      acceptance_area:
+        description: Extended native acceptance area
+        type: choice
+        options: [performance, native-gui, player, historical, all]
+        default: performance
 
 # A newer push to the same branch / PR cancels older in-progress runs.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.suite || 'full' }}-${{ inputs.installed_mode || 'updates' }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.suite || 'full' }}-${{ inputs.installed_mode || 'updates' }}-${{ inputs.acceptance_area || 'performance' }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
+  extended-acceptance:
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'extended'
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/_extended_acceptance.yml
+    with:
+      area: ${{ inputs.acceptance_area }}
+      package_run_id: ${{ inputs.package_run_id }}
+
   installed-lifecycle:
     if: github.event_name == 'workflow_dispatch' && inputs.suite == 'installed'
     permissions:
@@ -51,7 +66,7 @@ jobs:
       ref: ${{ github.sha }}
 
   backend-tests:
-    if: inputs.suite != 'packages' && inputs.suite != 'installed'
+    if: inputs.suite != 'packages' && inputs.suite != 'installed' && inputs.suite != 'extended'
     name: Backend tests
     runs-on: ubuntu-latest
     env:
@@ -133,7 +148,7 @@ jobs:
           if-no-files-found: ignore
 
   federation-platform:
-    if: inputs.suite != 'packages' && inputs.suite != 'installed'
+    if: inputs.suite != 'packages' && inputs.suite != 'installed' && inputs.suite != 'extended'
     name: Federation and release contracts (${{ matrix.rid }})
     needs: frontend
     runs-on: ${{ matrix.os }}
@@ -234,7 +249,7 @@ jobs:
           retention-days: 14
 
   federation-browser:
-    if: inputs.suite != 'packages' && inputs.suite != 'installed'
+    if: inputs.suite != 'packages' && inputs.suite != 'installed' && inputs.suite != 'extended'
     name: Legacy migration and multi-device browser
     needs: frontend
     runs-on: ubuntu-24.04
@@ -309,7 +324,7 @@ jobs:
           retention-days: 14
 
   frontend:
-    if: inputs.suite != 'packages' && inputs.suite != 'installed'
+    if: inputs.suite != 'packages' && inputs.suite != 'installed' && inputs.suite != 'extended'
     name: Frontend lint & tests
     runs-on: ubuntu-latest
     defaults:

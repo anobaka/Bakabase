@@ -1,0 +1,259 @@
+name: Extended native acceptance
+
+on:
+  workflow_call:
+    inputs:
+      area:
+        required: true
+        type: string
+      package_run_id:
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  performance:
+    if: inputs.area == 'performance' || inputs.area == 'all'
+    name: Query performance (${{ matrix.rid }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: windows-latest, rid: win-x64}
+          - {os: ubuntu-24.04, rid: linux-x64}
+          - {os: macos-15-intel, rid: osx-x64}
+          - {os: macos-15, rid: osx-arm64}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+      - name: Validate measurement and cleanup guards
+        run: python -m unittest discover -s src/tests/federation-smoke -p 'test_benchmark*.py' -v
+      - name: Build production Service fixture
+        run: dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj
+      - name: Measure unchanged query budgets with two full libraries
+        run: |
+          python src/tests/federation-smoke/benchmark.py --dotnet dotnet \
+            --counts 10000 100000 --repetitions 3 --timeout 900 \
+            --results-directory "$RUNNER_TEMP/performance-results" \
+            --concurrent-load 'GitHub-hosted VM; no intentionally added concurrent load'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: query-performance-${{ matrix.rid }}-evidence
+          path: ${{ runner.temp }}/performance-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  player:
+    if: inputs.area == 'player' || inputs.area == 'all'
+    name: Native video player (${{ matrix.rid }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: windows-latest, rid: win-x64}
+          - {os: macos-15-intel, rid: osx-x64}
+          - {os: macos-15, rid: osx-arm64}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+      - name: Validate native player fixture guards
+        run: python src/tests/native-player-acceptance/test_acceptance.py
+      - name: Fetch pinned first-party mpv CI build
+        id: mpv
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python src/tests/native-player-acceptance/prepare.py --rid '${{ matrix.rid }}' \
+            --output "$RUNNER_TEMP/player-inputs"
+      - name: Build production Service fixture
+        run: dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj
+      - name: Verify actual production launch and video playback
+        env:
+          MPV_EXECUTABLE: ${{ steps.mpv.outputs.executable }}
+          MPV_PROVENANCE: ${{ steps.mpv.outputs.provenance }}
+        run: |
+          python src/tests/native-player-acceptance/run.py --rid '${{ matrix.rid }}' \
+            --mpv "$MPV_EXECUTABLE" --provenance "$MPV_PROVENANCE" \
+            --results-directory "$RUNNER_TEMP/player-results"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-player-${{ matrix.rid }}-evidence
+          path: |
+            ${{ runner.temp }}/player-inputs/provenance.json
+            ${{ runner.temp }}/player-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  native-gui:
+    if: inputs.area == 'native-gui' || inputs.area == 'all'
+    name: Native GUI (${{ matrix.rid }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: windows-latest, rid: win-x64}
+          - {os: macos-15-intel, rid: osx-x64}
+          - {os: macos-15, rid: osx-arm64}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate native UI boundaries
+        run: python src/tests/native-gui-acceptance/test_probe.py
+      - name: Verify candidate package provenance
+        id: inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.package_run_id }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+        run: |
+          python src/tests/upgrade-tests/prepare-installed-inputs.py \
+            --repository "$SOURCE_REPOSITORY" --run-id "$SOURCE_RUN" --rid '${{ matrix.rid }}' \
+            --output-directory "$RUNNER_TEMP/gui-inputs"
+      - name: Probe the actual installed native windows
+        env:
+          UNIFIED_PACKAGES: ${{ steps.inputs.outputs.unified_directory }}
+          CLIENT_PACKAGES: ${{ steps.inputs.outputs.client_directory }}
+          PACKAGE_VERSION: ${{ steps.inputs.outputs.version }}
+          PACKAGE_PROVENANCE: ${{ steps.inputs.outputs.provenance }}
+        run: |
+          python src/tests/native-gui-acceptance/run-probe.py \
+            --unified-packages "$UNIFIED_PACKAGES" --client-packages "$CLIENT_PACKAGES" \
+            --rid '${{ matrix.rid }}' --version "$PACKAGE_VERSION" --provenance "$PACKAGE_PROVENANCE" \
+            --results-directory "$RUNNER_TEMP/native-gui-results"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-gui-${{ matrix.rid }}-evidence
+          path: |
+            ${{ runner.temp }}/gui-inputs/provenance.json
+            ${{ runner.temp }}/native-gui-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  historical:
+    if: inputs.area == 'historical' || inputs.area == 'all'
+    name: Published installer upgrade (${{ matrix.rid }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: windows-latest, rid: win-x64}
+          - {os: macos-15-intel, rid: osx-x64}
+          - {os: macos-15, rid: osx-arm64}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Install bounded updater test tools
+        run: |
+          npm ci --ignore-scripts --prefix src/tests/installed-lifecycle-tools
+          dotnet tool install --tool-path "$RUNNER_TEMP/historical-vpk-tools" vpk --version 1.2.0
+      - name: Validate historical and installed failure guards
+        run: |
+          python -m unittest discover -s src/tests/upgrade-tests -p 'test_installed*.py'
+          python src/tests/upgrade-tests/test_historical_upgrade.py
+          python src/tests/upgrade-tests/check-installed-observer.py \
+            --rid '${{ matrix.rid }}' --report "$RUNNER_TEMP/historical-observer.json"
+      - name: Verify unchanged candidate packages
+        id: inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.package_run_id }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+        run: |
+          python src/tests/upgrade-tests/prepare-installed-inputs.py \
+            --repository "$SOURCE_REPOSITORY" --run-id "$SOURCE_RUN" --rid '${{ matrix.rid }}' \
+            --output-directory "$RUNNER_TEMP/historical-candidate-inputs"
+      - name: Verify published original installers and prepare the candidate update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UNIFIED_PACKAGES: ${{ steps.inputs.outputs.unified_directory }}
+          CLIENT_PACKAGES: ${{ steps.inputs.outputs.client_directory }}
+          PACKAGE_VERSION: ${{ steps.inputs.outputs.version }}
+          PACKAGE_PROVENANCE: ${{ steps.inputs.outputs.provenance }}
+        run: |
+          python src/tests/upgrade-tests/historical-prepare.py \
+            --unified-packages "$UNIFIED_PACKAGES" --client-packages "$CLIENT_PACKAGES" \
+            --rid '${{ matrix.rid }}' --candidate-version "$PACKAGE_VERSION" --provenance "$PACKAGE_PROVENANCE" \
+            --new-version '2.4.1-historical.${{ github.run_id }}.${{ github.run_attempt }}' \
+            --vpk "$RUNNER_TEMP/historical-vpk-tools/vpk${{ runner.os == 'Windows' && '.exe' || '' }}" \
+            --output-directory "$RUNNER_TEMP/historical-inputs"
+      - name: Upgrade the actual published installations
+        run: |
+          AUTH_ARGS=()
+          if [[ '${{ runner.os }}' == 'macOS' ]]; then AUTH_ARGS=(--macos-native-authorization); fi
+          python src/tests/upgrade-tests/historical-installed.py \
+            --manifest "$RUNNER_TEMP/historical-inputs/historical.json" --rid '${{ matrix.rid }}' \
+            --results-directory "$RUNNER_TEMP/historical-results" "${AUTH_ARGS[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: historical-upgrade-${{ matrix.rid }}-evidence
+          path: |
+            ${{ runner.temp }}/historical-observer.json
+            ${{ runner.temp }}/historical-candidate-inputs/provenance.json
+            ${{ runner.temp }}/historical-inputs/historical.json
+            ${{ runner.temp }}/historical-inputs/release-metadata.json
+            ${{ runner.temp }}/historical-inputs/vpk-version.log
+            ${{ runner.temp }}/historical-inputs/candidate/*/vpk-pack.log
+            ${{ runner.temp }}/historical-results/
+          if-no-files-found: warn
+          retention-days: 14

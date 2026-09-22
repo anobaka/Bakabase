@@ -18,7 +18,7 @@ SPEC.loader.exec_module(package)
 LIMIT = 1024 ** 3
 FLOOR = 5 * 1024 ** 3
 WORKFLOWS = {".github/workflows/ci.yml", ".github/workflows/_package_acceptance.yml",
-             ".github/workflows/_installed_lifecycle.yml"}
+             ".github/workflows/_installed_lifecycle.yml", ".github/workflows/_extended_acceptance.yml"}
 
 
 def require(value, message):

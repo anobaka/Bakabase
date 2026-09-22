@@ -26,9 +26,11 @@ class InputGuards(unittest.TestCase):
                 runner.validate_run(dict(run, **changes), "owner/repo")
 
     def test_changed_product_or_submodule_requires_new_packages(self):
-        runner.validate_changes(["docs/acceptance.md", "src/tests/upgrade-tests/example.py", ".github/workflows/ci.yml"])
+        runner.validate_changes(["docs/acceptance.md", "src/tests/upgrade-tests/example.py", ".github/workflows/ci.yml",
+                                 ".github/workflows/_extended_acceptance.yml"])
         for path in ("src/apps/Bakabase.App/Program.cs", "src/web/index.html", "src/libs/Bakabase.Infrastructures",
-                     "global.json", "src/scripts/prepare-macos-plist.py", ".github/workflows/_build.yml"):
+                     "global.json", "src/scripts/prepare-macos-plist.py", ".github/workflows/_build.yml",
+                     ".github/workflows/unknown.yml"):
             with self.subTest(path=path), self.assertRaises(ValueError):
                 runner.validate_changes([path])
 

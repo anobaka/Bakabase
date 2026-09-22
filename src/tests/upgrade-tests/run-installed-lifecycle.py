@@ -221,7 +221,7 @@ def audit_installed(app):
     return base.contract.check_publish(content, app["role"], require_web=app["role"] == "unified")
 
 
-def install_app(app, label):
+def install_app(app, label, audit=None):
     require(not app["installRoot"].exists(), "Install target already exists")
     app["installationAttempted"] = True
     installer = app["packages"] / app["packageAudit"]["artifacts"]["installer"]["file"]
@@ -239,7 +239,7 @@ def install_app(app, label):
         mechanism = "original-setup-silent-default-install-root"
         startup = start_app(app, label)
     return {"mechanism": mechanism, "target": str(app["installRoot"]), "startup": startup,
-            "contentAudit": audit_installed(app), "passed": True}
+            "contentAudit": (audit or audit_installed)(app), "passed": True}
 
 
 def remove_app(app, label):
@@ -349,7 +349,7 @@ def registered_products():
     return values if isinstance(values, list) else [values]
 
 
-def execute(args, results, report):
+def execute(args, results, report, *, package_auditor=None, feed_factory=None, exercise=None):
     started_epoch = time.time()
     report["currentStage"] = "preflight"
     paths = default_paths(args.rid, Path.home(), os.environ)
@@ -386,7 +386,8 @@ def execute(args, results, report):
     feed, authorization = None, None
     try:
         if getattr(args, "updates_manifest", None):
-            feed = sibling("installed-update-feed").Feed(args.updates_manifest, args.rid, args.version)
+            factory = feed_factory or sibling("installed-update-feed").Feed
+            feed = factory(args.updates_manifest, args.rid, args.version)
             isolated.update(feed.environment)
         environment = dict(os.environ, **isolated)
         if mac:
@@ -399,7 +400,7 @@ def execute(args, results, report):
                 subprocess.run(["launchctl", "setenv", key, value], check=True, timeout=20)
         for role in ROLES:
             packages = getattr(args, role + "_packages").resolve()
-            audit = base.audit_packages(packages, role, args.rid, args.version)
+            audit = (package_auditor or base.audit_packages)(packages, role, args.rid, args.version)
             product = base.contract.PRODUCTS[role]
             installed = Path("/Applications") / audit["bundleName"] if mac else Path(os.environ["LOCALAPPDATA"]) / product["assembly"]
             role_results = results / role
@@ -450,7 +451,7 @@ def execute(args, results, report):
             report["nativeAuthorizationSetup"] = authorization.evidence
             for app in apps.values():
                 app["nativeAuthorization"] = (authorization_module, authorization)
-        exercise_coexistence(apps, report, feed)
+        (exercise or exercise_coexistence)(apps, report, feed)
     except (Exception, KeyboardInterrupt) as error:
         report["failureBeforeCleanup"] = {"stage": report.get("currentStage"), "type": type(error).__name__, "message": str(error)}
         try:
