@@ -445,6 +445,32 @@ def screenshot(ipc, path):
     return {"file": path.name, "sha256": hashlib.sha256(data).hexdigest(), "sizeBytes": len(data)}
 
 
+def requested_video_output(rid):
+    require(rid in ("win-x64", "osx-x64", "osx-arm64"), "Unsupported native player platform")
+    # In the pinned mpv, native Cocoa/OpenGL is the standalone application's
+    # libmpv VO, whose preinit creates CocoaCB/GLLayer. gpu-context=cocoa does
+    # not exist in that version. Keep the other platforms' gpu-next unchanged.
+    return "libmpv" if rid == "osx-x64" else "gpu-next"
+
+
+def verify_video_output(ipc, rid, native_log):
+    actual = ipc.get("current-vo")
+    require(ipc.get("video-params/w") == 96 and ipc.get("video-params/h") == 64 and
+            actual == requested_video_output(rid), "The requested real video output was not configured")
+    witness = {"requestedVO": requested_video_output(rid), "actualVO": actual}
+    if rid == "osx-x64":
+        with native_log.open("rb") as source:
+            initial = source.read(128 * 1024).decode("utf-8", errors="replace")
+        cgl = re.search(r"\[cocoacb(?:/cocoacb)?\] Created CGL pixel format with attributes: [^\r\n]{1,512}", initial)
+        version = re.search(r"\[[^\]\r\n]+\] GL_VERSION='([^'\r\n]{1,200})'", initial)
+        renderer = re.search(r"\[[^\]\r\n]+\] GL_RENDERER='([^'\r\n]{1,200})'", initial)
+        require(cgl is not None and version is not None and renderer is not None,
+                "Native Cocoa/OpenGL initialization was not witnessed")
+        witness.update(cocoaPixelFormatCreated=True, openGLVersion=version.group(1), openGLRenderer=renderer.group(1),
+                       scope="Pinned standalone mpv Cocoa/OpenGL output; default gpu-next/macvk remains unverified on Intel")
+    return witness
+
+
 def seek_reached(ipc, target):
     # time-pos can reflect the seek target before decoding/output has settled.
     if ipc.get("seeking") is not False:
@@ -623,6 +649,7 @@ def run(args):
                         "Synthetic 120-second uncompressed AVI over loopback; not physical weak networking",
                         "MPV_HOME supplies bounded cache/IPC/proxy settings and a read-only event observer; not normal user preferences",
                         "Private settings disable ytdl fallback and do not force windows for failed/empty media; actual video must still use a real output",
+                        "Intel macOS fixes the standalone mpv Cocoa/OpenGL libmpv VO; it does not certify the default gpu-next/macvk backend",
                         "M3U and forced-lavf HLS references use owned loopback canaries, not exhaustive media-format fuzzing",
                         "HLS forces lavf's hls format and disables curl in both private configs to verify FFmpeg nested I/O despite the opaque URL/AVI MIME; not every default backend combination",
                         "M3U enables playlist option inheritance in both private configs so its positive control retains the per-file proxy bypass",
@@ -643,7 +670,7 @@ def run(args):
         address = (r"\\.\pipe\bakabase-player-" + uuid.uuid4().hex) if os.name == "nt" else str(work / "mpv.sock")
         (configuration / "mpv.conf").write_text("\n".join([
             "input-ipc-server=" + address, "idle=yes", "keep-open=yes", "force-window=no", "ao=null",
-            "vo=gpu-next", "hwdec=no", "cache=yes", "demuxer-max-bytes=1MiB", "demuxer-readahead-secs=1",
+            "vo=" + requested_video_output(args.rid), "hwdec=no", "cache=yes", "demuxer-max-bytes=1MiB", "demuxer-readahead-secs=1",
             "gpu-shader-cache-dir=" + str(cache), "icc-cache-dir=" + str(cache),
             "http-proxy=" + trap.origin, "save-position-on-quit=no", "load-scripts=no", "osc=no", "ytdl=no",
             "log-file=" + str(work / "mpv.log"), "msg-level=all=warn"]) + "\n", encoding="utf-8")
@@ -722,9 +749,8 @@ def run(args):
         report["nativePlayerProcess"]["sourcePid"] = source["process"].pid
         wait(lambda: isinstance(ipc.get("time-pos"), (int, float)) and ipc.get("time-pos") >= 1, 25,
              "Actual video playback clock did not advance")
-        require(ipc.get("video-params/w") == 96 and ipc.get("video-params/h") == 64 and
-                ipc.get("current-vo") not in (None, "null", "image", "tct", "caca"), "A real video output was not configured")
-        report["videoOutput"] = ipc.get("current-vo")
+        report["graphicsWitness"] = verify_video_output(ipc, args.rid, work / "mpv.log")
+        report["videoOutput"] = report["graphicsWitness"]["actualVO"]
         ipc.command("set_property", "pause", True)
         paused = ipc.get("time-pos")
         time.sleep(1.2)

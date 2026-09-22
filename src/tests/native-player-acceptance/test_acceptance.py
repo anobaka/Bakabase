@@ -359,6 +359,43 @@ class PlayerAcceptanceTests(unittest.TestCase):
             self.assertIn("媒体 © \ufffd", retained.decode("utf-8"))
             self.assertNotIn("a" * 64, retained.decode("utf-8"))
 
+    def test_native_video_output_is_fixed_per_platform_and_cannot_fall_back_to_no_video(self):
+        for rid, output in (("win-x64", "gpu-next"), ("osx-arm64", "gpu-next"), ("osx-x64", "libmpv")):
+            self.assertEqual(output, runner.requested_video_output(rid))
+            for wrong in (None, "null", "image", "gpu-next" if output == "libmpv" else "libmpv"):
+                ipc = Mock()
+                ipc.get.side_effect = lambda name: {"current-vo": wrong, "video-params/w": 96, "video-params/h": 64}[name]
+                with self.subTest(rid=rid, wrong=wrong), self.assertRaises(AssertionError):
+                    runner.verify_video_output(ipc, rid, Path("not-opened"))
+
+    def test_intel_requires_real_cocoa_pixel_format_and_opengl_context_witnesses(self):
+        with tempfile.TemporaryDirectory() as directory:
+            native_log = Path(directory) / "mpv.log"
+            # Fixed upstream build's actual Intel diagnostic (8b31b33c CI).
+            lines = ["[   0.797][v][cocoacb/cocoacb] Created CGL pixel format with attributes: kCGLPFAOpenGLProfile, kCGLOGLPVersion_3_2_Core, kCGLPFARendererID, kCGLRendererGenericFloatID, kCGLPFADoubleBuffer, kCGLPFAColorSize, 64, kCGLPFAColorFloat, kCGLPFABackingStore, kCGLPFAAllowOfflineRenderers, kCGLPFASupportsAutomaticGraphicsSwitching, 0",
+                     "[   1.028][v][libmpv_render] GL_VERSION='4.1 APPLE-21.1.1'",
+                     "[   1.028][v][libmpv_render] GL_RENDERER='Apple Software Renderer'"]
+            ipc = Mock()
+            ipc.get.side_effect = lambda name: {"current-vo": "libmpv", "video-params/w": 96, "video-params/h": 64}[name]
+            for omitted in range(3):
+                native_log.write_text("\n".join(line for index, line in enumerate(lines) if index != omitted))
+                with self.subTest(omitted=omitted), self.assertRaises(AssertionError):
+                    runner.verify_video_output(ipc, "osx-x64", native_log)
+            native_log.write_text("\n".join(lines))
+            witness = runner.verify_video_output(ipc, "osx-x64", native_log)
+            self.assertTrue(witness["cocoaPixelFormatCreated"])
+            self.assertEqual("libmpv", witness["actualVO"])
+            self.assertEqual("4.1 APPLE-21.1.1", witness["openGLVersion"])
+            self.assertEqual("Apple Software Renderer", witness["openGLRenderer"])
+            native_log.write_text("\n".join(lines).replace("[cocoacb/cocoacb]", "[cocoacb]"))
+            self.assertTrue(runner.verify_video_output(ipc, "osx-x64", native_log)["cocoaPixelFormatCreated"])
+            for wrong in ("other", "cocoacb/other", "other/cocoacb", "cocoacb/cocoacb/cocoacb"):
+                native_log.write_text("\n".join(lines).replace("[cocoacb/cocoacb]", "[" + wrong + "]"))
+                with self.subTest(logger=wrong), self.assertRaises(AssertionError):
+                    runner.verify_video_output(ipc, "osx-x64", native_log)
+            native_log.write_text("x" * (128 * 1024) + "\n".join(lines))
+            with self.assertRaises(AssertionError): runner.verify_video_output(ipc, "osx-x64", native_log)
+
     def test_seek_waits_for_completed_seek_and_numeric_target_position(self):
         for seeking, position, expected in ((True, 90, False), (None, 90, False),
                                              (False, None, False), (False, True, False),
