@@ -27,6 +27,7 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 
@@ -98,6 +99,119 @@ class ProxyTrap:
         self.server.server_close()
         self.thread.join(timeout=3)
         require(not self.thread.is_alive(), "Proxy thread did not stop")
+
+
+class ReferenceCanary:
+    """One owned loopback endpoint; retain counts, never requested URLs."""
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.hits, self.unexpected, self.exceeded = 0, 0, False
+        self._path = "/" + uuid.uuid4().hex + "/segment.ts"
+        owner = self
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.connection.settimeout(3)
+                with owner._lock:
+                    if self.path == owner._path:
+                        owner.hits += 1
+                    else:
+                        owner.unexpected += 1
+                    owner.exceeded |= owner.hits + owner.unexpected > 64
+                self.send_response(503 if self.path == owner._path else 404)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            do_HEAD = do_GET
+            def log_message(self, *_):
+                pass
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.url = f"http://127.0.0.1:{self.server.server_port}" + self._path
+
+    def counts(self):
+        with self._lock:
+            return {"referenceRequests": self.hits, "unexpectedRequests": self.unexpected, "budgetExceeded": self.exceeded}
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=3)
+        require(not self.thread.is_alive(), "Reference canary thread did not stop")
+
+
+def reference_payload(kind, url):
+    parsed = urllib.parse.urlsplit(url)
+    require(parsed.scheme == "http" and parsed.hostname == "127.0.0.1" and parsed.port and
+            parsed.username is None and parsed.password is None and not parsed.query and not parsed.fragment and
+            re.fullmatch(r"/[0-9a-f]{32}/segment\.ts", parsed.path), "Reference fixture must target its own loopback canary")
+    if kind == "m3u":
+        # Both parent and child use FFmpeg's input. This keeps the canary control
+        # independent of mpv's curl interpretation of the fixture proxy option.
+        return ("#EXTM3U\n#EXTINF:1,owned canary\nlavf://" + url + "\n").encode()
+    require(kind == "hls-lavf", "Unknown reference fixture")
+    return ("#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:1\n#EXT-X-MEDIA-SEQUENCE:0\n"
+            "#EXTINF:1.0,\n" + url + "\n#EXT-X-ENDLIST\n").encode()
+
+
+def event_observer_script(path, journal):
+    """Observation only: fixed events/reasons/PID; no player options or URLs."""
+    path.write_text("""local mp = require 'mp'
+local utils = require 'mp.utils'
+local count = 0
+local reasons = {eof=true, error=true, stop=true, quit=true, redirect=true}
+local function record(name, event)
+    count = count + 1
+    if count > 65 then return end
+    local value = {event=name, pid=mp.get_property_number('pid')}
+    if count == 65 then value.event = 'overflow' end
+    if name == 'end-file' then
+        value.reason = reasons[event.reason] and event.reason or 'unknown'
+        value.errorPresent = type(event.error) == 'string' and event.error ~= ''
+    end
+    local output = assert(io.open(""" + json.dumps(str(journal), ensure_ascii=False) + """, 'ab'))
+    output:write(utils.format_json(value), '\\n')
+    output:close()
+end
+for _, name in ipairs({'start-file', 'file-loaded', 'end-file'}) do
+    mp.register_event(name, function(event) record(name, event) end)
+end
+""", encoding="utf-8")
+
+
+def playback_completion(journal, pid):
+    if not journal.exists():
+        return None
+    require(journal.stat().st_size <= 32768, "Player event evidence exceeded its bound")
+    data = journal.read_bytes()
+    # An atomic write is not assumed; a partial last line is still in progress.
+    if data and not data.endswith(b"\n"):
+        return None
+    lines = data.split(b"\n")[:-1]
+    require(len(lines) <= 64, "Player event count exceeded its bound")
+    events, started = [], False
+    for line in lines:
+        value = json.loads(line)
+        name = value.get("event")
+        require(value.get("pid") == pid and type(value.get("pid")) in (int, float) and
+                name in ("start-file", "file-loaded", "end-file"), "Unexpected player event identity")
+        value["pid"] = int(value["pid"])
+        if name == "start-file":
+            started = True
+        else:
+            require(started, "Player terminal event arrived without a load attempt")
+        if name == "end-file":
+            require(value.get("reason") in ("eof", "error", "stop", "quit", "redirect", "unknown") and
+                    type(value.get("errorPresent")) is bool, "Unexpected player end-file evidence")
+        require(set(value) == ({"event", "pid", "reason", "errorPresent"} if name == "end-file" else {"event", "pid"}),
+                "Player event retained unexpected data")
+        events.append(value)
+    # Redirecting a playlist or being idle before opening it is not a completed
+    # attempt. Require actual EOF/error, not an operator stop/quit or elapsed sleep.
+    terminal = next((value for value in reversed(events) if value["event"] == "end-file" and
+                     value["reason"] in ("eof", "error")), None)
+    if terminal is None or events[-1] != terminal:
+        return None
+    return {"outcome": terminal["reason"], "events": events, "passed": True}
 
 
 class WindowsPipe:
@@ -311,7 +425,14 @@ def parent_pid(pid):
 
 
 def redact(text):
+    text = re.sub(r"(?:lavf://)?https?://[^\s\"'<>]+", "[redacted-url]", text, flags=re.IGNORECASE)
     return re.sub(r"[a-fA-F0-9]{64}", "[redacted-ticket-or-digest]", text)
+
+
+def retain_log(path, results):
+    with path.open("rb") as source:
+        source.seek(max(0, path.stat().st_size - 128 * 1024))
+        (results / path.name).write_text(redact(source.read().decode("utf-8", errors="replace")), encoding="utf-8")
 
 
 def screenshot(ipc, path):
@@ -332,6 +453,130 @@ def seek_reached(ipc, target):
     return type(position) in (int, float) and position >= target - .2
 
 
+def reference_asset(reader, reference, payload):
+    """Resolve again, then prove the real preview ticket serves the altered asset."""
+    detail = api(reader["origin"], "/federation/local/resources/resolve", "POST", {"refs": [reference]})["resources"][0]
+    asset = base.one((value for value in detail["assets"] if value["kind"] == "video"), "fresh remote video asset")
+    asset_ref = {"resourceRef": reference, "assetId": asset["assetId"]}
+    session = api(reader["origin"], "/federation/local/playback-sessions", "POST", {"assetRef": asset_ref, "mode": "preview"})
+    url = session.get("url", "")
+    require(session.get("launched") is False and
+            re.fullmatch(re.escape(reader["origin"]) + r"/federation/local/media/[a-f0-9]{64}", url),
+            "Control ticket is not this receiver's opaque loopback media URL")
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(url, timeout=10) as response:
+        require(response.status == 200 and response.read(4097) == payload,
+                "Federation did not serve the exact altered reference fixture")
+    return asset_ref, url
+
+
+def observed_player(ipc, observer, executable, expected_parent, source_pid):
+    pid = ipc.get("pid")
+    records = wait(lambda: [p for p in observer.current(executable) if p["pid"] == pid], 5,
+                   "Reference-test player executable identity differs")
+    require(len(observer.current(executable)) == 1, "Unexpected player on receiver or source")
+    parent = parent_pid(pid)
+    require(parent == expected_parent and parent != source_pid, "Reference player has the wrong owning process")
+    return dict(records[0], parentPid=parent, sourcePid=source_pid)
+
+
+def close_reference_player(ipc, context, child=None):
+    ipc.command("quit")
+    if child is not None:
+        child.wait(timeout=10)
+    wait(lambda: not context["observer"].current(context["executable"]), 10, "Reference-test player did not exit")
+    ipc.close()
+    context["ipcs"].remove(ipc)
+    if os.name != "nt":
+        Path(ipc.address).unlink(missing_ok=True)
+
+
+def verify_reference_counts(control, after):
+    require(control["referenceRequests"] > 0 and control["unexpectedRequests"] == 0 and not control["budgetExceeded"],
+            "Reference control never reached its owned canary, or exceeded its request contract")
+    require(after == control, "Production player followed an embedded reference")
+    return {"controlRequests": control["referenceRequests"], "productionRequests": 0,
+            "unexpectedRequests": 0, "budgetExceeded": False, "passed": True}
+
+
+def exercise_references(kind, context, report):
+    """Same bytes/player/config; only the control opts into references manually."""
+    executable, work = context["executable"], context["work"]
+    reader, source, observer = context["reader"], context["source"], context["observer"]
+    require(not observer.current(executable), "A previous player is still running")
+    require(reader["process"].poll() is None and source["process"].poll() is None, "A federation host exited")
+    if os.name != "nt":
+        Path(context["address"]).unlink(missing_ok=True)
+    canary = ReferenceCanary()
+    context["canaries"].append(canary)
+    payload = reference_payload(kind, canary.url)
+    require(len(payload) <= 4096, "Reference fixture exceeds its bound")
+    media = source["directory"] / "fixture.avi"
+    require(media.is_file() and not media.is_symlink() and media.resolve().is_relative_to(work), "Source fixture is not owned")
+    media.write_bytes(payload)
+    journal, script = work / (kind + "-events.jsonl"), work / (kind + "-events.lua")
+    event_observer_script(script, journal)
+    configuration = context["configuration"] / "mpv.conf"
+    extra = ["script=" + str(script), "log-file=" + str(work / ("mpv-reference-" + kind + ".log"))]
+    if kind == "hls-lavf":
+        # The pinned development mpv routes nested HTTP through curl by default,
+        # where direct:// is not a proxy bypass. Exercise FFmpeg nested I/O on
+        # both sides so a broken control cannot masquerade as reference denial.
+        extra += ["demuxer=lavf", "demuxer-lavf-allow-mimetype=no", "curl-enabled=no"]
+    else:
+        # A playlist redirect otherwise loses per-file direct:// and lets the
+        # control's child use the adversarial proxy. Keep both sides identical.
+        extra += ["playlist-inherit-options=yes"]
+    configuration.write_text(context["originalConfiguration"] + "\n".join(extra) + "\n", encoding="utf-8")
+    config_hash = base.sha256(configuration)
+    case = report.setdefault("embeddedReferences", {})[kind] = {
+        "passed": False, "fixtureSizeBytes": len(payload), "fixtureSHA256": hashlib.sha256(payload).hexdigest(),
+        "forcedLavfDemuxer": kind == "hls-lavf", "curlDisabled": kind == "hls-lavf",
+        "playlistInheritsPerFileOptions": kind == "m3u",
+        "configurationSHA256": config_hash}
+    report["currentStage"] = "reference-control-" + kind
+    api(reader["origin"], "/federation/local/peers/browsing", "PUT", {"enabled": True})
+    _, control_url = reference_asset(reader, context["reference"], payload)
+    log = (work / ("reference-" + kind + "-control.log")).open("wb")
+    context["streams"].append(log)
+    child = subprocess.Popen([str(executable), "--{", "--http-proxy=direct://", "lavf://" + control_url,
+                              "--access-references=yes", "--}"], env=context["environment"], stdout=log, stderr=subprocess.STDOUT)
+    context["children"].append(child)
+    ipc = IPC(context["address"])
+    context["ipcs"].append(ipc)
+    ipc.connect(time.monotonic() + 20)
+    case["controlProcess"] = observed_player(ipc, observer, executable, os.getpid(), source["process"].pid)
+    require(case["controlProcess"]["pid"] == child.pid, "Control IPC belongs to a different process")
+    case["controlCompletion"] = wait(lambda: playback_completion(journal, child.pid), 30,
+                                      "Reference control never completed a load with EOF/error")
+    close_reference_player(ipc, context, child)
+    control_counts = canary.counts()
+    verify_reference_counts(control_counts, control_counts)
+    case["controlRequests"] = control_counts["referenceRequests"]
+    # All control I/O and processes have exited before resetting observation.
+    journal.write_bytes(b"")
+    require(base.sha256(configuration) == config_hash, "Reference-test configurations differ")
+    report["currentStage"] = "reference-production-" + kind
+    asset_ref, _ = reference_asset(reader, context["reference"], payload)
+    proxy_before = context["trap"].hits
+    launched = api(reader["origin"], "/federation/local/playback-sessions", "POST", {"assetRef": asset_ref, "mode": "player"})
+    require(launched.get("launched") is True and launched.get("url") is None, "Production reference fixture was not launched")
+    ipc = IPC(context["address"])
+    context["ipcs"].append(ipc)
+    ipc.connect(time.monotonic() + 20)
+    case["productionProcess"] = observed_player(ipc, observer, executable, reader["process"].pid, source["process"].pid)
+    require(case["productionProcess"]["pid"] != child.pid, "Production reused the control player")
+    case["productionCompletion"] = wait(lambda: playback_completion(journal, case["productionProcess"]["pid"]), 30,
+                                         "Production reference load never reached EOF/error")
+    close_reference_player(ipc, context)
+    case["canary"] = verify_reference_counts(control_counts, canary.counts())
+    require(context["trap"].hits == proxy_before, "Production reference fixture used the adversarial proxy")
+    require(reader["process"].poll() is None and source["process"].poll() is None and not observer.errors,
+            "Reference test lost a host or its process observer")
+    case.update(passed=True, sourcePlayerCount=0, productionProxyRequests=0, freshOpaqueAssetResolved=True,
+                identicalFixtureBytesVerified=True, identicalPrivateConfigurationVerified=True)
+
+
 def run(args):
     base.require_hosted_runner(os.environ, platform.system(), platform.machine(), args.rid)
     executable, results = args.mpv.resolve(), args.results_directory.resolve()
@@ -344,12 +589,16 @@ def run(args):
     work = Path(tempfile.mkdtemp(prefix="bakabase-player-", dir=os.environ["RUNNER_TEMP"])).resolve()
     report = {"passed": False, "rid": args.rid, "gitHead": subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(), "player": provenance,
-        "scope": "Production federation policy/discovery/launcher and two Service TestHosts; native mpv video output",
+        "scope": "Production federation policy/discovery/launcher, native mpv video output and owned embedded-reference canaries",
         "limitations": ["Pinned mpv development build; not VLC/IINA or every player version",
                         "Synthetic 120-second uncompressed AVI over loopback; not physical weak networking",
-                        "MPV_HOME supplies bounded cache/IPC/proxy fixture settings; not normal user preferences",
+                        "MPV_HOME supplies bounded cache/IPC/proxy settings and a read-only event observer; not normal user preferences",
+                        "M3U and forced-lavf HLS references use owned loopback canaries, not exhaustive media-format fuzzing",
+                        "HLS disables curl in both control and production private configs to verify FFmpeg nested I/O; not every default backend combination",
+                        "M3U enables playlist option inheritance in both private configs so its positive control retains the per-file proxy bypass",
                         "Video screenshots verify decoded frames, not physical display presentation"]}
     children, streams, ipc, trap, observer, native_created = [], [], None, None, None, False
+    reference_ipcs, canaries = [], []
     cleanup_errors = []
     try:
         video = work / "fixture.avi"
@@ -359,12 +608,15 @@ def run(args):
         trap = ProxyTrap()
         configuration = work / "mpv-config"
         configuration.mkdir()
+        cache = work / "mpv-cache"
+        cache.mkdir()
         address = (r"\\.\pipe\bakabase-player-" + uuid.uuid4().hex) if os.name == "nt" else str(work / "mpv.sock")
         (configuration / "mpv.conf").write_text("\n".join([
             "input-ipc-server=" + address, "idle=yes", "keep-open=yes", "force-window=yes", "ao=null",
             "vo=gpu-next", "hwdec=no", "cache=yes", "demuxer-max-bytes=1MiB", "demuxer-readahead-secs=1",
+            "gpu-shader-cache-dir=" + str(cache), "icc-cache-dir=" + str(cache),
             "http-proxy=" + trap.origin, "save-position-on-quit=no", "load-scripts=no", "osc=no",
-            "log-file=" + str(work / "mpv.log"), "msg-level=all=warn"]) + "\n")
+            "log-file=" + str(work / "mpv.log"), "msg-level=all=warn"]) + "\n", encoding="utf-8")
         player_environment = dict(os.environ, MPV_HOME=str(configuration), NO_PROXY="", no_proxy="",
                                   PATH=str(executable.parent) + os.pathsep + os.environ["PATH"])
         # Positive control: the same private player configuration really contacts
@@ -470,6 +722,13 @@ def run(args):
         wait(lambda: not observer.current(executable), 10, "Production player did not exit")
         ipc.close()
         ipc = None
+        reference_context = {"executable": executable, "work": work, "reader": reader, "source": source,
+            "observer": observer, "address": address, "configuration": configuration,
+            "originalConfiguration": (configuration / "mpv.conf").read_text(encoding="utf-8"),
+            "environment": player_environment, "reference": reference, "streams": streams, "children": children,
+            "ipcs": reference_ipcs, "canaries": canaries, "trap": trap}
+        for kind in ("m3u", "hls-lavf"):
+            exercise_references(kind, reference_context, report)
         for node in nodes:
             node["process"].terminate()
             node["process"].wait(timeout=10)
@@ -494,10 +753,14 @@ def run(args):
                 cleanup_errors.append({"stage": label, "type": type(error).__name__})
         if ipc:
             cleanup("request-player-quit", lambda: ipc.command("quit", timeout=2))
+        for reference_ipc in reference_ipcs:
+            cleanup("request-reference-player-quit", lambda ipc=reference_ipc: ipc.command("quit", timeout=2))
         if native_created:
             cleanup("stop-owned-player", lambda: base.stop_native(executable))
         if ipc:
             cleanup("close-player-ipc", ipc.close)
+        for reference_ipc in reference_ipcs:
+            cleanup("close-reference-player-ipc", reference_ipc.close)
         for child in children:
             def stop():
                 if child.poll() is None:
@@ -515,12 +778,10 @@ def run(args):
             cleanup("close-log", stream.close)
         if trap:
             cleanup("close-proxy", trap.close)
+        for canary in canaries:
+            cleanup("close-reference-canary", canary.close)
         for path in work.glob("*.log"):
-            def retain_log(path=path):
-                with path.open("rb") as source:
-                    source.seek(max(0, path.stat().st_size - 128 * 1024))
-                    (results / path.name).write_text(redact(source.read().decode("utf-8", errors="replace")))
-            cleanup("retain-sanitized-log", retain_log)
+            cleanup("retain-sanitized-log", lambda path=path: retain_log(path, results))
         cleanup("remove-owned-fixtures", lambda: shutil.rmtree(work))
         report["ownedFilesRemoved"] = not work.exists()
         report["cleanupErrors"] = cleanup_errors

@@ -5,6 +5,7 @@ import io
 import json
 from pathlib import Path
 import struct
+import tarfile
 import tempfile
 import types
 import unittest
@@ -33,6 +34,43 @@ class NativeFunction:
 
 
 class PlayerAcceptanceTests(unittest.TestCase):
+    @unittest.skipIf(runner.os.name == "nt", "macOS bundle symlink extraction requires POSIX permissions")
+    def test_upstream_macos_tarball_preserves_executable_and_internal_links(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with tarfile.open(root / "mpv.tar.gz", "w:gz") as archive:
+                item = tarfile.TarInfo("mpv.app/Contents/MacOS/mpv")
+                item.mode, item.size = 0o755, 7
+                archive.addfile(item, io.BytesIO(b"fixture"))
+                link = tarfile.TarInfo("mpv.app/Contents/MacOS/mpv-link")
+                link.type, link.linkname = tarfile.SYMTYPE, "mpv"
+                archive.addfile(link)
+            report = prepare.extract_macos_bundle(root)
+            executable = root / "bundle/mpv.app/Contents/MacOS/mpv"
+            self.assertEqual(executable.read_bytes(), b"fixture")
+            self.assertEqual((executable.parent / "mpv-link").resolve(), executable.resolve())
+            self.assertFalse((root / "mpv.tar.gz").exists())
+            self.assertEqual(report["uncompressedBytes"], 7)
+            if runner.os.name != "nt":
+                self.assertEqual(executable.stat().st_mode & 0o777, 0o755)
+
+    def test_macos_bundle_rejects_traversal_external_symlinks_and_special_files(self):
+        for kind in ("traversal", "symlink", "device", "duplicate"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                with tarfile.open(root / "mpv.tar.gz", "w:gz") as archive:
+                    item = tarfile.TarInfo("../escaped" if kind == "traversal" else "mpv.app/item")
+                    if kind == "symlink":
+                        item.type, item.linkname = tarfile.SYMTYPE, "../../escaped"
+                    elif kind == "device":
+                        item.type = tarfile.CHRTYPE
+                    archive.addfile(item)
+                    if kind == "duplicate":
+                        archive.addfile(item)
+                with self.assertRaises(AssertionError):
+                    prepare.extract_macos_bundle(root)
+                self.assertFalse((root / "bundle").exists())
+
     def test_requires_hosted_runner_before_any_player_or_filesystem_action(self):
         with patch.dict(runner.os.environ, {}, clear=True), patch.object(runner.tempfile, "mkdtemp") as create:
             with self.assertRaisesRegex(AssertionError, "disposable"):
@@ -97,6 +135,142 @@ class PlayerAcceptanceTests(unittest.TestCase):
 
     def test_logs_redact_media_tickets(self):
         self.assertNotIn("a" * 64, runner.redact("http://localhost/media/" + "a" * 64))
+        for text in ("lavf://http://127.0.0.1:3456/owned-canary", 'HTTPS://127.0.0.1:3456/owned-canary'):
+            self.assertNotIn("127.0.0.1", runner.redact(text))
+            self.assertNotIn("owned-canary", runner.redact(text))
+
+    def test_reference_payloads_only_target_the_owned_canary(self):
+        url = "http://127.0.0.1:3456/" + "a" * 32 + "/segment.ts"
+        m3u = runner.reference_payload("m3u", url).decode()
+        hls = runner.reference_payload("hls-lavf", url).decode()
+        self.assertEqual(["lavf://" + url], [line for line in m3u.splitlines() if not line.startswith("#")])
+        self.assertEqual([url], [line for line in hls.splitlines() if not line.startswith("#")])
+        self.assertIn("#EXT-X-ENDLIST", hls)
+        self.assertNotIn("#EXT-X", m3u)
+        for invalid in (url.replace("127.0.0.1", "example.org"), url + "?redirect=other", url + "#fragment",
+                        url.replace("http://", "file://"), url.replace("127.0.0.1", "user@127.0.0.1"),
+                        url.replace("a" * 32, "../other")):
+            with self.subTest(invalid=invalid), self.assertRaises(AssertionError): runner.reference_payload("m3u", invalid)
+
+    def test_owned_canary_records_counts_without_retaining_urls(self):
+        canary = runner.ReferenceCanary()
+        self.addCleanup(canary.close)
+        opener = runner.urllib.request.build_opener(runner.urllib.request.ProxyHandler({}))
+        with self.assertRaises(runner.urllib.error.HTTPError) as caught:
+            opener.open(canary.url, timeout=3)
+        self.assertEqual(503, caught.exception.code)
+        caught.exception.close()
+        self.assertEqual({"referenceRequests": 1, "unexpectedRequests": 0, "budgetExceeded": False}, canary.counts())
+        self.assertNotIn("http", json.dumps(canary.counts()))
+        with self.assertRaises(runner.urllib.error.HTTPError) as caught:
+            opener.open(canary.url + "-wrong", timeout=3)
+        self.assertEqual(404, caught.exception.code)
+        caught.exception.close()
+        self.assertEqual(1, canary.counts()["unexpectedRequests"])
+
+    def test_reference_attempt_requires_real_eof_or_error_after_start_not_idle_redirect_or_quit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            journal = Path(directory) / "events.jsonl"
+            self.assertIsNone(runner.playback_completion(journal, 123))
+            start = {"event": "start-file", "pid": 123}
+            for events in ([], [start], [start, {"event": "file-loaded", "pid": 123}],
+                           *([start, {"event": "end-file", "pid": 123, "reason": reason, "errorPresent": False}]
+                             for reason in ("stop", "quit", "redirect", "unknown"))):
+                journal.write_text("".join(json.dumps(item) + "\n" for item in events))
+                self.assertIsNone(runner.playback_completion(journal, 123))
+            for reason in ("eof", "error"):
+                events = [start, {"event": "end-file", "pid": 123.0, "reason": reason, "errorPresent": reason == "error"}]
+                journal.write_text("".join(json.dumps(item) + "\n" for item in events))
+                self.assertEqual(reason, runner.playback_completion(journal, 123)["outcome"])
+                with journal.open("ab") as stream: stream.write(b'{"event":')
+                self.assertIsNone(runner.playback_completion(journal, 123), "A partially written following event is not terminal")
+
+    def test_reference_events_reject_foreign_pid_unknown_fields_overflow_and_no_load_attempt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            journal = Path(directory) / "events.jsonl"
+            start = {"event": "start-file", "pid": 123}
+            end = {"event": "end-file", "pid": 123, "reason": "error", "errorPresent": True}
+            for events in ([dict(start, pid=999), end], [dict(start, pid=True)], [end],
+                           [dict(start, url="must-not-retain")], [start, dict(end, reason="unbounded text")],
+                           [start, dict(end, event="overflow")], [start] * 65):
+                journal.write_text("".join(json.dumps(item) + "\n" for item in events))
+                with self.assertRaises(AssertionError): runner.playback_completion(journal, 123)
+            journal.write_bytes(b"x" * 32769)
+            with self.assertRaises(AssertionError): runner.playback_completion(journal, 123)
+
+    def test_reference_control_must_trigger_canary_and_production_must_not_add_requests(self):
+        good = {"referenceRequests": 2, "unexpectedRequests": 0, "budgetExceeded": False}
+        self.assertEqual(0, runner.verify_reference_counts(good, good)["productionRequests"])
+        for control, after in ((dict(good, referenceRequests=0), dict(good, referenceRequests=0)),
+                               (good, dict(good, referenceRequests=3)), (good, dict(good, unexpectedRequests=1)),
+                               (dict(good, budgetExceeded=True), dict(good, budgetExceeded=True))):
+            with self.assertRaises(AssertionError): runner.verify_reference_counts(control, after)
+
+    def test_reference_flow_uses_same_config_and_production_api_without_security_argument_override(self):
+        for kind in ("m3u", "hls-lavf"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
+                work = Path(directory).resolve()
+                source = {"directory": work / "source", "process": Mock(pid=30)}
+                source["directory"].mkdir()
+                (source["directory"] / "fixture.avi").write_bytes(b"owned initial video")
+                reader = {"origin": "http://127.0.0.1:3456", "process": Mock(pid=20)}
+                reader["process"].poll.return_value = source["process"].poll.return_value = None
+                configuration = work / "config"
+                configuration.mkdir()
+                observer = Mock(errors=[])
+                observer.current.return_value = []
+                control, production = Mock(address=str(work / "ipc")), Mock(address=str(work / "ipc"))
+                child = Mock(pid=100)
+                canary = Mock(url="http://127.0.0.1:3457/" + "a" * 32 + "/segment.ts")
+                canary.counts.return_value = {"referenceRequests": 1, "unexpectedRequests": 0, "budgetExceeded": False}
+                context = {"work": work, "executable": work / "unused-mpv", "reader": reader, "source": source,
+                    "observer": observer, "address": str(work / "ipc"), "configuration": configuration,
+                    "originalConfiguration": "load-scripts=no\n", "environment": {"MPV_HOME": str(configuration)},
+                    "reference": {"opaque": "resource"}, "streams": [], "children": [], "ipcs": [], "canaries": [], "trap": Mock(hits=0)}
+                report = {}
+                try:
+                    with patch.object(runner, "ReferenceCanary", return_value=canary), \
+                         patch.object(runner, "IPC", side_effect=[control, production]), \
+                         patch.object(runner.subprocess, "Popen", return_value=child) as spawn, \
+                         patch.object(runner, "reference_asset", return_value=({"opaque": "asset"}, reader["origin"] + "/federation/local/media/" + "b" * 64)) as resolve, \
+                         patch.object(runner, "observed_player", side_effect=[{"pid": 100}, {"pid": 200}]), \
+                         patch.object(runner, "playback_completion", return_value={"outcome": "error", "events": [], "passed": True}), \
+                         patch.object(runner, "api", return_value={"launched": True}) as api:
+                        runner.exercise_references(kind, context, report)
+                    self.assertEqual(1, spawn.call_count)
+                    arguments = spawn.call_args.args[0]
+                    self.assertIn("--access-references=yes", arguments)
+                    self.assertNotIn("--access-references=no", arguments)
+                    production_call = api.call_args_list[-1]
+                    self.assertEqual({"assetRef": {"opaque": "asset"}, "mode": "player"}, production_call.args[3])
+                    self.assertEqual(2, resolve.call_count)
+                    self.assertEqual([], context["ipcs"])
+                    self.assertTrue(report["embeddedReferences"][kind]["passed"])
+                    self.assertEqual(0, report["embeddedReferences"][kind]["canary"]["productionRequests"])
+                    self.assertEqual(kind == "hls-lavf", "demuxer=lavf\n" in (configuration / "mpv.conf").read_text())
+                    self.assertEqual(kind == "hls-lavf", "curl-enabled=no\n" in (configuration / "mpv.conf").read_text())
+                    self.assertEqual(kind == "hls-lavf", report["embeddedReferences"][kind]["curlDisabled"])
+                    self.assertEqual(kind == "m3u", "playlist-inherit-options=yes\n" in (configuration / "mpv.conf").read_text())
+                    self.assertEqual(kind == "m3u", report["embeddedReferences"][kind]["playlistInheritsPerFileOptions"])
+                    script = (work / (kind + "-events.lua")).read_text()
+                    self.assertNotIn("set_property", script)
+                    self.assertNotIn("command", script)
+                    self.assertNotIn("url", script.lower())
+                finally:
+                    for stream in context["streams"]: stream.close()
+
+    def test_retained_unicode_log_is_utf8_bounded_and_redacted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            results = root / "results"
+            results.mkdir()
+            log = root / "owned.log"
+            log.write_bytes(b"x" * (150 * 1024) + ("\n媒体 © \ufffd " + "a" * 64).encode("utf-8"))
+            runner.retain_log(log, results)
+            retained = (results / log.name).read_bytes()
+            self.assertLessEqual(len(retained), 128 * 1024)
+            self.assertIn("媒体 © \ufffd", retained.decode("utf-8"))
+            self.assertNotIn("a" * 64, retained.decode("utf-8"))
 
     def test_seek_waits_for_completed_seek_and_numeric_target_position(self):
         for seeking, position, expected in ((True, 90, False), (None, 90, False),

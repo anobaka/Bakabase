@@ -4,9 +4,10 @@ import argparse
 import importlib.util
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import platform
 import subprocess
+import tarfile
 
 HERE = Path(__file__).resolve().parent
 
@@ -36,6 +37,39 @@ def validate_asset(value, rid):
     return name
 
 
+def extract_macos_bundle(payload):
+    # The pinned upstream workflow uploads mpv.tar.gz inside the artifact ZIP
+    # to preserve the app bundle's executable modes and relative dylib links.
+    source = payload / "mpv.tar.gz"
+    base.require(source.is_file() and not source.is_symlink() and list(payload.iterdir()) == [source],
+                 "Expected the pinned macOS artifact's single bundle tarball")
+    destination = payload / "bundle"
+    base.require(not destination.exists(), "mpv bundle destination must be fresh")
+    with tarfile.open(source, "r:gz") as archive:
+        members, seen, total = [], set(), 0
+        for member in archive:
+            name = PurePosixPath(member.name)
+            base.require(len(members) < 4096 and not name.is_absolute() and name.parts and
+                         name.parts[0] == "mpv.app" and ".." not in name.parts and
+                         "\\" not in member.name and "\x00" not in member.name and
+                         not any(":" in part for part in name.parts) and member.name not in seen and
+                         (member.isfile() or member.isdir() or member.issym()), "Unsafe mpv bundle entry")
+            if member.issym():
+                base.require(not Path(member.linkname).is_absolute() and "\\" not in member.linkname and
+                             (destination / member.name).parent.joinpath(member.linkname).resolve().is_relative_to(
+                                 (destination / "mpv.app").resolve()), "Unsafe mpv bundle symlink")
+            total += member.size
+            base.require(total <= 512 * 1024 ** 2, "mpv bundle exceeds its extraction budget")
+            members.append(member)
+            seen.add(member.name)
+        base.require(members, "mpv bundle is empty")
+        # Python's data filter additionally rejects links outside the destination
+        # using actual filesystem resolution, including earlier archive symlinks.
+        archive.extractall(destination, members=members, filter="data")
+    source.unlink()
+    return {"members": len(members), "uncompressedBytes": total, "source": "mpv.tar.gz"}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rid", required=True, choices=PINNED)
@@ -57,13 +91,15 @@ def main():
     inputs.verify_archive(archive, {"size_in_bytes": size, "digest": "sha256:" + digest})
     base.unpack(archive, root / "payload")
     archive.unlink()
+    bundle = extract_macos_bundle(root / "payload") if args.rid.startswith("osx-") else None
     executable = base.one((p for p in (root / "payload").rglob("mpv.exe" if args.rid == "win-x64" else "mpv")
                            if p.is_file() and not p.is_symlink()), "pinned mpv executable")
     base.require(os.access(executable, os.X_OK), "Extracted mpv is not executable")
     result = {"passed": True, "rid": args.rid, "repository": "mpv-player/mpv", "sourceCommitPrefix": "c6c4c38d7",
               "buildRun": 35659722192, "assetID": identifier, "assetName": name, "assetBytes": size,
               "assetSHA256": digest, "executable": str(executable), "executableSHA256": base.sha256(executable),
-              "version": subprocess.check_output([str(executable), "--version"], timeout=20, text=True)[:2048],
+              "bundleExtraction": bundle,
+              "version": subprocess.check_output([str(executable), "--version"], timeout=20).decode("utf-8", errors="replace")[:2048],
               "scope": "Pinned first-party development CI build; not all installed player versions"}
     (root / "provenance.json").write_text(json.dumps(result, indent=2) + "\n")
     if os.environ.get("GITHUB_OUTPUT"):
