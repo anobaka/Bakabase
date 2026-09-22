@@ -8,8 +8,9 @@ function ownedAX(input, budgetMs) {
   const allowed=['AXRole','AXSubrole','AXTitle','AXDescription','AXIdentifier','AXEnabled',
     'AXHidden','AXMinimized','AXChildren','AXWindows','AXValue','AXPosition','AXSize','AXParent'];
   let stage='initialize', operation='initialize', reads=0;
-  function fail(code, attribute=null, axError=null) {
-    throw {safe:true,code:code,stage:stage,operation:operation,attribute:attribute,axError:axError};
+  function fail(code, attribute=null, axError=null, count=null) {
+    throw {safe:true,code:code,stage:stage,operation:operation,attribute:attribute,axError:axError,
+      countKind:count?count.kind:null,countValue:count?count.value:null};
   }
   function check() {
     if(Date.now()-began>=limit) fail('DirectAXTreeDeadline');
@@ -69,9 +70,23 @@ function ownedAX(input, budgetMs) {
   }
   function children(ref,role) {
     // Only the known static-text leaf may omit AXChildren. A container, an
-    // editable control or an unknown role must explicitly return an array.
-    const value=read(ref,'AXChildren',role==='AXStaticText');
-    return value===null?[]:array(value,input.maxNodes);
+    // editable control or an unknown role must return an array or independently
+    // confirm that a NoValue attribute has exactly zero elements.
+    let value;
+    try {value=read(ref,'AXChildren',role==='AXStaticText');}
+    catch(error) {
+      if(!error||!error.safe||error.attribute!=='AXChildren'||error.axError!==-25212) throw error;
+      verifyPid(ref);check();operation='read-children-count';
+      const count=Ref(),countError=Number($.AXUIElementGetAttributeValueCount(ref,$('AXChildren'),count));
+      if(countError!==0) fail('DirectAXCallFailed','AXChildren',countError);
+      const normalized=cfIndex(count[0],input.maxNodes);
+      if(normalized.value!==0)
+        fail('DirectAXChildrenCountMismatch','AXChildren',-25212,normalized);
+      verifyPid(ref);
+      return {values:[],evidence:'no-value-count-zero',countKind:normalized.kind};
+    }
+    return {values:value===null?[]:array(value,input.maxNodes),
+      evidence:value===null?'static-text-unsupported':'explicit-array'};
   }
   function actions(ref) {
     check();
@@ -187,7 +202,9 @@ function ownedAX(input, budgetMs) {
             node.visible=exposure.visible;node.visibilityEvidence=exposure.evidence;
           }
           nodes.push(node);elements.set(path.join('/'),ref);
-          const nested=children(ref,role);
+          const childResult=children(ref,role),nested=childResult.values;
+          node.childrenEvidence=childResult.evidence;node.childCount=nested.length;
+          node.childrenCountKind=childResult.countKind||null;
           for(let child=0;child<nested.length;child++) walk(nested[child],path.concat(child),depth+1,inWeb,ancestors.concat([ref]),
             editableAncestor||editable.includes(role));
         }
@@ -198,7 +215,8 @@ function ownedAX(input, budgetMs) {
     } catch(error) {
       snapshot.truncated=true;
       snapshot.errorStage=error&&error.safe?error.stage:stage;
-      snapshot.diagnostic=error&&error.safe?{code:error.code,operation:error.operation,attribute:error.attribute,axError:error.axError}:
+      snapshot.diagnostic=error&&error.safe?{code:error.code,operation:error.operation,attribute:error.attribute,axError:error.axError,
+        countKind:error.countKind,countValue:error.countValue}:
         {code:'DirectAXTreeUnavailable',operation:operation,attribute:null,axError:null};
     }
     snapshot.elapsedMs=Date.now()-began;
@@ -212,7 +230,7 @@ function ownedAX(input, budgetMs) {
     if(!visible(application,ref)) fail('DirectAXControlInvisible');
     const window=ref;
     for(let i=1;i<path.length;i++) {
-      const nested=children(ref,string(read(ref,'AXRole')));
+      const nested=children(ref,string(read(ref,'AXRole'))).values;
       if(!nested[path[i]]) fail('DirectAXControlChanged');
       ref=element(nested[path[i]]);
       verifyPid(ref);
@@ -234,7 +252,8 @@ function ownedAX(input, budgetMs) {
     if(!snapshot.enabled||snapshot.truncated) {
       if(snapshot.diagnostic) throw {safe:true,stage:snapshot.errorStage||'read-tree',
         code:snapshot.diagnostic.code,operation:snapshot.diagnostic.operation,
-        attribute:snapshot.diagnostic.attribute,axError:snapshot.diagnostic.axError};
+        attribute:snapshot.diagnostic.attribute,axError:snapshot.diagnostic.axError,
+        countKind:snapshot.diagnostic.countKind,countValue:snapshot.diagnostic.countValue};
       fail('DirectAXActionTreeIncomplete');
     }
     const candidates=snapshot.windows.filter(w=>w.visible).flatMap(w=>w.nodes).filter(n=>n.insideWebContent&&

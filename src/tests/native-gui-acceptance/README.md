@@ -27,8 +27,10 @@ selected; editable values are never read. Unknown subtree errors, cycles and
 budget exhaustion produce partial trees and cannot establish absence/uniqueness.
 Only the conservative `AXStaticText` leaf allowlist may report unsupported
 `AXChildren`. Containers, editable controls and unknown roles must return an
-explicit array, including an empty array for no children. Other child-read
-errors, including `NoValue`, are partial.
+explicit array. A `NoValue` result is accepted as empty only when the separate
+`AXUIElementGetAttributeValueCount` call succeeds with exactly zero, with process
+identity checked before and after. The node records `no-value-count-zero` evidence.
+Unknown, nonzero or failed counts and every other child-read error remain partial.
 
 Every node's PID is checked before reading its role or metadata. Descendants of
 `AXTextField`, `AXTextArea` and `AXComboBox` are structurally traversed, but their

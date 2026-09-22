@@ -51,6 +51,7 @@ if(options.editableDescendants) {
 }
 if(options.foreignNonWeb) {const foreign=node('foreign-static','AXStaticText',{AXValue:'OTHER-PROCESS-CONTENT'});foreign.pid=900;window.children.push(foreign);}
 if(options.hiddenContainer) {const group=node('hidden-container','AXGroup');group.children=[node('hidden-duplicate','AXButton',{AXTitle:'Close',AXEnabled:true})];web.children.push(group);}
+if(options.emptyGroup)web.children.push(node('empty-group','AXGroup'));
 if(options.duplicate)web.children.push(node('duplicate','AXButton',{AXTitle:'Close',AXIdentifier:'another',AXEnabled:true}));
 if(options.deep){let parent=web;for(let i=0;i<42;i++){const n=node('depth'+i,'AXGroup');parent.children=[n];parent=n;}}
 if(options.cycle)web.children=[window];
@@ -82,7 +83,7 @@ Object.assign(native,{
   if(options.genericFailure===name)throw Error('SECRET-RAW-ERROR');
   if(name==='AXValue'&&n.role!=='AXStaticText')throw Error('Editable value requested');
   if(options.missingChildren&&n===web&&name==='AXChildren')return -25204;
-  if(options.noChildrenValue&&n===web&&name==='AXChildren')return -25212;
+  if(name==='AXChildren'&&((options.noChildrenValue&&n===web)||(options.emptyGroup&&n.id==='empty-group')))return -25212;
   if(options.unsupportedLeaf&&n.role==='AXStaticText'&&name==='AXChildren')return -25205;
   if(options.hiddenContainer&&n.id==='hidden-container'&&name==='AXChildren')return -25205;
   if(options.changedControl&&n===close&&name==='AXTitle'&&seen[k]>=2){out[0]=new Ref(box('Changed'));return 0;}
@@ -103,6 +104,18 @@ Object.assign(native,{
   out[0]=new Ref(box(v));return 0;
  },
  AXUIElementCopyActionNames:(ref,out)=>{out[0]=new Ref(box((value(ref)===secure?[]:['AXPress']).map(box)));return 0},
+ AXUIElementGetAttributeValueCount:(ref,attribute,out)=>{
+  if(attribute.value!=='AXChildren')throw Error('Unexpected count attribute');
+  calls.push(value(ref).id+':children-count');
+  if(options.childCountError)return options.childCountError;
+  if(options.pidAfterChildCount)value(ref).pid=900;
+  out[0]=options.childCountOverride===undefined?value(ref).children.length:options.childCountOverride;
+  if(options.childCountSpecial==='undefined')out[0]=undefined;
+  if(options.childCountSpecial==='NaN')out[0]=NaN;
+  if(options.childCountSpecial==='Infinity')out[0]=Infinity;
+  if(options.childCountSpecial==='-Infinity')out[0]=-Infinity;
+  return 0;
+ },
  AXUIElementCopyElementAtPosition:(application,x,y,out)=>{
   if(value(application)!==app||x<0||x>1000||y<0||y>800)throw Error('Unowned hit test');
   if(options.noHit)return -25212;
@@ -200,6 +213,61 @@ class ProviderFixtures(unittest.TestCase):
         self.assertFalse(action["output"]["performed"])
         self.assertEqual(0, action["presses"])
 
+    def test_no_value_is_empty_only_after_independent_successful_zero_count(self):
+        result = self.run_fixture(emptyGroup=True)
+        self.assertFalse(result["output"]["truncated"])
+        self.assertIn("empty-group:children-count", result["calls"])
+        node = result["output"]["windows"][0]["nodes"][-1]
+        self.assertEqual("no-value-count-zero", node["childrenEvidence"])
+        self.assertEqual(0, node["childCount"])
+        saved = probe.sanitize(result["output"])["windows"][0]["nodes"][-1]
+        self.assertEqual("no-value-count-zero", saved["childrenEvidence"])
+        action = self.run_fixture(emptyGroup=True, action=True)
+        self.assertTrue(action["output"]["performed"])
+        self.assertEqual(1, action["presses"])
+
+    def test_canonical_cfindex_zero_is_accepted_but_other_strings_never_coerce_to_zero(self):
+        result = self.run_fixture(emptyGroup=True, childCountOverride="0")
+        self.assertFalse(result["output"]["truncated"])
+        node = result["output"]["windows"][0]["nodes"][-1]
+        self.assertEqual("decimal-string", node["childrenCountKind"])
+        self.assertEqual("no-value-count-zero", node["childrenEvidence"])
+        self.assertEqual(0, node["childCount"])
+        self.assertEqual("decimal-string", probe.sanitize(result["output"])["windows"][0]["nodes"][-1]["childrenCountKind"])
+        for count in ("", " ", " 0", "0 ", "+0", "-0", "00", "0.0", "0e0", "SECRET", True, False, {}, []):
+            with self.subTest(count=count):
+                action = self.run_fixture(emptyGroup=True, childCountOverride=count, action=True)
+                self.assertFalse(action["output"]["performed"])
+                self.assertEqual(0, action["presses"])
+                self.assertIsNone(action["output"]["diagnostic"]["countValue"])
+                self.assertNotIn("SECRET", json.dumps(action["output"]))
+
+    def test_cfindex_positive_count_remains_failure_with_only_bounded_numeric_diagnostic(self):
+        for count, expected in (("1", 1), ("1000", 1000), (1, 1), ("1001", None), ("12345", None), (-1, None)):
+            with self.subTest(count=count):
+                result = self.run_fixture(emptyGroup=True, childCountOverride=count)
+                self.assertTrue(result["output"]["truncated"])
+                diagnostic = probe.sanitize(result["output"])["diagnostic"]
+                self.assertEqual("DirectAXChildrenCountMismatch", diagnostic["code"])
+                self.assertEqual(expected, diagnostic["countValue"])
+
+    def test_no_value_positive_unknown_or_failed_count_remains_partial_and_blocks_press(self):
+        for options in ({"childCountOverride": 1}, {"childCountOverride": -1}, {"childCountOverride": None},
+                        {"childCountOverride": 0.5}, {"childCountError": -25204}, {"childCountError": -25205},
+                        {"childCountError": -25212}, {"pidAfterChildCount": True},
+                        *({"childCountSpecial": v} for v in ("undefined", "NaN", "Infinity", "-Infinity"))):
+            with self.subTest(options=options):
+                result = self.run_fixture(emptyGroup=True, **options)
+                self.assertTrue(result["output"]["truncated"])
+                action = self.run_fixture(emptyGroup=True, action=True, **options)
+                self.assertFalse(action["output"]["performed"])
+                self.assertEqual(0, action["presses"])
+
+    def test_unsupported_container_does_not_use_zero_count_to_suppress_read_failure(self):
+        result = self.run_fixture(hiddenContainer=True, childCountOverride=0)
+        self.assertTrue(result["output"]["truncated"])
+        self.assertFalse(any(call.endswith(":children-count") for call in result["calls"]))
+
     def test_untrusted_or_wrong_root_pid_cannot_read_the_window_tree(self):
         for options in ({"untrusted": True}, {"foreignPid": True}):
             with self.subTest(options=options):
@@ -274,6 +342,26 @@ class ProviderFixtures(unittest.TestCase):
 
 
 class ProviderBoundary(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == "darwin", "Pure CFIndex out-parameter ABI regression is macOS only")
+    def test_real_cfindex_out_parameter_uses_canonical_string_without_ui_calls(self):
+        source = "ObjC.import('Foundation');\n" + (HERE / "macos-cf-values.js").read_text() + r'''
+ObjC.bindFunction('calloc',['unsigned char *',['unsigned long','unsigned long']]);
+ObjC.bindFunction('free',['void',['void *']]);
+const values=[];
+for(const text of ['', 'abc']) {
+ const out=Ref(),buffer=$.calloc(16,1);
+ try {
+  const length=Number($.CFStringGetBytes($(text),$.CFRangeMake(0,text.length),$.kCFStringEncodingUTF8,0,false,buffer,16,out));
+  values.push({type:typeof out[0],length:length,normalized:cfIndex(out[0],1000)});
+ }finally{$.free(buffer);}
+}
+JSON.stringify(values);
+'''
+        process = subprocess.run(["/usr/bin/osascript", "-l", "JavaScript", "-"], input=source,
+                                 capture_output=True, text=True, timeout=5, check=True)
+        self.assertEqual([{"type": "string", "length": n, "normalized": {"kind": "decimal-string", "value": n}}
+                          for n in (0, 3)], json.loads(process.stdout))
+
     @unittest.skipUnless(sys.platform == "darwin", "Pure CF container ABI regression is macOS only")
     def test_real_cf_container_generic_pointer_preserves_value_identity_for_typed_calls(self):
         source = "ObjC.import('ApplicationServices');ObjC.import('Foundation');\n" + (HERE / "macos-cf-values.js").read_text() + r'''
@@ -390,7 +478,8 @@ JSON.stringify(values);
             self.assertFalse(report["mainFlowPassed"])
 
     def test_diagnostic_unknown_strings_never_enter_report(self):
-        safe = probe.ax_diagnostic({"code": "SECRET", "attribute": "SECRET", "operation": "SECRET", "axError": "SECRET", "raw": "SECRET"})
+        safe = probe.ax_diagnostic({"code": "SECRET", "attribute": "SECRET", "operation": "SECRET", "axError": "SECRET",
+                                    "countKind": "SECRET", "countValue": "SECRET", "raw": "SECRET"})
         self.assertNotIn("SECRET", json.dumps(safe))
 
 
