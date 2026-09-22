@@ -125,11 +125,13 @@ def database_state(app, expected_id):
     return {"integrity": "ok", "resourceCount": len(ids), "resourceIds": ids}
 
 
-def observe_app(app, startup=False):
+def observe_app(app, startup=False, deadline=None):
     """Read the real installed process/API without changing application data."""
     endpoint = "/client/app/info" if app["role"] == "client" else "/app/info"
     ui_endpoint = "/client/connect-page" if app["role"] == "client" else "/"
-    deadline, last = time.monotonic() + 120, None
+    if deadline is None:
+        deadline = time.monotonic() + 120
+    last = None
     ui_timeout_retries = 0
     while time.monotonic() < deadline:
         try:

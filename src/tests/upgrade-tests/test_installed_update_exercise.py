@@ -127,6 +127,50 @@ class PackageAndCacheGuards(unittest.TestCase):
 
 
 class NativeProcessEvidence(unittest.TestCase):
+    def test_windows_updated_hook_is_not_selected_as_the_automatic_restart(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            app = {"exe": root / "current/Bakabase.exe"}
+            app["exe"].parent.mkdir()
+            (app["exe"].parent / "sq.version").write_text("<package><version>new</version></package>")
+            updater = root / "Update.exe"
+            old = {"pid": 10, "startedUtc": "old"}
+            hook = {"pid": 20, "startedUtc": "hook", "startedEpoch": 100, "firstSeenEpoch": 100.1}
+            final = {"pid": 30, "startedUtc": "final", "startedEpoch": 101, "firstSeenEpoch": 101.1}
+            native = {"pid": 40, "firstSeenEpoch": 100.1}
+            snapshots = [([hook], [native]), ([], [native]), ([final], [native]), ([final], [])]
+            tick = [0]
+            observer = SimpleNamespace(errors=[], seen=lambda path: [native] if path == updater else [hook, final],
+                current=lambda path: snapshots[tick[0]][1 if path == updater else 0])
+            def advance(_):
+                tick[0] += 1
+            with patch.object(runner, "update_paths", return_value={"updater": updater}), \
+                 patch.object(runner.time, "monotonic", side_effect=lambda: tick[0]), \
+                 patch.object(runner.time, "sleep", side_effect=advance):
+                actual = runner.wait_automatic_replacement(app, {"newManifest": {"version": "new"}}, old, observer, 100, 120)
+            self.assertEqual(final, actual)
+            self.assertEqual(3, tick[0])
+            self.assertEqual([hook, final], observer.seen(app["exe"]))
+
+    def test_replacement_wait_requires_observed_updater_exit_within_original_deadline(self):
+        app = {"exe": Path(tempfile.gettempdir()) / "unused-application"}
+        updater = app["exe"].parent / "unused-updater"
+        candidate = {"pid": 20, "startedUtc": "new", "startedEpoch": 100, "firstSeenEpoch": 100.1}
+        native = {"pid": 40, "firstSeenEpoch": 100.1}
+        for seen, running in (([], []), ([dict(native, firstSeenEpoch=99)], []), ([native], [native])):
+            with self.subTest(seen=seen, running=running):
+                tick = [0]
+                observer = SimpleNamespace(errors=[], seen=lambda _: seen,
+                    current=lambda path: running if path == updater else [candidate])
+                def advance(_):
+                    tick[0] += 1
+                with patch.object(runner, "update_paths", return_value={"updater": updater}), \
+                     patch.object(runner.time, "monotonic", side_effect=lambda: tick[0]), \
+                     patch.object(runner.time, "sleep", side_effect=advance), \
+                     self.assertRaisesRegex(AssertionError, "observed updater exit"):
+                    runner.wait_automatic_replacement(app, {}, {"pid": 10, "startedUtc": "old"}, observer, 100, 3)
+                self.assertEqual(3, tick[0])
+
     def test_first_multipath_snapshot_identifies_both_apps_and_allows_absent_updaters(self):
         root = Path(tempfile.gettempdir())
         paths = [root / "Bakabase/current/Bakabase.exe", root / "Bakabase/Update.exe",

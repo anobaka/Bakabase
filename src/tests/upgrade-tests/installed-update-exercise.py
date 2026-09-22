@@ -253,6 +253,28 @@ def one_process(observer, executable):
     return records[0]
 
 
+def wait_automatic_replacement(app, prepared, old, observer, trigger, deadline):
+    """Ignore Velopack's fast-exit hooks until the observed updater has exited."""
+    updater = update_paths(app)["updater"]
+    while time.monotonic() < deadline:
+        require(not observer.errors, "Native process observer failed")
+        started_updaters = [record for record in observer.seen(updater)
+                            if record["firstSeenEpoch"] >= trigger]
+        # Windows invokes the new EXE with --veloapp-updated before launching
+        # the lasting app. Its PID and manifest look new, but it is not a restart.
+        if started_updaters and not observer.current(updater):
+            matches = [record for record in observer.current(app["exe"])
+                       if identity(record) != identity(old) and
+                       record["startedEpoch"] >= math.floor(trigger) and record["firstSeenEpoch"] >= trigger]
+            if len(matches) == 1:
+                with contextlib.suppress(OSError, ValueError):
+                    manifest = base.read_manifest((app["exe"].parent / "sq.version").read_bytes())
+                    if manifest.get("version") == prepared["newManifest"]["version"]:
+                        return matches[0]
+        time.sleep(0.1)
+    raise AssertionError("No unique new installed process with target manifest after observed updater exit; manual fallback is forbidden")
+
+
 def perform(app, other, prepared, other_prepared, feed, lifecycle, observer, report, client_baseline, resource_id):
     old = one_process(observer, app["exe"])
     survivor = one_process(observer, other["exe"])
@@ -283,27 +305,12 @@ def perform(app, other, prepared, other_prepared, feed, lifecycle, observer, rep
             require(not any(identity(record) == identity(old) for record in observer.current(app["exe"])),
                     "Old application did not exit before the native updater force-stop window")
             deadline = time.monotonic() + 120
-            replacement = None
-            while time.monotonic() < deadline:
-                matches = [p for p in observer.current(app["exe"]) if identity(p) != identity(old) and
-                           p["startedEpoch"] >= math.floor(trigger) and p["firstSeenEpoch"] >= trigger]
-                if len(matches) == 1:
-                    manifest_path = app["exe"].parent / "sq.version"
-                    with contextlib.suppress(OSError, ValueError):
-                        manifest = base.read_manifest(manifest_path.read_bytes())
-                        if manifest.get("version") == prepared["newManifest"]["version"]:
-                            replacement = matches[0]
-                            break
-                time.sleep(0.1)
-            require(replacement is not None, "No new installed process appeared with the target manifest; manual fallback is forbidden")
-            report["automaticStartup"] = lifecycle.observe_app(app, startup=True)
+            replacement = wait_automatic_replacement(app, prepared, old, observer, trigger, deadline)
+            report["automaticStartup"] = lifecycle.observe_app(app, startup=True, deadline=deadline)
             actual = one_process(observer, app["exe"])
             require(identity(actual) == identity(replacement), "Automatic startup process changed unexpectedly")
             report["newProcess"] = actual
-            deadline = time.monotonic() + 30
             updater_path = update_paths(app)["updater"]
-            while observer.current(updater_path) and time.monotonic() < deadline:
-                time.sleep(0.1)
             require(not observer.current(updater_path), "Native updater did not exit without forced termination")
             native = [p for p in observer.seen(updater_path) if p["firstSeenEpoch"] >= trigger]
             report["nativeChain"] = verify_native_chain(read_update_logs(app, offsets), prepared, old["pid"], cache, native)

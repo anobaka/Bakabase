@@ -107,6 +107,12 @@ jobs:
         with:
           name: package-acceptance-web-${{ github.run_id }}
           path: ${{ runner.temp }}/package-acceptance-web
+      - name: Verify the actual macOS rectangle calling convention
+        if: startsWith(matrix.platform.rid, 'osx-')
+        run: |
+          dotnet run --project src/tests/Bakabase.Shell.NativeAbiProbe \
+            --configuration Release -p:RuntimeMode=MACOS \
+            -- --report "$RUNNER_TEMP/package-native-abi.json"
       - name: Publish the native product and audit its role
         run: |
           PROJECT=Bakabase.App
@@ -171,6 +177,7 @@ jobs:
             ${{ runner.temp }}/package-submodules.txt
             ${{ runner.temp }}/package-guards.log
             ${{ runner.temp }}/package-vpk.log
+            ${{ runner.temp }}/package-native-abi.json
           if-no-files-found: error
           retention-days: 14
       # These artifact names cannot match the release workflows' product globs.

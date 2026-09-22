@@ -135,6 +135,12 @@ class StartupReadiness(unittest.TestCase):
         self.assertEqual(2, api.call_count)
         sleep.assert_not_called()
 
+    def test_updater_startup_uses_its_existing_deadline(self):
+        with patch.object(runner.base, "api") as api, patch.object(runner.time, "monotonic", return_value=120):
+            with self.assertRaisesRegex(TimeoutError, "installed startup failed"):
+                runner.observe_app(self.app, startup=True, deadline=120)
+        api.assert_not_called()
+
     def test_startup_still_rejects_wrong_html_without_retry(self):
         with patch.object(runner.base, "api", side_effect=[self.info, b"not the application UI"]) as api, \
                 patch.object(runner.base, "native_processes", return_value=[42]), patch.object(runner.time, "sleep") as sleep:

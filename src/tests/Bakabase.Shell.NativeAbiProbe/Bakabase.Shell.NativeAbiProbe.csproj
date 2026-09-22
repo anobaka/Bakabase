@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../apps/Bakabase.Shell/Bakabase.Shell.csproj" />
+  </ItemGroup>
+  <Target Name="BuildNativeRectProbe" BeforeTargets="CoreCompile" Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <MakeDir Directories="$(TargetDir)" />
+    <Exec Command="xcrun clang -dynamiclib -framework Foundation -o &quot;$(TargetDir)libBakabaseNativeAbiProbe.dylib&quot; &quot;$(MSBuildProjectDirectory)/RectProbe.m&quot;" />
+  </Target>
+</Project>

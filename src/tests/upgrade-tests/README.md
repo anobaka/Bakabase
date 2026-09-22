@@ -173,6 +173,13 @@ Gatekeeper/SmartScreen trust, historical signed upgrades, or production feeds.
 First-install LaunchServices startup is distinct from updater automatic restart.
 Results must state which of these behaviors actually ran and passed.
 
+Both macOS architectures also run `Bakabase.Shell.NativeAbiProbe` before packaging.
+It calls the shell's actual Objective-C P/Invoke declarations against a small
+Foundation fixture and reads back zero, negative and fractional rectangles,
+including the trailing configuration pointer and the frame setter. The probe
+checks native argument passing without creating a window; the subsequent
+installed application checks exercise WebKit itself.
+
 ## Installed coexistence and native automatic updates
 
 The `installed` selection reuses artifacts from a successful `packages` run:
@@ -213,6 +220,10 @@ and marker, unchanged product hashes, and retained data. It continuously samples
 the other product's process identity and API. A restart into the old version,
 manual relaunch, startup hook, cache override or forced updater termination
 cannot count as a successful update.
+Windows' transient post-update hook is retained in process evidence but is not
+accepted as the restarted application: selection waits for the observed native
+updater to exit and requires the lasting process to serve the expected API/UI
+within the original startup deadline.
 
 Only small provenance, package manifests, hashes, reports and bounded logs are
 uploaded. The test feeds never publish to production. These unsigned same-code

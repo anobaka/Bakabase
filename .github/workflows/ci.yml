@@ -191,6 +191,12 @@ jobs:
         run: dotnet run --project src/tests/Bakabase.Modules.Federation.Tests -- --minimum-expected-tests 1 --report-trx --results-directory "$RUNNER_TEMP/federation-results/protocol"
       - name: Native player discovery and launch arguments
         run: dotnet run --project src/tests/Bakabase.Modules.Player.Tests -- --minimum-expected-tests 1 --report-trx --results-directory "$RUNNER_TEMP/federation-results/player"
+      - name: Verify the actual macOS rectangle calling convention
+        if: startsWith(matrix.rid, 'osx-')
+        run: |
+          dotnet run --project src/tests/Bakabase.Shell.NativeAbiProbe \
+            --configuration Release -p:RuntimeMode=MACOS \
+            -- --report "$RUNNER_TEMP/federation-results/native-abi.json"
       - name: Three independent native hosts
         run: |
           dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj
