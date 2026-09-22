@@ -201,13 +201,15 @@ public class CoordinatorTests
     {
         var clock = new ManualClock();
         var limits = Limits with { PreparationTimeout = TimeSpan.FromMilliseconds(30) };
-        using var a = new TestPeer("a", limits, clock, "a", "c");
         using var b = new TestPeer("b", limits, clock, "b");
         b.Client.AfterCreate = () => clock.Advance(TimeSpan.FromMilliseconds(31));
-        using var coordinator = new FederatedQueryCoordinator(new FixedTargets(a, b), limits, clock);
-        var result = await coordinator.CreateAsync("ui", new() { NodeIds = ["a", "b"], PageSize = 1 });
-        Assert.AreEqual("a", result.Participants.Single().NodeId);
-        Assert.AreEqual("QueryDeadlineExceeded", result.OmittedNodes.Single().Code);
+        using var coordinator = new FederatedQueryCoordinator(new FixedTargets(b), limits, clock);
+        var error = await Assert.ThrowsExceptionAsync<FederationQueryException>(() =>
+            coordinator.CreateAsync("ui", new() { NodeIds = ["b"], PageSize = 1 }));
+        Assert.AreEqual("PeerUnavailable", error.Code);
+        var omitted = error.OmittedNodes!.Single();
+        Assert.AreEqual("b", omitted.NodeId);
+        Assert.AreEqual("QueryDeadlineExceeded", omitted.Code);
         Assert.AreEqual(1, b.Client.ReleaseCalls);
     }
 

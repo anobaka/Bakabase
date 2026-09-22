@@ -98,7 +98,11 @@ public sealed class FederatedQueryCoordinator : IDisposable
         var preparationStarted = _time.GetTimestamp();
         using var deadline = new CancellationTokenSource(_limits.PreparationTimeout, _time);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
-        var jobs = input.NodeIds.Select(n => Prepare(n, query, linked.Token)).ToArray();
+        var preparationToken = linked.Token;
+        // A local provider may do synchronous work before its first incomplete
+        // await. Dispatch each node so that work cannot delay the other nodes;
+        // the shared preparation semaphore still bounds active work.
+        var jobs = input.NodeIds.Select(n => Task.Run(() => Prepare(n, query, preparationToken), preparationToken)).ToArray();
         try
         {
             try { await Task.WhenAll(jobs).WaitAsync(linked.Token); }
