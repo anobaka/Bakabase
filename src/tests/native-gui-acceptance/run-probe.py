@@ -27,11 +27,13 @@ def load(name, path):
 
 lifecycle = load("native_gui_owned_lifecycle", HERE.parent / "upgrade-tests/run-installed-lifecycle.py")
 probe = load("native_gui_capability", HERE / "probe.py")
+direct_ax = load("native_gui_direct_ax", HERE / "direct_ax.py")
 
 
 def exercise(apps, report, feed=None):
     lifecycle.require(feed is None, "Capability probe must not trigger product updates")
     report["nativeProbes"] = {}
+    report["directAXCapabilities"] = {}
     for role in ("client", "unified"):
         app = apps[role]
         report["currentStage"] = "native-probe-install-" + role
@@ -41,6 +43,10 @@ def exercise(apps, report, feed=None):
         pid = observed["processIds"][0]
         report["currentStage"] = "native-accessibility-" + role
         report["nativeProbes"][role] = probe.capture(app, pid, app["results"] / "native-accessibility")
+        if app.get("rid", "").startswith("osx-"):
+            diagnostic = direct_ax.capture(app, pid)
+            report["directAXCapabilities"][role] = diagnostic
+            (app["results"] / "direct-ax.json").write_text(json.dumps(diagnostic, indent=2) + "\n", encoding="utf-8")
         lifecycle.require_same_process(observed, lifecycle.observe_app(app))
     # Collect both products even when one does not expose its WebView controls.
     lifecycle.require(all(item["capabilityPassed"] for item in report["nativeProbes"].values()),
