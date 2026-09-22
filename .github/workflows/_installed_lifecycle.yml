@@ -1,0 +1,109 @@
+name: Installed desktop lifecycle
+
+on:
+  workflow_call:
+    inputs:
+      package_run_id:
+        description: Successful package acceptance CI run whose product sources are unchanged
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  installed:
+    name: Installed coexistence and update (${{ matrix.rid }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: macos-15-intel
+            rid: osx-x64
+          - os: macos-15
+            rid: osx-arm64
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Install bounded updater test tools
+        run: |
+          npm ci --ignore-scripts --prefix src/tests/installed-lifecycle-tools
+          dotnet tool install --tool-path "$RUNNER_TEMP/installed-vpk-tools" vpk --version 1.2.0
+      - name: Check provenance and lifecycle failure guards
+        run: |
+          python src/tests/upgrade-tests/test_installed_inputs.py
+          python src/tests/upgrade-tests/test_installed_lifecycle.py
+          python src/tests/upgrade-tests/test_installed_updates.py
+          python src/tests/upgrade-tests/test_installed_update_feed.py
+          python src/tests/upgrade-tests/test_installed_update_exercise.py
+      - name: Check actual native process observation before installing
+        run: |
+          python src/tests/upgrade-tests/check-installed-observer.py \
+            --rid '${{ matrix.rid }}' --report "$RUNNER_TEMP/installed-observer.json"
+      - name: Fetch and verify the existing native packages
+        id: inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.package_run_id }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+        run: |
+          python src/tests/upgrade-tests/prepare-installed-inputs.py \
+            --repository "$SOURCE_REPOSITORY" --run-id "$SOURCE_RUN" \
+            --rid '${{ matrix.rid }}' --output-directory "$RUNNER_TEMP/installed-inputs"
+      - name: Repackage unchanged product code for the local updater feed
+        env:
+          UNIFIED_PACKAGES: ${{ steps.inputs.outputs.unified_directory }}
+          CLIENT_PACKAGES: ${{ steps.inputs.outputs.client_directory }}
+          PACKAGE_VERSION: ${{ steps.inputs.outputs.version }}
+          PACKAGE_PROVENANCE: ${{ steps.inputs.outputs.provenance }}
+        run: |
+          python src/tests/upgrade-tests/prepare-installed-updates.py \
+            --unified-packages "$UNIFIED_PACKAGES" --client-packages "$CLIENT_PACKAGES" \
+            --rid '${{ matrix.rid }}' --old-version "$PACKAGE_VERSION" \
+            --new-version "0.0.2-updater.${{ github.run_id }}.${{ github.run_attempt }}" \
+            --vpk "$RUNNER_TEMP/installed-vpk-tools/vpk${{ runner.os == 'Windows' && '.exe' || '' }}" \
+            --provenance "$PACKAGE_PROVENANCE" --output-directory "$RUNNER_TEMP/installed-updates"
+      - name: Verify both installed products together
+        env:
+          UNIFIED_PACKAGES: ${{ steps.inputs.outputs.unified_directory }}
+          CLIENT_PACKAGES: ${{ steps.inputs.outputs.client_directory }}
+          PACKAGE_VERSION: ${{ steps.inputs.outputs.version }}
+        run: |
+          python src/tests/upgrade-tests/run-installed-lifecycle.py \
+            --unified-packages "$UNIFIED_PACKAGES" --client-packages "$CLIENT_PACKAGES" \
+            --rid '${{ matrix.rid }}' --version "$PACKAGE_VERSION" \
+            --updates-manifest "$RUNNER_TEMP/installed-updates/updates.json" \
+            --results-directory "$RUNNER_TEMP/installed-lifecycle-results"
+      - name: Keep small lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installed-lifecycle-${{ matrix.rid }}-evidence
+          path: |
+            ${{ runner.temp }}/installed-observer.json
+            ${{ runner.temp }}/installed-inputs/provenance.json
+            ${{ runner.temp }}/installed-updates/updates.json
+            ${{ runner.temp }}/installed-updates/vpk-version.log
+            ${{ runner.temp }}/installed-updates/*/vpk-pack.log
+            ${{ runner.temp }}/installed-lifecycle-results/
+          if-no-files-found: warn
+          retention-days: 14

@@ -13,8 +13,12 @@ on:
       suite:
         description: Test suite to run
         type: choice
-        options: [full, packages]
+        options: [full, packages, installed]
         default: full
+      package_run_id:
+        description: Successful packages run to reuse for the installed suite
+        type: string
+        required: false
 
 # A newer push to the same branch / PR cancels older in-progress runs.
 concurrency:
@@ -25,6 +29,15 @@ permissions:
   contents: read
 
 jobs:
+  installed-lifecycle:
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'installed'
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/_installed_lifecycle.yml
+    with:
+      package_run_id: ${{ inputs.package_run_id }}
+
   package-acceptance:
     if: github.event_name == 'workflow_dispatch' && inputs.suite == 'packages'
     uses: ./.github/workflows/_package_acceptance.yml
@@ -32,7 +45,7 @@ jobs:
       ref: ${{ github.sha }}
 
   backend-tests:
-    if: inputs.suite != 'packages'
+    if: inputs.suite != 'packages' && inputs.suite != 'installed'
     name: Backend tests
     runs-on: ubuntu-latest
     env:
@@ -114,7 +127,7 @@ jobs:
           if-no-files-found: ignore
 
   federation-platform:
-    if: inputs.suite != 'packages'
+    if: inputs.suite != 'packages' && inputs.suite != 'installed'
     name: Federation and release contracts (${{ matrix.rid }})
     needs: frontend
     runs-on: ${{ matrix.os }}
@@ -209,7 +222,7 @@ jobs:
           retention-days: 14
 
   federation-browser:
-    if: inputs.suite != 'packages'
+    if: inputs.suite != 'packages' && inputs.suite != 'installed'
     name: Legacy migration and multi-device browser
     needs: frontend
     runs-on: ubuntu-24.04
@@ -247,6 +260,11 @@ jobs:
           python3 src/tests/federation-smoke/test_linux_cross_container.py
           python3 src/tests/upgrade-tests/test_velopack_runner.py
           python3 src/tests/upgrade-tests/test_package_acceptance.py
+          python3 src/tests/upgrade-tests/test_installed_inputs.py
+          python3 src/tests/upgrade-tests/test_installed_lifecycle.py
+          python3 src/tests/upgrade-tests/test_installed_updates.py
+          python3 src/tests/upgrade-tests/test_installed_update_feed.py
+          python3 src/tests/upgrade-tests/test_installed_update_exercise.py
           python3 src/tests/federation-smoke/test_docker_boundary.py
       - name: Real legacy export, import, reauthorization and media
         run: python3 src/tests/federation-browser-smoke/run.py --results-directory "$RUNNER_TEMP/federation-browser-results"
@@ -278,7 +296,7 @@ jobs:
           retention-days: 14
 
   frontend:
-    if: inputs.suite != 'packages'
+    if: inputs.suite != 'packages' && inputs.suite != 'installed'
     name: Frontend lint & tests
     runs-on: ubuntu-latest
     defaults:

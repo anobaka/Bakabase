@@ -1,0 +1,9 @@
+{
+  "name": "bakabase-installed-lifecycle-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@microsoft/signalr": "7.0.14"
+  }
+}

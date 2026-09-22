@@ -173,6 +173,54 @@ Gatekeeper/SmartScreen trust, historical signed upgrades, or production feeds.
 First-install LaunchServices startup is distinct from updater automatic restart.
 Results must state which of these behaviors actually ran and passed.
 
+## Installed coexistence and native automatic updates
+
+The `installed` selection reuses artifacts from a successful `packages` run:
+
+```bash
+gh workflow run ci.yml --ref codex/multi-device-library \
+  -f suite=installed -f package_run_id=35618999687
+```
+
+`prepare-installed-inputs.py` checks the source run, repository, commit ancestry,
+artifact ZIP digest, and every native package's size and SHA256 against its verified
+acceptance report. Product or build-source changes since the package run reject
+reuse; rebuild with `suite=packages` first. The test checkout may contain later
+test, evidence-documentation and explicitly allowed acceptance-workflow changes.
+
+On three disposable native runners, `run-installed-lifecycle.py` installs the
+original legacy client before the unified application. Both use their real
+default installation and AppData paths. It checks simultaneous API/UI service,
+separate process identities, a unified resource created through its actual API,
+client settings read back through its API, independent restarts, and both
+directions of removal and survivor restart. Windows invokes the original
+uninstaller; macOS removes only the owned bundle and package receipt.
+
+`prepare-installed-updates.py` uses Velopack 1.2.0 to repackage the same verified
+product payload with a higher synthetic manifest version and a data-only marker.
+Every product file is hashed, including web assets and native dependencies;
+vendor-generated updater metadata is recorded separately. No product code is
+rebuilt. This checks updater mechanics and data retention, and complements the
+separate historical-source migration test above.
+
+The two products receive separate, allowlisted loopback feeds. Only one feed
+advertises its update at a time. The installed application itself checks and
+downloads the package, reaches `PendingRestart` through its existing API or
+SignalR event, and requests apply/restart through its actual updater endpoint.
+The runner requires the default cache's exact package hash, original updater
+process and logs, old process exit, automatic new process startup, new manifest
+and marker, unchanged product hashes, and retained data. It continuously samples
+the other product's process identity and API. A restart into the old version,
+manual relaunch, startup hook, cache override or forced updater termination
+cannot count as a successful update.
+
+Only small provenance, package manifests, hashes, reports and bounded logs are
+uploaded. The test feeds never publish to production. These unsigned same-code
+fixtures do not prove historical signed-package migrations, operating-system
+trust, production CDN behavior or physical multi-device networking. Results and
+remaining release gates are recorded in
+[release readiness](../../../docs/multi-device-library-release-readiness.md).
+
 ## Older filesystem replacement fixtures
 
 `run-macos.sh`, `run-linux.sh`, `run-windows.ps1` and `run-docker.sh` remain manual
