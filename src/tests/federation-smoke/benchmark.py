@@ -147,6 +147,20 @@ class LinkProxy:
                 self.connection.settimeout(12)
                 self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
+            def handle_one_request(self):
+                # A timed socket's idle readline is not necessarily interrupted
+                # by shutdown on Windows. Bound that wait below close()'s 5 s
+                # worker deadline while retaining keep-alive between requests.
+                self.connection.settimeout(2)
+                super().handle_one_request()
+
+            def parse_request(self):
+                parsed = super().parse_request()
+                if parsed:
+                    # Keep the existing body/write budget after request headers.
+                    self.connection.settimeout(12)
+                return parsed
+
             def log_message(self, *_):
                 pass
 

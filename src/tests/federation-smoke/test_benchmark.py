@@ -159,6 +159,22 @@ class BenchmarkTests(unittest.TestCase):
         proxy = benchmark.LinkProxy(upstream.server_port)
         client = benchmark.http.client.HTTPConnection("127.0.0.1", proxy.server.server_port, timeout=2)
         try:
+            # Only an idle request/header read gets the smaller timeout. The
+            # existing body/write timeout resumes after successful parsing.
+            handler = proxy.server.RequestHandlerClass.__new__(proxy.server.RequestHandlerClass)
+            handler.connection = Mock()
+            with patch.object(benchmark.BaseHTTPRequestHandler, "handle_one_request") as read:
+                handler.handle_one_request()
+                handler.connection.settimeout.assert_called_once_with(2)
+                read.assert_called_once_with()
+            for parsed in (False, True):
+                handler.connection.reset_mock()
+                with patch.object(benchmark.BaseHTTPRequestHandler, "parse_request", return_value=parsed):
+                    self.assertEqual(handler.parse_request(), parsed)
+                if parsed:
+                    handler.connection.settimeout.assert_called_once_with(12)
+                else:
+                    handler.connection.settimeout.assert_not_called()
             for _ in range(3):
                 client.request("POST", "/fixture", body=b"{}")
                 response = client.getresponse()
@@ -168,8 +184,11 @@ class BenchmarkTests(unittest.TestCase):
             self.assertEqual(len(accepted), 1)
             self.assertEqual(proxy.meter.snapshot()["requests"], 3)
             self.assertEqual(proxy.diagnostics(), {"upstreamClientsCreated": 1})
-            # Deliberately leave the client open: cleanup must unblock its worker.
-            proxy.close()
+            # Deliberately leave the client open and simulate a platform where
+            # shutdown does not interrupt a pending timed receive. Its idle
+            # read must still finish within the unchanged 5 s cleanup deadline.
+            with patch.object(benchmark.socket.socket, "shutdown", return_value=None):
+                proxy.close()
             self.assertTrue(proxy.clients_stopped.is_set())
             self.assertFalse(proxy.thread.is_alive())
             self.assertIsNone(proxy.transport)
