@@ -21,7 +21,8 @@ SPEC.loader.exec_module(base)
 MAX_OUTPUT = 2 * 1024 * 1024
 MAX_NODES = 1000
 TIMEOUT = 30
-INTERACTIVE_ACTIONS = {"AXPress", "AXConfirm", "AXShowMenu", "InvokePatternIdentifiers.Pattern",
+READY_SECONDS = 90
+INTERACTIVE_ACTIONS = {"AXPress", "AXConfirm", "InvokePatternIdentifiers.Pattern",
                        "TogglePatternIdentifiers.Pattern", "SelectionItemPatternIdentifiers.Pattern",
                        "ExpandCollapsePatternIdentifiers.Pattern", "ValuePatternIdentifiers.Pattern"}
 STAGES = {"initialize", "preflight", "resolve-process", "load-uia", "enumerate-windows", "read-tree", "verify-process"}
@@ -114,11 +115,12 @@ def mac_identity(pid):
     return {"pid": pid, "executable": buffer.value.decode(), "started": result.stdout.strip()}
 
 
-def native_snapshot(app, pid):
+def native_snapshot(app, pid, timeout=TIMEOUT):
     """All native reads are behind the hosted guard, including identity checks."""
     hosted(app)
     require(type(pid) is int and pid > 0, "InvalidProductPid")
-    data = {"pid": pid, "executable": str(Path(app["exe"]).resolve()), "maxNodes": MAX_NODES, "maxDepth": 40}
+    data = {"pid": pid, "executable": str(Path(app["exe"]).resolve()), "maxNodes": MAX_NODES, "maxDepth": 40,
+            "readBudgetMs": min(24000, max(100, int((timeout-2)*1000)))}
     if app["rid"].startswith("osx-"):
         before = mac_identity(pid)
         require(Path(before["executable"]).resolve() == Path(app["exe"]).resolve(), "ProductExecutableMismatch")
@@ -126,13 +128,13 @@ def native_snapshot(app, pid):
         # osascript's '-' is the script from stdin. JSON is source-escaped data,
         # never evaluated as a command or passed through a shell.
         result = bounded_command(["/usr/bin/osascript", "-l", "JavaScript", "-"],
-                                 "const input = " + json.dumps(data) + ";\n" + script, TIMEOUT)
+                                 "const input = " + json.dumps(data) + ";\n" + script, timeout)
         require(mac_identity(pid) == before, "ProductProcessChangedDuringProbe")
         result["process"] = before
     else:
         result = bounded_command(["powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-STA",
                                   "-ExecutionPolicy", "Bypass", "-File", HERE / "windows-snapshot.ps1"],
-                                 json.dumps(data) + "\n", TIMEOUT)
+                                 json.dumps(data) + "\n", timeout)
         if result.get("enabled") is False and result.get("errorStage") in STAGES and result.get("windows") == []:
             return result  # An explicit failed observation, never a capability pass.
         identity = result.get("process", {})
@@ -140,6 +142,13 @@ def native_snapshot(app, pid):
                 Path(identity.get("executable", "")).resolve() == Path(app["exe"]).resolve(),
                 "ProductExecutableMismatch")
     return result
+
+
+def node_visible(snapshot, node):
+    # UIA explicitly exposes offscreen state, including virtualized/collapsed
+    # descendants. Missing UIA visibility is not affirmative evidence. AX keeps
+    # its existing visible-window scope; it has no equivalent property here.
+    return node.get("visible") is True if snapshot.get("backend") == "windows-uia" else node.get("visible") is not False
 
 
 def summarize(snapshot):
@@ -157,7 +166,7 @@ def summarize(snapshot):
             require(isinstance(node, dict) and isinstance(node.get("path"), list), "InvalidNativeNode")
             total += 1
             require(total <= MAX_NODES, "InvalidNodeCount")
-            if node.get("insideWebContent") is True:
+            if node.get("insideWebContent") is True and node_visible(snapshot, node):
                 web_nodes += 1
                 if node.get("enabled") is True and INTERACTIVE_ACTIONS.intersection(node.get("actions", [])):
                     controls += 1
@@ -196,6 +205,7 @@ def sanitize(value, secrets=()):
             safe["nodes"].append({"path": node.get("path"), "role": string(node.get("role")),
                 "name": string(node.get("name")), "text": string(node.get("text")),
                 "identifier": string(node.get("identifier")), "enabled": node.get("enabled") is True,
+                "visible": node.get("visible") if type(node.get("visible")) is bool else None,
                 "insideWebContent": node.get("insideWebContent") is True,
                 "actions": [string(action, 60) for action in node.get("actions", [])[:12]],
                 "password": node.get("password") is True})
@@ -210,11 +220,28 @@ def capture(app, pid, destination):
     destination.mkdir(parents=True)
     report = {"capabilityPassed": False, "mainFlowPassed": False, "role": app["role"], "rid": app["rid"],
               "scope": "read-only-native-accessibility-capability"}
+    report["attempts"] = []
+    deadline, identity = time.monotonic() + READY_SECONDS, None
     try:
-        snapshot = native_snapshot(app, pid)
-        report.update(summarize(snapshot))
-        (destination / "tree.json").write_text(json.dumps(sanitize(snapshot), indent=2), encoding="utf-8")
+        for attempt in range(1, 11):
+            remaining = deadline-time.monotonic()
+            require(remaining > 7, "NativeUiReadinessTimedOut")
+            snapshot = native_snapshot(app, pid, timeout=min(TIMEOUT, remaining-6))
+            current = snapshot.get("process")
+            if identity is None:
+                identity = current
+            require(current == identity, "ProductProcessChangedDuringReadiness")
+            summary = summarize(snapshot)
+            report.update(summary)
+            report["attempts"].append({"attempt": attempt, **summary})
+            tree = json.dumps(sanitize(snapshot), indent=2)
+            (destination / f"tree-{attempt:02}.json").write_text(tree, encoding="utf-8")
+            (destination / "tree.json").write_text(tree, encoding="utf-8")
+            if summary["capabilityPassed"] or snapshot.get("enabled") is not True or snapshot.get("errorStage"):
+                break
+            time.sleep(min(1, max(0, deadline-time.monotonic())))
     except Exception as error:
+        report["capabilityPassed"] = False
         report["error"] = {"type": type(error).__name__,
                            "code": str(error) if isinstance(error, ProbeFailure) else "NativeProbeUnavailable"}
     (destination / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")

@@ -28,7 +28,7 @@ function Short-Text($value) {
     return $text
 }
 function Read-Node($element, [int[]]$path, [int]$depth, [bool]$insideWeb, $nodes) {
-    if ($script:nodeCount -ge $inputRecord.maxNodes -or $depth -gt $inputRecord.maxDepth -or $watch.ElapsedMilliseconds -gt 24000) {
+    if ($script:nodeCount -ge $inputRecord.maxNodes -or $depth -gt $inputRecord.maxDepth -or $watch.ElapsedMilliseconds -gt $inputRecord.readBudgetMs) {
         $script:truncated = $true
         return
     }
@@ -43,7 +43,7 @@ function Read-Node($element, [int[]]$path, [int]$depth, [bool]$insideWeb, $nodes
     }
     $name = if ($password) { '' } else { Short-Text $current.Name }
     $nodes.Add(@{path=@($path); role=$role; name=$name; text='';
-        identifier=(Short-Text $current.AutomationId); enabled=$current.IsEnabled;
+        identifier=(Short-Text $current.AutomationId); enabled=$current.IsEnabled; visible=(!$current.IsOffscreen);
         insideWebContent=$insideWeb; password=$password; actions=@($actions)})
     $child = $walker.GetFirstChild($element)
     $index = 0

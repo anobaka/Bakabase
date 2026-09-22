@@ -17,22 +17,25 @@ function main() {
   function text(value) { return typeof value === 'string' ? value.slice(0,300) : ''; }
   let count = 0;
   function walk(element, path, nodes, depth, inWeb) {
-    if (count >= input.maxNodes || depth > input.maxDepth || Date.now() - began > 24000) {
+    if (count >= input.maxNodes || depth > input.maxDepth || Date.now() - began > (input.readBudgetMs || 24000)) {
       output.truncated = true; return;
     }
     count++;
     const role = text(attribute(element,'AXRole'));
-    const password = attribute(element,'AXSubrole') === 'AXSecureTextField';
+    const interactive = ['AXButton','AXLink','AXMenuItem','AXCheckBox','AXRadioButton','AXTextField','AXTextArea','AXPopUpButton'].includes(role);
+    const password = ['AXTextField','AXTextArea'].includes(role) && attribute(element,'AXSubrole') === 'AXSecureTextField';
     inWeb = inWeb || role === 'AXWebArea';
     let actions = [];
-    if (!password) {
+    if (interactive && !password) {
       try { actions = element.actions().map(action => text(action.name())).slice(0,12); } catch (_) {}
     }
-    nodes.push({path:path, role:role, name:password ? '' : text(attribute(element,'AXTitle')) || text(attribute(element,'AXDescription')),
+    // Generic layout nodes need no costly per-property Apple Events. Read only
+    // controls, document titles and static text; never batch-read input values.
+    nodes.push({path:path, role:role, name:password || !interactive && role!=='AXWebArea' ? '' : text(attribute(element,'AXTitle')) || text(attribute(element,'AXDescription')),
       text:role === 'AXStaticText' ? text(attribute(element,'AXValue')) : '',
-      identifier:text(attribute(element,'AXIdentifier')), enabled:attribute(element,'AXEnabled') === true,
+      identifier:interactive ? text(attribute(element,'AXIdentifier')) : '', enabled:interactive && attribute(element,'AXEnabled') === true,
       insideWebContent:inWeb, password:password, actions:actions});
-    let children = []; try { children = element.uiElements(); } catch (_) {}
+    let children = []; try { children = element.uiElements(); } catch (_) { output.truncated = true; }
     for (let i=0; i<children.length; i++) {
       if (count >= input.maxNodes) { output.truncated = true; break; }
       walk(children[i],path.concat(i),nodes,depth+1,inWeb);

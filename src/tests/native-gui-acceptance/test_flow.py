@@ -1,0 +1,238 @@
+#!/usr/bin/env python3
+"""Non-OS native control fixtures: no real UI, accounts, system logs or products."""
+import copy
+import importlib.util
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import unittest
+from unittest.mock import patch
+
+HERE = Path(__file__).resolve().parent
+SPEC = importlib.util.spec_from_file_location("native_flow_test", HERE / "flow.py")
+flow = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(flow)
+
+
+def view(texts=(), buttons=(), menus=()):
+    values = [("AXStaticText", text) for text in texts] + [("AXButton", text) for text in buttons] + [("AXMenuItem", text) for text in menus]
+    return {"backend": "macos-system-events-ax", "enabled": True, "readOnly": True, "truncated": False,
+            "process": {"pid": 42, "executable": "/fixture/Bakabase", "started": "owned-start"},
+            "windows": [{"index": 0, "visible": True, "nodes": [{"path": [0, 0, index], "role": role,
+                "name": name, "text": name if role == "AXStaticText" else "", "identifier": "", "enabled": True,
+                "insideWebContent": True, "actions": [] if role == "AXStaticText" else ["AXPress"]}
+                for index, (role, name) in enumerate(values)]}]}
+
+
+class Selectors(unittest.TestCase):
+    def test_semantic_kind_disambiguates_menu_from_header_link(self):
+        snapshot = view(menus=["Devices and sharing"])
+        duplicate = dict(snapshot["windows"][0]["nodes"][0], role="AXLink", path=[0, 0, 1])
+        snapshot["windows"][0]["nodes"].append(duplicate)
+        self.assertEqual("AXMenuItem", flow.one(snapshot, "Devices and sharing", "menu")["role"])
+
+    def test_missing_ambiguous_disabled_or_outside_web_control_is_not_clicked(self):
+        for change in ("missing", "ambiguous", "disabled", "outside-web"):
+            snapshot = view(buttons=["Close"])
+            node = snapshot["windows"][0]["nodes"][0]
+            if change == "missing": node["name"] = "Other"
+            if change == "ambiguous": snapshot["windows"][0]["nodes"].append(dict(node))
+            if change == "disabled": node["enabled"] = False
+            if change == "outside-web": node["insideWebContent"] = False
+            with self.subTest(change=change), self.assertRaises(flow.probe.ProbeFailure):
+                flow.one(snapshot, "Close", "button")
+
+    def test_offscreen_or_unknown_uia_controls_and_text_are_not_visible(self):
+        for visibility in (False, None):
+            snapshot = view(texts=["No matching resources"], buttons=["Search"])
+            snapshot["backend"] = "windows-uia"
+            for node in snapshot["windows"][0]["nodes"]:
+                node["role"] = "ControlType.Button" if node["role"] == "AXButton" else "ControlType.Text"
+                node["visible"] = visibility
+            with self.subTest(visibility=visibility):
+                self.assertFalse(flow.has_text(snapshot, "No matching resources"))
+                with self.assertRaisesRegex(flow.probe.ProbeFailure, "MissingOrAmbiguousNativeControl"):
+                    flow.one(snapshot, "Search", "button")
+                for node in snapshot["windows"][0]["nodes"]:
+                    node["visible"] = True
+                self.assertTrue(flow.has_text(snapshot, "No matching resources"))
+                self.assertEqual("Search", flow.one(snapshot, "Search", "button")["name"])
+
+    def test_partial_tree_proves_neither_unique_control_nor_presence_or_absence(self):
+        snapshot = view(texts=["No matching resources"], buttons=["Search"])
+        snapshot["truncated"] = True
+        for check in (lambda: flow.one(snapshot, "Search", "button"),
+                      lambda: flow.has_text(snapshot, "No matching resources"),
+                      lambda: not flow.matches(snapshot, "Close", "button")):
+            with self.assertRaisesRegex(flow.probe.ProbeFailure, "IncompleteNativeTree"):
+                check()
+
+    def test_partial_tree_cannot_submit_an_already_resolved_action(self):
+        snapshot = view(buttons=["Close"])
+        selector = flow.one(snapshot, "Close", "button")
+        snapshot["truncated"] = True
+        with patch.object(flow.probe, "hosted"), patch.object(flow.probe, "bounded_command") as action:
+            with self.assertRaisesRegex(flow.probe.ProbeFailure, "IncompleteNativeTree"):
+                flow.perform({"rid": "win-x64"}, snapshot, selector)
+        action.assert_not_called()
+
+    def test_pid_change_prevents_native_action(self):
+        snapshot = view(buttons=["Close"])
+        app = {"rid": "osx-arm64", "exe": Path("/fixture/Bakabase")}
+        with patch.object(flow.probe, "hosted"), patch.object(flow.probe, "mac_identity", return_value={"pid": 42, "started": "reused"}), \
+                patch.object(flow.probe, "bounded_command") as action:
+            with self.assertRaisesRegex(flow.probe.ProbeFailure, "ProductProcessChangedBeforeAction"):
+                flow.perform(app, snapshot, flow.one(snapshot, "Close", "button"))
+        action.assert_not_called()
+
+    def test_failed_native_action_cannot_be_reported_submitted(self):
+        snapshot = view(buttons=["Close"])
+        app = {"rid": "osx-arm64", "exe": Path("/fixture/Bakabase")}
+        with patch.object(flow.probe, "hosted"), patch.object(flow.probe, "mac_identity", return_value=snapshot["process"]), \
+                patch.object(flow.probe, "bounded_command", return_value={"performed": False, "errorStage": "private payload"}):
+            with self.assertRaisesRegex(flow.probe.ProbeFailure, "NativeActionFailed:unknown"):
+                flow.perform(app, snapshot, flow.one(snapshot, "Close", "button"))
+
+
+class Readiness(unittest.TestCase):
+    def test_wait_uses_existing_phase_deadline_and_does_not_reset_it(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.object(flow.probe, "hosted"), \
+                patch.object(flow.time, "monotonic", return_value=0), patch.object(flow.time, "sleep"):
+            driver = flow.Driver({}, 42, Path(temporary) / "flow")
+            with patch.object(driver, "read", side_effect=[view(), view(buttons=["Search"])]) as read:
+                driver.wait("query", lambda snapshot: bool(flow.matches(snapshot, "Search", "button")))
+            self.assertEqual([90, 90], [call.args[1] for call in read.call_args_list])
+
+    def test_partial_state_is_reobserved_before_evaluating_absence_without_extending_deadline(self):
+        partial = view(buttons=["Search"])
+        partial["truncated"] = True
+        with tempfile.TemporaryDirectory() as temporary, patch.object(flow.probe, "hosted"), \
+                patch.object(flow.time, "monotonic", return_value=0), patch.object(flow.time, "sleep"):
+            driver = flow.Driver({}, 42, Path(temporary) / "flow")
+            condition_calls = []
+            def condition(snapshot):
+                condition_calls.append(snapshot)
+                return not flow.matches(snapshot, "Close", "button")
+            complete = view(buttons=["Search"])
+            with patch.object(driver, "read", side_effect=[partial, complete]) as read:
+                driver.wait("dialog-gone", condition)
+            self.assertEqual([complete], condition_calls)
+            self.assertEqual([90, 90], [call.args[1] for call in read.call_args_list])
+
+    def test_permanently_partial_tree_never_passes_a_checkpoint(self):
+        partial = view(buttons=["Search"])
+        partial["truncated"] = True
+        with tempfile.TemporaryDirectory() as temporary, patch.object(flow.probe, "hosted"), \
+                patch.object(flow.time, "monotonic", return_value=0), patch.object(flow.time, "sleep"):
+            driver = flow.Driver({}, 42, Path(temporary) / "flow")
+            with patch.object(driver, "read", return_value=partial) as read:
+                with self.assertRaisesRegex(flow.probe.ProbeFailure, "NativeExpectedStateUnavailable"):
+                    driver.wait("query", lambda _snapshot: self.fail("Partial tree used as evidence"))
+            self.assertEqual(8, read.call_count)
+            self.assertEqual([], driver.report["checkpoints"])
+
+
+class FlowSequence(unittest.TestCase):
+    def fake_driver(self):
+        menus = ["Multi-device library", "Devices and sharing"]
+        frames = {
+            "initial-native-ui": view(texts=["Help Center"], buttons=["Close"]),
+            "help-dismissed": view(buttons=["Help Center"], menus=menus), "local-menu": view(menus=menus),
+            "browsing-default-off": view(texts=["Browsing is off"], buttons=["Enable browsing"], menus=menus),
+            "device-settings-off": view(texts=["Browse libraries on this device", "Browsing is off"], buttons=["Enable browsing"], menus=menus),
+            "device-settings-enabled": view(texts=["Browsing enabled"], buttons=["Turn browsing off"], menus=menus),
+            "search-scopes-visible": view(buttons=["This device", "All enabled devices", "Choose devices", "Search"], menus=menus),
+            "local-source-selected": view(buttons=["Search"], menus=menus),
+            "empty-library-results": view(texts=["No matching resources", "0 resources · 1/1 devices searched", "Read-only view"], menus=menus),
+            "saved-browsing-state": view(texts=["Browsing enabled"], buttons=["Turn browsing off"], menus=menus),
+        }
+        class FakeDriver:
+            app = {"port": 40001}
+            current = None
+            report = {"mainFlowPassed": False}
+            def __init__(self): self.actions = []; self.checkpoints = []
+            def wait(self, step, condition):
+                self.current = frames[step]
+                if not condition(self.current): raise AssertionError("Native state missing: " + step)
+                self.checkpoints.append(step)
+            def press(self, label, kind="button"):
+                flow.one(self.current, label, kind)
+                self.actions.append((label, kind))
+            def save(self): pass
+        return FakeDriver(), frames
+
+    def test_browsing_is_changed_only_by_native_control_and_all_visible_results_required(self):
+        driver, _ = self.fake_driver()
+        states = [{"browsingEnabled": False, "sharingEnabled": False, "peers": []},
+                  {"browsingEnabled": True, "sharingEnabled": False, "peers": []}]
+        with patch.object(flow, "status", side_effect=AssertionError("No hidden API mutation")):
+            report = flow.empty_library(driver, status_reader=lambda _app: states.pop(0))
+        self.assertTrue(report["emptyLibraryFlowPassed"])
+        self.assertFalse(report["mainFlowPassed"])
+        self.assertIn(("Enable browsing", "button"), driver.actions)
+        self.assertIn(("Search", "button"), driver.actions)
+        self.assertIn("empty-library-results", driver.checkpoints)
+        self.assertEqual(["native-pairing", "remote-query-and-detail", "offline-recovery"], report["remaining"])
+
+    def test_http_state_without_native_empty_result_cannot_pass(self):
+        driver, frames = self.fake_driver()
+        frames["empty-library-results"] = view(texts=["Loading…"])
+        states = iter([{"browsingEnabled": False, "sharingEnabled": False, "peers": []},
+                       {"browsingEnabled": True, "sharingEnabled": False, "peers": []}])
+        with self.assertRaisesRegex(AssertionError, "Native state missing"):
+            flow.empty_library(driver, status_reader=lambda _app: next(states))
+        self.assertFalse(driver.report.get("emptyLibraryFlowPassed", False))
+
+
+class ScriptFixtures(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "PowerShell pure guard fixture runs on the Windows runner")
+    def test_uia_action_guard_rechecks_current_visibility_immediately_before_action(self):
+        # Execute just the actual final visibility guard with plain objects. No
+        # UIA assembly, OS window, product process or Invoke pattern is loaded.
+        fixture = r'''
+$tokens=$null; $errors=$null
+$ast=[System.Management.Automation.Language.Parser]::ParseInput([Console]::In.ReadToEnd(),[ref]$tokens,[ref]$errors)
+if($errors.Count){exit 1}
+$guards=@($ast.FindAll({param($node)
+  $node -is [System.Management.Automation.Language.IfStatementAst] -and
+  $node.Extent.Text.StartsWith('if($element.Current.IsOffscreen)')
+},$true))
+if($guards.Count -ne 1){exit 2}
+$guard=[scriptblock]::Create($guards[0].Extent.Text)
+foreach($offscreen in @($false,$true)) {
+  $element=[pscustomobject]@{Current=[pscustomobject]@{IsOffscreen=$offscreen}}
+  $blocked=$false
+  try { & $guard } catch {$blocked=$true}
+  if($blocked -ne $offscreen){exit 3}
+}
+'''
+        subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", fixture],
+                       input=(HERE / "windows-action.ps1").read_text(), text=True,
+                       capture_output=True, timeout=10, check=True)
+
+    @unittest.skipUnless(shutil.which("node"), "Node is required for the non-OS AX action fixture")
+    def test_macos_action_rechecks_target_and_never_presses_a_changed_control(self):
+        fixture = r'''
+const fs=require('fs'),vm=require('vm');const code=fs.readFileSync(process.argv[1],'utf8');
+function run(changed,outside) {
+ let presses=0;
+ const actions=()=>[{name:()=> 'AXPress'}];actions.byName=()=>({perform:()=>{presses++}});
+ const leaf={attributes:{byName:k=>({value:()=>({AXRole:'AXButton',AXTitle:changed?'Unrelated':'Close',AXEnabled:true,AXIdentifier:''}[k]??null)})},actions};
+ const web={attributes:{byName:k=>({value:()=>k==='AXRole'?(outside?'AXGroup':'AXWebArea'):null})},uiElements:()=>[leaf]};
+ const win={attributes:{byName:k=>({value:()=>false})},uiElements:()=>[web]};
+ const se={uiElementsEnabled:()=>true,processes:{whose:q=>{if(q.unixId!==42)throw Error();return()=>[{visible:()=>true,unixId:()=>42,windows:()=>[win]}]}}};
+ const input={pid:42,operation:'press',selector:{path:[0,0,0],role:'AXButton',name:'Close',identifier:''}};
+ const result=JSON.parse(vm.runInNewContext('const input='+JSON.stringify(input)+';\n'+code,{Application:()=>se}));
+ if(result.performed!==(!changed&&!outside) || presses!==(!changed&&!outside?1:0))throw Error('unexpected press');
+}
+run(false,false);run(true,false);run(false,true);
+'''
+        subprocess.run([shutil.which("node"), "-e", fixture, str(HERE / "macos-action.js")],
+                       capture_output=True, text=True, timeout=5, check=True)
+
+
+if __name__ == "__main__":
+    unittest.main()

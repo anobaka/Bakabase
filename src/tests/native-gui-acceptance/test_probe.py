@@ -31,9 +31,9 @@ def snapshot(backend="macos-system-events-ax"):
             "process": {"pid": 42, "started": "fixture-start", "executable": "/fixture/Bakabase"},
             "windows": [{"index": 0, "visible": True, "name": "Bakabase", "nodes": [
                 {"path": [0], "role": "AXWindow", "insideWebContent": False},
-                {"path": [0, 0], "role": "AXWebArea", "insideWebContent": True},
+                {"path": [0, 0], "role": "AXWebArea", "insideWebContent": True, "visible": True},
                 {"path": [0, 0, 0], "role": "AXButton", "insideWebContent": True,
-                 "enabled": True, "name": "Enable browsing", "actions": ["AXPress"]}]}]}
+                 "visible": True, "enabled": True, "name": "Enable browsing", "actions": ["AXPress"]}]}]}
 
 
 class Capability(unittest.TestCase):
@@ -76,6 +76,14 @@ class Capability(unittest.TestCase):
         self.assertFalse(probe.summarize(view)["capabilityPassed"])
         view["windows"][0]["nodes"][-1]["actions"] = ["InvokePatternIdentifiers.Pattern"]
         self.assertTrue(probe.summarize(view)["capabilityPassed"])
+
+    def test_uia_hidden_or_unknown_node_visibility_is_not_capability(self):
+        for visibility in (False, None):
+            view = snapshot("windows-uia")
+            view["windows"][0]["nodes"][-1]["visible"] = visibility
+            with self.subTest(visibility=visibility):
+                self.assertFalse(probe.summarize(view)["capabilityPassed"])
+                self.assertIs(probe.sanitize(view)["windows"][0]["nodes"][-1]["visible"], visibility)
 
     def test_node_budget_and_invalid_backend_are_rejected(self):
         view = snapshot()
@@ -139,6 +147,40 @@ class Guards(unittest.TestCase):
             self.assertFalse(result["capabilityPassed"])
             self.assertNotIn("sensitive", json.dumps(result))
 
+    def test_readiness_reobserves_empty_native_shell_without_changing_identity(self):
+        empty = snapshot()
+        empty["windows"] = []
+        with tempfile.TemporaryDirectory() as temporary, patch.object(probe, "hosted"), \
+                patch.object(probe, "native_snapshot", side_effect=[empty, snapshot()]) as read, patch.object(probe.time, "sleep"):
+            destination = Path(temporary) / "results"
+            result = probe.capture({"role": "unified", "rid": "osx-x64"}, 42, destination)
+            self.assertTrue(result["capabilityPassed"])
+            self.assertFalse(result["mainFlowPassed"])
+            self.assertEqual(2, len(result["attempts"]))
+            self.assertTrue((destination / "tree-01.json").exists())
+            self.assertTrue((destination / "tree-02.json").exists())
+            self.assertEqual(2, read.call_count)
+
+    def test_readiness_pid_reuse_does_not_pass(self):
+        empty = snapshot()
+        empty["windows"] = []
+        replacement = snapshot()
+        replacement["process"]["started"] = "reused"
+        with tempfile.TemporaryDirectory() as temporary, patch.object(probe, "hosted"), \
+                patch.object(probe, "native_snapshot", side_effect=[empty, replacement]), patch.object(probe.time, "sleep"):
+            result = probe.capture({"role": "unified", "rid": "osx-x64"}, 42, Path(temporary) / "results")
+            self.assertFalse(result["capabilityPassed"])
+            self.assertEqual("ProductProcessChangedDuringReadiness", result["error"]["code"])
+
+    def test_disabled_accessibility_is_not_retried(self):
+        view = snapshot()
+        view["enabled"] = False
+        with tempfile.TemporaryDirectory() as temporary, patch.object(probe, "hosted"), \
+                patch.object(probe, "native_snapshot", return_value=view) as read:
+            result = probe.capture({"role": "unified", "rid": "osx-x64"}, 42, Path(temporary) / "results")
+            self.assertFalse(result["capabilityPassed"])
+            self.assertEqual(1, read.call_count)
+
 
 class OwnedCommands(unittest.TestCase):
     def test_pure_helper_stdout_is_parsed(self):
@@ -162,6 +204,21 @@ class OwnedCommands(unittest.TestCase):
 
 
 class NativeScriptFixtures(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("node"), "Node is required for the non-OS JavaScript fixture")
+    def test_macos_missing_children_are_partial_not_a_complete_absence(self):
+        fixture = r'''
+const fs=require('fs'),vm=require('vm');
+const source=fs.readFileSync(process.argv[1],'utf8');
+const root={attributes:{byName:key=>({value:()=>({AXRole:'AXWindow',AXTitle:'Bakabase'}[key]??null)})},
+  uiElements:()=>{throw Error('Unavailable child tree')}};
+const owned={unixId:()=>42,visible:()=>true,windows:()=>[root]};
+const system={uiElementsEnabled:()=>true,processes:{whose:()=>()=>[owned]}};
+const output=JSON.parse(vm.runInNewContext('const input={pid:42,maxNodes:1000,maxDepth:40};\n'+source,{Application:()=>system}));
+if(output.truncated!==true || output.enabled!==true)throw Error('Missing subtree claimed complete');
+'''
+        subprocess.run([shutil.which("node"), "-e", fixture, str(HERE / "macos-snapshot.js")],
+                       capture_output=True, text=True, timeout=5, check=True)
+
     @unittest.skipUnless(shutil.which("node"), "Node is required for the non-OS JavaScript fixture")
     def test_macos_script_reads_exact_pid_and_omits_editable_values(self):
         fixture = r'''
@@ -188,9 +245,10 @@ console.log(JSON.stringify(output));
     @unittest.skipUnless(os.name == "nt", "Static PowerShell parser is available on the Windows runner")
     def test_windows_script_parses_without_executing_or_reading_ui(self):
         script = "$tokens=$null; $errors=$null; [void][System.Management.Automation.Language.Parser]::ParseInput([Console]::In.ReadToEnd(),[ref]$tokens,[ref]$errors); if($errors.Count){exit 1}"
-        subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script,
-                        ], input=(HERE / "windows-snapshot.ps1").read_text(), text=True,
-                       check=True, capture_output=True, timeout=10)
+        for name in ("windows-snapshot.ps1", "windows-action.ps1"):
+            with self.subTest(name=name):
+                subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+                               input=(HERE / name).read_text(), text=True, check=True, capture_output=True, timeout=10)
 
 
 class Integration(unittest.TestCase):

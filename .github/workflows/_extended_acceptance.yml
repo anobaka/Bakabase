@@ -141,7 +141,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate native UI boundaries
-        run: python src/tests/native-gui-acceptance/test_probe.py
+        run: |
+          python src/tests/native-gui-acceptance/test_probe.py
+          python src/tests/native-gui-acceptance/test_flow.py
       - name: Verify candidate package provenance
         id: inputs
         env:
@@ -162,7 +164,7 @@ jobs:
           python src/tests/native-gui-acceptance/run-probe.py \
             --unified-packages "$UNIFIED_PACKAGES" --client-packages "$CLIENT_PACKAGES" \
             --rid '${{ matrix.rid }}' --version "$PACKAGE_VERSION" --provenance "$PACKAGE_PROVENANCE" \
-            --results-directory "$RUNNER_TEMP/native-gui-results"
+            --results-directory "$RUNNER_TEMP/native-gui-results" --flow empty-library
       - uses: actions/upload-artifact@v4
         if: always()
         with:

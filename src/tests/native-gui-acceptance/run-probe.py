@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Install audited real products and probe native AX/UIA on a fresh hosted VM.
 
-This first gate collects actual trees needed to implement native user flows.
-It does not click controls, use a browser, or claim end-to-end GUI acceptance.
+The capability gate is read-only. --flow empty-library additionally operates
+actual native controls; neither mode claims the remaining remote user flows.
 The established installed lifecycle owns the installers, defaults and cleanup.
 """
 import argparse
@@ -45,6 +45,17 @@ def exercise(apps, report, feed=None):
     # Collect both products even when one does not expose its WebView controls.
     lifecycle.require(all(item["capabilityPassed"] for item in report["nativeProbes"].values()),
                       "Native accessibility capability is unavailable; inspect the bounded trees")
+    report["capabilityPassed"] = True
+    if report.get("requestedFlow") == "empty-library":
+        report["currentStage"] = "native-empty-library-flow"
+        app = apps["unified"]
+        observed = lifecycle.observe_app(app)
+        lifecycle.require(len(observed["processIds"]) == 1, "Native flow requires one exact product process")
+        flow = load("native_empty_library_flow", HERE / "flow.py")
+        result = flow.run_empty_library(app, observed["processIds"][0], app["results"] / "empty-library-flow")
+        lifecycle.require(result.get("emptyLibraryFlowPassed") is True, "Native empty-library flow did not pass")
+        report["emptyLibraryFlowPassed"] = True
+        report["nativeEmptyLibrary"] = result
 
 
 def provenance(path, rid, version):
@@ -64,17 +75,19 @@ def main():
     parser.add_argument("--version", required=True)
     parser.add_argument("--provenance", required=True, type=Path)
     parser.add_argument("--results-directory", required=True, type=Path)
+    parser.add_argument("--flow", choices=("capability", "empty-library"), default="capability")
     args = parser.parse_args()
     lifecycle.base.require_hosted_runner(os.environ, platform.system(), platform.machine(), args.rid)
     source = provenance(args.provenance, args.rid, args.version)
     results = args.results_directory.resolve()
     lifecycle.require(not results.exists(), "Results must be a new directory")
     results.mkdir(parents=True)
-    report = {"passed": False, "capabilityPassed": False, "mainFlowPassed": False,
-              "scope": "installed-native-accessibility-capability-only", "rid": args.rid,
+    report = {"passed": False, "capabilityPassed": False, "mainFlowPassed": False, "emptyLibraryFlowPassed": False,
+              "requestedFlow": args.flow,
+              "scope": "installed-native-empty-library" if args.flow == "empty-library" else "installed-native-accessibility-capability-only", "rid": args.rid,
               "provenance": source, "packageVersion": args.version,
               "executionHeadSHA": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=lifecycle.base.ROOT, text=True).strip(),
-              "limitations": ["Read-only capability probe: no product user flow is accepted by this result.",
+              "limitations": ["Capability is separate from empty-library flow; pairing, remote detail and offline recovery remain untested.",
                               "No browser automation, API mutation, accessibility permission changes or account creation.",
                               "The original installer and normal native process own the displayed UI."]}
     # Its execute/finally retains all established ownership checks. Only the
@@ -86,7 +99,7 @@ def main():
         report["error"] = {"type": type(error).__name__, "code": "NativeCapabilityProbeFailed"}
     finally:
         (results / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps({key: report[key] for key in ("passed", "capabilityPassed", "mainFlowPassed", "rid", "scope")}))
+        print(json.dumps({key: report[key] for key in ("passed", "capabilityPassed", "emptyLibraryFlowPassed", "mainFlowPassed", "rid", "scope")}))
     return 0 if report["passed"] else 1
 
 
