@@ -363,12 +363,13 @@ class FeedGuards(unittest.TestCase):
 
 class RetentionAndCoreGuards(unittest.TestCase):
     def test_historical_flow_seeds_original_code_before_native_updates_and_never_reinstalls_old_code(self):
-        apps = {role: {"role": role, "port": 41001 if role == "client" else 41002} for role in release.ROLES}
+        apps = {role: {"role": role, "rid": "win-x64", "port": 41001 if role == "client" else 41002} for role in release.ROLES}
         report, order = {}, []
         prepared = SimpleNamespace(manifest={"roles": {role: {"channel": "win"} for role in release.ROLES}})
         original = {"database": {"resourceIds": [7]}, "fields": {"Id": 7, "Title": runner.RESOURCE_TITLE}}
-        def install(app, label, audit=None):
+        def install(app, label, audit=None, macos_initial_activation=None):
             self.assertTrue(callable(audit))
+            self.assertIsNone(macos_initial_activation)
             order.append("install-" + app["role"])
             return {"passed": True}
         def api(port, path, payload):
@@ -471,6 +472,49 @@ class RetentionAndCoreGuards(unittest.TestCase):
             options["maxParallelism"] = 4
             path.write_text(json.dumps({"App": options}))
             with self.assertRaises(AssertionError): runner.config_state(app)
+
+
+class OriginalMacActivationGuards(unittest.TestCase):
+    def test_only_audited_unstarted_original_can_be_opened_once(self):
+        app = {"rid": "osx-arm64", "exe": Path("/owned/old.app/Contents/MacOS/Old")}
+        order = []
+        with patch.object(runner, "original_install_audit", side_effect=lambda *a: order.append("audit")), \
+             patch.object(runner.base, "native_processes", return_value=[]), \
+             patch.object(runner.lifecycle, "start_app", side_effect=lambda *a: order.append("open") or {"passed": True}) as start:
+            result = runner.open_original_macos(app, {})
+            self.assertEqual(order, ["audit", "open"])
+            start.assert_called_once_with(app, "historical-original-explicit-user")
+            self.assertFalse(result["initialLaunch"]["automatic"])
+            self.assertTrue(result["initialLaunch"]["unmodifiedOriginalPayloadVerified"])
+        for running, audit_error in (([123], None), ([], AssertionError("changed original"))):
+            with patch.object(runner, "original_install_audit", side_effect=audit_error), \
+                 patch.object(runner.base, "native_processes", return_value=running), \
+                 patch.object(runner.lifecycle, "start_app") as start:
+                with self.assertRaises(AssertionError): runner.open_original_macos(app, {})
+                start.assert_not_called()
+        with patch.object(runner.lifecycle, "start_app", side_effect=RuntimeError("LaunchServices failed")) as start, \
+             patch.object(runner, "original_install_audit"), patch.object(runner.base, "native_processes", return_value=[]):
+            with self.assertRaisesRegex(RuntimeError, "LaunchServices failed"): runner.open_original_macos(app, {})
+            start.assert_called_once()
+
+    def test_existing_installed_gate_keeps_automatic_initial_launch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            app = {"rid": "osx-arm64", "installRoot": root / "missing.app", "packages": root,
+                   "packageAudit": {"artifacts": {"installer": {"file": "original.pkg"}}},
+                   "results": root, "environment": {}}
+            with patch.object(runner.lifecycle.base, "command"), \
+                 patch.object(runner.lifecycle, "observe_app", return_value={"passed": True}) as observe, \
+                 patch.object(runner.lifecycle, "audit_installed", return_value={"passed": True}):
+                result = runner.lifecycle.install_app(app, "default")
+                observe.assert_called_once_with(app, startup=True)
+                self.assertEqual(result["mechanism"], "original-pkg-system-install-with-postinstall-automatic-launch")
+                observe.reset_mock()
+                activation = unittest.mock.Mock(return_value={"passed": True, "explicit": True})
+                result = runner.lifecycle.install_app(app, "historical", macos_initial_activation=activation)
+                activation.assert_called_once_with(app)
+                observe.assert_not_called()
+                self.assertEqual(result["mechanism"], "original-pkg-system-install-with-explicit-initial-user-open")
 
 
 if __name__ == "__main__":

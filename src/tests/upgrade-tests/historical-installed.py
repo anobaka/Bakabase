@@ -50,6 +50,23 @@ def original_install_audit(app, prepared):
     return updates.validate_payload(app, prepared, False)
 
 
+def open_original_macos(app, prepared):
+    """Explicit first user launch; never a retry or an updater restart fallback."""
+    require(app["rid"].startswith("osx-"), "Explicit historical activation is macOS-only")
+    original_install_audit(app, prepared)
+    require(not base.native_processes(app["exe"]), "Original product already runs before explicit initial activation")
+    startup = lifecycle.start_app(app, "historical-original-explicit-user")
+    return dict(startup, initialLaunch={"method": "LaunchServices-open-original-installed-bundle",
+                                      "automatic": False, "unmodifiedOriginalPayloadVerified": True})
+
+
+def install_original(app, prepared):
+    return lifecycle.install_app(app, "historical-original",
+        audit=lambda current: original_install_audit(current, prepared),
+        macos_initial_activation=(lambda current: open_original_macos(current, prepared))
+            if app["rid"].startswith("osx-") else None)
+
+
 def config_state(app):
     value = json.loads((app["data"] / "app.json").read_text(encoding="utf-8-sig"))["App"]
     expected = {"language": "en-US", "enableAnonymousDataTracking": False,
@@ -85,13 +102,11 @@ def exercise(apps, report, feed):
     require(feed is not None, "Historical acceptance requires real native updates")
     client, unified = apps["client"], apps["unified"]
     report["currentStage"] = "historical-original-client-install"
-    report["clientFirstInstall"] = lifecycle.install_app(client, "historical-original",
-        audit=lambda app: original_install_audit(app, feed.manifest["roles"]["client"]))
+    report["clientFirstInstall"] = install_original(client, feed.manifest["roles"]["client"])
     client_before = lifecycle.observe_app(client)
     report["clientSettingsBaseline"] = lifecycle.client_state(client)
     report["currentStage"] = "historical-original-unified-install"
-    report["unifiedSecondInstall"] = lifecycle.install_app(unified, "historical-original",
-        audit=lambda app: original_install_audit(app, feed.manifest["roles"]["unified"]))
+    report["unifiedSecondInstall"] = install_original(unified, feed.manifest["roles"]["unified"])
     lifecycle.require_same_process(client_before, lifecycle.observe_app(client))
     report["originalVersions"] = {}
     for role, app in apps.items():
@@ -161,6 +176,7 @@ def main(argv=None):
               "executionHeadSHA": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=base.ROOT, text=True).strip(),
               "automaticUpdatesRequested": True, "scope": SCOPE,
               "limitations": ["Original published installers are tested on disposable hosted runners only.",
+                              "macOS historical installation uses an explicit first user open of the unchanged bundle; updater restarts remain automatic.",
                   "The target synthetic package version is higher than the original; its product code is verified identical to the candidate packages.",
                   "This exercises original-code migration for a freshly seeded historical library, not every existing user database.",
                   "Background containment uses own loopback feeds and a rejecting proxy, not an OS network sandbox.",

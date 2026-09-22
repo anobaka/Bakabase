@@ -221,7 +221,7 @@ def audit_installed(app):
     return base.contract.check_publish(content, app["role"], require_web=app["role"] == "unified")
 
 
-def install_app(app, label, audit=None):
+def install_app(app, label, audit=None, macos_initial_activation=None):
     require(not app["installRoot"].exists(), "Install target already exists")
     app["installationAttempted"] = True
     installer = app["packages"] / app["packageAudit"]["artifacts"]["installer"]["file"]
@@ -229,8 +229,12 @@ def install_app(app, label, audit=None):
         base.command(["sudo", "/usr/bin/env", "USER=" + os.environ["USER"], "/usr/sbin/installer",
                       "-pkg", installer, "-target", "/", "-verboseR"],
                      app["results"] / (label + "-installer.log"), app["environment"])
-        mechanism = "original-pkg-system-install-with-postinstall-automatic-launch"
-        startup = observe_app(app, startup=True)
+        if macos_initial_activation is None:
+            mechanism = "original-pkg-system-install-with-postinstall-automatic-launch"
+            startup = observe_app(app, startup=True)
+        else:
+            mechanism = "original-pkg-system-install-with-explicit-initial-user-open"
+            startup = macos_initial_activation(app)
     else:
         # No installto or AppData override: verify the real product defaults.
         base.command([installer, "--silent", "--log", app["results"] / (label + "-setup-native.log")],
