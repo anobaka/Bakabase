@@ -3,6 +3,7 @@
 import type { components } from "@/sdk/BApi2";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type {
+  BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask,
   BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition,
   BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions,
 } from "@/sdk/Api";
@@ -36,6 +37,8 @@ import AutoRetryField from "@/pages/downloader/components/TaskDetailModal/compon
 import AllowDuplicateField from "@/pages/downloader/components/TaskDetailModal/components/AllowDuplicateField.tsx";
 import PreferTorrentField from "@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField.tsx";
 import DownloadResultsPanel from "@/pages/downloader/components/TaskDetailModal/components/DownloadResultsPanel";
+import EstimatedRemainingTime from "@/pages/downloader/components/EstimatedRemainingTime";
+import { useDownloadTasksStore } from "@/stores/downloadTasks";
 
 type Form =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskAddInputModel"];
@@ -56,6 +59,10 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
 
   const isAdding = !(id && id > 0);
   const [form, setForm] = useState<Partial<Form>>({ autoRetry: true });
+  const [loadedTask, setLoadedTask] =
+    useState<BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask>();
+  const liveTask = useDownloadTasksStore((s) => s.tasks.find((task) => task.id === id));
+  const task = liveTask ?? loadedTask;
   const [taskDefinitions, setTaskDefinitions] = useState<
     BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition[]
   >([]);
@@ -74,6 +81,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
       };
 
       setForm(form);
+      setLoadedTask(task);
     }
 
     const taskDefinitionsResponse = await BApi.downloadTask.getAllDownloaderDefinitions();
@@ -379,6 +387,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
           }
         }}
       >
+        {!isAdding && task && <EstimatedRemainingTime task={task} />}
         <div className={"grid gap-2 items-center"} style={{ gridTemplateColumns: "auto 1fr" }}>
           <div>{t<string>("downloader.label.site")}</div>
           <div>

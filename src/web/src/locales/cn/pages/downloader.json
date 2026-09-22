@@ -33,6 +33,7 @@
   "downloader.empty.noTasks": "未找到任务",
   "downloader.label.nextStartTime": "下次开始时间",
   "downloader.label.createdAt": "创建于",
+  "downloader.label.estimatedRemaining": "预计剩余",
   "downloader.confirm.deleteTask": "确定要删除吗？",
   "downloader.modal.configurations": "配置",
   "downloader.modal.creatingTask": "创建下载任务",

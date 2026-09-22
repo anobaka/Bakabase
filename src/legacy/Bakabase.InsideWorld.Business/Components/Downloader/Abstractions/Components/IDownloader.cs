@@ -13,6 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Compo
         int TaskType { get; }
         DownloaderStatus Status { get; }
         string? Current { get; }
+        double? EstimatedRemainingSeconds { get; }
         Task Stop(DownloaderStopBy stopBy);
         DownloaderStopBy? StoppedBy { get; set; }
 
