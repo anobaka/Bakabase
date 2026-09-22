@@ -503,7 +503,8 @@ class OriginalMacActivationGuards(unittest.TestCase):
             app = {"rid": "osx-arm64", "installRoot": root / "missing.app", "packages": root,
                    "packageAudit": {"artifacts": {"installer": {"file": "original.pkg"}}},
                    "results": root, "environment": {}}
-            with patch.object(runner.lifecycle.base, "command"), \
+            with patch.dict(runner.lifecycle.os.environ, {"USER": "fixture-user"}, clear=True), \
+                 patch.object(runner.lifecycle.base, "command"), \
                  patch.object(runner.lifecycle, "observe_app", return_value={"passed": True}) as observe, \
                  patch.object(runner.lifecycle, "audit_installed", return_value={"passed": True}):
                 result = runner.lifecycle.install_app(app, "default")
