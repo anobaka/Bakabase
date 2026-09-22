@@ -175,6 +175,27 @@ class ReleaseGuards(unittest.TestCase):
 
 
 class PreparationGuards(unittest.TestCase):
+    def test_original_os_only_rid_preserves_manifest_and_never_relaxes_candidate_architecture(self):
+        for rid in release.RIDS:
+            os_family = "win" if rid == "win-x64" else "osx"
+            for role in release.ROLES:
+                original = version_manifest(role, release.OLD_VERSION, rid, "beta")
+                original["rid"] = os_family
+                snapshot = copy.deepcopy(original)
+                checked = release.original_manifest_identity(original, role, rid)
+                self.assertEqual(snapshot, original)
+                self.assertEqual({"manifestRID": os_family, "verifiedAssetRID": rid, "legacyOSOnlyRID": True}, checked)
+                for wrong in ("linux", "", None, "osx-arm64" if rid != "osx-arm64" else "osx-x64"):
+                    with self.subTest(role=role, rid=rid, wrong=wrong), self.assertRaises(AssertionError):
+                        release.original_manifest_identity(dict(original, rid=wrong), role, rid)
+        with tempfile.TemporaryDirectory() as temporary:
+            value = manifest(Path(temporary))
+            for role in release.ROLES:
+                value["roles"][role]["oldManifest"]["rid"] = "win"
+            release.validate_preparation(value, "win-x64")
+            value["roles"]["unified"]["newManifest"]["rid"] = "win"
+            with self.assertRaises(AssertionError): release.validate_preparation(value, "win-x64")
+
     def test_pinned_legacy_plist_can_lack_executable_key_but_cannot_name_another_product(self):
         for role in release.ROLES:
             product = release.base.contract.PRODUCTS[role]
@@ -216,10 +237,15 @@ class PreparationGuards(unittest.TestCase):
             with patch.object(release, "hosted"), patch.object(release, "verify_file", return_value=installer), \
                  patch.object(release.repack, "run_command", side_effect=fake_expand) as command, \
                  patch.object(release.base.contract, "check_publish", side_effect=AssertionError("Current federation contract must not audit old code")):
-                audit = release.audit_released(root, "unified", "osx-arm64", root, time.monotonic() + 5)
+                observed = {}
+                audit = release.audit_released(root, "unified", "osx-arm64", root, time.monotonic() + 5, observations=observed)
             self.assertEqual("original-pkg-expanded", audit["payloadSource"])
             self.assertIn("web/main.js", audit["payloadHashes"])
             self.assertNotIn("Bakabase.Modules.Federation.dll", audit["payloadHashes"])
+            self.assertEqual(audit["manifest"], observed["manifest"])
+            self.assertEqual(audit["bundleIdentity"], observed["bundleIdentity"])
+            self.assertEqual(audit["artifacts"], observed["verifiedPublishedArtifacts"])
+            self.assertTrue(observed["passed"])
             self.assertFalse((root / "unified-historical-expanded").exists())
             command.assert_called_once()
 

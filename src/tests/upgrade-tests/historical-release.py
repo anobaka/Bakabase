@@ -170,11 +170,26 @@ def original_bundle_identity(info, role):
     return {"observed": observed, "legacyMissingExecutableKey": "CFBundleExecutable" not in info, "passed": True}
 
 
-def audit_released(packages, role, rid, work, deadline):
+def original_manifest_identity(manifest, role, rid):
+    require(rid in RIDS, "Unsupported historical target architecture")
+    original_rid = manifest.get("rid")
+    os_family = "win" if rid == "win-x64" else "osx"
+    # The old release workflow omitted vpk --runtime, so these exact published
+    # assets say win/osx in sq.version. Their architecture remains bound to the
+    # per-RID published asset ID, byte length and SHA256 and matching native VM.
+    # Do not rewrite the original manifest or relax the candidate's full RID.
+    require(original_rid in (os_family, rid), "Historical manifest names another platform or architecture")
+    base.validate_manifest(dict(manifest, rid=rid), role, rid, OLD_VERSION)
+    return {"manifestRID": original_rid, "verifiedAssetRID": rid, "legacyOSOnlyRID": original_rid == os_family}
+
+
+def audit_released(packages, role, rid, work, deadline, observations=None):
     """Expand the original pkg or published Win portable; never execute products."""
     hosted(rid)
     artifacts = {kind: verify_file(packages / pin(role, rid, kind)["file"], pin(role, rid, kind))
                  for kind in (("installer", "portable") if rid == "win-x64" else ("installer",))}
+    observations = {} if observations is None else observations
+    observations.update(passed=False, verifiedPublishedArtifacts=artifacts)
     expanded = work / (role + "-historical-expanded")
     bundle, bundle_identity = None, None
     try:
@@ -197,14 +212,19 @@ def audit_released(packages, role, rid, work, deadline):
             require(bundle in allowed, "Historical application bundle name differs")
             info = plistlib.loads((content.parent / "Info.plist").read_bytes())
             bundle_identity = original_bundle_identity(info, role)
+            observations.update(bundleName=bundle, bundleIdentity=bundle_identity)
         check_old_content(content, role, rid)
         manifest = base.read_manifest((content / "sq.version").read_bytes())
-        base.validate_manifest(manifest, role, rid, OLD_VERSION)
+        observations["manifest"] = {key: manifest.get(key) for key in ("id", "mainExe", "rid", "version", "channel")}
+        runtime_identity = original_manifest_identity(manifest, role, rid)
+        observations["runtimeIdentity"] = runtime_identity
         require(manifest.get("channel") == "beta", "Historical release must retain its original beta manifest")
         hashes = repack.tree_hashes(content)
         require(repack.MARKER not in hashes, "Historical release unexpectedly contains a test marker")
+        observations.update(passed=True, payloadFileCount=len(hashes))
         return {"passed": True, "artifacts": artifacts, "manifest": manifest, "bundleName": bundle,
                 "bundleIdentity": bundle_identity,
+                "runtimeIdentity": runtime_identity,
                 "binaryHashes": {name: hashes[name]["sha256"] for name in
                                   (manifest["mainExe"], base.contract.PRODUCTS[role]["assembly"] + ".dll",
                                    base.contract.PRODUCTS[role]["assembly"] + ".deps.json")},
@@ -234,8 +254,8 @@ def validate_preparation(value, rid):
         entry = value["roles"][role]
         require(entry.get("role") == role and entry.get("candidatePayloadUnchanged") is True and
                 entry.get("expectedRunningVersion") == CANDIDATE_CORE, "Candidate product payload is not verified")
-        for kind, version in (("old", OLD_VERSION), ("new", value["newVersion"])):
-            base.validate_manifest(entry[kind + "Manifest"], role, rid, version)
+        original_manifest_identity(entry["oldManifest"], role, rid)
+        base.validate_manifest(entry["newManifest"], role, rid, value["newVersion"])
         require(entry["oldManifest"].get("channel") == "beta" and
                 entry["newManifest"].get("channel") == entry.get("channel") == ("win" if rid == "win-x64" else "osx"),
                 "Unexpected original or target update channel")

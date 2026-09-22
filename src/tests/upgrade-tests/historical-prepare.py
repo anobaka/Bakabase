@@ -104,7 +104,8 @@ def main(argv=None):
             for expected in selected[role].values():
                 release.download(expected, original / expected["file"], args.rid, deadline)
             report["currentStage"] = "audit-original-" + role
-            old_audit = release.audit_released(original, role, args.rid, output, deadline)
+            observations = report.setdefault("originalPackageObservations", {}).setdefault(role, {})
+            old_audit = release.audit_released(original, role, args.rid, output, deadline, observations=observations)
             report["currentStage"] = "repack-candidate-" + role
             prepared = repack.prepare_role(role, packages[role], candidate, args, source, nonce, deadline)
             report["roles"][role] = combine(prepared, old_audit, original)
