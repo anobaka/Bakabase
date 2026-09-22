@@ -275,6 +275,14 @@ def wait_automatic_replacement(app, prepared, old, observer, trigger, deadline):
     raise AssertionError("No unique new installed process with target manifest after observed updater exit; manual fallback is forbidden")
 
 
+def validate_running_core(prepared, original, actual, persisted):
+    expected = prepared.get("expectedRunningVersion", original)
+    require(isinstance(expected, str) and bool(expected), "Expected running core version is missing")
+    require(actual == expected, "Updated running core differs from the verified candidate")
+    require(persisted == expected, "Persistent app version differs from the running core")
+    return expected
+
+
 def perform(app, other, prepared, other_prepared, feed, lifecycle, observer, report, client_baseline, resource_id):
     old = one_process(observer, app["exe"])
     survivor = one_process(observer, other["exe"])
@@ -332,10 +340,10 @@ def perform(app, other, prepared, other_prepared, feed, lifecycle, observer, rep
             report["afterPayload"] = validate_payload(app, prepared, True)
             app["version"], app["packageAudit"] = prepared["newManifest"]["version"], prepared["newAudit"]
             core = report["automaticStartup"]["appInfo"]["version" if app["role"] == "client" else "coreVersion"]
-            require(core == running, "Same-code repack changed the running core version")
-            report["afterCheck"] = validate_check(api(app, "new-version").get("data"), app["version"], running, prepared["channel"], None)
             app_options = json.loads((app["data"] / "app.json").read_text(encoding="utf-8-sig"))["App"]
-            require(app_options.get("version") == running, "Persistent app version changed to the package version")
+            expected_core = validate_running_core(prepared, running, core, app_options.get("version"))
+            report["expectedRunningVersion"] = expected_core
+            report["afterCheck"] = validate_check(api(app, "new-version").get("data"), app["version"], expected_core, prepared["channel"], None)
             require(validate_payload(other, other_prepared, other_updated) == other_payload, "Other installed product changed during update")
             report["coexistence"] = lifecycle.verify_coexistence({app["role"]: app, other["role"]: other},
                 app["role"] + "-automatically-updated", client_baseline, resource_id)

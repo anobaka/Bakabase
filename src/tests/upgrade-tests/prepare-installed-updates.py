@@ -217,7 +217,7 @@ def prepare_role(role, packages, output, args, source_sha, nonce, deadline):
             require(not path.is_dir(), "Generated payload name unexpectedly names a directory")
             path.unlink()
     marker = {"format": "bakabase-installed-updater-acceptance", "version": 1, "role": role,
-              "oldVersion": args.old_version, "newVersion": args.new_version,
+              "oldVersion": getattr(args, "original_installed_version", args.old_version), "newVersion": args.new_version,
               "sourceSHA": source_sha, "nonce": nonce}
     (staged / MARKER).write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8")
     assembly = acceptance.contract.PRODUCTS[role]["assembly"]
