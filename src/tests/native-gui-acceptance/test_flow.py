@@ -17,8 +17,8 @@ flow = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(flow)
 
 
-def view(texts=(), buttons=(), menus=()):
-    values = [("AXStaticText", text) for text in texts] + [("AXButton", text) for text in buttons] + [("AXMenuItem", text) for text in menus]
+def view(texts=(), buttons=(), menus=(), scopes=()):
+    values = [("AXStaticText", text) for text in texts] + [("AXButton", text) for text in buttons] + [("AXMenuItem", text) for text in menus] + [("AXCheckBox", text) for text in scopes]
     return {"backend": "macos-system-events-ax", "enabled": True, "readOnly": True, "truncated": False,
             "process": {"pid": 42, "executable": "/fixture/Bakabase", "started": "owned-start"},
             "windows": [{"index": 0, "visible": True, "nodes": [{"path": [0, 0, index], "role": role,
@@ -28,6 +28,12 @@ def view(texts=(), buttons=(), menus=()):
 
 
 class Selectors(unittest.TestCase):
+    def test_wkwebview_pressed_scope_is_selected_as_checkbox_not_an_unrelated_button(self):
+        snapshot = view(buttons=["Search"], scopes=["This device", "All enabled devices", "Choose devices"])
+        self.assertEqual("AXCheckBox", flow.one(snapshot, "This device", "scope")["role"])
+        with self.assertRaisesRegex(flow.probe.ProbeFailure, "MissingOrAmbiguousNativeControl"):
+            flow.one(snapshot, "This device", "button")
+
     def test_semantic_kind_disambiguates_menu_from_header_link(self):
         snapshot = view(menus=["Devices and sharing"])
         duplicate = dict(snapshot["windows"][0]["nodes"][0], role="AXLink", path=[0, 0, 1])
@@ -52,6 +58,7 @@ class Selectors(unittest.TestCase):
             for node in snapshot["windows"][0]["nodes"]:
                 node["role"] = "ControlType.Button" if node["role"] == "AXButton" else "ControlType.Text"
                 node["visible"] = visibility
+                node["runtimeId"] = [42, *node["path"]]
             with self.subTest(visibility=visibility):
                 self.assertFalse(flow.has_text(snapshot, "No matching resources"))
                 with self.assertRaisesRegex(flow.probe.ProbeFailure, "MissingOrAmbiguousNativeControl"):
@@ -60,6 +67,32 @@ class Selectors(unittest.TestCase):
                     node["visible"] = True
                 self.assertTrue(flow.has_text(snapshot, "No matching resources"))
                 self.assertEqual("Search", flow.one(snapshot, "Search", "button")["name"])
+
+    def test_uia_aliases_require_identical_runtime_id_and_semantics(self):
+        snapshot = view(buttons=["Close"])
+        snapshot["backend"] = "windows-uia"
+        node = snapshot["windows"][0]["nodes"][0]
+        node.update(role="ControlType.Button", visible=True, runtimeId=[42, 7, 19])
+        alias = dict(node, path=[0, 1, 3, 1, 0])
+        snapshot["windows"][0]["nodes"].append(alias)
+        selected = flow.one(snapshot, "Close", "button")
+        self.assertEqual([42, 7, 19], selected["runtimeId"])
+        self.assertEqual(node["path"], selected["path"])
+        alias["runtimeId"] = [42, 7, 20]
+        with self.assertRaisesRegex(flow.probe.ProbeFailure, "MissingOrAmbiguousNativeControl"):
+            flow.one(snapshot, "Close", "button")
+        alias["runtimeId"] = node["runtimeId"]
+        alias["identifier"] = "different-control"
+        with self.assertRaisesRegex(flow.probe.ProbeFailure, "InconsistentRuntimeIdObservation"):
+            flow.one(snapshot, "Close", "button")
+
+    def test_uia_missing_or_invalid_runtime_id_never_establishes_uniqueness(self):
+        for identity in (None, [], [True], [2**31], [0]*65):
+            snapshot = view(buttons=["Close"])
+            snapshot["backend"] = "windows-uia"
+            snapshot["windows"][0]["nodes"][0].update(role="ControlType.Button", visible=True, runtimeId=identity)
+            with self.subTest(identity=identity), self.assertRaisesRegex(flow.probe.ProbeFailure, "InvalidObservedRuntimeId"):
+                flow.one(snapshot, "Close", "button")
 
     def test_partial_tree_proves_neither_unique_control_nor_presence_or_absence(self):
         snapshot = view(texts=["No matching resources"], buttons=["Search"])
@@ -144,7 +177,7 @@ class FlowSequence(unittest.TestCase):
             "browsing-default-off": view(texts=["Browsing is off"], buttons=["Enable browsing"], menus=menus),
             "device-settings-off": view(texts=["Browse libraries on this device", "Browsing is off"], buttons=["Enable browsing"], menus=menus),
             "device-settings-enabled": view(texts=["Browsing enabled"], buttons=["Turn browsing off"], menus=menus),
-            "search-scopes-visible": view(buttons=["This device", "All enabled devices", "Choose devices", "Search"], menus=menus),
+            "search-scopes-visible": view(scopes=["This device", "All enabled devices", "Choose devices"], buttons=["Search"], menus=menus),
             "local-source-selected": view(buttons=["Search"], menus=menus),
             "empty-library-results": view(texts=["No matching resources", "0 resources · 1/1 devices searched", "Read-only view"], menus=menus),
             "saved-browsing-state": view(texts=["Browsing enabled"], buttons=["Turn browsing off"], menus=menus),
@@ -188,6 +221,32 @@ class FlowSequence(unittest.TestCase):
 
 
 class ScriptFixtures(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "PowerShell pure identity fixture runs on the Windows runner")
+    def test_uia_final_runtime_identity_guard_rejects_replaced_control(self):
+        fixture = r'''
+Add-Type -AssemblyName UIAutomationClient
+$tokens=$null; $errors=$null
+$ast=[System.Management.Automation.Language.Parser]::ParseInput([Console]::In.ReadToEnd(),[ref]$tokens,[ref]$errors)
+if($errors.Count){exit 1}
+$guards=@($ast.FindAll({param($node)
+  $node -is [System.Management.Automation.Language.IfStatementAst] -and
+  $node.Extent.Text.StartsWith('if(![System.Windows.Automation.Automation]::Compare(')
+},$true))
+if($guards.Count -ne 1){exit 2}
+$guard=[scriptblock]::Create($guards[0].Extent.Text)
+[int[]]$expectedRuntimeId=@(42,7,19)
+foreach($changed in @($false,$true)) {
+  $element=[pscustomobject]@{RuntimeId=@(42,7,$(if($changed){20}else{19}))}
+  $element | Add-Member ScriptMethod GetRuntimeId {return [int[]]$this.RuntimeId}
+  $blocked=$false
+  try { & $guard } catch {$blocked=$true}
+  if($blocked -ne $changed){exit 3}
+}
+'''
+        subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", fixture],
+                       input=(HERE / "windows-action.ps1").read_text(), text=True,
+                       capture_output=True, timeout=10, check=True)
+
     @unittest.skipUnless(os.name == "nt", "PowerShell pure guard fixture runs on the Windows runner")
     def test_uia_action_guard_rechecks_current_visibility_immediately_before_action(self):
         # Execute just the actual final visibility guard with plain objects. No

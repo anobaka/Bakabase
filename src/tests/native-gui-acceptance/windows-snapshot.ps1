@@ -43,6 +43,7 @@ function Read-Node($element, [int[]]$path, [int]$depth, [bool]$insideWeb, $nodes
     }
     $name = if ($password) { '' } else { Short-Text $current.Name }
     $nodes.Add(@{path=@($path); role=$role; name=$name; text='';
+        runtimeId=@($element.GetRuntimeId());
         identifier=(Short-Text $current.AutomationId); enabled=$current.IsEnabled; visible=(!$current.IsOffscreen);
         insideWebContent=$insideWeb; password=$password; actions=@($actions)})
     $child = $walker.GetFirstChild($element)

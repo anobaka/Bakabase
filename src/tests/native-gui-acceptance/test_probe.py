@@ -224,11 +224,18 @@ if(output.truncated!==true || output.enabled!==true)throw Error('Missing subtree
         fixture = r'''
 const fs=require('fs'),vm=require('vm');
 const source=fs.readFileSync(process.argv[1],'utf8');
-let queried, valuesRead=[];
+let queried, valuesRead=[], batches=[];
 function e(role,title,children=[],extra={}) {
   const props=Object.assign({AXRole:role,AXTitle:title,AXEnabled:true,AXValue:'PRIVATE_INPUT'},extra);
-  return {attributes:{byName:key=>({value:()=>{valuesRead.push([role,key]);return props[key] ?? null}})},
-          uiElements:()=>children, actions:()=>[{name:()=> 'AXPress'}]};
+  const uiElements=()=>children;uiElements.role=()=>children.map(child=>child.fixtureRole);
+  const actions={name:()=>['AXPress']};
+  return {fixtureRole:role, attributes:{byName:key=>({value:()=>{valuesRead.push([role,key]);return props[key] ?? null}}),
+    whose:query=>{
+      const names=query._or.map(term=>term.name);
+      if(names.some(name=>!['AXTitle','AXDescription','AXIdentifier','AXEnabled','AXSubrole'].includes(name)))throw Error('Unsafe native filter');
+      batches.push(names);
+      return {name:()=>names,value:()=>names.map(key=>{valuesRead.push([role,key]);return props[key]??null})};
+    }}, uiElements, actions};
 }
 const root=e('AXWindow','Bakabase',[e('AXWebArea','',[e('AXTextField','Search'),e('AXButton','Browse')])]);
 const owned={unixId:()=>42,visible:()=>true,windows:()=>[root]};
@@ -236,6 +243,7 @@ const system={uiElementsEnabled:()=>true,processes:{whose:q=>{queried=q;return()
 const output=JSON.parse(vm.runInNewContext('const input={pid:42,maxNodes:1000,maxDepth:40};\n'+source,{Application:()=>system}));
 if(queried.unixId!==42 || output.windows[0].nodes.length!==4) throw Error('wrong process or tree');
 if(JSON.stringify(output).includes('PRIVATE_INPUT') || valuesRead.some(([role,key])=>role==='AXTextField'&&key==='AXValue')) throw Error('input value read');
+if(output.truncated || batches.length!==2 || valuesRead.filter(([role,key])=>key==='AXRole').length!==1)throw Error('Safe batching was not used');
 console.log(JSON.stringify(output));
 '''
         completed = subprocess.run([shutil.which("node"), "-e", fixture, str(HERE / "macos-snapshot.js")],

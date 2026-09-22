@@ -151,6 +151,10 @@ def node_visible(snapshot, node):
     return node.get("visible") is True if snapshot.get("backend") == "windows-uia" else node.get("visible") is not False
 
 
+def valid_runtime_id(value):
+    return isinstance(value, list) and 1 <= len(value) <= 64 and all(type(item) is int and -(2**31) <= item < 2**31 for item in value)
+
+
 def summarize(snapshot):
     require(snapshot.get("backend") in ("macos-system-events-ax", "windows-uia"), "InvalidNativeBackend")
     require(snapshot.get("readOnly") is True, "NotReadOnlyProbe")
@@ -206,6 +210,7 @@ def sanitize(value, secrets=()):
                 "name": string(node.get("name")), "text": string(node.get("text")),
                 "identifier": string(node.get("identifier")), "enabled": node.get("enabled") is True,
                 "visible": node.get("visible") if type(node.get("visible")) is bool else None,
+                "runtimeId": node.get("runtimeId") if valid_runtime_id(node.get("runtimeId")) else None,
                 "insideWebContent": node.get("insideWebContent") is True,
                 "actions": [string(action, 60) for action in node.get("actions", [])[:12]],
                 "password": node.get("password") is True})

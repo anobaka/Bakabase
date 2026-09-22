@@ -15,6 +15,8 @@ KINDS = {
     "menu": {"AXMenuItem", "ControlType.MenuItem"},
     "link": {"AXLink", "ControlType.Hyperlink"},
     "input": {"AXTextField", "AXTextArea", "ControlType.Edit"},
+    # WKWebView exposes HTML aria-pressed buttons as AXCheckBox.
+    "scope": {"AXCheckBox", "ControlType.Button", "ControlType.CheckBox"},
 }
 ACTION_STAGES = {"initialize", "preflight", "resolve-process", "resolve-control", "validate-control", "perform-action"}
 
@@ -30,8 +32,28 @@ def nodes(snapshot):
 
 
 def matches(snapshot, label, kind):
-    return [node for node in nodes(snapshot) if node.get("role") in KINDS[kind] and
-            node.get("enabled") is True and node.get("name") == label]
+    found = [node for node in nodes(snapshot) if node.get("role") in KINDS[kind] and
+             node.get("enabled") is True and node.get("name") == label]
+    if snapshot.get("backend") != "windows-uia":
+        return found
+    unique = {}
+    for node in found:
+        runtime_id = node.get("runtimeId")
+        probe.require(probe.valid_runtime_id(runtime_id), "InvalidObservedRuntimeId")
+        key = tuple(runtime_id)
+        previous = unique.get(key)
+        if previous is not None:
+            # WebView2 can expose one element through two RawView paths. Only
+            # the provider's exact opaque identity permits alias collapsing;
+            # equal labels or geometry never establish that identity.
+            probe.require(all(previous.get(field) == node.get(field) for field in
+                              ("role", "name", "identifier", "password", "enabled", "visible")),
+                          "InconsistentRuntimeIdObservation")
+            if (len(node["path"]), node["path"]) < (len(previous["path"]), previous["path"]):
+                unique[key] = node
+        else:
+            unique[key] = node
+    return list(unique.values())
 
 
 def has_text(snapshot, text):
@@ -46,7 +68,7 @@ def one(snapshot, label, kind):
     path = node.get("path")
     probe.require(isinstance(path, list) and 2 <= len(path) <= 42 and
                   all(type(index) is int and 0 <= index < 1000 for index in path), "InvalidObservedControlPath")
-    return {key: node.get(key, "") for key in ("path", "role", "name", "identifier")}
+    return {key: node.get(key, "") for key in ("path", "role", "name", "identifier", "runtimeId")}
 
 
 def perform(app, snapshot, selector, operation="press", value=None):
@@ -172,9 +194,10 @@ def empty_library(driver, status_reader=status):
     probe.require(enabled.get("browsingEnabled") is True and enabled.get("sharingEnabled") is False and
                   enabled.get("peers") == [], "NativeBrowsingDidNotPersistIndependently")
     driver.press("Multi-device library", "menu")
-    driver.wait("search-scopes-visible", lambda view: all(len(matches(view, name, "button")) == 1
-                for name in ("This device", "All enabled devices", "Choose devices", "Search")))
-    driver.press("This device")
+    driver.wait("search-scopes-visible", lambda view: all(len(matches(view, name, "scope")) == 1
+                for name in ("This device", "All enabled devices", "Choose devices")) and
+                len(matches(view, "Search", "button")) == 1)
+    driver.press("This device", "scope")
     driver.wait("local-source-selected", lambda view: len(matches(view, "Search", "button")) == 1)
     driver.press("Search")
     driver.wait("empty-library-results", lambda view: has_text(view, "No matching resources") and

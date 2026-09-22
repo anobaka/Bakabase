@@ -31,6 +31,9 @@ try {
     $current=$element.Current
     $role=$current.ControlType.ProgrammaticName
     $stage='validate-control'
+    [int[]]$expectedRuntimeId=@($record.selector.runtimeId)
+    if($expectedRuntimeId.Count -lt 1 -or $expectedRuntimeId.Count -gt 64 -or
+        ![System.Windows.Automation.Automation]::Compare($expectedRuntimeId,[int[]]($element.GetRuntimeId()))) {throw 'ChangedRuntimeId'}
     if(!$insideWeb -or !$current.IsEnabled -or $current.IsOffscreen -or $current.IsPassword -or $role -ne $record.selector.role -or
         $current.Name -ne $record.selector.name -or $current.AutomationId -ne $record.selector.identifier) {throw 'ChangedControl'}
     if($role -notin @('ControlType.Button','ControlType.Hyperlink','ControlType.MenuItem','ControlType.CheckBox',
@@ -40,6 +43,7 @@ try {
         ![string]::Equals($after.Path,$expected,[StringComparison]::OrdinalIgnoreCase)) {throw 'ProcessChanged'}
     $stage='perform-action'
     if($element.Current.IsOffscreen) {throw 'InvisibleControlBeforeAction'}
+    if(![System.Windows.Automation.Automation]::Compare($expectedRuntimeId,[int[]]($element.GetRuntimeId()))) {throw 'ChangedRuntimeIdBeforeAction'}
     if($record.operation -eq 'press') {
         $pattern=$element.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
         ([System.Windows.Automation.InvokePattern]$pattern).Invoke()

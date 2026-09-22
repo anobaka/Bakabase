@@ -15,30 +15,53 @@ function main() {
     try { return element.attributes.byName(name).value(); } catch (_) { return null; }
   }
   function text(value) { return typeof value === 'string' ? value.slice(0,300) : ''; }
+  const metadataKeys = ['AXTitle','AXDescription','AXIdentifier','AXEnabled','AXSubrole'];
+  function metadata(element) {
+    try {
+      // Filter the native attribute collection BEFORE requesting values. Never
+      // read all values/properties: editable AXValue may contain credentials.
+      const selected = element.attributes.whose({_or:metadataKeys.map(name => ({name:name}))});
+      const names = selected.name(), values = selected.value();
+      if (!Array.isArray(names) || !Array.isArray(values) || names.length !== values.length ||
+          names.some(name => !metadataKeys.includes(name)) || new Set(names).size !== names.length) throw Error();
+      const result = {};
+      names.forEach((name,index) => { result[name] = values[index]; });
+      return result;
+    } catch (_) { output.truncated = true; return {}; }
+  }
   let count = 0;
-  function walk(element, path, nodes, depth, inWeb) {
+  function walk(element, path, nodes, depth, inWeb, observedRole) {
     if (count >= input.maxNodes || depth > input.maxDepth || Date.now() - began > (input.readBudgetMs || 24000)) {
       output.truncated = true; return;
     }
     count++;
-    const role = text(attribute(element,'AXRole'));
+    const role = typeof observedRole === 'string' ? observedRole : text(attribute(element,'AXRole'));
     const interactive = ['AXButton','AXLink','AXMenuItem','AXCheckBox','AXRadioButton','AXTextField','AXTextArea','AXPopUpButton'].includes(role);
-    const password = ['AXTextField','AXTextArea'].includes(role) && attribute(element,'AXSubrole') === 'AXSecureTextField';
+    const info = interactive ? metadata(element) : {};
+    const password = ['AXTextField','AXTextArea'].includes(role) && info.AXSubrole === 'AXSecureTextField';
     inWeb = inWeb || role === 'AXWebArea';
     let actions = [];
     if (interactive && !password) {
-      try { actions = element.actions().map(action => text(action.name())).slice(0,12); } catch (_) {}
+      try { actions = element.actions.name().map(text).slice(0,12); } catch (_) { output.truncated = true; }
     }
     // Generic layout nodes need no costly per-property Apple Events. Read only
     // controls, document titles and static text; never batch-read input values.
-    nodes.push({path:path, role:role, name:password || !interactive && role!=='AXWebArea' ? '' : text(attribute(element,'AXTitle')) || text(attribute(element,'AXDescription')),
+    nodes.push({path:path, role:role, name:password ? '' : interactive ? text(info.AXTitle) || text(info.AXDescription) :
+        role==='AXWebArea' ? text(attribute(element,'AXTitle')) || text(attribute(element,'AXDescription')) : '',
       text:role === 'AXStaticText' ? text(attribute(element,'AXValue')) : '',
-      identifier:interactive ? text(attribute(element,'AXIdentifier')) : '', enabled:interactive && attribute(element,'AXEnabled') === true,
+      identifier:interactive ? text(info.AXIdentifier) : '', enabled:interactive && info.AXEnabled === true,
       insideWebContent:inWeb, password:password, actions:actions});
     let children = []; try { children = element.uiElements(); } catch (_) { output.truncated = true; }
+    let childRoles = [];
+    if (children.length) {
+      try {
+        childRoles = element.uiElements.role();
+        if (!Array.isArray(childRoles) || childRoles.length !== children.length || childRoles.some(role => typeof role !== 'string')) throw Error();
+      } catch (_) { output.truncated = true; childRoles = []; }
+    }
     for (let i=0; i<children.length; i++) {
       if (count >= input.maxNodes) { output.truncated = true; break; }
-      walk(children[i],path.concat(i),nodes,depth+1,inWeb);
+      walk(children[i],path.concat(i),nodes,depth+1,inWeb,childRoles[i]);
     }
   }
   stage = 'enumerate-windows';
