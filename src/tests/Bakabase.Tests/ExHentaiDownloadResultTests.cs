@@ -9,12 +9,14 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Abstractions.Services;
 using Bakabase.TestKit.Utils;
+using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -213,10 +215,60 @@ public sealed class ExHentaiDownloadResultTests
         Assert.IsFalse(a.Contains(unrelated) || b.Contains(unrelated));
     }
 
-    private async Task<ExHentaiSingleWorkDownloader> BuildProducer(GalleryHandler handler)
+    private const string TrailingDotsGallery = "[fantia] RENA_bootleg 2025_11 女の子の部屋に連れ込まれて...";
+    private const string SanitizedGalleryFile = "[Misc] [fantia] RENA_bootleg 2025_11 女の子の部屋に連れ込まれて/Page 1_ _1.webp";
+
+    [DataTestMethod]
+    [DataRow(TrailingDotsGallery, "Page 1_ _1.webp", null, SanitizedGalleryFile)]
+    [DataRow("Gallery", "page.01.webp", "Downloads... /{RawName}... /{PageTitle}{Extension}",
+        "Downloads/Gallery/page.01.webp")]
+    [DataRow("CON", "NUL.webp", "{RawName}/{PageTitle}{Extension}", "_CON/_NUL.webp")]
+    [DataRow("...", ".hidden.webp", "{RawName}/{PageTitle}{Extension}", "_/.hidden.webp")]
+    [DataRow("Gallery:2025?", "001.jpg", "{RawName}/{PageTitle}{Extension}", "Gallery_2025_/001.jpg")]
+    [DataRow("Gallery/part\\extra", "001.jpg", "{RawName}/{PageTitle}{Extension}", "Gallery_part_extra/001.jpg")]
+    [DataRow("Gallery.v1...", "Page 1..webp", "{RawName} [edition]/{PageTitle}{Extension}",
+        "Gallery.v1... [edition]/Page 1..webp")]
+    public async Task ImageDownloads_SanitizeFinalPathComponentsBeforeWritingAndRecording(
+        string galleryName, string pageTitle, string? namingConvention, string expectedRelativePath)
+    {
+        var handler = new GalleryHandler {GalleryName = galleryName, PageTitle = pageTitle};
+        var producer = await BuildProducer(handler, namingConvention);
+
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+            preferTorrent: false);
+
+        var expected = Path.Combine(_root, expectedRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        var result = (await _results.GetByTaskAsync(10)).Single();
+        CollectionAssert.AreEqual(new[] {expected}, JsonSerializer.Deserialize<string[]>(result.FilesJson));
+        Assert.AreEqual("fixture image /image/12345", await File.ReadAllTextAsync(expected));
+        Assert.AreEqual(1, handler.ImageRequests);
+    }
+
+    [TestMethod]
+    public async Task ImageDownloads_ReuseTheSanitizedPathWithoutRequestingAnExistingImage()
+    {
+        var expected = Path.Combine(_root, SanitizedGalleryFile.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(expected)!);
+        await File.WriteAllTextAsync(expected, "Previously downloaded image.");
+        var handler = new GalleryHandler {GalleryName = TrailingDotsGallery, PageTitle = "Page 1_ _1.webp"};
+        var producer = await BuildProducer(handler);
+
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+            preferTorrent: false);
+
+        Assert.AreEqual(0, handler.ImageRequests);
+        Assert.AreEqual(0, handler.ImagePageRequests);
+        Assert.AreEqual("Previously downloaded image.", await File.ReadAllTextAsync(expected));
+        var result = (await _results.GetByTaskAsync(10)).Single();
+        CollectionAssert.AreEqual(new[] {expected}, JsonSerializer.Deserialize<string[]>(result.FilesJson));
+    }
+
+    private async Task<ExHentaiSingleWorkDownloader> BuildProducer(GalleryHandler handler,
+        string? namingConvention = null)
     {
         var provider = await TestServiceBuilder.BuildServiceProvider(services =>
             services.AddSingleton(_results));
+        provider.GetRequiredService<IBOptionsManager<ExHentaiOptions>>().Value.NamingConvention = namingConvention;
         var client = new ExHentaiClient(new Factory(new HttpClient(handler)), NullLoggerFactory.Instance);
         return new ExHentaiSingleWorkDownloader(provider,
             provider.GetRequiredService<IStringLocalizer<SharedResource>>(), client,
@@ -248,6 +300,10 @@ public sealed class ExHentaiDownloadResultTests
         public byte[]? TorrentBytes;
         public int TorrentRequests;
         public int Requests;
+        public string? GalleryName;
+        public string PageTitle = "001.jpg";
+        public int ImageRequests;
+        public int ImagePageRequests;
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             Requests++;
@@ -263,19 +319,26 @@ public sealed class ExHentaiDownloadResultTests
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {Content = new StringContent("<form><table><tr><td>Size: 1 KiB</td><td>Downloads: 1</td><td>Posted: 2026-09-14</td></tr><tr><td></td></tr><tr><td><a href='https://exhentai.org/metadata.torrent'>Download</a></td></tr></table></form>")});
             if (uri.AbsolutePath.StartsWith("/image/"))
+            {
+                ImageRequests++;
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {Content = new ByteArrayContent(Encoding.UTF8.GetBytes("fixture image " + uri.AbsolutePath))});
+            }
             if (uri.AbsolutePath.StartsWith("/s/"))
+            {
+                ImagePageRequests++;
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {Content = new StringContent($"<img id='img' src='https://exhentai.org/image/{uri.Segments.Last()}' />")});
+            }
             var id = uri.Segments[2].Trim('/');
+            var galleryName = WebUtility.HtmlEncode(GalleryName ?? $"Gallery {id}");
             var torrentLink = TorrentBytes == null ? "" : "<div id='gd5'><a onclick=\"popUp('https://exhentai.org/torrents')\">Torrent (1)</a></div>";
             var html = $"""
                 {torrentLink}
-                <div id='gn'>Gallery {id}</div><div id='gj'>Gallery {id}</div>
+                <div id='gn'>{galleryName}</div><div id='gj'>{galleryName}</div>
                 <div id='gdc'><div class='cs ct1'>Doujinshi</div></div>
                 <div id='gdd'><table><tr><td>Length:</td><td>1 pages</td></tr></table></div>
-                <div id='gdt'><a href='https://exhentai.org/s/{id}'><div title='001.jpg'></div></a></div>
+                <div id='gdt'><a href='https://exhentai.org/s/{id}'><div title='{WebUtility.HtmlEncode(PageTitle)}'></div></a></div>
                 """;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {Content = new StringContent(html)});
         }
