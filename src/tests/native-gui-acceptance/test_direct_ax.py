@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -21,7 +22,11 @@ IDENTITY = {"pid": 42, "started": "owned-start", "executable": "/fixture/Bakabas
 def reply(trusted=True, count=1):
     return {"readOnly": True, "trusted": trusted, "available": trusted and count > 0,
             "ownedWindowCount": count, "stage": "complete" if trusted else "check-existing-trust",
-            "code": None if trusted and count > 0 else "DirectAXNoOwnedWindow" if trusted else "DirectAXNotTrusted"}
+            "code": None if trusted and count > 0 else "DirectAXNoOwnedWindow" if trusted else "DirectAXNotTrusted",
+            "diagnostics": {"windowCountObserved": trusted, "pidReadError": 0, "messagingTimeoutError": 0,
+                            "roleReadError": 0, "windowsReadError": 0, "roleMatches": True,
+                            "roleTypeId": 7, "expectedRoleTypeId": 7,
+                            "windowsTypeId": 19, "expectedWindowsTypeId": 19}}
 
 
 class DiagnosticBoundary(unittest.TestCase):
@@ -81,13 +86,43 @@ class DiagnosticBoundary(unittest.TestCase):
                 self.assertFalse(result["available"])
                 self.assertNotIn("private", json.dumps(result))
 
+    def test_fixed_numeric_diagnostics_survive_without_native_values_or_unknown_fields(self):
+        raw = dict(reply(), available=False, code="DirectAXRoleReadFailed", stage="read-owned-application-role",
+                   diagnostics={"windowCountObserved": False, "roleReadError": -25204,
+                                "roleRawTypeId": 18, "roleTypeId": 7, "roleValueWasRef": True,
+                                "nativeValue": "private", "private": "private"})
+        with patch.object(diagnostic.probe, "hosted"), patch.object(diagnostic.probe, "mac_identity", return_value=IDENTITY), \
+                patch.object(diagnostic.probe, "bounded_command", return_value=raw):
+            result = diagnostic.capture(APP, 42)
+        self.assertEqual(-25204, result["diagnostics"]["roleReadError"])
+        self.assertEqual(18, result["diagnostics"]["roleRawTypeId"])
+        self.assertTrue(result["diagnostics"]["roleValueWasRef"])
+        self.assertFalse(result["diagnostics"]["windowCountObserved"])
+        self.assertFalse(result["available"])
+        self.assertNotIn("private", json.dumps(result))
+
+    def test_invalid_diagnostics_or_unobserved_window_count_cannot_be_success(self):
+        for key, value in [("roleReadError", "private"), ("roleReadError", True), ("roleReadError", -1),
+                           ("roleTypeId", -1), ("roleTypeId", 2**32), ("roleMatches", False),
+                           ("windowCountObserved", False), ("roleValueWasRef", "private")]:
+            raw = reply()
+            raw["diagnostics"][key] = value
+            with self.subTest(key=key, value=value), patch.object(diagnostic.probe, "hosted"), \
+                    patch.object(diagnostic.probe, "mac_identity", return_value=IDENTITY), \
+                    patch.object(diagnostic.probe, "bounded_command", return_value=raw):
+                result = diagnostic.capture(APP, 42)
+            self.assertFalse(result["available"])
+            self.assertEqual("DirectAXDiagnosticUnavailable", result["code"])
+            self.assertNotIn("private", json.dumps(result))
+
 
 class NativeApiFixture(unittest.TestCase):
     @unittest.skipUnless(shutil.which("node"), "Node is required for a fake native API fixture")
     def test_nonprompting_api_reads_only_owned_application_metadata_after_trust(self):
         fixture = r'''
-const fs=require('fs'),vm=require('vm'),source=fs.readFileSync(process.argv[1],'utf8');
+const fs=require('fs'),vm=require('vm'),source=fs.readFileSync(process.argv[1],'utf8')+'\n'+fs.readFileSync(process.argv[2],'utf8');
 function run(options={}) {
+ function Ref(value){if(!(this instanceof Ref))return new Ref(value);this.target=value}
  const calls=[];const native=name=>name;
  Object.assign(native,{
   AXIsProcessTrusted:()=>{calls.push('trust');return options.trusted!==false},
@@ -96,22 +131,61 @@ function run(options={}) {
   AXUIElementSetMessagingTimeout:(app,seconds)=>{if(app.pid!==42||seconds!==0.5)throw Error('bad bound');return 0},
   AXUIElementCopyAttributeValue:(app,name,ref)=>{
    if(app.pid!==42||!['AXRole','AXWindows'].includes(name))throw Error('Forbidden attribute');calls.push(name);
-   ref[0]=name==='AXRole'?{kind:1,value:'AXApplication'}:{kind:2,count:options.count??1};return 0;
-  },CFGetTypeID:value=>value.kind,CFStringGetTypeID:()=>1,CFArrayGetTypeID:()=>2,CFArrayGetCount:value=>value.count
+   if(name==='AXRole'&&options.roleError)return options.roleError;
+   if(name==='AXWindows'&&options.windowsError)return options.windowsError;
+   const value=name==='AXRole'?{kind:options.roleType??1,value:options.role??'AXApplication'}:
+    {kind:options.windowsType??2,count:options.count??1};
+   ref[0]=options.boxed===false?value:new Ref(value);return 0;
+  },CFGetTypeID:value=>value instanceof Ref?18:value.kind,CFStringGetTypeID:()=>1,CFArrayGetTypeID:()=>2,
+  CFArrayGetCount:value=>{if(value instanceof Ref)throw Error('Must unwrap array pointer');return value.count}
  });
  const output=JSON.parse(vm.runInNewContext('const input={pid:42};\n'+source,{
-  $:native,Ref:()=>[],ObjC:{import:()=>{},unwrap:value=>value.value}
+  $:native,Ref,ObjC:{import:()=>{},unwrap:value=>value instanceof Ref?value:value.value,
+   castRefToObject:value=>{if(!(value instanceof Ref))throw Error('Not a Ref');return value.target}}
  }));
  return {output,calls};
 }
 let r=run({trusted:false});if(r.output.trusted!==false||r.output.available||r.calls.join()!=='trust')throw Error('Read before trust');
 r=run({wrongPid:true});if(r.output.available||r.calls.some(x=>x.startsWith('AX')))throw Error('Read foreign process');
 r=run();if(!r.output.available||r.output.ownedWindowCount!==1||r.calls.join()!=='trust,create,AXRole,AXWindows')throw Error('Missing bounded capability');
+if(r.output.diagnostics.roleRawTypeId!==18||r.output.diagnostics.roleTypeId!==1||!r.output.diagnostics.roleValueWasRef||
+ !r.output.diagnostics.windowCountObserved)throw Error('Missing bridge evidence');
+r=run({boxed:false});if(!r.output.available||r.output.diagnostics.roleValueWasRef)throw Error('Wrapped object rejected');
+r=run({roleError:-25204});if(r.output.available||r.output.code!=='DirectAXRoleReadFailed'||r.output.diagnostics.roleReadError!==-25204||r.calls.includes('AXWindows'))throw Error('AX error hidden');
+r=run({roleType:2});if(r.output.available||r.output.code!=='DirectAXRoleTypeMismatch'||r.calls.includes('AXWindows'))throw Error('Wrong role type accepted');
+r=run({role:'AXWindow'});if(r.output.available||r.output.code!=='DirectAXRoleMismatch'||r.output.diagnostics.roleMatches!==false)throw Error('Wrong role accepted');
+r=run({windowsError:-25205});if(r.output.available||r.output.code!=='DirectAXWindowsReadFailed'||r.output.diagnostics.windowCountObserved)throw Error('Window error hidden');
+r=run({windowsType:1});if(r.output.available||r.output.code!=='DirectAXWindowsTypeMismatch'||r.output.diagnostics.windowCountObserved)throw Error('Wrong window type accepted');
 r=run({count:0});if(r.output.available||r.output.code!=='DirectAXNoOwnedWindow')throw Error('Empty window passed');
 r=run({count:9});if(r.output.available||r.output.code!=='DirectAXWindowBudgetExceeded')throw Error('Window bound ignored');
 '''
-        subprocess.run([shutil.which("node"), "-e", fixture, str(HERE / "macos-direct-ax.js")],
+        subprocess.run([shutil.which("node"), "-e", fixture, str(HERE / "macos-cf-values.js"), str(HERE / "macos-direct-ax.js")],
                        capture_output=True, text=True, timeout=5, check=True)
+
+    @unittest.skipUnless(sys.platform == "darwin", "Pure CoreFoundation bridge is macOS only")
+    def test_real_corefoundation_values_require_reference_conversion_without_any_ui_api(self):
+        # Real JXA ABI regression using only objects allocated in this process.
+        # No ApplicationServices, applications, accessibility or permission read.
+        source = "ObjC.import('CoreFoundation');\n" + (HERE / "macos-cf-values.js").read_text() + r'''
+const rawString=$.CFStringCreateWithCString(null,'AXApplication',$.kCFStringEncodingUTF8);
+const string=cfValue(rawString), ordinary=cfValue($('AXApplication'));
+const array=cfValue($.CFArrayCreate(null,null,0,null));
+JSON.stringify({stringWasRef:string.wasRef,stringTypeId:string.typeId,expectedStringTypeId:Number($.CFStringGetTypeID()),
+ stringMatches:ObjC.unwrap(string.object)==='AXApplication',ordinaryWasRef:ordinary.wasRef,
+ ordinaryMatches:ObjC.unwrap(ordinary.object)==='AXApplication',arrayWasRef:array.wasRef,
+ arrayTypeId:array.typeId,expectedArrayTypeId:Number($.CFArrayGetTypeID()),arrayCount:Number($.CFArrayGetCount(array.object))});
+'''
+        process = subprocess.run(["/usr/bin/osascript", "-l", "JavaScript", "-"], input=source,
+                                 capture_output=True, text=True, timeout=5, check=True)
+        evidence = json.loads(process.stdout)
+        self.assertTrue(evidence["stringWasRef"])
+        self.assertEqual(evidence["expectedStringTypeId"], evidence["stringTypeId"])
+        self.assertTrue(evidence["stringMatches"])
+        self.assertFalse(evidence["ordinaryWasRef"])
+        self.assertTrue(evidence["ordinaryMatches"])
+        self.assertTrue(evidence["arrayWasRef"])
+        self.assertEqual(evidence["expectedArrayTypeId"], evidence["arrayTypeId"])
+        self.assertEqual(0, evidence["arrayCount"])
 
 
 class ReportIntegration(unittest.TestCase):
