@@ -281,6 +281,41 @@ class PlayerAcceptanceTests(unittest.TestCase):
                 ipc.get.side_effect = lambda name: {"seeking": seeking, "time-pos": position}[name]
                 self.assertEqual(runner.seek_reached(ipc, 90), expected)
 
+    def test_cancellation_waits_for_real_terminal_state_and_retains_numeric_observations(self):
+        states = iter([{"time-pos": 55, "seeking": True, "eof-reached": False, "idle-active": False},
+                       {"time-pos": 90.3, "seeking": False, "eof-reached": True, "idle-active": False}])
+        current = {}
+        def get(name):
+            nonlocal current
+            if name == "time-pos": current = next(states)
+            return current[name]
+        evidence = {}
+        with patch.object(runner.time, "monotonic", side_effect=[0, 0, 1]), patch.object(runner.time, "sleep"):
+            runner.wait_browsing_cancellation(Mock(get=get), evidence, timeout=2)
+        self.assertEqual(2, len(evidence["samples"]))
+        self.assertTrue(evidence["eofOrIdle"])
+        self.assertFalse(evidence["passed"])  # HTTP rejection + decoded frame still need verification.
+
+    def test_cancellation_does_not_accept_target_position_or_transient_missing_position_as_completion(self):
+        for position in (55, None):
+            with self.subTest(position=position):
+                ipc = Mock()
+                ipc.get.side_effect = lambda name: {"time-pos": position, "seeking": False,
+                    "eof-reached": False, "idle-active": False}[name]
+                evidence = {}
+                with patch.object(runner.time, "monotonic", side_effect=[0, 0, 1, 2]), \
+                        patch.object(runner.time, "sleep"), self.assertRaises(TimeoutError):
+                    runner.wait_browsing_cancellation(ipc, evidence, timeout=2)
+                self.assertFalse(evidence["passed"])
+
+    def test_player_denials_only_count_fixed_status_in_owned_log_tail(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mpv.log"
+            self.assertEqual(0, runner.player_denials(path))
+            path.write_bytes(b"http: HTTP error 403 Forbidden\n" + b"x" * (128 * 1024) +
+                             b"\nhttp: HTTP error 503 Service Unavailable\nhttp: HTTP error 403 Forbidden\n")
+            self.assertEqual(1, runner.player_denials(path))
+
     def test_parent_process_read_uses_only_owned_pid_and_parent_field(self):
         for system in ("nt", "posix"):
             with self.subTest(system=system), patch.object(runner.os, "name", system), \

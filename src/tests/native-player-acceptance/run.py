@@ -2,8 +2,8 @@
 """Real mpv, launched by the production federation API on disposable CI hosts.
 
 Two production Service TestHosts own all data. No launcher/locator is replaced.
-The receiver discovers the pinned mpv via PATH; a private MPV_HOME supplies only
-observation, cache bounds and an adversarial proxy setting. Product arguments
+The receiver discovers the pinned mpv via PATH; a private MPV_HOME supplies
+observation, bounded fixture settings and an adversarial proxy. Product arguments
 must override that proxy. Source data and live media tickets are never uploaded.
 """
 import argparse
@@ -453,6 +453,34 @@ def seek_reached(ipc, target):
     return type(position) in (int, float) and position >= target - .2
 
 
+def player_denials(path):
+    """Count fixed HTTP status diagnostics in the owned player's bounded log."""
+    if not path.exists():
+        return 0
+    with path.open("rb") as source:
+        source.seek(max(0, path.stat().st_size - 128 * 1024))
+        return source.read().count(b"http: HTTP error 403 Forbidden")
+
+
+def wait_browsing_cancellation(ipc, evidence, timeout=20):
+    """A rejected asynchronous seek can retry before the player reaches EOF."""
+    deadline = time.monotonic() + timeout
+    evidence.update(passed=False, timeoutSeconds=timeout, samples=[])
+    while time.monotonic() < deadline:
+        snapshot = {name: ipc.get(name) for name in ("time-pos", "seeking", "eof-reached", "idle-active")}
+        require(snapshot["time-pos"] is None or type(snapshot["time-pos"]) in (int, float),
+                "Player returned a nonnumeric playback position")
+        require(all(snapshot[name] is None or type(snapshot[name]) is bool
+                    for name in ("seeking", "eof-reached", "idle-active")), "Player returned an invalid playback state")
+        evidence["samples"].append(snapshot)
+        require(len(evidence["samples"]) <= 100, "Cancellation observation exceeded its bound")
+        if snapshot["eof-reached"] is True or snapshot["idle-active"] is True:
+            evidence.update(eofOrIdle=True, positionAvailable=snapshot["time-pos"] is not None)
+            return
+        time.sleep(.25)
+    raise TimeoutError("Disabled browsing never reached actual player EOF/idle after the uncached seek")
+
+
 def reference_asset(reader, reference, payload):
     """Resolve again, then prove the real preview ticket serves the altered asset."""
     detail = api(reader["origin"], "/federation/local/resources/resolve", "POST", {"refs": [reference]})["resources"][0]
@@ -593,6 +621,7 @@ def run(args):
         "limitations": ["Pinned mpv development build; not VLC/IINA or every player version",
                         "Synthetic 120-second uncompressed AVI over loopback; not physical weak networking",
                         "MPV_HOME supplies bounded cache/IPC/proxy settings and a read-only event observer; not normal user preferences",
+                        "Private settings disable ytdl fallback and do not force windows for failed/empty media; actual video must still use a real output",
                         "M3U and forced-lavf HLS references use owned loopback canaries, not exhaustive media-format fuzzing",
                         "HLS disables curl in both control and production private configs to verify FFmpeg nested I/O; not every default backend combination",
                         "M3U enables playlist option inheritance in both private configs so its positive control retains the per-file proxy bypass",
@@ -612,10 +641,10 @@ def run(args):
         cache.mkdir()
         address = (r"\\.\pipe\bakabase-player-" + uuid.uuid4().hex) if os.name == "nt" else str(work / "mpv.sock")
         (configuration / "mpv.conf").write_text("\n".join([
-            "input-ipc-server=" + address, "idle=yes", "keep-open=yes", "force-window=yes", "ao=null",
+            "input-ipc-server=" + address, "idle=yes", "keep-open=yes", "force-window=no", "ao=null",
             "vo=gpu-next", "hwdec=no", "cache=yes", "demuxer-max-bytes=1MiB", "demuxer-readahead-secs=1",
             "gpu-shader-cache-dir=" + str(cache), "icc-cache-dir=" + str(cache),
-            "http-proxy=" + trap.origin, "save-position-on-quit=no", "load-scripts=no", "osc=no",
+            "http-proxy=" + trap.origin, "save-position-on-quit=no", "load-scripts=no", "osc=no", "ytdl=no",
             "log-file=" + str(work / "mpv.log"), "msg-level=all=warn"]) + "\n", encoding="utf-8")
         player_environment = dict(os.environ, MPV_HOME=str(configuration), NO_PROXY="", no_proxy="",
                                   PATH=str(executable.parent) + os.pathsep + os.environ["PATH"])
@@ -629,9 +658,11 @@ def run(args):
                                    stdout=control_log, stderr=subprocess.STDOUT)
         children.append(control)
         native_created = True
+        report["currentStage"] = "proxy-control-ipc"
         ipc = IPC(address).connect(time.monotonic() + 20)
         wait(lambda: trap.hits > 0, 15, "Configured player proxy was not exercised by its control")
         report["proxyControlHits"] = trap.hits
+        report["currentStage"] = "proxy-control-quit"
         ipc.command("quit")
         control.wait(timeout=10)
         ipc.close()
@@ -641,6 +672,7 @@ def run(args):
             Path(address).unlink(missing_ok=True)
 
         dll = ROOT / "src/tests/Bakabase.Federation.TestHost/bin/Debug/net9.0/Bakabase.Federation.TestHost.dll"
+        report["currentStage"] = "service-fixtures"
         require(dll.is_file(), "Build the production Service TestHost first")
         nodes = []
         for label in ("reader", "source"):
@@ -671,6 +703,7 @@ def run(args):
         detail = api(reader["origin"], "/federation/local/resources/resolve", "POST", {"refs": [reference]})["resources"][0]
         asset = base.one((v for v in detail["assets"] if v["kind"] == "video"), "remote video asset")
         trap_before = trap.hits
+        report["currentStage"] = "production-video"
         launched = api(reader["origin"], "/federation/local/playback-sessions", "POST",
                        {"assetRef": {"resourceRef": reference, "assetId": asset["assetId"]}, "mode": "player"})
         require(launched.get("launched") is True and launched.get("url") is None, "Production API did not launch a player")
@@ -706,16 +739,28 @@ def run(args):
         report["seekFrame"] = screenshot(ipc, results / "seek-frame.png")
         require(report["firstFrame"]["sha256"] != report["seekFrame"]["sha256"], "Seek did not produce a changed decoded frame")
         report["seekSeconds"] = ipc.get("time-pos")
+        report["normalVideoPlaybackPassed"] = True
         # Disable browsing while playback is paused, then force an uncached seek.
         # An old ticket cannot resume reading through a newly issued request.
+        report["currentStage"] = "browsing-cancellation"
+        denials_before = player_denials(work / "mpv.log")
         api(reader["origin"], "/federation/local/peers/browsing", "PUT", {"enabled": False})
         ipc.command("seek", 55, "absolute+exact")
         ipc.command("set_property", "pause", False)
-        time.sleep(3)
-        position = ipc.get("time-pos")
-        stopped = ipc.get("eof-reached") or ipc.get("idle-active")
-        require(stopped is True or position is None, "Disabled browsing left remote media playing after an uncached seek")
-        report["browsingCancellation"] = {"eofOrIdle": stopped, "positionAvailable": position is not None, "passed": True}
+        cancellation = report["browsingCancellation"] = {}
+        try:
+            wait_browsing_cancellation(ipc, cancellation)
+        finally:
+            cancellation["deniedHTTPRequests"] = player_denials(work / "mpv.log") - denials_before
+        require(cancellation["deniedHTTPRequests"] > 0, "Player did not observe an HTTP 403 for the uncached seek")
+        if ipc.get("video-out-params/w") is not None:
+            cancellation["terminalFrame"] = screenshot(ipc, results / "cancelled-frame.png")
+            require(cancellation["terminalFrame"]["sha256"] == report["seekFrame"]["sha256"],
+                    "Player decoded a changed frame after browsing was disabled")
+            cancellation["unchangedDecodedFrame"] = True
+        else:
+            cancellation["videoOutputUnavailable"] = True
+        cancellation["passed"] = True
         require(trap.hits == trap_before, "Production media was sent through the configured proxy")
         report["productionProxyHits"] = trap.hits - trap_before
         ipc.command("quit")
