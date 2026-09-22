@@ -22,8 +22,12 @@ on:
       installed_mode:
         description: Installed acceptance coverage (coexistence does not exercise updating)
         type: choice
-        options: [updates, coexistence]
+        options: [updates, coexistence, macos-data-restore]
         default: updates
+      data_seed_run_id:
+        description: Completed macos-data run containing verified original ARM data for Intel restore acceptance
+        type: string
+        required: false
       acceptance_area:
         description: Extended native acceptance area
         type: choice
@@ -58,6 +62,7 @@ jobs:
     with:
       package_run_id: ${{ inputs.package_run_id }}
       mode: ${{ inputs.installed_mode || 'updates' }}
+      data_seed_run_id: ${{ inputs.data_seed_run_id }}
 
   package-acceptance:
     if: github.event_name == 'workflow_dispatch' && inputs.suite == 'packages'

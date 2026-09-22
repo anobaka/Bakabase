@@ -8,9 +8,12 @@ on:
         required: true
         type: string
       mode:
-        description: updates or coexistence (the latter does not exercise updating)
+        description: updates, coexistence, or macos-data-restore on Intel
         required: false
         default: updates
+        type: string
+      data_seed_run_id:
+        required: false
         type: string
 
 permissions:
@@ -25,13 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            rid: win-x64
-          - os: macos-15-intel
-            rid: osx-x64
-          - os: macos-15
-            rid: osx-arm64
+        include: ${{ fromJSON(inputs.mode == 'macos-data-restore' && '[{"os":"macos-15-intel","rid":"osx-x64"}]' || '[{"os":"windows-latest","rid":"win-x64"},{"os":"macos-15-intel","rid":"osx-x64"},{"os":"macos-15","rid":"osx-arm64"}]') }}
     defaults:
       run:
         shell: bash
@@ -50,7 +47,7 @@ jobs:
         with:
           dotnet-version: '9.0.x'
       - name: Install bounded updater test tools
-        if: inputs.mode == 'updates'
+        if: inputs.mode != 'coexistence'
         run: |
           npm ci --ignore-scripts --prefix src/tests/installed-lifecycle-tools
           dotnet tool install --tool-path "$RUNNER_TEMP/installed-vpk-tools" vpk --version 1.2.0
@@ -58,7 +55,7 @@ jobs:
         env:
           LIFECYCLE_MODE: ${{ inputs.mode }}
         run: |
-          [[ "$LIFECYCLE_MODE" == 'updates' || "$LIFECYCLE_MODE" == 'coexistence' ]]
+          [[ "$LIFECYCLE_MODE" == 'updates' || "$LIFECYCLE_MODE" == 'coexistence' || "$LIFECYCLE_MODE" == 'macos-data-restore' ]]
           python src/tests/upgrade-tests/test_installed_inputs.py
           python src/tests/upgrade-tests/test_installed_lifecycle.py
           python src/tests/upgrade-tests/test_installed_updates.py
@@ -67,6 +64,7 @@ jobs:
           python src/tests/upgrade-tests/test_installed_macos_account.py
           python src/tests/upgrade-tests/test_installed_macos_auth_diagnostics.py
           python src/tests/upgrade-tests/test_installed_macos_authorization.py
+          python -m unittest discover -s src/tests/upgrade-tests -p 'test_macos_data*.py'
       - name: Check actual native process observation before installing
         run: |
           python src/tests/upgrade-tests/check-installed-observer.py \
@@ -81,8 +79,19 @@ jobs:
           python src/tests/upgrade-tests/prepare-installed-inputs.py \
             --repository "$SOURCE_REPOSITORY" --run-id "$SOURCE_RUN" \
             --rid '${{ matrix.rid }}' --output-directory "$RUNNER_TEMP/installed-inputs"
+      - name: Verify original ARM library evidence for Intel restore
+        if: inputs.mode == 'macos-data-restore'
+        id: original-data
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SEED_RUN: ${{ inputs.data_seed_run_id }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+        run: |
+          python src/tests/upgrade-tests/prepare-macos-data-restore.py \
+            --repository "$SOURCE_REPOSITORY" --run-id "$SEED_RUN" --rid '${{ matrix.rid }}' \
+            --output-directory "$RUNNER_TEMP/macos-data-producer"
       - name: Repackage unchanged product code for the local updater feed
-        if: inputs.mode == 'updates'
+        if: inputs.mode != 'coexistence'
         env:
           UNIFIED_PACKAGES: ${{ steps.inputs.outputs.unified_directory }}
           CLIENT_PACKAGES: ${{ steps.inputs.outputs.client_directory }}
@@ -101,15 +110,22 @@ jobs:
           CLIENT_PACKAGES: ${{ steps.inputs.outputs.client_directory }}
           PACKAGE_VERSION: ${{ steps.inputs.outputs.version }}
           LIFECYCLE_MODE: ${{ inputs.mode }}
+          PRODUCER_DIRECTORY: ${{ steps.original-data.outputs.producer_directory }}
+          PACKAGE_PROVENANCE: ${{ steps.inputs.outputs.provenance }}
         run: |
           UPDATE_ARGS=()
-          if [[ "$LIFECYCLE_MODE" == 'updates' ]]; then
+          if [[ "$LIFECYCLE_MODE" != 'coexistence' ]]; then
             UPDATE_ARGS=(--updates-manifest "$RUNNER_TEMP/installed-updates/updates.json")
             if [[ '${{ runner.os }}' == 'macOS' ]]; then
               UPDATE_ARGS+=(--macos-native-authorization)
             fi
           fi
-          python src/tests/upgrade-tests/run-installed-lifecycle.py \
+          RUNNER_SCRIPT=src/tests/upgrade-tests/run-installed-lifecycle.py
+          if [[ "$LIFECYCLE_MODE" == 'macos-data-restore' ]]; then
+            RUNNER_SCRIPT=src/tests/upgrade-tests/run-macos-data-restore.py
+            UPDATE_ARGS+=(--producer-directory "$PRODUCER_DIRECTORY" --provenance "$PACKAGE_PROVENANCE")
+          fi
+          python "$RUNNER_SCRIPT" \
             --unified-packages "$UNIFIED_PACKAGES" --client-packages "$CLIENT_PACKAGES" \
             --rid '${{ matrix.rid }}' --version "$PACKAGE_VERSION" \
             "${UPDATE_ARGS[@]}" \
@@ -126,5 +142,12 @@ jobs:
             ${{ runner.temp }}/installed-updates/vpk-version.log
             ${{ runner.temp }}/installed-updates/*/vpk-pack.log
             ${{ runner.temp }}/installed-lifecycle-results/
+            ${{ runner.temp }}/macos-data-producer/provenance.json
+            ${{ runner.temp }}/macos-data-producer/evidence/verified-producer.json
+            ${{ runner.temp }}/macos-data-producer/evidence/historical-results/report.json
+            ${{ runner.temp }}/macos-data-producer/evidence/historical-results/unified/before-update.sqlite
+            ${{ runner.temp }}/macos-data-producer/evidence/historical-results/unified/before-tables.json
+            ${{ runner.temp }}/macos-data-producer/evidence/historical-results/unified/source-media/
+            ${{ runner.temp }}/macos-data-producer/evidence/historical-results/*/before-update-configuration/
           if-no-files-found: warn
           retention-days: 14

@@ -322,6 +322,34 @@ This synthetic old-library fixture does not certify every user database,
 power-loss recovery, production signing/feed behavior or historical schemas.
 The pinned v349 and current candidate have unchanged business migrations/schema.
 
+The original Intel v349 client exits with SIGILL in the hosted fixture before it
+can seed data. For the beta data-retention requirement, a separate Intel consumer
+can use the actual original ARM-created baseline without starting that defective
+old Intel program:
+
+```bash
+gh workflow run ci.yml --ref codex/multi-device-library \
+  -f suite=installed -f installed_mode=macos-data-restore \
+  -f package_run_id=35701815533 -f data_seed_run_id=35728456779
+```
+
+The consumer verifies the producer run/artifact digest, original published asset
+identity, before-update SQLite main-file hash and seven populated tables, original
+configuration bytes, source media and API baseline. It restores those exact bytes
+to pristine default AppData and the unchanged media paths; it never edits SQLite
+or rebases paths. Nonempty backup WAL files are rejected, and the archived main
+database is read immutably. Both old listening ports must be available.
+
+The candidate installs, reads the original data, invokes its real native updater,
+automatically restarts, and then undergoes a separate explicit restart. Every
+phase must retain the original rows, fields, API meaning, selected settings and
+media hashes. Failure evidence is preserved after stopping both products and
+updater writers; only directories created by the fixture may be removed.
+This covers historical data on the Intel candidate and candidate-initiated native
+updates. It does not certify original Intel bundle startup or an update initiated
+by that old Intel program. The original ARM program's complete native update is
+recorded independently in the producer run.
+
 ## Older filesystem replacement fixtures
 
 `run-macos.sh`, `run-linux.sh`, `run-windows.ps1` and `run-docker.sh` remain manual

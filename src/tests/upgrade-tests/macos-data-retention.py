@@ -66,7 +66,7 @@ def backup_database(source, target, timeout=10):
         raise
 
 
-def snapshot_tables(path, table_names):
+def snapshot_tables(path, table_names, *, immutable=False):
     path = Path(path)
     require(path.is_file() and not path.is_symlink(), "Existing snapshot database is required")
     require(isinstance(table_names, list) and 0 < len(table_names) <= 32 and
@@ -74,7 +74,8 @@ def snapshot_tables(path, table_names):
             len(set(table_names)) == len(table_names), "Invalid table inventory")
     deadline = time.monotonic() + 10
     result = {}
-    with contextlib.closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=5)) as db:
+    uri = path.resolve().as_uri() + ("?mode=ro&immutable=1" if immutable else "?mode=ro")
+    with contextlib.closing(sqlite3.connect(uri, uri=True, timeout=5)) as db:
         db.execute("PRAGMA query_only=ON")
         db.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
         db.execute("BEGIN")
