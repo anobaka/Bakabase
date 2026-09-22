@@ -87,6 +87,16 @@ def select_source(rid):
         "buildRun": UPSTREAM_RUN, "headSHA": UPSTREAM_HEAD_SHA, "identicalPinnedArchive": True}
 
 
+def download_archive(endpoint, transport, archive):
+    base.require(transport in ("release-asset", "original-actions-artifact"), "Unknown pinned mpv transport")
+    # Release assets select binary content through Accept; Actions /zip returns
+    # its signed download redirect using the normal JSON API representation.
+    accept = "application/octet-stream" if transport == "release-asset" else "application/json"
+    with archive.open("xb") as output:
+        subprocess.run(["gh", "api", "-H", "Accept: " + accept, endpoint],
+                       stdout=output, check=True, timeout=120)
+
+
 def extract_macos_bundle(payload):
     # The pinned upstream workflow uploads mpv.tar.gz inside the artifact ZIP
     # to preserve the app bundle's executable modes and relative dylib links.
@@ -133,9 +143,7 @@ def main():
     name, download_endpoint, download_source = select_source(args.rid)
     root.mkdir()
     archive = root / name
-    with archive.open("xb") as output:
-        subprocess.run(["gh", "api", "-H", "Accept: application/octet-stream",
-                        download_endpoint], stdout=output, check=True, timeout=120)
+    download_archive(download_endpoint, download_source["transport"], archive)
     inputs.verify_archive(archive, {"size_in_bytes": size, "digest": "sha256:" + digest})
     base.unpack(archive, root / "payload")
     archive.unlink()

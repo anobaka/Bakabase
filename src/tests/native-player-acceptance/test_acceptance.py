@@ -149,6 +149,28 @@ class PlayerAcceptanceTests(unittest.TestCase):
         self.assertTrue(source["identicalPinnedArchive"])
         self.assertEqual(prepare.UPSTREAM_HEAD_SHA, source["headSHA"])
 
+    def test_download_uses_each_github_endpoint_representation_and_keeps_failures_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for transport, representation in (("release-asset", "application/octet-stream"),
+                                               ("original-actions-artifact", "application/json")):
+                path = root / (transport + ".zip")
+                def download(command, **options):
+                    self.assertEqual(["gh", "api", "-H", "Accept: " + representation, "fixed-endpoint"], command)
+                    self.assertTrue(options["check"])
+                    self.assertEqual(120, options["timeout"])
+                    options["stdout"].write(b"exact artifact bytes")
+                with patch.object(prepare.subprocess, "run", side_effect=download):
+                    prepare.download_archive("fixed-endpoint", transport, path)
+                self.assertEqual(b"exact artifact bytes", path.read_bytes())
+                with patch.object(prepare.subprocess, "run") as fetch, self.assertRaises(FileExistsError):
+                    prepare.download_archive("fixed-endpoint", transport, path)
+                fetch.assert_not_called()
+            with patch.object(prepare.subprocess, "run", side_effect=prepare.subprocess.CalledProcessError(1, ["gh"])) as fetch:
+                with self.assertRaises(prepare.subprocess.CalledProcessError):
+                    prepare.download_archive("fixed-endpoint", "original-actions-artifact", root / "failure.zip")
+                self.assertEqual(1, fetch.call_count)
+
     def test_video_has_exact_avi_index_and_bounded_payload(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "test.avi"
