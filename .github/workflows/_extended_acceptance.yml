@@ -145,6 +145,7 @@ jobs:
           python src/tests/native-gui-acceptance/test_probe.py
           python src/tests/native-gui-acceptance/test_flow.py
           python src/tests/native-gui-acceptance/test_direct_ax.py
+          python src/tests/native-gui-acceptance/test_direct_ax_tree.py
       - name: Verify candidate package provenance
         id: inputs
         env:
@@ -162,10 +163,12 @@ jobs:
           PACKAGE_VERSION: ${{ steps.inputs.outputs.version }}
           PACKAGE_PROVENANCE: ${{ steps.inputs.outputs.provenance }}
         run: |
+          OBSERVER_ARGS=()
+          if [[ '${{ runner.os }}' == 'macOS' ]]; then OBSERVER_ARGS=(--macos-observer direct-ax); fi
           python src/tests/native-gui-acceptance/run-probe.py \
             --unified-packages "$UNIFIED_PACKAGES" --client-packages "$CLIENT_PACKAGES" \
             --rid '${{ matrix.rid }}' --version "$PACKAGE_VERSION" --provenance "$PACKAGE_PROVENANCE" \
-            --results-directory "$RUNNER_TEMP/native-gui-results" --flow empty-library
+            --results-directory "$RUNNER_TEMP/native-gui-results" --flow empty-library "${OBSERVER_ARGS[@]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

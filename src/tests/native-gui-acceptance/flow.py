@@ -18,7 +18,8 @@ KINDS = {
     # WKWebView exposes HTML aria-pressed buttons as AXCheckBox.
     "scope": {"AXCheckBox", "ControlType.Button", "ControlType.CheckBox"},
 }
-ACTION_STAGES = {"initialize", "preflight", "resolve-process", "resolve-control", "validate-control", "perform-action"}
+ACTION_STAGES = {"initialize", "preflight", "resolve-process", "resolve-control", "validate-control", "perform-action",
+                 "enumerate-windows", "read-tree", "verify-process"}
 
 
 def complete(snapshot):
@@ -91,7 +92,16 @@ def perform(app, snapshot, selector, operation="press", value=None):
         record["value"] = value
     if app["rid"].startswith("osx-"):
         probe.require(probe.mac_identity(pid) == identity, "ProductProcessChangedBeforeAction")
-        script = "const input = " + json.dumps(record) + ";\n" + (HERE / "macos-action.js").read_text()
+        backend = app.get("nativeBackend", "macos-system-events-ax")
+        probe.require(snapshot.get("backend") == backend, "NativeActionProviderMismatch")
+        if backend == "macos-direct-ax":
+            probe.require(operation == "press", "UnsupportedDirectAXOperation")
+            record.update(maxNodes=1000, maxDepth=40)
+            source = probe.direct_ax_source("macos-ax-action.js")
+        else:
+            probe.require(backend == "macos-system-events-ax", "InvalidNativeBackend")
+            source = (HERE / "macos-action.js").read_text()
+        script = "const input = " + json.dumps(record) + ";\n" + source
         result = probe.bounded_command(["/usr/bin/osascript", "-l", "JavaScript", "-"], script, 15)
         probe.require(probe.mac_identity(pid) == identity, "ProductProcessChangedAfterAction")
     else:
@@ -100,7 +110,9 @@ def perform(app, snapshot, selector, operation="press", value=None):
                                        json.dumps(record) + "\n", 15)
     if result.get("performed") is not True:
         stage = result.get("errorStage")
-        raise probe.ProbeFailure("NativeActionFailed:" + (stage if stage in ACTION_STAGES else "unknown"))
+        diagnostic = probe.ax_diagnostic(result.get("diagnostic"))
+        detail = ":" + diagnostic["code"] + ":" + str(diagnostic["axError"]) if diagnostic else ""
+        raise probe.ProbeFailure("NativeActionFailed:" + (stage if stage in ACTION_STAGES else "unknown") + detail)
     probe.require(result.get("operation") == operation, "UnexpectedNativeActionResult")
 
 
@@ -113,6 +125,7 @@ class Driver:
         self.deadline = time.monotonic() + 600
         self.identity, self.current = None, None
         self.report = {"scope": "installed-native-empty-library", "emptyLibraryFlowPassed": False,
+                       "nativeBackend": app.get("nativeBackend", "windows-uia" if app.get("rid") == "win-x64" else "macos-system-events-ax"),
                        "mainFlowPassed": False, "actions": [], "observations": [], "checkpoints": []}
         self.save()
 

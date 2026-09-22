@@ -34,6 +34,7 @@ def exercise(apps, report, feed=None):
     lifecycle.require(feed is None, "Capability probe must not trigger product updates")
     report["nativeProbes"] = {}
     report["directAXCapabilities"] = {}
+    report["directAXTrees"] = {}
     for role in ("client", "unified"):
         app = apps[role]
         report["currentStage"] = "native-probe-install-" + role
@@ -47,9 +48,23 @@ def exercise(apps, report, feed=None):
             diagnostic = direct_ax.capture(app, pid)
             report["directAXCapabilities"][role] = diagnostic
             (app["results"] / "direct-ax.json").write_text(json.dumps(diagnostic, indent=2) + "\n", encoding="utf-8")
+            if report.get("macosObserver") == "direct-ax":
+                direct_app = dict(app, nativeBackend="macos-direct-ax")
+                report["currentStage"] = "direct-ax-complete-tree-" + role
+                tree = (probe.capture(direct_app, pid, app["results"] / "direct-ax-tree", require_complete=True)
+                        if diagnostic.get("available") is True else
+                        {"capabilityPassed": False, "completeTreePassed": False, "skippedReason": "DirectAXUnavailable"})
+                report["directAXTrees"][role] = tree
+                # A partial new tree never falls back to the old action provider.
+                if tree.get("completeTreePassed") is True:
+                    app["nativeBackend"] = "macos-direct-ax"
         lifecycle.require_same_process(observed, lifecycle.observe_app(app))
     # Collect both products even when one does not expose its WebView controls.
-    lifecycle.require(all(item["capabilityPassed"] for item in report["nativeProbes"].values()),
+    selected_probes = report["directAXTrees"] if report.get("macosObserver") == "direct-ax" else report["nativeProbes"]
+    if report.get("macosObserver") == "direct-ax":
+        lifecycle.require(len(selected_probes) == 2 and all(item.get("completeTreePassed") is True for item in selected_probes.values()),
+                          "Direct AX complete-tree gate failed")
+    lifecycle.require(len(selected_probes) == 2 and all(item["capabilityPassed"] for item in selected_probes.values()),
                       "Native accessibility capability is unavailable; inspect the bounded trees")
     report["capabilityPassed"] = True
     if report.get("requestedFlow") == "empty-library":
@@ -82,14 +97,16 @@ def main():
     parser.add_argument("--provenance", required=True, type=Path)
     parser.add_argument("--results-directory", required=True, type=Path)
     parser.add_argument("--flow", choices=("capability", "empty-library"), default="capability")
+    parser.add_argument("--macos-observer", choices=("system-events", "direct-ax"), default="system-events")
     args = parser.parse_args()
     lifecycle.base.require_hosted_runner(os.environ, platform.system(), platform.machine(), args.rid)
+    lifecycle.require(args.rid.startswith("osx-") or args.macos_observer == "system-events", "Direct AX requires a macOS runner")
     source = provenance(args.provenance, args.rid, args.version)
     results = args.results_directory.resolve()
     lifecycle.require(not results.exists(), "Results must be a new directory")
     results.mkdir(parents=True)
     report = {"passed": False, "capabilityPassed": False, "mainFlowPassed": False, "emptyLibraryFlowPassed": False,
-              "requestedFlow": args.flow,
+              "requestedFlow": args.flow, "macosObserver": args.macos_observer,
               "scope": "installed-native-empty-library" if args.flow == "empty-library" else "installed-native-accessibility-capability-only", "rid": args.rid,
               "provenance": source, "packageVersion": args.version,
               "executionHeadSHA": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=lifecycle.base.ROOT, text=True).strip(),

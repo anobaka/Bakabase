@@ -26,6 +26,36 @@ INTERACTIVE_ACTIONS = {"AXPress", "AXConfirm", "InvokePatternIdentifiers.Pattern
                        "TogglePatternIdentifiers.Pattern", "SelectionItemPatternIdentifiers.Pattern",
                        "ExpandCollapsePatternIdentifiers.Pattern", "ValuePatternIdentifiers.Pattern"}
 STAGES = {"initialize", "preflight", "resolve-process", "load-uia", "enumerate-windows", "read-tree", "verify-process"}
+AX_CODES = {"DirectAXTreeDeadline", "DirectAXReadCountExceeded", "DirectAXValueTypeMismatch",
+            "DirectAXCollectionBudgetExceeded", "DirectAXCallFailed", "DirectAXAttributeRejected",
+            "DirectAXProcessMismatch", "InvalidDirectAXInput", "DirectAXNotTrusted", "DirectAXApplicationRoleMismatch",
+            "DirectAXWindowRoleMismatch", "DirectAXTreeBudgetExceeded", "DirectAXTreeCycle",
+            "DirectAXSecureSubtreeUnavailable", "DirectAXTreeUnavailable", "DirectAXControlChanged",
+            "DirectAXControlInvisible", "DirectAXControlOutsideWeb", "DirectAXActionTreeIncomplete", "DirectAXControlAmbiguous",
+            "DirectAXGeometryUnavailable"}
+AX_ATTRIBUTES = {"AXRole", "AXSubrole", "AXTitle", "AXDescription", "AXIdentifier", "AXEnabled",
+                 "AXHidden", "AXMinimized", "AXChildren", "AXWindows", "AXValue", "AXPosition", "AXSize", "AXParent"}
+AX_OPERATIONS = {"initialize", "array-type", "array-count", "array-item", "element-type", "element-timeout",
+                 "read-pid", "read-role", "read-subrole", "read-title", "read-description", "read-identifier",
+                 "read-enabled", "read-hidden", "read-minimized", "read-children", "read-windows", "read-static-text",
+                 "read-position", "read-size", "read-parent", "read-actions", "geometry-decode", "hit-test", "press"}
+AX_VISIBILITY = {"window-hidden", "zero-size", "outside-window", "no-hit", "owned-hit-test", "other-hit",
+                 "other-window", "unverified-hit", "not-observed"}
+
+
+def ax_diagnostic(raw):
+    if not isinstance(raw, dict):
+        return None
+    code, attribute, error = raw.get("code"), raw.get("attribute"), raw.get("axError")
+    return {"code": code if code in AX_CODES else "DirectAXTreeUnavailable",
+            "operation": raw.get("operation") if raw.get("operation") in AX_OPERATIONS else None,
+            "attribute": attribute if attribute in AX_ATTRIBUTES else None,
+            "axError": error if type(error) is int and -(2**31) <= error < 2**31 else None}
+
+
+def direct_ax_source(entrypoint):
+    require(entrypoint in ("macos-ax-snapshot.js", "macos-ax-action.js"), "InvalidDirectAXEntrypoint")
+    return "\n".join((HERE / name).read_text() for name in ("macos-cf-values.js", "macos-ax-provider.js", entrypoint))
 
 
 class ProbeFailure(AssertionError):
@@ -124,12 +154,15 @@ def native_snapshot(app, pid, timeout=TIMEOUT):
     if app["rid"].startswith("osx-"):
         before = mac_identity(pid)
         require(Path(before["executable"]).resolve() == Path(app["exe"]).resolve(), "ProductExecutableMismatch")
-        script = (HERE / "macos-snapshot.js").read_text()
+        backend = app.get("nativeBackend", "macos-system-events-ax")
+        require(backend in ("macos-system-events-ax", "macos-direct-ax"), "InvalidNativeBackend")
+        script = direct_ax_source("macos-ax-snapshot.js") if backend == "macos-direct-ax" else (HERE / "macos-snapshot.js").read_text()
         # osascript's '-' is the script from stdin. JSON is source-escaped data,
         # never evaluated as a command or passed through a shell.
         result = bounded_command(["/usr/bin/osascript", "-l", "JavaScript", "-"],
                                  "const input = " + json.dumps(data) + ";\n" + script, timeout)
         require(mac_identity(pid) == before, "ProductProcessChangedDuringProbe")
+        require(result.get("backend") == backend, "UnexpectedNativeBackend")
         result["process"] = before
     else:
         result = bounded_command(["powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-STA",
@@ -148,7 +181,7 @@ def node_visible(snapshot, node):
     # UIA explicitly exposes offscreen state, including virtualized/collapsed
     # descendants. Missing UIA visibility is not affirmative evidence. AX keeps
     # its existing visible-window scope; it has no equivalent property here.
-    return node.get("visible") is True if snapshot.get("backend") == "windows-uia" else node.get("visible") is not False
+    return node.get("visible") is True if snapshot.get("backend") in ("windows-uia", "macos-direct-ax") else node.get("visible") is not False
 
 
 def valid_runtime_id(value):
@@ -156,7 +189,7 @@ def valid_runtime_id(value):
 
 
 def summarize(snapshot):
-    require(snapshot.get("backend") in ("macos-system-events-ax", "windows-uia"), "InvalidNativeBackend")
+    require(snapshot.get("backend") in ("macos-system-events-ax", "windows-uia", "macos-direct-ax"), "InvalidNativeBackend")
     require(snapshot.get("readOnly") is True, "NotReadOnlyProbe")
     windows = snapshot.get("windows")
     require(isinstance(windows, list) and len(windows) <= 8, "InvalidWindowCollection")
@@ -182,6 +215,7 @@ def summarize(snapshot):
             "namedWebNodes": texts, "treeTruncated": snapshot.get("truncated") is True,
             "reason": None if capable else "NativeWebContentNotAccessible",
             "nativeErrorStage": snapshot.get("errorStage") if snapshot.get("errorStage") in STAGES else None,
+            "diagnostic": ax_diagnostic(snapshot.get("diagnostic")),
             "scope": "read-only-native-accessibility-capability"}
 
 
@@ -196,6 +230,7 @@ def sanitize(value, secrets=()):
         return raw[:limit]
     output = {key: value.get(key) for key in ("backend", "readOnly", "enabled", "truncated", "elapsedMs")}
     output["errorStage"] = value.get("errorStage") if value.get("errorStage") in STAGES else None
+    output["diagnostic"] = ax_diagnostic(value.get("diagnostic"))
     identity = value.get("process", {})
     output["process"] = {"pid": identity.get("pid"), "started": string(identity.get("started"))}
     output["windows"] = []
@@ -210,6 +245,8 @@ def sanitize(value, secrets=()):
                 "name": string(node.get("name")), "text": string(node.get("text")),
                 "identifier": string(node.get("identifier")), "enabled": node.get("enabled") is True,
                 "visible": node.get("visible") if type(node.get("visible")) is bool else None,
+                "visibilityEvidence": node.get("visibilityEvidence") if node.get("visibilityEvidence") in AX_VISIBILITY else None,
+                "editableAncestor": node.get("editableAncestor") is True,
                 "runtimeId": node.get("runtimeId") if valid_runtime_id(node.get("runtimeId")) else None,
                 "insideWebContent": node.get("insideWebContent") is True,
                 "actions": [string(action, 60) for action in node.get("actions", [])[:12]],
@@ -218,7 +255,7 @@ def sanitize(value, secrets=()):
     return output
 
 
-def capture(app, pid, destination):
+def capture(app, pid, destination, require_complete=False):
     hosted(app)
     destination = Path(destination)
     require(not destination.exists(), "ProbeResultsAlreadyExist")
@@ -242,12 +279,16 @@ def capture(app, pid, destination):
             tree = json.dumps(sanitize(snapshot), indent=2)
             (destination / f"tree-{attempt:02}.json").write_text(tree, encoding="utf-8")
             (destination / "tree.json").write_text(tree, encoding="utf-8")
-            if summary["capabilityPassed"] or snapshot.get("enabled") is not True or snapshot.get("errorStage"):
+            if ((summary["capabilityPassed"] and (not require_complete or snapshot.get("truncated") is False)) or
+                    snapshot.get("enabled") is not True or snapshot.get("errorStage") and not require_complete):
                 break
             time.sleep(min(1, max(0, deadline-time.monotonic())))
     except Exception as error:
         report["capabilityPassed"] = False
         report["error"] = {"type": type(error).__name__,
                            "code": str(error) if isinstance(error, ProbeFailure) else "NativeProbeUnavailable"}
+    report["completeTreePassed"] = report.get("capabilityPassed") is True and report.get("treeTruncated") is False
+    if require_complete and not report["completeTreePassed"]:
+        report["capabilityPassed"] = False
     (destination / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     return report
