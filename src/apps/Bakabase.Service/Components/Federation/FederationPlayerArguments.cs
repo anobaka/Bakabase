@@ -23,18 +23,22 @@ public static class FederationPlayerArguments
             throw new ArgumentException("Expected a loopback federation media ticket URL.", nameof(mediaUrl));
 
         var known = KnownPlayerDefinitions.MatchByExecutable(player.ExecutablePath);
-        var target = uri.AbsoluteUri;
+        // mpv's newer curl backend interprets direct:// as a proxy host. Select
+        // its long-supported FFmpeg input explicitly for this validated ticket.
+        // lavf:// changes mpv's origin classification, so disable references below:
+        // the exported asset represents one file, never a playlist or nested I/O.
+        var target = known == KnownPlayerDefinitions.Mpv ? "lavf://" + uri.AbsoluteUri : uri.AbsoluteUri;
         var arguments = BatchPlayArguments.BuildFromTemplate(player.CommandTemplate, target);
         // VLC keeps its native HTTP input: AVIO cannot pause ordinary HTTP streams in
         // VLC 3.x. FederationPlayerPolicy excludes VLC before launch when Darwin's
         // system proxy would receive this loopback ticket.
-        // mpv passes nonempty http-proxy through to libavformat, which ignores non-HTTP
-        // values. Its braces limit the override to this file. IINA's supported CLI
+        // The selected mpv input passes nonempty http-proxy to libavformat, which
+        // ignores non-HTTP values. Braces limit the override to this file. IINA's supported CLI
         // applies --mpv-* to a new PlayerCore; its override lasts for that playback
         // instance (including files later opened there), without writing preferences.
         // Use a nonempty value: empty mpv options also fall back to environment proxies.
         if (known == KnownPlayerDefinitions.Mpv)
-            return "--{ --http-proxy=direct:// " + arguments + " --}";
+            return "--{ --http-proxy=direct:// " + arguments + " --access-references=no --}";
         if (known == KnownPlayerDefinitions.Iina)
             return "--mpv-http-proxy=direct:// " + arguments;
         return arguments;

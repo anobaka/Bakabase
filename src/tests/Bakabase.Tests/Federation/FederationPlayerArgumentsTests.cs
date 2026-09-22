@@ -21,11 +21,23 @@ public sealed class FederationPlayerArgumentsTests
     [TestMethod]
     public void MpvScopesProxyToOneFileAndIinaPreservesItsRequiredCliArguments()
     {
-        Assert.AreEqual($"--{{ --http-proxy=direct:// \"{MediaUrl}\" --}}",
+        Assert.AreEqual($"--{{ --http-proxy=direct:// \"lavf://{MediaUrl}\" --access-references=no --}}",
             FederationPlayerArguments.Build(new ResolvedPlayer("/usr/bin/mpv", null), null, MediaUrl));
         Assert.AreEqual($"--mpv-http-proxy=direct:// --no-stdin \"{MediaUrl}\"",
             FederationPlayerArguments.Build(new ResolvedPlayer("/Applications/IINA.app/Contents/MacOS/iina-cli", "--no-stdin {0}"),
                 null, MediaUrl));
+    }
+
+    [TestMethod]
+    public void MpvSelectsFfmpegInputInsideTheExistingLocalCommandTemplate()
+    {
+        var player = new ResolvedPlayer(@"C:\players\mpv.exe", "--fullscreen {0}");
+        Assert.AreEqual($"--{{ --http-proxy=direct:// --fullscreen \"lavf://{MediaUrl}\" --access-references=no --}}",
+            FederationPlayerArguments.Build(player, null, MediaUrl));
+        Assert.AreEqual("--fullscreen \"C:\\Media\\a movie.mp4\"",
+            FederationPlayerArguments.Build(player, @"C:\Media\a movie.mp4", MediaUrl));
+        Assert.ThrowsException<ArgumentException>(() =>
+            FederationPlayerArguments.Build(player, null, "lavf://" + MediaUrl));
     }
 
     [TestMethod]
