@@ -68,13 +68,20 @@ def one(snapshot, label, kind):
     path = node.get("path")
     probe.require(isinstance(path, list) and 2 <= len(path) <= 42 and
                   all(type(index) is int and 0 <= index < 1000 for index in path), "InvalidObservedControlPath")
-    return {key: node.get(key, "") for key in ("path", "role", "name", "identifier", "runtimeId")}
+    selected = {key: node.get(key, "") for key in ("path", "role", "name", "identifier", "runtimeId")}
+    if snapshot.get("backend") == "windows-uia" and kind == "scope":
+        probe.require("TogglePatternIdentifiers.Pattern" in node.get("actions", []), "NativeScopeToggleUnavailable")
+        selected["operation"] = "toggle"
+    return selected
 
 
 def perform(app, snapshot, selector, operation="press", value=None):
     probe.hosted(app)
     probe.require(complete(snapshot), "IncompleteNativeTree")
-    probe.require(operation in ("press", "set"), "UnsupportedNativeOperation")
+    probe.require(operation in ("press", "set", "toggle"), "UnsupportedNativeOperation")
+    if operation == "toggle":
+        probe.require(app["rid"] == "win-x64" and selector.get("operation") == "toggle" and
+                      selector.get("role") in ("ControlType.Button", "ControlType.CheckBox"), "UnsupportedNativeToggle")
     identity = snapshot["process"]
     pid = identity["pid"]
     record = {"pid": pid, "executable": str(Path(app["exe"]).resolve()), "started": identity["started"],
@@ -146,10 +153,11 @@ class Driver:
     def press(self, label, kind="button"):
         probe.require(len(self.report["actions"]) < 20, "NativeActionBudgetExceeded")
         selector = one(self.current, label, kind)
-        action = {"operation": "press", "label": label, "kind": kind, "submitted": False}
+        operation = selector.get("operation", "press")
+        action = {"operation": operation, "label": label, "kind": kind, "submitted": False}
         self.report["actions"].append(action)
         self.save()
-        perform(self.app, self.current, selector)
+        perform(self.app, self.current, selector, operation)
         action["submitted"] = True
         self.save()
 

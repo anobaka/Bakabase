@@ -47,6 +47,11 @@ try {
     if($record.operation -eq 'press') {
         $pattern=$element.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
         ([System.Windows.Automation.InvokePattern]$pattern).Invoke()
+    } elseif($record.operation -eq 'toggle' -and $record.selector.operation -eq 'toggle' -and
+             $role -in @('ControlType.Button','ControlType.CheckBox')) {
+        # aria-pressed buttons in WebView2 expose TogglePattern, not Invoke.
+        $pattern=$element.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+        ([System.Windows.Automation.TogglePattern]$pattern).Toggle()
     } elseif($record.operation -eq 'set' -and $role -eq 'ControlType.Edit') {
         $pattern=[System.Windows.Automation.ValuePattern]$element.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
         if($pattern.Current.IsReadOnly) {throw 'ReadOnlyControl'}

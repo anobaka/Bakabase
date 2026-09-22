@@ -28,6 +28,41 @@ def view(texts=(), buttons=(), menus=(), scopes=()):
 
 
 class Selectors(unittest.TestCase):
+    def test_webview2_scope_uses_observed_toggle_pattern_without_changing_ordinary_press(self):
+        snapshot = view(buttons=["This device"])
+        snapshot["backend"] = "windows-uia"
+        node = snapshot["windows"][0]["nodes"][0]
+        node.update(role="ControlType.Button", visible=True, runtimeId=[42, 7, 19],
+                    actions=["TogglePatternIdentifiers.Pattern"])
+        selector = flow.one(snapshot, "This device", "scope")
+        self.assertEqual("toggle", selector["operation"])
+        self.assertNotIn("operation", flow.one(snapshot, "This device", "button"))
+        node["actions"] = ["InvokePatternIdentifiers.Pattern"]
+        with self.assertRaisesRegex(flow.probe.ProbeFailure, "NativeScopeToggleUnavailable"):
+            flow.one(snapshot, "This device", "scope")
+
+    def test_driver_records_the_actual_native_scope_toggle_dispatch(self):
+        snapshot = view(buttons=["This device"])
+        snapshot["backend"] = "windows-uia"
+        snapshot["windows"][0]["nodes"][0].update(role="ControlType.Button", visible=True,
+            runtimeId=[42, 7, 19], actions=["TogglePatternIdentifiers.Pattern"])
+        with tempfile.TemporaryDirectory() as temporary, patch.object(flow.probe, "hosted"), \
+                patch.object(flow, "perform") as action:
+            driver = flow.Driver({"rid": "win-x64"}, 42, Path(temporary) / "flow")
+            driver.current = snapshot
+            driver.press("This device", "scope")
+            self.assertEqual("toggle", action.call_args.args[3])
+            self.assertEqual([42, 7, 19], action.call_args.args[2]["runtimeId"])
+            self.assertEqual({"operation": "toggle", "label": "This device", "kind": "scope", "submitted": True},
+                             driver.report["actions"][0])
+
+    def test_toggle_cannot_be_used_without_an_observed_windows_scope_selector(self):
+        snapshot = view(buttons=["Close"])
+        with patch.object(flow.probe, "hosted"), patch.object(flow.probe, "bounded_command") as action:
+            with self.assertRaisesRegex(flow.probe.ProbeFailure, "UnsupportedNativeToggle"):
+                flow.perform({"rid": "win-x64"}, snapshot, flow.one(snapshot, "Close", "button"), "toggle")
+        action.assert_not_called()
+
     def test_wkwebview_pressed_scope_is_selected_as_checkbox_not_an_unrelated_button(self):
         snapshot = view(buttons=["Search"], scopes=["This device", "All enabled devices", "Choose devices"])
         self.assertEqual("AXCheckBox", flow.one(snapshot, "This device", "scope")["role"])
