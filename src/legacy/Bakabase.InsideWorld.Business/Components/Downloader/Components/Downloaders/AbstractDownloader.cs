@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
@@ -137,7 +139,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 }
             }
 
-            return name;
+            // Sanitize complete components after interpolation: a gallery title or a template
+            // literal can leave trailing dots/spaces that Windows strips when creating a directory.
+            // Reuse the same safe path for existing-file checks and writes, keeping template folders.
+            return string.Join(Path.DirectorySeparatorChar,
+                name.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Select(segment =>
+                {
+                    var safeName = FileNameSanitizer.Sanitize(segment);
+                    return safeName.Length == 0 ? "_" : safeName;
+                }));
         }
 
         protected async Task OnCheckpointChangedInternal(string checkpoint)
