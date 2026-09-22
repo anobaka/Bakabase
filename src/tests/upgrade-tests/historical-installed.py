@@ -158,8 +158,11 @@ def main(argv=None):
     parser.add_argument("--rid", choices=release.RIDS, required=True)
     parser.add_argument("--results-directory", type=Path, required=True)
     parser.add_argument("--macos-native-authorization", action="store_true")
+    parser.add_argument("--macos-data-retention", action="store_true",
+        help="Beta data-only scope: activate the unchanged old executable to seed data, then require real native updates")
     args = parser.parse_args(argv)
     release.hosted(args.rid)
+    require(not args.macos_data_retention or args.rid.startswith("osx-"), "The beta data-retention scope is macOS-only")
     require(args.macos_native_authorization == args.rid.startswith("osx-"),
             "macOS requires the verified native authorization fixture; Windows must not request it")
     manifest = release.read_manifest(args.manifest, args.rid)
@@ -182,9 +185,18 @@ def main(argv=None):
                   "Background containment uses own loopback feeds and a rejecting proxy, not an OS network sandbox.",
                   "No production signing, notarization, Gatekeeper or SmartScreen trust is validated.",
                   "macOS removal deletes the owned bundle and receipt, not a product native uninstaller."]}
+    data_retention = lifecycle.sibling("macos-data-retention") if args.macos_data_retention else None
+    if data_retention is not None:
+        report.update(scope=data_retention.SCOPE, historicalNormalLaunchVerified=False, dataRetentionPassed=False)
+        report["limitations"] = [item for item in report["limitations"] if not item.startswith("macOS historical installation uses")]
+        report["limitations"].extend([
+            "Original postinstall startup is observed when available; otherwise the unchanged installed executable is explicitly activated to create test data. Normal old-bundle launch compatibility is not certified.",
+            "Candidate updater apply and first restart remain automatic; later explicit restarts separately verify durable data.",
+            "The original and candidate have unchanged business migrations/schema; this does not certify every historical schema or power-loss recovery."])
     try:
         lifecycle.execute(args, results, report, package_auditor=package_auditor(manifest),
-                          feed_factory=feed_module.Feed, exercise=exercise)
+                          feed_factory=feed_module.Feed, exercise=data_retention.exercise if data_retention else exercise,
+                          before_remove=data_retention.preserve_data_evidence if data_retention else None)
         report["passed"] = True
     except (Exception, KeyboardInterrupt) as error:
         report["error"] = f"{type(error).__name__}: {error}"

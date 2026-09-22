@@ -284,6 +284,44 @@ trust, production CDN behavior or physical multi-device networking. Results and
 remaining release gates are recorded in
 [release readiness](../../../docs/multi-device-library-release-readiness.md).
 
+## macOS beta data retention
+
+The `macos-data` area of the extended CI runs both macOS architectures on
+disposable hosted runners, reusing a verified candidate package run:
+
+```bash
+gh workflow run ci.yml --ref codex/multi-device-library \
+  -f suite=extended -f acceptance_area=macos-data -f package_run_id=35701815533
+```
+
+`historical-installed.py --macos-data-retention` installs the unchanged published
+v349 packages. It observes their installer-started process where available;
+otherwise the unchanged internal executable is explicitly started to create data
+through the old APIs. Each installation must begin without its bundle or process.
+The explicit activation bypasses the defective old bundle's LaunchServices entry;
+this scope does not certify normal old-bundle launch compatibility.
+The existing `historical` area keeps its stricter normal-launch requirement.
+
+The old program creates a Unicode directory, child file and pathless resource;
+manual name/introduction/rating, a custom text property, pin/play history, and an
+ordered collection with an ignored member. SQLite online backups include
+committed WAL data. All original rows and fields in seven populated business
+tables, API semantics, selected configuration and source-file hashes must survive
+both the original native updater and a later explicit candidate restart. Native
+updater application and its first candidate restart must remain automatic;
+manual restart cannot repair a failed update. Two-product coexistence and the
+existing macOS authorization/process ownership checks also remain required.
+
+Before removing owned AppData, the runner stops both products and updater writers
+and preserves a final database backup and configuration hashes, including on
+failure. If stopping or evidence preservation fails, cleanup fails and keeps the
+owned fixtures. Pure backup, comparison, seed and cleanup guards can run locally;
+the installed programs, updater and authorization UI cannot.
+
+This synthetic old-library fixture does not certify every user database,
+power-loss recovery, production signing/feed behavior or historical schemas.
+The pinned v349 and current candidate have unchanged business migrations/schema.
+
 ## Older filesystem replacement fixtures
 
 `run-macos.sh`, `run-linux.sh`, `run-windows.ps1` and `run-docker.sh` remain manual

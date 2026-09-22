@@ -353,7 +353,7 @@ def registered_products():
     return values if isinstance(values, list) else [values]
 
 
-def execute(args, results, report, *, package_auditor=None, feed_factory=None, exercise=None):
+def execute(args, results, report, *, package_auditor=None, feed_factory=None, exercise=None, before_remove=None):
     started_epoch = time.time()
     report["currentStage"] = "preflight"
     paths = default_paths(args.rid, Path.home(), os.environ)
@@ -458,6 +458,11 @@ def execute(args, results, report, *, package_auditor=None, feed_factory=None, e
         (exercise or exercise_coexistence)(apps, report, feed)
     except (Exception, KeyboardInterrupt) as error:
         report["failureBeforeCleanup"] = {"stage": report.get("currentStage"), "type": type(error).__name__, "message": str(error)}
+        # Nonblocking status of children this fixture actually launched. A
+        # missing PID alone cannot establish whether it exited or crashed.
+        report["ownedChildExitStatuses"] = {
+            role: [{"pid": child.pid, "returnCode": child.poll()} for child in app["children"]]
+            for role, app in apps.items()}
         try:
             report["failureDiagnostics"] = sibling("installed-lifecycle-diagnostics").capture(apps, results, started_epoch)
         except Exception as diagnostic_error:
@@ -467,13 +472,15 @@ def execute(args, results, report, *, package_auditor=None, feed_factory=None, e
         def cleanup(label, action):
             try:
                 action()
+                return True
             except Exception as error:
                 cleanup_errors.append(f"{label}: {error}")
+                return False
 
         report["updaterCleanup"] = {"passed": False, "remainingProcesses": [{"verification": "not completed"}]}
-        cleanup("Stop native updaters and preserve default logs", lambda: updates.cleanup(apps, report))
+        updaters_stopped = cleanup("Stop native updaters and preserve default logs", lambda: updates.cleanup(apps, report))
         updater_cleanup = report.get("updaterCleanup", {})
-        can_remove = "remainingProcesses" in updater_cleanup and not updater_cleanup["remainingProcesses"]
+        can_remove = updaters_stopped and "remainingProcesses" in updater_cleanup and not updater_cleanup["remainingProcesses"]
         if authorization is not None:
             report["nativeAuthorizationCleanup"] = {"passed": False, "remainingProcesses": [{"verification": "not completed"}]}
             cleanup("Remove native authorization fixture", lambda: report.update(
@@ -483,10 +490,16 @@ def execute(args, results, report, *, package_auditor=None, feed_factory=None, e
                           "remainingProcesses" in authorization_cleanup and not authorization_cleanup["remainingProcesses"])
             if authorization_cleanup.get("passed") is not True:
                 cleanup_errors.append("Native authorization fixture cleanup did not pass")
+        # Finish stopping both products before claiming their data was captured
+        # after shutdown, and preserve both products before removing either one.
         for role, app in apps.items():
-            cleanup("Stop " + role, lambda: stop_app(app))
+            if not cleanup("Stop " + role, lambda: stop_app(app)):
+                can_remove = False
             for log in app["childLogs"]:
-                cleanup("Close " + role + " log", log.close)
+                if not cleanup("Close " + role + " log", log.close):
+                    can_remove = False
+        can_preserve_stopped_data = can_remove
+        for role, app in apps.items():
             def preserve_logs():
                 if not app["data"].exists():
                     return
@@ -497,6 +510,14 @@ def execute(args, results, report, *, package_auditor=None, feed_factory=None, e
                         stream.seek(max(0, path.stat().st_size - 1024 * 1024))
                         (destination / f"{index}-{path.name}").write_bytes(stream.read())
             cleanup("Preserve " + role + " logs", preserve_logs)
+            if before_remove is not None:
+                if not can_preserve_stopped_data:
+                    cleanup_errors.append(f"Preserve {role} data evidence skipped: owned process shutdown was not verified")
+                elif not cleanup("Preserve " + role + " data evidence", lambda: before_remove(app, report, role)):
+                    # Still preserve the other stopped product, but do not
+                    # remove either fixture if any evidence callback fails.
+                    can_remove = False
+        for role, app in apps.items():
             if can_remove and app["installationAttempted"] and app["installRoot"].exists():
                 cleanup("Remove " + role, lambda: report.setdefault("cleanupRemovals", {}).update({role: remove_app(app, "cleanup")}))
             if mac and can_remove:
@@ -510,7 +531,7 @@ def execute(args, results, report, *, package_auditor=None, feed_factory=None, e
         report["createdDefaultPaths"] = [str(path) for path in paths["absent"] if path.exists()]
         for index, path in enumerate(paths["absent"]):
             def remove_default():
-                require(can_remove, "Files retained because a native updater is still running")
+                require(can_remove, "Files retained because owned process shutdown or data evidence preservation did not complete")
                 if path.exists() or path.is_symlink():
                     if mac:
                         base.command(["sudo", "rm", "-rf", "--", path], results / f"cleanup-{index}.log")

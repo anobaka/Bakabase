@@ -177,17 +177,15 @@ jobs:
           retention-days: 14
 
   historical:
-    if: inputs.area == 'historical' || inputs.area == 'all'
-    name: Published installer upgrade (${{ matrix.rid }})
+    if: inputs.area == 'historical' || inputs.area == 'macos-data' || inputs.area == 'all'
+    name: ${{ inputs.area == 'macos-data' && 'macOS beta data retention' || 'Published installer upgrade' }} (${{ matrix.rid }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - {os: windows-latest, rid: win-x64}
-          - {os: macos-15-intel, rid: osx-x64}
-          - {os: macos-15, rid: osx-arm64}
+        # The beta data scope is separate from the unchanged historical gate.
+        include: ${{ fromJSON(inputs.area == 'macos-data' && '[{"os":"macos-15-intel","rid":"osx-x64"},{"os":"macos-15","rid":"osx-arm64"}]' || '[{"os":"windows-latest","rid":"win-x64"},{"os":"macos-15-intel","rid":"osx-x64"},{"os":"macos-15","rid":"osx-arm64"}]') }}
     defaults:
       run:
         shell: bash
@@ -213,6 +211,7 @@ jobs:
         run: |
           python -m unittest discover -s src/tests/upgrade-tests -p 'test_installed*.py'
           python src/tests/upgrade-tests/test_historical_upgrade.py
+          python -m unittest discover -s src/tests/upgrade-tests -p 'test_macos_data*.py'
           python src/tests/upgrade-tests/check-installed-observer.py \
             --rid '${{ matrix.rid }}' --report "$RUNNER_TEMP/historical-observer.json"
       - name: Verify unchanged candidate packages
@@ -243,13 +242,14 @@ jobs:
         run: |
           AUTH_ARGS=()
           if [[ '${{ runner.os }}' == 'macOS' ]]; then AUTH_ARGS=(--macos-native-authorization); fi
+          if [[ '${{ inputs.area }}' == 'macos-data' ]]; then AUTH_ARGS+=(--macos-data-retention); fi
           python src/tests/upgrade-tests/historical-installed.py \
             --manifest "$RUNNER_TEMP/historical-inputs/historical.json" --rid '${{ matrix.rid }}' \
             --results-directory "$RUNNER_TEMP/historical-results" "${AUTH_ARGS[@]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: historical-upgrade-${{ matrix.rid }}-evidence
+          name: ${{ inputs.area == 'macos-data' && 'macos-data-retention' || 'historical-upgrade' }}-${{ matrix.rid }}-evidence
           path: |
             ${{ runner.temp }}/historical-observer.json
             ${{ runner.temp }}/historical-candidate-inputs/provenance.json

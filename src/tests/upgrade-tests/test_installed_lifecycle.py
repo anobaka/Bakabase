@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import shutil
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -128,6 +129,138 @@ class RunnerBoundary(unittest.TestCase):
             mocks[(id(runner.Path), "home")].assert_called()
             self.assertEqual([], list(home.iterdir()))
             mocks[(id(runner.base), "remove_owned_tree")].assert_not_called()
+
+
+class CleanupEvidenceOrdering(unittest.TestCase):
+    def lifecycle_fixture(self, *, stop_failure=None, updater_state="stopped", evidence_failure=None):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        home, results, local = root / "home", root / "results", root / "local"
+        for directory in (home, results, local):
+            directory.mkdir()
+        paths = {"absent": [root / "client-data", root / "unified-data"],
+                 "data": {role: root / (role + "-data") for role in runner.ROLES}}
+        args = SimpleNamespace(rid="win-x64", version="old", unified_packages=root / "unified-package",
+                               client_packages=root / "client-package", updates_manifest=None,
+                               macos_native_authorization=False)
+        events, apps_seen, report = [], {}, {}
+
+        def prepare_data(path, role):
+            path.mkdir()
+            (path / "client").mkdir()
+            (path / "app.json").write_text('{"App":{}}')
+            return 41001 if role == "client" else 41002
+
+        def exercise(apps, *_):
+            apps_seen.update(apps)
+            for role, app in apps.items():
+                app["installRoot"].mkdir(parents=True)
+                app["installationAttempted"] = True
+                app["childLogs"].append(MagicMock(close=MagicMock(side_effect=lambda current=role: events.append("close:" + current))))
+
+        def stop(app):
+            role = app["role"]
+            events.append("stop:" + role)
+            if role == stop_failure:
+                raise TimeoutError("owned product did not stop")
+
+        def updater_cleanup(_apps, current_report):
+            events.append("updaters")
+            current_report["updaterCleanup"] = {
+                "passed": updater_state == "stopped",
+                "remainingProcesses": [{"pid": 731}] if updater_state == "remaining" else []}
+            if updater_state == "error":
+                raise TimeoutError("updater stop verification failed")
+
+        def preserve(app, current_report, role):
+            events.append("evidence:" + role)
+            self.assertIn("stop:client", events)
+            self.assertIn("stop:unified", events)
+            self.assertIn("close:client", events)
+            self.assertIn("close:unified", events)
+            self.assertFalse(any(event.startswith("remove:") for event in events))
+            if role == evidence_failure:
+                raise OSError("owned evidence could not be saved")
+            current_report.setdefault("stoppedDataEvidence", {})[role] = {"passed": True}
+
+        def remove(app, _label):
+            events.append("remove:" + app["role"])
+            shutil.rmtree(app["installRoot"])
+            return {"passed": True}
+
+        def remove_tree(path):
+            self.assertTrue(path.resolve().is_relative_to(root.resolve()), "Only remove temporary test fixtures")
+            shutil.rmtree(path)
+
+        expected_failure = stop_failure is not None or updater_state != "stopped" or evidence_failure is not None
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(patch.dict(runner.os.environ, {"RUNNER_TEMP": temporary.name, "LOCALAPPDATA": str(local)}, clear=True))
+            patches = [(runner.Path, "home", {"return_value": home}),
+                       (runner, "default_paths", {"return_value": paths}),
+                       (runner, "registered_products", {"return_value": []}),
+                       (runner.shutil, "disk_usage", {"return_value": SimpleNamespace(free=10 * 1024 ** 3)}),
+                       (runner.base, "audit_packages", {"return_value": {"artifacts": {}}}),
+                       (runner.base, "prepare_data", {"side_effect": prepare_data}),
+                       (runner.base, "command", {"side_effect": AssertionError("No native command in pure fixture")}),
+                       (runner.base, "remove_owned_tree", {"side_effect": remove_tree}),
+                       (runner.subprocess, "Popen", {"side_effect": AssertionError("No native launch in pure fixture")}),
+                       (runner.subprocess, "run", {"side_effect": AssertionError("No native command in pure fixture")}),
+                       (runner.subprocess, "check_output", {"side_effect": AssertionError("No native command in pure fixture")}),
+                       (runner.http.server, "ThreadingHTTPServer", {"return_value": MagicMock(server_port=43111)}),
+                       (runner.threading, "Thread", {}), (runner.socket, "socket", {}),
+                       (runner, "stop_app", {"side_effect": stop}),
+                       (runner, "remove_app", {"side_effect": remove}),
+                       (runner.updates, "cleanup", {"side_effect": updater_cleanup})]
+            for owner, name, options in patches:
+                stack.enter_context(patch.object(owner, name, **options))
+            if expected_failure:
+                with self.assertRaisesRegex(AssertionError, "Installed lifecycle cleanup failed"):
+                    runner.execute(args, results, report, exercise=exercise, before_remove=preserve)
+            else:
+                runner.execute(args, results, report, exercise=exercise, before_remove=preserve)
+        return report, events, paths, apps_seen
+
+    def assert_retained(self, report, events, paths, apps):
+        self.assertFalse(report["ownedFilesRemoved"])
+        self.assertTrue(report["cleanupErrors"])
+        self.assertTrue(all(path.exists() for path in paths["absent"]))
+        self.assertTrue(all(app["installRoot"].exists() for app in apps.values()))
+        self.assertFalse(any(event.startswith("remove:") for event in events))
+
+    def test_both_products_stop_and_close_before_all_evidence_and_then_removal(self):
+        report, events, _paths, _apps = self.lifecycle_fixture()
+        self.assertEqual(["updaters", "stop:client", "close:client", "stop:unified", "close:unified",
+                          "evidence:client", "evidence:unified", "remove:client", "remove:unified"], events)
+        self.assertTrue(report["ownedFilesRemoved"])
+        self.assertEqual([], report["cleanupErrors"])
+
+    def test_either_stop_failure_still_stops_other_product_but_skips_evidence_and_all_removal(self):
+        for role in runner.ROLES:
+            with self.subTest(role=role):
+                report, events, paths, apps = self.lifecycle_fixture(stop_failure=role)
+                self.assertEqual(["updaters", "stop:client", "close:client", "stop:unified", "close:unified"], events)
+                self.assertNotIn("stoppedDataEvidence", report)
+                self.assertTrue(any("shutdown was not verified" in error for error in report["cleanupErrors"]))
+                self.assert_retained(report, events, paths, apps)
+
+    def test_updater_residual_or_failed_verification_prevents_stopped_evidence_and_removal(self):
+        for updater_state in ("remaining", "error"):
+            with self.subTest(updater_state=updater_state):
+                report, events, paths, apps = self.lifecycle_fixture(updater_state=updater_state)
+                self.assertNotIn("stoppedDataEvidence", report)
+                self.assertFalse(any(event.startswith("evidence:") for event in events))
+                self.assertIn("stop:client", events)
+                self.assertIn("stop:unified", events)
+                self.assert_retained(report, events, paths, apps)
+
+    def test_failed_callback_preserves_other_stopped_evidence_but_retains_both_fixtures(self):
+        report, events, paths, apps = self.lifecycle_fixture(evidence_failure="client")
+        self.assertEqual(["updaters", "stop:client", "close:client", "stop:unified", "close:unified",
+                          "evidence:client", "evidence:unified"], events)
+        self.assertNotIn("client", report["stoppedDataEvidence"])
+        self.assertTrue(report["stoppedDataEvidence"]["unified"]["passed"])
+        self.assert_retained(report, events, paths, apps)
 
 
 class ProductSeparation(unittest.TestCase):
