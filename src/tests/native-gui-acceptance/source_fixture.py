@@ -41,6 +41,18 @@ MAX_TREE_BYTES = 1024 * 1024 * 1024
 TITLES = ("Native source alpha.txt", "Native source beta", "Native source gamma")
 MEDIA = b"Owned native GUI source fixture; no user data.\n"
 INTRODUCTION = "Native GUI source detail sentinel"
+SHELL_DIAGNOSTIC_SCOPE = "native-gui-shell-failure-diagnostic"
+SHELL_DIAGNOSTIC_TYPES = {
+    "Other", "System.ArgumentException", "System.ArgumentNullException", "System.ArgumentOutOfRangeException",
+    "System.BadImageFormatException", "System.DllNotFoundException", "System.EntryPointNotFoundException",
+    "System.InvalidOperationException", "System.NotSupportedException", "System.NullReferenceException",
+    "System.TypeInitializationException", "System.TypeLoadException", "System.MissingMethodException",
+    "System.MissingFieldException", "System.IO.FileNotFoundException", "System.IO.DirectoryNotFoundException",
+    "System.IO.IOException", "System.UnauthorizedAccessException", "System.Reflection.TargetInvocationException",
+    "System.Runtime.InteropServices.COMException", "System.ComponentModel.Win32Exception",
+    "Avalonia.Markup.Xaml.XamlLoadException", "Avalonia.Markup.Xaml.XamlParseException"}
+SHELL_DIAGNOSTIC_METHODS = {"main-window-constructor", "main-window-xaml", "native-control-create",
+                            "windows-control-create", "navigate", "windows-navigate", "show-main-window"}
 
 
 class FixtureFailure(AssertionError):
@@ -106,6 +118,45 @@ def owned_json(path, root, limit):
     value = json.loads(path.read_text(encoding="utf-8"))
     require(isinstance(value, dict), "SourceJsonObjectRequired")
     return value
+
+
+def shell_failure_diagnostics(app, stopped):
+    """Only inspect the stopped fixture's fixed, bounded metadata file."""
+    validate_probe_app(app)  # Hosted and exact fixture ownership precede file reads.
+    process = stopped.get("process", {})
+    pid = process.get("pid")
+    require(stopped.get("ownedProcessesStopped") is True and stopped.get("remainingProcesses") == [] and
+            type(pid) is int and 0 < pid < 2**31 and process.get("executable") == str(app["exe"]) and
+            isinstance(process.get("started"), str) and bool(process["started"]), "SourceDiagnosticOwnerNotStopped")
+    path = beneath(app["data"] / f"native-shell-diagnostics-{pid}.json", app["fixtureRoot"], exists=False)
+    if not path.exists():
+        return {"available": False, "code": "SourceShellDiagnosticMissing"}
+    require(path.is_file() and 0 < path.stat().st_size <= 4096, "SourceShellDiagnosticBudgetOrTypeInvalid")
+    try:
+        def unique_pairs(pairs):
+            result = {}
+            for key, item in pairs:
+                if key in result:
+                    raise ValueError("Duplicate diagnostic field")
+                result[key] = item
+            return result
+        with path.open("rb") as stream:
+            raw = stream.read(4097)
+        require(len(raw) <= 4096, "SourceShellDiagnosticBudgetOrTypeInvalid")
+        value = json.loads(raw, object_pairs_hook=unique_pairs)
+        require(isinstance(value, dict) and set(value) == {"schemaVersion", "scope", "pid", "observations"} and
+                type(value["schemaVersion"]) is int and value["schemaVersion"] == 1 and
+                value["scope"] == SHELL_DIAGNOSTIC_SCOPE and type(value["pid"]) is int and value["pid"] == pid and
+                isinstance(value["observations"], list) and len(value["observations"]) <= 8,
+                "SourceShellDiagnosticInvalid")
+        for item in value["observations"]:
+            require(isinstance(item, dict) and set(item) == {"exceptionType", "hresult", "method"} and
+                    item["exceptionType"] in SHELL_DIAGNOSTIC_TYPES and item["method"] in SHELL_DIAGNOSTIC_METHODS and
+                    type(item["hresult"]) is int and -(2**31) <= item["hresult"] < 2**31,
+                    "SourceShellDiagnosticInvalid")
+    except (ValueError, TypeError, KeyError):
+        raise FixtureFailure("SourceShellDiagnosticInvalid") from None
+    return {"available": True, **value}
 
 
 def inventory(directory):
@@ -788,6 +839,7 @@ class SourceFixture:
         stopped.update(returnCode=self.process.returncode, remainingProcesses=[], ownedProcessesStopped=True)
         self.process, self.identity = None, None
         self.renderer_exit_proven = embedded_exit["passed"] is True
+        stopped["shellFailureDiagnostics"] = shell_failure_diagnostics(self.app, stopped)
         self.report["outputBytes"] = self.log_bytes
         self.save()
         require(self.renderer_exit_proven, "SourceEmbeddedExitCannotBeProven")

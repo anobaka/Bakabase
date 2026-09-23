@@ -44,3 +44,13 @@ Only pure tests may run on a developer machine:
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python src/tests/native-gui-acceptance/test_source_fixture.py
 ```
+
+The hosted source entry records at most eight first-chance exceptions whose
+current call chain includes the production `ShowMainWebView` method. A private,
+PID-specific JSON file is capped at 4096 bytes and contains only a fixed exception
+type (or `Other`), numeric HRESULT and a fixed method label. It never records
+messages, paths, arguments or stack text. The fixture reads and validates this
+metadata only after its exact owned source process has stopped, then includes
+it in that stop's `shellFailureDiagnostics`. Missing metadata is reported as
+unavailable; malformed or unowned metadata fails closed. This diagnostic does
+not establish native UI success or replace any accessibility check.

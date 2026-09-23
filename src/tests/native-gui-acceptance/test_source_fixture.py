@@ -960,6 +960,111 @@ class FixtureTests(unittest.TestCase):
         self.assertNotIn("private-key", encoded)
         self.assertIn("System.InvalidOperationException", encoded)
 
+    def diagnostic_input(self, fixture, *, pid=101):
+        stopped = {"process": {"pid": pid, "executable": str(fixture.app["exe"]), "started": "source-start"},
+                   "ownedProcessesStopped": True, "remainingProcesses": []}
+        document = {"schemaVersion": 1, "scope": source.SHELL_DIAGNOSTIC_SCOPE, "pid": pid,
+                    "observations": [{"exceptionType": "System.IO.FileNotFoundException", "hresult": -2147024894,
+                                      "method": "main-window-xaml"}]}
+        return stopped, document, fixture.app["data"] / f"native-shell-diagnostics-{pid}.json"
+
+    def test_shell_diagnostic_valid_fixed_schema_and_missing_file(self):
+        fixture = self.create()
+        stopped, document, path = self.diagnostic_input(fixture)
+        self.assertEqual({"available": False, "code": "SourceShellDiagnosticMissing"},
+                         source.shell_failure_diagnostics(fixture.app, stopped))
+        document["observations"].append({"exceptionType": "Other", "hresult": 2**31-1, "method": "show-main-window"})
+        path.write_text(json.dumps(document))
+        self.assertEqual({"available": True, **document}, source.shell_failure_diagnostics(fixture.app, stopped))
+
+    def test_shell_diagnostic_guard_and_exact_stop_proof_precede_file_access(self):
+        fixture = self.create()
+        stopped, _, _ = self.diagnostic_input(fixture)
+        with patch.object(source, "validate_probe_app", side_effect=source.FixtureFailure("NotHosted")), \
+                patch.object(source, "beneath") as read:
+            with self.assertRaisesRegex(source.FixtureFailure, "NotHosted"):
+                source.shell_failure_diagnostics(fixture.app, stopped)
+            read.assert_not_called()
+        for mutation in ({"ownedProcessesStopped": False}, {"remainingProcesses": [101]},
+                         {"process": {**stopped["process"], "pid": True}},
+                         {"process": {**stopped["process"], "executable": "/other/executable"}},
+                         {"process": {**stopped["process"], "started": ""}}):
+            with self.subTest(mutation=mutation), patch.object(source, "validate_probe_app"), \
+                    patch.object(source, "beneath") as read:
+                with self.assertRaisesRegex(source.FixtureFailure, "SourceDiagnosticOwnerNotStopped"):
+                    source.shell_failure_diagnostics(fixture.app, {**stopped, **mutation})
+                read.assert_not_called()
+
+    def test_shell_diagnostic_rejects_unknown_fields_types_pid_and_secret_content(self):
+        fixture = self.create()
+        stopped, document, path = self.diagnostic_input(fixture)
+        item = document["observations"][0]
+        invalid = [{**document, "message": "sensitive-value"}, {**document, "pid": 102},
+                   {**document, "schemaVersion": True}, {**document, "scope": "other"},
+                   {**document, "observations": [item] * 9}]
+        for change in ({"message": "sensitive-value"}, {"exceptionType": "sensitive-value"},
+                       {"exceptionType": []}, {"method": "sensitive-value"}, {"method": []},
+                       {"hresult": True}, {"hresult": 2**31}, {"hresult": -(2**31)-1}):
+            invalid.append({**document, "observations": [{**item, **change}]})
+        for value in invalid:
+            with self.subTest(value=value):
+                path.write_text(json.dumps(value))
+                with self.assertRaisesRegex(source.FixtureFailure, "SourceShellDiagnosticInvalid") as error:
+                    source.shell_failure_diagnostics(fixture.app, stopped)
+                self.assertNotIn("sensitive-value", str(error.exception))
+                self.assertNotIn("sensitive-value", json.dumps(fixture.report))
+
+    def test_shell_diagnostic_rejects_duplicate_malformed_and_oversized_json(self):
+        fixture = self.create()
+        stopped, document, path = self.diagnostic_input(fixture)
+        for payload in ('{"sensitive-value":', json.dumps(document).replace('"pid": 101', '"pid": 101, "pid": 101'),
+                        "x" * 4097):
+            with self.subTest(bytes=len(payload)):
+                path.write_text(payload)
+                with self.assertRaises(source.FixtureFailure) as error:
+                    source.shell_failure_diagnostics(fixture.app, stopped)
+                self.assertNotIn("sensitive-value", str(error.exception))
+
+    def test_shell_diagnostic_rejects_link_before_open_without_host_symlink_permissions(self):
+        fixture = self.create()
+        stopped, document, path = self.diagnostic_input(fixture)
+        path.write_text(json.dumps(document))
+        original = Path.is_symlink
+        with patch.object(Path, "is_symlink", lambda value: value == path or original(value)):
+            with self.assertRaisesRegex(source.FixtureFailure, "SourcePathTraversesLink"):
+                source.shell_failure_diagnostics(fixture.app, stopped)
+
+    def test_stop_records_shell_diagnostic_only_after_exact_source_exit(self):
+        fixture = self.create()
+        process, identity = self.attach(fixture)
+        _, document, path = self.diagnostic_input(fixture)
+        path.write_text(json.dumps(document))
+        collect = source.shell_failure_diagnostics
+        def read(app, stopped):
+            self.assertTrue(process.terminated)
+            self.assertIsNone(fixture.process)
+            self.assertTrue(stopped["ownedProcessesStopped"])
+            return collect(app, stopped)
+        with patch.object(source, "_native_identity", side_effect=lambda *_, **__: identity if process.returncode is None else None), \
+                patch.object(source, "_descendant_ids", return_value=[]), patch.object(source, "shell_failure_diagnostics", side_effect=read):
+            stopped = fixture.stop(retain_state=False)
+        self.assertEqual({"available": True, **document}, stopped["shellFailureDiagnostics"])
+        self.assertTrue(stopped["passed"])
+
+    def test_invalid_shell_diagnostic_after_stop_retains_owned_fixture(self):
+        fixture = self.create()
+        process, identity = self.attach(fixture)
+        _, _, path = self.diagnostic_input(fixture)
+        path.write_text('{"message":"sensitive-value"}')
+        with patch.object(source, "_native_identity", side_effect=lambda *_, **__: identity if process.returncode is None else None), \
+                patch.object(source, "_descendant_ids", return_value=[]):
+            with self.assertRaisesRegex(source.FixtureFailure, "SourceShellDiagnosticInvalid"):
+                fixture.close()
+        self.assertTrue(process.terminated)
+        self.assertTrue(fixture.root.exists())
+        self.assertFalse(fixture.report["cleanup"]["passed"])
+        self.assertNotIn("sensitive-value", json.dumps(fixture.report))
+
 
 if __name__ == "__main__":
     unittest.main()

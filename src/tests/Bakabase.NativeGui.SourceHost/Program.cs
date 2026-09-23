@@ -22,6 +22,7 @@ internal static class Program
     public static void Main(string[] args)
     {
         var options = FixtureOptions.Parse(args); // Hosted guard precedes disk/native initialization.
+        using var shellDiagnostics = ShellFailureDiagnostics.Install(options, typeof(ShellApp).Assembly);
         Environment.SetEnvironmentVariable(FixtureOptions.DataVariable, options.DataDirectory);
         Environment.SetEnvironmentVariable("Analytics__Sentry__BackendDsn", "");
         Environment.SetEnvironmentVariable("Analytics__Sentry__ClientDsn", "");
