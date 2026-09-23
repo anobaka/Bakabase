@@ -5,7 +5,7 @@ import importlib.util
 import io
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -16,6 +16,7 @@ HERE = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location("source_fixture_under_test", HERE / "source_fixture.py")
 source = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(source)
+MAC_SOURCE_EXE = "/private/native-gui-source-fixture/Bakabase.NativeGui.SourceHost"
 
 
 def state(sharing=False, peers=None):
@@ -58,6 +59,21 @@ class FixtureTests(unittest.TestCase):
         self.guard = patch.object(source, "hosted")
         self.guard.start()
         self.addCleanup(self.guard.stop)
+        # Files/provenance use real host paths, while mocked libproc describes a
+        # Mac process even when this pure suite runs on Windows. Intercept only
+        # the binding verifier's expected-executable resolution, never the real
+        # filesystem guard or the production POSIX identity schema.
+        verify_binding = source.verified_embedded_binding
+        def mac_binding_check(app, parent_pid):
+            def path(value):
+                if value == app["exe"]:
+                    return SimpleNamespace(resolve=lambda: MAC_SOURCE_EXE)
+                return Path(value)
+            with patch.object(source, "Path", side_effect=path):
+                return verify_binding(app, parent_pid)
+        self.mac_binding = patch.object(source, "verified_embedded_binding", side_effect=mac_binding_check)
+        self.mac_binding.start()
+        self.addCleanup(self.mac_binding.stop)
         self.publish, self.web = self.root / "publish", self.root / "audited-web"
         self.publish.mkdir()
         self.web.mkdir()
@@ -98,7 +114,7 @@ class FixtureTests(unittest.TestCase):
         (folder / "state.json").write_text(json.dumps(stored))
 
     def binding(self, fixture, parent_pid=101, embedded_pid=301):
-        application = {"pid": parent_pid, "ppid": 99, "uid": 501, "executable": str(fixture.app["exe"]),
+        application = {"pid": parent_pid, "ppid": 99, "uid": 501, "executable": MAC_SOURCE_EXE,
                        "startSeconds": 100, "startMicroseconds": 100}
         embedded = {"pid": embedded_pid, "ppid": 1, "uid": 501, "executable": "/System/Library/Frameworks/WebKit.framework/WebKit",
                     "startSeconds": 100, "startMicroseconds": 101}
@@ -110,6 +126,20 @@ class FixtureTests(unittest.TestCase):
     def paired_observation(self, binding):
         return {"code": "ObservedStable", "stable": True, "identity": binding["embedded"],
                 "ownedIdentity": binding["application"]}
+
+    def test_mac_identity_fixture_uses_posix_namespace_without_relaxing_validation(self):
+        fixture = self.create()
+        binding = self.binding(fixture)
+        self.assertEqual(MAC_SOURCE_EXE, binding["application"]["executable"])
+        self.assertNotEqual(str(fixture.app["exe"]), binding["application"]["executable"])
+        self.assertEqual(binding, source.verified_embedded_binding(fixture.app, 101))
+        windows_host_app = dict(fixture.app, exe=PureWindowsPath(r"D:\runner\Bakabase.NativeGui.SourceHost"))
+        self.assertEqual(binding, source.verified_embedded_binding(windows_host_app, 101))
+        module = source.pid_module()
+        # The unchanged production schema must still reject a Windows path.
+        for executable in (r"D:\runner\Bakabase.NativeGui.SourceHost", "relative/source"):
+            with self.subTest(executable=executable), self.assertRaises(module.IdentityFailure):
+                module.identity(dict(binding["application"], executable=executable), 101)
 
     def test_hosted_guard_precedes_every_create_disk_read(self):
         with patch.object(source, "hosted", side_effect=source.FixtureFailure("not-hosted")), \

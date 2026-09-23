@@ -3,7 +3,7 @@
 import importlib.util
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import subprocess
 import tempfile
 from types import SimpleNamespace
@@ -89,12 +89,22 @@ class IdentityGuards(unittest.TestCase):
             executable = Path(directory) / "Bakabase"
             executable.touch()
             app = {"role": "unified", "rid": "osx-arm64", "exe": executable}
+            mac_executable = "/fixture/Bakabase"
+            def simulated_mac_path(value):
+                actual = Path(value)
+                if actual == executable:
+                    # Keep real temporary-file existence checks, while the
+                    # mocked libproc boundary sees a Mac path on every host.
+                    return SimpleNamespace(name=actual.name, is_absolute=actual.is_absolute,
+                        is_file=actual.is_file, resolve=lambda: PurePosixPath(mac_executable))
+                return actual
             for child, expected in ((SimpleNamespace(returncode=0, stdout=json.dumps({"code": "ObservedStable", "identity": IDENTITY,
-                                        "ownedIdentity": {**IDENTITY, "pid": 42, "executable": str(executable.resolve())}}).encode()), "ObservedStable"),
+                                        "ownedIdentity": {**IDENTITY, "pid": 42, "executable": mac_executable}}).encode()), "ObservedStable"),
                                     (SimpleNamespace(returncode=1, stdout=b"SECRET"), "DiagnosticUnavailable"),
                                     (SimpleNamespace(returncode=0, stdout=b'{"code":"SECRET"}'), "DiagnosticUnavailable"),
                                     (subprocess.TimeoutExpired(["fixture"], 2, output=b"SECRET", stderr=b"SECRET"), "DiagnosticTimedOut")):
                 with self.subTest(expected=expected), patch.object(pid, "hosted"), \
+                        patch.object(pid, "Path", side_effect=simulated_mac_path), \
                         patch.object(pid.subprocess, "run", **({"side_effect": child} if isinstance(child, Exception) else {"return_value": child})) as run:
                     result = pid.capture(app, DIAGNOSTIC, 2)
                 self.assertEqual(expected, result["code"])

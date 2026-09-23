@@ -1,8 +1,9 @@
 """Synthetic exact-PID cleanup evidence only; no native OS/UI observations."""
 import copy
 import importlib.util
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -20,7 +21,18 @@ class RendererCleanupTests(unittest.TestCase):
         executable.write_bytes(b"synthetic fixture executable; never launched")
         self.app = {"role": "unified", "rid": "osx-arm64", "exe": executable,
                     "nativeBackend": "macos-direct-ax", "nativeGuiObservedPid": 101}
-        application = {"pid": 101, "ppid": 1, "uid": 501, "executable": str(executable),
+        mac_executable = PurePosixPath("/synthetic/Bakabase")
+        # The local file still exercises the installed executable guard. Its
+        # simulated libproc result and exact resolver use macOS path semantics
+        # on every test host; the production Unix path guard is not patched.
+        def paths(value, *parts):
+            if not parts and value == executable:
+                return SimpleNamespace(resolve=lambda: mac_executable)
+            return Path(value, *parts)
+        resolver = patch.object(cleanup.source, "Path", side_effect=paths)
+        resolver.start()
+        self.addCleanup(resolver.stop)
+        application = {"pid": 101, "ppid": 1, "uid": 501, "executable": str(mac_executable),
                        "startSeconds": 100, "startMicroseconds": 1}
         renderer = dict(application, pid=201, executable="/synthetic/embedded", startMicroseconds=2)
         self.binding = {"schemaVersion": 1, "initialRelationsVerified": True, "rootPath": [0, 0, 1],

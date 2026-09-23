@@ -3,7 +3,7 @@
 import copy
 import importlib.util
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
 import tempfile
@@ -24,7 +24,7 @@ def load(name, filename):
 fixture = load("embedded_ax_fixture", "test_direct_ax_tree.py")
 probe = load("embedded_ax_probe", "probe.py")
 pid = load("embedded_ax_identity", "macos_pid_identity.py")
-APP = {"role": "unified", "rid": "osx-arm64", "exe": Path("/fixture/Bakabase"), "nativeBackend": "macos-direct-ax"}
+APP = {"role": "unified", "rid": "osx-arm64", "exe": PurePosixPath("/fixture/Bakabase"), "nativeBackend": "macos-direct-ax"}
 OWNED = {"pid": 42, "ppid": 1, "uid": 501, "startSeconds": 100, "startMicroseconds": 123, "executable": "/fixture/Bakabase"}
 EMBEDDED = {**OWNED, "pid": 900, "startSeconds": 101, "executable": "/fixture/exact-WebContent"}
 LEGACY = {"pid": 42, "started": "owned-start", "executable": "/fixture/Bakabase"}
@@ -115,6 +115,18 @@ class ProviderBinding(unittest.TestCase):
 
 
 class BindingGuards(unittest.TestCase):
+    def setUp(self):
+        # This is a synthetic macOS executable, even when the pure test runs
+        # on Windows. Only its resolver is mocked; real result directories and
+        # the production Unix identity parser retain their normal behavior.
+        def paths(value, *parts):
+            if not parts and value in (APP["exe"], str(APP["exe"])):
+                return SimpleNamespace(resolve=lambda: APP["exe"])
+            return Path(value, *parts)
+        resolver = patch.object(probe, "Path", side_effect=paths)
+        resolver.start()
+        self.addCleanup(resolver.stop)
+
     def test_source_role_requires_specialized_provenance_guard_in_both_native_paths(self):
         app = {**APP, "role": "source-fixture", "exe": Path("/fixture/Bakabase.NativeGui.SourceHost")}
         for module, target in ((probe, probe.hosted), (pid, pid.validate_app)):
