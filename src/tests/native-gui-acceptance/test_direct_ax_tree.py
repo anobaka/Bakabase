@@ -43,6 +43,15 @@ const secure=node('secure','AXTextField',{AXSubrole:'AXSecureTextField',AXEnable
 const web=node('web','AXWebArea',{AXTitle:'Bakabase'});web.children=[close,text,inputNode,secure];
 const window=node('window','AXWindow',{AXTitle:'Bakabase',AXMinimized:!!options.minimized});window.children=[web];
 const app=node('app','AXApplication',{AXHidden:!!options.hidden});app.windows=[window];
+const wrappers=[];
+for(let i=(options.wrapperDepth||0)-1;i>=0;i--){const group=node('wrapper'+i,'AXGroup',
+ {AXTitle:'WRAPPER-CONTENT-MUST-NOT-BE-READ',AXIdentifier:'WRAPPER-PRIVATE-ID',AXEnabled:true});
+ group.children=[window.children[0]];window.children=[group];wrappers.unshift(group);}
+if(options.wrapperEmpty)wrappers[0].children=[];
+if(options.wrapperBranch)wrappers[0].children.push(node('wrapper-sibling','AXGroup',{AXTitle:'UNSCOPED-SIBLING'}));
+if(options.wrapperCycle)wrappers[0].children=[wrappers[0]];
+if(options.ownedWebAncestor){const owned=node('owned-web','AXWebArea',{AXTitle:'Owned shell'});
+ owned.children=window.children;window.children=[owned];}
 if(options.embeddedDescendantHit)close.children=[node('actual-child-hit','AXStaticText',{AXValue:'Nested button label'})];
 const region=node('region','AXGroup',{AXTitle:'Connection settings'});
 if(options.regionGroup)web.children.push(region);
@@ -64,12 +73,16 @@ if(options.cycle)web.children=[window];
 if(options.many)web.children=Array.from({length:1001},(_,i)=>node('n'+i,'AXGroup'));
 if(options.foreignPid)app.pid=43;
 const reads=[],calls=[],seen={};let presses=0,sets=0,scrolls=0,submittedValueMatched=false,clock=0,pidReads=0,hitTarget=null;
+let hitEdgeArmed=false,hitParentReads=0;
 function parents(n,parent=null,visited=new Set()) {
  if(visited.has(n))return;visited.add(n);n.parent=parent;
  for(const c of n.windows||n.children)parents(c,n,visited);
 }
 parents(app);
-if(options.embedded){const assign=n=>{n.pid=900;for(const child of n.children)assign(child)};assign(web);}
+if(options.embedded){const assigned=new Set();const assign=n=>{if(assigned.has(n))return;assigned.add(n);
+ n.pid=900;for(const child of n.children)assign(child)};
+ assign(options.ownedWebAncestor?window.children[0].children[0]:window.children[0]);}
+if(options.wrapperSecondPid)web.pid=901;
 if(options.secondEmbeddedPid)inputNode.pid=901;
 const native=s=>box(s);
 Object.assign(native,{
@@ -90,6 +103,8 @@ Object.assign(native,{
  AXUIElementCopyAttributeValue:(ref,key,out)=>{
   const n=value(ref),name=key.value,k=n.id+':'+name;reads.push(k);seen[k]=(seen[k]||0)+1;
   if(options.genericFailure===name)throw Error('SECRET-RAW-ERROR');
+  if(options.wrapperRoleChanged&&n===wrappers[0]&&name==='AXRole'&&seen[k]>=2){out[0]=new Ref(box('AXTextField'));return 0;}
+  if(options.wrapperMovedAfterMetadata&&n===web&&name==='AXTitle')wrappers[wrappers.length-1].children=[node('new-web','AXWebArea')];
   if(options.secureAfterRead&&n===inputNode&&name==='AXSubrole'&&seen[k]>=2){out[0]=new Ref(box('AXSecureTextField'));return 0;}
   if(name==='AXValue'&&n.role!=='AXStaticText')throw Error('Editable value requested');
   if(options.missingChildren&&n===web&&name==='AXChildren')return -25204;
@@ -110,7 +125,10 @@ Object.assign(native,{
    if(options.foreignPidChanged&&name==='AXWindow')n.pid=901;
    out[0]=new Ref(options.foreignStructureMismatch?app:window);return 0;
   }
-  if(name==='AXParent'){if(!n.parent)return -25205;out[0]=new Ref(options.embeddedWrongParent&&n===web?app:n.parent);return 0;}
+  if(name==='AXParent'){
+   if(hitEdgeArmed&&n===web){hitParentReads++;if(options.hitEdgeChanged&&hitParentReads===3){out[0]=new Ref(app);return 0;}
+    if(options.hitRootChanged&&hitParentReads===4)window.children=[];}
+   if(!n.parent)return -25205;out[0]=new Ref(options.embeddedWrongParent&&n===web?app:n.parent);return 0;}
   if(name==='AXWindow'){out[0]=new Ref(options.embeddedWrongWindow&&n===web?app:window);return 0;}
   if(name==='AXPosition'||name==='AXSize') {
    if(options.unknownGeometry&&n===close)return -25205;
@@ -145,10 +163,12 @@ Object.assign(native,{
   if(value(application)!==app||x<0||x>1000||y<0||y>800)throw Error('Unowned hit test');
   if(options.noHit)return -25212;
   let hit=hitTarget;
+  if((options.hitEdgeChanged||options.hitRootChanged)&&hit===close){hitEdgeArmed=true;hitParentReads=0;}
   if(options.occluded&&hit===close)hit=text;
   if(options.descendantHit&&hit===close){hit=node('child-hit','AXStaticText');hit.parent=close;}
   if(options.embeddedDescendantHit&&hit===close)hit=close.children[0];
   if(options.foreignHit){hit=node('foreign','AXButton');hit.pid=900;}
+  if(options.unlistedOwnedHit){hit=node('unlisted-owned-hit','AXButton');hit.pid=42;hit.parent=close;}
   out[0]=new Ref(hit);return 0;
  },
  AXUIElementPerformAction:(ref,action)=>{if(action.value==='AXScrollToVisible'){
@@ -163,8 +183,15 @@ if(options.target==='input')input.selector={path:[0,0,2],role:'AXTextField',name
 if(options.target==='region')input.selector={path:[0,0,4],role:'AXGroup',name:'Connection settings',identifier:''};
 if(options.target==='text')input.selector={path:[0,0,1],role:'AXStaticText',name:'No matching resources',identifier:''};
 if(options.inputValue!==undefined)input.value=options.inputValue;
-if(options.binding)input.embeddedBinding={pid:900,rootPath:[0,0],parentChildCount:options.bindingCount||1};
+if(options.binding)input.embeddedBinding={pid:900,rootPath:options.ownedWebAncestor?[0,0,0]:[0,0],parentChildCount:options.bindingCount||1};
 if(options.bindingPath)input.embeddedBinding.rootPath=options.bindingPath;
+if(options.ownedWebAncestor)input.selector.path=[0,0].concat(input.selector.path.slice(1));
+if(options.wrapperDepth)input.selector.path=input.selector.path.slice(0,2).concat(Array(options.wrapperDepth).fill(0),input.selector.path.slice(2));
+if(options.binding&&!options.missingExpectedContentScope){
+ const depth=options.expectedWrapperDepth===undefined?(options.wrapperDepth||0):options.expectedWrapperDepth;
+ input.expectedContentScope={contentRootRole:'AXWebArea',contentRootPath:input.embeddedBinding.rootPath.concat(Array(depth).fill(0)),
+  wrapperChain:Array.from({length:depth},(_,i)=>({path:input.embeddedBinding.rootPath.concat(Array(i).fill(0)),role:'AXGroup',childCount:1}))};
+}
 const output=JSON.parse(vm.runInNewContext('const input='+JSON.stringify(input)+';\n'+source,{
  $:native,Ref,Date:{now:()=>{clock+=options.slow?1000:1;return clock}},
  ObjC:{import:name=>{if(name!=='ApplicationServices')throw Error();},bindFunction:(name)=>{if(!['calloc','free'].includes(name))throw Error();},

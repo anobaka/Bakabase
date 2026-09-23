@@ -9,6 +9,7 @@ function ownedAX(input, budgetMs) {
   const allowed=['AXRole','AXSubrole','AXTitle','AXDescription','AXIdentifier','AXEnabled',
     'AXHidden','AXMinimized','AXChildren','AXWindows','AXValue','AXPosition','AXSize','AXParent'];
   let stage='initialize', operation='initialize', reads=0, pidMismatch=null, embeddedState=null;
+  let rootChecks=0, maximumEmbeddedDepth=0;
   const embeddedNodes=[];
   function fail(code, attribute=null, axError=null, count=null) {
     throw {safe:true,code:code,stage:stage,operation:operation,attribute:attribute,axError:axError,
@@ -137,17 +138,39 @@ function ownedAX(input, budgetMs) {
     const hit=Ref(),error=Number($.AXUIElementCopyElementAtPosition(application,(left+right)/2,(top+bottom)/2,hit));
     if(error===-25212) return {visible:false,evidence:'no-hit'};
     if(error!==0) fail('DirectAXCallFailed',null,error);
-    let current=element(hit[0]),matched=false;
+    let current=element(hit[0]),matched=false,hitChainProof=false,expectedParent=null;
+    // A bound content target can only be hit by its proven renderer subtree.
+    // An unlisted owner-PID element cannot enter it through a one-way AXParent
+    // reference. The later, validated embedded-root -> owner ascent is distinct.
+    if(input.embeddedBinding&&registered(ref)&&underContent(registered(ref).path))
+      strictPid(current,input.embeddedBinding.pid);
     const ancestors=[];
     for(let depth=0;depth<=input.maxDepth;depth++) {
-      check();verifyPid(current); // Never inspect a foreign process returned by a hit test.
+      check();
+      if(expectedParent&&!same(current,expectedParent)) fail('DirectAXEmbeddedStructureChanged');
+      const known=hitChainProof&&input.embeddedBinding?registered(current):null;
+      // Only this pointer-only ascent shares its first complete chain proof.
+      // Every next edge/window is fresh, and its root is checked again at exit.
+      if(known) verifyEmbeddedEdge(known); else verifyPid(current);
+      hitChainProof=true;
+      const observed=embeddedState?registered(current):null;
+      expectedParent=observed?observed.parent:null;
       if(ancestors.some(parent=>same(parent,current))) fail('DirectAXTreeCycle');
       ancestors.push(current);
       matched=matched||same(current,ref);
-      if(same(current,window)) return {visible:matched,evidence:matched?'owned-hit-test':'other-hit'};
-      if(same(current,application)) return {visible:false,evidence:'other-window'};
+      if(same(current,window)) {
+        if(input.embeddedBinding) embeddedRoot();
+        return {visible:matched,evidence:matched?'owned-hit-test':'other-hit'};
+      }
+      if(same(current,application)) {
+        if(input.embeddedBinding) embeddedRoot();
+        return {visible:false,evidence:'other-window'};
+      }
       const parent=read(current,'AXParent',true);
-      if(parent===null) return {visible:false,evidence:'unverified-hit'};
+      if(parent===null) {
+        if(input.embeddedBinding) embeddedRoot();
+        return {visible:false,evidence:'unverified-hit'};
+      }
       current=element(parent);
     }
     fail('DirectAXTreeBudgetExceeded');
@@ -157,6 +180,10 @@ function ownedAX(input, budgetMs) {
   function underRoot(path) {
     const root=input.embeddedBinding.rootPath;
     return path.length>=root.length&&root.every((value,index)=>path[index]===value);
+  }
+  function underContent(path) {
+    const root=embeddedState&&embeddedState.contentPath;
+    return !!root&&path.length>=root.length&&root.every((value,index)=>path[index]===value);
   }
   function strictPid(ref,expected) {
     check();operation='read-pid';
@@ -175,6 +202,7 @@ function ownedAX(input, budgetMs) {
        children.filter(child=>same(child,ref)).length!==1) fail('DirectAXEmbeddedStructureChanged','AXChildren');
   }
   function embeddedRoot() {
+    rootChecks++;
     const state=embeddedState,binding=input.embeddedBinding;
     if(!state) fail('DirectAXEmbeddedStructureChanged');
     strictPid(state.application,input.pid);strictPid(state.window,input.pid);strictPid(state.parent,input.pid);
@@ -192,16 +220,20 @@ function ownedAX(input, budgetMs) {
     childEdge(state.parent,state.root,binding.rootPath[binding.rootPath.length-1],binding.parentChildCount);
     relation(state.root,'AXParent',state.parent);relation(state.root,'AXWindow',state.window);
     strictPid(state.application,input.pid);strictPid(state.root,binding.pid);
+    if(state.content) verifyContentScope();
   }
   function registered(ref) {return embeddedNodes.find(node=>same(node.ref,ref));}
+  function verifyEmbeddedEdge(node) {
+    check();strictPid(node.ref,input.embeddedBinding.pid);
+    relation(node.ref,'AXWindow',embeddedState.window);
+    relation(node.ref,'AXParent',node.parent);
+    childEdge(node.parent,node.ref,node.path[node.path.length-1],node.parentChildCount);
+  }
   function validateEmbedded(node) {
     embeddedRoot();
     let current=node;
     for(let depth=0;depth<=input.maxDepth;depth++) {
-      check();strictPid(current.ref,input.embeddedBinding.pid);
-      relation(current.ref,'AXWindow',embeddedState.window);
-      relation(current.ref,'AXParent',current.parent);
-      childEdge(current.parent,current.ref,current.path[current.path.length-1],current.parentChildCount);
+      verifyEmbeddedEdge(current);
       if(same(current.ref,embeddedState.root)) return;
       current=registered(current.parent);
       if(!current) fail('DirectAXEmbeddedStructureChanged');
@@ -214,12 +246,13 @@ function ownedAX(input, budgetMs) {
          context.childCount!==input.embeddedBinding.parentChildCount) fail('DirectAXEmbeddedStructureChanged');
       for(const ancestor of context.ancestors) strictPid(ancestor,input.pid);
       embeddedState={root:ref,parent:context.ancestors[context.ancestors.length-1],window:context.window,
-        application:context.application,rootRole:null};
+        application:context.application,rootRole:null,wrappers:[],content:null,contentPath:null};
       embeddedRoot();
     }
     let node=registered(ref);
     if(context) {
       if(!underRoot(context.path)) fail('DirectAXEmbeddedStructureChanged');
+      maximumEmbeddedDepth=Math.max(maximumEmbeddedDepth,context.path.length-input.embeddedBinding.rootPath.length);
       const parent=context.ancestors[context.ancestors.length-1];
       if(!same(ref,embeddedState.root)&&!registered(parent)) fail('DirectAXEmbeddedStructureChanged');
       if(node&&(!pathSame(node.path,context.path)||!same(node.parent,parent))) fail('DirectAXEmbeddedStructureChanged');
@@ -255,10 +288,56 @@ function ownedAX(input, budgetMs) {
     }
     validateEmbedded(node);
   }
+  function safeRole(role) {return ['AXWebArea','AXGroup','AXScrollArea','AXUnknown'].includes(role)?role:'Other';}
+  function discoverContent(ref,role,context) {
+    const state=embeddedState;
+    state.rootRole=safeRole(role);
+    let current=ref,path=context.path,ancestors=context.ancestors;
+    while(role!=='AXWebArea') {
+      check();
+      const step={ref:current,path:path,role:safeRole(role),childCount:null,childrenEvidence:null,
+        parentMatches:true,windowMatches:true};
+      state.wrappers.push(step);
+      if(role!=='AXGroup') fail('DirectAXEmbeddedWrapperRoleRejected','AXRole');
+      const result=children(current,role);
+      step.childCount=result.values.length;step.childrenEvidence=result.evidence;
+      if(result.values.length!==1) fail('DirectAXEmbeddedWrapperBranch','AXChildren');
+      if(path.length>=41||state.wrappers.length>=input.maxDepth) fail('DirectAXTreeBudgetExceeded');
+      ancestors=ancestors.concat([current]);path=path.concat(0);
+      current=element(result.values[0]);
+      if(ancestors.some(parent=>same(parent,current))) fail('DirectAXTreeCycle');
+      verifyPid(current,{application:state.application,window:state.window,path:path,ancestors:ancestors,childCount:1});
+      role=string(read(current,'AXRole')); // Structural roles only; never wrapper labels or values.
+    }
+    state.content=current;state.contentPath=path;
+    verifyContentScope();
+  }
+  function verifyContentScope() {
+    const state=embeddedState;
+    for(let i=0;i<state.wrappers.length;i++) {
+      const step=state.wrappers[i],next=i+1<state.wrappers.length?state.wrappers[i+1].ref:state.content;
+      strictPid(step.ref,input.embeddedBinding.pid);
+      if(string(read(step.ref,'AXRole'))!=='AXGroup') fail('DirectAXEmbeddedStructureChanged','AXRole');
+      childEdge(step.ref,next,0,1);
+      strictPid(next,input.embeddedBinding.pid);
+      relation(next,'AXParent',step.ref);relation(next,'AXWindow',state.window);
+    }
+    strictPid(state.content,input.embeddedBinding.pid);
+    if(string(read(state.content,'AXRole'))!=='AXWebArea') fail('DirectAXEmbeddedStructureChanged','AXRole');
+  }
+  function contentScope() {
+    if(!embeddedState||!embeddedState.content) return null;
+    return {contentRootRole:'AXWebArea',contentRootPath:embeddedState.contentPath,
+      wrapperChain:embeddedState.wrappers.map(node=>({path:node.path,role:node.role,childCount:node.childCount}))};
+  }
   function embeddedProof(verified) {
     if(!input.embeddedBinding) return null;
     return {verified:verified,applicationPid:input.pid,embeddedPid:input.embeddedBinding.pid,
-      rootPath:input.embeddedBinding.rootPath,rootRole:embeddedState?embeddedState.rootRole:null};
+      rootPath:input.embeddedBinding.rootPath,rootRole:embeddedState?embeddedState.rootRole:null,
+      contentRootRole:embeddedState&&embeddedState.content?'AXWebArea':null,
+      contentRootPath:embeddedState?embeddedState.contentPath:null,
+      wrapperChain:embeddedState?embeddedState.wrappers.map(node=>({path:node.path,role:node.role,childCount:node.childCount,
+        childrenEvidence:node.childrenEvidence,parentMatches:node.parentMatches,windowMatches:node.windowMatches})):[]};
   }
   function mismatchStructure(ref,actual,context) {
     // Diagnostic only: never authorizes foreign metadata or a workflow action.
@@ -367,18 +446,19 @@ function ownedAX(input, budgetMs) {
           count++;
           const role=string(read(ref,'AXRole'));
           if(!role) fail('DirectAXValueTypeMismatch');
-          if(embeddedState&&same(ref,embeddedState.root)) {
-            embeddedState.rootRole=['AXWebArea','AXGroup','AXScrollArea','AXUnknown'].includes(role)?role:'Other';
-            if(role!=='AXWebArea') fail('DirectAXEmbeddedRootRoleRejected','AXRole');
-          }
-          const control=interactive.includes(role)&&!editableAncestor;
-          const labelled=(control||semantic.includes(role))&&!editableAncestor,info=labelled?metadata(ref,role):{};
+          if(embeddedState&&same(ref,embeddedState.root))
+            discoverContent(ref,role,{path:path,ancestors:ancestors});
+          const structureOnly=!!input.embeddedBinding&&underRoot(path)&&!underContent(path);
+          if(structureOnly&&!embeddedState.wrappers.some(node=>same(node.ref,ref)&&pathSame(node.path,path)))
+            fail('DirectAXEmbeddedStructureChanged');
+          const control=interactive.includes(role)&&!editableAncestor&&!structureOnly;
+          const labelled=(control||semantic.includes(role))&&!editableAncestor&&!structureOnly,info=labelled?metadata(ref,role):{};
           inWeb=inWeb||role==='AXWebArea';
-          const node={path:path,role:role,name:editableAncestor?'':labelled?info.name:role==='AXWebArea'?
+          const node={path:path,role:role,name:editableAncestor||structureOnly?'':labelled?info.name:role==='AXWebArea'?
             string(read(ref,'AXTitle',true))||string(read(ref,'AXDescription',true)):'',
             text:!editableAncestor&&role==='AXStaticText'?info.staticText:'',identifier:info.identifier||'',
-            enabled:control&&info.enabled===true,visible:false,visibilityEvidence:'not-observed',insideWebContent:inWeb,
-            editableAncestor:editableAncestor,password:info.password===true,actions:labelled&&!info.password?actions(ref):[],
+            enabled:control&&info.enabled===true,visible:false,visibilityEvidence:'not-observed',insideWebContent:inWeb&&!structureOnly,
+            editableAncestor:editableAncestor,structureOnly:structureOnly,password:info.password===true,actions:labelled&&!info.password?actions(ref):[],
             valueSettable:control&&!info.password&&['AXTextField','AXTextArea'].includes(role)?settable(ref):null};
           node.scrollToVisible=node.actions.includes('AXScrollToVisible');
           // A visible window is not proof that an individual control/text is
@@ -408,7 +488,8 @@ function ownedAX(input, budgetMs) {
         {code:'DirectAXTreeUnavailable',operation:operation,attribute:null,axError:null};
     }
     snapshot.pidMismatch=pidMismatch;
-    snapshot.embeddedAXProof=embeddedProof(!snapshot.truncated&&!!embeddedState&&embeddedState.rootRole==='AXWebArea');
+    snapshot.embeddedAXProof=embeddedProof(!snapshot.truncated&&!!embeddedState&&!!embeddedState.content);
+    snapshot.axReadCounts={checks:reads,rootProofs:rootChecks,maximumEmbeddedDepth:maximumEmbeddedDepth};
     snapshot.elapsedMs=Date.now()-began;
     return {snapshot:snapshot,application:application,windows:windowRefs,elements:elements};
   }
@@ -453,6 +534,9 @@ function ownedAX(input, budgetMs) {
         countKind:snapshot.diagnostic.countKind,countValue:snapshot.diagnostic.countValue};
       fail('DirectAXActionTreeIncomplete');
     }
+    if(input.embeddedBinding&&(!input.expectedContentScope||
+       JSON.stringify(input.expectedContentScope)!==JSON.stringify(contentScope())))
+      fail('DirectAXEmbeddedContentScopeChanged');
     const candidates=snapshot.windows.filter(w=>w.visible).flatMap(w=>w.nodes).filter(n=>n.insideWebContent&&
       (scroll||(n.visible&&n.enabled))&&!n.password&&!n.editableAncestor&&n.role===expected.role&&n.name===expected.name);
     if(candidates.length!==1) fail('DirectAXControlAmbiguous');
@@ -478,7 +562,7 @@ function ownedAX(input, budgetMs) {
     if(error!==0) fail('DirectAXCallFailed',null,error);
     if(input.embeddedBinding) embeddedRoot();
     const result={performed:true,operation:op};
-    if(input.embeddedBinding) result.embeddedAXProof=embeddedProof(!!embeddedState&&embeddedState.rootRole==='AXWebArea');
+    if(input.embeddedBinding) result.embeddedAXProof=embeddedProof(!!embeddedState&&!!embeddedState.content);
     return result;
   }
   return {inspect:inspect,press:press};

@@ -34,7 +34,8 @@ AX_CODES = {"DirectAXTreeDeadline", "DirectAXReadCountExceeded", "DirectAXValueT
             "DirectAXSecureSubtreeUnavailable", "DirectAXTreeUnavailable", "DirectAXControlChanged",
             "DirectAXControlInvisible", "DirectAXControlOutsideWeb", "DirectAXActionTreeIncomplete", "DirectAXControlAmbiguous",
             "DirectAXGeometryUnavailable", "DirectAXChildrenCountMismatch", "DirectAXEditableDescendant",
-            "DirectAXOperationUnsupported", "DirectAXEmbeddedStructureChanged", "DirectAXEmbeddedRootRoleRejected"}
+            "DirectAXOperationUnsupported", "DirectAXEmbeddedStructureChanged", "DirectAXEmbeddedRootRoleRejected",
+            "DirectAXEmbeddedWrapperRoleRejected", "DirectAXEmbeddedWrapperBranch", "DirectAXEmbeddedContentScopeChanged"}
 AX_ATTRIBUTES = {"AXRole", "AXSubrole", "AXTitle", "AXDescription", "AXIdentifier", "AXEnabled",
                  "AXHidden", "AXMinimized", "AXChildren", "AXWindows", "AXValue", "AXPosition", "AXSize", "AXParent", "AXWindow"}
 AX_OPERATIONS = {"initialize", "array-type", "array-count", "array-item", "element-type", "element-timeout",
@@ -137,11 +138,50 @@ def embedded_proof(raw):
     if not isinstance(raw, dict):
         return None
     role = raw.get("rootRole")
+    chain = raw.get("wrapperChain")
+    safe_chain = None
+    if isinstance(chain, list) and len(chain) <= 40:
+        safe_chain = [{"path": pid_diagnostic({"path": step.get("path")})["path"],
+                       "role": step.get("role") if step.get("role") in {"AXGroup", "AXWebArea", "AXScrollArea", "AXUnknown", "Other"} else None,
+                       "childCount": step.get("childCount") if type(step.get("childCount")) is int and 0 <= step["childCount"] <= MAX_NODES else None,
+                       "childrenEvidence": step.get("childrenEvidence") if step.get("childrenEvidence") in AX_CHILDREN_EVIDENCE else None,
+                       "parentMatches": step.get("parentMatches") is True, "windowMatches": step.get("windowMatches") is True}
+                      for step in chain if isinstance(step, dict)]
+        if len(safe_chain) != len(chain):
+            safe_chain = None
     return {"verified": raw.get("verified") is True, "osIdentityStable": raw.get("osIdentityStable") is True,
             "rootRole": role if role in {"AXWebArea", "AXGroup", "AXScrollArea", "AXUnknown", "Other"} else None,
             "applicationPid": raw.get("applicationPid") if type(raw.get("applicationPid")) is int else None,
             "embeddedPid": raw.get("embeddedPid") if type(raw.get("embeddedPid")) is int else None,
-            "rootPath": pid_diagnostic({"path": raw.get("rootPath")})["path"]}
+            "rootPath": pid_diagnostic({"path": raw.get("rootPath")})["path"],
+            "contentRootRole": "AXWebArea" if raw.get("contentRootRole") == "AXWebArea" else None,
+            "contentRootPath": pid_diagnostic({"path": raw.get("contentRootPath")})["path"], "wrapperChain": safe_chain}
+
+
+def content_scope(proof):
+    """A fixed single-child wrapper chain, never a same-PID content allowlist."""
+    if not proof or proof.get("contentRootRole") != "AXWebArea" or not proof.get("rootPath"):
+        return None
+    chain = proof.get("wrapperChain")
+    if not isinstance(chain, list) or proof.get("rootRole") != ("AXGroup" if chain else "AXWebArea"):
+        return None
+    path = list(proof["rootPath"])
+    for step in chain:
+        if not (step["path"] == path and step["role"] == "AXGroup" and step["childCount"] == 1 and
+                step["childrenEvidence"] == "explicit-array" and step["parentMatches"] and step["windowMatches"]):
+            return None
+        path += [0]
+    if path != proof.get("contentRootPath") or len(path) > 41:
+        return None
+    return {"contentRootRole": "AXWebArea", "contentRootPath": path,
+            "wrapperChain": [{key: step[key] for key in ("path", "role", "childCount")} for step in chain]}
+
+
+def ax_read_counts(raw):
+    if not isinstance(raw, dict):
+        return None
+    return {key: raw.get(key) if type(raw.get(key)) is int and 0 <= raw[key] <= maximum else None
+            for key, maximum in (("checks", 16001), ("rootProofs", 16001), ("maximumEmbeddedDepth", 40))}
 
 
 def ax_diagnostic(raw):
@@ -304,7 +344,7 @@ def direct_execute(app, pid, data, entrypoint, timeout, binding=None, expected_o
         success = result.get("performed") is True if entrypoint == "macos-ax-action.js" else (
             result.get("enabled") is True and result.get("truncated") is False)
         if success:
-            require(proof and proof["verified"] is True and proof["rootRole"] == "AXWebArea" and
+            require(proof and proof["verified"] is True and content_scope(proof) is not None and
                     proof["applicationPid"] == pid and proof["embeddedPid"] == binding["embedded"]["pid"] and
                     proof["rootPath"] == binding["rootPath"], "EmbeddedStructureNotVerified")
             proof["osIdentityStable"] = True
@@ -322,8 +362,11 @@ def direct_action(app, snapshot, record, timeout=15):
     if binding is not None:
         proof = embedded_proof(snapshot.get("embeddedAXProof"))
         require(embedded_binding(binding) == binding and proof and proof == snapshot.get("embeddedAXProof") and
-                proof["verified"] is True and proof["osIdentityStable"] is True,
+                proof["verified"] is True and proof["osIdentityStable"] is True and content_scope(proof) is not None and
+                proof["rootPath"] == binding["rootPath"] and proof["applicationPid"] == binding["application"]["pid"] and
+                proof["embeddedPid"] == binding["embedded"]["pid"],
                 "EmbeddedActionBindingChanged")
+        record = {**record, "expectedContentScope": content_scope(proof)}
     require(record.get("pid") == snapshot.get("process", {}).get("pid") and timeout <= 15, "ProductProcessChangedBeforeAction")
     require(isinstance(snapshot.get("ownedOSIdentity"), dict) and snapshot.get("ownedOSIdentityStable") is True,
             "OwnedOSIdentityUnavailable")
@@ -409,6 +452,7 @@ def summarize(snapshot):
             "diagnostic": ax_diagnostic(snapshot.get("diagnostic")),
             "pidMismatch": pid_diagnostic(snapshot.get("pidMismatch")),
             "embeddedAXProof": embedded_proof(snapshot.get("embeddedAXProof")),
+            "axReadCounts": ax_read_counts(snapshot.get("axReadCounts")),
             "scope": "read-only-native-accessibility-capability"}
 
 
@@ -427,6 +471,7 @@ def sanitize(value, secrets=()):
     output["pidMismatch"] = pid_diagnostic(value.get("pidMismatch"))
     output["embeddedAXBinding"] = embedded_binding(value.get("embeddedAXBinding"))
     output["embeddedAXProof"] = embedded_proof(value.get("embeddedAXProof"))
+    output["axReadCounts"] = ax_read_counts(value.get("axReadCounts"))
     output["ownedOSIdentityStable"] = value.get("ownedOSIdentityStable") is True
     output["ownedOSIdentity"] = None
     if isinstance(value.get("ownedOSIdentity"), dict):
@@ -450,6 +495,7 @@ def sanitize(value, secrets=()):
                 "visible": node.get("visible") if type(node.get("visible")) is bool else None,
                 "visibilityEvidence": node.get("visibilityEvidence") if node.get("visibilityEvidence") in AX_VISIBILITY else None,
                 "editableAncestor": node.get("editableAncestor") is True,
+                "structureOnly": node.get("structureOnly") is True,
                 "valueSettable": node.get("valueSettable") if type(node.get("valueSettable")) is bool else None,
                 "scrollToVisible": node.get("scrollToVisible") is True,
                 "childrenEvidence": node.get("childrenEvidence") if node.get("childrenEvidence") in AX_CHILDREN_EVIDENCE else None,

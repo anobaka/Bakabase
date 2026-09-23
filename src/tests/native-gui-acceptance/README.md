@@ -54,18 +54,25 @@ not become complete. No executable basename, process name or PPID grants access.
 
 The next read checks both full OS identities before and after native inspection.
 Before any embedded metadata, it re-resolves the owned application's window
-and parent path, requires the exact reciprocal root edge and window reference,
-then requires the embedded root role to be `AXWebArea`. Each embedded descendant
-must have the bound PID and a reciprocal parent/child chain to that root with
-the same held native window. An unvisited hit-test descendant is followed only
+and parent path, and requires the exact reciprocal root edge and window reference.
+An `AXWebArea` can be the content root directly. An `AXGroup` anchor must instead
+lead through a unique, single-child chain of `AXGroup` wrappers to exactly one
+`AXWebArea`. Discovery reads only roles, PID and parent/child/window references;
+zero/multiple children, other roles, cycles or another PID fail the gate.
+Wrapper nodes remain structure-only: no labels, identifiers, values, actions or
+geometry are read. Only the resulting WebArea and its proven descendants may
+expose content. Each descendant must have the bound PID and a reciprocal
+parent/child chain to the anchor with the same held native window. An unvisited hit-test descendant is followed only
 through pointer relations until it reaches an already verified ancestor.
 Another PID, the same PID outside this root, a changed edge/window, reused PID,
 changed identity, incomplete tree or exhausted budget fails closed.
 
 Only a complete successful next read promotes `embeddedAXBinding` into the
-app and snapshot. `embeddedAXProof` records the native root and the stable OS
-checks. Actions require that same complete snapshot binding, re-read the full
-tree, compare held native identities, recheck the root after the action and
+app and snapshot. `embeddedAXProof` records the anchor, wrapper role/count chain,
+exact content-root path and stable OS checks; failure diagnostics contain no
+wrapper content. Bounded `axReadCounts` distinguish call-budget exhaustion from
+structural failures. Actions require that same complete snapshot binding and
+content scope, re-read the full tree, compare held native identities, recheck the root after the action and
 verify both OS identities again. A partial read never authorizes an action.
 All checks consume the existing read/action/readiness deadlines; no processes
 are enumerated and argv, environment, UI of unrelated processes and logs are
@@ -76,6 +83,10 @@ A child does not inherit visibility from its window. Named web controls and
 static text require finite geometry and an application-scoped, read-only hit
 test within their verified window. The hit must be the target or an ancestor
 chain-confirmed descendant, with matching process and window references.
+Within one hit-test ascent only, its first complete chain proof avoids repeated
+whole-chain traversal. Every subsequent edge/PID/window is still read afresh,
+and the root is checked again at the end. No proof is shared between tree walk
+and exposure, separate reads, or actions; the 16,000-check/24-second bounds remain.
 Offscreen, clipped/occluded within that application and no-hit controls are not visible; an unknown
 geometry/read prevents a complete-tree claim. This does not perform coordinate
 clicks or prove physical presentation/occlusion by other applications. Each node

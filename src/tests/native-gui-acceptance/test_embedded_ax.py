@@ -35,7 +35,8 @@ DIAGNOSTIC = {"expectedPid": 42, "actualPid": 900, "observedEpochMs": 102000, "o
 PAIR = {"code": "ObservedStable", "stable": True, "identity": EMBEDDED, "ownedIdentity": OWNED, "observedEpochMs": 102000}
 BINDING = {"schemaVersion": 1, "initialRelationsVerified": True, "rootPath": [0, 0], "parentChildCount": 1,
            "observedEpochMs": 102000, "application": OWNED, "embedded": EMBEDDED}
-PROOF = {"verified": True, "rootRole": "AXWebArea", "applicationPid": 42, "embeddedPid": 900, "rootPath": [0, 0]}
+PROOF = {"verified": True, "rootRole": "AXWebArea", "applicationPid": 42, "embeddedPid": 900, "rootPath": [0, 0],
+         "contentRootRole": "AXWebArea", "contentRootPath": [0, 0], "wrapperChain": []}
 
 
 @unittest.skipUnless(shutil.which("node"), "Node is required for pure AX fixtures")
@@ -46,13 +47,16 @@ class ProviderBinding(unittest.TestCase):
         return json.loads(result.stdout)
 
     def test_first_unknown_pid_is_diagnostic_only_without_role_or_metadata(self):
-        result = self.run_fixture(embedded=True)
-        self.assertTrue(result["output"]["truncated"])
-        self.assertEqual("DirectAXProcessMismatch", result["output"]["diagnostic"]["code"])
-        self.assertNotIn("web:AXRole", result["reads"])
-        self.assertNotIn("web:AXTitle", result["reads"])
-        self.assertTrue(result["output"]["pidMismatch"]["parentMatches"])
-        self.assertTrue(result["output"]["pidMismatch"]["windowMatches"])
+        for depth in (0, 1):
+            with self.subTest(wrapperDepth=depth):
+                result = self.run_fixture(embedded=True, wrapperDepth=depth)
+                self.assertTrue(result["output"]["truncated"])
+                self.assertEqual("DirectAXProcessMismatch", result["output"]["diagnostic"]["code"])
+                self.assertNotIn("wrapper0:AXRole", result["reads"])
+                self.assertNotIn("web:AXRole", result["reads"])
+                self.assertNotIn("web:AXTitle", result["reads"])
+                self.assertTrue(result["output"]["pidMismatch"]["parentMatches"])
+                self.assertTrue(result["output"]["pidMismatch"]["windowMatches"])
 
     def test_exact_reciprocal_root_supports_one_complete_embedded_subtree_and_action(self):
         result = self.run_fixture(embedded=True, binding=True)
@@ -112,6 +116,86 @@ class ProviderBinding(unittest.TestCase):
         self.assertFalse(result["output"]["truncated"])
         self.assertNotIn("EDITABLE-", json.dumps(result["output"]))
         self.assertNotIn("editable-text:AXValue", result["reads"])
+
+    def test_single_child_wrappers_are_structure_only_and_bind_exact_content_scope(self):
+        result = self.run_fixture(embedded=True, binding=True, wrapperDepth=2)
+        snapshot = result["output"]
+        self.assertFalse(snapshot["truncated"])
+        proof = snapshot["embeddedAXProof"]
+        self.assertEqual("AXGroup", proof["rootRole"])
+        self.assertEqual([0, 0, 0, 0], proof["contentRootPath"])
+        self.assertEqual(2, len(proof["wrapperChain"]))
+        self.assertIsNotNone(probe.content_scope(probe.embedded_proof(proof)))
+        for name in ("wrapper0", "wrapper1"):
+            observed = [read.split(":", 1)[1] for read in result["reads"] if read.startswith(name + ":")]
+            self.assertTrue(set(observed) <= {"AXRole", "AXChildren", "AXParent", "AXWindow"})
+            self.assertNotIn(name + ":actions", result["calls"])
+        wrappers = [node for window in snapshot["windows"] for node in window["nodes"] if node["structureOnly"]]
+        self.assertEqual(2, len(wrappers))
+        self.assertTrue(all(not node["insideWebContent"] and not node["actions"] and not node["name"] for node in wrappers))
+        self.assertNotIn("WRAPPER-", json.dumps(snapshot))
+        action = self.run_fixture(embedded=True, binding=True, wrapperDepth=2, action=True)
+        self.assertTrue(action["output"]["performed"])
+        self.assertEqual(1, action["presses"])
+
+    def test_wrapper_never_inherits_owned_ancestor_web_content_permission(self):
+        result = self.run_fixture(embedded=True, binding=True, wrapperDepth=1, ownedWebAncestor=True)
+        snapshot = result["output"]
+        self.assertFalse(snapshot["truncated"])
+        wrappers = [node for window in snapshot["windows"] for node in window["nodes"] if node["structureOnly"]]
+        self.assertEqual(1, len(wrappers))
+        self.assertFalse(wrappers[0]["insideWebContent"])
+        content = [node for window in snapshot["windows"] for node in window["nodes"]
+                   if node["path"] == snapshot["embeddedAXProof"]["contentRootPath"]]
+        self.assertEqual(1, len(content))
+        self.assertTrue(content[0]["insideWebContent"])
+        action = self.run_fixture(embedded=True, binding=True, wrapperDepth=1, ownedWebAncestor=True, action=True)
+        self.assertTrue(action["output"]["performed"])
+
+    def test_unlisted_owner_pid_hit_cannot_enter_embedded_tree_through_one_way_parent(self):
+        result = self.run_fixture(embedded=True, binding=True, unlistedOwnedHit=True, action=True)
+        self.assertFalse(result["output"]["performed"])
+        self.assertEqual("DirectAXEmbeddedStructureChanged", result["output"]["diagnostic"]["code"])
+        self.assertEqual(0, result["presses"])
+        self.assertNotIn("unlisted-owned-hit:AXParent", result["reads"])
+        # The legitimate renderer descendant still reaches its owned window
+        # through the already verified cross-PID anchor edge.
+        valid = self.run_fixture(embedded=True, binding=True, embeddedDescendantHit=True, action=True)
+        self.assertTrue(valid["output"]["performed"])
+        self.assertEqual(1, valid["presses"])
+
+    def test_invalid_wrapper_structure_never_reads_content_or_submits_action(self):
+        for options, code in (({"wrapperEmpty": True}, "DirectAXEmbeddedWrapperBranch"),
+                              ({"wrapperBranch": True}, "DirectAXEmbeddedWrapperBranch"),
+                              ({"wrapperRoleChanged": True}, "DirectAXEmbeddedStructureChanged"),
+                              ({"wrapperSecondPid": True}, "DirectAXProcessMismatch"),
+                              ({"wrapperCycle": True}, "DirectAXTreeCycle")):
+            with self.subTest(options=options):
+                result = self.run_fixture(embedded=True, binding=True, wrapperDepth=1, **options)
+                self.assertTrue(result["output"]["truncated"])
+                self.assertEqual(code, result["output"]["diagnostic"]["code"])
+                self.assertNotIn("web:AXTitle", result["reads"])
+                self.assertNotIn("close:AXTitle", result["reads"])
+                self.assertNotIn("wrapper-sibling:AXRole", result["reads"])
+                action = self.run_fixture(embedded=True, binding=True, wrapperDepth=1, action=True, **options)
+                self.assertFalse(action["output"]["performed"])
+                self.assertEqual(0, action["presses"])
+
+    def test_action_cannot_select_a_moved_webarea_or_a_different_scope(self):
+        for options in ({"expectedWrapperDepth": 2}, {"missingExpectedContentScope": True},
+                        {"wrapperMovedAfterMetadata": True}):
+            with self.subTest(options=options):
+                result = self.run_fixture(embedded=True, binding=True, wrapperDepth=1, action=True, **options)
+                self.assertFalse(result["output"]["performed"])
+                self.assertEqual(0, result["presses"])
+
+    def test_hit_operation_rechecks_edges_after_initial_full_chain_proof(self):
+        for options in ({"hitEdgeChanged": True}, {"hitRootChanged": True}):
+            with self.subTest(options=options):
+                result = self.run_fixture(embedded=True, binding=True, action=True, **options)
+                self.assertFalse(result["output"]["performed"])
+                self.assertEqual("DirectAXEmbeddedStructureChanged", result["output"]["diagnostic"]["code"])
+                self.assertEqual(0, result["presses"])
 
 
 class BindingGuards(unittest.TestCase):
@@ -202,11 +286,30 @@ class BindingGuards(unittest.TestCase):
             probe.direct_action({**APP, "embeddedAXBinding": BINDING}, snapshot, record)
         self.assertEqual(15, execute.call_args.args[4])
         self.assertEqual(OWNED, execute.call_args.args[6])
+        self.assertEqual({"contentRootRole": "AXWebArea", "contentRootPath": [0, 0], "wrapperChain": []},
+                         execute.call_args.args[2]["expectedContentScope"])
         for change in ({"truncated": True}, {"embeddedAXProof": None}, {"embeddedAXBinding": None}):
             with patch.object(probe, "hosted"), patch.object(probe, "direct_execute") as execute:
                 with self.assertRaises(probe.ProbeFailure):
                     probe.direct_action({**APP, "embeddedAXBinding": BINDING}, {**snapshot, **change}, record)
             execute.assert_not_called()
+
+    def test_wrapper_diagnostics_are_bounded_and_cannot_turn_partial_proof_into_scope(self):
+        raw = {**PROOF, "rootRole": "AXGroup", "contentRootPath": [0, 0, 0], "wrapperChain": [
+            {"path": [0, 0], "role": "AXGroup", "childCount": 2, "childrenEvidence": "explicit-array",
+             "parentMatches": True, "windowMatches": True, "name": "PRIVATE"}]}
+        safe = probe.embedded_proof(raw)
+        self.assertNotIn("PRIVATE", json.dumps(safe))
+        self.assertIsNone(probe.content_scope(safe))
+        raw["wrapperChain"][0]["childCount"] = 1
+        self.assertIsNotNone(probe.content_scope(probe.embedded_proof(raw)))
+        for change in ({"role": "PRIVATE"}, {"parentMatches": False}, {"windowMatches": False},
+                       {"path": [0, 1]}, {"childrenEvidence": "no-value-count-zero"}):
+            changed = copy.deepcopy(raw)
+            changed["wrapperChain"][0].update(change)
+            self.assertIsNone(probe.content_scope(probe.embedded_proof(changed)))
+        self.assertEqual({"checks": 16001, "rootProofs": None, "maximumEmbeddedDepth": None},
+                         probe.ax_read_counts({"checks": 16001, "rootProofs": "PRIVATE", "maximumEmbeddedDepth": 999}))
 
     def test_readiness_promotes_binding_only_after_next_complete_read(self):
         app = dict(APP)
