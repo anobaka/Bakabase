@@ -4098,6 +4098,342 @@ export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId =
  */
 export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerTag = 1 | 2;
 
+export interface BakabaseModulesFederationContractsCommonLibraryQuery {
+  /** @format int32 */
+  queryContractVersion: number;
+  text?: string;
+  fileAvailability?: string;
+  sourceKinds?: number[];
+  sort: string;
+  [key: string]: any;
+}
+
+export interface BakabaseModulesFederationContractsFederatedQueryPage {
+  sessionId: string;
+  items: BakabaseModulesFederationContractsFederatedResourceSummary[];
+  nextCursor?: string;
+  /** @format int64 */
+  expiresInMs: number;
+  participants: BakabaseModulesFederationContractsQueryParticipant[];
+  omittedNodes: BakabaseModulesFederationContractsQueryOmittedNode[];
+  /** @format int64 */
+  totalWithinParticipants: number;
+  coverageComplete: boolean;
+}
+
+export interface BakabaseModulesFederationContractsFederatedResourceSummary {
+  ref: BakabaseModulesFederationContractsResourceRef;
+  ownerLabel: string;
+  title?: string;
+  displayName: string;
+  fileName?: string;
+  sourceKinds: number[];
+  fileAvailability: string;
+  normalizedSortKey?: string;
+  coverAsset?: string;
+  playbackCapabilities: string[];
+}
+
+export interface BakabaseModulesFederationContractsLocalFederatedQuery {
+  nodeIds: string[];
+  query: BakabaseModulesFederationContractsCommonLibraryQuery;
+  /** @format int32 */
+  pageSize: number;
+  [key: string]: any;
+}
+
+export interface BakabaseModulesFederationContractsNodeExportQuery {
+  expectedLibraryEpoch: string;
+  query: BakabaseModulesFederationContractsCommonLibraryQuery;
+  /** @format int32 */
+  blockSize: number;
+  [key: string]: any;
+}
+
+export interface BakabaseModulesFederationContractsNodeQueryBlock {
+  snapshotId: string;
+  nodeId: string;
+  libraryEpoch: string;
+  queryHash: string;
+  /** @format int64 */
+  totalCount: number;
+  /** @format int32 */
+  offset: number;
+  items: BakabaseModulesFederationContractsFederatedResourceSummary[];
+  nextCursor?: string;
+  /** @format int64 */
+  expiresInMs: number;
+  /** @format date-time */
+  captureStartedAt: string;
+  /** @format date-time */
+  captureCompletedAt: string;
+  consistency: string;
+}
+
+export interface BakabaseModulesFederationContractsQueryOmittedNode {
+  nodeId: string;
+  code: string;
+  retryable: boolean;
+}
+
+export interface BakabaseModulesFederationContractsQueryParticipant {
+  nodeId: string;
+  libraryEpoch: string;
+  /** @format int64 */
+  totalCount: number;
+}
+
+export interface BakabaseModulesFederationContractsResourceRef {
+  nodeId: string;
+  libraryEpoch: string;
+  /** @format int32 */
+  resourceId: number;
+}
+
+export interface BakabaseModulesFederationIdentityNodeIdentity {
+  nodeId: string;
+  libraryEpoch: string;
+  name: string;
+}
+
+export interface BakabaseModulesFederationMediaAssetRef {
+  resourceRef: BakabaseModulesFederationContractsResourceRef;
+  assetId: string;
+}
+
+export interface BakabaseModulesFederationMediaFederatedAsset {
+  assetId: string;
+  kind: string;
+  fileName: string;
+  contentType: string;
+  sourceRootId?: string;
+  relativePath?: string;
+  /** @format date-time */
+  expiresAt: string;
+}
+
+export interface BakabaseModulesFederationMediaFederatedCollection {
+  name: string;
+  color?: string;
+}
+
+export interface BakabaseModulesFederationMediaFederatedExternalIdentity {
+  provider: string;
+  externalId: string;
+}
+
+export interface BakabaseModulesFederationMediaFederatedProperty {
+  label: string;
+  type: string;
+  value?: any;
+  /** @format int32 */
+  scope: number;
+}
+
+export interface BakabaseModulesFederationMediaFederatedResourceDetail {
+  ref: BakabaseModulesFederationContractsResourceRef;
+  ownerLabel: string;
+  displayName: string;
+  fileName?: string;
+  availability: string;
+  properties: BakabaseModulesFederationMediaFederatedProperty[];
+  sources: BakabaseModulesFederationMediaFederatedSource[];
+  externalIdentities: BakabaseModulesFederationMediaFederatedExternalIdentity[];
+  collections: BakabaseModulesFederationMediaFederatedCollection[];
+  assets: BakabaseModulesFederationMediaFederatedAsset[];
+  unavailableReason?: string;
+  directoryAccess?: BakabaseModulesFederationMediaFederationDirectoryAccess;
+  location?: BakabaseModulesFederationMediaFederatedResourceLocation;
+}
+
+export interface BakabaseModulesFederationMediaFederatedResourceLocation {
+  sourceRootId: string;
+  relativePath: string;
+  isDirectory: boolean;
+}
+
+export interface BakabaseModulesFederationMediaFederatedSource {
+  /** @format int32 */
+  kind: number;
+  label?: string;
+  url?: string;
+}
+
+export interface BakabaseModulesFederationMediaFederationDirectoryAccess {
+  canOpen: boolean;
+  reason?: string;
+}
+
+export interface BakabaseModulesFederationMediaMappingRoot {
+  sourceRootId: string;
+  name: string;
+}
+
+export interface BakabaseModulesFederationMediaOpenResourceDirectoryRequest {
+  resourceRef: BakabaseModulesFederationContractsResourceRef;
+}
+
+export interface BakabaseModulesFederationMediaOpenResourceDirectoryResponse {
+  opened: boolean;
+}
+
+export interface BakabaseModulesFederationMediaPlaybackSessionRequest {
+  assetRef: BakabaseModulesFederationMediaAssetRef;
+  mode: string;
+}
+
+export interface BakabaseModulesFederationMediaPlaybackSessionResponse {
+  url?: string;
+  contentType: string;
+  launched: boolean;
+  /** @format date-time */
+  expiresAt: string;
+}
+
+export interface BakabaseModulesFederationMediaResourceLocationRequest {
+  resourceRef: BakabaseModulesFederationContractsResourceRef;
+}
+
+export interface BakabaseModulesFederationMediaResourceLocationResponse {
+  ref: BakabaseModulesFederationContractsResourceRef;
+  location?: BakabaseModulesFederationMediaFederatedResourceLocation;
+}
+
+export interface BakabaseModulesFederationMediaResourceResolveRequest {
+  refs: BakabaseModulesFederationContractsResourceRef[];
+}
+
+export interface BakabaseModulesFederationMediaResourceResolveResponse {
+  resources: BakabaseModulesFederationMediaFederatedResourceDetail[];
+}
+
+export interface BakabaseModulesFederationPeersFederationPeerView {
+  nodeId: string;
+  label: string;
+  address?: string;
+  enabled: boolean;
+  connectionState: string;
+  outboundGrant?: BakabaseModulesFederationPeersNodeGrantSummary;
+  inboundGrant?: BakabaseModulesFederationPeersNodeGrantSummary;
+  pathMappings: BakabaseModulesFederationPeersNodePathMapping[];
+}
+
+export interface BakabaseModulesFederationPeersNodeCredentials {
+  grantId: string;
+  subjectNodeId: string;
+  audienceNodeId: string;
+  libraryEpoch: string;
+  key: string;
+  /** @format int64 */
+  revision: number;
+}
+
+export interface BakabaseModulesFederationPeersNodeDiscoveryCandidate {
+  nodeId: string;
+  name: string;
+  address: string;
+}
+
+export interface BakabaseModulesFederationPeersNodeGrantSummary {
+  grantId: string;
+  /** @format int64 */
+  revision: number;
+}
+
+export interface BakabaseModulesFederationPeersNodeHandshakeRequest {
+  challenge: string;
+}
+
+export interface BakabaseModulesFederationPeersNodeHandshakeResponse {
+  info: BakabaseModulesFederationPeersNodeInfo;
+  challenge: string;
+  proof: string;
+}
+
+export interface BakabaseModulesFederationPeersNodeInfo {
+  nodeId: string;
+  libraryEpoch: string;
+  name: string;
+  /** @format int32 */
+  protocolVersion: number;
+  /** @format date-time */
+  serverTimeUtc: string;
+  /** @format int32 */
+  queryContractVersion: number;
+  supportedFilters: string[];
+  supportedSorts: string[];
+  supportedAssetKinds: string[];
+  /** @format int32 */
+  maxBatchSize: number;
+}
+
+export interface BakabaseModulesFederationPeersNodeInvitation {
+  code: string;
+  /** @format date-time */
+  expiresAt: string;
+}
+
+export interface BakabaseModulesFederationPeersNodePairClaimRequest {
+  requestId: string;
+  nodeId: string;
+  claimSecret: string;
+}
+
+export interface BakabaseModulesFederationPeersNodePairCodeRequest {
+  nodeId: string;
+  nodeName: string;
+  code: string;
+  transactionId: string;
+  claimSecret: string;
+  reciprocal?: BakabaseModulesFederationPeersNodeReciprocalOffer;
+}
+
+export interface BakabaseModulesFederationPeersNodePairExchange {
+  outcome: string;
+  requestId: string;
+  /** @format date-time */
+  expiresAt: string;
+  credentials?: BakabaseModulesFederationPeersNodeCredentials;
+}
+
+export interface BakabaseModulesFederationPeersNodePairRequest {
+  nodeId: string;
+  nodeName: string;
+  transactionId: string;
+  claimSecret: string;
+  reciprocal?: BakabaseModulesFederationPeersNodeReciprocalOffer;
+}
+
+export interface BakabaseModulesFederationPeersNodePairingOutcome {
+  outcome: string;
+  requestId?: string;
+  peerNodeId?: string;
+  message?: string;
+}
+
+export interface BakabaseModulesFederationPeersNodePairingRequestView {
+  requestId: string;
+  nodeId: string;
+  nodeName: string;
+  direction: string;
+  status: string;
+  /** @format date-time */
+  expiresAt: string;
+  remoteAddress?: string;
+  replacesExistingAccess: boolean;
+  offersReciprocalAccess: boolean;
+}
+
+export interface BakabaseModulesFederationPeersNodePathMapping {
+  sourceRootId: string;
+  localPath: string;
+}
+
+export interface BakabaseModulesFederationPeersNodeReciprocalOffer {
+  addresses: string[];
+  code: string;
+}
+
 export interface BakabaseModulesHealthScoreModelsDbHealthScoreRuleDbModel {
   /** @format int32 */
   id: number;
@@ -5093,6 +5429,58 @@ export interface BakabaseServiceControllersEnsureMappingsInput {
   /** @format int32 */
   resourceId: number;
   mediaLibraryIds: number[];
+}
+
+export interface BakabaseServiceControllersFederationBrowsingRequest {
+  enabled: boolean;
+}
+
+export interface BakabaseServiceControllersFederationClaimRequest {
+  requestId: string;
+}
+
+export interface BakabaseServiceControllersFederationConnectRequest {
+  address: string;
+  code?: string;
+  shareBack: boolean;
+}
+
+export interface BakabaseServiceControllersFederationDeviceNameRequest {
+  name?: string;
+}
+
+export interface BakabaseServiceControllersFederationIdentityResetRequest {
+  asNewNode: boolean;
+}
+
+export interface BakabaseServiceControllersFederationPathMappingsRequest {
+  mappings: BakabaseModulesFederationPeersNodePathMapping[];
+  expectedMappings?: BakabaseModulesFederationPeersNodePathMapping[];
+}
+
+export interface BakabaseServiceControllersFederationPeerChange {
+  changed: boolean;
+}
+
+export interface BakabaseServiceControllersFederationPeerEnabledRequest {
+  enabled: boolean;
+}
+
+export interface BakabaseServiceControllersFederationPeerStatusResponse {
+  identity: BakabaseModulesFederationIdentityNodeIdentity;
+  sharingEnabled: boolean;
+  /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
+  remoteAccessMode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+  requirePairing: boolean;
+  peers: BakabaseModulesFederationPeersFederationPeerView[];
+  requests: BakabaseModulesFederationPeersNodePairingRequestView[];
+  browsingEnabled: boolean;
+  reachableAddresses?: string[];
+}
+
+export interface BakabaseServiceControllersFederationSharingRequest {
+  enabled: boolean;
+  enablePairedRemoteAccess: boolean;
 }
 
 export interface BakabaseServiceControllersMediaLibraryStatistics {
@@ -17291,6 +17679,953 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+  };
+  federation = {
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name CreateFederationExportQuery
+     * @request POST:/federation/v1/export/queries
+     */
+    createFederationExportQuery: (
+      data: BakabaseModulesFederationContractsNodeExportQuery,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationContractsNodeQueryBlock, any>({
+        path: `/federation/v1/export/queries`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createFederationExportQuery
+     * @name createFederationExportQueryUrl
+     */
+    createFederationExportQueryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/queries`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name ReadFederationExportQuery
+     * @request GET:/federation/v1/export/queries/{id}/pages
+     */
+    readFederationExportQuery: (
+      id: string,
+      query?: {
+        cursor?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationContractsNodeQueryBlock, any>({
+        path: `/federation/v1/export/queries/${id}/pages`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name ValidateFederationExportQuery
+     * @request POST:/federation/v1/export/queries/{id}/validate
+     */
+    validateFederationExportQuery: (id: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/v1/export/queries/${id}/validate`,
+        method: "POST",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name ReleaseFederationExportQuery
+     * @request DELETE:/federation/v1/export/queries/{id}
+     */
+    releaseFederationExportQuery: (id: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/v1/export/queries/${id}`,
+        method: "DELETE",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name ResolveFederationExportResources
+     * @request POST:/federation/v1/export/resources/resolve
+     */
+    resolveFederationExportResources: (
+      data: BakabaseModulesFederationMediaResourceResolveRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaResourceResolveResponse, any>({
+        path: `/federation/v1/export/resources/resolve`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for resolveFederationExportResources
+     * @name resolveFederationExportResourcesUrl
+     */
+    resolveFederationExportResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/resources/resolve`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name LocateFederationExportResource
+     * @request POST:/federation/v1/export/resources/location
+     */
+    locateFederationExportResource: (
+      data: BakabaseModulesFederationMediaResourceLocationRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaResourceLocationResponse, any>({
+        path: `/federation/v1/export/resources/location`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for locateFederationExportResource
+     * @name locateFederationExportResourceUrl
+     */
+    locateFederationExportResourceUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/resources/location`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name GetFederationExportMappingRoots
+     * @request GET:/federation/v1/export/mapping-roots
+     */
+    getFederationExportMappingRoots: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesFederationMediaMappingRoot[], any>({
+        path: `/federation/v1/export/mapping-roots`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFederationExportMappingRoots
+     * @name getFederationExportMappingRootsUrl
+     */
+    getFederationExportMappingRootsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/mapping-roots`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name ReadFederationExportAsset
+     * @request GET:/federation/v1/export/assets/{assetId}
+     */
+    readFederationExportAsset: (assetId: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/v1/export/assets/${assetId}`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name InspectFederationExportAsset
+     * @request HEAD:/federation/v1/export/assets/{assetId}
+     */
+    inspectFederationExportAsset: (assetId: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/v1/export/assets/${assetId}`,
+        method: "HEAD",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationLocal
+     * @name CreateFederatedLibraryQuery
+     * @request POST:/federation/local/queries
+     */
+    createFederatedLibraryQuery: (
+      data: BakabaseModulesFederationContractsLocalFederatedQuery,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationContractsFederatedQueryPage, any>({
+        path: `/federation/local/queries`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createFederatedLibraryQuery
+     * @name createFederatedLibraryQueryUrl
+     */
+    createFederatedLibraryQueryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/queries`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationLocal
+     * @name ReadFederatedLibraryQuery
+     * @request GET:/federation/local/queries/{id}/pages
+     */
+    readFederatedLibraryQuery: (
+      id: string,
+      query?: {
+        cursor?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationContractsFederatedQueryPage, any>({
+        path: `/federation/local/queries/${id}/pages`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationLocal
+     * @name ReleaseFederatedLibraryQuery
+     * @request DELETE:/federation/local/queries/{id}
+     */
+    releaseFederatedLibraryQuery: (id: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/local/queries/${id}`,
+        method: "DELETE",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationMedia
+     * @name ResolveFederatedResources
+     * @request POST:/federation/local/resources/resolve
+     */
+    resolveFederatedResources: (
+      data: BakabaseModulesFederationMediaResourceResolveRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaResourceResolveResponse, any>({
+        path: `/federation/local/resources/resolve`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for resolveFederatedResources
+     * @name resolveFederatedResourcesUrl
+     */
+    resolveFederatedResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/resources/resolve`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationMedia
+     * @name OpenFederatedResourceDirectory
+     * @request POST:/federation/local/resources/open-directory
+     */
+    openFederatedResourceDirectory: (
+      data: BakabaseModulesFederationMediaOpenResourceDirectoryRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaOpenResourceDirectoryResponse, any>({
+        path: `/federation/local/resources/open-directory`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for openFederatedResourceDirectory
+     * @name openFederatedResourceDirectoryUrl
+     */
+    openFederatedResourceDirectoryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/resources/open-directory`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationMedia
+     * @name CreateFederatedPlaybackSession
+     * @request POST:/federation/local/playback-sessions
+     */
+    createFederatedPlaybackSession: (
+      data: BakabaseModulesFederationMediaPlaybackSessionRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaPlaybackSessionResponse, any>({
+        path: `/federation/local/playback-sessions`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createFederatedPlaybackSession
+     * @name createFederatedPlaybackSessionUrl
+     */
+    createFederatedPlaybackSessionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/playback-sessions`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationMedia
+     * @name ReadFederatedMediaSession
+     * @request GET:/federation/local/media/{ticketId}
+     */
+    readFederatedMediaSession: (ticketId: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/local/media/${ticketId}`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationMedia
+     * @name InspectFederatedMediaSession
+     * @request HEAD:/federation/local/media/{ticketId}
+     */
+    inspectFederatedMediaSession: (ticketId: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/local/media/${ticketId}`,
+        method: "HEAD",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name GetFederationPeers
+     * @request GET:/federation/local/peers
+     */
+    getFederationPeers: (params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerStatusResponse, any>({
+        path: `/federation/local/peers`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFederationPeers
+     * @name getFederationPeersUrl
+     */
+    getFederationPeersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name SetFederationBrowsing
+     * @request PUT:/federation/local/peers/browsing
+     */
+    setFederationBrowsing: (
+      data: BakabaseServiceControllersFederationBrowsingRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/browsing`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setFederationBrowsing
+     * @name setFederationBrowsingUrl
+     */
+    setFederationBrowsingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/browsing`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name SetFederationSharing
+     * @request PUT:/federation/local/peers/sharing
+     */
+    setFederationSharing: (
+      data: BakabaseServiceControllersFederationSharingRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/sharing`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setFederationSharing
+     * @name setFederationSharingUrl
+     */
+    setFederationSharingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/sharing`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name SetFederationDeviceName
+     * @request PUT:/federation/local/peers/name
+     */
+    setFederationDeviceName: (
+      data: BakabaseServiceControllersFederationDeviceNameRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/name`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setFederationDeviceName
+     * @name setFederationDeviceNameUrl
+     */
+    setFederationDeviceNameUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/name`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name CreateFederationInvitation
+     * @request POST:/federation/local/peers/invite
+     */
+    createFederationInvitation: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesFederationPeersNodeInvitation, any>({
+        path: `/federation/local/peers/invite`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createFederationInvitation
+     * @name createFederationInvitationUrl
+     */
+    createFederationInvitationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/invite`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name DiscoverFederationPeers
+     * @request GET:/federation/local/peers/discover
+     */
+    discoverFederationPeers: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesFederationPeersNodeDiscoveryCandidate[], any>({
+        path: `/federation/local/peers/discover`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for discoverFederationPeers
+     * @name discoverFederationPeersUrl
+     */
+    discoverFederationPeersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/discover`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ConnectFederationPeer
+     * @request POST:/federation/local/peers/connect
+     */
+    connectFederationPeer: (
+      data: BakabaseServiceControllersFederationConnectRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairingOutcome, any>({
+        path: `/federation/local/peers/connect`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for connectFederationPeer
+     * @name connectFederationPeerUrl
+     */
+    connectFederationPeerUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/connect`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ClaimFederationPairing
+     * @request POST:/federation/local/peers/claim
+     */
+    claimFederationPairing: (
+      data: BakabaseServiceControllersFederationClaimRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairingOutcome, any>({
+        path: `/federation/local/peers/claim`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for claimFederationPairing
+     * @name claimFederationPairingUrl
+     */
+    claimFederationPairingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/claim`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ApproveFederationPairing
+     * @request POST:/federation/local/peers/requests/{id}/approve
+     */
+    approveFederationPairing: (id: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/requests/${id}/approve`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name RejectFederationPairing
+     * @request POST:/federation/local/peers/requests/{id}/reject
+     */
+    rejectFederationPairing: (id: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/requests/${id}/reject`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name CancelFederationPairing
+     * @request DELETE:/federation/local/peers/requests/{id}
+     */
+    cancelFederationPairing: (id: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/requests/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name RevokeFederationGrant
+     * @request DELETE:/federation/local/peers/grants/{grantId}
+     */
+    revokeFederationGrant: (grantId: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/grants/${grantId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name RemoveFederationPeer
+     * @request DELETE:/federation/local/peers/{nodeId}
+     */
+    removeFederationPeer: (nodeId: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/${nodeId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ForgetFederationPeer
+     * @request DELETE:/federation/local/peers/{nodeId}/outbound
+     */
+    forgetFederationPeer: (nodeId: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/${nodeId}/outbound`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name SetFederationPeerEnabled
+     * @request PUT:/federation/local/peers/{nodeId}/enabled
+     */
+    setFederationPeerEnabled: (
+      nodeId: string,
+      data: BakabaseServiceControllersFederationPeerEnabledRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/${nodeId}/enabled`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name SetFederationPathMappings
+     * @request PUT:/federation/local/peers/{nodeId}/path-mappings
+     */
+    setFederationPathMappings: (
+      nodeId: string,
+      data: BakabaseServiceControllersFederationPathMappingsRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/${nodeId}/path-mappings`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name GetFederationMappingRoots
+     * @request GET:/federation/local/peers/{nodeId}/mapping-roots
+     */
+    getFederationMappingRoots: (nodeId: string, params: RequestParams = {}) =>
+      this.request<BakabaseModulesFederationMediaMappingRoot[], any>({
+        path: `/federation/local/peers/${nodeId}/mapping-roots`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ResetFederationIdentity
+     * @request POST:/federation/local/peers/identity/reset
+     */
+    resetFederationIdentity: (
+      data: BakabaseServiceControllersFederationIdentityResetRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationIdentityNodeIdentity, any>({
+        path: `/federation/local/peers/identity/reset`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for resetFederationIdentity
+     * @name resetFederationIdentityUrl
+     */
+    resetFederationIdentityUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/identity/reset`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name GetFederationNodeInfo
+     * @request GET:/federation/v1/info
+     */
+    getFederationNodeInfo: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesFederationPeersNodeInfo, any>({
+        path: `/federation/v1/info`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFederationNodeInfo
+     * @name getFederationNodeInfoUrl
+     */
+    getFederationNodeInfoUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/info`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ExchangeFederationInvitation
+     * @request POST:/federation/v1/pair/code
+     */
+    exchangeFederationInvitation: (
+      data: BakabaseModulesFederationPeersNodePairCodeRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
+        path: `/federation/v1/pair/code`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for exchangeFederationInvitation
+     * @name exchangeFederationInvitationUrl
+     */
+    exchangeFederationInvitationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/pair/code`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name RequestFederationPairing
+     * @request POST:/federation/v1/pair/request
+     */
+    requestFederationPairing: (
+      data: BakabaseModulesFederationPeersNodePairRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
+        path: `/federation/v1/pair/request`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for requestFederationPairing
+     * @name requestFederationPairingUrl
+     */
+    requestFederationPairingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/pair/request`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ClaimFederationNodeGrant
+     * @request POST:/federation/v1/pair/claim
+     */
+    claimFederationNodeGrant: (
+      data: BakabaseModulesFederationPeersNodePairClaimRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
+        path: `/federation/v1/pair/claim`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for claimFederationNodeGrant
+     * @name claimFederationNodeGrantUrl
+     */
+    claimFederationNodeGrantUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/pair/claim`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name VerifyFederationNode
+     * @request POST:/federation/v1/export/handshake
+     */
+    verifyFederationNode: (
+      data: BakabaseModulesFederationPeersNodeHandshakeRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodeHandshakeResponse, any>({
+        path: `/federation/v1/export/handshake`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for verifyFederationNode
+     * @name verifyFederationNodeUrl
+     */
+    verifyFederationNodeUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/handshake`;
+
+      return baseUrl + path;
+    },
   };
   file = {
     /**

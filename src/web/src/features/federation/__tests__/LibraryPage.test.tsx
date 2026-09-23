@@ -1,0 +1,431 @@
+import type { FederationStatus } from "../types";
+import type { QueryState } from "../hooks/useFederatedQuery";
+
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import LibraryPage from "../LibraryPage";
+import { useFederatedQuery } from "../hooks/useFederatedQuery";
+import { useFederationStatus } from "../hooks/useFederationStatus";
+import { federationPeerApi } from "../peerApi";
+import { FederationError } from "../transport";
+
+vi.mock("@/stores/remoteAccess", () => ({
+  useRemoteAccessStore: (selector: (state: unknown) => unknown) =>
+    selector({ initialized: true, isLocal: true }),
+  useIsPureClient: () => false,
+}));
+vi.mock("../peerApi", () => ({ federationPeerApi: { browsing: vi.fn() } }));
+vi.mock("../components/ResourceDetail", () => ({
+  default: () => (
+    <div>
+      Active resource detail
+      <input aria-label="Preview playback position" defaultValue="0" />
+    </div>
+  ),
+}));
+vi.mock("../hooks/useFederatedQuery", () => ({ useFederatedQuery: vi.fn() }));
+vi.mock("../hooks/useFederationStatus", () => ({ useFederationStatus: vi.fn() }));
+const status: FederationStatus = {
+  identity: { nodeId: "local", libraryEpoch: "epoch", name: "This PC" },
+  browsingEnabled: true,
+  sharingEnabled: false,
+  remoteAccessMode: 0,
+  requirePairing: false,
+  peers: [
+    {
+      nodeId: "offline",
+      label: "Sleeping PC",
+      address: "http://sleeping",
+      enabled: true,
+      connectionState: "Offline",
+      outboundGrant: { grantId: "grant", revision: 1 },
+      pathMappings: [],
+    },
+    {
+      nodeId: "unauthorized",
+      label: "Unpaired PC",
+      address: "http://unpaired",
+      enabled: true,
+      connectionState: "Unknown",
+      pathMappings: [],
+    },
+  ],
+  requests: [],
+};
+const search = vi.fn().mockResolvedValue(undefined);
+const state: QueryState = { pages: [], requestedNodeIds: ["local", "offline"] };
+const setState = (state: QueryState) =>
+  vi
+    .mocked(useFederatedQuery)
+    .mockReturnValue({ state, search, nextPage: vi.fn(), cancel: vi.fn(), reset: vi.fn() });
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  localStorage.clear();
+  vi.mocked(useFederationStatus).mockReturnValue({
+    status,
+    loading: false,
+    error: undefined,
+    refresh: vi.fn(),
+  });
+  setState(state);
+});
+afterEach(cleanup);
+
+describe("visible query coverage", () => {
+  it("lets a saved source be deselected after that device was forgotten", async () => {
+    localStorage.setItem(
+      "federation.scope",
+      JSON.stringify({ scope: "selected", sources: ["forgotten-device"] }),
+    );
+    render(
+      <MemoryRouter>
+        <LibraryPage />
+      </MemoryRouter>,
+    );
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: ["forgotten-device"] }));
+    const source = screen.getByRole("checkbox", { name: /forgotten-device/ });
+
+    expect(source).toBeChecked();
+    expect(source).not.toBeDisabled();
+    fireEvent.click(source);
+    expect(screen.queryByRole("checkbox", { name: /forgotten-device/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "federation.search.action" })).toBeDisabled();
+    expect(JSON.parse(localStorage.getItem("federation.scope")!).sources).toEqual([]);
+  });
+  it("keeps offline authorized sources in All so the coordinator can report missing coverage", async () => {
+    render(
+      <MemoryRouter initialEntries={["/federation?scope=all"]}>
+        <LibraryPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() =>
+      expect(search).toHaveBeenCalledWith(
+        expect.objectContaining({ nodeIds: ["local", "offline"] }),
+      ),
+    );
+    expect(screen.getByText("federation.readOnly")).toBeInTheDocument();
+  });
+  it("explains zero results with omitted sources as partial, never as an empty combined library", () => {
+    setState({
+      ...state,
+      pages: [
+        {
+          sessionId: "partial",
+          items: [],
+          expiresInMs: 30_000,
+          participants: [{ nodeId: "local", libraryEpoch: "epoch", totalCount: 0 }],
+          omittedNodes: [{ nodeId: "offline", code: "Offline", retryable: true }],
+          totalWithinParticipants: 0,
+          coverageComplete: false,
+        },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <LibraryPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("federation.empty.partial")).toBeInTheDocument();
+    expect(screen.queryByText("federation.empty.title")).not.toBeInTheDocument();
+    expect(screen.getByText(/Sleeping PC/)).toBeInTheDocument();
+  });
+  it("shows each failed source when no participant could complete", () => {
+    setState({
+      ...state,
+      error: new FederationError("NoParticipants", "No sources completed", 503, true, undefined, [
+        { nodeId: "offline", code: "Offline", retryable: true },
+      ]),
+    });
+    render(
+      <MemoryRouter>
+        <LibraryPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("No sources completed");
+    expect(screen.getByText(/Sleeping PC/)).toBeInTheDocument();
+    expect(screen.queryByText("federation.empty.title")).not.toBeInTheDocument();
+  });
+});
+
+describe("query and detail lifecycle", () => {
+  it("keeps the detail instance and preview state while the first page arrives or results refresh", () => {
+    const view = () => (
+      <MemoryRouter initialEntries={["/federation?node=remote&epoch=epoch&resource=1"]}>
+        <LibraryPage />
+      </MemoryRouter>
+    );
+    const page = render(view());
+    const preview = screen.getByLabelText("Preview playback position");
+
+    fireEvent.change(preview, { target: { value: "42" } });
+    setState({
+      ...state,
+      pages: [
+        {
+          sessionId: "first",
+          items: [],
+          expiresInMs: 30_000,
+          participants: [{ nodeId: "local", libraryEpoch: "epoch", totalCount: 0 }],
+          omittedNodes: [],
+          totalWithinParticipants: 0,
+          coverageComplete: true,
+        },
+      ],
+    });
+    page.rerender(view());
+    expect(screen.getByLabelText("Preview playback position")).toBe(preview);
+    expect(preview).toHaveValue("42");
+    setState({ ...state, busy: "preparing" });
+    page.rerender(view());
+    expect(screen.getByLabelText("Preview playback position")).toBe(preview);
+    expect(preview).toHaveValue("42");
+  });
+
+  it.each([
+    { nodeId: "local", libraryEpoch: "restored-epoch", name: "This PC" },
+    { nodeId: "cloned-node", libraryEpoch: "cloned-epoch", name: "This PC" },
+  ])(
+    "discards the old snapshot and detail when refreshed local identity changes to $nodeId/$libraryEpoch",
+    (identity) => {
+      const reset = vi.fn();
+
+      vi.mocked(useFederatedQuery).mockReturnValue({
+        state,
+        search,
+        nextPage: vi.fn(),
+        cancel: vi.fn(),
+        reset,
+      });
+      const view = () => (
+        <MemoryRouter
+          initialEntries={["/federation?scope=local&node=local&epoch=epoch&resource=1"]}
+        >
+          <LibraryPage />
+        </MemoryRouter>
+      );
+      const page = render(view());
+
+      expect(search).toHaveBeenCalledTimes(1);
+      vi.mocked(useFederationStatus).mockReturnValue({
+        status: { ...status, identity },
+        loading: false,
+        error: undefined,
+        refresh: vi.fn(),
+      });
+      page.rerender(view());
+      expect(reset).toHaveBeenCalledOnce();
+      expect(search).toHaveBeenCalledTimes(2);
+      expect(search).toHaveBeenLastCalledWith(
+        expect.objectContaining({ nodeIds: [identity.nodeId] }),
+      );
+      expect(screen.queryByText("Active resource detail")).not.toBeInTheDocument();
+    },
+  );
+});
+
+describe("explicit browsing opt-in", () => {
+  it.each([false, undefined])(
+    "does not search when browsingEnabled is %s; keeps the device entry available",
+    (enabled) => {
+      vi.mocked(useFederationStatus).mockReturnValue({
+        status: { ...status, browsingEnabled: enabled } as FederationStatus,
+        loading: false,
+        error: undefined,
+        refresh: vi.fn(),
+      });
+      render(
+        <MemoryRouter>
+          <LibraryPage />
+        </MemoryRouter>,
+      );
+      expect(screen.getByText("federation.browsing.off")).toBeInTheDocument();
+      expect(screen.getByText("federation.devices.title")).toBeInTheDocument();
+      expect(search).not.toHaveBeenCalled();
+      expect(screen.queryByText("federation.search")).not.toBeInTheDocument();
+    },
+  );
+  it("keeps browsing off and shows a failed enable request", async () => {
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: { ...status, browsingEnabled: false },
+      loading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    });
+    vi.mocked(federationPeerApi.browsing).mockRejectedValue(new Error("Enable failed"));
+    render(
+      <MemoryRouter>
+        <LibraryPage />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByText("federation.browsing.enable"));
+    expect(await screen.findByText("Enable failed")).toBeInTheDocument();
+    expect(search).not.toHaveBeenCalled();
+  });
+  it("clears active results and unmounts detail/media when browsing is disabled", () => {
+    const reset = vi.fn();
+
+    vi.mocked(useFederatedQuery).mockReturnValue({
+      state,
+      search,
+      nextPage: vi.fn(),
+      cancel: vi.fn(),
+      reset,
+    });
+    const view = () => (
+      <MemoryRouter initialEntries={["/federation?node=remote&epoch=epoch&resource=1"]}>
+        <LibraryPage />
+      </MemoryRouter>
+    );
+    const page = render(view());
+
+    expect(screen.getByText("Active resource detail")).toBeInTheDocument();
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: { ...status, browsingEnabled: false },
+      loading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    });
+    page.rerender(view());
+    expect(reset).toHaveBeenCalled();
+    expect(screen.queryByText("Active resource detail")).not.toBeInTheDocument();
+    expect(screen.getByText("federation.browsing.off")).toBeInTheDocument();
+  });
+});
+
+describe("retrying a failed page", () => {
+  const loaded = {
+    sessionId: "session",
+    items: [],
+    expiresInMs: 30_000,
+    participants: [{ nodeId: "local", libraryEpoch: "epoch", totalCount: 80 }],
+    omittedNodes: [],
+    totalWithinParticipants: 80,
+    coverageComplete: true,
+    nextCursor: "page-2",
+  };
+  const renderWithError = (error: Error) => {
+    const nextPage = vi.fn();
+
+    vi.mocked(useFederatedQuery).mockReturnValue({
+      state: { ...state, pages: [loaded], error },
+      search,
+      nextPage,
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    });
+    render(
+      <MemoryRouter>
+        <LibraryPage />
+      </MemoryRouter>,
+    );
+    search.mockClear();
+    fireEvent.click(screen.getByText("federation.retry"));
+
+    return nextPage;
+  };
+
+  it.each([
+    [
+      "QuerySessionInterrupted",
+      new FederationError("QuerySessionInterrupted", "Interrupted", 409, true),
+    ],
+    ["Busy", new FederationError("Busy", "Busy", 429, true)],
+    ["a transport failure", new TypeError("Failed to fetch")],
+  ])("retries the same cursor after %s and keeps loaded pages", (_, error) => {
+    const nextPage = renderWithError(error);
+
+    expect(nextPage).toHaveBeenCalledOnce();
+    expect(search).not.toHaveBeenCalled();
+  });
+  it.each([
+    "NodeSessionChanged",
+    "CapabilityDenied",
+    "InvalidPeerResponse",
+    "IdentityConflict",
+    "SharingDisabled",
+    "NodeNotAuthorized",
+    "QuerySessionExpired",
+    "CursorSuperseded",
+    "LibraryEpochChanged",
+    "GrantRevoked",
+    "InvalidCursor",
+  ])("starts a new search after %s, even if the error is marked retryable", (code) => {
+    const nextPage = renderWithError(new FederationError(code, code, 409, true));
+
+    expect(search).toHaveBeenCalledOnce();
+    expect(nextPage).not.toHaveBeenCalled();
+  });
+});
+
+describe("initial search scope", () => {
+  const pressed = () =>
+    screen
+      .getAllByRole("button", { pressed: true })
+      .map((button) => button.textContent)
+      .join();
+  const renderLibrary = (entry = "/federation") =>
+    render(
+      <MemoryRouter initialEntries={[entry]}>
+        <LibraryPage />
+      </MemoryRouter>,
+    );
+
+  it("starts on all enabled devices when this device can already read one", () => {
+    renderLibrary();
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: ["local", "offline"] }));
+    expect(pressed()).toBe("federation.scope.all");
+  });
+  it("stays on this device when no enabled device can be read", () => {
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: { ...status, peers: [{ ...status.peers[0], enabled: false }, status.peers[1]] },
+      loading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    });
+    renderLibrary();
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: ["local"] }));
+    expect(pressed()).toBe("federation.scope.local");
+  });
+  it.each([
+    [
+      "a saved preference",
+      "/federation",
+      () => localStorage.setItem("federation.scope", '{"scope":"local"}'),
+    ],
+    ["the address", "/federation?scope=local", () => {}],
+  ])("keeps the scope the user chose in %s", (_, entry, arrange) => {
+    arrange();
+    renderLibrary(entry);
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: ["local"] }));
+  });
+  it("decides the default once, so a device authorized later does not switch the scope", () => {
+    const unreadable = { ...status, peers: [status.peers[1]] };
+
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: unreadable,
+      loading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    });
+    const page = renderLibrary();
+
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: { ...status },
+      loading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    });
+    page.rerender(
+      <MemoryRouter initialEntries={["/federation"]}>
+        <LibraryPage />
+      </MemoryRouter>,
+    );
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: ["local"] }));
+    expect(pressed()).toBe("federation.scope.local");
+  });
+});

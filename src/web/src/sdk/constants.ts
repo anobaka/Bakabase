@@ -2545,6 +2545,24 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.Any]: 'Any'
 };
 
+export enum LocalFileSaveOutcome {
+  Unavailable = 0,
+  Cancelled = 1,
+  Saved = 2
+}
+
+export const localFileSaveOutcomes = [
+  { label: 'Unavailable', value: LocalFileSaveOutcome.Unavailable },
+  { label: 'Cancelled', value: LocalFileSaveOutcome.Cancelled },
+  { label: 'Saved', value: LocalFileSaveOutcome.Saved }
+] as const;
+
+export const LocalFileSaveOutcomeLabel: Record<LocalFileSaveOutcome, string> = {
+  [LocalFileSaveOutcome.Unavailable]: 'Unavailable',
+  [LocalFileSaveOutcome.Cancelled]: 'Cancelled',
+  [LocalFileSaveOutcome.Saved]: 'Saved'
+};
+
 export enum AdditionalCoverDiscoveringSource {
   CompressedFile = 1,
   Video = 2
@@ -5117,6 +5135,24 @@ export const dataCardMatchModes = [
 export const DataCardMatchModeLabel: Record<DataCardMatchMode, string> = {
   [DataCardMatchMode.Any]: 'Any',
   [DataCardMatchMode.All]: 'All'
+};
+
+export enum FederationEndpointKind {
+  Local = 0,
+  Public = 1,
+  Export = 2
+}
+
+export const federationEndpointKinds = [
+  { label: 'Local', value: FederationEndpointKind.Local },
+  { label: 'Public', value: FederationEndpointKind.Public },
+  { label: 'Export', value: FederationEndpointKind.Export }
+] as const;
+
+export const FederationEndpointKindLabel: Record<FederationEndpointKind, string> = {
+  [FederationEndpointKind.Local]: 'Local',
+  [FederationEndpointKind.Public]: 'Public',
+  [FederationEndpointKind.Export]: 'Export'
 };
 
 export enum ResourceMatcherLeafKind {

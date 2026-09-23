@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 
 import ServerUpdateNotice from "./ServerUpdateNotice";
 
+import MigrationNotice from "@/features/federation/components/MigrationNotice";
 import { clientApi } from "@/core/clientApi";
 import { ClientPairingOutcome, ServerHandshakeOutcome } from "@/sdk/constants";
 import { Button, Chip, Input, Modal, Snippet } from "@/components/bakaui";
@@ -196,6 +197,7 @@ const ClientConnectionPage = () => {
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      <MigrationNotice />
       <div className="flex items-end gap-2">
         <Input
           className="max-w-[420px]"
