@@ -1,10 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Bakabase.Abstractions.Components.Gui;
-using Bakabase.Client.Remoting.Abstractions.Models;
-using Bakabase.Client.Remoting.Components.Connection;
+using Bakabase.Remoting.Abstractions.Models;
+using Bakabase.Remoting.Components.Connection;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
-using Bakabase.Client.Remoting.Components.UserMachine;
+using Bakabase.Remoting.Components.Forwarding;
+using Bakabase.Remoting.Components.UserMachine;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Infrastructures.Components.Gui;
 using Microsoft.AspNetCore.Builder;
@@ -32,7 +33,7 @@ namespace Bakabase.Client.Remoting.Components.Forwarding;
 /// </remarks>
 public static class ClientApiEndpoints
 {
-    public const string Prefix = "/client";
+    public const string Prefix = RelayPaths.Prefix;
 
     private static readonly JsonSerializerOptions Json = new()
     {
@@ -40,15 +41,7 @@ public static class ClientApiEndpoints
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    /// <summary>
-    /// Where a client with no server sends the window.
-    /// </summary>
-    /// <remarks>
-    /// A path of its own rather than <c>/</c>, so the root always means one thing: hand
-    /// this request to the server. There is simply nothing to hand it to yet, and the
-    /// forwarder redirects here instead of answering a browser with a JSON refusal.
-    /// </remarks>
-    public const string ConnectPath = Prefix + "/connect-page";
+    public const string ConnectPath = RelayPaths.ConnectPath;
 
     public static void Map(IEndpointRouteBuilder endpoints, string clientVersion)
     {

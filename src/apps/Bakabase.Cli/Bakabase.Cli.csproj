@@ -11,6 +11,6 @@
       <ProjectReference Include="..\Bakabase.Service\Bakabase.Service.csproj" />
       <!-- Only for codegen: the client's outcome enums are rendered by the same
            frontend, and this is the one project that can see both sides. -->
-      <ProjectReference Include="..\Bakabase.Client.Remoting\Bakabase.Client.Remoting.csproj" />
+      <ProjectReference Include="..\Bakabase.Remoting\Bakabase.Remoting.csproj" />
     </ItemGroup>
 </Project>

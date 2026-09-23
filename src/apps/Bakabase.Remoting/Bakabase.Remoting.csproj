@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+      Everything a desktop needs to use a server on *another machine* as if it were its
+      own: the signed loopback relay the embedded browser talks to, pairing and the keys
+      it produces, path mapping, and the handlers that run a command on the machine the
+      user is sitting at instead of on the server.
+
+      Shared by both desktop products. The all-in-one composes one relay per server it
+      manages, next to its own in-process server; the legacy thin client composes exactly
+      one, with nothing else behind it. Neither the server nor its container ever sees any
+      of this: Bakabase.Service must not reference this project, and this project must not
+      reference Bakabase.Service, Bakabase.Modules.Federation, Bakabase.Shell or Avalonia.
+      The release contract checks both directions.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\libs\Bakabase.Infrastructures\Bakabase.Infrastructures\Bakabase.Infrastructures.csproj" />
+        <ProjectReference Include="..\..\modules\Bakabase.Modules.Player\Bakabase.Modules.Player.csproj" />
+        <ProjectReference Include="..\..\modules\Bakabase.Modules.RemoteAccess\Bakabase.Modules.RemoteAccess.csproj" />
+        <!-- For the cookie-capture flows and the orchestration that drives them: the
+             sign-in window has to open on the machine the user is sitting at. -->
+        <ProjectReference Include="..\..\modules\Bakabase.Modules.ThirdParty\Bakabase.Modules.ThirdParty.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
+    </ItemGroup>
+
+</Project>

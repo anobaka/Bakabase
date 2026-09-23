@@ -3,7 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Bakabase.Client.Remoting.Components.Connection;
+using Bakabase.Remoting.Components.Connection;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components.Pairing;

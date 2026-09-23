@@ -92,9 +92,14 @@ def check_sources(root):
     require("AppDataPathProfile.Client" not in (root / "src/apps/Bakabase.App/Program.cs").read_text(encoding="utf-8"),
             "The unified application must not select client AppData")
     projects, packages = project_graph(root / "src/apps/Bakabase.Service/Bakabase.Service.csproj")
-    require(not any(name.startswith(("Bakabase.Client", "Bakabase.Shell")) for name in projects),
-            "Service transitively references a desktop/client host")
+    require(not any(name.startswith(("Bakabase.Client", "Bakabase.Remoting", "Bakabase.Shell")) for name in projects),
+            "Service transitively references a desktop/client host or the relay")
     require(not any(name.startswith(("Avalonia", "Yarp")) for name in packages), "Service transitively references desktop/client packages")
+    projects, packages = project_graph(root / "src/apps/Bakabase.Remoting/Bakabase.Remoting.csproj")
+    require(not any(name in ("Bakabase.Service", "Bakabase.Modules.Federation") or name.startswith(("Bakabase.Shell", "Bakabase.Client"))
+                    for name in projects),
+            "The relay references a server host, the federation module, the shell or a client product")
+    require(not any(name.startswith("Avalonia") for name in packages), "The relay references desktop UI packages")
     projects, _ = project_graph(root / "src/apps/Bakabase.Client.App/Bakabase.Client.App.csproj")
     require("Bakabase.Service" not in projects and "Bakabase.Modules.Federation" not in projects,
             "Legacy client unexpectedly includes an authoritative library host")
@@ -111,9 +116,9 @@ def check_publish(directory, role, require_web=False):
         dependencies.update(json.loads(path.read_text(encoding="utf-8-sig")).get("libraries", {}))
     required = {"server": {"Bakabase.Service.dll", "Bakabase.Modules.Federation.dll"},
                 "unified": {"Bakabase.dll", "Bakabase.Shell.dll", "Bakabase.Service.dll", "Bakabase.Modules.Federation.dll"},
-                "client": {"Bakabase.Client.dll", "Bakabase.Client.Remoting.dll", "Bakabase.Shell.dll"}}[role]
+                "client": {"Bakabase.Client.dll", "Bakabase.Client.Remoting.dll", "Bakabase.Remoting.dll", "Bakabase.Shell.dll"}}[role]
     require(required <= names, f"{role}: missing required assemblies {sorted(required - names)}")
-    forbidden = {"server": ("Bakabase.Client", "Bakabase.Shell", "Avalonia", "Yarp"),
+    forbidden = {"server": ("Bakabase.Client", "Bakabase.Remoting", "Bakabase.Shell", "Avalonia", "Yarp"),
                  "unified": ("Bakabase.Client", "Yarp"),
                  "client": ("Bakabase.Service", "Bakabase.Modules.Federation", "Bakabase.Migrations")}[role]
     require(not any(name.startswith(forbidden) for name in names | dependencies),

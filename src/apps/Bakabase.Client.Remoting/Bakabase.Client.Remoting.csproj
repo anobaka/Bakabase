@@ -1,21 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <!--
-      Everything the thin client needs *because its server is on another machine*:
-      forwarding, request signing, pairing, discovery, path mapping, and the handlers
-      that run a command on the machine the user is sitting at.
+      The legacy thin-client product: its host, connect page, updater, telemetry, tray
+      bridge and the /client API that belongs to a window with exactly one server behind
+      it. The relay itself — forwarding, signing, pairing, path mapping and the handlers
+      that run a command on this machine — lives in Bakabase.Remoting, which the
+      all-in-one composes too.
 
-      "Remoting", not "Client", is the boundary. Being a client — a window, a tray icon,
-      an embedded browser, a media player — is something both flavours do, and all of it
-      lives in Bakabase.Shell and the modules. What lives here is only what stops making
-      sense the moment the server is in-process: every piece of it would be a no-op or an
-      identity mapping in the all-in-one, which is why that flavour does not reference
-      this project and its container holds none of these types.
+      The thin client is deprecated: the all-in-one manages other servers itself. This
+      project goes away together with Bakabase.Client.App once the final client release
+      has shipped its migration notice.
 
-      Deliberately free of Avalonia and of Bakabase.Service. The shell talks to a host
-      through IShellHost, and this project is what the client flavour puts behind it, so
-      keeping both out is what lets the two flavours share one shell without either
-      dragging the other's world along.
+      Deliberately free of Avalonia and of Bakabase.Service, for the same reason as
+      before: the shell talks to a host through IShellHost, and this project is what the
+      client flavour puts behind it.
     -->
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
@@ -30,16 +28,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\libs\Bakabase.Infrastructures\Bakabase.Infrastructures\Bakabase.Infrastructures.csproj" />
-        <ProjectReference Include="..\..\modules\Bakabase.Modules.Player\Bakabase.Modules.Player.csproj" />
-        <ProjectReference Include="..\..\modules\Bakabase.Modules.RemoteAccess\Bakabase.Modules.RemoteAccess.csproj" />
-        <!-- For the cookie-capture flows and the orchestration that drives them: the
-             sign-in window has to open on the machine the user is sitting at. -->
-        <ProjectReference Include="..\..\modules\Bakabase.Modules.ThirdParty\Bakabase.Modules.ThirdParty.csproj" />
+        <!-- The relay, pairing, path mapping and user-machine handlers, shared with the
+             all-in-one. What stays here is only what makes this the legacy thin-client
+             product: its host, connect page, updater, telemetry and tray bridge. -->
+        <ProjectReference Include="..\Bakabase.Remoting\Bakabase.Remoting.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
       <!--
         Errors from this process. Not Sentry.AspNetCore: its diagnostic listener files an
         event per failed HTTP request, and every request this process handles is a relay

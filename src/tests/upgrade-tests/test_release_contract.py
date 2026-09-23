@@ -56,8 +56,13 @@ class PublishContractTests(unittest.TestCase):
         (web / "app.js").write_text("/* built fixture */")
         self.assertTrue(contract.check_publish(self.directory, "server", require_web=True)["passed"])
 
+    def test_relay_is_never_part_of_the_server(self):
+        (self.directory / "Bakabase.Remoting.dll").touch()
+        with self.assertRaises(AssertionError):
+            contract.check_publish(self.directory, "server")
+
     def test_client_cannot_carry_frontend_or_server(self):
-        for name in ("Bakabase.Client.dll", "Bakabase.Client.Remoting.dll", "Bakabase.Shell.dll"):
+        for name in ("Bakabase.Client.dll", "Bakabase.Client.Remoting.dll", "Bakabase.Remoting.dll", "Bakabase.Shell.dll"):
             (self.directory / name).touch()
         with self.assertRaises(AssertionError):
             contract.check_publish(self.directory, "client")

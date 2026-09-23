@@ -125,6 +125,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Modules.Federation
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Federation.TestHost", "tests\Bakabase.Federation.TestHost\Bakabase.Federation.TestHost.csproj", "{1D9966D7-EFBB-4652-985A-5781FAD9784C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Remoting", "apps\Bakabase.Remoting\Bakabase.Remoting.csproj", "{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Company|Any CPU = Company|Any CPU
@@ -1110,6 +1112,24 @@ Global
 		{1D9966D7-EFBB-4652-985A-5781FAD9784C}.Release|x64.Build.0 = Release|Any CPU
 		{1D9966D7-EFBB-4652-985A-5781FAD9784C}.Release|x86.ActiveCfg = Release|Any CPU
 		{1D9966D7-EFBB-4652-985A-5781FAD9784C}.Release|x86.Build.0 = Release|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Company|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Company|Any CPU.Build.0 = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Company|x64.ActiveCfg = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Company|x64.Build.0 = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Company|x86.ActiveCfg = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Company|x86.Build.0 = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Debug|x64.Build.0 = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Debug|x86.Build.0 = Debug|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Release|x64.ActiveCfg = Release|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Release|x64.Build.0 = Release|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Release|x86.ActiveCfg = Release|Any CPU
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1169,6 +1189,7 @@ Global
 		{F3B75CE8-3D15-4931-A8A9-09C99A088EFF} = {CA253913-39DE-BFD0-C9A3-4B7EC6FBDF17}
 		{14B17DDC-FE5D-48B3-9095-9176DC9F0DDA} = {8B728E85-2F02-43E7-A3D1-32CDB437DFEC}
 		{1D9966D7-EFBB-4652-985A-5781FAD9784C} = {8B728E85-2F02-43E7-A3D1-32CDB437DFEC}
+		{DDDD00AF-FD2B-47F7-983E-0C14771FC5E2} = {CA558E6A-5009-445B-88C9-96FDA6583067}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0EDB2DE5-2794-4737-A47F-105A2CCFFD16}

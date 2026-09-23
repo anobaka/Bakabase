@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Bakabase.Client.Remoting.Components.Forwarding;
+using Bakabase.Remoting.Components.Forwarding;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Tests.RemoteAccess;
@@ -94,15 +95,15 @@ public class ConnectPageTests
         // connect", which is what every distinct outcome exists to avoid.
         var en = Dictionary("en");
 
-        foreach (var name in System.Enum.GetNames<Bakabase.Client.Remoting.Abstractions.Models.ServerHandshakeOutcome>()
-                     .Where(n => n != nameof(Bakabase.Client.Remoting.Abstractions.Models.ServerHandshakeOutcome.Ok)))
+        foreach (var name in System.Enum.GetNames<Bakabase.Remoting.Abstractions.Models.ServerHandshakeOutcome>()
+                     .Where(n => n != nameof(Bakabase.Remoting.Abstractions.Models.ServerHandshakeOutcome.Ok)))
         {
             Assert.IsTrue(en.Contains($"handshake.{name}"), $"No connect-page text for handshake outcome {name}.");
         }
 
         foreach (var name in System.Enum
-                     .GetNames<Bakabase.Client.Remoting.Components.Connection.ClientPairingOutcome>()
-                     .Where(n => n != nameof(Bakabase.Client.Remoting.Components.Connection.ClientPairingOutcome
+                     .GetNames<Bakabase.Remoting.Components.Connection.ClientPairingOutcome>()
+                     .Where(n => n != nameof(Bakabase.Remoting.Components.Connection.ClientPairingOutcome
                          .Paired)))
         {
             Assert.IsTrue(en.Contains($"pairing.{name}"), $"No connect-page text for pairing outcome {name}.");

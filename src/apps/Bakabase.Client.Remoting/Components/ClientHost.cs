@@ -1,4 +1,5 @@
 using Bakabase.Client.Remoting.Components.Diagnostics;
+using Bakabase.Remoting.Components.Forwarding;
 using Bakabase.Client.Remoting.Components.Forwarding;
 using Bakabase.Infrastructures.Components.App;
 using Microsoft.Extensions.Configuration;
