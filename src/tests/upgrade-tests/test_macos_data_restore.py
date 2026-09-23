@@ -53,7 +53,10 @@ class RestoreTests(unittest.TestCase):
         self.ports = {"client": free_port(), "unified": free_port()}
         while self.ports["client"] == self.ports["unified"]: self.ports["unified"] = free_port()
         defaults = restore.lifecycle.default_paths("osx-x64", self.home, os.environ)["data"]
-        old = {"rid": "osx-arm64", "scope": restore.retention.SCOPE, "executionHeadSHA": "a" * 40,
+        old = {"rid": "osx-arm64", "scope": restore.retention.SCOPE,
+               "executionHeadSHA": restore.producer_identity.EXECUTION_SHA,
+               "sourceSHA": restore.producer_identity.PRODUCT_SHA,
+               "candidateCoreVersion": restore.producer_identity.PRODUCT_CORE,
                "apps": {}, "originalDataSeedInstallations": {}, "originalDataPreinstallProofs": {},
                "originalVersions": {}, "originalConfiguration": {}, "originalConfigurationBackups": {}}
         for role in restore.ROLES:
@@ -138,7 +141,8 @@ class RestoreTests(unittest.TestCase):
         path = self.results / "report.json"
         write_json(path, self.old)
         write_json(self.producer_dir / "verified-producer.json", {"verified": True, "area": "macos-data", "rid": "osx-arm64",
-            "runId": 123, "headSHA": "a" * 40, "artifactSHA256": "b" * 64, "reportSHA256": digest(path)})
+            "runId": restore.producer_identity.RUN_ID, "headSHA": restore.producer_identity.EXECUTION_SHA,
+            "artifactSHA256": restore.producer_identity.ARTIFACT_SHA256, "reportSHA256": digest(path)})
 
     def prepare(self):
         return restore.prepare_restore(self.apps, self.producer_dir, self.report)
@@ -171,6 +175,43 @@ class RestoreTests(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "hosted"): self.prepare()
         native.assert_not_called()
         producer.assert_not_called()
+
+    def test_producer_manifest_and_product_identity_are_exact_before_writes(self):
+        marker = self.producer_dir / "verified-producer.json"
+        for field, value in (("runId", restore.producer_identity.RUN_ID + 1), ("headSHA", "a" * 40),
+                             ("artifactSHA256", "b" * 64)):
+            self.persist()
+            manifest = json.loads(marker.read_text())
+            manifest[field] = value
+            write_json(marker, manifest)
+            with self.subTest(field=field), self.assertRaisesRegex(AssertionError, "verified baseline"):
+                self.prepare()
+            self.assert_untouched()
+        original = copy.deepcopy(self.old)
+        for field, value in (("executionHeadSHA", "a" * 40), ("sourceSHA", "c" * 40),
+                             ("candidateCoreVersion", "2.4.0-beta.999")):
+            self.old = dict(original, **{field: value})
+            self.persist()
+            with self.subTest(field=field), self.assertRaisesRegex(AssertionError, "identity differs"):
+                self.prepare()
+            self.assert_untouched()
+
+    def test_new_consumer_restores_original_producer_but_requires_new_running_core(self):
+        current_core = "2.4.0-beta.999"
+        observed_core = restore.producer_identity.PRODUCT_CORE
+        def observe(app):
+            return {"processIds": [731 if app["role"] == "client" else 732],
+                    "appInfo": {"version" if app["role"] == "client" else "coreVersion": observed_core}}
+        with patch.object(restore.release, "CANDIDATE_SHA", "c" * 40), \
+             patch.object(restore.release, "CANDIDATE_CORE", current_core), \
+             patch.object(restore.lifecycle, "observe_app", side_effect=observe):
+            baseline = self.prepare()
+            self.assertEqual(restore.producer_identity.EXECUTION_SHA, baseline["producer"]["headSHA"])
+            with self.assertRaisesRegex(AssertionError, "pinned candidate code"):
+                restore.verify_restore(self.apps, self.report, "wrong-core", baseline)
+            observed_core = current_core
+            with patch.object(restore.seed_module, "verify_semantics", return_value=baseline["seed"]["baselineSemantics"]):
+                self.assertTrue(restore.verify_restore(self.apps, self.report, "current-core", baseline)["passed"])
 
     def test_old_proof_failures_never_write_consumer_data(self):
         original = copy.deepcopy(self.old)

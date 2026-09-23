@@ -16,8 +16,8 @@ import zipfile
 SPEC = importlib.util.spec_from_file_location("restore_inputs_test", Path(__file__).with_name("prepare-macos-data-restore.py"))
 runner = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(runner)
-HEAD = "a" * 40
-RUN = 123
+HEAD = runner.producer_identity.EXECUTION_SHA
+RUN = runner.producer_identity.RUN_ID
 REPO = "anobaka/Bakabase"
 
 
@@ -29,13 +29,14 @@ def run_metadata():
 
 def artifact_metadata():
     return {"id": 456, "name": runner.ARTIFACT, "expired": False, "size_in_bytes": 10,
-            "digest": "sha256:" + "b" * 64, "workflow_run": {"id": RUN, "head_sha": HEAD}}
+            "digest": "sha256:" + runner.producer_identity.ARTIFACT_SHA256,
+            "workflow_run": {"id": RUN, "head_sha": HEAD}}
 
 
 def report_fixture():
     return {"passed": False, "dataRetentionPassed": False, "currentStage": "later-update-failed",
-            "executionHeadSHA": HEAD, "rid": "osx-arm64", "sourceSHA": runner.release.CANDIDATE_SHA,
-            "candidateCoreVersion": runner.release.CANDIDATE_CORE, "scope": runner.SCOPE,
+            "executionHeadSHA": HEAD, "rid": "osx-arm64", "sourceSHA": runner.producer_identity.PRODUCT_SHA,
+            "candidateCoreVersion": runner.producer_identity.PRODUCT_CORE, "scope": runner.SCOPE,
             "packageVersion": runner.release.OLD_VERSION,
             "originalVersions": {role: runner.release.OLD_VERSION for role in ("client", "unified")},
             "dataSeed": {"passed": True, "oldVersion": runner.release.OLD_VERSION,
@@ -71,6 +72,7 @@ class ProducerGuards(unittest.TestCase):
         self.assertEqual(HEAD, runner.validate_run(dict(value, conclusion="success"), REPO, RUN))
         for change in ({"id": RUN + 1}, {"id": True}, {"status": "in_progress"}, {"conclusion": None},
                        {"conclusion": "cancelled"}, {"head_sha": "main"}, {"head_sha": "A" * 40},
+                       {"head_sha": "a" * 40},
                        {"repository": {"full_name": "other/repo"}}, {"head_repository": {"full_name": "other/repo"}},
                        {"path": ".github/workflows/_extended_acceptance.yml"}):
             with self.subTest(change=change), self.assertRaises(ValueError):
@@ -81,7 +83,8 @@ class ProducerGuards(unittest.TestCase):
         metadata = {"total_count": 1, "artifacts": [artifact]}
         self.assertEqual(artifact, runner.select_artifact(metadata, RUN, HEAD))
         for change in ({"expired": True}, {"id": 0}, {"size_in_bytes": runner.MAX_ZIP_BYTES + 1},
-                       {"size_in_bytes": True}, {"digest": None}, {"name": "package-acceptance-unified-osx-arm64-packages"},
+                       {"size_in_bytes": True}, {"digest": None}, {"digest": "sha256:" + "b" * 64},
+                       {"name": "package-acceptance-unified-osx-arm64-packages"},
                        {"workflow_run": {"id": RUN + 1, "head_sha": HEAD}},
                        {"workflow_run": {"id": RUN, "head_sha": "c" * 40}}):
             with self.subTest(change=change), self.assertRaises(ValueError):
@@ -108,6 +111,16 @@ class ProducerGuards(unittest.TestCase):
                 (root / "historical-results/report.json").write_text(json.dumps(dict(report, **{field: value})))
                 with self.subTest(field=field, value=value), self.assertRaises(ValueError):
                     runner.validate_report(root, HEAD)
+
+    def test_original_producer_report_remains_valid_when_consumer_changes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            expected = write_report(root)
+            with patch.object(runner.release, "CANDIDATE_SHA", "c" * 40), \
+                 patch.object(runner.release, "CANDIDATE_CORE", "2.4.0-beta.999"):
+                actual, _ = runner.validate_report(root, HEAD)
+            self.assertEqual(expected, actual)
+            self.assertEqual(runner.producer_identity.PRODUCT_SHA, actual["sourceSHA"])
 
     def test_report_missing_modified_or_symlink_baseline_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -187,8 +200,9 @@ class ProducerGuards(unittest.TestCase):
 
     def test_wrong_repository_run_id_and_consumer_rid_never_request_metadata(self):
         with patch.object(runner.release, "hosted"), patch.object(runner.inputs, "gh_json") as network:
-            for repository, run_id, rid in (("other/repo", "123", "osx-x64"), (REPO, "0", "osx-x64"),
-                                           (REPO, "123/other", "osx-x64"), (REPO, "123", "osx-arm64")):
+            for repository, run_id, rid in (("other/repo", str(RUN), "osx-x64"), (REPO, "0", "osx-x64"),
+                                           (REPO, "123/other", "osx-x64"), (REPO, "123", "osx-x64"),
+                                           (REPO, str(RUN), "osx-arm64")):
                 with self.subTest(repository=repository, run_id=run_id, rid=rid), self.assertRaises(ValueError):
                     runner.prepare(repository, run_id, rid, Path("/unused"))
             network.assert_not_called()
@@ -205,6 +219,9 @@ class ProducerGuards(unittest.TestCase):
                 self.assertEqual(artifact, actual)
                 target.write_bytes(archive.read_bytes())
             with patch.object(runner.release, "hosted"), patch.dict(os.environ, {"RUNNER_TEMP": str(root)}), \
+                 patch.object(runner.release, "CANDIDATE_SHA", "c" * 40), \
+                 patch.object(runner.release, "CANDIDATE_CORE", "2.4.0-beta.999"), \
+                 patch.object(runner.producer_identity, "ARTIFACT_SHA256", artifact["digest"][7:]), \
                  patch.object(runner.subprocess, "check_output", return_value=b""), \
                  patch.object(runner.inputs, "gh_json", side_effect=[run_metadata(), {"total_count": 1, "artifacts": [artifact]}]) as metadata, \
                  patch.object(runner.inputs, "download", side_effect=download) as fetched:
@@ -220,6 +237,8 @@ class ProducerGuards(unittest.TestCase):
             self.assertFalse(result["producerOutcome"]["passed"])
             self.assertEqual("failure", result["runConclusion"])
             self.assertEqual(artifact["id"], result["artifact"]["id"])
+            self.assertEqual(runner.producer_identity.PRODUCT_SHA, result["productSourceSHA"])
+            self.assertEqual(runner.producer_identity.PRODUCT_CORE, result["productCoreVersion"])
 
     def test_bad_download_never_unpacks_retries_or_writes_verified_marker(self):
         with tempfile.TemporaryDirectory() as temporary:

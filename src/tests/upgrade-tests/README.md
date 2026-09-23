@@ -340,6 +340,13 @@ to pristine default AppData and the unchanged media paths; it never edits SQLite
 or rebases paths. Nonempty backup WAL files are rejected, and the archived main
 database is read immutably. Both old listening ports must be available.
 
+`macos-data-producer.py` pins the independently verified producer run, execution
+commit, product version and artifact digest. The `data_seed_run_id` must match
+that baseline. Its original v349 data remains usable when the consumer candidate
+changes; consumer provenance and running code are still checked against the
+current candidate separately. Replacing the producer requires reviewing a new
+original-data artifact and updating its explicit identity.
+
 The candidate installs, reads the original data, invokes its real native updater,
 automatically restarts, and then undergoes a separate explicit restart. Every
 phase must retain the original rows, fields, API meaning, selected settings and

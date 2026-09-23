@@ -24,6 +24,7 @@ def sibling(name):
 
 inputs = sibling("prepare-installed-inputs")
 release = sibling("historical-release")
+producer_identity = sibling("macos-data-producer")
 require = inputs.require
 ROOT = inputs.ROOT
 ARTIFACT = "macos-data-retention-osx-arm64-evidence"
@@ -35,14 +36,15 @@ SCOPE = "macos-beta-data-retention-original-executable-seed-native-update"
 
 
 def validate_run(run, repository, run_id):
-    require(type(run.get("id")) is int and run["id"] == run_id, "Producer run ID differs")
+    require(type(run.get("id")) is int and run["id"] == run_id == producer_identity.RUN_ID,
+            "Producer run ID differs")
     require(run.get("status") == "completed" and run.get("conclusion") in ("success", "failure"),
             "Producer run must be completed with a recorded success or failure")
     require(run.get("repository", {}).get("full_name") == repository and
             run.get("head_repository", {}).get("full_name") == repository, "Producer repository differs")
     require(run.get("path") == ".github/workflows/ci.yml", "Unexpected producer workflow")
     sha = run.get("head_sha", "")
-    require(isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{40}", sha), "Invalid producer head SHA")
+    require(sha == producer_identity.EXECUTION_SHA, "Producer head SHA differs from the verified baseline")
     return sha
 
 
@@ -55,6 +57,9 @@ def select_artifact(metadata, run_id, head):
     origin = artifact.get("workflow_run", {})
     require(type(origin.get("id")) is int and origin["id"] == run_id and origin.get("head_sha") == head,
             "Producer artifact workflow run or head SHA differs")
+    require(run_id == producer_identity.RUN_ID and head == producer_identity.EXECUTION_SHA
+            and artifact["digest"] == "sha256:" + producer_identity.ARTIFACT_SHA256,
+            "Producer artifact differs from the verified baseline")
     return artifact
 
 
@@ -87,9 +92,10 @@ def regular(path, limit):
 def validate_report(evidence, head):
     report_path = regular(evidence / "historical-results/report.json", MAX_JSON_BYTES)
     report = json.loads(report_path.read_text(encoding="utf-8-sig"))
-    require(report.get("executionHeadSHA") == head and report.get("rid") == "osx-arm64" and
-            report.get("sourceSHA") == release.CANDIDATE_SHA and
-            report.get("candidateCoreVersion") == release.CANDIDATE_CORE and report.get("scope") == SCOPE,
+    require(report.get("executionHeadSHA") == head == producer_identity.EXECUTION_SHA
+            and report.get("rid") == "osx-arm64" and
+            report.get("sourceSHA") == producer_identity.PRODUCT_SHA and
+            report.get("candidateCoreVersion") == producer_identity.PRODUCT_CORE and report.get("scope") == SCOPE,
             "Producer execution, source, core or scope differs")
     require(report.get("packageVersion") == release.OLD_VERSION and
             report.get("originalVersions") == {role: release.OLD_VERSION for role in ("client", "unified")},
@@ -116,6 +122,7 @@ def prepare(repository, run_id, rid, output_directory):
     release.hosted(rid)  # Before filesystem/native/GitHub operations.
     require(repository == release.REPOSITORY, "Unexpected producer repository")
     require(isinstance(run_id, str) and re.fullmatch(r"[1-9][0-9]*", run_id), "Invalid producer run ID")
+    require(int(run_id) == producer_identity.RUN_ID, "Producer run ID differs from the verified baseline")
     output = Path(output_directory)
     runner = Path(os.environ["RUNNER_TEMP"]).resolve()
     require(output.is_absolute() and output == output.resolve() and output.is_relative_to(runner) and output != runner,
@@ -131,7 +138,8 @@ def prepare(repository, run_id, rid, output_directory):
     evidence = output / "evidence"
     provenance = {"passed": False, "repository": repository, "runId": int(run_id), "headSHA": head,
                   "runConclusion": run["conclusion"], "producerRid": "osx-arm64", "consumerRid": rid,
-                  "productSourceSHA": release.CANDIDATE_SHA, "artifact": {
+                  "productSourceSHA": producer_identity.PRODUCT_SHA,
+                  "productCoreVersion": producer_identity.PRODUCT_CORE, "artifact": {
                       "id": artifact["id"], "name": ARTIFACT, "sizeBytes": artifact["size_in_bytes"],
                       "digest": artifact["digest"]}}
     try:

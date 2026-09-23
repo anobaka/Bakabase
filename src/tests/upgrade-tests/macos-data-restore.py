@@ -21,6 +21,7 @@ retention = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(retention)
 release, lifecycle, base, require = retention.release, retention.lifecycle, retention.base, retention.require
 seed_module = lifecycle.sibling("macos-data-seed")
+producer_identity = lifecycle.sibling("macos-data-producer")
 ROLES = ("client", "unified")
 CONFIG_NAMES = {"unified": {"app.json", "acceptance-sentinel.txt"},
                 "client": {"app.json", "acceptance-sentinel.txt", "client/host.json", "client/connection.json"}}
@@ -93,11 +94,18 @@ def _producer(producer_dir):
             and manifest["rid"] == "osx-arm64" and type(manifest["runId"]) is int and manifest["runId"] > 0
             and re.fullmatch(r"[0-9a-f]{40}", manifest["headSHA"])
             and re.fullmatch(r"[0-9a-f]{64}", manifest["artifactSHA256"]), "Verified producer manifest is invalid")
+    require(manifest["runId"] == producer_identity.RUN_ID
+            and manifest["headSHA"] == producer_identity.EXECUTION_SHA
+            and manifest["artifactSHA256"] == producer_identity.ARTIFACT_SHA256,
+            "Producer manifest differs from the verified baseline")
     results = root / "historical-results"
     report_path = _hash(results / "report.json", manifest["reportSHA256"], 8 * 1024 * 1024)
     producer = _json(report_path)
     require(producer.get("rid") == "osx-arm64" and producer.get("scope") == retention.SCOPE
-            and producer.get("executionHeadSHA") == manifest["headSHA"], "Producer execution identity differs")
+            and producer.get("executionHeadSHA") == manifest["headSHA"]
+            and producer.get("sourceSHA") == producer_identity.PRODUCT_SHA
+            and producer.get("candidateCoreVersion") == producer_identity.PRODUCT_CORE,
+            "Producer execution or product identity differs")
     seed = copy.deepcopy(producer.get("macosDataSeed"))
     require(isinstance(seed, dict) and seed.get("passed") is True and seed.get("oldVersion") == release.OLD_VERSION
             and seed.get("oldSourceSHA") == release.RELEASE_SHA and isinstance(seed.get("baselineSemantics"), dict)
