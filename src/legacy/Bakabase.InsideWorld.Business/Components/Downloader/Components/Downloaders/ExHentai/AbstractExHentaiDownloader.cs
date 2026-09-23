@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
@@ -285,7 +286,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                     contentType = r.ContentType;
                                     break;
                                 }
-                                catch (Exception) when (!ct.IsCancellationRequested)
+                                catch (Exception e) when (!ct.IsCancellationRequested)
                                 {
                                     // A cancelled download must fall straight through instead of
                                     // burning ten more attempts that are all guaranteed to fail.
@@ -293,6 +294,17 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                     if (tryTimes >= maxTryTimes)
                                     {
                                         throw;
+                                    }
+
+                                    // A dropped connection or a TLS handshake cut short by a flaky image
+                                    // server usually needs a moment, not an instant re-dial: back to back,
+                                    // the ten attempts were all spent within the first seconds of a brief
+                                    // outage. Other failures keep retrying at the request pace as before.
+                                    if (TransientNetworkError.IsTransient(e, ct))
+                                    {
+                                        await Task.Delay(
+                                            TransientNetworkError.GetBackoffDelay(tryTimes - 1,
+                                                TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5)), ct);
                                     }
                                 }
                             }

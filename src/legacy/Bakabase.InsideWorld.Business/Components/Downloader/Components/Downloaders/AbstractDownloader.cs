@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
@@ -156,6 +157,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
         protected async Task OnCheckpointChangedInternal(string checkpoint)
         {
+            _latestCheckpoint = checkpoint;
             if (OnCheckpointChanged != null)
             {
                 await OnCheckpointChanged(checkpoint);
@@ -279,6 +281,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
             Message = null;
             Current = null;
+            _latestCheckpoint = null;
+            _transientRetries = 0;
             if (OnProgress != null)
             {
                 await OnProgress(0);
@@ -297,7 +301,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             {
                 try
                 {
-                    await StartCore(task, token);
+                    await RunWithTransientRetriesAsync(task, token);
                 }
                 catch (OperationCanceledException oce)
                 {
@@ -381,7 +385,119 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         }
 
         private string BuildFailureMessage(Exception e) =>
-            $"An error occurred during downloading files. You can use expected checkpoint to skip current file: {NextCheckpoint}\n{e.BuildFullInformationText()}";
+            (_transientRetries > 0
+                ? $"An error occurred during downloading files (automatic retries after network errors: {_transientRetries}). "
+                : "An error occurred during downloading files. ") +
+            $"You can use expected checkpoint to skip current file: {NextCheckpoint}\n{e.BuildFullInformationText()}";
+
+        /// <summary>
+        /// How long to wait before each automatic re-run of a task that a transient network failure
+        /// interrupted; the number of entries is the number of re-runs.
+        /// </summary>
+        /// <remarks>
+        /// Individual requests already retry briefly on their own. This covers what they cannot: an
+        /// outage that outlasts them, and every request that has no retry of its own (list pages,
+        /// torrent pages, API calls). Kept well inside the queue watchdog's stall threshold, and
+        /// short enough that a real outage still reaches Failed — and the slower task-level auto
+        /// retry — within a few minutes.
+        /// </remarks>
+        protected virtual IReadOnlyList<TimeSpan> TransientFailureRetryDelays { get; } =
+            [TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(90)];
+
+        /// <summary>
+        /// The wait before a re-run. A seam for tests; it must observe <paramref name="ct"/> so that
+        /// stopping a waiting task takes effect at once.
+        /// </summary>
+        protected virtual Task DelayBeforeRetryAsync(TimeSpan delay, CancellationToken ct) => Task.Delay(delay, ct);
+
+        private string? _latestCheckpoint;
+        private int _transientRetries;
+
+        /// <summary>
+        /// Runs <see cref="StartCore"/>, and runs it again after a transient network failure instead
+        /// of failing the task outright.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Before this, a single dropped connection anywhere in a download — one TLS handshake cut
+        /// short while fetching one image of a gallery — failed the whole task, and the only way back
+        /// was the task-level auto retry a minute later or the user pressing restart. A re-run is
+        /// cheap because every downloader resumes: finished files are skipped and list downloaders
+        /// continue from their checkpoint, which is carried forward from the failed run because the
+        /// <paramref name="task"/> snapshot still holds the one the run started with.
+        /// </para>
+        /// <para>
+        /// The task stays Downloading throughout, so stopping it works as usual (the wait observes
+        /// the token), <see cref="FailureTimes"/> — which drives the task-level retry schedule —
+        /// only counts a failure that survived every re-run, and the row shows what is happening
+        /// instead of a failure that is about to heal itself.
+        /// </para>
+        /// </remarks>
+        private async Task RunWithTransientRetriesAsync(DownloadTask task, CancellationToken token)
+        {
+            var delays = TransientFailureRetryDelays;
+            for (var retry = 0;; retry++)
+            {
+                TimeSpan delay;
+                // Each run gets its own token so that whatever a failed run left in flight — ExHentai
+                // gives up on a gallery while sibling image downloads are still running — is
+                // cancelled before the next run starts, instead of racing it.
+                using (var runCts = CancellationTokenSource.CreateLinkedTokenSource(token))
+                {
+                    try
+                    {
+                        await StartCore(task, runCts.Token);
+                        return;
+                    }
+                    catch (Exception e) when (retry < delays.Count && IsRetryableFailure(e, token))
+                    {
+                        await runCts.CancelAsync();
+                        delay = delays[retry];
+                        _transientRetries = retry + 1;
+                        Logger.LogWarning(e,
+                            "A transient network error interrupted download task {TaskId}; running it again in {Delay} ({Retry}/{MaxRetries})",
+                            task.Id, delay, retry + 1, delays.Count);
+                    }
+                }
+
+                // The estimate would only grow while nothing moves, then start from a stale baseline.
+                _timeEstimator.Reset();
+                // Also a sign of life for the queue watchdog, which would otherwise read a long wait
+                // as a stalled download.
+                Current = GetRequiredService<IDownloaderLocalizer>()
+                    .TransientNetworkErrorRetrying((int) Math.Ceiling(delay.TotalSeconds), retry + 1, delays.Count);
+                await OnCurrentChangedInternal();
+
+                try
+                {
+                    await DelayBeforeRetryAsync(delay, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // A stop can complete — clearing Current on its way to Stopped — between the
+                    // failure and the retry step above being written. Nothing else clears Current on
+                    // a stopped downloader, so the idle row would keep promising a retry.
+                    Current = null;
+                    await OnCurrentChangedInternal();
+                    throw;
+                }
+
+                Current = null;
+                await OnCurrentChangedInternal();
+                // Do not start another run for a task stopped while that step was being pushed.
+                token.ThrowIfCancellationRequested();
+                if (_latestCheckpoint != null)
+                {
+                    task.Checkpoint = _latestCheckpoint;
+                }
+            }
+        }
+
+        private bool IsRetryableFailure(Exception e, CancellationToken token) =>
+            // A stop that raced the failure wins: nothing should start again behind the user's back.
+            Status == DownloaderStatus.Downloading &&
+            e is not DownloadDeferredException &&
+            TransientNetworkError.IsTransient(e, token);
 
         protected abstract Task StartCore(DownloadTask task, CancellationToken ct);
 

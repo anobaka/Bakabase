@@ -27,6 +27,7 @@ import { MdPlayCircle, MdAccessTime, MdDelete } from "react-icons/md";
 
 import DownloadTaskDetailModal from "./components/TaskDetailModal";
 import BatchEditModal from "./components/BatchEditModal";
+import TaskErrorMessage from "./components/TaskErrorMessage";
 import TaskRow, { DOWNLOAD_TASK_ITEM_HEIGHT } from "./components/TaskRow";
 import DownloadTaskFilters, { type DownloadTaskFilter } from "./components/DownloadTaskFilters";
 
@@ -548,7 +549,8 @@ const DownloaderPage = () => {
       defaultVisible: true,
       size: "xl",
       title: translate<string>("common.label.error"),
-      children: <pre>{task.message}</pre>,
+      footer: { actions: ["cancel"] },
+      children: <TaskErrorMessage message={task.message ?? ""} />,
     });
   }, []);
 

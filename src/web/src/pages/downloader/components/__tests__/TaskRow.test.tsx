@@ -104,13 +104,30 @@ afterEach(async () => {
 });
 
 describe("download task row interaction", () => {
-  it("shows the server estimate alongside download progress", async () => {
+  it("shows the server estimate beside the progress percentage, not among the dates", async () => {
+    const estimate =
+      "downloader.label.estimatedRemaining 1datetime.duration.minute 5datetime.duration.second";
+
     await show({ status: DownloadTaskStatus.Downloading, estimatedRemainingSeconds: 65 });
 
-    expect(container).toHaveTextContent(
-      "downloader.label.estimatedRemaining 1datetime.duration.minute 5datetime.duration.second",
-    );
+    const readouts = document.querySelectorAll<HTMLElement>(`[title="${estimate}"]`);
+
+    expect(readouts).toHaveLength(1);
+    expect(readouts[0]).toHaveTextContent(estimate);
+    // Same line as the percentage, which stays last so it keeps its column in every row.
+    expect(readouts[0].parentElement!.lastElementChild).toHaveTextContent("42%");
+    // And nowhere in the dates line it used to open.
+    expect(
+      document.querySelector('[aria-label^="downloader.label.createdAt"]')!.parentElement,
+    ).not.toHaveTextContent("downloader.label.estimatedRemaining");
     expect(document.querySelector('[role="progressbar"]')).toHaveAttribute("aria-valuenow", "42.3");
+  });
+
+  it("does not leave a separator behind when there is no estimate", async () => {
+    await show({ status: DownloadTaskStatus.Downloading, estimatedRemainingSeconds: undefined });
+
+    expect(container).not.toHaveTextContent("downloader.label.estimatedRemaining");
+    expect(container).not.toHaveTextContent("·");
   });
 
   it("keeps row click modifiers and the context menu callbacks", async () => {
@@ -256,11 +273,57 @@ describe("download task row interaction", () => {
       metadata: { torrentFoundAt: "2026-09-14T01:01:00Z" },
     });
     expect(document.querySelector('[role="progressbar"]')).toHaveAttribute("aria-valuenow", "100");
-    expect(container).toHaveTextContent("downloader.label.torrentAvailable");
+    expect(element("downloader.label.torrentAvailable")).toHaveAttribute("role", "img");
     expect(container).not.toHaveTextContent("downloader.results.contentsReady");
     const schedule = document.querySelector('[aria-label^="downloader.label.createdAt"]')!;
 
     expect(schedule).toHaveAttribute("title", expect.stringContaining(task.createdAt));
     expect(schedule).toHaveAttribute("title", expect.stringContaining(String(nextStartDt)));
+  });
+
+  it.each([
+    [
+      { torrentFoundAt: "2026-09-14T01:01:00Z" },
+      "downloader.label.torrentAvailable",
+      "text-success",
+    ],
+    [
+      { noTorrentCheckedAt: "2026-09-14T01:02:00Z" },
+      "downloader.label.torrentUnavailable",
+      "text-warning",
+    ],
+    [{ preferTorrent: false }, "downloader.label.torrentDisabled", "text-default-400"],
+  ] as const)(
+    "shows the torrent state %o as an icon right after the task name",
+    async (metadata, label, color) => {
+      await show({ metadata });
+      const indicator = element(label);
+
+      expect(indicator).toHaveAttribute("role", "img");
+      expect(indicator).toHaveClass(color);
+      expect(indicator.querySelector("svg")).toBeInTheDocument();
+      // An icon, not a chip: the label is for assistive technology, not rendered text.
+      expect(container).not.toHaveTextContent(label);
+      expect(indicator.previousElementSibling).toHaveAttribute("title", task.name);
+    },
+  );
+
+  it("keeps the no-torrent explanation in the icon's tooltip", async () => {
+    await show({ metadata: { noTorrentCheckedAt: "2026-09-14T01:02:00Z" } });
+    const indicator = element("downloader.label.torrentUnavailable");
+
+    // jsdom cannot emulate react-aria hover; focus opens the same tooltip, and also proves the icon
+    // is reachable without a mouse.
+    await act(async () => indicator.focus());
+
+    expect(document.querySelector('[role="tooltip"]')).toHaveTextContent(
+      "downloader.tip.noTorrentCheckedAt",
+    );
+  });
+
+  it("shows nothing about torrents when the task has never learned anything", async () => {
+    await show({ metadata: { preferTorrent: true } });
+
+    expect(document.querySelector('[role="img"]')).not.toBeInTheDocument();
   });
 });

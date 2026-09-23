@@ -161,5 +161,6 @@
   "downloader.filter.status.Complete": "Completed",
   "downloader.filter.status.Failed": "Failed",
   "downloader.filter.status.Disabled": "Disabled",
-  "downloader.action.viewError": "View error"
+  "downloader.action.viewError": "View error",
+  "downloader.tip.clickToCopyError": "Click to copy the full error"
 }

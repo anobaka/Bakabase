@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
@@ -103,12 +104,23 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 data = await Client.GetBytes(pageUrl);
                                 break;
                             }
-                            catch (Exception)
+                            catch (Exception e) when (!ct.IsCancellationRequested)
                             {
+                                // A stopped download falls straight through instead of spending the
+                                // remaining attempts on requests nobody wants any more.
                                 tryTimes++;
                                 if (tryTimes >= maxTryTimes)
                                 {
                                     throw;
+                                }
+
+                                // Give a dropped connection a moment instead of re-dialling at once,
+                                // which spent all ten attempts within the first seconds of an outage.
+                                if (TransientNetworkError.IsTransient(e, ct))
+                                {
+                                    await Task.Delay(
+                                        TransientNetworkError.GetBackoffDelay(tryTimes - 1,
+                                            TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5)), ct);
                                 }
                             }
                         }

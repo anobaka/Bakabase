@@ -54,67 +54,53 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
             return ExHentaiConnectionStatus.UnknownError;
         }
 
+        /// <summary>
+        /// Attempts per page load, the first included. Only transient network failures are retried.
+        /// </summary>
+        private const int MaxHtmlAttempts = 3;
+
         private async Task<string> GetHtmlAsync(HttpClient client, string url, CancellationToken ct = default)
         {
-            // Honour cancellation while queueing too: this gate is held for the whole request (and
-            // the handler paces requests a second apart), so a stopped download used to stay parked
-            // here with nothing able to interrupt it.
-            await _lock.WaitAsync(ct);
-            var tryTimes = 0;
-            @try:
-            try
+            for (var attempt = 1;; attempt++)
             {
-                tryTimes++;
-                //_logger.LogInformation($"Requesting: {url}");
-                var html = await client.GetStringAsync(url, ct);
-                ThrowIfBanned(html);
-                return html;
-            }
-            catch (TaskCanceledException tce)
-            {
-                if (tce.InnerException is TimeoutException)
+                // Honour cancellation while queueing too: this gate is held for the whole request (and
+                // the handler paces requests a second apart), so a stopped download used to stay parked
+                // here with nothing able to interrupt it.
+                await _lock.WaitAsync(ct);
+                try
                 {
-                    if (tryTimes < 3)
-                    {
-                        Logger.LogWarning($"Timeout, retrying...({tryTimes})");
-                        goto @try;
-                    }
-                    else
-                    {
-                        Logger.LogError("Reach max retry limits: 3, throwing");
-                    }
+                    var html = await client.GetStringAsync(url, ct);
+                    ThrowIfBanned(html);
+                    return html;
+                }
+                catch (Exception e) when (attempt < MaxHtmlAttempts && TransientNetworkError.IsTransient(e, ct))
+                {
+                    // Used to be a `goto` back into the try, which left the try statement and so ran
+                    // the finally below on every retry: the permit was released once per attempt but
+                    // taken only once, so the retry that was meant to absorb a dropped connection
+                    // ended in a SemaphoreFullException instead (or, with another caller waiting,
+                    // let two requests through a gate meant for one). Each attempt now takes and
+                    // returns its own permit. It also only matched timeouts and IOExceptions whose
+                    // message happened to contain "EOF"; a reset connection or a failed DNS lookup
+                    // failed outright.
+                    Logger.LogWarning(e, "Transient network error requesting {Url}, retrying ({Attempt}/{MaxAttempts})",
+                        url, attempt + 1, MaxHtmlAttempts);
+                }
+                finally
+                {
+                    // Was guarded by "if (_lock.CurrentCount == 0)". CurrentCount is a racy observation of
+                    // a semaphore this method does not exclusively own, so it could read non-zero and skip
+                    // the release of a permit this call had definitely taken — wedging every later
+                    // ExHentai request behind a gate nobody holds. The permit was acquired just above the
+                    // try, so releasing it here unconditionally is exactly right.
+                    _lock.Release();
                 }
 
-                throw;
-            }
-            catch (HttpRequestException hre)
-            {
-                if (hre.InnerException is IOException ioe)
-                {
-                    if (ioe.Message.Contains("EOF"))
-                    {
-                        if (tryTimes < 3)
-                        {
-                            Logger.LogWarning($"{ioe.Message}, retrying...({tryTimes})");
-                            goto @try;
-                        }
-                        else
-                        {
-                            Logger.LogError("Reach max retry limits: 3, throwing");
-                        }
-                    }
-                }
-
-                throw;
-            }
-            finally
-            {
-                // Was guarded by "if (_lock.CurrentCount == 0)". CurrentCount is a racy observation of
-                // a semaphore this method does not exclusively own, so it could read non-zero and skip
-                // the release of a permit this call had definitely taken — wedging every later
-                // ExHentai request behind a gate nobody holds. The permit was acquired above the try,
-                // so releasing it here unconditionally is exactly right.
-                _lock.Release();
+                // Back off with the gate released: it serializes every ExHentai page load in the app, so
+                // waiting while holding it would stall enhancers, subscriptions and other downloads too.
+                await Task.Delay(
+                    TransientNetworkError.GetBackoffDelay(attempt - 1, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10)),
+                    ct);
             }
         }
 
