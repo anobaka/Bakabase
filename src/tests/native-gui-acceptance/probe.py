@@ -44,6 +44,42 @@ AX_CHILDREN_EVIDENCE = {"explicit-array", "static-text-unsupported", "no-value-c
 AX_COUNT_KINDS = {"number", "decimal-string", "rejected-string", "null", "undefined", "boolean", "other"}
 AX_VISIBILITY = {"window-hidden", "zero-size", "outside-window", "no-hit", "owned-hit-test", "other-hit",
                  "other-window", "unverified-hit", "not-observed"}
+PID_STATUSES = {"not-attempted", "pid-read-failed", "owned-edge-changed", "pid-changed", "observed",
+                "budget-exhausted", "diagnostic-unavailable"}
+
+
+def pid_diagnostic(raw):
+    """Pointer relations are boolean evidence only, never an ownership grant."""
+    if not isinstance(raw, dict):
+        return None
+    def integer(value, low, high):
+        return value if type(value) is int and low <= value <= high else None
+    def path(value):
+        return value if isinstance(value, list) and 1 <= len(value) <= 42 and all(
+            type(item) is int and 0 <= item < MAX_NODES for item in value) else None
+    output = {"expectedPid": integer(raw.get("expectedPid"), 1, 2**31-1),
+              "actualPid": integer(raw.get("actualPid"), 1, 2**31-1),
+              "observedEpochMs": integer(raw.get("observedEpochMs"), 0, 2**53-1),
+              "origin": raw.get("origin") if raw.get("origin") in {"owned-child-edge", "other"} else None,
+              "status": raw.get("status") if raw.get("status") in PID_STATUSES else "diagnostic-unavailable",
+              "path": path(raw.get("path")), "parentPath": path(raw.get("parentPath")),
+              "windowIndex": integer(raw.get("windowIndex"), 0, 7),
+              "childIndex": integer(raw.get("childIndex"), 0, MAX_NODES-1),
+              "parentChildCount": integer(raw.get("parentChildCount"), 0, MAX_NODES)}
+    for key in ("edgeStillMatches", "windowStillMatches", "parentMatches", "windowMatches", "actualPidStable"):
+        output[key] = raw.get(key) if type(raw.get(key)) is bool else None
+    for key in ("parentAXError", "windowAXError"):
+        output[key] = integer(raw.get(key), -(2**31), 2**31-1)
+    return output
+
+
+def collect_pid_identity(app, diagnostic, timeout):
+    # Separate short-lived helper bounds libproc calls and has its own hosted
+    # guard. This is evidence collection only; no process is authorized by it.
+    spec = importlib.util.spec_from_file_location("native_gui_pid_identity", HERE / "macos_pid_identity.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.capture(app, diagnostic, timeout)
 
 
 def ax_diagnostic(raw):
@@ -221,6 +257,7 @@ def summarize(snapshot):
             "reason": None if capable else "NativeWebContentNotAccessible",
             "nativeErrorStage": snapshot.get("errorStage") if snapshot.get("errorStage") in STAGES else None,
             "diagnostic": ax_diagnostic(snapshot.get("diagnostic")),
+            "pidMismatch": pid_diagnostic(snapshot.get("pidMismatch")),
             "scope": "read-only-native-accessibility-capability"}
 
 
@@ -236,6 +273,7 @@ def sanitize(value, secrets=()):
     output = {key: value.get(key) for key in ("backend", "readOnly", "enabled", "truncated", "elapsedMs")}
     output["errorStage"] = value.get("errorStage") if value.get("errorStage") in STAGES else None
     output["diagnostic"] = ax_diagnostic(value.get("diagnostic"))
+    output["pidMismatch"] = pid_diagnostic(value.get("pidMismatch"))
     identity = value.get("process", {})
     output["process"] = {"pid": identity.get("pid"), "started": string(identity.get("started"))}
     output["windows"] = []
@@ -272,16 +310,28 @@ def capture(app, pid, destination, require_complete=False):
               "scope": "read-only-native-accessibility-capability"}
     report["attempts"] = []
     deadline, identity = time.monotonic() + READY_SECONDS, None
+    pid_identity_attempted = False
     try:
         for attempt in range(1, 11):
             remaining = deadline-time.monotonic()
             require(remaining > 7, "NativeUiReadinessTimedOut")
-            snapshot = native_snapshot(app, pid, timeout=min(TIMEOUT, remaining-6))
+            read_timeout = min(TIMEOUT, remaining-6)
+            read_deadline = time.monotonic() + read_timeout
+            snapshot = native_snapshot(app, pid, timeout=read_timeout)
             current = snapshot.get("process")
             if identity is None:
                 identity = current
             require(current == identity, "ProductProcessChangedDuringReadiness")
             summary = summarize(snapshot)
+            mismatch = summary["pidMismatch"]
+            if (not pid_identity_attempted and app["rid"].startswith("osx-") and
+                    snapshot.get("backend") == "macos-direct-ax" and snapshot.get("truncated") is True and
+                    summary["diagnostic"] and summary["diagnostic"]["code"] == "DirectAXProcessMismatch" and
+                    mismatch and mismatch["origin"] == "owned-child-edge" and mismatch["expectedPid"] == pid and
+                    mismatch["actualPid"] is not None and mismatch["actualPid"] != pid):
+                pid_identity_attempted = True
+                report["pidIdentityDiagnostic"] = collect_pid_identity(
+                    app, mismatch, max(0, min(2, deadline-time.monotonic(), read_deadline-time.monotonic())))
             report.update(summary)
             report["attempts"].append({"attempt": attempt, **summary})
             tree = json.dumps(sanitize(snapshot), indent=2)

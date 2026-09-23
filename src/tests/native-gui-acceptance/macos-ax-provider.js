@@ -7,7 +7,7 @@ function ownedAX(input, budgetMs) {
   const editable=['AXTextField','AXTextArea','AXComboBox'];
   const allowed=['AXRole','AXSubrole','AXTitle','AXDescription','AXIdentifier','AXEnabled',
     'AXHidden','AXMinimized','AXChildren','AXWindows','AXValue','AXPosition','AXSize','AXParent'];
-  let stage='initialize', operation='initialize', reads=0;
+  let stage='initialize', operation='initialize', reads=0, pidMismatch=null;
   function fail(code, attribute=null, axError=null, count=null) {
     throw {safe:true,code:code,stage:stage,operation:operation,attribute:attribute,axError:axError,
       countKind:count?count.kind:null,countValue:count?count.value:null};
@@ -140,11 +140,59 @@ function ownedAX(input, budgetMs) {
     }
     fail('DirectAXTreeBudgetExceeded');
   }
-  function verifyPid(application) {
+  function validPid(value) {return Number.isInteger(value)&&value>0&&value<2147483648;}
+  function mismatchStructure(ref,actual,context) {
+    // Diagnostic only: never authorizes foreign metadata or a workflow action.
+    // The only foreign attributes read are two nonrecursive pointer relations.
+    const detail={expectedPid:input.pid,actualPid:validPid(actual)?actual:null,
+      observedEpochMs:Date.now(),origin:context?'owned-child-edge':'other',
+      path:context?context.path:null,windowIndex:context?context.path[0]:null,
+      parentPath:context?context.path.slice(0,-1):null,childIndex:context?context.path[context.path.length-1]:null,
+      parentChildCount:context?context.childCount:null,edgeStillMatches:null,windowStillMatches:null,
+      parentMatches:null,windowMatches:null,parentAXError:null,windowAXError:null,
+      actualPidStable:null,status:'not-attempted'};
+    if(!context||!validPid(actual)) return detail;
+    const priorStage=stage,priorOperation=operation;
+    try {
+      const parent=context.ancestors[context.ancestors.length-1];
+      // Revalidate the owned side before reading the foreign pointers. Neither
+      // an arbitrary hit-test result nor an unrelated application enters here.
+      verifyPid(context.application);verifyPid(context.window);verifyPid(parent);
+      const windows=array(read(context.application,'AXWindows'),8);
+      detail.windowStillMatches=!!windows[context.path[0]]&&same(windows[context.path[0]],context.window);
+      const siblings=array(read(parent,'AXChildren'),input.maxNodes);
+      const sibling=siblings[detail.childIndex];
+      detail.edgeStillMatches=!!sibling&&same(sibling,ref);
+      if(!detail.windowStillMatches||!detail.edgeStillMatches) {detail.status='owned-edge-changed';return detail;}
+      const before=Ref();check();
+      if(Number($.AXUIElementGetPid(ref,before))!==0||Number(before[0])!==actual) {detail.status='pid-changed';return detail;}
+      for(const [attribute,target,matchKey,errorKey] of [
+        ['AXParent',parent,'parentMatches','parentAXError'],['AXWindow',context.window,'windowMatches','windowAXError']]) {
+        check();operation='diagnostic-structure';
+        const value=Ref(),error=Number($.AXUIElementCopyAttributeValue(ref,$(attribute),value));
+        detail[errorKey]=error;
+        if(error===0) detail[matchKey]=same(typed(value[0],$.AXUIElementGetTypeID),target);
+      }
+      const after=Ref();check();
+      detail.actualPidStable=Number($.AXUIElementGetPid(ref,after))===0&&Number(after[0])===actual;
+      detail.status=detail.actualPidStable?'observed':'pid-changed';
+    } catch(error) {
+      detail.status=error&&error.safe&&error.code==='DirectAXTreeDeadline'?'budget-exhausted':'diagnostic-unavailable';
+    } finally {stage=priorStage;operation=priorOperation;}
+    return detail;
+  }
+  function verifyPid(application,context=null) {
     check();
     operation='read-pid';
     const pid=Ref(),error=Number($.AXUIElementGetPid(application,pid));
-    if(error!==0||Number(pid[0])!==input.pid) fail('DirectAXProcessMismatch',null,error);
+    if(error!==0||Number(pid[0])!==input.pid) {
+      // Reserve the record before any diagnostic revalidation can fail again.
+      if(pidMismatch===null) {
+        pidMismatch={expectedPid:input.pid,actualPid:null,origin:'other',status:'pid-read-failed'};
+        if(error===0) pidMismatch=mismatchStructure(application,Number(pid[0]),context);
+      }
+      fail('DirectAXProcessMismatch',null,error);
+    }
   }
   function open() {
     stage='preflight';
@@ -178,11 +226,12 @@ function ownedAX(input, budgetMs) {
         if(windowBounds.width<=0||windowBounds.height<=0) fail('DirectAXGeometryUnavailable');
         const record={index:i,name:string(read(window,'AXTitle',true)),visible:windowVisible,nodes:nodes};
         snapshot.windows.push(record);
-        function walk(value,path,depth,inWeb,ancestors,editableAncestor) {
+        function walk(value,path,depth,inWeb,ancestors,editableAncestor,parentChildCount=null) {
           check();
           if(count>=input.maxNodes||depth>input.maxDepth) fail('DirectAXTreeBudgetExceeded');
           const ref=element(value);
-          verifyPid(ref); // Before any role, text or other node metadata read.
+          verifyPid(ref,ancestors.length?{application:application,window:window,path:path,
+            ancestors:ancestors,childCount:parentChildCount}:null); // Before foreign role/text/metadata.
           if(ancestors.some(parent=>same(parent,ref))) fail('DirectAXTreeCycle');
           count++;
           const role=string(read(ref,'AXRole'));
@@ -206,7 +255,7 @@ function ownedAX(input, budgetMs) {
           node.childrenEvidence=childResult.evidence;node.childCount=nested.length;
           node.childrenCountKind=childResult.countKind||null;
           for(let child=0;child<nested.length;child++) walk(nested[child],path.concat(child),depth+1,inWeb,ancestors.concat([ref]),
-            editableAncestor||editable.includes(role));
+            editableAncestor||editable.includes(role),nested.length);
         }
         stage='read-tree';
         walk(window,[i],0,false,[],false);
@@ -219,6 +268,7 @@ function ownedAX(input, budgetMs) {
         countKind:error.countKind,countValue:error.countValue}:
         {code:'DirectAXTreeUnavailable',operation:operation,attribute:null,axError:null};
     }
+    snapshot.pidMismatch=pidMismatch;
     snapshot.elapsedMs=Date.now()-began;
     return {snapshot:snapshot,application:application,windows:windowRefs,elements:elements};
   }

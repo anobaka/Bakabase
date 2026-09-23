@@ -38,6 +38,22 @@ names, text, identifiers and actions are not read or retained and cannot become
 action candidates. This also prevents an editable value exposed as a child
 `AXStaticText` from entering the saved evidence.
 
+A PID mismatch still fails the complete-tree gate. For the first mismatch
+obtained directly from a verified parent's `AXChildren`, diagnostics retain the
+expected/actual PIDs and numeric tree path. After rechecking the owned parent
+edge and application's window reference, the observer reads only the foreign
+node's `AXParent` and `AXWindow` references and records equality booleans and AX
+error numbers. It does not read that node's role, text, values or actions, follow
+its pointers, or treat matching references as permission to continue.
+
+One hosted-only helper may then sample exactly that PID twice using public
+`libproc` calls, recording executable path, UID, PPID and microsecond start time
+only if stable. Its two-second cap also fits within the original read/readiness
+deadlines; it never enumerates processes or reads argv, environment, UI or logs.
+The report labels these facts as diagnostics with `ownershipEstablished=false`.
+They do not establish that a WebKit process belongs to the product or make a
+partial tree pass.
+
 A child does not inherit visibility from its window. Named web controls and
 static text require finite geometry and an application-scoped, read-only hit
 test within their verified window. The hit must be the target or an ancestor

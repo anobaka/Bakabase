@@ -146,6 +146,7 @@ jobs:
           python src/tests/native-gui-acceptance/test_flow.py
           python src/tests/native-gui-acceptance/test_direct_ax.py
           python src/tests/native-gui-acceptance/test_direct_ax_tree.py
+          python src/tests/native-gui-acceptance/test_pid_identity.py
       - name: Verify candidate package provenance
         id: inputs
         env:

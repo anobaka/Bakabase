@@ -77,7 +77,8 @@ Object.assign(native,{
  AXUIElementSetMessagingTimeout:(ref,time)=>{if(time!==0.5)throw Error('timeout changed');
   if(options.strictTypedArgument&&ref instanceof Ref)throw Error('Generic pointer is not a typed AX argument');
   if(options.genericFailure==='element-timeout'&&value(ref)===window)throw Error('SECRET-RAW-ERROR');return 0},
- AXUIElementGetPid:(ref,out)=>{pidReads++;out[0]=options.pidChanged&&pidReads>=3?43:value(ref).pid;return 0},
+ AXUIElementGetPid:(ref,out)=>{pidReads++;out[0]=options.pidChanged&&pidReads>=3?43:value(ref).pid;
+  if(options.foreignPidReadError&&value(ref).id==='foreign-static')return -25202;return 0},
  AXUIElementCopyAttributeValue:(ref,key,out)=>{
   const n=value(ref),name=key.value,k=n.id+':'+name;reads.push(k);seen[k]=(seen[k]||0)+1;
   if(options.genericFailure===name)throw Error('SECRET-RAW-ERROR');
@@ -91,6 +92,15 @@ Object.assign(native,{
    out[0]=new Ref(box([node('replacement','AXButton',{AXTitle:'Close',AXIdentifier:'close',AXEnabled:true}),text,inputNode,secure]));return 0;
   }
   if(options.hiddenAfterRead&&n===app&&name==='AXHidden'&&seen[k]>=2){out[0]=new Ref(box(true));return 0;}
+  if(options.foreignEdgeChanged&&n===window&&name==='AXChildren'&&seen[k]>=2){out[0]=new Ref(box([web]));return 0;}
+  if(options.foreignWindowChanged&&n===app&&name==='AXWindows'&&seen[k]>=2){out[0]=new Ref(box([]));return 0;}
+  if(n.id==='foreign-static'&&(name==='AXParent'||name==='AXWindow')) {
+   if(options.foreignStructureError)return options.foreignStructureError;
+   if(options.foreignStructureType){out[0]=new Ref(box('FOREIGN-POINTER-CONTENT'));return 0;}
+   if(options.foreignStructureSlow)clock+=24000;
+   if(options.foreignPidChanged&&name==='AXWindow')n.pid=901;
+   out[0]=new Ref(options.foreignStructureMismatch?app:window);return 0;
+  }
   if(name==='AXParent'){if(!n.parent)return -25205;out[0]=new Ref(n.parent);return 0;}
   if(name==='AXPosition'||name==='AXSize') {
    if(options.unknownGeometry&&n===close)return -25205;
@@ -103,7 +113,7 @@ Object.assign(native,{
   if(Array.isArray(v))v=v.map(item=>item.kind===99?item:box(item));
   out[0]=new Ref(box(v));return 0;
  },
- AXUIElementCopyActionNames:(ref,out)=>{out[0]=new Ref(box((value(ref)===secure?[]:['AXPress']).map(box)));return 0},
+ AXUIElementCopyActionNames:(ref,out)=>{calls.push(value(ref).id+':actions');out[0]=new Ref(box((value(ref)===secure?[]:['AXPress']).map(box)));return 0},
  AXUIElementGetAttributeValueCount:(ref,attribute,out)=>{
   if(attribute.value!=='AXChildren')throw Error('Unexpected count attribute');
   calls.push(value(ref).id+':children-count');
@@ -201,8 +211,54 @@ class ProviderFixtures(unittest.TestCase):
         result = self.run_fixture(foreignNonWeb=True)
         self.assertTrue(result["output"]["truncated"])
         self.assertEqual("DirectAXProcessMismatch", result["output"]["diagnostic"]["code"])
-        self.assertFalse(any(read.startswith("foreign-static:") for read in result["reads"]))
+        self.assertEqual(["foreign-static:AXParent", "foreign-static:AXWindow"],
+                         [read for read in result["reads"] if read.startswith("foreign-static:")])
         self.assertNotIn("OTHER-PROCESS-CONTENT", json.dumps(result["output"]))
+        self.assertNotIn("foreign-static:actions", result["calls"])
+        diagnostic = probe.sanitize(result["output"])["pidMismatch"]
+        self.assertEqual("observed", diagnostic["status"])
+        self.assertEqual((42, 900, [0, 1], [0], 1, 2), tuple(diagnostic[k] for k in
+                         ("expectedPid", "actualPid", "path", "parentPath", "childIndex", "parentChildCount")))
+        for key in ("parentMatches", "windowMatches", "actualPidStable", "edgeStillMatches", "windowStillMatches"):
+            self.assertIs(True, diagnostic[key])
+        action = self.run_fixture(foreignNonWeb=True, action=True)
+        self.assertFalse(action["output"]["performed"])
+        self.assertEqual(0, action["presses"])
+
+    def test_foreign_relations_errors_change_and_budget_never_allow_metadata_or_actions(self):
+        for options, status in (({"foreignStructureMismatch": True}, "observed"),
+                                ({"foreignStructureError": -25204}, "observed"),
+                                ({"foreignStructureType": True}, "diagnostic-unavailable"),
+                                ({"foreignPidChanged": True}, "pid-changed"),
+                                ({"foreignStructureSlow": True}, "budget-exhausted")):
+            with self.subTest(options=options):
+                result = self.run_fixture(foreignNonWeb=True, **options)
+                self.assertTrue(result["output"]["truncated"])
+                self.assertEqual("DirectAXProcessMismatch", result["output"]["diagnostic"]["code"])
+                self.assertEqual(status, result["output"]["pidMismatch"]["status"])
+                self.assertTrue(all(read in ("foreign-static:AXParent", "foreign-static:AXWindow")
+                                    for read in result["reads"] if read.startswith("foreign-static:")))
+                self.assertEqual(0, result["presses"])
+                self.assertNotIn("FOREIGN-POINTER-CONTENT", json.dumps(result["output"]))
+                if options.get("foreignStructureMismatch"):
+                    self.assertIs(False, result["output"]["pidMismatch"]["parentMatches"])
+                if options.get("foreignStructureError"):
+                    self.assertEqual(-25204, result["output"]["pidMismatch"]["windowAXError"])
+                    self.assertIsNone(result["output"]["pidMismatch"]["windowMatches"])
+
+    def test_changed_owned_edge_window_or_failed_pid_read_never_inspects_foreign_pointers(self):
+        for option in ("foreignEdgeChanged", "foreignWindowChanged", "foreignPidReadError"):
+            with self.subTest(option=option):
+                result = self.run_fixture(foreignNonWeb=True, **{option: True})
+                self.assertTrue(result["output"]["truncated"])
+                self.assertEqual("DirectAXProcessMismatch", result["output"]["diagnostic"]["code"])
+                self.assertFalse(any(read.startswith("foreign-static:") for read in result["reads"]))
+
+    def test_foreign_hit_without_owned_child_edge_has_no_structural_probe(self):
+        result = self.run_fixture(foreignHit=True)
+        self.assertTrue(result["output"]["truncated"])
+        self.assertEqual("other", result["output"]["pidMismatch"]["origin"])
+        self.assertFalse(any(read.startswith("foreign:") for read in result["reads"]))
 
     def test_unsupported_container_children_cannot_hide_duplicate_and_still_press(self):
         result = self.run_fixture(hiddenContainer=True)
