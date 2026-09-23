@@ -16,9 +16,10 @@ import {
   AiOutlineStop,
   AiOutlineWarning,
 } from "react-icons/ai";
+import { TbMagnet, TbMagnetOff } from "react-icons/tb";
 
 import { DownloadTaskTypeIconMap } from "./TaskDetailModal/models";
-import EstimatedRemainingTime from "./EstimatedRemainingTime";
+import { useEstimatedRemainingLabel } from "./EstimatedRemainingTime";
 
 import { DownloadTaskAction, DownloadTaskStatus } from "@/sdk/constants";
 import {
@@ -94,6 +95,7 @@ const TaskRow = memo(function TaskRow({
     task.failureTimes > 0
       ? t<string>("downloader.action.showError", { count: task.failureTimes })
       : t<string>("downloader.action.viewError");
+  const estimatedRemaining = useEstimatedRemainingLabel(task);
 
   return (
     <div
@@ -128,8 +130,11 @@ const TaskRow = memo(function TaskRow({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold leading-5 text-foreground" title={name}>
-            {name}
+          <div className="flex min-w-0 items-center gap-1.5">
+            <div className="truncate text-sm font-semibold leading-5 text-foreground" title={name}>
+              {name}
+            </div>
+            <TorrentIndicator formatDateTime={formatDateTime} task={task} />
           </div>
           <div className="truncate text-xs leading-4 text-default-400" title={task.key}>
             {task.name ? task.key : `#${task.id}`}
@@ -168,6 +173,19 @@ const TaskRow = memo(function TaskRow({
               <span className="min-w-0 flex-1 truncate text-default-500" title={task.current}>
                 {task.current || t<string>("common.label.progress")}
               </span>
+            )}
+            {/* The estimate belongs to the progress readout, so it sits right beside the percentage
+                rather than among the row's dates. The percentage stays last so it keeps the same
+                column in every row whether or not an estimate is showing. */}
+            {estimatedRemaining && (
+              <>
+                <span className="shrink-0 tabular-nums text-default-500" title={estimatedRemaining}>
+                  {estimatedRemaining}
+                </span>
+                <span aria-hidden className="shrink-0 text-default-300">
+                  ·
+                </span>
+              </>
             )}
             <span className="shrink-0 tabular-nums text-default-500">{Math.round(progress)}%</span>
           </div>
@@ -292,7 +310,6 @@ const TaskRow = memo(function TaskRow({
         </div>
       </div>
       <div className="flex h-6 min-w-0 shrink-0 items-center gap-2">
-        <EstimatedRemainingTime task={task} />
         <span
           aria-label={[createdAt, nextStart].filter(Boolean).join(" · ")}
           className="min-w-0 flex-1 truncate text-xs text-default-400"
@@ -300,22 +317,25 @@ const TaskRow = memo(function TaskRow({
         >
           {nextStart || createdAt}
         </span>
-        <TorrentChip formatDateTime={formatDateTime} task={task} />
       </div>
     </div>
   );
 });
 
 /**
- * What running the task has taught us about its torrent, if anything.
+ * What running the task has taught us about its torrent, if anything, as a small icon right after
+ * the task name.
  *
  * The app already knew all of this — whether the task prefers torrents, and whether the last probe
  * found one — but only ever used it internally to order the queue, so from the list it was
  * impossible to tell a task that will download a small .torrent from one that is about to fetch a
- * few hundred images. Absent when there is nothing to say (a source without torrents, or a task
- * that has never run).
+ * few hundred images. These used to be text chips at the end of the row; most galleries have no
+ * torrent, so a column of "No torrent" chips became the loudest thing in the list. An icon next to
+ * the name keeps the fact visible where the eye already is, and the tooltip still carries the
+ * detail. Absent when there is nothing to say (a source without torrents, or a task that has never
+ * run).
  */
-const TorrentChip = ({
+const TorrentIndicator = ({
   task,
   formatDateTime,
 }: {
@@ -329,47 +349,53 @@ const TorrentChip = ({
     return null;
   }
 
+  let indicator: { Icon: typeof TbMagnet; className: string; label: string; tip: string };
+
   if (metadata.torrentFoundAt) {
-    return (
-      <Tooltip
-        content={t<string>("downloader.tip.torrentFoundAt", {
-          time: formatDateTime(metadata.torrentFoundAt),
-        })}
+    indicator = {
+      Icon: TbMagnet,
+      className: "text-success",
+      label: t<string>("downloader.label.torrentAvailable"),
+      tip: t<string>("downloader.tip.torrentFoundAt", {
+        time: formatDateTime(metadata.torrentFoundAt),
+      }),
+    };
+  } else if (metadata.noTorrentCheckedAt) {
+    indicator = {
+      Icon: TbMagnetOff,
+      className: "text-warning",
+      label: t<string>("downloader.label.torrentUnavailable"),
+      tip: t<string>("downloader.tip.noTorrentCheckedAt", {
+        time: formatDateTime(metadata.noTorrentCheckedAt),
+      }),
+    };
+  } else if (metadata.preferTorrent === false) {
+    // Only worth saying when it is a deliberate opt-out; "prefers torrents but has never been
+    // probed" is the default and adds nothing to the row. Muted, unlike the probed "no torrent",
+    // because nothing was found out — the user asked for images.
+    indicator = {
+      Icon: TbMagnetOff,
+      className: "text-default-400",
+      label: t<string>("downloader.label.torrentDisabled"),
+      tip: t<string>("downloader.tip.torrentDisabled"),
+    };
+  } else {
+    return null;
+  }
+
+  const { Icon, className, label, tip } = indicator;
+
+  return (
+    <Tooltip content={tip}>
+      <span
+        aria-label={label}
+        className={`inline-flex shrink-0 items-center ${className}`}
+        role="img"
       >
-        <Chip color="success" size="sm" variant="flat">
-          {t<string>("downloader.label.torrentAvailable")}
-        </Chip>
-      </Tooltip>
-    );
-  }
-
-  if (metadata.noTorrentCheckedAt) {
-    return (
-      <Tooltip
-        content={t<string>("downloader.tip.noTorrentCheckedAt", {
-          time: formatDateTime(metadata.noTorrentCheckedAt),
-        })}
-      >
-        <Chip color="warning" size="sm" variant="flat">
-          {t<string>("downloader.label.torrentUnavailable")}
-        </Chip>
-      </Tooltip>
-    );
-  }
-
-  // Only worth saying when it is a deliberate opt-out; "prefers torrents but has never been probed"
-  // is the default and adds nothing to the row.
-  if (metadata.preferTorrent === false) {
-    return (
-      <Tooltip content={t<string>("downloader.tip.torrentDisabled")}>
-        <Chip color="default" size="sm" variant="flat">
-          {t<string>("downloader.label.torrentDisabled")}
-        </Chip>
-      </Tooltip>
-    );
-  }
-
-  return null;
+        <Icon aria-hidden className="text-base" />
+      </span>
+    </Tooltip>
+  );
 };
 
 TaskRow.displayName = "TaskRow";

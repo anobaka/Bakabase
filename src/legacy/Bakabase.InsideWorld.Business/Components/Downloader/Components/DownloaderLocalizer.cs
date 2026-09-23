@@ -67,5 +67,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         {
             return this[nameof(DownloadPathNotSet)];
         }
+
+        public string TransientNetworkErrorRetrying(int delaySeconds, int retry, int maxRetries) =>
+            this[nameof(TransientNetworkErrorRetrying), delaySeconds, retry, maxRetries];
     }
 }

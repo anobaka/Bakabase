@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
@@ -76,19 +78,55 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 return true; // No validation URL provided, assume valid
             }
 
-            try
+            for (var attempt = 1;; attempt++)
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, CookieValidationUrl);
-                request.Headers.Add("Cookie", cookie);
+                // This check runs inside the queue's scheduling pass, so only a failure that came back
+                // quickly (a reset, a cut-off handshake, a 503) earns another attempt. One that took
+                // long — an HttpClient timeout, or an unreachable host running out the OS connect
+                // timeout — would only make every pass wait that long again.
+                var startedAt = Stopwatch.GetTimestamp();
+                try
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Get, CookieValidationUrl);
+                    request.Headers.Add("Cookie", cookie);
 
-                using var response = await httpClient.SendAsync(request);
-                return await IsCookieValidResponse(response);
-            }
-            catch
-            {
-                return false;
+                    using var response = await httpClient.SendAsync(request);
+                    if (attempt >= MaxCookieValidationAttempts ||
+                        !TransientNetworkError.IsTransientStatusCode(response.StatusCode) ||
+                        Stopwatch.GetElapsedTime(startedAt) > CookieValidationFastFailure)
+                    {
+                        return await IsCookieValidResponse(response);
+                    }
+                }
+                catch (Exception e) when (attempt < MaxCookieValidationAttempts &&
+                                          e is not OperationCanceledException &&
+                                          Stopwatch.GetElapsedTime(startedAt) <= CookieValidationFastFailure &&
+                                          TransientNetworkError.IsTransient(e))
+                {
+                    // Retried below.
+                }
+                catch
+                {
+                    return false;
+                }
+
+                // Every failure here reads as "invalid cookie" and parks the task in Failed before it
+                // has downloaded anything, so a momentary blip — a dropped connection, a 503 — must not
+                // get that far.
+                await Task.Delay(TransientNetworkError.GetBackoffDelay(attempt - 1, TimeSpan.FromSeconds(1),
+                    TimeSpan.FromSeconds(5)));
             }
         }
+
+        /// <summary>
+        /// Attempts at the cookie check, the first included. Only transient network failures are retried.
+        /// </summary>
+        private const int MaxCookieValidationAttempts = 3;
+
+        /// <summary>
+        /// A cookie check that failed within this long failed fast enough to be worth repeating.
+        /// </summary>
+        protected virtual TimeSpan CookieValidationFastFailure => TimeSpan.FromSeconds(5);
 
         /// <summary>
         /// Determine if the HTTP response indicates a valid cookie

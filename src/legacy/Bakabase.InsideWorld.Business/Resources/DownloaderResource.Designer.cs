@@ -1193,5 +1193,14 @@ namespace Bakabase.InsideWorld.Business.Resources {
                 return ResourceManager.GetString("PixivNamingFields.UserName", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Network error, retrying in {0}s ({1}/{2}).
+        /// </summary>
+        internal static string TransientNetworkErrorRetrying {
+            get {
+                return ResourceManager.GetString("TransientNetworkErrorRetrying", resourceCulture);
+            }
+        }
     }
 }

@@ -54,6 +54,7 @@
   "common.action.clear": "Clear",
   "common.action.copy": "Copy",
   "common.message.copiedToClipboard": "Copied to clipboard",
+  "common.message.copyFailed": "Copy failed",
   "common.action.duplicate": "Duplicate",
   "common.action.enable": "Enable",
   "common.action.disable": "Disable",

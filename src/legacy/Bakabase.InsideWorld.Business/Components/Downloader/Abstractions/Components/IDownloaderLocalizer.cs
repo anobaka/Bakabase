@@ -34,5 +34,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Compo
         string LuxIsNotReady();
         string InvalidCookie();
         string DownloadPathNotSet();
+
+        /// <summary>
+        /// The step shown while a task waits to re-run after a transient network failure.
+        /// </summary>
+        string TransientNetworkErrorRetrying(int delaySeconds, int retry, int maxRetries);
     }
 }

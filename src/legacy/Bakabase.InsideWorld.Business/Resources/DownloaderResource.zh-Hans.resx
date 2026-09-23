@@ -609,4 +609,8 @@
     <value>下载路径未设置</value>
     <comment>下载路径未配置时的错误信息</comment>
   </data>
+  <data name="TransientNetworkErrorRetrying" xml:space="preserve">
+    <value>网络异常，{0} 秒后自动重试（第 {1}/{2} 次）</value>
+    <comment>任务因临时网络错误等待重新运行时显示的当前步骤。{0}：等待秒数，{1}：本次重试序号，{2}：重试总次数</comment>
+  </data>
 </root>

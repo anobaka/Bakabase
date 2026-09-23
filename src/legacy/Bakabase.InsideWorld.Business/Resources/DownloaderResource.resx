@@ -609,4 +609,8 @@
     <value>Download path not set</value>
     <comment>Error message when download path is not configured</comment>
   </data>
+  <data name="TransientNetworkErrorRetrying" xml:space="preserve">
+    <value>Network error, retrying in {0}s ({1}/{2})</value>
+    <comment>Shown as the task's current step while it waits to re-run after a transient network failure. {0}: seconds to wait, {1}: this retry, {2}: total retries</comment>
+  </data>
 </root>
