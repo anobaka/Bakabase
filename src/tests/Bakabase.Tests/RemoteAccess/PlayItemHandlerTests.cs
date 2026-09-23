@@ -1,3 +1,4 @@
+using Bakabase.Modules.Player.Components;
 using System;
 using System.Collections.Generic;
 using System.IO;

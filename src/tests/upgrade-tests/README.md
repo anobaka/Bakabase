@@ -108,3 +108,24 @@ and configure each script to point the app at it.
 
 On failure each script copies the install dir + AppData dir to
 `./src/tests/upgrade-tests/failures/<scenario>-<timestamp>/` for inspection.
+
+## Release contract and package checks
+
+These accompany the two desktop products (the unified `Bakabase` and the thin
+`Bakabase.Client`), which must never share an identity, data directory or
+update feed.
+
+| Script | Runs | Checks |
+|---|---|---|
+| [`../../scripts/check-release-contract.py`](../../scripts/check-release-contract.py) | every build (`_build.yml`) and PR CI | Package IDs, bundle IDs, AppData variables, single-instance names and feeds stay distinct; a publish directory carries exactly its role's assemblies (the server no Client/Shell, the client no web). |
+| [`test_release_contract.py`](test_release_contract.py) | PR CI | The checker rejects each guarded mistake. |
+| [`run-compatibility.py`](run-compatibility.py) | `CI` dispatch `suite=platforms` | Identity, AppData, relocation and legacy-client migration-export contracts on each desktop OS. |
+| [`run-package-acceptance.py`](run-package-acceptance.py) | `CI` dispatch `suite=packages` | Installs the real candidate packages side by side and verifies their identities, data directories and coexistence. |
+
+```bash
+python src/scripts/check-release-contract.py
+python src/scripts/check-release-contract.py --role server --publish-dir /path/to/service-publish --require-web
+python src/scripts/check-release-contract.py --role unified --publish-dir /path/to/desktop-publish --require-web
+python src/scripts/check-release-contract.py --role client --publish-dir /path/to/client-publish
+python src/tests/upgrade-tests/run-compatibility.py --results-directory /tmp/bakabase-compat
+```

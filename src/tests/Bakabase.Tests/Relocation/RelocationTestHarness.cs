@@ -63,7 +63,7 @@ public sealed class RelocationTestHarness : IDisposable
     {
         var full = Path.Combine(CurrentDataDir, relPath);
         Directory.CreateDirectory(Path.GetDirectoryName(full)!);
-        using (var conn = new SqliteConnection($"Data Source={full}"))
+        using (var conn = new SqliteConnection($"Data Source={full};Pooling=False"))
         {
             conn.Open();
             using var cmd = conn.CreateCommand();

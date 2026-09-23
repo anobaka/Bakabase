@@ -84,8 +84,8 @@ public class AppDataProfileTests
         // a user who relocated their library would find the client had moved too.
         var env = new Dictionary<string, string?>
         {
-            ["BAKABASE_DATA_DIR"] = "/custom/all-in-one",
-            ["BAKABASE_CLIENT_DATA_DIR"] = "/custom/client"
+            ["BAKABASE_DATA_DIR"] = Path.GetFullPath("/custom/all-in-one"),
+            ["BAKABASE_CLIENT_DATA_DIR"] = Path.GetFullPath("/custom/client")
         };
 
         Assert.AreEqual(Path.GetFullPath("/custom/all-in-one"),
@@ -97,7 +97,7 @@ public class AppDataProfileTests
     [TestMethod]
     public void The_client_ignores_the_all_in_ones_override()
     {
-        var env = new Dictionary<string, string?> {["BAKABASE_DATA_DIR"] = "/custom/all-in-one"};
+        var env = new Dictionary<string, string?> {["BAKABASE_DATA_DIR"] = Path.GetFullPath("/custom/all-in-one")};
 
         Assert.AreEqual(Resolve(AppDataPathProfile.Client, OSPlatform.Linux),
             Resolve(AppDataPathProfile.Client, OSPlatform.Linux, env));

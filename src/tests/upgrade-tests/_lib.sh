@@ -39,8 +39,11 @@ publish_app() {
   rm -rf "$out"
   mkdir -p "$out"
 
+  # Linux ships the headless Service, not an additional Linux desktop product.
+  local project="$REPO_ROOT/src/apps/Bakabase.App/Bakabase.App.csproj"
+  if [ "$mode" = "DOCKER" ]; then project="$REPO_ROOT/src/apps/Bakabase.Service/Bakabase.Service.csproj"; fi
   # Bakabase reads its assembly version via Nerdbank.GitVersioning. We override at publish-time.
-  dotnet publish "$REPO_ROOT/src/apps/Bakabase.App/Bakabase.App.csproj" \
+  dotnet publish "$project" \
     -p:RuntimeMode="$mode" \
     -p:Version="$version" \
     -p:AssemblyVersion="$(echo "$version" | cut -d- -f1)" \
@@ -48,9 +51,8 @@ publish_app() {
     --self-contained -r "$rid" \
     -o "$out" >&2
 
-  # The actual release pipeline drops the frontend bundle into publish/web; we don't need
-  # the frontend for these filesystem-level tests, but the AppService bootstrap looks for it.
-  # Fake an empty wwwroot so startup doesn't try to download.
+  # This fixture is never started. The stub is not a real frontend and must not be
+  # used as evidence that a shippable web bundle or application startup was checked.
   mkdir -p "$out/web"
   echo "<!doctype html><title>upgrade-test</title>" > "$out/web/index.html"
 }
