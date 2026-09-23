@@ -2011,6 +2011,8 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   type: number;
   /** @format double */
   progress: number;
+  /** @format double */
+  estimatedRemainingSeconds?: number;
   /** @format date-time */
   downloadStatusUpdateDt: string;
   /** @format int64 */

@@ -7,6 +7,7 @@ export type DownloadTask = {
   thirdPartyId: ThirdPartyId;
   type: number;
   progress: number;
+  estimatedRemainingSeconds?: number | null;
   downloadStatusUpdateDt: Date;
   interval?: number;
   startPage?: number;

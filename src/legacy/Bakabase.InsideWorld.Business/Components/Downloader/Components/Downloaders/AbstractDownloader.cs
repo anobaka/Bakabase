@@ -48,6 +48,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         public int TaskType => Convert.ToInt32(EnumTaskType);
         public abstract TEnumTaskType EnumTaskType { get; }
         public string? Current { get; protected set; }
+        private readonly DownloadTimeEstimator _timeEstimator = new();
+        public double? EstimatedRemainingSeconds => Status == DownloaderStatus.Downloading
+            ? _timeEstimator.EstimateRemainingSeconds()
+            : null;
         public string? Message { get; protected set; }
         private DownloaderStatus _status = DownloaderStatus.JustCreated;
         protected readonly ILogger Logger;
@@ -161,6 +165,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         protected async Task OnProgressInternal(decimal progress)
         {
             Touch();
+            if (Status == DownloaderStatus.Downloading)
+            {
+                _timeEstimator.Report(progress);
+            }
             if (OnProgress != null)
             {
                 await OnProgress(progress);
@@ -195,6 +203,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             get => _status;
             protected set
             {
+                if (_status != value)
+                {
+                    _timeEstimator.Reset();
+                }
                 _status = value;
                 LastActivityAt = DateTime.Now;
 

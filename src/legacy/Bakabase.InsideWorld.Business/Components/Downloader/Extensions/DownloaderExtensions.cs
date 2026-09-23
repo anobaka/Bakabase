@@ -174,6 +174,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 Name = task.Name,
                 Checkpoint = task.Checkpoint,
                 Progress = task.Progress,
+                EstimatedRemainingSeconds = status == DownloadTaskStatus.Downloading
+                    ? downloader?.EstimatedRemainingSeconds
+                    : null,
                 ThirdPartyId = task.ThirdPartyId,
                 Type = task.Type,
                 Status = status,

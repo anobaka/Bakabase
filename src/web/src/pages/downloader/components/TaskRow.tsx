@@ -18,6 +18,7 @@ import {
 } from "react-icons/ai";
 
 import { DownloadTaskTypeIconMap } from "./TaskDetailModal/models";
+import EstimatedRemainingTime from "./EstimatedRemainingTime";
 
 import { DownloadTaskAction, DownloadTaskStatus } from "@/sdk/constants";
 import {
@@ -291,6 +292,7 @@ const TaskRow = memo(function TaskRow({
         </div>
       </div>
       <div className="flex h-6 min-w-0 shrink-0 items-center gap-2">
+        <EstimatedRemainingTime task={task} />
         <span
           aria-label={[createdAt, nextStart].filter(Boolean).join(" · ")}
           className="min-w-0 flex-1 truncate text-xs text-default-400"

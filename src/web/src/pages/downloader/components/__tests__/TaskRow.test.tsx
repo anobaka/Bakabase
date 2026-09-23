@@ -104,6 +104,15 @@ afterEach(async () => {
 });
 
 describe("download task row interaction", () => {
+  it("shows the server estimate alongside download progress", async () => {
+    await show({ status: DownloadTaskStatus.Downloading, estimatedRemainingSeconds: 65 });
+
+    expect(container).toHaveTextContent(
+      "downloader.label.estimatedRemaining 1datetime.duration.minute 5datetime.duration.second",
+    );
+    expect(document.querySelector('[role="progressbar"]')).toHaveAttribute("aria-valuenow", "42.3");
+  });
+
   it("keeps row click modifiers and the context menu callbacks", async () => {
     const props = await show();
     const title = document.querySelector<HTMLElement>(`[title="${task.name}"]`)!;

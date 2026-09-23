@@ -33,6 +33,7 @@
   "downloader.empty.noTasks": "No tasks found",
   "downloader.label.nextStartTime": "Next start time",
   "downloader.label.createdAt": "Created at",
+  "downloader.label.estimatedRemaining": "Estimated remaining",
   "downloader.confirm.deleteTask": "Are you sure to delete it?",
   "downloader.modal.configurations": "Configurations",
   "downloader.modal.creatingTask": "Creating download task",

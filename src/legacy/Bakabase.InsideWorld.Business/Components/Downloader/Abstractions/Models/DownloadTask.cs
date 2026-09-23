@@ -20,6 +20,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         public ThirdPartyId ThirdPartyId { get; set; }
         public int Type { get; set; }
         public decimal Progress { get; set; }
+        /// <summary>
+        /// Estimated seconds remaining in the current run; null when not downloading or when
+        /// there is not enough recent progress to estimate. Transient, never persisted.
+        /// </summary>
+        public double? EstimatedRemainingSeconds { get; set; }
         public DateTime DownloadStatusUpdateDt { get; set; }
         public long? Interval { get; set; }
         public int? StartPage { get; set; }

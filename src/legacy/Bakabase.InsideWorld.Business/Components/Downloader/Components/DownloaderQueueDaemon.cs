@@ -19,8 +19,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
     /// safety net but was never scheduled: nothing in the app registers Quartz, so it has always been
     /// dead code.)
     ///
-    /// This daemon is that safety net, and nothing more. It never starts work the scheduler would not
-    /// have started on its own; it just makes sure somebody asks.
+    /// This daemon is that safety net. It never starts work the scheduler would not have started on
+    /// its own. It also refreshes live estimates while a download is waiting for its next progress tick.
     /// </summary>
     public class DownloaderQueueDaemon(IServiceProvider serviceProvider, ILogger<DownloaderQueueDaemon> logger)
         : BackgroundService
@@ -99,6 +99,18 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             var service = scope.ServiceProvider.GetRequiredService<DownloadTaskService>();
             await service.TryStartAllTasks(DownloadTaskStartMode.AutoStart, null,
                 DownloadTaskActionOnConflict.Ignore);
+
+            // An estimate changes even while progress stands still, and eventually expires. Use
+            // the existing incremental snapshot push so clients do not keep a stale ETA forever.
+            // Only live tasks need refreshing; this does not write progress to the database.
+            foreach (var (taskId, downloader) in manager.Downloaders)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (downloader.Status == DownloaderStatus.Downloading)
+                {
+                    await service.OnCurrentChanged(taskId);
+                }
+            }
 
             if (released.Count > 0)
             {

@@ -9253,6 +9253,8 @@ export interface components {
             type: number;
             /** Format: double */
             progress: number;
+            /** Format: double */
+            estimatedRemainingSeconds?: number;
             /** Format: date-time */
             downloadStatusUpdateDt: string;
             /** Format: int64 */
