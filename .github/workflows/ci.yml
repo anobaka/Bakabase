@@ -38,10 +38,15 @@ on:
         type: choice
         options: [empty-library, capability, federated]
         default: empty-library
+      native_gui_platform:
+        description: Native GUI platforms to verify (all retains the full three-platform coverage)
+        type: choice
+        options: [all, windows, macos]
+        default: all
 
 # A newer push to the same branch / PR cancels older in-progress runs.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.suite || 'full' }}-${{ inputs.installed_mode || 'updates' }}-${{ inputs.acceptance_area || 'performance' }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.suite || 'full' }}-${{ inputs.installed_mode || 'updates' }}-${{ inputs.acceptance_area || 'performance' }}-${{ inputs.native_gui_platform || 'all' }}
   cancel-in-progress: true
 
 permissions:
@@ -58,6 +63,7 @@ jobs:
       area: ${{ inputs.acceptance_area }}
       package_run_id: ${{ inputs.package_run_id }}
       native_gui_flow: ${{ inputs.native_gui_flow || 'empty-library' }}
+      native_gui_platform: ${{ inputs.native_gui_platform || 'all' }}
 
   installed-lifecycle:
     if: github.event_name == 'workflow_dispatch' && inputs.suite == 'installed'

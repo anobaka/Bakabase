@@ -13,6 +13,10 @@ on:
         required: false
         type: string
         default: empty-library
+      native_gui_platform:
+        required: false
+        type: string
+        default: all
 
 permissions:
   contents: read
@@ -129,10 +133,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - {os: windows-latest, rid: win-x64}
-          - {os: macos-15-intel, rid: osx-x64}
-          - {os: macos-15, rid: osx-arm64}
+        # Only these fixed subsets are selectable. Empty/unknown reusable-workflow
+        # input falls back to all three platforms, so a typo cannot omit coverage.
+        include: ${{ fromJSON(inputs.native_gui_platform == 'windows' && '[{"os":"windows-latest","rid":"win-x64"}]' || inputs.native_gui_platform == 'macos' && '[{"os":"macos-15-intel","rid":"osx-x64"},{"os":"macos-15","rid":"osx-arm64"}]' || '[{"os":"windows-latest","rid":"win-x64"},{"os":"macos-15-intel","rid":"osx-x64"},{"os":"macos-15","rid":"osx-arm64"}]') }}
     defaults:
       run:
         shell: bash
