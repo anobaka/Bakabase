@@ -38,10 +38,14 @@ const node=(id,role,attrs={})=>({kind:99,id,role,attrs,children:[],pid:42});
 const close=node('close','AXButton',{AXTitle:'Close',AXIdentifier:'close',AXEnabled:true});
 const text=node('text','AXStaticText',{AXValue:'No matching resources'});
 const inputNode=node('input','AXTextField',{AXTitle:'Address',AXEnabled:true,AXValue:'DO-NOT-READ'});
+if(options.secureInput)inputNode.attrs.AXSubrole='AXSecureTextField';
 const secure=node('secure','AXTextField',{AXSubrole:'AXSecureTextField',AXEnabled:true,AXValue:'SECRET'});
 const web=node('web','AXWebArea',{AXTitle:'Bakabase'});web.children=[close,text,inputNode,secure];
 const window=node('window','AXWindow',{AXTitle:'Bakabase',AXMinimized:!!options.minimized});window.children=[web];
 const app=node('app','AXApplication',{AXHidden:!!options.hidden});app.windows=[window];
+const region=node('region','AXGroup',{AXTitle:'Connection settings'});
+if(options.regionGroup)web.children.push(region);
+if(options.duplicateInput)web.children.push(node('duplicate-input','AXTextField',{AXTitle:'Address',AXEnabled:true}));
 if(options.editableDescendants) {
  if(options.comboBox)inputNode.role='AXComboBox';
  const group=node('editable-group','AXGroup');
@@ -57,7 +61,7 @@ if(options.deep){let parent=web;for(let i=0;i<42;i++){const n=node('depth'+i,'AX
 if(options.cycle)web.children=[window];
 if(options.many)web.children=Array.from({length:1001},(_,i)=>node('n'+i,'AXGroup'));
 if(options.foreignPid)app.pid=43;
-const reads=[],calls=[],seen={};let presses=0,clock=0,pidReads=0,hitTarget=null;
+const reads=[],calls=[],seen={};let presses=0,sets=0,scrolls=0,submittedValueMatched=false,clock=0,pidReads=0,hitTarget=null;
 function parents(n,parent=null,visited=new Set()) {
  if(visited.has(n))return;visited.add(n);n.parent=parent;
  for(const c of n.windows||n.children)parents(c,n,visited);
@@ -82,6 +86,7 @@ Object.assign(native,{
  AXUIElementCopyAttributeValue:(ref,key,out)=>{
   const n=value(ref),name=key.value,k=n.id+':'+name;reads.push(k);seen[k]=(seen[k]||0)+1;
   if(options.genericFailure===name)throw Error('SECRET-RAW-ERROR');
+  if(options.secureAfterRead&&n===inputNode&&name==='AXSubrole'&&seen[k]>=2){out[0]=new Ref(box('AXSecureTextField'));return 0;}
   if(name==='AXValue'&&n.role!=='AXStaticText')throw Error('Editable value requested');
   if(options.missingChildren&&n===web&&name==='AXChildren')return -25204;
   if(name==='AXChildren'&&((options.noChildrenValue&&n===web)||(options.emptyGroup&&n.id==='empty-group')))return -25212;
@@ -104,7 +109,7 @@ Object.assign(native,{
   if(name==='AXParent'){if(!n.parent)return -25205;out[0]=new Ref(n.parent);return 0;}
   if(name==='AXPosition'||name==='AXSize') {
    if(options.unknownGeometry&&n===close)return -25205;
-   const position=n===window?[0,0]:(options.offscreen&&n===close)||(options.offscreenText&&n===text)?[2000,20]:[10,20];
+   const position=n===window?[0,0]:(options.offscreen&&n===close)||(options.offscreenText&&n===text)||(options.offscreenInput&&n===inputNode)||(options.offscreenRegion&&n===region)?[2000,20]:[10,20];
    const size=n===window?[1000,800]:options.zeroSize&&n===close?[0,20]:[40,20];
    hitTarget=n;out[0]=new Ref({kind:98,type:name==='AXPosition'?1:2,value:name==='AXPosition'?position:size});return 0;
   }
@@ -113,7 +118,12 @@ Object.assign(native,{
   if(Array.isArray(v))v=v.map(item=>item.kind===99?item:box(item));
   out[0]=new Ref(box(v));return 0;
  },
- AXUIElementCopyActionNames:(ref,out)=>{calls.push(value(ref).id+':actions');out[0]=new Ref(box((value(ref)===secure?[]:['AXPress']).map(box)));return 0},
+ AXUIElementCopyActionNames:(ref,out)=>{calls.push(value(ref).id+':actions');const names=value(ref)===secure?[]:['AXPress'];
+  if(options.scrollSupported)names.push('AXScrollToVisible');out[0]=new Ref(box(names.map(box)));return 0},
+ AXUIElementIsAttributeSettable:(ref,attribute,out)=>{calls.push(value(ref).id+':settable');if(attribute.value!=='AXValue')throw Error('Wrong attribute');
+  if(options.settableError)return -25204;out[0]=!options.readOnlyInput;return 0},
+ AXUIElementSetAttributeValue:(ref,attribute,inputValue)=>{if(value(ref)!==inputNode||attribute.value!=='AXValue')throw Error('Wrong set');
+  if(options.setError)return -25204;sets++;submittedValueMatched=inputValue.value==='TEST-VALUE-PRIVATE';return 0},
  AXUIElementGetAttributeValueCount:(ref,attribute,out)=>{
   if(attribute.value!=='AXChildren')throw Error('Unexpected count attribute');
   calls.push(value(ref).id+':children-count');
@@ -135,17 +145,23 @@ Object.assign(native,{
   if(options.foreignHit){hit=node('foreign','AXButton');hit.pid=900;}
   out[0]=new Ref(hit);return 0;
  },
- AXUIElementPerformAction:(ref,action)=>{if(value(ref)!==close||action.value!=='AXPress')throw Error('wrong action');
+ AXUIElementPerformAction:(ref,action)=>{if(action.value==='AXScrollToVisible'){
+   if(!options.scrollSupported||![close,region,inputNode].includes(value(ref)))throw Error('Wrong scroll');
+   if(options.scrollError)return -25204;scrolls++;return 0;
+  }if(value(ref)!==close||action.value!=='AXPress')throw Error('wrong action');
   if(options.pressError)return -25204;presses++;return 0}
 });
 const input={pid:42,maxNodes:1000,maxDepth:40,readBudgetMs:24000,operation:options.operation||'press',
  selector:{path:[0,0,0],role:'AXButton',name:'Close',identifier:'close'}};
+if(options.target==='input')input.selector={path:[0,0,2],role:'AXTextField',name:'Address',identifier:''};
+if(options.target==='region')input.selector={path:[0,0,4],role:'AXGroup',name:'Connection settings',identifier:''};
+if(options.inputValue!==undefined)input.value=options.inputValue;
 const output=JSON.parse(vm.runInNewContext('const input='+JSON.stringify(input)+';\n'+source,{
  $:native,Ref,Date:{now:()=>{clock+=options.slow?1000:1;return clock}},
  ObjC:{import:name=>{if(name!=='ApplicationServices')throw Error();},bindFunction:(name)=>{if(!['calloc','free'].includes(name))throw Error();},
   castRefToObject:ref=>value(ref),castObjectToRef:v=>new Ref(v),unwrap:v=>v.value}
 }));
-process.stdout.write(JSON.stringify({output,presses,reads,calls}));
+process.stdout.write(JSON.stringify({output,presses,sets,scrolls,submittedValueMatched,reads,calls}));
 '''
 
 

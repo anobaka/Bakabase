@@ -253,7 +253,7 @@ console.log(JSON.stringify(output));
     @unittest.skipUnless(os.name == "nt", "Static PowerShell parser is available on the Windows runner")
     def test_windows_script_parses_without_executing_or_reading_ui(self):
         script = "$tokens=$null; $errors=$null; [void][System.Management.Automation.Language.Parser]::ParseInput([Console]::In.ReadToEnd(),[ref]$tokens,[ref]$errors); if($errors.Count){exit 1}"
-        for name in ("windows-snapshot.ps1", "windows-action.ps1"):
+        for name in ("windows-snapshot.ps1", "windows-action.ps1", "windows-tree.ps1"):
             with self.subTest(name=name):
                 subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
                                input=(HERE / name).read_text(), text=True, check=True, capture_output=True, timeout=10)

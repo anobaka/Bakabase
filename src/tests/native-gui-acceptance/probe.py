@@ -32,14 +32,15 @@ AX_CODES = {"DirectAXTreeDeadline", "DirectAXReadCountExceeded", "DirectAXValueT
             "DirectAXWindowRoleMismatch", "DirectAXTreeBudgetExceeded", "DirectAXTreeCycle",
             "DirectAXSecureSubtreeUnavailable", "DirectAXTreeUnavailable", "DirectAXControlChanged",
             "DirectAXControlInvisible", "DirectAXControlOutsideWeb", "DirectAXActionTreeIncomplete", "DirectAXControlAmbiguous",
-            "DirectAXGeometryUnavailable", "DirectAXChildrenCountMismatch"}
+            "DirectAXGeometryUnavailable", "DirectAXChildrenCountMismatch", "DirectAXEditableDescendant",
+            "DirectAXOperationUnsupported"}
 AX_ATTRIBUTES = {"AXRole", "AXSubrole", "AXTitle", "AXDescription", "AXIdentifier", "AXEnabled",
                  "AXHidden", "AXMinimized", "AXChildren", "AXWindows", "AXValue", "AXPosition", "AXSize", "AXParent"}
 AX_OPERATIONS = {"initialize", "array-type", "array-count", "array-item", "element-type", "element-timeout",
                  "read-pid", "read-role", "read-subrole", "read-title", "read-description", "read-identifier",
                  "read-enabled", "read-hidden", "read-minimized", "read-children", "read-windows", "read-static-text",
                  "read-position", "read-size", "read-parent", "read-actions", "read-children-count",
-                 "geometry-decode", "hit-test", "press"}
+                 "geometry-decode", "hit-test", "press", "read-value-settable", "set-value", "scroll-to-visible"}
 AX_CHILDREN_EVIDENCE = {"explicit-array", "static-text-unsupported", "no-value-count-zero"}
 AX_COUNT_KINDS = {"number", "decimal-string", "rejected-string", "null", "undefined", "boolean", "other"}
 AX_VISIBILITY = {"window-hidden", "zero-size", "outside-window", "no-hit", "owned-hit-test", "other-hit",
@@ -290,6 +291,8 @@ def sanitize(value, secrets=()):
                 "visible": node.get("visible") if type(node.get("visible")) is bool else None,
                 "visibilityEvidence": node.get("visibilityEvidence") if node.get("visibilityEvidence") in AX_VISIBILITY else None,
                 "editableAncestor": node.get("editableAncestor") is True,
+                "valueSettable": node.get("valueSettable") if type(node.get("valueSettable")) is bool else None,
+                "scrollToVisible": node.get("scrollToVisible") is True,
                 "childrenEvidence": node.get("childrenEvidence") if node.get("childrenEvidence") in AX_CHILDREN_EVIDENCE else None,
                 "childrenCountKind": node.get("childrenCountKind") if node.get("childrenCountKind") in AX_COUNT_KINDS else None,
                 "childCount": node.get("childCount") if type(node.get("childCount")) is int and 0 <= node["childCount"] <= MAX_NODES else None,

@@ -5,6 +5,7 @@ function ownedAX(input, budgetMs) {
   const began=Date.now(), limit=Math.min(24000,budgetMs);
   const interactive=['AXButton','AXLink','AXMenuItem','AXCheckBox','AXRadioButton','AXTextField','AXTextArea','AXPopUpButton'];
   const editable=['AXTextField','AXTextArea','AXComboBox'];
+  const semantic=['AXGroup','AXHeading','AXScrollArea'];
   const allowed=['AXRole','AXSubrole','AXTitle','AXDescription','AXIdentifier','AXEnabled',
     'AXHidden','AXMinimized','AXChildren','AXWindows','AXValue','AXPosition','AXSize','AXParent'];
   let stage='initialize', operation='initialize', reads=0, pidMismatch=null;
@@ -99,6 +100,14 @@ function ownedAX(input, budgetMs) {
     const password=['AXTextField','AXTextArea'].includes(role)&&string(read(ref,'AXSubrole',true))==='AXSecureTextField';
     return {password:password,name:password?'':string(read(ref,'AXTitle',true))||string(read(ref,'AXDescription',true)),
       identifier:password?'':string(read(ref,'AXIdentifier',true)),enabled:boolean(read(ref,'AXEnabled',true))===true};
+  }
+  function settable(ref) {
+    check();operation='read-value-settable';
+    const value=Ref(),error=Number($.AXUIElementIsAttributeSettable(ref,$('AXValue'),value));
+    if(error===-25205) return false;
+    if(error!==0) fail('DirectAXCallFailed','AXValue',error);
+    if(![true,false,0,1].includes(value[0])) fail('DirectAXValueTypeMismatch','AXValue');
+    return value[0]===true||value[0]===1;
   }
   function visible(application,window) {
     return boolean(read(application,'AXHidden'))===false&&boolean(read(window,'AXMinimized'))===false;
@@ -236,17 +245,20 @@ function ownedAX(input, budgetMs) {
           count++;
           const role=string(read(ref,'AXRole'));
           if(!role) fail('DirectAXValueTypeMismatch');
-          const control=interactive.includes(role)&&!editableAncestor,info=control?metadata(ref,role):{};
+          const control=interactive.includes(role)&&!editableAncestor;
+          const labelled=(control||semantic.includes(role))&&!editableAncestor,info=labelled?metadata(ref,role):{};
           inWeb=inWeb||role==='AXWebArea';
-          const node={path:path,role:role,name:editableAncestor?'':control?info.name:role==='AXWebArea'?
+          const node={path:path,role:role,name:editableAncestor?'':labelled?info.name:role==='AXWebArea'?
             string(read(ref,'AXTitle',true))||string(read(ref,'AXDescription',true)):'',
             text:!editableAncestor&&role==='AXStaticText'?string(read(ref,'AXValue',true)):'',identifier:info.identifier||'',
             enabled:control&&info.enabled===true,visible:false,visibilityEvidence:'not-observed',insideWebContent:inWeb,
-            editableAncestor:editableAncestor,password:info.password===true,actions:control&&!info.password?actions(ref):[]};
+            editableAncestor:editableAncestor,password:info.password===true,actions:labelled&&!info.password?actions(ref):[],
+            valueSettable:control&&!info.password&&['AXTextField','AXTextArea'].includes(role)?settable(ref):null};
+          node.scrollToVisible=node.actions.includes('AXScrollToVisible');
           // A visible window is not proof that an individual control/text is
           // exposed. Read-only, application-scoped hit testing also excludes
           // clipped, offscreen and occluded elements; it never clicks a point.
-          if(inWeb&&!editableAncestor&&(control||role==='AXStaticText')&&!info.password) {
+          if(inWeb&&!editableAncestor&&(labelled||role==='AXStaticText')&&!info.password) {
             const exposure=exposed(application,window,windowBounds,ref);
             node.visible=exposure.visible;node.visibilityEvidence=exposure.evidence;
           }
@@ -275,26 +287,33 @@ function ownedAX(input, budgetMs) {
   function resolve(application,path) {
     const windows=array(read(application,'AXWindows'),8);
     if(!windows[path[0]]) fail('DirectAXControlChanged');
-    let ref=element(windows[path[0]]),inWeb=false;
+    let ref=element(windows[path[0]]),inWeb=false,editableAncestor=false;
     verifyPid(ref);
     if(!visible(application,ref)) fail('DirectAXControlInvisible');
     const window=ref;
     for(let i=1;i<path.length;i++) {
-      const nested=children(ref,string(read(ref,'AXRole'))).values;
+      const parentRole=string(read(ref,'AXRole'));
+      editableAncestor=editableAncestor||editable.includes(parentRole);
+      const nested=children(ref,parentRole).values;
       if(!nested[path[i]]) fail('DirectAXControlChanged');
       ref=element(nested[path[i]]);
       verifyPid(ref);
       inWeb=inWeb||string(read(ref,'AXRole'))==='AXWebArea';
     }
     if(!inWeb) fail('DirectAXControlOutsideWeb');
+    if(editableAncestor) fail('DirectAXEditableDescendant');
     return {ref:ref,window:window};
   }
   function press() {
     stage='validate-control';
     const expected=input.selector,path=expected&&expected.path;
-    if(input.operation!=='press'||!Array.isArray(path)||path.length<2||path.length>42||
+    const op=input.operation,scroll=op==='scroll',setting=op==='set';
+    const pressRoles=['AXButton','AXLink','AXMenuItem','AXCheckBox','AXRadioButton','AXPopUpButton'];
+    const roles=setting?['AXTextField','AXTextArea']:scroll?interactive.concat(semantic):pressRoles;
+    if(!['press','set','scroll'].includes(op)||!Array.isArray(path)||path.length<2||path.length>42||
        path.some(i=>!Number.isInteger(i)||i<0||i>=1000)||
-       !['AXButton','AXLink','AXMenuItem','AXCheckBox','AXRadioButton','AXPopUpButton'].includes(expected.role))
+       !roles.includes(expected.role)||typeof expected.name!=='string'||!expected.name||expected.name.length>300||
+       (setting&&(typeof input.value!=='string'||input.value.length>4096)))
       fail('InvalidDirectAXInput');
     // Re-read the full current tree in this same provider before a mutation.
     // Partial trees cannot establish uniqueness, even when the target is found.
@@ -307,24 +326,29 @@ function ownedAX(input, budgetMs) {
       fail('DirectAXActionTreeIncomplete');
     }
     const candidates=snapshot.windows.filter(w=>w.visible).flatMap(w=>w.nodes).filter(n=>n.insideWebContent&&
-      n.visible&&n.enabled&&!n.password&&n.role===expected.role&&n.name===expected.name);
+      (scroll||(n.visible&&n.enabled))&&!n.password&&!n.editableAncestor&&n.role===expected.role&&n.name===expected.name);
     if(candidates.length!==1) fail('DirectAXControlAmbiguous');
     const found=candidates[0];
-    if(found.path.join('/')!==path.join('/')||found.identifier!==expected.identifier||!found.actions.includes('AXPress'))
+    const action=scroll?'AXScrollToVisible':'AXPress';
+    if(found.path.join('/')!==path.join('/')||found.identifier!==expected.identifier)
       fail('DirectAXControlChanged');
+    if(setting?found.valueSettable!==true:!found.actions.includes(action)) fail('DirectAXOperationUnsupported');
     stage='resolve-control';
     const current=resolve(view.application,path),held=view.elements.get(path.join('/'));
     if(!same(current.ref,held)||!same(current.window,view.windows[path[0]])) fail('DirectAXControlChanged');
     stage='validate-control';
     const role=string(read(current.ref,'AXRole')),info=metadata(current.ref,role);
-    if(role!==expected.role||info.password||!info.enabled||info.name!==expected.name||info.identifier!==expected.identifier||
-       !visible(view.application,current.window)||!actions(current.ref).includes('AXPress')) fail('DirectAXControlChanged');
-    if(!exposed(view.application,current.window,bounds(current.window),current.ref).visible) fail('DirectAXControlInvisible');
-    verifyPid(view.application);check();stage='perform-action';
-    operation='press';
-    const error=Number($.AXUIElementPerformAction(current.ref,$('AXPress')));
+    if(role!==expected.role||info.password||(!scroll&&!info.enabled)||info.name!==expected.name||info.identifier!==expected.identifier||
+       !visible(view.application,current.window)) fail('DirectAXControlChanged');
+    if(setting?!settable(current.ref):!actions(current.ref).includes(action)) fail('DirectAXOperationUnsupported');
+    if(!scroll&&!exposed(view.application,current.window,bounds(current.window),current.ref).visible) fail('DirectAXControlInvisible');
+    verifyPid(view.application);verifyPid(current.ref);check();stage='perform-action';
+    operation=setting?'set-value':scroll?'scroll-to-visible':'press';
+    // Value is submitted once from stdin and never read back or returned.
+    const error=Number(setting?$.AXUIElementSetAttributeValue(current.ref,$('AXValue'),$(input.value)):
+      $.AXUIElementPerformAction(current.ref,$(action)));
     if(error!==0) fail('DirectAXCallFailed',null,error);
-    return {performed:true,operation:'press'};
+    return {performed:true,operation:op};
   }
   return {inspect:inspect,press:press};
 }

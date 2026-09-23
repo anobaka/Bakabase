@@ -63,12 +63,36 @@ geometry/read prevents a complete-tree claim. This does not perform coordinate
 clicks or prove physical presentation/occlusion by other applications. Each node
 records a fixed `visibilityEvidence` classification.
 
-Direct actions currently support only observed `AXPress` controls needed by the
-empty-library workflow. They re-read the complete current tree, require a unique
-visible enabled match, resolve the same provider path, compare live native
-element/window references, and recheck metadata and process identity before
-pressing. The action helper retains its 15-second bound. There are no coordinates,
-keyboard fallback or editable-field actions in this mode.
+Actions re-read the complete current tree in the same provider, require a unique
+semantic match, resolve the same provider path, and recheck live element/window
+identity before acting. Windows aliases require identical runtime IDs and
+consistent metadata; equal names alone do not collapse distinct elements.
+
+The flow interface accepts `operation="set"` with a string `value` of at most
+4,096 characters and `operation="scroll"` with the usual selector. `set` requires
+a visible, enabled, nonsecure text field with observed and rechecked
+`valueSettable=true`: macOS uses public `AXUIElementIsAttributeSettable` /
+`AXUIElementSetAttributeValue`; Windows uses `ValuePattern.IsReadOnly` /
+`SetValue`. Existing field values are never read back, and submitted values
+must not enter flow logs. Secure controls and all editable descendants remain
+ineligible for every action.
+
+`scroll` may select an offscreen control or named noneditable semantic region
+from the complete tree. It requires an observed and rechecked native capability:
+Windows `ScrollItemPattern.ScrollIntoView`, or macOS `AXScrollToVisible` **only
+when returned by public `AXUIElementCopyActionNames`**. [WebKit exposes this
+provider action](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/accessibility/mac/WebAccessibilityObjectWrapperMac.mm)
+but it is not an Apple SDK standard action constant. The observer
+uses public `AXUIElementPerformAction`, without private API, guessed action or
+fallback. Unsupported targets fail explicitly. macOS semantic region labels
+are limited to `AXGroup`, `AXHeading` and `AXScrollArea` outside editable
+subtrees. Snapshot fields `scrollToVisible`, `valueSettable` and
+`editableAncestor` describe these boundaries. A successful submission is not
+proof of the resulting visible state; the flow must observe that separately.
+
+The action helper retains its 15-second outer and 12-second internal bounds.
+There are no coordinate, keyboard or DOM fallbacks. Checkbox/scope presses keep
+their existing `AXPress` / UIA `TogglePattern` behavior.
 
 Local validation uses only synthetic native-API fixtures and pure in-memory CF
 and AXValue point/size containers. It never checks local AX trust or reads the desktop:
