@@ -15,7 +15,7 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.Shell.Components;
 
-public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
+public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
 {
     private readonly App _app;
     private InitializationWindow? _initializationWindow;

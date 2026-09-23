@@ -4,7 +4,7 @@ using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components.Discovery;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Client.Remoting.Components.Discovery;
+namespace Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 
 /// <summary>
 /// A server found on this network, with the address that actually reached it.

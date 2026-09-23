@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Extensions;
-using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Extensions;
@@ -112,11 +112,6 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
                     {
                         using (MiniProfiler.Current.Step("VideoSource"))
                         {
-                            if (ffMpegService.Status != DependentComponentStatus.Installed)
-                            {
-                                continue;
-                            }
-
                             FileInfo? firstVideoFile;
                             using (MiniProfiler.Current.Step("FindFirstVideoFile"))
                             {
@@ -134,10 +129,10 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
                                 await FindCoverInVideoSm.WaitAsync(ct);
                             }
 
-                            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
                             try
                             {
-                                var mixedCt = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, ct);
+                                using var mixedCt = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, ct);
 
                                 double durationSeconds;
                                 using (MiniProfiler.Current.Step("FfMpeg.GetDuration"))
@@ -170,6 +165,10 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
                                 {
                                     _logger.LogError(tce, "An error occurred during capture a frame from video file");
                                 }
+                            }
+                            catch (DependencyNotInstalledException)
+                            {
+                                // Video covers are optional until ffmpeg is installed.
                             }
                             catch (Exception e)
                             {

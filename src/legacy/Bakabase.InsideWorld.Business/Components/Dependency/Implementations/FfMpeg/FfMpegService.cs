@@ -124,6 +124,18 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
         public string FfProbeExecutable => GetExecutableWithValidation("ffprobe");
         public string FfMpegExecutable => GetExecutableWithValidation("ffmpeg");
 
+        public async Task<string> GetFfProbeExecutableAsync(CancellationToken ct)
+        {
+            await EnsureReadyAsync(ct);
+            return FfProbeExecutable;
+        }
+
+        public async Task<string> GetFfMpegExecutableAsync(CancellationToken ct)
+        {
+            await EnsureReadyAsync(ct);
+            return FfMpegExecutable;
+        }
+
         public async Task<double> GetDuration(string path, CancellationToken ct)
         {
             // https://trac.ffmpeg.org/ticket/8890
@@ -132,7 +144,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
             // var info = await FFmpeg.GetMediaInfo(firstVideoFile.FullName, ct);
             var output = new StringBuilder();
             var error = new StringBuilder();
-            var cmd = Cli.Wrap(FfProbeExecutable)
+            var cmd = Cli.Wrap(await GetFfProbeExecutableAsync(ct))
                 .WithArguments(new[]
                 {
                     "-v", "quiet",
@@ -195,7 +207,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
             // clearing it") to stderr even on successful runs, so we only treat a
             // non-zero exit code as a failure rather than aborting on any stderr
             // output.
-            var cmd = Cli.Wrap(FfMpegExecutable)
+            var cmd = Cli.Wrap(await GetFfMpegExecutableAsync(ct))
                 .WithArguments(new[]
                 {
                     "-ss", timeString,

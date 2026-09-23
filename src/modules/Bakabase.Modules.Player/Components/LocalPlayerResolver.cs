@@ -2,7 +2,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Player.Abstractions.Components;
 using Bakabase.Modules.Player.Components;
 
-namespace Bakabase.Client.Remoting.Components.UserMachine;
+namespace Bakabase.Modules.Player.Components;
 
 /// <param name="ExecutablePath">Null means "let the OS decide".</param>
 /// <param name="CommandTemplate">The user's argument template, e.g. <c>"{0}" --fullscreen</c>.</param>
@@ -77,8 +77,11 @@ public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
 
         var here = locator.Locate(known).FirstOrDefault();
 
-        return here == null ? ResolvedPlayer.SystemDefault : new ResolvedPlayer(here, chosen.Command);
+        return here == null ? ResolvedPlayer.SystemDefault : new ResolvedPlayer(here, AddRequiredArguments(known, chosen.Command));
     }
+
+    private static string? AddRequiredArguments(Abstractions.Models.Domain.KnownPlayerDefinition definition, string? template) =>
+        definition.ArgumentPrefix == null ? template : $"{definition.ArgumentPrefix} {template ?? "{0}"}";
 
     /// <summary>
     /// Any player installed on this machine that can open this kind of file, best match
@@ -90,12 +93,18 @@ public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
     /// video stream with a download prompt — so a target that is a URL needs a program
     /// known to be a player, not whatever the OS would pick.
     /// </remarks>
-    public ResolvedPlayer? ResolveInstalled(string fileNameOrPath)
+    public ResolvedPlayer? ResolveInstalled(string fileNameOrPath,
+        Func<Abstractions.Models.Domain.KnownPlayerDefinition, bool>? isAllowed = null)
     {
         var extension = Path.GetExtension(fileNameOrPath);
 
         foreach (var definition in KnownPlayerDefinitions.All)
         {
+            if (isAllowed?.Invoke(definition) == false)
+            {
+                continue;
+            }
+
             // A null set means the player claims everything; foobar2000 claims audio
             // only, and starting it on a video is not an improvement on failing.
             if (definition.SupportedExtensions?.Contains(extension) == false)
@@ -107,7 +116,7 @@ public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
 
             if (here != null)
             {
-                return new ResolvedPlayer(here, null);
+                return new ResolvedPlayer(here, AddRequiredArguments(definition, null));
             }
         }
 

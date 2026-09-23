@@ -873,4 +873,10 @@ The version of lux is not limited.</value>
   <data name="BTask_MessageOnInterruption_DownloadResultDispatch" xml:space="preserve">
     <value>Download-result processing will resume on the next scheduled pass.</value>
   </data>
+  <data name="Federation_PairingRequest_Title" xml:space="preserve">
+    <value>{0} wants to read your library</value>
+  </data>
+  <data name="Federation_PairingRequest_Body" xml:space="preserve">
+    <value>From {0}. Approve or reject it in Devices and sharing.</value>
+  </data>
 </root>

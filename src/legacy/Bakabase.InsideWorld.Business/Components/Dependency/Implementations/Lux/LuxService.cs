@@ -144,8 +144,11 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
         /// <param name="otherArgs"></param>
         /// <returns></returns>
         public async Task<CmdResult> Download(string url, string? cookie, bool downloadCaptions, int threadsCount,
-            string outputDirectory, string outputName, Func<int, Task>? onProgress, List<(string, object?)>? otherArgs)
+            string outputDirectory, string outputName, Func<int, Task>? onProgress, List<(string, object?)>? otherArgs,
+            CancellationToken ct = default)
         {
+            await EnsureReadyAsync(ct);
+            await FfMpegService.EnsureReadyAsync(ct);
             var args = new List<(string Key, object? Value)>();
             if (!string.IsNullOrEmpty(cookie))
             {

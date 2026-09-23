@@ -2,7 +2,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
-using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
@@ -29,12 +29,20 @@ public class BilibiliDownloaderHelper(
 
     protected override async Task<BaseResponse> ValidateAdditional(DownloaderOptions options)
     {
-        if (ffMpegService.Status != DependentComponentStatus.Installed)
+        try
+        {
+            await ffMpegService.EnsureReadyAsync(default);
+        }
+        catch (DependencyNotInstalledException)
         {
             return BaseResponseBuilder.BuildBadRequest(_localizer.FfMpegIsNotReady());
         }
 
-        if (luxService.Status != DependentComponentStatus.Installed)
+        try
+        {
+            await luxService.EnsureReadyAsync(default);
+        }
+        catch (DependencyNotInstalledException)
         {
             return BaseResponseBuilder.BuildBadRequest(_localizer.LuxIsNotReady());
         }

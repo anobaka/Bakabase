@@ -181,6 +181,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Se
         /// <param name="codePage">Optional code page for filename encoding (e.g., 932 for Shift-JIS)</param>
         public async Task Extract(string archivePath, string destinationPath, CancellationToken ct, int? codePage = null)
         {
+            await EnsureReadyAsync(ct);
             Directory.CreateDirectory(destinationPath);
 
             var argsList = new List<string>
@@ -226,6 +227,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Se
             {
                 throw new ArgumentOutOfRangeException(nameof(compressionLevel), "Compression level must be between 0 and 9");
             }
+
+            await EnsureReadyAsync(ct);
 
             var args = new[]
             {
