@@ -1,5 +1,9 @@
 # 多设备媒体库：发布准备与迁移验收
 
+最新基线、rebase/squash 和重新验收状态见
+[2026-09-23 验收记录](multi-device-library-acceptance-20260923.md)。以下记录保留
+各历史运行的原始 SHA 和范围，不将旧结果改标为当前候选的通过证明。
+
 记录日期：2026-09-22。对应开发分支 `codex/multi-device-library`；初始实现基线为 `f1fa1469`，后续验收在 `b80ddfbe`、`cf787d13` 的基础上继续，包含其后的修改。继续验收时已合入最新 `origin/main`（`86d76392`）并推送开发分支，用于远端测试。没有发布、切换更新 feed 或收敛官方下载入口。
 
 当前设计以[多设备联合媒体库执行计划](multi-device-library-execution-plan.md)为准，功能、预算和已有测试记录见[实施记录](multi-device-library-implementation.md)。[旧拆分设计](pc-client-design.html)与[旧拆分执行计划](pc-client-execution-plan.html)保留历史内容，并增加了当前状态入口。
