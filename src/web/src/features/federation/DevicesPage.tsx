@@ -132,6 +132,26 @@ function Devices() {
     if (result.outcome === "granted") setCode("");
   };
 
+  // The server also claims approved requests in the background, so an outgoing request can
+  // be decided between two refreshes without this page's own claim ever seeing it.
+  const outgoingSeen = useRef(new Map<string, string>());
+
+  useEffect(() => {
+    const seen = outgoingSeen.current;
+
+    for (const request of status?.requests ?? []) {
+      if (request.direction !== "outgoing") continue;
+      if (
+        seen.get(request.requestId) === "awaitingApproval" &&
+        (request.status === "granted" || request.status === "rejected")
+      ) {
+        setNotice(t(`federation.pair.${request.status}`));
+        if (request.status === "granted") setCode("");
+      }
+      seen.set(request.requestId, request.status);
+    }
+  }, [status?.requests]);
+
   // Background polling. It reads the latest render through a ref so a status change never
   // restarts it, and it never touches the busy flag, action errors or the user's inputs:
   // it only reports a request that has just been decided, then re-reads status quietly.

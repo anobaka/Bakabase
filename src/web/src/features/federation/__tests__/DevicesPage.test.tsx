@@ -812,3 +812,46 @@ describe("discovery", () => {
     expect(screen.queryByText("federation.discovery.use")).not.toBeInTheDocument();
   });
 });
+
+describe("requests decided outside this page", () => {
+  it("reports an outgoing request the server claimed in the background", () => {
+    const request = {
+      requestId: "outgoing-request",
+      nodeId: "remote",
+      nodeName: "Other PC",
+      direction: "outgoing",
+      status: "awaitingApproval",
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      replacesExistingAccess: false,
+      offersReciprocalAccess: false,
+    } satisfies PairingRequest;
+    const refresh = vi.fn().mockResolvedValue(undefined);
+
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: { ...status, requests: [request] },
+      loading: false,
+      error: undefined,
+      refresh,
+    });
+    const { rerender } = render(
+      <MemoryRouter>
+        <DevicesPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("federation.pair.granted")).not.toBeInTheDocument();
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: { ...status, requests: [{ ...request, status: "granted" }] },
+      loading: false,
+      error: undefined,
+      refresh,
+    });
+    rerender(
+      <MemoryRouter>
+        <DevicesPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("federation.pair.granted");
+  });
+});

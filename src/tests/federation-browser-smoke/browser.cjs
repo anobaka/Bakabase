@@ -9,6 +9,8 @@ const uiBase = unified.base.replace('127.0.0.1', 'localhost');
 const locales = ['en', 'cn'].map(lang => JSON.parse(fs.readFileSync(path.join(config.repo, `src/web/src/locales/${lang}/pages/federation.json`), 'utf8')));
 const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const name = key => new RegExp(`^(?:${locales.map(locale => escape(locale[key])).join('|')})$`);
+// For controls whose accessible name continues with an explanation after the label.
+const namePrefix = key => new RegExp(`^(?:${locales.map(locale => escape(locale[key])).join('|')})`);
 const hintKey = 'federation.connection-hints.v1';
 const artifacts = file => path.join(config.results, file);
 const hasFiles = (directory, predicate) => fs.readdirSync(directory, { withFileTypes: true }).some(entry =>
@@ -107,6 +109,8 @@ const hasFiles = (directory, predicate) => fs.readdirSync(directory, { withFileT
     await candidate.getByRole('button', { name: name('federation.discovery.use'), exact: true }).click();
     assert.equal(await devices.getByLabel(name('federation.pair.address'), { exact: true }).inputValue(), source.base);
     assert.equal(await devices.getByLabel(name('federation.pair.code'), { exact: true }).inputValue(), '');
+    // Migration only restores reading the old server; sharing this library back is a separate choice.
+    await devices.getByRole('checkbox', { name: namePrefix('federation.pair.shareBack') }).uncheck();
     const connectResponse = devices.waitForResponse(response => response.url() === uiBase + '/federation/local/peers/connect');
     await devices.getByRole('button', { name: name('federation.pair.request'), exact: true }).click();
     assert.equal((await (await connectResponse).json()).outcome, 'awaitingApproval');
@@ -122,7 +126,7 @@ const hasFiles = (directory, predicate) => fs.readdirSync(directory, { withFileT
     assert.ok(!peer.inboundGrant, 'Reading a source must not authorize that source to read this library');
     assert.deepEqual(peer.pathMappings, [], 'Legacy prefixes must not become sourceRootId mappings');
     assert.deepEqual(paired.identity, before.identity, 'Import/pairing must not replace local library identity');
-    assert.equal(paired.browsingEnabled, false, 'Pairing does not opt into local browsing');
+    assert.equal(paired.browsingEnabled, true, 'Gaining read access to another device turns browsing on');
     assert.ok(fs.readFileSync(connectionFile).equals(oldConnectionBytes), 'Migration must not change the old installation');
     assert.equal((await legacy(client.base, '/client/status')).serverReachable, true);
     assert.equal(await oldPage.evaluate(() => localStorage.getItem('migration-origin-sentinel')), 'legacy-only');
@@ -135,7 +139,7 @@ const hasFiles = (directory, predicate) => fs.readdirSync(directory, { withFileT
       return false;
     });
 
-    // Unified library: opt-in, complete identities, local media URLs, and disable from another window.
+    // Unified library: on after pairing, complete identities, local media URLs, and disable from another window.
     const library = await context.newPage();
     library.on('response', async response => {
       if (response.url() === uiBase + '/federation/local/queries' && response.ok()) {
@@ -143,10 +147,8 @@ const hasFiles = (directory, predicate) => fs.readdirSync(directory, { withFileT
         if (page.sessionId) sessions.add(page.sessionId);
       }
     });
-    await library.goto(uiBase + '/#/federation?scope=all');
-    await library.getByRole('heading', { name: name('federation.browsing.off'), exact: true }).waitFor();
     const queryResponse = library.waitForResponse(response => response.url() === uiBase + '/federation/local/queries' && response.request().method() === 'POST');
-    await library.getByRole('button', { name: name('federation.browsing.enable'), exact: true }).click();
+    await library.goto(uiBase + '/#/federation?scope=all');
     const query = await (await queryResponse).json();
     assert.equal(query.participants.length, 2);
     assert.equal(query.totalWithinParticipants, 114);
@@ -214,7 +216,7 @@ const hasFiles = (directory, predicate) => fs.readdirSync(directory, { withFileT
       legacyUiPairAndDownload: true, safeHintExport: true, draftRestoreAndIdempotency: true,
       noAuthorizationOrMappingOnImport: true, explicitNewNodeApproval: true, noReverseGrant: true,
       independentOriginsAndData: true, oldClientStillConnectedAndUnchanged: true,
-      optInBrowsing: true, participants: query.participants.length, total: query.totalWithinParticipants,
+      browsingOnAfterPairing: true, participants: query.participants.length, total: query.totalWithinParticipants,
       unmappedDirectoryDisabled: true, localhostAudioMetadataReady: true,
       crossTabDisableClearsResultsAndMedia: true, peersAndSharingPreserved: true,
       explicitRestorePreservesNodeAndOutbound: true, explicitCloneCreatesFreshNode: true, pageErrors: errors
