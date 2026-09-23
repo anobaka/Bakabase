@@ -181,15 +181,17 @@ jobs:
           retention-days: 14
 
   historical:
-    if: inputs.area == 'historical' || inputs.area == 'macos-data' || inputs.area == 'all'
-    name: ${{ inputs.area == 'macos-data' && 'macOS beta data retention' || 'Published installer upgrade' }} (${{ matrix.rid }})
+    if: inputs.area == 'historical' || inputs.area == 'macos-data' || inputs.area == 'macos-data-arm' || inputs.area == 'all'
+    name: ${{ startsWith(inputs.area, 'macos-data') && 'macOS beta data retention' || 'Published installer upgrade' }} (${{ matrix.rid }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        # The beta data scope is separate from the unchanged historical gate.
-        include: ${{ fromJSON(inputs.area == 'macos-data' && '[{"os":"macos-15-intel","rid":"osx-x64"},{"os":"macos-15","rid":"osx-arm64"}]' || '[{"os":"windows-latest","rid":"win-x64"},{"os":"macos-15-intel","rid":"osx-x64"},{"os":"macos-15","rid":"osx-arm64"}]') }}
+        # Explicit ARM-only data mode avoids re-running the known original Intel
+        # v349 startup failure. Intel byte-preservation has its own restore gate.
+        # Neither this selection nor the data scope changes the historical gate.
+        include: ${{ fromJSON(inputs.area == 'macos-data-arm' && '[{"os":"macos-15","rid":"osx-arm64"}]' || inputs.area == 'macos-data' && '[{"os":"macos-15-intel","rid":"osx-x64"},{"os":"macos-15","rid":"osx-arm64"}]' || '[{"os":"windows-latest","rid":"win-x64"},{"os":"macos-15-intel","rid":"osx-x64"},{"os":"macos-15","rid":"osx-arm64"}]') }}
     defaults:
       run:
         shell: bash
@@ -246,14 +248,14 @@ jobs:
         run: |
           AUTH_ARGS=()
           if [[ '${{ runner.os }}' == 'macOS' ]]; then AUTH_ARGS=(--macos-native-authorization); fi
-          if [[ '${{ inputs.area }}' == 'macos-data' ]]; then AUTH_ARGS+=(--macos-data-retention); fi
+          if [[ '${{ inputs.area }}' == 'macos-data' || '${{ inputs.area }}' == 'macos-data-arm' ]]; then AUTH_ARGS+=(--macos-data-retention); fi
           python src/tests/upgrade-tests/historical-installed.py \
             --manifest "$RUNNER_TEMP/historical-inputs/historical.json" --rid '${{ matrix.rid }}' \
             --results-directory "$RUNNER_TEMP/historical-results" "${AUTH_ARGS[@]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ${{ inputs.area == 'macos-data' && 'macos-data-retention' || 'historical-upgrade' }}-${{ matrix.rid }}-evidence
+          name: ${{ startsWith(inputs.area, 'macos-data') && 'macos-data-retention' || 'historical-upgrade' }}-${{ matrix.rid }}-evidence
           path: |
             ${{ runner.temp }}/historical-observer.json
             ${{ runner.temp }}/historical-candidate-inputs/provenance.json

@@ -31,7 +31,7 @@ on:
       acceptance_area:
         description: Extended native acceptance area
         type: choice
-        options: [performance, native-gui, player, historical, macos-data, all]
+        options: [performance, native-gui, player, historical, macos-data, macos-data-arm, all]
         default: performance
 
 # A newer push to the same branch / PR cancels older in-progress runs.
