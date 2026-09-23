@@ -20,6 +20,10 @@ current device merges results.
 
 ## Invariants — do not weaken
 
+- **Access, not management.** A device reads (browses, searches, views, plays) other devices'
+  resources; it never edits, deletes, moves or runs tasks on them. Management always happens on
+  the device that owns the library. This is the product scope, not a first-phase limit.
+
 - **Two interfaces, never mixed.** `/federation/local/*` is for this device's own UI: real
   loopback socket + loopback `Host` + matching `Origin` (`FederationAccessMiddleware.IsLocalCaller`).
   `/federation/v1/*` is node-to-node: `export/*` always needs a `Bakabase-Node` signature, even
