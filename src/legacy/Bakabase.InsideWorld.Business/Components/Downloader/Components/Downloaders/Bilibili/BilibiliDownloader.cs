@@ -218,7 +218,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                                         globalProgress = newGlobalProgress;
                                                         await OnProgressInternal(globalProgress);
                                                     }
-                                                }, null);
+                                                }, null, ct);
                                             
                                             if (luxRet.ExitCode != 0)
                                             {

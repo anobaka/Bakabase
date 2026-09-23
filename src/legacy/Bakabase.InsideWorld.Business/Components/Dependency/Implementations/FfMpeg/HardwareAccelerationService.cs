@@ -42,6 +42,9 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
                     return cachedInfo;
                 }
 
+                // Missing/cancelled discovery must remain retryable, not become a cached
+                // software-only result before ffmpeg has ever been inspected.
+                await _ffMpegService.EnsureReadyAsync(ct);
                 var info = await DetectHardwareAccelerationAsync(ct);
                 _cache.TryAdd(cacheKey, info);
                 return info;
@@ -107,6 +110,10 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
                 }
 
                 info.IsDetected = true;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -178,4 +185,4 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
         public string PreferredCodec { get; set; } = "libx264";
         public List<string> AvailableCodecs { get; set; } = new();
     }
-} 
+}

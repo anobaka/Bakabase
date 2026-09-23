@@ -19,6 +19,7 @@ import {
 import BApi from "@/sdk/BApi";
 import ExternalLink from "@/components/ExternalLink";
 import { Chip } from "@/components/bakaui";
+import MigrationNotice from "@/features/federation/components/MigrationNotice";
 
 /**
  * Where to get Bakabase for a device that is not this one.
@@ -45,10 +46,6 @@ const OtherDevicesPage = () => {
       .catch(() => setDownloads(null));
   }, []);
 
-  if (downloads === undefined) {
-    return <div className="p-6 text-sm">{t<string>("otherDevices.loading")}</div>;
-  }
-
   const mobile = downloads?.mobile;
   const client = downloads?.desktopClient;
 
@@ -59,7 +56,14 @@ const OtherDevicesPage = () => {
         <div className="text-sm text-foreground-500 mt-2">{t<string>("otherDevices.intro")}</div>
       </div>
 
-      {!mobile && !client && (
+      <MigrationNotice />
+
+      {downloads === undefined && (
+        <div className="text-sm text-foreground-500" role="status">
+          {t<string>("otherDevices.loading")}
+        </div>
+      )}
+      {downloads !== undefined && !mobile && !client && (
         <div className="text-sm text-foreground-500">{t<string>("otherDevices.unavailable")}</div>
       )}
 
@@ -142,7 +146,7 @@ const DesktopClientCard: React.FC<{ downloads: ClientDownloads }> = ({ downloads
         icon={<AiOutlineDesktop className="text-xl" />}
         publishedAt={downloads.publishedAt}
         releaseUrl={downloads.releaseUrl}
-        title={t("otherDevices.client.title")}
+        title={t("federation.migration.legacy")}
         version={downloads.version}
       />
 

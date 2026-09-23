@@ -1,13 +1,16 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Bakabase.Abstractions.Components.Gui;
 using Bakabase.Client.Remoting.Abstractions.Models;
 using Bakabase.Client.Remoting.Components.Connection;
-using Bakabase.Client.Remoting.Components.Discovery;
+using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Client.Remoting.Components.UserMachine;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Infrastructures.Components.Gui;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Client.Remoting.Components.Forwarding;
 
@@ -49,6 +52,30 @@ public static class ClientApiEndpoints
 
     public static void Map(IEndpointRouteBuilder endpoints, string clientVersion)
     {
+        endpoints.MapGet($"{Prefix}/migration-hints", async (HttpContext context, IClientConnectionStore store) =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            await WriteAsync(context, MigrationHints(store));
+        });
+
+        // This is deliberately not a general file-write API. Neither a destination
+        // nor file contents come from the page (which belongs to the upstream host).
+        endpoints.MapPost($"{Prefix}/migration-hints/export", async (HttpContext context, IClientConnectionStore store) =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            if (context.Request.ContentLength > 0 || context.Request.Headers.ContainsKey("Transfer-Encoding"))
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await WriteAsync(context, new { message = "This export does not accept a destination or content." });
+                return;
+            }
+            var dialog = context.RequestServices.GetService<IGuiAdapter>() as ILocalFileSaveDialog;
+            var outcome = dialog == null ? LocalFileSaveOutcome.Unavailable : await dialog.SaveTextFileAsync(
+                "bakabase-connection-hints.json", JsonSerializer.Serialize(MigrationHints(store), Json),
+                context.RequestAborted);
+            await WriteAsync(context, new { outcome = outcome.ToString().ToLowerInvariant() });
+        });
+
         // The one page this client serves itself. It is not the web frontend — that
         // still comes from the server, as it must — but the client cannot ask for a
         // server address without somewhere to ask it.
@@ -212,6 +239,30 @@ public static class ClientApiEndpoints
                         context.RequestAborted)
                 });
             });
+    }
+
+    private static object MigrationHints(IClientConnectionStore store) => new
+    {
+        format = "bakabase-client-connection-hints",
+        version = 1,
+        servers = store.Read().Servers.Select(server => new
+        {
+            name = server.ServerName,
+            address = MigrationAddressHint(server.BaseAddress),
+            pathMappings = server.PathMappings.Select(mapping => new
+                { serverPath = mapping.ServerPath, localPath = mapping.LocalPath }).ToArray()
+        }).Where(server => server.address != null).ToArray()
+    };
+
+    private static string? MigrationAddressHint(string? address)
+    {
+        if (!Uri.TryCreate(ServerConnector.Normalize(address ?? string.Empty), UriKind.Absolute, out var uri) ||
+            uri.Scheme is not ("http" or "https")) return null;
+        // Legacy addresses were not restricted to origins. Build from safe URI
+        // components so userinfo, token-bearing paths, query and fragment cannot
+        // become part of a portable migration file. The saved connection is untouched.
+        return new UriBuilder(uri.Scheme, uri.Host, uri.IsDefaultPort ? -1 : uri.Port)
+            .Uri.GetLeftPart(UriPartial.Authority);
     }
 
     /// <summary>

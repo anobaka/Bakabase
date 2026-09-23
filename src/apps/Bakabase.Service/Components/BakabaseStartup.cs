@@ -45,6 +45,7 @@ using Bakabase.Modules.RemoteAccess.Extensions;
 using Bakabase.Service.Components;
 using Bakabase.Service.Components.ModelBinding;
 using Bakabase.Service.Components.RemoteAccess;
+using Bakabase.Service.Components.Federation;
 using Bakabase.Service.Components.Tasks;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Services;
@@ -116,6 +117,7 @@ namespace Bakabase.Service.Components
                 AppService.CoreVersion.ToString());
             services.AddSingleton<IListeningAddressProvider, AppContextListeningAddressProvider>();
             services.AddSingleton<IRemoteAccessDataDirectory, AppServiceRemoteAccessDataDirectory>();
+            services.AddFederatedLibrary();
 
             // Configured rather than passed to AddMvc because the base AppStartup owns
             // that call; MvcOptions configuration is order-independent.
@@ -349,6 +351,9 @@ namespace Bakabase.Service.Components
             // Swagger, static files, the SignalR hub — is reachable from another
             // machine before it has been judged. Loopback requests pass straight
             // through, so this is a no-op for the desktop app.
+            app.UseMiddleware<FederationExceptionMiddleware>();
+            app.UseMiddleware<FederationAccessMiddleware>();
+            app.UseMiddleware<FederationBrowsingMiddleware>();
             app.UseMiddleware<RemoteAccessMiddleware>();
 
             // Enable MiniProfiler - should be early in the pipeline

@@ -68,7 +68,7 @@
   "configuration.dataPath.confirm.useOrMergeHeader": "目标文件夹中已存在 Bakabase 数据（版本：{{version}}）。请选择处理方式：",
   "configuration.dataPath.confirm.unknownVersion": "未知",
   "configuration.dataPath.confirm.option.useTarget.title": "使用目标位置已有数据",
-  "configuration.dataPath.confirm.option.useTarget.description": "切换指针指向目标位置，不复制任何文件。当前数据将保留在原处，需要时可手动清理。",
+  "configuration.dataPath.confirm.option.useTarget.description": "切换指针指向目标位置，不复制任何文件。当前数据将保留在原处，需要时可手动清理。 若目标来自历史备份或复制的安装，不会自动识别并重置身份。切换重启前请断网；重启后在本机“设备与分享 → 克隆或恢复安装”完成对应重置，再恢复对外访问。",
   "configuration.dataPath.confirm.option.merge.title": "合并到目标位置",
   "configuration.dataPath.confirm.option.merge.description": "将当前数据复制到目标，同名文件覆盖；目标中的其他文件（如缓存）会保留。",
   "configuration.dataPath.confirm.merge.warning": "目标位置中与当前数据同名的文件将被覆盖。无关文件会保留。请确认操作。",
@@ -94,13 +94,13 @@
   "configuration.appInfo.dataPathSource.environment": "环境变量 {{name}}",
   "configuration.appInfo.anchorPath": "路径锚点",
   "configuration.appInfo.tip.appDataPath": "这是存储核心数据文件的位置，如非必要请勿更改。[系统] - [日志] 中的日志保存在 bootstrap_log.* 文件中，可以安全删除。",
-  "configuration.appInfo.tip.appDataPath.manualMerge": "如果想在保持当前路径的前提下导入旧数据，也可以手动操作：1) 点击右侧文件夹图标打开当前目录；2) 完全关闭 Bakabase；3) 把旧 AppData 内的所有文件复制覆盖到当前目录；4) 重新打开 Bakabase。",
+  "configuration.appInfo.tip.appDataPath.manualMerge": "导入旧 AppData 不会自动识别历史备份或克隆。全量覆盖前，先把备份准备到本机，断开网络并完全关闭 Bakabase；覆盖后保持断网，从本机启动并进入“设备与分享 → 克隆或恢复安装”，更换库代际或创建新的设备身份。复核旧版远程访问授权后再联网，随后重新开启分享并授权。仅搬迁同一份库且不回滚数据，无需重置身份。",
   "configuration.appInfo.tip.appDataPath.installRootRiskNotice": "若数据保存在程序安装目录内，通过卸载程序卸载 Bakabase 或在安装包中执行\"修复\"时，这些数据会被一并删除。如需保留数据，请先将路径改到安装目录之外。",
   "configuration.appInfo.tip.anchorPath": "应用数据路径的指针文件所在位置。当你自定义应用数据路径时，应用会在这里写一个指针文件，下次启动时根据它定位到你设置的路径。",
   "configuration.appInfo.tip.dataPath": "这是存储用户文件、封面等数据的目录。",
   "configuration.appInfo.tip.tempFilesPath": "这是存储临时文件的目录。",
   "configuration.appInfo.tip.logPath": "描述应用运行状态的详细信息。如果应用运行异常，您可以将日志文件发送给开发者；如果一切正常，也可以删除它们。",
-  "configuration.appInfo.tip.backupPath": "首次使用新版本应用时会创建数据备份，如果一切正常可以删除它们。您可以下载相应版本的应用，使用备份文件覆盖应用数据路径来恢复数据。",
+  "configuration.appInfo.tip.backupPath": "首次使用新版本时会创建数据备份，恢复前请确认版本兼容。全量覆盖也可能恢复旧分享设置和节点授权，不会自动将它们禁用。恢复安装首次启动前须断网，并保持隔离直到完成下方对应的身份重置；复核旧版远程访问授权后，才能重新联网、开启分享并授权。",
   "configuration.others.title": "其他设置",
   "configuration.others.proxy": "代理",
   "configuration.others.proxy.tip": "您可以为网络请求设置代理，例如 socks5://127.0.0.1:18888",
@@ -313,5 +313,7 @@
   "configuration.clientInfo.dataDirectory.tip": "本客户端在这里保存它认识的服务端、对应密钥与路径映射。与服务端的数据目录无关，也与同机上的一体版无关。",
   "configuration.clientInfo.logDirectory": "客户端日志路径",
   "configuration.clientInfo.componentsDirectory": "客户端组件路径",
-  "configuration.clientInfo.componentsDirectory.tip": "Locale Emulator 需要装在这里，本客户端才能用它启动作品——下方的组件列表装的是服务端，而服务端无法在这块屏幕上弹窗。"
+  "configuration.clientInfo.componentsDirectory.tip": "Locale Emulator 需要装在这里，本客户端才能用它启动作品——下方的组件列表装的是服务端，而服务端无法在这块屏幕上弹窗。",
+  "configuration.appInfo.identityRecovery.link": "设备与分享 → 克隆或恢复安装",
+  "configuration.appInfo.identityRecovery.onHost": "请在保存此资源库的设备上操作：设备与分享 → 克隆或恢复安装。"
 }

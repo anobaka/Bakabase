@@ -251,6 +251,25 @@ public class PendingRelocationRunnerTests
     }
 
     [TestMethod]
+    public void SqliteIntegrityCheck_ReleasesDatabaseForExclusiveAccess()
+    {
+        using var h = new RelocationTestHarness();
+        const string databaseName = "bakabase_insideworld.db";
+        h.WithSqliteDb(databaseName);
+        var database = Path.Combine(h.CurrentDataDir, databaseName);
+        var length = new FileInfo(database).Length;
+
+        var result = RelocationIntegrityValidator.Validate(h.CurrentDataDir,
+            [new RelocationIntegrityValidator.ExpectedFile(databaseName, length)], [databaseName]);
+
+        Assert.IsTrue(result.Ok, result.FailureReason);
+        // Windows refuses this while the integrity check retains a pooled handle.
+        // Relocation must be free to replace or move the database after validation.
+        using var exclusive = new FileStream(database, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        Assert.AreEqual(length, exclusive.Length);
+    }
+
+    [TestMethod]
     public async Task MergeOverwrite_RecordsPrevDataPathForRebasing()
     {
         using var h = new RelocationTestHarness();

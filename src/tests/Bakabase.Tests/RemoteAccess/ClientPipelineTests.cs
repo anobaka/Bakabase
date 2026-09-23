@@ -8,15 +8,19 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Components.Gui;
 using Bakabase.Client.Remoting.Abstractions;
 using Bakabase.Client.Remoting.Abstractions.Models;
 using Bakabase.Client.Remoting.Components;
+using Bakabase.Client.Remoting.Components.Connection;
 using Bakabase.Client.Remoting.Components.Diagnostics;
 using Bakabase.Client.Remoting.Components.Forwarding;
 using Bakabase.Client.Remoting.Components.Shell;
 using Bakabase.Client.Remoting.Components.Updating;
 using Bakabase.Client.Remoting.Components.UserMachine;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.TestKit.Implementations;
 using Bakabase.Infrastructures.Components.Orm.Log;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +46,28 @@ public class ClientPipelineTests
     private IHost _host = null!;
     private int _port;
     private string _root = null!;
+    private RecordingSaveDialog _saveDialog = null!;
+
+    private sealed class RecordingSaveDialog : TestGuiAdapter, ILocalFileSaveDialog
+    {
+        public LocalFileSaveOutcome Outcome { get; set; } = LocalFileSaveOutcome.Unavailable;
+        public int Calls { get; private set; }
+        public string? FileName { get; private set; }
+        public string? Text { get; private set; }
+        public string? SelectedPath { get; set; }
+        public bool Fail { get; set; }
+        public async Task<LocalFileSaveOutcome> SaveTextFileAsync(string suggestedFileName, string text,
+            System.Threading.CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            FileName = suggestedFileName;
+            Text = text;
+            if (Fail) throw new IOException("Simulated save failure");
+            if (Outcome == LocalFileSaveOutcome.Saved)
+                await File.WriteAllTextAsync(SelectedPath!, text, cancellationToken);
+            return Outcome;
+        }
+    }
 
     private sealed class TempDirectory(string path) : IClientDataDirectory
     {
@@ -54,6 +80,7 @@ public class ClientPipelineTests
     {
         _root = Path.Combine(Path.GetTempPath(), "bakabase-client-pipeline", Guid.NewGuid().ToString("N"));
         _port = LoopbackPortAllocator.Allocate(45000);
+        _saveDialog = new RecordingSaveDialog();
 
         var address = $"http://127.0.0.1:{_port}";
 
@@ -65,6 +92,7 @@ public class ClientPipelineTests
                     // Registered before the startup's TryAdd, so the pipeline reads
                     // this rather than the real application data directory.
                     services.AddSingleton<IClientDataDirectory>(new TempDirectory(_root));
+                    services.AddSingleton<IGuiAdapter>(_saveDialog);
 
                     // The same object the real host publishes, and the only place the
                     // guard learns which port to expect.
@@ -503,6 +531,102 @@ public class ClientPipelineTests
         var body = await (await Send($"{ClientApiEndpoints.Prefix}/status")).Content.ReadAsStringAsync();
 
         StringAssert.DoesNotMatch(body, new Regex("deviceKey", RegexOptions.IgnoreCase));
+    }
+
+    [TestMethod]
+    public async Task Migration_hints_export_only_names_origin_addresses_and_paths_without_old_credentials()
+    {
+        const string original = "https://legacy-user:legacy-password@192.168.1.10:34567/path-secret?token=query-secret#fragment-secret";
+        var store = _host.Services.GetRequiredService<IClientConnectionStore>();
+        await store.MutateAsync(data => data.Servers =
+        [
+            new ClientServerConnection
+            {
+                ServerId = "server-identity-secret", ServerName = "Home library", BaseAddress = original,
+                DeviceId = "device-identity-secret", DeviceKey = "old-administrator-signing-key",
+                PathMappings = [new ClientPathMapping { ServerPath = "/data/media", LocalPath = "Z:\\media" }]
+            },
+            new ClientServerConnection
+            {
+                ServerId = "unsafe", ServerName = "Invalid protocol", BaseAddress = "file:///secret-file",
+                DeviceId = "device", DeviceKey = "secret"
+            }
+        ]);
+        using var response = await Send($"{ClientApiEndpoints.Prefix}/migration-hints");
+        var text = await response.Content.ReadAsStringAsync();
+        var data = JsonDocument.Parse(text).RootElement.GetProperty("data");
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.IsTrue(response.Headers.CacheControl!.NoStore);
+        Assert.AreEqual("bakabase-client-connection-hints", data.GetProperty("format").GetString());
+        Assert.AreEqual(1, data.GetProperty("version").GetInt32());
+        var servers = data.GetProperty("servers");
+        Assert.AreEqual(1, servers.GetArrayLength());
+        var server = servers[0];
+        CollectionAssert.AreEquivalent(new[] { "name", "address", "pathMappings" },
+            server.EnumerateObject().Select(p => p.Name).ToArray());
+        Assert.AreEqual("Home library", server.GetProperty("name").GetString());
+        Assert.AreEqual("https://192.168.1.10:34567", server.GetProperty("address").GetString());
+        var mapping = server.GetProperty("pathMappings")[0];
+        CollectionAssert.AreEquivalent(new[] { "serverPath", "localPath" }, mapping.EnumerateObject().Select(p => p.Name).ToArray());
+        Assert.AreEqual("/data/media", mapping.GetProperty("serverPath").GetString());
+        Assert.AreEqual("Z:\\media", mapping.GetProperty("localPath").GetString());
+        foreach (var secret in new[] { "legacy-user", "legacy-password", "path-secret", "query-secret", "fragment-secret",
+                     "server-identity-secret", "device-identity-secret", "old-administrator-signing-key", "secret-file" })
+            Assert.IsFalse(text.Contains(secret, StringComparison.Ordinal), "A legacy credential escaped in the migration payload.");
+        Assert.AreEqual(original, store.Read().Servers[0].BaseAddress);
+        Assert.AreEqual("old-administrator-signing-key", store.Read().Servers[0].DeviceKey);
+
+        _saveDialog.Outcome = LocalFileSaveOutcome.Saved;
+        _saveDialog.SelectedPath = Path.Combine(_root, "chosen-hints.json");
+        using var native = await Send($"{ClientApiEndpoints.Prefix}/migration-hints/export", method: HttpMethod.Post);
+        Assert.AreEqual(HttpStatusCode.OK, native.StatusCode);
+        Assert.IsTrue(native.Headers.CacheControl!.NoStore);
+        Assert.AreEqual("saved", JsonDocument.Parse(await native.Content.ReadAsStringAsync())
+            .RootElement.GetProperty("data").GetProperty("outcome").GetString());
+        Assert.AreEqual("bakabase-connection-hints.json", _saveDialog.FileName);
+        Assert.AreEqual(data.GetRawText(), _saveDialog.Text);
+        Assert.AreEqual(_saveDialog.Text, await File.ReadAllTextAsync(_saveDialog.SelectedPath));
+        Assert.AreEqual(original, store.Read().Servers[0].BaseAddress);
+        Assert.AreEqual("old-administrator-signing-key", store.Read().Servers[0].DeviceKey);
+    }
+
+    [TestMethod]
+    public async Task Native_migration_export_refuses_foreign_callers_and_arbitrary_contents_before_showing_a_dialog()
+    {
+        const string route = "/client/migration-hints/export";
+        foreach (var response in new[]
+                 {
+                     await Send(route, origin: "https://evil.example", method: HttpMethod.Post),
+                     await Send(route, host: $"evil.example:{_port}", method: HttpMethod.Post),
+                     await Send(route, method: HttpMethod.Post, body: "{\"path\":\"/tmp/arbitrary\",\"text\":\"write-me\"}")
+                 })
+        {
+            using (response) Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+        Assert.AreEqual(0, _saveDialog.Calls);
+    }
+
+    [TestMethod]
+    [DataRow(LocalFileSaveOutcome.Cancelled, "cancelled")]
+    [DataRow(LocalFileSaveOutcome.Unavailable, "unavailable")]
+    public async Task Native_migration_export_reports_no_save_without_writing_a_file(LocalFileSaveOutcome outcome, string expected)
+    {
+        _saveDialog.Outcome = outcome;
+        _saveDialog.SelectedPath = Path.Combine(_root, "not-created.json");
+        using var response = await Send("/client/migration-hints/export", method: HttpMethod.Post);
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual(expected, JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+            .RootElement.GetProperty("data").GetProperty("outcome").GetString());
+        Assert.AreEqual(1, _saveDialog.Calls);
+        Assert.IsFalse(File.Exists(_saveDialog.SelectedPath));
+    }
+
+    [TestMethod]
+    public async Task Native_migration_export_save_failure_does_not_report_success()
+    {
+        _saveDialog.Fail = true;
+        using var response = await Send("/client/migration-hints/export", method: HttpMethod.Post);
+        Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 
     [TestMethod]

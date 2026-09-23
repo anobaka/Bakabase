@@ -68,7 +68,7 @@
   "configuration.dataPath.confirm.useOrMergeHeader": "Target folder already contains Bakabase data (version: {{version}}). Pick how to proceed:",
   "configuration.dataPath.confirm.unknownVersion": "unknown",
   "configuration.dataPath.confirm.option.useTarget.title": "Use target's existing data",
-  "configuration.dataPath.confirm.option.useTarget.description": "Flip the pointer to the target. No files copied. Current data stays at the original location and can be cleaned up manually later.",
+  "configuration.dataPath.confirm.option.useTarget.description": "Flip the pointer to the target. No files copied. Current data stays at the original location and can be cleaned up manually later. A historical backup or copied installation will not be detected automatically. Before restarting into it, disconnect this device from the network; complete the appropriate reset in Devices and sharing → Cloned or restored installation before allowing external access.",
   "configuration.dataPath.confirm.option.merge.title": "Merge into target",
   "configuration.dataPath.confirm.option.merge.description": "Copy current data to the target. Same-name files are overwritten; other files at the target (e.g. caches) are preserved.",
   "configuration.dataPath.confirm.merge.warning": "Same-name files at the target will be overwritten with current data. Unrelated files are preserved. Confirm to proceed.",
@@ -94,13 +94,13 @@
   "configuration.appInfo.dataPathSource.environment": "Environment variable {{name}}",
   "configuration.appInfo.anchorPath": "Path anchor",
   "configuration.appInfo.tip.appDataPath": "This is where core data files stored and DO NOT change them if not necessary. The logs in [System] - [Logs] are saved in bootstrap_log.* files, they can be safely deleted.",
-  "configuration.appInfo.tip.appDataPath.manualMerge": "To bring data from a previous install over without changing this path, you can also do it by hand: 1) click the folder icon to open the current directory; 2) fully close Bakabase; 3) copy and overwrite the current directory with the contents of the old AppData; 4) reopen Bakabase.",
+  "configuration.appInfo.tip.appDataPath.manualMerge": "Importing old AppData does not automatically detect a restored or cloned library. Before a full overwrite, prepare the backup locally, disconnect this device from the network, and fully close Bakabase. Keep it offline after reopening and use Devices and sharing → Cloned or restored installation to reset the library generation or create a new device identity. Review legacy remote-access permissions before reconnecting, then enable sharing and authorize devices again. Moving the same library without rolling back data needs no identity reset.",
   "configuration.appInfo.tip.appDataPath.installRootRiskNotice": "Data kept inside the application install directory is removed when you uninstall Bakabase or run \"Repair\" from the installer. To keep it, switch the path to a directory outside the install tree first.",
   "configuration.appInfo.tip.anchorPath": "Where the app data path's redirect file lives. When you customise the app data path, the app writes a small pointer file here so the next launch knows where to find your data.",
   "configuration.appInfo.tip.dataPath": "This is where user files, covers, and other data are stored.",
   "configuration.appInfo.tip.tempFilesPath": "This is a directory where temporary files are stored.",
   "configuration.appInfo.tip.logPath": "Detailed information which describing the running states of app. You can send log files to developer if the app is not running normally, and you can delete them also if everything is ok.",
-  "configuration.appInfo.tip.backupPath": "A data backup will be created when using the new version of app first time, you can delete them if everything is ok. You can download the corresponding version of the app and use the backup files to overwrite the App Data Path for data recovery.",
+  "configuration.appInfo.tip.backupPath": "A data backup is created on the first launch of a new version. Confirm version compatibility before restoring. A full overwrite can also restore old sharing settings and node grants; it will not automatically disable them. Keep the restored installation offline from its first launch until the matching identity reset below is complete, review legacy remote-access permissions, and only then reconnect and authorize sharing again.",
   "configuration.others.title": "Other settings",
   "configuration.others.proxy": "Proxy",
   "configuration.others.proxy.tip": "You can set a proxy for network requests, such as socks5://127.0.0.1:18888",
@@ -313,5 +313,7 @@
   "configuration.clientInfo.dataDirectory.tip": "Where this client keeps the servers it knows, their keys and its path mappings. Separate from the server's, and separate from an all-in-one Bakabase on this same machine.",
   "configuration.clientInfo.logDirectory": "Client log path",
   "configuration.clientInfo.componentsDirectory": "Client components path",
-  "configuration.clientInfo.componentsDirectory.tip": "Locale Emulator has to be installed here for this client to launch a work with it — the component list below installs on the server, which cannot open a window on this screen."
+  "configuration.clientInfo.componentsDirectory.tip": "Locale Emulator has to be installed here for this client to launch a work with it — the component list below installs on the server, which cannot open a window on this screen.",
+  "configuration.appInfo.identityRecovery.link": "Devices and sharing → Cloned or restored installation",
+  "configuration.appInfo.identityRecovery.onHost": "Perform the identity reset on the device storing this library: Devices and sharing → Cloned or restored installation."
 }

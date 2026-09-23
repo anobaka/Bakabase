@@ -24,6 +24,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
     public abstract class DependentComponentService : IDependentComponentService
     {
         private readonly IServiceProvider _globalServiceProvider;
+        private readonly SemaphoreSlim _operationLock = new(1, 1);
+        private int _completedInstallVersion;
         public abstract string Id { get; }
 
         public string DisplayName =>
@@ -42,12 +44,18 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
         protected DependentComponentService(ILoggerFactory loggerFactory, AppService appService,
             string directoryName, IServiceProvider globalServiceProvider)
+            : this(loggerFactory, appService.ComponentsPath, directoryName, globalServiceProvider)
+        {
+        }
+
+        protected DependentComponentService(ILoggerFactory loggerFactory, string componentsPath,
+            string directoryName, IServiceProvider globalServiceProvider)
         {
             _globalServiceProvider = globalServiceProvider;
             Logger = loggerFactory.CreateLogger(GetType());
 
             DirectoryName = directoryName;
-            DefaultLocation = Path.Combine(appService.ComponentsPath, DirectoryName);
+            DefaultLocation = Path.Combine(componentsPath, DirectoryName);
             TempDirectory = Path.Combine(DefaultLocation, InternalOptions.TempDirectoryName);
         }
 
@@ -79,64 +87,140 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
         protected abstract Task InstallCore(CancellationToken ct);
 
-        public virtual async Task Install(CancellationToken ct)
+        /// <summary>
+        /// How long an optional caller trusts a "not found" before probing again. Discovery spawns a
+        /// process, and callers such as cover discovery ask once per resource.
+        /// </summary>
+        protected virtual TimeSpan MissingRediscoveryInterval => TimeSpan.FromSeconds(10);
+
+        /// <summary><see cref="Environment.TickCount64"/> of the last optional miss, or -1.</summary>
+        private long _missingDiscoveredAt = -1;
+
+        public virtual async Task EnsureReadyAsync(CancellationToken ct)
         {
-            if (Status == DependentComponentStatus.Installing)
+            if (Status == DependentComponentStatus.Installed)
             {
                 return;
             }
 
-            // Check and install dependencies first
-            var dependencyLocalizer = _globalServiceProvider.GetRequiredService<IDependencyLocalizer>();
-            foreach (var dependencyType in Dependencies)
+            // Optional features skip the tool while it installs or was just found missing, as the
+            // status check they replaced did, instead of waiting out a download or probing again.
+            var missingAt = Volatile.Read(ref _missingDiscoveredAt);
+            if (!IsRequired && (Status == DependentComponentStatus.Installing || missingAt >= 0 &&
+                    Environment.TickCount64 - missingAt < MissingRediscoveryInterval.TotalMilliseconds))
             {
-                var dependencyService = _globalServiceProvider.GetRequiredService(dependencyType) as IDependentComponentService;
-                if (dependencyService == null)
-                {
-                    throw new InvalidOperationException($"Dependency type {dependencyType.Name} is not a valid IDependentComponentService");
-                }
-
-                if (dependencyService.Status == DependentComponentStatus.Installing)
-                {
-                    // Expected: the user kicked off this install while a prerequisite is still
-                    // downloading. Not a defect — see CreateNotReadyException.
-                    var message = dependencyLocalizer.Dependency_Installing_Message(dependencyService.DisplayName);
-                    Logger.LogWarning(message);
-                    throw new DependencyNotInstalledException(dependencyService.Id, dependencyService.DisplayName,
-                        message);
-                }
-
-                if (dependencyService.Status != DependentComponentStatus.Installed)
-                {
-                    var message = dependencyLocalizer.Dependency_Required_Message(dependencyService.DisplayName, DisplayName);
-                    Logger.LogInformation(message);
-
-                    // Automatically install the dependency
-                    await dependencyService.Install(ct);
-                }
+                throw CreateNotReadyException();
             }
 
-            Status = DependentComponentStatus.Installing;
-            await UpdateContext(d =>
-            {
-                d.Error = null;
-                d.InstallationProgress = 0;
-            });
+            await _operationLock.WaitAsync(ct);
             try
             {
+                if (Status == DependentComponentStatus.Installed)
+                {
+                    return;
+                }
+
+                ThrowIfUnsupported();
+                await DiscoverCore(ct);
+                if (Status != DependentComponentStatus.Installed && !IsRequired)
+                {
+                    Volatile.Write(ref _missingDiscoveredAt, Environment.TickCount64);
+                }
+                if (Status != DependentComponentStatus.Installed && IsRequired)
+                {
+                    await InstallWhileLocked(ct);
+                }
+
+                if (Status != DependentComponentStatus.Installed)
+                {
+                    throw CreateNotReadyException();
+                }
+            }
+            finally
+            {
+                _operationLock.Release();
+            }
+        }
+
+        public virtual async Task Install(CancellationToken ct)
+        {
+            // Overlapping requests wait for the successful install. A later explicit request
+            // still checks for updates, including when the component is already installed.
+            var observedVersion = Volatile.Read(ref _completedInstallVersion);
+            await _operationLock.WaitAsync(ct);
+            try
+            {
+                if (observedVersion != _completedInstallVersion && Status == DependentComponentStatus.Installed)
+                {
+                    return;
+                }
+
+                ThrowIfUnsupported();
+                await DiscoverCore(ct);
+                await InstallWhileLocked(ct);
+            }
+            finally
+            {
+                _operationLock.Release();
+            }
+        }
+
+        private void ThrowIfUnsupported()
+        {
+            if (!IsAvailableOnCurrentPlatform)
+            {
+                throw new PlatformNotSupportedException($"{DisplayName} is not available on this platform.");
+            }
+        }
+
+        private async Task InstallWhileLocked(CancellationToken ct)
+        {
+            Status = DependentComponentStatus.Installing;
+            try
+            {
+                await UpdateContext(d =>
+                {
+                    d.Error = null;
+                    d.InstallationProgress = 0;
+                });
+
+                foreach (var dependencyType in Dependencies)
+                {
+                    if (_globalServiceProvider.GetRequiredService(dependencyType) is not IDependentComponentService dependency)
+                    {
+                        throw new InvalidOperationException($"Dependency type {dependencyType.Name} is not a valid IDependentComponentService");
+                    }
+
+                    // Installation authorizes its prerequisites too, but reuse an existing
+                    // system installation before downloading another copy.
+                    await dependency.Discover(ct);
+                    if (dependency.Status != DependentComponentStatus.Installed)
+                    {
+                        await dependency.Install(ct);
+                    }
+                }
+
                 await InstallCore(ct);
-                Status = DependentComponentStatus.Installed;
+                await DiscoverCore(ct);
+                if (Status != DependentComponentStatus.Installed)
+                {
+                    throw CreateNotReadyException();
+                }
+
                 await UpdateContext(d => { d.InstallationProgress = 100; });
+                Interlocked.Increment(ref _completedInstallVersion);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                await RestoreAfterFailedInstall(null);
+                throw;
             }
             catch (Exception e)
             {
-                Status = DependentComponentStatus.NotInstalled;
-                await UpdateContext(d => { d.Error = e.Message; });
+                await RestoreAfterFailedInstall(e.Message);
                 var message = $"An error occurred during installing {DisplayName}: {e.Message}";
                 if (IsNetworkException(e))
                 {
-                    // Network failures (offline, DNS, TLS, blocked hosts) are environmental
-                    // rather than code defects; log as a warning so they don't flood Sentry.
                     Logger.LogWarning(e, message);
                 }
                 else
@@ -146,10 +230,25 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
                 throw;
             }
-            finally
+        }
+
+        /// <summary>
+        /// A failed or cancelled update must not hide a copy that still works, so the status
+        /// comes from discovering what is on disk now; the error stays visible either way.
+        /// </summary>
+        private async Task RestoreAfterFailedInstall(string? error)
+        {
+            try
             {
-                await Discover(ct);
+                await DiscoverCore(CancellationToken.None);
             }
+            catch (Exception e)
+            {
+                Logger.LogWarning(e, $"Failed to rediscover {DisplayName} after an unsuccessful install: {e.Message}");
+                Status = DependentComponentStatus.NotInstalled;
+            }
+
+            await UpdateContext(d => d.Error = error);
         }
 
         private static bool IsNetworkException(Exception? e)
@@ -174,22 +273,35 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
         /// <returns></returns>
         public virtual async Task Discover(CancellationToken ct)
         {
-            var r = await Discoverer.Discover(DefaultLocation, ct);
-            if (Status != DependentComponentStatus.Installing)
+            await _operationLock.WaitAsync(ct);
+            try
             {
-                Status = string.IsNullOrEmpty(r?.Version)
-                    ? DependentComponentStatus.NotInstalled
-                    : DependentComponentStatus.Installed;
+                Volatile.Write(ref _missingDiscoveredAt, -1);
+                await DiscoverCore(ct);
             }
+            finally
+            {
+                _operationLock.Release();
+            }
+        }
 
-            if (r.HasValue)
+        private async Task DiscoverCore(CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            var r = IsAvailableOnCurrentPlatform ? await Discoverer.Discover(DefaultLocation, ct) : null;
+            ct.ThrowIfCancellationRequested();
+            Status = string.IsNullOrEmpty(r?.Version)
+                ? DependentComponentStatus.NotInstalled
+                : DependentComponentStatus.Installed;
+            await UpdateContext(c =>
             {
-                await UpdateContext(c =>
+                c.Location = r?.Location;
+                c.Version = r?.Version;
+                if (Status == DependentComponentStatus.Installed)
                 {
-                    c.Location = r.Value.Location;
-                    c.Version = r.Value.Version;
-                });
-            }
+                    c.Error = null;
+                }
+            });
         }
 
         protected abstract IDiscoverer Discoverer { get; }

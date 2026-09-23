@@ -37,8 +37,8 @@ PUBLISH_B="$RUN_DIR/publish-B"
 
 trap 'echo; echo "Workspace: $RUN_DIR"' EXIT
 
-publish_app "$VERSION_A" "$PUBLISH_A" LINUX linux-x64
-publish_app "$VERSION_B" "$PUBLISH_B" LINUX linux-x64
+publish_app "$VERSION_A" "$PUBLISH_A" DOCKER linux-x64
+publish_app "$VERSION_B" "$PUBLISH_B" DOCKER linux-x64
 
 cp -R "$PUBLISH_A/." "$INSTALL_ROOT/current/"
 

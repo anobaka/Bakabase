@@ -55,7 +55,7 @@ public partial class NativeWebViewHost
         var alloc = ObjC.SendIntPtr(wkClass, ObjC.Sel("alloc"));
         _macWebView = ObjC.SendIntPtr_CGRect_IntPtr(
             alloc, ObjC.Sel("initWithFrame:configuration:"),
-            0, 0, 0, 0, // CGRectZero - NativeControlHost manages sizing
+            new ObjC.CGRect(0, 0, 0, 0), // CGRectZero - NativeControlHost manages sizing
             _macConfig);
 
         // Do NOT set autoresizingMask - NativeControlHost manages the frame directly.
@@ -102,7 +102,7 @@ public partial class NativeWebViewHost
         Console.WriteLine($"[NativeWebViewHost] SizeChanged: Avalonia={w}x{h}");
 
         // Set the WKWebView frame to match Avalonia's layout size (in points)
-        ObjC.SendVoid_CGRect(_macWebView, ObjC.Sel("setFrame:"), 0, 0, w, h);
+        ObjC.SendVoid_CGRect(_macWebView, ObjC.Sel("setFrame:"), new ObjC.CGRect(0, 0, w, h));
     }
 
     private void NavigateMacOS(string url)
@@ -431,6 +431,17 @@ public partial class NativeWebViewHost
     {
         public const int RTLD_NOW = 2;
 
+        // CGRect is one by-value aggregate, not four separate arguments. Darwin
+        // x64 passes this 32-byte struct on the stack; arm64 uses an HFA in d0-d3.
+        [StructLayout(LayoutKind.Sequential)]
+        public readonly struct CGRect(double x, double y, double width, double height)
+        {
+            public readonly double X = x;
+            public readonly double Y = y;
+            public readonly double Width = width;
+            public readonly double Height = height;
+        }
+
         [DllImport("libdl.dylib")]
         public static extern IntPtr dlopen(string path, int mode);
 
@@ -480,7 +491,7 @@ public partial class NativeWebViewHost
         // objc_msgSend: (CGRect, IntPtr) -> IntPtr [initWithFrame:configuration:]
         [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
         public static extern IntPtr SendIntPtr_CGRect_IntPtr(IntPtr receiver, IntPtr selector,
-            double x, double y, double width, double height, IntPtr arg);
+            CGRect frame, IntPtr arg);
 
         // objc_msgSend: () -> void
         [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
@@ -502,7 +513,7 @@ public partial class NativeWebViewHost
         // objc_msgSend: (CGRect) -> void [setFrame:]
         [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
         public static extern void SendVoid_CGRect(IntPtr receiver, IntPtr selector,
-            double x, double y, double width, double height);
+            CGRect frame);
 
         // objc_msgSend: (bool) -> void [setInspectable:]
         [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]

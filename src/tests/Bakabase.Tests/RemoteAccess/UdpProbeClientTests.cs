@@ -2,7 +2,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Bakabase.Client.Remoting.Components.Discovery;
+using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components.Discovery;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

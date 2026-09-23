@@ -17,6 +17,8 @@ import {
 } from "@ant-design/icons";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 
+import IdentityRecoveryLink from "./IdentityRecoveryLink";
+
 import { Popover, Divider, Icon, Progress, Snippet, Tooltip } from "@/components/bakaui";
 import { UpdaterStatus, DataPathSource } from "@/sdk/constants";
 import ExternalLink from "@/components/ExternalLink";
@@ -361,6 +363,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
             <span className="text-xs text-foreground-400">
               {t("configuration.appInfo.tip.appDataPath.manualMerge")}
             </span>
+            <IdentityRecoveryLink />
             {appInfo.dataInInstallRoot && (
               <span className="text-xs text-warning-500">
                 {t("configuration.appInfo.tip.appDataPath.installRootRiskNotice")}
@@ -401,7 +404,12 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
         id: "backupPath",
         label: "configuration.appInfo.backupPath",
         keywords: ["path", "backup", "备份"],
-        value: renderPathValue(appInfo.backupPath, t("configuration.appInfo.tip.backupPath")),
+        value: (
+          <div className="flex flex-col gap-1">
+            {renderPathValue(appInfo.backupPath, t("configuration.appInfo.tip.backupPath"))}
+            <IdentityRecoveryLink />
+          </div>
+        ),
       },
       {
         id: "coreVersion",

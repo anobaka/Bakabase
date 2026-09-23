@@ -136,6 +136,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lo
                 throw new PlatformNotSupportedException("Locale Emulator is only available on Windows");
             }
 
+            await EnsureReadyAsync(ct);
+
             var output = new System.Text.StringBuilder();
             var error = new System.Text.StringBuilder();
 

@@ -35,7 +35,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
 
         protected override async Task InstallCore(CancellationToken ct)
         {
-            await Discover(ct);
+            // The base class discovers under its operation lock before entering installation.
             var latestVersion = await GetLatestVersion(ct);
             Logger.LogInformation($"Try to install latest version: {latestVersion.Version}");
 

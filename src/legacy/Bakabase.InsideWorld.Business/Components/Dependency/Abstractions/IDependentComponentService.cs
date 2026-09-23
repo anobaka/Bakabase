@@ -16,6 +16,11 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Abstractions
         string? Description { get; }
         string DefaultLocation { get; }
         bool IsRequired { get; }
+        /// <summary>
+        /// Discover this component on first use. Only required components install automatically;
+        /// missing optional components report the usual recoverable dependency error.
+        /// </summary>
+        Task EnsureReadyAsync(CancellationToken ct);
         Task Install(CancellationToken ct);
         Task<DependentComponentVersion> GetLatestVersion(bool fromCache, CancellationToken ct);
 

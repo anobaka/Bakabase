@@ -24,7 +24,7 @@ public class DefaultAppDataPathResolverTests
         {
             var path = DefaultAppDataPathResolver.Resolve(
                 platform,
-                Env(new() { ["BAKABASE_DATA_DIR"] = "/custom/bakabase" }),
+                Env(new() { ["BAKABASE_DATA_DIR"] = Path.GetFullPath("/custom/bakabase") }),
                 Folder(new()
                 {
                     [Environment.SpecialFolder.LocalApplicationData] = "/local",
@@ -33,7 +33,8 @@ public class DefaultAppDataPathResolverTests
                 }),
                 "Bakabase");
 
-            // Path.GetFullPath normalises but the input is already absolute.
+            // The injected platform selects a policy, while System.IO still uses
+            // the executing OS. Supply an absolute fixture on that actual OS.
             Assert.AreEqual(Path.GetFullPath("/custom/bakabase"), path,
                 $"env-var override should win on {platform}");
         }
@@ -54,7 +55,7 @@ public class DefaultAppDataPathResolverTests
     public void EnvVar_NormalizedToAbsolute()
     {
         // Path.GetFullPath collapses redundant segments — exercise that.
-        var input = Path.Combine("/custom", ".", "bakabase", "..", "bakabase");
+        var input = Path.Combine(Path.GetPathRoot(Path.GetTempPath())!, "custom", ".", "bakabase", "..", "bakabase");
         var path = DefaultAppDataPathResolver.Resolve(
             OSPlatform.Linux,
             Env(new() { ["BAKABASE_DATA_DIR"] = input }),
@@ -91,7 +92,7 @@ public class DefaultAppDataPathResolverTests
             Env(new()),
             Folder(new() { [Environment.SpecialFolder.UserProfile] = "/Users/foo" }),
             "Bakabase");
-        Assert.AreEqual("/Users/foo/Library/Application Support/Bakabase", path);
+        Assert.AreEqual(Path.Combine("/Users/foo", "Library", "Application Support", "Bakabase"), path);
     }
 
     [TestMethod]
@@ -102,7 +103,7 @@ public class DefaultAppDataPathResolverTests
             Env(new()),
             Folder(new() { [Environment.SpecialFolder.UserProfile] = "/home/foo" }),
             "Bakabase");
-        Assert.AreEqual("/home/foo/.local/share/Bakabase", path);
+        Assert.AreEqual(Path.Combine("/home/foo", ".local", "share", "Bakabase"), path);
     }
 
     [TestMethod]
@@ -113,7 +114,7 @@ public class DefaultAppDataPathResolverTests
             Env(new() { ["XDG_DATA_HOME"] = "/data/share" }),
             Folder(new() { [Environment.SpecialFolder.UserProfile] = "/home/foo" }),
             "Bakabase");
-        Assert.AreEqual("/data/share/Bakabase", path);
+        Assert.AreEqual(Path.Combine("/data/share", "Bakabase"), path);
     }
 
     [TestMethod]
@@ -125,7 +126,7 @@ public class DefaultAppDataPathResolverTests
             Env(new() { ["XDG_DATA_HOME"] = "   " }),
             Folder(new() { [Environment.SpecialFolder.UserProfile] = "/home/foo" }),
             "Bakabase");
-        Assert.AreEqual("/home/foo/.local/share/Bakabase", path);
+        Assert.AreEqual(Path.Combine("/home/foo", ".local", "share", "Bakabase"), path);
     }
 
     [TestMethod]
@@ -149,6 +150,6 @@ public class DefaultAppDataPathResolverTests
             Env(new() { ["BAKABASE_DATA_DIR"] = "   " }),
             Folder(new() { [Environment.SpecialFolder.UserProfile] = "/home/foo" }),
             "Bakabase");
-        Assert.AreEqual("/home/foo/.local/share/Bakabase", path);
+        Assert.AreEqual(Path.Combine("/home/foo", ".local", "share", "Bakabase"), path);
     }
 }

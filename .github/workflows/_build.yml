@@ -102,13 +102,13 @@ jobs:
             csproj: Bakabase/src/apps/Bakabase.App/Bakabase.App.csproj
             nuget-path: ~\\.nuget\\packages
             runtimeMode: WINFORMS
-          - os: macos-15
+          - os: macos-15-intel
             rid: osx-x64
             artifact: osx-x64
             csproj: Bakabase/src/apps/Bakabase.App/Bakabase.App.csproj
             nuget-path: ~/.nuget/packages
             runtimeMode: MACOS
-          - os: macos-latest
+          - os: macos-15
             rid: osx-arm64
             artifact: osx-arm64
             csproj: Bakabase/src/apps/Bakabase.App/Bakabase.App.csproj
@@ -134,6 +134,10 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: ./global.json
+      - name: Setup Python for release contract checks
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Check dotnet info
         run: dotnet --info
       - name: Cache NuGet packages
@@ -162,6 +166,12 @@ jobs:
         with:
           name: fe
           path: ./publish/web
+      - name: Verify product and published role boundaries
+        shell: bash
+        run: |
+          ROLE=unified
+          if [[ "${{ matrix.runtimeMode }}" == "DOCKER" ]]; then ROLE=server; fi
+          python Bakabase/src/scripts/check-release-contract.py --role "$ROLE" --publish-dir ./publish --require-web
       # vpk builds the Setup.exe / Update.exe binaries that the Velopack NuGet package talks
       # to, and Velopack ships both halves under one version number — they are meant to match.
       # Unpinned, this step silently took whatever was newest, so the installer version drifted
@@ -198,6 +208,7 @@ jobs:
           else
             MAIN_EXE="Bakabase"
             ICON_ARG="--icon ./publish/Assets/app.icns"
+            python Bakabase/src/scripts/prepare-macos-plist.py --template ./publish/Info.plist --output ./publish/Info.plist --version "${{ inputs.version }}"
             PLIST_ARG="--plist ./publish/Info.plist"
           fi
           vpk pack \
@@ -209,6 +220,9 @@ jobs:
             $ICON_ARG \
             $PLIST_ARG \
             $CHANNEL_ARG
+          if [[ "${{ matrix.runtimeMode }}" == "MACOS" ]]; then
+            python Bakabase/src/scripts/check-release-contract.py --role unified --publish-dir ./publish --require-web --macos-portable-dir ./vpk-output --version "${{ inputs.version }}"
+          fi
       - name: Upload Velopack artifact
         if: matrix.runtimeMode == 'WINFORMS' || matrix.runtimeMode == 'MACOS'
         uses: actions/upload-artifact@v4
@@ -247,12 +261,12 @@ jobs:
             artifact: win-x64
             nuget-path: ~\\.nuget\\packages
             runtimeMode: WINFORMS
-          - os: macos-15
+          - os: macos-15-intel
             rid: osx-x64
             artifact: osx-x64
             nuget-path: ~/.nuget/packages
             runtimeMode: MACOS
-          - os: macos-latest
+          - os: macos-15
             rid: osx-arm64
             artifact: osx-arm64
             nuget-path: ~/.nuget/packages
@@ -271,6 +285,10 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: ./global.json
+      - name: Setup Python for release contract checks
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
@@ -293,6 +311,9 @@ jobs:
             exit 1
           fi
           test -f ./publish/Bakabase.Client.Remoting.dll
+      - name: Verify legacy client product and dependency boundaries
+        shell: bash
+        run: python Bakabase/src/scripts/check-release-contract.py --role client --publish-dir ./publish
 
       - name: Install Velopack CLI
         run: dotnet tool install -g vpk --version 1.2.0
@@ -320,6 +341,7 @@ jobs:
           else
             MAIN_EXE="Bakabase.Client"
             ICON_ARG="--icon ./publish/Assets/app.icns"
+            python Bakabase/src/scripts/prepare-macos-plist.py --template ./publish/Info.plist --output ./publish/Info.plist --version "${{ inputs.version }}"
             PLIST_ARG="--plist ./publish/Info.plist"
           fi
           # A pack id of its own, and it is load-bearing: Velopack keys a release
@@ -335,6 +357,9 @@ jobs:
             $ICON_ARG \
             $PLIST_ARG \
             $CHANNEL_ARG
+          if [[ "${{ matrix.runtimeMode }}" == "MACOS" ]]; then
+            python Bakabase/src/scripts/check-release-contract.py --role client --publish-dir ./publish --macos-portable-dir ./vpk-output --version "${{ inputs.version }}"
+          fi
 
       # Named so it does NOT match the `vpk-*` pattern the release workflow globs for
       # the all-in-one. Two products in one release, collected separately.

@@ -8,6 +8,8 @@
     <string>Bakabase</string>
     <key>CFBundleIdentifier</key>
     <string>com.anobaka.bakabase</string>
+    <key>CFBundleExecutable</key>
+    <string>Bakabase</string>
     <key>CFBundleVersion</key>
     <string>1.0.0</string>
     <key>CFBundleShortVersionString</key>
@@ -18,6 +20,12 @@
     <string>app.icns</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Bakabase finds your other devices running Bakabase and shares or browses libraries you have authorized on your local network.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_bakabase._tcp</string>
+    </array>
     <key>LSMinimumSystemVersion</key>
     <string>10.15</string>
 </dict>

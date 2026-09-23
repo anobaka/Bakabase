@@ -15,6 +15,8 @@
     <string>Bakabase Client</string>
     <key>CFBundleIdentifier</key>
     <string>com.anobaka.bakabase.client</string>
+    <key>CFBundleExecutable</key>
+    <string>Bakabase.Client</string>
     <key>CFBundleVersion</key>
     <string>1.0.0</string>
     <key>CFBundleShortVersionString</key>
@@ -25,6 +27,12 @@
     <string>app.icns</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Bakabase Client finds Bakabase servers on your local network and connects to the one you choose.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_bakabase._tcp</string>
+    </array>
     <key>LSMinimumSystemVersion</key>
     <string>10.15</string>
 </dict>
