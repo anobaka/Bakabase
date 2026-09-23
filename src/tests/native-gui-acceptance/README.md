@@ -38,21 +38,39 @@ names, text, identifiers and actions are not read or retained and cannot become
 action candidates. This also prevents an editable value exposed as a child
 `AXStaticText` from entering the saved evidence.
 
-A PID mismatch still fails the complete-tree gate. For the first mismatch
-obtained directly from a verified parent's `AXChildren`, diagnostics retain the
-expected/actual PIDs and numeric tree path. After rechecking the owned parent
-edge and application's window reference, the observer reads only the foreign
-node's `AXParent` and `AXWindow` references and records equality booleans and AX
-error numbers. It does not read that node's role, text, values or actions, follow
-its pointers, or treat matching references as permission to continue.
+The first unknown PID still fails the complete-tree gate without reading its
+role, text, values or actions. Only a node obtained directly from a verified
+owned parent's `AXChildren` receives pointer-only diagnostics: the parent edge
+and application's window are re-read, and the foreign `AXParent` / `AXWindow`
+references must compare equal to those held native objects. Both AX calls must
+succeed and the node's PID must remain stable.
 
-One hosted-only helper may then sample exactly that PID twice using public
-`libproc` calls, recording executable path, UID, PPID and microsecond start time
-only if stable. Its two-second cap also fits within the original read/readiness
-deadlines; it never enumerates processes or reads argv, environment, UI or logs.
-The report labels these facts as diagnostics with `ownershipEstablished=false`.
-They do not establish that a WebKit process belongs to the product or make a
-partial tree pass.
+A hosted-only, at most two-second `libproc` helper samples the exact application
+and embedded PIDs twice, recording executable paths, UIDs, PPIDs and microsecond
+start times. These identities must agree with the application's identity from
+before and after the failed read, have matching UIDs, and predate the diagnostic.
+This may prepare **one candidate for the next read**; the failed first read does
+not become complete. No executable basename, process name or PPID grants access.
+
+The next read checks both full OS identities before and after native inspection.
+Before any embedded metadata, it re-resolves the owned application's window
+and parent path, requires the exact reciprocal root edge and window reference,
+then requires the embedded root role to be `AXWebArea`. Each embedded descendant
+must have the bound PID and a reciprocal parent/child chain to that root with
+the same held native window. An unvisited hit-test descendant is followed only
+through pointer relations until it reaches an already verified ancestor.
+Another PID, the same PID outside this root, a changed edge/window, reused PID,
+changed identity, incomplete tree or exhausted budget fails closed.
+
+Only a complete successful next read promotes `embeddedAXBinding` into the
+app and snapshot. `embeddedAXProof` records the native root and the stable OS
+checks. Actions require that same complete snapshot binding, re-read the full
+tree, compare held native identities, recheck the root after the action and
+verify both OS identities again. A partial read never authorizes an action.
+All checks consume the existing read/action/readiness deadlines; no processes
+are enumerated and argv, environment, UI of unrelated processes and logs are
+never read. `capture(..., deadline=...)` can shorten the readiness deadline to
+an enclosing flow's absolute deadline, and cannot extend its 90-second default.
 
 A child does not inherit visibility from its window. Named web controls and
 static text require finite geometry and an application-scoped, read-only hit
@@ -86,7 +104,9 @@ but it is not an Apple SDK standard action constant. The observer
 uses public `AXUIElementPerformAction`, without private API, guessed action or
 fallback. Unsupported targets fail explicitly. macOS semantic region labels
 are limited to `AXGroup`, `AXHeading` and `AXScrollArea` outside editable
-subtrees. Snapshot fields `scrollToVisible`, `valueSettable` and
+subtrees. A noneditable `AXStaticText` may also expose an exact displayed-value
+label and its own advertised scroll action; no ancestor is guessed as a scroll
+target. Snapshot fields `scrollToVisible`, `valueSettable` and
 `editableAncestor` describe these boundaries. A successful submission is not
 proof of the resulting visible state; the flow must observe that separately.
 
@@ -103,5 +123,35 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover \
 ```
 
 Neither availability nor a complete tree is a successful product workflow.
-The empty-library gate remains distinct from untested native pairing, remote
-query/detail and offline recovery (`mainFlowPassed` stays false).
+The empty-library gate remains distinct from native pairing, remote query/detail
+and offline recovery (`mainFlowPassed` stays false).
+
+`--flow federated --source-publish <hosted-publish-directory>` exercises these
+remaining workflows with one installed unified reader and the explicit
+`Bakabase.NativeGui.SourceHost` fixture. The fixture uses production Shell and
+Service assemblies from the execution commit, plus web assets verified against
+the candidate package's portable ZIP. Both provenances are recorded. It has a
+private executable, AppData profile, loopback port and single-instance ID; this
+does not certify two installed unified copies or separate physical devices.
+
+The four named phases (source pairing, reader pairing, reader query, reader
+recovery) share one 600-second deadline. Each retains 20 actions and 40 reads,
+with the existing per-action/read/readiness bounds. Resource preparation alone
+uses production API writes. Native controls accept terms, enable sharing,
+request and approve read-only access, enable independent browsing, search and
+open the exact resource detail. Read-only API checks confirm directional grants
+and unchanged source metadata, media and playback history.
+
+The source is then stopped and restarted with its original data and grants.
+Native UI must show partial coverage while offline and recover without reader
+restart or re-pairing. On macOS the restarted source must establish a fresh
+complete embedded-process binding. Source cleanup verifies owned process exit
+and removes only its private profile and preflighted test bundle cache domains.
+`mainFlowPassed` is set only after all workflow steps and source/installed-product
+cleanup succeed. The fixture's own report never declares that overall result.
+The direct-AX runner also arms exact renderer identities for both installed
+products while they are alive. After their main processes stop, the existing
+lifecycle's pre-removal callback verifies those renderers have exited using
+read-only exact-PID observations (at most 30 seconds per product). An uncertain
+or absent binding retains the installed fixtures and fails cleanup; no renderer
+is signalled or selected by executable name.

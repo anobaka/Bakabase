@@ -93,9 +93,59 @@ def observe(rid, pid, observed_ms):
     return before
 
 
+def observe_pair(rid, pid, owned_pid, observed_ms):
+    hosted(rid)
+    require(integer(pid, 1) and integer(owned_pid, 1) and pid != owned_pid and
+            integer(observed_ms, 0, 2**53-1), "InvalidDiagnosticInput")
+    before = {"identity": identity(sample(pid), pid), "ownedIdentity": identity(sample(owned_pid), owned_pid)}
+    after = {"identity": identity(sample(pid), pid), "ownedIdentity": identity(sample(owned_pid), owned_pid)}
+    require(before == after, "ProcessIdentityChanged")
+    require(all(item["startSeconds"] * 1000000 + item["startMicroseconds"] <= observed_ms * 1000 + 999
+                for item in before.values()), "ProcessStartedAfterAXObservation")
+    return before
+
+
+def validate_app(app):
+    hosted(app["rid"])
+    if app.get("role") == "source-fixture":
+        spec = importlib.util.spec_from_file_location("native_pid_source_guard", HERE / "source_fixture.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.validate_probe_app(app)
+        return
+    expected = {"unified": "Bakabase", "client": "Bakabase.Client"}.get(app.get("role"))
+    require(expected is not None and Path(app["exe"]).is_absolute() and Path(app["exe"]).name == expected and
+            Path(app["exe"]).is_file(), "InvalidDiagnosticInput")
+
+
 def failure_code(error):
     code = str(error) if isinstance(error, IdentityFailure) else None
     return code if code in CODES else "DiagnosticUnavailable"
+
+
+def capture_owned(app, pid, timeout):
+    result = {"code": "DiagnosticUnavailable", "stable": False, "identity": None}
+    began = time.monotonic()
+    try:
+        validate_app(app)
+        require(integer(pid, 1), "InvalidDiagnosticInput")
+        require(type(timeout) in (float, int) and math.isfinite(timeout) and 0 < timeout <= 2,
+                "DiagnosticBudgetExhausted")
+        remaining = timeout - (time.monotonic() - began)
+        require(remaining > 0, "DiagnosticBudgetExhausted")
+        child = subprocess.run([sys.executable, "-B", str(Path(__file__).resolve()), app["rid"], str(pid),
+                                str(int(time.time()*1000))], capture_output=True, timeout=remaining)
+        require(child.returncode == 0 and len(child.stdout) <= 8192, "DiagnosticUnavailable")
+        raw = json.loads(child.stdout)
+        require(isinstance(raw, dict) and raw.get("code") == "ObservedStable", "ProcessUnavailable")
+        observed = identity(raw.get("identity"), pid)
+        require(observed["executable"] == str(Path(app["exe"]).resolve()), "ProcessIdentityChanged")
+        result.update(code="ObservedStable", stable=True, identity=observed)
+    except subprocess.TimeoutExpired:
+        result["code"] = "DiagnosticTimedOut"
+    except Exception as error:
+        result["code"] = failure_code(error)
+    return result
 
 
 def capture(app, diagnostic, timeout):
@@ -104,10 +154,7 @@ def capture(app, diagnostic, timeout):
               "identity": None, "observedEpochMs": None}
     began = time.monotonic()
     try:
-        hosted(app["rid"])
-        expected = {"unified": "Bakabase", "client": "Bakabase.Client"}.get(app.get("role"))
-        require(expected is not None and Path(app["exe"]).is_absolute() and Path(app["exe"]).name == expected and
-                Path(app["exe"]).is_file(), "InvalidDiagnosticInput")
+        validate_app(app)
         pid, expected_pid, observed_ms = (diagnostic.get(key) for key in ("actualPid", "expectedPid", "observedEpochMs"))
         require(diagnostic.get("origin") == "owned-child-edge" and integer(pid, 1) and integer(expected_pid, 1) and
                 pid != expected_pid and integer(observed_ms, 0, 2**53-1), "InvalidDiagnosticInput")
@@ -116,7 +163,7 @@ def capture(app, diagnostic, timeout):
                 "DiagnosticBudgetExhausted")
         remaining = timeout - (time.monotonic() - began)
         require(remaining > 0, "DiagnosticBudgetExhausted")
-        child = subprocess.run([sys.executable, "-B", str(Path(__file__).resolve()), app["rid"], str(pid), str(observed_ms)],
+        child = subprocess.run([sys.executable, "-B", str(Path(__file__).resolve()), app["rid"], str(pid), str(observed_ms), str(expected_pid)],
                                capture_output=True, timeout=remaining)
         # The child writes only this fixed schema; raw streams/exceptions are
         # never evidence. subprocess.run kills and waits for its own child on timeout.
@@ -125,7 +172,10 @@ def capture(app, diagnostic, timeout):
         require(isinstance(raw, dict), "DiagnosticUnavailable")
         if raw.get("code") != "ObservedStable":
             raise IdentityFailure(raw.get("code") if raw.get("code") in CODES else "DiagnosticUnavailable")
-        result.update(code="ObservedStable", stable=True, identity=identity(raw.get("identity"), pid))
+        target, owned = identity(raw.get("identity"), pid), identity(raw.get("ownedIdentity"), expected_pid)
+        require(owned["executable"] == str(Path(app["exe"]).resolve()) and owned["uid"] == target["uid"],
+                "ProcessIdentityChanged")
+        result.update(code="ObservedStable", stable=True, identity=target, ownedIdentity=owned)
     except subprocess.TimeoutExpired:
         result["code"] = "DiagnosticTimedOut"
     except Exception as error:
@@ -136,8 +186,12 @@ def capture(app, diagnostic, timeout):
 
 def main():
     try:
-        require(len(sys.argv) == 4, "InvalidDiagnosticInput")
-        result = {"code": "ObservedStable", "identity": observe(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))}
+        require(len(sys.argv) in (4, 5), "InvalidDiagnosticInput")
+        result = {"code": "ObservedStable"}
+        if len(sys.argv) == 5:
+            result.update(observe_pair(sys.argv[1], int(sys.argv[2]), int(sys.argv[4]), int(sys.argv[3])))
+        else:
+            result["identity"] = observe(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
     except Exception as error:
         result = {"code": failure_code(error)}
     print(json.dumps(result, separators=(",", ":")))

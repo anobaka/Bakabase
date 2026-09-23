@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Native AX/UIA controls, never DOM/HTTP mutations, drive the empty-library flow."""
 import importlib.util
+import http.client
 import json
 from pathlib import Path
 import time
-import urllib.request
 
 HERE = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location("native_flow_probe", HERE / "probe.py")
@@ -17,6 +17,9 @@ KINDS = {
     "input": {"AXTextField", "AXTextArea", "ControlType.Edit"},
     # WKWebView exposes HTML aria-pressed buttons as AXCheckBox.
     "scope": {"AXCheckBox", "ControlType.Button", "ControlType.CheckBox"},
+    "checkbox": {"AXCheckBox", "ControlType.CheckBox"},
+    "region": {"AXGroup", "AXScrollArea", "ControlType.Group", "ControlType.Pane"},
+    "text": {"AXStaticText", "ControlType.Text"},
 }
 ACTION_STAGES = {"initialize", "preflight", "resolve-process", "resolve-control", "validate-control", "perform-action",
                  "enumerate-windows", "read-tree", "verify-process"}
@@ -26,15 +29,20 @@ def complete(snapshot):
     return snapshot.get("enabled") is True and snapshot.get("truncated") is False
 
 
-def nodes(snapshot):
+def nodes(snapshot, *, visible=True):
     probe.require(complete(snapshot), "IncompleteNativeTree")
     return [node for window in snapshot.get("windows", []) if window.get("visible") is True
-            for node in window.get("nodes", []) if node.get("insideWebContent") is True and probe.node_visible(snapshot, node)]
+            for node in window.get("nodes", []) if node.get("insideWebContent") is True and
+            (not visible or probe.node_visible(snapshot, node))]
 
 
-def matches(snapshot, label, kind):
-    found = [node for node in nodes(snapshot) if node.get("role") in KINDS[kind] and
-             node.get("enabled") is True and node.get("name") == label]
+def matches(snapshot, label, kind, *, visible=True, enabled=True):
+    found = [node for node in nodes(snapshot, visible=visible) if node.get("role") in KINDS[kind] and
+             (enabled is None or node.get("enabled") is enabled) and node.get("name") == label]
+    return unique_nodes(snapshot, found)
+
+
+def unique_nodes(snapshot, found):
     if snapshot.get("backend") != "windows-uia":
         return found
     unique = {}
@@ -48,7 +56,8 @@ def matches(snapshot, label, kind):
             # the provider's exact opaque identity permits alias collapsing;
             # equal labels or geometry never establish that identity.
             probe.require(all(previous.get(field) == node.get(field) for field in
-                              ("role", "name", "identifier", "password", "enabled", "visible")),
+                              ("role", "name", "identifier", "password", "enabled", "visible", "editableAncestor",
+                               "valueSettable", "scrollToVisible")),
                           "InconsistentRuntimeIdObservation")
             if (len(node["path"]), node["path"]) < (len(previous["path"]), previous["path"]):
                 unique[key] = node
@@ -61,25 +70,48 @@ def has_text(snapshot, text):
     return any(node.get("name") == text or node.get("text") == text for node in nodes(snapshot))
 
 
-def one(snapshot, label, kind):
-    found = matches(snapshot, label, kind)
+def select_node(snapshot, found, kind, *, operation=None):
     probe.require(len(found) == 1, "MissingOrAmbiguousNativeControl")
     node = found[0]
     probe.require(not node.get("password"), "SecureControlNotAllowed")
+    probe.require(not node.get("editableAncestor"), "EditableDescendantNotAllowed")
     path = node.get("path")
     probe.require(isinstance(path, list) and 2 <= len(path) <= 42 and
                   all(type(index) is int and 0 <= index < 1000 for index in path), "InvalidObservedControlPath")
     selected = {key: node.get(key, "") for key in ("path", "role", "name", "identifier", "runtimeId")}
-    if snapshot.get("backend") == "windows-uia" and kind == "scope":
+    if operation:
+        selected["operation"] = operation
+    elif snapshot.get("backend") == "windows-uia" and kind in ("scope", "checkbox"):
         probe.require("TogglePatternIdentifiers.Pattern" in node.get("actions", []), "NativeScopeToggleUnavailable")
         selected["operation"] = "toggle"
     return selected
 
 
+def one(snapshot, label, kind, *, operation=None):
+    return select_node(snapshot, matches(snapshot, label, kind, visible=operation != "scroll"), kind,
+                       operation=operation)
+
+
+def descendant(path, parent):
+    return isinstance(path, list) and isinstance(parent, list) and len(path) > len(parent) and path[:len(parent)] == parent
+
+
+def resource_card(snapshot, title):
+    # The card's accessible name includes source and availability. Its exact
+    # heading identifies the card without guessing concatenation or clicking text.
+    observed = nodes(snapshot)
+    headings = [node for node in observed if node.get("role") in
+                {"AXHeading", "AXStaticText", "ControlType.Text"} and
+                (node.get("name") == title or node.get("text") == title)]
+    cards = unique_nodes(snapshot, [node for node in observed if node.get("role") in KINDS["button"] and
+        node.get("enabled") is True and any(descendant(child.get("path"), node.get("path")) for child in headings)])
+    return select_node(snapshot, cards, "button")
+
+
 def perform(app, snapshot, selector, operation="press", value=None):
     probe.hosted(app)
     probe.require(complete(snapshot), "IncompleteNativeTree")
-    probe.require(operation in ("press", "set", "toggle"), "UnsupportedNativeOperation")
+    probe.require(operation in ("press", "set", "toggle", "scroll"), "UnsupportedNativeOperation")
     if operation == "toggle":
         probe.require(app["rid"] == "win-x64" and selector.get("operation") == "toggle" and
                       selector.get("role") in ("ControlType.Button", "ControlType.CheckBox"), "UnsupportedNativeToggle")
@@ -91,19 +123,19 @@ def perform(app, snapshot, selector, operation="press", value=None):
         probe.require(isinstance(value, str) and len(value) <= 4096, "InvalidNativeInput")
         record["value"] = value
     if app["rid"].startswith("osx-"):
-        probe.require(probe.mac_identity(pid) == identity, "ProductProcessChangedBeforeAction")
         backend = app.get("nativeBackend", "macos-system-events-ax")
         probe.require(snapshot.get("backend") == backend, "NativeActionProviderMismatch")
         if backend == "macos-direct-ax":
-            probe.require(operation == "press", "UnsupportedDirectAXOperation")
+            probe.require(operation in ("press", "set", "scroll"), "UnsupportedDirectAXOperation")
             record.update(maxNodes=1000, maxDepth=40)
-            source = probe.direct_ax_source("macos-ax-action.js")
+            result = probe.direct_action(app, snapshot, record, timeout=15)
         else:
             probe.require(backend == "macos-system-events-ax", "InvalidNativeBackend")
+            probe.require(probe.mac_identity(pid) == identity, "ProductProcessChangedBeforeAction")
             source = (HERE / "macos-action.js").read_text()
-        script = "const input = " + json.dumps(record) + ";\n" + source
-        result = probe.bounded_command(["/usr/bin/osascript", "-l", "JavaScript", "-"], script, 15)
-        probe.require(probe.mac_identity(pid) == identity, "ProductProcessChangedAfterAction")
+            script = "const input = " + json.dumps(record) + ";\n" + source
+            result = probe.bounded_command(["/usr/bin/osascript", "-l", "JavaScript", "-"], script, 15)
+            probe.require(probe.mac_identity(pid) == identity, "ProductProcessChangedAfterAction")
     else:
         result = probe.bounded_command(["powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-STA",
                                         "-ExecutionPolicy", "Bypass", "-File", HERE / "windows-action.ps1"],
@@ -117,14 +149,14 @@ def perform(app, snapshot, selector, operation="press", value=None):
 
 
 class Driver:
-    def __init__(self, app, pid, directory):
+    def __init__(self, app, pid, directory, *, deadline=None, scope="installed-native-empty-library"):
         probe.hosted(app)
         self.app, self.pid, self.directory = app, pid, Path(directory)
         probe.require(not self.directory.exists(), "FlowResultsAlreadyExist")
         self.directory.mkdir(parents=True)
-        self.deadline = time.monotonic() + 600
+        self.deadline = min(time.monotonic() + 600, deadline) if deadline is not None else time.monotonic() + 600
         self.identity, self.current = None, None
-        self.report = {"scope": "installed-native-empty-library", "emptyLibraryFlowPassed": False,
+        self.report = {"scope": scope, "emptyLibraryFlowPassed": False,
                        "nativeBackend": app.get("nativeBackend", "windows-uia" if app.get("rid") == "win-x64" else "macos-system-events-ax"),
                        "mainFlowPassed": False, "actions": [], "observations": [], "checkpoints": []}
         self.save()
@@ -164,24 +196,73 @@ class Driver:
         raise probe.ProbeFailure("NativeExpectedStateUnavailable:" + step)
 
     def press(self, label, kind="button"):
-        probe.require(len(self.report["actions"]) < 20, "NativeActionBudgetExceeded")
         selector = one(self.current, label, kind)
         operation = selector.get("operation", "press")
+        self.act(selector, operation, label, kind)
+
+    def act(self, selector, operation, label, kind, value=None):
+        probe.require(time.monotonic() < self.deadline-16, "NativeFlowDeadlineExceeded")
+        probe.require(len(self.report["actions"]) < 20, "NativeActionBudgetExceeded")
         action = {"operation": operation, "label": label, "kind": kind, "submitted": False}
         self.report["actions"].append(action)
         self.save()
-        perform(self.app, self.current, selector, operation)
+        if value is None:
+            perform(self.app, self.current, selector, operation)
+        else:
+            perform(self.app, self.current, selector, operation, value)
         action["submitted"] = True
         self.save()
 
+    def set(self, label, value):
+        self.act(one(self.current, label, "input"), "set", label, "input", value)
 
-def status(app):
+    def reveal(self, label, kind="button", *, enabled=True):
+        self.wait("find-" + kind, lambda view: len(matches(view, label, kind, visible=False, enabled=enabled)) == 1)
+        if len(matches(self.current, label, kind, enabled=enabled)) == 1:
+            return
+        found = matches(self.current, label, kind, visible=False, enabled=enabled)
+        probe.require(found[0].get("scrollToVisible") is True, "NativeScrollUnavailable")
+        self.act(select_node(self.current, found, kind, operation="scroll"), "scroll", label, kind)
+        self.wait("revealed-" + kind, lambda view: len(matches(view, label, kind, enabled=enabled)) == 1)
+
+    def open_resource(self, title):
+        self.act(resource_card(self.current, title), "press", title, "resource-card")
+
+    def reveal_text(self, label):
+        self.reveal(label, "text", enabled=None)
+        probe.require(has_text(self.current, label), "NativeTextNotVisibleAfterReveal")
+
+
+def status(app, *, deadline=None):
     # A read-only cross-check of persisted outcome, never a substitute for the
     # native visible-state assertions and never a way to change the setting.
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    with opener.open(f'http://127.0.0.1:{app["port"]}/federation/local/peers', timeout=3) as response:
+    deadline = min(time.monotonic() + 3, deadline) if deadline is not None else time.monotonic() + 3
+    def remaining():
+        value = deadline - time.monotonic()
+        probe.require(value > 0, "NativeFlowDeadlineExceeded")
+        return value
+    connection = http.client.HTTPConnection("127.0.0.1", app["port"], timeout=remaining())
+    try:
+        connection.request("GET", "/federation/local/peers")
+        active_socket = connection.sock
+        probe.require(active_socket is not None, "NativeStateCrossCheckFailed")
+        active_socket.settimeout(remaining())
+        response = connection.getresponse()
         probe.require(response.status == 200, "NativeStateCrossCheckFailed")
-        return json.loads(response.read(1024*1024))
+        body = bytearray()
+        while True:
+            active_socket.settimeout(remaining())
+            block = response.read1(min(65536, 1024*1024 + 1 - len(body)))
+            if not block:
+                break
+            body.extend(block)
+            probe.require(len(body) <= 1024*1024, "NativeStateCrossCheckFailed")
+            if response.isclosed():
+                break
+        remaining()
+        return json.loads(body)
+    finally:
+        connection.close()
 
 
 def empty_library(driver, status_reader=status):

@@ -89,7 +89,8 @@ class IdentityGuards(unittest.TestCase):
             executable = Path(directory) / "Bakabase"
             executable.touch()
             app = {"role": "unified", "rid": "osx-arm64", "exe": executable}
-            for child, expected in ((SimpleNamespace(returncode=0, stdout=json.dumps({"code": "ObservedStable", "identity": IDENTITY}).encode()), "ObservedStable"),
+            for child, expected in ((SimpleNamespace(returncode=0, stdout=json.dumps({"code": "ObservedStable", "identity": IDENTITY,
+                                        "ownedIdentity": {**IDENTITY, "pid": 42, "executable": str(executable.resolve())}}).encode()), "ObservedStable"),
                                     (SimpleNamespace(returncode=1, stdout=b"SECRET"), "DiagnosticUnavailable"),
                                     (SimpleNamespace(returncode=0, stdout=b'{"code":"SECRET"}'), "DiagnosticUnavailable"),
                                     (subprocess.TimeoutExpired(["fixture"], 2, output=b"SECRET", stderr=b"SECRET"), "DiagnosticTimedOut")):
@@ -101,7 +102,7 @@ class IdentityGuards(unittest.TestCase):
                 self.assertEqual(expected == "ObservedStable", result["stable"])
                 self.assertNotIn("SECRET", json.dumps(result))
                 self.assertLessEqual(run.call_args.kwargs["timeout"], 2)
-                self.assertEqual(["osx-arm64", "900", "100001"], run.call_args.args[0][-3:])
+                self.assertEqual(["osx-arm64", "900", "100001", "42"], run.call_args.args[0][-4:])
 
     def test_unowned_origin_or_no_remaining_budget_cannot_start_helper(self):
         with tempfile.TemporaryDirectory() as directory:

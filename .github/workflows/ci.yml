@@ -33,6 +33,11 @@ on:
         type: choice
         options: [performance, native-gui, player, historical, macos-data, macos-data-arm, all]
         default: performance
+      native_gui_flow:
+        description: Native GUI scope (federated uses an installed reader and a production source fixture)
+        type: choice
+        options: [empty-library, capability, federated]
+        default: empty-library
 
 # A newer push to the same branch / PR cancels older in-progress runs.
 concurrency:
@@ -52,6 +57,7 @@ jobs:
     with:
       area: ${{ inputs.acceptance_area }}
       package_run_id: ${{ inputs.package_run_id }}
+      native_gui_flow: ${{ inputs.native_gui_flow || 'empty-library' }}
 
   installed-lifecycle:
     if: github.event_name == 'workflow_dispatch' && inputs.suite == 'installed'

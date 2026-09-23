@@ -9,6 +9,10 @@ on:
       package_run_id:
         required: false
         type: string
+      native_gui_flow:
+        required: false
+        type: string
+        default: empty-library
 
 permissions:
   contents: read
@@ -135,18 +139,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Validate native UI boundaries
+        run: python -m unittest discover -s src/tests/native-gui-acceptance -p 'test_*.py' -v
+      - uses: actions/setup-dotnet@v4
+        if: inputs.native_gui_flow == 'federated'
+        with:
+          global-json-file: ./global.json
+      - name: Build explicitly isolated production Shell and Service source fixture
+        if: inputs.native_gui_flow == 'federated'
         run: |
-          python src/tests/native-gui-acceptance/test_probe.py
-          python src/tests/native-gui-acceptance/test_flow.py
-          python src/tests/native-gui-acceptance/test_direct_ax.py
-          python src/tests/native-gui-acceptance/test_direct_ax_tree.py
-          python src/tests/native-gui-acceptance/test_pid_identity.py
+          MODE=WINFORMS
+          if [[ '${{ runner.os }}' == 'macOS' ]]; then MODE=MACOS; fi
+          dotnet publish src/tests/Bakabase.NativeGui.SourceHost/Bakabase.NativeGui.SourceHost.csproj \
+            --configuration Release --runtime '${{ matrix.rid }}' --self-contained true \
+            -p:RuntimeMode="$MODE" --output "$RUNNER_TEMP/native-source-publish"
       - name: Verify candidate package provenance
         id: inputs
         env:
@@ -163,13 +175,16 @@ jobs:
           CLIENT_PACKAGES: ${{ steps.inputs.outputs.client_directory }}
           PACKAGE_VERSION: ${{ steps.inputs.outputs.version }}
           PACKAGE_PROVENANCE: ${{ steps.inputs.outputs.provenance }}
+          GUI_FLOW: ${{ inputs.native_gui_flow }}
         run: |
           OBSERVER_ARGS=()
           if [[ '${{ runner.os }}' == 'macOS' ]]; then OBSERVER_ARGS=(--macos-observer direct-ax); fi
+          SOURCE_ARGS=()
+          if [[ "$GUI_FLOW" == 'federated' ]]; then SOURCE_ARGS=(--source-publish "$RUNNER_TEMP/native-source-publish"); fi
           python src/tests/native-gui-acceptance/run-probe.py \
             --unified-packages "$UNIFIED_PACKAGES" --client-packages "$CLIENT_PACKAGES" \
             --rid '${{ matrix.rid }}' --version "$PACKAGE_VERSION" --provenance "$PACKAGE_PROVENANCE" \
-            --results-directory "$RUNNER_TEMP/native-gui-results" --flow empty-library "${OBSERVER_ARGS[@]}"
+            --results-directory "$RUNNER_TEMP/native-gui-results" --flow "$GUI_FLOW" "${OBSERVER_ARGS[@]}" "${SOURCE_ARGS[@]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

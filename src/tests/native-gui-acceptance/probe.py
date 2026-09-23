@@ -7,6 +7,7 @@ accepts HTML/API responses as evidence of visible native WebView content.
 import ctypes
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -33,14 +34,14 @@ AX_CODES = {"DirectAXTreeDeadline", "DirectAXReadCountExceeded", "DirectAXValueT
             "DirectAXSecureSubtreeUnavailable", "DirectAXTreeUnavailable", "DirectAXControlChanged",
             "DirectAXControlInvisible", "DirectAXControlOutsideWeb", "DirectAXActionTreeIncomplete", "DirectAXControlAmbiguous",
             "DirectAXGeometryUnavailable", "DirectAXChildrenCountMismatch", "DirectAXEditableDescendant",
-            "DirectAXOperationUnsupported"}
+            "DirectAXOperationUnsupported", "DirectAXEmbeddedStructureChanged", "DirectAXEmbeddedRootRoleRejected"}
 AX_ATTRIBUTES = {"AXRole", "AXSubrole", "AXTitle", "AXDescription", "AXIdentifier", "AXEnabled",
-                 "AXHidden", "AXMinimized", "AXChildren", "AXWindows", "AXValue", "AXPosition", "AXSize", "AXParent"}
+                 "AXHidden", "AXMinimized", "AXChildren", "AXWindows", "AXValue", "AXPosition", "AXSize", "AXParent", "AXWindow"}
 AX_OPERATIONS = {"initialize", "array-type", "array-count", "array-item", "element-type", "element-timeout",
                  "read-pid", "read-role", "read-subrole", "read-title", "read-description", "read-identifier",
                  "read-enabled", "read-hidden", "read-minimized", "read-children", "read-windows", "read-static-text",
                  "read-position", "read-size", "read-parent", "read-actions", "read-children-count",
-                 "geometry-decode", "hit-test", "press", "read-value-settable", "set-value", "scroll-to-visible"}
+                 "geometry-decode", "hit-test", "press", "read-value-settable", "set-value", "scroll-to-visible", "verify-embedded-relation"}
 AX_CHILDREN_EVIDENCE = {"explicit-array", "static-text-unsupported", "no-value-count-zero"}
 AX_COUNT_KINDS = {"number", "decimal-string", "rejected-string", "null", "undefined", "boolean", "other"}
 AX_VISIBILITY = {"window-hidden", "zero-size", "outside-window", "no-hit", "owned-hit-test", "other-hit",
@@ -77,10 +78,70 @@ def pid_diagnostic(raw):
 def collect_pid_identity(app, diagnostic, timeout):
     # Separate short-lived helper bounds libproc calls and has its own hosted
     # guard. This is evidence collection only; no process is authorized by it.
+    return pid_module().capture(app, diagnostic, timeout)
+
+
+def pid_module():
     spec = importlib.util.spec_from_file_location("native_gui_pid_identity", HERE / "macos_pid_identity.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.capture(app, diagnostic, timeout)
+    return module
+
+
+def embedded_binding(raw):
+    """Validate and copy only the fixed, single-subtree binding schema."""
+    if not isinstance(raw, dict):
+        return None
+    try:
+        require(type(raw.get("schemaVersion")) is int and raw["schemaVersion"] == 1 and
+                raw.get("initialRelationsVerified") is True, "InvalidEmbeddedBinding")
+        path, observed = raw.get("rootPath"), raw.get("observedEpochMs")
+        require(isinstance(path, list) and 2 <= len(path) <= 42 and type(path[0]) is int and 0 <= path[0] < 8 and
+                all(type(i) is int and 0 <= i < MAX_NODES for i in path), "InvalidEmbeddedBinding")
+        count = raw.get("parentChildCount")
+        require(type(count) is int and path[-1] < count <= MAX_NODES and type(observed) is int and
+                0 <= observed <= 2**53-1, "InvalidEmbeddedBinding")
+        module = pid_module()
+        application = module.identity(raw.get("application"), raw["application"]["pid"])
+        embedded = module.identity(raw.get("embedded"), raw["embedded"]["pid"])
+        require(application["pid"] != embedded["pid"] and application["uid"] == embedded["uid"], "InvalidEmbeddedBinding")
+        require(all(item["startSeconds"] * 1000000 + item["startMicroseconds"] <= observed * 1000 + 999
+                    for item in (application, embedded)), "InvalidEmbeddedBinding")
+        return {"schemaVersion": 1, "initialRelationsVerified": True, "rootPath": list(path),
+                "parentChildCount": count, "observedEpochMs": observed, "application": application, "embedded": embedded}
+    except (AssertionError, TypeError, KeyError, ValueError):
+        return None
+
+
+def binding_from_diagnostic(app, snapshot, diagnostic, identity_result):
+    flags = ("edgeStillMatches", "windowStillMatches", "parentMatches", "windowMatches", "actualPidStable")
+    if not (diagnostic and diagnostic["origin"] == "owned-child-edge" and diagnostic["status"] == "observed" and
+            all(diagnostic[key] is True for key in flags) and diagnostic["parentAXError"] == 0 and diagnostic["windowAXError"] == 0 and
+            identity_result.get("code") == "ObservedStable" and identity_result.get("stable") is True):
+        return None
+    path = diagnostic["path"]
+    if not (path and diagnostic["parentPath"] == path[:-1] and diagnostic["windowIndex"] == path[0] and
+            diagnostic["childIndex"] == path[-1] and identity_result.get("observedEpochMs") == diagnostic["observedEpochMs"]):
+        return None
+    candidate = embedded_binding({"schemaVersion": 1, "initialRelationsVerified": True, "rootPath": path,
+        "parentChildCount": diagnostic["parentChildCount"], "observedEpochMs": diagnostic["observedEpochMs"],
+        "application": identity_result.get("ownedIdentity"), "embedded": identity_result.get("identity")})
+    if not (candidate and snapshot.get("ownedOSIdentityStable") is True and candidate["application"] == snapshot.get("ownedOSIdentity") and
+            candidate["application"]["pid"] == diagnostic["expectedPid"] and candidate["embedded"]["pid"] == diagnostic["actualPid"] and
+            candidate["application"]["executable"] == str(Path(app["exe"]).resolve())):
+        return None
+    return candidate
+
+
+def embedded_proof(raw):
+    if not isinstance(raw, dict):
+        return None
+    role = raw.get("rootRole")
+    return {"verified": raw.get("verified") is True, "osIdentityStable": raw.get("osIdentityStable") is True,
+            "rootRole": role if role in {"AXWebArea", "AXGroup", "AXScrollArea", "AXUnknown", "Other"} else None,
+            "applicationPid": raw.get("applicationPid") if type(raw.get("applicationPid")) is int else None,
+            "embeddedPid": raw.get("embeddedPid") if type(raw.get("embeddedPid")) is int else None,
+            "rootPath": pid_diagnostic({"path": raw.get("rootPath")})["path"]}
 
 
 def ax_diagnostic(raw):
@@ -111,6 +172,12 @@ def require(value, code):
 
 def hosted(app):
     base.require_hosted_runner(os.environ, platform.system(), platform.machine(), app["rid"])
+    if app.get("role") == "source-fixture":
+        spec = importlib.util.spec_from_file_location("native_gui_source_guard", HERE / "source_fixture.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.validate_probe_app(app)
+        return
     require(app["role"] in ("unified", "client"), "InvalidProductRole")
     expected = "Bakabase" if app["role"] == "unified" else "Bakabase.Client"
     if app["rid"] == "win-x64":
@@ -176,15 +243,92 @@ def bounded_command(arguments, payload, timeout):
             stream.close()
 
 
-def mac_identity(pid):
+def mac_identity(pid, timeout=3):
     require(type(pid) is int and pid > 0, "InvalidProductPid")
     library = ctypes.CDLL("/usr/lib/libproc.dylib")
     buffer = ctypes.create_string_buffer(4096)
     require(library.proc_pidpath(pid, buffer, len(buffer)) > 0, "ProductProcessMissing")
     result = subprocess.run(["/bin/ps", "-p", str(pid), "-o", "lstart="],
-                            capture_output=True, text=True, timeout=3)
+                            capture_output=True, text=True, timeout=timeout)
     require(result.returncode == 0 and result.stdout.strip(), "ProductProcessMissing")
     return {"pid": pid, "executable": buffer.value.decode(), "started": result.stdout.strip()}
+
+
+def owned_identity(app, pid, timeout):
+    result = pid_module().capture_owned(app, pid, timeout)
+    require(result.get("code") == "ObservedStable" and result.get("stable") is True, "OwnedOSIdentityUnavailable")
+    return result["identity"]
+
+
+def direct_execute(app, pid, data, entrypoint, timeout, binding=None, expected_owned=None):
+    """One deadline contains pre/post OS checks and the bounded native helper."""
+    require(0 < timeout <= TIMEOUT, "InvalidProbeTimeout")
+    deadline = time.monotonic() + timeout
+    def remaining(cap):
+        value = min(cap, deadline-time.monotonic())
+        require(value > 0, "NativeProbeTimedOut")
+        return value
+    legacy = mac_identity(pid, timeout=remaining(3))
+    require(Path(legacy["executable"]).resolve() == Path(app["exe"]).resolve(), "ProductExecutableMismatch")
+    if binding is not None:
+        require(embedded_binding(binding) == binding and binding["application"]["pid"] == pid and
+                binding["application"]["executable"] == str(Path(app["exe"]).resolve()), "InvalidEmbeddedBinding")
+        def pair():
+            diagnostic = {"origin": "owned-child-edge", "actualPid": binding["embedded"]["pid"],
+                          "expectedPid": pid, "observedEpochMs": binding["observedEpochMs"]}
+            value = collect_pid_identity(app, diagnostic, remaining(2))
+            require(value.get("code") == "ObservedStable" and value.get("stable") is True and
+                    value.get("identity") == binding["embedded"] and value.get("ownedIdentity") == binding["application"],
+                    "EmbeddedOSIdentityChanged")
+            return value["ownedIdentity"]
+        before = pair()
+        data = {**data, "embeddedBinding": {"pid": binding["embedded"]["pid"], "rootPath": binding["rootPath"],
+                                           "parentChildCount": binding["parentChildCount"]}}
+    else:
+        before = owned_identity(app, pid, remaining(2))
+    if expected_owned is not None:
+        require(before == expected_owned, "OwnedOSIdentityChanged")
+    # Preserve the original ceilings, reserving time for both post checks.
+    command_timeout = deadline-time.monotonic()-5
+    require(command_timeout > 0, "NativeProbeTimedOut")
+    data = {**data, "readBudgetMs": min(24000, int(command_timeout*1000))}
+    result = bounded_command(["/usr/bin/osascript", "-l", "JavaScript", "-"],
+                             "const input = " + json.dumps(data) + ";\n" + direct_ax_source(entrypoint), command_timeout)
+    after = pair() if binding is not None else owned_identity(app, pid, remaining(2))
+    require(before == after, "OwnedOSIdentityChanged")
+    require(mac_identity(pid, timeout=remaining(3)) == legacy, "ProductProcessChangedDuringProbe")
+    require(time.monotonic() <= deadline, "NativeProbeTimedOut")
+    result["process"], result["ownedOSIdentity"], result["ownedOSIdentityStable"] = legacy, before, True
+    if binding is not None:
+        proof = embedded_proof(result.get("embeddedAXProof"))
+        success = result.get("performed") is True if entrypoint == "macos-ax-action.js" else (
+            result.get("enabled") is True and result.get("truncated") is False)
+        if success:
+            require(proof and proof["verified"] is True and proof["rootRole"] == "AXWebArea" and
+                    proof["applicationPid"] == pid and proof["embeddedPid"] == binding["embedded"]["pid"] and
+                    proof["rootPath"] == binding["rootPath"], "EmbeddedStructureNotVerified")
+            proof["osIdentityStable"] = True
+            result["embeddedAXBinding"] = binding
+        result["embeddedAXProof"] = proof
+    return result
+
+
+def direct_action(app, snapshot, record, timeout=15):
+    hosted(app)
+    require(snapshot.get("backend") == "macos-direct-ax" and app["rid"].startswith("osx-") and
+            snapshot.get("enabled") is True and snapshot.get("truncated") is False, "IncompleteNativeTree")
+    binding = snapshot.get("embeddedAXBinding")
+    require(binding == app.get("embeddedAXBinding"), "EmbeddedActionBindingChanged")
+    if binding is not None:
+        proof = embedded_proof(snapshot.get("embeddedAXProof"))
+        require(embedded_binding(binding) == binding and proof and proof == snapshot.get("embeddedAXProof") and
+                proof["verified"] is True and proof["osIdentityStable"] is True,
+                "EmbeddedActionBindingChanged")
+    require(record.get("pid") == snapshot.get("process", {}).get("pid") and timeout <= 15, "ProductProcessChangedBeforeAction")
+    require(isinstance(snapshot.get("ownedOSIdentity"), dict) and snapshot.get("ownedOSIdentityStable") is True,
+            "OwnedOSIdentityUnavailable")
+    return direct_execute(app, record["pid"], {**record, "maxNodes": MAX_NODES, "maxDepth": 40},
+                          "macos-ax-action.js", timeout, binding, snapshot["ownedOSIdentity"])
 
 
 def native_snapshot(app, pid, timeout=TIMEOUT):
@@ -194,6 +338,11 @@ def native_snapshot(app, pid, timeout=TIMEOUT):
     data = {"pid": pid, "executable": str(Path(app["exe"]).resolve()), "maxNodes": MAX_NODES, "maxDepth": 40,
             "readBudgetMs": min(24000, max(100, int((timeout-2)*1000)))}
     if app["rid"].startswith("osx-"):
+        if app.get("nativeBackend") == "macos-direct-ax":
+            binding = app.get("embeddedAXBinding", app.get("_embeddedAXCandidate"))
+            result = direct_execute(app, pid, data, "macos-ax-snapshot.js", timeout, binding)
+            require(result.get("backend") == "macos-direct-ax", "UnexpectedNativeBackend")
+            return result
         before = mac_identity(pid)
         require(Path(before["executable"]).resolve() == Path(app["exe"]).resolve(), "ProductExecutableMismatch")
         backend = app.get("nativeBackend", "macos-system-events-ax")
@@ -259,6 +408,7 @@ def summarize(snapshot):
             "nativeErrorStage": snapshot.get("errorStage") if snapshot.get("errorStage") in STAGES else None,
             "diagnostic": ax_diagnostic(snapshot.get("diagnostic")),
             "pidMismatch": pid_diagnostic(snapshot.get("pidMismatch")),
+            "embeddedAXProof": embedded_proof(snapshot.get("embeddedAXProof")),
             "scope": "read-only-native-accessibility-capability"}
 
 
@@ -275,6 +425,15 @@ def sanitize(value, secrets=()):
     output["errorStage"] = value.get("errorStage") if value.get("errorStage") in STAGES else None
     output["diagnostic"] = ax_diagnostic(value.get("diagnostic"))
     output["pidMismatch"] = pid_diagnostic(value.get("pidMismatch"))
+    output["embeddedAXBinding"] = embedded_binding(value.get("embeddedAXBinding"))
+    output["embeddedAXProof"] = embedded_proof(value.get("embeddedAXProof"))
+    output["ownedOSIdentityStable"] = value.get("ownedOSIdentityStable") is True
+    output["ownedOSIdentity"] = None
+    if isinstance(value.get("ownedOSIdentity"), dict):
+        try:
+            output["ownedOSIdentity"] = pid_module().identity(value["ownedOSIdentity"], value.get("process", {}).get("pid"))
+        except (AssertionError, TypeError, ValueError):
+            output["ownedOSIdentityStable"] = False
     identity = value.get("process", {})
     output["process"] = {"pid": identity.get("pid"), "started": string(identity.get("started"))}
     output["windows"] = []
@@ -304,7 +463,7 @@ def sanitize(value, secrets=()):
     return output
 
 
-def capture(app, pid, destination, require_complete=False):
+def capture(app, pid, destination, require_complete=False, deadline=None):
     hosted(app)
     destination = Path(destination)
     require(not destination.exists(), "ProbeResultsAlreadyExist")
@@ -312,7 +471,11 @@ def capture(app, pid, destination, require_complete=False):
     report = {"capabilityPassed": False, "mainFlowPassed": False, "role": app["role"], "rid": app["rid"],
               "scope": "read-only-native-accessibility-capability"}
     report["attempts"] = []
-    deadline, identity = time.monotonic() + READY_SECONDS, None
+    readiness_deadline = time.monotonic() + READY_SECONDS
+    if deadline is not None:
+        require(type(deadline) in (int, float) and math.isfinite(deadline), "InvalidProbeDeadline")
+        readiness_deadline = min(readiness_deadline, deadline)
+    deadline, identity = readiness_deadline, None
     pid_identity_attempted = False
     try:
         for attempt in range(1, 11):
@@ -335,11 +498,21 @@ def capture(app, pid, destination, require_complete=False):
                 pid_identity_attempted = True
                 report["pidIdentityDiagnostic"] = collect_pid_identity(
                     app, mismatch, max(0, min(2, deadline-time.monotonic(), read_deadline-time.monotonic())))
+                if not app.get("embeddedAXBinding") and not app.get("_embeddedAXCandidate"):
+                    candidate = binding_from_diagnostic(app, snapshot, mismatch, report["pidIdentityDiagnostic"])
+                    if candidate is not None:
+                        app["_embeddedAXCandidate"] = candidate
+                        report["embeddedCandidatePrepared"] = True
             report.update(summary)
             report["attempts"].append({"attempt": attempt, **summary})
             tree = json.dumps(sanitize(snapshot), indent=2)
             (destination / f"tree-{attempt:02}.json").write_text(tree, encoding="utf-8")
             (destination / "tree.json").write_text(tree, encoding="utf-8")
+            if summary["capabilityPassed"] and snapshot.get("truncated") is False and snapshot.get("embeddedAXBinding") is not None:
+                require(embedded_binding(snapshot["embeddedAXBinding"]) == app.get("_embeddedAXCandidate", app.get("embeddedAXBinding")),
+                        "EmbeddedBindingChangedDuringReadiness")
+                app["embeddedAXBinding"] = snapshot["embeddedAXBinding"]
+                report["embeddedAXBinding"] = snapshot["embeddedAXBinding"]
             if ((summary["capabilityPassed"] and (not require_complete or snapshot.get("truncated") is False)) or
                     snapshot.get("enabled") is not True or snapshot.get("errorStage") and not require_complete):
                 break
@@ -351,5 +524,6 @@ def capture(app, pid, destination, require_complete=False):
     report["completeTreePassed"] = report.get("capabilityPassed") is True and report.get("treeTruncated") is False
     if require_complete and not report["completeTreePassed"]:
         report["capabilityPassed"] = False
+    app.pop("_embeddedAXCandidate", None)
     (destination / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     return report

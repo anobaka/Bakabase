@@ -5,10 +5,11 @@ function ownedAX(input, budgetMs) {
   const began=Date.now(), limit=Math.min(24000,budgetMs);
   const interactive=['AXButton','AXLink','AXMenuItem','AXCheckBox','AXRadioButton','AXTextField','AXTextArea','AXPopUpButton'];
   const editable=['AXTextField','AXTextArea','AXComboBox'];
-  const semantic=['AXGroup','AXHeading','AXScrollArea'];
+  const semantic=['AXGroup','AXHeading','AXScrollArea','AXStaticText'];
   const allowed=['AXRole','AXSubrole','AXTitle','AXDescription','AXIdentifier','AXEnabled',
     'AXHidden','AXMinimized','AXChildren','AXWindows','AXValue','AXPosition','AXSize','AXParent'];
-  let stage='initialize', operation='initialize', reads=0, pidMismatch=null;
+  let stage='initialize', operation='initialize', reads=0, pidMismatch=null, embeddedState=null;
+  const embeddedNodes=[];
   function fail(code, attribute=null, axError=null, count=null) {
     throw {safe:true,code:code,stage:stage,operation:operation,attribute:attribute,axError:axError,
       countKind:count?count.kind:null,countValue:count?count.value:null};
@@ -98,7 +99,9 @@ function ownedAX(input, budgetMs) {
   }
   function metadata(ref,role) {
     const password=['AXTextField','AXTextArea'].includes(role)&&string(read(ref,'AXSubrole',true))==='AXSecureTextField';
-    return {password:password,name:password?'':string(read(ref,'AXTitle',true))||string(read(ref,'AXDescription',true)),
+    const staticText=role==='AXStaticText'?string(read(ref,'AXValue',true)):null;
+    return {password:password,staticText:staticText,name:password?'':role==='AXStaticText'?staticText:
+      string(read(ref,'AXTitle',true))||string(read(ref,'AXDescription',true)),
       identifier:password?'':string(read(ref,'AXIdentifier',true)),enabled:boolean(read(ref,'AXEnabled',true))===true};
   }
   function settable(ref) {
@@ -150,6 +153,113 @@ function ownedAX(input, budgetMs) {
     fail('DirectAXTreeBudgetExceeded');
   }
   function validPid(value) {return Number.isInteger(value)&&value>0&&value<2147483648;}
+  function pathSame(a,b) {return a.join('/')===b.join('/');}
+  function underRoot(path) {
+    const root=input.embeddedBinding.rootPath;
+    return path.length>=root.length&&root.every((value,index)=>path[index]===value);
+  }
+  function strictPid(ref,expected) {
+    check();operation='read-pid';
+    const out=Ref(),error=Number($.AXUIElementGetPid(ref,out));
+    if(error!==0||Number(out[0])!==expected) fail('DirectAXEmbeddedStructureChanged',null,error);
+  }
+  function relation(ref,name,target) {
+    check();operation='verify-embedded-relation';
+    const out=Ref(),error=Number($.AXUIElementCopyAttributeValue(ref,$(name),out));
+    if(error!==0||!same(typed(out[0],$.AXUIElementGetTypeID),target))
+      fail('DirectAXEmbeddedStructureChanged',name,error);
+  }
+  function childEdge(parent,ref,index,count) {
+    const children=array(read(parent,'AXChildren'),input.maxNodes);
+    if(children.length!==count||!children[index]||!same(children[index],ref)||
+       children.filter(child=>same(child,ref)).length!==1) fail('DirectAXEmbeddedStructureChanged','AXChildren');
+  }
+  function embeddedRoot() {
+    const state=embeddedState,binding=input.embeddedBinding;
+    if(!state) fail('DirectAXEmbeddedStructureChanged');
+    strictPid(state.application,input.pid);strictPid(state.window,input.pid);strictPid(state.parent,input.pid);
+    strictPid(state.root,binding.pid);
+    const windows=array(read(state.application,'AXWindows'),8);
+    if(!windows[binding.rootPath[0]]||!same(windows[binding.rootPath[0]],state.window))
+      fail('DirectAXEmbeddedStructureChanged','AXWindows');
+    let owned=state.window;
+    for(let i=1;i<binding.rootPath.length-1;i++) {
+      const siblings=array(read(owned,'AXChildren'),input.maxNodes),child=siblings[binding.rootPath[i]];
+      if(!child) fail('DirectAXEmbeddedStructureChanged','AXChildren');
+      owned=element(child);strictPid(owned,input.pid);
+    }
+    if(!same(owned,state.parent)) fail('DirectAXEmbeddedStructureChanged','AXParent');
+    childEdge(state.parent,state.root,binding.rootPath[binding.rootPath.length-1],binding.parentChildCount);
+    relation(state.root,'AXParent',state.parent);relation(state.root,'AXWindow',state.window);
+    strictPid(state.application,input.pid);strictPid(state.root,binding.pid);
+  }
+  function registered(ref) {return embeddedNodes.find(node=>same(node.ref,ref));}
+  function validateEmbedded(node) {
+    embeddedRoot();
+    let current=node;
+    for(let depth=0;depth<=input.maxDepth;depth++) {
+      check();strictPid(current.ref,input.embeddedBinding.pid);
+      relation(current.ref,'AXWindow',embeddedState.window);
+      relation(current.ref,'AXParent',current.parent);
+      childEdge(current.parent,current.ref,current.path[current.path.length-1],current.parentChildCount);
+      if(same(current.ref,embeddedState.root)) return;
+      current=registered(current.parent);
+      if(!current) fail('DirectAXEmbeddedStructureChanged');
+    }
+    fail('DirectAXTreeBudgetExceeded');
+  }
+  function acceptEmbedded(ref,context) {
+    if(!embeddedState) {
+      if(!context||!pathSame(context.path,input.embeddedBinding.rootPath)||
+         context.childCount!==input.embeddedBinding.parentChildCount) fail('DirectAXEmbeddedStructureChanged');
+      for(const ancestor of context.ancestors) strictPid(ancestor,input.pid);
+      embeddedState={root:ref,parent:context.ancestors[context.ancestors.length-1],window:context.window,
+        application:context.application,rootRole:null};
+      embeddedRoot();
+    }
+    let node=registered(ref);
+    if(context) {
+      if(!underRoot(context.path)) fail('DirectAXEmbeddedStructureChanged');
+      const parent=context.ancestors[context.ancestors.length-1];
+      if(!same(ref,embeddedState.root)&&!registered(parent)) fail('DirectAXEmbeddedStructureChanged');
+      if(node&&(!pathSame(node.path,context.path)||!same(node.parent,parent))) fail('DirectAXEmbeddedStructureChanged');
+      if(!node) {
+        node={ref:ref,parent:parent,path:context.path,parentChildCount:context.childCount};
+        if(embeddedNodes.length>=input.maxNodes) fail('DirectAXTreeBudgetExceeded');
+        embeddedNodes.push(node);
+      }
+    } else if(!node) {
+      // Hit testing can return an as-yet unvisited descendant. Read pointers
+      // only until it reaches a registered ancestor; no foreign metadata.
+      const pending=[],seen=[];let current=ref;
+      while(!registered(current)) {
+        check();if(pending.length>=input.maxDepth||seen.some(item=>same(item,current))) fail('DirectAXTreeBudgetExceeded');
+        seen.push(current);strictPid(current,input.embeddedBinding.pid);
+        relation(current,'AXWindow',embeddedState.window);
+        const parent=element(read(current,'AXParent'));
+        strictPid(parent,input.embeddedBinding.pid);
+        const siblings=array(read(parent,'AXChildren'),input.maxNodes),indexes=[];
+        for(let i=0;i<siblings.length;i++) if(same(siblings[i],current)) indexes.push(i);
+        if(indexes.length!==1) fail('DirectAXEmbeddedStructureChanged');
+        pending.push({ref:current,parent:parent,index:indexes[0],count:siblings.length});current=parent;
+      }
+      let ancestor=registered(current);validateEmbedded(ancestor);
+      for(const item of pending.reverse()) {
+        const path=ancestor.path.concat(item.index);
+        if(path.length>42||!underRoot(path)) fail('DirectAXTreeBudgetExceeded');
+        ancestor={ref:item.ref,parent:item.parent,path:path,parentChildCount:item.count};
+        if(embeddedNodes.length>=input.maxNodes) fail('DirectAXTreeBudgetExceeded');
+        embeddedNodes.push(ancestor);
+      }
+      node=registered(ref);
+    }
+    validateEmbedded(node);
+  }
+  function embeddedProof(verified) {
+    if(!input.embeddedBinding) return null;
+    return {verified:verified,applicationPid:input.pid,embeddedPid:input.embeddedBinding.pid,
+      rootPath:input.embeddedBinding.rootPath,rootRole:embeddedState?embeddedState.rootRole:null};
+  }
   function mismatchStructure(ref,actual,context) {
     // Diagnostic only: never authorizes foreign metadata or a workflow action.
     // The only foreign attributes read are two nonrecursive pointer relations.
@@ -194,11 +304,16 @@ function ownedAX(input, budgetMs) {
     check();
     operation='read-pid';
     const pid=Ref(),error=Number($.AXUIElementGetPid(application,pid));
+    if(error===0&&input.embeddedBinding&&Number(pid[0])===input.embeddedBinding.pid) {
+      acceptEmbedded(application,context);return;
+    }
+    if(error===0&&Number(pid[0])===input.pid&&context&&embeddedState&&underRoot(context.path))
+      fail('DirectAXEmbeddedStructureChanged');
     if(error!==0||Number(pid[0])!==input.pid) {
       // Reserve the record before any diagnostic revalidation can fail again.
       if(pidMismatch===null) {
         pidMismatch={expectedPid:input.pid,actualPid:null,origin:'other',status:'pid-read-failed'};
-        if(error===0) pidMismatch=mismatchStructure(application,Number(pid[0]),context);
+        if(error===0) pidMismatch=mismatchStructure(application,Number(pid[0]),input.embeddedBinding?null:context);
       }
       fail('DirectAXProcessMismatch',null,error);
     }
@@ -207,6 +322,13 @@ function ownedAX(input, budgetMs) {
     stage='preflight';
     if(!Number.isInteger(input.pid)||input.pid<=0||input.maxNodes!==1000||input.maxDepth!==40||
        !Number.isFinite(limit)||limit<=0) fail('InvalidDirectAXInput');
+    if(input.embeddedBinding) {
+      const binding=input.embeddedBinding,path=binding.rootPath;
+      if(!validPid(binding.pid)||binding.pid===input.pid||!Array.isArray(path)||path.length<2||path.length>42||
+         path[0]>=8||path.some(i=>!Number.isInteger(i)||i<0||i>=input.maxNodes)||
+         !Number.isInteger(binding.parentChildCount)||binding.parentChildCount<=path[path.length-1]||
+         binding.parentChildCount>input.maxNodes) fail('InvalidDirectAXInput');
+    }
     ObjC.import('ApplicationServices');
     ObjC.bindFunction('calloc',['double *',['unsigned long','unsigned long']]);
     ObjC.bindFunction('free',['void',['void *']]);
@@ -245,12 +367,16 @@ function ownedAX(input, budgetMs) {
           count++;
           const role=string(read(ref,'AXRole'));
           if(!role) fail('DirectAXValueTypeMismatch');
+          if(embeddedState&&same(ref,embeddedState.root)) {
+            embeddedState.rootRole=['AXWebArea','AXGroup','AXScrollArea','AXUnknown'].includes(role)?role:'Other';
+            if(role!=='AXWebArea') fail('DirectAXEmbeddedRootRoleRejected','AXRole');
+          }
           const control=interactive.includes(role)&&!editableAncestor;
           const labelled=(control||semantic.includes(role))&&!editableAncestor,info=labelled?metadata(ref,role):{};
           inWeb=inWeb||role==='AXWebArea';
           const node={path:path,role:role,name:editableAncestor?'':labelled?info.name:role==='AXWebArea'?
             string(read(ref,'AXTitle',true))||string(read(ref,'AXDescription',true)):'',
-            text:!editableAncestor&&role==='AXStaticText'?string(read(ref,'AXValue',true)):'',identifier:info.identifier||'',
+            text:!editableAncestor&&role==='AXStaticText'?info.staticText:'',identifier:info.identifier||'',
             enabled:control&&info.enabled===true,visible:false,visibilityEvidence:'not-observed',insideWebContent:inWeb,
             editableAncestor:editableAncestor,password:info.password===true,actions:labelled&&!info.password?actions(ref):[],
             valueSettable:control&&!info.password&&['AXTextField','AXTextArea'].includes(role)?settable(ref):null};
@@ -273,6 +399,7 @@ function ownedAX(input, budgetMs) {
         walk(window,[i],0,false,[],false);
       }
       stage='verify-process';verifyPid(application);
+      if(input.embeddedBinding) embeddedRoot();
     } catch(error) {
       snapshot.truncated=true;
       snapshot.errorStage=error&&error.safe?error.stage:stage;
@@ -281,6 +408,7 @@ function ownedAX(input, budgetMs) {
         {code:'DirectAXTreeUnavailable',operation:operation,attribute:null,axError:null};
     }
     snapshot.pidMismatch=pidMismatch;
+    snapshot.embeddedAXProof=embeddedProof(!snapshot.truncated&&!!embeddedState&&embeddedState.rootRole==='AXWebArea');
     snapshot.elapsedMs=Date.now()-began;
     return {snapshot:snapshot,application:application,windows:windowRefs,elements:elements};
   }
@@ -348,7 +476,10 @@ function ownedAX(input, budgetMs) {
     const error=Number(setting?$.AXUIElementSetAttributeValue(current.ref,$('AXValue'),$(input.value)):
       $.AXUIElementPerformAction(current.ref,$(action)));
     if(error!==0) fail('DirectAXCallFailed',null,error);
-    return {performed:true,operation:op};
+    if(input.embeddedBinding) embeddedRoot();
+    const result={performed:true,operation:op};
+    if(input.embeddedBinding) result.embeddedAXProof=embeddedProof(!!embeddedState&&embeddedState.rootRole==='AXWebArea');
+    return result;
   }
   return {inspect:inspect,press:press};
 }

@@ -43,9 +43,11 @@ const secure=node('secure','AXTextField',{AXSubrole:'AXSecureTextField',AXEnable
 const web=node('web','AXWebArea',{AXTitle:'Bakabase'});web.children=[close,text,inputNode,secure];
 const window=node('window','AXWindow',{AXTitle:'Bakabase',AXMinimized:!!options.minimized});window.children=[web];
 const app=node('app','AXApplication',{AXHidden:!!options.hidden});app.windows=[window];
+if(options.embeddedDescendantHit)close.children=[node('actual-child-hit','AXStaticText',{AXValue:'Nested button label'})];
 const region=node('region','AXGroup',{AXTitle:'Connection settings'});
 if(options.regionGroup)web.children.push(region);
 if(options.duplicateInput)web.children.push(node('duplicate-input','AXTextField',{AXTitle:'Address',AXEnabled:true}));
+if(options.embeddedRootRole)web.role=options.embeddedRootRole;
 if(options.editableDescendants) {
  if(options.comboBox)inputNode.role='AXComboBox';
  const group=node('editable-group','AXGroup');
@@ -67,6 +69,8 @@ function parents(n,parent=null,visited=new Set()) {
  for(const c of n.windows||n.children)parents(c,n,visited);
 }
 parents(app);
+if(options.embedded){const assign=n=>{n.pid=900;for(const child of n.children)assign(child)};assign(web);}
+if(options.secondEmbeddedPid)inputNode.pid=901;
 const native=s=>box(s);
 Object.assign(native,{
  AXIsProcessTrusted:()=>{calls.push('trust');return !options.untrusted},
@@ -106,7 +110,8 @@ Object.assign(native,{
    if(options.foreignPidChanged&&name==='AXWindow')n.pid=901;
    out[0]=new Ref(options.foreignStructureMismatch?app:window);return 0;
   }
-  if(name==='AXParent'){if(!n.parent)return -25205;out[0]=new Ref(n.parent);return 0;}
+  if(name==='AXParent'){if(!n.parent)return -25205;out[0]=new Ref(options.embeddedWrongParent&&n===web?app:n.parent);return 0;}
+  if(name==='AXWindow'){out[0]=new Ref(options.embeddedWrongWindow&&n===web?app:window);return 0;}
   if(name==='AXPosition'||name==='AXSize') {
    if(options.unknownGeometry&&n===close)return -25205;
    const position=n===window?[0,0]:(options.offscreen&&n===close)||(options.offscreenText&&n===text)||(options.offscreenInput&&n===inputNode)||(options.offscreenRegion&&n===region)?[2000,20]:[10,20];
@@ -142,20 +147,24 @@ Object.assign(native,{
   let hit=hitTarget;
   if(options.occluded&&hit===close)hit=text;
   if(options.descendantHit&&hit===close){hit=node('child-hit','AXStaticText');hit.parent=close;}
+  if(options.embeddedDescendantHit&&hit===close)hit=close.children[0];
   if(options.foreignHit){hit=node('foreign','AXButton');hit.pid=900;}
   out[0]=new Ref(hit);return 0;
  },
  AXUIElementPerformAction:(ref,action)=>{if(action.value==='AXScrollToVisible'){
-   if(!options.scrollSupported||![close,region,inputNode].includes(value(ref)))throw Error('Wrong scroll');
+   if(!options.scrollSupported||![close,region,inputNode,text].includes(value(ref)))throw Error('Wrong scroll');
    if(options.scrollError)return -25204;scrolls++;return 0;
   }if(value(ref)!==close||action.value!=='AXPress')throw Error('wrong action');
-  if(options.pressError)return -25204;presses++;return 0}
+  if(options.pressError)return -25204;presses++;if(options.embeddedMoveAfterAction)window.children=[];return 0}
 });
 const input={pid:42,maxNodes:1000,maxDepth:40,readBudgetMs:24000,operation:options.operation||'press',
  selector:{path:[0,0,0],role:'AXButton',name:'Close',identifier:'close'}};
 if(options.target==='input')input.selector={path:[0,0,2],role:'AXTextField',name:'Address',identifier:''};
 if(options.target==='region')input.selector={path:[0,0,4],role:'AXGroup',name:'Connection settings',identifier:''};
+if(options.target==='text')input.selector={path:[0,0,1],role:'AXStaticText',name:'No matching resources',identifier:''};
 if(options.inputValue!==undefined)input.value=options.inputValue;
+if(options.binding)input.embeddedBinding={pid:900,rootPath:[0,0],parentChildCount:options.bindingCount||1};
+if(options.bindingPath)input.embeddedBinding.rootPath=options.bindingPath;
 const output=JSON.parse(vm.runInNewContext('const input='+JSON.stringify(input)+';\n'+source,{
  $:native,Ref,Date:{now:()=>{clock+=options.slow?1000:1;return clock}},
  ObjC:{import:name=>{if(name!=='ApplicationServices')throw Error();},bindFunction:(name)=>{if(!['calloc','free'].includes(name))throw Error();},
@@ -480,11 +489,13 @@ JSON.stringify(values);
     def test_direct_reader_keeps_hosted_identity_and_thirty_second_outer_bound(self):
         raw = {"backend": "macos-direct-ax", "readOnly": True, "enabled": True, "truncated": False, "windows": []}
         with patch.object(probe, "hosted") as hosted, patch.object(probe, "mac_identity", return_value=IDENTITY) as identity, \
+                patch.object(probe, "owned_identity", return_value={"pid": 42}), \
                 patch.object(probe, "bounded_command", return_value=raw) as command:
             probe.native_snapshot(APP, 42)
         hosted.assert_called_once()
         self.assertEqual(2, identity.call_count)
-        self.assertEqual(30, command.call_args.args[2])
+        self.assertGreater(command.call_args.args[2], 0)
+        self.assertLessEqual(command.call_args.args[2], 25)
         self.assertIn('"readBudgetMs": 24000', command.call_args.args[1])
         self.assertIn("ownedAX(input,input.readBudgetMs).inspect()", command.call_args.args[1])
 
@@ -497,14 +508,17 @@ JSON.stringify(values);
         command.assert_not_called()
 
     def test_direct_action_retains_fifteen_second_bound_and_post_action_process_check(self):
-        snapshot = {"backend": "macos-direct-ax", "enabled": True, "truncated": False, "process": IDENTITY}
+        snapshot = {"backend": "macos-direct-ax", "enabled": True, "truncated": False, "process": IDENTITY,
+                    "ownedOSIdentity": {"pid": 42}, "ownedOSIdentityStable": True}
         with patch.object(flow.probe, "hosted"), \
                 patch.object(flow.probe, "mac_identity", side_effect=[IDENTITY, dict(IDENTITY, started="changed")]), \
+                patch.object(flow.probe, "owned_identity", return_value={"pid": 42}), \
                 patch.object(flow.probe, "bounded_command", return_value={"performed": True, "operation": "press"}) as command:
-            with self.assertRaisesRegex(flow.probe.ProbeFailure, "ProductProcessChangedAfterAction"):
+            with self.assertRaisesRegex(flow.probe.ProbeFailure, "ProductProcessChangedDuringProbe"):
                 flow.perform(APP, snapshot, {})
-        self.assertEqual(15, command.call_args.args[2])
-        self.assertIn("ownedAX(input,12000).press()", command.call_args.args[1])
+        self.assertGreater(command.call_args.args[2], 0)
+        self.assertLessEqual(command.call_args.args[2], 10)
+        self.assertIn("Math.min(12000,input.readBudgetMs", command.call_args.args[1])
 
     def test_partial_direct_tree_cannot_enable_flow_and_does_not_fallback(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -542,7 +556,7 @@ JSON.stringify(values);
                     patch.object(runner.lifecycle, "require_same_process"), \
                     patch.object(runner.probe, "capture", side_effect=[{"capabilityPassed": False}, {"capabilityPassed": True,"completeTreePassed": True}]*2), \
                     patch.object(runner.direct_ax, "capture", return_value={"available": True}), \
-                    patch.object(runner, "load", return_value=SimpleNamespace(run_empty_library=native_flow)):
+                    patch.object(runner, "load", return_value=SimpleNamespace(run_empty_library=native_flow, arm=lambda app: {"armed": True})):
                 runner.exercise(apps, report)
             self.assertEqual(1, len(observed_apps))
             self.assertEqual("macos-direct-ax", observed_apps[0]["nativeBackend"])

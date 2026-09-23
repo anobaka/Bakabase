@@ -1,5 +1,5 @@
 let result;
-try {result=ownedAX(input,12000).press();}
+try {result=ownedAX(input,Math.min(12000,input.readBudgetMs===undefined?12000:input.readBudgetMs)).press();}
 catch(error) {
   result={performed:false,errorStage:error&&error.safe?error.stage:'validate-control',
     diagnostic:error&&error.safe?{code:error.code,operation:error.operation,attribute:error.attribute,axError:error.axError,
