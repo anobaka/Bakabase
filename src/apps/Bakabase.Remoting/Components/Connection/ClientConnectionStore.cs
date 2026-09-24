@@ -104,7 +104,7 @@ public sealed class ClientConnectionStore(IClientDataDirectory directory) : ICli
             var path = System.IO.Path.Combine(dir, FileName);
             var temp = path + ".tmp";
 
-            await File.WriteAllTextAsync(temp, JsonSerializer.Serialize(data, SerializerOptions), ct);
+            await WriteOwnerOnlyAsync(temp, JsonSerializer.Serialize(data, SerializerOptions), ct);
             File.Move(temp, path, true);
 
             lock (_cacheGate)
@@ -119,4 +119,49 @@ public sealed class ClientConnectionStore(IClientDataDirectory directory) : ICli
             _writeGate.Release();
         }
     }
+
+    /// <summary>
+    /// Owner read/write only on Unix, where a file is otherwise created world-readable
+    /// under the usual umask.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The file holds device keys, each of which is full control of a server somewhere
+    /// else. Another account on a shared machine reading it would be exactly that.
+    /// </para>
+    /// <para>
+    /// Set on the temporary file, both at creation and explicitly afterwards, because the
+    /// rename keeps the inode and with it the mode: the final file is never observable with
+    /// wider permissions, and a temporary file left behind by a crash — created before
+    /// this rule existed — is tightened rather than reused as it was. Windows has no mode
+    /// bits; the profile directory's ACL is what protects it there.
+    /// </para>
+    /// </remarks>
+    private static async Task WriteOwnerOnlyAsync(string path, string contents, CancellationToken ct)
+    {
+        var options = new FileStreamOptions
+        {
+            Mode = FileMode.Create,
+            Access = FileAccess.Write,
+            Share = FileShare.None
+        };
+
+        if (!OperatingSystem.IsWindows())
+        {
+            options.UnixCreateMode = OwnerOnly;
+        }
+
+        await using (var stream = new FileStream(path, options))
+        await using (var writer = new StreamWriter(stream))
+        {
+            await writer.WriteAsync(contents.AsMemory(), ct);
+        }
+
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(path, OwnerOnly);
+        }
+    }
+
+    private const UnixFileMode OwnerOnly = UnixFileMode.UserRead | UnixFileMode.UserWrite;
 }

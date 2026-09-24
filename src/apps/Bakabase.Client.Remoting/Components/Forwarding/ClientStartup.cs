@@ -83,6 +83,10 @@ public class ClientStartup(IConfiguration configuration, IWebHostEnvironment env
                 ClientAnonymousId.GetOrCreate(app.ApplicationServices.GetRequiredService<IClientDataDirectory>()));
         }
 
+        // This program's own log and directories are published to the page as well. Safe
+        // here and only here: the thin client runs no server, so its log and its data
+        // directory hold nothing but its own connection to the one server it shows. The
+        // desktop app's relays leave them out — see UseRelayPipeline.
         app.UseRelayPipeline(endpoints =>
         {
             // Questions about this machine — which server it points at, where that
@@ -90,7 +94,7 @@ public class ClientStartup(IConfiguration configuration, IWebHostEnvironment env
             ClientApiEndpoints.Map(endpoints, AppService.CoreVersion.ToString());
             ClientUpdaterEndpoints.Map(endpoints);
             ClientTrayEndpoints.Map(endpoints);
-        });
+        }, mapThisMachinesDiagnostics: true);
     }
 
     /// <summary>

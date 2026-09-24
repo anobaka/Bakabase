@@ -4342,6 +4342,72 @@ export const DeviceAuthOutcomeLabel: Record<DeviceAuthOutcome, string> = {
   [DeviceAuthOutcome.Replayed]: 'Replayed'
 };
 
+export enum ManagedServerOutcome {
+  Ok = 0,
+  AwaitingApproval = 1,
+  Unreachable = 2,
+  NotBakabase = 3,
+  ThisAppTooOld = 4,
+  ServerTooOld = 5,
+  RemoteAccessDisabled = 6,
+  ThisDevice = 7,
+  CodeRejected = 8,
+  RequestRejected = 9,
+  TooManyAttempts = 10,
+  PairingUnsupported = 11
+}
+
+export const managedServerOutcomes = [
+  { label: 'Ok', value: ManagedServerOutcome.Ok },
+  { label: 'AwaitingApproval', value: ManagedServerOutcome.AwaitingApproval },
+  { label: 'Unreachable', value: ManagedServerOutcome.Unreachable },
+  { label: 'NotBakabase', value: ManagedServerOutcome.NotBakabase },
+  { label: 'ThisAppTooOld', value: ManagedServerOutcome.ThisAppTooOld },
+  { label: 'ServerTooOld', value: ManagedServerOutcome.ServerTooOld },
+  { label: 'RemoteAccessDisabled', value: ManagedServerOutcome.RemoteAccessDisabled },
+  { label: 'ThisDevice', value: ManagedServerOutcome.ThisDevice },
+  { label: 'CodeRejected', value: ManagedServerOutcome.CodeRejected },
+  { label: 'RequestRejected', value: ManagedServerOutcome.RequestRejected },
+  { label: 'TooManyAttempts', value: ManagedServerOutcome.TooManyAttempts },
+  { label: 'PairingUnsupported', value: ManagedServerOutcome.PairingUnsupported }
+] as const;
+
+export const ManagedServerOutcomeLabel: Record<ManagedServerOutcome, string> = {
+  [ManagedServerOutcome.Ok]: 'Ok',
+  [ManagedServerOutcome.AwaitingApproval]: 'AwaitingApproval',
+  [ManagedServerOutcome.Unreachable]: 'Unreachable',
+  [ManagedServerOutcome.NotBakabase]: 'NotBakabase',
+  [ManagedServerOutcome.ThisAppTooOld]: 'ThisAppTooOld',
+  [ManagedServerOutcome.ServerTooOld]: 'ServerTooOld',
+  [ManagedServerOutcome.RemoteAccessDisabled]: 'RemoteAccessDisabled',
+  [ManagedServerOutcome.ThisDevice]: 'ThisDevice',
+  [ManagedServerOutcome.CodeRejected]: 'CodeRejected',
+  [ManagedServerOutcome.RequestRejected]: 'RequestRejected',
+  [ManagedServerOutcome.TooManyAttempts]: 'TooManyAttempts',
+  [ManagedServerOutcome.PairingUnsupported]: 'PairingUnsupported'
+};
+
+export enum ManagedServerState {
+  Unknown = 0,
+  Online = 1,
+  Offline = 2,
+  Revoked = 3
+}
+
+export const managedServerStates = [
+  { label: 'Unknown', value: ManagedServerState.Unknown },
+  { label: 'Online', value: ManagedServerState.Online },
+  { label: 'Offline', value: ManagedServerState.Offline },
+  { label: 'Revoked', value: ManagedServerState.Revoked }
+] as const;
+
+export const ManagedServerStateLabel: Record<ManagedServerState, string> = {
+  [ManagedServerState.Unknown]: 'Unknown',
+  [ManagedServerState.Online]: 'Online',
+  [ManagedServerState.Offline]: 'Offline',
+  [ManagedServerState.Revoked]: 'Revoked'
+};
+
 export enum PairingFailure {
   None = 0,
   CodeRejected = 1,

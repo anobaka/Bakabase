@@ -10,6 +10,13 @@
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
     <DockPanel>
+        <!--
+          The tray's "Switch to" submenu, for desktops that show no tray. Hidden everywhere
+          else; see MainWindow.SetServerSwitchMenu.
+        -->
+        <Menu Name="ServerSwitchBar" DockPanel.Dock="Top" IsVisible="False">
+            <MenuItem Name="ServerSwitchRoot" />
+        </Menu>
         <controls:NativeWebViewHost Name="WebView" />
     </DockPanel>
 </Window>

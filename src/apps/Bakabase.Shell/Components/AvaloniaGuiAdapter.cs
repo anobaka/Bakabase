@@ -44,6 +44,9 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     /// <summary>Owner for modal dialogs. Null until the main window exists.</summary>
     internal Window? MainWindow => _mainWindow;
 
+    /// <summary>What the main window's switch menu bar should show; see <see cref="SetServerSwitchMenu"/>.</summary>
+    private ServerSwitchMenu? _serverSwitchMenu;
+
     public AvaloniaGuiAdapter(App app)
     {
         _app = app;
@@ -149,7 +152,12 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     {
         try
         {
-            _mainWindow ??= new MainWindow();
+            if (_mainWindow == null)
+            {
+                _mainWindow = new MainWindow();
+                _mainWindow.SetServerSwitchMenu(_serverSwitchMenu);
+            }
+
             _mainWindow.Show();
             _mainWindow.Title = title;
 
@@ -224,7 +232,9 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     }
 
     [GuiContextInterceptor]
-    public override void Show()
+    public override void Show() => BringMainWindowToFront();
+
+    private void BringMainWindowToFront()
     {
         if (_mainWindow != null)
         {
@@ -235,6 +245,83 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
 
             _mainWindow.Show();
             _mainWindow.Activate();
+        }
+    }
+
+    /// <summary>
+    /// Points the main window's browser at <paramref name="url"/> — this device's own UI or a
+    /// managed server's relay — and optionally brings the window to the front.
+    /// </summary>
+    /// <remarks>
+    /// Safe from any thread. Off the UI thread the work is posted rather than invoked: callers
+    /// typically arrive from the thread pool after network work, and must neither wait on the
+    /// dispatcher nor deadlock against a UI thread that is itself waiting on them.
+    /// <para>
+    /// A no-op before the main window exists — the host's <see cref="ShowMainWebView"/> decides
+    /// the first page, and a queued switch must not race it — and once the app is on its way
+    /// out, where navigating would only slow the teardown. Deliberately not intercepted by
+    /// <see cref="GuiContextInterceptorAttribute"/>, whose <c>Invoke</c> would block the caller.
+    /// </para>
+    /// </remarks>
+    /// <param name="url">An absolute http(s) URL; anything else is refused and logged.</param>
+    public void NavigateMainWebView(string url, bool bringToFront = false)
+    {
+        // The main window hosts native bridges (file pickers, cookie access), so only ever
+        // point it at a web page — never file:, javascript: or a custom scheme.
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            Serilog.Log.Warning("Refused to navigate the main window to a non-http(s) address");
+            return;
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            NavigateMainWebViewCore(url, bringToFront);
+        }
+        else
+        {
+            Dispatcher.UIThread.Post(() => NavigateMainWebViewCore(url, bringToFront));
+        }
+    }
+
+    /// <summary>
+    /// Shows the tray's "Switch to" list as a menu bar in the main window, or hides it (null) —
+    /// for desktops that show no tray. Remembered, so a main window created later starts out
+    /// with it. UI thread only, and deliberately not intercepted: its one caller,
+    /// <see cref="TrayMenuController"/>, is already there.
+    /// </summary>
+    internal void SetServerSwitchMenu(ServerSwitchMenu? menu)
+    {
+        _serverSwitchMenu = menu;
+        _mainWindow?.SetServerSwitchMenu(menu);
+    }
+
+    private void NavigateMainWebViewCore(string url, bool bringToFront)
+    {
+        if (_mainWindow == null || _isShuttingDown)
+        {
+            return;
+        }
+
+        try
+        {
+            var webView = _mainWindow.FindControl<NativeWebViewHost>("WebView");
+            if (webView == null)
+            {
+                return;
+            }
+
+            webView.Navigate(url);
+
+            if (bringToFront)
+            {
+                BringMainWindowToFront();
+            }
+        }
+        catch (Exception e)
+        {
+            Serilog.Log.Warning(e, "Failed to navigate the main window");
         }
     }
 

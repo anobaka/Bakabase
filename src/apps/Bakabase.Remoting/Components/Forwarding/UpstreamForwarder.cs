@@ -16,6 +16,7 @@ public sealed class UpstreamForwarder(
     IUpstreamTarget target,
     UpstreamTransformer transformer,
     HttpMessageInvoker invoker,
+    UpstreamStanding standing,
     ILogger<UpstreamForwarder> logger)
 {
     /// <summary>
@@ -64,8 +65,11 @@ public sealed class UpstreamForwarder(
 
         if (error == ForwarderError.None)
         {
+            standing.Answered(context.Response);
             return;
         }
+
+        standing.Failed(error);
 
         // The client hanging up is the normal end of a video or a hub connection, not a
         // failure worth reporting — and by then there is nobody left to report it to.

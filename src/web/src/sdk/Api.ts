@@ -4876,6 +4876,117 @@ export interface BakabaseModulesPropertyModelsViewPropertyViewModel {
   order: number;
 }
 
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerCandidateView {
+  serverId: string;
+  name: string;
+  address: string;
+  appVersion: string;
+  alreadyManaged: boolean;
+}
+
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerDiscoveryView {
+  servers: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerCandidateView[];
+}
+
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerImportView {
+  found: boolean;
+  /** @format int32 */
+  imported: number;
+  /** @format int32 */
+  skipped: number;
+}
+
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOpenView {
+  url: string;
+}
+
+/**
+ * [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported]
+ * @format int32
+ */
+export type BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOutcome =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11;
+
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPairingView {
+  /** [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported] */
+  outcome: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOutcome;
+  serverId?: string;
+  serverName?: string;
+  requestId?: string;
+  /** @format date-time */
+  expiresAt?: string;
+  detail?: string;
+}
+
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPathMapping {
+  serverPath: string;
+  localPath: string;
+}
+
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPendingRequestView {
+  requestId: string;
+  address: string;
+  serverName?: string;
+  /** @format date-time */
+  expiresAt: string;
+  /** [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported] */
+  outcome: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOutcome;
+  active: boolean;
+}
+
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerProbeView {
+  /** [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported] */
+  outcome: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOutcome;
+  serverId?: string;
+  name?: string;
+  appVersion?: string;
+  /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
+  mode?: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+  pairingSupported: boolean;
+  alreadyManaged: boolean;
+  detail?: string;
+}
+
+/**
+ * [0: Unknown, 1: Online, 2: Offline, 3: Revoked]
+ * @format int32
+ */
+export type BakabaseModulesRemoteAccessAbstractionsModelsManagedServerState = 0 | 1 | 2 | 3;
+
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerView {
+  serverId: string;
+  name?: string;
+  address: string;
+  /** @format date-time */
+  pairedAt: string;
+  /** @format date-time */
+  lastConnectedAt?: string;
+  pathMappings: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPathMapping[];
+  /** [0: Unknown, 1: Online, 2: Offline, 3: Revoked] */
+  state: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerState;
+  /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
+  mode?: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+  appVersion?: string;
+  importedFromLegacyClient: boolean;
+}
+
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView {
+  available: boolean;
+  servers: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerView[];
+  requests: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPendingRequestView[];
+}
+
 /**
  * [0: None, 1: CodeRejected, 2: RequestRejected, 3: NotYetApproved, 4: TooManyAttempts]
  * @format int32
@@ -5481,6 +5592,23 @@ export interface BakabaseServiceControllersFederationPeerStatusResponse {
 export interface BakabaseServiceControllersFederationSharingRequest {
   enabled: boolean;
   enablePairedRemoteAccess: boolean;
+}
+
+export interface BakabaseServiceControllersManagedServerAddressRequest {
+  address: string;
+}
+
+export interface BakabaseServiceControllersManagedServerOpenRequest {
+  path?: string;
+}
+
+export interface BakabaseServiceControllersManagedServerPairRequest {
+  address: string;
+  code?: string;
+}
+
+export interface BakabaseServiceControllersManagedServerPathMappingsRequest {
+  mappings?: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPathMapping[];
 }
 
 export interface BakabaseServiceControllersMediaLibraryStatistics {
@@ -18623,6 +18751,238 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     verifyFederationNodeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/federation/v1/export/handshake`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name GetManagedServers
+     * @request GET:/federation/local/servers
+     */
+    getManagedServers: (
+      query?: {
+        probe?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView, any>({
+        path: `/federation/local/servers`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getManagedServers
+     * @name getManagedServersUrl
+     */
+    getManagedServersUrl: (query?: {
+        probe?: boolean;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/servers`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name DiscoverManagedServers
+     * @request GET:/federation/local/servers/discover
+     */
+    discoverManagedServers: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerDiscoveryView, any>({
+        path: `/federation/local/servers/discover`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for discoverManagedServers
+     * @name discoverManagedServersUrl
+     */
+    discoverManagedServersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/servers/discover`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name ProbeManagedServer
+     * @request POST:/federation/local/servers/probe
+     */
+    probeManagedServer: (
+      data: BakabaseServiceControllersManagedServerAddressRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerProbeView, any>({
+        path: `/federation/local/servers/probe`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for probeManagedServer
+     * @name probeManagedServerUrl
+     */
+    probeManagedServerUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/servers/probe`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name PairManagedServer
+     * @request POST:/federation/local/servers/pair
+     */
+    pairManagedServer: (
+      data: BakabaseServiceControllersManagedServerPairRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPairingView, any>({
+        path: `/federation/local/servers/pair`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for pairManagedServer
+     * @name pairManagedServerUrl
+     */
+    pairManagedServerUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/servers/pair`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name CancelManagedServerRequest
+     * @request DELETE:/federation/local/servers/requests/{requestId}
+     */
+    cancelManagedServerRequest: (requestId: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/servers/requests/${requestId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name ForgetManagedServer
+     * @request DELETE:/federation/local/servers/{serverId}
+     */
+    forgetManagedServer: (serverId: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/servers/${serverId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name SetManagedServerPathMappings
+     * @request PUT:/federation/local/servers/{serverId}/path-mappings
+     */
+    setManagedServerPathMappings: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedServerPathMappingsRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/servers/${serverId}/path-mappings`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name OpenManagedServer
+     * @request POST:/federation/local/servers/{serverId}/open
+     */
+    openManagedServer: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedServerOpenRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOpenView, any>({
+        path: `/federation/local/servers/${serverId}/open`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name ImportLegacyClientServers
+     * @request POST:/federation/local/servers/import-legacy-client
+     */
+    importLegacyClientServers: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerImportView, any>({
+        path: `/federation/local/servers/import-legacy-client`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for importLegacyClientServers
+     * @name importLegacyClientServersUrl
+     */
+    importLegacyClientServersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/servers/import-legacy-client`;
 
       return baseUrl + path;
     },

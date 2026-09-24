@@ -103,7 +103,28 @@ def check_sources(root):
     projects, _ = project_graph(root / "src/apps/Bakabase.Client.App/Bakabase.Client.App.csproj")
     require("Bakabase.Service" not in projects and "Bakabase.Modules.Federation" not in projects,
             "Legacy client unexpectedly includes an authoritative library host")
+    check_shell_graph(*project_graph(root / "src/apps/Bakabase.Shell/Bakabase.Shell.csproj"))
+    check_unified_graph(project_graph(root / "src/apps/Bakabase.App/Bakabase.App.csproj")[0])
     return {"sourceIdentityChecks": "passed", "products": PRODUCTS}
+
+
+def check_shell_graph(projects, packages):
+    """The shell is shared by both desktop products and talks to its host only through IShellHost and
+    the optional contracts in Bakabase.Abstractions (IMainViewSwitcher among them): it never references a
+    host — the Service, the relay, or a client product layer — nor the relay's proxy."""
+    hosts = sorted(name for name in projects
+                   if name in ("Bakabase.Service", "Bakabase.Modules.Federation")
+                   or name.startswith(("Bakabase.Remoting", "Bakabase.Client")))
+    require(not hosts, f"The shell references a host or the relay {hosts}")
+    require(not any(name.startswith("Yarp") for name in packages), "The shell references the relay's proxy")
+
+
+def check_unified_graph(projects):
+    """The unified app composes the relay (Bakabase.Remoting) but never the retired thin client's
+    product layer: Bakabase.Client.Remoting, or anything else named Bakabase.Client*."""
+    require("Bakabase.Remoting" in projects, "The unified application no longer composes the relay")
+    thin_client = sorted(name for name in projects if name.startswith("Bakabase.Client"))
+    require(not thin_client, f"The unified application references thin-client projects {thin_client}")
 
 
 def check_publish(directory, role, require_web=False):
@@ -115,14 +136,18 @@ def check_publish(directory, role, require_web=False):
     for path in manifests:
         dependencies.update(json.loads(path.read_text(encoding="utf-8-sig")).get("libraries", {}))
     required = {"server": {"Bakabase.Service.dll", "Bakabase.Modules.Federation.dll"},
-                "unified": {"Bakabase.dll", "Bakabase.Shell.dll", "Bakabase.Service.dll", "Bakabase.Modules.Federation.dll"},
+                "unified": {"Bakabase.dll", "Bakabase.Shell.dll", "Bakabase.Service.dll", "Bakabase.Modules.Federation.dll",
+                            "Bakabase.Remoting.dll"},
                 "client": {"Bakabase.Client.dll", "Bakabase.Client.Remoting.dll", "Bakabase.Remoting.dll", "Bakabase.Shell.dll"}}[role]
-    require(required <= names, f"{role}: missing required assemblies {sorted(required - names)}")
+    # The unified app ships the relay, and YARP only as the relay's own dependency: YARP in a
+    # package without Bakabase.Remoting.dll came from somewhere it does not belong. Checked
+    # before the required set so that case is reported as what it is.
     forbidden = {"server": ("Bakabase.Client", "Bakabase.Remoting", "Bakabase.Shell", "Avalonia", "Yarp"),
-                 "unified": ("Bakabase.Client", "Yarp"),
+                 "unified": ("Bakabase.Client",) + (() if "Bakabase.Remoting.dll" in names else ("Yarp",)),
                  "client": ("Bakabase.Service", "Bakabase.Modules.Federation", "Bakabase.Migrations")}[role]
     require(not any(name.startswith(forbidden) for name in names | dependencies),
             f"{role}: forbidden shipped dependency {sorted(name for name in names | dependencies if name.startswith(forbidden))}")
+    require(required <= names, f"{role}: missing required assemblies {sorted(required - names)}")
     if role == "client":
         require(not (directory / "web").exists(), "Legacy client must not ship the local frontend")
     if require_web:

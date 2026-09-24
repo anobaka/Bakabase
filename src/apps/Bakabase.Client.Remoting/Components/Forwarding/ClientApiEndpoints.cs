@@ -127,7 +127,11 @@ public static class ClientApiEndpoints
                         s.DeviceId,
                         isActive = s.ServerId == data.ActiveServerId,
                         pathMappings = s.PathMappings
-                    })
+                    }),
+                    // The thin client is retired: the desktop app manages other servers
+                    // itself and imports this client's pairings, keys included. A server's
+                    // UI reads this to say so; it has no other effect.
+                    deprecated = true
                 });
             });
 

@@ -109,6 +109,7 @@
   .note { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
   .note.bad { color: var(--bad); }
   .note.good { color: var(--good); }
+  .panel.retired { border-color: var(--accent); }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -122,6 +123,18 @@
   <h1 data-t="title">Connect to a server</h1>
   <p class="lede" data-t="lede">This is the Bakabase client. Your library lives on a server; point
     this at it once and it is remembered.</p>
+
+  <!--
+    The thin client is retired. Shown unconditionally: everyone who still sees this page is
+    exactly who needs to know, and the desktop app brings this client's pairings over by
+    itself, so there is nothing to do here first.
+  -->
+  <section class="panel retired" id="retired">
+    <h2 data-t="retired.heading">This client is retired</h2>
+    <p class="note" style="margin-top: 0" data-t="retired.body">Install the Bakabase desktop app
+      instead: it manages other computers' libraries in the same window as its own, and imports
+      the servers this client is paired with automatically — nothing needs to be paired again.</p>
+  </section>
 
   <section class="panel" id="update" hidden>
     <h2 data-t="update.heading">Client update</h2>
@@ -186,6 +199,8 @@
     en: {
       'title': 'Connect to a server',
       'lede': 'This is the Bakabase client. Your library lives on a server; point this at it once and it is remembered.',
+      'retired.heading': 'This client is retired',
+      'retired.body': 'Install the Bakabase desktop app instead: it manages other computers’ libraries in the same window as its own, and imports the servers this client is paired with automatically — nothing needs to be paired again.',
       'update.heading': 'Client update',
       'update.action': 'Update and restart',
       'update.available': 'Version {version} is available. You are on {running}.',
@@ -233,6 +248,8 @@
     zh: {
       'title': '连接到服务端',
       'lede': '这是 Bakabase 客户端。你的库在服务端上，指向它一次就会被记住。',
+      'retired.heading': '本客户端已停止维护',
+      'retired.body': '请改用 Bakabase 桌面版：它可以在同一个窗口里管理其他电脑上的库，并会自动导入本客户端已配对的服务端，无需重新配对。',
       'update.heading': '客户端更新',
       'update.action': '更新并重启',
       'update.available': '有新版本 {version}，当前为 {running}。',
