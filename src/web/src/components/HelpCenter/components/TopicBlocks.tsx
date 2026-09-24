@@ -145,13 +145,15 @@ export const TopicCallout = ({
 }: {
   icon?: ReactNode;
   textKey: string;
-  tone?: "default" | "primary";
+  tone?: "default" | "primary" | "warning";
 }) => {
   const { t } = useTranslation();
   const toneClass =
     tone === "primary"
       ? "border-primary/20 bg-primary/5 text-primary"
-      : "border-default-200 bg-default-100 text-default-600";
+      : tone === "warning"
+        ? "border-warning/30 bg-warning/10 text-warning-700 dark:text-warning"
+        : "border-default-200 bg-default-100 text-default-600";
 
   return (
     <div className={`flex items-start gap-2 rounded-lg border p-3 text-xs ${toneClass}`}>

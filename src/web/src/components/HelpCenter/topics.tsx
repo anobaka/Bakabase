@@ -3,6 +3,7 @@ import type { HelpTopicDefinition, HelpTopicId } from "./types";
 import {
   AiOutlineApartment,
   AiOutlineCloudDownload,
+  AiOutlineCluster,
   AiOutlineDatabase,
   AiOutlineEdit,
   AiOutlineInbox,
@@ -20,6 +21,9 @@ import CollectionTopic from "./topics/collection";
 import CollectionConceptDetail from "./topics/collection/ConceptDetail";
 import { collectionConcepts } from "./topics/collection/concepts";
 import GettingStartedTopic from "./topics/gettingStarted";
+import MultiDeviceTopic from "./topics/multiDevice";
+import MultiDeviceConceptDetail from "./topics/multiDevice/ConceptDetail";
+import { multiDeviceConcepts } from "./topics/multiDevice/concepts";
 import PathMarkTopic from "./topics/pathMark";
 import PathMarkConceptDetail from "./topics/pathMark/ConceptDetail";
 import { pathMarkConcepts } from "./topics/pathMark/concepts";
@@ -114,6 +118,15 @@ export const helpTopics: HelpTopicDefinition[] = [
     conceptGroupLabelKey: "helpCenter.acquisition.section.concepts",
     concepts: acquisitionConcepts,
     ConceptContent: AcquisitionConceptDetail,
+  },
+  {
+    id: "multiDevice",
+    titleKey: "helpCenter.topic.multiDevice",
+    icon: <AiOutlineCluster className="text-lg" />,
+    Content: MultiDeviceTopic,
+    conceptGroupLabelKey: "helpCenter.multiDevice.section.concepts",
+    concepts: multiDeviceConcepts,
+    ConceptContent: MultiDeviceConceptDetail,
   },
 ];
 

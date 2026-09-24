@@ -15,7 +15,8 @@ export type HelpTopicId =
   | "collection"
   | "subscription"
   | "acquisition"
-  | "bulkModification";
+  | "bulkModification"
+  | "multiDevice";
 
 /** Horizontal tabs inside the path mark overview. Extend as more topics arrive. */
 export type PathMarkHelpSectionId = "whatIs" | "examples" | "comparison";
@@ -23,7 +24,13 @@ export type PathMarkHelpSectionId = "whatIs" | "examples" | "comparison";
 /** Horizontal tabs inside the workflow overview. */
 export type WorkflowHelpSectionId = "whatIs" | "examples" | "triggers";
 
-export type HelpSectionId = PathMarkHelpSectionId | WorkflowHelpSectionId;
+/** Horizontal tabs inside the multi-device overview. */
+export type MultiDeviceHelpSectionId = "whatIs" | "browse" | "switch" | "setup";
+
+export type HelpSectionId =
+  | PathMarkHelpSectionId
+  | WorkflowHelpSectionId
+  | MultiDeviceHelpSectionId;
 
 /** Where a help entry point should land inside the help center. */
 export interface HelpTarget {

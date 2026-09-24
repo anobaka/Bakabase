@@ -13,12 +13,18 @@ import { Tab, Tabs } from "@/components/bakaui";
 
 const sectionIds: PathMarkHelpSectionId[] = ["whatIs", "examples", "comparison"];
 
+/** The help center passes any topic's section id; only this topic's own ids select a tab. */
+const isSection = (value?: string): value is PathMarkHelpSectionId =>
+  sectionIds.includes(value as PathMarkHelpSectionId);
+
 const PathMarkTopic = ({ section }: HelpTopicContentProps) => {
   const { t } = useTranslation();
-  const [activeSection, setActiveSection] = useState<PathMarkHelpSectionId>(section ?? "whatIs");
+  const [activeSection, setActiveSection] = useState<PathMarkHelpSectionId>(
+    isSection(section) ? section : "whatIs",
+  );
 
   useEffect(() => {
-    if (section) {
+    if (isSection(section)) {
       setActiveSection(section);
     }
   }, [section]);
