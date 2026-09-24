@@ -39,5 +39,6 @@
   "clientConnection.serverUpdate.start": "Update the server",
   "clientConnection.serverUpdate.downloading": "Downloading {{version}} onto {{name}}",
   "clientConnection.serverUpdate.pendingRestart": "{{name}} has to restart to finish updating. Anyone else using it will be disconnected while it does.",
-  "clientConnection.serverUpdate.restart": "Restart the server"
+  "clientConnection.serverUpdate.restart": "Restart the server",
+  "clientConnection.managedByDesktop": "This window belongs to the Bakabase desktop app, which decides the devices it can show. Manage them from the desktop app's Devices page."
 }

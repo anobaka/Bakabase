@@ -17,7 +17,7 @@ import { UpdaterStatus, RemoteDevicePlatform } from "@/sdk/constants";
 import { Button, Chip, Divider, Progress, Snippet, Tooltip } from "@/components/bakaui";
 import { ChangelogButton } from "@/components/Changelog";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
-import { useIsPureClient } from "@/stores/remoteAccess";
+import { useIsLegacyClient } from "@/stores/remoteAccess";
 
 /** How often the client's update progress is re-read while it is downloading. */
 const PROGRESS_INTERVAL = 1500;
@@ -33,7 +33,9 @@ const PROGRESS_INTERVAL = 1500;
  */
 const ClientAppInfo: React.FC<{ query?: string }> = ({ query }) => {
   const { t } = useTranslation();
-  const isPureClient = useIsPureClient();
+  // The retired thin client only. The desktop app's console answers as the same flavour
+  // but has none of these routes: the app it belongs to is updated from its own window.
+  const isPureClient = useIsLegacyClient();
 
   const [status, setStatus] = useState<ClientStatus>();
   const [paths, setPaths] = useState<ClientAppInfoModel>();

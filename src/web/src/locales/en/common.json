@@ -440,6 +440,7 @@
   "menu.client": "This client",
   "menu.client.connection": "Server connection",
   "menu.client.pathMapping": "Path mapping",
+  "menu.client.thisComputer": "This computer",
   "client.failure.pathNotMapped": "That folder is not on this computer",
   "client.failure.addMapping": "Set it up",
   "client.failure.needsNewerClient": "This client cannot do that yet",

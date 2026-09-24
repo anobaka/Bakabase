@@ -13,7 +13,8 @@ import { clientApi } from "@/core/clientApi";
 import { ClientPairingOutcome, ServerHandshakeOutcome } from "@/sdk/constants";
 import { Button, Chip, Input, Modal, Snippet } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
+import { useIsConsole, useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
+import { devicesRoute, openLocalView } from "@/features/federation/switching";
 
 /**
  * Which server this client talks to, and how it got permission to.
@@ -30,6 +31,7 @@ const ClientConnectionPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const isPureClient = useIsPureClient();
+  const isConsole = useIsConsole();
   const reloadContext = useRemoteAccessStore((state) => state.load);
 
   const [status, setStatus] = useState<ClientStatus>();
@@ -48,10 +50,10 @@ const ClientConnectionPage = () => {
   }, []);
 
   useEffect(() => {
-    if (isPureClient) {
+    if (isPureClient && !isConsole) {
       load();
     }
-  }, [isPureClient, load]);
+  }, [isPureClient, isConsole, load]);
 
   // Polling only while a request is outstanding; nothing runs otherwise.
   useEffect(() => {
@@ -91,6 +93,27 @@ const ClientConnectionPage = () => {
   if (!isPureClient) {
     return (
       <div className="p-4 text-sm text-foreground-400">{t("clientConnection.onlyInClient")}</div>
+    );
+  }
+
+  // The desktop app's console answers every connection route here with "managed by the
+  // host": which servers this window can show is decided on the device's own Devices page.
+  if (isConsole) {
+    return (
+      <div className="flex flex-col items-start gap-3 p-4 text-sm">
+        <p className="text-foreground-500">{t("clientConnection.managedByDesktop")}</p>
+        <Button
+          size="sm"
+          variant="flat"
+          onPress={() =>
+            openLocalView(devicesRoute("servers")).catch(() =>
+              toast.error(t("federation.switcher.openFailed")),
+            )
+          }
+        >
+          {t("federation.switcher.manageDevices")}
+        </Button>
+      </div>
     );
   }
 

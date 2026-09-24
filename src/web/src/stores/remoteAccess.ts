@@ -2,6 +2,16 @@ import { create } from "zustand";
 
 import { ClientMode, RemoteAccessMode } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
+import { clientApi } from "@/core/clientApi";
+
+/**
+ * Which program is answering as PureClient.
+ *
+ * - `console` — the desktop app showing a server it manages, through its own relay. Full
+ *   control of that server; the app itself, its updater and its tray are this device's.
+ * - `legacy` — the retired Bakabase Client.
+ */
+export type ClientHost = "console" | "legacy";
 
 interface IRemoteAccessState {
   /** False until the first answer from the server arrives. */
@@ -30,8 +40,41 @@ interface IRemoteAccessState {
   /** Whether a sign-in capture window can open for this caller. */
   cookieCaptureAvailable: boolean;
   serverName?: string;
+  /**
+   * Only ever set under PureClient, once `/client/status` has answered. Undefined until
+   * then — callers that behave differently per host wait rather than guess, because the
+   * two guesses are wrong in opposite, visible ways (a retired client's updater offered
+   * in the desktop app, or the desktop app's switcher missing from the client).
+   */
+  clientHost?: ClientHost;
+  /** In the console: this device's own name, as opposed to the server being shown. */
+  localName?: string;
+  /**
+   * Under PureClient, once `/client/status` has answered: the id the server being shown
+   * knows this window's device by. Its list of paired devices contains this one, and
+   * revoking it is the one revocation that also ends the session doing it.
+   */
+  ownDeviceId?: string;
   load: () => Promise<void>;
 }
+
+/**
+ * Asks the PureClient which program it is. The console says so; the retired client
+ * predates the question and says nothing, which is itself the answer.
+ */
+const resolveClientHost = async (): Promise<
+  Pick<IRemoteAccessState, "clientHost" | "localName" | "ownDeviceId">
+> => {
+  const status = await clientApi.status();
+  const active =
+    status?.servers?.find((server) => server.isActive) ??
+    status?.servers?.find((server) => server.serverId === status.activeServerId);
+  const ownDeviceId = active?.deviceId || undefined;
+
+  return status?.host === "console"
+    ? { clientHost: "console", localName: status.localName || undefined, ownDeviceId }
+    : { clientHost: "legacy", localName: undefined, ownDeviceId };
+};
 
 export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
   initialized: false,
@@ -49,20 +92,34 @@ export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
 
       if (data) {
         const isLocal = data.isLocal ?? true;
+        // A backend that predates the field is an all-in-one when the caller
+        // is on it and an ordinary remote browser otherwise. Neither can be
+        // PureClient — that answer only ever comes from a client that
+        // intercepts this endpoint.
+        const clientMode =
+          data.clientMode ?? (isLocal ? ClientMode.AllInOne : ClientMode.RemoteBrowser);
 
         set({
           initialized: true,
           isLocal,
           mode: data.mode ?? RemoteAccessMode.Disabled,
-          // A backend that predates the field is an all-in-one when the caller
-          // is on it and an ordinary remote browser otherwise. Neither can be
-          // PureClient — that answer only ever comes from a client that
-          // intercepts this endpoint.
-          clientMode: data.clientMode ?? (isLocal ? ClientMode.AllInOne : ClientMode.RemoteBrowser),
+          clientMode,
           serverReachable: data.serverReachable ?? true,
           cookieCaptureAvailable: data.cookieCaptureAvailable ?? isLocal,
           serverName: data.serverName ?? undefined,
+          ...(clientMode === ClientMode.PureClient
+            ? {}
+            : { clientHost: undefined, localName: undefined, ownDeviceId: undefined }),
         });
+
+        if (clientMode === ClientMode.PureClient) {
+          try {
+            set(await resolveClientHost());
+          } catch {
+            // Its own status route not answering means the process is going away; the
+            // next load asks again. Until then nothing host-specific is shown.
+          }
+        }
       }
     } catch {
       // An older backend, or a request that failed on a flaky LAN. Staying
@@ -100,9 +157,49 @@ export const useUserSideActionsRunHere = () =>
     (state) => state.initialized && (state.isLocal || state.clientMode === ClientMode.PureClient),
   );
 
-/** True in the thin client specifically. */
+/**
+ * True when `/client/*` is answered on this origin: the retired thin client, or the
+ * desktop app's console showing a managed server. Both run user-side actions here; see
+ * {@link useIsConsole} / {@link useIsLegacyClient} for anything that differs.
+ */
 export const useIsPureClient = () =>
   useRemoteAccessStore((state) => state.initialized && state.clientMode === ClientMode.PureClient);
+
+/**
+ * True when this window is the desktop app showing a server it manages. The UI is that
+ * server's own; the window, updater and tray belong to the device the app runs on.
+ */
+export const useIsConsole = () =>
+  useRemoteAccessStore(
+    (state) =>
+      state.initialized &&
+      state.clientMode === ClientMode.PureClient &&
+      state.clientHost === "console",
+  );
+
+/** True in the retired Bakabase Client, once it has been told apart from the console. */
+export const useIsLegacyClient = () =>
+  useRemoteAccessStore(
+    (state) =>
+      state.initialized &&
+      state.clientMode === ClientMode.PureClient &&
+      state.clientHost === "legacy",
+  );
+
+/**
+ * True when this window may administer the server it shows — who else may manage it,
+ * above all: sitting at it, a paired device (the console or the retired client, whose
+ * requests are signed), or a browser the server lets in unconditionally because its mode
+ * is Unrestricted. An ordinary browser on a paired-only server can read, not decide.
+ */
+export const useCanAdministerShownServer = () =>
+  useRemoteAccessStore(
+    (state) =>
+      state.initialized &&
+      (state.isLocal ||
+        state.clientMode === ClientMode.PureClient ||
+        state.mode === RemoteAccessMode.Unrestricted),
+  );
 
 /**
  * True when a sign-in capture window can open. In the thin client that window

@@ -12,6 +12,8 @@ export interface IMenuItem {
   isDeprecated?: boolean;
   pureClientOnly?: boolean;
   localNodeOnly?: boolean;
+  hideInConsole?: boolean;
+  nameInConsole?: string;
 }
 
 function extractMenu(config: RouteMenuItem[]): IMenuItem[] {
@@ -26,6 +28,8 @@ function extractMenu(config: RouteMenuItem[]): IMenuItem[] {
         isDeprecated: r.isDeprecated,
         pureClientOnly: r.pureClientOnly,
         localNodeOnly: r.localNodeOnly,
+        hideInConsole: r.hideInConsole,
+        nameInConsole: r.nameInConsole,
       };
 
       if (r.children) item.children = extractMenu(r.children);

@@ -13,11 +13,12 @@ import toast from "react-hot-toast";
 import { AiOutlineCopy } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
-import { RemoteAccessMode, RemoteDevicePlatform } from "@/sdk/constants";
+import { RemoteAccessMode } from "@/sdk/constants";
 import { Button, Chip, Input, Modal, Select, Snippet, Switch } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import { millisecondsUntil, minutesUntil } from "@/core/serverTime";
+import { remoteDevicePlatformLabelKey } from "@/core/remoteDevicePlatform";
 import { useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
 
 interface RemoteAccessProps {
@@ -31,22 +32,7 @@ interface RemoteAccessProps {
  */
 const LivePollInterval = 5000;
 
-const platformLabelKey = (platform?: RemoteDevicePlatform) => {
-  switch (platform) {
-    case RemoteDevicePlatform.Windows:
-      return "configuration.remoteAccess.platform.windows";
-    case RemoteDevicePlatform.MacOS:
-      return "configuration.remoteAccess.platform.macOS";
-    case RemoteDevicePlatform.Linux:
-      return "configuration.remoteAccess.platform.linux";
-    case RemoteDevicePlatform.Android:
-      return "configuration.remoteAccess.platform.android";
-    case RemoteDevicePlatform.IOS:
-      return "configuration.remoteAccess.platform.iOS";
-    default:
-      return "configuration.remoteAccess.platform.unknown";
-  }
-};
+const platformLabelKey = remoteDevicePlatformLabelKey;
 
 const RemoteAccess: React.FC<RemoteAccessProps> = ({ query }) => {
   const { t } = useTranslation();

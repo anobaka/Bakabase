@@ -7,20 +7,33 @@ import { buttonClass, ErrorNotice } from "./common";
 
 import ExternalLink from "@/components/ExternalLink";
 import { clientApi } from "@/core/clientApi";
-import { useIsPureClient } from "@/stores/remoteAccess";
+import { useIsConsole, useIsPureClient } from "@/stores/remoteAccess";
 
+/**
+ * Bakabase Client is retired; this says what replaces it and what moving costs.
+ *
+ * Moving costs nothing on the same computer: the desktop app imports the client's
+ * pairings — keys and path mappings included — so every server stays managed without
+ * pairing again. The hint export stays for the one case that import cannot reach, a
+ * desktop app installed on a *different* computer, and it never carries a key.
+ *
+ * Absent in the desktop app's console: that window already is the replacement.
+ */
 export default function MigrationNotice() {
   const { t } = useTranslation();
   const isPureClient = useIsPureClient();
+  const isConsole = useIsConsole();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
   const [outcome, setOutcome] = useState<"saved" | "cancelled">();
+
+  if (isConsole) return null;
 
   return (
     <aside className="rounded-xl border border-primary/20 bg-primary/5 p-4">
       <h2 className="font-medium">{t("federation.migration.fullDesktop")}</h2>
       <p className="mt-2 text-sm">{t("federation.migration.intro")}</p>
-      <p className="mt-2 text-xs text-default-500">{t("federation.migration.security")}</p>
+      <p className="mt-2 text-xs text-default-500">{t("federation.migration.automatic")}</p>
       <p className="mt-2 text-xs text-default-500">{t("federation.migration.independent")}</p>
       <ExternalLink
         className="mt-3 inline-block text-sm text-primary underline"

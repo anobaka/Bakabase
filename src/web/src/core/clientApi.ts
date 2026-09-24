@@ -1,6 +1,7 @@
 import type { BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo } from "@/sdk/Api";
 import type {
   ClientPairingOutcome,
+  ManagedServerState,
   RemoteDevicePlatform,
   ServerHandshakeOutcome,
   UpdaterStatus,
@@ -18,6 +19,11 @@ import type {
  * Every call here is served by the forwarding layer on this origin. In any other
  * flavour they simply do not exist, which is why the pages that use them are shown
  * only when `clientMode` says PureClient.
+ *
+ * Two programs answer as PureClient: the retired thin client, and the desktop app's
+ * console — the relay it runs to show a server it manages in its own window. The console
+ * implements a subset (status, switcher, path mappings) and answers the thin client's
+ * connection, update and migration routes with 409/404; `status().host` tells them apart.
  */
 
 export interface ClientPathMapping {
@@ -45,7 +51,43 @@ export interface ClientStatus {
   /** Route keys this build can run here, e.g. `GET /tool/open`. */
   implementedUserMachineRoutes: string[];
   servers: ClientKnownServer[];
+  /**
+   * Which program answers `/client/*`. `"console"` is the desktop app's relay showing a
+   * server it manages; absent in the retired thin client, which predates the field.
+   */
+  host?: ClientHostKind;
+  /** In the console: the name of the device whose window this is (not the server's). */
+  localName?: string;
+  /** Set by a thin client that knows it has been retired. Absence proves nothing. */
+  deprecated?: boolean;
 }
+
+/** The value `/client/status` reports in `host`. Only one is defined so far. */
+export type ClientHostKind = "console";
+
+/** One place the desktop app's window can show: itself, or a server it manages. */
+export interface ClientSwitcherTarget {
+  /** `"local"` for the device the window belongs to; otherwise the server's id. */
+  id: string;
+  name: string;
+  isLocal: boolean;
+  isCurrent: boolean;
+  /**
+   * How the server was when last checked — the same states `/federation/local/servers`
+   * reports in this device's own window. Absent for `"local"`, and from a desktop app
+   * that predates the field; either way the entry reads as not checked.
+   */
+  state?: ManagedServerState;
+}
+
+export interface ClientSwitcher {
+  currentId: string;
+  /** This device first, then every managed server. */
+  targets: ClientSwitcherTarget[];
+}
+
+/** The id the console uses for the device whose window this is. */
+export const LOCAL_SWITCHER_TARGET = "local";
 
 export interface ClientHandshakeResult {
   outcome: ServerHandshakeOutcome;
@@ -114,6 +156,25 @@ export interface ClientAppInfo {
   componentsDirectory?: string;
 }
 
+/**
+ * A `/client/*` route that answered with a failure status.
+ *
+ * The console refuses in the same envelope it answers in — `{ code, message }`, with a
+ * stable name as the message (`RelayUnavailable`, `UnknownServer`) — and `reason` keeps
+ * that name, so a page can say what went wrong rather than only that something did.
+ * Absent when the body said nothing usable.
+ */
+export class ClientApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly reason?: string,
+  ) {
+    super(message);
+    this.name = "ClientApiError";
+  }
+}
+
 const call = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const rsp = await fetch(`/client${path}`, {
     ...init,
@@ -121,7 +182,21 @@ const call = async <T>(path: string, init?: RequestInit): Promise<T> => {
   });
 
   if (!rsp.ok) {
-    throw new Error(`${init?.method ?? "GET"} /client${path} failed with ${rsp.status}`);
+    let reason: string | undefined;
+
+    try {
+      const refusal = await rsp.json();
+
+      if (typeof refusal?.message === "string" && refusal.message) reason = refusal.message;
+    } catch {
+      // No body, or not JSON: the status is all there is.
+    }
+
+    throw new ClientApiError(
+      `${init?.method ?? "GET"} /client${path} failed with ${rsp.status}`,
+      rsp.status,
+      reason,
+    );
   }
 
   const envelope = await rsp.json();
@@ -225,6 +300,23 @@ export const clientApi = {
    * the client open a second connection to learn the same thing.
    */
   setTrayRunning: (running: boolean) => post<{ applied: boolean }>("/tray", { running }),
+
+  /**
+   * Where else this window can go. Console only: the desktop app answers these while it
+   * shows a managed server; the retired thin client has no such routes.
+   */
+  switcher: {
+    list: () => call<ClientSwitcher>("/switcher"),
+    /**
+     * Where the window should navigate to show `id`. For `"local"` that is this device's
+     * own origin — the same one its window starts on, so its browser storage is the same.
+     */
+    open: (id: string, path?: string) =>
+      post<{ url: string }>(
+        `/switcher/${encodeURIComponent(id)}/open`,
+        path === undefined ? {} : { path },
+      ),
+  },
 
   /**
    * The client updating itself. Separate from `BApi.updater`, which is forwarded and

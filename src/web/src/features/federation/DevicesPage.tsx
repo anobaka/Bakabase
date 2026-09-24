@@ -1,8 +1,9 @@
 import type { PairingRequest, PairingResult, PathMapping, Peer } from "./types";
+import type { DevicesSection } from "./switching";
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { AiOutlineLaptop, AiOutlinePlus, AiOutlineReload } from "react-icons/ai";
 
 import {
@@ -16,9 +17,14 @@ import {
 } from "./components/common";
 import ConfirmDialog from "./components/ConfirmDialog";
 import { useFederationStatus } from "./hooks/useFederationStatus";
+import { useSectionReveal } from "./hooks/useSectionReveal";
 import { federationPeerApi } from "./peerApi";
 import { FederationError, isAbort } from "./transport";
 import ImportConnectionHints from "./components/ImportConnectionHints";
+import ManagedServersSection from "./components/ManagedServers";
+import ManagementAccessSection from "./components/ManagementAccess";
+
+import { useCanAdministerShownServer } from "@/stores/remoteAccess";
 
 /** How often outgoing requests are claimed while the page is visible. */
 const CLAIM_POLL_MS = 4000;
@@ -39,11 +45,47 @@ const isAwaitingOutgoing = (request: PairingRequest, at: number) =>
   request.status === "awaitingApproval" &&
   Date.parse(request.expiresAt) > at;
 
+/**
+ * Changes with every navigation that lands on the management section — the notification
+ * followed again while the page is open is the same URL, but a new location key.
+ */
+const managementLinkKey = (section: string | null, locationKey: string) =>
+  section === "management" ? locationKey : "";
+
 export default function DevicesPage() {
   return (
-    <FederationAccess>
+    <FederationAccess elsewhere={<ShownServerManagement />}>
       <Devices />
     </FederationAccess>
+  );
+}
+
+/**
+ * Where the rest of this page is not available — the desktop app showing a server it
+ * manages, the retired client, a browser — the one part that still applies is whether other
+ * devices may manage the server the window shows. A headless server's management requests
+ * are answered exactly there, and its notification links here.
+ *
+ * Only where the window may decide that: a paired window or an Unrestricted server. An
+ * ordinary browser on a paired-only server would only be told it is not allowed to look.
+ */
+function ShownServerManagement() {
+  const [params] = useSearchParams();
+  const { key: locationKey } = useLocation();
+  const allowed = useCanAdministerShownServer();
+  const [settled, setSettled] = useState(false);
+  const section = params.get("section");
+  const { ref, highlighted } = useSectionReveal<HTMLElement>(section === "management", settled);
+
+  if (!allowed) return null;
+
+  return (
+    <ManagementAccessSection
+      highlighted={highlighted}
+      reloadKey={managementLinkKey(section, locationKey)}
+      sectionRef={ref}
+      onSettled={() => setSettled(true)}
+    />
   );
 }
 
@@ -52,15 +94,36 @@ function Devices() {
   const { status, error: loadError, loading, refresh } = useFederationStatus();
   const [params] = useSearchParams();
   const identitySection = useRef<HTMLDetailsElement>(null);
-  const identityRequested = params.get("section") === "identity";
+  const section = params.get("section") as DevicesSection | null;
+  const identityRequested = section === "identity";
   const statusReady = !!status;
+  const { key: locationKey } = useLocation();
+  // Both management sections load on their own. The access section sits under the
+  // servers section, so it is brought into view only once both have filled: arriving
+  // there before the list above it has loaded would let that list push it away again.
+  const [serversSettled, setServersSettled] = useState(false);
+  const [accessSettled, setAccessSettled] = useState(false);
+  const serversReveal = useSectionReveal<HTMLElement>(section === "servers", serversSettled);
+  const accessReveal = useSectionReveal<HTMLElement>(
+    section === "management",
+    serversSettled && accessSettled,
+  );
+  // The access section reads its own settings; these are the moments they may have moved
+  // under it. The sharing panel below can turn remote access on (the page's status then
+  // reports the new mode), and the "wants to manage this device" notification leads here
+  // again with a request the section has not seen yet.
+  const accessReloadKey = [
+    status?.remoteAccessMode ?? "",
+    status?.requirePairing ?? "",
+    managementLinkKey(section, locationKey),
+  ].join("|");
 
   useEffect(() => {
     if (statusReady && identityRequested && identitySection.current) {
       identitySection.current.open = true;
       identitySection.current.scrollIntoView?.({ block: "start" });
     }
-  }, [statusReady, identityRequested]);
+  }, [statusReady, identityRequested, locationKey]);
   const [error, setError] = useState<Error>();
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
@@ -336,6 +399,21 @@ function Devices() {
           </div>
         </section>
       )}
+      {/* Management first: it is where the window's server switcher leads, and it does not
+          depend on the sharing state below — a device whose sharing state is unreadable
+          can still manage other devices and be managed. */}
+      <ManagedServersSection
+        highlighted={serversReveal.highlighted}
+        sectionRef={serversReveal.ref}
+        onSettled={() => setServersSettled(true)}
+      />
+      <ManagementAccessSection
+        highlighted={accessReveal.highlighted}
+        reloadKey={accessReloadKey}
+        sectionRef={accessReveal.ref}
+        onChanged={() => void refresh({ quiet: true })}
+        onSettled={() => setAccessSettled(true)}
+      />
       {!status && loading && <p role="status">{t("federation.loading")}</p>}
       {status && (
         <>

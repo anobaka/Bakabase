@@ -7,7 +7,7 @@ import ClientLog from "./ClientLog";
 import ServerLog from "./ServerLog";
 
 import { Tab, Tabs } from "@/components/bakaui";
-import { useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
+import { useIsConsole, useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
 
 type LogSource = "server" | "client";
 
@@ -22,6 +22,10 @@ type LogSource = "server" | "client";
 export default function LogPage() {
   const { t } = useTranslation();
   const isPureClient = useIsPureClient();
+  // The desktop app showing a managed server has only that server's log to offer. Its relay
+  // deliberately does not serve this computer's log to the page, because the page belongs
+  // to the other server; this computer's log is on its own window's log page.
+  const isConsole = useIsConsole();
   const serverReachable = useRemoteAccessStore((state) => state.serverReachable);
   const [chosen, setChosen] = useState<LogSource>();
 
@@ -30,7 +34,7 @@ export default function LogPage() {
   // network error is a worse first screen than the log that explains the disconnection.
   const source: LogSource = chosen ?? (serverReachable ? "server" : "client");
 
-  if (!isPureClient) {
+  if (!isPureClient || isConsole) {
     return (
       <div className="p-4">
         <ServerLog />
