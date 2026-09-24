@@ -12,6 +12,8 @@ export const LIBRARY_ROUTE = "/federation";
 export { DEVICES_ROUTE };
 /** The "let other devices manage this one" part of the Devices page. */
 export const MANAGEMENT_ROUTE = `${DEVICES_ROUTE}?section=management`;
+/** The device map: every device and relationship as one picture. */
+export const MAP_ROUTE = "/federation/map";
 
 /**
  * Where a link to the multi-device pages can take this window.

@@ -16,7 +16,7 @@ import { TopicCallout, TopicCards, TopicHeadline } from "../../components/TopicB
 
 import { mdk } from "./devices";
 import NetworkDiagram from "./NetworkDiagram";
-import OpenPageButton, { DEVICES_ROUTE, LIBRARY_ROUTE } from "./OpenPageButton";
+import OpenPageButton, { DEVICES_ROUTE, LIBRARY_ROUTE, MAP_ROUTE } from "./OpenPageButton";
 
 import { Button } from "@/components/bakaui";
 
@@ -51,6 +51,45 @@ const ways = [
 ];
 
 const comparisonRows = ["see", "do", "play", "access"];
+
+/**
+ * A thumbnail of the device map: this device in the middle, lines out to the others in the
+ * colours the map uses — sharing blue, management amber. Decoration beside the words.
+ */
+const MiniMap = () => (
+  <svg aria-hidden className="h-20 w-28 shrink-0 self-center" viewBox="0 0 112 80">
+    <path className="stroke-primary" d="M56 40 L18 16" strokeWidth={2} />
+    <path className="stroke-warning" d="M56 40 L94 16" strokeWidth={2.5} />
+    <path className="stroke-primary" d="M56 40 L94 64" strokeDasharray="4 3" strokeWidth={2} />
+    <path className="stroke-warning" d="M56 40 L18 64" strokeWidth={2.5} />
+    {[
+      [18, 16],
+      [94, 16],
+      [94, 64],
+      [18, 64],
+    ].map(([cx, cy]) => (
+      <rect
+        key={`${cx}-${cy}`}
+        className="fill-content1 stroke-default-400"
+        height={14}
+        rx={4}
+        strokeWidth={1.5}
+        width={22}
+        x={cx - 11}
+        y={cy - 7}
+      />
+    ))}
+    <rect
+      className="fill-primary-50 stroke-primary"
+      height={20}
+      rx={5}
+      strokeWidth={2}
+      width={32}
+      x={40}
+      y={30}
+    />
+  </svg>
+);
 
 const OverviewSection = ({
   onNavigate,
@@ -96,6 +135,20 @@ const OverviewSection = ({
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section
+        className="flex flex-col gap-3 rounded-lg border border-default-200 p-3 sm:flex-row sm:items-center"
+        data-testid="multi-device-map-link"
+      >
+        <MiniMap />
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <h4 className="text-sm font-medium">{t(mdk("map.title"))}</h4>
+          <p className="text-xs text-default-600">{t(mdk("map.desc"))}</p>
+          <div className="pt-1">
+            <OpenPageButton labelKey={mdk("open.map")} route={MAP_ROUTE} onNavigate={onNavigate} />
+          </div>
         </div>
       </section>
 

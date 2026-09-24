@@ -35,6 +35,8 @@ import {
   AiOutlineMobile,
   AiOutlineLaptop,
   AiOutlineNodeIndex,
+  AiOutlineApartment,
+  AiOutlineCluster,
 } from "react-icons/ai";
 import { lazy } from "react";
 import { MdOutlineArticle, MdVideoLibrary } from "react-icons/md";
@@ -91,6 +93,7 @@ import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 const Test = lazy(() => import("@/pages/test"));
 const FederationLibraryPage = lazy(() => import("@/features/federation/LibraryPage"));
 const FederationDevicesPage = lazy(() => import("@/features/federation/DevicesPage"));
+const FederationDeviceMapPage = lazy(() => import("@/features/federation/DeviceMapPage"));
 
 export interface RouteMenuItem {
   name: string;
@@ -137,20 +140,39 @@ export const routesMenuConfig: RouteMenuItem[] = [
     menu: true,
   },
   {
-    name: "federation.title",
-    path: "/federation",
-    component: FederationLibraryPage,
-    icon: AiOutlineCloudServer,
-    layout: "basic",
+    // The multi-device mode (「多设备互联」, "Multi-device"): every page of it belongs to this device's own
+    // window, so the group is filtered out wherever that window is not (`localNodeOnly`). The
+    // routes stay where they were, so links and bookmarks keep working.
+    name: "federation.mode",
+    icon: AiOutlineCluster,
+    menu: true,
     localNodeOnly: true,
-  },
-  {
-    name: "federation.devices.title",
-    path: "/federation/devices",
-    component: FederationDevicesPage,
-    icon: AiOutlineLaptop,
-    layout: "basic",
-    localNodeOnly: true,
+    children: [
+      {
+        name: "federation.title",
+        path: "/federation",
+        component: FederationLibraryPage,
+        icon: AiOutlineCloudServer,
+        layout: "basic",
+        localNodeOnly: true,
+      },
+      {
+        name: "federation.devices.title",
+        path: "/federation/devices",
+        component: FederationDevicesPage,
+        icon: AiOutlineLaptop,
+        layout: "basic",
+        localNodeOnly: true,
+      },
+      {
+        name: "federation.map.title",
+        path: "/federation/map",
+        component: FederationDeviceMapPage,
+        icon: AiOutlineApartment,
+        layout: "basic",
+        localNodeOnly: true,
+      },
+    ],
   },
   {
     name: "menu.mediaLibrary",

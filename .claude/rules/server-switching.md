@@ -79,12 +79,19 @@ manage anything; they are only ever managed.
   waits on the network or the disk.
 - **Management is legacy paired-device access.** Pairing uses `/remote-access/pair/*` with a
   code or an approved request, exactly as the removed thin client did, and grants full control
-  of the target. It is unrelated to federation grants, which stay read-only.
+  of the target. It is unrelated to federation grants, which stay read-only. Approving a request
+  (`pairing/requests/{id}/approve`) answers the id the device will be listed under once it has
+  collected its key — never the key — so the page that approved it can find it.
 - **A filed request is collected in the background.** The manager claims it every few seconds
   until it is approved, rejected, expires or is cancelled. In the listing, `outcome` is what the
   last attempt said and `active` is whether the wait is still on: a claim that did not get
   through (`Unreachable`, `TooManyAttempts`) does not end it, so the page polls and offers
-  "cancel" on `active`, never on `outcome`.
+  "cancel" on `active`, never on `outcome`. `serverId` is the install the address answered as
+  when the request was filed — what the server joins the listing under once approved.
+- **What a server says it is** (`kind`, `platform`, optional in `server-info`) is kept from its
+  last answer as itself, like `mode` and `appVersion`: never from whoever answers at its
+  address instead, and never a reason to refuse a handshake — a value this app does not know,
+  as a number or a name, reads as nothing.
 - **Finding servers to manage uses the remote-access beacons**, not library sharing:
   `GET /federation/local/servers/discover` (UDP probe + mDNS, ~3 s, on request only) lists
   every server answering them, minus this install and marked when already managed. Library

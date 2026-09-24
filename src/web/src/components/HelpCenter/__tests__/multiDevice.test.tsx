@@ -311,6 +311,14 @@ describe("multi-device help topic: links to the devices pages", () => {
     openTab("browse");
     fireEvent.click(screen.getByRole("button", { name: k("open.library") }));
     expect(onNavigate).toHaveBeenLastCalledWith("/federation");
+
+    // The overview points at the device map, where every connection is drawn.
+    openTab("whatIs");
+    const map = screen.getByTestId("multi-device-map-link");
+
+    expect(map).toHaveTextContent(k("map.desc"));
+    fireEvent.click(within(map).getByRole("button", { name: k("open.map") }));
+    expect(onNavigate).toHaveBeenLastCalledWith("/federation/map");
     expect(openLocalView).not.toHaveBeenCalled();
   });
 
@@ -406,6 +414,14 @@ describe("multi-device help topic: translations", () => {
     await renderEverything();
 
     expect(Object.keys(enHelp).filter((key) => !used.has(key))).toEqual([]);
+  });
+
+  it("names the mode Multi-device, 多设备互联", () => {
+    expect(enHelp["helpCenter.topic.multiDevice"]).toBe("Multi-device");
+    expect(cnHelp["helpCenter.topic.multiDevice"]).toBe("多设备互联");
+    // The same name the pages and the menu use for it.
+    expect((enFederation as Record<string, string>)["federation.mode"]).toBe("Multi-device");
+    expect((cnFederation as Record<string, string>)["federation.mode"]).toBe("多设备互联");
   });
 
   it("keeps the two languages in step", () => {

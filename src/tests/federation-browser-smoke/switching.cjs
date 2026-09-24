@@ -136,6 +136,11 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     const bInfo = await envelope(source.base + '/remote-access/server-info');
     const aInfo = await envelope(unified.base + '/remote-access/server-info');
     assert.notEqual(bInfo.id, aInfo.id);
+    // What each says it is (optional fields, answered here): A is composed as the desktop app,
+    // B as a headless server — ServerKind 1 and 2 — and both run on this machine's OS.
+    assert.equal(aInfo.kind, 1, 'A does not say it is the desktop app');
+    assert.equal(bInfo.kind, 2, 'B does not say it is a headless server');
+    assert.ok(bInfo.platform >= 1 && bInfo.platform === aInfo.platform, 'The fixtures do not say what they run on');
     // The UI names servers, never ids: a check by name proves B only if A is called something else.
     assert.notEqual(bInfo.name, aInfo.name, 'The fixtures share a server name, so no check by name can tell them apart');
     const legacyFile = connectionFile(config.legacyClient.directory);
@@ -613,6 +618,240 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
       hubSocketsRefusedByA: true, hubSocketsFromOtherPagesRefusedByRelay: true
     };
     report.hubSockets = { refusedByA: refusedHubs, refusedByRelay };
+
+    // The device map on A draws what A knows now: B, managed from here — one line from A to
+    // B, and no line for anything A does not manage. Its panel offers what the devices page
+    // offers for B. Read only: nothing is clicked that changes anything.
+    const listing = await managedServers();
+    const map = await context.newPage();
+    await map.goto(home + '/#/federation/map');
+    await map.getByRole('heading', { name: exactly('federation.map.title') }).waitFor();
+    const bName = new RegExp(`^${escape(bInfo.name)}$`);
+    const bCard = map.locator('g[role="button"][data-node]').filter({ has: map.locator('title', { hasText: bName }) });
+    await bCard.waitFor();
+    const bNode = await bCard.getAttribute('data-node');
+    const managesB = map.locator(`g[role="button"][data-edge="management:${bNode}"]`);
+    await managesB.waitFor();
+    assert.equal(await managesB.getAttribute('data-out'), 'active', 'The map does not draw A managing B');
+    assert.equal(await managesB.getAttribute('data-in'), 'none', 'The map draws B managing A');
+    assert.equal(await map.locator('g[role="button"][data-edge^="management:"][data-out="active"]').count(),
+      listing.servers.length, 'The map draws a managed server A does not have, or misses one');
+    assert.equal(await map.locator('g[role="button"][data-node="self"]').getAttribute('data-kind'), 'desktop');
+    // B is drawn as what it says it is: a headless server.
+    await map.locator(`g[role="button"][data-node="${bNode}"][data-kind="server"]`).waitFor();
+    await bCard.click();
+    const mapPanel = map.getByTestId('device-map-panel');
+    await mapPanel.getByRole('heading', { name: bName }).waitFor();
+    await mapPanel.getByRole('button', { name: exactly('federation.servers.open') }).waitFor();
+    await map.screenshot({ path: artifacts('device-map.png'), fullPage: true });
+    // Narrower than the widest windows, the details are shown on demand: beside the map, which
+    // gives up their width and is laid out again for the rest. Nothing of the map may be under
+    // them — no device a keyboard can reach there, no part of the map's region — and the device
+    // selected is in view. At this window's 1440 px, then at the desktop app's smallest, 1280.
+    const besideTheMap = () => map.evaluate(() => {
+      const layout = document.querySelector('[data-testid="device-map-layout"]');
+      const details = document.querySelector('[data-testid="device-map-details"]');
+      const region = layout.firstElementChild;
+      const d = details.getBoundingClientRect();
+      const m = region.getBoundingClientRect();
+      const under = element => {
+        const r = element.getBoundingClientRect();
+        return [[r.left + 4, r.top + r.height / 2], [r.left + r.width / 2, r.top + r.height / 2], [r.right - 4, r.top + r.height / 2]]
+          .some(([x, y]) => details.contains(document.elementFromPoint(x, y)));
+      };
+      const devices = [...region.querySelectorAll('[role="button"][data-node], button[data-node]')];
+      const selected = region.querySelector('[aria-pressed="true"][data-node]');
+      const s = selected?.getBoundingClientRect();
+      return {
+        details: layout.getAttribute('data-details'),
+        regionOverlapsDetails: m.right > d.left && m.left < d.right && m.bottom > d.top && m.top < d.bottom,
+        devicesUnderDetails: devices.filter(under).map(device => device.getAttribute('data-node')),
+        selected: selected?.getAttribute('data-node') ?? null,
+        selectedInView: !!s && s.top >= 0 && s.bottom <= innerHeight && s.left >= 0 && s.right <= innerWidth,
+        canvas: document.querySelector('[data-testid="device-map-canvas"]')?.getBoundingClientRect().width,
+        sideways: document.documentElement.scrollWidth > innerWidth + 1,
+      };
+    });
+    const clearOfDetails = value => value.details === 'open' && !value.regionOverlapsDetails &&
+      value.devicesUnderDetails.length === 0 && value.selected === bNode && value.selectedInView && !value.sideways;
+    const besideAt1440 = await until(besideTheMap, clearOfDetails, 'the details beside the map at 1440 px, nothing of it under them', 5000);
+    await map.setViewportSize({ width: 1280, height: 1000 });
+    const besideAt1280 = await until(besideTheMap, value => clearOfDetails(value) && value.canvas < besideAt1440.canvas,
+      'the map laid out again at 1280 px beside the details, nothing of it under them', 5000);
+    // The cards glide to where the new layout puts them: the picture once they are there.
+    let lastPlace;
+    await until(async () => {
+      const place = await map.locator('g[role="button"][data-node="self"]').boundingBox();
+      const still = !!place && !!lastPlace && Math.abs(place.x - lastPlace.x) < 0.5 && Math.abs(place.y - lastPlace.y) < 0.5;
+      lastPlace = place;
+      return still;
+    }, still => still, 'the map to settle at 1280 px', 5000);
+    await map.screenshot({ path: artifacts('device-map-1280.png'), fullPage: true });
+    assert.equal(await map.getByTestId('device-map-layout').getAttribute('data-layout'), 'on-demand');
+    await map.setViewportSize({ width: 1440, height: 1000 });
+
+    // From the keyboard, in Chromium: an action that takes away what the details show leaves
+    // the keyboard in the details. Its button is disabled while it runs, and Chromium moves
+    // focus off a disabled button to the page's body at once — long before the listings are
+    // read again — so where the keyboard was is taken when the action starts, not when the page
+    // last drew. (1) A stops managing B, on its map.
+    const focused = page => page.evaluate(() => {
+      const active = document.activeElement;
+      return active
+        ? { tag: active.tagName, id: active.id, text: active === document.body ? '' : (active.textContent ?? '').trim().slice(0, 80) }
+        : null;
+    });
+    const onDetailsHeading = (page, what) =>
+      until(() => focused(page), active => active?.id === 'device-map-panel-title', what, 15000);
+    await mapPanel.getByRole('button', { name: exactly('federation.servers.forget') }).focus();
+    await map.keyboard.press('Enter');
+    await map.getByRole('alertdialog').waitFor();
+    assert.match((await focused(map)).text, exactly('federation.confirm'));
+    await map.keyboard.press('Enter');
+    await until(managedServers, view => view.servers.length === 0, 'A to stop managing B');
+    const afterForget = await onDetailsHeading(map, 'the keyboard back in the details after stopping to manage B');
+    await map.screenshot({ path: artifacts('device-map-after-forget.png') });
+
+    // (2) A asks to manage B again; B approves on its own map, from the keyboard. The request
+    // goes at once; the device it lets in is listed only once A has collected its key, in the
+    // background — the details wait for it there and move to it, still with the keyboard.
+    const asker = await context.newPage();
+    await asker.goto(home + '/#/federation/devices?section=servers');
+    const askerServers = asker.locator('#managed-servers');
+    await askerServers.getByLabel(exactly('federation.servers.add.address')).fill(source.base);
+    await askerServers.getByRole('button', { name: exactly('federation.servers.add.request') }).click();
+    await askerServers.getByRole('status').filter({ hasText: containing('federation.servers.requested', { name: bInfo.name }) }).waitFor();
+    const onB = await context.newPage();
+    await onB.goto(source.base + '/#/federation/map');
+    const requestCard = onB.locator('g[role="button"][data-node^="manager-request:"]');
+    await requestCard.waitFor();
+    assert.equal(await requestCard.count(), 1);
+    await requestCard.focus();
+    await onB.keyboard.press('Enter');
+    const bPanel = onB.getByTestId('device-map-panel');
+    await onDetailsHeading(onB, 'the keyboard in B\'s details for the request');
+    await bPanel.getByRole('button', { name: exactly('federation.management.requests.approve') }).focus();
+    await onB.keyboard.press('Enter');
+    await onB.getByRole('alertdialog').waitFor();
+    const approval = onB.waitForResponse(response => /\/remote-access\/pairing\/requests\/[^/]+\/approve$/.test(response.url()));
+    await onB.keyboard.press('Enter');
+    const approvedDevice = (await (await approval).json()).data?.deviceId;
+    assert.ok(approvedDevice, 'Approving did not say which device it let in');
+    await until(async () => (await settingsOf(source)).devices.map(device => device.id), ids => ids.includes(approvedDevice),
+      'A to collect its key, under the id approving named', 30000);
+    await until(() => bPanel.getAttribute('data-overview'), overview => overview === null,
+      'B\'s details to move to the device it let in');
+    await bPanel.getByTestId('management-in').waitFor();
+    assert.equal(await bPanel.getByTestId('management-in').getAttribute('data-status'), 'active');
+    await bPanel.getByRole('status').filter({ hasText: containing('federation.management.requests.approved') }).waitFor();
+    const afterApprove = await onDetailsHeading(onB, 'the keyboard in B\'s details on the device it let in');
+    await onB.screenshot({ path: artifacts('device-map-after-approve.png') });
+    // (3) Enter on the message's own × takes the message and the button away: the keyboard goes
+    // to the details' heading, not to the page's body.
+    const approvedSaid = bPanel.getByRole('status').filter({ hasText: containing('federation.management.requests.approved') });
+    await approvedSaid.getByRole('button', { name: exactly('federation.dismiss') }).focus();
+    await onB.keyboard.press('Enter');
+    await approvedSaid.waitFor({ state: 'detached' });
+    const afterDismiss = await onDetailsHeading(onB, 'the keyboard in B\'s details once what approving said is dismissed');
+    await until(managedServers, view => view.servers.length === 1 && view.servers[0].serverId === bInfo.id,
+      'A to manage B again');
+    await Promise.all([map.close(), asker.close(), onB.close()]);
+
+    // (4) More devices than the map can draw beside the details at the desktop app's smallest
+    // window: opening them turns the drawing into the list, closing them the list back into the
+    // drawing, and each rendering replaces every control of the other. The keyboard must end on
+    // the device or relationship it was on, never on the page's body. The devices pair with A
+    // through A's own pairing API — a code minted on A, exchanged under a name of their own —
+    // and are revoked again afterwards.
+    const CROWD = 13;
+    const crowd = [];
+    let crowded;
+    try {
+      for (let i = 1; i <= CROWD; i++) {
+        const { code } = await envelope(unified.base + '/remote-access/pairing/code', { method: 'POST' });
+        const paired = await envelope(unified.base + '/remote-access/pair/code', {
+          method: 'POST',
+          data: { code, deviceName: `fixture-manager-${String(i).padStart(2, '0')}`, platform: 'Android' },
+        });
+        assert.ok(paired?.credentials?.deviceId, `A did not pair device ${i} (failure ${paired?.failure})`);
+        crowd.push(paired.credentials.deviceId);
+      }
+      crowded = await context.newPage();
+      await crowded.setViewportSize({ width: 1280, height: 1000 });
+      await crowded.goto(home + '/#/federation/map');
+      await crowded.getByRole('heading', { name: exactly('federation.map.title') }).waitFor();
+      const mode = () => crowded.getByTestId('device-map-canvas').getAttribute('data-mode');
+      const cards = crowded.locator('g[role="button"][data-node^="manager:"]');
+      await until(() => cards.count(), count => count === CROWD, `A's map to draw the ${CROWD} devices paired with it`);
+      assert.equal(await mode(), 'map', 'A\'s map is not drawn at 1280 px with the details closed');
+      const keyboardOn = () => crowded.evaluate(() => {
+        const active = document.activeElement;
+        return {
+          tag: active?.tagName.toLowerCase() ?? null,
+          node: active?.getAttribute('data-node') ?? null,
+          edge: active?.getAttribute('data-edge') ?? null,
+          body: active === document.body,
+        };
+      });
+      const target = await cards.first().getAttribute('data-node');
+      const card = crowded.locator(`g[role="button"][data-node="${target}"]`);
+      const relationship = `management:${target}`;
+      const detailsListTheMap = what => until(mode, value => value === 'list', `A's map listed beside the details ${what}`, 5000);
+      const drawnAgain = what => until(mode, value => value === 'map', `A's map drawn again once the details closed ${what}`, 5000);
+
+      // (a) Enter on a device's card; Escape in the details.
+      await card.focus();
+      await crowded.keyboard.press('Enter');
+      await detailsListTheMap('opened from the keyboard');
+      await onDetailsHeading(crowded, 'the keyboard in the details that listed the map');
+      await crowded.screenshot({ path: artifacts('device-map-crowded-open.png'), fullPage: true });
+      await crowded.keyboard.press('Escape');
+      await drawnAgain('with Escape');
+      const afterEscape = await until(keyboardOn, on => on.tag === 'g' && on.node === target,
+        'the keyboard on the card of the device that opened the details, drawn again', 5000);
+
+      // (b) Enter on its relationship; the details' own X, from the keyboard.
+      await crowded.locator(`g[role="button"][data-edge="${relationship}"]`).focus();
+      await crowded.keyboard.press('Enter');
+      await detailsListTheMap('opened from a relationship');
+      await onDetailsHeading(crowded, 'the keyboard in the details of the relationship');
+      await crowded.getByTestId('device-map-panel').getByRole('button', { name: exactly('federation.close') }).focus();
+      await crowded.keyboard.press('Enter');
+      await drawnAgain('with their X');
+      const afterClose = await until(keyboardOn, on => on.tag === 'g' && on.edge === relationship,
+        'the keyboard on the relationship that opened the details, drawn again', 5000);
+
+      // (c) A pointer on the card, which keeps the keyboard: the card goes with the drawing, and
+      // the keyboard goes to the same device in the list; Escape there, on the map, closes the
+      // details, and the keyboard is on the card drawn again.
+      await card.click();
+      await detailsListTheMap('opened with a pointer');
+      const inTheList = await until(keyboardOn, on => on.tag === 'button' && on.node === target,
+        'the keyboard on the same device in the list', 5000);
+      await crowded.keyboard.press('Escape');
+      await drawnAgain('with Escape on the map');
+      const afterEscapeOnMap = await until(keyboardOn, on => on.tag === 'g' && on.node === target,
+        'the keyboard on the device\'s card once Escape on the map closed the details', 5000);
+      await crowded.screenshot({ path: artifacts('device-map-crowded-closed.png'), fullPage: true });
+      report.deviceMapCrowded = {
+        devices: CROWD, width: 1280, openedListsTheMap: true,
+        keyboardAfterEscape: afterEscape, keyboardAfterClose: afterClose,
+        keyboardInTheListAfterPointer: inTheList, keyboardAfterEscapeOnMap: afterEscapeOnMap,
+      };
+    } finally {
+      await crowded?.close();
+      for (const id of crowd)
+        await call(`${unified.base}/remote-access/devices/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    }
+    assert.deepEqual((await settingsOf(unified)).devices.filter(device => crowd.includes(device.id)), [],
+      'A still lists a device paired for the crowded map');
+
+    report.deviceMap = {
+      managedServerDrawn: true, managementLines: listing.servers.length, managedServerKind: 'server',
+      detailsBesideTheMap: { at1440: besideAt1440, at1280: besideAt1280 },
+      keyboardAfterStopManaging: afterForget.id, keyboardAfterApproving: afterApprove.id, approvalNamedTheDevice: true,
+      keyboardAfterDismissing: afterDismiss.id
+    };
 
     assert.deepEqual(pageErrors, []);
     await assertStayedLocal(context, blocked, 'Server switching');
