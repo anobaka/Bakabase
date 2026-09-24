@@ -16,7 +16,8 @@ export type HelpTopicId =
   | "subscription"
   | "acquisition"
   | "bulkModification"
-  | "multiDevice";
+  | "multiDevice"
+  | "notices";
 
 /** Horizontal tabs inside the path mark overview. Extend as more topics arrive. */
 export type PathMarkHelpSectionId = "whatIs" | "examples" | "comparison";
@@ -45,6 +46,8 @@ export interface HelpTopicContentProps {
   section?: HelpSectionId;
   /** Open an application feature and dismiss the hosting help dialog. */
   onNavigate?: (path: string) => void;
+  /** Show another entry of the help center in place, e.g. a guide a topic points to. */
+  onOpenTopic?: (target: HelpTarget) => void;
   /** True when the help center was opened automatically for a first-time user. */
   firstRun?: boolean;
 }

@@ -5072,6 +5072,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/options/ui/notices/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MarkNoticesRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/options/ui/notices/baseline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CaptureNoticeBaseline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/options/ui-style": {
         parameters: {
             query?: never;
@@ -10383,6 +10415,7 @@ export interface components {
             hideResourceCovers: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
             latestUsedProperties: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
+            notices: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions"];
         };
         "Bakabase.InsideWorld.Models.Configs.UIOptions+CustomContextMenuItem": {
             property: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"];
@@ -10416,6 +10449,10 @@ export interface components {
             gap: number;
             blocks: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailBlock"][];
             hidden: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailBlock"][];
+        };
+        "Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions": {
+            readIds: string[];
+            baselinePending: boolean;
         };
         "Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions": {
             /** Format: int32 */
@@ -14822,6 +14859,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions]": {
             /** Format: int32 */
@@ -26044,6 +26087,64 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    MarkNoticesRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": string[];
+                "application/json": string[];
+                "text/json": string[];
+                "application/*+json": string[];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
+                };
+            };
+        };
+    };
+    CaptureNoticeBaseline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": string[];
+                "application/json": string[];
+                "text/json": string[];
+                "application/*+json": string[];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
                 };
             };
         };

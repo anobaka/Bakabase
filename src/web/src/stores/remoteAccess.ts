@@ -11,9 +11,25 @@ import { clientApi } from "@/core/clientApi";
  */
 export type ClientHost = "console";
 
+/**
+ * Whether the context below is the server's answer:
+ * - `asking` — nothing has come back yet;
+ * - `known` — the server answered with its context;
+ * - `unknown` — it could not be read (the request failed, or came back without a context).
+ *   Every field keeps its default — local, all-in-one — so the desktop app keeps working, and
+ *   after a failed request {@link IRemoteAccessState.initialized} is true all the same.
+ */
+export type RemoteAccessContextState = "asking" | "known" | "unknown";
+
 interface IRemoteAccessState {
-  /** False until the first answer from the server arrives. */
+  /** False until the first answer from the server arrives — or until asking it failed. */
   initialized: boolean;
+  /**
+   * Whether the fields below are the server's answer or the defaults they start with.
+   * Anything that must not act on a guess about who is looking checks this, not
+   * {@link initialized}. A later request that fails leaves an earlier answer `known`.
+   */
+  context: RemoteAccessContextState;
   /**
    * Whether this browser is on the machine running Bakabase. Answered by the
    * server from the connection itself, not guessed from the URL — opening
@@ -73,8 +89,14 @@ const resolveClientHost = async (): Promise<
     : { clientHost: undefined, localName: undefined, ownDeviceId };
 };
 
+/** A request that brought no context back: unknown, unless an earlier one answered. */
+const unanswered = (state: IRemoteAccessState): Pick<IRemoteAccessState, "context"> => ({
+  context: state.context === "known" ? "known" : "unknown",
+});
+
 export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
   initialized: false,
+  context: "asking",
   // Assume local until told otherwise: the desktop app is the overwhelmingly
   // common case, and it must not flicker through a "remote" rendering on start.
   isLocal: true,
@@ -98,6 +120,7 @@ export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
 
         set({
           initialized: true,
+          context: "known",
           isLocal,
           mode: data.mode ?? RemoteAccessMode.Disabled,
           clientMode,
@@ -117,12 +140,16 @@ export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
             // next load asks again. Until then nothing host-specific is shown.
           }
         }
+      } else {
+        // Answered with an error code instead of a context. Everything else goes on as
+        // before; only what waits on `context` learns that no answer is coming.
+        set(unanswered);
       }
     } catch {
       // An older backend, or a request that failed on a flaky LAN. Staying
       // local-by-default keeps the desktop app working; a genuinely remote
       // device would have been refused by the gate long before this point.
-      set({ initialized: true });
+      set((state) => ({ initialized: true, ...unanswered(state) }));
     }
   },
 }));

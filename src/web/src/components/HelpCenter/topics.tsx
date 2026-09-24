@@ -7,6 +7,7 @@ import {
   AiOutlineDatabase,
   AiOutlineEdit,
   AiOutlineInbox,
+  AiOutlineNotification,
   AiOutlineProfile,
   AiOutlineRocket,
   AiOutlineSync,
@@ -35,6 +36,8 @@ import { subscriptionConcepts } from "./topics/subscription/concepts";
 import WorkflowTopic from "./topics/workflow";
 import WorkflowConceptDetail from "./topics/workflow/ConceptDetail";
 import { workflowConcepts } from "./topics/workflow/concepts";
+
+import NoticesTopic from "@/components/Notices/NoticesTopic";
 
 /**
  * Registry of all help center topics. A guide joins the help center by adding an
@@ -127,6 +130,13 @@ export const helpTopics: HelpTopicDefinition[] = [
     conceptGroupLabelKey: "helpCenter.multiDevice.section.concepts",
     concepts: multiDeviceConcepts,
     ConceptContent: MultiDeviceConceptDetail,
+  },
+  {
+    // Every notice the app opened at startup, to read again after "Got it".
+    id: "notices",
+    titleKey: "helpCenter.topic.notices",
+    icon: <AiOutlineNotification className="text-lg" />,
+    Content: NoticesTopic,
   },
 ];
 

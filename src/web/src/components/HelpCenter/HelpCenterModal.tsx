@@ -1,6 +1,6 @@
 "use client";
 
-import type { HelpTarget, HelpTopicId } from "./types";
+import type { HelpSectionId, HelpTarget, HelpTopicId } from "./types";
 
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,12 +15,22 @@ export interface HelpCenterModalProps extends HelpTarget {
   onClose: () => void;
   /** First-run mode: opened automatically for new users, closes via a single primary action. */
   firstRun?: boolean;
+  /**
+   * Takes over when a link inside the help center goes to a page of the app, from any topic
+   * the reader has moved to. The host then closes the help center itself. Without it the
+   * page is opened and the help center closes (`onClose`), which cannot tell a reader who
+   * went somewhere from one who simply closed it — a host that must (the startup notices,
+   * which put off what is left once the reader has gone to a page) passes this.
+   */
+  onNavigate?: (path: string) => void;
 }
 
 interface ActiveEntry {
   topicId: HelpTopicId;
   /** Undefined = the topic's overview entry is selected. */
   conceptId?: string;
+  /** A tab asked for by a link inside the help center (`onOpenTopic`). */
+  section?: HelpSectionId;
 }
 
 /**
@@ -35,6 +45,7 @@ const HelpCenterModal = ({
   section,
   concept,
   firstRun,
+  onNavigate,
 }: HelpCenterModalProps) => {
   const { t } = useTranslation();
   const initialTopicId = topic ?? helpTopics[0]!.id;
@@ -135,11 +146,23 @@ const HelpCenterModal = ({
           ) : (
             <Content
               firstRun={firstRun}
+              section={active.section ?? (active.topicId === initialTopicId ? section : undefined)}
               onNavigate={(path) => {
+                if (onNavigate) {
+                  onNavigate(path);
+
+                  return;
+                }
                 window.location.hash = path;
                 onClose();
               }}
-              section={active.topicId === initialTopicId ? section : undefined}
+              onOpenTopic={(target) =>
+                setActive({
+                  topicId: target.topic ?? active.topicId,
+                  conceptId: target.concept,
+                  section: target.section,
+                })
+              }
             />
           )}
         </div>

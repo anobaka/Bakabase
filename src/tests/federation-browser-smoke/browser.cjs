@@ -175,7 +175,7 @@ async function federation(browser) {
     // What an old thin client left on this machine: its pairing with the source. Both stages
     // below import it; see legacy-client.cjs.
     report.legacyClientPairing = await legacyClientPairing({ config });
-    report.firstLaunchImport = await firstLaunchImport({ config });
+    report.firstLaunchImport = await firstLaunchImport({ browser, config });
     report.serverSwitching = await serverSwitching({ browser, config, artifacts });
     fs.writeFileSync(artifacts('result.json'), JSON.stringify(report, null, 2));
     console.log(JSON.stringify(report, null, 2));

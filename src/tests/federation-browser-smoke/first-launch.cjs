@@ -6,11 +6,16 @@
 // pairing with the source server on disk — on a data directory of its own and the thin client's
 // data directory to read from, exactly as a fresh install finds an old one. The long-lived
 // unified fixture cannot show this: it started before there was anything to import.
+//
+// It is also the one fresh install started here through the app's own host start-up, so it is
+// where the startup notices' fresh-install rule is checked for real: the first start opens the
+// notice baseline, and its window, having brought the thin client's pairings over, is shown the
+// thin client's notice and no other upgrade-only one.
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
-const { assertNoAnalytics } = require('./network.cjs');
+const { assertNoAnalytics, assertStayedLocal, confine } = require('./network.cjs');
 const { connectionFile } = require('./legacy-client.cjs');
 
 const field = (object, name) => object?.[name] ?? object?.[name[0].toLowerCase() + name.slice(1)];
@@ -56,7 +61,52 @@ async function start(spec, timeout = 90000) {
   return stop;
 }
 
-module.exports = async function firstLaunchImport({ config }) {
+/** Polls a read until it satisfies `done`, or fails with the last value. */
+async function until(read, done, what, timeout = 20000) {
+  const deadline = Date.now() + timeout;
+  let value;
+  while (Date.now() < deadline) {
+    value = read();
+    if (done(value)) return value;
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+  assert.fail(`Timed out waiting for ${what}: ${JSON.stringify(value)}`);
+}
+
+/**
+ * The fresh install's startup notices, end to end: the baseline its first start opened (read
+ * before any page loads), then its window.
+ */
+async function freshInstallNotices(browser, spec) {
+  const uiFile = findFile(spec.directory, path.join('configs', 'ui.json'));
+  assert.ok(uiFile, 'No UI options after the first launch');
+  // The options manager writes a byte order mark.
+  const notices = () =>
+    field(field(JSON.parse(fs.readFileSync(uiFile, 'utf8').replace(/^\uFEFF/, '')), 'UI'), 'Notices');
+  // Read as the host started, before it recorded the running version over the one this
+  // install last ran — none.
+  assert.equal(field(notices(), 'BaselinePending'), true, 'The first launch did not open the fresh install\'s notice baseline');
+
+  const origins = new Set([new URL(spec.window).origin, new URL(spec.base).origin]);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'en-US' });
+  try {
+    const blocked = await confine(context, url => origins.has(url.origin));
+    const page = await context.newPage();
+    // Not the dashboard, whose welcome would come first.
+    await page.goto(spec.window + '/#/federation/devices?section=servers');
+    await page.locator('[role=dialog] [data-notice-id="thin-client-discontinued"]').waitFor();
+    // The window recorded the baseline: every upgrade-only notice but the thin client's, which
+    // this install is for after all — it brought the thin client's pairings over.
+    const recorded = await until(notices, state => field(state, 'BaselinePending') === false, 'the notice baseline');
+    assert.deepEqual(field(recorded, 'ReadIds'), ['multi-device'], 'The baseline did not leave the thin client\'s notice out');
+    assert.equal(await page.locator('[data-notice-id]').count(), 1);
+    await assertStayedLocal(context, blocked, 'First launch');
+  } finally {
+    await context.close();
+  }
+}
+
+module.exports = async function firstLaunchImport({ browser, config }) {
   const spec = config.firstLaunch;
   const { source } = config.hosts;
   const legacyFile = connectionFile(config.legacyClient.directory);
@@ -92,7 +142,11 @@ module.exports = async function firstLaunchImport({ config }) {
     if (process.platform !== 'win32') assert.equal(fs.statSync(storeFile).mode & 0o777, 0o600);
     assert.ok(fs.readFileSync(legacyFile).equals(legacyBytes), 'The first launch changed the thin client\'s file');
     await assertNoAnalytics(spec.base);
-    return { importedAtFirstLaunch: true, withKeyAndMappings: true, recorded: true };
+    await freshInstallNotices(browser, spec);
+    return {
+      importedAtFirstLaunch: true, withKeyAndMappings: true, recorded: true,
+      noticeBaselineOpenedAtFirstStart: true, thinClientNoticeShownAfterImport: true
+    };
   } finally {
     await stop();
   }

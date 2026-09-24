@@ -2474,6 +2474,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptions {
   hideResourceCovers: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
   latestUsedProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
+  notices: BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions;
 }
 
 export interface BakabaseInsideWorldModelsConfigsUIOptionsCustomContextMenuItem {
@@ -2511,6 +2512,11 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutCo
   gap: number;
   blocks: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailBlock[];
   hidden: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailBlock[];
+}
+
+export interface BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions {
+  readIds: string[];
+  baselinePending: boolean;
 }
 
 export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
@@ -7900,6 +7906,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsConfigsThirdPartyOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptions {
@@ -22232,6 +22245,68 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addLatestUsedPropertyUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui/latest-used-property`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name MarkNoticesRead
+     * @request POST:/options/ui/notices/read
+     */
+    markNoticesRead: (data: string[], params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions,
+        any
+      >({
+        path: `/options/ui/notices/read`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for markNoticesRead
+     * @name markNoticesReadUrl
+     */
+    markNoticesReadUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/ui/notices/read`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name CaptureNoticeBaseline
+     * @request POST:/options/ui/notices/baseline
+     */
+    captureNoticeBaseline: (data: string[], params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions,
+        any
+      >({
+        path: `/options/ui/notices/baseline`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for captureNoticeBaseline
+     * @name captureNoticeBaselineUrl
+     */
+    captureNoticeBaselineUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/ui/notices/baseline`;
 
       return baseUrl + path;
     },
