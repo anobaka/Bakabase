@@ -335,7 +335,17 @@ public class RemoteConsolePairingTests
         Assert.AreEqual("9.9.9", servers["server-online"].AppVersion);
         Assert.AreEqual(ManagedServerState.Revoked, servers["server-revoked"].State);
         Assert.AreEqual(ManagedServerState.Offline, servers["server-offline"].State);
-        Assert.AreEqual(ManagedServerState.Revoked, servers["server-reset-before"].State);
+
+        // Another install answers there — its data was reset, or the address went to another
+        // server. Not "revoked": that would send the user to pair again at the address, with
+        // whoever now answers there. Who answered is said, and nothing it said is taken as
+        // the server's own.
+        var answered = servers["server-reset-before"];
+        Assert.AreEqual(ManagedServerState.WrongServer, answered.State);
+        Assert.AreEqual(new ManagedServerAnswerView("server-reset", "Reset", false), answered.AnsweredBy);
+        Assert.IsNull(answered.Mode);
+        Assert.IsNull(answered.AppVersion);
+        Assert.IsNull(servers["server-online"].AnsweredBy);
 
         // Warned about, never changed: nothing but reads reached the unrestricted server.
         Assert.IsTrue(online.Requests.All(r => r.Method == "GET"));

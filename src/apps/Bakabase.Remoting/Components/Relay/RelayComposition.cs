@@ -92,17 +92,35 @@ public static class RelayComposition
         services.TryAddSingleton<IUpstreamTarget>(sp => sp.GetRequiredService<ActiveConnection>());
         services.TryAddSingleton<IClientCredentialProvider>(sp => sp.GetRequiredService<ActiveConnection>());
         services.TryAddSingleton<UpstreamTransformer>();
-        services.TryAddSingleton(_ => CreateUpstreamInvoker());
+        services.TryAddSingleton(sp => CreateUpstreamInvoker(sp.GetRequiredService<UpstreamIdentity>()));
         services.TryAddSingleton<UpstreamStanding>();
+
+        // Which server answers at the address, asked before anything is forwarded or signed
+        // for it. The question itself is the composer's (IUpstreamIdentityVerifier): it knows
+        // this device's own identity and ports, which a relay does not.
+        services.TryAddSingleton(sp => new UpstreamIdentity(
+            sp.GetRequiredService<ActiveConnection>(),
+            sp.GetRequiredService<IUpstreamIdentityVerifier>(),
+            sp.GetService<UpstreamIdentityPolicy>(),
+            sp.GetService<TimeProvider>(),
+            sp.GetService<ILogger<UpstreamIdentity>>()));
         services.TryAddSingleton<UpstreamForwarder>();
 
         // Its own signed client, for the few calls the relay makes on its own behalf
-        // rather than on the browser's.
+        // rather than on the browser's — held back until the address is confirmed, like the
+        // browser's, signed only after that, and connected only the way the forwarder
+        // connects: to an address just confirmed, with no proxy in between.
         services.AddHttpClient<IUpstreamContextProbe, UpstreamContextProbe>()
+            .ConfigurePrimaryHttpMessageHandler(sp =>
+                UpstreamConnections.CreateHandler(sp.GetRequiredService<UpstreamIdentity>(), TimeSpan.FromSeconds(10)))
+            .AddHttpMessageHandler(sp => new UpstreamIdentityHandler(sp.GetRequiredService<UpstreamIdentity>()))
             .AddHttpMessageHandler(sp => new DeviceSigningHandler(
                 sp.GetRequiredService<IClientCredentialProvider>(), sp.GetRequiredService<ServerClock>()));
 
         services.AddHttpClient<IUpstreamApi, UpstreamApi>()
+            .ConfigurePrimaryHttpMessageHandler(sp =>
+                UpstreamConnections.CreateHandler(sp.GetRequiredService<UpstreamIdentity>(), TimeSpan.FromSeconds(10)))
+            .AddHttpMessageHandler(sp => new UpstreamIdentityHandler(sp.GetRequiredService<UpstreamIdentity>()))
             .AddHttpMessageHandler(sp => new DeviceSigningHandler(
                 sp.GetRequiredService<IClientCredentialProvider>(), sp.GetRequiredService<ServerClock>()));
 
@@ -338,18 +356,15 @@ public static class RelayComposition
     /// The invoker YARP relays through. Everything that would normally be helpful is
     /// turned off: automatic decompression would break a byte-range video, cookies would
     /// mix the browser's with the relay's, and following redirects would hide the
-    /// server's own answer.
+    /// server's own answer. Every connection it opens is to an address just confirmed as
+    /// the server's (<see cref="UpstreamConnections"/>).
     /// </summary>
-    private static HttpMessageInvoker CreateUpstreamInvoker() =>
-        new(new SocketsHttpHandler
-        {
-            UseProxy = false,
-            AllowAutoRedirect = false,
-            AutomaticDecompression = DecompressionMethods.None,
-            UseCookies = false,
-            ConnectTimeout = TimeSpan.FromSeconds(15),
-            // Long-lived by design: this carries the hub connection and video streams.
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-            ActivityHeadersPropagator = null
-        });
+    private static HttpMessageInvoker CreateUpstreamInvoker(UpstreamIdentity identity)
+    {
+        // Long-lived by design: this carries the hub connection and video streams.
+        var handler = UpstreamConnections.CreateHandler(identity, TimeSpan.FromSeconds(15));
+        handler.ActivityHeadersPropagator = null;
+
+        return new HttpMessageInvoker(handler);
+    }
 }

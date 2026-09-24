@@ -86,6 +86,13 @@ export function reportClientFailure(response: Response | undefined, error: any):
       toast.danger({ title: t("client.failure.serverUnreachable"), description });
       break;
 
+    case ClientForwardingFailure.WrongServer:
+      // The server's address answers as another server now, so nothing was sent there. The
+      // relay's message names the address and who answers; the way on is this computer's
+      // devices page, which the window's switcher reaches.
+      toast.danger({ title: t("client.failure.wrongServer"), description });
+      break;
+
     default:
       // ForeignCaller, and anything added later. A request that never came from this
       // window has no user to guide, so the plain message is the honest answer.

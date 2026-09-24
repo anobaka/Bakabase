@@ -371,28 +371,94 @@ internal sealed class FakeServer : IAsyncDisposable
     /// </summary>
     public bool RefusesUnknownDevices { get; set; }
 
+    /// <summary>
+    /// Whether this server takes every caller as sitting at it, the way a real server takes
+    /// any loopback caller: it never looks at a signature, and says so in its context.
+    /// Another install on the same machine as the console is one.
+    /// </summary>
+    public bool TrustsLoopback { get; set; }
+
+    /// <summary>
+    /// Whether remote access is turned off here, answered as a real server's gate answers a
+    /// caller from another machine then: 403 with <c>X-Bakabase-Remote-Access: Disabled</c> on
+    /// every path, <c>server-info</c> included, so it never says who it is.
+    /// </summary>
+    public bool RemoteAccessOff { get; set; }
+
     public sealed record Received(string Method, string Path, string Query, string? DeviceId, bool? SignatureValid,
         string? Cookie = null, string? Origin = null);
 
+    /// <remarks>
+    /// The port is only a preference: the first free one at or after it is taken, and one
+    /// that another process grabs between the check and the bind — test runs in other
+    /// checkouts share this machine's ports — is skipped for the next.
+    /// </remarks>
     public static async Task<FakeServer> StartAsync(string serverId, string name, int preferredPort)
+    {
+        for (var attempt = 0;; attempt++)
+        {
+            var port = LoopbackPortAllocator.Allocate(preferredPort);
+
+            try
+            {
+                return await StartOnAsync(serverId, name, port);
+            }
+            catch (IOException) when (attempt < LoopbackPortAllocator.MaxAttempts)
+            {
+                preferredPort = port + 1;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Starts on exactly <paramref name="port"/> — another server taking over an address, as
+    /// another install does when it is launched onto the port a stopped one had.
+    /// </summary>
+    public static async Task<FakeServer> TakeOverAsync(string serverId, string name, int port)
+    {
+        for (var attempt = 0;; attempt++)
+        {
+            try
+            {
+                return await StartOnAsync(serverId, name, port);
+            }
+            catch (IOException) when (attempt < 20)
+            {
+                // The previous listener's socket may take a moment to be released.
+                await Task.Delay(100);
+            }
+        }
+    }
+
+    private static async Task<FakeServer> StartOnAsync(string serverId, string name, int port)
     {
         var server = new FakeServer
         {
             ServerId = serverId,
             Name = name,
-            Port = LoopbackPortAllocator.Allocate(preferredPort)
+            Port = port
         };
 
         var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions {Args = []});
         builder.Logging.ClearProviders();
         builder.WebHost.ConfigureKestrel(k => k.Listen(IPAddress.Loopback, server.Port));
 
-        server._app = builder.Build();
-        server._app.Urls.Clear();
-        server._app.UseWebSockets();
-        server._app.Run(server.HandleAsync);
+        var app = builder.Build();
+        app.Urls.Clear();
+        app.UseWebSockets();
+        app.Run(server.HandleAsync);
 
-        await server._app.StartAsync();
+        try
+        {
+            await app.StartAsync();
+        }
+        catch
+        {
+            await app.DisposeAsync();
+            throw;
+        }
+
+        server._app = app;
 
         return server;
     }
@@ -430,7 +496,16 @@ internal sealed class FakeServer : IAsyncDisposable
             request.Headers.Cookie.Count > 0 ? request.Headers.Cookie.ToString() : null,
             request.Headers.Origin.Count > 0 ? request.Headers.Origin.ToString() : null));
 
-        if (RefusesUnknownDevices && valid == false)
+        if (RemoteAccessOff)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.Headers["X-Bakabase-Remote-Access"] = nameof(RemoteAccessDenialReason.Disabled);
+            await WriteJsonAsync(context,
+                "{\"code\":403,\"message\":\"Remote access is turned off. Enable it in Bakabase on the host machine.\"}");
+            return;
+        }
+
+        if (RefusesUnknownDevices && valid == false && !TrustsLoopback)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             context.Response.Headers["X-Bakabase-Remote-Access"] = nameof(RemoteAccessDenialReason.DeviceRevoked);
@@ -462,6 +537,13 @@ internal sealed class FakeServer : IAsyncDisposable
                 return;
 
             case ("GET", "/remote-access/context"):
+                if (TrustsLoopback)
+                {
+                    await WriteJsonAsync(context,
+                        $"{{\"code\":0,\"data\":{{\"isLocal\":true,\"mode\":{(int) Mode},\"paired\":false}}}}");
+                    return;
+                }
+
                 if (parsed != null && valid != true)
                 {
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;

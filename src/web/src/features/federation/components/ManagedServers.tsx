@@ -62,6 +62,7 @@ const stateBadgeClass: Record<ManagedServerState, string> = {
   [ManagedServerState.Online]: "bg-success/10 text-success",
   [ManagedServerState.Offline]: "bg-default-100 text-default-500",
   [ManagedServerState.Revoked]: "bg-danger/10 text-danger",
+  [ManagedServerState.WrongServer]: "bg-warning/10 text-warning-600 dark:text-warning",
 };
 
 const serverLabel = (server: Pick<ManagedServer, "name" | "address">) =>
@@ -694,6 +695,27 @@ function ManagedServerCard({
       )}
       {server.state === ManagedServerState.Revoked && (
         <p className="text-xs text-danger">{t("federation.servers.revokedTip", { name })}</p>
+      )}
+      {server.state === ManagedServerState.WrongServer && (
+        // Never "pair again here": whoever answers at the address is not this server, and
+        // pairing with it is exactly the mistake the state is there to prevent.
+        <p
+          className="text-xs text-warning-600 dark:text-warning"
+          data-testid="managed-server-wrong-server"
+        >
+          {server.answeredBy?.isThisDevice
+            ? t("federation.servers.wrongServerThisDeviceTip", {
+                name,
+                address: server.address,
+                discover: t("federation.servers.add.discover"),
+              })
+            : t("federation.servers.wrongServerTip", {
+                name,
+                address: server.address,
+                other: server.answeredBy?.name || server.answeredBy?.serverId || "?",
+                discover: t("federation.servers.add.discover"),
+              })}
+        </p>
       )}
       <div className="flex flex-wrap items-center gap-2">
         <button className={primaryClass} disabled={busy} type="button" onClick={() => onOpen()}>

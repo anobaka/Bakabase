@@ -4373,21 +4373,24 @@ export enum ManagedServerState {
   Unknown = 0,
   Online = 1,
   Offline = 2,
-  Revoked = 3
+  Revoked = 3,
+  WrongServer = 4
 }
 
 export const managedServerStates = [
   { label: 'Unknown', value: ManagedServerState.Unknown },
   { label: 'Online', value: ManagedServerState.Online },
   { label: 'Offline', value: ManagedServerState.Offline },
-  { label: 'Revoked', value: ManagedServerState.Revoked }
+  { label: 'Revoked', value: ManagedServerState.Revoked },
+  { label: 'WrongServer', value: ManagedServerState.WrongServer }
 ] as const;
 
 export const ManagedServerStateLabel: Record<ManagedServerState, string> = {
   [ManagedServerState.Unknown]: 'Unknown',
   [ManagedServerState.Online]: 'Online',
   [ManagedServerState.Offline]: 'Offline',
-  [ManagedServerState.Revoked]: 'Revoked'
+  [ManagedServerState.Revoked]: 'Revoked',
+  [ManagedServerState.WrongServer]: 'WrongServer'
 };
 
 export enum PairingFailure {
@@ -5617,7 +5620,8 @@ export enum ClientForwardingFailure {
   ServerUnreachable = 2,
   ForeignCaller = 3,
   NeedsNewerClient = 4,
-  PathNotMapped = 5
+  PathNotMapped = 5,
+  WrongServer = 6
 }
 
 export const clientForwardingFailures = [
@@ -5626,7 +5630,8 @@ export const clientForwardingFailures = [
   { label: 'ServerUnreachable', value: ClientForwardingFailure.ServerUnreachable },
   { label: 'ForeignCaller', value: ClientForwardingFailure.ForeignCaller },
   { label: 'NeedsNewerClient', value: ClientForwardingFailure.NeedsNewerClient },
-  { label: 'PathNotMapped', value: ClientForwardingFailure.PathNotMapped }
+  { label: 'PathNotMapped', value: ClientForwardingFailure.PathNotMapped },
+  { label: 'WrongServer', value: ClientForwardingFailure.WrongServer }
 ] as const;
 
 export const ClientForwardingFailureLabel: Record<ClientForwardingFailure, string> = {
@@ -5635,7 +5640,8 @@ export const ClientForwardingFailureLabel: Record<ClientForwardingFailure, strin
   [ClientForwardingFailure.ServerUnreachable]: 'ServerUnreachable',
   [ClientForwardingFailure.ForeignCaller]: 'ForeignCaller',
   [ClientForwardingFailure.NeedsNewerClient]: 'NeedsNewerClient',
-  [ClientForwardingFailure.PathNotMapped]: 'PathNotMapped'
+  [ClientForwardingFailure.PathNotMapped]: 'PathNotMapped',
+  [ClientForwardingFailure.WrongServer]: 'WrongServer'
 };
 
 export const ExtensionMediaTypes: Record<string, MediaType> = {

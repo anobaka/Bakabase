@@ -43,9 +43,16 @@ namespace Bakabase.Remoting.Components.Console;
 /// a relay's endpoints carries one; each relay reads its own server's through a one-entry
 /// view and signs with it, and that is the only place a key is ever used.
 /// </para>
+/// <para>
+/// A server is its install identity, not its address. Every relay asks the address who
+/// answers before it forwards anything (<see cref="UpstreamIdentity"/>, with this class as
+/// the verifier), and so does every probe; an address that answers as another install, or
+/// as this device itself, is reported as <see cref="ManagedServerState.WrongServer"/> and
+/// gets nothing — it is never paired with, renamed after or trusted in the server's place.
+/// </para>
 /// </remarks>
 public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitcher, IRemoteConsoleNavigator,
-    IHostedService, IAsyncDisposable
+    IUpstreamIdentityVerifier, IHostedService, IAsyncDisposable
 {
     private const int MaxBindAttempts = 4;
 
@@ -69,7 +76,23 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     private readonly ConcurrentDictionary<string, ManagedServerRelay> _relays = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ServerClock> _clocks = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ProbeSnapshot> _probes = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// When the latest answer about who serves each server's address was asked, so a slower
+    /// answer to an earlier question — a probe and a relay asking at once — never overwrites it.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _identityAskedAt = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, PendingRequest> _requests = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The latest answer each server gave as itself that the store does not reflect yet, and
+    /// the background write taking care of it — see <see cref="NoteAnswered"/>. Both by server
+    /// id, both under <see cref="_answeredGate"/>.
+    /// </summary>
+    private readonly Dictionary<string, AnsweredNote> _unwritten = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Task> _answeredWriters = new(StringComparer.Ordinal);
+    private readonly Lock _answeredGate = new();
+
     private readonly CancellationTokenSource _lifetime = new();
     private Task _startup = Task.CompletedTask;
     private int _stopped;
@@ -187,6 +210,17 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         {
             request.Cancel();
         }
+
+        // Cancelled with the lifetime; waited for so none of them writes the store after the
+        // app has stopped with it.
+        Task[] writers;
+
+        lock (_answeredGate)
+        {
+            writers = _answeredWriters.Values.ToArray();
+        }
+
+        await Task.WhenAll(writers);
 
         await _relayGate.WaitAsync(CancellationToken.None);
         try
@@ -329,8 +363,11 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             return false;
         }
 
-        await RevokeSelfAsync(entry, ct);
-
+        // Forgotten here first, then asked there. Asking is best effort and can take a couple
+        // of round trips — the address has to answer as the server before it is sent anything
+        // signed — and the server must stop being openable the moment the user says so: an
+        // open finishing meanwhile would hand the window a ticket to a relay about to stop.
+        // The key needed to ask is in hand, in the entry read above.
         await _store.MutateAsync(data =>
         {
             // Its origin outlives it: the browser keeps that server's storage under it. See
@@ -346,7 +383,12 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         await StopRelayAsync(serverId);
 
         _probes.TryRemove(serverId, out _);
+
+        await RevokeSelfAsync(entry, ct);
+
+        // After asking, which reads the server's clock offset to sign with.
         _clocks.TryRemove(serverId, out _);
+        _identityAskedAt.TryRemove(serverId, out _);
 
         _logger.LogInformation("Stopped managing {ServerName} ({ServerId})", entry.ServerName, serverId);
 
@@ -378,21 +420,23 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     {
         ct.ThrowIfCancellationRequested();
 
-        var (relay, started) = await EnsureRelayAsync(serverId, ct);
+        var (relay, _) = await EnsureRelayAsync(serverId, ct);
 
         if (relay == null)
         {
             return null;
         }
 
-        if (started)
-        {
-            // The first open after a launch is also the relay's first chance to learn how
-            // far this server's clock is from ours. Every request it signs is checked
-            // against a five-minute window, so a machine with a wrong clock would otherwise
-            // show a revoked-looking server until somebody probed it.
-            await SynchronizeAsync(serverId, ct);
-        }
+        // Before the window goes there, ask the address who answers — unless the relay asked
+        // recently and nothing since has made it doubt the answer. On a fresh relay this is
+        // also its first chance to learn how far this server's clock is from ours: every
+        // request it signs is checked against a five-minute window, so a machine with a
+        // wrong clock would otherwise show a revoked-looking server until somebody probed it.
+        //
+        // The URL is handed out whatever the answer: the relay refuses to forward on its own,
+        // and a window sent there is shown why, with the way back. This only means the
+        // window's first request need not wait for the question.
+        await VerifyBeforeOpeningAsync(relay, ct);
 
         ct.ThrowIfCancellationRequested();
 
@@ -592,6 +636,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         }, ct);
 
         _clocks[server.Id] = clock;
+        _identityAskedAt[server.Id] = DateTimeOffset.UtcNow;
         _probes[server.Id] = new ProbeSnapshot(ManagedServerState.Online, server.Mode, server.AppVersion);
 
         _logger.LogInformation("Now managing {ServerName} ({ServerId}) at {Address}", server.Name, server.Id,
@@ -753,35 +798,42 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
         var clock = ClockFor(entry.ServerId);
         var previous = _probes.GetValueOrDefault(entry.ServerId);
+        var startedAt = DateTimeOffset.UtcNow;
         ProbeSnapshot snapshot;
 
         try
         {
             var handshake = await HandshakeAsync(entry.BaseAddress, clock, budget.Token);
+            var identity = await IdentityOfAsync(entry.ServerId, entry.BaseAddress, handshake, startedAt);
             var server = handshake.Server;
-            var mode = server?.Mode ?? previous?.Mode;
-            var version = server?.AppVersion ?? previous?.AppVersion;
 
-            if (server != null && !string.Equals(server.Id, entry.ServerId, StringComparison.Ordinal))
+            // A running relay acts on this at once — stops forwarding, or starts again —
+            // rather than on its own next question.
+            Share(identity);
+
+            if (identity.IsMismatch)
             {
-                // A different install answers at that address: this one's data was reset,
-                // or the address now belongs to another. Either way the key is no good.
-                snapshot = new ProbeSnapshot(ManagedServerState.Revoked, mode, version);
+                // Another install answers at that address — or this device does. The server
+                // moved, or it was reinstalled or reset and is a new install now; which one
+                // is for the user to find out, and neither is a reason to talk to whoever
+                // answered. Nothing more is asked of it, and nothing it said is kept.
+                snapshot = Mismatched(previous, identity);
             }
-            else if (!handshake.Succeeded)
+            else if (server == null || !handshake.Succeeded)
             {
                 snapshot = new ProbeSnapshot(ManagedServerState.Offline,
                     handshake.Outcome == ServerHandshakeOutcome.RemoteAccessDisabled
                         ? RemoteAccessMode.Disabled
-                        : mode, version);
+                        : server?.Mode ?? previous?.Mode, server?.AppVersion ?? previous?.AppVersion);
             }
             else
             {
-                snapshot = new ProbeSnapshot(await ReadContextAsync(entry, clock, budget.Token), mode, version);
+                snapshot = new ProbeSnapshot(await ReadContextAsync(entry, clock, budget.Token), server.Mode,
+                    server.AppVersion);
 
                 if (snapshot.State == ManagedServerState.Online)
                 {
-                    await RefreshAsync(entry, server!.Name, ct);
+                    NoteAnswered(entry, server.Name);
                 }
             }
         }
@@ -797,7 +849,41 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             snapshot = new ProbeSnapshot(ManagedServerState.Offline, previous?.Mode, previous?.AppVersion);
         }
 
-        _probes[entry.ServerId] = snapshot;
+        if (NoteIdentityAsked(entry.ServerId, startedAt))
+        {
+            _probes[entry.ServerId] = snapshot;
+        }
+    }
+
+    /// <summary>
+    /// Notes that an answer about who serves <paramref name="serverId"/>'s address, asked at
+    /// <paramref name="askedAt"/>, is being recorded. False when an answer asked later has
+    /// already been recorded: that one stands.
+    /// </summary>
+    private bool NoteIdentityAsked(string serverId, DateTimeOffset askedAt)
+    {
+        while (true)
+        {
+            if (!_identityAskedAt.TryGetValue(serverId, out var known))
+            {
+                if (_identityAskedAt.TryAdd(serverId, askedAt))
+                {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if (known > askedAt)
+            {
+                return false;
+            }
+
+            if (_identityAskedAt.TryUpdate(serverId, askedAt, known))
+            {
+                return true;
+            }
+        }
     }
 
     /// <summary>
@@ -862,42 +948,174 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         return payload.Paired || payload.IsLocal ? ManagedServerState.Online : ManagedServerState.Revoked;
     }
 
-    /// <summary>Keeps the stored name current, and notes that the server answered — rarely enough not to churn the file.</summary>
-    private async Task RefreshAsync(ClientServerConnection entry, string? name, CancellationToken ct)
+    /// <summary>What a server said about itself when it answered as itself, and when.</summary>
+    private sealed record AnsweredNote(string? Name, DateTime At);
+
+    /// <summary>
+    /// Keeps the stored name current, and notes that the server answered as itself — rarely
+    /// enough not to churn the file, and never on the path of whoever heard the answer.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Bookkeeping, not a verdict. Who answers at the address, and whether it takes this
+    /// device, is decided before this is called and waits for nothing here: a store that
+    /// cannot be written — a full disk, a file a scanner holds — must never turn a server
+    /// that answered as itself into one nobody answers for, and with it refuse every request
+    /// the relay has for the right server.
+    /// </para>
+    /// <para>
+    /// So the write happens in the background, one writer per server holding only the latest
+    /// answer. One that fails is logged and tried again every
+    /// <see cref="RemoteConsoleOptions.StoreRetryInterval"/>, whether or not the server
+    /// answers again meanwhile, until it lands, the server is forgotten or the app stops.
+    /// Until then the store — and so every answer after this one — still reads as not written,
+    /// and each of those answers simply becomes the one the writer writes.
+    /// </para>
+    /// </remarks>
+    private void NoteAnswered(ClientServerConnection entry, string? name)
     {
         var now = DateTime.UtcNow;
-        var renamed = !string.IsNullOrWhiteSpace(name) && !string.Equals(name, entry.ServerName, StringComparison.Ordinal);
-        var stale = entry.LastConnectedAt is not { } last || now - last >= ActiveConnection.LastConnectedPersistenceInterval;
+        var renamed = !string.IsNullOrWhiteSpace(name) &&
+                      !string.Equals(name, entry.ServerName, StringComparison.Ordinal);
+        var stale = entry.LastConnectedAt is not { } last ||
+                    now - last >= ActiveConnection.LastConnectedPersistenceInterval;
 
         if (!renamed && !stale)
         {
             return;
         }
 
-        await _store.MutateAsync(data =>
-        {
-            var target = Find(data, entry.ServerId);
+        var serverId = entry.ServerId;
 
-            if (target == null)
+        lock (_answeredGate)
+        {
+            if (_lifetime.IsCancellationRequested)
             {
                 return;
             }
 
-            if (renamed)
-            {
-                target.ServerName = name;
-            }
+            _unwritten[serverId] = new AnsweredNote(renamed ? name : null, now);
 
-            target.LastConnectedAt = now;
-        }, ct);
+            if (!_answeredWriters.ContainsKey(serverId))
+            {
+                _answeredWriters[serverId] = Task.Run(() => WriteAnsweredAsync(serverId), CancellationToken.None);
+            }
+        }
     }
 
-    /// <summary>The handshake a relay's first start does to set this server's clock. Bounded; never throws.</summary>
-    private async Task SynchronizeAsync(string serverId, CancellationToken ct)
+    /// <summary>
+    /// Writes <paramref name="serverId"/>'s latest answer into the store until none is left
+    /// unwritten, waiting <see cref="RemoteConsoleOptions.StoreRetryInterval"/> after a
+    /// failure. Never throws.
+    /// </summary>
+    private async Task WriteAnsweredAsync(string serverId)
     {
-        var entry = _store.Find(serverId);
+        var failures = 0;
 
-        if (entry == null)
+        while (NextUnwritten(serverId) is { } note)
+        {
+            try
+            {
+                // Forgotten meanwhile: nothing left to note it on, and no reason to write.
+                if (_store.Find(serverId) != null)
+                {
+                    await _store.MutateAsync(data =>
+                    {
+                        var target = Find(data, serverId);
+
+                        if (target == null)
+                        {
+                            return;
+                        }
+
+                        if (note.Name != null)
+                        {
+                            target.ServerName = note.Name;
+                        }
+
+                        target.LastConnectedAt = note.At;
+                    }, _lifetime.Token);
+                }
+
+                lock (_answeredGate)
+                {
+                    // Written, unless a later answer came in while it was: that one is next.
+                    if (_unwritten.TryGetValue(serverId, out var latest) && ReferenceEquals(latest, note))
+                    {
+                        _unwritten.Remove(serverId);
+                    }
+                }
+
+                if (failures > 0)
+                {
+                    _logger.LogInformation(
+                        "Noted in the managed-server store that {ServerId} answered, after {Failures} failed attempts",
+                        serverId, failures);
+                    failures = 0;
+                }
+
+                continue;
+            }
+            catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
+            {
+                continue;
+            }
+            catch (Exception e)
+            {
+                failures++;
+
+                if (failures == 1)
+                {
+                    _logger.LogWarning(e,
+                        "Could not note in the managed-server store that {ServerId} answered; it is still forwarded " +
+                        "to, and the write is tried again every {Interval}", serverId, _options.StoreRetryInterval);
+                }
+                else
+                {
+                    _logger.LogDebug(e, "Noting in the managed-server store that {ServerId} answered failed again ({Failures})",
+                        serverId, failures);
+                }
+            }
+
+            try
+            {
+                await Task.Delay(_options.StoreRetryInterval, _lifetime.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Stopping: the loop's next check ends it.
+            }
+        }
+    }
+
+    /// <summary>
+    /// The answer still to be written for <paramref name="serverId"/>; null — and the writer
+    /// taken off the books in the same step, so an answer noted a moment later starts a new
+    /// one — when there is none or the app is stopping.
+    /// </summary>
+    private AnsweredNote? NextUnwritten(string serverId)
+    {
+        lock (_answeredGate)
+        {
+            if (!_lifetime.IsCancellationRequested && _unwritten.TryGetValue(serverId, out var note))
+            {
+                return note;
+            }
+
+            _answeredWriters.Remove(serverId);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Has the relay make sure who answers at its server's address, within the probe budget.
+    /// Never throws unless <paramref name="ct"/> is cancelled.
+    /// </summary>
+    private async Task VerifyBeforeOpeningAsync(ManagedServerRelay relay, CancellationToken ct)
+    {
+        var identity = relay.Identity;
+
+        if (identity == null)
         {
             return;
         }
@@ -907,19 +1125,138 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
         try
         {
-            var handshake = await HandshakeAsync(entry.BaseAddress, ClockFor(serverId), budget.Token);
-
-            if (handshake.Succeeded && string.Equals(handshake.Server!.Id, serverId, StringComparison.Ordinal))
-            {
-                await RefreshAsync(entry, handshake.Server.Name, ct);
-            }
+            await identity.EnsureAsync(budget.Token);
         }
-        catch (Exception e) when (e is OperationCanceledException or HttpRequestException or IOException &&
-                                  !ct.IsCancellationRequested)
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            // The window opens either way; the relay reports an unreachable server itself.
+            // Out of budget. The question goes on in the relay, and the window's first
+            // request waits for its answer instead.
         }
     }
+
+    #endregion
+
+    #region Identity
+
+    /// <summary>
+    /// Asks <paramref name="address"/> who answers there, for a relay about to forward to it,
+    /// and records the answer for the listing.
+    /// </summary>
+    /// <remarks>
+    /// The same handshake pairing and probing use, so the clock offset every signature
+    /// depends on is refreshed with each answer. An answer from the right server also keeps
+    /// its stored name current, as a probe does — in the background, so the verdict never
+    /// depends on the store being writable (<see cref="NoteAnswered"/>); an answer from anyone
+    /// else changes nothing about the entry.
+    /// </remarks>
+    public async Task<UpstreamIdentityCheck> VerifyAsync(string serverId, string address, CancellationToken ct)
+    {
+        var startedAt = DateTimeOffset.UtcNow;
+        var handshake = await HandshakeAsync(address, ClockFor(serverId), ct);
+        var check = await IdentityOfAsync(serverId, address, handshake, startedAt);
+
+        var entry = _store.Find(serverId);
+
+        // Recorded only while it is still about the server as stored — an answer about an
+        // address the entry has since left, or about a server forgotten meanwhile, says
+        // nothing about either — and only when nothing asked later has been recorded first.
+        if (entry != null && string.Equals(entry.BaseAddress, address, StringComparison.Ordinal) &&
+            NoteIdentityAsked(serverId, startedAt))
+        {
+            var previous = _probes.GetValueOrDefault(serverId);
+
+            if (check.IsMismatch)
+            {
+                _probes[serverId] = Mismatched(previous, check);
+            }
+            else if (check.IsConfirmed)
+            {
+                if (previous?.State == ManagedServerState.WrongServer)
+                {
+                    // The server is back at its address. Whether it still takes this device
+                    // is the next probe's to say, or the relay's next request's.
+                    _probes[serverId] = previous with {State = ManagedServerState.Unknown, AnsweredBy = null};
+                }
+
+                // Off the verdict's path: the answer stands whether or not the store can be
+                // written just now.
+                NoteAnswered(entry, handshake.Server!.Name);
+            }
+            else
+            {
+                _probes[serverId] = new ProbeSnapshot(ManagedServerState.Offline,
+                    handshake.Outcome == ServerHandshakeOutcome.RemoteAccessDisabled
+                        ? RemoteAccessMode.Disabled
+                        : previous?.Mode, previous?.AppVersion);
+            }
+        }
+
+        return check;
+    }
+
+    /// <summary>What a handshake with <paramref name="address"/> says about who serves <paramref name="serverId"/> there.</summary>
+    /// <remarks>
+    /// Only the identity counts. A server that answered with its identity but cannot be
+    /// talked to otherwise — remote access switched off, a protocol too new or too old — is
+    /// still the server: what it then does with a request is its own answer to give, as it
+    /// always was.
+    /// </remarks>
+    private async Task<UpstreamIdentityCheck> IdentityOfAsync(string serverId, string address,
+        ServerHandshakeResult handshake, DateTimeOffset startedAt)
+    {
+        if (handshake.Outcome == ServerHandshakeOutcome.SelfAddress)
+        {
+            // One of this app's own ports: its own server, or a relay that would hand the
+            // question to some other server and come back with that one's name.
+            return new UpstreamIdentityCheck(serverId, address, UpstreamIdentityVerdict.ThisDevice, null,
+                LocalName, null, startedAt);
+        }
+
+        if (handshake.Server is { } server)
+        {
+            var verdict =
+                string.Equals(server.Id, await _remoteAccess.GetOrCreateServerIdAsync(), StringComparison.Ordinal)
+                    ? UpstreamIdentityVerdict.ThisDevice
+                    : string.Equals(server.Id, serverId, StringComparison.Ordinal)
+                        ? UpstreamIdentityVerdict.Confirmed
+                        : UpstreamIdentityVerdict.WrongServer;
+
+            return new UpstreamIdentityCheck(serverId, address, verdict, server.Id, server.Name, null, startedAt);
+        }
+
+        return new UpstreamIdentityCheck(serverId, address, UpstreamIdentityVerdict.Unconfirmed, null, null,
+            handshake.Outcome switch
+            {
+                ServerHandshakeOutcome.Unreachable => "nothing answers there",
+                ServerHandshakeOutcome.RemoteAccessDisabled => "remote access is turned off there",
+                _ => "what answers there is not a Bakabase server"
+            }, startedAt)
+        {
+            // Its gate refused before saying who it is. What the user is told to do differs:
+            // turn remote access on there, not check that something is running.
+            RemoteAccessDisabled = handshake.Outcome == ServerHandshakeOutcome.RemoteAccessDisabled
+        };
+    }
+
+    /// <summary>Hands a relay an answer the console got itself, so it acts on it without asking again.</summary>
+    private void Share(UpstreamIdentityCheck check)
+    {
+        if (_relays.TryGetValue(check.ServerId, out var relay))
+        {
+            relay.Identity?.Record(check);
+        }
+    }
+
+    private static ProbeSnapshot Mismatched(ProbeSnapshot? previous, UpstreamIdentityCheck check) =>
+        // The server's own mode and version as last seen, never the ones of whoever answered
+        // in its place.
+        new(ManagedServerState.WrongServer, previous?.Mode, previous?.AppVersion,
+            new ManagedServerAnswerView(check.AnsweredById, check.AnsweredByName,
+                check.Verdict == UpstreamIdentityVerdict.ThisDevice));
+
+    #endregion
+
+    #region Server calls
 
     /// <summary>
     /// Asks the server to forget this device, signed as it. Best effort: a server that is
@@ -937,6 +1274,21 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
         try
         {
+            // Only to the server itself. Whoever else answers at its address now has no
+            // business receiving a request signed as this device — and one that takes any
+            // caller as local would carry it out.
+            var identity = await IdentityOfAsync(entry.ServerId, entry.BaseAddress,
+                await HandshakeAsync(entry.BaseAddress, ClockFor(entry.ServerId), budget.Token),
+                DateTimeOffset.UtcNow);
+
+            if (!identity.IsConfirmed)
+            {
+                _logger.LogInformation(
+                    "Not asking {Address} to revoke this device: it does not answer as {ServerId} ({Verdict}); " +
+                    "forgetting it here anyway", entry.BaseAddress, entry.ServerId, identity.Verdict);
+                return;
+            }
+
             using var request = new HttpRequestMessage(HttpMethod.Delete,
                 new Uri(root, $"/remote-access/devices/{Uri.EscapeDataString(entry.DeviceId)}"));
 
@@ -994,7 +1346,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             probe?.State ?? ManagedServerState.Unknown,
             probe?.Mode,
             probe?.AppVersion,
-            entry.ImportedFromLegacyClient);
+            entry.ImportedFromLegacyClient,
+            probe?.State == ManagedServerState.WrongServer ? probe.AnsweredBy : null);
     }
 
     #endregion
@@ -1244,7 +1597,10 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         new ConsoleRelayContext(serverId, AppService.CoreVersion.ToString(), this),
         _loggerFactory,
         _services.GetService<AppService>(),
-        _services.GetService<IGuiAdapter>());
+        _services.GetService<IGuiAdapter>(),
+        this,
+        new UpstreamIdentityPolicy(_options.IdentityCheckInterval, _options.IdentityRetryInterval,
+            _options.IdentityCheckTimeout, _options.IdentityConnectionWindow));
 
     /// <summary>This app's own server's ports, as it reports them.</summary>
     private IEnumerable<int> ServicePorts()
@@ -1294,7 +1650,9 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     private static ClientServerConnection? Find(ClientConnectionData data, string serverId) =>
         data.Servers.FirstOrDefault(s => string.Equals(s.ServerId, serverId, StringComparison.Ordinal));
 
-    private sealed record ProbeSnapshot(ManagedServerState State, RemoteAccessMode? Mode, string? AppVersion);
+    /// <param name="AnsweredBy">Who answered at the address instead, while <paramref name="State"/> is WrongServer.</param>
+    private sealed record ProbeSnapshot(ManagedServerState State, RemoteAccessMode? Mode, string? AppVersion,
+        ManagedServerAnswerView? AnsweredBy = null);
 
     private sealed record Envelope<T>(int Code, string? Message, T? Data);
 

@@ -205,7 +205,15 @@ const stateDotClass: Record<ManagedServerState, string> = {
   [ManagedServerState.Online]: "bg-success",
   [ManagedServerState.Offline]: "bg-default-300",
   [ManagedServerState.Revoked]: "bg-danger",
+  [ManagedServerState.WrongServer]: "bg-warning",
 };
+
+/** States worth a word next to the name: the entry would not show that server if opened. */
+const labelledStates = new Set<ManagedServerState>([
+  ManagedServerState.Offline,
+  ManagedServerState.Revoked,
+  ManagedServerState.WrongServer,
+]);
 
 /**
  * The state an entry's dot shows. In the console the list comes from this device's relay
@@ -475,13 +483,11 @@ export const SwitcherView: React.FC<{
                   {t("federation.thisDevice")}
                 </span>
               )}
-              {!entry.isLocal &&
-                (entry.state === ManagedServerState.Offline ||
-                  entry.state === ManagedServerState.Revoked) && (
-                  <span className="shrink-0 text-xs text-default-400">
-                    {t(`federation.servers.state.${entry.state}`)}
-                  </span>
-                )}
+              {!entry.isLocal && entry.state !== undefined && labelledStates.has(entry.state) && (
+                <span className="shrink-0 text-xs text-default-400">
+                  {t(`federation.servers.state.${entry.state}`)}
+                </span>
+              )}
               {busyId === entry.id && (
                 <span className="shrink-0 text-xs text-default-400">
                   {t("federation.switcher.opening")}

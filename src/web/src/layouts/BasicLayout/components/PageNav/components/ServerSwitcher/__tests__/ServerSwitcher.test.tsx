@@ -501,6 +501,13 @@ describe("the console (the desktop app showing a managed server)", () => {
               isCurrent: false,
               state: ManagedServerState.Unknown,
             },
+            {
+              id: "moved",
+              name: "Moved box",
+              isLocal: false,
+              isCurrent: false,
+              state: ManagedServerState.WrongServer,
+            },
           ],
         },
       }),
@@ -509,6 +516,13 @@ describe("the console (the desktop app showing a managed server)", () => {
     const menu = await openMenu();
     const item = (name: RegExp) => within(menu).findByRole("menuitem", { name });
     const dot = async (name: RegExp) => within(await item(name)).getByTestId("server-state-dot");
+
+    // Another server answers at its address: opening it would show why nothing is sent.
+    expect(await dot(/Moved box/)).toHaveAttribute("data-state", "WrongServer");
+    expect(await dot(/Moved box/)).toHaveClass("bg-warning");
+    expect(await item(/Moved box/)).toHaveTextContent(
+      `federation.servers.state.${ManagedServerState.WrongServer}`,
+    );
 
     expect(await dot(/NAS/)).toHaveAttribute("data-state", "Online");
     expect(await dot(/NAS/)).toHaveClass("bg-success");

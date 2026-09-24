@@ -110,12 +110,14 @@ public static class ConsoleEndpoints
         // Every managed server with how it was last seen, as a ManagedServerState number, so
         // the switcher can mark each one without asking anybody: the listing is read from
         // memory, and never waits on the network or the disk. This relay's own server is
-        // whatever the latest request forwarded to it said — while its page is up that page
-        // keeps asking, so a server that has answered through here reads Online — and until
-        // something has, what the console last knew. This device carries no state: it is
-        // the app itself, not a server it reaches.
+        // WrongServer while its address answers as someone else, and otherwise whatever the
+        // latest request forwarded to it said — while its page is up that page keeps asking,
+        // so a server that has answered through here reads Online — and until something has,
+        // what the console last knew. This device carries no state: it is the app itself,
+        // not a server it reaches.
         endpoints.MapGet($"{Prefix}/switcher",
-            async (HttpContext context, ConsoleRelayContext relay, UpstreamStanding standing) =>
+            async (HttpContext context, ConsoleRelayContext relay, UpstreamStanding standing,
+                UpstreamIdentity identity) =>
             {
                 var targets = relay.Navigator.ListTargets();
 
@@ -132,7 +134,7 @@ public static class ConsoleEndpoints
                             t.Name,
                             t.IsLocal,
                             isCurrent,
-                            state = t.IsLocal ? null : (int?) StateOf(t.Id, isCurrent, relay, standing)
+                            state = t.IsLocal ? null : (int?) StateOf(t.Id, isCurrent, relay, standing, identity)
                         };
                     })
                 });
@@ -196,15 +198,8 @@ public static class ConsoleEndpoints
         // server's page has nothing to report to it.
         endpoints.MapPost($"{Prefix}/tray", (HttpContext context) => WriteAsync(context, new {applied = false}));
 
-        endpoints.MapGet(RelayPaths.ConnectPath, async (HttpContext context, ConsoleRelayContext relay) =>
-        {
-            context.Response.ContentType = "text/html; charset=utf-8";
-            context.Response.Headers.CacheControl = "no-store";
-            context.Response.Headers.ContentSecurityPolicy = ConsoleUnavailablePage.ContentSecurityPolicy;
-
-            await context.Response.WriteAsync(ConsoleUnavailablePage.Render(relay.Navigator.LocalOrigin),
-                context.RequestAborted);
-        });
+        endpoints.MapGet(RelayPaths.ConnectPath, (HttpContext context, ConsoleRelayContext relay) =>
+            ConsoleUnavailablePage.WriteAsync(context, relay.Navigator.LocalOrigin));
 
         // Everything else under the prefix is not here, and is never the server's either —
         // /client/log* and /client/app/* included: in this app this device's log and
@@ -214,11 +209,21 @@ public static class ConsoleEndpoints
     }
 
     private static ManagedServerState StateOf(string serverId, bool isCurrent, ConsoleRelayContext relay,
-        UpstreamStanding standing)
+        UpstreamStanding standing, UpstreamIdentity identity)
     {
-        if (isCurrent && standing.Latest is var seenHere and not ManagedServerState.Unknown)
+        if (isCurrent)
         {
-            return seenHere;
+            // Ahead of the latest answer: once the address answers as someone else nothing
+            // is forwarded, so an Online from before the change would never be corrected.
+            if (identity.Latest is {IsMismatch: true})
+            {
+                return ManagedServerState.WrongServer;
+            }
+
+            if (standing.Latest is var seenHere and not ManagedServerState.Unknown)
+            {
+                return seenHere;
+            }
         }
 
         return relay.Navigator.LastKnownState(serverId);

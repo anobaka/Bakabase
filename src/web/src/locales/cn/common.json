@@ -435,5 +435,6 @@
   "client.failure.needsNewerClient": "本机暂不支持该操作",
   "client.failure.notConnected": "本机已不再管理该设备",
   "client.failure.serverUnreachable": "服务端没有响应",
-  "client.failure.refused": "被本机拒绝"
+  "client.failure.refused": "被本机拒绝",
+  "client.failure.wrongServer": "该地址上现在是另一台设备"
 }

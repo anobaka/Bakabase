@@ -26,6 +26,11 @@ namespace Bakabase.Remoting.Components.Console;
 /// <c>/client/app</c>. Null in a test host.
 /// </param>
 /// <param name="GuiAdapter">The windows cookie capture opens, on this machine. Null without a GUI.</param>
+/// <param name="IdentityVerifier">
+/// Asks the server's address who answers there — the console, which knows this device's own
+/// identity and ports and records what it hears for the listing.
+/// </param>
+/// <param name="IdentityPolicy">How often the relay asks, and how long it waits.</param>
 public sealed record ManagedServerRelayDependencies(
     ManagedServerStore ManagedStore,
     RelayNavigationTokens Tokens,
@@ -34,7 +39,9 @@ public sealed record ManagedServerRelayDependencies(
     ConsoleRelayContext Context,
     ILoggerFactory LoggerFactory,
     AppService? AppService,
-    IGuiAdapter? GuiAdapter);
+    IGuiAdapter? GuiAdapter,
+    IUpstreamIdentityVerifier IdentityVerifier,
+    UpstreamIdentityPolicy IdentityPolicy);
 
 /// <summary>
 /// One managed server's relay: a loopback listener, with a container of its own, that
@@ -71,6 +78,12 @@ public sealed class ManagedServerRelay(string serverId, int port, ManagedServerR
 
     /// <summary>The relay's own container. Null before <see cref="StartAsync"/>.</summary>
     public IServiceProvider? Services => _app?.Services;
+
+    /// <summary>
+    /// Who the relay last found at its server's address, and the way to ask again. Null
+    /// before <see cref="StartAsync"/> and after disposal.
+    /// </summary>
+    public UpstreamIdentity? Identity => _app?.Services.GetService<UpstreamIdentity>();
 
     /// <summary>
     /// Builds and starts the listener. Throws when the port cannot be bound, which the
@@ -138,6 +151,9 @@ public sealed class ManagedServerRelay(string serverId, int port, ManagedServerR
         services.AddSingleton(dependencies.Clock);
         services.AddSingleton(dependencies.SelfAddress);
         services.AddSingleton(dependencies.Context);
+        services.AddSingleton(dependencies.IdentityVerifier);
+        services.AddSingleton(dependencies.IdentityPolicy);
+        services.AddSingleton<IRelayUnavailablePage, ConsoleUnavailablePageWriter>();
 
         // Instances rather than factories over the app's container, so this container
         // never disposes something the app still owns.

@@ -4876,6 +4876,12 @@ export interface BakabaseModulesPropertyModelsViewPropertyViewModel {
   order: number;
 }
 
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerAnswerView {
+  serverId?: string;
+  name?: string;
+  isThisDevice: boolean;
+}
+
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerCandidateView {
   serverId: string;
   name: string;
@@ -4959,10 +4965,10 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerProbe
 }
 
 /**
- * [0: Unknown, 1: Online, 2: Offline, 3: Revoked]
+ * [0: Unknown, 1: Online, 2: Offline, 3: Revoked, 4: WrongServer]
  * @format int32
  */
-export type BakabaseModulesRemoteAccessAbstractionsModelsManagedServerState = 0 | 1 | 2 | 3;
+export type BakabaseModulesRemoteAccessAbstractionsModelsManagedServerState = 0 | 1 | 2 | 3 | 4;
 
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerView {
   serverId: string;
@@ -4973,12 +4979,13 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerView 
   /** @format date-time */
   lastConnectedAt?: string;
   pathMappings: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPathMapping[];
-  /** [0: Unknown, 1: Online, 2: Offline, 3: Revoked] */
+  /** [0: Unknown, 1: Online, 2: Offline, 3: Revoked, 4: WrongServer] */
   state: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerState;
   /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
   mode?: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
   appVersion?: string;
   importedFromLegacyClient: boolean;
+  answeredBy?: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerAnswerView;
 }
 
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView {

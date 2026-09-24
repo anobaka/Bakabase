@@ -49,13 +49,38 @@ public sealed class UpstreamStanding
     /// </summary>
     internal void Failed(ForwarderError error)
     {
-        if (error is ForwarderError.Request or ForwarderError.RequestTimedOut
-            or ForwarderError.RequestBodyDestination or ForwarderError.ResponseBodyDestination
-            or ForwarderError.UpgradeRequestDestination or ForwarderError.UpgradeResponseDestination)
+        if (IsTheServers(error))
         {
             _latest = ManagedServerState.Offline;
         }
     }
+
+    /// <summary>
+    /// Nothing was forwarded because nobody could be identified at the address: as far as
+    /// this relay can tell, the server is not there.
+    /// </summary>
+    /// <remarks>
+    /// Someone else answering there is not recorded here. That is
+    /// <see cref="UpstreamIdentity.Latest"/>'s to say, and it stops saying it the moment the
+    /// server answers at its address again — which a standing kept here would outlive until
+    /// the next request went through.
+    /// </remarks>
+    internal void Refused(UpstreamIdentityCheck check)
+    {
+        if (!check.IsMismatch)
+        {
+            _latest = ManagedServerState.Offline;
+        }
+    }
+
+    /// <summary>
+    /// Whether a forwarding error was the server's doing, or the network's on the way to it,
+    /// rather than the browser's.
+    /// </summary>
+    public static bool IsTheServers(ForwarderError error) =>
+        error is ForwarderError.Request or ForwarderError.RequestTimedOut
+            or ForwarderError.RequestBodyDestination or ForwarderError.ResponseBodyDestination
+            or ForwarderError.UpgradeRequestDestination or ForwarderError.UpgradeResponseDestination;
 
     /// <summary>
     /// What an answer says about this device's standing on the server, read the way the

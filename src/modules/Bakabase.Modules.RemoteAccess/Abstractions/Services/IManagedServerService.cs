@@ -50,8 +50,8 @@ public interface IManagedServerService
     Task<bool> CancelRequestAsync(string requestId, CancellationToken ct = default);
 
     /// <summary>
-    /// Stops managing a server: asks it to revoke this device (best effort), deletes the
-    /// key, and stops its relay.
+    /// Stops managing a server: deletes the key, stops its relay, then asks it to revoke this
+    /// device — best effort, and only if its address still answers as that server.
     /// </summary>
     Task<bool> ForgetAsync(string serverId, CancellationToken ct = default);
 

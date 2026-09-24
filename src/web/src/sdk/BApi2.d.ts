@@ -12304,6 +12304,11 @@ export interface components {
             /** Format: int32 */
             order: number;
         };
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerAnswerView": {
+            serverId?: string;
+            name?: string;
+            isThisDevice: boolean;
+        };
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerCandidateView": {
             serverId: string;
             name: string;
@@ -12364,10 +12369,10 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [0: Unknown, 1: Online, 2: Offline, 3: Revoked]
+         * @description [0: Unknown, 1: Online, 2: Offline, 3: Revoked, 4: WrongServer]
          * @enum {integer}
          */
-        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerState": 0 | 1 | 2 | 3;
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerState": 0 | 1 | 2 | 3 | 4;
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerView": {
             serverId: string;
             name?: string;
@@ -12381,6 +12386,7 @@ export interface components {
             mode?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
             appVersion?: string;
             importedFromLegacyClient: boolean;
+            answeredBy?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerAnswerView"];
         };
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServersView": {
             available: boolean;

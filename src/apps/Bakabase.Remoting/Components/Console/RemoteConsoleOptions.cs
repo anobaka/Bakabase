@@ -1,3 +1,5 @@
+using Bakabase.Remoting.Components.Forwarding;
+
 namespace Bakabase.Remoting.Components.Console;
 
 /// <summary>
@@ -48,6 +50,36 @@ public sealed class RemoteConsoleOptions
     /// page can say what happened to it rather than have it silently vanish.
     /// </summary>
     public TimeSpan FinishedRequestRetention { get; set; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// How long a relay trusts that its server's address answers as that server. A page in
+    /// use is asked again in the background past half of it; nothing is forwarded past all of
+    /// it until the address has answered again.
+    /// </summary>
+    public TimeSpan IdentityCheckInterval { get; set; } = UpstreamIdentityPolicy.Default.Lifetime;
+
+    /// <summary>
+    /// How long a relay stands by an address answering as someone else, or not at all,
+    /// before asking again — so a server that comes back is noticed within this, and a page
+    /// reloaded meanwhile does not ask on every request.
+    /// </summary>
+    public TimeSpan IdentityRetryInterval { get; set; } = UpstreamIdentityPolicy.Default.RetryInterval;
+
+    /// <summary>How long a relay waits for its server's address to say who it is.</summary>
+    public TimeSpan IdentityCheckTimeout { get; set; } = UpstreamIdentityPolicy.Default.Timeout;
+
+    /// <summary>
+    /// How recent that answer has to be for a relay to open a new connection to its server —
+    /// the moment the process at the other end can have changed.
+    /// </summary>
+    public TimeSpan IdentityConnectionWindow { get; set; } = UpstreamIdentityPolicy.Default.ConnectionWindow;
+
+    /// <summary>
+    /// How long to wait before trying again when noting in the managed-server store that a
+    /// server answered (its name, when it was last seen) could not be written — a full disk,
+    /// a file a scanner holds. Nothing waits on that write; it is tried again until it lands.
+    /// </summary>
+    public TimeSpan StoreRetryInterval { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>Whether starting up brings over the removed thin client's pairings, once.</summary>
     public bool ImportLegacyClientOnStart { get; set; } = true;
