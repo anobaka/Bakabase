@@ -5,4 +5,8 @@
   <ItemGroup>
     <ProjectReference Include="../../apps/Bakabase.Client.Remoting/Bakabase.Client.Remoting.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The same analytics shut-off as the Service fixtures, from one place. -->
+    <Compile Include="../Bakabase.Federation.TestHost/FixtureAnalytics.cs" Link="FixtureAnalytics.cs" />
+  </ItemGroup>
 </Project>

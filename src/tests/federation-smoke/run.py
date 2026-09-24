@@ -82,6 +82,13 @@ def run(args):
                 raise AssertionError(f"Startup did not finish. Inspect {root}/*.log")
             time.sleep(0.2)
         for node in nodes:
+            # The test host blanks every analytics key and turns anonymous tracking off
+            # (FixtureAnalytics) whatever this environment says; here is what its UI is told.
+            analytics = request(node["base"], "/app/analytics-info")["data"]
+            configured = [key for key in ("clarityProjectId", "ga4MeasurementId", "sentryDsn", "postHogApiKey")
+                          if analytics.get(key)]
+            assert not configured and analytics["enableAnonymousDataTracking"] is False, \
+                f"A fixture would report to analytics: {configured or 'anonymous tracking on'}"
             node["status"] = request(node["base"], "/federation/local/peers")
             node["id"] = node["status"]["identity"]["nodeId"]
             assert node["status"]["browsingEnabled"] is False, "New installations must not opt into federation browsing"
