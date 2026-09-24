@@ -6,10 +6,11 @@ Local media manager for organizing files of any type.
 
 - **Bakabase/** - Main application
   - `src/web/` - React frontend (TypeScript)
-  - `src/apps/Bakabase.App/` - C# all-in-one desktop entry point (process entry + packaging inputs). Ships as `Bakabase.exe`
-  - `src/apps/Bakabase.Client.App/` - C# thin-client entry point. Ships as `Bakabase.Client.exe`
-  - `src/apps/Bakabase.Shell/` - C# Avalonia shell shared by desktop flavours (windows, tray, exit coordination, embedded browser). Talks to a host only through `IShellHost`; must not reference `Bakabase.Service` or `Bakabase.Client.Remoting`
-  - `src/apps/Bakabase.Client.Remoting/` - C# thin-client wiring for a server on **another machine**: forwarding, signing, pairing, discovery, path mapping, user-machine handlers. Nothing here has a job once the server is in-process, which is why the all-in-one does not reference it
+  - `src/apps/Bakabase.App/` - C# all-in-one desktop entry point (process entry + packaging inputs). Ships as `Bakabase.exe`. Every PC install is this app: it runs its own server and can switch its window to other servers it manages
+  - `src/apps/Bakabase.Client.App/` - C# legacy thin-client entry point. Ships as `Bakabase.Client.exe`. **Deprecated** — the all-in-one imports its pairings; do not add features here
+  - `src/apps/Bakabase.Shell/` - C# Avalonia shell shared by desktop flavours (windows, tray, exit coordination, embedded browser). Talks to a host only through `IShellHost` (and optional abstractions such as `IMainViewSwitcher`); must not reference `Bakabase.Service`, `Bakabase.Remoting` or `Bakabase.Client.Remoting`
+  - `src/apps/Bakabase.Remoting/` - C# relay to a server on **another machine**: signed loopback forwarding (YARP), pairing, path mapping, user-machine handlers, and the per-server relays the all-in-one uses to show and manage other servers. Must not reference `Bakabase.Service`, `Bakabase.Modules.Federation`, `Bakabase.Shell` or Avalonia
+  - `src/apps/Bakabase.Client.Remoting/` - C# legacy thin-client product layer over `Bakabase.Remoting` (its host, connect page, updater, telemetry). Goes away with `Bakabase.Client.App`
   - `src/apps/Bakabase.Service/` - C# HTTP API layer
   - `src/apps/Bakabase.Cli/` - C# offline build-time tool (SDK/constants generation). Reserve for dev-time codegen only.
   - `src/abstractions/` - C# interfaces & shared types
@@ -24,15 +25,18 @@ Local media manager for organizing files of any type.
 ```
 Bakabase.App (all-in-one entry) → Bakabase.Shell            → abstractions
                                 ↘ Bakabase.Service          → modules → abstractions
-                                                            ↘ abstractions ↗
+                                ↘ Bakabase.Remoting         → modules → abstractions
 
-Bakabase.Client.App (client entry) → Bakabase.Shell         → abstractions
-                                   ↘ Bakabase.Client.Remoting → modules → abstractions
+Bakabase.Client.App (legacy)    → Bakabase.Shell            → abstractions
+                                ↘ Bakabase.Client.Remoting  → Bakabase.Remoting → modules
 ```
 
-The two entries share the shell and differ only in which host they put behind it.
-Neither host project references the other, and the shell references neither — the
-flavour is a link-time fact, not a runtime switch.
+The shell references no host, and the Service never references `Bakabase.Remoting`:
+the all-in-one composes its relays next to its in-process server (one slim container
+and 127.0.0.1 port per managed server), and the Service reaches them only through
+`IManagedServerService`, which a headless server does not register. The release
+contract (`src/scripts/check-release-contract.py`) enforces these edges. See
+`.claude/rules/server-switching.md`.
 
 Updating is handled by Velopack; there is no updater project in this repo.
 

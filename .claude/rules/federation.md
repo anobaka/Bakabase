@@ -20,9 +20,12 @@ current device merges results.
 
 ## Invariants — do not weaken
 
-- **Access, not management.** A device reads (browses, searches, views, plays) other devices'
-  resources; it never edits, deletes, moves or runs tasks on them. Management always happens on
-  the device that owns the library. This is the product scope, not a first-phase limit.
+- **The federated view is read-only.** Through `/federation/*` a device browses, searches, views
+  and plays other devices' resources; it never edits, deletes, moves or runs tasks on them.
+  Managing another server is a different feature with a different credential: the desktop app
+  switches its window to that server's own UI through a signed loopback relay using the legacy
+  `Bakabase-Device` pairing (see `server-switching.md`). Never route management through the node
+  protocol, and never let an admin device key travel on `/federation/v1`.
 
 - **Two interfaces, never mixed.** `/federation/local/*` is for this device's own UI: real
   loopback socket + loopback `Host` + matching `Origin` (`FederationAccessMiddleware.IsLocalCaller`).

@@ -1,0 +1,166 @@
+# Server Switching (managing other servers from the desktop app)
+
+Every PC install is the all-in-one desktop app. It always runs its own server, and its main
+window can switch to another server it manages — a NAS, or another PC's all-in-one — and
+control it fully, as the retired thin client did. Headless servers (Docker/NAS) never
+manage anything; they are only ever managed.
+
+## How it works
+
+- **The other server's own UI, not ours.** The window shows the target's own SPA bundle, so
+  UI and API always match whatever version the target runs. This device's bundle could not
+  drive another server's API anyway: the SPA is same-origin by construction, and request
+  signing cannot happen in a page.
+- **One relay per managed server.** `Bakabase.Remoting` composes, for each server, a slim
+  `WebApplication` with its own container, bound to `127.0.0.1` on a port that stays the same
+  for that server across launches (browser storage is keyed by origin). It signs every
+  forwarded request with that server's device key and intercepts the actions that must run on
+  this machine (play, open folder, cookie capture, batch play) with this machine's player
+  configuration and per-server path mappings.
+- **Never in the Service.** The relays live next to the in-process server, not inside its
+  container or pipeline — the user-machine dispatcher would otherwise intercept the local
+  server's own play and open routes. The Service reaches them only through
+  `IManagedServerService` (resolved optionally), and headless builds register none.
+- **Switching is a navigation.** The SPA asks for a URL (`/federation/local/servers/{id}/open`
+  locally, `/client/switcher/{id}/open` inside a relay) and assigns `location`. The tray menu
+  (`IMainViewSwitcher`) is the way back when the target's UI is too old to have a switcher.
+- **The switcher inside a relay says how each server was last seen.** `GET /client/switcher`
+  answers `{currentId, targets: [{id, name, isLocal, isCurrent, state}]}`. `state` is
+  `ManagedServerState` as a number — `0` Unknown, `1` Online, `2` Offline, `3` Revoked — and is
+  **absent on the local target** (this device is the app itself, not a server it reaches). The
+  relay's own (current) server reports what the latest request forwarded through this relay
+  said (`UpstreamStanding`): any answer the server's gate did not refuse is Online, even a 404
+  or 500, since the signature was accepted; `DeviceRevoked`/`Unauthenticated` is Revoked;
+  `Disabled`/`SignatureExpired`, or a forwarding failure the server or the network caused, is
+  Offline; the relay's own answers and the browser hanging up change nothing. Until anything
+  has been forwarded it falls back to the console's last probe (`LastKnownState`, which a
+  pairing also sets), which is also what every other managed server reports. Read from memory
+  only: the listing never waits on the network or the disk.
+- **Management is legacy paired-device access.** Pairing uses `/remote-access/pair/*` with a
+  code or an approved request, exactly like the thin client, and grants full control of the
+  target. It is unrelated to federation grants, which stay read-only.
+- **A filed request is collected in the background.** The manager claims it every few seconds
+  until it is approved, rejected, expires or is cancelled. In the listing, `outcome` is what the
+  last attempt said and `active` is whether the wait is still on: a claim that did not get
+  through (`Unreachable`, `TooManyAttempts`) does not end it, so the page polls and offers
+  "cancel" on `active`, never on `outcome`.
+- **Finding servers to manage uses the remote-access beacons**, not library sharing:
+  `GET /federation/local/servers/discover` (UDP probe + mDNS, ~3 s, on request only) lists
+  every server answering them, minus this install and marked when already managed. Library
+  sharing's discovery only lists servers that opted into sharing, which says nothing about
+  whether a server can be managed.
+
+## Invariants — do not weaken
+
+- **Keys stay in the store.** Device keys live in `AppData/remote-access/managed/connection.json`
+  (mode 0600 on Unix), never in `[Options]`, never in a DTO, log line or `/client` response.
+- **A relay only serves this device's own window.** The loopback guard checks `Host`; a browser
+  request from another site (`Sec-Fetch-Site: same-site|cross-site`) is refused unless it is a
+  top-level navigation carrying a single-use `RelayNavigationTokens` ticket for that relay's
+  port. The ticket is consumed and the relay answers with a small page that does
+  `location.replace("<same URL without it>" + location.hash)` — **not a 302**: browsers
+  compute `Sec-Fetch-Site` over the whole redirect chain, so the request after a 302 would
+  still read as cross-site and be refused. The `+ location.hash` is what keeps the SPA's `#`
+  route: the fragment is never sent, and unlike a redirect a script navigation does not
+  inherit it. Requests without fetch metadata keep the old behaviour, WebSocket handshakes apart (local
+  players do not send it). `Cookie` and `Authorization` never reach the target.
+- **A WebSocket handshake is judged by its `Origin`, on both sides.** Chromium — and so
+  WebView2 — sends **no fetch metadata on a handshake**, only `Host`, `Upgrade` and `Origin`,
+  and a handshake is a GET, so neither `Sec-Fetch-Site` nor the relay's non-safe-method rule
+  ever sees it; what the socket then carries is past every CORS check. The relay refuses a
+  handshake (`Upgrade: websocket`, `Sec-Fetch-Mode: websocket`, or HTTP/2 extended `CONNECT`)
+  whose `Origin` is present and is not its own page — `127.0.0.1`, `localhost` or `[::1]` on
+  its port — as `ForeignOrigin` (400 `ForeignCaller`), before fetch metadata and before any
+  ticket: a ticket is never spent on a handshake. An absent `Origin` is a native client and is
+  judged as before. Without this, any page in any browser on the machine — this device's own
+  window, another relay's page, a website — could open the managed server's hub through the
+  relay, signed with the device key, and read every options object it pushes.
+- **The relay presents its page to the server as the server's own UI.** A request the guard
+  admitted from the relay's own origin is forwarded with the server's own origin in `Origin`.
+  A server on another machine reads no `Origin`; one on this machine (another install, a
+  host-network container, an SSH tunnel) takes the relay for a loopback caller and judges a
+  handshake by its `Origin` like this device's server does, and would otherwise refuse its own
+  UI's hub through the relay. For such a server its `/federation/local` interface answers that
+  page as it answers its own window. A foreign `Origin` is never rewritten.
+- **A relay never exposes this device's diagnostics to the target's page.** The thin
+  client's `/client/log*` and `/client/app/*` (its log, its app paths, its folder opener) are
+  opt-in in `UseRelayPipeline`; only the thin client opts in. In the desktop app those would
+  be this device's whole log — its own server's pairing codes, every managed server's address
+  — and the data directory holding every key, so a console relay answers them 404. Beyond the
+  console `/client` contract (status, switcher, path mappings, tray, connect page) and the
+  mapped user-machine actions, a managed server's page learns nothing about this device.
+- **The local server does not trust other loopback origins.** A relay page runs the target's
+  JavaScript on a loopback origin; this device's own Service (`LoopbackCrossSiteGuard`, all
+  loopback requests, 403 `HostOnly`) refuses, unless the page is one it trusts — an origin in
+  its CORS allow-list (its `ApiEndpoints`, the userscript's sites, and `yarn dev`'s
+  `http://localhost:3000` only in `RuntimeMode.Dev` builds) or a browser extension (how the
+  userscript manager sends its requests):
+  - a **WebSocket handshake** whose `Origin` is present and is not the request's own origin —
+    exactly its scheme and the `Host` it was sent to, under any name (so the window works on
+    `localhost`, on `127.0.0.1`, and behind a hosts-file alias or a local reverse proxy/tunnel
+    over plain HTTP, which sends no fetch metadata). This tells apart a page on a *different*
+    origin — every relay page and every other site; it does not defend against DNS rebinding,
+    which needs a `Host` allow-list covering reads too and is tracked separately. `null` is
+    foreign; an absent `Origin` (a native client) is judged as before. By `Origin` because
+    Chromium sends no fetch metadata on a handshake: judged by `Sec-Fetch-Site` alone, a relay
+    page could open `ws://127.0.0.1:<port>/hub/ui` and read every options object — third-party
+    cookies and API keys included — that `GetInitialData` pushes;
+  - a request that is not GET/HEAD/OPTIONS, or a frame load, that the browser labels
+    `Sec-Fetch-Site: same-site|cross-site`;
+  - a request that is not GET/HEAD/OPTIONS, from an engine that sends no `Sec-Fetch-Site`, that
+    names a foreign `Origin` — and, after routing, a `[RunsOnUserMachine]` action reached by
+    either kind of untrusted page (`LoopbackCrossSiteUserMachineFilter`).
+
+  The Service's only WebSocket endpoints are its two SignalR hubs, `/hub/ui` and
+  `/hub/progressor`. Their other transports need a connection id from `negotiate`, a POST that
+  a foreign page is refused (and could not read); every send is a POST too, and a long-poll or
+  SSE receive carries no CORS grant for a foreign page. The Service listens on plain HTTP,
+  where browsers never speak HTTP/2, so an extended `CONNECT` handshake is covered by the unit
+  matrix only.
+- **The local server cannot be framed by another page.** It refuses cross-site frame loads
+  and sends `frame-ancestors 'self'`, so a relay page cannot load this device's own UI in a
+  frame and drive it.
+- **Trust is explicit and pairwise.** Managing B is a decision taken on B (approve or show a
+  code). Nothing joins a device to others automatically.
+- **Warn, never reconfigure.** A target in `RemoteAccessMode.Unrestricted` is flagged in the UI;
+  the app never changes another server's mode on its own.
+- **Never pair with yourself.** Refuse an address whose handshake returns this install's
+  `ServerId`, and loopback addresses at this app's own server or relay ports.
+- **Legacy import is read-only.** The thin client's `connection.json` is read from its own AppData
+  (`AppDataPathProfile.Client`, following its redirect) once at startup and on request; its file
+  is never written, and servers already managed here are never overwritten.
+- **Layering is enforced** by `src/scripts/check-release-contract.py`: the Service image ships no
+  `Bakabase.Remoting` or YARP; the desktop app ships YARP only through `Bakabase.Remoting` and no
+  `Bakabase.Client*` assembly.
+
+## The legacy thin client
+
+`Bakabase.Client.App` is deprecated: its connect page and `/client/status` (`deprecated: true`)
+tell users to install the desktop app, which imports its pairings. Do not add features to it.
+Its build and feed are removed in a later release, once the final version carrying the notice
+has shipped.
+
+## Tests
+
+- `src/tests/Bakabase.Tests/RemoteAccess/Console` — relays, console endpoints, store view,
+  pairing edge cases and request liveness, discovery, legacy import, key secrecy, and
+  `ConsoleDiagnosticsExposureTests` (a real `AppService` and log behind a relay, answered 404).
+- `src/tests/Bakabase.Tests/Federation` — `/federation/local/servers` end to end and its route
+  policy (`FederationServerControllerTests`, `Security/FederationGateTests`).
+- `src/tests/Bakabase.Tests/RemoteAccess` — loopback guard, navigation tokens, pipeline
+  (shared with the thin client). WebSocket handshakes: `LoopbackOriginGuardTests`
+  (`The_websocket_matrix`), `Console/RelayWebSocketOriginTests` (real handshakes through a
+  relay; the forwarded `Origin`), `ClientPipelineTests` (the thin client);
+  `Service/LoopbackCrossSiteGuardMatrixTests` (every page × kind × fetch metadata, Dev and
+  packaged) and `Service/LoopbackHubAccessTests` (real Kestrel handshakes as Chromium sends
+  them, on both hubs, plus negotiate, long polling and SSE).
+- Frontend: `yarn vitest run src/features/federation src/layouts`.
+- End to end: `src/tests/federation-browser-smoke/switching.cjs` (run by `run.py`, in CI's
+  federation job) — Chromium against real hosts, the unified fixture composed as `UnifiedHost`
+  is: import from the thin client, switch and back, a write on the managed server (pushed live
+  to its UI over the relay's hub WebSocket), path mapping and interception, stop managing and
+  re-pair by request, and the relay page's containment — the relay page's WebSockets to this
+  device's hub refused 403, and other pages' to the relay refused 400 before the managed server
+  sees them.
+  Each Service's request log is how it judges what reached the managed server and how this
+  device answered; see its README for what a one-machine run cannot show.
