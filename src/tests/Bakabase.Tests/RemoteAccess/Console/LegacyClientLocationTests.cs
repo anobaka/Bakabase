@@ -11,7 +11,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests.RemoteAccess.Console;
 
 /// <summary>
-/// Where the desktop app looks for the retired thin client's pairings: exactly where that
+/// Where the desktop app looks for the removed thin client's pairings: exactly where that
 /// client kept them, on every platform and in every build, including when the user moved its
 /// data or pinned it with an environment variable.
 /// </summary>

@@ -5072,6 +5072,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/options/ui/notices/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MarkNoticesRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/options/ui/notices/baseline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CaptureNoticeBaseline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/options/ui-style": {
         parameters: {
             query?: never;
@@ -10383,6 +10415,7 @@ export interface components {
             hideResourceCovers: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
             latestUsedProperties: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
+            notices: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions"];
         };
         "Bakabase.InsideWorld.Models.Configs.UIOptions+CustomContextMenuItem": {
             property: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"];
@@ -10416,6 +10449,10 @@ export interface components {
             gap: number;
             blocks: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailBlock"][];
             hidden: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailBlock"][];
+        };
+        "Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions": {
+            readIds: string[];
+            baselinePending: boolean;
         };
         "Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions": {
             /** Format: int32 */
@@ -12304,6 +12341,11 @@ export interface components {
             /** Format: int32 */
             order: number;
         };
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerAnswerView": {
+            serverId?: string;
+            name?: string;
+            isThisDevice: boolean;
+        };
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerCandidateView": {
             serverId: string;
             name: string;
@@ -12364,10 +12406,10 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [0: Unknown, 1: Online, 2: Offline, 3: Revoked]
+         * @description [0: Unknown, 1: Online, 2: Offline, 3: Revoked, 4: WrongServer]
          * @enum {integer}
          */
-        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerState": 0 | 1 | 2 | 3;
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerState": 0 | 1 | 2 | 3 | 4;
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerView": {
             serverId: string;
             name?: string;
@@ -12381,6 +12423,7 @@ export interface components {
             mode?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
             appVersion?: string;
             importedFromLegacyClient: boolean;
+            answeredBy?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerAnswerView"];
         };
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServersView": {
             available: boolean;
@@ -13349,22 +13392,6 @@ export interface components {
             markdown: string;
             htmlUrl?: string;
         };
-        "Bakabase.Service.Models.View.ClientAppDownloadFileViewModel": {
-            name: string;
-            platform: string;
-            shape: string;
-            /** Format: int64 */
-            size: number;
-            githubUrl?: string;
-            cdnUrl?: string;
-        };
-        "Bakabase.Service.Models.View.ClientAppDownloadsViewModel": {
-            version: string;
-            /** Format: date-time */
-            publishedAt?: string;
-            releaseUrl?: string;
-            files: components["schemas"]["Bakabase.Service.Models.View.ClientAppDownloadFileViewModel"][];
-        };
         "Bakabase.Service.Models.View.ComparisonPlanViewModel": {
             /** Format: int32 */
             id: number;
@@ -13592,7 +13619,6 @@ export interface components {
         };
         "Bakabase.Service.Models.View.OtherDeviceDownloadsViewModel": {
             mobile?: components["schemas"]["Bakabase.Service.Models.View.MobileAppDownloadsViewModel"];
-            desktopClient?: components["schemas"]["Bakabase.Service.Models.View.ClientAppDownloadsViewModel"];
         };
         "Bakabase.Service.Models.View.PropertyTypeForManuallySettingValueViewModel": {
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
@@ -14833,6 +14859,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions]": {
             /** Format: int32 */
@@ -26055,6 +26087,64 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    MarkNoticesRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": string[];
+                "application/json": string[];
+                "text/json": string[];
+                "application/*+json": string[];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
+                };
+            };
+        };
+    };
+    CaptureNoticeBaseline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": string[];
+                "application/json": string[];
+                "text/json": string[];
+                "application/*+json": string[];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIOptions+UINoticeOptions]"];
                 };
             };
         };

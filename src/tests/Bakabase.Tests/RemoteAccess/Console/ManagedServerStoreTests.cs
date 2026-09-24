@@ -111,7 +111,7 @@ public class ManagedServerStoreTests
     }
 
     [TestMethod]
-    public async Task The_thin_clients_own_operations_cannot_reach_past_the_view()
+    public async Task The_relay_cores_own_operations_cannot_reach_past_the_view()
     {
         var connection = new ActiveConnection(new SingleServerConnectionStore(_store, "server-a"));
 
@@ -188,7 +188,7 @@ public class ManagedServerStoreTests
     }
 
     [TestMethod]
-    public async Task The_thin_clients_file_is_tightened_on_its_next_write_too()
+    public async Task A_file_written_before_the_rule_is_tightened_on_its_next_write_too()
     {
         if (OperatingSystem.IsWindows())
         {

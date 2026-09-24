@@ -53,8 +53,8 @@ const MANAGE_DEVICES_ROUTE = devicesRoute("servers");
  *   manages, from `/federation/local/servers`;
  * - the console (the desktop app showing a managed server): whatever the relay lists at
  *   `/client/switcher` — the relay, not the server being shown, knows the way back;
- * - anything else — an ordinary browser on another device, the retired thin client, or a
- *   flavour not yet identified — keeps the plain brand link. None of them has anywhere
+ * - anything else — an ordinary browser on another device, or a flavour not yet
+ *   identified — keeps the plain brand link. None of them has anywhere
  *   to switch to, and a switcher offering nothing would only suggest otherwise.
  */
 const ServerSwitcher: React.FC<Props> = ({ collapsed }) => {
@@ -205,7 +205,15 @@ const stateDotClass: Record<ManagedServerState, string> = {
   [ManagedServerState.Online]: "bg-success",
   [ManagedServerState.Offline]: "bg-default-300",
   [ManagedServerState.Revoked]: "bg-danger",
+  [ManagedServerState.WrongServer]: "bg-warning",
 };
+
+/** States worth a word next to the name: the entry would not show that server if opened. */
+const labelledStates = new Set<ManagedServerState>([
+  ManagedServerState.Offline,
+  ManagedServerState.Revoked,
+  ManagedServerState.WrongServer,
+]);
 
 /**
  * The state an entry's dot shows. In the console the list comes from this device's relay
@@ -475,13 +483,11 @@ export const SwitcherView: React.FC<{
                   {t("federation.thisDevice")}
                 </span>
               )}
-              {!entry.isLocal &&
-                (entry.state === ManagedServerState.Offline ||
-                  entry.state === ManagedServerState.Revoked) && (
-                  <span className="shrink-0 text-xs text-default-400">
-                    {t(`federation.servers.state.${entry.state}`)}
-                  </span>
-                )}
+              {!entry.isLocal && entry.state !== undefined && labelledStates.has(entry.state) && (
+                <span className="shrink-0 text-xs text-default-400">
+                  {t(`federation.servers.state.${entry.state}`)}
+                </span>
+              )}
               {busyId === entry.id && (
                 <span className="shrink-0 text-xs text-default-400">
                   {t("federation.switcher.opening")}

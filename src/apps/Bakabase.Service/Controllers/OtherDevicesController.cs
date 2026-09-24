@@ -18,16 +18,12 @@ namespace Bakabase.Service.Controllers
         private const string MobileManifestUrl =
             "https://cdn-public.anobaka.com/app/bakabase-mobile/manifest.json";
 
-        private const string ClientManifestUrl =
-            "https://cdn-public.anobaka.com/app/bakabase-client/manifest.json";
-
         /// <summary>
-        /// The latest published packages for phones and for a second computer.
+        /// The latest published packages for phones and tablets.
         /// </summary>
         /// <remarks>
-        /// Either half is null when its manifest is unreachable and nothing is cached.
-        /// The two are fetched together but cached separately, so one product being
-        /// unpublished never hides the other.
+        /// <see cref="OtherDeviceDownloadsViewModel.Mobile"/> is null when its manifest is
+        /// unreachable and nothing is cached.
         /// </remarks>
         [HttpGet("downloads")]
         [SwaggerOperation(OperationId = "GetOtherDeviceDownloads")]
@@ -36,16 +32,10 @@ namespace Bakabase.Service.Controllers
         {
             var ct = HttpContext.RequestAborted;
 
-            var mobile = manifests.GetAsync<MobileAppDownloadsViewModel>(MobileManifestUrl, ct);
-            var client = manifests.GetAsync<ClientAppDownloadsViewModel>(ClientManifestUrl, ct);
-
-            await Task.WhenAll(mobile, client);
-
             return new SingletonResponse<OtherDeviceDownloadsViewModel>(
                 new OtherDeviceDownloadsViewModel
                 {
-                    Mobile = await mobile,
-                    DesktopClient = await client
+                    Mobile = await manifests.GetAsync<MobileAppDownloadsViewModel>(MobileManifestUrl, ct)
                 });
         }
     }

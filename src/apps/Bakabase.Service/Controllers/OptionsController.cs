@@ -223,6 +223,55 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
+        /// <summary>
+        /// Records notices as read on this install. Idempotent, and tolerant of ids this build
+        /// does not know — they are kept, since a newer UI may have sent them.
+        /// </summary>
+        [HttpPost("ui/notices/read")]
+        [SwaggerOperation(OperationId = "MarkNoticesRead")]
+        public Task<SingletonResponse<UIOptions.UINoticeOptions>> MarkNoticesRead([FromBody] string[]? ids) =>
+            SaveNotices(notices => notices.MarkRead(ids));
+
+        /// <summary>
+        /// A fresh install's UI reports the upgrade-only notices it ships with, which are
+        /// recorded as read so the install is never greeted with them. Ignored unless the
+        /// install is still waiting for this (<see cref="UIOptions.UINoticeOptions.BaselinePending"/>).
+        /// </summary>
+        [HttpPost("ui/notices/baseline")]
+        [SwaggerOperation(OperationId = "CaptureNoticeBaseline")]
+        public Task<SingletonResponse<UIOptions.UINoticeOptions>> CaptureNoticeBaseline([FromBody] string[]? ids) =>
+            SaveNotices(notices => notices.CaptureBaseline(ids));
+
+        /// <summary>
+        /// Applies <paramref name="change"/> to the notice state and answers the state after it.
+        /// Tried on a copy first, so a request that changes nothing — a second window marking
+        /// the same notice — neither rewrites the file nor pushes the options to every window.
+        /// </summary>
+        private async Task<SingletonResponse<UIOptions.UINoticeOptions>> SaveNotices(
+            Func<UIOptions.UINoticeOptions, bool> change)
+        {
+            var manager = _bakabaseOptionsManager.Get<UIOptions>();
+            var current = manager.Value.Notices ?? new UIOptions.UINoticeOptions();
+            var trial = current with {ReadIds = [..current.ReadIds ?? []]};
+
+            if (!change(trial))
+            {
+                return new SingletonResponse<UIOptions.UINoticeOptions>(trial);
+            }
+
+            UIOptions.UINoticeOptions? saved = null;
+            await manager.SaveAsync(options =>
+            {
+                // Applied again to what is on disk now, under the manager's lock: another
+                // window may have marked something between the trial and here.
+                options.Notices ??= new UIOptions.UINoticeOptions();
+                change(options.Notices);
+                saved = options.Notices;
+            });
+
+            return new SingletonResponse<UIOptions.UINoticeOptions>(saved!);
+        }
+
         [HttpGet("ui-style")]
         [SwaggerOperation(OperationId = "GetUIStyleOptions")]
         public async Task<SingletonResponse<UIStyleOptions>> GetUIStyleOptions()

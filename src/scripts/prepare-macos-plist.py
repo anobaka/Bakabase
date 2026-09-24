@@ -14,8 +14,8 @@ def prepare(template, output, version):
         raise ValueError("A three-component semantic release version is required")
     with template.open("rb") as stream:
         info = plistlib.load(stream)
-    if info.get("CFBundleExecutable") not in ("Bakabase", "Bakabase.Client"):
-        raise ValueError("The template must identify its product's executable")
+    if info.get("CFBundleExecutable") != "Bakabase":
+        raise ValueError("The template must identify the app's executable")
     numeric_version = ".".join(match.groups())
     info["CFBundleVersion"] = numeric_version
     info["CFBundleShortVersionString"] = numeric_version

@@ -51,15 +51,6 @@ public sealed record ClientPairingRequestResult(ClientPairingOutcome Outcome, Cl
     public bool Succeeded => Ticket != null;
 }
 
-public interface IClientPairingService
-{
-    Task<ClientPairingResult> PairWithCodeAsync(string baseAddress, string code, CancellationToken ct = default);
-
-    Task<ClientPairingRequestResult> RequestPairingAsync(string baseAddress, CancellationToken ct = default);
-
-    Task<ClientPairingResult> ClaimAsync(string baseAddress, string requestId, CancellationToken ct = default);
-}
-
 /// <summary>
 /// The client's half of pairing: two ways in, matching the two the server offers.
 /// </summary>
@@ -70,7 +61,7 @@ public interface IClientPairingService
 /// the only thing it has, the request id. Waiting is the normal state there, so
 /// <see cref="ClientPairingOutcome.AwaitingApproval"/> is an answer rather than an error.
 /// </remarks>
-public sealed class ClientPairingService(HttpClient http, IClientConnectionStore store) : IClientPairingService
+public sealed class ClientPairingService(HttpClient http, IClientConnectionStore store)
 {
     public async Task<ClientPairingResult> PairWithCodeAsync(string baseAddress, string code,
         CancellationToken ct = default)
@@ -110,10 +101,9 @@ public sealed class ClientPairingService(HttpClient http, IClientConnectionStore
         var payload = await ReadAsync<TicketPayload>(response, ct);
 
         // AwaitingApproval, not Paired: filing a request is the start of waiting, and
-        // nothing has been paired. Reporting it as Paired told the connect page the
-        // device was in — so it navigated to a library it had no credentials for and
-        // never started polling for the approval, which then went uncollected however
-        // long the user waited at the server.
+        // nothing has been paired. Reporting it as Paired would tell the caller the device
+        // was in — so it would stop polling for the approval, which would then go
+        // uncollected however long the user waited at the server.
         return payload?.RequestId == null
             ? new ClientPairingRequestResult(Map(payload?.Failure), null, null)
             : new ClientPairingRequestResult(ClientPairingOutcome.AwaitingApproval,

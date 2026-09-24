@@ -65,7 +65,6 @@ import PathRuleConfigPage from "@/pages/path-mark-config";
 import PathMarksPage from "@/pages/path-marks";
 import ProfilerPage from "@/pages/profiler";
 import OtherDevicesPage from "@/pages/other-devices";
-import ClientConnectionPage from "@/pages/client-connection";
 import ClientPathMappingPage from "@/pages/client-path-mapping";
 import ComparisonPage from "@/pages/comparison";
 import AiConfigurationPage from "@/pages/ai-configuration";
@@ -104,24 +103,13 @@ export interface RouteMenuItem {
   isDeprecated?: boolean;
   menu?: boolean;
   /**
-   * Hidden unless this is the thin client. Evaluated when the menu renders rather than
-   * when this module loads: the answer arrives from the context call, which has not
-   * happened yet at import time.
+   * Hidden unless this window is the desktop app showing a server it manages (PureClient).
+   * Evaluated when the menu renders rather than when this module loads: the answer arrives
+   * from the context call, which has not happened yet at import time.
    */
   pureClientOnly?: boolean;
   /** The local coordinator belongs to the unified application, never to a forwarded UI. */
   localNodeOnly?: boolean;
-  /**
-   * Hidden in the desktop app's console (a managed server shown in this device's window):
-   * the page drives the retired thin client's own connection, which the console refuses —
-   * the device's Devices page manages that instead.
-   */
-  hideInConsole?: boolean;
-  /**
-   * The label in the desktop app's console, where "this client" would name a program that
-   * is not there: the pages are about the computer the window runs on.
-   */
-  nameInConsole?: string;
 }
 
 export const routesMenuConfig: RouteMenuItem[] = [
@@ -547,25 +535,16 @@ export const routesMenuConfig: RouteMenuItem[] = [
     menu: true,
   },
   {
-    // The endpoints behind these pages exist only in the thin client, so the group is
-    // filtered out of the menu everywhere else — see `pureClientOnly`. The routes stay
-    // registered regardless, because a bookmark can still land on one, and each page
-    // renders a notice rather than a broken screen.
-    name: "menu.client",
-    nameInConsole: "menu.client.thisComputer",
+    // The endpoints behind these pages exist only in the desktop app's relay for a server
+    // it manages, so the group is filtered out of the menu everywhere else — see
+    // `pureClientOnly`. The routes stay registered regardless, because a bookmark can still
+    // land on one, and each page renders a notice rather than a broken screen. About the
+    // computer the window runs on, hence the name.
+    name: "menu.client.thisComputer",
     icon: AiOutlineLaptop,
     menu: true,
     pureClientOnly: true,
     children: [
-      {
-        name: "menu.client.connection",
-        path: "/client-connection",
-        component: ClientConnectionPage,
-        icon: AiOutlineLaptop,
-        layout: "basic",
-        menu: true,
-        hideInConsole: true,
-      },
       {
         name: "menu.client.pathMapping",
         path: "/client-path-mapping",

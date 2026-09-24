@@ -72,7 +72,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        role: [unified, client]
+        role: [unified]
         platform:
           - os: windows-latest
             rid: win-x64
@@ -102,7 +102,6 @@ jobs:
           git submodule status --recursive > "$RUNNER_TEMP/package-submodules.txt"
           python src/tests/upgrade-tests/test_package_acceptance.py 2>&1 | tee "$RUNNER_TEMP/package-guards.log"
       - name: Download unified frontend
-        if: matrix.role == 'unified'
         uses: actions/download-artifact@v4
         with:
           name: package-acceptance-web-${{ github.run_id }}
@@ -115,32 +114,19 @@ jobs:
             -- --report "$RUNNER_TEMP/package-native-abi.json"
       - name: Publish the native product and audit its role
         run: |
-          PROJECT=Bakabase.App
-          WEB_ARGS=()
-          if [[ "$PACKAGE_ROLE" == "client" ]]; then
-            PROJECT=Bakabase.Client.App
-          else
-            WEB_ARGS=(--require-web)
-          fi
-          dotnet publish "src/apps/$PROJECT/$PROJECT.csproj" \
+          dotnet publish src/apps/Bakabase.App/Bakabase.App.csproj \
             --configuration Release --self-contained true -r "$PACKAGE_RID" \
             -p:RuntimeMode="$PACKAGE_RUNTIME_MODE" -o "$RUNNER_TEMP/package-publish"
-          if [[ "$PACKAGE_ROLE" == "unified" ]]; then
-            python -c 'import os,pathlib,shutil; p=pathlib.Path(os.environ["RUNNER_TEMP"]); shutil.copytree(p/"package-acceptance-web",p/"package-publish/web")'
-          fi
+          python -c 'import os,pathlib,shutil; p=pathlib.Path(os.environ["RUNNER_TEMP"]); shutil.copytree(p/"package-acceptance-web",p/"package-publish/web")'
           python src/scripts/check-release-contract.py \
             --role "$PACKAGE_ROLE" --publish-dir "$RUNNER_TEMP/package-publish" \
-            "${WEB_ARGS[@]}" --report "$RUNNER_TEMP/package-publish-audit.json"
+            --require-web --report "$RUNNER_TEMP/package-publish-audit.json"
       - name: Install the matching Velopack CLI
         run: dotnet tool install --tool-path "$RUNNER_TEMP/package-vpk-tools" vpk --version 1.2.0
       - name: Build actual portable, full update and native installer packages
         run: |
           ASSEMBLY=Bakabase
           TITLE=Bakabase
-          if [[ "$PACKAGE_ROLE" == "client" ]]; then
-            ASSEMBLY=Bakabase.Client
-            TITLE="Bakabase Client"
-          fi
           PLIST_ARGS=()
           if [[ "$PACKAGE_RID" == "win-x64" ]]; then
             MAIN_EXE="$ASSEMBLY.exe"

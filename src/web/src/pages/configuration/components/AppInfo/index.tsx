@@ -53,8 +53,8 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
     useState<BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo>();
   const appUpdaterState = useAppUpdaterStateStore((state) => state);
   const appOptions = useAppOptionsStore((state) => state.data);
-  // Every value in this section is forwarded, so in a thin client it describes the
-  // machine holding the library — including the update button, which updates that
+  // Every value in this section is forwarded, so in the desktop app showing a server it
+  // manages it describes that server — including the update button, which updates that
   // machine. Saying whose information this is costs a word and prevents the mistake.
   const isPureClient = useIsPureClient();
 
@@ -307,33 +307,6 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
       label: string;
       value: React.ReactNode;
     })[] = [
-      {
-        // Which of the two downloads this install is. Named because the pair is
-        // genuinely confusing from outside — one is called Bakabase and the other
-        // Bakabase Client, and nothing on screen has ever said which one is open or
-        // what the difference amounts to.
-        id: "edition",
-        label: "configuration.appInfo.edition",
-        keywords: ["edition", "client", "server", "版本", "客户端", "一体版", "服务端"],
-        value: (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Chip color="primary" radius="sm" variant="flat">
-              {t(
-                isPureClient
-                  ? "configuration.appInfo.edition.client"
-                  : "configuration.appInfo.edition.allInOne",
-              )}
-            </Chip>
-            <span className="text-sm text-foreground-500">
-              {t(
-                isPureClient
-                  ? "configuration.appInfo.edition.client.tip"
-                  : "configuration.appInfo.edition.allInOne.tip",
-              )}
-            </span>
-          </div>
-        ),
-      },
       {
         id: "appDataPath",
         label: "configuration.appInfo.appDataPath",

@@ -6,11 +6,9 @@ Local media manager for organizing files of any type.
 
 - **Bakabase/** - Main application
   - `src/web/` - React frontend (TypeScript)
-  - `src/apps/Bakabase.App/` - C# all-in-one desktop entry point (process entry + packaging inputs). Ships as `Bakabase.exe`. Every PC install is this app: it runs its own server and can switch its window to other servers it manages
-  - `src/apps/Bakabase.Client.App/` - C# legacy thin-client entry point. Ships as `Bakabase.Client.exe`. **Deprecated** — the all-in-one imports its pairings; do not add features here
-  - `src/apps/Bakabase.Shell/` - C# Avalonia shell shared by desktop flavours (windows, tray, exit coordination, embedded browser). Talks to a host only through `IShellHost` (and optional abstractions such as `IMainViewSwitcher`); must not reference `Bakabase.Service`, `Bakabase.Remoting` or `Bakabase.Client.Remoting`
+  - `src/apps/Bakabase.App/` - C# all-in-one desktop entry point (process entry + packaging inputs). Ships as `Bakabase.exe`. Every PC install is this app: it runs its own server and can switch its window to other servers it manages. The thin client (`Bakabase.Client.App`/`Bakabase.Client.Remoting`) was removed; the app still imports an old install's pairings once
+  - `src/apps/Bakabase.Shell/` - C# Avalonia shell (windows, tray, exit coordination, embedded browser). Talks to a host only through `IShellHost` (and optional abstractions such as `IMainViewSwitcher`); must not reference `Bakabase.Service` or `Bakabase.Remoting`
   - `src/apps/Bakabase.Remoting/` - C# relay to a server on **another machine**: signed loopback forwarding (YARP), pairing, path mapping, user-machine handlers, and the per-server relays the all-in-one uses to show and manage other servers. Must not reference `Bakabase.Service`, `Bakabase.Modules.Federation`, `Bakabase.Shell` or Avalonia
-  - `src/apps/Bakabase.Client.Remoting/` - C# legacy thin-client product layer over `Bakabase.Remoting` (its host, connect page, updater, telemetry). Goes away with `Bakabase.Client.App`
   - `src/apps/Bakabase.Service/` - C# HTTP API layer
   - `src/apps/Bakabase.Cli/` - C# offline build-time tool (SDK/constants generation). Reserve for dev-time codegen only.
   - `src/abstractions/` - C# interfaces & shared types
@@ -26,9 +24,6 @@ Local media manager for organizing files of any type.
 Bakabase.App (all-in-one entry) → Bakabase.Shell            → abstractions
                                 ↘ Bakabase.Service          → modules → abstractions
                                 ↘ Bakabase.Remoting         → modules → abstractions
-
-Bakabase.Client.App (legacy)    → Bakabase.Shell            → abstractions
-                                ↘ Bakabase.Client.Remoting  → Bakabase.Remoting → modules
 ```
 
 The shell references no host, and the Service never references `Bakabase.Remoting`:

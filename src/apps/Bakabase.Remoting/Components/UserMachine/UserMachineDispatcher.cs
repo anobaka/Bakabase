@@ -60,7 +60,7 @@ public sealed class UserMachineDispatcher
 
         if (!_handlers.TryGetValue(match.Route.Key, out var handler))
         {
-            _logger.LogInformation("No local handler for {Route}; telling the caller this client is behind.",
+            _logger.LogInformation("No local handler for {Route}; telling the caller this app is behind.",
                 match.Route.Key);
 
             await WriteNeedsNewerClient(context, match.Route.Key);
@@ -80,8 +80,8 @@ public sealed class UserMachineDispatcher
         await context.Response.WriteAsync(JsonSerializer.Serialize(new
         {
             code = (int) HttpStatusCode.NotImplemented,
-            message = $"This version of the Bakabase client cannot run {route} on your machine yet. " +
-                      "Updating the client will enable it."
+            message = $"Bakabase on this computer cannot run {route} here yet. " +
+                      "Updating Bakabase on this computer will enable it."
         }), context.RequestAborted);
     }
 }

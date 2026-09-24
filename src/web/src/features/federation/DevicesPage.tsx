@@ -20,7 +20,6 @@ import { useFederationStatus } from "./hooks/useFederationStatus";
 import { useSectionReveal } from "./hooks/useSectionReveal";
 import { federationPeerApi } from "./peerApi";
 import { FederationError, isAbort } from "./transport";
-import ImportConnectionHints from "./components/ImportConnectionHints";
 import ManagedServersSection from "./components/ManagedServers";
 import ManagementAccessSection from "./components/ManagementAccess";
 
@@ -62,7 +61,7 @@ export default function DevicesPage() {
 
 /**
  * Where the rest of this page is not available — the desktop app showing a server it
- * manages, the retired client, a browser — the one part that still applies is whether other
+ * manages, a browser — the one part that still applies is whether other
  * devices may manage the server the window shows. A headless server's management requests
  * are answered exactly there, and its notification links here.
  *
@@ -896,13 +895,6 @@ function Devices() {
               </div>
             </section>
           )}
-          <ImportConnectionHints
-            busy={busy}
-            onSelect={(address) => {
-              setAddress(address);
-              setCode("");
-            }}
-          />
           <section className="space-y-3">
             <div className="flex items-baseline justify-between">
               <h2 className="font-semibold">{t("federation.devices.known")}</h2>

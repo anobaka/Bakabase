@@ -1,3 +1,5 @@
+using Bakabase.Remoting.Components.Forwarding;
+
 namespace Bakabase.Remoting.Components.Console;
 
 /// <summary>
@@ -17,8 +19,8 @@ public sealed class RemoteConsoleOptions
     /// </summary>
     /// <remarks>
     /// Clear of the app's own listening window (34567 and up, three ports by default) and
-    /// of the retired thin client's 34600, so a machine that still runs that one for a
-    /// while does not decide either origin by launch order.
+    /// of the removed thin client's 34600, which an old install left on the machine may
+    /// still hold, so neither decides an origin by launch order.
     /// </remarks>
     public const int DefaultFirstRelayPort = 34650;
 
@@ -36,8 +38,7 @@ public sealed class RemoteConsoleOptions
 
     /// <summary>
     /// How long looking for servers on the network waits for answers. Somebody is watching a
-    /// spinner, and a server that has not answered in three seconds is not going to — the
-    /// same bound the thin client's own search used.
+    /// spinner, and a server that has not answered in three seconds is not going to.
     /// </summary>
     public TimeSpan DiscoveryTimeout { get; set; } = TimeSpan.FromSeconds(3);
 
@@ -50,7 +51,37 @@ public sealed class RemoteConsoleOptions
     /// </summary>
     public TimeSpan FinishedRequestRetention { get; set; } = TimeSpan.FromMinutes(10);
 
-    /// <summary>Whether starting up brings over the retired thin client's pairings, once.</summary>
+    /// <summary>
+    /// How long a relay trusts that its server's address answers as that server. A page in
+    /// use is asked again in the background past half of it; nothing is forwarded past all of
+    /// it until the address has answered again.
+    /// </summary>
+    public TimeSpan IdentityCheckInterval { get; set; } = UpstreamIdentityPolicy.Default.Lifetime;
+
+    /// <summary>
+    /// How long a relay stands by an address answering as someone else, or not at all,
+    /// before asking again — so a server that comes back is noticed within this, and a page
+    /// reloaded meanwhile does not ask on every request.
+    /// </summary>
+    public TimeSpan IdentityRetryInterval { get; set; } = UpstreamIdentityPolicy.Default.RetryInterval;
+
+    /// <summary>How long a relay waits for its server's address to say who it is.</summary>
+    public TimeSpan IdentityCheckTimeout { get; set; } = UpstreamIdentityPolicy.Default.Timeout;
+
+    /// <summary>
+    /// How recent that answer has to be for a relay to open a new connection to its server —
+    /// the moment the process at the other end can have changed.
+    /// </summary>
+    public TimeSpan IdentityConnectionWindow { get; set; } = UpstreamIdentityPolicy.Default.ConnectionWindow;
+
+    /// <summary>
+    /// How long to wait before trying again when noting in the managed-server store that a
+    /// server answered (its name, when it was last seen) could not be written — a full disk,
+    /// a file a scanner holds. Nothing waits on that write; it is tried again until it lands.
+    /// </summary>
+    public TimeSpan StoreRetryInterval { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>Whether starting up brings over the removed thin client's pairings, once.</summary>
     public bool ImportLegacyClientOnStart { get; set; } = true;
 
     /// <summary>
@@ -60,7 +91,7 @@ public sealed class RemoteConsoleOptions
     public string? ManagedDirectory { get; set; }
 
     /// <summary>
-    /// The retired thin client's <c>connection.json</c>. Null to find it the way the thin
+    /// The removed thin client's <c>connection.json</c>. Null to find it the way the thin
     /// client itself did — see <see cref="LegacyClientConnectionSource.ResolveDefaultFile"/>.
     /// </summary>
     public Func<string?>? LegacyClientConnectionFile { get; set; }

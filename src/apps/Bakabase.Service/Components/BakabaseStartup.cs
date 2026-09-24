@@ -214,6 +214,10 @@ namespace Bakabase.Service.Components
                 HubLegacyInstallNotifier>();
             services.AddHostedService<Bakabase.Infrastructures.Components.App.LegacyInstallAppDataDetector>();
 
+            // Must be a hosted service: it reads the version this install last ran when the host
+            // constructs it, before anything running in the host records the running one.
+            services.AddHostedService<Notices.NoticeBaselineInitializer>();
+
             // Add MiniProfiler for performance tracking
             services.AddMiniProfiler(options =>
             {

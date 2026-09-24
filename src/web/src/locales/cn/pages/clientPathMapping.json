@@ -1,11 +1,11 @@
 {
-  "clientPathMapping.onlyInClient": "本页仅在 Bakabase 客户端中可用。",
-  "clientPathMapping.noServer": "请先连接一个服务端 —— 映射是按服务端保存的。",
+  "clientPathMapping.onlyInClient": "本页仅在桌面端显示其管理的服务端时可用。",
+  "clientPathMapping.noServer": "本窗口当前没有显示受管理的服务端 —— 映射是按服务端保存的。",
   "clientPathMapping.title": "{{name}} 的库在本机的位置",
-  "clientPathMapping.description": "服务端用它自己的方式称呼这些文件，本机可能把它们挂在完全不同的地方。这件事无法自动推断，所以在这里登记之前，客户端宁可拒绝打开也不会去猜。",
+  "clientPathMapping.description": "服务端用它自己的方式称呼这些文件，本机可能把它们挂在完全不同的地方。这件事无法自动推断，所以在这里登记之前，本机宁可拒绝打开也不会去猜。",
   "clientPathMapping.serverPath": "服务端上的路径",
   "clientPathMapping.localPath": "本机上的路径",
   "clientPathMapping.add": "添加一条映射",
-  "clientPathMapping.canRunHere": "本客户端可以在本机执行的操作",
-  "clientPathMapping.canRunHereTip": "未列出的仍由服务端处理，或返回“客户端版本过旧”。升级客户端会让这个列表变长。"
+  "clientPathMapping.canRunHere": "本机自己执行的操作",
+  "clientPathMapping.canRunHereTip": "未列出的仍由服务端处理，或提示本机暂不支持。升级本机的 Bakabase 会让这个列表变长。"
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import type { ModalProps } from "@/components/bakaui";
+
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineFileText } from "react-icons/ai";
@@ -24,38 +26,62 @@ export interface ChangelogModalOptions {
   fallbackUrl?: string;
 }
 
-/** Opens a version's notes — or a whole update's worth of notes — in a modal. */
-export const useChangelogModal = () => {
+export interface ChangelogModalProps
+  extends ChangelogModalOptions,
+    Pick<ModalProps, "visible" | "defaultVisible" | "onClose" | "onDestroyed"> {
+  version?: string;
+}
+
+/**
+ * A version's notes — or a whole update's worth of notes — in a modal. Rendered in place by
+ * the startup gate, which has to know when it closes; everything else opens it through
+ * {@link useChangelogModal}.
+ */
+export const ChangelogModal = ({
+  version,
+  from,
+  fallbackUrl,
+  ...modalProps
+}: ChangelogModalProps) => {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
+  // A span is only meaningful between two different versions; anything else is a
+  // single release. The server still re-checks, and collapses on its own terms.
+  const isRange = Boolean(from && version && from !== version);
 
-  return (version?: string, options?: ChangelogModalOptions) => {
-    const { from, fallbackUrl } = options ?? {};
-    // A span is only meaningful between two different versions; anything else is a
-    // single release. The server still re-checks, and collapses on its own terms.
-    const isRange = Boolean(from && version && from !== version);
-
-    createPortal(Modal, {
-      size: "xl",
+  return (
+    <Modal
+      // The modal body is itself a scroller (scrollBehavior="inside"); the range view
+      // brings its own panes, so let it own the scrolling instead of nesting two.
+      classNames={isRange ? { body: "overflow-hidden" } : undefined}
+      footer={{ actions: ["cancel"] }}
+      size="xl"
       // A range title is NOT built from these arguments: the server may resolve
       // different bounds than were asked for, so the resolved span is stated inside the
       // body instead, where it cannot disagree with what is on screen.
-      title: isRange
-        ? t<string>("changelog.title")
-        : version
-          ? t<string>("changelog.titleWithVersion", { version })
-          : t<string>("changelog.title"),
-      defaultVisible: true,
-      // The modal body is itself a scroller (scrollBehavior="inside"); the range view
-      // brings its own panes, so let it own the scrolling instead of nesting two.
-      classNames: isRange ? { body: "overflow-hidden" } : undefined,
-      children: isRange ? (
+      title={
+        isRange
+          ? t<string>("changelog.title")
+          : version
+            ? t<string>("changelog.titleWithVersion", { version })
+            : t<string>("changelog.title")
+      }
+      {...modalProps}
+    >
+      {isRange ? (
         <ChangelogRangeView fallbackUrl={fallbackUrl} from={from!} to={version!} />
       ) : (
         <ChangelogViewer fallbackUrl={fallbackUrl} version={version} />
-      ),
-      footer: { actions: ["cancel"] },
-    });
+      )}
+    </Modal>
+  );
+};
+
+/** Opens a version's notes — or a whole update's worth of notes — in a modal. */
+export const useChangelogModal = () => {
+  const { createPortal } = useBakabaseContext();
+
+  return (version?: string, options?: ChangelogModalOptions) => {
+    createPortal(ChangelogModal, { ...options, version, defaultVisible: true });
   };
 };
 

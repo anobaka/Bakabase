@@ -64,7 +64,7 @@ public sealed class ServerDateTimeConverter : JsonConverter<DateTime>
         if (parsed == null)
         {
             throw new JsonException(
-                $"'{raw}' is not a timestamp this client can read. Bakabase servers write " +
+                $"'{raw}' is not a timestamp this app can read. Bakabase servers write " +
                 "'yyyy-MM-dd HH:mm:ss.fff' in UTC, and ISO 8601 is accepted too.");
         }
 

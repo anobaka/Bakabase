@@ -5,9 +5,8 @@ namespace Bakabase.Remoting.Components.Forwarding;
 /// </summary>
 /// <remarks>
 /// Nothing under <see cref="Prefix"/> is ever forwarded, so none of it can shadow one of
-/// the server's routes or be shadowed by one later. What is mapped there depends on who
-/// composed the relay: the legacy thin client answers its connect and pairing API, the
-/// all-in-one answers the server switcher's.
+/// the server's routes or be shadowed by one later. The desktop app answers the server
+/// switcher's API there (<see cref="Console.ConsoleEndpoints"/>).
 /// </remarks>
 public static class RelayPaths
 {

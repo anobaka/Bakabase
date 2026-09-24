@@ -21,7 +21,7 @@ export const MANAGEMENT_ROUTE = `${DEVICES_ROUTE}?section=management`;
  * - `here` — this is that window: route to the page.
  * - `local` — the desktop app showing a device it manages: the pages are this
  *   computer's, so switch the window back to this computer at that page.
- * - `none` — a browser on another device, or the retired Bakabase Client: nothing to open.
+ * - `none` — a browser on another device: nothing to open.
  */
 export const useDevicePagesReach = (): "here" | "local" | "none" => {
   const isPureClient = useIsPureClient();

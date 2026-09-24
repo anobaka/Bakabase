@@ -4,11 +4,12 @@
 // "unified" (A) is composed like the desktop app (UnifiedHost: its server plus the relay
 // manager), with this browser as its window. "source" (B) is the managed server; every request
 // it receives is recorded before its own middleware, so the relay's traffic can be judged on B's
-// side. Runs after the legacy-migration stage, whose thin client already paired with B.
+// side. Runs once legacy-client.cjs has left an old thin client's pairing with B on this machine.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { confine, assertStayedLocal } = require('./network.cjs');
+const { connectionFile } = require('./legacy-client.cjs');
 
 /** Where RemoteConsoleOptions puts relay ports by default; nothing else on loopback is allowed. */
 const RELAY_FIRST_PORT = 34650;
@@ -47,7 +48,7 @@ const watchSockets = (page, markers = {}) => {
 };
 
 module.exports = async function serverSwitching({ browser, config, artifacts }) {
-  const { unified, source, client } = config.hosts;
+  const { unified, source } = config.hosts;
   // Where this browser shows A: the origin A recorded as its main window's, and so "home".
   const home = unified.window;
   const locales = ['en', 'cn'].map(lang => Object.assign({}, ...['pages/federation', 'pages/configuration', 'components/helpCenter']
@@ -79,7 +80,7 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
   const pageErrors = [];
   let blocked = { external: [], loopback: [] };
   try {
-    // The three hosts and the relay port range; nothing else, loopback or not.
+    // The two hosts and the relay port range; nothing else, loopback or not.
     blocked = await confine(context, url => hostOrigins.has(url.origin) || relayPort(url.href) !== null);
     context.on('page', page => page.on('pageerror', error => pageErrors.push(`${page.url()}: ${error.message}`)));
 
@@ -137,10 +138,10 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     assert.notEqual(bInfo.id, aInfo.id);
     // The UI names servers, never ids: a check by name proves B only if A is called something else.
     assert.notEqual(bInfo.name, aInfo.name, 'The fixtures share a server name, so no check by name can tell them apart');
-    const legacyFile = path.join(client.directory, 'client', 'connection.json');
+    const legacyFile = connectionFile(config.legacyClient.directory);
     const legacyBytes = fs.readFileSync(legacyFile);
     const legacyServer = field(JSON.parse(legacyBytes.toString()), 'Servers').find(server => field(server, 'ServerId') === bInfo.id);
-    assert.ok(legacyServer, 'The legacy client is not paired with the source server');
+    assert.ok(legacyServer, 'The old thin client\'s pairing is not with the source server');
     const legacyDevice = field(legacyServer, 'DeviceId');
     const legacyKey = field(legacyServer, 'DeviceKey');
     assert.ok(legacyDevice && legacyKey && legacyKey.length > 10);
@@ -149,7 +150,7 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     // (a) Import the thin client's pairing with B through A's devices page: no re-pairing.
     const initial = await managedServers();
     assert.equal(initial.available, true, 'The unified fixture did not compose the relay manager');
-    assert.deepEqual(initial.servers, [], 'Nothing was imported at startup: the thin client paired afterwards');
+    assert.deepEqual(initial.servers, [], 'Nothing was imported at startup: the old pairing was written afterwards');
     const win = await context.newPage();
     // The window's WebSockets — A's own UI's hub, then B's through the relay, then the probes.
     const winSockets = watchSockets(win, {

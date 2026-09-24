@@ -7,9 +7,9 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
 /// </summary>
 /// <remarks>
 /// A second copy of six strings the all-in-one also has in its shared resource, and
-/// deliberately so: a thin client shows this window without the legacy business layer that
-/// owns the other copy, and shipping the window in English there would be a worse trade
-/// than duplicating six entries.
+/// deliberately so: a relay for a managed server shows this window from its own container,
+/// without the legacy business layer that owns the other copy, and shipping the window in
+/// English there would be a worse trade than duplicating six entries.
 /// </remarks>
 public class ThirdPartyCookieCaptureLocalizer : ICookieCaptureLocalizer
 {

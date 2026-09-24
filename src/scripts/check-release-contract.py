@@ -18,14 +18,14 @@ PRODUCTS = {
                 "dataFolder": "Bakabase", "windowsDataFolder": "Bakabase.AppData",
                 "feed": "https://cdn-public.anobaka.com/app/bakabase/releases/",
                 "buildJob": "build-app", "deployJob": "deploy-velopack", "artifact": "vpk-"},
-    "client": {"project": "Bakabase.Client.App", "assembly": "Bakabase.Client", "bundle": "com.anobaka.bakabase.client",
-               "host": "src/apps/Bakabase.Client.Remoting/Components/ClientHost.cs",
-               "source": "src/apps/Bakabase.Client.Remoting/Components/Updating/ClientUpdateSource.cs",
-               "dataEnv": "BAKABASE_CLIENT_DATA_DIR", "updateEnv": "BAKABASE_CLIENT_UPDATE_URL",
-               "dataFolder": "Bakabase.Client", "windowsDataFolder": "Bakabase.Client.AppData",
-               "feed": "https://cdn-public.anobaka.com/app/bakabase-client/releases/",
-               "buildJob": "build-client", "deployJob": "deploy-client-velopack", "artifact": "velopack-client-"},
 }
+
+# The removed thin client's identity. Nothing ships under it any more, and nothing may: its
+# feed, AppData folder and executable are still on users' machines (the desktop app imports
+# their pairings from there), so reusing any of them would hand an old install something
+# that is not its own.
+RETIRED_CLIENT = {"assembly": "Bakabase.Client",
+                  "feed": "https://cdn-public.anobaka.com/app/bakabase-client/releases/"}
 
 
 def require(condition, message):
@@ -72,8 +72,7 @@ def check_sources(root):
         source = (root / product["source"]).read_text(encoding="utf-8")
         for key in ("updateEnv", "feed"):
             require('"' + product[key] + '"' in source, f"{role}: {key} changed")
-        profile_name = "AllInOne" if role == "unified" else "Client"
-        expected = r'\b' + profile_name + r'\s*=\s*new\(\s*"' + product["dataEnv"] + r'",\s*"' + re.escape(product["dataFolder"]) + r'",\s*"' + re.escape(product["windowsDataFolder"]) + r'"\s*\)'
+        expected = r'\bAllInOne\s*=\s*new\(\s*"' + product["dataEnv"] + r'",\s*"' + re.escape(product["dataFolder"]) + r'",\s*"' + re.escape(product["windowsDataFolder"]) + r'"\s*\)'
         require(re.search(expected, profile), f"{role}: AppData profile changed")
         build_job = workflow_job(build, product["buildJob"])
         require(re.search(r"--packId\s+" + re.escape(product["assembly"]) + r"\s", build_job), f"{role}: pack ID changed")
@@ -83,12 +82,11 @@ def check_sources(root):
         deploy_job = workflow_job(deploy, product["deployJob"])
         expected_prefix = product["feed"].replace("https://cdn-public.anobaka.com/", "oss://anobaka-public/")
         require(expected_prefix in deploy_job, f"{role}: published updater prefix changed")
-        other = PRODUCTS["client" if role == "unified" else "unified"]
-        forbidden = other["feed"].replace("https://cdn-public.anobaka.com/", "oss://anobaka-public/")
-        require(forbidden not in deploy_job, f"{role}: another product's updater feed appears in the deployment job")
         require(f'pattern: {product["artifact"]}*' in release, f"{role}: release artifact collection missing")
-    require("AppDataAnchor.Use(AppDataPathProfile.Client)" in (root / "src/apps/Bakabase.Client.App/Program.cs").read_text(encoding="utf-8"),
-            "The legacy client no longer selects its own AppData profile")
+    retired_feed = RETIRED_CLIENT["feed"].replace("https://cdn-public.anobaka.com/", "oss://anobaka-public/")
+    require(retired_feed not in deploy, "The removed thin client's updater feed appears in the deployment workflow")
+    require(not re.search(r"--packId\s+" + re.escape(RETIRED_CLIENT["assembly"]) + r"\s", build),
+            "The removed thin client's pack ID appears in the build workflow")
     require("AppDataPathProfile.Client" not in (root / "src/apps/Bakabase.App/Program.cs").read_text(encoding="utf-8"),
             "The unified application must not select client AppData")
     projects, packages = project_graph(root / "src/apps/Bakabase.Service/Bakabase.Service.csproj")
@@ -100,18 +98,15 @@ def check_sources(root):
                     for name in projects),
             "The relay references a server host, the federation module, the shell or a client product")
     require(not any(name.startswith("Avalonia") for name in packages), "The relay references desktop UI packages")
-    projects, _ = project_graph(root / "src/apps/Bakabase.Client.App/Bakabase.Client.App.csproj")
-    require("Bakabase.Service" not in projects and "Bakabase.Modules.Federation" not in projects,
-            "Legacy client unexpectedly includes an authoritative library host")
     check_shell_graph(*project_graph(root / "src/apps/Bakabase.Shell/Bakabase.Shell.csproj"))
     check_unified_graph(project_graph(root / "src/apps/Bakabase.App/Bakabase.App.csproj")[0])
     return {"sourceIdentityChecks": "passed", "products": PRODUCTS}
 
 
 def check_shell_graph(projects, packages):
-    """The shell is shared by both desktop products and talks to its host only through IShellHost and
-    the optional contracts in Bakabase.Abstractions (IMainViewSwitcher among them): it never references a
-    host — the Service, the relay, or a client product layer — nor the relay's proxy."""
+    """The shell talks to its host only through IShellHost and the optional contracts in
+    Bakabase.Abstractions (IMainViewSwitcher among them): it never references a host — the Service,
+    the relay, or a client product layer — nor the relay's proxy."""
     hosts = sorted(name for name in projects
                    if name in ("Bakabase.Service", "Bakabase.Modules.Federation")
                    or name.startswith(("Bakabase.Remoting", "Bakabase.Client")))
@@ -120,8 +115,8 @@ def check_shell_graph(projects, packages):
 
 
 def check_unified_graph(projects):
-    """The unified app composes the relay (Bakabase.Remoting) but never the retired thin client's
-    product layer: Bakabase.Client.Remoting, or anything else named Bakabase.Client*."""
+    """The unified app composes the relay (Bakabase.Remoting) but never anything named
+    Bakabase.Client*: that name belonged to the removed thin client's product layer."""
     require("Bakabase.Remoting" in projects, "The unified application no longer composes the relay")
     thin_client = sorted(name for name in projects if name.startswith("Bakabase.Client"))
     require(not thin_client, f"The unified application references thin-client projects {thin_client}")
@@ -137,21 +132,17 @@ def check_publish(directory, role, require_web=False):
         dependencies.update(json.loads(path.read_text(encoding="utf-8-sig")).get("libraries", {}))
     required = {"server": {"Bakabase.Service.dll", "Bakabase.Modules.Federation.dll"},
                 "unified": {"Bakabase.dll", "Bakabase.Shell.dll", "Bakabase.Service.dll", "Bakabase.Modules.Federation.dll",
-                            "Bakabase.Remoting.dll"},
-                "client": {"Bakabase.Client.dll", "Bakabase.Client.Remoting.dll", "Bakabase.Remoting.dll", "Bakabase.Shell.dll"}}[role]
+                            "Bakabase.Remoting.dll"}}[role]
     # The unified app ships the relay, and YARP only as the relay's own dependency: YARP in a
     # package without Bakabase.Remoting.dll came from somewhere it does not belong. Checked
     # before the required set so that case is reported as what it is.
     forbidden = {"server": ("Bakabase.Client", "Bakabase.Remoting", "Bakabase.Shell", "Avalonia", "Yarp"),
-                 "unified": ("Bakabase.Client",) + (() if "Bakabase.Remoting.dll" in names else ("Yarp",)),
-                 "client": ("Bakabase.Service", "Bakabase.Modules.Federation", "Bakabase.Migrations")}[role]
+                 "unified": ("Bakabase.Client",) + (() if "Bakabase.Remoting.dll" in names else ("Yarp",))}[role]
     require(not any(name.startswith(forbidden) for name in names | dependencies),
             f"{role}: forbidden shipped dependency {sorted(name for name in names | dependencies if name.startswith(forbidden))}")
     require(required <= names, f"{role}: missing required assemblies {sorted(required - names)}")
-    if role == "client":
-        require(not (directory / "web").exists(), "Legacy client must not ship the local frontend")
     if require_web:
-        require(role != "client" and (directory / "web/index.html").is_file(), "Unified/server release requires the actual local frontend")
+        require((directory / "web/index.html").is_file(), "Unified/server release requires the actual local frontend")
         require(any((directory / "web").rglob("*.js")), "Frontend directory has no built JavaScript")
     return {"role": role, "publish": str(directory), "assemblies": sorted(names),
             "dependencyCount": len(dependencies), "localFrontendChecked": require_web, "passed": True}
@@ -185,7 +176,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--publish-dir", type=Path)
-    parser.add_argument("--role", choices=("server", "unified", "client"))
+    parser.add_argument("--role", choices=("server", "unified"))
     parser.add_argument("--require-web", action="store_true")
     parser.add_argument("--macos-portable-dir", type=Path)
     parser.add_argument("--version")

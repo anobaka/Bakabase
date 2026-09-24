@@ -45,13 +45,13 @@ public class ClientServerConnection
     /// The loopback port this server's relay listens on in the desktop app, once it has
     /// had one. Kept with the server because the browser keys localStorage, IndexedDB and
     /// its cache to the origin, port included: a server whose relay moved would look to
-    /// the user like it had forgotten their settings. Never set by the thin client, which
-    /// has exactly one listener of its own.
+    /// the user like it had forgotten their settings. Absent from a file an old thin client
+    /// wrote, which had exactly one listener of its own.
     /// </summary>
     public int? RelayPort { get; set; }
 
     /// <summary>
-    /// Brought over from the retired thin client on this machine rather than paired here.
+    /// Brought over from the removed thin client on this machine rather than paired here.
     /// Informational: the UI says where a server came from, nothing behaves differently.
     /// </summary>
     public bool ImportedFromLegacyClient { get; set; }
@@ -81,7 +81,7 @@ public class ClientConnectionData
     public RemoteDevicePlatform Platform { get; set; }
 
     /// <summary>
-    /// When the desktop app last brought over the retired thin client's pairings. Set once
+    /// When the desktop app last brought over the removed thin client's pairings. Set once
     /// something was found, so the automatic import at startup runs only once: a server the
     /// user has since stopped managing must not come back on the next launch.
     /// </summary>
@@ -92,7 +92,7 @@ public class ClientConnectionData
     /// still holds each one's storage under that origin, so the port is kept from the next
     /// server paired here — whose own code would otherwise read what the last one's UI left —
     /// and given back if the same server is paired again. Null when there are none, and
-    /// never set by the thin client.
+    /// absent from a file an old thin client wrote.
     /// </summary>
     public Dictionary<string, int>? RetiredRelayPorts { get; set; }
 }

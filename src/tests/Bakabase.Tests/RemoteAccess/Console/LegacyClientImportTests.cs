@@ -12,7 +12,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests.RemoteAccess.Console;
 
 /// <summary>
-/// Bringing the retired thin client's pairings over, keys included, so nobody has to pair
+/// Bringing the removed thin client's pairings over, keys included, so nobody has to pair
 /// again after switching to the desktop app.
 /// </summary>
 [TestClass]

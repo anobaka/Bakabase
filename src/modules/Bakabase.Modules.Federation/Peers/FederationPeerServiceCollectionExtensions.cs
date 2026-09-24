@@ -24,7 +24,7 @@ public static class FederationPeerServiceCollectionExtensions
         services.AddHttpClient<FederationHttpClient>(http => http.Timeout = Timeout.InfiniteTimeSpan)
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
-                // Peers are addressed directly, like the thin client's relay: a system or
+                // Peers are addressed directly, like the desktop app's relays: a system or
                 // environment proxy would otherwise receive LAN traffic and signed requests.
                 UseProxy = false,
                 AllowAutoRedirect = false,

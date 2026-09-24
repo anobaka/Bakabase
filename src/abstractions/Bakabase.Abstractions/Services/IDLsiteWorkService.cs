@@ -23,7 +23,7 @@ public interface IDLsiteWorkService
     /// Works out what running a work would start, without starting it.
     /// </summary>
     /// <remarks>
-    /// Split out for the thin client, which starts the program itself but cannot pick the
+    /// Split out for a managed server's relay, which starts the program itself but cannot pick the
     /// file: choosing it needs the work's type, its download location and the priority
     /// rules over what is in that folder, all of which live here.
     /// </remarks>

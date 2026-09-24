@@ -139,7 +139,7 @@ public sealed class LocaleEmulatorLauncher(IServiceProvider services, IShellOpen
     public Task LaunchAsync(string executablePath, CancellationToken ct)
     {
         var leProc = ExecutablePath ??
-                     throw new InvalidOperationException("Locale Emulator is not installed for this client.");
+                     throw new InvalidOperationException("Locale Emulator is not installed on this computer.");
 
         // -run is what LEProc takes; the server passes the same.
         shell.LaunchProcess(leProc, $"-run \"{executablePath}\"", useShellExecute: false);

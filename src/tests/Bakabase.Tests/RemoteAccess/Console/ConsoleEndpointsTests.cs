@@ -17,7 +17,7 @@ namespace Bakabase.Tests.RemoteAccess.Console;
 /// </summary>
 /// <remarks>
 /// That UI is the other machine's code running in this device's window. What it may do
-/// here is exactly what the thin client let it do about its own server — read the status,
+/// here is exactly what the removed thin client let it do about its own server — read the status,
 /// edit its path mappings, report the tray — plus switching the window; never pairing,
 /// forgetting, or reaching another server's settings.
 /// </remarks>

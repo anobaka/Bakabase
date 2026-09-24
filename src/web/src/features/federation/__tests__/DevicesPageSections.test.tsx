@@ -227,16 +227,16 @@ describe("the devices page where the rest of it is not available", () => {
     expect(useFederationStatus).not.toHaveBeenCalled();
   });
 
-  it("in the retired client, which is paired: still explains the move, and answers too", async () => {
+  it("while the relay has not yet said it is the console: already points back, and answers too", async () => {
     setStore({
       initialized: true,
       isLocal: false,
       clientMode: ClientMode.PureClient,
-      clientHost: "legacy",
+      clientHost: undefined,
       serverName: "NAS",
     });
     renderPage("/federation/devices?section=management");
-    expect(screen.getByText("federation.migration.intro")).toBeInTheDocument();
+    expect(screen.getByText("federation.console.localOnly")).toBeInTheDocument();
     await waitFor(() => expect(accessSection()).toHaveFocus());
   });
 

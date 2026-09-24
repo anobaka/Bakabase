@@ -72,65 +72,6 @@ jobs:
             done
           fi
 
-  # The thin client, under a prefix of its own.
-  #
-  # This separation is the whole point of the job. Velopack's updater reads
-  # releases/<rid>/releases.<channel>.json and installs whatever it finds there; the
-  # client's manifest landing in app/bakabase/ would be handed to every existing
-  # all-in-one installation as its next update.
-  deploy-client-velopack:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - artifact: win-x64
-          - artifact: osx-x64
-          - artifact: osx-arm64
-    steps:
-      - name: Install ossutil
-        run: |
-          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
-          chmod +x ossutil64
-
-      - name: Configure ossutil
-        env:
-          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
-        run: |
-          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
-
-      - name: Download client Velopack artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: velopack-client-${{ matrix.artifact }}
-          path: ./vpk-output
-
-      - name: Upload client Velopack releases to OSS
-        run: |
-          ./ossutil64 cp -rf ./vpk-output/ oss://anobaka-public/app/bakabase-client/releases/${{ matrix.artifact }}/
-
-      # Same naming as the all-in-one's archive step, under the client's product name.
-      - name: Archive client installer and portable for this version
-        run: |
-          ARCHIVE_BASE="oss://anobaka-public/app/bakabase-client/archives/${{ inputs.version }}/${{ matrix.artifact }}"
-          NAME_BASE="Bakabase-Client-${{ inputs.version }}-${{ matrix.artifact }}"
-
-          for f in ./vpk-output/*Setup*.exe; do
-            [ -f "$f" ] || continue
-            ./ossutil64 cp "$f" "${ARCHIVE_BASE}/${NAME_BASE}-Setup.exe"
-          done
-          for f in ./vpk-output/*.pkg; do
-            [ -f "$f" ] || continue
-            ./ossutil64 cp "$f" "${ARCHIVE_BASE}/${NAME_BASE}-Setup.pkg"
-          done
-          if [[ "${{ matrix.artifact }}" == win-* ]]; then
-            for f in ./vpk-output/*-Portable.zip; do
-              [ -f "$f" ] || continue
-              ./ossutil64 cp "$f" "${ARCHIVE_BASE}/${NAME_BASE}-Portable.zip"
-            done
-          fi
-
   deploy-tampermonkey:
     runs-on: ubuntu-latest
     steps:

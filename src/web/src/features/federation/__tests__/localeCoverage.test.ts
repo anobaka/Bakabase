@@ -38,18 +38,15 @@ const sources = import.meta.glob<string>(
     "../components/ConfirmDialog.tsx",
     "../components/ManagedServers.tsx",
     "../components/ManagementAccess.tsx",
-    "../components/MigrationNotice.tsx",
     "../../../layouts/BasicLayout/components/PageNav/components/ServerSwitcher/index.tsx",
-    "../../../layouts/BasicLayout/components/LegacyClientNotice/index.tsx",
-    "../../../pages/client-connection/index.tsx",
-    "../../../pages/log/index.tsx",
+    "../../../pages/client-path-mapping/index.tsx",
   ],
   { eager: true, query: "?raw", import: "default" },
 );
 
 /** Namespaces these screens draw from; a quoted string under one of them is a key. */
 const keyPattern =
-  /["'`]((?:federation|clientConnection|configuration\.remoteAccess|log)\.[A-Za-z0-9_.]*[A-Za-z0-9_])["'`]/g;
+  /["'`]((?:federation|clientPathMapping|configuration\.remoteAccess|log)\.[A-Za-z0-9_.]*[A-Za-z0-9_])["'`]/g;
 
 const staticKeys = (source: string) => Array.from(source.matchAll(keyPattern), (match) => match[1]);
 
@@ -83,7 +80,7 @@ const dynamicKeys = [
   ...Object.values(RemoteDevicePlatform)
     .filter((value): value is RemoteDevicePlatform => typeof value === "number")
     .map(remoteDevicePlatformLabelKey),
-  // The menu group the console keeps (`nameInConsole` in routesMenuConfig) and its page.
+  // The console's menu group (routesMenuConfig) and its page.
   "menu.client.thisComputer",
   "menu.client.pathMapping",
 ];
@@ -97,7 +94,7 @@ describe("locales for the server-switching screens", () => {
   ).sort();
 
   it("reads keys out of every listed component", () => {
-    expect(Object.keys(sources)).toHaveLength(10);
+    expect(Object.keys(sources)).toHaveLength(7);
     for (const [path, source] of Object.entries(sources)) {
       expect(staticKeys(source).length, path).toBeGreaterThan(0);
     }
@@ -114,8 +111,7 @@ describe("locales for the server-switching screens", () => {
         "federation.servers.add.discovering",
         "federation.servers.add.alreadyManaged",
         "federation.console.switchToThisDevice",
-        "federation.legacyClient.notice",
-        "clientConnection.managedByDesktop",
+        "clientPathMapping.onlyInClient",
         "menu.client.thisComputer",
       ]),
     );

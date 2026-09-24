@@ -59,9 +59,23 @@ public enum ManagedServerState
     /// <summary>Did not answer.</summary>
     Offline = 2,
 
-    /// <summary>Answered but no longer knows this device: revoked there, or its data was reset.</summary>
-    Revoked = 3
+    /// <summary>Answered but no longer knows this device: revoked there.</summary>
+    Revoked = 3,
+
+    /// <summary>
+    /// Its address answers as another server — or as this device itself — so nothing is sent
+    /// there. The server moved (a new port after a restart, a new DHCP lease), or it was
+    /// reinstalled or its data reset and is a new install now. See
+    /// <see cref="ManagedServerView.AnsweredBy"/> for who answers instead.
+    /// </summary>
+    WrongServer = 4
 }
+
+/// <summary>Who answered at a managed server's address instead of that server.</summary>
+/// <param name="ServerId">Its install identity, when it gave one.</param>
+/// <param name="Name">What it calls itself, when it said.</param>
+/// <param name="IsThisDevice">The address now reaches this device itself: its own server, or one of its relays.</param>
+public sealed record ManagedServerAnswerView(string? ServerId, string? Name, bool IsThisDevice);
 
 /// <summary>Where one of a managed server's library paths is on this machine.</summary>
 public sealed record ManagedServerPathMapping(string ServerPath, string LocalPath);
@@ -82,7 +96,12 @@ public sealed record ManagedServerPathMapping(string ServerPath, string LocalPat
 /// means anybody on its network can manage it without pairing; the UI warns and changes nothing.
 /// </param>
 /// <param name="AppVersion">The server's version when last probed.</param>
-/// <param name="ImportedFromLegacyClient">Brought over from the retired thin client rather than paired here.</param>
+/// <param name="ImportedFromLegacyClient">Brought over from the removed thin client rather than paired here.</param>
+/// <param name="AnsweredBy">
+/// Set only while <paramref name="State"/> is <see cref="ManagedServerState.WrongServer"/>:
+/// who answers at <paramref name="Address"/> instead. Never used as this server's name, mode
+/// or version, which stay as they were last seen.
+/// </param>
 public sealed record ManagedServerView(
     string ServerId,
     string? Name,
@@ -93,7 +112,8 @@ public sealed record ManagedServerView(
     ManagedServerState State,
     RemoteAccessMode? Mode,
     string? AppVersion,
-    bool ImportedFromLegacyClient);
+    bool ImportedFromLegacyClient,
+    ManagedServerAnswerView? AnsweredBy = null);
 
 /// <summary>A management request this device filed, and where waiting on it has got to.</summary>
 /// <param name="Outcome">
@@ -142,7 +162,7 @@ public sealed record ManagedServerPairingView(
 /// <param name="Url">A loopback relay URL carrying a single-use navigation token, or this device's own origin.</param>
 public sealed record ManagedServerOpenView(string Url);
 
-/// <summary>What importing the retired thin client's pairings did.</summary>
+/// <summary>What importing the removed thin client's pairings did.</summary>
 /// <param name="Found">Whether a thin-client installation with pairings exists on this machine.</param>
 /// <param name="Imported">Servers added; ones already managed here are left as they are.</param>
 public sealed record ManagedServerImportView(bool Found, int Imported, int Skipped);

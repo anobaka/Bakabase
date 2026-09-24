@@ -65,6 +65,14 @@ export interface ManagedServerPathMapping {
   localPath: string;
 }
 
+/** Who answers at a managed server's address instead of that server. */
+export interface ManagedServerAnswer {
+  serverId?: string | null;
+  name?: string | null;
+  /** The address now reaches this computer itself. */
+  isThisDevice: boolean;
+}
+
 /** A server this device can switch its window to. Never carries the key. */
 export interface ManagedServer {
   serverId: string;
@@ -78,6 +86,11 @@ export interface ManagedServer {
   mode?: RemoteAccessMode | null;
   appVersion?: string | null;
   importedFromLegacyClient: boolean;
+  /**
+   * Set while {@link state} is `WrongServer`: who answers at {@link address} instead. This
+   * computer sends it nothing, and nothing it says is shown as this server's.
+   */
+  answeredBy?: ManagedServerAnswer | null;
 }
 
 /**
@@ -148,7 +161,7 @@ export interface ManagedServerDiscovery {
 }
 
 export interface ManagedServerImport {
-  /** Whether a Bakabase Client installation with pairings exists on this machine. */
+  /** Whether an old Bakabase Client installation with pairings exists on this machine. */
   found: boolean;
   imported: number;
   skipped: number;

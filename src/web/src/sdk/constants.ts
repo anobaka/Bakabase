@@ -2545,24 +2545,6 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.Any]: 'Any'
 };
 
-export enum LocalFileSaveOutcome {
-  Unavailable = 0,
-  Cancelled = 1,
-  Saved = 2
-}
-
-export const localFileSaveOutcomes = [
-  { label: 'Unavailable', value: LocalFileSaveOutcome.Unavailable },
-  { label: 'Cancelled', value: LocalFileSaveOutcome.Cancelled },
-  { label: 'Saved', value: LocalFileSaveOutcome.Saved }
-] as const;
-
-export const LocalFileSaveOutcomeLabel: Record<LocalFileSaveOutcome, string> = {
-  [LocalFileSaveOutcome.Unavailable]: 'Unavailable',
-  [LocalFileSaveOutcome.Cancelled]: 'Cancelled',
-  [LocalFileSaveOutcome.Saved]: 'Saved'
-};
-
 export enum AdditionalCoverDiscoveringSource {
   CompressedFile = 1,
   Video = 2
@@ -4391,21 +4373,24 @@ export enum ManagedServerState {
   Unknown = 0,
   Online = 1,
   Offline = 2,
-  Revoked = 3
+  Revoked = 3,
+  WrongServer = 4
 }
 
 export const managedServerStates = [
   { label: 'Unknown', value: ManagedServerState.Unknown },
   { label: 'Online', value: ManagedServerState.Online },
   { label: 'Offline', value: ManagedServerState.Offline },
-  { label: 'Revoked', value: ManagedServerState.Revoked }
+  { label: 'Revoked', value: ManagedServerState.Revoked },
+  { label: 'WrongServer', value: ManagedServerState.WrongServer }
 ] as const;
 
 export const ManagedServerStateLabel: Record<ManagedServerState, string> = {
   [ManagedServerState.Unknown]: 'Unknown',
   [ManagedServerState.Online]: 'Online',
   [ManagedServerState.Offline]: 'Offline',
-  [ManagedServerState.Revoked]: 'Revoked'
+  [ManagedServerState.Revoked]: 'Revoked',
+  [ManagedServerState.WrongServer]: 'WrongServer'
 };
 
 export enum PairingFailure {
@@ -5629,73 +5614,14 @@ export const CompressedFileDetectionResultStatusLabel: Record<CompressedFileDete
   [CompressedFileDetectionResultStatus.Error]: 'Error'
 };
 
-export enum ClientPairingOutcome {
-  Paired = 0,
-  Unreachable = 1,
-  CodeRejected = 2,
-  AwaitingApproval = 3,
-  RequestRejected = 4,
-  TooManyAttempts = 5,
-  PairingUnsupported = 6
-}
-
-export const clientPairingOutcomes = [
-  { label: 'Paired', value: ClientPairingOutcome.Paired },
-  { label: 'Unreachable', value: ClientPairingOutcome.Unreachable },
-  { label: 'CodeRejected', value: ClientPairingOutcome.CodeRejected },
-  { label: 'AwaitingApproval', value: ClientPairingOutcome.AwaitingApproval },
-  { label: 'RequestRejected', value: ClientPairingOutcome.RequestRejected },
-  { label: 'TooManyAttempts', value: ClientPairingOutcome.TooManyAttempts },
-  { label: 'PairingUnsupported', value: ClientPairingOutcome.PairingUnsupported }
-] as const;
-
-export const ClientPairingOutcomeLabel: Record<ClientPairingOutcome, string> = {
-  [ClientPairingOutcome.Paired]: 'Paired',
-  [ClientPairingOutcome.Unreachable]: 'Unreachable',
-  [ClientPairingOutcome.CodeRejected]: 'CodeRejected',
-  [ClientPairingOutcome.AwaitingApproval]: 'AwaitingApproval',
-  [ClientPairingOutcome.RequestRejected]: 'RequestRejected',
-  [ClientPairingOutcome.TooManyAttempts]: 'TooManyAttempts',
-  [ClientPairingOutcome.PairingUnsupported]: 'PairingUnsupported'
-};
-
-export enum ServerHandshakeOutcome {
-  Ok = 0,
-  Unreachable = 1,
-  NotBakabase = 2,
-  ClientTooOld = 3,
-  ServerTooOld = 4,
-  RemoteAccessDisabled = 5,
-  SelfAddress = 6
-}
-
-export const serverHandshakeOutcomes = [
-  { label: 'Ok', value: ServerHandshakeOutcome.Ok },
-  { label: 'Unreachable', value: ServerHandshakeOutcome.Unreachable },
-  { label: 'NotBakabase', value: ServerHandshakeOutcome.NotBakabase },
-  { label: 'ClientTooOld', value: ServerHandshakeOutcome.ClientTooOld },
-  { label: 'ServerTooOld', value: ServerHandshakeOutcome.ServerTooOld },
-  { label: 'RemoteAccessDisabled', value: ServerHandshakeOutcome.RemoteAccessDisabled },
-  { label: 'SelfAddress', value: ServerHandshakeOutcome.SelfAddress }
-] as const;
-
-export const ServerHandshakeOutcomeLabel: Record<ServerHandshakeOutcome, string> = {
-  [ServerHandshakeOutcome.Ok]: 'Ok',
-  [ServerHandshakeOutcome.Unreachable]: 'Unreachable',
-  [ServerHandshakeOutcome.NotBakabase]: 'NotBakabase',
-  [ServerHandshakeOutcome.ClientTooOld]: 'ClientTooOld',
-  [ServerHandshakeOutcome.ServerTooOld]: 'ServerTooOld',
-  [ServerHandshakeOutcome.RemoteAccessDisabled]: 'RemoteAccessDisabled',
-  [ServerHandshakeOutcome.SelfAddress]: 'SelfAddress'
-};
-
 export enum ClientForwardingFailure {
   None = 0,
   NotConnected = 1,
   ServerUnreachable = 2,
   ForeignCaller = 3,
   NeedsNewerClient = 4,
-  PathNotMapped = 5
+  PathNotMapped = 5,
+  WrongServer = 6
 }
 
 export const clientForwardingFailures = [
@@ -5704,7 +5630,8 @@ export const clientForwardingFailures = [
   { label: 'ServerUnreachable', value: ClientForwardingFailure.ServerUnreachable },
   { label: 'ForeignCaller', value: ClientForwardingFailure.ForeignCaller },
   { label: 'NeedsNewerClient', value: ClientForwardingFailure.NeedsNewerClient },
-  { label: 'PathNotMapped', value: ClientForwardingFailure.PathNotMapped }
+  { label: 'PathNotMapped', value: ClientForwardingFailure.PathNotMapped },
+  { label: 'WrongServer', value: ClientForwardingFailure.WrongServer }
 ] as const;
 
 export const ClientForwardingFailureLabel: Record<ClientForwardingFailure, string> = {
@@ -5713,7 +5640,8 @@ export const ClientForwardingFailureLabel: Record<ClientForwardingFailure, strin
   [ClientForwardingFailure.ServerUnreachable]: 'ServerUnreachable',
   [ClientForwardingFailure.ForeignCaller]: 'ForeignCaller',
   [ClientForwardingFailure.NeedsNewerClient]: 'NeedsNewerClient',
-  [ClientForwardingFailure.PathNotMapped]: 'PathNotMapped'
+  [ClientForwardingFailure.PathNotMapped]: 'PathNotMapped',
+  [ClientForwardingFailure.WrongServer]: 'WrongServer'
 };
 
 export const ExtensionMediaTypes: Record<string, MediaType> = {

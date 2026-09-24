@@ -15,7 +15,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests.RemoteAccess.Console;
 
 /// <summary>
-/// What a relay's own container is made of: the thin client's relay core, with this app's
+/// What a relay's own container is made of: the relay core, with this app's
 /// windows and logging, and one server's credentials — never the list, never the app's
 /// container.
 /// </summary>

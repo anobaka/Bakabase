@@ -429,9 +429,9 @@ const RemoteAccess: React.FC<RemoteAccessProps> = ({ query }) => {
       items={items}
       keywords={["remote", "lan", "远程", "局域网"]}
       query={query}
-      // Whose remote access this is. In a thin client every switch here is
-      // forwarded — "only this machine" means the machine holding the library, not
-      // the one the window is open on.
+      // Whose remote access this is. For a managed server shown in this window every
+      // switch here is forwarded — "only this machine" means the machine holding the
+      // library, not the one the window is open on.
       title={t(
         isPureClient
           ? "configuration.remoteAccess.title.server"

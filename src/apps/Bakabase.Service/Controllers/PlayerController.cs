@@ -25,8 +25,8 @@ namespace Bakabase.Service.Controllers
         /// players their profiles configure.
         /// </summary>
         /// <remarks>
-        /// Read by the thin client, which runs the same batch-play orchestration against
-        /// its own installed players and its own filesystem. It is deliberately data
+        /// Read by the desktop app's relay for a server it manages, which runs the same
+        /// batch-play orchestration against its own installed players and its own filesystem. It is deliberately data
         /// only — nothing here starts, opens or writes anything.
         /// </remarks>
         [SwaggerOperation(OperationId = "GetBatchPlayResourceSnapshot")]

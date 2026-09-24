@@ -1,30 +1,35 @@
-import { useCallback, useEffect, useState } from "react";
+import type { StartupSurfaceId } from "@/components/Startup/startupQueue";
+
+import { useCallback, useState } from "react";
+
+import { useStartupSurface } from "@/components/Startup/startupQueue";
+
+const isCompleted = (storageKey: string) => {
+  if (typeof localStorage === "undefined") return true;
+
+  try {
+    return !!localStorage.getItem(storageKey);
+  } catch {
+    // Storage unavailable — treat as completed to avoid nagging.
+    return true;
+  }
+};
 
 /**
  * Opens the help center automatically the first time a user visits a screen
  * that a topic covers. Completion is remembered per storage key.
+ *
+ * It takes its place in the startup order as `surface` (see `startupQueue`), so it never
+ * opens over another dialog the app opened by itself — the dashboard's welcome goes first,
+ * a page's own guide last.
+ *
+ * `deferRest` is for a host whose guide sends the reader to a page (`HelpCenterModal`'s
+ * `onNavigate`): call it before completing, so nothing waiting after this guide opens over
+ * the page the reader went to.
  */
-export const useFirstRunHelp = (storageKey: string) => {
-  const [showFirstRun, setShowFirstRun] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof localStorage === "undefined") {
-      return;
-    }
-
-    let completed: string | null = null;
-
-    try {
-      completed = localStorage.getItem(storageKey);
-    } catch {
-      // Storage unavailable — treat as completed to avoid nagging.
-      completed = "true";
-    }
-
-    if (!completed) {
-      setShowFirstRun(true);
-    }
-  }, [storageKey]);
+export const useFirstRunHelp = (storageKey: string, surface: StartupSurfaceId = "pageGuide") => {
+  const [pending, setPending] = useState(() => !isCompleted(storageKey));
+  const { isTurn, deferRest } = useStartupSurface(surface, pending ? "ready" : "idle");
 
   const completeFirstRun = useCallback(() => {
     try {
@@ -32,12 +37,13 @@ export const useFirstRunHelp = (storageKey: string) => {
     } catch {
       // Ignore storage failures; the guide simply reappears next time.
     }
-    setShowFirstRun(false);
+    setPending(false);
   }, [storageKey]);
 
   return {
-    showFirstRun,
+    showFirstRun: pending && isTurn,
     completeFirstRun,
+    deferRest,
   };
 };
 

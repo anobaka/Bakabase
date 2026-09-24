@@ -206,7 +206,7 @@ public sealed class UpstreamApi(HttpClient http, IUpstreamTarget target) : IUpst
     private Uri RootOrThrow() =>
         Uri.TryCreate(target.BaseAddress, UriKind.Absolute, out var root)
             ? root
-            : throw new InvalidOperationException("This client is not connected to a server.");
+            : throw new InvalidOperationException("This relay has no server: this computer no longer manages it.");
 
     private static StringContent JsonContent(object body) =>
         new(JsonSerializer.Serialize(body), System.Text.Encoding.UTF8, "application/json");

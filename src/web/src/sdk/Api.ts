@@ -2474,6 +2474,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptions {
   hideResourceCovers: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
   latestUsedProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
+  notices: BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions;
 }
 
 export interface BakabaseInsideWorldModelsConfigsUIOptionsCustomContextMenuItem {
@@ -2511,6 +2512,11 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutCo
   gap: number;
   blocks: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailBlock[];
   hidden: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailBlock[];
+}
+
+export interface BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions {
+  readIds: string[];
+  baselinePending: boolean;
 }
 
 export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
@@ -4876,6 +4882,12 @@ export interface BakabaseModulesPropertyModelsViewPropertyViewModel {
   order: number;
 }
 
+export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerAnswerView {
+  serverId?: string;
+  name?: string;
+  isThisDevice: boolean;
+}
+
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerCandidateView {
   serverId: string;
   name: string;
@@ -4959,10 +4971,10 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerProbe
 }
 
 /**
- * [0: Unknown, 1: Online, 2: Offline, 3: Revoked]
+ * [0: Unknown, 1: Online, 2: Offline, 3: Revoked, 4: WrongServer]
  * @format int32
  */
-export type BakabaseModulesRemoteAccessAbstractionsModelsManagedServerState = 0 | 1 | 2 | 3;
+export type BakabaseModulesRemoteAccessAbstractionsModelsManagedServerState = 0 | 1 | 2 | 3 | 4;
 
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerView {
   serverId: string;
@@ -4973,12 +4985,13 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerView 
   /** @format date-time */
   lastConnectedAt?: string;
   pathMappings: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPathMapping[];
-  /** [0: Unknown, 1: Online, 2: Offline, 3: Revoked] */
+  /** [0: Unknown, 1: Online, 2: Offline, 3: Revoked, 4: WrongServer] */
   state: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerState;
   /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
   mode?: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
   appVersion?: string;
   importedFromLegacyClient: boolean;
+  answeredBy?: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerAnswerView;
 }
 
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView {
@@ -6193,24 +6206,6 @@ export interface BakabaseServiceModelsViewChangelogViewModel {
   htmlUrl?: string;
 }
 
-export interface BakabaseServiceModelsViewClientAppDownloadFileViewModel {
-  name: string;
-  platform: string;
-  shape: string;
-  /** @format int64 */
-  size: number;
-  githubUrl?: string;
-  cdnUrl?: string;
-}
-
-export interface BakabaseServiceModelsViewClientAppDownloadsViewModel {
-  version: string;
-  /** @format date-time */
-  publishedAt?: string;
-  releaseUrl?: string;
-  files: BakabaseServiceModelsViewClientAppDownloadFileViewModel[];
-}
-
 export interface BakabaseServiceModelsViewComparisonPlanViewModel {
   /** @format int32 */
   id: number;
@@ -6470,7 +6465,6 @@ export interface BakabaseServiceModelsViewMobileAppDownloadsViewModel {
 
 export interface BakabaseServiceModelsViewOtherDeviceDownloadsViewModel {
   mobile?: BakabaseServiceModelsViewMobileAppDownloadsViewModel;
-  desktopClient?: BakabaseServiceModelsViewClientAppDownloadsViewModel;
 }
 
 export interface BakabaseServiceModelsViewPropertyTypeForManuallySettingValueViewModel {
@@ -7912,6 +7906,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsConfigsThirdPartyOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptions {
@@ -9529,8 +9530,8 @@ export class HttpClient<SecurityDataType = unknown> {
       }
     }
 
-    // A refusal from the thin client's own forwarding layer rather than from the
-    // server: no local path mapping, an action this build cannot run yet, and so on.
+    // A refusal from the desktop app's relay rather than from the server it shows: no
+    // local path mapping, an action this build cannot run yet, and so on.
     // Recognised in one place because any endpoint that touches a path can return it,
     // and "GET /tool/open failed" describes none of them.
     if (reportClientFailure(response, error)) {
@@ -22244,6 +22245,68 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addLatestUsedPropertyUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui/latest-used-property`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name MarkNoticesRead
+     * @request POST:/options/ui/notices/read
+     */
+    markNoticesRead: (data: string[], params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions,
+        any
+      >({
+        path: `/options/ui/notices/read`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for markNoticesRead
+     * @name markNoticesReadUrl
+     */
+    markNoticesReadUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/ui/notices/read`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name CaptureNoticeBaseline
+     * @request POST:/options/ui/notices/baseline
+     */
+    captureNoticeBaseline: (data: string[], params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptionsUINoticeOptions,
+        any
+      >({
+        path: `/options/ui/notices/baseline`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for captureNoticeBaseline
+     * @name captureNoticeBaselineUrl
+     */
+    captureNoticeBaselineUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/ui/notices/baseline`;
 
       return baseUrl + path;
     },

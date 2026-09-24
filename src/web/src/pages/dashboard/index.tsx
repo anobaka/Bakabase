@@ -95,7 +95,19 @@ const shortcuts = [
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { showFirstRun, completeFirstRun } = useFirstRunHelp(GETTING_STARTED_FIRST_RUN_KEY);
+  const { showFirstRun, completeFirstRun, deferRest } = useFirstRunHelp(
+    GETTING_STARTED_FIRST_RUN_KEY,
+    "gettingStarted",
+  );
+  /**
+   * A link out of the welcome: the reader went to a page, so what waits after the welcome
+   * (notices, release notes) waits for the next launch instead of opening over it.
+   */
+  const leaveWelcomeFor = (path: string) => {
+    deferRest();
+    completeFirstRun();
+    navigate(path);
+  };
   const [refreshKey, setRefreshKey] = useState(0);
   const [keyword, setKeyword] = useState("");
   const { data, loading, error, updatedAt } = useDashboardOverview(refreshKey);
@@ -324,6 +336,7 @@ export default function DashboardPage() {
         topic="gettingStarted"
         visible={showFirstRun}
         onClose={completeFirstRun}
+        onNavigate={leaveWelcomeFor}
       />
       <DataMigrationHintModal />
     </div>

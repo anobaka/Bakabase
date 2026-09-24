@@ -17,14 +17,15 @@ interface DependencyProps {
   query?: string;
 }
 
-/// The one component a thin client uses itself rather than through the server.
+/// The one component the desktop app uses itself when showing a server it manages.
 const LocaleEmulatorId = "locale-emulator-component-service";
 
 const Dependency: React.FC<DependencyProps> = ({ query }) => {
   const { t } = useTranslation();
   const componentContexts = useDependentComponentContextsStore((state) => state.contexts);
-  // These are installed by the machine that uses them. In a thin client that is the
-  // server for all but one of them, and the install button here installs there.
+  // These are installed by the machine that uses them. For a managed server shown in
+  // this window that is the server for all but one of them, and the install button
+  // here installs there.
   const isPureClient = useIsPureClient();
 
   const items: SettingItem[] = componentContexts.map((c, i) => ({

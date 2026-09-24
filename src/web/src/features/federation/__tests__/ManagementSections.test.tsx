@@ -205,6 +205,44 @@ describe("devices this one manages", () => {
     expect(managedServerApi.pair).not.toHaveBeenCalled();
   });
 
+  it("says who answers at a server's address instead, and never offers to pair with it there", async () => {
+    listing = view({
+      servers: [
+        server({
+          state: ManagedServerState.WrongServer,
+          answeredBy: { serverId: "studio", name: "Studio", isThisDevice: false },
+        }),
+        server({
+          serverId: "desk",
+          name: "Desk",
+          address: "http://127.0.0.1:34570",
+          state: ManagedServerState.WrongServer,
+          answeredBy: { serverId: "this-device", name: "This Mac", isThisDevice: true },
+        }),
+      ],
+    });
+    await renderServers();
+    const nas = await screen.findByRole("article", { name: "NAS" });
+
+    expect(
+      within(nas).getByText(`federation.servers.state.${ManagedServerState.WrongServer}`),
+    ).toBeInTheDocument();
+    // Names the address and who answers there, and points at finding the server where it
+    // went — the address is not this server's any more, so nothing here pairs with it.
+    expect(within(nas).getByTestId("managed-server-wrong-server")).toHaveTextContent(
+      "federation.servers.wrongServerTip NAS http://192.168.1.5:34567 Studio federation.servers.add.discover",
+    );
+    expect(within(nas).queryByText(/revokedTip/)).not.toBeInTheDocument();
+
+    const desk = screen.getByRole("article", { name: "Desk" });
+
+    expect(within(desk).getByTestId("managed-server-wrong-server")).toHaveTextContent(
+      "federation.servers.wrongServerThisDeviceTip Desk http://127.0.0.1:34570 federation.servers.add.discover",
+    );
+    expect(managedServerApi.pair).not.toHaveBeenCalled();
+    expect(managedServerApi.forget).not.toHaveBeenCalled();
+  });
+
   it("pairs with a code and shows the new server", async () => {
     vi.mocked(managedServerApi.pair).mockImplementation(async () => {
       listing = view({ servers: [server()] });
@@ -999,7 +1037,6 @@ describe("multi-device pages inside the console", () => {
     );
     expect(screen.queryByText("page")).not.toBeInTheDocument();
     expect(screen.getByText("federation.console.localOnly")).toBeInTheDocument();
-    expect(screen.queryByText("federation.migration.intro")).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("federation.console.switchToThisDevice"));
     await waitFor(() =>
       expect(assign).toHaveBeenCalledWith("http://localhost:34567/#/federation/devices"),
@@ -1007,7 +1044,7 @@ describe("multi-device pages inside the console", () => {
     expect(clientApi.switcher.open).toHaveBeenCalledWith("local");
   });
 
-  it("still tells the retired client about the desktop app", () => {
+  it("points back to this computer before the relay has said it is the console", () => {
     store.state = { initialized: true, isLocal: false, clientMode: ClientMode.PureClient };
     store.pureClient = true;
     render(
@@ -1017,7 +1054,22 @@ describe("multi-device pages inside the console", () => {
         </FederationAccess>
       </MemoryRouter>,
     );
-    expect(screen.getByText("federation.migration.intro")).toBeInTheDocument();
-    expect(screen.getByText("federation.migration.automatic")).toBeInTheDocument();
+    expect(screen.queryByText("page")).not.toBeInTheDocument();
+    expect(screen.getByText("federation.console.localOnly")).toBeInTheDocument();
+  });
+
+  it("tells a browser on another device where these pages live", () => {
+    store.state = { initialized: true, isLocal: false, clientMode: ClientMode.RemoteBrowser };
+    store.pureClient = false;
+    render(
+      <MemoryRouter>
+        <FederationAccess>
+          <p>page</p>
+        </FederationAccess>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText("page")).not.toBeInTheDocument();
+    expect(screen.getByText("federation.localOnly")).toBeInTheDocument();
+    expect(screen.queryByText("federation.console.localOnly")).not.toBeInTheDocument();
   });
 });

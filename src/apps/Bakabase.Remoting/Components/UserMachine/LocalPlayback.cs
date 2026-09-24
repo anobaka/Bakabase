@@ -110,9 +110,9 @@ public sealed class LocalPlayback(
             if (installed == null)
             {
                 await UserMachineResponse.WriteAsync(context, HttpStatusCode.NotImplemented,
-                    $"'{serverPath}' is not on this machine, so it would have to be streamed — and no player " +
-                    "this client can recognise is installed here to stream it into. Either map that library " +
-                    "to a local path in the client's settings, or install one of " +
+                    $"'{serverPath}' is not on this computer, so it would have to be streamed — and no player " +
+                    "Bakabase can recognise is installed here to stream it into. Either map that library " +
+                    "to a folder on this computer under This computer → Path mapping, or install one of " +
                     $"{string.Join(", ", KnownPlayerDefinitions.All.Select(d => d.DisplayName))}.");
 
                 return false;
@@ -182,7 +182,7 @@ public sealed class LocalPlayback(
     private static async Task<bool> UnsupportedAsync(HttpContext context, DataOrigin origin)
     {
         await UserMachineResponse.WriteAsync(context, HttpStatusCode.NotImplemented,
-            $"This client does not know how to play a {origin} item yet.");
+            $"Bakabase on this computer does not know how to play a {origin} item yet.");
 
         return false;
     }

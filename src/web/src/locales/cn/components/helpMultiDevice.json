@@ -124,7 +124,7 @@
   "helpCenter.multiDevice.setup.unrestricted": "NAS 或 Docker 服务器默认处于“无限制”模式：同一网络中的任何人无需配对即可管理它。Bakabase 会为这类设备显示警告，但绝不会替你修改设置。请切换过去，在它的“配置”页面中修改“远程访问”下的“其他设备访问”。",
   "helpCenter.multiDevice.setup.nas": "NAS 或 Docker 服务器没有窗口，也没有“设备与分享”页面。用环境变量 BAKABASE_FEDERATION_SHARING=true 或容器内的 federation 命令开启分享；它的配对码和待批准请求在它自己界面的“配置 → 远程访问”中，用浏览器打开它的地址即可。",
   "helpCenter.multiDevice.setup.codes": "分享码和配对码是两回事：分享码只允许读取资源库，配对码授予完全控制权。请在页面中各自对应的区域使用。",
-  "helpCenter.multiDevice.setup.thinClient": "以前用过 Bakabase Client？它已停止维护。桌面端首次启动时会自动导入 Bakabase Client 已配对的服务器（包括密钥和路径映射），无需重新配对。之后也可以随时在“可管理的设备”中点击“从 Bakabase Client 导入”再次导入。",
+  "helpCenter.multiDevice.setup.thinClient": "以前用过 Bakabase Client？它已被移除，由桌面端取代。桌面端首次启动时会自动导入 Bakabase Client 已配对的服务器（包括密钥和路径映射），无需重新配对。之后也可以随时在“可管理的设备”中点击“从 Bakabase Client 导入”再次导入。",
   "helpCenter.multiDevice.concept.sharing.name": "只读分享",
   "helpCenter.multiDevice.concept.sharing.short": "设备如何允许其他设备读取它的资源库——仅此而已。",
   "helpCenter.multiDevice.concept.sharing.long": "设备只有在开启分享后才会分享资源库，并且只分享给它授权的设备：使用它生成的一次性配对码，或在它的通知中心、“设备与分享”页面批准请求。\n访问是有方向的：你能读取 NAS，不代表 NAS 能读取你，也不会传递给第三台设备。连接时默认勾选的“同时允许对方设备读取我的库”会在同一步中建立反向授权，因此一次批准即可双向互通。\n分享永远不允许修改：被分享的设备可以搜索、查看和播放，但不能编辑或删除任何内容。",
@@ -147,8 +147,8 @@
   "helpCenter.multiDevice.concept.remoteAccess.table.value.none": "无法访问",
   "helpCenter.multiDevice.concept.remoteAccess.table.value.browse": "浏览和播放",
   "helpCenter.multiDevice.concept.remoteAccess.table.value.full": "完全控制",
-  "helpCenter.multiDevice.concept.thinClient.name": "Bakabase Client（已停止维护）",
+  "helpCenter.multiDevice.concept.thinClient.name": "Bakabase Client（已移除）",
   "helpCenter.multiDevice.concept.thinClient.short": "旧的远程控制程序，已由桌面端的设备切换取代。",
-  "helpCenter.multiDevice.concept.thinClient.long": "过去要控制另一台机器上的服务器，需要使用 Bakabase Client。现在桌面端在运行自己的服务器的同时，也能把窗口切换到那台服务器来完成同样的事，因此 Bakabase Client 已停止维护，它的连接页面会提示你安装桌面端。\n桌面端首次启动时，会读取本机 Bakabase Client 已配对的服务器（包括密钥和路径映射），并加入“可管理的设备”，无需重新配对。本机已在管理的设备保持不变，Bakabase Client 自己的文件也不会被修改。",
+  "helpCenter.multiDevice.concept.thinClient.long": "过去要控制另一台机器上的服务器，需要使用 Bakabase Client。现在桌面端在运行自己的服务器的同时，也能把窗口切换到那台服务器来完成同样的事，因此 Bakabase Client 已被移除。\n桌面端首次启动时，会读取本机 Bakabase Client 已配对的服务器（包括密钥和路径映射），并加入“可管理的设备”，无需重新配对。本机已在管理的设备保持不变，Bakabase Client 自己的文件也不会被修改。",
   "helpCenter.multiDevice.concept.thinClient.example": "先装了桌面端，或之后又在 Bakabase Client 中配对了服务器？在“可管理的设备”中点击“从 Bakabase Client 导入”即可再次导入。"
 }

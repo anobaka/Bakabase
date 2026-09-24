@@ -2,7 +2,7 @@
 
 import type { BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo } from "@/sdk/Api";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   CloseOutlined,
@@ -18,8 +18,7 @@ import { useChangelogModal } from "@/components/Changelog";
 import BApi from "@/sdk/BApi";
 import { UpdaterStatus } from "@/sdk/constants";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
-import { clientApi } from "@/core/clientApi";
-import { useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
+import { useIsPureClient } from "@/stores/remoteAccess";
 
 export type AppUpdateBannerViewState =
   | { kind: "checking" }
@@ -228,25 +227,16 @@ interface Props {
 }
 
 /**
- * The sidebar's update banner, which in a thin client is about the client.
+ * The sidebar's update banner: the desktop app updating itself.
  *
- * The two flavours ask different questions of different programs, so they are two
- * components rather than one with branches: the all-in-one's path below is exactly what
- * it has always been, down to the auto-start, and nothing about it is now conditional on
- * a store that only a client populates.
+ * Not in the desktop app's console (a managed server shown in this device's window):
+ * there `BApi.updater` is forwarded, and would update the managed server behind the
+ * user's back — and the app's own updater lives in the app's own window, not here.
  */
 const AppUpdateBanner: React.FC<Props> = ({ collapsed }) => {
   const isPureClient = useIsPureClient();
-  const clientHost = useRemoteAccessStore((state) => state.clientHost);
 
-  if (!isPureClient) {
-    return <ServerUpdateBanner collapsed={collapsed} />;
-  }
-
-  // Nothing until the PureClient says which program it is. In the desktop app's console
-  // neither banner is right: `BApi.updater` would update the managed server behind the
-  // user's back, and the app's own updater lives in the app's own window, not here.
-  return clientHost === "legacy" ? <ClientUpdateBanner collapsed={collapsed} /> : null;
+  return isPureClient ? null : <ServerUpdateBanner collapsed={collapsed} />;
 };
 
 const ServerUpdateBanner: React.FC<Props> = ({ collapsed }) => {
@@ -330,109 +320,6 @@ const ServerUpdateBanner: React.FC<Props> = ({ collapsed }) => {
               })
           : undefined
       }
-    />
-  );
-};
-
-/** While the client is downloading, how often its progress is re-read. */
-const CLIENT_POLL_INTERVAL = 1500;
-
-/**
- * The same banner, for the program the window belongs to.
- *
- * `BApi.updater.*` is forwarded, so in a thin client every call on it is about the server
- * — including the auto-start above, which would have this window quietly update someone
- * else's machine the moment it opened. The server's own new version is not silently
- * dropped: it is reported on the connection page, where the decision to update the
- * machine holding the library belongs.
- */
-const ClientUpdateBanner: React.FC<Props> = ({ collapsed }) => {
-  const [checking, setChecking] = useState(true);
-  const [version, setVersion] = useState<string>();
-  const [status, setStatus] = useState<UpdaterStatus>();
-  const [percentage, setPercentage] = useState<number>();
-  const [error, setError] = useState<string>();
-  const [dismissed, setDismissed] = useState(false);
-  const autoStartedRef = useRef(false);
-
-  // The server pushes its updater state over SignalR. The client has no channel into this
-  // window, so its progress is polled — and only while it is actually downloading.
-  const readState = useCallback(async () => {
-    try {
-      const state = await clientApi.updater.state();
-
-      setStatus(state.status);
-      setPercentage(state.percentage);
-      setError(state.error);
-    } catch {
-      // Nothing to say; the banner keeps showing what it last knew.
-    }
-  }, []);
-
-  useEffect(() => {
-    clientApi.updater
-      .newVersion()
-      .then((v) => setVersion(v?.version ?? undefined))
-      .catch(() => {})
-      .finally(() => setChecking(false));
-    readState();
-  }, [readState]);
-
-  useEffect(() => {
-    if (status !== UpdaterStatus.Running) {
-      return;
-    }
-
-    const timer = setInterval(readState, CLIENT_POLL_INTERVAL);
-
-    return () => clearInterval(timer);
-  }, [status, readState]);
-
-  useEffect(() => {
-    if (autoStartedRef.current || !version) {
-      return;
-    }
-
-    const busy =
-      status === UpdaterStatus.Running ||
-      status === UpdaterStatus.PendingRestart ||
-      status === UpdaterStatus.Failed;
-
-    if (busy) {
-      return;
-    }
-
-    autoStartedRef.current = true;
-    clientApi.updater
-      .start()
-      .then((state) => setStatus(state.status))
-      .catch(() => {});
-  }, [version, status]);
-
-  let viewState: AppUpdateBannerViewState;
-
-  if (checking) {
-    viewState = { kind: "checking" };
-  } else if (status === UpdaterStatus.PendingRestart) {
-    viewState = { kind: "pendingRestart" };
-  } else if (status === UpdaterStatus.Failed) {
-    viewState = dismissed ? { kind: "hidden" } : { kind: "failed", error };
-  } else if (status === UpdaterStatus.Running || (version && status !== UpdaterStatus.UpToDate)) {
-    viewState = { kind: "downloading", version, percentage };
-  } else {
-    viewState = { kind: "hidden" };
-  }
-
-  return (
-    <AppUpdateBannerView
-      collapsed={collapsed}
-      state={viewState}
-      onDismiss={() => setDismissed(true)}
-      onRestart={() => clientApi.updater.restart()}
-      onRetry={() => {
-        setDismissed(false);
-        clientApi.updater.start().then((state) => setStatus(state.status));
-      }}
     />
   );
 };

@@ -11,7 +11,6 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Remoting.Abstractions;
 using Bakabase.Remoting.Abstractions.Models;
 using Bakabase.Remoting.Components.Connection;
-using Bakabase.Client.Remoting.Components.Forwarding;
 using Bakabase.Remoting.Components.Forwarding;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -200,7 +199,7 @@ public class ClientConnectionTests
         // loopback too, and only the port tells them apart.
         _handler.Respond = _ => Json(ServerInfo());
 
-        var result = await _connector.HandshakeAsync($"127.0.0.1:{LoopbackPortAllocator.AllInOneWindowStart}");
+        var result = await _connector.HandshakeAsync("127.0.0.1:34567");
 
         Assert.AreEqual(ServerHandshakeOutcome.Ok, result.Outcome);
         Assert.AreEqual("server-1", result.Server!.Id);

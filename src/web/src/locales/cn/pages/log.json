@@ -9,15 +9,5 @@
   "log.action.clearAll": "清除全部",
   "log.label.log": "日志",
   "log.action.expand": "展开",
-  "log.label.fullMessage": "完整消息",
-  "log.source.server": "服务端",
-  "log.source.client": "本客户端",
-  "log.client.source": "来源",
-  "log.client.directory": "日志文件",
-  "log.client.filter.lines": "行数",
-  "log.client.filter.containsPlaceholder": "要查找的内容",
-  "log.client.action.refresh": "刷新",
-  "log.client.unavailable": "无法读取本客户端的日志。",
-  "log.client.empty": "本客户端还没有写入日志文件。",
-  "log.client.noEntries": "没有匹配的日志。"
+  "log.label.fullMessage": "完整消息"
 }

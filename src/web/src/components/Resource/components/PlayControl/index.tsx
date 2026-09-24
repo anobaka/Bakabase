@@ -126,9 +126,9 @@ const DefaultVisibleFileCount = 5;
  * Ask whichever machine is meant to play this to play it.
  *
  * Through the SDK rather than a bare fetch, because the answer is no longer
- * always the server's: the thin client intercepts this endpoint, and its
- * refusals — the library is not mapped on this machine, this client build
- * cannot do it yet — arrive as ordinary error responses. A raw fetch swallowed
+ * always the server's: a managed server's relay intercepts this endpoint, and
+ * its refusals — the library is not mapped on this machine, this build cannot
+ * do it yet — arrive as ordinary error responses. A raw fetch swallowed
  * them into an opaque failure.
  */
 const playItemApi = async (resourceId: number, origin: DataOrigin, key: string) =>
@@ -244,7 +244,8 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   // Play a PlayableItem via unified PlayItem API (all sources go through resolvers)
   const playItem = async (item: PlayableItem) => {
     // The question is where a player would start, not where the files are. In
-    // the app and in the thin client it starts here, so the call goes through;
+    // the app — its own library or a server it manages — it starts here, so the
+    // call goes through;
     // in a plain browser pointed at a server it would start on the host's
     // desktop and report success to someone who cannot see it. Local files
     // stream into the page instead; the other origins (Steam, ExHentai, …) have
@@ -321,8 +322,8 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
   /** Open the resource's folder */
   const handleOpenFolder = useCallback(() => {
-    // Opening a folder happens in a file manager, and only the app and the thin
-    // client have one that belongs to the person clicking. From a plain browser
+    // Opening a folder happens in a file manager, and only the app (showing its own
+    // library or a server it manages) has one that belongs to the person clicking. From a plain browser
     // it would pop a window on someone else's screen.
     if (!userSideActionsRunHere) {
       toast.error(t<string>("resource.play.hostOnly"));

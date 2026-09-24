@@ -7,18 +7,8 @@ using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 
 namespace Bakabase.Remoting.Components.Connection;
 
-public interface IServerConnector
-{
-    /// <summary>
-    /// Asks an address what it is, and decides whether this client can talk to it.
-    /// Never throws for an unreachable or unrecognisable server — that is an answer,
-    /// not an error.
-    /// </summary>
-    Task<ServerHandshakeResult> HandshakeAsync(string baseAddress, CancellationToken ct = default);
-}
-
 /// <summary>
-/// The first thing this client does with an address.
+/// The first thing this device does with an address it is asked to manage.
 /// </summary>
 /// <remarks>
 /// Also where the clock offset comes from. Every later request carries a timestamp the
@@ -26,7 +16,7 @@ public interface IServerConnector
 /// otherwise have everything refused as expired — a failure that looks exactly like a
 /// broken pairing and sends the user to the wrong fix.
 /// </remarks>
-public sealed class ServerConnector(HttpClient http, ServerClock clock, ClientSelfAddress self) : IServerConnector
+public sealed class ServerConnector(HttpClient http, ServerClock clock, ClientSelfAddress self)
 {
     /// <summary>
     /// The oldest contract this client can talk to. Separate from
@@ -37,6 +27,11 @@ public sealed class ServerConnector(HttpClient http, ServerClock clock, ClientSe
 
     public const int MaxSupportedProtocolVersion = RemoteAccessProtocol.CurrentVersion;
 
+    /// <summary>
+    /// Asks an address what it is, and decides whether this device can talk to it.
+    /// Never throws for an unreachable or unrecognisable server — that is an answer,
+    /// not an error.
+    /// </summary>
     public async Task<ServerHandshakeResult> HandshakeAsync(string baseAddress, CancellationToken ct = default)
     {
         if (!Uri.TryCreate(Normalize(baseAddress), UriKind.Absolute, out var root) ||
@@ -47,14 +42,13 @@ public sealed class ServerConnector(HttpClient http, ServerClock clock, ClientSe
         }
 
         // Before the request rather than after it, because sending it is what makes this
-        // unrecoverable: this address answers. With no server attached it answers with
-        // the connect page, and with one attached the forwarder relays the question
+        // unrecoverable: this address answers. A relay's forwarder relays the question
         // upstream and the real server's identity comes back — a handshake that succeeds
-        // and pairs this client to itself.
+        // and pairs this device with itself.
         if (self.Matches(root))
         {
             return ServerHandshakeResult.Failed(ServerHandshakeOutcome.SelfAddress,
-                $"{root.Authority} is this client's own address.");
+                $"{root.Authority} is this computer's own address.");
         }
 
         // The clock's own source, not DateTime.UtcNow: the round trip has to be
@@ -113,14 +107,14 @@ public sealed class ServerConnector(HttpClient http, ServerClock clock, ClientSe
         if (server.ProtocolVersion > MaxSupportedProtocolVersion)
         {
             return ServerHandshakeResult.Failed(ServerHandshakeOutcome.ClientTooOld,
-                $"the server speaks protocol {server.ProtocolVersion}; this client knows up to " +
+                $"the server speaks protocol {server.ProtocolVersion}; this app knows up to " +
                 $"{MaxSupportedProtocolVersion}", server);
         }
 
         if (server.ProtocolVersion < MinSupportedProtocolVersion)
         {
             return ServerHandshakeResult.Failed(ServerHandshakeOutcome.ServerTooOld,
-                $"the server speaks protocol {server.ProtocolVersion}; this client needs at least " +
+                $"the server speaks protocol {server.ProtocolVersion}; this app needs at least " +
                 $"{MinSupportedProtocolVersion}", server);
         }
 

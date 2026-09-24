@@ -9,15 +9,5 @@
   "log.action.clearAll": "Clear all",
   "log.label.log": "Log",
   "log.action.expand": "Expand",
-  "log.label.fullMessage": "Full Message",
-  "log.source.server": "Server",
-  "log.source.client": "This client",
-  "log.client.source": "Source",
-  "log.client.directory": "Log files",
-  "log.client.filter.lines": "Lines",
-  "log.client.filter.containsPlaceholder": "Text to look for",
-  "log.client.action.refresh": "Refresh",
-  "log.client.unavailable": "Could not read this client's log.",
-  "log.client.empty": "This client has not written a log file yet.",
-  "log.client.noEntries": "No lines matched."
+  "log.label.fullMessage": "Full Message"
 }

@@ -13,7 +13,7 @@ import { asideMenuConfig } from "./menuConfig";
 
 import BetaChip from "@/components/Chips/BetaChip";
 import DeprecatedChip from "@/components/Chips/DeprecatedChip";
-import { useIsConsole, useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
+import { useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -26,7 +26,6 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const isPureClient = useIsPureClient();
-  const isConsole = useIsConsole();
   const isLocalNode =
     useRemoteAccessStore((state) => state.initialized && state.isLocal) && !isPureClient;
   // console.log(pathname);
@@ -70,24 +69,17 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
     );
   }
 
-  // Filtered here rather than where the config is built: whether this is the thin
-  // client is answered by the context call, which has not happened when that module
-  // loads.
+  // Filtered here rather than where the config is built: whether this window shows a
+  // managed server is answered by the context call, which has not happened when that
+  // module loads.
   const visibleMenuConfig = useMemo(() => {
     const visible = (m: IMenuItem) =>
-      (!m.pureClientOnly || isPureClient) &&
-      (!m.localNodeOnly || isLocalNode) &&
-      (!m.hideInConsole || !isConsole);
-    const label = (m: IMenuItem): IMenuItem =>
-      isConsole && m.nameInConsole ? { ...m, name: m.nameInConsole } : m;
+      (!m.pureClientOnly || isPureClient) && (!m.localNodeOnly || isLocalNode);
     const filter = (items: IMenuItem[]): IMenuItem[] =>
-      items
-        .filter(visible)
-        .map(label)
-        .map((m) => (m.children ? { ...m, children: filter(m.children) } : m));
+      items.filter(visible).map((m) => (m.children ? { ...m, children: filter(m.children) } : m));
 
     return filter(asideMenuConfig);
-  }, [isPureClient, isLocalNode, isConsole]);
+  }, [isPureClient, isLocalNode]);
 
   const items: MenuProps["items"] = visibleMenuConfig.map(convertItem);
 

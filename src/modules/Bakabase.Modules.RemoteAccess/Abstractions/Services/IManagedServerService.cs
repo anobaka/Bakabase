@@ -33,7 +33,7 @@ public interface IManagedServerService
     /// Looks for servers on this network that could be managed from here, for a few seconds.
     /// </summary>
     /// <remarks>
-    /// Uses the remote-access beacons, the ones the retired thin client found servers by, so a
+    /// Uses the remote-access beacons, the ones the removed thin client found servers by, so a
     /// server shows up whether or not it shares its library. Never lists this device itself.
     /// Runs only when asked: nothing probes the network on its own.
     /// </remarks>
@@ -50,8 +50,8 @@ public interface IManagedServerService
     Task<bool> CancelRequestAsync(string requestId, CancellationToken ct = default);
 
     /// <summary>
-    /// Stops managing a server: asks it to revoke this device (best effort), deletes the
-    /// key, and stops its relay.
+    /// Stops managing a server: deletes the key, stops its relay, then asks it to revoke this
+    /// device — best effort, and only if its address still answers as that server.
     /// </summary>
     Task<bool> ForgetAsync(string serverId, CancellationToken ct = default);
 
@@ -66,7 +66,7 @@ public interface IManagedServerService
     Task<ManagedServerOpenView?> OpenAsync(string serverId, string? path, CancellationToken ct = default);
 
     /// <summary>
-    /// Brings over the servers the retired thin client on this machine was paired with,
+    /// Brings over the servers the removed thin client on this machine was paired with,
     /// keys included, so nothing has to be paired again. Runs once on its own at startup;
     /// this re-runs it on request. Never overwrites a server already managed here.
     /// </summary>

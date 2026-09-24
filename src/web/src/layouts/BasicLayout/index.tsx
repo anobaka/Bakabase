@@ -7,10 +7,10 @@ import { useTranslation } from "react-i18next";
 
 import styles from "./index.module.scss";
 import PageNav from "./components/PageNav";
-import ClientTrayState from "./components/ClientTrayState";
 
 import { InitializationContentType } from "@/sdk/constants";
 import WhatsNewGate from "@/components/Changelog/WhatsNewGate";
+import NoticesGate from "@/components/Notices/NoticesGate";
 import FloatingAssistantV2 from "@/components/FloatingAssistantV2";
 import { ErrorBoundary } from "@/components/Error";
 import BApi from "@/sdk/BApi";
@@ -46,9 +46,10 @@ export default function BasicLayout({ children }: { children: React.ReactNode })
     <TourProvider steps={[]}>
       <ErrorBoundary>
         <div className={styles.insideWorld}>
+          {/* Dialogs the app opens by itself. They take the screen one at a time, in the
+              order startupQueue defines (the dashboard's welcome takes part too). */}
+          <NoticesGate />
           <WhatsNewGate />
-          {/* Renders nothing, and does nothing at all outside the thin client. */}
-          <ClientTrayState />
           <FloatingAssistantV2 />
           <PageNav />
           <div className={`${styles.main} pt-2 pb-2 pr-2`}>{children}</div>
