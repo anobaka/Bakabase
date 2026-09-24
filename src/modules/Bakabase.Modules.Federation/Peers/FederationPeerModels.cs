@@ -1,12 +1,18 @@
 using Bakabase.Modules.Federation.Identity;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 
 namespace Bakabase.Modules.Federation.Peers;
 
 public sealed record NodePathMapping(string SourceRootId, string LocalPath);
 public sealed record NodeGrantSummary(string GrantId, long Revision);
+/// <param name="Kind">
+/// What kind of install it is, as its last verified handshake said — for showing. Null until one
+/// did, and for peers too old to say.
+/// </param>
+/// <param name="Platform">What it runs on, as its last verified handshake said.</param>
 public sealed record FederationPeerView(string NodeId, string Label, string? Address, bool Enabled,
     string ConnectionState, NodeGrantSummary? OutboundGrant, NodeGrantSummary? InboundGrant,
-    IReadOnlyList<NodePathMapping> PathMappings);
+    IReadOnlyList<NodePathMapping> PathMappings, ServerKind? Kind = null, RemoteDevicePlatform? Platform = null);
 /// <param name="RemoteAddress">Where an incoming request came from; the claimed NodeId and name are unproven.</param>
 /// <param name="ReplacesExistingAccess">Approving would replace a live grant already held under this NodeId.</param>
 /// <param name="OffersReciprocalAccess">Approving also lets this device read the requester's library.</param>
@@ -31,6 +37,26 @@ public sealed record NodeInfo(string NodeId, string LibraryEpoch, string Name, i
     public string[] SupportedSorts { get; init; } = ["NameAsc", "NameDesc"];
     public string[] SupportedAssetKinds { get; init; } = ["image", "audio", "video"];
     public int MaxBatchSize { get; init; } = 200;
+
+    /// <summary>
+    /// Optional, added later, for showing only: what kind of install this is, as a word
+    /// (<see cref="ServerSelfDescriptionWords"/>) so a later kind never breaks an older reader.
+    /// Older nodes leave it out. Not covered by the handshake proof, which signs a fixed field
+    /// list; nothing is decided on it.
+    /// </summary>
+    public string? Kind { get; init; }
+
+    /// <summary>Optional, like <see cref="Kind"/>: the operating system it runs on, as a word.</summary>
+    public string? Platform { get; init; }
+
+    /// <summary>This node's info saying what it is, when the host can tell.</summary>
+    public NodeInfo DescribedBy(IServerSelfDescription? self) => self == null
+        ? this
+        : this with
+        {
+            Kind = ServerSelfDescriptionWords.Of(self.Kind),
+            Platform = ServerSelfDescriptionWords.Of(self.Platform)
+        };
 }
 
 /// <summary>
@@ -77,6 +103,9 @@ internal sealed class StoredPeer
 {
     public string NodeId { get; set; } = "";
     public string Label { get; set; } = "";
+    /// <summary>What its last verified handshake said it is; kept so an offline peer still shows it.</summary>
+    public ServerKind? Kind { get; set; }
+    public RemoteDevicePlatform? Platform { get; set; }
     public string? Address { get; set; }
     public string? LibraryEpoch { get; set; }
     public bool Enabled { get; set; } = true;

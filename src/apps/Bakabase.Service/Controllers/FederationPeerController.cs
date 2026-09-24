@@ -15,10 +15,12 @@ using Bakabase.Modules.Federation.Media;
 using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Federation.Transport;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Service.Components.Federation;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers;
@@ -274,7 +276,10 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
     public async Task<IActionResult> Info(CancellationToken ct)
     {
         var local = await identity.GetAsync(ct);
-        return FederationResult(new NodeInfo(local.NodeId, local.LibraryEpoch, local.Name, 1, timeProvider.GetUtcNow()));
+        // What this install says it is, where the host can tell: optional on the wire.
+        var self = HttpContext.RequestServices.GetService<IServerSelfDescription>();
+        return FederationResult(new NodeInfo(local.NodeId, local.LibraryEpoch, local.Name, 1, timeProvider.GetUtcNow())
+            .DescribedBy(self));
     }
 
     [HttpPost("~/federation/v1/pair/code")]

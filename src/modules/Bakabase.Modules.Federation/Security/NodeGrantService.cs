@@ -1,5 +1,6 @@
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Peers;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 
 namespace Bakabase.Modules.Federation.Security;
 
@@ -13,7 +14,7 @@ public interface INodeGrantService
 }
 
 public sealed class NodeGrantService(FederationStateStore store, INodeIdentityProvider identity,
-    GrantLeaseRegistry leases, TimeProvider timeProvider) : INodeGrantService
+    GrantLeaseRegistry leases, TimeProvider timeProvider, IServerSelfDescription? self = null) : INodeGrantService
 {
     public async Task<NodePrincipal> ValidateAsync(string grantId, string expectedLibraryEpoch,
         CancellationToken cancellationToken = default)
@@ -45,7 +46,8 @@ public sealed class NodeGrantService(FederationStateStore store, INodeIdentityPr
             throw new FederationAccessException("InvalidChallenge", 400, "The identity challenge is invalid.");
         var credentials = await GetCredentialsAsync(grantId, ct);
         var local = await identity.GetAsync(ct);
-        var info = new NodeInfo(local.NodeId, local.LibraryEpoch, local.Name, 1, timeProvider.GetUtcNow());
+        var info = new NodeInfo(local.NodeId, local.LibraryEpoch, local.Name, 1, timeProvider.GetUtcNow())
+            .DescribedBy(self);
         return new NodeHandshakeResponse(info, challenge, NodeRequestSignature.HandshakeProof(credentials.Key, info, challenge));
     }
 }

@@ -5,6 +5,7 @@ using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Federation.Transport;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Modules.Federation.Tests.Transport;
@@ -242,6 +243,95 @@ public sealed class PeerTransportTests
     }
 
     [TestMethod]
+    public async Task APeerSaysWhatKindOfInstallItIsThroughItsVerifiedHandshakeAndItIsKeptWhileOffline()
+    {
+        using var local = new Node("local", TimeSpan.Zero);
+        using var remote = new Node("remote", TimeSpan.Zero, new Says(ServerKind.Headless, RemoteDevicePlatform.Linux));
+        var handler = new ProtocolHandler(new Dictionary<string, Node> { ["remote"] = remote });
+        using var http = new HttpClient(handler);
+        var wire = new FederationHttpClient(http);
+        await new NodePairingClient(local.Store, local.Identity, wire, local.Clock, local.Leases)
+            .ConnectAsync("http://remote", await remote.InviteAsync());
+
+        // Nothing is shown before a verified handshake said it.
+        Assert.IsNull((await local.Peers.GetStatusAsync()).Peers.Single().Kind);
+
+        var session = await new PeerSessionFactory(local.Store, local.Identity, wire, local.Clock).GetAsync("remote");
+        Assert.AreEqual("headless", session.Info.Kind);
+        Assert.AreEqual("linux", session.Info.Platform);
+        var peer = (await local.Peers.GetStatusAsync()).Peers.Single();
+        Assert.AreEqual(ServerKind.Headless, peer.Kind);
+        Assert.AreEqual(RemoteDevicePlatform.Linux, peer.Platform);
+
+        // Kept with the peer, so an offline one still shows what it is after a restart.
+        var restarted = new FederationStateStore(local, local);
+        var again = await new FederationPeerService(restarted, new NodeIdentityProvider(restarted), local.Leases,
+            local.Clock).GetStatusAsync();
+        Assert.AreEqual(ServerKind.Headless, again.Peers.Single().Kind);
+        Assert.AreEqual(RemoteDevicePlatform.Linux, again.Peers.Single().Platform);
+    }
+
+    [TestMethod]
+    public async Task AnOlderPeerThatSaysNothingPairsAndVerifiesAsBeforeAndIsShownWithout()
+    {
+        using var local = new Node("local", TimeSpan.Zero);
+        using var remote = new Node("remote", TimeSpan.Zero);
+        var handler = new ProtocolHandler(new Dictionary<string, Node> { ["remote"] = remote });
+        using var http = new HttpClient(handler);
+        var wire = new FederationHttpClient(http);
+        await new NodePairingClient(local.Store, local.Identity, wire, local.Clock, local.Leases)
+            .ConnectAsync("http://remote", await remote.InviteAsync());
+
+        var session = await new PeerSessionFactory(local.Store, local.Identity, wire, local.Clock).GetAsync("remote");
+
+        Assert.IsNull(session.Info.Kind);
+        Assert.IsNull(session.Info.Platform);
+        Assert.IsNull((await local.Peers.GetStatusAsync()).Peers.Single().Kind);
+        // What an older peer sends has no such members at all.
+        var older = JsonSerializer.Deserialize<NodeInfo>(
+            "{\"nodeId\":\"remote\",\"libraryEpoch\":\"e\",\"name\":\"NAS\",\"protocolVersion\":1," +
+            "\"serverTimeUtc\":\"2026-09-20T12:00:00+00:00\"}", FederationJson.Options)!;
+        Assert.IsNull(older.Kind);
+        Assert.IsNull(older.Platform);
+    }
+
+    [TestMethod]
+    public async Task WhatANodeSaysItIsStaysOutsideTheHandshakeProofAndOutsideItsBudgetIsRefused()
+    {
+        var info = new NodeInfo("remote", "epoch", "NAS", 1, new DateTimeOffset(2026, 9, 20, 12, 0, 0, TimeSpan.Zero));
+        var key = NodeRequestSignature.RandomToken();
+
+        // The proof signs a fixed list: a later node saying more still proves itself to an older one.
+        Assert.AreEqual(NodeRequestSignature.HandshakeProof(key, info, "challenge-0123456789"),
+            NodeRequestSignature.HandshakeProof(key, info with { Kind = "desktop", Platform = "windows" },
+                "challenge-0123456789"));
+        Assert.IsNull(ServerSelfDescriptionWords.KindOf("tablet"));
+
+        using var local = new Node("local", TimeSpan.Zero);
+        using var remote = new Node("remote", TimeSpan.Zero);
+        var handler = new ProtocolHandler(new Dictionary<string, Node> { ["remote"] = remote });
+        using var http = new HttpClient(handler);
+        var pairing = new NodePairingClient(local.Store, local.Identity, new FederationHttpClient(http), local.Clock,
+            local.Leases);
+
+        // A word this build does not know is fine; one past the budget is not a node's answer.
+        handler.DescribeInfo = described => described with { Kind = "tablet", Platform = "haiku" };
+        Assert.AreEqual("granted", (await pairing.ConnectAsync("http://remote", await remote.InviteAsync())).Outcome);
+        handler.DescribeInfo = described => described with { Kind = new string('x', 33) };
+        Assert.AreEqual("InvalidNodeResponse", (await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
+            pairing.ConnectAsync("http://remote", null))).ErrorCode);
+        handler.DescribeInfo = described => described with { Platform = "linux\n" };
+        Assert.AreEqual("InvalidNodeResponse", (await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
+            pairing.ConnectAsync("http://remote", null))).ErrorCode);
+    }
+
+    private sealed class Says(ServerKind? kind, RemoteDevicePlatform? platform) : IServerSelfDescription
+    {
+        public ServerKind? Kind => kind;
+        public RemoteDevicePlatform? Platform => platform;
+    }
+
+    [TestMethod]
     public async Task DeviceNameIsUsersChoiceAndInvalidNamesAreRefused()
     {
         using var node = new Node("named", TimeSpan.Zero);
@@ -265,6 +355,8 @@ public sealed class PeerTransportTests
         public TimeSpan UnsignedInfoOffset { get; set; }
         public bool HoldBodies { get; set; }
         public bool RedirectQueries { get; set; }
+        /// <summary>Changes what <c>/federation/v1/info</c> says, as a newer or broken node would.</summary>
+        public Func<NodeInfo, NodeInfo>? DescribeInfo { get; set; }
         public TaskCompletionSource QueryStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource BodyStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -279,7 +371,11 @@ public sealed class PeerTransportTests
                 var identity = await node.Identity.GetAsync(ct);
                 object value;
                 if (path == "/federation/v1/info")
-                    value = new NodeInfo(identity.NodeId, identity.LibraryEpoch, identity.Name, 1, node.Clock.GetUtcNow() + UnsignedInfoOffset);
+                {
+                    var info = new NodeInfo(identity.NodeId, identity.LibraryEpoch, identity.Name, 1,
+                        node.Clock.GetUtcNow() + UnsignedInfoOffset).DescribedBy(node.Self);
+                    value = DescribeInfo?.Invoke(info) ?? info;
+                }
                 else if (path == "/federation/v1/pair/code") value = await node.Peers.ExchangeCodeAsync(Body<NodePairCodeRequest>(), ct: ct);
                 else if (path == "/federation/v1/pair/request") value = await node.Peers.RequestPairingAsync(Body<NodePairRequest>(), ct: ct);
                 else if (path == "/federation/v1/pair/claim") value = await node.Peers.ClaimPairingAsync(Body<NodePairClaimRequest>(), ct);
@@ -339,14 +435,17 @@ public sealed class PeerTransportTests
         public FederationPeerService Peers { get; }
         public NodeGrantService Grants { get; }
         public NodeGrantAuthenticator Auth { get; }
-        public Node(string id, TimeSpan offset)
+        /// <summary>What this node says it is; null for one from before nodes said.</summary>
+        public IServerSelfDescription? Self { get; }
+        public Node(string id, TimeSpan offset, IServerSelfDescription? self = null)
         {
             _id = id;
+            Self = self;
             Clock = new(offset);
             Store = new(this, this);
             Identity = new NodeIdentityProvider(Store);
             Peers = new(Store, Identity, Leases, Clock);
-            Grants = new(Store, Identity, Leases, Clock);
+            Grants = new(Store, Identity, Leases, Clock, self);
             Auth = new(Grants, new NodeNonceCache(Clock), Clock);
         }
         public async Task<string> InviteAsync()

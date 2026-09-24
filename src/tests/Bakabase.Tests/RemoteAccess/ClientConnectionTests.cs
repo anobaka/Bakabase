@@ -262,6 +262,56 @@ public class ClientConnectionTests
         // Read as UTC, because that is what the server stamped and then forgot to say.
         Assert.AreEqual(new DateTime(2026, 9, 12, 9, 22, 29, 278, DateTimeKind.Utc),
             result.Server.ServerTime!.Value.ToUniversalTime());
+        // A server from before kind and platform were added says neither.
+        Assert.IsNull(result.Server.Kind);
+        Assert.IsNull(result.Server.Platform);
+    }
+
+    [TestMethod]
+    public async Task A_server_says_what_kind_of_install_it_is_and_what_it_runs_on()
+    {
+        // As the server writes them: enums as numbers, trailing and optional.
+        _handler.Respond = _ => Json(ServerInfo().Replace("\"pairingSupported\":true",
+            $"\"pairingSupported\":true,\"kind\":{(int) ServerKind.Headless},\"platform\":{(int) RemoteDevicePlatform.Linux}"));
+
+        var result = await _connector.HandshakeAsync("192.168.1.5:34567");
+
+        Assert.AreEqual(ServerHandshakeOutcome.Ok, result.Outcome, result.Detail);
+        Assert.AreEqual(ServerKind.Headless, result.Server!.Kind);
+        Assert.AreEqual(RemoteDevicePlatform.Linux, result.Server.Platform);
+
+        // Written as names by a server that ever switches, read the same.
+        _handler.Respond = _ => Json(ServerInfo().Replace("\"pairingSupported\":true",
+            "\"pairingSupported\":true,\"kind\":\"Desktop\",\"platform\":\"MacOS\""));
+        result = await _connector.HandshakeAsync("192.168.1.5:34567");
+        Assert.AreEqual(ServerKind.Desktop, result.Server!.Kind);
+        Assert.AreEqual(RemoteDevicePlatform.MacOS, result.Server.Platform);
+    }
+
+    [TestMethod]
+    public async Task A_kind_or_platform_this_app_does_not_know_is_nothing_and_never_fails_the_handshake()
+    {
+        // A later server with a later kind, a null, garbage: the handshake is about who the
+        // server is, and none of this may cost it.
+        foreach (var facts in new[]
+                 {
+                     "\"kind\":99,\"platform\":42",
+                     "\"kind\":\"tablet\",\"platform\":\"haiku\"",
+                     "\"kind\":null,\"platform\":null",
+                     "\"kind\":{\"a\":1},\"platform\":[1]",
+                     $"\"kind\":{(int) ServerKind.Unknown},\"platform\":{(int) RemoteDevicePlatform.Unknown}"
+                 })
+        {
+            _handler.Respond = _ => Json(ServerInfo().Replace("\"pairingSupported\":true",
+                $"\"pairingSupported\":true,{facts}"));
+
+            var result = await _connector.HandshakeAsync("192.168.1.5:34567");
+
+            Assert.AreEqual(ServerHandshakeOutcome.Ok, result.Outcome, facts + ": " + result.Detail);
+            Assert.AreEqual("server-1", result.Server!.Id, facts);
+            Assert.IsNull(result.Server.Kind, facts);
+            Assert.IsNull(result.Server.Platform, facts);
+        }
     }
 
     [TestMethod]

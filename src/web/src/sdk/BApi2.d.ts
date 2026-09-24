@@ -11939,6 +11939,8 @@ export interface components {
             outboundGrant?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeGrantSummary"];
             inboundGrant?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeGrantSummary"];
             pathMappings: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePathMapping"][];
+            kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
+            platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
         };
         "Bakabase.Modules.Federation.Peers.NodeCredentials": {
             grantId: string;
@@ -11953,6 +11955,8 @@ export interface components {
             nodeId: string;
             name: string;
             address: string;
+            kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
+            platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
         };
         "Bakabase.Modules.Federation.Peers.NodeGrantSummary": {
             grantId: string;
@@ -11982,6 +11986,8 @@ export interface components {
             supportedAssetKinds: string[];
             /** Format: int32 */
             maxBatchSize: number;
+            kind?: string;
+            platform?: string;
         };
         "Bakabase.Modules.Federation.Peers.NodeInvitation": {
             code: string;
@@ -12352,6 +12358,8 @@ export interface components {
             address: string;
             appVersion: string;
             alreadyManaged: boolean;
+            kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
+            platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
         };
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerDiscoveryView": {
             servers: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerCandidateView"][];
@@ -12393,6 +12401,7 @@ export interface components {
             expiresAt: string;
             outcome: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOutcome"];
             active: boolean;
+            serverId?: string;
         };
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerProbeView": {
             outcome: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOutcome"];
@@ -12424,6 +12433,8 @@ export interface components {
             appVersion?: string;
             importedFromLegacyClient: boolean;
             answeredBy?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerAnswerView"];
+            kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
+            platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
         };
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServersView": {
             available: boolean;
@@ -12442,6 +12453,12 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform": 0 | 1 | 2 | 3 | 4 | 5;
+        /**
+         * Format: int32
+         * @description [0: Unknown, 1: Desktop, 2: Headless]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind": 0 | 1 | 2;
         "Bakabase.Modules.Search.Models.Db.ResourceSearchDbModel": {
             group?: components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchFilterGroupDbModel"];
             orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
@@ -13672,6 +13689,9 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        "Bakabase.Service.Models.View.RemoteAccessPairingApprovalViewModel": {
+            deviceId: string;
+        };
         "Bakabase.Service.Models.View.RemoteAccessPairingCodeViewModel": {
             /** Format: date-time */
             expiresAt: string;
@@ -13713,6 +13733,8 @@ export interface components {
             pairingSupported: boolean;
             /** Format: date-time */
             serverTime: string;
+            kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
+            platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
         };
         "Bakabase.Service.Models.View.RemoteAccessSettingsViewModel": {
             mode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
@@ -15285,6 +15307,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.RemoteAccessIssuedPairingCodeViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.RemoteAccessPairingApprovalViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.RemoteAccessPairingApprovalViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.RemoteAccessPairingRequestAcceptedViewModel]": {
             /** Format: int32 */
@@ -29310,9 +29338,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.RemoteAccessPairingApprovalViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.RemoteAccessPairingApprovalViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.RemoteAccessPairingApprovalViewModel]"];
                 };
             };
         };

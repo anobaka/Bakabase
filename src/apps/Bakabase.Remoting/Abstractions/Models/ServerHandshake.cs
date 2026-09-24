@@ -1,10 +1,13 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 
 namespace Bakabase.Remoting.Abstractions.Models;
 
 /// <summary>
 /// What a server told this client about itself.
 /// </summary>
+/// <param name="Kind">What kind of install it said it is; null when it did not say (older servers).</param>
+/// <param name="Platform">What it said it runs on; null when it did not say.</param>
 public sealed record ServerInfo(
     string Id,
     string Name,
@@ -12,7 +15,9 @@ public sealed record ServerInfo(
     int ProtocolVersion,
     RemoteAccessMode Mode,
     bool PairingSupported,
-    DateTime? ServerTime);
+    DateTime? ServerTime,
+    ServerKind? Kind = null,
+    RemoteDevicePlatform? Platform = null);
 
 /// <summary>
 /// Why a handshake did not end in a usable connection. Each one sends the user

@@ -224,7 +224,9 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
                     $"http://{address}:{host.Port}",
                     descriptor.AppVersion,
                     descriptor.ProtocolVersion,
-                    IPAddress.IsLoopback(address));
+                    IPAddress.IsLoopback(address),
+                    descriptor.Kind,
+                    descriptor.Platform);
 
                 if (!found.TryGetValue(server.ServerId, out var existing) ||
                     (server.IsThisMachine && !existing.IsThisMachine))

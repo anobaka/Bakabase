@@ -40,7 +40,12 @@ public interface IRemoteDeviceService
     Task<PendingPairingRequest> RequestPairingAsync(string deviceName, RemoteDevicePlatform platform,
         string? remoteAddress, CancellationToken ct = default);
 
-    Task<bool> ApproveRequestAsync(string requestId, string approvedByDeviceId, CancellationToken ct = default);
+    /// <summary>
+    /// Lets a waiting device in. Returns the id the device will have once it collects its
+    /// key — the one it is listed under from then on — or null when there was nothing to
+    /// approve (unknown, expired or already approved).
+    /// </summary>
+    Task<string?> ApproveRequestAsync(string requestId, string approvedByDeviceId, CancellationToken ct = default);
 
     Task<bool> RejectRequestAsync(string requestId, CancellationToken ct = default);
 
@@ -189,28 +194,29 @@ public sealed class RemoteDeviceService(IRemoteDeviceStore store, Func<DateTime>
         return request;
     }
 
-    public async Task<bool> ApproveRequestAsync(string requestId, string approvedByDeviceId,
+    public async Task<string?> ApproveRequestAsync(string requestId, string approvedByDeviceId,
         CancellationToken ct = default)
     {
         var now = _now();
 
-        return await store.MutateAsync(data =>
+        return await store.MutateAsync<string?>(data =>
         {
             var request = data.PendingRequests.FirstOrDefault(r =>
                 string.Equals(r.Id, requestId, StringComparison.Ordinal));
 
             if (request == null || request.ExpiresAt <= now || request.IsApproved)
             {
-                return false;
+                return null;
             }
 
             // The device itself is not created yet — an approval nobody collects should
             // expire rather than leave a device in the list that can never authenticate.
+            // Its id is decided now, so whoever approved it can find it once it is listed.
             var device = NewDevice(request.DeviceName, request.Platform, now, approvedByDeviceId);
             request.ApprovedDeviceId = device.Id;
             request.ApprovedKey = device.Key;
             request.ApprovedByDeviceId = approvedByDeviceId;
-            return true;
+            return device.Id;
         }, ct);
     }
 

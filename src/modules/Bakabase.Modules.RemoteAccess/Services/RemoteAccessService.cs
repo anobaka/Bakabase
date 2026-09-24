@@ -14,7 +14,8 @@ public class RemoteAccessService(
     RemoteAccessDefaults defaults,
     RemoteAccessHostInfo hostInfo,
     IListeningAddressProvider listeningAddressProvider,
-    ILogger<RemoteAccessService> logger) : IRemoteAccessService
+    ILogger<RemoteAccessService> logger,
+    IServerSelfDescription? self = null) : IRemoteAccessService
 {
     private readonly SemaphoreSlim _serverIdLock = new(1, 1);
 
@@ -101,7 +102,9 @@ public class RemoteAccessService(
             GetServerName(),
             ports.Count > 0 ? ports[0] : null,
             hostInfo.AppVersion,
-            RemoteAccessProtocol.CurrentVersion);
+            RemoteAccessProtocol.CurrentVersion,
+            ServerSelfDescriptionWords.Known(self?.Kind),
+            ServerSelfDescriptionWords.Known(self?.Platform));
     }
 
     private static string GetServerName()

@@ -108,6 +108,10 @@ namespace Bakabase.Service.Components
 
             services.AddSingleton<BakabaseOptionsManagerPool>();
 
+            // What this install tells other devices it is. Before AddRemoteAccess, whose
+            // default knows the platform but not the kind.
+            services.TryAddSingleton(sp => ServiceSelfDescription.Create(sp, AppService.RuntimeMode));
+
             // Remote access. Docker has always served whoever could reach the port, so
             // it keeps that as its default; a desktop install starts closed, which is a
             // behavior change for anyone who was quietly relying on LAN reachability.

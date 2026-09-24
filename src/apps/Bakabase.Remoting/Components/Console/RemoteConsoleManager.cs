@@ -294,7 +294,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             // probe and mDNS, is still one server to pair with.
             .DistinctBy(s => s.ServerId, StringComparer.Ordinal)
             .Select(s => new ManagedServerCandidateView(s.ServerId, s.ServerName, s.BaseAddress, s.AppVersion,
-                managed.Contains(s.ServerId)))
+                managed.Contains(s.ServerId), s.Kind, s.Platform))
             .ToList();
 
         return new ManagedServerDiscoveryView(servers);
@@ -637,7 +637,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
         _clocks[server.Id] = clock;
         _identityAskedAt[server.Id] = DateTimeOffset.UtcNow;
-        _probes[server.Id] = new ProbeSnapshot(ManagedServerState.Online, server.Mode, server.AppVersion);
+        _probes[server.Id] = new ProbeSnapshot(ManagedServerState.Online, server.Mode, server.AppVersion)
+            { Kind = server.Kind, Platform = server.Platform };
 
         _logger.LogInformation("Now managing {ServerName} ({ServerId}) at {Address}", server.Name, server.Id,
             ServerConnector.Normalize(address));
@@ -645,7 +646,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
     private void StartClaiming(ClientPairingTicket ticket, string address, ServerInfo server, ServerClock clock)
     {
-        var request = new PendingRequest(ticket.RequestId, address, server.Name, ticket.ExpiresAt,
+        var request = new PendingRequest(ticket.RequestId, address, server.Id, server.Name, ticket.ExpiresAt,
             CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token));
 
         _requests[ticket.RequestId] = request;
@@ -824,12 +825,18 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
                 snapshot = new ProbeSnapshot(ManagedServerState.Offline,
                     handshake.Outcome == ServerHandshakeOutcome.RemoteAccessDisabled
                         ? RemoteAccessMode.Disabled
-                        : server?.Mode ?? previous?.Mode, server?.AppVersion ?? previous?.AppVersion);
+                        : server?.Mode ?? previous?.Mode, server?.AppVersion ?? previous?.AppVersion)
+                {
+                    Kind = server?.Kind ?? previous?.Kind,
+                    Platform = server?.Platform ?? previous?.Platform
+                };
             }
             else
             {
+                // What it says of itself now: a server that stopped saying (an older build)
+                // has nothing more to show.
                 snapshot = new ProbeSnapshot(await ReadContextAsync(entry, clock, budget.Token), server.Mode,
-                    server.AppVersion);
+                    server.AppVersion) { Kind = server.Kind, Platform = server.Platform };
 
                 if (snapshot.State == ManagedServerState.Online)
                 {
@@ -846,7 +853,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
                 _logger.LogDebug(e, "Probing {ServerId} failed", entry.ServerId);
             }
 
-            snapshot = new ProbeSnapshot(ManagedServerState.Offline, previous?.Mode, previous?.AppVersion);
+            snapshot = new ProbeSnapshot(ManagedServerState.Offline, previous?.Mode, previous?.AppVersion)
+                { Kind = previous?.Kind, Platform = previous?.Platform };
         }
 
         if (NoteIdentityAsked(entry.ServerId, startedAt))
@@ -1187,7 +1195,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
                 _probes[serverId] = new ProbeSnapshot(ManagedServerState.Offline,
                     handshake.Outcome == ServerHandshakeOutcome.RemoteAccessDisabled
                         ? RemoteAccessMode.Disabled
-                        : previous?.Mode, previous?.AppVersion);
+                        : previous?.Mode, previous?.AppVersion)
+                    { Kind = previous?.Kind, Platform = previous?.Platform };
             }
         }
 
@@ -1248,11 +1257,15 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     }
 
     private static ProbeSnapshot Mismatched(ProbeSnapshot? previous, UpstreamIdentityCheck check) =>
-        // The server's own mode and version as last seen, never the ones of whoever answered
-        // in its place.
+        // The server's own mode, version, kind and platform as last seen, never the ones of
+        // whoever answered in its place.
         new(ManagedServerState.WrongServer, previous?.Mode, previous?.AppVersion,
             new ManagedServerAnswerView(check.AnsweredById, check.AnsweredByName,
-                check.Verdict == UpstreamIdentityVerdict.ThisDevice));
+                check.Verdict == UpstreamIdentityVerdict.ThisDevice))
+        {
+            Kind = previous?.Kind,
+            Platform = previous?.Platform
+        };
 
     #endregion
 
@@ -1347,7 +1360,9 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             probe?.Mode,
             probe?.AppVersion,
             entry.ImportedFromLegacyClient,
-            probe?.State == ManagedServerState.WrongServer ? probe.AnsweredBy : null);
+            probe?.State == ManagedServerState.WrongServer ? probe.AnsweredBy : null,
+            probe?.Kind,
+            probe?.Platform);
     }
 
     #endregion
@@ -1652,7 +1667,14 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
     /// <param name="AnsweredBy">Who answered at the address instead, while <paramref name="State"/> is WrongServer.</param>
     private sealed record ProbeSnapshot(ManagedServerState State, RemoteAccessMode? Mode, string? AppVersion,
-        ManagedServerAnswerView? AnsweredBy = null);
+        ManagedServerAnswerView? AnsweredBy = null)
+    {
+        /// <summary>What kind of install it said it is, the last time it answered as itself.</summary>
+        public ServerKind? Kind { get; init; }
+
+        /// <summary>What it said it runs on, the last time it answered as itself.</summary>
+        public RemoteDevicePlatform? Platform { get; init; }
+    }
 
     private sealed record Envelope<T>(int Code, string? Message, T? Data);
 
@@ -1669,6 +1691,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     private sealed class PendingRequest(
         string requestId,
         string address,
+        string serverId,
         string? serverName,
         DateTime expiresAt,
         CancellationTokenSource cancellation)
@@ -1679,6 +1702,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
         public string RequestId { get; } = requestId;
         public string Address { get; } = address;
+        public string ServerId { get; } = serverId;
         public string? ServerName { get; } = serverName;
         public DateTime ExpiresAt { get; } = expiresAt;
         public DateTime StartedAt { get; } = DateTime.UtcNow;
@@ -1740,7 +1764,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
                 // Cancelled counts as ended even before the claim loop notices: withdrawn from
                 // the page, or the app closing — either way nobody is collecting it any more.
                 return new ManagedServerPendingRequestView(RequestId, Address, ServerName, ExpiresAt, _outcome,
-                    _finishedAt == null && !cancellation.IsCancellationRequested);
+                    _finishedAt == null && !cancellation.IsCancellationRequested, ServerId);
             }
         }
     }

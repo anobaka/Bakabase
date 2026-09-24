@@ -102,7 +102,9 @@ namespace Bakabase.Service.Controllers
                 ProtocolVersion = descriptor.ProtocolVersion,
                 Mode = remoteAccessService.GetEffectiveMode(),
                 PairingSupported = true,
-                ServerTime = DateTime.UtcNow
+                ServerTime = DateTime.UtcNow,
+                Kind = descriptor.Kind,
+                Platform = descriptor.Platform
             });
         }
 
@@ -278,17 +280,22 @@ namespace Bakabase.Service.Controllers
         /// to a container and click a button, and the alternative — a code read out of
         /// the server's log — is a worse thing to ask of somebody every time.
         /// </summary>
+        /// <remarks>
+        /// Answers the id the device will be listed under once it has collected its key, so
+        /// whoever approved it can find it there. The key itself only ever goes to the device.
+        /// </remarks>
         [HttpPost("pairing/requests/{id}/approve")]
         [SwaggerOperation(OperationId = "ApproveRemoteDevicePairingRequest")]
         [RemoteAccessible]
-        public async Task<BaseResponse> ApprovePairingRequest(string id)
+        public async Task<SingletonResponse<RemoteAccessPairingApprovalViewModel>> ApprovePairingRequest(string id)
         {
             var approver = HttpContext.GetRemoteAccessContext()?.Device?.Id ?? HostApproverId;
-            var approved = await deviceService.ApproveRequestAsync(id, approver, HttpContext.RequestAborted);
+            var deviceId = await deviceService.ApproveRequestAsync(id, approver, HttpContext.RequestAborted);
 
-            return approved
-                ? BaseResponseBuilder.Ok
-                : BaseResponseBuilder.Build(ResponseCode.NotFound,
+            return deviceId != null
+                ? new SingletonResponse<RemoteAccessPairingApprovalViewModel>(
+                    new RemoteAccessPairingApprovalViewModel {DeviceId = deviceId})
+                : SingletonResponseBuilder<RemoteAccessPairingApprovalViewModel>.Build(ResponseCode.NotFound,
                     "This pairing request has expired or was already handled.");
         }
 

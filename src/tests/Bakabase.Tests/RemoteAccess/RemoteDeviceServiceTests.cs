@@ -151,11 +151,17 @@ public class RemoteDeviceServiceTests
         Assert.AreEqual(PairingFailure.NotYetApproved,
             (await _service.ClaimApprovedAsync(request.Id)).Failure);
 
-        Assert.IsTrue(await _service.ApproveRequestAsync(request.Id, approver));
+        var approved = await _service.ApproveRequestAsync(request.Id, approver);
+        Assert.IsNotNull(approved);
+        // Not listed until it collects its key.
+        Assert.IsNull(_service.Find(approved));
 
         var claim = await _service.ClaimApprovedAsync(request.Id);
         Assert.IsTrue(claim.Succeeded);
         Assert.AreEqual(2, _service.GetDevices().Count);
+        // The id the approval named is the one the device is listed under.
+        Assert.AreEqual(approved, claim.Credentials!.DeviceId);
+        Assert.AreEqual("Tablet", _service.Find(approved)!.Name);
         Assert.AreEqual(approver, _service.Find(claim.Credentials!.DeviceId)!.ApprovedByDeviceId);
 
         // Replaying the claim must not mint a second device.
@@ -198,7 +204,7 @@ public class RemoteDeviceServiceTests
 
         _now = _now.AddMinutes(11);
 
-        Assert.IsFalse(await _service.ApproveRequestAsync(request.Id, approver));
+        Assert.IsNull(await _service.ApproveRequestAsync(request.Id, approver));
     }
 
     [TestMethod]
@@ -207,8 +213,8 @@ public class RemoteDeviceServiceTests
         var approver = (await PairFirstDevice()).DeviceId;
         var request = await _service.RequestPairingAsync("Tablet", RemoteDevicePlatform.Android, null);
 
-        Assert.IsTrue(await _service.ApproveRequestAsync(request.Id, approver));
-        Assert.IsFalse(await _service.ApproveRequestAsync(request.Id, approver));
+        Assert.IsNotNull(await _service.ApproveRequestAsync(request.Id, approver));
+        Assert.IsNull(await _service.ApproveRequestAsync(request.Id, approver));
     }
 
     [TestMethod]
@@ -227,7 +233,7 @@ public class RemoteDeviceServiceTests
     public async Task An_unknown_request_id_is_rejected()
     {
         Assert.AreEqual(PairingFailure.RequestRejected, (await _service.ClaimApprovedAsync("nope")).Failure);
-        Assert.IsFalse(await _service.ApproveRequestAsync("nope", "whoever"));
+        Assert.IsNull(await _service.ApproveRequestAsync("nope", "whoever"));
     }
 
     [TestMethod]
@@ -268,7 +274,7 @@ public class RemoteDeviceServiceTests
         // yet. Dropping it under pressure would leave that device unable to finish.
         var approver = (await PairFirstDevice()).DeviceId;
         var mine = await _service.RequestPairingAsync("Tablet", RemoteDevicePlatform.Android, null);
-        Assert.IsTrue(await _service.ApproveRequestAsync(mine.Id, approver));
+        Assert.IsNotNull(await _service.ApproveRequestAsync(mine.Id, approver));
 
         for (var i = 0; i < PendingPairingRequest.MaxPending * 2; i++)
         {

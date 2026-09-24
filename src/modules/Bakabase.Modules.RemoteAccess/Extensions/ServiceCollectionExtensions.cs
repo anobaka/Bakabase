@@ -30,6 +30,8 @@ public static class ServiceCollectionExtensions
     {
         services.TryAddSingleton(new RemoteAccessDefaults(defaultMode));
         services.TryAddSingleton(new RemoteAccessHostInfo(appVersion));
+        // The platform from the process; the kind only where the host registered its own.
+        services.TryAddSingleton<IServerSelfDescription>(new ServerSelfDescription());
         services.TryAddSingleton<IRemoteAccessService, RemoteAccessService>();
         services.TryAddSingleton<IMediaPathGuard, MediaPathGuard>();
 

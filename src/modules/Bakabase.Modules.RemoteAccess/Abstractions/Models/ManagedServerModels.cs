@@ -102,6 +102,11 @@ public sealed record ManagedServerPathMapping(string ServerPath, string LocalPat
 /// who answers at <paramref name="Address"/> instead. Never used as this server's name, mode
 /// or version, which stay as they were last seen.
 /// </param>
+/// <param name="Kind">
+/// What kind of install it said it is when last probed, if it said — like <paramref name="Mode"/>
+/// and <paramref name="AppVersion"/>, never taken from whoever answers in its place.
+/// </param>
+/// <param name="Platform">What it said it runs on when last probed, if it said.</param>
 public sealed record ManagedServerView(
     string ServerId,
     string? Name,
@@ -113,7 +118,9 @@ public sealed record ManagedServerView(
     RemoteAccessMode? Mode,
     string? AppVersion,
     bool ImportedFromLegacyClient,
-    ManagedServerAnswerView? AnsweredBy = null);
+    ManagedServerAnswerView? AnsweredBy = null,
+    ServerKind? Kind = null,
+    RemoteDevicePlatform? Platform = null);
 
 /// <summary>A management request this device filed, and where waiting on it has got to.</summary>
 /// <param name="Outcome">
@@ -129,13 +136,18 @@ public sealed record ManagedServerView(
 /// signal to poll on and to offer "cancel" for; <paramref name="Outcome"/> alone cannot say
 /// whether the wait is over.
 /// </param>
+/// <param name="ServerId">
+/// The install the request was filed with, as its address answered the pairing handshake —
+/// the identity the server joins the managed list under once approved.
+/// </param>
 public sealed record ManagedServerPendingRequestView(
     string RequestId,
     string Address,
     string? ServerName,
     DateTime ExpiresAt,
     ManagedServerOutcome Outcome,
-    bool Active);
+    bool Active,
+    string? ServerId = null);
 
 /// <summary>What an address turned out to be, before anything was paired.</summary>
 public sealed record ManagedServerProbeView(
@@ -179,12 +191,16 @@ public sealed record ManagedServerImportView(bool Found, int Imported, int Skipp
 /// <param name="Address">The base address that answered, e.g. <c>http://192.168.1.5:34567</c>.</param>
 /// <param name="AppVersion">Its version, as its beacon reports it.</param>
 /// <param name="AlreadyManaged">This device already manages it.</param>
+/// <param name="Kind">What kind of install its beacon says it is, when it says.</param>
+/// <param name="Platform">What its beacon says it runs on, when it says.</param>
 public sealed record ManagedServerCandidateView(
     string ServerId,
     string Name,
     string Address,
     string AppVersion,
-    bool AlreadyManaged);
+    bool AlreadyManaged,
+    ServerKind? Kind = null,
+    RemoteDevicePlatform? Platform = null);
 
 /// <summary>What looking around the network for servers to manage found. Never this device itself.</summary>
 public sealed record ManagedServerDiscoveryView(IReadOnlyList<ManagedServerCandidateView> Servers);

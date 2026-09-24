@@ -81,6 +81,8 @@ public class RemoteConsolePairingTests
         var waiting = (await _console.Manager.GetAsync(false)).Requests.Single();
         Assert.AreEqual(ManagedServerOutcome.AwaitingApproval, waiting.Outcome);
         Assert.IsTrue(waiting.Active);
+        // The install it was filed with, as the address answered: what it joins the list under.
+        Assert.AreEqual("server-desk", waiting.ServerId);
 
         desk.Approved = true;
 

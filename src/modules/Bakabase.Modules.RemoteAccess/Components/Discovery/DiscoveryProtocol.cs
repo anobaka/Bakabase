@@ -22,6 +22,14 @@ public static class DiscoveryProtocol
         public const string Port = "port";
         public const string AppVersion = "ver";
         public const string ProtocolVersion = "proto";
+
+        /// <summary>
+        /// Optional, added later: what kind of install it is and what it runs on, as words
+        /// (<see cref="ServerSelfDescriptionWords"/>). Older servers leave them out; older
+        /// readers skip keys they do not know.
+        /// </summary>
+        public const string Kind = "kind";
+        public const string Platform = "os";
     }
 
     public static bool IsProbeRequest(ReadOnlySpan<byte> datagram)
@@ -32,14 +40,21 @@ public static class DiscoveryProtocol
 
     public static byte[] BuildProbeResponse(RemoteAccessServerDescriptor descriptor)
     {
-        var json = JsonSerializer.Serialize(new Dictionary<string, object?>
+        var facts = new Dictionary<string, object?>
         {
             [Keys.Id] = descriptor.Id,
             [Keys.Name] = descriptor.Name,
             [Keys.Port] = descriptor.Port,
             [Keys.AppVersion] = descriptor.AppVersion,
             [Keys.ProtocolVersion] = descriptor.ProtocolVersion,
-        });
+        };
+
+        foreach (var (key, word) in DescriptionOf(descriptor))
+        {
+            facts[key] = word;
+        }
+
+        var json = JsonSerializer.Serialize(facts);
 
         return Encoding.UTF8.GetBytes(RemoteAccessProtocol.ProbeResponsePrefix + json);
     }
@@ -107,7 +122,22 @@ public static class DiscoveryProtocol
             $"{Keys.Port}={descriptor.Port?.ToString() ?? string.Empty}",
             $"{Keys.AppVersion}={descriptor.AppVersion}",
             $"{Keys.ProtocolVersion}={descriptor.ProtocolVersion}",
+            .. DescriptionOf(descriptor).Select(fact => $"{fact.Key}={fact.Word}"),
         ];
+    }
+
+    /// <summary>The optional facts that are known, and only those: absent ones take no room.</summary>
+    private static IEnumerable<(string Key, string Word)> DescriptionOf(RemoteAccessServerDescriptor descriptor)
+    {
+        if (ServerSelfDescriptionWords.Of(descriptor.Kind) is { } kind)
+        {
+            yield return (Keys.Kind, kind);
+        }
+
+        if (ServerSelfDescriptionWords.Of(descriptor.Platform) is { } platform)
+        {
+            yield return (Keys.Platform, platform);
+        }
     }
 
     /// <summary>
@@ -155,6 +185,9 @@ public static class DiscoveryProtocol
         _ = int.TryParse(fact(Keys.ProtocolVersion), out var protocolVersion);
 
         return new RemoteAccessServerDescriptor(id, fact(Keys.Name) ?? id, port,
-            fact(Keys.AppVersion) ?? string.Empty, protocolVersion);
+            fact(Keys.AppVersion) ?? string.Empty, protocolVersion,
+            // Whatever answered a broadcast: a word this build does not know is nothing.
+            ServerSelfDescriptionWords.KindOf(fact(Keys.Kind)),
+            ServerSelfDescriptionWords.PlatformOf(fact(Keys.Platform)));
     }
 }

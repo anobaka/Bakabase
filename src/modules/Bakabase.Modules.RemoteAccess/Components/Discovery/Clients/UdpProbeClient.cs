@@ -19,13 +19,17 @@ namespace Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 /// running right here. Worth showing, because "connect to my own computer" is a
 /// normal thing to want and an odd thing to have to type an address for.
 /// </param>
+/// <param name="Kind">What kind of install it says it is, when it says: for showing only.</param>
+/// <param name="Platform">What it says it runs on, when it says: for showing only.</param>
 public sealed record DiscoveredServer(
     string ServerId,
     string ServerName,
     string BaseAddress,
     string AppVersion,
     int ProtocolVersion,
-    bool IsThisMachine);
+    bool IsThisMachine,
+    ServerKind? Kind = null,
+    RemoteDevicePlatform? Platform = null);
 
 public interface IServerDiscovery
 {
@@ -135,7 +139,9 @@ public sealed class UdpProbeClient(ILogger<UdpProbeClient> logger) : IServerDisc
             $"http://{FormatHost(host)}:{port}",
             descriptor.AppVersion,
             descriptor.ProtocolVersion,
-            IPAddress.IsLoopback(host));
+            IPAddress.IsLoopback(host),
+            descriptor.Kind,
+            descriptor.Platform);
     }
 
     /// <summary>IPv6 literals need brackets before they can go in a URL.</summary>

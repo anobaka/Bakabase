@@ -907,6 +907,45 @@ export const UpdaterStatusLabel: Record<UpdaterStatus, string> = {
   [UpdaterStatus.Unavailable]: 'Unavailable'
 };
 
+export enum DataDirectoryLockStatus {
+  Acquired = 1,
+  HeldByAnotherProcess = 2,
+  Unavailable = 3
+}
+
+export const dataDirectoryLockStatuses = [
+  { label: 'Acquired', value: DataDirectoryLockStatus.Acquired },
+  { label: 'HeldByAnotherProcess', value: DataDirectoryLockStatus.HeldByAnotherProcess },
+  { label: 'Unavailable', value: DataDirectoryLockStatus.Unavailable }
+] as const;
+
+export const DataDirectoryLockStatusLabel: Record<DataDirectoryLockStatus, string> = {
+  [DataDirectoryLockStatus.Acquired]: 'Acquired',
+  [DataDirectoryLockStatus.HeldByAnotherProcess]: 'HeldByAnotherProcess',
+  [DataDirectoryLockStatus.Unavailable]: 'Unavailable'
+};
+
+export enum SingleInstanceEntry {
+  Entered = 1,
+  Refused = 2,
+  Unguarded = 3,
+  NotApplicable = 4
+}
+
+export const singleInstanceEntries = [
+  { label: 'Entered', value: SingleInstanceEntry.Entered },
+  { label: 'Refused', value: SingleInstanceEntry.Refused },
+  { label: 'Unguarded', value: SingleInstanceEntry.Unguarded },
+  { label: 'NotApplicable', value: SingleInstanceEntry.NotApplicable }
+] as const;
+
+export const SingleInstanceEntryLabel: Record<SingleInstanceEntry, string> = {
+  [SingleInstanceEntry.Entered]: 'Entered',
+  [SingleInstanceEntry.Refused]: 'Refused',
+  [SingleInstanceEntry.Unguarded]: 'Unguarded',
+  [SingleInstanceEntry.NotApplicable]: 'NotApplicable'
+};
+
 export enum RelocationMode {
   UseTarget = 1,
   MergeOverwrite = 3
@@ -4478,6 +4517,24 @@ export const RemoteDevicePlatformLabel: Record<RemoteDevicePlatform, string> = {
   [RemoteDevicePlatform.Linux]: 'Linux',
   [RemoteDevicePlatform.Android]: 'Android',
   [RemoteDevicePlatform.IOS]: 'IOS'
+};
+
+export enum ServerKind {
+  Unknown = 0,
+  Desktop = 1,
+  Headless = 2
+}
+
+export const serverKinds = [
+  { label: 'Unknown', value: ServerKind.Unknown },
+  { label: 'Desktop', value: ServerKind.Desktop },
+  { label: 'Headless', value: ServerKind.Headless }
+] as const;
+
+export const ServerKindLabel: Record<ServerKind, string> = {
+  [ServerKind.Unknown]: 'Unknown',
+  [ServerKind.Desktop]: 'Desktop',
+  [ServerKind.Headless]: 'Headless'
 };
 
 export enum FileOperationType {
