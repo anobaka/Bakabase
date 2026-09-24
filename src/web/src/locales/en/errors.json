@@ -31,6 +31,6 @@
   "error.modal.logFile": "Log file:",
   "error.modal.continueBrowsing": "Continue browsing",
   "error.modal.returnHome": "Return to homepage",
-  "error.modal.restartClient": "Restart the Bakabase client",
-  "error.modal.restartClientDesc": "Close this window and open it again. The server keeps running — nothing it is doing is interrupted."
+  "error.modal.restartThisComputer": "Restart Bakabase on this computer",
+  "error.modal.restartThisComputerDesc": "Close the app and open it again. The server shown in this window keeps running — nothing it is doing is interrupted."
 }

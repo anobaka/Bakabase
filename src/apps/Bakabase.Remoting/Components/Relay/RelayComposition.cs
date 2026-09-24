@@ -9,7 +9,6 @@ using Bakabase.Modules.Player.Extensions;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
 using Bakabase.Remoting.Components.BatchPlay;
 using Bakabase.Remoting.Components.Connection;
-using Bakabase.Remoting.Components.Diagnostics;
 using Bakabase.Remoting.Components.Forwarding;
 using Bakabase.Remoting.Components.UserMachine;
 using Microsoft.AspNetCore.Builder;
@@ -44,11 +43,10 @@ public sealed record RelayEnvironment(
 /// </summary>
 /// <remarks>
 /// <para>
-/// Composed by two products. The legacy thin client builds exactly one, with its connect
-/// page and updater around it. The all-in-one builds one per server it manages, each with
-/// its own container and port, next to its own in-process server — never inside that
-/// server's container or pipeline, whose play and open routes the dispatcher below would
-/// otherwise intercept.
+/// The desktop app builds one per server it manages, each with its own container and port
+/// (<see cref="Console.ManagedServerRelay"/>), next to its own in-process server — never
+/// inside that server's container or pipeline, whose play and open routes the dispatcher
+/// below would otherwise intercept.
 /// </para>
 /// <para>
 /// Deliberately thin: no response caching, no compression, no buffering, no static files.
@@ -59,14 +57,15 @@ public sealed record RelayEnvironment(
 public static class RelayComposition
 {
     /// <summary>
-    /// Registers everything a relay needs except the connection store, the data directory
-    /// and the product's own endpoints, which each composer supplies.
+    /// Registers everything a relay needs except the connection store and the composer's own
+    /// endpoints, which the composer supplies.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Stores and directories are <c>TryAdd</c>: a composer registers its own first — the
-    /// all-in-one a one-entry view over its managed-server list, the thin client the file
-    /// it has always used.
+    /// The store is registered by the composer before this call, and nothing here falls back
+    /// to one: the desktop app's is a one-entry view over its managed-server list
+    /// (<see cref="Console.SingleServerConnectionStore"/>), so a relay can only ever sign for
+    /// its own server.
     /// </para>
     /// <para>
     /// The logger factory is the composer's too: the relay logs through whichever one was
@@ -81,14 +80,13 @@ public static class RelayComposition
         services.AddSingleton(environment);
         services.AddHttpForwarder();
 
-        // The guard reads switch tickets from here. The all-in-one registers one instance
+        // The guard reads switch tickets from here. The desktop app registers one instance
         // shared by every relay it runs, since the ticket is minted by whoever opens the
-        // window; a relay nobody switches into — the thin client — still gets its own, so
-        // the guard is always armed with something and a ticket-shaped parameter is always
-        // taken out of the address.
+        // window; a composer that registers none still gets one of its own, so the guard is
+        // always armed with something and a ticket-shaped parameter is always taken out of
+        // the address.
         services.TryAddSingleton(sp => new RelayNavigationTokens(sp.GetService<TimeProvider>() ?? TimeProvider.System));
 
-        services.TryAddSingleton<IClientConnectionStore, ClientConnectionStore>();
         services.TryAddSingleton<ServerClock>();
         services.TryAddSingleton<ActiveConnection>();
         services.TryAddSingleton<IUpstreamTarget>(sp => sp.GetRequiredService<ActiveConnection>());
@@ -162,10 +160,9 @@ public static class RelayComposition
         // flows and the orchestration are the server's own; only the window is local.
         //
         // "Resources" is what the modules' resource names are laid out for, and what every
-        // host built through AppUtils.CreateAppHostBuilder already sets — the thin client
-        // among them. Stated here because a relay the desktop app composes has no such host
-        // around it, and with the default the sign-in window's labels came out as their
-        // resource keys.
+        // host built through AppUtils.CreateAppHostBuilder already sets. Stated here because
+        // a relay the desktop app composes has no such host around it, and with the default
+        // the sign-in window's labels came out as their resource keys.
         services.AddLocalization(o => o.ResourcesPath = "Resources");
         services.TryAddTransient<ICookieCaptureLocalizer, ThirdPartyCookieCaptureLocalizer>();
         services.TryAddTransient<CookieCaptureOrchestrator>();
@@ -189,25 +186,16 @@ public static class RelayComposition
     /// the relay's own endpoints and the composer's, then everything else to the server.
     /// </summary>
     /// <param name="mapLocal">The composer's own endpoints, under <see cref="RelayPaths.Prefix"/>.</param>
-    /// <param name="mapThisMachinesDiagnostics">
-    /// <para>
-    /// Whether the page may read this program's own log (<see cref="ClientLogEndpoints"/>)
-    /// and learn and open its directories (<see cref="ClientAppEndpoints"/>). Off unless a
-    /// composer asks, because what those reveal depends entirely on what "this program" is.
-    /// </para>
-    /// <para>
-    /// The thin client asks: it runs no server, its log and its data directory are only its
-    /// own, and its window has nowhere else to show them. The desktop app's relays must not:
-    /// there the log is the whole app's — this device's own server included, with the
-    /// pairing code it prints while locked out and the address of every other server it
-    /// manages — and the data directory is the one holding every managed server's key. The
-    /// page asking is another server's own code, so answering would hand that server the
-    /// way to take over the device that manages it. Unmapped, those paths fall through to
-    /// the composer's own <c>/client</c> catch-all, never to the server.
-    /// </para>
-    /// </param>
-    public static void UseRelayPipeline(this IApplicationBuilder app, Action<IEndpointRouteBuilder> mapLocal,
-        bool mapThisMachinesDiagnostics = false)
+    /// <remarks>
+    /// Nothing here publishes this machine's own log or directories to the page. The page is
+    /// the managed server's own code, and in the desktop app this device's log is the whole
+    /// app's — its own server included, with the pairing code it prints while locked out and
+    /// the address of every other server it manages — and its data directory holds every
+    /// managed server's key; answering would hand that server the way to take over the
+    /// device that manages it. Paths the composer does not map fall through to its own
+    /// <c>/client</c> catch-all, never to the server.
+    /// </remarks>
+    public static void UseRelayPipeline(this IApplicationBuilder app, Action<IEndpointRouteBuilder> mapLocal)
     {
         var environment = app.ApplicationServices.GetRequiredService<RelayEnvironment>();
         var logger = app.ApplicationServices.GetRequiredService<ILoggerFactory>()
@@ -279,14 +267,6 @@ public static class RelayComposition
             // only the relay knows the answer.
             endpoints.MapGet(ClientContextEndpoint.Path,
                 (HttpContext context, ClientContextEndpoint endpoint) => endpoint.WriteAsync(context));
-
-            // This program's own log and directories, which the server has no way to
-            // answer for — only where they are this program's alone. See the parameter.
-            if (mapThisMachinesDiagnostics)
-            {
-                ClientLogEndpoints.Map(endpoints);
-                ClientAppEndpoints.Map(endpoints);
-            }
 
             mapLocal(endpoints);
 

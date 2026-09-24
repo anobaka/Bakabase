@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.App;
-using Bakabase.Remoting.Components.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -21,17 +20,17 @@ namespace Bakabase.Tests.RemoteAccess.Console;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The thin client publishes its own log and directories to the page it shows, because
-/// there they are only the thin client's. In the desktop app the same routes would be this
-/// device's: the log of its own server — including the pairing code that server prints
-/// while it waits for its first device, which is full control of this device — and the
-/// data directory that holds every managed server's key.
+/// The removed thin client published its own log and directories to the page it showed
+/// (<c>/client/log*</c>, <c>/client/app/*</c>), because there they were only the thin
+/// client's. In the desktop app the same routes would be this device's: the log of its own
+/// server — including the pairing code that server prints while it waits for its first
+/// device, which is full control of this device — and the data directory that holds every
+/// managed server's key. A managed server's older UI may still ask for them.
 /// </para>
 /// <para>
 /// Everything here runs with the app's real <see cref="AppService"/> bridged into the relay
-/// and a real log on disk, because the routes only ever answered with content in that
-/// setting: without an application service they report "no log here", and a test that sends
-/// them there proves nothing.
+/// and a real log on disk, so a route that answered would have something to answer with: a
+/// test against a relay with no application service or no log proves nothing.
 /// </para>
 /// </remarks>
 [TestClass]
@@ -127,9 +126,16 @@ public class ConsoleDiagnosticsExposureTests
 
         // What a route that published the log would hand out — so an empty answer below is
         // the relay refusing, not a log that happened to be empty.
-        var entries = ClientLogReader.Read(logDirectory, 50);
-        Assert.IsTrue(entries.Any(e => e.Message.Contains(PairingCode, StringComparison.Ordinal)),
-            string.Join("\n", entries.Select(e => e.Message)));
+        var written = string.Join("\n", Directory.EnumerateFiles(logDirectory, "*.log").Select(ReadShared));
+        StringAssert.Contains(written, PairingCode);
+    }
+
+    /// <summary>Reads a log file the way a reader beside a live logger has to: sharing it.</summary>
+    private static string ReadShared(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 
     [TestMethod]
@@ -137,19 +143,19 @@ public class ConsoleDiagnosticsExposureTests
     {
         var port = ConsoleHarness.PortOf((await _console.Manager.OpenAsync(_nas.ServerId, null))!.Url);
 
-        // Every route the relay core publishes about the machine it runs on, in every shape
-        // a page could ask — the read first, so a relay that still answered stops the test
-        // before the openers below could reach this machine's file manager.
+        // Every route the thin client published about the machine it ran on, in every shape
+        // a page could ask — the read first, so a relay that answered stops the test before
+        // the openers below could reach this machine's file manager.
         (HttpMethod Method, string Path)[] calls =
         [
-            (HttpMethod.Get, ClientLogEndpoints.Prefix),
-            (HttpMethod.Get, $"{ClientLogEndpoints.Prefix}?take=50"),
-            (HttpMethod.Get, $"{ClientLogEndpoints.Prefix}?contains=Enter%20this%20code&level=Information"),
-            (HttpMethod.Get, $"{ClientAppEndpoints.Prefix}/info"),
-            (HttpMethod.Post, $"{ClientLogEndpoints.Prefix}/open"),
-            (HttpMethod.Post, $"{ClientAppEndpoints.Prefix}/open?directory=data"),
-            (HttpMethod.Post, $"{ClientAppEndpoints.Prefix}/open?directory=log"),
-            (HttpMethod.Post, $"{ClientAppEndpoints.Prefix}/open?directory=components")
+            (HttpMethod.Get, "/client/log"),
+            (HttpMethod.Get, "/client/log?take=50"),
+            (HttpMethod.Get, "/client/log?contains=Enter%20this%20code&level=Information"),
+            (HttpMethod.Get, "/client/app/info"),
+            (HttpMethod.Post, "/client/log/open"),
+            (HttpMethod.Post, "/client/app/open?directory=data"),
+            (HttpMethod.Post, "/client/app/open?directory=log"),
+            (HttpMethod.Post, "/client/app/open?directory=components")
         ];
 
         var forwardedBefore = _nas.Requests.Count;

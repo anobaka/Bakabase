@@ -83,7 +83,7 @@ const FileSystemEntryIcon = ({ path, type, size = 14, disableCache }: Props) => 
   const userSideActionsRunHere = useUserSideActionsRunHere();
   const isPureClient = useIsPureClient();
   // AppContext arrives asynchronously. Wait for it before assuming a local
-  // connection has a desktop; a thin client supplies its own icon handler.
+  // connection has a desktop; a managed server's relay supplies its own icon handler.
   const hasDesktopRuntime = useAppContextStore(
     (state) => state.bApi2 !== null && state.runtimeMode !== RuntimeMode.Docker,
   );

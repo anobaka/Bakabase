@@ -667,10 +667,6 @@ describe("the console (the desktop app showing a managed server)", () => {
 describe("windows with nothing to switch to", () => {
   it.each([
     [
-      "the retired thin client",
-      { clientMode: ClientMode.PureClient, clientHost: "legacy", isLocal: false },
-    ],
-    [
       "a client not yet identified",
       { clientMode: ClientMode.PureClient, clientHost: undefined, isLocal: false },
     ],
@@ -687,8 +683,7 @@ describe("windows with nothing to switch to", () => {
     useRemoteAccessStore.setState({
       initialized: true,
       isLocal: false,
-      clientMode: ClientMode.PureClient,
-      clientHost: "legacy",
+      clientMode: ClientMode.RemoteBrowser,
     });
     renderSwitcher(true);
     expect(screen.getByRole("link", { name: "B" })).toBeInTheDocument();

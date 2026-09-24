@@ -61,16 +61,14 @@ class PublishContractTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             contract.check_publish(self.directory, "server")
 
-    def test_client_cannot_carry_frontend_or_server(self):
-        for name in ("Bakabase.Client.dll", "Bakabase.Client.Remoting.dll", "Bakabase.Remoting.dll", "Bakabase.Shell.dll"):
-            (self.directory / name).touch()
-        with self.assertRaises(AssertionError):
+    def test_the_removed_client_role_is_no_publish_role(self):
+        with self.assertRaises(KeyError):
             contract.check_publish(self.directory, "client")
 
 
 class UnifiedPublishContractTests(unittest.TestCase):
     """The unified app ships its own server and the relay it manages other servers through,
-    and nothing of the retired thin client."""
+    and nothing named after the removed thin client."""
 
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -128,7 +126,7 @@ class UnifiedProjectGraphTests(unittest.TestCase):
 
 
 class ShellProjectGraphTests(unittest.TestCase):
-    """The shell reaches its host only through contracts, so it can sit in front of either product."""
+    """The shell reaches its host only through contracts."""
 
     def test_actual_shell_graph_references_no_host(self):
         contract.check_shell_graph(*contract.project_graph(contract.ROOT / "src/apps/Bakabase.Shell/Bakabase.Shell.csproj"))
@@ -203,7 +201,7 @@ class MacPortableContractTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "permission"):
             self.check(mode=0o644)
 
-    def test_prepare_supports_both_products_and_preserves_identity(self):
+    def test_prepare_preserves_the_apps_identity(self):
         for role, product in contract.PRODUCTS.items():
             template = contract.ROOT / "src/apps" / product["project"] / "Info.plist"
             before = template.read_bytes()
@@ -215,6 +213,14 @@ class MacPortableContractTests(unittest.TestCase):
             self.assertEqual("2.4.0", info["CFBundleVersion"])
             self.assertTrue(info["CFBundleGetInfoString"].endswith(" 2.4.0-beta.3+abc123"))
             self.assertEqual(before, template.read_bytes())
+
+    def test_the_removed_clients_template_is_refused(self):
+        template = self.directory / "client.plist"
+        template.write_bytes(plistlib.dumps({"CFBundleIdentifier": "com.anobaka.bakabase.client",
+                                             "CFBundleExecutable": "Bakabase.Client",
+                                             "CFBundleDisplayName": "Bakabase Client"}))
+        with self.assertRaisesRegex(ValueError, "executable"):
+            prepare_plist.prepare(template, self.directory / "out.plist", "2.4.0-beta.3")
 
     def test_invalid_release_does_not_modify_output(self):
         output = self.directory / "existing.plist"

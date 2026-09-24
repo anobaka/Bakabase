@@ -37,7 +37,6 @@ import enPostParser from "@/locales/en/pages/postParser.json";
 import enPathMarks from "@/locales/en/pages/pathMarks.json";
 import enPathMarkConfig from "@/locales/en/pages/pathMarkConfig.json";
 import enComparison from "@/locales/en/pages/comparison.json";
-import enClientConnection from "@/locales/en/pages/clientConnection.json";
 import enClientPathMapping from "@/locales/en/pages/clientPathMapping.json";
 import enResourceSource from "@/locales/en/pages/resourceSource.json";
 import enDataCard from "@/locales/en/pages/dataCard.json";
@@ -108,7 +107,6 @@ import cnPostParser from "@/locales/cn/pages/postParser.json";
 import cnPathMarks from "@/locales/cn/pages/pathMarks.json";
 import cnPathMarkConfig from "@/locales/cn/pages/pathMarkConfig.json";
 import cnComparison from "@/locales/cn/pages/comparison.json";
-import cnClientConnection from "@/locales/cn/pages/clientConnection.json";
 import cnClientPathMapping from "@/locales/cn/pages/clientPathMapping.json";
 import cnResourceSource from "@/locales/cn/pages/resourceSource.json";
 import cnDataCard from "@/locales/cn/pages/dataCard.json";
@@ -179,7 +177,6 @@ const enResources = {
   ...enPathMarks,
   ...enPathMarkConfig,
   ...enComparison,
-  ...enClientConnection,
   ...enClientPathMapping,
   ...enResourceSource,
   ...enDataCard,
@@ -250,7 +247,6 @@ const cnResources = {
   ...cnPathMarks,
   ...cnPathMarkConfig,
   ...cnComparison,
-  ...cnClientConnection,
   ...cnClientPathMapping,
   ...cnResourceSource,
   ...cnDataCard,

@@ -12,11 +12,11 @@ namespace Bakabase.Service.Components
     public static class BakabaseConstantsGenerator
     {
         /// <param name="extraEnums">
-        /// Enums from assemblies this one does not reference. The thin client's are the
-        /// case: its outcomes are rendered by the same frontend, but nothing on the
-        /// server side can see them, so the codegen driver -- which sees both -- hands
-        /// them in rather than the frontend keeping a hand-copied duplicate that would
-        /// silently drift.
+        /// Enums from assemblies this one does not reference. The relay's are the case:
+        /// its failure header is read by the same frontend, but nothing on the server
+        /// side can see it, so the codegen driver -- which sees both -- hands it in
+        /// rather than the frontend keeping a hand-copied duplicate that would silently
+        /// drift.
         /// </param>
         public static string Generate(params Type[] extraEnums)
         {

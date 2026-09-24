@@ -6,12 +6,11 @@
       it produces, path mapping, and the handlers that run a command on the machine the
       user is sitting at instead of on the server.
 
-      Shared by both desktop products. The all-in-one composes one relay per server it
-      manages, next to its own in-process server; the legacy thin client composes exactly
-      one, with nothing else behind it. Neither the server nor its container ever sees any
-      of this: Bakabase.Service must not reference this project, and this project must not
-      reference Bakabase.Service, Bakabase.Modules.Federation, Bakabase.Shell or Avalonia.
-      The release contract checks both directions.
+      Composed by the desktop app (Bakabase.App), one relay per server it manages, next to
+      its own in-process server. Neither the server nor its container ever sees any of this:
+      Bakabase.Service must not reference this project, and this project must not reference
+      Bakabase.Service, Bakabase.Modules.Federation, Bakabase.Shell or Avalonia. The release
+      contract checks both directions.
     -->
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>

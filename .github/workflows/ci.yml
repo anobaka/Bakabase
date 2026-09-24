@@ -57,14 +57,11 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-
 
-      # The two entry projects are not referenced by any test project, so nothing
-      # else here compiles them — a break in either would first show up during a
-      # deploy, which is the worst place to find out. They are small; this is
-      # seconds, not minutes.
-      - name: Build the app entry points
-        run: |
-          dotnet build src/apps/Bakabase.App/Bakabase.App.csproj
-          dotnet build src/apps/Bakabase.Client.App/Bakabase.Client.App.csproj
+      # The app's entry project is not referenced by any test project, so nothing
+      # else here compiles it — a break would first show up during a deploy, which
+      # is the worst place to find out. It is small; this is seconds, not minutes.
+      - name: Build the app entry point
+        run: dotnet build src/apps/Bakabase.App/Bakabase.App.csproj
 
       - name: Run tests
         run: |
@@ -147,7 +144,7 @@ jobs:
           retention-days: 3
 
   # Real processes on Linux: three production-startup hosts talking the node
-  # protocol, the headless publish contents, and the legacy-client migration
+  # protocol, the headless publish contents, and first launch, library sharing
   # and server switching in a browser. The unit/integration tests already run
   # in backend-tests.
   federation:
@@ -192,7 +189,7 @@ jobs:
           dotnet publish src/apps/Bakabase.Service/Bakabase.Service.csproj -p:RuntimeMode=DOCKER --self-contained false -r linux-x64 -o "$RUNNER_TEMP/publish-server"
           cp -R src/web/dist "$RUNNER_TEMP/publish-server/web"
           python src/scripts/check-release-contract.py --role server --publish-dir "$RUNNER_TEMP/publish-server" --require-web --report "$RUNNER_TEMP/federation-results/server-package.json"
-      - name: Legacy client export, import, reauthorization, media and server switching in a browser
+      - name: First launch, pairing, media and server switching in a browser
         run: |
           (cd src/tests/federation-browser-smoke && npm ci --ignore-scripts && npx playwright install --with-deps chromium)
           python3 -m unittest discover -s src/tests/federation-browser-smoke -p 'test*.py'
@@ -264,8 +261,6 @@ jobs:
           dotnet publish src/apps/Bakabase.App/Bakabase.App.csproj -p:RuntimeMode=${{ matrix.runtimeMode }} --self-contained false -r ${{ matrix.rid }} -o "$RUNNER_TEMP/publish-unified"
           cp -R src/web/dist "$RUNNER_TEMP/publish-unified/web"
           python src/scripts/check-release-contract.py --role unified --publish-dir "$RUNNER_TEMP/publish-unified" --require-web --report "$RUNNER_TEMP/federation-results/unified-package.json"
-          dotnet publish src/apps/Bakabase.Client.App/Bakabase.Client.App.csproj -p:RuntimeMode=${{ matrix.runtimeMode }} --self-contained false -r ${{ matrix.rid }} -o "$RUNNER_TEMP/publish-client"
-          python src/scripts/check-release-contract.py --role client --publish-dir "$RUNNER_TEMP/publish-client" --report "$RUNNER_TEMP/federation-results/client-package.json"
       - name: Decoded video, slow streams, seek, interruption and opt-out
         if: matrix.runtimeMode == 'DOCKER'
         run: |

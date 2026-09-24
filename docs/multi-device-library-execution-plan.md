@@ -2,7 +2,7 @@
 
 > 状态：已在开发分支实施，尚未发布。本文保留原始设计与决策；当前实现、使用方式和剩余发布门槛见[实施记录](multi-device-library-implementation.md)。开发期间的验收证据保留在标签 `acceptance-evidence-2026-09-23`。下列复选框是原计划清单，不代表实施状态。
 >
-> 与本文默认决策的差异：配对仍是两份定向授权，但连接时可附带只对目标设备有效的一次性回授码，一次批准即双向互通（D05 的“一次流程编排两份授权”）；来源地址变化时经发现与签名握手自动更新；D07 只约束联合视图：联合视图保持只读。管理其他设备另行实现为“服务器切换”——一体版把主窗口切换到目标设备自己的界面，经本机签名中继使用旧管理员配对（完全控制），详见[服务器切换](server-switching.md)。据此修订 §4.2(4)(5)：整站转发器只允许以“每台受管服务器一个 127.0.0.1 中继”的形式由 `Bakabase.App` 组装，绝不进入 Service 容器或管线；允许每台受管服务器一个精简容器，但不另起 AppHost、配置、数据库或单实例守卫。纯客户端停止维护（D12 收敛），一体版直接导入其配对。
+> 与本文默认决策的差异：配对仍是两份定向授权，但连接时可附带只对目标设备有效的一次性回授码，一次批准即双向互通（D05 的“一次流程编排两份授权”）；来源地址变化时经发现与签名握手自动更新；D07 只约束联合视图：联合视图保持只读。管理其他设备另行实现为“服务器切换”——一体版把主窗口切换到目标设备自己的界面，经本机签名中继使用旧管理员配对（完全控制），详见[服务器切换](server-switching.md)。据此修订 §4.2(4)(5)：整站转发器只允许以“每台受管服务器一个 127.0.0.1 中继”的形式由 `Bakabase.App` 组装，绝不进入 Service 容器或管线；允许每台受管服务器一个精简容器，但不另起 AppHost、配置、数据库或单实例守卫。纯客户端已移除（D12 收敛）：产品仍处测试版，因此不发布带停止维护提示的过渡版本，下文 P12 与 §12 中的迁移提示版本、连接提示导出/导入、保留旧 feed 与下载入口等安排均已作废；一体版直接导入本机旧安装留下的配对。以下正文保留为设计历史。
 >
 > 基线：2026-09-20 获取的 `origin/main`，`f1fa1469f32f794f17895f5ba886cc14ddd42883`。
 
@@ -735,7 +735,6 @@ yarn build
 # 从仓库根运行；目标 SDK 由 global.json 决定。
 cd ../..
 dotnet build src/apps/Bakabase.App/Bakabase.App.csproj
-dotnet build src/apps/Bakabase.Client.App/Bakabase.Client.App.csproj
 dotnet build src/apps/Bakabase.Service/Bakabase.Service.csproj
 dotnet run --project src/tests/Bakabase.Modules.Federation.Tests -- --minimum-expected-tests 1
 dotnet run --project src/tests/Bakabase.Tests -- --filter 'FullyQualifiedName~Federation' --minimum-expected-tests 1

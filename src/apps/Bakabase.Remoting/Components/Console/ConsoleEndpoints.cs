@@ -18,20 +18,20 @@ namespace Bakabase.Remoting.Components.Console;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Shaped like the thin client's API wherever the two mean the same thing, so a server's
-/// UI written against the thin client keeps working when the desktop app shows it — its
-/// status, its path mappings, its tray report. <c>host: "console"</c> is how a newer UI
-/// tells the two apart and offers the server switcher instead of the thin client's
-/// connect and pairing screens.
+/// The API grew out of the removed thin client's, and keeps its shape wherever the two mean
+/// the same thing — status, path mappings, the tray report — because the page asking may be
+/// a managed server's older UI, written when that was the only program answering here.
+/// <c>host: "console"</c> is how a newer UI knows it is in the desktop app and offers the
+/// server switcher.
 /// </para>
 /// <para>
-/// Those screens answer 409 <c>ManagedByHost</c> here: pairing, switching the active
-/// server and forgetting one are the desktop app's own business, done from its own UI,
-/// and a server's page — which is the other machine's code — has no say in them. The
-/// thin client's updater and migration export answer 404; there is no thin client to
-/// update or migrate from. So do its log and directory routes: this device's log and data
-/// directory are the whole app's, and nothing about this device beyond what is listed here
-/// is the server's page's to read or open.
+/// The thin client's connect and pairing routes answer 409 <c>ManagedByHost</c> here, for
+/// such an older UI: pairing, switching the active server and forgetting one are the
+/// desktop app's own business, done from its own UI, and a server's page — which is the
+/// other machine's code — has no say in them. Everything else it had (updater, migration
+/// export, its log and directories) answers 404: this device's log and data directory are
+/// the whole app's, and nothing about this device beyond what is listed here is the
+/// server's page's to read or open.
 /// </para>
 /// <para>
 /// Nothing under <c>/client</c> is forwarded, including paths nobody mapped: the server
@@ -46,10 +46,13 @@ public static class ConsoleEndpoints
     /// <summary>What <c>/client/status</c> says this host is.</summary>
     public const string HostName = "console";
 
-    /// <summary>The refusal a thin-client-only route answers with.</summary>
+    /// <summary>The refusal a route that only the removed thin client served answers with.</summary>
     public const string ManagedByHost = "ManagedByHost";
 
-    /// <summary>The thin client's routes that mean nothing when the desktop app is the host.</summary>
+    /// <summary>
+    /// The removed thin client's connect and pairing routes, which a managed server's older UI
+    /// may still call and which mean nothing when the desktop app is the host.
+    /// </summary>
     public static IReadOnlyList<(string Method, string Pattern)> ManagedByHostRoutes { get; } =
     [
         (HttpMethods.Post, $"{Prefix}/connect"),
@@ -203,10 +206,9 @@ public static class ConsoleEndpoints
                 context.RequestAborted);
         });
 
-        // Everything else under the prefix — the thin client's migration export and
-        // updater among it — is not here, and is never the server's either. So is the thin
-        // client's own log and directories (/client/log*, /client/app/*), which the relay
-        // core leaves unmapped here: in this app they are this device's, not a relay's.
+        // Everything else under the prefix is not here, and is never the server's either —
+        // /client/log* and /client/app/* included: in this app this device's log and
+        // directories are the whole app's, not a relay's.
         endpoints.Map($"{Prefix}/{{**rest}}",
             (HttpContext context) => RefuseAsync(context, HttpStatusCode.NotFound, "NotFound"));
     }

@@ -1,15 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <!--
-      The all-in-one entry point, twin of Bakabase.Client.App: the process entry, the
-      packaging inputs (icon, manifest, Info.plist) and the one thing that makes this
-      flavour the all-in-one — the reference to Bakabase.Service, wrapped as an
-      IShellHost. Everything visual lives in Bakabase.Shell, which both share.
+      The desktop app's entry point: the process entry, the packaging inputs (icon,
+      manifest, Info.plist) and the reference to Bakabase.Service, wrapped as an
+      IShellHost. Everything visual lives in Bakabase.Shell.
 
       It also references Bakabase.Remoting, for the relays that let this window show and
-      manage other servers (UnifiedHost adds them next to its own server). Never
-      Bakabase.Client.Remoting: that is the retired thin client's product layer, and the
-      release contract checks the project graph for it.
+      manage other servers (UnifiedHost adds them next to its own server).
     -->
     <PropertyGroup>
         <OutputType>WinExe</OutputType>

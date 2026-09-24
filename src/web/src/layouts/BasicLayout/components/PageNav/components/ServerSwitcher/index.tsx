@@ -53,8 +53,8 @@ const MANAGE_DEVICES_ROUTE = devicesRoute("servers");
  *   manages, from `/federation/local/servers`;
  * - the console (the desktop app showing a managed server): whatever the relay lists at
  *   `/client/switcher` — the relay, not the server being shown, knows the way back;
- * - anything else — an ordinary browser on another device, the retired thin client, or a
- *   flavour not yet identified — keeps the plain brand link. None of them has anywhere
+ * - anything else — an ordinary browser on another device, or a flavour not yet
+ *   identified — keeps the plain brand link. None of them has anywhere
  *   to switch to, and a switcher offering nothing would only suggest otherwise.
  */
 const ServerSwitcher: React.FC<Props> = ({ collapsed }) => {

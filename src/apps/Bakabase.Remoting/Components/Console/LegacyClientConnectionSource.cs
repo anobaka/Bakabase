@@ -8,7 +8,7 @@ using Bakabase.Remoting.Components.Connection;
 namespace Bakabase.Remoting.Components.Console;
 
 /// <summary>
-/// The retired thin client's pairings on this machine, read where it left them.
+/// The removed thin client's pairings on this machine, read where an old install left them.
 /// </summary>
 /// <remarks>
 /// <para>

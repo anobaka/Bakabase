@@ -46,8 +46,8 @@ public abstract class PathHandlerBase(ActiveConnection connection) : IUserMachin
             code = (int) HttpStatusCode.NotFound,
             message = string.IsNullOrWhiteSpace(serverPath)
                 ? "The server did not say which file to open."
-                : $"There is no folder on this machine mapped to '{serverPath}'. " +
-                  "Add a path mapping for that library in the client's settings.",
+                : $"There is no folder on this computer mapped to '{serverPath}'. " +
+                  "Add a path mapping for that library under This computer → Path mapping.",
             serverPath = result.UnmappedServerPath
         }), context.RequestAborted);
 

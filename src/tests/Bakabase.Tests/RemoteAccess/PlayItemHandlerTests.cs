@@ -180,9 +180,17 @@ public class PlayItemHandlerTests
 
         await Play(context);
 
-        Assert.AreEqual((int) HttpStatusCode.NotImplemented, Read(context).Status);
+        var (status, body) = Read(context);
+        var message = body.GetProperty("message").GetString()!;
+
+        Assert.AreEqual((int) HttpStatusCode.NotImplemented, status);
         Assert.AreEqual(0, _shell.Launched.Count);
         Assert.AreEqual(0, _shell.Processes.Count);
+
+        // Sends the user to where the mapping is set in this window, and never to the
+        // settings of a client that no longer exists.
+        StringAssert.Contains(message, "This computer → Path mapping");
+        Assert.IsFalse(message.Contains("client", StringComparison.OrdinalIgnoreCase), message);
     }
 
     [TestMethod]

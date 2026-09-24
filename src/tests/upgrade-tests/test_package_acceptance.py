@@ -19,9 +19,8 @@ VERSION = "0.0.1-acceptance.1"
 HOSTED = {"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted", "RUNNER_TEMP": "/runner-temp"}
 
 
-def manifest(role="unified", rid="win-x64"):
-    assembly = "Bakabase" if role == "unified" else "Bakabase.Client"
-    return {"id": assembly, "mainExe": assembly + (".exe" if rid == "win-x64" else ""),
+def manifest(rid="win-x64"):
+    return {"id": "Bakabase", "mainExe": "Bakabase" + (".exe" if rid == "win-x64" else ""),
             "rid": rid, "version": VERSION}
 
 
@@ -38,9 +37,9 @@ def write_zip(path, entries):
     return path
 
 
-def windows_packages(directory, role="unified", full_manifest=None, full_changes=None):
+def windows_packages(directory, full_manifest=None, full_changes=None):
     """Actual ZIP containers with tiny synthetic payloads; none is executable."""
-    expected = manifest(role)
+    expected = manifest()
     assembly = expected["id"]
     payload = {expected["mainExe"]: b"MZ\x00\x00synthetic-native-header",
                assembly + ".dll": b"synthetic-managed-assembly",
@@ -93,19 +92,23 @@ class HostedRunnerBoundary(unittest.TestCase):
 
 
 class ManifestBoundary(unittest.TestCase):
-    def test_each_product_and_native_rid_have_exact_manifest_identity(self):
-        for role in ("unified", "client"):
-            for rid in ("win-x64", "osx-x64", "osx-arm64"):
-                expected = manifest(role, rid)
-                with self.subTest(role=role, rid=rid):
-                    runner.validate_manifest(expected, role, rid, VERSION)
-                for field, wrong in (("id", "OtherProduct"), ("rid", "linux-x64"),
-                                     ("version", "0.0.0"), ("mainExe", "Other.exe")):
-                    with self.subTest(role=role, rid=rid, field=field), self.assertRaises(AssertionError):
-                        runner.validate_manifest(dict(expected, **{field: wrong}), role, rid, VERSION)
-                other_role = "client" if role == "unified" else "unified"
-                with self.subTest(role=role, rid=rid, wrong_role=True), self.assertRaises(AssertionError):
-                    runner.validate_manifest(expected, other_role, rid, VERSION)
+    def test_each_native_rid_has_exact_manifest_identity(self):
+        for rid in ("win-x64", "osx-x64", "osx-arm64"):
+            expected = manifest(rid)
+            with self.subTest(rid=rid):
+                runner.validate_manifest(expected, "unified", rid, VERSION)
+            for field, wrong in (("id", "OtherProduct"), ("rid", "linux-x64"),
+                                 ("version", "0.0.0"), ("mainExe", "Other.exe")):
+                with self.subTest(rid=rid, field=field), self.assertRaises(AssertionError):
+                    runner.validate_manifest(dict(expected, **{field: wrong}), "unified", rid, VERSION)
+
+    def test_the_removed_clients_package_is_not_the_app(self):
+        # A package the thin client's pipeline once produced must never pass as the app's.
+        for rid in ("win-x64", "osx-x64", "osx-arm64"):
+            retired = dict(manifest(rid), id="Bakabase.Client",
+                           mainExe="Bakabase.Client" + (".exe" if rid == "win-x64" else ""))
+            with self.subTest(rid=rid), self.assertRaises(AssertionError):
+                runner.validate_manifest(retired, "unified", rid, VERSION)
 
 
 class ArchiveBoundary(unittest.TestCase):
@@ -156,19 +159,18 @@ class ArchiveBoundary(unittest.TestCase):
 
 class PackageAuditBoundary(unittest.TestCase):
     def test_matching_self_contained_packages_report_content_hashes(self):
-        for role in ("unified", "client"):
-            with self.subTest(role=role), tempfile.TemporaryDirectory() as temporary:
-                root = Path(temporary)
-                windows_packages(root, role)
-                report = runner.audit_packages(root, role, "win-x64", VERSION)
-                self.assertTrue(report["passed"])
-                self.assertEqual(manifest(role), report["manifest"])
-                self.assertEqual("current/", report["portableContent"])
-                self.assertEqual({"portable", "full", "installer"}, set(report["artifacts"]))
-                for artifact in report["artifacts"].values():
-                    content = (root / artifact["file"]).read_bytes()
-                    self.assertEqual(len(content), artifact["sizeBytes"])
-                    self.assertEqual(hashlib.sha256(content).hexdigest(), artifact["sha256"])
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            windows_packages(root)
+            report = runner.audit_packages(root, "unified", "win-x64", VERSION)
+            self.assertTrue(report["passed"])
+            self.assertEqual(manifest(), report["manifest"])
+            self.assertEqual("current/", report["portableContent"])
+            self.assertEqual({"portable", "full", "installer"}, set(report["artifacts"]))
+            for artifact in report["artifacts"].values():
+                content = (root / artifact["file"]).read_bytes()
+                self.assertEqual(len(content), artifact["sizeBytes"])
+                self.assertEqual(hashlib.sha256(content).hexdigest(), artifact["sha256"])
 
     def test_missing_or_truncated_installer_is_rejected(self):
         for content in (None, b"MZ"):

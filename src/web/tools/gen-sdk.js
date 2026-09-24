@@ -260,8 +260,8 @@ async function buildApiTs() {
       }
     }
 
-    // A refusal from the thin client's own forwarding layer rather than from the
-    // server: no local path mapping, an action this build cannot run yet, and so on.
+    // A refusal from the desktop app's relay rather than from the server it shows: no
+    // local path mapping, an action this build cannot run yet, and so on.
     // Recognised in one place because any endpoint that touches a path can return it,
     // and "GET /tool/open failed" describes none of them.
     if (reportClientFailure(response, error)) {

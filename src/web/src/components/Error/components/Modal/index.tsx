@@ -8,8 +8,7 @@ import { CopyOutlined, CheckOutlined, GithubOutlined } from "@ant-design/icons";
 import { Accordion, AccordionItem, Button, Chip, Link, Modal, Snippet } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import Urls from "@/cons/Urls";
-import { useIsConsole, useIsPureClient } from "@/stores/remoteAccess";
-import { clientApi } from "@/core/clientApi";
+import { useIsPureClient } from "@/stores/remoteAccess";
 
 interface IProps {
   error?: Error;
@@ -37,11 +36,10 @@ const Step = ({ number, title, children }: StepProps) => (
 const ErrorModal = ({ error, errorInfo }: IProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  // Which program to restart, and whose log to read. Both answers change in a thin
-  // client: the window that just failed is this one, and the log that recorded it is
-  // this machine's — the path below belongs to the server.
+  // Which program to restart, and whose log to read. Both answers change in the desktop
+  // app showing a server it manages: the window that just failed is this computer's app,
+  // and the server's log path would not open here.
   const isPureClient = useIsPureClient();
-  const isConsole = useIsConsole();
 
   const [appInfo, setAppInfo] = useState<{ logPath: string }>();
   const [showFullStack, setShowFullStack] = useState(false);
@@ -49,24 +47,10 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    // A thin client's /app/info is the server's, and so is the log path in it. The
-    // failure being reported happened in this window, so the log worth pointing at
-    // is this machine's — and the server's path could not be opened from here
-    // anyway, since nothing maps it.
-    //
     // The desktop app showing a managed server has no log to point at: its relay keeps
     // this computer's log away from the other server's page, and the server's own path
-    // would not open here either.
-    if (isConsole) return;
-
-    if (isPureClient) {
-      clientApi
-        .log({ take: 1 })
-        .then((page) => setAppInfo(page.directory ? { logPath: page.directory } : undefined))
-        .catch(() => {});
-
-      return;
-    }
+    // (which is what /app/info names there) would not open here either.
+    if (isPureClient) return;
 
     BApi.app.getAppInfo().then((rsp) => {
       if (!rsp.code) {
@@ -75,7 +59,7 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
         });
       }
     });
-  }, [isPureClient, isConsole]);
+  }, [isPureClient]);
 
   const truncateStack = (stack: string, maxLines: number = 5) => {
     const lines = stack.split("\n");
@@ -218,11 +202,11 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
             <Step
               number={2}
               title={t<string>(
-                isPureClient ? "error.modal.restartClient" : "error.modal.restartApp",
+                isPureClient ? "error.modal.restartThisComputer" : "error.modal.restartApp",
               )}
             >
               {t<string>(
-                isPureClient ? "error.modal.restartClientDesc" : "error.modal.restartAppDesc",
+                isPureClient ? "error.modal.restartThisComputerDesc" : "error.modal.restartAppDesc",
               )}
             </Step>
             <Step number={3} title={t<string>("error.modal.contactSupport")}>
@@ -234,11 +218,7 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                       hideSymbol
                       className="cursor-pointer ml-1"
                       size="sm"
-                      onClick={() =>
-                        isPureClient
-                          ? clientApi.openLogDirectory()
-                          : BApi.tool.openFileOrDirectory({ path: appInfo.logPath })
-                      }
+                      onClick={() => BApi.tool.openFileOrDirectory({ path: appInfo.logPath })}
                     >
                       <span className="break-all whitespace-break-spaces text-primary">
                         {appInfo.logPath}

@@ -59,14 +59,9 @@ jobs:
       - name: Refresh CDN cache
         id: cdn-refresh
         run: |
-          # Both products. The thin client is published under its own prefix, and an
-          # edge still serving its old manifest strands client installs exactly the
-          # way a stale all-in-one manifest strands the desktop app.
           OBJECT_PATH="https://cdn-public.anobaka.com/app/bakabase/releases/
           https://cdn-public.anobaka.com/app/bakabase/archives/${VERSION}/
-          https://cdn-public.anobaka.com/app/bakabase/scripts/
-          https://cdn-public.anobaka.com/app/bakabase-client/releases/
-          https://cdn-public.anobaka.com/app/bakabase-client/archives/${VERSION}/"
+          https://cdn-public.anobaka.com/app/bakabase/scripts/"
           RESULT=$(./aliyun cdn RefreshObjectCaches \
             --ObjectPath "$OBJECT_PATH" \
             --ObjectType Directory)
@@ -111,13 +106,8 @@ jobs:
             CHANNEL=
           fi
 
-          # Each product under its own prefix. Keeping them apart is what stops an
-          # all-in-one updater ever seeing a client manifest, so it is worth
-          # confirming rather than assuming.
-          PRODUCTS=(bakabase bakabase-client)
           PLATFORMS=(win-x64 osx-x64 osx-arm64)
           FAILED=()
-          for product in "${PRODUCTS[@]}"; do
           for plat in "${PLATFORMS[@]}"; do
             if [ -n "$CHANNEL" ]; then
               MANIFEST="releases.${CHANNEL}.json"
@@ -128,12 +118,12 @@ jobs:
                 *) echo "::error::No default Velopack channel known for platform $plat"; exit 1 ;;
               esac
             fi
-            echo "[$product/$plat] verifying manifest: $MANIFEST, expected version: $VERSION"
-            URL="https://cdn-public.anobaka.com/app/${product}/releases/${plat}/${MANIFEST}"
+            echo "[$plat] verifying manifest: $MANIFEST, expected version: $VERSION"
+            URL="https://cdn-public.anobaka.com/app/bakabase/releases/${plat}/${MANIFEST}"
             OK=0
             for i in $(seq 1 6); do
               ACTUAL=$(curl -fsSL "$URL" | jq -r '.Assets[0].Version // empty' 2>/dev/null || echo "")
-              echo "[$product/$plat] attempt $i: got version='$ACTUAL', expected='$VERSION'"
+              echo "[$plat] attempt $i: got version='$ACTUAL', expected='$VERSION'"
               if [ "$ACTUAL" = "$VERSION" ]; then
                 OK=1
                 break
@@ -141,13 +131,12 @@ jobs:
               sleep 5
             done
             if [ "$OK" -ne 1 ]; then
-              FAILED+=("$product/$plat")
+              FAILED+=("$plat")
             fi
-          done
           done
 
           if [ "${#FAILED[@]}" -gt 0 ]; then
             echo "::error::CDN still serves a stale manifest after 30s for: ${FAILED[*]}"
             exit 1
           fi
-          echo "Both products serve version $VERSION on all platforms"
+          echo "CDN serves version $VERSION on all platforms"

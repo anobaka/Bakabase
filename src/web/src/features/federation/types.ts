@@ -148,7 +148,7 @@ export interface ManagedServerDiscovery {
 }
 
 export interface ManagedServerImport {
-  /** Whether a Bakabase Client installation with pairings exists on this machine. */
+  /** Whether an old Bakabase Client installation with pairings exists on this machine. */
   found: boolean;
   imported: number;
   skipped: number;

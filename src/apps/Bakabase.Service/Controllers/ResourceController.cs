@@ -585,9 +585,9 @@ public class ResourceController(
     /// The players configured for this resource, after profile inheritance is resolved.
     /// </summary>
     /// <remarks>
-    /// Read by the thin client, which starts the player itself and so needs to know
-    /// which one the user chose. The executable paths in here belong to whichever
-    /// machine configured them, so a client matches them to a known player and
+    /// Read by a managed server's relay, which starts the player itself and so needs to
+    /// know which one the user chose. The executable paths in here belong to whichever
+    /// machine configured them, so the relay matches them to a known player and
     /// substitutes its own installation rather than trying to run them as-is.
     /// </remarks>
     [HttpGet("{id:int}/effective-player-options")]
@@ -615,7 +615,7 @@ public class ResourceController(
     /// Picks a random resource with something playable, without playing it.
     /// </summary>
     /// <remarks>
-    /// The picking half of random play, split out for the thin client: it starts the
+    /// The picking half of random play, split out for a managed server's relay: it starts the
     /// player itself but cannot choose what to play, because the resources, the
     /// playable-file cache and the live fallback probe are all here.
     /// </remarks>
@@ -849,7 +849,7 @@ public class ResourceController(
     /// Records that several resources were played, one file each.
     /// </summary>
     /// <remarks>
-    /// Batch play writes one history entry per resource, and a thin client that started
+    /// Batch play writes one history entry per resource, and a relay that started
     /// the players would otherwise make a request per resource for a selection that could
     /// run to hundreds.
     /// </remarks>

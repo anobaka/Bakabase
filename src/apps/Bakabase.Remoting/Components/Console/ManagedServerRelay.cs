@@ -1,7 +1,6 @@
 using System.Net;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Gui;
-using Bakabase.Remoting.Abstractions;
 using Bakabase.Remoting.Components.Connection;
 using Bakabase.Remoting.Components.Forwarding;
 using Bakabase.Remoting.Components.Relay;
@@ -22,8 +21,9 @@ namespace Bakabase.Remoting.Components.Console;
 /// <param name="SelfAddress">Every listener of this app, so nothing the relay does can point back into the app.</param>
 /// <param name="Context">Which server the relay is for, and the switcher behind <c>/client/switcher</c>.</param>
 /// <param name="AppService">
-/// This app's data directories, for temp playlists. Never published to the page: a relay
-/// maps no <c>/client/log</c> or <c>/client/app</c>. Null in a test host.
+/// This app's data directories, for temp playlists and the Locale Emulator components
+/// folder. Never published to the page: a relay maps no <c>/client/log</c> or
+/// <c>/client/app</c>. Null in a test host.
 /// </param>
 /// <param name="GuiAdapter">The windows cookie capture opens, on this machine. Null without a GUI.</param>
 public sealed record ManagedServerRelayDependencies(
@@ -109,7 +109,7 @@ public sealed class ManagedServerRelay(string serverId, int port, ManagedServerR
         // code, and this app's log and data directory are this device's whole server — its
         // pairing codes, every other managed server, every key. Those paths reach
         // ConsoleEndpoints' catch-all and answer 404.
-        app.UseRelayPipeline(ConsoleEndpoints.Map, mapThisMachinesDiagnostics: false);
+        app.UseRelayPipeline(ConsoleEndpoints.Map);
 
         _app = app;
 
@@ -134,7 +134,6 @@ public sealed class ManagedServerRelay(string serverId, int port, ManagedServerR
         var store = new SingleServerConnectionStore(dependencies.ManagedStore, ServerId);
 
         services.AddSingleton<IClientConnectionStore>(store);
-        services.AddSingleton<IClientDataDirectory>(dependencies.ManagedStore.Directory);
         services.AddSingleton(dependencies.Tokens);
         services.AddSingleton(dependencies.Clock);
         services.AddSingleton(dependencies.SelfAddress);

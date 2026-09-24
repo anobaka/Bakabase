@@ -999,7 +999,6 @@ describe("multi-device pages inside the console", () => {
     );
     expect(screen.queryByText("page")).not.toBeInTheDocument();
     expect(screen.getByText("federation.console.localOnly")).toBeInTheDocument();
-    expect(screen.queryByText("federation.migration.intro")).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("federation.console.switchToThisDevice"));
     await waitFor(() =>
       expect(assign).toHaveBeenCalledWith("http://localhost:34567/#/federation/devices"),
@@ -1007,7 +1006,7 @@ describe("multi-device pages inside the console", () => {
     expect(clientApi.switcher.open).toHaveBeenCalledWith("local");
   });
 
-  it("still tells the retired client about the desktop app", () => {
+  it("points back to this computer before the relay has said it is the console", () => {
     store.state = { initialized: true, isLocal: false, clientMode: ClientMode.PureClient };
     store.pureClient = true;
     render(
@@ -1017,7 +1016,22 @@ describe("multi-device pages inside the console", () => {
         </FederationAccess>
       </MemoryRouter>,
     );
-    expect(screen.getByText("federation.migration.intro")).toBeInTheDocument();
-    expect(screen.getByText("federation.migration.automatic")).toBeInTheDocument();
+    expect(screen.queryByText("page")).not.toBeInTheDocument();
+    expect(screen.getByText("federation.console.localOnly")).toBeInTheDocument();
+  });
+
+  it("tells a browser on another device where these pages live", () => {
+    store.state = { initialized: true, isLocal: false, clientMode: ClientMode.RemoteBrowser };
+    store.pureClient = false;
+    render(
+      <MemoryRouter>
+        <FederationAccess>
+          <p>page</p>
+        </FederationAccess>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText("page")).not.toBeInTheDocument();
+    expect(screen.getByText("federation.localOnly")).toBeInTheDocument();
+    expect(screen.queryByText("federation.console.localOnly")).not.toBeInTheDocument();
   });
 });

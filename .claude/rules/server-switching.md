@@ -2,7 +2,7 @@
 
 Every PC install is the all-in-one desktop app. It always runs its own server, and its main
 window can switch to another server it manages — a NAS, or another PC's all-in-one — and
-control it fully, as the retired thin client did. Headless servers (Docker/NAS) never
+control it fully, as the removed thin client did. Headless servers (Docker/NAS) never
 manage anything; they are only ever managed.
 
 ## How it works
@@ -37,8 +37,8 @@ manage anything; they are only ever managed.
   pairing also sets), which is also what every other managed server reports. Read from memory
   only: the listing never waits on the network or the disk.
 - **Management is legacy paired-device access.** Pairing uses `/remote-access/pair/*` with a
-  code or an approved request, exactly like the thin client, and grants full control of the
-  target. It is unrelated to federation grants, which stay read-only.
+  code or an approved request, exactly as the removed thin client did, and grants full control
+  of the target. It is unrelated to federation grants, which stay read-only.
 - **A filed request is collected in the background.** The manager claims it every few seconds
   until it is approved, rejected, expires or is cancelled. In the listing, `outcome` is what the
   last attempt said and `active` is whether the wait is still on: a claim that did not get
@@ -82,13 +82,14 @@ manage anything; they are only ever managed.
   handshake by its `Origin` like this device's server does, and would otherwise refuse its own
   UI's hub through the relay. For such a server its `/federation/local` interface answers that
   page as it answers its own window. A foreign `Origin` is never rewritten.
-- **A relay never exposes this device's diagnostics to the target's page.** The thin
-  client's `/client/log*` and `/client/app/*` (its log, its app paths, its folder opener) are
-  opt-in in `UseRelayPipeline`; only the thin client opts in. In the desktop app those would
-  be this device's whole log — its own server's pairing codes, every managed server's address
-  — and the data directory holding every key, so a console relay answers them 404. Beyond the
-  console `/client` contract (status, switcher, path mappings, tray, connect page) and the
-  mapped user-machine actions, a managed server's page learns nothing about this device.
+- **A relay never exposes this device's diagnostics to the target's page.** Nothing in
+  `UseRelayPipeline` publishes this machine's log or directories. The removed thin client
+  served its own at `/client/log*` and `/client/app/*`, and a managed server's older UI may
+  still ask; in the desktop app those would be this device's whole log — its own server's
+  pairing codes, every managed server's address — and the data directory holding every key,
+  so a console relay answers them 404. Beyond the console `/client` contract (status,
+  switcher, path mappings, tray, connect page) and the mapped user-machine actions, a managed
+  server's page learns nothing about this device.
 - **The local server does not trust other loopback origins.** A relay page runs the target's
   JavaScript on a loopback origin; this device's own Service (`LoopbackCrossSiteGuard`, all
   loopback requests, 403 `HostOnly`) refuses, unless the page is one it trusts — an origin in
@@ -133,12 +134,20 @@ manage anything; they are only ever managed.
   `Bakabase.Remoting` or YARP; the desktop app ships YARP only through `Bakabase.Remoting` and no
   `Bakabase.Client*` assembly.
 
-## The legacy thin client
+## The removed thin client
 
-`Bakabase.Client.App` is deprecated: its connect page and `/client/status` (`deprecated: true`)
-tell users to install the desktop app, which imports its pairings. Do not add features to it.
-Its build and feed are removed in a later release, once the final version carrying the notice
-has shipped.
+`Bakabase.Client.App` and `Bakabase.Client.Remoting` were removed while the product was in
+beta, together with their build, update feed, download manifest and frontend (connect page,
+updater banner, migration export); there is no deprecation path. Do not reintroduce them.
+What stays is deliberate:
+
+- the one-time import of an old install's pairings (`LegacyClientConnectionSource`, reading
+  `AppDataPathProfile.Client` from the Infrastructures submodule) and its manual re-run;
+- the console's `/client` API keeps the thin client's shape where the two mean the same thing,
+  and answers its connect and pairing routes 409 `ManagedByHost` and everything else it had
+  404 — a managed server's older UI, written for the thin client, may still call them;
+- the release contract refuses anything shipped under the thin client's name, pack ID or feed:
+  old installs still have them.
 
 ## Tests
 
@@ -147,17 +156,21 @@ has shipped.
   `ConsoleDiagnosticsExposureTests` (a real `AppService` and log behind a relay, answered 404).
 - `src/tests/Bakabase.Tests/Federation` — `/federation/local/servers` end to end and its route
   policy (`FederationServerControllerTests`, `Security/FederationGateTests`).
-- `src/tests/Bakabase.Tests/RemoteAccess` — loopback guard, navigation tokens, pipeline
-  (shared with the thin client). WebSocket handshakes: `LoopbackOriginGuardTests`
-  (`The_websocket_matrix`), `Console/RelayWebSocketOriginTests` (real handshakes through a
-  relay; the forwarded `Origin`), `ClientPipelineTests` (the thin client);
+- `src/tests/Bakabase.Tests/RemoteAccess` — loopback guard, navigation tokens, the relay's
+  components (forwarding, signing, path mapping, user-machine handlers, batch play), and
+  `Console/RelayPipelineTests` (the assembled pipeline of a console relay: guard order, tickets,
+  fetch metadata, cookies, forwarding, the no-server path, route interception). WebSocket
+  handshakes: `LoopbackOriginGuardTests` (`The_websocket_matrix`),
+  `Console/RelayWebSocketOriginTests` (real handshakes through a relay; the forwarded
+  `Origin`), `Console/RelayPipelineTests`;
   `Service/LoopbackCrossSiteGuardMatrixTests` (every page × kind × fetch metadata, Dev and
   packaged) and `Service/LoopbackHubAccessTests` (real Kestrel handshakes as Chromium sends
   them, on both hubs, plus negotiate, long polling and SSE).
 - Frontend: `yarn vitest run src/features/federation src/layouts`.
 - End to end: `src/tests/federation-browser-smoke/switching.cjs` (run by `run.py`, in CI's
   federation job) — Chromium against real hosts, the unified fixture composed as `UnifiedHost`
-  is: import from the thin client, switch and back, a write on the managed server (pushed live
+  is: import of an old thin client's pairing (a real device key from the managed server's own
+  pairing API, in the thin client's file format — `legacy-client.cjs`), switch and back, a write on the managed server (pushed live
   to its UI over the relay's hub WebSocket), path mapping and interception, stop managing and
   re-pair by request, and the relay page's containment — the relay page's WebSockets to this
   device's hub refused 403, and other pages' to the relay refused 400 before the managed server

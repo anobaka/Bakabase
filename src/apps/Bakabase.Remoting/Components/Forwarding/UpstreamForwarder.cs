@@ -25,8 +25,8 @@ public sealed class UpstreamForwarder(
     /// <remarks>
     /// Generous on purpose. This carries the UI hub, the discovery event stream and
     /// video that a viewer may pause for a long time; YARP's hundred-second default
-    /// would cut all three, and the reconnect that follows is exactly the stutter the
-    /// thin client is supposed to be free of. Not infinite, so a connection whose peer
+    /// would cut all three, and the reconnect that follows is exactly the stutter a
+    /// managed server's window is supposed to be free of. Not infinite, so a connection whose peer
     /// vanished without a FIN is eventually reclaimed.
     /// </remarks>
     public static readonly TimeSpan ActivityTimeout = TimeSpan.FromMinutes(30);
@@ -56,8 +56,11 @@ public sealed class UpstreamForwarder(
                 return;
             }
 
+            // In the desktop app a relay has no server only once that server was removed
+            // here: the store view behind it is empty from then on.
             await WriteUnavailable(context, ClientForwardingFailure.NotConnected,
-                "This client is not connected to a server yet.");
+                "This computer no longer manages this server. Add it again from this computer's " +
+                "Devices and sharing page.");
             return;
         }
 

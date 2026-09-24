@@ -310,8 +310,8 @@ export const RelocationRestartGate: React.FC = () => {
   const { t } = useTranslation();
   const pending = useRelocationPendingStore((s) => s.pending);
   // The data being moved is the server's, and so is the process that restarts to
-  // finish the move. From a thin client, "restart Bakabase" would otherwise read as
-  // "restart this window", which is not what the button does.
+  // finish the move. For a managed server shown in this window, "restart Bakabase"
+  // would otherwise read as "restart this window", which is not what the button does.
   const isPureClient = useIsPureClient();
   const [open, setOpen] = useState(false);
   const [restarting, setRestarting] = useState(false);

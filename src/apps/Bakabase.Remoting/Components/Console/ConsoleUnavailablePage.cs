@@ -8,10 +8,9 @@ namespace Bakabase.Remoting.Components.Console;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The thin client's connect page is the wrong screen here — this window is not a client
-/// waiting for an address, it is the desktop app, and the way forward is back to its own
-/// UI, where servers are added and removed. So the page says what happened and links
-/// there, and nothing else.
+/// This window is not a client waiting for an address, it is the desktop app, and the way
+/// forward is back to its own UI, where servers are added and removed. So the page says
+/// what happened and links there, and nothing else.
 /// </para>
 /// <para>
 /// Inline and script-free, with a policy that forbids scripts outright: it runs at a

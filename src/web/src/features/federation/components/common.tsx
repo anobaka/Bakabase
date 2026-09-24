@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 import { FederationError } from "../transport";
 import { openLocalView } from "../switching";
@@ -46,8 +46,6 @@ export function FederationAccess({
   const { t } = useTranslation();
   const initialized = useRemoteAccessStore((state) => state.initialized);
   const local = useRemoteAccessStore((state) => state.isLocal);
-  // Read through the store rather than a dedicated hook, so this stays a plain selector.
-  const inConsole = useRemoteAccessStore((state) => state.clientHost === "console");
   const pureClient = useIsPureClient();
 
   if (!initialized)
@@ -56,18 +54,13 @@ export function FederationAccess({
         {t("federation.loading")}
       </div>
     );
-  if (pureClient && inConsole) return <ConsoleLocalOnly elsewhere={elsewhere} />;
-  if (pureClient || !local) {
+  // The desktop app showing a server it manages: the pages are this computer's.
+  if (pureClient) return <ConsoleLocalOnly elsewhere={elsewhere} />;
+  if (!local) {
     return (
       <div className="mx-auto flex max-w-2xl flex-col gap-4 p-6">
         <h1 className="text-xl font-semibold">{t("federation.title")}</h1>
-        <p>{t(pureClient ? "federation.migration.intro" : "federation.localOnly")}</p>
-        {pureClient && (
-          <p className="text-sm text-default-500">{t("federation.migration.automatic")}</p>
-        )}
-        <Link className={`${buttonClass} self-start`} to="/other-devices">
-          {t("federation.migration.download")}
-        </Link>
+        <p>{t("federation.localOnly")}</p>
         {elsewhere}
       </div>
     );

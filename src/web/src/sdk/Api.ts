@@ -6193,24 +6193,6 @@ export interface BakabaseServiceModelsViewChangelogViewModel {
   htmlUrl?: string;
 }
 
-export interface BakabaseServiceModelsViewClientAppDownloadFileViewModel {
-  name: string;
-  platform: string;
-  shape: string;
-  /** @format int64 */
-  size: number;
-  githubUrl?: string;
-  cdnUrl?: string;
-}
-
-export interface BakabaseServiceModelsViewClientAppDownloadsViewModel {
-  version: string;
-  /** @format date-time */
-  publishedAt?: string;
-  releaseUrl?: string;
-  files: BakabaseServiceModelsViewClientAppDownloadFileViewModel[];
-}
-
 export interface BakabaseServiceModelsViewComparisonPlanViewModel {
   /** @format int32 */
   id: number;
@@ -6470,7 +6452,6 @@ export interface BakabaseServiceModelsViewMobileAppDownloadsViewModel {
 
 export interface BakabaseServiceModelsViewOtherDeviceDownloadsViewModel {
   mobile?: BakabaseServiceModelsViewMobileAppDownloadsViewModel;
-  desktopClient?: BakabaseServiceModelsViewClientAppDownloadsViewModel;
 }
 
 export interface BakabaseServiceModelsViewPropertyTypeForManuallySettingValueViewModel {
@@ -9529,8 +9510,8 @@ export class HttpClient<SecurityDataType = unknown> {
       }
     }
 
-    // A refusal from the thin client's own forwarding layer rather than from the
-    // server: no local path mapping, an action this build cannot run yet, and so on.
+    // A refusal from the desktop app's relay rather than from the server it shows: no
+    // local path mapping, an action this build cannot run yet, and so on.
     // Recognised in one place because any endpoint that touches a path can return it,
     // and "GET /tool/open failed" describes none of them.
     if (reportClientFailure(response, error)) {

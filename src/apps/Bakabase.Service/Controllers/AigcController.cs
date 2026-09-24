@@ -135,7 +135,7 @@ public class AigcController(
     /// Where an artifact's file is, as this server sees it.
     /// </summary>
     /// <remarks>
-    /// Read by the thin client, which opens the file itself and so has to translate the
+    /// Read by a managed server's relay, which opens the file itself and so has to translate the
     /// path onto its own machine first. Opening is the user-machine action; knowing
     /// where the file is is ordinary data the server owns.
     /// </remarks>

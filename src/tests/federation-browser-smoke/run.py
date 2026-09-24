@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Run isolated legacy-client -> unified migration, federated browser and server-switching flows.
+"""Run isolated federated browser, legacy-pairing import and server-switching flows.
 
 Requires the built web app and this directory's pinned Playwright/Chromium installation.
-All three listeners (and the relays the unified host starts), databases and credentials are
+Every listener (and the relays the unified host starts), database and credential is
 temporary; no installed application is used.
 """
 import argparse
@@ -20,14 +20,14 @@ import time
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 
-# Every analytics key the Service and the thin client read, blank, and anonymous tracking off:
-# a fixture serves the production frontend, which would otherwise start Clarity, GA4, PostHog
-# and Sentry with the shipped project ids. The test hosts turn the same things off themselves
-# and refuse to report ready while any is set; this is the runner saying so for its part.
+# Every analytics key the Service reads, blank, and anonymous tracking off: a fixture serves the
+# production frontend, which would otherwise start Clarity, GA4, PostHog and Sentry with the
+# shipped project ids. The test host turns the same things off itself and refuses to report
+# ready while any is set; this is the runner saying so for its part.
 ANALYTICS_OFF = {
     "Analytics__Clarity__ProjectId": "", "Analytics__Ga4__MeasurementId": "",
     "Analytics__Sentry__FrontendDsn": "", "Analytics__Sentry__BackendDsn": "",
-    "Analytics__Sentry__ClientDsn": "", "Analytics__PostHog__ApiKey": "", "Analytics__PostHog__ApiHost": "",
+    "Analytics__PostHog__ApiKey": "", "Analytics__PostHog__ApiHost": "",
     "App__EnableAnonymousDataTracking": "false",
 }
 
@@ -99,33 +99,37 @@ def retain_host_diagnostics(fixture, hosts, host_processes, results):
         (results / (role + "-host.log")).write_text(json.dumps(diagnostic, indent=2))
 
 
+def legacy_client_directory(fixture):
+    """Where an old thin client's AppData would be. The removed program is not run: the browser
+    stage writes the pairing it would have left there (legacy-client.cjs), for the desktop
+    fixtures to import."""
+    return fixture / "client"
+
+
 def host_environment(role, port, fixture, web_root):
     """The environment one fixture host starts with.
 
     "unified" and "first-launch" are composed as the desktop app, each with this browser as its
-    window and the thin client's data directory to import from. The two long-lived Services
+    window and an old thin client's data directory to import from. The two long-lived Services
     record what reaches them, and every Service has a name of its own, so a check by name can
     tell them apart.
     """
     env = {**os.environ, **ANALYTICS_OFF, "BAKABASE_FEDERATION_TEST_WEB_ROOT": str(web_root),
-           # An old client must ignore this conflicting unified setting.
-           "BAKABASE_DATA_DIR": str(fixture / "unified"),
            "DOTNET_ENVIRONMENT": "Development"}
     for key in ("BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW", "BAKABASE_CLIENT_DATA_DIR",
                 "BAKABASE_FEDERATION_TEST_REQUEST_LOG", "BAKABASE_FEDERATION_TEST_SERVER_NAME"):
         env.pop(key, None)
     if role in ("unified", "first-launch"):
         # The desktop app: its own server plus the relays that manage other servers. Its window
-        # is this browser, and it reads the thin client's pairings from the fixture's client
-        # directory.
+        # is this browser, and it reads an old thin client's pairings from the fixture's client
+        # directory — the variable that thin client's own AppData profile answered to.
         env["BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW"] = f"http://localhost:{port}"
-        env["BAKABASE_CLIENT_DATA_DIR"] = str(fixture / "client")
+        env["BAKABASE_CLIENT_DATA_DIR"] = str(legacy_client_directory(fixture))
     if role in ("unified", "source"):
         # What reaches each server and how it answered: the managed server's side of the
         # relay, and this device's own answers to the managed server's page.
         env["BAKABASE_FEDERATION_TEST_REQUEST_LOG"] = str(fixture / (role + "-requests.jsonl"))
-    if role != "client":
-        env["BAKABASE_FEDERATION_TEST_SERVER_NAME"] = "fixture-" + role
+    env["BAKABASE_FEDERATION_TEST_SERVER_NAME"] = "fixture-" + role
     return env
 
 
@@ -168,11 +172,11 @@ def main():
     first_launch_directory = None
     try:
         if not args.no_build:
-            for project in ("Bakabase.Federation.TestHost", "Bakabase.Client.TestHost"):
-                with (results / (project + "-build.log")).open("w") as output:
-                    subprocess.run([args.dotnet, "build", str(ROOT / "src/tests" / project / (project + ".csproj")),
-                                    "--nologo", "-v:q"], cwd=ROOT, stdout=output, stderr=subprocess.STDOUT,
-                                   check=True, timeout=300)
+            project = "Bakabase.Federation.TestHost"
+            with (results / (project + "-build.log")).open("w") as output:
+                subprocess.run([args.dotnet, "build", str(ROOT / "src/tests" / project / (project + ".csproj")),
+                                "--nologo", "-v:q"], cwd=ROOT, stdout=output, stderr=subprocess.STDOUT,
+                               check=True, timeout=300)
         fixture = Path(tempfile.mkdtemp(prefix="bakabase-browser-fixture-"))
         deadline = time.monotonic() + args.timeout
         ports = set()
@@ -190,27 +194,23 @@ def main():
                 raise AssertionError(f"Missing {dll}; run without --no-build.")
             return dll
 
-        for role in ("unified", "source", "client"):
+        for role in ("unified", "source"):
             port = take_port()
             directory = fixture / role
-            dll = dll_of("Bakabase.Client.TestHost" if role == "client" else "Bakabase.Federation.TestHost")
             stream = (fixture / (role + ".log")).open("w")
             streams.append(stream)
             env = host_environment(role, port, fixture, web_root)
-            command = [args.dotnet, str(dll), str(port), str(directory)]
-            if role != "client":
-                command.append("57")
+            command = [args.dotnet, str(dll_of("Bakabase.Federation.TestHost")), str(port), str(directory), "57"]
             process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=stream,
                                        stderr=subprocess.STDOUT, start_new_session=os.name == "posix")
             processes.append(process)
             host_processes[role] = process
-            hosts[role] = {"base": f"http://127.0.0.1:{port}", "directory": str(directory)}
+            hosts[role] = {"base": f"http://127.0.0.1:{port}", "directory": str(directory),
+                           "requestLog": env["BAKABASE_FEDERATION_TEST_REQUEST_LOG"]}
             if role == "unified":
                 hosts[role]["window"] = env["BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW"]
-            if role != "client":
-                hosts[role]["requestLog"] = env["BAKABASE_FEDERATION_TEST_REQUEST_LOG"]
-        # A fresh desktop install on a machine where the thin client has already paired. The
-        # browser stage starts it once the thin client has, and stops it again; it runs in the
+        # A fresh desktop install on a machine where an old thin client had paired. The browser
+        # stage starts it once that pairing is on disk, and stops it again; it runs in the
         # browser's process group, so the cleanup below reaches it too.
         port = take_port()
         first_launch_env = host_environment("first-launch", port, fixture, web_root)
@@ -234,8 +234,9 @@ def main():
                 raise TimeoutError("Fixture startup timed out")
             time.sleep(0.2)
         config = fixture / "browser-config.json"
-        config.write_text(json.dumps({"hosts": hosts, "firstLaunch": first_launch, "results": str(results),
-                                      "repo": str(ROOT)}))
+        config.write_text(json.dumps({"hosts": hosts, "firstLaunch": first_launch,
+                                      "legacyClient": {"directory": str(legacy_client_directory(fixture))},
+                                      "results": str(results), "repo": str(ROOT)}))
         with (results / "browser.log").open("w") as output:
             browser = subprocess.Popen([args.node, str(HERE / "browser.cjs"), str(config)], cwd=ROOT,
                                        stdout=output, stderr=subprocess.STDOUT,
@@ -245,7 +246,7 @@ def main():
             if code:
                 raise AssertionError(f"Browser checks failed (exit {code}); inspect {results / 'browser.log'}")
         passed = True
-        print(f"PASS: legacy migration, browser and server-switching flows. Results: {results}")
+        print(f"PASS: federated browser, legacy-pairing import and server-switching flows. Results: {results}")
         return 0
     except Exception as error:
         (results / "result.json").write_text(json.dumps({"passed": False, "status": "failed", "reason": str(error)}, indent=2))

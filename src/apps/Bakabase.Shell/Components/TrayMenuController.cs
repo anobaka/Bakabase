@@ -21,8 +21,8 @@ namespace Bakabase.Shell.Components;
 /// <remarks>
 /// The web UI has its own switcher; this submenu is the way back when the window is showing a
 /// server whose (older) UI has none. It exists only where the host registers an
-/// <see cref="IMainViewSwitcher"/> — the legacy thin client does not, so there the menu keeps
-/// its two original items — and only while there is somewhere to switch to.
+/// <see cref="IMainViewSwitcher"/> — a host that does not keeps the menu's two original
+/// items — and only while there is somewhere to switch to.
 /// <para>
 /// That only works where the tray is actually shown. On a Linux desktop without a
 /// StatusNotifierWatcher (<see cref="TrayIconAvailability"/>) the icon never appears, and a

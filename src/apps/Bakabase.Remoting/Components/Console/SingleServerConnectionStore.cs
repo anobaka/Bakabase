@@ -8,14 +8,16 @@ namespace Bakabase.Remoting.Components.Console;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The relay was written for the thin client, which reads "the connection store" and
-/// signs with whichever server is active. Handing it the whole managed list would put
-/// every server's key in reach of every relay; this view is what makes a relay unable to
-/// sign for any server but its own, whatever its code does with the store.
+/// The relay core reads "the connection store" and signs with whichever server is active
+/// in it — its shape comes from the removed thin client, which had exactly one store.
+/// Handing it the whole managed list would put every server's key in reach of every relay;
+/// this view is what makes a relay unable to sign for any server but its own, whatever its
+/// code does with the store.
 /// </para>
 /// <para>
 /// So reads show that one server, active, or nothing at all once it is forgotten — the
-/// relay then answers like a thin client with no server, which is the right reading. And
+/// relay then answers as a relay with no server, sending a window to the unavailable page
+/// and refusing to forward, which is the right reading. And
 /// writes are narrowed to the two things a relay legitimately records about its own server:
 /// when it last answered, and where its libraries are on this machine. Anything else a
 /// mutation does to the projection — another server, a key, which server is active — is

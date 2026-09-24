@@ -1,21 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Bakabase.Client.Remoting.Components.Forwarding;
-using Bakabase.Remoting.Abstractions;
-using Bakabase.Remoting.Components.Connection;
-using Bakabase.Remoting.Components.Forwarding;
 using Bakabase.Tests.RemoteAccess.Console;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using AppContext = Bakabase.Infrastructures.Components.App.AppContext;
 
 namespace Bakabase.Tests.RemoteAccess;
 
@@ -142,108 +134,5 @@ public class RelayLoggingTests
         console.Get<ILoggerFactory>().CreateLogger("After.The.Relay").LogWarning("still logging");
 
         Assert.IsTrue(Snapshot(console.Logs).Contains("Warning After.The.Relay: still logging"));
-    }
-
-    [TestMethod]
-    public async Task The_thin_clients_relay_forwards_without_logging_each_request_but_still_logs_refusals()
-    {
-        var logs = new List<string>();
-        var root = Path.Combine(Path.GetTempPath(), "bakabase-relay-logging", Guid.NewGuid().ToString("N"));
-        var port = LoopbackPortAllocator.Allocate(45100);
-        var address = $"http://127.0.0.1:{port}";
-
-        await using var desk = await FakeServer.StartAsync("server-desk", "Desk", 46900);
-
-        using var host = Host.CreateDefaultBuilder()
-            .ConfigureLogging(b => b.ClearProviders().AddProvider(new Capture(logs)).SetMinimumLevel(LogLevel.Debug))
-            .ConfigureWebHostDefaults(web => web
-                .UseUrls(address)
-                .ConfigureServices(services =>
-                {
-                    services.AddSingleton<IClientDataDirectory>(new TempDirectory(root));
-                    services.AddSingleton(new AppContext
-                    {
-                        ListeningAddresses = [address],
-                        ApiEndpoints = [address],
-                        ApiEndpoint = address
-                    });
-                })
-                .UseStartup<ClientStartup>())
-            .Build();
-
-        await host.StartAsync();
-
-        try
-        {
-            var key = Bakabase.Modules.RemoteAccess.Components.Pairing.RemoteRequestSignature.ToBase64Url(
-                System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
-            desk.KnownDevices["device-1"] = key;
-            await host.Services.GetRequiredService<ActiveConnection>().SaveAsync(desk.ServerId, desk.Name,
-                desk.BaseAddress, new ClientCredentials("device-1", key), DateTime.UtcNow);
-
-            Assert.AreEqual(HttpStatusCode.OK, (await ConsoleHarness.SendToRelayAsync(port, "/")).StatusCode);
-            Assert.AreEqual(HttpStatusCode.OK,
-                (await ConsoleHarness.SendToRelayAsync(port, "/resource/search", HttpMethod.Post, "{}")).StatusCode);
-
-            var refused = await ConsoleHarness.NavigateAsync($"{address}/resource", "cross-site");
-            Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
-
-            Assert.IsTrue(desk.Requests.Count(r => r.Path is "/" or "/resource/search") >= 2,
-                "the requests were not forwarded, so their logging was not checked");
-
-            var captured = Snapshot(logs);
-            var all = string.Join("\n", captured);
-
-            Assert.IsFalse(captured.Any(IsQuietYarpLine), all);
-            Assert.IsTrue(captured.Any(l => l.StartsWith(
-                "Warning Bakabase.Remoting.Components.Relay.RelayComposition: Refused", StringComparison.Ordinal)), all);
-
-            var forwarder = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger(ForwarderCategory);
-            Assert.IsFalse(forwarder.IsEnabled(LogLevel.Information));
-            Assert.IsTrue(forwarder.IsEnabled(LogLevel.Warning));
-        }
-        finally
-        {
-            await host.StopAsync();
-
-            try
-            {
-                Directory.Delete(root, true);
-            }
-            catch (Exception e) when (e is IOException or DirectoryNotFoundException)
-            {
-            }
-        }
-    }
-
-    private sealed class TempDirectory(string path) : IClientDataDirectory
-    {
-        public string Path => path;
-        public string Ensure() => Directory.CreateDirectory(path).FullName;
-    }
-
-    private sealed class Capture(List<string> sink) : ILoggerProvider
-    {
-        public ILogger CreateLogger(string categoryName) => new Logger(sink, categoryName);
-
-        public void Dispose()
-        {
-        }
-
-        private sealed class Logger(List<string> sink, string category) : ILogger
-        {
-            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-            public bool IsEnabled(LogLevel logLevel) => true;
-
-            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
-                Func<TState, Exception?, string> formatter)
-            {
-                lock (sink)
-                {
-                    sink.Add($"{logLevel} {category}: {formatter(state, exception)}");
-                }
-            }
-        }
     }
 }

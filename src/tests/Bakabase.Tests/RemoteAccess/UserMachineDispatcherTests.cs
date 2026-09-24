@@ -5,7 +5,6 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Bakabase.Client.Remoting.Components.Forwarding;
 using Bakabase.Remoting.Components.Forwarding;
 using Bakabase.Remoting.Components.UserMachine;
 using Microsoft.AspNetCore.Http;
@@ -69,7 +68,11 @@ public class UserMachineDispatcherTests
         Assert.AreEqual((int) HttpStatusCode.NotImplemented, context.Response.StatusCode);
         Assert.AreEqual(nameof(ClientForwardingFailure.NeedsNewerClient),
             context.Response.Headers["X-Bakabase-Client"].ToString());
-        StringAssert.Contains(body.GetProperty("message").GetString()!, "/tool/cookie-capture");
+        var message = body.GetProperty("message").GetString()!;
+        StringAssert.Contains(message, "/tool/cookie-capture");
+        // The desktop app runs it; there is no separate client to update.
+        StringAssert.Contains(message, "Updating Bakabase on this computer");
+        Assert.IsFalse(message.Contains("client", StringComparison.OrdinalIgnoreCase), message);
     }
 
     [TestMethod]

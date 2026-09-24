@@ -17,8 +17,8 @@ public sealed class RemoteConsoleOptions
     /// </summary>
     /// <remarks>
     /// Clear of the app's own listening window (34567 and up, three ports by default) and
-    /// of the retired thin client's 34600, so a machine that still runs that one for a
-    /// while does not decide either origin by launch order.
+    /// of the removed thin client's 34600, which an old install left on the machine may
+    /// still hold, so neither decides an origin by launch order.
     /// </remarks>
     public const int DefaultFirstRelayPort = 34650;
 
@@ -36,8 +36,7 @@ public sealed class RemoteConsoleOptions
 
     /// <summary>
     /// How long looking for servers on the network waits for answers. Somebody is watching a
-    /// spinner, and a server that has not answered in three seconds is not going to — the
-    /// same bound the thin client's own search used.
+    /// spinner, and a server that has not answered in three seconds is not going to.
     /// </summary>
     public TimeSpan DiscoveryTimeout { get; set; } = TimeSpan.FromSeconds(3);
 
@@ -50,7 +49,7 @@ public sealed class RemoteConsoleOptions
     /// </summary>
     public TimeSpan FinishedRequestRetention { get; set; } = TimeSpan.FromMinutes(10);
 
-    /// <summary>Whether starting up brings over the retired thin client's pairings, once.</summary>
+    /// <summary>Whether starting up brings over the removed thin client's pairings, once.</summary>
     public bool ImportLegacyClientOnStart { get; set; } = true;
 
     /// <summary>
@@ -60,7 +59,7 @@ public sealed class RemoteConsoleOptions
     public string? ManagedDirectory { get; set; }
 
     /// <summary>
-    /// The retired thin client's <c>connection.json</c>. Null to find it the way the thin
+    /// The removed thin client's <c>connection.json</c>. Null to find it the way the thin
     /// client itself did — see <see cref="LegacyClientConnectionSource.ResolveDefaultFile"/>.
     /// </summary>
     public Func<string?>? LegacyClientConnectionFile { get; set; }

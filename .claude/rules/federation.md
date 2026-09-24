@@ -47,7 +47,7 @@ current device merges results.
   `ResourceSource` members) must be filtered before they reach the wire, or peers reject whole blocks.
 - **No silent widening or truncation.** Unsupported filters are rejected, partial coverage is
   reported per node, budget overruns fail explicitly.
-- **Proxies are bypassed** (`UseProxy = false`), matching the thin client's relay.
+- **Proxies are bypassed** (`UseProxy = false`), matching the desktop app's relays.
 
 ## Changing the protocol
 

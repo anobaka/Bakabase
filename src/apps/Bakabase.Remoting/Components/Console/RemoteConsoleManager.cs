@@ -26,10 +26,10 @@ namespace Bakabase.Remoting.Components.Console;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Management is the thin client's access, unchanged — the other server's legacy
-/// paired-device key, <c>Bakabase-Device</c> signing, everything its own UI can do — with
-/// the one difference that the thin client was a separate program with one server behind
-/// it, and this is the app itself with any number. Each server gets its own relay, own
+/// Management is legacy paired-device access — the other server's paired-device key,
+/// <c>Bakabase-Device</c> signing, everything its own UI can do — the same access the
+/// removed thin client had, from the app itself and for any number of servers. Each
+/// server gets its own relay, own
 /// container and own stable loopback port (<see cref="ManagedServerRelay"/>); what they
 /// share is only this device: its data directory, its windows, its players and its name.
 /// </para>
@@ -159,7 +159,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             if (result.Found)
             {
                 _logger.LogInformation(
-                    "Brought over the retired thin client's pairings: {Imported} imported, {Skipped} already here or unusable",
+                    "Brought over the removed thin client's pairings: {Imported} imported, {Skipped} already here or unusable",
                     result.Imported, result.Skipped);
             }
         }
@@ -170,7 +170,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         {
             // Never worth failing the app's start over: the import can be re-run from the
             // devices page, and pairing again is always possible.
-            _logger.LogWarning(e, "Could not bring over the retired thin client's pairings");
+            _logger.LogWarning(e, "Could not bring over the removed thin client's pairings");
         }
     }
 
@@ -364,8 +364,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
                 return false;
             }
 
-            // Replaced as a whole, as the thin client's settings page did: the page edits a
-            // table, and a merge would keep a row the user deleted.
+            // Replaced as a whole: the page edits a table, and a merge would keep a row the
+            // user deleted.
             entry.PathMappings = mappings
                 .Where(m => !string.IsNullOrWhiteSpace(m.ServerPath) && !string.IsNullOrWhiteSpace(m.LocalPath))
                 .Select(m => new ClientPathMapping {ServerPath = m.ServerPath.Trim(), LocalPath = m.LocalPath.Trim()})

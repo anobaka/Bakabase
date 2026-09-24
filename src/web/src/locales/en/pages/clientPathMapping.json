@@ -1,11 +1,11 @@
 {
-  "clientPathMapping.onlyInClient": "This page is only available in the Bakabase client.",
-  "clientPathMapping.noServer": "Connect to a server first — mappings belong to one.",
+  "clientPathMapping.onlyInClient": "This page is only available while the desktop app shows a server it manages.",
+  "clientPathMapping.noServer": "This window is not showing a managed server right now — mappings belong to one.",
   "clientPathMapping.title": "Where {{name}}'s libraries are on this machine",
-  "clientPathMapping.description": "The server names its files its own way; this machine may mount them somewhere else entirely. Nothing can work that out on its own, so until a library is listed here the client refuses to open its files rather than guessing.",
+  "clientPathMapping.description": "The server names its files its own way; this machine may mount them somewhere else entirely. Nothing can work that out on its own, so until a library is listed here this computer refuses to open its files rather than guessing.",
   "clientPathMapping.serverPath": "On the server",
   "clientPathMapping.localPath": "On this machine",
   "clientPathMapping.add": "Add a mapping",
-  "clientPathMapping.canRunHere": "Actions this client can run here",
-  "clientPathMapping.canRunHereTip": "Anything not listed is still handled by the server, or answered with \"this client is behind\". Updating the client adds to this list."
+  "clientPathMapping.canRunHere": "Actions this computer runs itself",
+  "clientPathMapping.canRunHereTip": "Anything not listed is still handled by the server, or refused as something this computer cannot do yet. Updating Bakabase on this computer adds to this list."
 }

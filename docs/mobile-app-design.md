@@ -48,7 +48,7 @@ S1–S4 已按 §6 落地于 `Bakabase.Modules.RemoteAccess/Components/Discovery
 
 分发收口于可复用的 `_mobile_distribute.yml`（上述 1、2 两路发布后共同调用）：镜像裸文件到 OSS `archives/{version}/`、按**资产名**（而非 tag）扫描全部 release 重建 SideStore 源、生成下载清单 `manifest.json` 上传到 OSS 固定路径并刷新 CDN。
 
-**下载地址发现机制**（2026-09-12 起由移动端与纯客户端共用）：服务端 `AppDownloadManifestService` 按 URL 拉取并缓存清单（带 cache-bust、1 小时缓存、离线降级），经 `GET /other-devices/downloads`（`[RemoteAccessible]`）一次返回两个产品，供 Web UI 的**「其他设备」**一级菜单页展示。纯客户端的清单由 `scripts/desktop/build_client_manifest.py` 在 `_release.yml` 里生成 —— 之所以也走清单而不是由页面拼 URL，是因为拼出来的链接在下一次改文件名时会静默 404，而清单记录的是 CI **实际发布过**的东西。
+**下载地址发现机制**（2026-09-12 起；纯客户端已移除，现只剩移动端）：服务端 `AppDownloadManifestService` 按 URL 拉取并缓存清单（带 cache-bust、1 小时缓存、离线降级），经 `GET /other-devices/downloads`（`[RemoteAccessible]`）返回，供 Web UI 的**「其他设备」**一级菜单页展示。之所以走清单而不是由页面拼 URL，是因为拼出来的链接在下一次改文件名时会静默 404，而清单记录的是 CI **实际发布过**的东西。
 
 页面对两种设备给的是不同的入口：手机给二维码（拿着摄像头的就是目标设备），另一台电脑给可发送的链接（看页面的人正坐在服务端那台机器前）。
 

@@ -27,14 +27,15 @@ public record BatchPlayResourceSnapshot(
 /// <remarks>
 /// It exists because the machine holding the library is not always the machine starting
 /// the player. The host registers an adapter: on the all-in-one one that reads the
-/// database directly, on a thin client one that asks the server. Everything downstream of
-/// this — which player, which files, how to launch it — is then the same code in both.
+/// database directly, in a relay for a managed server one that asks that server. Everything
+/// downstream of this — which player, which files, how to launch it — is then the same
+/// code in both.
 /// </remarks>
 public interface IBatchPlayResourceSource
 {
     /// <summary>
     /// Reads the selection in one go. One call rather than a question per resource,
-    /// because on a thin client each one is a round trip.
+    /// because through a relay each one is a round trip.
     /// </summary>
     Task<BatchPlayResourceSnapshot> GetSnapshotAsync(int[] resourceIds, CancellationToken ct);
 

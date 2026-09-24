@@ -11,7 +11,6 @@ import Dependency from "./components/Dependency";
 
 import "./index.scss";
 import AppInfo from "@/pages/configuration/components/AppInfo";
-import ClientAppInfo from "@/pages/configuration/components/AppInfo/ClientAppInfo";
 import ContactUs from "@/pages/configuration/components/ContactUs";
 import Functional from "@/pages/configuration/components/Functional";
 import Others from "@/pages/configuration/components/Others";
@@ -76,10 +75,6 @@ const ConfigurationPage: React.FC = () => {
             <Functional applyPatches={applyPatches} query={query} />
             <Others applyPatches={applyPatches} query={query} />
             <RemoteAccess query={query} />
-            {/* Above the server's, and only in a thin client: the version someone is
-                looking for when they open this page is the one of the program they are
-                looking at. Renders nothing anywhere else. */}
-            <ClientAppInfo query={query} />
             <AppInfo appInfo={appInfo} applyPatches={applyPatches} query={query} />
             <Development query={query} />
             <ContactUs query={query} />

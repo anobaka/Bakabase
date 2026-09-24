@@ -8,9 +8,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests;
 
 /// <summary>
-/// The all-in-one app and the thin client are separate builds a user may run side by
-/// side — one serving their library, the other pointed at a server elsewhere. These
-/// tests hold the two apart, and hold the existing one exactly where it has always been.
+/// The all-in-one app and the removed thin client had AppData profiles of their own, and an
+/// old thin client's data is still where the app looks for pairings to import. These tests
+/// hold the two apart, and hold the existing one exactly where it has always been.
 /// </summary>
 [TestClass]
 public class AppDataProfileTests

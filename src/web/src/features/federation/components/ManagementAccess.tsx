@@ -92,7 +92,7 @@ export interface ManagementAccessProps {
  * explicit button to require pairing, never corrected behind the user's back.
  *
  * Also rendered where the rest of the devices page is not — the desktop app showing a
- * managed server, the retired client, a browser on an Unrestricted server — because that
+ * managed server, a browser on an Unrestricted server — because that
  * is where a headless server's management requests are answered: nobody can walk over to
  * a container and click a button. The wording then names the server instead of saying
  * "this device", which there would mean the wrong one.

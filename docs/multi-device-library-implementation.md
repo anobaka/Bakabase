@@ -31,18 +31,15 @@ NAS/Docker 等无界面宿主：`BAKABASE_FEDERATION_SHARING=true` 在启动时�
 | `Contracts`、`Queries` | 严格查询、不可变节点快照、固定参与者、全量有界归并分页 |
 | `Media` | 绑定资源与授权的资产票据、路径边界、固定媒体类型 |
 | `src/apps/Bakabase.Service/Components/Federation` | 实际数据库投影、宿主适配、鉴权管线、媒体代理 |
-| `src/web/src/features/federation` | 独立只读视图、设备管理、迁移提示与连接信息导入 |
-| `Client.Remoting/Components/Forwarding/ClientApiEndpoints.cs`、`Shell/Components/AvaloniaGuiAdapter.FileSave.cs` | 旧客户端连接提示白名单、原生保存对话框；共用可选接口位于父仓库 `Bakabase.Abstractions/Components/Gui/ILocalFileSaveDialog.cs` |
+| `src/web/src/features/federation` | 独立只读视图、设备管理 |
 | `Service/Components/Federation/FederationPairingFlow.cs` | 后台领取已批准的请求、批准后反向连接、获得授权后开启浏览 |
 | `Service/Components/Federation/FederationCli.cs` | 无界面宿主的 `federation` 管理命令（只调用本机回环接口） |
 | `src/tests/Bakabase.Federation.TestHost` | 使用正式 Service 启动流程的独立进程夹具 |
 | `src/tests/federation-smoke/run.py` | 三个独立进程之间的真实网络验收 |
 
-共享发现与本机播放器定位已下沉到 RemoteAccess/Player 模块；Service 不引用 Client.Remoting。旧客户端保留原协议和转发器。新增 Node 协议不需要搬动旧签名、JSON 兼容或活动服务器逻辑。
+共享发现与本机播放器定位已下沉到 RemoteAccess/Player 模块；Service 不引用 `Bakabase.Remoting`。原协议和转发器由一体版管理其他服务端的中继（`Bakabase.Remoting`）继续使用。新增 Node 协议不需要搬动旧签名、JSON 兼容或活动服务器逻辑。
 
-旧客户端的 `GET /client/migration-hints` 继续提供名称、规范化 origin 地址及路径映射提示。原生导出使用新增的 `POST /client/migration-hints/export`：服务端从本机连接存储生成同一份白名单 JSON，固定建议文件名为 `bakabase-connection-hints.json`，通过可选 `ILocalFileSaveDialog` 交给 Avalonia `StorageProvider.SaveFilePickerAsync`。用户选择目的文件后才写入；启用覆盖确认，同一进程同时只允许一个保存对话框。网页不能传入目的路径或任意内容，带请求体的调用返回 400；接口沿用客户端既有回环、Host/Origin 守卫，输出不含旧管理员密钥、设备身份、URL 凭据或活动连接设置。导出接口本身不依赖 Infrastructure 子模块修改，也没有添加通用 HTTP 写文件接口或全局 WebView 下载处理；后续 Windows 数据迁移的独立子模块修复见本文开头。
-
-前端只在返回 `saved` 时显示已保存；`cancelled` 显示取消且不再下载。没有原生保存能力的 `unavailable`，或旧客户端缺少该接口的 404，才回退到既有 GET 与浏览器 Blob 下载。其他 HTTP 错误或无效结果明确显示失败。每次操作先清除上次结果；成功、取消、失败均在 `finally` 解除按钮忙碌状态，Shell 也在 `finally` 释放对话框互斥。通过浏览器访问带可用 GUI 的旧客户端时，同样会打开该客户端所在设备的保存对话框；无 GUI 的测试宿主使用浏览器下载。
+纯客户端（`Bakabase.Client`）已在测试版期间移除，不提供停止维护的过渡版本。它的连接提示导出（`/client/migration-hints*`、原生保存对话框 `ILocalFileSaveDialog`）与设备页的“导入连接提示”随之删除：一体版改为直接读取本机旧纯客户端留下的 `connection.json`，连同密钥与路径映射导入配对（见[服务器切换](server-switching.md)）。
 
 新增数据统一存于 AppData 下 `federation/state.json`。身份、授权、配对状态使用一次原子替换，避免多文件部分提交；Unix 文件权限为 0600。普通配置导入不覆盖节点身份。损坏状态正常启动时拒绝使用；显式重置可恢复。还原本库使用新 LibraryEpoch，克隆成另一节点同时换 NodeId。直接从外部完整替换 AppData 无法自动识别，仍需按此操作重置。
 
@@ -78,7 +75,7 @@ NAS/Docker 等无界面宿主：`BAKABASE_FEDERATION_SHARING=true` 在启动时�
 
 ## 产品身份与发布契约
 
-| 项目 | 统一版（已有一体版继续升级） | 旧纯客户端（继续保留） |
+| 项目 | 统一版（已有一体版继续升级） | 旧纯客户端（已移除；身份不再发布、也不复用） |
 | --- | --- | --- |
 | 安装包 ID / 主程序 / 单实例标识 | `Bakabase` | `Bakabase.Client` |
 | macOS bundle ID | `com.anobaka.bakabase` | `com.anobaka.bakabase.client` |
@@ -89,13 +86,12 @@ NAS/Docker 等无界面宿主：`BAKABASE_FEDERATION_SHARING=true` 在启动时�
 | CDN 更新前缀 | `app/bakabase/releases/` | `app/bakabase-client/releases/` |
 | 前端包 | 包含本机 `web/index.html` 与构建后的 JS | 不包含 `web` |
 
-`src/scripts/check-release-contract.py` 在每次构建时检查源代码与实际 publish 目录（含传递依赖）：Service/Docker 不得带 Client、Shell、Avalonia、YARP；统一桌面不得带 Client、YARP；旧客户端不得带 Service、联合宿主、业务 migrations 或前端。macOS 自定义 plist 补齐了 `CFBundleExecutable`，打包前由 `prepare-macos-plist.py` 写入发布版本，并声明本地网络用途说明。
+`src/scripts/check-release-contract.py` 在每次构建时检查源代码与实际 publish 目录（含传递依赖）：Service/Docker 不得带 `Bakabase.Client*`、中继、Shell、Avalonia、YARP；统一桌面不得带 `Bakabase.Client*`，YARP 只能随中继（`Bakabase.Remoting`）出现；已移除纯客户端的包 ID 与更新源不得再出现在构建与部署工作流中——旧安装仍在使用它们。macOS 自定义 plist 补齐了 `CFBundleExecutable`，打包前由 `prepare-macos-plist.py` 写入发布版本，并声明本地网络用途说明。
 
 ## 本机验证
 
 ```bash
 dotnet build src/apps/Bakabase.App/Bakabase.App.csproj
-dotnet build src/apps/Bakabase.Client.App/Bakabase.Client.App.csproj
 dotnet test src/tests/Bakabase.Modules.Federation.Tests/Bakabase.Modules.Federation.Tests.csproj
 dotnet test src/tests/Bakabase.Tests/Bakabase.Tests.csproj --filter "FullyQualifiedName~Federation"
 dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj
@@ -107,11 +103,11 @@ cd src/web && corepack yarn vitest run src/features/federation
 
 开发者也可以直接运行两个无界面实例手动体验：发布 `Bakabase.Service`（`-p:RuntimeMode=DOCKER`），把 `src/web/dist` 复制为发布目录下的 `web`，分别以不同的 `BAKABASE_DATA_DIR` 和 `ASPNETCORE_HTTP_PORTS` 启动，再在各自的 `/#/federation/devices` 页面操作。
 
-PR CI 在 Linux 上运行全部单元/集成测试、三实例冒烟、无界面发布内容检查和浏览器迁移冒烟；Windows/macOS 发布内容、macOS 原生 ABI 探针与视频流故障注入在发布前以 `CI` 手动触发 `suite=platforms` 运行，安装包并存验收为 `suite=packages`。
+PR CI 在 Linux 上运行全部单元/集成测试、三实例冒烟、无界面发布内容检查和浏览器冒烟（联合浏览、导入旧纯客户端配对、服务器切换）；Windows/macOS 发布内容、macOS 原生 ABI 探针与视频流故障注入在发布前以 `CI` 手动触发 `suite=platforms` 运行，安装包并存验收为 `suite=packages`。
 
 ## 剩余发布门槛
 
 - 真实网络：至少一次 Windows ↔ macOS 同一 Wi-Fi、桌面 ↔ 桥接模式 Docker NAS 的双向配对、搜索、播放、撤权、休眠唤醒与 DHCP 地址变化。
 - 最终安装包上由人工完成一次“首启 → 发现 → 配对 → 搜索 → 详情 → 播放 → 离线 → 恢复”的完整桌面流程（Windows x64、macOS ARM/Intel）。
-- 签名与公证、生产 stable/beta 更新通道演练；macOS 旧版纯客户端的自动更新路径不可用，需提供手动迁移说明。
+- 签名与公证、生产 stable/beta 更新通道演练。
 - 规模：每次查询都会捕获整个本库的轻量投影（有捕获工作区与期限预算），十万级以上且元数据丰富的库可能触发预算；后续以索引预筛或复用捕获解决。

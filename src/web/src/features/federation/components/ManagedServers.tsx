@@ -71,7 +71,7 @@ const requestLabel = (request: Pick<ManagedServerPendingRequest, "serverName" | 
   request.serverName || request.address;
 
 /**
- * Other devices this one manages in full — the retired thin client's job, now done by
+ * Other devices this one manages in full — the removed thin client's job, now done by
  * switching this window to the other device's own UI.
  *
  * Kept apart from the read-only library sharing below it on purpose: this is the other

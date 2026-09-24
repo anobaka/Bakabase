@@ -28,21 +28,21 @@ namespace Bakabase.Service.Models.View
         public string? DeviceName { get; set; }
 
         /// <summary>
-        /// Which flavour is answering. A server answers for itself; the thin client's
-        /// forwarding layer answers this endpoint locally and says
+        /// Which flavour is answering. A server answers for itself; a relay the desktop app
+        /// runs for a server it manages answers this endpoint locally and says
         /// <see cref="Constants.ClientMode.PureClient"/> instead, which is the whole
         /// reason the field exists.
         /// </summary>
         public ClientMode ClientMode { get; set; }
 
         /// <summary>
-        /// Always true here — a server that answered is reachable by definition. The
-        /// client's own answer can say otherwise, and the UI needs somewhere to read
-        /// that from during a reconnect.
+        /// Always true here — a server that answered is reachable by definition. A relay's
+        /// own answer can say otherwise, and the UI needs somewhere to read that from
+        /// during a reconnect.
         /// </summary>
         public bool ServerReachable { get; set; } = true;
 
-        /// <summary>Null on a server; the thin client fills in its own version.</summary>
+        /// <summary>Null on a server; a relay fills in the desktop app's version.</summary>
         public string? ClientVersion { get; set; }
 
         public string? ServerId { get; set; }

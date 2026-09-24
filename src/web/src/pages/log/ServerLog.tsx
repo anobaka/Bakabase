@@ -28,9 +28,10 @@ import FilePathValue from "@/components/FilePathValue";
 /**
  * The log the server recorded into its database.
  *
- * In the all-in-one this is the only log there is. In a thin client every call on this
- * page is forwarded, so it describes the machine holding the library — which is the right
- * answer for most questions and the wrong one for anything about the client itself.
+ * In the all-in-one this is this machine's log. In the desktop app showing a server it
+ * manages every call on this page is forwarded, so it describes the machine holding that
+ * library — which is the right answer for most questions and the wrong one for anything
+ * about this computer itself.
  */
 export default function ServerLog() {
   const { t } = useTranslation();

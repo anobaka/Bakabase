@@ -13349,22 +13349,6 @@ export interface components {
             markdown: string;
             htmlUrl?: string;
         };
-        "Bakabase.Service.Models.View.ClientAppDownloadFileViewModel": {
-            name: string;
-            platform: string;
-            shape: string;
-            /** Format: int64 */
-            size: number;
-            githubUrl?: string;
-            cdnUrl?: string;
-        };
-        "Bakabase.Service.Models.View.ClientAppDownloadsViewModel": {
-            version: string;
-            /** Format: date-time */
-            publishedAt?: string;
-            releaseUrl?: string;
-            files: components["schemas"]["Bakabase.Service.Models.View.ClientAppDownloadFileViewModel"][];
-        };
         "Bakabase.Service.Models.View.ComparisonPlanViewModel": {
             /** Format: int32 */
             id: number;
@@ -13592,7 +13576,6 @@ export interface components {
         };
         "Bakabase.Service.Models.View.OtherDeviceDownloadsViewModel": {
             mobile?: components["schemas"]["Bakabase.Service.Models.View.MobileAppDownloadsViewModel"];
-            desktopClient?: components["schemas"]["Bakabase.Service.Models.View.ClientAppDownloadsViewModel"];
         };
         "Bakabase.Service.Models.View.PropertyTypeForManuallySettingValueViewModel": {
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];

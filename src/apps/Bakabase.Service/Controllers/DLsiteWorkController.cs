@@ -139,7 +139,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
     /// What running a work would start, without starting it.
     /// </summary>
     /// <remarks>
-    /// Read by the thin client, which runs the program itself. Picking the file needs the
+    /// Read by a managed server's relay, which runs the program itself. Picking the file needs the
     /// work's type, its download location and the priority rules over that folder — all
     /// of which are here.
     /// </remarks>

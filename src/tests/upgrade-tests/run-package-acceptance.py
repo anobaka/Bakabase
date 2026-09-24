@@ -153,8 +153,7 @@ def audit_packages(directory, role, rid, version):
                 portable_content = prefix
                 if rid.startswith("osx-"):
                     bundle = PurePosixPath(binary).parts[0]
-                    allowed = ("Bakabase.app",) if role == "unified" else ("Bakabase.Client.app", "Bakabase Client.app")
-                    require(bundle in allowed, "Unexpected application bundle name")
+                    require(bundle == "Bakabase.app", "Unexpected application bundle name")
     require(binaries["portable"] == binaries["full"], "Portable and update package binaries differ")
     if rid.startswith("osx-"):
         contract.check_macos_portable(portable, role, version)
@@ -240,14 +239,11 @@ def free_port():
         return sock.getsockname()[1]
 
 
-def prepare_data(directory, role):
+def prepare_data(directory):
     directory.mkdir(parents=True)
     port = free_port()
     (directory / "app.json").write_text(json.dumps({"App": {"language": "en-US", "enableAnonymousDataTracking": False,
         "listeningPorts": [port], "autoListeningPortCount": 0, "maxParallelism": 1}}))
-    if role == "client":
-        (directory / "client").mkdir()
-        (directory / "client/host.json").write_text(json.dumps({"LoopbackPort": port}))
     (directory / "acceptance-sentinel.txt").write_text("installer acceptance owned external AppData\n")
     return port
 
@@ -261,40 +257,31 @@ def api(port, path, payload=None):
         return response.read(8 * 1024 * 1024)
 
 
-def inspect_running(executable, data, port, role):
-    endpoint = "/app/info" if role == "unified" else "/client/app/info"
+def inspect_running(executable, data, port):
     deadline, last = time.monotonic() + 120, None
     while time.monotonic() < deadline:
         try:
-            response = json.loads(api(port, endpoint))
+            response = json.loads(api(port, "/app/info"))
             require(response["code"] == 0, "Application info failed")
             info = response["data"]
-            actual = info["appDataPath"] if role == "unified" else info["dataDirectory"]
-            require(Path(actual).resolve() == data.resolve(), "Application data escaped its expected location")
+            require(Path(info["appDataPath"]).resolve() == data.resolve(), "Application data escaped its expected location")
             pids = native_processes(executable)
             require(pids, "API answered without the expected installed native process")
-            if role == "unified":
-                options = json.loads((data / "app.json").read_text(encoding="utf-8-sig"))["App"]
-                require(options.get("version") == info["coreVersion"], "Startup has not persisted its current version")
-            else:
-                require(info.get("available") is True, "Client host is not available")
+            options = json.loads((data / "app.json").read_text(encoding="utf-8-sig"))["App"]
+            require(options.get("version") == info["coreVersion"], "Startup has not persisted its current version")
             break
         except (OSError, ValueError, KeyError, AssertionError, urllib.error.URLError) as error:
             last = str(error)
             time.sleep(0.5)
     else:
         raise TimeoutError(f"Native application startup failed: {last}")
-    page = api(port, "/" if role == "unified" else "/client/connect-page")
+    page = api(port, "/")
     require(b"<html" in page.lower() and b"<script" in page.lower(), "Application did not serve its actual UI")
-    if role == "client":
-        context = json.loads(api(port, "/remote-access/context"))["data"]
-        require(context["clientMode"] == 2 and context["serverReachable"] is False, "Legacy client role is incorrect")
-    else:
-        api(port, "/app/terms", {})
-        created = json.loads(api(port, "/resource/placeholder", {"items": [{"title": "Native package acceptance"}],
-                                                              "acquireImmediately": False}))["data"]
-        require(len(created) == 1 and created[0].get("resourceId") and not created[0].get("error"),
-                "Installed authoritative library could not persist a resource")
+    api(port, "/app/terms", {})
+    created = json.loads(api(port, "/resource/placeholder", {"items": [{"title": "Native package acceptance"}],
+                                                          "acquireImmediately": False}))["data"]
+    require(len(created) == 1 and created[0].get("resourceId") and not created[0].get("error"),
+            "Installed authoritative library could not persist a resource")
     return {"executable": str(executable), "processIds": pids, "effectiveDataDirectory": str(data),
             "appInfo": info, "uiBytes": len(page), "passed": True}
 
@@ -302,7 +289,8 @@ def inspect_running(executable, data, port, role):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--packages", required=True, type=Path)
-    parser.add_argument("--role", required=True, choices=("unified", "client"))
+    # The desktop app is the only desktop product; the removed thin client had a role here.
+    parser.add_argument("--role", default="unified", choices=("unified",))
     parser.add_argument("--rid", required=True, choices=("win-x64", "osx-x64", "osx-arm64"))
     parser.add_argument("--version", required=True)
     parser.add_argument("--results-directory", required=True, type=Path)
@@ -339,8 +327,10 @@ def execute(args, results, report):
     bundle = package["bundleName"]
     mac = args.rid.startswith("osx-")
     home = Path.home()
-    # These paths must be absent before either application starts. Only a fresh
-    # hosted VM may run this gate; its newly created defaults are owned by this run.
+    # These paths must be absent before the application starts. Only a fresh hosted VM
+    # may run this gate; its newly created defaults are owned by this run. The removed thin
+    # client's are included: the app reads an old install's pairings from there once at
+    # startup, and a runner that had one would not be the clean machine this run assumes.
     if mac:
         defaults = [home / "Library/Application Support" / name for name in ("Bakabase", "Bakabase.Client")]
         defaults += [base / name for base in (Path("/Applications"), home / "Applications")
@@ -380,8 +370,7 @@ def execute(args, results, report):
     proxy_thread = threading.Thread(target=proxy.serve_forever, daemon=True)
     proxy_thread.start()
     proxy_url = f"http://127.0.0.1:{proxy.server_port}"
-    isolated_environment = {"BAKABASE_UPDATE_URL": proxy_url, "BAKABASE_CLIENT_UPDATE_URL": proxy_url,
-                            "Analytics__Sentry__BackendDsn": "", "Analytics__Sentry__ClientDsn": "",
+    isolated_environment = {"BAKABASE_UPDATE_URL": proxy_url, "Analytics__Sentry__BackendDsn": "",
                             "HTTP_PROXY": proxy_url, "HTTPS_PROXY": proxy_url, "ALL_PROXY": proxy_url,
                             "http_proxy": proxy_url, "https_proxy": proxy_url, "all_proxy": proxy_url,
                             "NO_PROXY": "localhost,127.0.0.1,::1", "no_proxy": "localhost,127.0.0.1,::1"}
@@ -397,12 +386,14 @@ def execute(args, results, report):
         validate_manifest(read_manifest((content / "sq.version").read_bytes()), args.role, args.rid, args.version)
         for filename, expected in package["binaryHashes"].items():
             require(sha256(content / filename) == expected, f"Installer payload differs from portable: {filename}")
-        return contract.check_publish(content, args.role, require_web=args.role == "unified")
+        return contract.check_publish(content, args.role, require_web=True)
 
     def start_direct(executable, data, label):
         owned_executables.append(executable)
         log = (results / (label + "-app.log")).open("wb")
         child_logs.append(log)
+        # The client variable points the one-time import of an old thin client's pairings
+        # at this run's own fixture rather than the runner's default location.
         env = dict(environment, BAKABASE_DATA_DIR=str(data), BAKABASE_CLIENT_DATA_DIR=str(data))
         children.append(subprocess.Popen([str(executable)], cwd=executable.parent, env=env,
                                          stdout=log, stderr=subprocess.STDOUT, start_new_session=os.name != "nt"))
@@ -413,13 +404,13 @@ def execute(args, results, report):
         content = portable_root / package["portableContent"]
         report["portableContentAudit"] = validate_content(content)
         portable_exe = content / package["manifest"]["mainExe"]
-        port = prepare_data(portable_data, args.role)
+        port = prepare_data(portable_data)
         start_direct(portable_exe, portable_data, "portable")
-        report["portableStartup"] = inspect_running(portable_exe, portable_data, port, args.role)
+        report["portableStartup"] = inspect_running(portable_exe, portable_data, port)
         report["portableProcessesStopped"] = stop_native(portable_exe)
 
         installer = (args.packages / package["artifacts"]["installer"]["file"]).resolve()
-        port = prepare_data(install_data, args.role)
+        port = prepare_data(install_data)
         if mac:
             expanded = work / "expanded-installer"
             command(["pkgutil", "--expand-full", installer, expanded], results / "pkg-expand.log")
@@ -461,17 +452,16 @@ def execute(args, results, report):
                                       "automaticStartupSuppressedByInstaller": True, "target": str(installed_root)}
             report["installedContentAudit"] = validate_content(installed_exe.parent)
             start_direct(installed_exe, install_data, "installed")
-        report["installedStartup"] = inspect_running(installed_exe, install_data, port, args.role)
+        report["installedStartup"] = inspect_running(installed_exe, install_data, port)
         report["installedProcessesStopped"] = stop_native(installed_exe)
-        if args.role == "unified":
-            databases = {}
-            for label, data in (("portable", portable_data), ("installed", install_data)):
-                with contextlib.closing(sqlite3.connect(data / "bakabase_insideworld.db")) as db:
-                    require(db.execute("PRAGMA integrity_check").fetchall() == [("ok",)], "SQLite integrity failed")
-                    count = db.execute("SELECT count(*) FROM ResourcesV2").fetchone()[0]
-                    require(count == 1, "Native package did not retain the one created resource")
-                    databases[label] = {"integrity": "ok", "resourceCount": count}
-            report["databases"] = databases
+        databases = {}
+        for label, data in (("portable", portable_data), ("installed", install_data)):
+            with contextlib.closing(sqlite3.connect(data / "bakabase_insideworld.db")) as db:
+                require(db.execute("PRAGMA integrity_check").fetchall() == [("ok",)], "SQLite integrity failed")
+                count = db.execute("SELECT count(*) FROM ResourcesV2").fetchone()[0]
+                require(count == 1, "Native package did not retain the one created resource")
+                databases[label] = {"integrity": "ok", "resourceCount": count}
+        report["databases"] = databases
     finally:
         def cleanup_step(label, action):
             try:

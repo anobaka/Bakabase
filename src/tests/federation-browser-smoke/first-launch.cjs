@@ -1,16 +1,17 @@
-// The desktop app's first launch on a machine where the thin client has already paired: it
-// brings the thin client's pairings over by itself, before anyone opens the devices page.
+// The desktop app's first launch on a machine where an old install of the removed thin client
+// had paired: it brings the thin client's pairings over by itself, before anyone opens the
+// devices page.
 //
-// A second desktop fixture, started only now — after the legacy stage paired the thin client
-// with the source server — on a data directory of its own and the thin client's data directory
-// to read from, exactly as a fresh install finds an old one. The long-lived unified fixture
-// cannot show this: it started before the thin client had anything to import, and the legacy
-// stage checks that nothing crossed over while it ran.
+// A second desktop fixture, started only now — after legacy-client.cjs left the thin client's
+// pairing with the source server on disk — on a data directory of its own and the thin client's
+// data directory to read from, exactly as a fresh install finds an old one. The long-lived
+// unified fixture cannot show this: it started before there was anything to import.
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { assertNoAnalytics } = require('./network.cjs');
+const { connectionFile } = require('./legacy-client.cjs');
 
 const field = (object, name) => object?.[name] ?? object?.[name[0].toLowerCase() + name.slice(1)];
 
@@ -57,8 +58,8 @@ async function start(spec, timeout = 90000) {
 
 module.exports = async function firstLaunchImport({ config }) {
   const spec = config.firstLaunch;
-  const { source, client } = config.hosts;
-  const legacyFile = path.join(client.directory, 'client', 'connection.json');
+  const { source } = config.hosts;
+  const legacyFile = connectionFile(config.legacyClient.directory);
   const legacyBytes = fs.readFileSync(legacyFile);
   const legacy = JSON.parse(legacyBytes.toString());
   const legacyServers = field(legacy, 'Servers');

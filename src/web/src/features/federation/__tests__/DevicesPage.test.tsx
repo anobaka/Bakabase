@@ -5,7 +5,6 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FederationError } from "../transport";
-import { saveConnectionHintDraft, CONNECTION_HINT_DRAFT_KEY } from "../migration";
 import DevicesPage from "../DevicesPage";
 import { federationPeerApi } from "../peerApi";
 import { useFederationStatus } from "../hooks/useFederationStatus";
@@ -161,36 +160,6 @@ describe("device permission workflows", () => {
     expect(federationPeerApi.connect).not.toHaveBeenCalled();
   });
 
-  it("imports a hint file without network or authorization side effects", async () => {
-    renderPage();
-    const file = new File(["{}"], "hints.json", { type: "application/json" });
-
-    Object.defineProperty(file, "text", {
-      value: async () =>
-        JSON.stringify({
-          format: "bakabase-client-connection-hints",
-          version: 1,
-          servers: [
-            {
-              name: "Imported PC",
-              address: "http://imported",
-              pathMappings: [{ serverPath: "D:/Movies", localPath: "/Volumes/Movies" }],
-              deviceKey: "discard",
-            },
-          ],
-        }),
-    });
-    fireEvent.change(screen.getByLabelText("federation.migration.chooseFile"), {
-      target: { files: [file] },
-    });
-    fireEvent.click(await screen.findByText("federation.discovery.use"));
-    expect(screen.getByDisplayValue("http://imported")).toBeInTheDocument();
-    expect(screen.getByText(/D:\/Movies/)).toBeInTheDocument();
-    expect(federationPeerApi.connect).not.toHaveBeenCalled();
-    expect(federationPeerApi.mappings).not.toHaveBeenCalled();
-    expect(document.body.textContent).not.toContain("discard");
-  });
-
   it("requires explicit confirmation before resetting a cloned installation identity", async () => {
     renderPage();
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
@@ -267,42 +236,9 @@ describe("independent browsing and safe mapping edits", () => {
       );
     },
   );
-  it("restores a migration preview after remount, deduplicates repeated imports and clears only the draft", async () => {
-    const file = new File(["{}"], "hints.json", { type: "application/json" });
-
-    Object.defineProperty(file, "text", {
-      value: async () =>
-        JSON.stringify({
-          format: "bakabase-client-connection-hints",
-          version: 1,
-          servers: [
-            { name: "Imported", address: "http://imported", pathMappings: [], deviceKey: "secret" },
-          ],
-        }),
-    });
-    const page = renderPage();
-    const importFile = () =>
-      fireEvent.change(screen.getByLabelText("federation.migration.chooseFile"), {
-        target: { files: [file] },
-      });
-
-    importFile();
-    await screen.findByText("Imported");
-    importFile();
-    await waitFor(() => expect(screen.getAllByText("Imported")).toHaveLength(1));
-    page.unmount();
-    renderPage();
-    expect(screen.getAllByText("Imported")).toHaveLength(1);
-    expect(federationPeerApi.connect).not.toHaveBeenCalled();
-    localStorage.setItem("unrelated", "keep");
-    expect(JSON.stringify(localStorage)).not.toContain("secret");
-    fireEvent.click(screen.getByText("federation.migration.clearDraft"));
-    expect(screen.queryByText("Imported")).not.toBeInTheDocument();
-    expect(localStorage.getItem("unrelated")).toBe("keep");
-  });
 });
 
-describe("mapping and migration recovery", () => {
+describe("mapping recovery", () => {
   it("requires a new review when the saved mapping changes during confirmation", async () => {
     vi.mocked(federationPeerApi.mappings).mockResolvedValue(undefined);
     const page = renderPage();
@@ -361,25 +297,6 @@ describe("mapping and migration recovery", () => {
     expect(screen.getByDisplayValue("/Volumes/New")).toBeInTheDocument();
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
     expect(screen.queryByText("federation.mappings.saved")).not.toBeInTheDocument();
-  });
-  it("keeps the restored draft intact if the next import is invalid", async () => {
-    saveConnectionHintDraft({
-      format: "bakabase-client-connection-hints",
-      version: 1,
-      servers: [{ name: "Saved PC", address: "http://saved", pathMappings: [] }],
-    });
-    const before = localStorage.getItem(CONNECTION_HINT_DRAFT_KEY);
-
-    renderPage();
-    const file = new File(["invalid"], "bad.json");
-
-    Object.defineProperty(file, "text", { value: async () => "invalid" });
-    fireEvent.change(screen.getByLabelText("federation.migration.chooseFile"), {
-      target: { files: [file] },
-    });
-    expect(await screen.findByRole("alert")).toHaveTextContent("InvalidConnectionHints");
-    expect(screen.getByText("Saved PC")).toBeInTheDocument();
-    expect(localStorage.getItem(CONNECTION_HINT_DRAFT_KEY)).toBe(before);
   });
 });
 

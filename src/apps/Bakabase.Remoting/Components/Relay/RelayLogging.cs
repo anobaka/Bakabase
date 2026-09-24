@@ -14,7 +14,7 @@ namespace Bakabase.Remoting.Components.Relay;
 /// http://&lt;server&gt;/&lt;path&gt;" and "Received HTTP/1.1 response 200." — and a relay
 /// forwards every asset, API call and range request its window makes. In the desktop app
 /// that was a pair of lines per request in the app's own persistent log, each naming the
-/// managed server's address; the thin client's log filled the same way. Its warnings and
+/// managed server's address. Its warnings and
 /// errors are kept: they are the forwarder's account of a failure, which is exactly what
 /// the log is for. The relay's own lines — the guard's refusals, the tickets it takes off —
 /// are not YARP's and pass through untouched.

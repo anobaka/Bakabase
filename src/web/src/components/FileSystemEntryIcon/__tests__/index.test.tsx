@@ -105,7 +105,7 @@ describe("filesystem icons", () => {
     expect(getIconData).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the thin client's local icon handler available when its server is headless", async () => {
+  it("keeps the relay's local icon handler available when the managed server is headless", async () => {
     useRemoteAccessStore.setState({ isLocal: false, clientMode: ClientMode.PureClient });
     useAppContextStore.setState({ bApi2: null, runtimeMode: RuntimeMode.Docker });
     getIconData.mockResolvedValue({ code: 0, data: iconData });
