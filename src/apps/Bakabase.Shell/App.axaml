@@ -9,9 +9,14 @@
 
     <TrayIcon.Icons>
         <TrayIcons>
+            <!--
+              Hidden until App.OnFrameworkInitializationCompleted has wired its menu: an icon
+              whose Open and Exit do nothing is worse than none, and a launch the
+              single-instance guard refuses never gets this far at all.
+            -->
             <TrayIcon Icon="avares://Bakabase.Shell/Assets/favicon.ico"
                       ToolTipText="Bakabase"
-                      IsVisible="True">
+                      IsVisible="False">
                 <TrayIcon.Menu>
                     <!--
                       Headers double as lookup keys in App.OnFrameworkInitializationCompleted.

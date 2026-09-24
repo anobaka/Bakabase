@@ -10,9 +10,9 @@ namespace Bakabase.Abstractions.Components.App;
 /// <remarks>
 /// A plain restart spawns the replacement first and then asks the host to stop, because the
 /// HTTP response has to get back to the frontend before the sockets come down. The
-/// single-instance guard, meanwhile, refuses whoever finds the mutex still held — and that
-/// mutex belongs to the old process until it has fully exited. Nothing ordered those two
-/// events, so a replacement that started quickly enough mistook its own dying predecessor for
+/// single-instance guard, meanwhile, refuses whoever finds the data directory still locked —
+/// and that lock belongs to the old process until it is on its way out. Nothing ordered those
+/// two events, so a replacement that started quickly enough mistook its own dying predecessor for
 /// a live instance, wrote "SHOW" down its pipe and exited. The predecessor then exited too,
 /// and the user was left with no app at all.
 ///

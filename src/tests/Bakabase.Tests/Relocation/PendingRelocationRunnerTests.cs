@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.App.Relocation;
+using Bakabase.Infrastructures.Components.App.SingleInstance;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Tests.Relocation;
@@ -303,5 +304,66 @@ public class PendingRelocationRunnerTests
         Assert.AreEqual(RelocationOutcomeKind.Success, outcome.Kind, outcome.ErrorMessage);
         Assert.IsFalse(Directory.Exists(h.CurrentDataDir),
             "previous custom data dir should be deleted (it's not anchor and not target)");
+    }
+
+    [TestMethod]
+    public void EnumerateCopyableFiles_ExcludesTheInstanceLock()
+    {
+        using var h = new RelocationTestHarness();
+        h.WithFile("data/file1.bin", new byte[] { 1 })
+         .WithFile(DataDirectoryLock.FileName, "pid=1");
+
+        var copyable = PendingRelocationRunner.EnumerateCopyableFiles(h.CurrentDataDir).ToList();
+        Assert.AreEqual(1, copyable.Count, "the lock belongs to whoever runs on a directory, not to the data");
+    }
+
+    [TestMethod]
+    public async Task MergeOverwrite_SucceedsWhileTheRunningAppHoldsBothLocks()
+    {
+        // The real situation at startup: this process owns the source (the entry point locked
+        // it) and has just locked the target. A held lock file cannot even be read, so copying
+        // it would fail the whole move.
+        using var h = new RelocationTestHarness().WithCurrentDataDirAt("custom-data");
+        h.WithFile("data/keep.bin", new byte[] { 1, 2, 3 });
+        using var sourceLock = DataDirectoryLock.TryAcquire(h.CurrentDataDir).Lock!;
+        using var targetLock = DataDirectoryLock.TryAcquire(h.TargetDir).Lock!;
+        h.WithMarker(new PendingRelocation
+        {
+            Mode = RelocationMode.MergeOverwrite,
+            Target = h.TargetDir,
+        });
+
+        var outcome = await h.RunAsync();
+
+        Assert.AreEqual(RelocationOutcomeKind.Success, outcome.Kind, outcome.ErrorMessage);
+        CollectionAssert.AreEqual(new byte[] { 1, 2, 3 }, h.ReadFromTarget("data/keep.bin"));
+
+        // The source is emptied but for the lock this process still holds: it stays owned
+        // until SingleInstanceGuard.Retire lets go and removes the rest.
+        Assert.IsTrue(Directory.Exists(h.CurrentDataDir));
+        CollectionAssert.AreEqual(new[] { DataDirectoryLock.FileName },
+            Directory.EnumerateFileSystemEntries(h.CurrentDataDir).Select(Path.GetFileName).ToArray());
+        Assert.AreEqual(DataDirectoryLockStatus.HeldByAnotherProcess,
+            DataDirectoryLock.TryAcquire(h.CurrentDataDir).Status, "still locked through the cleanup");
+    }
+
+    [TestMethod]
+    public async Task PreviousDataDir_WithAnUnheldLockFile_IsDeletedWhole()
+    {
+        // A build without the guard (or a leftover file): nobody holds it, so it goes too.
+        using var h = new RelocationTestHarness().WithCurrentDataDirAt("custom-data");
+        h.WithFile("data/keep.bin", new byte[] { 1 })
+         .WithFile(DataDirectoryLock.FileName, "pid=1");
+        h.WithMarker(new PendingRelocation
+        {
+            Mode = RelocationMode.MergeOverwrite,
+            Target = h.TargetDir,
+        });
+
+        var outcome = await h.RunAsync();
+        Assert.AreEqual(RelocationOutcomeKind.Success, outcome.Kind, outcome.ErrorMessage);
+        Assert.IsFalse(Directory.Exists(h.CurrentDataDir));
+        Assert.IsFalse(File.Exists(Path.Combine(h.TargetDir, DataDirectoryLock.FileName)),
+            "and was not copied to the target");
     }
 }

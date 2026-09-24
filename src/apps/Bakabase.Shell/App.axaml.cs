@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using Bakabase.Shell.Components;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Relocation;
+using Bakabase.Infrastructures.Components.App.SingleInstance;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.SystemService;
@@ -85,6 +86,23 @@ public partial class App : Application
             // Wire up tray events now that Host is available
             AppTrayIcon.Clicked += (_, _) => _guiAdapter.Show();
 
+            // macOS: clicking the Dock icon, or opening the app again from Finder or
+            // Launchpad, does not start a second process — LaunchServices sends the running
+            // one a "reopen" instead. With the window hidden (closed to the tray), that has to
+            // bring it back, or the click does nothing at all. Windows has no such event; a
+            // second launch there is a second process, which the single-instance guard turns
+            // into the same Show() through its activation channel.
+            if (TryGetFeature(typeof(IActivatableLifetime)) is IActivatableLifetime activatable)
+            {
+                activatable.Activated += (_, e) =>
+                {
+                    if (e.Kind == ActivationKind.Reopen)
+                    {
+                        _guiAdapter.Show();
+                    }
+                };
+            }
+
             // desktop.Exit below covers the graceful exits only. Anything that ends the
             // process without unwinding Avalonia — Environment.Exit from Velopack's
             // ApplyUpdatesAndRestart, a fatal-error bail-out, Ctrl+C on a console run —
@@ -118,6 +136,9 @@ public partial class App : Application
             var trayMenu = new TrayMenuController(AppTrayIcon.Menu!, openItem, exitItem, _guiAdapter,
                 () => Host?.Host?.Services, () => IsTrayIconAvailable);
             desktop.Exit += (_, _) => trayMenu.Dispose();
+
+            // Only now, with Open and Exit wired (App.axaml declares it hidden).
+            SetTrayIconVisible(true);
 
             await Host.Start(desktop.Args ?? []);
 
@@ -169,6 +190,21 @@ public partial class App : Application
         var currentDataDir = EffectiveAppDataResolver.Resolve(anchor).DataDir;
         var marker = PendingRelocation.TryReadFrom(currentDataDir);
         if (marker == null) return;
+
+        // This process already owns currentDataDir (the entry point took its lock). Own the
+        // target too, before a byte is copied into it, and keep both until the move is over:
+        // until the pointer flips a second launch resolves the source, after it the target,
+        // and either way it must find this process holding it — not a half-copied database it
+        // could open. A target some other instance owns (one started with BAKABASE_DATA_DIR
+        // pointing there) means the move waits: the marker stays, and the next launch retries.
+        var targetClaim = SingleInstanceGuard.AcquireAdditional(marker.Target);
+        if (targetClaim == SingleInstanceEntry.Refused)
+        {
+            Serilog.Log.Warning(
+                "Data path relocation to {Target} postponed: another running Bakabase owns that directory. " +
+                "The request is kept and retried on the next launch.", marker.Target);
+            return;
+        }
 
         // Release the static Serilog file handle so the runner's source-dir cleanup isn't
         // blocked on Windows. We re-target after the runner finishes, regardless of outcome.
@@ -246,6 +282,20 @@ public partial class App : Application
             ? marker.Target
             : currentDataDir;
         AppService.ReconfigureLogger(effectiveDataDir);
+
+        if (outcome.Kind == RelocationOutcomeKind.Success)
+        {
+            // The target is this process's data directory now. The source has been emptied by
+            // the runner (all but its lock file), so letting go of it last means it was owned
+            // right up to the moment it stopped mattering.
+            SingleInstanceGuard.Promote(marker.Target);
+            SingleInstanceGuard.Retire(currentDataDir);
+        }
+        else if (targetClaim == SingleInstanceEntry.Entered)
+        {
+            // Not moving after all: give the target back as it was.
+            SingleInstanceGuard.Abandon(marker.Target);
+        }
 
         if (outcome.Kind == RelocationOutcomeKind.Error)
         {

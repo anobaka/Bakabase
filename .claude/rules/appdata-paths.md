@@ -41,6 +41,14 @@ respectively, both already outside any install tree.
   references.
 - For env-var override (`BAKABASE_DATA_DIR`) or user-configured DataPath,
   trust `DefaultAppDataPathResolver` — don't re-implement the precedence.
+- For "which directory is the data directory" before DI exists, call
+  `AppDataLocator.ResolveEffectiveDataDirectory` — the one rule the database
+  (`AppStartup`), `app.json` (`AppOptionsManager`), `AppService`, the log file,
+  the port memory and the single-instance guard all share. The env var names
+  the **anchor**; a `.redirect` inside it is followed like any other. Never
+  special-case the env var on one side only: when the guard stopped at the
+  variable's directory while the database followed the redirect, two
+  processes ended up on one database.
 
 ## Don't
 
@@ -79,6 +87,41 @@ var path = Path.Combine(_appService.AppDataDirectory, "data", "covers");
 If you genuinely need a path inside the install tree (e.g. reading a
 read-only asset shipped with the app), that's fine — but don't write to it.
 
+## One instance per data directory
+
+A data directory has exactly one running owner. The guard
+(`SingleInstanceGuard`) keys on the **effective** directory — after
+`BAKABASE_DATA_DIR` and the anchor redirect, normalised (full path, links
+resolved, case-folded on Windows/macOS) — never on the executable or a fixed
+name, so a second launch on the same directory hands off to the running
+window and exits, while a launch on a different directory is its own
+instance.
+
+- The entry point takes the lock **before** `AppService` is touched: nothing
+  may create, migrate, log to or relocate the directory first. A refused
+  launch must leave no file behind.
+- The lock is `{dataDir}/.bakabase.lock`, held open exclusively for the
+  process lifetime (`FileShare.None`: share mode on Windows, `flock` on
+  Unix). The OS drops it when the process dies — there is no stale-lock
+  logic, and there must never be any.
+- Anything that copies, backs up or deletes the whole data directory must
+  skip that file (it cannot even be read while held). The relocation runner
+  and the startup backup already do.
+- A relocation holds both the source's and the target's locks until the
+  source is emptied; see the `SingleInstanceGuard` remarks.
+- The activation channel (pipe / Unix socket) is named from a hash of the
+  normalised directory and the user; see `ActivationChannel`. On macOS/Linux
+  the socket is an absolute path in a per-user directory that does not come
+  from `TMPDIR` (`DARWIN_USER_TEMP_DIR`; `/run/user/{uid}`, else a private
+  `/tmp/bakabase-{uid}`), so a launch from ssh, a script or an IDE with its
+  own `TMPDIR` still reaches the running window.
+
+`{dataDir}/listening-ports.json` remembers the automatic listening ports so
+the main window's origin (and its browser storage) survives a restart; see
+`ListeningPortSelector`. It keeps the directory's **preferred** ports (the
+first ones it got, never overwritten) apart from the **last used** ones, so a
+port another program holds for one launch comes back on the next.
+
 ## Where the mechanism lives
 
 | Concern | File |
@@ -89,15 +132,21 @@ read-only asset shipped with the app), that's fine — but don't write to it.
 | User-driven DataPath change → copy + commit | `Bakabase.Infrastructures/Components/App/Relocation/PendingRelocationRunner.cs` |
 | Validation of user-chosen DataPath | `Bakabase.Infrastructures/Components/App/Relocation/DataPathValidator.cs` |
 | Legacy `current/AppData` notice | `Bakabase.Infrastructures/Components/App/LegacyInstallAppDataDetector.cs` |
+| The one effective-dir rule, without side effects (guard, DB, `app.json`, `AppService`) | `Bakabase.Infrastructures/Components/App/AppDataLocator.cs` |
+| One instance per data dir (lock, channel, relocation) | `Bakabase.Infrastructures/Components/App/SingleInstance/` |
+| Stable automatic listening ports | `Bakabase.Infrastructures/Components/App/Ports/` |
 | One-shot DB path conversion (absolute → relative) | `legacy/Bakabase.Migrations/V230/PathsRelocationMigrator.cs` |
 
 ## Tests
 
 Behavior is locked down in `src/tests/Bakabase.Tests/`:
 `DefaultAppDataPathResolverTests`, `AppDataPathRelocationTests`,
-`DataPathValidatorTests`, `LegacyInstallDetectorTests`,
-`Relocation/PendingRelocationRunnerTests`. Add a unit test there before
-changing any of the files above.
+`DataPathValidatorTests`, `LegacyInstallDetectorTests`, `AppDataLocatorTests`,
+`Relocation/PendingRelocationRunnerTests`, `SingleInstance/*`,
+`ListeningPorts/*`. Add a unit test there before changing any of the files
+above. The single-instance tests start a second process
+(`src/tests/Bakabase.Tests.InstanceProbe`), because a lock taken twice by one
+process proves nothing about two.
 
 The end-to-end scripts in [`src/tests/upgrade-tests/`](../../src/tests/upgrade-tests/)
 are a manual regression guard for this rule — run them before a release if
