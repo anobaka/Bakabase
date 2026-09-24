@@ -5,6 +5,8 @@
     <ProjectReference Include="..\..\apps\Bakabase.Remoting\Bakabase.Remoting.csproj" />
     <ProjectReference Include="..\..\apps\Bakabase.Service\Bakabase.Service.csproj" />
     <ProjectReference Include="..\Bakabase.TestKit\Bakabase.TestKit.csproj" />
+    <!-- A second process for the single-instance tests (see SingleInstance/InstanceProbe.cs). -->
+    <ProjectReference Include="..\Bakabase.Tests.InstanceProbe\Bakabase.Tests.InstanceProbe.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,6 +2,7 @@ using Avalonia;
 using Bakabase.Abstractions.Components.App;
 using Bakabase.Shell.Components;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.App.SingleInstance;
 using Bakabase.Infrastructures.Components.App.Upgrade;
 using Velopack;
 // Aliased because this project's own namespace is Bakabase.App: an unqualified `App`
@@ -40,10 +41,21 @@ class Program
         CrashHandler.Install();
 
         // A restart spawns its replacement before it has stopped itself, and the
-        // single-instance guard refuses whoever finds the mutex still held. Wait here, ahead
-        // of everything that reaches that check, for the process that spawned us to be gone.
-        // Does nothing on an ordinary launch.
+        // single-instance guard refuses whoever finds the data directory still locked. Wait
+        // here, ahead of everything that reaches that check, for the process that spawned us to
+        // be gone. Does nothing on an ordinary launch.
         var restartHandoff = RestartHandoff.WaitForPredecessor(args);
+
+        // One instance per data directory, settled before anything touches the directory:
+        // the static constructor below creates it and opens a log file in it, and the shell
+        // would go on to run a pending relocation and show a tray icon. A second launch on
+        // the same directory asks the running one to show its window and ends here, having
+        // written nothing. A launch on a different directory (BAKABASE_DATA_DIR) is its own
+        // instance and carries on.
+        if (!SingleInstanceGuard.EnterOrHandOff())
+        {
+            return;
+        }
 
         // Touching AppService runs its static constructor, which is what builds the Serilog file
         // sink. That would otherwise happen a step later, inside OnFrameworkInitializationCompleted
@@ -53,6 +65,13 @@ class Program
         // same property. Deliberately not guarded — the static ctor throws by design when the
         // AppData layout cannot be migrated, and the handler above is already armed to report it.
         _ = AppService.DefaultAppDataDirectory;
+
+        // That constructor converts a pre-redirect layout into a redirect, which moves the
+        // effective directory. Nothing moved on any other launch, and then this does nothing.
+        if (!SingleInstanceGuard.EnterOrHandOff())
+        {
+            return;
+        }
 
         // Reported only now: the line above is what builds the file sink, and before it
         // Serilog's default logger drops everything.

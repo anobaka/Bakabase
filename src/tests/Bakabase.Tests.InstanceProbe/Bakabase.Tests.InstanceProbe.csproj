@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    A second process for the single-instance tests in Bakabase.Tests. The data-directory lock
+    and the activation channel only mean anything between processes, so the tests start this
+    and have it run the real code against the same directory. Never packaged.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../libs/Bakabase.Infrastructures/Bakabase.Infrastructures/Bakabase.Infrastructures.csproj" />
+  </ItemGroup>
+</Project>

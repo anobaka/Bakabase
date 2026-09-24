@@ -132,9 +132,9 @@ namespace Bakabase.Service.Controllers
         /// The child is told which process it is replacing, via
         /// <see cref="RestartHandoff.FormatArgument"/>. Spawning has to happen before the host
         /// stops — the response must reach the frontend first — but the single-instance guard
-        /// refuses whoever finds this process's mutex still held, so without that argument a
-        /// child that got going quickly enough would mistake us for a live instance and exit,
-        /// leaving the user with nothing running once we finished stopping.
+        /// refuses whoever finds this process's data-directory lock still held, so without that
+        /// argument a child that got going quickly enough would mistake us for a live instance
+        /// and exit, leaving the user with nothing running once we finished stopping.
         ///
         /// Dev / Visual Studio caveat: when running under a debugger, the spawned child shares
         /// the parent's console and VS keeps the parent alive — so the user sees the parent
