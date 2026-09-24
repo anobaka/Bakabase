@@ -29,7 +29,11 @@ const SETTLE_MS = 500;
  * to the process that owns the icon.
  */
 const ClientTrayState: React.FC = () => {
-  const isPureClient = useIsPureClient();
+  // Not in the desktop app's console: its tray belongs to the app and shows the app's own
+  // tasks, and the relay would only answer that it applied nothing.
+  const pureClient = useIsPureClient();
+  const clientHost = useRemoteAccessStore((state) => state.clientHost);
+  const isPureClient = pureClient && clientHost !== "console";
   // A client that has lost its server knows nothing about what it is doing, and the last
   // thing it saw is not evidence that the work is still running.
   const serverReachable = useRemoteAccessStore((state) => state.serverReachable);

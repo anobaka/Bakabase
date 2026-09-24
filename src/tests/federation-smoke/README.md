@@ -9,6 +9,10 @@ The pairing check first creates a pending approval and then completes the same
 transaction with an invitation code. SQLite inspection connections are explicitly
 closed before fixture cleanup, including on Windows where open files cannot be
 removed.
+No host reports to analytics: the TestHost blanks every `Analytics:*` key and
+turns anonymous tracking off itself, whatever the caller's environment (see
+`FixtureAnalytics.cs`), and `run.py` checks each host's `/app/analytics-info`
+before anything else.
 The TestHost writes complete fixture remote-access settings atomically before
 configuration watchers start. It intentionally warms empty resource/property
 caches, then seeds through the production cache-aware ORM and checks resource

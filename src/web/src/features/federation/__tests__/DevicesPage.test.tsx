@@ -45,6 +45,31 @@ vi.mock("../peerApi", () => ({
   },
 }));
 vi.mock("../hooks/useFederationStatus", () => ({ useFederationStatus: vi.fn() }));
+// The management sections have their own suites (ManagementSections.test.tsx). Here they
+// sit idle: nothing managed, remote access off, so they never compete with the sharing
+// controls these tests drive.
+vi.mock("../serverApi", () => ({
+  managedServerApi: {
+    list: vi.fn().mockResolvedValue({ available: true, servers: [], requests: [] }),
+  },
+}));
+vi.mock("@/sdk/BApi", () => ({
+  default: {
+    remoteAccess: {
+      getRemoteAccessSettings: vi.fn().mockResolvedValue({
+        code: 0,
+        data: {
+          mode: 0,
+          addresses: [],
+          allowLiveTranscode: false,
+          requirePairing: false,
+          devices: [],
+          pendingRequests: [],
+        },
+      }),
+    },
+  },
+}));
 const status: FederationStatus = {
   identity: { nodeId: "local", libraryEpoch: "epoch", name: "This PC" },
   browsingEnabled: true,

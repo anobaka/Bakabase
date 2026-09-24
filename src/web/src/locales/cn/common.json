@@ -440,6 +440,7 @@
   "menu.client": "本客户端",
   "menu.client.connection": "服务端连接",
   "menu.client.pathMapping": "路径映射",
+  "menu.client.thisComputer": "本机",
   "client.failure.pathNotMapped": "这个文件夹不在本机上",
   "client.failure.addMapping": "去设置",
   "client.failure.needsNewerClient": "当前客户端还不支持该操作",

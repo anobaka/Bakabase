@@ -3,14 +3,20 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Domain.Options;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Identity;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
+using Bakabase.Modules.RemoteAccess.Components.Pairing;
+using Bakabase.Modules.RemoteAccess.Services;
+using Bakabase.Remoting.Components.Console;
 using Bakabase.Service.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 using Microsoft.Extensions.FileProviders;
 using System.Text.Json;
@@ -45,22 +51,41 @@ if (!File.Exists(remoteOptionsPath))
 }
 File.Delete(Path.Combine(dataDirectory, "ready"));
 Environment.SetEnvironmentVariable("BAKABASE_FEDERATION_TEST_DATA_DIR", dataDirectory);
-Environment.SetEnvironmentVariable("Analytics__Sentry__BackendDsn", "");
+// Whatever harness starts this host, and whatever its environment says.
+FixtureAnalytics.TurnOff();
 AppDataAnchor.Use(new AppDataPathProfile("BAKABASE_FEDERATION_TEST_DATA_DIR", "Bakabase.Federation.Test", "Bakabase.Federation.Test"));
 var count = args.Length > 2 ? int.Parse(args[2]) : 257;
-var host = new FederationTestHost(port, dataDirectory, count);
+// Optional: be the desktop app rather than a headless server. The value is where the
+// harness's browser opens this host's UI — the "main window" whose origin UnifiedHost records.
+var desktopWindow = Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW");
+if (desktopWindow != null && !(Uri.TryCreate(desktopWindow, UriKind.Absolute, out var window) &&
+                               window.Scheme == Uri.UriSchemeHttp && window.IsLoopback && window.Port == port))
+    throw new ArgumentException("The desktop window must be an http loopback address on this fixture's own port.");
+// Optional: record every request this host receives, before any of its own middleware.
+var requestLog = Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_REQUEST_LOG");
+if (requestLog != null && !Path.IsPathFullyQualified(requestLog))
+    throw new ArgumentException("The request log must be an absolute file path.");
+// Optional: the name this server gives itself to other devices, in place of the machine's.
+var serverName = Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_SERVER_NAME");
+if (serverName != null && !System.Text.RegularExpressions.Regex.IsMatch(serverName, "^[a-z][a-z0-9-]{0,31}$"))
+    throw new ArgumentException("The server name must be a short lowercase label.");
+var host = new FederationTestHost(port, dataDirectory, count, desktopWindow, requestLog, serverName);
 await host.Start([]);
 
-sealed class FederationTestHost(int port, string dataDirectory, int count)
+sealed class FederationTestHost(int port, string dataDirectory, int count, string? desktopWindow, string? requestLog,
+        string? serverName)
     : BakabaseHost(new NullGuiAdapter(), new NullSystemService())
 {
     protected override string? SingleInstanceId => null;
     protected override IReadOnlyList<int>? OverrideListeningPorts() => [port];
     protected override string ListeningInterface => "127.0.0.1";
 
-    protected override IHostBuilder CreateHostBuilder(params string[] args) => base.CreateHostBuilder(args)
+    protected override IHostBuilder CreateHostBuilder(params string[] args) => ComposeDesktop(base.CreateHostBuilder(args)
         .ConfigureServices(services =>
         {
+            if (requestLog != null)
+                // First, so it is the outermost middleware and sees requests the server refuses too.
+                services.Insert(0, ServiceDescriptor.Singleton<IStartupFilter>(new RequestRecorder(requestLog)));
             // The fixture exercises media serving, never dependency installation or external downloads.
             services.RemoveAll<IDependentComponentService>();
             // A benchmark must not vary every result row's label with the CI VM
@@ -75,8 +100,46 @@ sealed class FederationTestHost(int port, string dataDirectory, int count)
                 services.AddSingleton<INodeIdentityProvider>(provider => new BenchmarkNodeIdentityProvider(
                     new NodeIdentityProvider(provider.GetRequiredService<FederationStateStore>()), fixtureName));
             }
+            if (serverName != null)
+            {
+                // Every fixture on one machine would otherwise share its name, so nothing a
+                // test reads by name could tell one server from another.
+                services.RemoveAll<IRemoteAccessService>();
+                services.AddSingleton<RemoteAccessService>();
+                services.AddSingleton<IRemoteAccessService>(provider =>
+                    new FixtureNamedRemoteAccess(provider.GetRequiredService<RemoteAccessService>(), serverName));
+            }
             services.AddSingleton<IStartupFilter, FederationTestStaticFiles>();
-        });
+        }));
+
+    /// <summary>
+    /// What <c>Bakabase.App</c>'s UnifiedHost adds to this same server, and nothing else: the
+    /// relay manager, appended after every server registration. Avalonia, the tray and the
+    /// shell's switcher menu are not part of it; the harness's browser is the window.
+    /// </summary>
+    private IHostBuilder ComposeDesktop(IHostBuilder builder) => desktopWindow == null
+        ? builder
+        : builder.ConfigureServices(services => services.AddRemoteConsole());
+
+    /// <summary>
+    /// Records where the main window opens, exactly as UnifiedHost does: "back to this device"
+    /// must land on that origin. The window here is the harness's browser, so its address is
+    /// given rather than the one a debug build would pick (the frontend dev server's).
+    /// </summary>
+    protected override string OverrideFeAddress(string feAddress)
+    {
+        if (desktopWindow == null)
+            return base.OverrideFeAddress(feAddress);
+        var address = base.OverrideFeAddress(desktopWindow);
+        try
+        {
+            Host.Services.GetService<RemoteConsoleLocalOrigin>()?.Set(address);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        return address;
+    }
 
     protected override async Task ExecuteCustomProgress(IServiceProvider services)
     {
@@ -142,7 +205,19 @@ sealed class FederationTestHost(int port, string dataDirectory, int count)
         var remoteAccess = services.GetRequiredService<IRemoteAccessService>();
         if (remoteAccess.GetEffectiveMode() != RemoteAccessMode.Enabled || !remoteAccess.GetRequirePairing())
             throw new InvalidOperationException("The fixture requires preconfigured Enabled remote access with pairing.");
+        FixtureAnalytics.Verify(services.GetRequiredService<IConfiguration>(),
+            services.GetRequiredService<IBOptions<AppOptions>>().Value.EnableAnonymousDataTracking);
+        if (serverName != null && (await remoteAccess.GetServerDescriptorAsync()).Name != serverName)
+            throw new InvalidOperationException("The fixture's server name did not take.");
         await services.GetRequiredService<FederationPeerService>().SetSharingAsync(true);
+        if (desktopWindow != null)
+        {
+            // Ready means the startup import has run and "this device" has an origin.
+            await services.GetRequiredService<RemoteConsoleManager>().Startup;
+            if (services.GetRequiredService<RemoteConsoleLocalOrigin>().Origin !=
+                new Uri(desktopWindow).GetLeftPart(UriPartial.Authority))
+                throw new InvalidOperationException("The desktop fixture did not record its window's origin.");
+        }
         services.GetRequiredService<AppService>().NotAcceptTerms = false;
         File.WriteAllText(Path.Combine(dataDirectory, "ready"), port.ToString());
         Console.WriteLine($"FEDERATION_TEST_READY {port}");
@@ -155,17 +230,155 @@ sealed class BenchmarkNodeIdentityProvider(INodeIdentityProvider production, str
         (await production.GetAsync(cancellationToken)) with { Name = name };
 }
 
+/// <summary>
+/// The production remote-access service under another name. The name — what
+/// <c>server-info</c> and discovery announce, and so what every pairing records and every
+/// switcher shows — is <see cref="Environment.MachineName"/> with no setting, which every
+/// fixture on one machine shares. Everything else is the production service's answer.
+/// </summary>
+sealed class FixtureNamedRemoteAccess(IRemoteAccessService production, string name) : IRemoteAccessService
+{
+    public RemoteAccessMode GetEffectiveMode() => production.GetEffectiveMode();
+    public Task SetModeAsync(RemoteAccessMode? mode) => production.SetModeAsync(mode);
+    public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses() => production.GetReachableAddresses();
+    public Task<string> GetOrCreateServerIdAsync() => production.GetOrCreateServerIdAsync();
+    public bool GetAllowLiveTranscode() => production.GetAllowLiveTranscode();
+    public Task SetAllowLiveTranscodeAsync(bool allow) => production.SetAllowLiveTranscodeAsync(allow);
+    public bool GetRequirePairing() => production.GetRequirePairing();
+    public Task SetRequirePairingAsync(bool require) => production.SetRequirePairingAsync(require);
+
+    public async Task<RemoteAccessServerDescriptor> GetServerDescriptorAsync() =>
+        (await production.GetServerDescriptorAsync()) with { Name = name };
+}
+
+/// <summary>
+/// Writes a JSON line for every request this host receives, as it arrives: method, path, the
+/// page's fetch metadata and <c>Origin</c>, whether it is a WebSocket handshake, whether the
+/// query carried a relay switch ticket or the request a cookie, and what its device signature
+/// verifies as against this host's own paired devices.
+/// A second line with the same <c>id</c> gives the status this host answered with, written
+/// before the answer leaves, so a client holding the answer finds the line already there.
+/// </summary>
+/// <remarks>
+/// An observer only; it never changes a request. It lets a browser test see what reached a
+/// server and how the server answered — which the server does not reveal itself: a relay on
+/// the same machine is a loopback caller, and loopback callers skip device authentication; a
+/// page's no-cors request gets an opaque answer. The verification uses its own nonce cache, so
+/// it cannot consume a nonce the server's authenticator will later see. Neither the header nor
+/// any key is written.
+/// </remarks>
+public sealed class RequestRecorder(string file) : IStartupFilter
+{
+    private readonly Lock _gate = new();
+    private readonly NonceCache _nonces = new();
+    private long _next;
+
+    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+    {
+        app.Use(async (context, following) =>
+        {
+            var request = context.Request;
+            var id = Interlocked.Increment(ref _next);
+            var query = request.QueryString.HasValue ? request.QueryString.Value![1..] : string.Empty;
+            var header = request.Headers.Authorization.ToString();
+            string signature = "none";
+            string? device = null;
+            if (RemoteRequestSignature.TryParseHeader(header) != null)
+            {
+                var bodyDigest = string.Empty;
+                if (!HttpMethods.IsGet(request.Method) && !HttpMethods.IsHead(request.Method) &&
+                    request.ContentLength is > 0 and <= RemoteRequestSignature.MaxHashedBodyBytes)
+                {
+                    // The same rule the server's gate applies when deciding what was signed.
+                    request.EnableBuffering();
+                    using var buffer = new MemoryStream((int) request.ContentLength!.Value);
+                    await request.Body.CopyToAsync(buffer, context.RequestAborted);
+                    request.Body.Position = 0;
+                    bodyDigest = RemoteRequestSignature.HashBody(buffer.GetBuffer().AsSpan(0, (int) buffer.Length));
+                }
+                var result = new RemoteDeviceAuthenticator(
+                        context.RequestServices.GetRequiredService<IRemoteDeviceService>(), _nonces)
+                    .Authenticate(header, request.Method, request.Path.Value ?? string.Empty, query, bodyDigest);
+                signature = result.Outcome.ToString();
+                device = result.Outcome == DeviceAuthOutcome.Authenticated ? result.Device!.Id : null;
+            }
+            Write(new
+            {
+                id,
+                method = request.Method,
+                path = WithoutCapabilities(request.Path.Value),
+                site = request.Headers["Sec-Fetch-Site"].ToString(),
+                dest = request.Headers["Sec-Fetch-Dest"].ToString(),
+                // The page the browser names — the only thing a WebSocket handshake from
+                // Chromium says about who opened it, since it carries no fetch metadata.
+                origin = request.Headers.Origin.ToString(),
+                // Read from the request: the WebSocket feature is only installed inside the hub.
+                websocket = request.Headers.Upgrade.Any(v =>
+                    v?.Contains("websocket", StringComparison.OrdinalIgnoreCase) == true),
+                ticket = query.Contains("__bakabase_switch", StringComparison.OrdinalIgnoreCase),
+                cookie = request.Headers.Cookie.Count > 0,
+                signature,
+                device
+            });
+            context.Response.OnStarting(() =>
+            {
+                var headers = context.Response.Headers;
+                Write(new
+                {
+                    id,
+                    status = context.Response.StatusCode,
+                    denial = headers["X-Bakabase-Remote-Access"].ToString(),
+                    csp = headers.ContentSecurityPolicy.ToString()
+                });
+                return Task.CompletedTask;
+            });
+            await following();
+        });
+        next(app);
+    };
+
+    /// <summary>
+    /// Paths whose next segment is a bearer ticket: whoever holds it may use it. The file is
+    /// kept when a run fails, so the ticket is replaced by a placeholder.
+    /// </summary>
+    private static readonly string[] CapabilityPrefixes = ["/federation/local/media/"];
+
+    private static string? WithoutCapabilities(string? path)
+    {
+        foreach (var prefix in CapabilityPrefixes)
+        {
+            if (path != null && path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return prefix + "{ticket}";
+        }
+        return path;
+    }
+
+    private void Write(object entry)
+    {
+        var line = JsonSerializer.Serialize(entry) + "\n";
+        lock (_gate)
+            File.AppendAllText(file, line);
+    }
+}
+
+/// <summary>
+/// Serves a production frontend build, as a release build of the server does and where it
+/// does: behind the server's own pipeline, request gates included. Ahead of it, the UI's own
+/// document skipped the rules a release build applies to it — a page on another site could
+/// load it into a frame, and nothing added <c>frame-ancestors</c>.
+/// </summary>
 public sealed class FederationTestStaticFiles : IStartupFilter
 {
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
     {
+        next(app);
         var webRoot = Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_WEB_ROOT");
         if (!string.IsNullOrEmpty(webRoot))
         {
+            // Reached by whatever the server's endpoints did not answer, like UseSpa's "/".
             var files = new PhysicalFileProvider(Path.GetFullPath(webRoot));
             app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = files });
             app.UseStaticFiles(new StaticFileOptions { FileProvider = files });
         }
-        next(app);
     };
 }

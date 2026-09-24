@@ -119,11 +119,16 @@ namespace Bakabase.Service.Components
             services.AddSingleton<IRemoteAccessDataDirectory, AppServiceRemoteAccessDataDirectory>();
             services.AddFederatedLibrary();
 
+            // Which pages CORS, the cross-site guard and the framing headers trust, for the
+            // runtime this build is for.
+            services.AddSingleton(ServiceCorsOrigins.ForThisBuild);
+
             // Configured rather than passed to AddMvc because the base AppStartup owns
             // that call; MvcOptions configuration is order-independent.
             services.Configure<MvcOptions>(o =>
             {
                 o.Filters.Add<RemoteAccessAuthorizationFilter>();
+                o.Filters.Add<LoopbackCrossSiteUserMachineFilter>();
                 o.Filters.Add<RemoteAccessPathGuardFilter>();
                 FlagsEnumModelBinderProvider.Register(o.ModelBinderProviders);
             });
@@ -134,8 +139,10 @@ namespace Bakabase.Service.Components
             services.AddSingleton<RemoteAccessHubFilter>();
             services.Configure<HubOptions>(o => o.AddFilter<RemoteAccessHubFilter>());
 
-            // Idle unless the server is locked out of itself, which on a desktop
-            // install it never is.
+            // Prints a pairing code when a server with no screen is locked out of itself.
+            // The desktop app never prints one: its own window shows and issues codes
+            // (Configuration → Remote access, and the devices page), and a code in its log
+            // is one more place for it to leak from.
             services.AddHostedService<FirstDevicePairingCodeAnnouncer>();
 
             services.AddSingleton<ThirdPartyHttpRequestLogger>();
@@ -326,7 +333,27 @@ namespace Bakabase.Service.Components
 
         protected override void ConfigureCors(CorsPolicyBuilder builder)
         {
-            builder.WithOrigins("https://www.north-plus.net", "https://exhentai.org");
+            // Kept with the rest of the allow-list, which the loopback cross-site guard
+            // also reads. In a packaged build this also takes yarn dev's server back off.
+            ServiceCorsOrigins.ForThisBuild.Configure(builder);
+        }
+
+        /// <summary>
+        /// The gates every request passes before anything else sees it, in the order that
+        /// makes them safe. Public so tests can run exactly this order.
+        /// </summary>
+        public static void UseRequestGates(IApplicationBuilder app)
+        {
+            // First, so the gates' own refusals carry it too: the half of the frame rule
+            // that the browser enforces.
+            app.UseMiddleware<FrameAncestorsPolicy>();
+            app.UseMiddleware<FederationExceptionMiddleware>();
+            app.UseMiddleware<FederationAccessMiddleware>();
+            app.UseMiddleware<FederationBrowsingMiddleware>();
+            app.UseMiddleware<RemoteAccessMiddleware>();
+            // After the loopback bypass above: narrows what a page on another site can
+            // make this computer's browser do here, showing this UI in a frame included.
+            app.UseMiddleware<LoopbackCrossSiteGuard>();
         }
 
         public override void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime)
@@ -350,11 +377,9 @@ namespace Bakabase.Service.Components
             // The remote-access gate goes first so nothing downstream — MiniProfiler,
             // Swagger, static files, the SignalR hub — is reachable from another
             // machine before it has been judged. Loopback requests pass straight
-            // through, so this is a no-op for the desktop app.
-            app.UseMiddleware<FederationExceptionMiddleware>();
-            app.UseMiddleware<FederationAccessMiddleware>();
-            app.UseMiddleware<FederationBrowsingMiddleware>();
-            app.UseMiddleware<RemoteAccessMiddleware>();
+            // through, so this is a no-op for the desktop app — except for a page on
+            // another site, which LoopbackCrossSiteGuard still judges.
+            UseRequestGates(app);
 
             // Enable MiniProfiler - should be early in the pipeline
             app.UseMiniProfiler();

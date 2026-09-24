@@ -879,4 +879,10 @@ The version of lux is not limited.</value>
   <data name="Federation_PairingRequest_Body" xml:space="preserve">
     <value>From {0}. Approve or reject it in Devices and sharing.</value>
   </data>
+  <data name="RemoteAccess_ManagementRequest_Title" xml:space="preserve">
+    <value>{0} wants to manage this device</value>
+  </data>
+  <data name="RemoteAccess_ManagementRequest_Body" xml:space="preserve">
+    <value>{0}, from {1}. Approving it gives that device full control of Bakabase here. Approve or reject it in Configuration → Remote access.</value>
+  </data>
 </root>

@@ -2,7 +2,14 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
+  <!--
+    Bakabase.Remoting is here only so a fixture can stand in for the desktop app's host
+    (UnifiedHost: this server plus the relays that manage other servers), which is opted into
+    per process by BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW. This executable is never packaged;
+    the release contract checks the shipped projects' graphs, not this one.
+  -->
   <ItemGroup>
     <ProjectReference Include="../../apps/Bakabase.Service/Bakabase.Service.csproj" />
+    <ProjectReference Include="../../apps/Bakabase.Remoting/Bakabase.Remoting.csproj" />
   </ItemGroup>
 </Project>

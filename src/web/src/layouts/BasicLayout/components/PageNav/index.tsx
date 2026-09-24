@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MenuFoldOutlined, MenuUnfoldOutlined, MoonOutlined, SunOutlined } from "@ant-design/icons";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 
 import AntdMenu from "./components/AntdMenu";
+import ServerSwitcher from "./components/ServerSwitcher";
 import styles from "./index.module.scss";
 
 import AppUpdateBanner from "@/layouts/BasicLayout/components/AppUpdateBanner";
 import ClientVersionNotice from "@/layouts/BasicLayout/components/ClientVersionNotice";
+import LegacyClientNotice from "@/layouts/BasicLayout/components/LegacyClientNotice";
 import { Button, Divider, Tooltip } from "@/components/bakaui";
 import { HelpCenterModal } from "@/components/HelpCenter";
 import BApi from "@/sdk/BApi";
@@ -23,46 +24,20 @@ const OptIconStyle = { fontSize: 20 };
 
 const Navigation = () => {
   const { t } = useTranslation();
-  const { pathname } = useLocation();
 
   const appOptions = useAppOptionsStore((state) => state.data);
   const uiOptionsStore = useUiOptionsStore();
   const isDarkMode = appOptions.uiTheme == UiTheme.Dark;
 
-  const [loading, setLoading] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
-  const prevPathRef = useRef<string>(pathname);
   const isCollapsed = uiOptionsStore.data.isMenuCollapsed;
-
-  useEffect(() => {
-    if (pathname != prevPathRef.current) {
-      setLoading(false);
-      prevPathRef.current = pathname;
-    }
-  }, [pathname]);
-
-  console.log("PageNav", pathname);
 
   return (
     <div className={`${styles.nav} ${isCollapsed ? `${styles.collapsed}` : ""}`}>
-      {/* {loading && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 9999
-        }}>
-          <Spinner size="lg" />
-        </div>
-      )} */}
       <div className={styles.top}>
-        <Link to="/">{isCollapsed ? "B" : "Bakabase"}</Link>
+        {/* Which server this window shows, and the way to another. A plain brand link
+            wherever there is nothing to switch to. */}
+        <ServerSwitcher collapsed={isCollapsed} />
       </div>
       <div className={styles.menu}>
         <AntdMenu collapsed={isCollapsed} />
@@ -70,6 +45,7 @@ const Navigation = () => {
       {/* Above the update banner, and about the other program: that one offers to update
           this client, this one says the server is not on the same version. Renders
           nothing outside a thin client, or once the two agree. */}
+      <LegacyClientNotice collapsed={isCollapsed} />
       <ClientVersionNotice collapsed={isCollapsed} />
       <AppUpdateBanner collapsed={isCollapsed} />
       <div className={"px-2"}>
@@ -81,7 +57,6 @@ const Navigation = () => {
           color={"default"}
           variant={"light"}
           onPress={() => {
-            setLoading(true);
             BApi.options
               .patchAppOptions({
                 uiTheme: isDarkMode ? UiTheme.Light : UiTheme.Dark,

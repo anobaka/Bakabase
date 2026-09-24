@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Client.Remoting.Components.Connection;
+using Bakabase.Remoting.Components.Connection;
 using Bakabase.Modules.Player.Abstractions.Components;
 
 namespace Bakabase.Tests.RemoteAccess;

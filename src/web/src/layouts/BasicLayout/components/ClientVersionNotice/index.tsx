@@ -11,7 +11,7 @@ import { compareAppVersions } from "@/core/versionComparison";
 import { clientApi } from "@/core/clientApi";
 import BApi from "@/sdk/BApi";
 import { Tooltip } from "@/components/bakaui";
-import { useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
+import { useIsLegacyClient, useRemoteAccessStore } from "@/stores/remoteAccess";
 
 /**
  * Says, and keeps saying, that the two halves are not the same version.
@@ -26,10 +26,15 @@ import { useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
  * because it was acknowledged once, and the thing it explains may not be hit for days.
  * It is quiet instead — one line, no buttons, the same shape as the update banner beside
  * it, and gone the moment the versions match.
+ *
+ * The retired thin client only. The desktop app's console answers as the same flavour,
+ * but there the two versions are two independent installs — the device's own app and a
+ * server it manages — with no client to update into step, and the connection page this
+ * points at does not exist there.
  */
 const ClientVersionNotice: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
   const { t } = useTranslation();
-  const isPureClient = useIsPureClient();
+  const isPureClient = useIsLegacyClient();
   // A client that cannot reach its server has nothing to compare against, and the
   // disconnection is the thing worth the user's attention rather than this.
   const serverReachable = useRemoteAccessStore((state) => state.serverReachable);

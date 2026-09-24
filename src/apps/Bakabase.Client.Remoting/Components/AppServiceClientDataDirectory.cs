@@ -1,4 +1,4 @@
-using Bakabase.Client.Remoting.Abstractions;
+using Bakabase.Remoting.Abstractions;
 using Bakabase.Infrastructures.Components.App;
 
 namespace Bakabase.Client.Remoting.Components;

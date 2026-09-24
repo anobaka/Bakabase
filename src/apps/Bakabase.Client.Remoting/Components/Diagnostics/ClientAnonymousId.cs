@@ -1,4 +1,4 @@
-using Bakabase.Client.Remoting.Abstractions;
+using Bakabase.Remoting.Abstractions;
 
 namespace Bakabase.Client.Remoting.Components.Diagnostics;
 

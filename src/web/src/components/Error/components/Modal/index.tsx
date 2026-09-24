@@ -8,7 +8,7 @@ import { CopyOutlined, CheckOutlined, GithubOutlined } from "@ant-design/icons";
 import { Accordion, AccordionItem, Button, Chip, Link, Modal, Snippet } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import Urls from "@/cons/Urls";
-import { useIsPureClient } from "@/stores/remoteAccess";
+import { useIsConsole, useIsPureClient } from "@/stores/remoteAccess";
 import { clientApi } from "@/core/clientApi";
 
 interface IProps {
@@ -41,6 +41,7 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
   // client: the window that just failed is this one, and the log that recorded it is
   // this machine's — the path below belongs to the server.
   const isPureClient = useIsPureClient();
+  const isConsole = useIsConsole();
 
   const [appInfo, setAppInfo] = useState<{ logPath: string }>();
   const [showFullStack, setShowFullStack] = useState(false);
@@ -52,6 +53,12 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
     // failure being reported happened in this window, so the log worth pointing at
     // is this machine's — and the server's path could not be opened from here
     // anyway, since nothing maps it.
+    //
+    // The desktop app showing a managed server has no log to point at: its relay keeps
+    // this computer's log away from the other server's page, and the server's own path
+    // would not open here either.
+    if (isConsole) return;
+
     if (isPureClient) {
       clientApi
         .log({ take: 1 })
@@ -68,7 +75,7 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
         });
       }
     });
-  }, [isPureClient]);
+  }, [isPureClient, isConsole]);
 
   const truncateStack = (stack: string, maxLines: number = 5) => {
     const lines = stack.split("\n");

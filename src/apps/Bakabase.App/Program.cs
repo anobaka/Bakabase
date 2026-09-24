@@ -1,7 +1,6 @@
 using Avalonia;
 using Bakabase.Abstractions.Components.App;
 using Bakabase.Shell.Components;
-using Bakabase.Service.Components;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade;
 using Velopack;
@@ -67,12 +66,13 @@ class Program
     }
 
     // Configure(Func<TApp>) rather than Configure<App>(): the shell takes the host
-    // it should run behind as a constructor argument, and picking BakabaseHost here
-    // is exactly what makes this build the all-in-one flavour.
+    // it should run behind as a constructor argument, and picking UnifiedHost here
+    // is exactly what makes this build the all-in-one flavour — its own server, plus
+    // the relays that let the same window manage other servers.
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure(() =>
                 new ShellApp((guiAdapter, systemService) =>
-                    new BakabaseShellHost(new BakabaseHost(guiAdapter, systemService))))
+                    new BakabaseShellHost(new UnifiedHost(guiAdapter, systemService))))
             .UsePlatformDetect()
             .LogToTrace();
 }

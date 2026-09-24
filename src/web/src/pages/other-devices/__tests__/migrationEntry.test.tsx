@@ -10,7 +10,10 @@ vi.mock("@/sdk/BApi", () => ({ default: { otherDevices: { getOtherDeviceDownload
 vi.mock("@/core/clientApi", () => ({
   clientApi: { migrationHints: vi.fn(), exportMigrationHints: vi.fn() },
 }));
-vi.mock("@/stores/remoteAccess", () => ({ useIsPureClient: () => true }));
+vi.mock("@/stores/remoteAccess", () => ({
+  useIsPureClient: () => true,
+  useIsConsole: () => false,
+}));
 vi.mock("@/components/bakaui", () => ({
   Chip: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));

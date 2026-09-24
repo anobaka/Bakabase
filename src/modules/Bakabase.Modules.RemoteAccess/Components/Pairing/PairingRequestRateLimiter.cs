@@ -17,11 +17,13 @@ namespace Bakabase.Modules.RemoteAccess.Components.Pairing;
 /// <para>
 /// The per-address budget is what actually refuses the flood. The notification throttle
 /// is separate and global, because many addresses can each stay inside their own budget
-/// and still add up to a wall of notifications.
+/// and still add up to a wall of notifications. Which requests were actually announced is
+/// remembered here too, so a device that files again while its announced request still
+/// waits is not announced twice.
 /// </para>
 /// <para>
 /// In memory only: a restart forgives everything, which is the right trade for something
-/// whose worst case is bounded anyway.
+/// whose worst case is bounded anyway — at most, one device is announced once more.
 /// </para>
 /// </remarks>
 public sealed class PairingRequestRateLimiter(Func<DateTime>? now = null)
@@ -43,6 +45,7 @@ public sealed class PairingRequestRateLimiter(Func<DateTime>? now = null)
 
     private readonly Func<DateTime> _now = now ?? (() => DateTime.UtcNow);
     private readonly List<(string Address, DateTime At)> _requests = [];
+    private readonly Dictionary<string, DateTime> _announced = new(StringComparer.Ordinal);
     private readonly Lock _gate = new();
     private DateTime? _lastNotifiedAt;
 
@@ -86,6 +89,44 @@ public sealed class PairingRequestRateLimiter(Func<DateTime>? now = null)
 
             _lastNotifiedAt = now;
             return true;
+        }
+    }
+
+    /// <summary>
+    /// Records that a notification about this request actually went out, until the request
+    /// itself lapses.
+    /// </summary>
+    /// <remarks>
+    /// Called only once the notification exists: a device that files again is kept quiet
+    /// only by an earlier request of its own that somebody was told about. One held back
+    /// by <see cref="TryNotify"/>, or one whose notification could not be created, told
+    /// nobody, so the next request from that device is still news.
+    /// </remarks>
+    public void MarkAnnounced(string requestId, DateTime expiresAt)
+    {
+        lock (_gate)
+        {
+            ForgetLapsedAnnouncements(_now());
+            _announced[requestId] = expiresAt;
+        }
+    }
+
+    /// <summary>Whether a notification about this request went out, and the request has not lapsed.</summary>
+    public bool WasAnnounced(string requestId)
+    {
+        lock (_gate)
+        {
+            ForgetLapsedAnnouncements(_now());
+            return _announced.ContainsKey(requestId);
+        }
+    }
+
+    /// <summary>Bounds the record by the requests themselves, which are bounded already.</summary>
+    private void ForgetLapsedAnnouncements(DateTime now)
+    {
+        foreach (var id in _announced.Where(a => a.Value <= now).Select(a => a.Key).ToList())
+        {
+            _announced.Remove(id);
         }
     }
 }

@@ -13,7 +13,7 @@ var directory = args[1];
 if (Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any())
     throw new ArgumentException("The client fixture requires a new, empty data directory.");
 Environment.SetEnvironmentVariable("BAKABASE_CLIENT_DATA_DIR", directory);
-Environment.SetEnvironmentVariable("Analytics__Sentry__ClientDsn", "");
+FixtureAnalytics.TurnOff();
 AppDataAnchor.Use(AppDataPathProfile.Client);
 await new ClientFixtureHost(port, directory).Start([]);
 
@@ -28,6 +28,7 @@ sealed class ClientFixtureHost(int port, string directory) : ClientHost(new Test
         await base.ExecuteCustomProgress(services);
         if (AppService.DefaultAppDataDirectory != directory)
             throw new InvalidOperationException("The legacy client adopted another product's data directory.");
+        FixtureAnalytics.Verify(services.GetRequiredService<IConfiguration>());
         services.GetRequiredService<AppService>().NotAcceptTerms = false;
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory, "ready"), port.ToString());

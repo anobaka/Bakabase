@@ -5,32 +5,32 @@ using Avalonia.Controls;
 namespace Bakabase.Shell.Components;
 
 /// <summary>
-/// Answers "is there actually a notification area to minimize into?".
+/// Answers "is there actually a notification area showing our icon?".
 ///
 /// This matters on Linux only, and it matters a lot there. Avalonia implements the tray via
 /// the DBus StatusNotifierItem spec, so the icon silently does nothing on a desktop with no
 /// StatusNotifierWatcher — GNOME without the AppIndicator extension being the common case.
 /// Worse, the "a second launch shows the running instance" recovery in AppHost is gated on
-/// RuntimeMode being WinForms or MacOS, so on Linux a hidden window has no way back at all:
-/// offering "minimize to tray" there hides the app forever.
+/// RuntimeMode being WinForms or MacOS, so on Linux the tray is the only way back into the
+/// app from outside its window: offering "minimize to tray" there hides the app forever, and
+/// the tray's "Switch to" submenu is out of reach (the main window then carries it instead —
+/// see <see cref="TrayMenuController"/>).
 /// </summary>
+/// <remarks>
+/// Asked afresh every time rather than cached. The watcher can appear after we start (an app
+/// launched at login can beat the shell extension that provides it) and can go away again,
+/// and Avalonia follows both; so does this.
+/// </remarks>
 internal static class TrayIconAvailability
 {
     private static readonly FieldInfo? ImplField =
         typeof(TrayIcon).GetField("_impl", BindingFlags.NonPublic | BindingFlags.Instance);
 
-    private static bool? _cached;
+    /// <summary>Reflection failures are reported once; the answer is asked for every couple of seconds.</summary>
+    private static volatile bool _reportedProbeFailure;
 
-    /// <summary>
-    /// Cached after the first call: the answer is settled long before the user closes the app
-    /// (the icon is registered at startup) and cannot change without a session restart.
-    /// </summary>
+    /// <summary>Safe on any thread: it only reads two fields of the platform implementation.</summary>
     public static bool IsSupported(TrayIcon? icon)
-    {
-        return _cached ??= Detect(icon);
-    }
-
-    private static bool Detect(TrayIcon? icon)
     {
         // Windows' notification area and the macOS menu bar are always there, and both
         // platforms additionally have the single-instance "show the running instance" path
@@ -54,25 +54,58 @@ internal static class TrayIconAvailability
                 return false;
             }
 
-            // DBusTrayIconImpl.IsActive is set once the StatusNotifierWatcher accepts the
-            // registration, and cleared when it goes away. Both types are internal to
-            // Avalonia, hence the reflection.
-            if (impl.GetType().GetProperty("IsActive", BindingFlags.Public | BindingFlags.Instance)
-                    ?.GetValue(impl) is bool isActive)
+            var type = impl.GetType();
+            switch (type.Name)
             {
-                return isActive;
-            }
+                case "XEmbedTrayIconImpl":
+                    // What Avalonia's X11 backend falls back to without a session bus: a
+                    // placeholder that logs "not implemented" and shows nothing.
+                    return false;
+                case "DBusTrayIconImpl":
+                {
+                    // Not IsActive alone: Avalonia 11.3 sets it as soon as it has a session-bus
+                    // connection, whether or not anything will display the icon, and clears it
+                    // only on dispose. _serviceConnected is what tracks the watcher: set when
+                    // org.kde.StatusNotifierWatcher has an owner, cleared when it loses it.
+                    // Both members are internal to Avalonia, hence the reflection.
+                    var isActive = type.GetProperty("IsActive", BindingFlags.Public | BindingFlags.Instance)
+                        ?.GetValue(impl) as bool?;
+                    var watcherPresent = type.GetField("_serviceConnected", BindingFlags.NonPublic | BindingFlags.Instance)
+                        ?.GetValue(impl) as bool?;
+                    if (isActive == null || watcherPresent == null)
+                    {
+                        ReportProbeFailure(null);
+                        return false;
+                    }
 
-            // Some other implementation we do not recognise. If the platform bothered to
-            // provide one, assume it works.
-            return true;
+                    return isActive.Value && watcherPresent.Value;
+                }
+                default:
+                    // Some other implementation we do not recognise. If the platform bothered to
+                    // provide one, assume it works.
+                    return true;
+            }
         }
         catch (Exception e)
         {
-            // Avalonia moved something. Fail closed on Linux: losing the minimize option is a
-            // small annoyance, while hiding the window with no way to restore it is not.
-            Serilog.Log.Warning(e, "Could not determine tray icon availability; assuming none");
+            ReportProbeFailure(e);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Avalonia moved something. Fail closed on Linux: losing the minimize option and showing
+    /// the switch menu in the window are small annoyances, while hiding the window with no way
+    /// to restore it is not.
+    /// </summary>
+    private static void ReportProbeFailure(Exception? e)
+    {
+        if (_reportedProbeFailure)
+        {
+            return;
+        }
+
+        _reportedProbeFailure = true;
+        Serilog.Log.Warning(e, "Could not determine tray icon availability; assuming none");
     }
 }

@@ -201,7 +201,7 @@ public sealed class FederationGateTests
     public void EveryRealFederationActionHasAnExactAllowedProtocolRoute()
     {
         var controllers = new[] { typeof(FederationPeerController), typeof(FederationLocalController),
-            typeof(FederationExportController), typeof(FederationMediaController) };
+            typeof(FederationExportController), typeof(FederationMediaController), typeof(FederationServerController) };
         foreach (var type in controllers)
         foreach (var action in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
         foreach (var route in action.GetCustomAttributes<HttpMethodAttribute>())
@@ -215,6 +215,108 @@ public sealed class FederationGateTests
             Assert.AreEqual(kind, FederationRoutePolicy.Classify(path), path);
             foreach (var method in route.HttpMethods)
                 Assert.IsTrue(FederationRoutePolicy.Allows(kind.Value, method, path), method + " " + path);
+        }
+    }
+
+    /// <summary>Every managed-server route, exactly as the controller declares it.</summary>
+    [TestMethod]
+    [DataRow("GET", "/federation/local/servers")]
+    [DataRow("GET", "/federation/local/servers/")]
+    [DataRow("POST", "/federation/local/servers/probe")]
+    [DataRow("POST", "/federation/local/servers/pair")]
+    [DataRow("POST", "/federation/local/servers/import-legacy-client")]
+    [DataRow("GET", "/federation/local/servers/discover")]
+    [DataRow("GET", "/federation/local/servers/discover/")]
+    [DataRow("get", "/FEDERATION/LOCAL/SERVERS/DISCOVER")]
+    [DataRow("DELETE", "/federation/local/servers/requests/Req_1-a")]
+    [DataRow("DELETE", "/federation/local/servers/server-1")]
+    [DataRow("PUT", "/federation/local/servers/server-1/path-mappings")]
+    [DataRow("POST", "/federation/local/servers/server-1/open")]
+    [DataRow("post", "/FEDERATION/LOCAL/SERVERS/SERVER-1/OPEN")]
+    public void ManagedServerRoutesAreAllowedAndOnlyAsLocalRoutes(string method, string path)
+    {
+        Assert.AreEqual(FederationEndpointKind.Local, FederationRoutePolicy.Classify(path));
+        Assert.IsTrue(FederationRoutePolicy.Allows(FederationEndpointKind.Local, method, path));
+        Assert.IsFalse(FederationRoutePolicy.Allows(FederationEndpointKind.Export, method, path));
+        Assert.IsFalse(FederationRoutePolicy.Allows(FederationEndpointKind.Public, method, path));
+    }
+
+    /// <summary>
+    /// One step off each managed-server route — wrong method, extra or missing segment, an
+    /// id that is not an identifier, a lookalike prefix — is refused before MVC sees it.
+    /// </summary>
+    [TestMethod]
+    [DataRow("POST", "/federation/local/servers")]
+    [DataRow("PUT", "/federation/local/servers")]
+    [DataRow("DELETE", "/federation/local/servers")]
+    [DataRow("GET", "/federation/local/servers/probe")]
+    [DataRow("PUT", "/federation/local/servers/pair")]
+    [DataRow("GET", "/federation/local/servers/import-legacy-client")]
+    [DataRow("POST", "/federation/local/servers/discover")]
+    [DataRow("PUT", "/federation/local/servers/discover")]
+    [DataRow("HEAD", "/federation/local/servers/discover")]
+    [DataRow("GET", "/federation/local/servers/discover/extra")]
+    [DataRow("GET", "/federation/local/servers/discovery")]
+    [DataRow("GET", "/federation/local/servers/server-1/discover")]
+    [DataRow("GET", "/federation/local/servers/requests/discover")]
+    [DataRow("POST", "/federation/local/servers/probe/extra")]
+    [DataRow("GET", "/federation/local/servers/server-1")]
+    [DataRow("POST", "/federation/local/servers/server-1")]
+    [DataRow("PUT", "/federation/local/servers/server-1")]
+    [DataRow("DELETE", "/federation/local/servers/a.b")]
+    [DataRow("DELETE", "/federation/local/servers/a b")]
+    [DataRow("POST", "/federation/local/servers/requests/request-1")]
+    [DataRow("DELETE", "/federation/local/servers/requests/a.b")]
+    [DataRow("DELETE", "/federation/local/servers/requests/request-1/extra")]
+    [DataRow("GET", "/federation/local/servers/server-1/open")]
+    [DataRow("PUT", "/federation/local/servers/server-1/open")]
+    [DataRow("POST", "/federation/local/servers/a.b/open")]
+    [DataRow("POST", "/federation/local/servers/server-1/open/extra")]
+    [DataRow("POST", "/federation/local/servers/server-1/path-mappings")]
+    [DataRow("GET", "/federation/local/servers/server-1/path-mappings")]
+    [DataRow("DELETE", "/federation/local/servers/server-1/path-mappings")]
+    [DataRow("POST", "/federation/local/servers/server-1/forget")]
+    [DataRow("GET", "/federation/local/serversx")]
+    [DataRow("GET", "/federation/local/server")]
+    public void NearMissesOfManagedServerRoutesAreRefused(string method, string path) =>
+        Assert.IsFalse(FederationRoutePolicy.Allows(FederationEndpointKind.Local, method, path), $"{method} {path}");
+
+    [TestMethod]
+    public void ManagedServerRoutesExistOnlyOnTheLocalInterface()
+    {
+        var overlong = new string('a', 129);
+        Assert.IsFalse(FederationRoutePolicy.Allows(FederationEndpointKind.Local, "DELETE", $"/federation/local/servers/{overlong}"));
+        Assert.IsFalse(FederationRoutePolicy.Allows(FederationEndpointKind.Local, "POST", $"/federation/local/servers/{overlong}/open"));
+        Assert.IsNull(FederationRoutePolicy.Classify("/federation/v1/servers"));
+        Assert.IsFalse(FederationRoutePolicy.Allows(FederationEndpointKind.Export, "GET", "/federation/v1/export/servers"));
+        Assert.IsFalse(FederationRoutePolicy.Allows(FederationEndpointKind.Public, "POST", "/federation/v1/pair/servers"));
+    }
+
+    [TestMethod]
+    public async Task ManagedServerRoutesPassTheGateOnlyForTheLocalCaller()
+    {
+        using var fixture = await GateFixture.CreateAsync();
+        foreach (var (method, path) in new[]
+                 {
+                     ("GET", "/federation/local/servers"), ("GET", "/federation/local/servers/discover"),
+                     ("POST", "/federation/local/servers/pair"),
+                     ("POST", "/federation/local/servers/server-1/open"), ("DELETE", "/federation/local/servers/server-1")
+                 })
+        {
+            var local = Context(path, method);
+            local.Request.Headers.Origin = "http://localhost:9000";
+            await fixture.RunAsync(local);
+            Assert.IsTrue(fixture.ReachedEndpoint, $"{method} {path}");
+            Assert.AreEqual(FederationEndpointKind.Local, FederationHttpContext.GetKind(local));
+
+            foreach (var (ip, origin) in new[] { ("192.168.20.8", ""), ("127.0.0.1", "http://127.0.0.1:34650") })
+            {
+                var foreign = Context(path, method, ip);
+                foreign.Request.Headers.Origin = origin;
+                await fixture.RunAsync(foreign);
+                Assert.AreEqual("LocalInterfaceOnly", Error(foreign), $"{method} {path} {ip} {origin}");
+                Assert.IsFalse(fixture.ReachedEndpoint);
+            }
         }
     }
 

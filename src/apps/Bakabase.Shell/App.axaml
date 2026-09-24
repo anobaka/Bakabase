@@ -13,6 +13,11 @@
                       ToolTipText="Bakabase"
                       IsVisible="True">
                 <TrayIcon.Menu>
+                    <!--
+                      Headers double as lookup keys in App.OnFrameworkInitializationCompleted.
+                      TrayMenuController then localises them and, when the host can switch the
+                      main window between servers, inserts a "Switch to" submenu after Open.
+                    -->
                     <NativeMenu>
                         <NativeMenuItem Header="Open" />
                         <NativeMenuItem Header="Exit" />

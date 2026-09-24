@@ -44,9 +44,10 @@ public partial class App : Application
     public TrayIcon AppTrayIcon { get; private set; } = null!;
 
     /// <summary>
-    /// Whether "minimize to tray" is a real option on this desktop. See
-    /// <see cref="TrayIconAvailability"/> — on Linux without a StatusNotifierWatcher the icon
-    /// never appears and a hidden window cannot be recovered.
+    /// Whether the desktop shows the tray icon right now, i.e. whether "minimize to tray" is a
+    /// real option and the tray menu can be reached. See <see cref="TrayIconAvailability"/> — on
+    /// Linux without a StatusNotifierWatcher the icon never appears and a hidden window cannot
+    /// be recovered. Safe on any thread.
     /// </summary>
     public bool IsTrayIconAvailable => TrayIconAvailability.IsSupported(AppTrayIcon);
 
@@ -100,6 +101,8 @@ public partial class App : Application
                 TrayIconGhostSweeper.Sweep();
             });
 
+            // Found by their XAML headers, which TrayMenuController replaces with localised ones
+            // below — so this lookup has to come first.
             var openItem = AppTrayIcon.Menu!.Items.OfType<NativeMenuItem>().First(i => i.Header == "Open");
             var exitItem = AppTrayIcon.Menu!.Items.OfType<NativeMenuItem>().First(i => i.Header == "Exit");
             openItem.Click += (_, _) => _guiAdapter.Show();
@@ -108,6 +111,13 @@ public partial class App : Application
             // its own close-behaviour switch, so a tray exit with CloseBehavior.Prompt raises a
             // confirmation dialog while Avalonia is already tearing down.
             exitItem.Click += async (_, _) => await ExitCoordinator.RequestExitAsync(ExitTrigger.TrayMenu);
+
+            // The host's container is read lazily: it does not exist until Start has built it,
+            // and the all-in-one's Start does not return until the host has stopped again, so
+            // there is no "after start" to wire this up in.
+            var trayMenu = new TrayMenuController(AppTrayIcon.Menu!, openItem, exitItem, _guiAdapter,
+                () => Host?.Host?.Services, () => IsTrayIconAvailable);
+            desktop.Exit += (_, _) => trayMenu.Dispose();
 
             await Host.Start(desktop.Args ?? []);
 

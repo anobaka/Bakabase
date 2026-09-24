@@ -4,6 +4,15 @@ using Bakabase.Shell.Controls;
 
 namespace Bakabase.Shell.Windows;
 
+/// <summary>The tray's "Switch to" list as the main window shows it; see <see cref="MainWindow.SetServerSwitchMenu"/>.</summary>
+/// <param name="Header">The menu's title, already localised.</param>
+/// <param name="Entries">This device and every managed server, in menu order.</param>
+internal sealed record ServerSwitchMenu(string Header, IReadOnlyList<ServerSwitchMenuEntry> Entries);
+
+/// <param name="Label">Already escaped for access keys ("_" doubled).</param>
+/// <param name="Invoke">Runs on the UI thread when the entry is picked; must not block it.</param>
+internal sealed record ServerSwitchMenuEntry(string Label, Action Invoke);
+
 public partial class MainWindow : Window
 {
     private static readonly (int MinScreenWidth, int MinWindowWidth)[] MinWidths =
@@ -30,6 +39,49 @@ public partial class MainWindow : Window
 
         MinWidth = 1280;
         MinHeight = 720;
+    }
+
+    /// <summary>
+    /// Shows <paramref name="menu"/> as a menu bar above the page, or hides the bar when it is
+    /// null or empty. UI thread only.
+    /// </summary>
+    /// <remarks>
+    /// For desktops that show no tray, where this window would otherwise have no way back from
+    /// a server whose UI predates the switcher. A menu bar rather than a keyboard shortcut: keys
+    /// typed while the page has focus go to the browser's own native window and never reach
+    /// Avalonia (on X11 the WebKitGTK window is simply reparented into ours, with no XEmbed
+    /// focus forwarding), whereas a click on the bar lands in Avalonia's part of the window
+    /// whatever has focus. The submenu opens as a popup window of its own, so it draws over the
+    /// page instead of underneath it.
+    /// </remarks>
+    internal void SetServerSwitchMenu(ServerSwitchMenu? menu)
+    {
+        var bar = this.FindControl<Menu>("ServerSwitchBar");
+        var root = this.FindControl<MenuItem>("ServerSwitchRoot");
+        if (bar == null || root == null)
+        {
+            return;
+        }
+
+        if (menu == null || menu.Entries.Count == 0)
+        {
+            bar.Close();
+            bar.IsVisible = false;
+            root.Items.Clear();
+            return;
+        }
+
+        root.Header = menu.Header;
+        root.Items.Clear();
+        foreach (var entry in menu.Entries)
+        {
+            var item = new MenuItem { Header = entry.Label };
+            var invoke = entry.Invoke;
+            item.Click += (_, _) => invoke();
+            root.Items.Add(item);
+        }
+
+        bar.IsVisible = true;
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)

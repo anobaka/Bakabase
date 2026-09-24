@@ -1,5 +1,8 @@
 // Drives production web assets and real ClientStartup/Service listeners; no mocked API responses.
 const { chromium } = require('playwright');
+const serverSwitching = require('./switching.cjs');
+const firstLaunchImport = require('./first-launch.cjs');
+const { LAUNCH_ARGS, confine, proveConfinement, assertStayedLocal, assertNoAnalytics } = require('./network.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -16,13 +19,13 @@ const artifacts = file => path.join(config.results, file);
 const hasFiles = (directory, predicate) => fs.readdirSync(directory, { withFileTypes: true }).some(entry =>
   entry.isDirectory() ? hasFiles(path.join(directory, entry.name), predicate) : predicate(path.join(directory, entry.name)));
 
-(async () => {
-  const browser = await chromium.launch({ headless: true });
+// Legacy client export/import, federated browsing and identity recovery.
+async function legacyMigrationAndFederation(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'en-US', acceptDownloads: true });
   const sessions = new Set();
   try {
     const origins = new Set(Object.values(config.hosts).flatMap(host => [host.base, host.base.replace('127.0.0.1', 'localhost')]));
-    await context.route('**/*', route => origins.has(new URL(route.request().url()).origin) ? route.continue() : route.abort());
+    const blocked = await confine(context, url => origins.has(url.origin));
     const api = async (base, endpoint, method = 'get', data) => {
       const response = await context.request[method](base + endpoint, { data });
       assert.ok(response.ok(), `${method.toUpperCase()} ${endpoint}: HTTP ${response.status()}`);
@@ -107,7 +110,11 @@ const hasFiles = (directory, predicate) => fs.readdirSync(directory, { withFileT
 
     // Import only chooses an address. New node access needs an independent approval from its owner.
     await candidate.getByRole('button', { name: name('federation.discovery.use'), exact: true }).click();
-    assert.equal(await devices.getByLabel(name('federation.pair.address'), { exact: true }).inputValue(), source.base);
+    // The sharing form's own field: the desktop app's devices page also has "Device address"
+    // for adding a server to manage, which importing hints must leave empty.
+    const sharingForm = devices.locator('form').filter({ has: devices.getByRole('checkbox', { name: namePrefix('federation.pair.shareBack') }) });
+    assert.equal(await sharingForm.getByLabel(name('federation.pair.address'), { exact: true }).inputValue(), source.base);
+    assert.equal(await devices.locator('#managed-servers').getByLabel(name('federation.servers.add.address'), { exact: true }).inputValue(), '');
     assert.equal(await devices.getByLabel(name('federation.pair.code'), { exact: true }).inputValue(), '');
     // Migration only restores reading the old server; sharing this library back is a separate choice.
     await devices.getByRole('checkbox', { name: namePrefix('federation.pair.shareBack') }).uncheck();
@@ -211,6 +218,7 @@ const hasFiles = (directory, predicate) => fs.readdirSync(directory, { withFileT
     assert.equal(cloned.browsingEnabled, false);
     assert.ok(fs.readFileSync(connectionFile).equals(oldConnectionBytes), 'The old connection file changed');
     assert.deepEqual(errors, []);
+    await assertStayedLocal(context, blocked, 'Legacy migration and federation');
     const report = {
       passed: true, fixtureScope: 'Production ClientStartup and Service HTTP pipelines; not an installed native package',
       legacyUiPairAndDownload: true, safeHintExport: true, draftRestoreAndIdempotency: true,
@@ -219,13 +227,31 @@ const hasFiles = (directory, predicate) => fs.readdirSync(directory, { withFileT
       browsingOnAfterPairing: true, participants: query.participants.length, total: query.totalWithinParticipants,
       unmappedDirectoryDisabled: true, localhostAudioMetadataReady: true,
       crossTabDisableClearsResultsAndMedia: true, peersAndSharingPreserved: true,
-      explicitRestorePreservesNodeAndOutbound: true, explicitCloneCreatesFreshNode: true, pageErrors: errors
+      explicitRestorePreservesNodeAndOutbound: true, explicitCloneCreatesFreshNode: true, pageErrors: errors,
+      blockedRequests: blocked
     };
-    fs.writeFileSync(artifacts('result.json'), JSON.stringify(report, null, 2));
-    console.log(JSON.stringify(report, null, 2));
+    return report;
   } finally {
     for (const session of sessions) await context.request.delete(unified.base + '/federation/local/queries/' + encodeURIComponent(session)).catch(() => {});
     await context.close();
+  }
+}
+
+(async () => {
+  // Before any page loads: what each Service's frontend is told about analytics.
+  for (const host of [unified, source]) await assertNoAnalytics(host.base);
+  const browser = await chromium.launch({ headless: true, args: LAUNCH_ARGS });
+  try {
+    // And that a tracker arriving some other way would be stopped and named.
+    const refusedCanary = await proveConfinement(browser, unified.base);
+    const report = await legacyMigrationAndFederation(browser);
+    report.networkConfinementProven = refusedCanary;
+    // Both need the thin client's pairing made above; see first-launch.cjs and switching.cjs.
+    report.firstLaunchImport = await firstLaunchImport({ config });
+    report.serverSwitching = await serverSwitching({ browser, config, artifacts });
+    fs.writeFileSync(artifacts('result.json'), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report, null, 2));
+  } finally {
     await browser.close();
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });

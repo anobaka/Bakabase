@@ -111,6 +111,17 @@ export interface RouteMenuItem {
   pureClientOnly?: boolean;
   /** The local coordinator belongs to the unified application, never to a forwarded UI. */
   localNodeOnly?: boolean;
+  /**
+   * Hidden in the desktop app's console (a managed server shown in this device's window):
+   * the page drives the retired thin client's own connection, which the console refuses —
+   * the device's Devices page manages that instead.
+   */
+  hideInConsole?: boolean;
+  /**
+   * The label in the desktop app's console, where "this client" would name a program that
+   * is not there: the pages are about the computer the window runs on.
+   */
+  nameInConsole?: string;
 }
 
 export const routesMenuConfig: RouteMenuItem[] = [
@@ -541,6 +552,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     // registered regardless, because a bookmark can still land on one, and each page
     // renders a notice rather than a broken screen.
     name: "menu.client",
+    nameInConsole: "menu.client.thisComputer",
     icon: AiOutlineLaptop,
     menu: true,
     pureClientOnly: true,
@@ -552,6 +564,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: AiOutlineLaptop,
         layout: "basic",
         menu: true,
+        hideInConsole: true,
       },
       {
         name: "menu.client.pathMapping",

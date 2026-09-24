@@ -879,4 +879,10 @@
   <data name="Federation_PairingRequest_Body" xml:space="preserve">
     <value>来自 {0}。请在“设备与分享”中批准或拒绝。</value>
   </data>
+  <data name="RemoteAccess_ManagementRequest_Title" xml:space="preserve">
+    <value>{0} 请求管理此设备</value>
+  </data>
+  <data name="RemoteAccess_ManagementRequest_Body" xml:space="preserve">
+    <value>{0}，来自 {1}。批准后，该设备将能完全控制此处的 Bakabase。请在“配置 → 远程访问”中批准或拒绝。</value>
+  </data>
 </root>

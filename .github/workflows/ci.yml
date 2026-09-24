@@ -148,7 +148,8 @@ jobs:
 
   # Real processes on Linux: three production-startup hosts talking the node
   # protocol, the headless publish contents, and the legacy-client migration
-  # in a browser. The unit/integration tests already run in backend-tests.
+  # and server switching in a browser. The unit/integration tests already run
+  # in backend-tests.
   federation:
     if: inputs.suite != 'platforms' && inputs.suite != 'packages'
     name: Multi-device federation (Linux)
@@ -191,7 +192,7 @@ jobs:
           dotnet publish src/apps/Bakabase.Service/Bakabase.Service.csproj -p:RuntimeMode=DOCKER --self-contained false -r linux-x64 -o "$RUNNER_TEMP/publish-server"
           cp -R src/web/dist "$RUNNER_TEMP/publish-server/web"
           python src/scripts/check-release-contract.py --role server --publish-dir "$RUNNER_TEMP/publish-server" --require-web --report "$RUNNER_TEMP/federation-results/server-package.json"
-      - name: Legacy client export, import, reauthorization and media in a browser
+      - name: Legacy client export, import, reauthorization, media and server switching in a browser
         run: |
           (cd src/tests/federation-browser-smoke && npm ci --ignore-scripts && npx playwright install --with-deps chromium)
           python3 -m unittest discover -s src/tests/federation-browser-smoke -p 'test*.py'

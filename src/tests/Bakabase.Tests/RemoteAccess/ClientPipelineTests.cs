@@ -9,20 +9,24 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Components.Gui;
-using Bakabase.Client.Remoting.Abstractions;
-using Bakabase.Client.Remoting.Abstractions.Models;
+using Bakabase.Remoting.Abstractions;
+using Bakabase.Remoting.Abstractions.Models;
 using Bakabase.Client.Remoting.Components;
-using Bakabase.Client.Remoting.Components.Connection;
+using Bakabase.Remoting.Components.Connection;
 using Bakabase.Client.Remoting.Components.Diagnostics;
+using Bakabase.Remoting.Components.Diagnostics;
 using Bakabase.Client.Remoting.Components.Forwarding;
+using Bakabase.Remoting.Components.Forwarding;
 using Bakabase.Client.Remoting.Components.Shell;
 using Bakabase.Client.Remoting.Components.Updating;
-using Bakabase.Client.Remoting.Components.UserMachine;
+using Bakabase.Remoting.Components.UserMachine;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.TestKit.Implementations;
 using Bakabase.Infrastructures.Components.Orm.Log;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -128,13 +132,20 @@ public class ClientPipelineTests
     /// Sends without letting HttpClient rewrite the Host header, which is the whole
     /// point of most of these.
     /// </summary>
-    private async Task<HttpResponseMessage> Send(string path, string? host = null, string? origin = null,
-        HttpMethod? method = null, string? body = null, string? accept = null, string? fetchMode = null)
+    private Task<HttpResponseMessage> Send(string path, string? host = null, string? origin = null,
+        HttpMethod? method = null, string? body = null, string? accept = null, string? fetchMode = null,
+        string? fetchSite = null, string? fetchDest = null, string? cookie = null) =>
+        SendTo(_port, path, host, origin, method, body, accept, fetchMode, fetchSite, fetchDest, cookie);
+
+    private static async Task<HttpResponseMessage> SendTo(int port, string path, string? host = null,
+        string? origin = null, HttpMethod? method = null, string? body = null, string? accept = null,
+        string? fetchMode = null, string? fetchSite = null, string? fetchDest = null, string? cookie = null)
     {
-        // Redirects are the subject of some of these, so they are never followed.
-        using var handler = new HttpClientHandler {AllowAutoRedirect = false};
+        // Redirects are the subject of some of these, so they are never followed. Cookies
+        // are sent by hand when a test wants them, never from a jar.
+        using var handler = new HttpClientHandler {AllowAutoRedirect = false, UseCookies = false};
         using var client = new HttpClient(handler);
-        var request = new HttpRequestMessage(method ?? HttpMethod.Get, $"http://127.0.0.1:{_port}{path}");
+        var request = new HttpRequestMessage(method ?? HttpMethod.Get, $"http://127.0.0.1:{port}{path}");
 
         if (accept != null)
         {
@@ -146,7 +157,22 @@ public class ClientPipelineTests
             request.Headers.Add("Sec-Fetch-Mode", fetchMode);
         }
 
-        request.Headers.Host = host ?? $"127.0.0.1:{_port}";
+        if (fetchSite != null)
+        {
+            request.Headers.Add("Sec-Fetch-Site", fetchSite);
+        }
+
+        if (fetchDest != null)
+        {
+            request.Headers.Add("Sec-Fetch-Dest", fetchDest);
+        }
+
+        if (cookie != null)
+        {
+            request.Headers.Add("Cookie", cookie);
+        }
+
+        request.Headers.Host = host ?? $"127.0.0.1:{port}";
 
         if (origin != null)
         {
@@ -177,6 +203,311 @@ public class ClientPipelineTests
         var response = await Send("/resource/search", origin: "https://evil.com", method: HttpMethod.Post);
 
         Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    // ---- fetch metadata, switch tickets and cookies ----
+
+    /// <summary>
+    /// Where the page a switch ticket is answered with sends the window: the address it
+    /// names, with the window's own fragment appended.
+    /// </summary>
+    /// <remarks>
+    /// The fragment is never sent, so the page is the only thing that can carry it over; a
+    /// page that navigated to the bare address would land every <c>#/route</c> on the UI's
+    /// root. Hence the part after the literal is required, not merely allowed.
+    /// </remarks>
+    private static async Task<string> ContinuationOf(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        var match = Regex.Match(body, @"location\.replace\((?<url>""[^""]*"")(?<hash>\s*\+\s*location\.hash)?\)");
+
+        Assert.IsTrue(match.Success, body);
+        Assert.IsTrue(match.Groups["hash"].Success, $"the landing page drops the window's #route: {body}");
+
+        return JsonSerializer.Deserialize<string>(match.Groups["url"].Value)!;
+    }
+
+    [TestMethod]
+    public async Task A_window_switching_in_lands_where_it_was_sent_without_its_ticket()
+    {
+        var ticket = _host.Services.GetRequiredService<RelayNavigationTokens>().Mint(_port);
+        var path = $"/resource/42?tab=files&{RelayNavigationTokens.QueryName}={ticket}&q=a%20b&tag=%E4%B8%AD";
+
+        // Exactly what a window navigated from this device's own origin sends: every other
+        // loopback port is the same site.
+        var response = await Send(path, fetchSite: "same-site", fetchMode: "navigate", fetchDest: "document");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, body);
+        Assert.AreEqual("text/html", response.Content.Headers.ContentType?.MediaType);
+        Assert.IsTrue(response.Headers.CacheControl?.NoStore == true);
+        Assert.AreEqual("no-referrer", response.Headers.GetValues("Referrer-Policy").Single());
+        Assert.IsFalse(response.Headers.Contains("X-Bakabase-Client"), "neither refused nor forwarded");
+
+        // Only the ticket is gone: the path, every other parameter and its escaping are
+        // exactly what was asked for, on the host the guard just verified.
+        Assert.AreEqual($"http://127.0.0.1:{_port}/resource/42?tab=files&q=a%20b&tag=%E4%B8%AD",
+            await ContinuationOf(response));
+        Assert.IsFalse(body.Contains(ticket), "the ticket must not be written back out");
+
+        // One navigation, to that address plus whatever #route the window was sent to: the
+        // browser keeps the fragment from the request, and only the page can hand it on.
+        StringAssert.Contains(body,
+            $"<script>location.replace({JsonSerializer.Serialize($"http://127.0.0.1:{_port}/resource/42?tab=files&q=a%20b&tag=%E4%B8%AD")}+location.hash);</script>");
+
+        // Spent: the same address a second time is just another site's navigation.
+        var replay = await Send(path, fetchSite: "same-site", fetchMode: "navigate", fetchDest: "document");
+        Assert.AreEqual(HttpStatusCode.BadRequest, replay.StatusCode);
+        Assert.AreEqual(nameof(ClientForwardingFailure.ForeignCaller),
+            replay.Headers.GetValues("X-Bakabase-Client").First());
+
+        // The page starts the next navigation itself, so it arrives same-origin and is
+        // served — here by the no-server redirect, which is the relay doing its job.
+        var landed = await Send("/resource/42?tab=files&q=a%20b&tag=%E4%B8%AD", fetchSite: "same-origin",
+            fetchMode: "navigate", fetchDest: "document");
+        Assert.AreEqual(HttpStatusCode.Redirect, landed.StatusCode);
+        Assert.AreEqual(RelayPaths.ConnectPath, landed.Headers.Location?.OriginalString);
+    }
+
+    [TestMethod]
+    public async Task A_ticket_is_refused_on_anything_but_a_window_navigating()
+    {
+        var tickets = _host.Services.GetRequiredService<RelayNavigationTokens>();
+        var ticket = tickets.Mint(_port);
+        var path = $"/?{RelayNavigationTokens.QueryName}={ticket}";
+
+        var image = await Send(path, fetchSite: "cross-site", fetchMode: "no-cors", fetchDest: "image");
+        var frame = await Send(path, fetchSite: "cross-site", fetchMode: "navigate", fetchDest: "iframe");
+        var post = await Send(path, method: HttpMethod.Post, origin: "https://evil.example", fetchSite: "cross-site",
+            fetchMode: "navigate", fetchDest: "document");
+        var other = await Send($"/?{RelayNavigationTokens.QueryName}={tickets.Mint(_port + 1)}",
+            fetchSite: "cross-site", fetchMode: "navigate", fetchDest: "document");
+
+        foreach (var response in new[] {image, frame, post, other})
+        {
+            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.AreEqual(nameof(ClientForwardingFailure.ForeignCaller),
+                response.Headers.GetValues("X-Bakabase-Client").First());
+        }
+
+        // None of the refusals spent the one minted for this relay.
+        Assert.IsTrue(tickets.TryConsume(ticket, _port));
+    }
+
+    [TestMethod]
+    public async Task Another_sites_page_cannot_start_an_action_on_this_machine()
+    {
+        // An <img> pointed at these would, before fetch metadata was read, have opened a
+        // file or started a stream on the user's machine: they are GETs, and a GET from
+        // another site used to be let through as harmless.
+        foreach (var path in new[] {"/tool/open?path=%2Fdata%2Fmedia%2Fa.mkv", "/file/play?fullname=%2Fdata%2Fa.mkv"})
+        foreach (var site in new[] {"cross-site", "same-site"})
+        {
+            var response = await Send(path, fetchSite: site, fetchMode: "no-cors", fetchDest: "image");
+
+            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode, $"{site} {path}");
+            Assert.AreEqual(nameof(ClientForwardingFailure.ForeignCaller),
+                response.Headers.GetValues("X-Bakabase-Client").First(), $"{site} {path}");
+        }
+    }
+
+    [TestMethod]
+    public async Task Callers_that_send_no_fetch_metadata_are_served_as_before()
+    {
+        // A local player pulling a stream, a script, an older engine. The action is
+        // reached — and fails only because this test host has no mapping for the path.
+        var open = await Send("/tool/open?path=%2Fdata%2Fmedia%2Fa.mkv");
+        Assert.AreEqual(HttpStatusCode.NotFound, open.StatusCode);
+        Assert.AreEqual(nameof(ClientForwardingFailure.PathNotMapped),
+            open.Headers.GetValues("X-Bakabase-Client").First());
+
+        var stream = await Send("/file/play?fullname=%2Fdata%2Fa.mkv");
+        Assert.AreEqual(HttpStatusCode.ServiceUnavailable, stream.StatusCode);
+        Assert.AreEqual(nameof(ClientForwardingFailure.NotConnected),
+            stream.Headers.GetValues("X-Bakabase-Client").First());
+
+        // And so is the relay's own page, asking for the same thing.
+        var sameOrigin = await Send("/tool/open?path=%2Fdata%2Fmedia%2Fa.mkv", fetchSite: "same-origin",
+            fetchMode: "cors", fetchDest: "empty");
+        Assert.AreEqual(nameof(ClientForwardingFailure.PathNotMapped),
+            sameOrigin.Headers.GetValues("X-Bakabase-Client").First());
+    }
+
+    [TestMethod]
+    public async Task Neither_cookies_nor_tickets_ever_reach_the_server()
+    {
+        // Cookies are per host, not per port, so the browser attaches whatever any
+        // loopback origin set — this device's own server's, another relay's. None of it
+        // is this relay's to hand to another machine.
+        var received = new System.Collections.Generic.List<(string Target, string? Cookie, string? Authorization)>();
+        var serverPort = LoopbackPortAllocator.Allocate(_port + 1);
+        var server = Host.CreateDefaultBuilder()
+            .ConfigureWebHostDefaults(web => web
+                .UseUrls($"http://127.0.0.1:{serverPort}")
+                .Configure(app => app.Run(async context =>
+                {
+                    lock (received)
+                    {
+                        received.Add((context.Request.Path + context.Request.QueryString,
+                            context.Request.Headers.Cookie.ToString() is {Length: > 0} cookie ? cookie : null,
+                            context.Request.Headers.Authorization.ToString() is {Length: > 0} auth ? auth : null));
+                    }
+
+                    await context.Response.WriteAsync("{\"code\":0}");
+                })))
+            .Build();
+
+        await server.StartAsync();
+
+        try
+        {
+            var key = Bakabase.Modules.RemoteAccess.Components.Pairing.RemoteRequestSignature.ToBase64Url(
+                System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+            await _host.Services.GetRequiredService<ActiveConnection>().SaveAsync("server-1", "Desk",
+                $"127.0.0.1:{serverPort}", new ClientCredentials("device-1", key), DateTime.UtcNow);
+
+            var get = await Send("/resource/search?page=2", cookie: "session=local-secret; other=1",
+                fetchSite: "same-origin", fetchMode: "cors", fetchDest: "empty");
+            var post = await Send("/resource/search", method: HttpMethod.Post, body: "{}",
+                origin: $"http://127.0.0.1:{_port}", cookie: "session=local-secret");
+
+            Assert.AreEqual(HttpStatusCode.OK, get.StatusCode);
+            Assert.AreEqual(HttpStatusCode.OK, post.StatusCode);
+
+            // A ticket on an address the relay would serve anyway is taken off, not passed on.
+            var ticketed = await Send($"/?{RelayNavigationTokens.QueryName}=" +
+                                      _host.Services.GetRequiredService<RelayNavigationTokens>().Mint(_port),
+                fetchSite: "none", fetchMode: "navigate", fetchDest: "document");
+            Assert.AreEqual($"http://127.0.0.1:{_port}/", await ContinuationOf(ticketed));
+
+            Assert.AreEqual(2, received.Count, string.Join("\n", received));
+
+            foreach (var (target, cookie, authorization) in received)
+            {
+                Assert.IsNull(cookie, target);
+                Assert.IsFalse(target.Contains(RelayNavigationTokens.QueryName), target);
+
+                // Still signed as this device: dropping the cookie took nothing else with it.
+                StringAssert.StartsWith(authorization,
+                    Bakabase.Modules.RemoteAccess.Components.Pairing.RemoteRequestSignature.Scheme);
+            }
+        }
+        finally
+        {
+            await server.StopAsync();
+            server.Dispose();
+        }
+    }
+
+    private sealed class NoCredentials : IClientCredentialProvider
+    {
+        public ClientCredentials? Current => null;
+    }
+
+    [TestMethod]
+    public async Task A_websocket_from_another_page_never_reaches_the_pipeline()
+    {
+        // The thin client's relay is the same pipeline, and the same hole: a handshake is a
+        // GET, and Chromium sends no fetch metadata on it, only Origin.
+        async Task<System.Net.WebSockets.ClientWebSocket> Open(string? origin)
+        {
+            var socket = new System.Net.WebSockets.ClientWebSocket();
+            socket.Options.CollectHttpResponseDetails = true;
+            socket.Options.Proxy = null;
+            if (origin != null)
+            {
+                socket.Options.SetRequestHeader("Origin", origin);
+            }
+
+            using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10));
+            try
+            {
+                await socket.ConnectAsync(new Uri($"ws://127.0.0.1:{_port}/hub/ui"), timeout.Token);
+            }
+            catch (System.Net.WebSockets.WebSocketException)
+            {
+            }
+
+            return socket;
+        }
+
+        foreach (var origin in new[] {"https://evil.example", "null", $"http://127.0.0.1:{_port + 1}", "http://localhost:34567"})
+        {
+            using var socket = await Open(origin);
+            Assert.AreEqual(HttpStatusCode.BadRequest, socket.HttpStatusCode, origin);
+            Assert.AreEqual(nameof(ClientForwardingFailure.ForeignCaller),
+                socket.HttpResponseHeaders!["X-Bakabase-Client"].Single(), origin);
+        }
+
+        // Its own page's handshake gets past the guard, to the forwarder — which has no server
+        // to send it to in this test.
+        foreach (var origin in new[] {$"http://127.0.0.1:{_port}", $"http://localhost:{_port}", null})
+        {
+            using var socket = await Open(origin);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, socket.HttpStatusCode, origin ?? "(none)");
+            Assert.AreEqual(nameof(ClientForwardingFailure.NotConnected),
+                socket.HttpResponseHeaders!["X-Bakabase-Client"].Single(), origin ?? "(none)");
+        }
+    }
+
+    [TestMethod]
+    public async Task Only_the_relays_own_page_is_forwarded_with_the_servers_origin()
+    {
+        var transformer = new UpstreamTransformer(new NoCredentials(), new ServerClock());
+
+        async Task<string?> Forwarded(bool fromRelayPage, string? origin, string destination)
+        {
+            var context = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+            context.Request.Method = "GET";
+            context.Request.Path = "/hub/ui";
+            if (origin != null)
+            {
+                context.Request.Headers.Origin = origin;
+            }
+
+            if (fromRelayPage)
+            {
+                UpstreamTransformer.MarkFromRelayPage(context);
+            }
+
+            using var proxyRequest = new HttpRequestMessage(HttpMethod.Get, (Uri?) null);
+            await transformer.TransformRequestAsync(context, proxyRequest, destination,
+                System.Threading.CancellationToken.None);
+
+            return proxyRequest.Headers.TryGetValues("Origin", out var values) ? values.Single() : null;
+        }
+
+        // The guard marks what it admitted from the relay's own origin; the server is told
+        // it is its own UI — a path in the server's address is not part of an origin.
+        Assert.AreEqual("http://192.168.1.5:34567",
+            await Forwarded(true, $"http://127.0.0.1:{_port}", "http://192.168.1.5:34567/"));
+        Assert.AreEqual("https://nas.example",
+            await Forwarded(true, $"http://localhost:{_port}", "https://nas.example/bakabase/"));
+
+        // Anything else keeps whatever it named, or nothing.
+        Assert.AreEqual("https://evil.example", await Forwarded(false, "https://evil.example", "http://192.168.1.5:34567/"));
+        Assert.IsNull(await Forwarded(false, null, "http://192.168.1.5:34567/"));
+    }
+
+    [TestMethod]
+    public async Task An_unpaired_relay_drops_cookies_too()
+    {
+        // The unsigned path returns early; the cookie has to be gone before it does.
+        var transformer = new UpstreamTransformer(new NoCredentials(), new ServerClock());
+        var context = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        context.Request.Method = "GET";
+        context.Request.Path = "/resource/search";
+        context.Request.Headers.Cookie = "session=local-secret";
+        context.Request.Headers.Authorization = "Bearer chosen-by-the-page";
+        context.Request.Headers["X-Kept"] = "1";
+
+        using var proxyRequest = new HttpRequestMessage(HttpMethod.Get, (Uri?) null);
+        await transformer.TransformRequestAsync(context, proxyRequest, "http://127.0.0.1:1/",
+            System.Threading.CancellationToken.None);
+
+        Assert.IsFalse(proxyRequest.Headers.Contains("Cookie"));
+        Assert.IsNull(proxyRequest.Headers.Authorization);
+        Assert.IsTrue(proxyRequest.Headers.Contains("X-Kept"), "only the cookie and credentials are dropped");
     }
 
     [TestMethod]

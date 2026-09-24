@@ -52,6 +52,21 @@ public static class FederationRoutePolicy
                    segments.Length == 4 && NodeRequestSignature.IsIdentifier(segments[3]) && method == "DELETE" ||
                    segments.Length == 5 && NodeRequestSignature.IsIdentifier(segments[3]) &&
                    Equal(segments[4], "pages") && method == "GET";
+        if (Equal(segments[2], "servers"))
+        {
+            if (segments.Length == 3) return method == "GET";
+            if (segments.Length == 4)
+                return (Equal(segments[3], "probe") || Equal(segments[3], "pair") ||
+                        Equal(segments[3], "import-legacy-client")) && method == "POST" ||
+                       Equal(segments[3], "discover") && method == "GET" ||
+                       NodeRequestSignature.IsIdentifier(segments[3]) && method == "DELETE";
+            if (segments.Length != 5) return false;
+            if (Equal(segments[3], "requests"))
+                return NodeRequestSignature.IsIdentifier(segments[4]) && method == "DELETE";
+            return NodeRequestSignature.IsIdentifier(segments[3]) &&
+                   (Equal(segments[4], "path-mappings") && method == "PUT" ||
+                    Equal(segments[4], "open") && method == "POST");
+        }
         if (!Equal(segments[2], "peers")) return false;
         if (segments.Length == 3) return method == "GET";
         if (segments.Length == 4)

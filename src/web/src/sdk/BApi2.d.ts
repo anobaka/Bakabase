@@ -3604,6 +3604,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/federation/local/servers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedServers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/servers/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DiscoverManagedServers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/servers/probe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ProbeManagedServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/servers/pair": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PairManagedServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/servers/requests/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["CancelManagedServerRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/servers/{serverId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["ForgetManagedServer"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/servers/{serverId}/path-mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetManagedServerPathMappings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/servers/{serverId}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenManagedServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/servers/import-legacy-client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ImportLegacyClientServers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/file/decompression/detect": {
         parameters: {
             query?: never;
@@ -12160,6 +12304,89 @@ export interface components {
             /** Format: int32 */
             order: number;
         };
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerCandidateView": {
+            serverId: string;
+            name: string;
+            address: string;
+            appVersion: string;
+            alreadyManaged: boolean;
+        };
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerDiscoveryView": {
+            servers: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerCandidateView"][];
+        };
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerImportView": {
+            found: boolean;
+            /** Format: int32 */
+            imported: number;
+            /** Format: int32 */
+            skipped: number;
+        };
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView": {
+            url: string;
+        };
+        /**
+         * Format: int32
+         * @description [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOutcome": 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPairingView": {
+            outcome: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOutcome"];
+            serverId?: string;
+            serverName?: string;
+            requestId?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            detail?: string;
+        };
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPathMapping": {
+            serverPath: string;
+            localPath: string;
+        };
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPendingRequestView": {
+            requestId: string;
+            address: string;
+            serverName?: string;
+            /** Format: date-time */
+            expiresAt: string;
+            outcome: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOutcome"];
+            active: boolean;
+        };
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerProbeView": {
+            outcome: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOutcome"];
+            serverId?: string;
+            name?: string;
+            appVersion?: string;
+            mode?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
+            pairingSupported: boolean;
+            alreadyManaged: boolean;
+            detail?: string;
+        };
+        /**
+         * Format: int32
+         * @description [0: Unknown, 1: Online, 2: Offline, 3: Revoked]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerState": 0 | 1 | 2 | 3;
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerView": {
+            serverId: string;
+            name?: string;
+            address: string;
+            /** Format: date-time */
+            pairedAt: string;
+            /** Format: date-time */
+            lastConnectedAt?: string;
+            pathMappings: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPathMapping"][];
+            state: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerState"];
+            mode?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
+            appVersion?: string;
+            importedFromLegacyClient: boolean;
+        };
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServersView": {
+            available: boolean;
+            servers: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerView"][];
+            requests: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPendingRequestView"][];
+        };
         /**
          * Format: int32
          * @description [0: None, 1: CodeRejected, 2: RequestRejected, 3: NotYetApproved, 4: TooManyAttempts]
@@ -12637,6 +12864,19 @@ export interface components {
         "Bakabase.Service.Controllers.FederationSharingRequest": {
             enabled: boolean;
             enablePairedRemoteAccess: boolean;
+        };
+        "Bakabase.Service.Controllers.ManagedServerAddressRequest": {
+            address: string;
+        };
+        "Bakabase.Service.Controllers.ManagedServerOpenRequest": {
+            path?: string;
+        };
+        "Bakabase.Service.Controllers.ManagedServerPairRequest": {
+            address: string;
+            code?: string;
+        };
+        "Bakabase.Service.Controllers.ManagedServerPathMappingsRequest": {
+            mappings?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPathMapping"][];
         };
         "Bakabase.Service.Controllers.MediaLibraryStatistics": {
             /** Format: int32 */
@@ -22971,6 +23211,242 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeHandshakeResponse"];
                     "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeHandshakeResponse"];
                     "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeHandshakeResponse"];
+                };
+            };
+        };
+    };
+    GetManagedServers: {
+        parameters: {
+            query?: {
+                probe?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServersView"];
+                    "application/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServersView"];
+                    "text/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServersView"];
+                };
+            };
+        };
+    };
+    DiscoverManagedServers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerDiscoveryView"];
+                    "application/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerDiscoveryView"];
+                    "text/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerDiscoveryView"];
+                };
+            };
+        };
+    };
+    ProbeManagedServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerAddressRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerAddressRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerAddressRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerAddressRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerProbeView"];
+                    "application/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerProbeView"];
+                    "text/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerProbeView"];
+                };
+            };
+        };
+    };
+    PairManagedServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerPairRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerPairRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerPairRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerPairRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPairingView"];
+                    "application/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPairingView"];
+                    "text/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPairingView"];
+                };
+            };
+        };
+    };
+    CancelManagedServerRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
+                };
+            };
+        };
+    };
+    ForgetManagedServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
+                };
+            };
+        };
+    };
+    SetManagedServerPathMappings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerPathMappingsRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerPathMappingsRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerPathMappingsRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerPathMappingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
+                };
+            };
+        };
+    };
+    OpenManagedServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerOpenRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerOpenRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerOpenRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedServerOpenRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
+                    "application/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
+                    "text/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
+                };
+            };
+        };
+    };
+    ImportLegacyClientServers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerImportView"];
+                    "application/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerImportView"];
+                    "text/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerImportView"];
                 };
             };
         };

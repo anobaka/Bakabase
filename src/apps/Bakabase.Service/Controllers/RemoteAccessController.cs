@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
@@ -201,7 +203,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "RequestRemoteDevicePairing")]
         [RemoteAccessible]
         public async Task<SingletonResponse<RemoteAccessPairingRequestAcceptedViewModel>> RequestPairing(
-            [FromBody] RemoteAccessPairRequestInputModel model)
+            [FromBody] RemoteAccessPairRequestInputModel model, [FromServices] IBakabaseLocalizer localizer)
         {
             var remoteAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
@@ -216,23 +218,7 @@ namespace Bakabase.Service.Controllers
             var request = await deviceService.RequestPairingAsync(model.DeviceName ?? string.Empty, model.Platform,
                 remoteAddress, HttpContext.RequestAborted);
 
-            // The request expires in minutes, and whoever can approve it is unlikely to
-            // be sitting on the settings page. A persistent notification reaches them
-            // wherever they are, and survives a reload the way a toast would not.
-            // Throttled separately from the per-address budget: many addresses can each
-            // stay inside theirs and still add up to a wall of notifications.
-            if (rateLimiter.TryNotify())
-            {
-                await notificationService.CreateAsync(new NotificationCreationInputModel
-                {
-                    Source = "RemoteAccess",
-                    Title = $"{request.DeviceName} wants to pair with Bakabase",
-                    Body = request.RemoteAddress == null
-                        ? $"{request.Platform}. Approve it in Settings → Remote access."
-                        : $"{request.Platform}, from {request.RemoteAddress}. Approve it in Settings → Remote access.",
-                    Severity = AppNotificationSeverity.Warning
-                });
-            }
+            await AnnounceManagementRequestAsync(request, localizer);
 
             return new SingletonResponse<RemoteAccessPairingRequestAcceptedViewModel>(
                 new RemoteAccessPairingRequestAcceptedViewModel
@@ -388,6 +374,76 @@ namespace Bakabase.Service.Controllers
         }
 
         #endregion
+
+        /// <summary>
+        /// Where a management request is approved — the devices page, in the section that
+        /// lets other devices manage this one.
+        /// </summary>
+        internal const string ManagementRequestRoute = "/federation/devices?section=management";
+
+        /// <summary>
+        /// Tells whoever is at this server that a device asks to manage it.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A pairing grants full control — the same access the desktop app uses to switch its
+        /// window to this server — so the notification says so, and links to the page where
+        /// it is approved. The request expires in minutes, and whoever can approve it is
+        /// unlikely to be on that page; a persistent notification reaches them wherever they
+        /// are, and survives a reload the way a toast would not.
+        /// </para>
+        /// <para>
+        /// Two limits keep it from becoming noise, as with the federation pairing
+        /// notification. A device that files again while an earlier request of its own is
+        /// still waiting and was announced — someone clicking "add" twice, an app restarted
+        /// mid-wait — has already reached whoever approves, so it stays quiet. Only an
+        /// announced request counts: one the throttle held back, or whose notification
+        /// could not be created, told nobody, so the device's next request is announced.
+        /// And the global throttle is separate from the per-address budget: many addresses
+        /// can each stay inside theirs and still add up to a wall of notifications. The
+        /// notification is a convenience; failing to raise one never fails the request,
+        /// which is stored.
+        /// </para>
+        /// <para>
+        /// The body names Configuration → Remote access, which lists waiting requests
+        /// with approve and reject for every viewer who can see the notification — this
+        /// machine, a paired device, the desktop app showing this server, a browser on an
+        /// Unrestricted server. The link still opens the devices page's management section.
+        /// </para>
+        /// </remarks>
+        private async Task AnnounceManagementRequestAsync(PendingPairingRequest request, IBakabaseLocalizer localizer)
+        {
+            var repeat = deviceService.GetPendingRequests().Any(r =>
+                !string.Equals(r.Id, request.Id, StringComparison.Ordinal) &&
+                string.Equals(r.DeviceName, request.DeviceName, StringComparison.Ordinal) &&
+                r.Platform == request.Platform &&
+                string.Equals(r.RemoteAddress, request.RemoteAddress, StringComparison.Ordinal) &&
+                rateLimiter.WasAnnounced(r.Id));
+
+            if (repeat || !rateLimiter.TryNotify())
+            {
+                return;
+            }
+
+            try
+            {
+                await notificationService.CreateAsync(new NotificationCreationInputModel
+                {
+                    Source = "RemoteAccess",
+                    Title = localizer["RemoteAccess_ManagementRequest_Title", request.DeviceName],
+                    Body = localizer["RemoteAccess_ManagementRequest_Body", request.Platform.ToString(),
+                        request.RemoteAddress ?? "?"],
+                    PayloadJson = JsonSerializer.Serialize(new {route = ManagementRequestRoute}),
+                    Severity = AppNotificationSeverity.Warning
+                });
+
+                rateLimiter.MarkAnnounced(request.Id, request.ExpiresAt);
+            }
+            catch (Exception)
+            {
+                // Stored either way, and listed where it is approved.
+            }
+        }
 
         private async Task<RemoteAccessPairingResultViewModel> ToViewModelAsync(PairingResult result)
         {

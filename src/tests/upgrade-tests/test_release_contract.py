@@ -56,11 +56,98 @@ class PublishContractTests(unittest.TestCase):
         (web / "app.js").write_text("/* built fixture */")
         self.assertTrue(contract.check_publish(self.directory, "server", require_web=True)["passed"])
 
+    def test_relay_is_never_part_of_the_server(self):
+        (self.directory / "Bakabase.Remoting.dll").touch()
+        with self.assertRaises(AssertionError):
+            contract.check_publish(self.directory, "server")
+
     def test_client_cannot_carry_frontend_or_server(self):
-        for name in ("Bakabase.Client.dll", "Bakabase.Client.Remoting.dll", "Bakabase.Shell.dll"):
+        for name in ("Bakabase.Client.dll", "Bakabase.Client.Remoting.dll", "Bakabase.Remoting.dll", "Bakabase.Shell.dll"):
             (self.directory / name).touch()
         with self.assertRaises(AssertionError):
             contract.check_publish(self.directory, "client")
+
+
+class UnifiedPublishContractTests(unittest.TestCase):
+    """The unified app ships its own server and the relay it manages other servers through,
+    and nothing of the retired thin client."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.directory = Path(self.temporary.name)
+        for name in ("Bakabase.dll", "Bakabase.Shell.dll", "Bakabase.Service.dll", "Bakabase.Modules.Federation.dll",
+                     "Bakabase.Remoting.dll", "Yarp.ReverseProxy.dll", "Avalonia.dll"):
+            (self.directory / name).touch()
+        self.manifest = self.directory / "Bakabase.deps.json"
+        self.manifest.write_text(json.dumps({"libraries": {
+            "Bakabase/1.0": {}, "Bakabase.Remoting/1.0": {}, "Yarp.ReverseProxy/2.3.0": {}, "Avalonia/11.3.20": {}}}))
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def test_unified_with_relay_and_its_proxy_passes(self):
+        self.assertTrue(contract.check_publish(self.directory, "unified")["passed"])
+
+    def test_unified_without_relay_is_rejected(self):
+        (self.directory / "Bakabase.Remoting.dll").unlink()
+        (self.directory / "Yarp.ReverseProxy.dll").unlink()
+        self.manifest.write_text(json.dumps({"libraries": {"Bakabase/1.0": {}}}))
+        with self.assertRaisesRegex(AssertionError, "Bakabase.Remoting.dll"):
+            contract.check_publish(self.directory, "unified")
+
+    def test_proxy_without_relay_is_rejected(self):
+        (self.directory / "Bakabase.Remoting.dll").unlink()
+        with self.assertRaisesRegex(AssertionError, "forbidden shipped dependency.*Yarp"):
+            contract.check_publish(self.directory, "unified")
+
+    def test_thin_client_product_layer_is_rejected(self):
+        (self.directory / "Bakabase.Client.Remoting.dll").touch()
+        with self.assertRaisesRegex(AssertionError, "Bakabase.Client.Remoting"):
+            contract.check_publish(self.directory, "unified")
+
+    def test_thin_client_dependency_in_manifest_is_rejected(self):
+        self.manifest.write_text(json.dumps({"libraries": {"Bakabase.Client.Remoting/1.0": {}}}))
+        with self.assertRaisesRegex(AssertionError, "forbidden shipped dependency"):
+            contract.check_publish(self.directory, "unified")
+
+
+class UnifiedProjectGraphTests(unittest.TestCase):
+    def test_actual_unified_graph_composes_the_relay_and_no_thin_client(self):
+        projects, packages = contract.project_graph(contract.ROOT / "src/apps/Bakabase.App/Bakabase.App.csproj")
+        contract.check_unified_graph(projects)
+        self.assertIn("Bakabase.Remoting", projects)
+        self.assertIn("Yarp.ReverseProxy", packages)
+
+    def test_thin_client_project_in_unified_graph_is_rejected(self):
+        with self.assertRaisesRegex(AssertionError, "thin-client"):
+            contract.check_unified_graph({"Bakabase.App", "Bakabase.Remoting", "Bakabase.Client.Remoting"})
+
+    def test_unified_graph_without_relay_is_rejected(self):
+        with self.assertRaisesRegex(AssertionError, "relay"):
+            contract.check_unified_graph({"Bakabase.App", "Bakabase.Service"})
+
+
+class ShellProjectGraphTests(unittest.TestCase):
+    """The shell reaches its host only through contracts, so it can sit in front of either product."""
+
+    def test_actual_shell_graph_references_no_host(self):
+        contract.check_shell_graph(*contract.project_graph(contract.ROOT / "src/apps/Bakabase.Shell/Bakabase.Shell.csproj"))
+
+    def test_shell_referencing_the_service_is_rejected(self):
+        with self.assertRaisesRegex(AssertionError, "Bakabase.Service"):
+            contract.check_shell_graph({"Bakabase.Shell", "Bakabase.Service"}, set())
+
+    def test_shell_referencing_the_relay_is_rejected(self):
+        with self.assertRaisesRegex(AssertionError, "Bakabase.Remoting"):
+            contract.check_shell_graph({"Bakabase.Shell", "Bakabase.Remoting"}, set())
+
+    def test_shell_referencing_a_client_product_is_rejected(self):
+        with self.assertRaisesRegex(AssertionError, "Bakabase.Client.Remoting"):
+            contract.check_shell_graph({"Bakabase.Shell", "Bakabase.Client.Remoting"}, set())
+
+    def test_shell_with_the_proxy_is_rejected(self):
+        with self.assertRaisesRegex(AssertionError, "proxy"):
+            contract.check_shell_graph({"Bakabase.Shell"}, {"Yarp.ReverseProxy"})
 
 
 class MacPortableContractTests(unittest.TestCase):

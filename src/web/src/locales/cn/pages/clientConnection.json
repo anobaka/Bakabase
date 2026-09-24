@@ -39,5 +39,6 @@
   "clientConnection.serverUpdate.start": "更新服务端",
   "clientConnection.serverUpdate.downloading": "正在为 {{name}} 下载 {{version}}",
   "clientConnection.serverUpdate.pendingRestart": "{{name}} 需要重启才能完成更新，重启期间其他人会断开连接。",
-  "clientConnection.serverUpdate.restart": "重启服务端"
+  "clientConnection.serverUpdate.restart": "重启服务端",
+  "clientConnection.managedByDesktop": "此窗口属于 Bakabase 桌面端，可显示的设备由桌面端决定。请在桌面端的“设备”页面中管理。"
 }

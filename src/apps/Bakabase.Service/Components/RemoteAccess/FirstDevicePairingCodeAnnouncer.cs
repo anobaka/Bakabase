@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Modules.RemoteAccess.Components.Pairing;
 using Microsoft.Extensions.Hosting;
@@ -10,8 +11,8 @@ using Microsoft.Extensions.Logging;
 namespace Bakabase.Service.Components.RemoteAccess;
 
 /// <summary>
-/// Prints a pairing code whenever the server is locked out of itself: pairing is
-/// required, and no device has paired yet.
+/// Prints a pairing code whenever a server with no screen is locked out of itself:
+/// pairing is required, and no device has paired yet.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -20,10 +21,21 @@ namespace Bakabase.Service.Components.RemoteAccess;
 /// the only place to put one. The container build is exactly that server.
 /// </para>
 /// <para>
-/// The condition is the lockout itself rather than the runtime flavour. Gating on
-/// "is this the container build" would read the same today and quietly exclude the
-/// headless server build when it arrives; gating on the lockout keeps working, and
-/// says out loud what the code is for.
+/// The desktop app is not: its own window is on loopback, so it is never locked out of
+/// itself, and it shows and issues codes on its settings and devices pages. A code in its
+/// log would help nobody and is one more place for it to leak from: a log travels further
+/// than a screen — it stays on disk, goes into bug reports, and is served to diagnostics
+/// pages. So nothing is printed where there is a screen.
+/// </para>
+/// <para>
+/// Whether there is one is read from the host's GUI adapter, the same test
+/// <c>PlatformClientLauncher</c> makes: desktop hosts hand the Service a
+/// <see cref="GuiAdapter"/>, the headless entry hands it <c>NullGuiAdapter</c> — which
+/// holds for a development build too, whichever entry it was started from. Beyond that the
+/// condition is the lockout itself rather than the runtime flavour. Gating on "is this the
+/// container build" would read the same today and quietly exclude the headless server
+/// build when it arrives; gating on the lockout keeps working, and says out loud what the
+/// code is for.
 /// </para>
 /// <para>
 /// Nothing is written, and no directory is created, unless the lockout actually holds:
@@ -31,11 +43,19 @@ namespace Bakabase.Service.Components.RemoteAccess;
 /// in memory.
 /// </para>
 /// </remarks>
+/// <param name="gui">
+/// The host's GUI adapter. Absent reads as no screen, which is what a host that registers
+/// none has.
+/// </param>
 public sealed class FirstDevicePairingCodeAnnouncer(
     IRemoteAccessService remoteAccessService,
     IRemoteDeviceService deviceService,
-    ILogger<FirstDevicePairingCodeAnnouncer> logger) : BackgroundService
+    ILogger<FirstDevicePairingCodeAnnouncer> logger,
+    IGuiAdapter? gui = null) : BackgroundService
 {
+    /// <summary>Whether this process has a screen of its own, which shows codes instead.</summary>
+    public bool HasScreen { get; } = gui is GuiAdapter;
+
     /// <summary>
     /// How often the lockout is re-checked. Every input is already in memory, so this
     /// costs nothing; it is short enough that a code which lapses is replaced before
@@ -45,6 +65,11 @@ public sealed class FirstDevicePairingCodeAnnouncer(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (HasScreen)
+        {
+            return;
+        }
+
         using var timer = new PeriodicTimer(CheckInterval);
 
         try
@@ -76,7 +101,7 @@ public sealed class FirstDevicePairingCodeAnnouncer(
     /// <returns>Whether a code was issued and printed.</returns>
     public async Task<bool> AnnounceIfLockedOutAsync(CancellationToken ct = default)
     {
-        if (!IsLockedOut())
+        if (HasScreen || !IsLockedOut())
         {
             return false;
         }

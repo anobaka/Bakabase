@@ -70,6 +70,7 @@ import enHelpCenter from "@/locales/en/components/helpCenter.json";
 import enHelpCollection from "@/locales/en/components/helpCollection.json";
 import enHelpSubscription from "@/locales/en/components/helpSubscription.json";
 import enHelpAcquisition from "@/locales/en/components/helpAcquisition.json";
+import enHelpMultiDevice from "@/locales/en/components/helpMultiDevice.json";
 
 // New modular imports - Chinese
 import cnCommon from "@/locales/cn/common.json";
@@ -140,6 +141,7 @@ import cnHelpCenter from "@/locales/cn/components/helpCenter.json";
 import cnHelpCollection from "@/locales/cn/components/helpCollection.json";
 import cnHelpSubscription from "@/locales/cn/components/helpSubscription.json";
 import cnHelpAcquisition from "@/locales/cn/components/helpAcquisition.json";
+import cnHelpMultiDevice from "@/locales/cn/components/helpMultiDevice.json";
 
 // Merge all English resources
 const enResources = {
@@ -209,6 +211,7 @@ const enResources = {
   ...enHelpCollection,
   ...enHelpSubscription,
   ...enHelpAcquisition,
+  ...enHelpMultiDevice,
 };
 
 // Merge all Chinese resources
@@ -279,6 +282,7 @@ const cnResources = {
   ...cnHelpCollection,
   ...cnHelpSubscription,
   ...cnHelpAcquisition,
+  ...cnHelpMultiDevice,
 };
 
 // 只初始化一次，防止热更新或多次 import 时重复初始化

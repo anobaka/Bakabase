@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using Bakabase.Client.Remoting.Components.UserMachine;
+using Bakabase.Remoting.Components.UserMachine;
 using Bakabase.Service.Components.RemoteAccess;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

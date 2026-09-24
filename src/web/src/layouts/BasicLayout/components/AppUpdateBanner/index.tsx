@@ -19,7 +19,7 @@ import BApi from "@/sdk/BApi";
 import { UpdaterStatus } from "@/sdk/constants";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { clientApi } from "@/core/clientApi";
-import { useIsPureClient } from "@/stores/remoteAccess";
+import { useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
 
 export type AppUpdateBannerViewState =
   | { kind: "checking" }
@@ -235,12 +235,19 @@ interface Props {
  * it has always been, down to the auto-start, and nothing about it is now conditional on
  * a store that only a client populates.
  */
-const AppUpdateBanner: React.FC<Props> = ({ collapsed }) =>
-  useIsPureClient() ? (
-    <ClientUpdateBanner collapsed={collapsed} />
-  ) : (
-    <ServerUpdateBanner collapsed={collapsed} />
-  );
+const AppUpdateBanner: React.FC<Props> = ({ collapsed }) => {
+  const isPureClient = useIsPureClient();
+  const clientHost = useRemoteAccessStore((state) => state.clientHost);
+
+  if (!isPureClient) {
+    return <ServerUpdateBanner collapsed={collapsed} />;
+  }
+
+  // Nothing until the PureClient says which program it is. In the desktop app's console
+  // neither banner is right: `BApi.updater` would update the managed server behind the
+  // user's back, and the app's own updater lives in the app's own window, not here.
+  return clientHost === "legacy" ? <ClientUpdateBanner collapsed={collapsed} /> : null;
+};
 
 const ServerUpdateBanner: React.FC<Props> = ({ collapsed }) => {
   const appUpdaterState = useAppUpdaterStateStore((s) => s);
