@@ -111,14 +111,18 @@ public class ConsoleIntegrationContractTests
     public async Task Listing_is_safe_from_any_thread_while_servers_come_and_go()
     {
         var switcher = _console.Get<IMainViewSwitcher>();
-        using var stop = new CancellationTokenSource(TimeSpan.FromMilliseconds(800));
+        const int writes = 30;
+        using var done = new CancellationTokenSource();
         var failures = new List<Exception>();
+        var reads = 0;
 
         // The shell reads from the UI thread and from a timer while pairing, forgetting and
-        // importing write from request threads.
-        var readers = Enumerable.Range(0, 6).Select(_ => Task.Run(() =>
+        // importing write from request threads. The readers get threads of their own and the
+        // test counts writes rather than time: busy readers on the thread pool of a two-core CI
+        // runner once starved the writer down to a single write in the time allowed.
+        var readers = Enumerable.Range(0, 4).Select(_ => Task.Factory.StartNew(() =>
         {
-            while (!stop.IsCancellationRequested)
+            while (!done.IsCancellationRequested)
             {
                 try
                 {
@@ -130,6 +134,8 @@ public class ConsoleIntegrationContractTests
                         throw new InvalidOperationException("an inconsistent list: " +
                                                             string.Join(",", targets.Select(t => t.Id)));
                     }
+
+                    Interlocked.Increment(ref reads);
                 }
                 catch (Exception e)
                 {
@@ -139,29 +145,34 @@ public class ConsoleIntegrationContractTests
                     }
                 }
             }
-        })).ToArray();
+        }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
 
-        var writes = 0;
-        while (!stop.IsCancellationRequested)
+        try
         {
-            var id = $"server-{writes++ % 7}";
-
-            await _console.Store.MutateAsync(data =>
+            for (var i = 0; i < writes; i++)
             {
-                if (data.Servers.RemoveAll(s => s.ServerId == id) == 0)
+                var id = $"server-{i % 7}";
+
+                await _console.Store.MutateAsync(data =>
                 {
-                    data.Servers.Add(new ClientServerConnection
+                    if (data.Servers.RemoveAll(s => s.ServerId == id) == 0)
                     {
-                        ServerId = id, ServerName = id, BaseAddress = "http://192.0.2.1:34567", DeviceId = "d",
-                        DeviceKey = "k", PairedAt = DateTime.UtcNow
-                    });
-                }
-            });
+                        data.Servers.Add(new ClientServerConnection
+                        {
+                            ServerId = id, ServerName = id, BaseAddress = "http://192.0.2.1:34567",
+                            DeviceId = "d", DeviceKey = "k", PairedAt = DateTime.UtcNow
+                        });
+                    }
+                }).WaitAsync(TimeSpan.FromSeconds(30));
+            }
+        }
+        finally
+        {
+            done.Cancel();
+            await Task.WhenAll(readers);
         }
 
-        await Task.WhenAll(readers);
-
-        Assert.IsTrue(writes > 10, $"only {writes} writes happened");
+        Assert.IsTrue(Volatile.Read(ref reads) > 0, "no list was read while the servers changed");
         Assert.AreEqual(0, failures.Count, string.Join("\n", failures));
     }
 
