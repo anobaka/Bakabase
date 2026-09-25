@@ -1,0 +1,57 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "from": "local",
+    "result": "suee",
+    "message": "",
+    "quality": 32,
+    "format": "flv480",
+    "timelength": 187000,
+    "accept_format": "mp4",
+    "accept_description": [],
+    "accept_quality": [
+      64,
+      32
+    ],
+    "video_codecid": 7,
+    "seek_param": "start",
+    "seek_type": "second",
+    "durl": [
+      {
+        "order": 1,
+        "length": 187000,
+        "size": 13600942,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/441330-1-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/441330-1-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      }
+    ],
+    "support_formats": [
+      {
+        "quality": 64,
+        "format": "fmt64",
+        "new_description": "720P 准高清",
+        "display_desc": "720P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 32,
+        "format": "fmt32",
+        "new_description": "480P 标清",
+        "display_desc": "480P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      }
+    ]
+  }
+}

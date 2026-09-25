@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Globalization;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Protocol;
 using Microsoft.Extensions.Localization;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
@@ -57,7 +59,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 
         public string FfMpegIsNotReady() => this[nameof(FfMpegIsNotReady)];
 
-        public string LuxIsNotReady() => this[nameof(LuxIsNotReady)];
         public string InvalidCookie()
         {
             return this[nameof(InvalidCookie)];
@@ -70,5 +71,35 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 
         public string TransientNetworkErrorRetrying(int delaySeconds, int retry, int maxRetries) =>
             this[nameof(TransientNetworkErrorRetrying), delaySeconds, retry, maxRetries];
+
+        public string DownloadNoticesSummary(int count) => this["DownloadNotices.Summary", count];
+
+        public string DownloadNoticesTruncated(int remaining) => this["DownloadNotices.Truncated", remaining];
+
+        public string BilibiliFavoritesNotFound(string favoritesId, string? name) =>
+            this["Bilibili.FavoritesNotFound", favoritesId, name ?? string.Empty];
+
+        public string BilibiliRiskControl(int? code) =>
+            this["Bilibili.RiskControl", FormatCode(code)];
+
+        public string BilibiliRiskControlWaiting(int minutes, int retry, int maxRetries) =>
+            this["Bilibili.RiskControlWaiting", minutes, retry, maxRetries];
+
+        public string BilibiliNotLoggedIn() => this["Bilibili.NotLoggedIn"];
+
+        public string BilibiliDiskFull(string path) => this["Bilibili.DiskFull", path];
+
+        public string DescribeBilibiliSkip(BilibiliSkipReason reason, int? code, string? message)
+        {
+            var result = localizer[$"Bilibili.Skip.{reason}", FormatCode(code), message ?? string.Empty];
+            return result.ResourceNotFound ? reason.ToString() : result.Value.TrimEnd();
+        }
+
+        public string BilibiliSkipNotice(string subject, string reason) => this["Bilibili.SkipNotice", subject, reason];
+
+        public string BilibiliSkipFooter() => this["Bilibili.SkipFooter"];
+
+        /// <summary>Protocol codes are identifiers, not quantities: always "-352", whatever the culture's minus sign.</summary>
+        private static string FormatCode(int? code) => code?.ToString(CultureInfo.InvariantCulture) ?? "?";
     }
 }

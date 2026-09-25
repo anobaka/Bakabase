@@ -1,0 +1,24 @@
+{
+  "font_size": 0.4,
+  "font_color": "#FFFFFF",
+  "background_alpha": 0.5,
+  "background_color": "#9C27B0",
+  "Stroke": "none",
+  "type": "AIsubtitle",
+  "lang": "th",
+  "version": "v1.7.0",
+  "body": [
+    {
+      "from": 0.0,
+      "to": 1.5,
+      "sid": 1,
+      "content": "สวัสดี"
+    },
+    {
+      "from": 1.5,
+      "to": 2.25,
+      "sid": 2,
+      "content": "ครับ"
+    }
+  ]
+}

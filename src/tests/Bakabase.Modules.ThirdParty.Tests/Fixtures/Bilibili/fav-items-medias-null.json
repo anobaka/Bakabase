@@ -1,0 +1,24 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "info": {
+      "id": 100,
+      "fid": 1,
+      "mid": 3546571234567890,
+      "attr": 0,
+      "title": "默认收藏夹",
+      "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+      "upper": {
+        "mid": 3546571234567890,
+        "name": "测试用户",
+        "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+      },
+      "media_count": 14
+    },
+    "medias": null,
+    "has_more": false,
+    "ttl": 1
+  }
+}

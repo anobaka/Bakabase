@@ -315,20 +315,11 @@
   <data name="Dependency_Component_ffmpeg_Name" xml:space="preserve">
     <value>ffmpeg</value>
   </data>
-  <data name="Dependency_Component_lux_Name" xml:space="preserve">
-    <value>lux</value>
-  </data>
   <data name="Dependency_Component_ffmpeg_Description" xml:space="preserve">
     <value>该组件用于处理媒体文件。
 您可以在 https://www.ffmpeg.org/ 下载可执行文件。 
 请确保目录中包含ffmpeg.exe和ffprobe.exe文件。
 本程序对ffmpeg的版本不作要求。</value>
-  </data>
-  <data name="Dependency_Component_lux_Description" xml:space="preserve">
-    <value>该组件用于下载在线视频。
-您可以在 https://github.com/iawia002/lux 下载可执行文件。 
-请确保目录中包含lux.exe文件。
-本程序对lux的版本不作要求。</value>
   </data>
   <data name="Dependency_Component_Bakabase.Updater_Description" xml:space="preserve">
     <value>该组件用于更新Bakabase本体。</value>
@@ -793,7 +784,7 @@
     <value>7-Zip</value>
   </data>
   <data name="Dependency_Component_7z_Description" xml:space="preserve">
-    <value>该组件用于压缩包的压缩和解压。它是 ffmpeg、lux 等组件安装过程中所必需的依赖。</value>
+    <value>该组件用于压缩包的压缩和解压。它是 ffmpeg 等组件安装过程中所必需的依赖。</value>
   </data>
   <data name="Dependency_Component_LocaleEmulator_Name" xml:space="preserve">
     <value>Locale Emulator</value>

@@ -542,17 +542,27 @@ const DownloaderPage = () => {
     });
   }, []);
 
-  const handleRowShowError = useCallback((task: { message?: string }) => {
-    const { createPortal: portal, t: translate } = rowEnvRef.current;
+  // Shows a failed task's error, or the notes a completed task left behind (skipped items etc.).
+  const handleRowShowError = useCallback(
+    (task: { message?: string; status?: DownloadTaskStatus }) => {
+      const { createPortal: portal, t: translate } = rowEnvRef.current;
+      const failed = task.status === DownloadTaskStatus.Failed;
 
-    portal(Modal, {
-      defaultVisible: true,
-      size: "xl",
-      title: translate<string>("common.label.error"),
-      footer: { actions: ["cancel"] },
-      children: <TaskErrorMessage message={task.message ?? ""} />,
-    });
-  }, []);
+      portal(Modal, {
+        defaultVisible: true,
+        size: "xl",
+        title: translate<string>(failed ? "common.label.error" : "downloader.label.notices"),
+        footer: { actions: ["cancel"] },
+        children: (
+          <TaskErrorMessage
+            copyTip={failed ? undefined : translate<string>("downloader.tip.clickToCopyNotices")}
+            message={task.message ?? ""}
+          />
+        ),
+      });
+    },
+    [],
+  );
 
   const handleRowClick = useCallback((id: number, e: any) => onTaskClick(id, e), [onTaskClick]);
 

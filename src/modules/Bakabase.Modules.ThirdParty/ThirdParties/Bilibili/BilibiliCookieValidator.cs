@@ -1,9 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.Components.Http.Cookie;
@@ -21,8 +15,9 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.Bilibili
 
         protected override (bool Success, string? Message) Validate(DataWrapper<UserCredential> body)
         {
-            var mid = body?.Data?.Profile?.Mid;
-            return (mid.HasValue, body?.Message);
+            // Mid is a long: 16-digit account ids overflowed the former int and failed validation of a valid cookie.
+            var success = body is {Code: 0, Data.Profile.Mid: > 0};
+            return (success, body?.Message);
         }
     }
 }

@@ -15,6 +15,12 @@
     <Content Include="Fixtures\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- The scrubbed Bilibili fixtures live with the module tests; the legacy downloader tests read the same files. -->
+    <Content Include="..\Bakabase.Modules.ThirdParty.Tests\Fixtures\Bilibili\**\*" LinkBase="Fixtures\Bilibili">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- One fake of the Bilibili wire (API, CDN, merger) for both suites, so they test the same protocol. -->
+    <Compile Include="..\Bakabase.Modules.ThirdParty.Tests\Bilibili\Shared\*.cs" LinkBase="Bilibili\Shared" />
   </ItemGroup>
 
 </Project>

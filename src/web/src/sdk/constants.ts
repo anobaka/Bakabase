@@ -1258,6 +1258,225 @@ export const DLsiteMetadataFieldLabel: Record<DLsiteMetadataField, string> = {
   [DLsiteMetadataField.CoverUrls]: 'CoverUrls'
 };
 
+export enum BilibiliApiCodeClass {
+  Ok = 0,
+  RiskControl = 1,
+  ServiceBusy = 2,
+  NotLoggedIn = 3,
+  ContentState = 4,
+  Unknown = 5
+}
+
+export const bilibiliApiCodeClasses = [
+  { label: 'Ok', value: BilibiliApiCodeClass.Ok },
+  { label: 'RiskControl', value: BilibiliApiCodeClass.RiskControl },
+  { label: 'ServiceBusy', value: BilibiliApiCodeClass.ServiceBusy },
+  { label: 'NotLoggedIn', value: BilibiliApiCodeClass.NotLoggedIn },
+  { label: 'ContentState', value: BilibiliApiCodeClass.ContentState },
+  { label: 'Unknown', value: BilibiliApiCodeClass.Unknown }
+] as const;
+
+export const BilibiliApiCodeClassLabel: Record<BilibiliApiCodeClass, string> = {
+  [BilibiliApiCodeClass.Ok]: 'Ok',
+  [BilibiliApiCodeClass.RiskControl]: 'RiskControl',
+  [BilibiliApiCodeClass.ServiceBusy]: 'ServiceBusy',
+  [BilibiliApiCodeClass.NotLoggedIn]: 'NotLoggedIn',
+  [BilibiliApiCodeClass.ContentState]: 'ContentState',
+  [BilibiliApiCodeClass.Unknown]: 'Unknown'
+};
+
+export enum BilibiliViewOutcomeKind {
+  Proceed = 1,
+  FollowForward = 2,
+  CheckExistence = 3,
+  PageListFallback = 4,
+  Skip = 5
+}
+
+export const bilibiliViewOutcomeKinds = [
+  { label: 'Proceed', value: BilibiliViewOutcomeKind.Proceed },
+  { label: 'FollowForward', value: BilibiliViewOutcomeKind.FollowForward },
+  { label: 'CheckExistence', value: BilibiliViewOutcomeKind.CheckExistence },
+  { label: 'PageListFallback', value: BilibiliViewOutcomeKind.PageListFallback },
+  { label: 'Skip', value: BilibiliViewOutcomeKind.Skip }
+] as const;
+
+export const BilibiliViewOutcomeKindLabel: Record<BilibiliViewOutcomeKind, string> = {
+  [BilibiliViewOutcomeKind.Proceed]: 'Proceed',
+  [BilibiliViewOutcomeKind.FollowForward]: 'FollowForward',
+  [BilibiliViewOutcomeKind.CheckExistence]: 'CheckExistence',
+  [BilibiliViewOutcomeKind.PageListFallback]: 'PageListFallback',
+  [BilibiliViewOutcomeKind.Skip]: 'Skip'
+};
+
+export enum BilibiliTemporaryFailureKind {
+  RiskControl = 1,
+  ServiceBusy = 2,
+  CdnUnavailable = 3
+}
+
+export const bilibiliTemporaryFailureKinds = [
+  { label: 'RiskControl', value: BilibiliTemporaryFailureKind.RiskControl },
+  { label: 'ServiceBusy', value: BilibiliTemporaryFailureKind.ServiceBusy },
+  { label: 'CdnUnavailable', value: BilibiliTemporaryFailureKind.CdnUnavailable }
+] as const;
+
+export const BilibiliTemporaryFailureKindLabel: Record<BilibiliTemporaryFailureKind, string> = {
+  [BilibiliTemporaryFailureKind.RiskControl]: 'RiskControl',
+  [BilibiliTemporaryFailureKind.ServiceBusy]: 'ServiceBusy',
+  [BilibiliTemporaryFailureKind.CdnUnavailable]: 'CdnUnavailable'
+};
+
+export enum BilibiliFavoriteItemKind {
+  Video = 1,
+  OgvEpisode = 2,
+  Audio = 3,
+  UgcSeason = 4,
+  Unknown = 5
+}
+
+export const bilibiliFavoriteItemKinds = [
+  { label: 'Video', value: BilibiliFavoriteItemKind.Video },
+  { label: 'OgvEpisode', value: BilibiliFavoriteItemKind.OgvEpisode },
+  { label: 'Audio', value: BilibiliFavoriteItemKind.Audio },
+  { label: 'UgcSeason', value: BilibiliFavoriteItemKind.UgcSeason },
+  { label: 'Unknown', value: BilibiliFavoriteItemKind.Unknown }
+] as const;
+
+export const BilibiliFavoriteItemKindLabel: Record<BilibiliFavoriteItemKind, string> = {
+  [BilibiliFavoriteItemKind.Video]: 'Video',
+  [BilibiliFavoriteItemKind.OgvEpisode]: 'OgvEpisode',
+  [BilibiliFavoriteItemKind.Audio]: 'Audio',
+  [BilibiliFavoriteItemKind.UgcSeason]: 'UgcSeason',
+  [BilibiliFavoriteItemKind.Unknown]: 'Unknown'
+};
+
+export enum BilibiliPlayUrlOutcomeKind {
+  Dash = 1,
+  Durl = 2,
+  Skip = 3,
+  NoStreams = 4
+}
+
+export const bilibiliPlayUrlOutcomeKinds = [
+  { label: 'Dash', value: BilibiliPlayUrlOutcomeKind.Dash },
+  { label: 'Durl', value: BilibiliPlayUrlOutcomeKind.Durl },
+  { label: 'Skip', value: BilibiliPlayUrlOutcomeKind.Skip },
+  { label: 'NoStreams', value: BilibiliPlayUrlOutcomeKind.NoStreams }
+] as const;
+
+export const BilibiliPlayUrlOutcomeKindLabel: Record<BilibiliPlayUrlOutcomeKind, string> = {
+  [BilibiliPlayUrlOutcomeKind.Dash]: 'Dash',
+  [BilibiliPlayUrlOutcomeKind.Durl]: 'Durl',
+  [BilibiliPlayUrlOutcomeKind.Skip]: 'Skip',
+  [BilibiliPlayUrlOutcomeKind.NoStreams]: 'NoStreams'
+};
+
+export enum BilibiliSkipReason {
+  InvalidItem = 1,
+  UnsupportedOgvEpisode = 2,
+  UnsupportedAudio = 3,
+  UnsupportedCollection = 4,
+  UnsupportedItemType = 5,
+  InteractiveVideo = 6,
+  Deleted = 7,
+  PrivateToUploader = 8,
+  UnderReview = 9,
+  RegionRestrictedOrHidden = 10,
+  AccessDenied = 11,
+  SupporterOnly = 12,
+  SupporterOnlyPreview = 13,
+  PgcMemberOrPaid = 14,
+  PreviewOnly = 15,
+  Unavailable = 16,
+  PgcEpisodeNotSupported = 17,
+  MergeFailed = 18,
+  CdnUnavailable = 19
+}
+
+export const bilibiliSkipReasons = [
+  { label: 'InvalidItem', value: BilibiliSkipReason.InvalidItem },
+  { label: 'UnsupportedOgvEpisode', value: BilibiliSkipReason.UnsupportedOgvEpisode },
+  { label: 'UnsupportedAudio', value: BilibiliSkipReason.UnsupportedAudio },
+  { label: 'UnsupportedCollection', value: BilibiliSkipReason.UnsupportedCollection },
+  { label: 'UnsupportedItemType', value: BilibiliSkipReason.UnsupportedItemType },
+  { label: 'InteractiveVideo', value: BilibiliSkipReason.InteractiveVideo },
+  { label: 'Deleted', value: BilibiliSkipReason.Deleted },
+  { label: 'PrivateToUploader', value: BilibiliSkipReason.PrivateToUploader },
+  { label: 'UnderReview', value: BilibiliSkipReason.UnderReview },
+  { label: 'RegionRestrictedOrHidden', value: BilibiliSkipReason.RegionRestrictedOrHidden },
+  { label: 'AccessDenied', value: BilibiliSkipReason.AccessDenied },
+  { label: 'SupporterOnly', value: BilibiliSkipReason.SupporterOnly },
+  { label: 'SupporterOnlyPreview', value: BilibiliSkipReason.SupporterOnlyPreview },
+  { label: 'PgcMemberOrPaid', value: BilibiliSkipReason.PgcMemberOrPaid },
+  { label: 'PreviewOnly', value: BilibiliSkipReason.PreviewOnly },
+  { label: 'Unavailable', value: BilibiliSkipReason.Unavailable },
+  { label: 'PgcEpisodeNotSupported', value: BilibiliSkipReason.PgcEpisodeNotSupported },
+  { label: 'MergeFailed', value: BilibiliSkipReason.MergeFailed },
+  { label: 'CdnUnavailable', value: BilibiliSkipReason.CdnUnavailable }
+] as const;
+
+export const BilibiliSkipReasonLabel: Record<BilibiliSkipReason, string> = {
+  [BilibiliSkipReason.InvalidItem]: 'InvalidItem',
+  [BilibiliSkipReason.UnsupportedOgvEpisode]: 'UnsupportedOgvEpisode',
+  [BilibiliSkipReason.UnsupportedAudio]: 'UnsupportedAudio',
+  [BilibiliSkipReason.UnsupportedCollection]: 'UnsupportedCollection',
+  [BilibiliSkipReason.UnsupportedItemType]: 'UnsupportedItemType',
+  [BilibiliSkipReason.InteractiveVideo]: 'InteractiveVideo',
+  [BilibiliSkipReason.Deleted]: 'Deleted',
+  [BilibiliSkipReason.PrivateToUploader]: 'PrivateToUploader',
+  [BilibiliSkipReason.UnderReview]: 'UnderReview',
+  [BilibiliSkipReason.RegionRestrictedOrHidden]: 'RegionRestrictedOrHidden',
+  [BilibiliSkipReason.AccessDenied]: 'AccessDenied',
+  [BilibiliSkipReason.SupporterOnly]: 'SupporterOnly',
+  [BilibiliSkipReason.SupporterOnlyPreview]: 'SupporterOnlyPreview',
+  [BilibiliSkipReason.PgcMemberOrPaid]: 'PgcMemberOrPaid',
+  [BilibiliSkipReason.PreviewOnly]: 'PreviewOnly',
+  [BilibiliSkipReason.Unavailable]: 'Unavailable',
+  [BilibiliSkipReason.PgcEpisodeNotSupported]: 'PgcEpisodeNotSupported',
+  [BilibiliSkipReason.MergeFailed]: 'MergeFailed',
+  [BilibiliSkipReason.CdnUnavailable]: 'CdnUnavailable'
+};
+
+export enum BilibiliAudioKind {
+  None = 0,
+  Aac = 1,
+  Flac = 2,
+  DolbyEac3 = 3
+}
+
+export const bilibiliAudioKinds = [
+  { label: 'None', value: BilibiliAudioKind.None },
+  { label: 'Aac', value: BilibiliAudioKind.Aac },
+  { label: 'Flac', value: BilibiliAudioKind.Flac },
+  { label: 'DolbyEac3', value: BilibiliAudioKind.DolbyEac3 }
+] as const;
+
+export const BilibiliAudioKindLabel: Record<BilibiliAudioKind, string> = {
+  [BilibiliAudioKind.None]: 'None',
+  [BilibiliAudioKind.Aac]: 'Aac',
+  [BilibiliAudioKind.Flac]: 'Flac',
+  [BilibiliAudioKind.DolbyEac3]: 'DolbyEac3'
+};
+
+export enum BilibiliPageStatus {
+  Downloaded = 1,
+  AlreadyExists = 2,
+  Skipped = 3
+}
+
+export const bilibiliPageStatuses = [
+  { label: 'Downloaded', value: BilibiliPageStatus.Downloaded },
+  { label: 'AlreadyExists', value: BilibiliPageStatus.AlreadyExists },
+  { label: 'Skipped', value: BilibiliPageStatus.Skipped }
+] as const;
+
+export const BilibiliPageStatusLabel: Record<BilibiliPageStatus, string> = {
+  [BilibiliPageStatus.Downloaded]: 'Downloaded',
+  [BilibiliPageStatus.AlreadyExists]: 'AlreadyExists',
+  [BilibiliPageStatus.Skipped]: 'Skipped'
+};
+
 export enum BangumiSubjectType {
   All = 0,
   Anime = 1,

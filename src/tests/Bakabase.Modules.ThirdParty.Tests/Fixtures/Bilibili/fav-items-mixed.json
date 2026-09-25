@@ -1,0 +1,438 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "info": {
+      "id": 100,
+      "fid": 1,
+      "mid": 3546571234567890,
+      "attr": 0,
+      "title": "默认收藏夹",
+      "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+      "upper": {
+        "mid": 3546571234567890,
+        "name": "测试用户",
+        "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+      },
+      "media_count": 14
+    },
+    "medias": [
+      {
+        "id": 1001,
+        "type": 2,
+        "title": "正常视频",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 2,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 0,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/1001",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m1",
+        "bvid": "BV1xx411c7m1",
+        "season": null,
+        "ogv": null,
+        "ugc": {
+          "first_cid": 5001
+        },
+        "media_list_link": ""
+      },
+      {
+        "id": 1002,
+        "type": 2,
+        "title": "已失效视频",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 0,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 1,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/1002",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m2",
+        "bvid": "BV1xx411c7m2",
+        "season": null,
+        "ogv": null,
+        "ugc": {
+          "first_cid": 0
+        },
+        "media_list_link": ""
+      },
+      {
+        "id": 1009,
+        "type": 2,
+        "title": "被UP主删除",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 1,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 9,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/1009",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m9",
+        "bvid": "BV1xx411c7m9",
+        "season": null,
+        "ogv": null,
+        "ugc": {
+          "first_cid": 5009
+        },
+        "media_list_link": ""
+      },
+      {
+        "id": 1004,
+        "type": 2,
+        "title": "登录可见的老视频",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 1,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 4,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/1004",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m4",
+        "bvid": "BV1xx411c7m4",
+        "season": null,
+        "ogv": null,
+        "ugc": {
+          "first_cid": 5004
+        },
+        "media_list_link": ""
+      },
+      {
+        "id": 1003,
+        "type": 2,
+        "title": "互动视频",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 1,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 16,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/1003",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m3",
+        "bvid": "BV1xx411c7m3",
+        "season": null,
+        "ogv": null,
+        "ugc": {
+          "first_cid": 5003
+        },
+        "media_list_link": ""
+      },
+      {
+        "id": 1005,
+        "type": 2,
+        "title": "PGC稿件",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 1,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 2,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/1005",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m5",
+        "bvid": "BV1xx411c7m5",
+        "season": null,
+        "ogv": null,
+        "ugc": {
+          "first_cid": 5005
+        },
+        "media_list_link": ""
+      },
+      {
+        "id": 1006,
+        "title": "缺少类型字段",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 1,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 0,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/1006",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m6",
+        "bvid": "BV1xx411c7m6",
+        "season": null,
+        "ogv": null,
+        "ugc": {
+          "first_cid": 5006
+        },
+        "media_list_link": ""
+      },
+      {
+        "id": 321808,
+        "type": 24,
+        "title": "番剧一集",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 1,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 0,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "https://www.bilibili.com/bangumi/play/ep321808",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m8",
+        "bvid": "BV1xx411c7m8",
+        "season": null,
+        "ogv": {
+          "type_name": "番剧",
+          "type_id": 1,
+          "season_id": 33333
+        },
+        "ugc": null,
+        "media_list_link": ""
+      },
+      {
+        "id": 281830,
+        "type": 24,
+        "title": "已下架番剧",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 1,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 1,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/281830",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m0",
+        "bvid": "BV1xx411c7m0",
+        "season": null,
+        "ogv": {
+          "type_name": "番剧",
+          "type_id": 1,
+          "season_id": 44444
+        },
+        "ugc": null,
+        "media_list_link": ""
+      },
+      {
+        "id": 518946,
+        "type": 12,
+        "title": "一首歌",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 1,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 0,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/518946",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m6",
+        "bvid": "BV1xx411c7m6",
+        "season": null,
+        "ogv": null,
+        "ugc": null,
+        "media_list_link": ""
+      },
+      {
+        "id": 7001,
+        "type": 21,
+        "title": "一个合集",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 1,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 0,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/7001",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m1",
+        "bvid": "BV1xx411c7m1",
+        "season": null,
+        "ogv": null,
+        "ugc": null,
+        "media_list_link": ""
+      },
+      {
+        "id": 9901,
+        "type": 99,
+        "title": "未知类型",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 1,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 0,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/9901",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m1",
+        "bvid": "BV1xx411c7m1",
+        "season": null,
+        "ogv": null,
+        "ugc": null,
+        "media_list_link": ""
+      },
+      {
+        "id": 1007,
+        "type": 2,
+        "title": "已失效视频",
+        "cover": "http://i0.hdslb.com/bfs/archive/example.jpg",
+        "intro": "",
+        "page": 1,
+        "duration": 120,
+        "upper": {
+          "mid": 100,
+          "name": "测试UP",
+          "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+        },
+        "attr": 0,
+        "cnt_info": {
+          "collect": 1,
+          "play": 2,
+          "danmaku": 0
+        },
+        "link": "bilibili://video/1007",
+        "ctime": 1600000000,
+        "pubtime": 1600000000,
+        "fav_time": 1700000000,
+        "bv_id": "BV1xx411c7m7",
+        "bvid": "BV1xx411c7m7",
+        "season": null,
+        "ogv": null,
+        "ugc": {
+          "first_cid": 5007
+        },
+        "media_list_link": ""
+      }
+    ],
+    "has_more": false,
+    "ttl": 1
+  }
+}

@@ -35,6 +35,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Hand-built, scrubbed Bilibili answers (see .claude/rules/bilibili-downloader.md). -->
+    <None Remove="Fixtures\Bilibili\**" />
+    <Content Include="Fixtures\Bilibili\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="HttpCloak" Version="1.6.1" />
   </ItemGroup>
 

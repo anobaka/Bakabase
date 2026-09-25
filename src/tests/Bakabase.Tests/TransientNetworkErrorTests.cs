@@ -166,6 +166,25 @@ public sealed class TransientNetworkErrorTests
         Assert.IsFalse(TransientNetworkError.IsTransient(new InvalidOperationException("An invalid request URI was provided.")));
     }
 
+    /// <summary>A service that answered "not right now" in-band (HTTP 200 with a risk-control code).</summary>
+    private sealed class InBandNotRightNow() : Exception("busy"), ITransientServiceError;
+
+    [TestMethod]
+    public void AnInBandNotRightNowIsTransientAlsoWhenWrapped()
+    {
+        Assert.IsTrue(TransientNetworkError.IsTransient(new InBandNotRightNow()));
+        Assert.IsTrue(TransientNetworkError.IsTransient(new InvalidOperationException("wrapper", new InBandNotRightNow())));
+        Assert.IsTrue(TransientNetworkError.IsTransient(new AggregateException(new FormatException("a"), new InBandNotRightNow())));
+    }
+
+    [TestMethod]
+    public void AnInBandNotRightNowIsNotTransientOnceTheCallerCancelled()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        Assert.IsFalse(TransientNetworkError.IsTransient(new InBandNotRightNow(), cts.Token));
+    }
+
     [TestMethod]
     public void BackoffDoublesWithJitterAndNeverExceedsTheCap()
     {

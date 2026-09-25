@@ -1,0 +1,129 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "from": "local",
+    "result": "suee",
+    "message": "",
+    "quality": 64,
+    "format": "hdmp4",
+    "timelength": 6839289,
+    "accept_format": "mp4",
+    "accept_description": [],
+    "accept_quality": [
+      80,
+      64,
+      32,
+      16
+    ],
+    "video_codecid": 7,
+    "seek_param": "start",
+    "seek_type": "second",
+    "durl": [
+      {
+        "order": 1,
+        "length": 6835185,
+        "size": 400000000,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-1-48.mp4?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-1-48.mp4?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      }
+    ],
+    "support_formats": [
+      {
+        "quality": 127,
+        "format": "fmt127",
+        "new_description": "8K 超高清",
+        "display_desc": "8K",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 126,
+        "format": "fmt126",
+        "new_description": "杜比视界",
+        "display_desc": "杜比视界",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 125,
+        "format": "fmt125",
+        "new_description": "HDR 真彩",
+        "display_desc": "HDR",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 120,
+        "format": "fmt120",
+        "new_description": "4K 超高清",
+        "display_desc": "4K",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 112,
+        "format": "fmt112",
+        "new_description": "1080P 高码率",
+        "display_desc": "1080P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 80,
+        "format": "fmt80",
+        "new_description": "1080P 高清",
+        "display_desc": "1080P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 64,
+        "format": "fmt64",
+        "new_description": "720P 准高清",
+        "display_desc": "720P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 32,
+        "format": "fmt32",
+        "new_description": "480P 标清",
+        "display_desc": "480P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 16,
+        "format": "fmt16",
+        "new_description": "360P 流畅",
+        "display_desc": "360P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      }
+    ]
+  }
+}

@@ -17,10 +17,11 @@ import {
   ThirdPartyId,
 } from "@/sdk/constants";
 
-const { getDefinitions, startTasks, stopTasks } = vi.hoisted(() => ({
+const { getDefinitions, startTasks, stopTasks, createPortal } = vi.hoisted(() => ({
   getDefinitions: vi.fn(),
   startTasks: vi.fn(),
   stopTasks: vi.fn(),
+  createPortal: vi.fn(),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
@@ -39,7 +40,7 @@ vi.mock("@szhsin/react-menu", () => ({
   useMenuState: () => [{}, () => undefined],
 }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
-  useBakabaseContext: () => ({ createPortal: vi.fn() }),
+  useBakabaseContext: () => ({ createPortal }),
 }));
 vi.mock("@/config/env.ts", () => ({ toAbsoluteBackendUrl: (url: string) => url }));
 // Workflow help has its own configuration dependencies, outside task selection and filtering.
@@ -53,13 +54,18 @@ vi.mock("../components/TaskRow", () => ({
   default: ({
     task,
     onClick,
+    onShowError,
   }: {
     task: DownloadTask;
     onClick: (id: number, event: unknown) => void;
+    onShowError: (task: DownloadTask) => void;
   }) => (
-    <button data-row-id={task.id} onClick={(event) => onClick(task.id, event)}>
-      {task.name}
-    </button>
+    <>
+      <button data-row-id={task.id} onClick={(event) => onClick(task.id, event)}>
+        {task.name}
+      </button>
+      <button onClick={() => onShowError(task)}>{`message-${task.id}`}</button>
+    </>
   ),
 }));
 vi.mock("../components/DownloadTaskFilters", () => ({
@@ -260,4 +266,26 @@ describe("downloader page task selection", () => {
     expect(rowIds()).toEqual([11, 22, 33]);
     expect(container).not.toHaveTextContent("downloader.empty.filteredTitle");
   });
+
+  it.each([
+    [DownloadTaskStatus.Failed, "common.label.error", undefined],
+    [DownloadTaskStatus.Complete, "downloader.label.notices", "downloader.tip.clickToCopyNotices"],
+  ] as const)(
+    "opens the message of a task in status %s under the matching title",
+    async (status, title, copyTip) => {
+      useDownloadTasksStore
+        .getState()
+        .setTasks([
+          { ...task(11, "Alpha", ThirdPartyId.Bilibili), status, message: "line 1\nline 2" },
+        ]);
+      await act(async () => root.render(<DownloaderPage />));
+      await choose("message-11");
+
+      expect(createPortal).toHaveBeenCalledOnce();
+      const [, props] = createPortal.mock.calls[0];
+
+      expect(props.title).toBe(title);
+      expect(props.children.props).toEqual({ copyTip, message: "line 1\nline 2" });
+    },
+  );
 });

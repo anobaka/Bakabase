@@ -26,11 +26,11 @@ function setClipboard(value: unknown) {
   Object.defineProperty(navigator, "clipboard", { configurable: true, value });
 }
 
-async function show() {
+async function show(copyTip?: string) {
   await act(async () =>
     root.render(
       <HeroUIProvider disableAnimation>
-        <TaskErrorMessage message={message} />
+        <TaskErrorMessage copyTip={copyTip} message={message} />
       </HeroUIProvider>,
     ),
   );
@@ -107,6 +107,17 @@ describe("download task error message", () => {
 
     expect(writeText).toHaveBeenCalledExactlyOnceWith(message);
     expect(toast.success).toHaveBeenCalledOnce();
+  });
+
+  it("uses the given hover hint, e.g. for a completed task's notes", async () => {
+    vi.useFakeTimers();
+    await show("downloader.tip.clickToCopyNotices");
+
+    expect(text()).toHaveAttribute("title", "downloader.tip.clickToCopyNotices");
+    await click(text(), 1);
+    await afterClickDelay();
+
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(message);
   });
 
   it("leaves a dragged selection alone", async () => {

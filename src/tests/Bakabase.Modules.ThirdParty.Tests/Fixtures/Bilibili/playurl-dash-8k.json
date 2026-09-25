@@ -1,0 +1,270 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "from": "local",
+    "result": "suee",
+    "message": "",
+    "quality": 127,
+    "format": "mp4",
+    "timelength": 187106,
+    "accept_format": "mp4",
+    "accept_description": [],
+    "accept_quality": [
+      80,
+      64,
+      32,
+      16
+    ],
+    "video_codecid": 7,
+    "seek_param": "start",
+    "seek_type": "second",
+    "dash": {
+      "duration": 188,
+      "minBufferTime": 1.5,
+      "min_buffer_time": 1.5,
+      "video": [
+        {
+          "id": 127,
+          "baseUrl": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-127.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "base_url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-127.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "backupUrl": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-127.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "backup_url": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-127.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "bandwidth": 20000000,
+          "mimeType": "video/mp4",
+          "mime_type": "video/mp4",
+          "codecs": "hev1.1.6.L183.90",
+          "width": 1920,
+          "height": 1080,
+          "frameRate": "30.000",
+          "frame_rate": "30.000",
+          "codecid": 12
+        },
+        {
+          "id": 127,
+          "baseUrl": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100113-127.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "base_url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100113-127.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "backupUrl": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100113-127.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "backup_url": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100113-127.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "bandwidth": 15000000,
+          "mimeType": "video/mp4",
+          "mime_type": "video/mp4",
+          "codecs": "av01.0.16M.10.0.110.01.01.01.0",
+          "width": 1920,
+          "height": 1080,
+          "frameRate": "30.000",
+          "frame_rate": "30.000",
+          "codecid": 13
+        },
+        {
+          "id": 126,
+          "baseUrl": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-126.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "base_url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-126.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "backupUrl": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-126.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "backup_url": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-126.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "bandwidth": 16000000,
+          "mimeType": "video/mp4",
+          "mime_type": "video/mp4",
+          "codecs": "dvh1.05.07",
+          "width": 1920,
+          "height": 1080,
+          "frameRate": "30.000",
+          "frame_rate": "30.000",
+          "codecid": 12
+        },
+        {
+          "id": 125,
+          "baseUrl": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-125.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "base_url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-125.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "backupUrl": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-125.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "backup_url": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-125.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "bandwidth": 14000000,
+          "mimeType": "video/mp4",
+          "mime_type": "video/mp4",
+          "codecs": "hev1.2.4.L153.90",
+          "width": 1920,
+          "height": 1080,
+          "frameRate": "30.000",
+          "frame_rate": "30.000",
+          "codecid": 12
+        },
+        {
+          "id": 120,
+          "baseUrl": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100026-120.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "base_url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100026-120.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "backupUrl": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100026-120.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "backup_url": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100026-120.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "bandwidth": 12000000,
+          "mimeType": "video/mp4",
+          "mime_type": "video/mp4",
+          "codecs": "avc1.640033",
+          "width": 1920,
+          "height": 1080,
+          "frameRate": "30.000",
+          "frame_rate": "30.000",
+          "codecid": 7
+        },
+        {
+          "id": 120,
+          "baseUrl": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-120.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "base_url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-120.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "backupUrl": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-120.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "backup_url": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-100110-120.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "bandwidth": 9000000,
+          "mimeType": "video/mp4",
+          "mime_type": "video/mp4",
+          "codecs": "hev1.1.6.L153.90",
+          "width": 1920,
+          "height": 1080,
+          "frameRate": "30.000",
+          "frame_rate": "30.000",
+          "codecid": 12
+        }
+      ],
+      "audio": [
+        {
+          "id": 30280,
+          "baseUrl": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-30280.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "base_url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/5001-1-30280.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+          "backupUrl": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-30280.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "backup_url": [
+            "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/5001-1-30280.m4s?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+          ],
+          "bandwidth": 320000,
+          "mimeType": "audio/mp4",
+          "mime_type": "audio/mp4",
+          "codecs": "mp4a.40.2",
+          "width": 0,
+          "height": 0,
+          "frameRate": "",
+          "frame_rate": "",
+          "codecid": 0
+        }
+      ],
+      "dolby": {
+        "type": 0,
+        "audio": null
+      },
+      "flac": null
+    },
+    "support_formats": [
+      {
+        "quality": 127,
+        "format": "fmt127",
+        "new_description": "8K 超高清",
+        "display_desc": "8K",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 126,
+        "format": "fmt126",
+        "new_description": "杜比视界",
+        "display_desc": "杜比视界",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 125,
+        "format": "fmt125",
+        "new_description": "HDR 真彩",
+        "display_desc": "HDR",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 120,
+        "format": "fmt120",
+        "new_description": "4K 超高清",
+        "display_desc": "4K",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 112,
+        "format": "fmt112",
+        "new_description": "1080P 高码率",
+        "display_desc": "1080P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 80,
+        "format": "fmt80",
+        "new_description": "1080P 高清",
+        "display_desc": "1080P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 64,
+        "format": "fmt64",
+        "new_description": "720P 准高清",
+        "display_desc": "720P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 32,
+        "format": "fmt32",
+        "new_description": "480P 标清",
+        "display_desc": "480P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 16,
+        "format": "fmt16",
+        "new_description": "360P 流畅",
+        "display_desc": "360P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      }
+    ]
+  }
+}

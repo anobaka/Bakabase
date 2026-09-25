@@ -61,6 +61,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Not enough free disk space to write {0}. Free up space, then run the task again; downloaded parts are kept and resumed..
+        /// </summary>
+        internal static string Bilibili_DiskFull {
+            get {
+                return ResourceManager.GetString("Bilibili.DiskFull", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Favorites.
         /// </summary>
         internal static string Bilibili_Favorites {
@@ -75,6 +84,231 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string Bilibili_Favorites_Description {
             get {
                 return ResourceManager.GetString("Bilibili.Favorites.Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Bilibili favorites folder {0} ({1}) was not found in this account. It may have been deleted, or the cookie belongs to another account..
+        /// </summary>
+        internal static string Bilibili_FavoritesNotFound {
+            get {
+                return ResourceManager.GetString("Bilibili.FavoritesNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The Bilibili cookie is not logged in or has expired. Update it in the downloader settings, then run the task again..
+        /// </summary>
+        internal static string Bilibili_NotLoggedIn {
+            get {
+                return ResourceManager.GetString("Bilibili.NotLoggedIn", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Bilibili is temporarily refusing requests (risk control, code {0}). The task retries automatically; if it keeps failing, wait a while or update the cookie..
+        /// </summary>
+        internal static string Bilibili_RiskControl {
+            get {
+                return ResourceManager.GetString("Bilibili.RiskControl", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Bilibili is refusing requests for now (risk control); retrying in {0} min ({1}/{2}).
+        /// </summary>
+        internal static string Bilibili_RiskControlWaiting {
+            get {
+                return ResourceManager.GetString("Bilibili.RiskControlWaiting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to this account has no access.
+        /// </summary>
+        internal static string Bilibili_Skip_AccessDenied {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.AccessDenied", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to no Bilibili CDN server would deliver the video (HTTP {0}); it may work later.
+        /// </summary>
+        internal static string Bilibili_Skip_CdnUnavailable {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.CdnUnavailable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to deleted or no longer visible.
+        /// </summary>
+        internal static string Bilibili_Skip_Deleted {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.Deleted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to interactive videos are not supported.
+        /// </summary>
+        internal static string Bilibili_Skip_InteractiveVideo {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.InteractiveVideo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to no longer available (removed or invalidated).
+        /// </summary>
+        internal static string Bilibili_Skip_InvalidItem {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.InvalidItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ffmpeg could not merge the video and audio (exit code {0}).
+        /// </summary>
+        internal static string Bilibili_Skip_MergeFailed {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.MergeFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to bangumi/film episode, not supported yet (it may need a membership).
+        /// </summary>
+        internal static string Bilibili_Skip_PgcEpisodeNotSupported {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.PgcEpisodeNotSupported", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to bangumi/film episode that needs a membership or purchase (not supported yet).
+        /// </summary>
+        internal static string Bilibili_Skip_PgcMemberOrPaid {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.PgcMemberOrPaid", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to this account only gets a preview, which was not saved.
+        /// </summary>
+        internal static string Bilibili_Skip_PreviewOnly {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.PreviewOnly", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to only visible to the uploader.
+        /// </summary>
+        internal static string Bilibili_Skip_PrivateToUploader {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.PrivateToUploader", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to not available in your region, or hidden.
+        /// </summary>
+        internal static string Bilibili_Skip_RegionRestrictedOrHidden {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.RegionRestrictedOrHidden", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to supporter-only (充电专属) video; this account has no access.
+        /// </summary>
+        internal static string Bilibili_Skip_SupporterOnly {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.SupporterOnly", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to supporter-only video; this account only gets a preview, which was not saved.
+        /// </summary>
+        internal static string Bilibili_Skip_SupporterOnlyPreview {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.SupporterOnlyPreview", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to unavailable on Bilibili (code {0}) {1}.
+        /// </summary>
+        internal static string Bilibili_Skip_Unavailable {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.Unavailable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to under review.
+        /// </summary>
+        internal static string Bilibili_Skip_UnderReview {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.UnderReview", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to audio items are not supported yet.
+        /// </summary>
+        internal static string Bilibili_Skip_UnsupportedAudio {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.UnsupportedAudio", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to video collections are not supported yet.
+        /// </summary>
+        internal static string Bilibili_Skip_UnsupportedCollection {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.UnsupportedCollection", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to unsupported favorites item type {0}.
+        /// </summary>
+        internal static string Bilibili_Skip_UnsupportedItemType {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.UnsupportedItemType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to bangumi/film episodes are not supported yet.
+        /// </summary>
+        internal static string Bilibili_Skip_UnsupportedOgvEpisode {
+            get {
+                return ResourceManager.GetString("Bilibili.Skip.UnsupportedOgvEpisode", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Skipped items are not retried automatically, and the log lists every one. To check them again, clear this task's checkpoint..
+        /// </summary>
+        internal static string Bilibili_SkipFooter {
+            get {
+                return ResourceManager.GetString("Bilibili.SkipFooter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} — skipped: {1}.
+        /// </summary>
+        internal static string Bilibili_SkipNotice {
+            get {
+                return ResourceManager.GetString("Bilibili.SkipNotice", resourceCulture);
             }
         }
         
@@ -381,6 +615,24 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string DownloaderSource_Pixiv {
             get {
                 return ResourceManager.GetString("DownloaderSource.Pixiv", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} note(s) from this task:.
+        /// </summary>
+        internal static string DownloadNotices_Summary {
+            get {
+                return ResourceManager.GetString("DownloadNotices.Summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to …and {0} more (see the log for the full list).
+        /// </summary>
+        internal static string DownloadNotices_Truncated {
+            get {
+                return ResourceManager.GetString("DownloadNotices.Truncated", resourceCulture);
             }
         }
         
@@ -876,15 +1128,6 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string InvalidFavorites {
             get {
                 return ResourceManager.GetString("InvalidFavorites", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Lux is not ready.
-        /// </summary>
-        internal static string LuxIsNotReady {
-            get {
-                return ResourceManager.GetString("LuxIsNotReady", resourceCulture);
             }
         }
         

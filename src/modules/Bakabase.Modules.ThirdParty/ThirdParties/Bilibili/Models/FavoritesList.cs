@@ -4,6 +4,7 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models
 {
     public class FavoritesList
     {
-        public List<ApiFavorites> List { get; set; }
+        /// <summary>Null when the account has no folders.</summary>
+        public List<ApiFavorites>? List { get; set; }
     }
 }

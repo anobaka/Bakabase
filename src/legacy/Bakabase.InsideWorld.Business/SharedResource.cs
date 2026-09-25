@@ -8,7 +8,6 @@
         public const string Downloader_KeyIsMissing = nameof(Downloader_KeyIsMissing);
         public const string Downloader_MayBeDuplicate = nameof(Downloader_MayBeDuplicate);
         public const string Downloader_BilibiliFavoritesIsMissing = nameof(Downloader_BilibiliFavoritesIsMissing);
-        public const string Downloader_BilibiliFavoritesDoesNotExist = nameof(Downloader_BilibiliFavoritesDoesNotExist);
         public const string Downloader_BilibiliCookieIsInvalid = nameof(Downloader_BilibiliCookieIsInvalid);
         public const string Downloader_DownloaderCountExceeded = nameof(Downloader_DownloaderCountExceeded);
         public const string Downloader_DownloaderIsNotFound = nameof(Downloader_DownloaderIsNotFound);

@@ -1,0 +1,25 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "quality": 80,
+    "format": "mp4",
+    "timelength": 187106,
+    "accept_quality": [
+      80
+    ],
+    "support_formats": [
+      {
+        "quality": 80,
+        "format": "fmt80",
+        "new_description": "1080P 高清",
+        "display_desc": "1080P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      }
+    ]
+  }
+}
