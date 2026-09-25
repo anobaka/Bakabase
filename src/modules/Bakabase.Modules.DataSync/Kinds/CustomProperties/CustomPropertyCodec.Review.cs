@@ -12,14 +12,21 @@ public sealed partial class CustomPropertyCodec
     /// is equal content except child ids, child order and duplicates. Custom properties never link automatically, so
     /// Identical is informational.
     /// </summary>
+    /// <remarks>
+    /// <paramref name="incoming"/> is validated peer content; <paramref name="local"/> is ReadLocal content, compared as
+    /// this device publishes it (§3.5), as Refresh's <c>SharedHash</c> is: options it keeps but never publishes count for
+    /// nothing, and a property it would hold at source is never Identical.
+    /// </remarks>
     public override DataSyncNaturalMatch MatchNatural(CustomPropertyContentV1 incoming, CustomPropertyContentV1 local)
     {
         if (!string.Equals(incoming.Name.Trim(), local.Name.Trim(), StringComparison.OrdinalIgnoreCase))
             return DataSyncNaturalMatch.None;
         if (incoming.Type != local.Type) return DataSyncNaturalMatch.Clash;
         if (!string.Equals(incoming.Name, local.Name, StringComparison.Ordinal)) return DataSyncNaturalMatch.Similar;
+        if (Publish(local, DataSyncOverlay.None, local.ChildrenLocal).Content is not CustomPropertyContentV1 published)
+            return DataSyncNaturalMatch.Exact;
         var incomingForm = CanonicalJson.Serialize(ComparisonForm(incoming, null, incoming.ChildrenLocal));
-        var localForm = CanonicalJson.Serialize(ComparisonForm(local, null, local.ChildrenLocal));
+        var localForm = CanonicalJson.Serialize(ComparisonForm(published, null, local.ChildrenLocal));
         return incomingForm == localForm ? DataSyncNaturalMatch.Identical : DataSyncNaturalMatch.Exact;
     }
 
@@ -54,8 +61,10 @@ public sealed partial class CustomPropertyCodec
         var added = ChildrenOf(fold.Content).Select(c => c.Id).ToArray();
         var warnings = fold.Folds.Select(f =>
         {
-            var args = new Dictionary<string, string> { ["uuid"] = f.Uuid, ["intoLabel"] = f.IntoLabel, ["when"] = "always" };
-            if (f.Into is not null) args["into"] = f.Into;
+            var args = new Dictionary<string, string>
+            {
+                ["uuid"] = f.Uuid, ["into"] = f.Into, ["intoLabel"] = f.IntoLabel, ["when"] = "always",
+            };
             return new DataSyncPlanWarning(DataSyncWarningCode.OptionLabelConflict, null, args);
         }).ToArray();
         return new MergeResult(fold.Content, childIdMap, added, warnings);

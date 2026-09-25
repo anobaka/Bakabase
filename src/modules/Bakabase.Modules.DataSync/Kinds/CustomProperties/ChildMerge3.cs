@@ -167,7 +167,8 @@ internal sealed record ChildMergeOutcome(
 /// (its leader): they take its renames, its colour and its moves; outside a FastForward a multilevel free member follows
 /// the group whose anchor ends under the same parent class, if any, and stays with its parent
 /// (<see cref="FollowedGroup"/>). A peer class whose counterpart is an overlay child, or which lies below one, is
-/// invisible: mapped, never touched.
+/// invisible: mapped, never touched. Any other local node this device does not publish (no id, below a parent without
+/// an id, dropped by the reader) is no counterpart: the peer's class is matched among what is published, or added.
 /// </para>
 /// <para>
 /// <b>Deciding.</b> Per group, against the base node of the member that linked it: the key three-way, the colour
@@ -202,7 +203,8 @@ internal sealed record ChildMergeOutcome(
 /// </para>
 /// <para>
 /// Nothing is reordered: renames and colours change nodes in place, a move or an add is appended at the end of its
-/// new parent's children, and every local node the steps do not remove stays, valid or not.
+/// new parent's children, and every local node the steps do not remove stays, valid or not. An add that lands beside
+/// a local option of its class without an id is stored in that option instead (<see cref="AdoptTwins"/>).
 /// </para>
 /// </remarks>
 internal sealed class ChildMerge3
@@ -419,6 +421,7 @@ internal sealed class ChildMerge3
         }
 
         ApplyColors();
+        AdoptTwins();
         return new ChildMergeOutcome(_localRoots, _fields, BuildChildMap(), _created.Select(n => n.Uuid!).ToArray(),
             removed, held, _released, [], _warnings);
     }
@@ -523,7 +526,10 @@ internal sealed class ChildMerge3
                 if (target is null) continue;
                 if (!target.Visible)
                 {
-                    peer.InvisibleTarget ??= target;
+                    // An overlay child, or a node below one, is mapped and left alone. Any other node this device does
+                    // not publish (below a parent without an id, dropped by the reader) is no counterpart: the class is
+                    // matched by key or added, so what this device publishes has it.
+                    if (IsOverlaid(target)) peer.InvisibleTarget ??= target;
                     continue;
                 }
 
@@ -1613,6 +1619,55 @@ internal sealed class ChildMerge3
     private static string IdentityOf(ChildGroup group) =>
         group.Owned.Select(n => n.Uuid!).Min(StringComparer.Ordinal)!;
 
+    /// <summary>
+    /// An option this merge created (an add, a restore, a part of a split class) that lands beside an option of its class
+    /// this device keeps without an id (§3.3) is stored in that option instead: it takes the created option's id, colour
+    /// and children, keeps its own label and place, and the created option goes. The list gains no second member of the
+    /// class, and the option without an id becomes the class's published counterpart; nothing referenced it, so nothing
+    /// is lost. Only a childless one — its own subtree would be published with it — and only where no option with an id
+    /// has that key: the class then has the created option alone, so what this device publishes is exactly as without
+    /// the adoption.
+    /// </summary>
+    private void AdoptTwins()
+    {
+        for (var i = 0; i < _created.Count; i++)
+        {
+            var created = _created[i];
+            var siblings = created.Parent?.Children ?? _localRoots;
+            var key = KeyOf(created);
+            ChildNode? twin = null;
+            var taken = false;
+            foreach (var node in siblings)
+            {
+                if (ReferenceEquals(node, created) || KeyOf(node) != key) continue;
+                if (node.Uuid is not null)
+                {
+                    taken = true;
+                    break;
+                }
+
+                if (twin is null && node.Children.Count == 0 && !IsOverlaid(node)) twin = node;
+            }
+
+            if (taken || twin is null) continue;
+            twin.Uuid = created.Uuid;
+            twin.Color = created.Color;
+            twin.CreatedFor = created.CreatedFor;
+            twin.Part = created.Part;
+            foreach (var child in created.Children)
+            {
+                child.Parent = twin;
+                twin.Children.Add(child);
+            }
+
+            created.Children.Clear();
+            siblings.Remove(created);
+            if (created.Part is { } part && ReferenceEquals(part.Created, created)) part.Created = twin;
+            else if (created.CreatedFor is { } peer && ReferenceEquals(peer.Created, created)) peer.Created = twin;
+            _created[i] = twin;
+        }
+    }
+
     /// <summary>Every member of R mapped to where its class ends here; older entries kept while their target stays.</summary>
     private Dictionary<string, string> BuildChildMap()
     {
@@ -1647,6 +1702,17 @@ internal sealed class ChildMerge3
         _s.ChildMap.TryGetValue(peerUuid, out var localUuid)
             ? _localByUuid.GetValueOrDefault(localUuid)
             : _localByUuid.GetValueOrDefault(peerUuid);
+
+    /// <summary>An overlay child (§3.6), or a node below one: never touched by a merge.</summary>
+    private static bool IsOverlaid(ChildNode node)
+    {
+        for (var n = node; n is not null; n = n.OriginalParent)
+        {
+            if (n.Overlay) return true;
+        }
+
+        return false;
+    }
 
     /// <summary>ThreeWay only: the base node of the first of <paramref name="peerMembers"/> the base has.</summary>
     private ChildNode? BaseNodeOf(IEnumerable<ChildNode> peerMembers) =>

@@ -67,6 +67,21 @@ public class PublishTests
     }
 
     [TestMethod]
+    public void ARefToAChildTheReaderDropsIsNotResolvedByLabelToAnother()
+    {
+        // "k" has a colour past the reader's limit: it is kept here and never published, and neither is the default that
+        // names it — although "KYOTO" is its class under IgnoreCase. A ref to nothing here is resolved as a reader does.
+        var content = Choice("G", true, C("k", "Kyoto", new string('c', 65)), C("2", "KYOTO"), C("3", "Osaka"))
+            with { DefaultValue = [Ref("k", "Kyoto"), Ref("3", "Osaka")] };
+        var published = Published(Publish(content));
+        CollectionAssert.AreEqual(new[] { "2", "3" }, published.Choices.Select(c => c.Uuid).ToArray());
+        CollectionAssert.AreEqual(new[] { "3" }, published.DefaultValue.Select(r => r.Uuid).ToArray());
+
+        var byLabel = Published(Publish(content with { DefaultValue = [Ref("gone", "kyoto")] }));
+        Assert.AreEqual("2", CustomPropertyRefs.Resolve(byLabel, byLabel.DefaultValue.Single())!.Uuid);
+    }
+
+    [TestMethod]
     public void ChildrenLocalPublishesNoChildrenAndNoDefault()
     {
         var tags = Tags("T", true, T("1", null, "A"), T("2", "g", "B"));

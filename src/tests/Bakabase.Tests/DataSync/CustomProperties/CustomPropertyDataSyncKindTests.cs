@@ -6,6 +6,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
+using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Canonical;
 using Bakabase.Modules.DataSync.Identity;
@@ -18,6 +19,7 @@ using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components.DataSync;
 using Bakabase.Modules.Property.Components.Properties.Choice;
 using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
+using Bakabase.Modules.Property.Components.Properties.Multilevel;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.TestKit.Utils;
@@ -147,34 +149,38 @@ public class CustomPropertyDataSyncKindTests
     }
 
     [TestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
-    public async Task LocalOptionsAreReadUnvalidated_AndAnUpdateWritesThemBack(bool ignoreCase)
+    [DataRow(false, false)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task LocalOptionsAreReadUnvalidated_AndAnUpdateWritesThemBack(bool ignoreCase, bool duplicateWithoutId)
     {
         // v3.1 B3, §3.3: a 200-character id, a duplicate id, a control character, a null label and an option without
-        // an id are all local data: read as they are, kept by a merge and written back by the update. Under IgnoreCase
-        // the update goes through the service's normalizer, which must not give the option without an id a random one.
+        // an id are all local data: read as they are, kept by a merge and written back by the update — under IgnoreCase
+        // an option without an id that is a case variant of another too, which the service's normalizer would fold
+        // away (it reads it with a fresh random id each time), so the update is stored as it is.
         var longUuid = new string('f', 200);
         var id = await AddAsync("Genre", PropertyType.MultipleChoice);
+        var choices = new List<object>
+        {
+            new { Value = longUuid, Label = "Long", Color = (string?) null },
+            new { Value = "dup", Label = "A\u0000B", Color = "#fff" },
+            new { Value = "dup", Label = (string?) null, Color = (string?) null },
+            new { Value = (string?) null, Label = "No id", Color = (string?) null },
+            new { Value = "keep", Label = "Keep", Color = (string?) null },
+        };
+        if (duplicateWithoutId) choices.Add(new { Value = (string?) null, Label = "LONG", Color = (string?) null });
         await SetRawOptionsAsync(id, JsonConvert.SerializeObject(new
         {
-            IgnoreCase = ignoreCase,
-            Choices = new object[]
-            {
-                new { Value = longUuid, Label = "Long", Color = (string?) null },
-                new { Value = "dup", Label = "A\u0000B", Color = "#fff" },
-                new { Value = "dup", Label = (string?) null, Color = (string?) null },
-                new { Value = (string?) null, Label = "No id", Color = (string?) null },
-                new { Value = "keep", Label = "Keep", Color = (string?) null },
-            },
-            DefaultValue = new[] { "keep" },
+            IgnoreCase = ignoreCase, Choices = choices, DefaultValue = new[] { "keep" },
         }));
 
         var local = (await Kind.ReadAsync([Key(id)], CancellationToken.None)).Single();
         Assert.IsFalse(local.Unreadable);
         var content = (CustomPropertyContentV1) Codec.ReadLocal(local.Content);
-        CollectionAssert.AreEqual(new[] { longUuid, "dup", "dup", null, "keep" }, content.Choices.Select(c => c.Uuid).ToArray());
-        CollectionAssert.AreEqual(new[] { "Long", "A\u0000B", "", "No id", "Keep" }, content.Choices.Select(c => c.Label).ToArray());
+        CollectionAssert.AreEqual(new[] { longUuid, "dup", "dup", null, "keep", null }.Take(choices.Count).ToArray(),
+            content.Choices.Select(c => c.Uuid).ToArray());
+        CollectionAssert.AreEqual(new[] { "Long", "A\u0000B", "", "No id", "Keep", "LONG" }.Take(choices.Count).ToArray(),
+            content.Choices.Select(c => c.Label).ToArray());
         // The reader would drop what is invalid: that limits what travels, never what is kept (§3.5).
         Assert.IsTrue(Codec.Publish(content, DataSyncOverlay.None, false).ChildrenWithheld >= 3);
 
@@ -191,6 +197,40 @@ public class CustomPropertyDataSyncKindTests
         var after = (await Kind.ReadAsync([Key(id)], CancellationToken.None)).Single();
         // Echo prevention depends on it: what is read back is exactly what was merged.
         Assert.AreEqual(Canon(Codec.Write(merged)), Canon(after.Content));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task AMergeKeepsAChoiceWithoutAnIdThatIsACaseVariantOfAnother(bool withoutIdFirst)
+    {
+        // §3.3, §8.5.4 step 0: the peer only renamed the property. Merge3 keeps the choice without an id (it takes no
+        // part in folding), and the update stores exactly that.
+        var id = await AddAsync("Genre", PropertyType.MultipleChoice);
+        var withId = new { Value = "keep", Label = "Action" };
+        var withoutId = new { Label = "action" };
+        await SetRawOptionsAsync(id, JsonConvert.SerializeObject(new
+        {
+            IgnoreCase = true, Choices = withoutIdFirst ? new object[] { withoutId, withId } : [withId, withoutId],
+        }));
+        var local = await ReadOneAsync(id);
+        var content = (CustomPropertyContentV1) Codec.ReadLocal(local.Content);
+        Assert.AreEqual(2, content.Choices.Count);
+
+        var peer = content with { Name = "Genres", Choices = content.Choices.Where(c => c.Uuid is not null).ToArray() };
+        var result = Codec.Merge3(new DataSyncMerge3Input(content with { Choices = peer.Choices }, content,
+            DataSyncOverlay.None, peer, DataSyncMerge3Mode.ThreeWay, new Dictionary<string, string> { ["keep"] = "keep" },
+            false, false, DataSyncLinkMode.TwoWay, true, DataSyncMergeSide.Local, new Dictionary<string, int>(),
+            DataSyncChildDeletionMode.Normal));
+        var merged = (CustomPropertyContentV1) result.Merged;
+        Assert.AreEqual("Genres", merged.Name);
+        CollectionAssert.AreEqual(content.Choices.ToArray(), merged.Choices.ToArray(), "both choices, as stored");
+
+        await ApplyAsync(Update("u", id, local, merged));
+        var after = await ReadOneAsync(id);
+        Assert.AreEqual(Canon(Codec.Write(merged)), Canon(after.Content), "read back exactly as merged");
+        CollectionAssert.AreEqual(content.Choices.ToArray(),
+            ((CustomPropertyContentV1) Codec.ReadLocal(after.Content)).Choices.ToArray());
     }
 
     [TestMethod]
@@ -332,19 +372,36 @@ public class CustomPropertyDataSyncKindTests
     }
 
     [TestMethod]
-    public async Task Create_StoresItsContentAsGiven_IgnoreCaseDuplicatesIncluded()
+    public async Task APeerCreateIsFoldedLikeAnyNewProperty_ARecreateIsStoredAsCaptured()
     {
-        // A peer's create never holds them: PrepareCreate folds them first (v3.1 H4). A re-created property does (§8.11,
-        // F72): it keeps every captured option id, so the service does not fold them.
         var given = new CustomPropertyContentV1
         {
             Name = "Genre", Type = PropertyType.MultipleChoice, IgnoreCase = true,
             Choices = [new("a", "Action", null), new("b", "action", null), new("c", "Drama", null)],
             DefaultValue = [OptionRef.Choice("b", "action")],
         };
-        var outcome = await ApplyAsync(Create("c", given));
-        var created = (await Kind.ReadAsync([outcome.CreatedLocalKeysByItemId["c"]], CancellationToken.None)).Single();
-        Assert.AreEqual(Canon(Codec.Write(given)), Canon(created.Content));
+        var prepared = (CustomPropertyContentV1) Codec.PrepareCreate(given, null).Content;
+        var outcome = await ApplyAsync(Create("peer", given), Create("prepared", prepared),
+            Create("undo", given) with { FromPreImage = true }, Create("again", given));
+        Assert.AreEqual(4, outcome.CreatedLocalKeysByItemId.Values.Distinct().Count());
+
+        // A peer's create goes through the service's AddRange (§14.2): content PrepareCreate did not fold is folded as
+        // any new property is, and PrepareCreate's content (v3.1 H4) is stored as given — the two folds agree.
+        foreach (var itemId in new[] { "peer", "prepared", "again" })
+        {
+            var created = await Kind.ReadAsync([outcome.CreatedLocalKeysByItemId[itemId]], CancellationToken.None);
+            Assert.AreEqual(Canon(Codec.Write(prepared)), Canon(created.Single().Content), itemId);
+        }
+
+        // A re-created property (undo of a deletion, §8.11) keeps every captured option id: case-variant duplicates
+        // under IgnoreCase included (F72).
+        var recreated = await Kind.ReadAsync([outcome.CreatedLocalKeysByItemId["undo"]], CancellationToken.None);
+        Assert.AreEqual(Canon(Codec.Write(given)), Canon(recreated.Single().Content));
+
+        // Results in input order across the calls a batch is split into.
+        var ids = new[] { "peer", "prepared", "undo", "again" }.Select(i => int.Parse(outcome.CreatedLocalKeysByItemId[i]))
+            .ToArray();
+        CollectionAssert.AreEqual(ids.Order().ToArray(), ids);
     }
 
     /// <summary>The data sync row of the write-path matrix (v3.1 §11.3, B0).</summary>
@@ -398,6 +455,41 @@ public class CustomPropertyDataSyncKindTests
         var row = await StoredRowAsync(id);
         Assert.AreEqual("Renamed here", row.Name);
         Assert.AreEqual(PropertyType.MultipleChoice, row.Type);
+    }
+
+    [TestMethod]
+    public async Task AnEntityTheBatchWrote_IsJudgedByWhatItWrote()
+    {
+        // An update, then a delete of the same property: the delete's expected hash is checked against the row the
+        // update wrote, never the batch's first read of it.
+        var id = await AddAsync("Genre", PropertyType.MultipleChoice, Choices(("a", "Action")));
+        var local = await ReadOneAsync(id);
+        var merged = (CustomPropertyContentV1) Codec.ReadLocal(local.Content) with { Name = "Genres" };
+        var afterUpdate = ContentHash.Of(Codec.Write(merged));
+
+        var stale = await ApplyAsync(Update("u", id, local, merged),
+            new DeleteEntityOperation("d", Key(id), ContentHash.Of(local.Content)));
+        CollectionAssert.AreEqual(new[] { "d" }, stale.ChangedDuringApplyItemIds.ToArray());
+        Assert.AreEqual("Genres", (await StoredRowAsync(id)).Name, "the update applied, the delete did not");
+
+        var current = await ReadOneAsync(id);
+        var renamed = (CustomPropertyContentV1) Codec.ReadLocal(current.Content) with { Name = "Moods" };
+        var fresh = await ApplyAsync(Update("u2", id, current, renamed),
+            new ChangeSubtypeOperation("t", Key(id), ContentHash.Of(Codec.Write(renamed)), nameof(PropertyType.SingleChoice)),
+            new DeleteEntityOperation("d2", Key(id), afterUpdate));
+        CollectionAssert.AreEqual(new[] { "d2" }, fresh.ChangedDuringApplyItemIds.ToArray(),
+            "the subtype change applied to the renamed row; the delete expected the first update's");
+        var row = await StoredRowAsync(id);
+        Assert.AreEqual("Moods", row.Name);
+        Assert.AreEqual(PropertyType.SingleChoice, row.Type);
+
+        var converted = await ReadOneAsync(id);
+        var both = await ApplyAsync(Update("u3", id, converted,
+                (CustomPropertyContentV1) Codec.ReadLocal(converted.Content) with { Name = "Last" }),
+            new DeleteEntityOperation("d3", Key(id),
+                ContentHash.Of(Codec.Write((CustomPropertyContentV1) Codec.ReadLocal(converted.Content) with { Name = "Last" }))));
+        Assert.AreEqual(0, both.ChangedDuringApplyItemIds.Count);
+        Assert.AreEqual(0, (await Properties.GetAllDbModels(r => r.Id == id)).Count, "deleted after its update");
     }
 
     [TestMethod]
@@ -702,7 +794,7 @@ public class CustomPropertyDataSyncKindTests
         await Kind.DeleteAsync(Key(id), CancellationToken.None);
 
         var outcome = await ApplyAsync(new CreateEntityOperation("r", EntityKeys.None, "self", 0,
-            preImage["content"]!.AsObject()));
+            preImage["content"]!.AsObject(), FromPreImage: true));
         var recreated = outcome.CreatedLocalKeysByItemId["r"];
         Assert.AreNotEqual(Key(id), recreated, "a new local id");
         Assert.AreEqual(Canon(content), Canon((await Kind.ReadAsync([recreated], CancellationToken.None)).Single().Content));
@@ -744,19 +836,16 @@ public class CustomPropertyDataSyncKindTests
         // Undo of a deletion (§8.11 Recreate): the same ids again, under a new local id.
         await Kind.DeleteAsync(Key(id), CancellationToken.None);
         var outcome = await ApplyAsync(new CreateEntityOperation("r", EntityKeys.None, "self", 0,
-            preImage["content"]!.AsObject()));
+            preImage["content"]!.AsObject(), FromPreImage: true));
         var recreated = (await Kind.ReadAsync([outcome.CreatedLocalKeysByItemId["r"]], CancellationToken.None)).Single();
         Assert.AreEqual(Canon(before.Content), Canon(recreated.Content));
     }
 
     [TestMethod]
-    public async Task Restore_RefusesAPropertyOfAnotherTypeOrOneThatIsGone()
+    public async Task Restore_RefusesAPropertyThatIsGone_AndCapturedOptionsThatDoNotRead()
     {
         var id = await AddAsync("Genre", PropertyType.MultipleChoice, Choices(("a", "Action")));
         var preImage = (await Kind.CapturePreImageAsync([Key(id)], CancellationToken.None))[Key(id)];
-        await Kind.ChangeSubtypeAsync(Key(id), nameof(PropertyType.SingleChoice), CancellationToken.None);
-        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
-            Kind.RestoreAsync(Key(id), preImage, CancellationToken.None));
         await Assert.ThrowsExceptionAsync<KeyNotFoundException>(() =>
             Kind.RestoreAsync("424242", preImage, CancellationToken.None));
 
@@ -769,6 +858,161 @@ public class CustomPropertyDataSyncKindTests
         await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
             Kind.RestoreAsync(Key(other), broken, CancellationToken.None));
         Assert.AreEqual("X", ((CustomPropertyContentV1) Codec.ReadLocal((await ReadOneAsync(other)).Content)).Choices.Single().Label);
+    }
+
+    /// <summary>§8.11: a type change is undone by restoring its pre-image, which converts the property back.</summary>
+    [TestMethod]
+    public async Task RestoringAPreImageOfAnotherType_ConvertsBack_AndEveryValueNamesItsCapturedOption()
+    {
+        var id = await AddAsync("Genre", PropertyType.MultipleChoice,
+            Choices(("a", "Action"), ("c", "Comedy"), ("u", "Unused")));
+        await AddValuesAsync(id, PropertyType.MultipleChoice, (1, new List<string> { "a" }), (2, new List<string> { "c" }),
+            (3, new List<string> { "a" }));
+        var before = await StoredRowAsync(id);
+        var beforeHash = ContentHash.Of((await ReadOneAsync(id)).Content);
+        var preImage = (await Kind.CapturePreImageAsync([Key(id)], CancellationToken.None))[Key(id)];
+
+        var local = await ReadOneAsync(id);
+        await ApplyAsync(new ChangeSubtypeOperation("t", Key(id), ContentHash.Of(local.Content),
+            nameof(PropertyType.SingleChoice)));
+        Assert.AreEqual(PropertyType.SingleChoice, (await StoredRowAsync(id)).Type);
+        _index.Invalidated.Clear();
+
+        await Kind.RestoreAsync(Key(id), preImage, CancellationToken.None);
+        var row = await StoredRowAsync(id);
+        Assert.AreEqual(PropertyType.MultipleChoice, row.Type);
+        Assert.AreEqual(before.Options, row.Options, "the captured options, as stored: ids, colours and the unused one");
+        Assert.AreEqual(beforeHash, ContentHash.Of((await ReadOneAsync(id)).Content));
+        CollectionAssert.AreEquivalent(new[] { "1:a", "2:c", "3:a" }, await ValueIdsAsync(id));
+        CollectionAssert.IsSubsetOf(new[] { 1, 2, 3 }, _index.Invalidated.Distinct().ToArray());
+    }
+
+    [TestMethod]
+    public async Task RestoringAfterALossyConversion_KeepsWhatTheConversionMadeOfAValue()
+    {
+        // A label holding the list separator becomes text and comes back as whatever the conversions make of it: options
+        // the pre-image does not have. They are added to the restored options, so the value still names them (§8.11:
+        // what the first conversion lost stays lost, nothing more).
+        var id = await AddAsync("Genre", PropertyType.MultipleChoice,
+            Choices(("a", "Action"), ("c", "Rock, Pop"), ("u", "Unused")));
+        await AddValuesAsync(id, PropertyType.MultipleChoice, (1, new List<string> { "a" }),
+            (2, new List<string> { "c" }));
+        var preImage = (await Kind.CapturePreImageAsync([Key(id)], CancellationToken.None))[Key(id)];
+        var local = await ReadOneAsync(id);
+        await ApplyAsync(new ChangeSubtypeOperation("t", Key(id), ContentHash.Of(local.Content),
+            nameof(PropertyType.SingleLineText)));
+
+        await Kind.RestoreAsync(Key(id), preImage, CancellationToken.None);
+        var restored = (CustomPropertyContentV1) Codec.ReadLocal((await ReadOneAsync(id)).Content);
+        Assert.AreEqual(PropertyType.MultipleChoice, restored.Type);
+        CollectionAssert.AreEqual(new[] { "a", "c", "u" }, restored.Choices.Take(3).Select(c => c.Uuid).ToArray());
+        var options = restored.Choices.Select(c => c.Uuid!).ToHashSet();
+        var values = await ValueIdsAsync(id);
+        Assert.AreEqual(2, values.Select(v => v.Split(':')[0]).Distinct().Count(), "no value is lost");
+        foreach (var value in values) Assert.IsTrue(options.Contains(value.Split(':')[1]), $"{value} names no option");
+        Assert.IsTrue(values.Contains("1:a"));
+    }
+
+    [TestMethod]
+    [DataRow(nameof(PropertyType.SingleLineText))]
+    [DataRow(nameof(PropertyType.MultipleChoice))]
+    [DataRow(nameof(PropertyType.Tags))]
+    public async Task RestoringAMultilevelPropertyOfAnotherType_EveryValueNamesAnOption(string convertedTo)
+    {
+        var id = await AddAsync("Region", PropertyType.Multilevel, new MultilevelPropertyOptions
+        {
+            Data =
+            [
+                new MultilevelDataOptions
+                {
+                    Value = "n1", Label = "Asia", Children = [new MultilevelDataOptions { Value = "n2", Label = "Japan" }],
+                },
+                new MultilevelDataOptions { Value = "n3", Label = "Europe" },
+            ],
+        });
+        await AddValuesAsync(id, PropertyType.Multilevel, (1, new List<string> { "n2" }), (2, new List<string> { "n3" }),
+            (3, new List<string> { "n1", "n3" }));
+        var preImage = (await Kind.CapturePreImageAsync([Key(id)], CancellationToken.None))[Key(id)];
+        await Kind.ChangeSubtypeAsync(Key(id), convertedTo, CancellationToken.None);
+
+        await Kind.RestoreAsync(Key(id), preImage, CancellationToken.None);
+        var restored = (CustomPropertyContentV1) Codec.ReadLocal((await ReadOneAsync(id)).Content);
+        Assert.AreEqual(PropertyType.Multilevel, restored.Type);
+        var nodes = Codec.ChildrenOf(restored).Select(c => c.Id).ToHashSet();
+        CollectionAssert.IsSubsetOf(new[] { "n1", "n2", "n3" }, nodes.ToArray(), "every captured node, with its id");
+        var values = await ValueIdsAsync(id);
+        foreach (var value in values) Assert.IsTrue(nodes.Contains(value.Split(':')[1]), $"{value} names no node");
+        CollectionAssert.IsSubsetOf(new[] { "2:n3" }, values);
+    }
+
+    [TestMethod]
+    public async Task RestoringAfterALossyConversion_AddsANodeUnderWhatItsPathStillHas()
+    {
+        // "Kyoto/Osaka" holds the level separator: as text and back it is the path Asia / Kyoto / Osaka. Asia is the
+        // captured n1, so Kyoto / Osaka is added below it for the value that names it.
+        var id = await AddAsync("Region", PropertyType.Multilevel, new MultilevelPropertyOptions
+        {
+            Data =
+            [
+                new MultilevelDataOptions
+                {
+                    Value = "n1", Label = "Asia",
+                    Children =
+                    [
+                        new MultilevelDataOptions { Value = "n2", Label = "Japan" },
+                        new MultilevelDataOptions { Value = "n4", Label = "Kyoto/Osaka" },
+                    ],
+                },
+                new MultilevelDataOptions { Value = "n3", Label = "Europe" },
+            ],
+        });
+        await AddValuesAsync(id, PropertyType.Multilevel, (1, new List<string> { "n2" }), (2, new List<string> { "n4" }));
+        var preImage = (await Kind.CapturePreImageAsync([Key(id)], CancellationToken.None))[Key(id)];
+        await Kind.ChangeSubtypeAsync(Key(id), nameof(PropertyType.SingleLineText), CancellationToken.None);
+
+        await Kind.RestoreAsync(Key(id), preImage, CancellationToken.None);
+        var restored = (CustomPropertyContentV1) Codec.ReadLocal((await ReadOneAsync(id)).Content);
+        var nodes = Codec.ChildrenOf(restored).ToDictionary(c => c.Id);
+        CollectionAssert.IsSubsetOf(new[] { "n1", "n2", "n3", "n4" }, nodes.Keys.ToArray());
+        var values = (await ValueIdsAsync(id)).ToDictionary(v => v.Split(':')[0], v => v.Split(':')[1]);
+        Assert.AreEqual("n2", values["1"]);
+        var osaka = nodes[values["2"]];
+        CollectionAssert.AreEqual(new[] { "Asia", "Kyoto", "Osaka" }, osaka.Display.Path!.ToArray());
+        Assert.AreEqual("n1", nodes[osaka.ParentId!].ParentId, "under the captured Asia");
+    }
+
+    [TestMethod]
+    public async Task RestoringTheSameType_PointsValuesAtTheirClass_AndRefusesAnOptionInUseThePreImageLacks()
+    {
+        // Converted back through ChangeSubtypeAsync first: the values name rebuilt options, found by their labels.
+        var id = await AddAsync("Genre", PropertyType.MultipleChoice, Choices(("a", "Action"), ("c", "Comedy")));
+        await AddValuesAsync(id, PropertyType.MultipleChoice, (1, new List<string> { "a" }), (2, new List<string> { "c" }));
+        var before = await StoredRowAsync(id);
+        var preImage = (await Kind.CapturePreImageAsync([Key(id)], CancellationToken.None))[Key(id)];
+        await Kind.ChangeSubtypeAsync(Key(id), nameof(PropertyType.SingleChoice), CancellationToken.None);
+        await Kind.ChangeSubtypeAsync(Key(id), nameof(PropertyType.MultipleChoice), CancellationToken.None);
+        Assert.AreNotEqual(before.Options, (await StoredRowAsync(id)).Options, "ChangeType rebuilt the options (F73)");
+        await AddValuesAsync(id, PropertyType.MultipleChoice, (3, new List<string> { "gone" }));
+
+        await Kind.RestoreAsync(Key(id), preImage, CancellationToken.None);
+        Assert.AreEqual(before.Options, (await StoredRowAsync(id)).Options);
+        // A value that named no option before names none after: left as it is.
+        CollectionAssert.AreEquivalent(new[] { "1:a", "2:c", "3:gone" }, await ValueIdsAsync(id));
+
+        // An option added since and used: the pre-image has nothing of its class, so restoring is refused, and
+        // nothing is written.
+        var mood = await AddAsync("Mood", PropertyType.MultipleChoice, Choices(("h", "Happy")));
+        var moodImage = (await Kind.CapturePreImageAsync([Key(mood)], CancellationToken.None))[Key(mood)];
+        var local = await ReadOneAsync(mood);
+        var content = (CustomPropertyContentV1) Codec.ReadLocal(local.Content);
+        await ApplyAsync(Update("u", mood, local, content with { Choices = [..content.Choices, new("s", "Sad", null)] }));
+        await AddValuesAsync(mood, PropertyType.MultipleChoice, (4, new List<string> { "s" }));
+        var added = await StoredRowAsync(mood);
+
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
+            Kind.RestoreAsync(Key(mood), moodImage, CancellationToken.None));
+        Assert.AreEqual(added, await StoredRowAsync(mood));
+        CollectionAssert.AreEqual(new[] { "4:s" }, await ValueIdsAsync(mood));
     }
 
     // ---- caches and the index after a rollback -------------------------------------------------------
@@ -903,6 +1147,19 @@ public class CustomPropertyDataSyncKindTests
 
     private async Task AddValuesAsync(int propertyId, PropertyType type, params (int ResourceId, object DbValue)[] values) =>
         await Values.AddDbModelRange(values.Select(v => Value(propertyId, type, v.ResourceId, v.DbValue)).ToList());
+
+    /// <summary>Every option id each stored value of a property names, as <c>resource:id</c>.</summary>
+    private async Task<List<string>> ValueIdsAsync(int propertyId)
+    {
+        var dbValueType = (await StoredRowAsync(propertyId)).Type.GetDbValueType();
+        return (await Values.GetAllDbModels(v => v.PropertyId == propertyId)).SelectMany(v =>
+            (v.Value!.DeserializeAsStandardValue(dbValueType) switch
+            {
+                string single => [single],
+                List<string> list => list,
+                _ => new List<string>(),
+            }).Select(option => $"{v.ResourceId}:{option}")).ToList();
+    }
 
     private Task<ApplyBatchOutcome> ApplyAsync(params ApplyOperation[] operations) =>
         Kind.ApplyAsync(new ApplyBatch(DataSyncKindIds.CustomProperty, operations), CancellationToken.None);

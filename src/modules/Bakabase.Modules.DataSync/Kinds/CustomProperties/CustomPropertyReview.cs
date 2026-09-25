@@ -798,9 +798,9 @@ internal sealed class CustomPropertyReview
             var args = new Dictionary<string, string>
             {
                 ["uuid"] = add?.IncomingUuid ?? f.Uuid,
+                ["into"] = f.Into,
                 ["intoLabel"] = f.IntoLabel,
             };
-            if (f.Into is not null) args["into"] = f.Into;
             if (when is not null) args["when"] = when;
             yield return new DataSyncPlanWarning(DataSyncWarningCode.OptionLabelConflict, add?.ChangeId, args);
         }

@@ -15,7 +15,9 @@ namespace Bakabase.Modules.DataSync.Tests.CustomProperties;
 /// not transfer, and <c>Merge3</c> transfers every difference the form keeps. Checked as the closure property
 /// (<c>FastForward</c> ends at the peer's form) and the symmetry property (merging either way without conflicts ends
 /// at one form), over seeded random contents with duplicates, IgnoreCase, <c>null</c>/<c>""</c> tag groups, colours set
-/// and cleared, node moves and renames onto existing keys.
+/// and cleared, node moves and renames onto existing keys — and, on the local side, options this device keeps but never
+/// publishes (§3.3, §3.5): without a uuid, with an empty label, dropped by the reader, and multilevel nodes whose uuid
+/// is gone, with their subtrees.
 /// </summary>
 [TestClass]
 public class Merge3PropertyTests
@@ -57,6 +59,7 @@ public class Merge3PropertyTests
             }
 
             var remote = Peer(remoteRaw);
+            local = new Merge3Generator(7_000_000 + seed).Unpublishable(local, "x");
             var usage = Ids(local).Distinct().ToDictionary(id => id, _ => gen.Usage(), StringComparer.Ordinal);
             var input = new DataSyncMerge3Input(null, local, DataSyncOverlay.None, remote, DataSyncMerge3Mode.FastForward,
                 childMap, false, false, DataSyncLinkMode.TwoWay, true, gen.Winner(), usage,
@@ -67,6 +70,7 @@ public class Merge3PropertyTests
             Assert.AreEqual(Form(remote), PublishedForm(result), trace);
             AssertNothingLost(local, result, trace);
             AssertCandidatesCoverRemovals(input, result, trace);
+            AssertConsistent(local, result, trace);
         }
     }
 
@@ -106,15 +110,22 @@ public class Merge3PropertyTests
         var r = gen.Mutate(@base, "r", gen.Edits());
         var winner = gen.Winner();
         var other = winner == DataSyncMergeSide.Local ? DataSyncMergeSide.Remote : DataSyncMergeSide.Local;
+        // Each side's own unpublished options, drawn apart so the seeds above still merge the contents they failed on.
+        // Each side receives what the other publishes (§3.5), which leaves them out.
+        var extras = new Merge3Generator(8_000_000 + seed);
+        l = extras.Unpublishable(l, "xl");
+        r = extras.Unpublishable(r, "xr");
 
-        var lr = Merge(@base, l, r, winner: winner, deletions: DataSyncChildDeletionMode.Apply);
-        var rl = Merge(@base, r, l, winner: other, deletions: DataSyncChildDeletionMode.Apply);
+        var lr = Merge(@base, l, Published(r), winner: winner, deletions: DataSyncChildDeletionMode.Apply);
+        var rl = Merge(@base, r, Published(l), winner: other, deletions: DataSyncChildDeletionMode.Apply);
         if (lr.TypeChanged || rl.TypeChanged || HasConflict(lr) || HasConflict(rl)) return false;
         var trace = $"seed {seed}\nbase {Canon(@base)}\nl    {Canon(l)}\nr    {Canon(r)}\n" +
                     $"lr   {Canon(Merged(lr))}\nrl   {Canon(Merged(rl))}";
         Assert.AreEqual(PublishedForm(lr), PublishedForm(rl), trace);
         AssertNothingLost(l, lr, trace);
         AssertNothingLost(r, rl, trace);
+        AssertConsistent(l, lr, trace);
+        AssertConsistent(r, rl, trace);
         return true;
     }
 
@@ -128,7 +139,9 @@ public class Merge3PropertyTests
             var @base = Peer(gen.Content(gen.Type(), "b"));
             var l = gen.Mutate(@base, "l", gen.Edits());
             var mode = seed % 3 == 0 ? DataSyncLinkMode.Follow : DataSyncLinkMode.TwoWay;
-            var result = Merge(@base, l, @base, winner: gen.Winner(), mode: mode,
+            var winner = gen.Winner();
+            l = new Merge3Generator(9_000_000 + seed).Unpublishable(l, "x");
+            var result = Merge(@base, l, @base, winner: winner, mode: mode,
                 deletions: DataSyncChildDeletionMode.Apply);
             Assert.AreEqual(Canon(l), Canon(Merged(result)),
                 $"seed {seed}\nbase {Canon(@base)}\nl    {Canon(l)}\n{Outcomes(result)}");
@@ -273,10 +286,17 @@ public class Merge3PropertyTests
         }
     }
 
+    /// <summary>What a device publishes for its local content, with no overlays (§3.5).</summary>
+    private static CustomPropertyContentV1 Published(CustomPropertyContentV1 local) =>
+        (CustomPropertyContentV1)Untyped.Publish(local, DataSyncOverlay.None, false).Content!;
+
     private static bool HasConflict(DataSyncMerge3Result result) =>
         result.Fields.Any(f => f.Resolution is DataSyncFieldResolution.Conflict);
 
-    /// <summary>Every local option stays unless this merge removed it (v3.1 B3, §8.6).</summary>
+    /// <summary>
+    /// Every local option stays unless this merge removed it (v3.1 B3, §8.6). One without a uuid stays too: without one
+    /// still, or holding an option this merge added (<c>AdoptTwins</c>), under its own label.
+    /// </summary>
     private static void AssertNothingLost(CustomPropertyContentV1 local, DataSyncMerge3Result result, string trace)
     {
         var merged = Ids(Merged(result)).ToHashSet(StringComparer.Ordinal);
@@ -284,7 +304,43 @@ public class Merge3PropertyTests
         {
             Assert.IsTrue(merged.Contains(id) || result.RemovedChildIds.Contains(id), $"{id} lost\n{trace}");
         }
+
+        var kept = Options(Merged(result)).Where(o => o.Uuid is null || result.AddedChildIds.Contains(o.Uuid))
+            .Select(o => o.Label).ToList();
+        foreach (var label in Options(local).Where(o => o.Uuid is null).Select(o => o.Label))
+        {
+            Assert.IsTrue(kept.Remove(label), $"an option without a uuid, \"{label}\", lost\n{trace}");
+        }
     }
+
+    /// <summary>
+    /// A result that agrees with itself: every added id and every child map target is an option of the merged content,
+    /// and every default value ref names one (§3.2: the engine never writes a dangling id) — except a local ref that
+    /// named nothing already, which is local data and kept as it is.
+    /// </summary>
+    private static void AssertConsistent(CustomPropertyContentV1 local, DataSyncMerge3Result result, string trace)
+    {
+        var merged = Merged(result);
+        var ids = Ids(merged).ToHashSet(StringComparer.Ordinal);
+        foreach (var id in result.AddedChildIds)
+            Assert.IsTrue(ids.Contains(id), $"the added {id} is not in the result\n{trace}");
+        foreach (var (peerId, localId) in result.ChildMap)
+            Assert.IsTrue(ids.Contains(localId), $"{peerId} maps to {localId}, which is not in the result\n{trace}");
+        var localIds = Ids(local).ToHashSet(StringComparer.Ordinal);
+        var danglingHere = local.DefaultValue.Select(r => r.Uuid).Where(u => !localIds.Contains(u))
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var optionRef in merged.DefaultValue.Where(r => !danglingHere.Contains(r.Uuid)))
+            Assert.IsTrue(ids.Contains(optionRef.Uuid), $"the default {optionRef.Uuid} names nothing\n{trace}");
+    }
+
+    /// <summary>Every option of a content, pre-order: its uuid (null without one) and its label (a tag's name).</summary>
+    private static IEnumerable<(string? Uuid, string Label)> Options(CustomPropertyContentV1 content) =>
+        content.Choices.Select(c => (c.Uuid, c.Label))
+            .Concat(content.Tags.Select(t => (t.Uuid, t.Name)))
+            .Concat(Flatten(content.Nodes).Select(n => (n.Uuid, n.Label)));
+
+    private static IEnumerable<CustomPropertyNodeV1> Flatten(IEnumerable<CustomPropertyNodeV1> nodes) =>
+        nodes.SelectMany(n => Flatten(n.Children).Prepend(n));
 
     private static void AssertCandidatesCoverRemovals(DataSyncMerge3Input input, DataSyncMerge3Result result, string trace)
     {
@@ -381,6 +437,55 @@ internal sealed class Merge3Generator(int seed)
         return FromNodes(content, roots);
     }
 
+    /// <summary>
+    /// <paramref name="content"/> with options a device keeps but never publishes (§3.3) put in at random places: without
+    /// a uuid (a label other options have, so a peer's class may meet it), an empty label with or without a uuid, one
+    /// with a uuid the reader drops (a colour past its limit), and for multilevel a node whose uuid is gone, which
+    /// withholds its subtree. New uuids start with <paramref name="prefix"/>. A quarter of the contents stay as they are.
+    /// </summary>
+    public CustomPropertyContentV1 Unpublishable(CustomPropertyContentV1 content, string prefix)
+    {
+        if (!CustomPropertyTypes.IsReference(content.Type)) return content;
+        var roots = ToNodes(content);
+        for (var i = _rng.Next(4); i > 0; i--)
+        {
+            var all = All(roots).ToList();
+            MNode added;
+            switch (_rng.Next(6))
+            {
+                case 2:
+                    added = new MNode
+                    {
+                        Id = _rng.Next(2) == 0 ? null : prefix + (_next++).ToString(CultureInfo.InvariantCulture),
+                        Label = "", Color = Pick(Colors),
+                    };
+                    break;
+                case 4:
+                    // A colour past the reader's limit: kept here, dropped by the reader, so never published.
+                    added = new MNode
+                    {
+                        Id = prefix + (_next++).ToString(CultureInfo.InvariantCulture), Label = Pick(Labels),
+                        Color = new string('c', 65),
+                    };
+                    break;
+                case 3 when content.Type == PropertyType.Multilevel && all.Count > 0:
+                    Pick(all).Id = null;
+                    continue;
+                default:
+                    added = new MNode { Id = null, Label = Pick(Labels), Color = Pick(Colors) };
+                    break;
+            }
+
+            if (content.Type == PropertyType.Tags) added.Group = Pick(Groups);
+            var siblings = content.Type == PropertyType.Multilevel && all.Count > 0 && _rng.Next(2) == 0
+                ? Pick(all).Children
+                : roots;
+            siblings.Insert(_rng.Next(siblings.Count + 1), added);
+        }
+
+        return FromNodes(content, roots);
+    }
+
     /// <summary>Every option id prefixed; <paramref name="childMap"/> gets the peer → local entries.</summary>
     public static CustomPropertyContentV1 Reprefix(CustomPropertyContentV1 content, string prefix,
         Dictionary<string, string> childMap)
@@ -388,6 +493,7 @@ internal sealed class Merge3Generator(int seed)
         var roots = ToNodes(content);
         foreach (var node in All(roots))
         {
+            if (node.Id is null) continue;
             childMap[prefix + node.Id] = node.Id;
             node.Id = prefix + node.Id;
         }
@@ -446,15 +552,15 @@ internal sealed class Merge3Generator(int seed)
 
     private static List<MNode> ToNodes(CustomPropertyContentV1 content) => content.Type switch
     {
-        PropertyType.Tags => content.Tags.Select(t => new MNode { Id = t.Uuid!, Label = t.Name, Group = t.Group, Color = t.Color }).ToList(),
+        PropertyType.Tags => content.Tags.Select(t => new MNode { Id = t.Uuid, Label = t.Name, Group = t.Group, Color = t.Color }).ToList(),
         PropertyType.Multilevel => FromTree(content.Nodes),
-        _ => content.Choices.Select(c => new MNode { Id = c.Uuid!, Label = c.Label, Color = c.Color }).ToList(),
+        _ => content.Choices.Select(c => new MNode { Id = c.Uuid, Label = c.Label, Color = c.Color }).ToList(),
     };
 
     private static List<MNode> FromTree(IReadOnlyList<CustomPropertyNodeV1> nodes) =>
         nodes.Select(n =>
         {
-            var node = new MNode { Id = n.Uuid!, Label = n.Label, Color = n.Color };
+            var node = new MNode { Id = n.Uuid, Label = n.Label, Color = n.Color };
             node.Children.AddRange(FromTree(n.Children));
             return node;
         }).ToList();
@@ -471,7 +577,7 @@ internal sealed class Merge3Generator(int seed)
 
     private sealed class MNode
     {
-        public required string Id { get; set; }
+        public required string? Id { get; set; }
         public required string Label { get; set; }
         public string? Group { get; set; }
         public string? Color { get; set; }

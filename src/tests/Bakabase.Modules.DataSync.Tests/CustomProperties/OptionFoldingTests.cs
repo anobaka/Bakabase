@@ -114,6 +114,46 @@ public class OptionFoldingTests
     }
 
     [TestMethod]
+    public void NothingIsFoldedIntoAnOptionWithoutAUuid()
+    {
+        // It is never published: an option folded into it would leave its class out of what this device publishes,
+        // with no id to map to (§3.3). The next option of its class with a uuid is the survivor.
+        var choices = OptionFolding.Fold(Choice("G", true, C(null, "Action"), C("r1", "action"), C("r2", "ACTION")),
+            None);
+        CollectionAssert.AreEqual(new[] { null, "r1" }, choices.Content.Choices.Select(c => c.Uuid).ToArray());
+        CollectionAssert.AreEqual(new[] { new OptionFold("r2", "r1", "action") }, choices.Folds.ToArray());
+
+        var tags = OptionFolding.Fold(Tags("T", true, T(null, null, "Kyoto"), T("r1", "", "KYOTO")), None);
+        CollectionAssert.AreEqual(new[] { null, "r1" }, tags.Content.Tags.Select(t => t.Uuid).ToArray());
+        Assert.AreEqual(0, tags.Folds.Count);
+
+        var tree = OptionFolding.Fold(Tree("R", true, N(null, "Asia", N("j1", "Japan")), N("n2", "ASIA", N("j2", "japan"))),
+            None);
+        Assert.AreEqual(Canon(Tree("R", true, N(null, "Asia", N("j1", "Japan")), N("n2", "ASIA", N("j2", "japan")))),
+            Canon(tree.Content));
+        Assert.AreEqual(0, tree.Folds.Count);
+    }
+
+    [TestMethod]
+    public void OnlyWhatMayAbsorbIsASurvivor()
+    {
+        // A merge lets only published options take others in: here the stored "Action" may not, so the new "action"
+        // stays and takes in the later "ACTION".
+        var content = Choice("G", true, C("a", "Action"), C("b", "action"), C("c", "ACTION"));
+        var stored = content.Choices[0];
+        var result = OptionFolding.Fold(content, new HashSet<string> { "a" },
+            mayAbsorb: o => !ReferenceEquals(o, stored));
+        CollectionAssert.AreEqual(new[] { "a", "b" }, result.Content.Choices.Select(c => c.Uuid).ToArray());
+        CollectionAssert.AreEqual(new[] { new OptionFold("c", "b", "action") }, result.Folds.ToArray());
+
+        // Nodes are asked by their records, at every level.
+        var japan = N("j1", "Japan");
+        var tree = Tree("R", true, N("n1", "Asia", japan), N("n2", "ASIA", N("j2", "japan")));
+        var nodes = OptionFolding.Fold(tree, None, mayAbsorb: o => !ReferenceEquals(o, japan));
+        Assert.AreEqual(Canon(Tree("R", true, N("n1", "Asia", N("j1", "Japan"), N("j2", "japan")))), Canon(nodes.Content));
+    }
+
+    [TestMethod]
     public void OnlyTheTypesOwnListFolds()
     {
         var odd = new CustomPropertyContentV1

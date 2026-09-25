@@ -413,7 +413,7 @@ public class Merge3ChildTests
 
 /// <summary>
 /// §8.5.4 step 0: overlay children (<c>LocalOnlyChildren</c>, <c>HeldChildren</c>) are invisible to merging and always
-/// stay in <c>Merged</c>, since the adapter's <c>Put</c> writes back exactly that list; and the one release.
+/// stay in <c>Merged</c>, since the adapter's update writes back exactly that list; and the one release.
 /// </summary>
 [TestClass]
 public class MergeKeepsOverlayChildrenTests

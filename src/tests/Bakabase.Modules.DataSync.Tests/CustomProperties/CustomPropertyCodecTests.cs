@@ -491,5 +491,12 @@ public class CustomPropertyCodecTests
         // Other ids, other order, a duplicate and another casing under IgnoreCase: the same comparison form.
         Assert.AreEqual(DataSyncNaturalMatch.Identical,
             Codec.MatchNatural(Choice("Genre", true, C("9", "drama"), C("8", "Action", "#f00"), C("7", "ACTION")), genre));
+
+        // The local side as this device publishes it (§3.5), as its SharedHash is computed: options it never publishes
+        // count for nothing, and a property it holds at source is never Identical.
+        var unpublished = genre with { Choices = [..genre.Choices, C(null, "No id"), C("3", ""), C("4", "Long", new string('c', 65))] };
+        Assert.AreEqual(DataSyncNaturalMatch.Identical, Codec.MatchNatural(genre, unpublished));
+        var tooMany = new CustomPropertyCodec(DataSyncLimits.Default with { MaxOptionsPerProperty = 1 });
+        Assert.AreEqual(DataSyncNaturalMatch.Exact, tooMany.MatchNatural(genre with { Choices = [C("1", "Action", "#f00")] }, genre));
     }
 }

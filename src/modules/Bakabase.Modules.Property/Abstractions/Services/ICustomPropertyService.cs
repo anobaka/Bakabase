@@ -40,9 +40,11 @@ public interface ICustomPropertyService
 
     /// <summary>
     /// <see cref="AddRange(CustomPropertyAddOrPutDto[])"/> and <see cref="Put"/> storing the options exactly as given:
-    /// case-variant duplicates under IgnoreCase are not folded. Only for options that were stored so before — data
-    /// sync writes a captured row back with them (undo, §8.11), and such a row may hold duplicates the normalizer
-    /// would fold, stored before IgnoreCase was switched on (F72).
+    /// case-variant duplicates under IgnoreCase are not folded. Only for options that are already what should be
+    /// stored. Data sync writes a captured row back with them (undo, §8.11), which may hold duplicates the normalizer
+    /// would fold, stored before IgnoreCase was switched on (F72); and it writes a merge result with
+    /// <see cref="PutVerbatim"/>, which it folded as the normalizer folds an edit, except that it never folds a choice
+    /// stored without an id — the normalizer reads one with a fresh random id on each side and would fold it away.
     /// </summary>
     Task<List<CustomProperty>> AddRangeVerbatim(CustomPropertyAddOrPutDto[] models);
 

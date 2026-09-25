@@ -10,8 +10,9 @@ namespace Bakabase.Modules.DataSync.Kinds.CustomProperties;
 /// <summary>
 /// <c>Merge3</c> of one custom property (§8.5): the subtype first (§8.5.6), then the scalar paths (§8.5.2), the
 /// children (<see cref="ChildMerge3"/>, §8.5.4 with §8.5.5's colours) and <c>defaultValue</c>, translated through the
-/// class map (step 9). The result is folded as the service will fold it (<see cref="OptionFolding"/>, every local id
-/// preserved), so it lists exactly what a <c>Put</c> stores.
+/// class map (step 9). The result is folded as the service folds an edit (<see cref="OptionFolding"/>, every local id
+/// preserved; an option without an id takes no part), and the adapter stores it exactly as it is (<c>PutVerbatim</c>),
+/// so it lists exactly what is stored.
 /// </summary>
 /// <remarks>
 /// <c>orderKey</c> and the preserved unknown members (§8.9) are not content: they travel beside it, and the merger
@@ -44,6 +45,10 @@ internal sealed class CustomPropertyMerge
     private CustomPropertySettingsV1? _settings;
     private bool _settingsChanged;
     private bool _childrenForcedNoBase;
+
+    // What the local refs are resolved against (LocalOptionOf).
+    private HashSet<string>? _localUuids;
+    private CustomPropertyContentV1? _publishedLocal;
 
     public CustomPropertyMerge(CustomPropertyCodec codec, CustomPropertyContentV1? baseContent,
         CustomPropertyContentV1 local, CustomPropertyContentV1 remote, DataSyncMerge3Input input,
@@ -94,25 +99,37 @@ internal sealed class CustomPropertyMerge
                 ChildListKind.Tags => merged with { Tags = ChildNode.ToTags(outcome.Roots) },
                 _ => merged with { Nodes = ChildNode.ToNodes(outcome.Roots) },
             };
-            merged = merged with { DefaultValue = MergeDefaultValue(children, merged) };
+            merged = merged with { DefaultValue = MergeDefaultValue(children, merged, HiddenAfter(outcome)) };
         }
 
-        // What the service folds when it stores the result (F72): only adds, never a stored id.
+        // What the service folds in an edit (F72): only adds, never a stored id. The adapter stores the result as it
+        // is, so this is the one fold, and nothing is folded into an option this device does not publish (§3.3, §3.5):
+        // the class would be left out of what it publishes.
         IReadOnlyDictionary<string, string> childMap = outcome?.ChildMap ?? new Dictionary<string, string>(_input.ChildMap);
         IReadOnlyList<string> added = outcome?.Added ?? [];
         if (CustomPropertyTypes.IsReference(merged.Type) && merged.IgnoreCase == true)
         {
-            var fold = OptionFolding.Fold(merged, AllUuids(_local), ignoreCase: true);
+            var preserved = AllUuids(_local);
+            var fold = OptionFolding.Fold(merged, preserved, ignoreCase: true);
+            if (fold.Folds.Count > 0 && children is not null && outcome is not null)
+            {
+                // Fewer survivors never fold more: without folds, there is nothing to look at.
+                var published = PublishedOptions(merged, HiddenAfter(outcome), children.Kind);
+                fold = OptionFolding.Fold(merged, preserved, ignoreCase: true, published.Contains);
+            }
+
             if (fold.Folds.Count > 0)
             {
-                merged = children is null ? fold.Content : KeepClassColours(merged, fold.Content, children.Kind);
+                merged = children is null || outcome is null
+                    ? fold.Content
+                    : KeepClassColours(merged, fold.Content, children.Kind, HiddenAfter(outcome));
                 childMap = childMap.ToDictionary(p => p.Key, p => fold.Aliases.GetValueOrDefault(p.Value, p.Value),
                     StringComparer.Ordinal);
                 added = added.Where(id => !fold.Aliases.ContainsKey(id)).ToArray();
                 foreach (var f in fold.Folds)
                 {
-                    var args = new Dictionary<string, string> { ["uuid"] = f.Uuid, ["intoLabel"] = f.IntoLabel };
-                    if (f.Into is not null) args["into"] = f.Into;
+                    var args = new Dictionary<string, string>
+                        { ["uuid"] = f.Uuid, ["into"] = f.Into, ["intoLabel"] = f.IntoLabel };
                     _warnings.Add(new DataSyncPlanWarning(DataSyncWarningCode.OptionLabelConflict, null, args));
                 }
             }
@@ -270,26 +287,84 @@ internal sealed class CustomPropertyMerge
         var settings = new ChildMergeSettings(kind, _ignoreCase == true, rules, _input.Mode, _input.LocalLastEditorIsSelf,
             _input.AppearanceWinner, _input.ChildMap, _input.LocalOverlay, _input.ChildDeletions, _policy);
         var baseRoots = rules != ChildMergeRules.NoBase && _base is not null ? ChildNode.Of(_base, kind) : null;
-        var engine = new ChildMerge3(settings, ChildNode.Of(_local, kind), PublishedRoots(kind), ChildNode.Of(_remote, kind),
-            baseRoots);
+        var hidden = _input.LocalOverlay.HiddenChildIds.ToHashSet(StringComparer.Ordinal);
+        var engine = new ChildMerge3(settings, ChildNode.Of(_local, kind), PublishedRoots(_local, hidden, kind),
+            ChildNode.Of(_remote, kind), baseRoots);
         return new ChildPlan(kind, rules, engine);
     }
 
-    /// <summary>
-    /// This device's list as it publishes it (§3.5 steps 1, 3 and 4): overlays and options without an id or a label out,
-    /// then the reader's own per-option rules. Entity-level rules are not the children's business: the name, settings
-    /// and default value are neutralized and the option limit lifted.
-    /// </summary>
-    private List<ChildNode> PublishedRoots(ChildListKind kind)
+    /// <summary>The overlay children after the merge: the local ones, less the released holds, plus the new holds.</summary>
+    private HashSet<string> HiddenAfter(ChildMergeOutcome outcome)
     {
         var hidden = _input.LocalOverlay.HiddenChildIds.ToHashSet(StringComparer.Ordinal);
-        var probe = _local with { Name = "n", Settings = null, DefaultValue = [], ChildrenLocal = false };
+        hidden.ExceptWith(outcome.Released);
+        hidden.UnionWith(outcome.Held);
+        return hidden;
+    }
+
+    /// <summary>A list as this device publishes it: <see cref="PublishedOptionsOf"/>'s.</summary>
+    private List<ChildNode> PublishedRoots(CustomPropertyContentV1 content, IReadOnlySet<string> hidden,
+        ChildListKind kind) => ChildNode.Of(PublishedOptionsOf(content, hidden), kind);
+
+    /// <summary>
+    /// The options of a content as this device publishes them (§3.5 steps 1, 3 and 4): <paramref name="hidden"/>
+    /// (overlays) and options without an id or a label out, then the reader's own per-option rules. Entity-level rules
+    /// are not the children's business: the name, settings and default value are neutralized and the option limit
+    /// lifted; the type and IgnoreCase are kept.
+    /// </summary>
+    private CustomPropertyContentV1 PublishedOptionsOf(CustomPropertyContentV1 content, IReadOnlySet<string> hidden)
+    {
+        var probe = content with { Name = "n", Settings = null, DefaultValue = [], ChildrenLocal = false };
         var stepped = CustomPropertyCodec.RemoveChildren(probe,
             (uuid, label) => string.IsNullOrEmpty(uuid) || label.Length == 0 || hidden.Contains(uuid),
             static (_, _, _) => { });
         var read = _codec.Read(CustomPropertyJson.Write(stepped),
             _codec.Limits with { MaxOptionsPerProperty = int.MaxValue });
-        return read.Content is CustomPropertyContentV1 published ? ChildNode.Of(published, kind) : [];
+        return read.Content as CustomPropertyContentV1 ?? probe with { Choices = [], Tags = [], Nodes = [] };
+    }
+
+    /// <summary>
+    /// The options of <paramref name="content"/> this device publishes (§3.5), by instance: the published list is the
+    /// content's with some options left out, in the same order, so a greedy walk finds them (the reader keeps the first
+    /// of a repeated id).
+    /// </summary>
+    private HashSet<object> PublishedOptions(CustomPropertyContentV1 content, IReadOnlySet<string> hidden,
+        ChildListKind kind)
+    {
+        var options = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        var published = PublishedRoots(content, hidden, kind);
+        switch (kind)
+        {
+            case ChildListKind.Choices:
+                Align(content.Choices, published, (c, n) => Same(c.Uuid, c.Label, null, c.Color, n), _ => []);
+                break;
+            case ChildListKind.Tags:
+                Align(content.Tags, published, (t, n) => Same(t.Uuid, t.Name, t.Group, t.Color, n), _ => []);
+                break;
+            default:
+                Align(content.Nodes, published, (x, n) => Same(x.Uuid, x.Label, null, x.Color, n), x => x.Children);
+                break;
+        }
+
+        return options;
+
+        void Align<T>(IReadOnlyList<T> level, IReadOnlyList<ChildNode> nodes, Func<T, ChildNode, bool> same,
+            Func<T, IReadOnlyList<T>> childrenOf) where T : notnull
+        {
+            var p = 0;
+            foreach (var option in level)
+            {
+                if (p >= nodes.Count) break;
+                if (!same(option, nodes[p])) continue;
+                options.Add(option);
+                Align(childrenOf(option), nodes[p].Children, same, childrenOf);
+                p++;
+            }
+        }
+
+        static bool Same(string? uuid, string label, string? group, string? color, ChildNode node) =>
+            uuid == node.Uuid && label == node.Label && group == node.Group &&
+            ChildMerge3.NormColor(color) == ChildMerge3.NormColor(node.Color);
     }
 
     // ---- defaultValue (§8.5.2, step 9) --------------------------------------------------------
@@ -300,21 +375,23 @@ internal sealed class CustomPropertyMerge
     /// scalar. The chosen side's refs are translated option by option through the merge; a ref whose option is gone
     /// here is dropped with <see cref="DataSyncWarningCode.DefaultValueRefDropped"/>.
     /// </summary>
-    private IReadOnlyList<OptionRef> MergeDefaultValue(ChildPlan children, CustomPropertyContentV1 merged)
+    /// <param name="hiddenAfter">The overlay children after the merge (<see cref="HiddenAfter"/>).</param>
+    private IReadOnlyList<OptionRef> MergeDefaultValue(ChildPlan children, CustomPropertyContentV1 merged,
+        IReadOnlySet<string> hiddenAfter)
     {
         if (!CustomPropertyTypes.HasDefaultValue(_local.Type) || !CustomPropertyTypes.HasDefaultValue(_remote.Type))
-            return KeepLocalDefault(children.Engine, merged);
+            return KeepLocalDefault(children.Engine, merged, hiddenAfter);
 
         var engine = children.Engine;
         var l = TokenSet(_local.DefaultValue
-            .Select(x => CustomPropertyRefs.Resolve(_local, x)?.Uuid)
+            .Select(LocalOptionOf)
             .Select(u => u is null ? null : engine.Token(engine.LocalTarget(u))));
         var r = TokenSet(Resolved(_remote).Select(u => engine.Token(engine.RemoteTarget(u))));
         string? b = null;
         if (children.Rules == ChildMergeRules.ThreeWay && _base is not null)
             b = TokenSet(Resolved(_base).Select(u => engine.Token(engine.BaseTarget(u))));
 
-        if (l == r) return KeepLocalDefault(engine, merged);
+        if (l == r) return KeepLocalDefault(engine, merged, hiddenAfter);
         var mode3 = _input.Mode3 == DataSyncMerge3Mode.Convert
             ? DataSyncMerge3Mode.Convert
             : children.Rules switch
@@ -326,7 +403,7 @@ internal sealed class CustomPropertyMerge
         var resolution = Decide(mode3, DefaultValuePath, b, l, r);
         var result = ChildMerge3.TakesRemote(resolution)
             ? TranslateRemoteDefault(engine, merged)
-            : KeepLocalDefault(engine, merged);
+            : KeepLocalDefault(engine, merged, hiddenAfter);
         AddField(DefaultValuePath, resolution, _base is null ? null : DefaultDisplay(_base.DefaultValue),
             DefaultDisplay(_local.DefaultValue), DefaultDisplay(_remote.DefaultValue), DefaultDisplay(result));
         return result;
@@ -356,16 +433,19 @@ internal sealed class CustomPropertyMerge
     /// The local refs, less those whose option this merge removed. A ref is kept as it is while it still names the
     /// same, unchanged option; one to a renamed or moved option is rebuilt from the merged content. A ref that names no
     /// option here is kept as it is, unless it would name one after the merge (by id, label or path): it never meant
-    /// that one.
+    /// that one. What a ref names by label or path is judged as this device publishes, before and after (§3.5).
     /// </summary>
-    private IReadOnlyList<OptionRef> KeepLocalDefault(ChildMerge3 engine, CustomPropertyContentV1 merged)
+    private IReadOnlyList<OptionRef> KeepLocalDefault(ChildMerge3 engine, CustomPropertyContentV1 merged,
+        IReadOnlySet<string> hiddenAfter)
     {
         var refs = new List<OptionRef>();
+        HashSet<string>? mergedUuids = null;
+        CustomPropertyContentV1? publishedAfter = null;
         foreach (var optionRef in _local.DefaultValue)
         {
-            if (CustomPropertyRefs.Resolve(_local, optionRef)?.Uuid is not { } uuid)
+            if (LocalOptionOf(optionRef) is not { } uuid)
             {
-                if (CustomPropertyRefs.Resolve(merged, optionRef) is null) refs.Add(optionRef);
+                if (MergedOptionOf(optionRef) is null) refs.Add(optionRef);
                 else _warnings.Add(CustomPropertyCodec.Warning(DataSyncWarningCode.DefaultValueRefDropped, ("uuid", optionRef.Uuid)));
                 continue;
             }
@@ -377,12 +457,33 @@ internal sealed class CustomPropertyMerge
             }
 
             var after = CustomPropertyRefs.RefFor(merged, uuid);
-            var same = CustomPropertyRefs.Resolve(merged, optionRef)?.Uuid == uuid &&
-                       Equals(CustomPropertyRefs.RefFor(_local, uuid), after);
+            var same = MergedOptionOf(optionRef) == uuid && Equals(CustomPropertyRefs.RefFor(_local, uuid), after);
             refs.Add(same || after is null ? optionRef : after);
         }
 
         return refs.SequenceEqual(_local.DefaultValue) ? _local.DefaultValue : refs;
+
+        // What a ref names after the merge, the way LocalOptionOf judges it before.
+        string? MergedOptionOf(OptionRef optionRef)
+        {
+            mergedUuids ??= AllUuids(merged);
+            if (mergedUuids.Contains(optionRef.Uuid)) return optionRef.Uuid;
+            publishedAfter ??= PublishedOptionsOf(merged, hiddenAfter);
+            return CustomPropertyRefs.Resolve(publishedAfter, optionRef)?.Uuid;
+        }
+    }
+
+    /// <summary>
+    /// The local option a local ref names: the one with its id, published or not (a default is local data; publishing
+    /// decides what of it travels, §3.5); else what it names by label or path among the options this device publishes,
+    /// as a reader of its record would resolve it; else null.
+    /// </summary>
+    private string? LocalOptionOf(OptionRef optionRef)
+    {
+        _localUuids ??= AllUuids(_local);
+        if (_localUuids.Contains(optionRef.Uuid)) return optionRef.Uuid;
+        _publishedLocal ??= PublishedOptionsOf(_local, _input.LocalOverlay.HiddenChildIds.ToHashSet(StringComparer.Ordinal));
+        return CustomPropertyRefs.Resolve(_publishedLocal, optionRef)?.Uuid;
     }
 
     private IReadOnlyList<OptionRef> Single(List<OptionRef> refs) =>
@@ -399,30 +500,43 @@ internal sealed class CustomPropertyMerge
 
     /// <summary>
     /// Folding keeps every class (a duplicate folds into its class, and a folded node's children into the survivor's),
-    /// but can change which member comes first in a multilevel class, and so the colour the class shows: each class of
-    /// <paramref name="folded"/> gets the colour it had in <paramref name="merged"/> (§8.5.5).
+    /// but can change which member comes first in a multilevel class, and so the colour the class shows: each class
+    /// this device publishes from <paramref name="folded"/> gets the colour it showed as published from
+    /// <paramref name="merged"/> (§8.5.5), on the member that shows it. Only what is published counts (§3.5): an option
+    /// that is not, such as one below a node without an id, shows no colour.
     /// </summary>
-    private static CustomPropertyContentV1 KeepClassColours(CustomPropertyContentV1 merged,
-        CustomPropertyContentV1 folded, ChildListKind kind)
+    private CustomPropertyContentV1 KeepClassColours(CustomPropertyContentV1 merged, CustomPropertyContentV1 folded,
+        ChildListKind kind, IReadOnlySet<string> hidden)
     {
         var colours = new Dictionary<string, string?>(StringComparer.Ordinal);
-        VisitClasses(ChildNode.Of(merged, kind), "", kind,
+        VisitClasses(PublishedRoots(merged, hidden, kind), "", kind,
             (path, rep) => colours.TryAdd(path, ChildMerge3.NormColor(rep.Color)));
-        var roots = ChildNode.Of(folded, kind);
-        var changed = false;
-        VisitClasses(roots, "", kind, (path, rep) =>
+        var recolour = new Dictionary<string, string?>(StringComparer.Ordinal);
+        VisitClasses(PublishedRoots(folded, hidden, kind), "", kind, (path, rep) =>
         {
-            if (!colours.TryGetValue(path, out var colour) || ChildMerge3.NormColor(rep.Color) == colour) return;
-            rep.Color = colour;
-            changed = true;
+            if (colours.TryGetValue(path, out var colour) && ChildMerge3.NormColor(rep.Color) != colour)
+                recolour[rep.Uuid!] = colour;
         });
-        if (!changed) return folded;
+        if (recolour.Count == 0) return folded;
+        var roots = ChildNode.Of(folded, kind);
+        Recolour(roots);
         return kind switch
         {
             ChildListKind.Choices => folded with { Choices = ChildNode.ToChoices(roots) },
             ChildListKind.Tags => folded with { Tags = ChildNode.ToTags(roots) },
             _ => folded with { Nodes = ChildNode.ToNodes(roots) },
         };
+
+        // The published option is the first with its id outside what publishing leaves out (the reader drops a repeat).
+        void Recolour(IEnumerable<ChildNode> level)
+        {
+            foreach (var node in level)
+            {
+                if (string.IsNullOrEmpty(node.Uuid) || node.Label.Length == 0 || hidden.Contains(node.Uuid)) continue;
+                if (recolour.Remove(node.Uuid, out var colour)) node.Color = colour;
+                Recolour(node.Children);
+            }
+        }
     }
 
     /// <summary>Every label class under IgnoreCase (the folded content's), with its key path and representative.</summary>

@@ -9,7 +9,8 @@ internal enum ChildListKind { Choices, Tags, Nodes }
 /// </summary>
 internal sealed class ChildNode(string? uuid, string label, string? group, string? color)
 {
-    public string? Uuid { get; } = uuid;
+    /// <summary>Set once by a merge that stores one of its options in a local option without an id (AdoptTwins).</summary>
+    public string? Uuid { get; set; } = uuid;
     public string Label { get; set; } = label;
 
     /// <summary>A tag's group, exactly as the content holds it (<c>null</c> and <c>""</c> kept apart).</summary>

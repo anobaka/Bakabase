@@ -4,6 +4,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Canonical;
 using Bakabase.Modules.DataSync.Planning;
+using Bakabase.Modules.DataSync.Refs;
 
 namespace Bakabase.Modules.DataSync.Kinds.CustomProperties;
 
@@ -18,8 +19,8 @@ public sealed partial class CustomPropertyCodec
     /// <c>childrenLocal</c> set;</item>
     /// <item>children with an empty uuid or label withheld (§3.3);</item>
     /// <item>the codec's own validated <see cref="DataSyncKindCodec{TContent}.Read"/>: what a reader would drop is left
-    /// out, and an entity a reader would hold is returned with <c>Held</c> and no content (for example Invalid,
-    /// <c>tooManyChildren</c>, past the per-property option limit).</item>
+    /// out, with the <c>defaultValue</c> refs to it, and an entity a reader would hold is returned with <c>Held</c> and
+    /// no content (for example Invalid, <c>tooManyChildren</c>, past the per-property option limit).</item>
     /// </list>
     /// Unknown members (step 5) are merged back by <see cref="DataSyncKindCodec{TContent}.WritePublished"/>.
     /// <c>ChildrenWithheld</c> counts the children left out by steps 1, 3 and 4 (nodes with their descendants); with
@@ -62,8 +63,21 @@ public sealed partial class CustomPropertyCodec
             content = content with { ChildrenLocal = false };
         }
 
-        // Step 4: exactly what a reader accepts.
+        // Step 4: exactly what a reader accepts. A defaultValue ref to an option the reader drops names nothing this
+        // device publishes: it is dropped like a ref to an overlay child, never aimed at another option by its label.
         var read = Read(Write(content), _limits);
+        if (read.Content is CustomPropertyContentV1 validated && content.DefaultValue.Count > 0)
+        {
+            var kept = Uuids(validated);
+            var local = Uuids(content);
+            bool Dropped(OptionRef r) => local.Contains(r.Uuid) && !kept.Contains(r.Uuid);
+            if (content.DefaultValue.Any(Dropped))
+            {
+                content = content with { DefaultValue = content.DefaultValue.Where(r => !Dropped(r)).ToArray() };
+                read = Read(Write(content), _limits);
+            }
+        }
+
         warnings.AddRange(read.Warnings);
         if (read.Held is { } held)
             return new DataSyncPublishable(null, withheld, warnings.ToArray(), held, read.Errors.FirstOrDefault());
@@ -74,6 +88,33 @@ public sealed partial class CustomPropertyCodec
         }
 
         return new DataSyncPublishable(read.Content, withheld, warnings.ToArray());
+    }
+
+    /// <summary>Every option uuid of a content.</summary>
+    private static HashSet<string> Uuids(CustomPropertyContentV1 content)
+    {
+        var uuids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var choice in content.Choices)
+        {
+            if (choice.Uuid is not null) uuids.Add(choice.Uuid);
+        }
+
+        foreach (var tag in content.Tags)
+        {
+            if (tag.Uuid is not null) uuids.Add(tag.Uuid);
+        }
+
+        Walk(content.Nodes);
+        return uuids;
+
+        void Walk(IReadOnlyList<CustomPropertyNodeV1> nodes)
+        {
+            foreach (var node in nodes)
+            {
+                if (node.Uuid is not null) uuids.Add(node.Uuid);
+                Walk(node.Children);
+            }
+        }
     }
 
     /// <summary>

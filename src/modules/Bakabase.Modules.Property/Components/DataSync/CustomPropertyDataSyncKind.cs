@@ -23,10 +23,11 @@ namespace Bakabase.Modules.Property.Components.DataSync;
 
 /// <summary>
 /// The <c>customProperty</c> adapter (v3.1 §2.2, §8.3; §2.3 here): I/O only, next to the service that owns the table.
-/// It reads the stored rows through <see cref="ICustomPropertyService"/>'s cache and writes only through the service —
-/// <c>AddRangeVerbatim</c>, <c>Put</c>, <c>PutVerbatim</c>, <c>SetOrders</c>, <c>ChangeType</c> and <c>RemoveByKey</c> —
-/// on the scope's context, so every write joins the caller's transaction. The pure half (validation, publishing,
-/// comparison, merging) is <see cref="CustomPropertyCodec"/>.
+/// It reads the stored rows through <see cref="ICustomPropertyService"/>'s cache and writes only through the services —
+/// <c>AddRange</c>, <c>AddRangeVerbatim</c>, <c>PutVerbatim</c>, <c>SetOrders</c>, <c>ChangeType</c> and
+/// <c>RemoveByKey</c>, and <see cref="ICustomPropertyValueService"/> for the values a restore points back at their
+/// options — on the scope's context, so every write joins the caller's transaction. The pure half (validation,
+/// publishing, comparison, merging) is <see cref="CustomPropertyCodec"/>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -46,10 +47,11 @@ namespace Bakabase.Modules.Property.Components.DataSync;
 /// row, so content read here never carries it and a written content's <c>childrenLocal</c> is ignored.
 /// </para>
 /// <para>
-/// Derived state (§8.10.6): a type change converts values and a deletion removes them, so both invalidate the search
-/// index for the resources that had values. Renames, adds, removals, recolours and moves need no index work (index
-/// keys are ids). <see cref="ResetCaches"/> drops both services' memory caches after a rollback and invalidates those
-/// resources again, so the index re-reads what the rollback restored.
+/// Derived state (§8.10.6): a type change converts values, a deletion removes them and a restore may point them at
+/// other option ids, so each invalidates the search index for the resources whose values it touched. Renames, adds,
+/// removals, recolours and moves need no index work (index keys are ids). <see cref="ResetCaches"/> drops both
+/// services' memory caches after a rollback and invalidates those resources again, so the index re-reads what the
+/// rollback restored.
 /// </para>
 /// </remarks>
 /// <typeparam name="TDbContext">The context the property services run on (<c>AddProperty&lt;TDbContext&gt;</c>).</typeparam>
@@ -215,13 +217,17 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
     // ---- writing -----------------------------------------------------------------------------
 
     /// <summary>
-    /// Creates, updates, binds, deletes and changes subtypes in batch order (v3.1 §8.3, §8.5.6). Consecutive creates
-    /// are one <c>AddRangeVerbatim</c>, results in input order: a create stores its content as given. A peer's create
-    /// is folded by <c>PrepareCreate</c> before it gets here (v3.1 H4), and a re-created property (undo of a deletion,
-    /// §8.11) keeps every captured option id, case-variant duplicates under IgnoreCase included (F72). An update is a
-    /// <c>Put</c>, whose normalizer folds nothing the merge left: its result is already folded as the service folds
-    /// it. An update, delete or subtype change whose entity is gone, is unreadable or no longer hashes to
-    /// <c>ExpectedLocalHash</c> is skipped as ChangedDuringApply; nothing throws for it. Placement of creates is
+    /// Creates, updates, binds, deletes and changes subtypes in batch order (v3.1 §8.3, §8.5.6). Consecutive creates of
+    /// one origin are one call, results in input order. A peer's create goes through <c>AddRange</c>, which folds what
+    /// the service folds in any new property: nothing, for <c>PrepareCreate</c>'s content (v3.1 H4), which it stores as
+    /// given. A re-created property (undo of a deletion, §8.11, <see cref="CreateEntityOperation.FromPreImage"/>) goes
+    /// through <c>AddRangeVerbatim</c>: it keeps every captured option, case-variant duplicates under IgnoreCase
+    /// included (F72). An update is a <c>PutVerbatim</c>: the merge already folded what the service folds in an edit
+    /// (<see cref="OptionFolding"/>, cross-checked against its normalizer), and a second normalization could only
+    /// diverge — the service would take a local choice without an id for one the edit introduced and fold it away,
+    /// which merges keep (§3.3). An update, delete or subtype change whose entity is gone, is unreadable or no longer
+    /// hashes to <c>ExpectedLocalHash</c> is skipped as ChangedDuringApply; nothing throws for it. An entity the batch
+    /// wrote is read again before a later operation of the batch is checked against it. Placement of creates is
     /// <see cref="ApplyOrderAsync"/>'s, after every batch (§3.7).
     /// </summary>
     public async Task<ApplyBatchOutcome> ApplyAsync(ApplyBatch batch, CancellationToken ct)
@@ -238,17 +244,18 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
             ct.ThrowIfCancellationRequested();
             switch (operations[i])
             {
-                case CreateEntityOperation:
+                case CreateEntityOperation first:
                 {
                     var creates = new List<CreateEntityOperation>();
-                    while (i < operations.Count && operations[i] is CreateEntityOperation create)
+                    while (i < operations.Count && operations[i] is CreateEntityOperation create &&
+                           create.FromPreImage == first.FromPreImage)
                     {
                         creates.Add(create);
                         i++;
                     }
 
                     i--;
-                    var properties = await _properties.AddRangeVerbatim(creates.Select(c =>
+                    var models = creates.Select(c =>
                     {
                         var content = SharedCodec.ReadLocal(c.Content);
                         return new CustomPropertyAddOrPutDto
@@ -256,7 +263,10 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
                             Name = content.Name, Type = content.Type,
                             Options = CustomPropertyContentMapper.ToOptionsJson(content),
                         };
-                    }).ToArray());
+                    }).ToArray();
+                    var properties = first.FromPreImage
+                        ? await _properties.AddRangeVerbatim(models)
+                        : await _properties.AddRange(models);
                     for (var j = 0; j < creates.Count; j++) created[creates[j].ItemId] = KeyOf(properties[j].Id);
                     break;
                 }
@@ -272,7 +282,7 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
                     if (merged.Type != row.Type)
                         throw new InvalidOperationException(
                             $"Custom property {update.LocalKey}: an update never changes the type; a ChangeSubtypeOperation does.");
-                    await _properties.Put(row.Id, new CustomPropertyAddOrPutDto
+                    await _properties.PutVerbatim(row.Id, new CustomPropertyAddOrPutDto
                     {
                         Name = merged.Name, Type = row.Type, Options = CustomPropertyContentMapper.ToOptionsJson(merged),
                     });
@@ -317,11 +327,28 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
     /// <summary>
     /// Writes a captured pre-image back through <c>PutVerbatim</c>: the name and the stored options string, exactly as
     /// captured — case-variant duplicates under IgnoreCase that are no longer stored included, which <c>Put</c> would
-    /// fold (F72).
-    /// <c>CreatedAt</c> and <c>Order</c> are kept. The property must still exist with the captured type: a type change
-    /// is undone by <see cref="ChangeSubtypeAsync"/> first. An unreadable property is never written, and unreadable
+    /// fold (F72). <c>CreatedAt</c> and <c>Order</c> are kept. An unreadable property is never written, and unreadable
     /// captured options are never restored.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// No value is left naming an option the restored options lack (§3.2, the unified miss behaviour would drop it
+    /// silently). A value whose option the pre-image does not have is pointed at the captured option of its label
+    /// class (§3.4: the label under the captured IgnoreCase, a tag's group and name, a node's key path); with none,
+    /// the restore is refused (<see cref="InvalidOperationException"/>) before anything is written — undo does not
+    /// take away an option in use (v3.1 <c>AddedOptionsInUse</c>). A value that names no option already is left as
+    /// it is.
+    /// </para>
+    /// <para>
+    /// A type change is undone here too (§8.11): when the pre-image has another type, the property is converted back
+    /// with <c>ChangeType</c> first (converting its values and invalidating their index entries), which rebuilds its
+    /// options from its values with fresh ids (F73). Every value is then pointed at the captured option of its class;
+    /// one the conversions left without one (its label changed on the way) keeps the option it has, added to the
+    /// restored options — values lost by the first conversion stay lost, and no value dangles. Undo converts back
+    /// through this method, not <see cref="ChangeSubtypeAsync"/>: after that, a restore of the same type would refuse
+    /// such a value instead of keeping it.
+    /// </para>
+    /// </remarks>
     public async Task RestoreAsync(string localKey, JsonObject preImage, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(preImage);
@@ -333,14 +360,34 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
                    throw new ArgumentException("A custom property pre-image has a name.", nameof(preImage));
         var type = (PropertyType) (preImage[PreImageType]?.GetValue<int>() ??
                                    throw new ArgumentException("A custom property pre-image has a type.", nameof(preImage)));
-        if (type != row.Type)
-            throw new InvalidOperationException(
-                $"Custom property {localKey} is {row.Type} now, not {type}: convert it back before restoring it.");
+        if (!CustomPropertyContentMapper.Supports(type))
+            throw new ArgumentException($"A custom property pre-image of type {(int) type} this build does not know.",
+                nameof(preImage));
         var options = preImage[PreImageOptions]?.GetValue<string>();
-        if (CustomPropertyContentMapper.ReadRow(name, type, options).Unreadable)
+        var captured = CustomPropertyContentMapper.ReadRow(name, type, options);
+        if (captured.Unreadable)
             throw new InvalidOperationException($"Custom property {localKey}: the captured options do not read.");
-        await _properties.PutVerbatim(row.Id,
-            new CustomPropertyAddOrPutDto { Name = name, Type = type, Options = options });
+
+        var convertBack = type != row.Type;
+        if (convertBack)
+        {
+            await ChangeTypeAsync(row, type);
+            row = await RowAsync(row.Id) ??
+                  throw new InvalidOperationException($"Custom property {localKey} is gone after its conversion.");
+        }
+
+        var (values, restored) = await PointValuesAtAsync(row, captured.Content, keepUnmatched: convertBack, ct);
+        if (values.Count > 0)
+        {
+            EnsureOk(await _values.UpdateDbModelRange(values), $"point the values of custom property {row.Id} back");
+            Invalidate(values.Select(v => v.ResourceId).Distinct().ToArray());
+        }
+
+        await _properties.PutVerbatim(row.Id, new CustomPropertyAddOrPutDto
+        {
+            Name = name, Type = type,
+            Options = restored is null ? options : CustomPropertyContentMapper.ToOptionsJson(restored),
+        });
     }
 
     /// <summary>Deletes the property and its values (<c>RemoveByKey</c>), then invalidates their resources' index entries.</summary>
@@ -505,6 +552,165 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
             List<string> ids => ids.Where(i => !string.IsNullOrEmpty(i)),
             _ => [],
         };
+    }
+
+    // ---- restoring -----------------------------------------------------------------------------
+
+    /// <summary>
+    /// The values of <paramref name="row"/> that <see cref="RestoreAsync"/> points at <paramref name="captured"/>'s
+    /// options (copies; unchanged values left out), and the options to restore when some had to be added to the
+    /// captured ones (<paramref name="keepUnmatched"/>; null: the captured options as they are).
+    /// </summary>
+    private async Task<(List<CustomPropertyValueDbModel> Values, CustomPropertyContentV1? Restored)> PointValuesAtAsync(
+        CustomPropertyDbModel row, CustomPropertyContentV1 captured, bool keepUnmatched, CancellationToken ct)
+    {
+        if (!PropertySystem.Property.IsReferenceValueType(row.Type)) return ([], null);
+        var ignoreCase = captured.IgnoreCase == true;
+        var current = CustomPropertyContentMapper.ReadRow(row.Name, row.Type, row.Options).Content;
+        var currentKeys = OptionKeys.Of(current, ignoreCase);
+        var restored = captured;
+        var targets = OptionKeys.Of(restored, ignoreCase);
+        var extended = false;
+        var dbValueType = PropertySystem.Property.GetDbValueType(row.Type);
+        var values = await _values.GetAllDbModels(v => v.PropertyId == row.Id, false);
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var value in values)
+        {
+            ct.ThrowIfCancellationRequested();
+            foreach (var id in ReferencedIds(value.Value, dbValueType))
+            {
+                if (targets.Ids.Contains(id) || map.ContainsKey(id)) continue;
+                // A value that names no option already: left as it is.
+                if (!currentKeys.KeyById.TryGetValue(id, out var key)) continue;
+                if (targets.IdByKey.TryGetValue(key, out var target))
+                {
+                    map[id] = target;
+                    continue;
+                }
+
+                if (!keepUnmatched)
+                    throw new InvalidOperationException(
+                        $"Custom property {row.Id}: its values use option {id}, which its pre-image does not have; " +
+                        "restoring it would leave them naming nothing.");
+                restored = WithOptionOf(restored, current, id, ignoreCase);
+                targets = OptionKeys.Of(restored, ignoreCase);
+                extended = true;
+            }
+        }
+
+        var rewritten = new List<CustomPropertyValueDbModel>();
+        if (map.Count > 0)
+        {
+            foreach (var value in values)
+            {
+                if (Rewrite(value.Value, map, dbValueType) is { } serialized) rewritten.Add(value with { Value = serialized });
+            }
+        }
+
+        return (rewritten, extended ? restored : null);
+    }
+
+    /// <summary>A serialized value with its option ids mapped (a list deduplicated), or null when nothing changes.</summary>
+    private static string? Rewrite(string? serialized, IReadOnlyDictionary<string, string> map,
+        StandardValueType dbValueType)
+    {
+        if (string.IsNullOrEmpty(serialized)) return null;
+        switch (serialized.DeserializeAsStandardValue(dbValueType))
+        {
+            case string id when map.TryGetValue(id, out var target):
+                return target.SerializeAsStandardValue(dbValueType);
+            case List<string> ids when ids.Any(map.ContainsKey):
+                return ids.Select(i => map.GetValueOrDefault(i, i)).Distinct(StringComparer.Ordinal).ToList()
+                    .SerializeAsStandardValue(dbValueType);
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// <paramref name="content"/> with <paramref name="current"/>'s option <paramref name="id"/> added at the end of its
+    /// list; a node under the counterpart of its parent's key path, with whatever part of that path is missing.
+    /// </summary>
+    private static CustomPropertyContentV1 WithOptionOf(CustomPropertyContentV1 content, CustomPropertyContentV1 current,
+        string id, bool ignoreCase)
+    {
+        if (current.Choices.FirstOrDefault(c => c.Uuid == id) is { } choice)
+            return content with { Choices = [..content.Choices, choice] };
+        if (current.Tags.FirstOrDefault(t => t.Uuid == id) is { } tag) return content with { Tags = [..content.Tags, tag] };
+        var path = PathTo(current.Nodes, id) ??
+                   throw new InvalidOperationException($"Option {id} is not an option of the property.");
+        return content with { Nodes = Graft(content.Nodes, path, 0) };
+
+        IReadOnlyList<CustomPropertyNodeV1> Graft(IReadOnlyList<CustomPropertyNodeV1> level,
+            IReadOnlyList<CustomPropertyNodeV1> nodes, int depth)
+        {
+            var key = ChildClasses.KeyOf(nodes[depth], ignoreCase);
+            var index = depth == nodes.Count - 1
+                ? -1
+                : level.ToList().FindIndex(n => ChildClasses.KeyOf(n, ignoreCase) == key);
+            if (index < 0) return [..level, Chain(nodes, depth)];
+            var grafted = level.ToArray();
+            grafted[index] = grafted[index] with { Children = Graft(grafted[index].Children, nodes, depth + 1) };
+            return grafted;
+        }
+
+        static CustomPropertyNodeV1 Chain(IReadOnlyList<CustomPropertyNodeV1> nodes, int depth) => nodes[depth] with
+        {
+            Children = depth == nodes.Count - 1 ? [] : [Chain(nodes, depth + 1)],
+        };
+    }
+
+    /// <summary>The nodes from a root down to the first node (pre-order) with <paramref name="id"/>, or null.</summary>
+    private static IReadOnlyList<CustomPropertyNodeV1>? PathTo(IReadOnlyList<CustomPropertyNodeV1> nodes, string id)
+    {
+        foreach (var node in nodes)
+        {
+            if (node.Uuid == id) return [node];
+            if (PathTo(node.Children, id) is { } below) return [node, ..below];
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// A property's options by label class (§3.4): every id, each id's class key (a node's is its key path), and for each
+    /// class key the id of its first member that has one.
+    /// </summary>
+    private sealed record OptionKeys(HashSet<string> Ids, Dictionary<string, string> KeyById,
+        Dictionary<string, string> IdByKey)
+    {
+        public static OptionKeys Of(CustomPropertyContentV1 content, bool ignoreCase)
+        {
+            var keys = new OptionKeys(new HashSet<string>(StringComparer.Ordinal),
+                new Dictionary<string, string>(StringComparer.Ordinal), new Dictionary<string, string>(StringComparer.Ordinal));
+            foreach (var choice in content.Choices) keys.Add(choice.Uuid, ChildClasses.KeyOf(choice, ignoreCase));
+            foreach (var tag in content.Tags)
+            {
+                var key = ChildClasses.KeyOf(tag, ignoreCase);
+                keys.Add(tag.Uuid, key.Group + "\0" + key.Name);
+            }
+
+            Walk(content.Nodes, "");
+            return keys;
+
+            void Walk(IReadOnlyList<CustomPropertyNodeV1> nodes, string parentPath)
+            {
+                foreach (var node in nodes)
+                {
+                    var path = parentPath + "\u0001" + ChildClasses.KeyOf(node, ignoreCase);
+                    keys.Add(node.Uuid, path);
+                    Walk(node.Children, path);
+                }
+            }
+        }
+
+        private void Add(string? id, string key)
+        {
+            if (string.IsNullOrEmpty(id)) return;
+            Ids.Add(id);
+            KeyById.TryAdd(id, key);
+            IdByKey.TryAdd(key, id);
+        }
     }
 
     /// <summary>

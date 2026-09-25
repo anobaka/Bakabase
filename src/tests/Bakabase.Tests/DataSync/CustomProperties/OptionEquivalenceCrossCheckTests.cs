@@ -12,6 +12,7 @@ using Bakabase.Modules.Property.Components.Properties.Tags;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
 using DomainProperty = Bakabase.Abstractions.Models.Domain.Property;
 
 namespace Bakabase.Tests.DataSync.CustomProperties;
@@ -103,6 +104,35 @@ public class OptionEquivalenceCrossCheckTests
                 }, preserved);
             }
         }
+    }
+
+    /// <summary>
+    /// The one difference, pinned (§3.3): a choice stored without an id. The service reads it with a fresh random id
+    /// (<c>ChoiceOptions.Value</c>'s default) on each side of a <c>Put</c>, so its normalizer takes it for one the edit
+    /// introduced and folds it into an earlier option of its class, even when nothing changed. <see cref="OptionFolding"/>
+    /// gives it no part — it is never folded and nothing is folded into it — so a merge keeps it; which is why the
+    /// adapter stores a merge result with <c>PutVerbatim</c>.
+    /// </summary>
+    [TestMethod]
+    public void AChoiceWithoutAnIdIsTheOneDifference()
+    {
+        var content = new CustomPropertyContentV1
+        {
+            Name = "G", Type = PropertyType.MultipleChoice, IgnoreCase = true,
+            Choices = [new("a", "Action", null), new(null, "action", null), new("d", "Drama", null)],
+        };
+        var folded = OptionFolding.Fold(content, new HashSet<string>(StringComparer.Ordinal) { "a", "d" });
+        Assert.AreEqual(0, folded.Folds.Count);
+        CollectionAssert.AreEqual(content.Choices.ToArray(), folded.Content.Choices.ToArray());
+
+        // The same options as the app stores them (no Value at all), put back unchanged.
+        const string stored = """
+            {"IgnoreCase":true,"Choices":[{"Value":"a","Label":"Action"},{"Label":"action"},{"Value":"d","Label":"Drama"}]}
+            """;
+        var options = JsonConvert.DeserializeObject<MultipleChoicePropertyOptions>(stored)!;
+        var previous = JsonConvert.DeserializeObject<MultipleChoicePropertyOptions>(stored)!;
+        ReferencePropertyOptionsNormalizer.Normalize(options, previous);
+        CollectionAssert.AreEqual(new[] { "a", "d" }, options.Choices!.Select(c => c.Value).ToArray(), "folded away");
     }
 
     /// <summary>A few preserved-id sets per list: none (AddRange), all (Put of stored options), and slices.</summary>
