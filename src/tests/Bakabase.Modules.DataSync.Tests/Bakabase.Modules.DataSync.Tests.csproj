@@ -2,4 +2,8 @@
   <ItemGroup>
     <ProjectReference Include="../../modules/Bakabase.Modules.DataSync/Bakabase.Modules.DataSync.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Pages and heads other builds wrote (§13.8), read by VersionSkewFixtureTests. -->
+    <None Update="Fixtures/**/*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

@@ -1,0 +1,25 @@
+{
+  "nodeId": "peer-node",
+  "libraryEpoch": "epoch",
+  "actorId": "0000000000000bee",
+  "contractVersion": 1,
+  "minimumPeerContract": 1,
+  "appVersion": "2.5.0-beta.1",
+  "seq": 12,
+  "kinds": [
+    {
+      "kind": "testItem",
+      "schemaVersion": 2,
+      "maxSeq": 12,
+      "cursorSuperseded": false,
+      "comparisonFormVersion": 1
+    }
+  ],
+  "attention": {
+    "headless": false,
+    "openDecisions": 0,
+    "pausedLinks": 0,
+    "restorePending": false,
+    "awaitingReview": 0
+  }
+}

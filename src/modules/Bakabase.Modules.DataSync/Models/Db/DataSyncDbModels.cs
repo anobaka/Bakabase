@@ -126,6 +126,7 @@ public record DataSyncPeerBaseDbModel
     public DataSyncPendingReason? PendingReason { get; set; }
     public long? PendingEvaluatedLocalSeq { get; set; }    // the entity's local Seq when the pending record was last merged
     public string? PendingFlagsJson { get; set; }          // DataSyncMergeFlags for re-merging it
+    public string? PendingAppliedBaseJson { get; set; }    // DataSyncAppliedBase: what a conflicted merge applied (§8.4 K6)
     public DateTime UpdatedAtUtc { get; set; }
 }
 
