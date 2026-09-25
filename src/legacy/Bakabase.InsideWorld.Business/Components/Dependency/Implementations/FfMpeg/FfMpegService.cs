@@ -101,11 +101,15 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
 
             if (nameAndUrls == null)
             {
-                var runtimeIdentifier = RuntimeInformation.RuntimeIdentifier;
-                var message =
-                    $"Runtime is not supported: {runtimeIdentifier}. Supported runtimes are: {string.Join(',', version.Bin.Keys)}";
-                Logger.LogError(message);
-                throw new NotSupportedException(message);
+                // Not an error: ffbinaries publishes no build for this runtime (e.g. osx-arm64), so there
+                // is nothing to offer. Checking an installed copy for updates must not report a failure
+                // on every visit to the settings page; an explicit install still says why it cannot.
+                return new FfMpegVersion
+                {
+                    Version = NotAvailableVersion,
+                    Description = BuildUnsupportedRuntimeMessage(version),
+                    UnsupportedRuntime = true
+                };
             }
 
             var fv = new FfMpegVersion
@@ -114,11 +118,24 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
                 Version = version.Version,
                 FfMpegUrl = nameAndUrls.FfMpeg,
                 FfProbeUrl = nameAndUrls.FfProbe,
-                FfPlayUrl = nameAndUrls.FfPlay,
-                CanUpdate = string.IsNullOrEmpty(Context.Version) || !Context.Version.Contains(version.Version)
+                FfPlayUrl = nameAndUrls.FfPlay
             };
 
             return fv;
+        }
+
+        /// <summary>The latest version reported when no build is published for this runtime.</summary>
+        private const string NotAvailableVersion = "N/A";
+
+        private static string BuildUnsupportedRuntimeMessage(VersionRsp version) =>
+            $"Runtime is not supported: {RuntimeInformation.RuntimeIdentifier}. Supported runtimes are: {string.Join(',', version.Bin.Keys)}";
+
+        protected override void OnLatestVersionNotInstallable(DependentComponentVersion latestVersion)
+        {
+            if (latestVersion is FfMpegVersion { UnsupportedRuntime: true })
+            {
+                throw new NotSupportedException(latestVersion.Description);
+            }
         }
 
         public string FfProbeExecutable => GetExecutableWithValidation("ffprobe");

@@ -7,5 +7,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
         public string FfMpegUrl { get; set; } = null!;
         public string FfProbeUrl { get; set; } = null!;
         public string? FfPlayUrl { get; set; }
+
+        /// <summary>ffbinaries publishes no build for this runtime; nothing can be installed from it.</summary>
+        public bool UnsupportedRuntime { get; set; }
     }
 }

@@ -310,33 +310,93 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
         public DependentComponentStatus Status { get; protected set; } = DependentComponentStatus.NotInstalled;
 
-        private DependentComponentVersion? _latestVersion;
+        /// <summary>
+        /// How long a looked-up latest version is reused. Opening the settings page must not hit the
+        /// unauthenticated GitHub API (60 requests an hour per IP) every time.
+        /// </summary>
+        protected virtual TimeSpan LatestVersionCacheDuration => TimeSpan.FromHours(1);
+
+        /// <summary>How long a failed lookup is remembered before the next one is tried.</summary>
+        protected virtual TimeSpan LatestVersionFailureCacheDuration => TimeSpan.FromMinutes(5);
+
+        protected virtual TimeProvider Clock => TimeProvider.System;
+
+        private readonly SemaphoreSlim _latestVersionLock = new(1, 1);
+
+        /// <summary>
+        /// The latest version as looked up, and until when it is reused. Its
+        /// <see cref="DependentComponentVersion.CanUpdate"/> is never read: the verdict depends on what
+        /// is installed at the time it is asked for. Replaced as a whole, so readers outside the lock
+        /// never see a version paired with another one's expiry.
+        /// </summary>
+        private CachedLatestVersion? _latestVersion;
+
+        private sealed record CachedLatestVersion(DependentComponentVersion Version, DateTimeOffset ExpiresAt);
 
         public async Task<DependentComponentVersion> GetLatestVersion(bool fromCache, CancellationToken ct)
         {
-            if (!fromCache || _latestVersion == null)
+            var latest = fromCache ? GetFreshLatestVersion() : null;
+            if (latest == null)
             {
+                await _latestVersionLock.WaitAsync(ct);
                 try
                 {
-                    _latestVersion = await GetLatestVersion(ct);
+                    // Another caller may have looked it up while this one waited.
+                    latest = fromCache ? GetFreshLatestVersion() : null;
+                    if (latest == null)
+                    {
+                        try
+                        {
+                            latest = await GetLatestVersion(ct);
+                            StoreLatestVersion(latest, LatestVersionCacheDuration);
+                        }
+                        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                        {
+                            throw;
+                        }
+                        catch (Exception e)
+                        {
+                            const string message = "Failed to look up the latest version of {Component}";
+                            if (IsNetworkException(e))
+                            {
+                                Logger.LogWarning(e, message, DisplayName);
+                            }
+                            else
+                            {
+                                Logger.LogError(e, message, DisplayName);
+                            }
+
+                            latest = DependentComponentVersion.Unknown;
+                            StoreLatestVersion(latest, LatestVersionFailureCacheDuration);
+                        }
+                    }
                 }
-                catch (Exception e)
+                finally
                 {
-                    Logger.LogError(e,
-                        $"An error occurred during getting latest version of dependent component {this.DisplayName}");
-                    _latestVersion = DependentComponentVersion.Unknown;
+                    _latestVersionLock.Release();
                 }
             }
 
-            if (_latestVersion.CanUpdate)
+            // Decided now, against what is installed now; `with` keeps the component's own version type.
+            var installed = Context.Version;
+            return latest with
             {
-                if (Context.Version == _latestVersion.Version)
-                {
-                    _latestVersion.CanUpdate = false;
-                }
-            }
+                CanUpdate = IsAvailableOnCurrentPlatform &&
+                            ComponentVersionComparison.IsUpdateAvailable(installed, latest.Version),
+                InstalledVersionRecognized = string.IsNullOrWhiteSpace(installed) ||
+                                             ComponentVersionComparison.TryParse(installed) != null
+            };
+        }
 
-            return _latestVersion;
+        private DependentComponentVersion? GetFreshLatestVersion()
+        {
+            var cached = Volatile.Read(ref _latestVersion);
+            return cached != null && Clock.GetUtcNow() < cached.ExpiresAt ? cached.Version : null;
+        }
+
+        private void StoreLatestVersion(DependentComponentVersion latest, TimeSpan duration)
+        {
+            Volatile.Write(ref _latestVersion, new CachedLatestVersion(latest, Clock.GetUtcNow() + duration));
         }
 
         public abstract Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct);

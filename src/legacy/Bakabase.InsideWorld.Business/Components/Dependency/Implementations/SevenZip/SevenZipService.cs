@@ -163,8 +163,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Se
             {
                 Description = release.Body,
                 Version = version,
-                DownloadUrl = targetAsset.BrowserDownloadUrl,
-                CanUpdate = string.IsNullOrEmpty(Context.Version) || Context.Version != version
+                DownloadUrl = targetAsset.BrowserDownloadUrl
             };
         }
 
