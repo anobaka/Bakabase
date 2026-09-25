@@ -259,6 +259,33 @@ public class ExtensionGroupCodecTests
     }
 
     [TestMethod]
+    public void AnExtensionAReaderWouldDropIsNeverRemovedByAMerge()
+    {
+        // The service stores any non-blank string with a dot; one a reader would drop (a space, a comma, too long) is
+        // never published, so the peer's set says nothing about it — whatever the mode.
+        const string tooLong = ".abcdefghijklmnopqrstuvwxyz0123456789";
+        var local = ExtensionGroupContentV1.FromLocal("Odd", ["a b", "mkv", "x,y", tooLong]);
+        Assert.IsFalse(ExtensionGroupCodec.IsValidExtension(tooLong, DataSyncLimits.Default));
+
+        var fastForward = Untyped.Merge3(Input(G("Odd", ".mkv"), local, G("Odd", ".mkv", ".mp4"),
+            DataSyncMerge3Mode.FastForward));
+        CollectionAssert.AreEquivalent(new[] { ".a b", ".mkv", ".mp4", ".x,y", tooLong },
+            Merged(fastForward).Extensions.ToArray());
+        Assert.AreEqual(0, fastForward.RemovedChildIds.Count);
+        CollectionAssert.AreEqual(new[] { ".mp4" }, fastForward.AddedChildIds.ToArray());
+
+        var threeWay = Untyped.Merge3(Input(G("Odd", ".mkv"), local, G("Odd")));
+        CollectionAssert.AreEquivalent(new[] { ".a b", ".x,y", tooLong }, Merged(threeWay).Extensions.ToArray(),
+            "the peer removed .mkv; the rest were never its");
+
+        var noBase = Untyped.Merge3(Input(null, local, G("Odd"), DataSyncMerge3Mode.NoBase));
+        Assert.AreEqual(0, noBase.RemovedChildIds.Count);
+
+        // What this device publishes afterwards is the peer's form: closure holds.
+        Assert.AreEqual(PublishedForm(G("Odd", ".mkv", ".mp4")), PublishedForm(fastForward.Merged));
+    }
+
+    [TestMethod]
     public void NoBaseUnitesAndNeverRemoves()
     {
         var result = Untyped.Merge3(Input(null, G("V", ".a", ".b"), G("V", ".b", ".c"), DataSyncMerge3Mode.NoBase));
@@ -329,13 +356,15 @@ public class ExtensionGroupCodecTests
     [TestMethod]
     public void FastForwardClosure()
     {
+        // Local groups also hold extensions a reader would drop: kept by the merge, and left out of what this device
+        // publishes, so the published form still reaches the peer's.
         var random = new Random(3);
         for (var run = 0; run < 2_000; run++)
         {
-            var l = RandomGroup(random);
+            var l = WithUnpublishable(RandomGroup(random), random);
             var r = RandomGroup(random);
             var merged = Untyped.Merge3(Input(RandomGroup(random), l, r, DataSyncMerge3Mode.FastForward)).Merged;
-            Assert.AreEqual(Form(r), Form(merged), $"L={l} R={r}");
+            Assert.AreEqual(Form(r), PublishedForm(merged), $"L={l} R={r}");
         }
     }
 
@@ -360,6 +389,16 @@ public class ExtensionGroupCodecTests
     }
 
     private static string Form(object content) => CanonicalJson.Serialize(Untyped.ComparisonForm(content, null, false));
+
+    /// <summary>The comparison form of what this device publishes for local content (§3.5).</summary>
+    private static string PublishedForm(object content) =>
+        Form(Untyped.Publish(content, DataSyncOverlay.None, false).Content!);
+
+    private static readonly string[] Unpublishable = ["a b", "x,y", "a:b", ".abcdefghijklmnopqrstuvwxyz0123456789"];
+
+    private static ExtensionGroupContentV1 WithUnpublishable(ExtensionGroupContentV1 group, Random random) =>
+        ExtensionGroupContentV1.FromLocal(group.Name,
+            group.Extensions.Concat(Unpublishable.Where(_ => random.Next(3) == 0)));
 
     private static readonly string[] Pool = [".a", ".b", ".c", ".d", ".e", ".f", ".g"];
 

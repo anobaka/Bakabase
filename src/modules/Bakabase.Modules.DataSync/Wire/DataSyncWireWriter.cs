@@ -11,8 +11,8 @@ namespace Bakabase.Modules.DataSync.Wire;
 /// <param name="Pages">Each page's canonical JSON bytes, first page first.</param>
 /// <param name="Records">
 /// The records as written, in page order, as a receiver reassembles them: unchanged, except that a record whose
-/// content cannot travel (a child subtree larger than a page, more than <c>MaxChunksPerEntity</c> chunks) is written
-/// as <c>HeldAtSource = Invalid</c> with no content.
+/// content cannot travel (a child subtree larger than a page, more than <c>MaxChunksPerEntity</c> chunks, a string no
+/// reader can decode) is written as <c>HeldAtSource = Invalid</c> with no content.
 /// </param>
 /// <param name="ContentHash">
 /// The kind content hash over <paramref name="Records"/> (§7.5.2 step 6): the manifest's
@@ -172,6 +172,11 @@ public static class DataSyncWireWriter
             var hash = ContentHash.OfCanonicalBytes(contentBytes);
             if (hash != record.Hash)
                 throw new ArgumentException($"Record {record.Keys[0]}: hash does not match its content.", nameof(record));
+
+            // Local content is never validated, and canonical JSON writes an unpaired surrogate as an escape a reader
+            // parses but cannot decode: such content is withheld, so readers hold that one entity instead of refusing
+            // the whole page at every pull.
+            if (DataSyncWireFormat.HasUnpairedSurrogate(content)) return Held(record, itemCapacity);
 
             if (contentBytes.Length > limits.MaxChunkBytes &&
                 Chunk(record, content, limits, itemCapacity) is { } chunked) return chunked;

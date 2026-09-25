@@ -272,6 +272,14 @@ internal sealed partial class SimNode
                     case CreateEntityOperation create:
                     {
                         var revived = TombstoneOwner(batch.Kind, create.Keys.All[0]);
+                        // §8.11: an undone create comes back only on a link where the person included it again.
+                        if (revived is { TombstoneKind: DataSyncTombstoneKind.UndoneCreate } &&
+                            !link.IncludedUndone.Contains((batch.Kind, revived.Primary)))
+                        {
+                            Violations.Add($"§8.11: {Name} revived {revived.Kind}/{revived.Primary.Value[..6]}, an " +
+                                           $"undone create, on {link} without [Include]");
+                        }
+
                         var row = revived ?? new SimRow { Kind = batch.Kind, LocalKey = "" };
                         row.LocalKey = NewLocalKey();
                         foreach (var key in create.Keys.All.Where(k => !row.Keys.Contains(k)))
@@ -322,8 +330,25 @@ internal sealed partial class SimNode
                     {
                         var target = LiveRow(batch.Kind, delete.LocalKey)!;
                         before[target] = target.Content;
-                        if (!target.CreatedBySync || Db.Values.GetValueOrDefault((batch.Kind, target.LocalKey)) > 0)
-                            Violations.Add($"I4: {Name} deleted {target.Name} by itself (createdBySync {target.CreatedBySync})");
+                        // §8.6, checked here on this node's own state before the apply (not through the policy the
+                        // merger asks): the tombstone the merge took dominates the entity, sync created it, it has
+                        // no values, and no link has an open item, a pending record or a held child of it.
+                        var tombstone = result.Revisions.FirstOrDefault(r =>
+                            r.Kind == batch.Kind && r.LocalKey == delete.LocalKey &&
+                            r.Revision == DataSyncRevisionKind.AcceptRemoteDelete)?.RemoteVv;
+                        var waiting = link.Bases.GetValueOrDefault((batch.Kind, target.Primary))?.Pending;
+                        var unmet = new List<string>();
+                        if (tombstone is null || target.Vv.CompareTo(tombstone) != DataSyncVvRelation.DominatedBy)
+                            unmet.Add("notDominated");
+                        if (!target.CreatedBySync) unmet.Add("notCreatedBySync");
+                        if (Db.Values.GetValueOrDefault((batch.Kind, target.LocalKey)) > 0) unmet.Add("hasValues");
+                        if (HasOpenItem(target)) unmet.Add("openItem");
+                        if (HasPendingRecord(target)) unmet.Add("pendingRecord");
+                        if (target.Overlay.HeldChildren.Count > 0) unmet.Add("heldChildren");
+                        if (link.OnceFlags.DeletionsAsItems || (waiting?.Flags.DeletionsAsItems ?? false))
+                            unmet.Add("deletionsAsItems");
+                        if (unmet.Count > 0)
+                            Violations.Add($"I4: {Name} deleted {target.Name} by itself ({string.Join(",", unmet)})");
                         break;
                     }
                 }

@@ -497,6 +497,53 @@ public partial class MergerTests
     }
 
     [TestMethod]
+    [DataRow(DataSyncLinkMode.Follow, DataSyncLinkMode.TwoWay, DisplayName = "mutual Follow works as TwoWay")]
+    [DataRow(DataSyncLinkMode.Off, null, DisplayName = "copy once on a link that is off")]
+    public void K6_TheEffectiveModeDecidesNotTheSetOne(DataSyncLinkMode mode, DataSyncLinkMode? effective)
+    {
+        // §8.1: a merge runs in the effective mode, and TwoWay for a link that is off. Following the set mode here,
+        // the peer's name would override the local one (FollowTookRemote) instead of asking.
+        var f = new MergeFixture { Mode = mode, EffectiveMode = effective };
+        f.Base(A, f.Record(A, T("Artist"), Vv((Self, 3))));
+        f.Local("1", A, T("作者"), Vv((Self, 4)));
+        f.Pull(f.Record(A, T("Artists"), Vv((Self, 3), (Peer, 1))));
+
+        var r = f.Merge();
+        Assert.AreEqual(0, Ops(r).Count + r.Revisions.Count, "the local name is kept, so nothing changes here");
+        Assert.AreEqual(DataSyncInboxItemType.FieldConflict, r.Inbox.Single().Type);
+        Assert.AreEqual(DataSyncPendingReason.Conflict, BaseOf(r, A).Pending!.Reason);
+        Assert.IsFalse(r.Notes.Any(n => n.Code == DataSyncMergeNoteCodes.FollowOverride));
+    }
+
+    [TestMethod]
+    public void K6_AnEffectiveFollowOnATwoWayLinkTakesThePeersValue()
+    {
+        // The other way round: a restore choice that lets the others win makes the next cycle Follow (§9.5).
+        var f = new MergeFixture { Mode = DataSyncLinkMode.TwoWay, EffectiveMode = DataSyncLinkMode.Follow };
+        f.Base(A, f.Record(A, T("Artist"), Vv((Self, 3))));
+        f.Local("1", A, T("作者"), Vv((Self, 4)));
+        f.Pull(f.Record(A, T("Artists"), Vv((Self, 3), (Peer, 1))));
+
+        var r = f.Merge();
+        Assert.AreEqual(T("Artists"), Items.ReadLocal(((UpdateEntityOperation)Ops(r).Single()).MergedContent));
+        Assert.AreEqual(DataSyncRevisionKind.FollowMerged, r.Revisions.Single().Revision);
+        Assert.AreEqual(0, r.Inbox.Count);
+    }
+
+    [TestMethod]
+    public void K2_UnderAMutualFollowTheEditStillWins()
+    {
+        var f = new MergeFixture { Mode = DataSyncLinkMode.Follow, EffectiveMode = DataSyncLinkMode.TwoWay };
+        f.Local("1", A, T("Mood"), Vv((Peer, 1), (Self, 2)), createdBySync: true);
+        f.ValueCounts[(ItemKind, "1")] = 0;
+        f.Pull(f.Record(A, null, Vv((Peer, 2)), deleted: true));
+
+        var r = f.Merge();
+        Assert.AreEqual(0, Ops(r).Count + r.Inbox.Count, "no deletion and no question here");
+        Assert.AreEqual(DataSyncMergeNoteCodes.EditWinsKept, r.Notes.Single().Code);
+    }
+
+    [TestMethod]
     public void K5_AnInUseChildThePeerDeletedIsHeldAndThePublishedFormEqualsThePeers()
     {
         var f = new MergeFixture();
@@ -579,6 +626,8 @@ public partial class MergerTests
     {
         var f = new MergeFixture();
         var tombstone = f.Tombstone(A, Vv((Peer, 2), (Self, 6)), DataSyncTombstoneKind.UndoneCreate, served: false);
+        // [Include] turned the link's Excluded(Undone) base into an unbound row: the evidence T0 acts on (§8.11).
+        f.Base(A, null, DataSyncBaseState.Unbound);
         var record = f.Pull(f.Record(A, T("Genre", ("1", "A")), Vv((Peer, 2)), orderKey: "a1"));
 
         var r = f.Merge();
@@ -588,6 +637,43 @@ public partial class MergerTests
         Assert.AreEqual(DataSyncRevisionKind.Revive, revision.Revision);
         Assert.AreEqual(tombstone.Vv, revision.TombstoneVv);
         Assert.AreEqual(record, BaseOf(r, A).Record);
+    }
+
+    [TestMethod]
+    [DataRow("live")]
+    [DataRow("edited elsewhere")]
+    [DataRow("held")]
+    [DataRow("deleted")]
+    [DataRow("excluded under another key")]
+    public void T0_AnUndoneCreateStaysExcludedOnALinkWhereItWasNotIncluded(string what)
+    {
+        // Exclusions are per link: a link made after the undo, or one that had no base for it then, has no
+        // Excluded(Undone) row. The record is excluded like row E, whatever it is, and nothing comes back.
+        var f = new MergeFixture();
+        f.Tombstone(A, Vv((Peer, 2), (Self, 6)), DataSyncTombstoneKind.UndoneCreate, served: false, aliases: [C]);
+        if (what == "excluded under another key")
+        {
+            f.Base(A, null, DataSyncBaseState.Excluded, exclusion: DataSyncExclusionReason.Undone,
+                exclusionKeys: [A.Value]);
+        }
+
+        var record = f.Pull(what switch
+        {
+            "edited elsewhere" => f.Record(A, T("Genre 2"), Vv((Peer, 2), (Third, 1)), editedBy: ThirdEditor),
+            "held" => f.Record(A, T("Genre"), Vv((Peer, 3)), schemaVersion: 9),
+            "deleted" => f.Record(A, null, Vv((Peer, 3)), deleted: true),
+            "excluded under another key" => f.Record(B, T("Genre"), Vv((Peer, 3)), aliases: [C]),
+            _ => f.Record(A, T("Genre"), Vv((Peer, 2))),
+        });
+
+        var r = f.Merge();
+        Assert.AreEqual(0, Ops(r).Count + r.Revisions.Count + r.Inbox.Count, "never revived, never asked about");
+        Assert.AreEqual(0, r.TombstonesToServe?.Count ?? 0, "an undone create is never served");
+        var b = BaseOf(r, A);
+        Assert.AreEqual(DataSyncBaseState.Excluded, b.State);
+        Assert.AreEqual(DataSyncExclusionReason.Undone, b.Exclusion);
+        Assert.AreEqual(record, b.Record, "the exclusion takes the record's keys");
+        Assert.IsNull(b.Pending, "no pending record a later merge could take for the person's [Include]");
     }
 
     [TestMethod]
@@ -765,6 +851,39 @@ public partial class MergerTests
         Assert.IsTrue(revision.ResultEqualsRemote);
         Assert.AreEqual(record, BaseOf(r, A, GroupKind).Record);
         Assert.AreEqual(0, r.Inbox.Count);
+    }
+
+    [TestMethod]
+    public void N2_ANameMatchWithADefinitionThatCannotBeReadHoldsTheRecord()
+    {
+        // §3.3: an unreadable definition takes part in no decision; the record may be it, so it waits (as a review
+        // holds it, Held(LocalUnreadable)) instead of being created beside it.
+        var f = new MergeFixture();
+        f.Local("1", A, T("Genre"), Vv((Self, 1)), unreadable: true);
+        f.Pull(f.Record(B, T("Genre", ("p1", "Action")), Vv((Peer, 1))));
+
+        var r = f.Merge();
+        Assert.AreEqual(0, Ops(r).Count + r.Revisions.Count + r.Inbox.Count);
+        var b = BaseOf(r, B);
+        Assert.AreEqual(DataSyncBaseState.Unbound, b.State);
+        Assert.AreEqual(DataSyncPendingReason.Held, b.Pending!.Reason);
+    }
+
+    [TestMethod]
+    public void F_AnIdenticalExtensionGroupTheLostUpdateGuardHoldsIsNotLinkedByItself()
+    {
+        // Row F before the D09 link: the held group takes no peer version, not even by being linked.
+        var f = new MergeFixture();
+        var video = new ExtensionGroupContentV1("Video", [".mkv"]);
+        f.Local("5", A, video, Vv((Self, 1)), kind: GroupKind, publishHeld: true);
+        f.Pull(f.Record(B, video, Vv((Peer, 1)), kind: GroupKind), GroupKind);
+
+        var r = f.Merge();
+        Assert.AreEqual(0, Ops(r).Count + r.Revisions.Count + r.Inbox.Count);
+        Assert.IsFalse(r.BaseUpdates.Any(u => u.Key == A), "the held group gets no base");
+        var b = BaseOf(r, B, GroupKind);
+        Assert.AreEqual(DataSyncBaseState.Unbound, b.State);
+        Assert.AreEqual(DataSyncPendingReason.PublishHeld, b.Pending!.Reason);
     }
 
     [TestMethod]

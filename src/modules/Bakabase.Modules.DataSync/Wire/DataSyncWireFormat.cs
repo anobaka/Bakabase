@@ -176,6 +176,55 @@ public static class DataSyncWireFormat
         return true;
     }
 
+    /// <summary>
+    /// Whether a member name or string value anywhere in <paramref name="node"/> holds an unpaired surrogate. Canonical
+    /// JSON writes one as an escape (<c>\ud800</c>) that a JSON parser accepts and cannot decode into a string.
+    /// </summary>
+    internal static bool HasUnpairedSurrogate(JsonNode? node)
+    {
+        var stack = new Stack<JsonNode?>();
+        stack.Push(node);
+        while (stack.Count > 0)
+        {
+            switch (stack.Pop())
+            {
+                case JsonObject obj:
+                    foreach (var (name, value) in obj)
+                    {
+                        if (HasUnpairedSurrogate(name)) return true;
+                        stack.Push(value);
+                    }
+
+                    break;
+                case JsonArray array:
+                    foreach (var item in array) stack.Push(item);
+                    break;
+                case JsonValue value when value.GetValueKind() == JsonValueKind.String:
+                    if (value.TryGetValue(out string? text) && HasUnpairedSurrogate(text)) return true;
+                    break;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Whether <paramref name="value"/> holds a surrogate that is not half of a pair.</summary>
+    internal static bool HasUnpairedSurrogate(string value)
+    {
+        for (var i = 0; i < value.Length; i++)
+        {
+            if (char.IsHighSurrogate(value[i]) && i + 1 < value.Length && char.IsLowSurrogate(value[i + 1]))
+            {
+                i++;
+                continue;
+            }
+
+            if (char.IsSurrogate(value[i])) return true;
+        }
+
+        return false;
+    }
+
     private static string? ReadRecord(JsonObject json, DataSyncLimits limits, out DataSyncWireRecord? record)
     {
         record = null;

@@ -48,6 +48,32 @@ public class WireWriterTests
     }
 
     [TestMethod]
+    [DataRow("label")]
+    [DataRow("member name")]
+    public void ContentWithTextNoReaderCanDecodeIsHeldAtTheSource(string where)
+    {
+        // Canonical JSON writes an unpaired surrogate as an escape a reader parses and cannot decode. Served as it
+        // was, one such string made every reader refuse the whole page, at every pull.
+        var content = Item("Odd", 2);
+        if (where == "label") ((JsonObject)((JsonArray)content["children"]!)[0]!)["label"] = "a\ud800b";
+        else content["x\udc00"] = 1;
+        var written = DataSyncWireWriter.WriteKind(Snapshot, TestItemCodec.Kind, 0,
+            [Live(1, 1, content), Live(2, 2, Item("Fine", 1))], Small);
+
+        Assert.AreEqual(DataSyncHeldReason.Invalid, written.Records[0].HeldAtSource);
+        Assert.IsNull(written.Records[0].Content);
+        Assert.IsNull(written.Records[1].HeldAtSource);
+        Assert.IsFalse(written.Pages.Any(p => Text(p).Contains("\\ud", StringComparison.OrdinalIgnoreCase)));
+
+        var assembler = Assemble(written.Pages, TestItemCodec.Instance, Small);
+        var staged = assembler.Complete(2, false);
+        Assert.IsNull(assembler.Problem, "the page is read");
+        Assert.AreEqual(DataSyncHeldReason.AtSource, staged.Entities[0].Held, "only that entity waits");
+        Assert.IsNull(staged.Entities[1].Held);
+        Assert.AreEqual(written.ContentHash, assembler.ContentHash);
+    }
+
+    [TestMethod]
     public void BytesAreDeterministicAndCanonical()
     {
         var records = Enumerable.Range(1, 40)

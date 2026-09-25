@@ -363,6 +363,63 @@ public class PlannerTests
     }
 
     [TestMethod]
+    [DataRow("dominated", DisplayName = "the peer never saw this device's deletion")]
+    [DataRow("concurrent", DisplayName = "the peer changed it after this device deleted it")]
+    [DataRow("restored", DisplayName = "the peer restored it after the deletion")]
+    [DataRow("undone", DisplayName = "this device undid its create")]
+    public void ARecordOfSomethingDeletedHereIsNeverCreatedByDefault(string how)
+    {
+        // §8.3: newer local state is never regressed, and the continuous merge never revives by itself (rows T0, T2,
+        // T3): whatever the vectors, a key of a tombstone here asks for an explicit Create or Skip.
+        var f = new PlanFixture();
+        f.Tombstone(3, vv: Vv((Peer, 1), (Self, 5)),
+            tombstoneKind: how == "undone" ? DataSyncTombstoneKind.UndoneCreate : DataSyncTombstoneKind.Deleted);
+        f.Pull(3, T("Revived"), vv: how switch
+        {
+            "concurrent" => Vv((Peer, 2)),
+            "restored" => Vv((Peer, 2), (Self, 5)),
+            _ => Vv((Peer, 1)),
+        });
+
+        var plan = f.Plan();
+        var item = Item(plan, 3);
+        Assert.AreEqual(DataSyncPlanItemType.Create, item.Type);
+        Assert.IsTrue(HasWarning(item, DataSyncWarningCode.PreviouslyDeletedHere));
+        Assert.IsTrue(item.RequiresConfirmation);
+        Assert.IsNull(item.DefaultResolution, "no default to apply with one click");
+        Assert.AreEqual(1, plan.Summary.PendingCount);
+        CollectionAssert.AreEquivalent(new[] { DataSyncPlanResolution.Create, DataSyncPlanResolution.Skip },
+            item.AllowedResolutions.ToArray());
+
+        // Apply with no decision for it: nothing is created.
+        Assert.AreEqual(0, DataSyncPlanner.CompleteDecisions(plan, []).Count);
+        Assert.AreEqual(DataSyncDecisionErrorCode.DecisionMissing,
+            f.Resolve(plan, [], strict: true).Errors.Single().Code);
+        var inTask = f.Resolve(plan, DataSyncPlanner.CompleteDecisions(plan, []), strict: false).Items.Single();
+        Assert.IsNull(inTask.Operation);
+
+        // Created only when the person says so.
+        var created = f.Resolve(plan, [Decide(item, DataSyncPlanResolution.Create)], strict: true).Items.Single();
+        Assert.IsInstanceOfType<CreateEntityOperation>(created.Operation);
+    }
+
+    [TestMethod]
+    public void ANameMatchOfSomethingDeletedHereIsNeverLinkedInBulkOrByItself()
+    {
+        // An identical extension group links by itself (D09), unless the record is of a group deleted here.
+        var f = new PlanFixture();
+        var video = G("Video", ".mkv");
+        f.Local("5", 5, video, GroupKind);
+        f.Tombstone(3, GroupKind);
+        f.Pull(3, video, GroupKind);
+
+        var item = Item(f.Plan(), 3, GroupKind);
+        Assert.AreEqual(DataSyncPlanItemType.Link, item.Type);
+        Assert.IsTrue(item.RequiresConfirmation);
+        Assert.IsFalse(item.BulkLinkEligible);
+    }
+
+    [TestMethod]
     public void AReviewOfThisDevicesOwnDefinitionsSaysSo()
     {
         var f = new PlanFixture();

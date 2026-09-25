@@ -226,7 +226,9 @@ public sealed partial class ExtensionGroupCodec : DataSyncKindCodec<ExtensionGro
     /// removed only when the peer removed it and this device still has it from the base. Never a conflict.</item>
     /// <item>FastForward: <c>R</c>. NoBase and Convert: <c>L ∪ R</c>.</item>
     /// </list>
-    /// Overlay extensions are invisible to the merge and always kept. A held extension the peer re-added since the
+    /// Overlay extensions are invisible to the merge and always kept. So is every local extension a reader would drop
+    /// (<see cref="IsValidExtension"/>): it is never published, so the peer never saw it and its set says nothing
+    /// about it — least of all in FastForward, where R replaces the set. A held extension the peer re-added since the
     /// base is released.
     /// </summary>
     protected override DataSyncMerge3Result Merge3(ExtensionGroupContentV1? baseContent, ExtensionGroupContentV1 local,
@@ -238,6 +240,8 @@ public sealed partial class ExtensionGroupCodec : DataSyncKindCodec<ExtensionGro
         var hidden = input.LocalOverlay.HiddenChildIds.ToHashSet(StringComparer.Ordinal);
         var localSet = local.Extensions.ToHashSet(StringComparer.Ordinal);
         var visibleLocal = local.Extensions.Where(e => !hidden.Contains(e)).ToHashSet(StringComparer.Ordinal);
+        var unpublished = visibleLocal.Where(e => !IsValidExtension(e, DataSyncLimits.Default))
+            .ToHashSet(StringComparer.Ordinal);
         var remoteSet = remote.Extensions.ToHashSet(StringComparer.Ordinal);
         var baseSet = baseContent?.Extensions.ToHashSet(StringComparer.Ordinal);
 
@@ -247,10 +251,12 @@ public sealed partial class ExtensionGroupCodec : DataSyncKindCodec<ExtensionGro
             case DataSyncMerge3Mode.ThreeWay:
                 merged = new HashSet<string>(visibleLocal, StringComparer.Ordinal);
                 merged.UnionWith(remoteSet.Where(e => !baseSet!.Contains(e)));
-                merged.ExceptWith(baseSet!.Where(e => !remoteSet.Contains(e) && visibleLocal.Contains(e)));
+                merged.ExceptWith(baseSet!.Where(e => !remoteSet.Contains(e) && visibleLocal.Contains(e) &&
+                                                      !unpublished.Contains(e)));
                 break;
             case DataSyncMerge3Mode.FastForward:
                 merged = new HashSet<string>(remoteSet, StringComparer.Ordinal);
+                merged.UnionWith(unpublished);
                 break;
             default:
                 merged = new HashSet<string>(visibleLocal, StringComparer.Ordinal);

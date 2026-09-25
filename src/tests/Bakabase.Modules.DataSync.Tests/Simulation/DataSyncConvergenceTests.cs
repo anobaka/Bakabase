@@ -8,7 +8,8 @@ namespace Bakabase.Modules.DataSync.Tests.Simulation;
 /// headless hub, mesh; TwoWay, a mix with Follow, mutual Follow) with every step of the list the simulator's kinds
 /// can express, checked against invariants I1–I10. CI runs 500 fixed seeds; <c>DATASYNC_FUZZ_SEED</c> sets the
 /// first seed and <c>DATASYNC_FUZZ_RUNS</c> how many to run (for longer local runs). A failing seed is shrunk to
-/// fewer steps and printed with its trace and final states.
+/// fewer steps and printed with its trace and final states. Every fifth seed writes its feed with small wire limits
+/// (<see cref="SimWorld.SmallWireLimits"/>), so paging and chunk reassembly run under the invariants too.
 /// </summary>
 [TestClass]
 public class DataSyncConvergenceTests
@@ -44,8 +45,8 @@ public class DataSyncConvergenceTests
         Assert.AreEqual(0, failures.Count, "\n" + string.Join("\n\n", failures));
 
         // The CI seeds keep reaching the paths the step list exists for; a generator change that stops reaching
-        // one fails here rather than passing on easier scenarios.
-        if (runs < CiRuns) return;
+        // one fails here rather than passing on easier scenarios. Other seeds (local runs) reach what they reach.
+        if (first != 1 || runs < CiRuns) return;
         foreach (var covered in CoveredPaths)
             Assert.IsTrue(coverage.GetValueOrDefault(covered) > 0, $"no scenario reached {covered}");
     }
@@ -63,6 +64,8 @@ public class DataSyncConvergenceTests
         "changedDuringApply", "chooser:headless", "hold",
         "step:LongPartition", "step:RestoreOffline", "step:SyncTwice", "step:SyncStaleWrite", "step:SyncConcurrentWrite",
         "step:ChildrenLocal", "step:SyncCrossed", "note:childrenLocalTurnedOff",
+        "step:UndoRelink", "undoRelink:excluded", "step:EditApplied", "editApplied:kept", "wire:multiPage",
+        "wire:chunked",
     ];
 
     /// <summary>

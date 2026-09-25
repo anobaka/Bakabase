@@ -128,6 +128,29 @@ public partial class MergerTests
     }
 
     [TestMethod]
+    public void B2_DeletionsWaitingForADecisionAreNotNew()
+    {
+        // The other half of §8.7's rule: deletions already waiting as AwaitingDecision pending records — their
+        // items not open (not yet drafted, or closed by a reset of the inbox) — re-sent by a full reconciliation.
+        var f = new MergeFixture();
+        for (var i = 1; i <= 30; i++)
+        {
+            var key = K(0x100 + i);
+            f.Local(i.ToString(), key, T("E" + i), Vv((Peer, 1)), lastEditor: PeerEditor);
+            var tombstone = f.Record(key, null, Vv((Peer, 2)), deleted: true);
+            f.Base(key, f.Record(key, T("E" + i), Vv((Peer, 1))),
+                pending: PendingOf(tombstone, DataSyncPendingReason.AwaitingDecision));
+            f.Pull(tombstone with { Seq = tombstone.Seq + 100 });
+        }
+
+        f.FullReconciliation.Add(ItemKind);
+        var r = f.Merge();
+        Assert.IsNull(r.Pause, "none of the thirty is a new deletion");
+        Assert.AreEqual(30, r.Inbox.Count(i => i.Type == DataSyncInboxItemType.DeletedThere), "each is asked again");
+        Assert.AreEqual(0, Ops(r).Count);
+    }
+
+    [TestMethod]
     public void B2_TheResumeFlagsSkipIt()
     {
         var apply = Deletions(11, 11);

@@ -433,6 +433,61 @@ public class WireReaderTests
     }
 
     [TestMethod]
+    [DataRow("label")]
+    [DataRow("member name")]
+    [DataRow("chunk item")]
+    public void TextNoReaderCanDecodeInsideContentHoldsOnlyThatEntity(string where)
+    {
+        // What an older source serves: content with an escaped unpaired surrogate (a parser accepts it and cannot
+        // decode it). v3.1 §6.3 holds that entity; the page and every other record are read.
+        byte[] page;
+        if (where == "chunk item")
+        {
+            var pages = Write(Live(1, 1, Item("Big", 120, 30)), Live(2, 2, Item("Fine", 1)));
+            // A label inside one of the chunks becomes an escaped lone surrogate.
+            var text = Text(pages[1]);
+            var at = text.IndexOf("\"label\":\"", StringComparison.Ordinal) + "\"label\":\"".Length;
+            pages = [pages[0], Encoding.UTF8.GetBytes(text[..at] + "\\ud800" + text[at..]), .. pages.Skip(2)];
+            var chunked = Assemble(pages, TestItemCodec.Instance, Small);
+            var stagedChunks = chunked.Complete(2, false);
+            Assert.IsNull(chunked.Problem);
+            Assert.AreEqual(DataSyncHeldReason.Invalid, stagedChunks.Entities[0].Held);
+            Assert.IsNull(stagedChunks.Entities[1].Held);
+            return;
+        }
+
+        var content = Item("Odd", 2);
+        if (where == "label") ((JsonObject)((JsonArray)content["children"]!)[0]!)["label"] = "a\ud800b";
+        else content["x\udc00"] = 1;
+        // Built as a source that does not check writes it: the hash is over the content as it was, escape included.
+        page = Page(RecordJson(Live(1, 1, content)), RecordJson(Live(2, 2, Item("Fine", 1))));
+        StringAssert.Contains(Text(page), where == "label" ? "\\ud800" : "\\udc00");
+
+        var result = Read(page);
+        Assert.IsNull(result.Problem, "the page is read");
+        var assembler = new DataSyncRecordAssembler(TestItemCodec.Instance, Small);
+        assembler.Add(result);
+        var staged = assembler.Complete(2, false);
+        Assert.IsNull(assembler.Problem);
+        Assert.AreEqual(DataSyncHeldReason.Invalid, staged.Entities[0].Held, "the content no longer matches its hash");
+        Assert.AreEqual("Odd", staged.Entities[0].DisplayName);
+        Assert.IsNull(staged.Entities[1].Held);
+    }
+
+    [TestMethod]
+    public void TextNoReaderCanDecodeInTheEnvelopeRefusesThePage()
+    {
+        var record = RecordJson(Live(1, 1, Item("A", 1)));
+        ((JsonObject)record["editedBy"]!)["name"] = "PC\ud800";
+        Assert.AreEqual(DataSyncWireReader.Corrupted, Read(Page(record)).Problem);
+
+        var unknown = RecordJson(Live(1, 1, Item("A", 1)));
+        unknown["future"] = "x\ud800";
+        Assert.AreEqual(DataSyncWireReader.Corrupted, Read(Page(unknown)).Problem,
+            "outside content, a record's own members are the envelope");
+    }
+
+    [TestMethod]
     public void SeqMustBeAboveSinceAndInOrder()
     {
         var page = ParsePage(Write(Live(1, 3, Item("A", 1)), Live(2, 4, Item("B", 1)))[0]);
@@ -471,7 +526,7 @@ public class WireReaderTests
             var mutated = pages.Select(p => (byte[])p.Clone()).ToList();
             var target = random.Next(mutated.Count);
             var bytes = mutated[target];
-            switch (run % 6)
+            switch (run % 7)
             {
                 case 0:
                     for (var flips = random.Next(1, 4); flips > 0; flips--)
@@ -516,6 +571,20 @@ public class WireReaderTests
                         _ => new byte[] { 0xED, 0xA0, 0x80 },   // an encoded surrogate
                     };
                     bytes = bytes[..position].Concat(bad).Concat(bytes[position..]).ToArray();
+                    break;
+                }
+                case 5:
+                {
+                    // A content string (a label or a name) gains an escaped lone surrogate.
+                    var text = Encoding.UTF8.GetString(bytes);
+                    var strings = Regex.Matches(text, "\"(label|name)\":\"");
+                    if (strings.Count > 0)
+                    {
+                        var m = strings[random.Next(strings.Count)];
+                        text = text.Insert(m.Index + m.Length, random.Next(2) == 0 ? "\\ud800" : "\\udfff");
+                    }
+
+                    bytes = Encoding.UTF8.GetBytes(text);
                     break;
                 }
                 default:

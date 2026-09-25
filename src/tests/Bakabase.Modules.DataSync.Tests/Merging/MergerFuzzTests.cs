@@ -2,6 +2,7 @@ using System.Globalization;
 using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Kinds.ExtensionGroups;
 using Bakabase.Modules.DataSync.Merging;
+using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Tests.TestKinds;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Bakabase.Modules.DataSync.Tests.Merging.MergeFixture;
@@ -217,6 +218,17 @@ public class MergerFuzzTests
                         seq: 1 + random.Next(9), kind: kind),
                     reasons[random.Next(reasons.Length)], random.Next(30));
                 if (random.Next(2) == 0) f.PendingToMerge.Add((kind, key));
+
+                // What a conflicted merge applied (§8.4 row K6): the record itself, or another, with a kept path.
+                if (random.Next(3) == 0)
+                {
+                    var applied = random.Next(2) == 0 ? pending.Record : record ?? pending.Record;
+                    pending = pending with
+                    {
+                        AppliedBase = new DataSyncAppliedBase(applied,
+                            random.Next(2) == 0 ? [] : [new DataSyncKeptPath("name", new DataSyncDisplayValue("Mood"))]),
+                    };
+                }
             }
 
             f.Base(key, record, state, pending: pending,

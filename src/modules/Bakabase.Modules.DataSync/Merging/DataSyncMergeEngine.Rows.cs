@@ -110,6 +110,7 @@ internal sealed partial class DataSyncMergeEngine
     {
         var bind = c.Bind;
         if (bind.Kind == BindingKind.Excluded) return null;                           // row E
+        if (UndoneHere(k, c) is { } undone) return undone;                           // row E, an undone create
         if (c.Entity.Held is not null || (bind.Live?.Unreadable ?? false) || k.Codec is null)
             return Waiting(k, c, DataSyncPendingReason.Held);                         // row H
         if (c.Drift) return Drift(k, c);                                              // row A2, drift
@@ -128,6 +129,28 @@ internal sealed partial class DataSyncMergeEngine
             default:
                 return c.Record.Deleted ? Unbound(k, c) : Unmatched(k, c);            // rows N1–N3
         }
+    }
+
+    /// <summary>
+    /// §8.11: an undone create stays unsynced on a link until the person includes it there, and [Include] leaves a
+    /// base that is not excluded — the only evidence row T0 acts on. Exclusions are per link: a link made after the
+    /// undo, or one that had no base for it then, has none, and reviving there would bring back what the person undid
+    /// without asking. A record of it on such a link, whatever it is (held, live or a tombstone), is excluded like
+    /// row E, under its keys: never revived (T0), served (T2) or asked about (T3), and never waiting on a base row a
+    /// later record could take for that evidence. Null when the record binds to no undone create, or it was included.
+    /// </summary>
+    private Proposal? UndoneHere(KindState k, Candidate c)
+    {
+        if (c.Bind is not { Kind: BindingKind.Tombstone, Tombstone: { } t } ||
+            t.TombstoneKind != DataSyncTombstoneKind.UndoneCreate) return null;
+        var key = t.Keys.Primary!.Value;
+        var b = BaseOf(k, key);
+        if (b is { State: not DataSyncBaseState.Excluded }) return null;
+        var p = new Proposal(k, c) { Name = c.Entity.DisplayName };
+        Evaluated(p, key, c);
+        p.BaseUpdates.Add(new DataSyncBaseUpdate(k.Kind, key, DataSyncBaseState.Excluded,
+            b?.Exclusion ?? DataSyncExclusionReason.Undone, c.Record, null, null, true));
+        return p;
     }
 
     // ---- rows H, F and the waits of B5 and the children budget -------------------------------------
@@ -285,7 +308,11 @@ internal sealed partial class DataSyncMergeEngine
         }
 
         var remote = c.Entity.Content!;
-        var baseRead = b is { Record: { Deleted: false } } ? BaseContent(k, b) : null;
+        // While a conflicted merge's applied base stands on the row, the entity merges against it instead of the
+        // base: what that merge applied is agreed, not the peer's change again (§8.4 row K6).
+        var applied = AppliedBaseOf(k, b);
+        var baseRecord = applied?.Base.Record ?? b?.Record;
+        var baseRead = applied?.Read ?? (b is { Record: { Deleted: false } } ? BaseContent(k, b) : null);
         var mode3 = rel == DataSyncVvRelation.DominatedBy ? DataSyncMerge3Mode.FastForward
             : baseRead is not null ? DataSyncMerge3Mode.ThreeWay
             : DataSyncMerge3Mode.NoBase;
@@ -309,7 +336,7 @@ internal sealed partial class DataSyncMergeEngine
         if (!WithinBudget(codec, remote)) return Waiting(k, c, DataSyncPendingReason.OverBudget);
 
         var remoteCl = DataSyncRecordValidation.ChildrenLocalOf(c.Record.Content);
-        var baseCl = baseRead is not null && DataSyncRecordValidation.ChildrenLocalOf(b!.Record!.Content);
+        var baseCl = baseRead is not null && DataSyncRecordValidation.ChildrenLocalOf(baseRecord!.Content);
         var usage = _in.ChildUsage.TryGetValue((k.Kind, l.LocalKey), out var u) ? u : new Dictionary<string, int>();
         var childMap = b?.ChildMap ?? new Dictionary<string, string>();
         var winner = string.CompareOrdinal(c.Record.EditedBy?.ActorId ?? "", l.LastActor?.Value ?? "") > 0
@@ -331,19 +358,66 @@ internal sealed partial class DataSyncMergeEngine
         var lastEditorIsSelf = LocalLastEditorIsSelf(l) && !AlreadyMergedConflict(k, c);
         var m3 = codec.Merge3(new DataSyncMerge3Input(baseRead?.Content, l.Content, l.Overlay, remote, mode3, childMap,
             l.ChildrenLocal, baseCl, MergeMode, lastEditorIsSelf, winner, usage, c.Flags.ChildDeletions));
+        if (applied is { Base.KeptPaths.Count: > 0 } standing)
+            m3 = m3 with { Fields = StillConflicting(m3.Fields, standing.Base.KeptPaths) };
         if (m3.TypeChanged)
             return Frozen(p, k, c, l, b, DataSyncPendingReason.TypeChange, baseType, localType, remoteType);
         if (m3.MassDeletionCandidates.Count > 0)
             return Frozen(p, k, c, l, b, DataSyncPendingReason.MassChildDeletion, baseType, localType, remoteType,
                 m3.MassDeletionCandidates);
 
-        return Merged(p, k, c, l, b, baseRead, mode3, m3, remoteCl, winner, aliasKeys);
+        return Merged(p, k, c, l, b, baseRecord, baseRead, mode3, m3, remoteCl, winner, aliasKeys);
     }
 
+    /// <summary>
+    /// The applied base standing on the entity's row (§8.4 row K6) and its content as this build reads it; null when
+    /// there is none, or it cannot be read (the merge then runs against the base, as before it was stored).
+    /// </summary>
+    private (DataSyncAppliedBase Base, CodecReadResult Read)? AppliedBaseOf(KindState k, DataSyncPeerBase? b)
+    {
+        if (b is not { State: not DataSyncBaseState.Excluded, Pending.AppliedBase: { } applied } || k.Codec is null)
+            return null;
+        if (!k.AppliedContents.TryGetValue(b.Key.Value, out var read))
+        {
+            read = DataSyncRecordValidation.ReadContent(k.Codec, applied.Record, _in.Limits);
+            k.AppliedContents[b.Key.Value] = read;
+        }
+
+        return read is null ? null : (applied, read);
+    }
+
+    /// <summary>
+    /// A merge against an applied base (§8.4 row K6) reads every path the conflicted merge kept local as a local
+    /// edit. Those conflicts are not settled: a kept path where this device still differs from the peer is a conflict
+    /// again, shown with the base's value it was asked about (so its card, and its token, are the ones derived first).
+    /// A kept path where both now agree reports nothing, and one where the peer changed again what this device took
+    /// from it takes the peer's value like any other.
+    /// </summary>
+    private static IReadOnlyList<DataSyncFieldOutcome> StillConflicting(IReadOnlyList<DataSyncFieldOutcome> fields,
+        IReadOnlyList<DataSyncKeptPath> kept)
+    {
+        var byPath = kept.GroupBy(x => x.Path, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().Base,
+            StringComparer.Ordinal);
+        return fields.Select(f =>
+                f.Resolution is DataSyncFieldResolution.KeptLocal or DataSyncFieldResolution.Conflict &&
+                byPath.TryGetValue(f.Path, out var agreed)
+                    ? f with { Resolution = DataSyncFieldResolution.Conflict, Base = agreed }
+                    : f)
+            .ToList();
+    }
+
+    /// <summary>
+    /// The applied base a <c>Conflict</c> pending record keeps (§8.4 row K6): its record, and what did not apply.
+    /// </summary>
+    private static DataSyncAppliedBase AppliedBaseAfter(Candidate c, IEnumerable<DataSyncFieldOutcome> conflicts) =>
+        new(c.Record, conflicts.OrderBy(f => f.Path, StringComparer.Ordinal)
+            .Select(f => new DataSyncKeptPath(f.Path, f.Base)).ToList());
+
     /// <summary>K5/K6 once the codec merged: the safe part applies; conflicts become items and a pending record.</summary>
+    /// <param name="baseRecord">The record the merge ran against: the base's, or the applied base's (§8.4 row K6).</param>
     private Proposal Merged(Proposal p, KindState k, Candidate c, DataSyncLocalEntityState l, DataSyncPeerBase? b,
-        CodecReadResult? baseRead, DataSyncMerge3Mode mode3, DataSyncMerge3Result m3, bool remoteCl,
-        DataSyncMergeSide winner, IReadOnlyList<SyncKey> aliasKeys)
+        DataSyncWireRecord? baseRecord, CodecReadResult? baseRead, DataSyncMerge3Mode mode3, DataSyncMerge3Result m3,
+        bool remoteCl, DataSyncMergeSide winner, IReadOnlyList<SyncKey> aliasKeys)
     {
         var codec = k.Codec!;
         var key = l.Keys.Primary!.Value;
@@ -362,7 +436,7 @@ internal sealed partial class DataSyncMergeEngine
                                ? remoteCl
                                : l.ChildrenLocal);
         var orderKey = codec.Descriptor.HasOrder
-            ? MergeOrderKey(mode3, b?.Record?.OrderKey, l.OrderKey, c.Record.OrderKey, winner)
+            ? MergeOrderKey(mode3, baseRecord?.OrderKey, l.OrderKey, c.Record.OrderKey, winner)
             : null;
         var unknown = DataSyncUnknownMembers.Merge(baseRead?.Unknown, l.Unknown, c.Entity.Unknown, mode3);
 
@@ -426,10 +500,14 @@ internal sealed partial class DataSyncMergeEngine
         }
         else
         {
-            // Base unchanged; the child map keeps the base's classes and learns the ones this merge added.
+            // Base unchanged; the child map keeps the base's classes and learns the ones this merge added. What
+            // applied is remembered with the record (its applied base), so later merges do not take it again.
             var map = new Dictionary<string, string>(b?.ChildMap ?? new Dictionary<string, string>(), StringComparer.Ordinal);
             foreach (var (peerId, localId) in m3.ChildMap) map[peerId] = localId;
-            var pending = Pending(c, DataSyncPendingReason.Conflict, l.Seq);
+            var pending = Pending(c, DataSyncPendingReason.Conflict, l.Seq) with
+            {
+                AppliedBase = AppliedBaseAfter(c, conflicts),
+            };
             p.BaseUpdates.Add(new DataSyncBaseUpdate(k.Kind, key, BaseStateFor(b, bound: true), b?.Exclusion, null,
                 map, pending, false));
             foreach (var field in conflicts.OrderBy(f => f.Path, StringComparer.Ordinal))
@@ -493,7 +571,8 @@ internal sealed partial class DataSyncMergeEngine
     /// so only its items are derived again (and its pending record re-evaluated). Applying that part again against the
     /// unchanged base would undo whatever changed here since — another link's merge included — so two links whose
     /// peers disagree on a field that merges safely would flip the entity at every pull, each flip a revision, until
-    /// someone decided the conflict (found by the convergence simulator).
+    /// someone decided the conflict (found by the convergence simulator). Against its applied base the merge finds
+    /// nothing to apply anyway; this guards a record stored before it had one.
     /// </summary>
     private Proposal ConflictItemsOnly(Proposal p, KindState k, Candidate c, DataSyncLocalEntityState l, DataSyncPeerBase? b,
         DataSyncMerge3Result m3, List<DataSyncFieldOutcome> conflicts, IReadOnlyList<SyncKey> aliasKeys)
@@ -503,7 +582,10 @@ internal sealed partial class DataSyncMergeEngine
             p.Operation = new BindOnlyOperation(DataSyncMergeItemIds.Of(k.Kind, key), l.LocalKey, Keys(aliasKeys));
         var map = new Dictionary<string, string>(b?.ChildMap ?? new Dictionary<string, string>(), StringComparer.Ordinal);
         foreach (var (peerId, localId) in m3.ChildMap) map[peerId] = localId;
-        var pending = Pending(c, DataSyncPendingReason.Conflict, l.Seq);
+        var pending = Pending(c, DataSyncPendingReason.Conflict, l.Seq) with
+        {
+            AppliedBase = AppliedBaseAfter(c, conflicts),
+        };
         p.BaseUpdates.Add(new DataSyncBaseUpdate(k.Kind, key, BaseStateFor(b, bound: true), b?.Exclusion, null, map, pending,
             false));
         foreach (var field in conflicts.OrderBy(f => f.Path, StringComparer.Ordinal))
@@ -589,7 +671,7 @@ internal sealed partial class DataSyncMergeEngine
         }
 
         if (t.TombstoneKind == DataSyncTombstoneKind.UndoneCreate)
-            return Create(p, k, c, key, [key], t);                                    // T0
+            return Create(p, k, c, key, [key], t);                                    // T0, included
 
         // Row A2's collision: the peer's live version and this device's deletion share a reissued vector (T3).
         var rel = c.Collision ? DataSyncVvRelation.Concurrent : t.Vv.CompareTo(c.Record.Vv);
@@ -761,11 +843,16 @@ internal sealed partial class DataSyncMergeEngine
         var remote = c.Entity.Content!;
         var remoteType = codec.SubtypeOf(remote);
         var candidates = k.Entities
-            .Where(l => l.State == DataSyncEntitySyncState.Synced && !l.Unreadable && !k.BoundByKey.Contains(l.LocalKey) &&
+            .Where(l => l.State == DataSyncEntitySyncState.Synced && !k.BoundByKey.Contains(l.LocalKey) &&
                         !k.AutoLinked.Contains(l.LocalKey))
             .Select(l => (Local: l, Match: codec.MatchNatural(remote, l.Content)))
             .Where(m => m.Match != DataSyncNaturalMatch.None)
             .ToList();
+
+        // §3.3: a definition here that cannot be read takes part in no decision, so the record it may be waits
+        // (Held(LocalUnreadable), as in a review) instead of being created beside it or offered for a link. Its name
+        // and type still read, and every natural match needs them.
+        if (candidates.Any(m => m.Local.Unreadable)) return Waiting(k, c, DataSyncPendingReason.Held);
 
         var key = new SyncKey(c.Primary);
         if (candidates.Count == 0)
@@ -783,6 +870,8 @@ internal sealed partial class DataSyncMergeEngine
             // entities: that would bind two of the peer's records to one entity here (row M next pull) and, with a
             // third device, re-raise the identity questions it answered (found by the convergence simulator).
             var l = candidates[0].Local;
+            // Row F first: a definition the lost-update guard holds takes no peer version, not even by a link (§6.5).
+            if (l.PublishHeld) return Waiting(k, c, DataSyncPendingReason.PublishHeld);
             k.AutoLinked.Add(l.LocalKey);
             return LiveChanged(k, c, l, null, []);
         }

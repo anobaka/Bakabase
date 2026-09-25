@@ -21,6 +21,9 @@ internal sealed class MergeContentGenerator(Random random)
     private static readonly string?[] Colors = [null, "#e5484d", "#30a46c", "#0090ff"];
     private static readonly string?[] Types = [null, "Tags", "Choice"];
     private static readonly string[] RawExtensions = [".mp4", ".MKV", "mkv", ".avi", " .Jpg", ".png", "zip", ".mp3"];
+
+    /// <summary>Stored extensions a reader would drop (never published, §3.5): only ever on this device's side.</summary>
+    private static readonly string[] Unpublishable = ["a b", ".x,y", ".abcdefghijklmnopqrstuvwxyz0123456789"];
     private int _next;
 
     public Random Random { get; } = random;
@@ -80,9 +83,13 @@ internal sealed class MergeContentGenerator(Random random)
         return content;
     }
 
-    /// <summary>A local extension group as stored: raw extensions, any case, with or without a dot.</summary>
+    /// <summary>
+    /// A local extension group as stored: raw extensions, any case, with or without a dot, and now and then one a
+    /// reader would drop.
+    /// </summary>
     public ExtensionGroupContentV1 Group() =>
-        ExtensionGroupContentV1.FromLocal(Pick(Names), RawExtensions.Where(_ => Random.Next(3) == 0));
+        ExtensionGroupContentV1.FromLocal(Pick(Names), RawExtensions.Where(_ => Random.Next(3) == 0)
+            .Concat(Unpublishable.Where(_ => Random.Next(4) == 0)));
 
     public ExtensionGroupContentV1 Edit(ExtensionGroupContentV1 content)
     {

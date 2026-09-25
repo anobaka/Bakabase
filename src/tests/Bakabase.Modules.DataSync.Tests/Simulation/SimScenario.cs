@@ -15,6 +15,9 @@ internal enum SimStepKind
     Create, Edit, Delete, Sync, SyncTwice, SyncConcurrentWrite, SyncAll, Resolve, Use, Values, Reorder, EntityState,
     Undo, Backup, RestoreDatabase, RestoreDirectory, Restart, StopLink, StartLink, ResetLink, Partition, Heal,
     LongPartition, Advance, StaleWrite, Include, SyncStaleWrite, Bulk, RestoreOffline, ChildrenLocal, SyncCrossed,
+
+    // Inserted after the weighted draw (see Generate), not drawn by weight.
+    UndoRelink, EditApplied,
 }
 
 /// <summary>
@@ -52,6 +55,7 @@ internal sealed record SimScenarioSpec(int Seed, int NodeCount, SimTopology Topo
         SimStep Step(SimStepKind kind) => new(kind, random.Next(1 << 20), random.Next(1 << 20), random.Next(1 << 20), random.Next(1 << 20));
         for (var i = random.Next(2, 6); i > 0; i--) steps.Add(Step(SimStepKind.Create));
         steps.Add(Step(SimStepKind.SyncAll));
+        var prefix = steps.Count;
         var total = Weights.Sum(w => w.Weight);
         for (var i = random.Next(maxSteps / 3, maxSteps + 1) - steps.Count; i > 0; i--)
         {
@@ -62,6 +66,17 @@ internal sealed record SimScenarioSpec(int Seed, int NodeCount, SimTopology Topo
                 steps.Add(Step(kind));
                 break;
             }
+        }
+
+        // Steps added after the table above come from a stream of their own and are inserted among the drawn ones,
+        // so a seed keeps every step it had (the seeds that found defects still start the way they did).
+        var extra = new Random(seed ^ 0x2a2a2a);
+        SimStep Extra(SimStepKind kind) => new(kind, extra.Next(1 << 20), extra.Next(1 << 20), extra.Next(1 << 20),
+            extra.Next(1 << 20));
+        foreach (var (kind, most) in new[] { (SimStepKind.UndoRelink, 1), (SimStepKind.EditApplied, 3) })
+        {
+            for (var n = extra.Next(most + 1); n > 0; n--)
+                steps.Insert(extra.Next(prefix, steps.Count + 1), Extra(kind));
         }
 
         return new SimScenarioSpec(seed, nodes, topology, modes, steps);
@@ -90,7 +105,10 @@ internal sealed class SimScenario
     public SimScenario(SimScenarioSpec spec)
     {
         _spec = spec;
-        World = new SimWorld(spec.Seed);
+        World = new SimWorld(spec.Seed)
+        {
+            WireLimits = spec.Seed % 5 == 0 ? SimWorld.SmallWireLimits : SimKinds.Limits,
+        };
         Build();
     }
 
@@ -604,9 +622,101 @@ internal sealed class SimScenario
                 node.Include(link, key);
                 return $"{node} includes {key.Kind}/{key.Key.Value[..6]} again on {link}";
             }
+            case SimStepKind.UndoRelink:
+            {
+                // §8.11: undo a definition sync created here, then link to that peer anew (a reset link has no base
+                // for it, like any link made after the undo). The undone create must stay excluded there too, until
+                // the person includes it on that link.
+                var entries = node.Db.History
+                    .Where(h => !h.Undone && h.Kind is not (DataSyncHistoryKind.Undo or DataSyncHistoryKind.Restore) &&
+                                h.Changes.Any(c => c.Action == "created" && c.LinkId is not null))
+                    .ToList();
+                if (entries.Count == 0 || !node.Verified) return "no create to undo";
+                var entry = entries[entries.Count - 1 - s.B % Math.Min(entries.Count, 4)];
+                var refusals = node.Undo(entry);
+                var linkId = entry.Changes.First(c => c.Action == "created" && c.LinkId is not null).LinkId;
+                if (node.LinkById(linkId) is not { } old) return $"no link left to reset after undoing #{entry.Id}";
+                var relinked = node.ResetLink(old);
+                var outcome = node.Pull(relinked);
+                var excluded = relinked.Bases.Values.Count(b => b.Exclusion == DataSyncExclusionReason.Undone);
+                if (excluded > 0) World.Count("undoRelink:excluded");
+                var refused = refusals.Count > 0 ? $" (refused [{string.Join(",", refusals)}])" : "";
+                return $"{node} undoes #{entry.Id}{refused}, resets {old} → {relinked} and pulls: {outcome}, " +
+                       $"{excluded} undone create(s) excluded";
+            }
+            case SimStepKind.EditApplied:
+                return EditApplied(s);
             default:
                 throw new ArgumentOutOfRangeException(nameof(s), s.Kind, null);
         }
+    }
+
+    /// <summary>
+    /// §8.4 row K6: a conflicted merge applied the record's other paths and waits on the rest. The person changes one
+    /// path the last apply changed (back to what it was), after the lost-update window, while the conflict is open;
+    /// the record merged again (condition 2, as the next pull would) applies nothing — its applied base says it has
+    /// already — so the edit stands. Merged against the old base instead, it was taken again and published.
+    /// </summary>
+    private string EditApplied(SimStep s)
+    {
+        // Conflicts are rare, so the step takes the first node from its own that has one open.
+        List<(SimLink Link, DataSyncPeerBase Base, SimRow? Row)> open = [];
+        var node = Nodes[s.A % Nodes.Count];
+        for (var i = 0; i < Nodes.Count && open.Count == 0; i++)
+        {
+            node = Nodes[(s.A + i) % Nodes.Count];
+            if (!node.Verified) continue;
+            var rows = node.Rows;
+            open = node.Links.Values.Where(l => l.Paused is null && !l.Stopped).OrderBy(l => l.Id)
+                .SelectMany(l => l.Bases.Values
+                    .Where(b => b.Pending is { Reason: DataSyncPendingReason.Conflict, AppliedBase: not null })
+                    .OrderBy(b => b.Kind, StringComparer.Ordinal).ThenBy(b => b.Key.Value, StringComparer.Ordinal)
+                    .Select(b => (Link: l, Base: b)))
+                .Select(x => (x.Link, x.Base, Row: rows.FirstOrDefault(r => r.IsLive && r.Kind == x.Base.Kind &&
+                                                                        r.Keys.Contains(x.Base.Key))))
+                .Where(x => x.Row is { LastApply: not null, PublishHeld: false, State: DataSyncEntitySyncState.Synced })
+                .ToList();
+        }
+
+        if (open.Count == 0) return "no open conflict with applied changes";
+        var (link, b, row) = open[s.B % open.Count];
+        var kind = SimKinds.Of(row!.Kind);
+        var singles = Singles(row.LastApply!.Value.Changes);
+        if (singles.Count == 0) return "no applied change to edit";
+        var one = singles[s.C % singles.Count];
+        if (kind.Revert(row.Content!, one, out _) is not { } reverted) return "no longer the applied value";
+
+        World.Clock.Advance(DataSyncLostUpdateGuard.Window + TimeSpan.FromMinutes(1));
+        foreach (var n in Nodes) n.UpdateVerified();
+        node.EditRow(row, reverted);
+        var edited = row.Content;
+        var outcome = node.Remerge(link, [(b.Kind, b.Key)]);
+        if (outcome == SimPullOutcome.Applied && row.IsLive && !row.PublishHeld)
+        {
+            if (!Equals(row.Content, edited))
+            {
+                Failures.Add($"K6: {node} re-merged the open conflict of {row.Name} on {link} and undid an edit made " +
+                             $"since: {edited} became {row.Content}");
+            }
+            else
+            {
+                World.Count("editApplied:kept");
+            }
+        }
+
+        return $"{node} changes an applied path of {row.Kind}:{row.LocalKey} back while its conflict is open, " +
+               $"re-merges on {link}: {outcome}";
+    }
+
+    /// <summary>Each change of <paramref name="changes"/> as a list of its own.</summary>
+    private static List<DataSyncEntityChangeList> Singles(DataSyncEntityChangeList changes)
+    {
+        var none = DataSyncEntityChangeList.Empty;
+        return changes.Scalars.Select(c => none with { Scalars = [c] })
+            .Concat(changes.Added.Select(c => none with { Added = [c] }))
+            .Concat(changes.Removed.Select(c => none with { Removed = [c] }))
+            .Concat(changes.Renamed.Select(c => none with { Renamed = [c] }))
+            .ToList();
     }
 
     /// <summary>The custom name/label and the target a random resolution passes.</summary>

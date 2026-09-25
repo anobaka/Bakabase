@@ -20,7 +20,8 @@ namespace Bakabase.Modules.DataSync.Planning;
 /// local side is strictly newer; another subtype is TypeMismatch; else Update or Unchanged by the diff). Two matches,
 /// or one match two records bind, are IdentityConflict.</item>
 /// <item>Pass 2, by name, over the locals no record claimed by key: Create, Link, AmbiguousNameMatch,
-/// NameClashDifferentType or DuplicateInPackage (v3.1 §5.2 steps 2–4).</item>
+/// NameClashDifferentType or DuplicateInPackage (v3.1 §5.2 steps 2–4). A record with a key of a tombstone here
+/// (PreviouslyDeletedHere) always asks: never a default Create, never a link confirmed in bulk.</item>
 /// </list>
 /// </remarks>
 internal sealed class DataSyncPlanBuilder
@@ -220,7 +221,12 @@ internal sealed class DataSyncPlanBuilder
             var r = p.R;
             if (p.TouchesUnreadable) return Held(r, DataSyncHeldReason.LocalUnreadable, null);
 
-            List<DataSyncPlanWarning> deletedHere = r.Keys!.Any(local.TombstonedKeys.Contains)
+            // A record of something this device deleted (or undid) is never taken back by default (§8.3: newer local
+            // state is never regressed): whether this device's deletion is newer than the record, concurrent with it
+            // or older, its item asks — an explicit Create or Skip, nothing a bulk confirmation or a default decides.
+            // The continuous merge never revives by itself either (rows T2, T3; T0 only after [Include]).
+            var deletedHere = r.Keys!.Any(local.TombstonedKeys.Contains);
+            List<DataSyncPlanWarning> deletedWarning = deletedHere
                 ? [new DataSyncPlanWarning(DataSyncWarningCode.PreviouslyDeletedHere, null, null)]
                 : [];
             if (p.Same.Count == 0)
@@ -228,32 +234,33 @@ internal sealed class DataSyncPlanBuilder
                 if (p.Clash)
                 {
                     return Item(r, DataSyncPlanItemType.NeedsDecision, DataSyncPlanItemReason.NameClashDifferentType,
-                        extra: deletedHere);
+                        extra: deletedWarning);
                 }
 
                 var create = Codec.PrepareCreate(r.Entity.Content!, null);
-                return Item(r, DataSyncPlanItemType.Create, null, extra: deletedHere.Concat(create.Warnings));
+                return Item(r, DataSyncPlanItemType.Create, null, extra: deletedWarning.Concat(create.Warnings),
+                    askFirst: deletedHere);
             }
 
             if (p.Best is not { } best)
             {
                 return Item(r, DataSyncPlanItemType.NeedsDecision, DataSyncPlanItemReason.AmbiguousNameMatch,
-                    candidates: p.Same, extra: deletedHere);
+                    candidates: p.Same, extra: deletedWarning);
             }
 
             if (duplicate)
             {
                 return Item(r, DataSyncPlanItemType.NeedsDecision, DataSyncPlanItemReason.DuplicateInPackage,
-                    candidates: p.Same, extra: deletedHere);
+                    candidates: p.Same, extra: deletedWarning);
             }
 
             // v3.1 §5.2 step 3: a link always asks, except an extension group with an Identical unique candidate
             // (the D09 exception); an exact name (or better) can be confirmed in bulk.
             var level = p.Same[0].Level;
             var confirm = !(Codec.Descriptor.AutoLinkIdentical && level == DataSyncNaturalMatch.Identical);
-            return Item(r, DataSyncPlanItemType.Link, null, candidates: p.Same, extra: deletedHere,
+            return Item(r, DataSyncPlanItemType.Link, null, candidates: p.Same, extra: deletedWarning,
                 defaultTarget: best.LocalKey, requiresConfirmation: confirm,
-                bulkLinkEligible: confirm && level >= DataSyncNaturalMatch.Exact);
+                bulkLinkEligible: confirm && level >= DataSyncNaturalMatch.Exact, askFirst: deletedHere);
         }
 
         // ---- items -------------------------------------------------------------------------------
@@ -266,11 +273,15 @@ internal sealed class DataSyncPlanBuilder
                 DataSyncPlanFormat.SortWarnings(r.Entity.Warnings), DataSyncPlanFormat.CountWarnings(r.Entity.Warnings),
                 false);
 
+        /// <param name="askFirst">
+        /// The item asks whatever its type (a record of something deleted here): it requires confirmation, is never
+        /// linked in bulk, and a Create has no default.
+        /// </param>
         private DataSyncPlanItem Item(DataSyncReviewIncoming r, DataSyncPlanItemType type, DataSyncPlanItemReason? reason,
             LocalIdentifiedEntity? local = null, EntityDiff? diff = null,
             IReadOnlyList<(LocalIdentifiedEntity Local, DataSyncNaturalMatch Level)>? candidates = null,
             IEnumerable<DataSyncPlanWarning>? extra = null, string? defaultTarget = null, bool requiresConfirmation = true,
-            bool bulkLinkEligible = false, bool recordsNewKeys = false)
+            bool bulkLinkEligible = false, bool recordsNewKeys = false, bool askFirst = false)
         {
             var allowed = Allowed(type, reason, candidates?.Count ?? 0);
             DataSyncPlanResolution? resolution = type switch
@@ -284,6 +295,13 @@ internal sealed class DataSyncPlanBuilder
             {
                 requiresConfirmation = false;
                 defaultTarget = local?.LocalKey;
+            }
+
+            if (askFirst)
+            {
+                requiresConfirmation = true;
+                bulkLinkEligible = false;
+                if (type == DataSyncPlanItemType.Create) resolution = null;
             }
 
             var changes = diff is null ? [] : DataSyncPlanFormat.SortChanges(diff.Changes);

@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Identity;
+using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Wire;
 
 namespace Bakabase.Modules.DataSync.Merging;
@@ -61,8 +62,26 @@ public sealed record DataSyncPeerBase(string Kind, SyncKey Key, DataSyncBaseStat
 }
 
 /// <summary>A peer record this device received but did not agree to (§8.4). Stored once per link and entity.</summary>
+/// <param name="AppliedBase">
+/// What this device already applied of the peer's records while the base stays at the last agreement (row K6 with
+/// conflicts); null when nothing was. It stays with the entity's row, whatever record waits there, until the base
+/// advances. Stored beside the record (<c>PendingAppliedBaseJson</c>).
+/// </param>
 public sealed record DataSyncPendingRecord(DataSyncWireRecord Record, string RecordHash, DataSyncPendingReason Reason,
-    long EvaluatedAtLocalSeq, DataSyncMergeFlags Flags);
+    long EvaluatedAtLocalSeq, DataSyncMergeFlags Flags, DataSyncAppliedBase? AppliedBase = null);
+
+/// <summary>
+/// §8.4 row K6 with conflicts: the safe part of <see cref="Record"/> was applied here while the base keeps the last
+/// agreement (rows A2 and K compare with that). Merged three-way against the base, every path the record changed
+/// reads as the peer's change again and overwrites whatever changed here since; later merges of the entity therefore
+/// run against this record. <see cref="KeptPaths"/> are the conflicting paths, which did not apply: a later merge
+/// still asks about each of them while this device and the peer differ there, with the base's value on its card (so
+/// the item derived again keeps its token).
+/// </summary>
+public sealed record DataSyncAppliedBase(DataSyncWireRecord Record, IReadOnlyList<DataSyncKeptPath> KeptPaths);
+
+/// <summary>A conflicting path of a <see cref="DataSyncAppliedBase"/> and the display of the base value there.</summary>
+public sealed record DataSyncKeptPath(string Path, DataSyncDisplayValue? Base);
 
 /// <summary>
 /// Per-entity switches that change how a pending record is merged; stored with the pending record and copied to

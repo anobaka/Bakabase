@@ -81,9 +81,19 @@ internal sealed partial class SimNode
             }
 
             var snapshotId = "snap-" + NodeId;
-            var written = DataSyncWireWriter.WriteKind(snapshotId, kind.Kind, since, records, Limits);
-            var assembler = new DataSyncRecordAssembler(kind.Codec, Limits);
-            foreach (var page in written.Pages) assembler.Add(DataSyncWireReader.ReadPage(page, snapshotId, kind.Kind, Limits));
+            var wire = _world.WireLimits;
+            var written = DataSyncWireWriter.WriteKind(snapshotId, kind.Kind, since, records, wire);
+            var assembler = new DataSyncRecordAssembler(kind.Codec, wire);
+            var chunked = false;
+            foreach (var page in written.Pages)
+            {
+                var read = DataSyncWireReader.ReadPage(page, snapshotId, kind.Kind, wire);
+                chunked |= read.Chunks.Count > 0;
+                assembler.Add(read);
+            }
+
+            if (written.Pages.Count > 1) _world.Count("wire:multiPage");
+            if (chunked) _world.Count("wire:chunked");
             var live = Rows.Count(r => r.Kind == kind.Kind && r.IsLive && r.HasSideRow && r.State == DataSyncEntitySyncState.Synced);
             var feedKind = new DataSyncFeedKind(kind.Kind, kind.Codec.Descriptor.SchemaVersion, MaxSeq(kind.Kind),
                 Db.Local.TombstoneFloors.GetValueOrDefault(kind.Kind), live,

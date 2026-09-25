@@ -56,6 +56,7 @@ internal sealed partial class SimNode
                     Tombstone(row, DataSyncTombstoneKind.UndoneCreate);
                     foreach (var link in Links.Values)
                     {
+                        link.IncludedUndone.Remove((row.Kind, row.Primary));
                         // §8.11: every link's base becomes Excluded(Undone) with the entity's keys, so a record under
                         // any of them — an alias a Link added included — is ignored until the person includes it.
                         var b = link.Bases.GetValueOrDefault((row.Kind, row.Primary));
@@ -302,11 +303,28 @@ internal sealed partial class SimNode
         link.PausedDetail = null;
     }
 
-    /// <summary>[Include] on an excluded base (§5.4, §8.11): the exclusion goes; the next full reconciliation re-merges it.</summary>
+    /// <summary>
+    /// [Include] on an excluded base (§5.4, §8.11): the exclusion goes; the next full reconciliation re-merges it. An
+    /// undone exclusion leaves the row behind, unbound (or agreed on the record it kept): that row is what lets row T0
+    /// revive an undone create on this link and no other.
+    /// </summary>
     public void Include(SimLink link, (string Kind, SyncKey Key) baseKey)
     {
         if (!link.Bases.TryGetValue(baseKey, out var b) || b.State != DataSyncBaseState.Excluded) return;
-        link.Bases.Remove(baseKey);
+        if (b.Exclusion == DataSyncExclusionReason.Undone)
+        {
+            link.Bases[baseKey] = b with
+            {
+                State = b.Record is null ? DataSyncBaseState.Unbound : DataSyncBaseState.Normal, Exclusion = null,
+                ExclusionKeys = [],
+            };
+            link.IncludedUndone.Add(baseKey);
+        }
+        else
+        {
+            link.Bases.Remove(baseKey);
+        }
+
         link.LastFullReconciliation = DateTime.MinValue;
         _world.Log($"{Name}: included {baseKey.Kind}/{baseKey.Key.Value[..6]} on {link}");
     }

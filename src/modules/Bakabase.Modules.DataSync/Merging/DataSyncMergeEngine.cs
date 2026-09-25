@@ -132,6 +132,9 @@ internal sealed partial class DataSyncMergeEngine
 
         public bool FirstContact { get; init; }
         public Dictionary<string, CodecReadResult?> BaseContents { get; } = new(StringComparer.Ordinal);
+
+        /// <summary>The applied bases' contents (§8.4 row K6) as this build reads them, by base row.</summary>
+        public Dictionary<string, CodecReadResult?> AppliedContents { get; } = new(StringComparer.Ordinal);
     }
 
     private sealed class Candidate
@@ -637,7 +640,8 @@ internal sealed partial class DataSyncMergeEngine
 
         // One update per base row: the record's own outcome wins over clearing the row a pending record moved from.
         var bases = new Dictionary<(string, string), DataSyncBaseUpdate>();
-        foreach (var update in _proposals.SelectMany(p => p.BaseUpdates)) bases[(update.Kind, update.Key.Value)] = update;
+        foreach (var update in _proposals.SelectMany(p => p.BaseUpdates))
+            bases[(update.Kind, update.Key.Value)] = KeepAppliedBase(update);
         foreach (var clear in _proposals.SelectMany(p => p.SourceClears)) bases.TryAdd((clear.Kind, clear.Key.Value), clear);
         var baseUpdates = bases.Values.OrderBy(u => KindOrder(u.Kind)).ThenBy(u => u.Key.Value, StringComparer.Ordinal)
             .ToList();
@@ -667,6 +671,22 @@ internal sealed partial class DataSyncMergeEngine
 
         return new DataSyncMergeResult(null, null, null, batches, revisions, baseUpdates, inbox, overlays, order, cursors,
             notes, hints, new EvaluatedSet(evaluated), serve);
+    }
+
+    /// <summary>
+    /// A record that waits on a row whose base does not advance keeps the row's applied base (§8.4 row K6): the
+    /// entity still holds what that conflicted merge applied, whatever the new record waits for (a hold, a type
+    /// change, a lost-update freeze), so the merge that finally takes the record runs against it too. A row agreed
+    /// on anew, or cleared, drops it.
+    /// </summary>
+    private DataSyncBaseUpdate KeepAppliedBase(DataSyncBaseUpdate update)
+    {
+        if (update is not { Pending: { AppliedBase: null } pending, Record: null } ||
+            update.State == DataSyncBaseState.Excluded) return update;
+        var kind = _kinds.FirstOrDefault(k => k.Kind == update.Kind);
+        return kind?.Bases.GetValueOrDefault(update.Key.Value)?.Pending?.AppliedBase is { } applied
+            ? update with { Pending = pending with { AppliedBase = applied } }
+            : update;
     }
 
     /// <summary>

@@ -75,11 +75,14 @@ internal sealed class PlanFixture
         return entity;
     }
 
-    public void Tombstone(int key, string kind = ItemKind, params int[] aliases)
+    /// <summary>A tombstone; its vector is <c>{self: 1}</c> unless given.</summary>
+    public void Tombstone(int key, string kind = ItemKind, DataSyncVersionVector? vv = null,
+        DataSyncTombstoneKind tombstoneKind = DataSyncTombstoneKind.Deleted, params int[] aliases)
     {
         if (!Tombstones.TryGetValue(kind, out var list)) Tombstones[kind] = list = [];
-        list.Add(new DataSyncTombstoneState(new EntityKeys([K(key), .. aliases.Select(K)]), Vv((Self, 1)),
-            MergeFixture.SelfEditor, DataSyncEntitySyncState.Synced, DataSyncTombstoneKind.Deleted, true, 5));
+        list.Add(new DataSyncTombstoneState(new EntityKeys([K(key), .. aliases.Select(K)]), vv ?? Vv((Self, 1)),
+            MergeFixture.SelfEditor, DataSyncEntitySyncState.Synced, tombstoneKind,
+            tombstoneKind == DataSyncTombstoneKind.Deleted, 5));
     }
 
     // ---- the peer ----------------------------------------------------------------------------------

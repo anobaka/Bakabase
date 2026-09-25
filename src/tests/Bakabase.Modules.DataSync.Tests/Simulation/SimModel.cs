@@ -48,6 +48,16 @@ internal sealed class SimWorld
 
     public void Count(string what) => Counters[what] = Counters.GetValueOrDefault(what) + 1;
 
+    /// <summary>
+    /// The limits the feed pages are written and read with (§7.5.4): the defaults, or small ones that make the
+    /// simulator's small kinds span pages and chunks, so paging and reassembly meet the invariants too.
+    /// </summary>
+    public DataSyncLimits WireLimits { get; set; } = DataSyncLimits.Default;
+
+    /// <summary>Wire limits small enough to page and chunk the simulator's kinds; every other limit is the default.</summary>
+    public static DataSyncLimits SmallWireLimits { get; } =
+        DataSyncLimits.Default with { MaxPageBytes = 2_048, MaxChunkBytes = 300, MaxRecordsPerPage = 3 };
+
     public SimNode AddNode(string name, bool headless = false)
     {
         var node = new SimNode(this, name, headless);
@@ -167,6 +177,12 @@ internal sealed class SimLink
     /// <summary>Turned on again after a stop: every pending record is re-merged with the next pull (§8.1).</summary>
     public bool RemergeAllPending { get; set; }
 
+    /// <summary>
+    /// Undone creates the person included again on this link ([Include], §8.11), by base key: the only place row T0
+    /// may revive one. Kept apart from the bases, so the check does not trust what the engine wrote.
+    /// </summary>
+    public HashSet<(string Kind, SyncKey Key)> IncludedUndone { get; private set; } = [];
+
     public bool Stopped => Mode == DataSyncLinkMode.Off;
 
     public SimLink Clone()
@@ -175,6 +191,7 @@ internal sealed class SimLink
         clone.Cursors = new Dictionary<string, long>(Cursors, StringComparer.Ordinal);
         clone.Bases = new Dictionary<(string, SyncKey), DataSyncPeerBase>(Bases);
         clone.CompletedKinds = new HashSet<string>(CompletedKinds, StringComparer.Ordinal);
+        clone.IncludedUndone = [.. IncludedUndone];
         return clone;
     }
 

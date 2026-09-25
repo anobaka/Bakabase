@@ -93,7 +93,7 @@ public static class DataSyncRecordApply
     /// closure hints and item drafts are dropped, and their keys leave <c>Evaluated</c>, so reconciliation leaves
     /// their open items untouched until the <c>Retry</c> record is merged again.
     /// </summary>
-    /// <param name="bases">The link's bases as the merge read them (for the rows' states).</param>
+    /// <param name="bases">The link's bases as the merge read them (for the rows' states and applied bases).</param>
     public static DataSyncMergeResult WithoutChangedDuringApply(DataSyncMergeResult result,
         IReadOnlyCollection<string> changedItemIds, IReadOnlyDictionary<(string Kind, SyncKey Key), DataSyncPeerBase> bases)
     {
@@ -140,8 +140,13 @@ public static class DataSyncRecordApply
             var record = u.Record ?? u.Pending?.Record;
             if (record is null) return u;
             var existing = bases.GetValueOrDefault((u.Kind, u.Key));
+            // Nothing of this merge applied, so the entity still holds what the row's applied base says (§8.4 K6),
+            // never what this merge's update would have made of it.
             var retry = DataSyncPendingRecords.Create(record, DataSyncPendingReason.Retry,
-                u.Pending?.EvaluatedAtLocalSeq ?? 0, u.Pending?.Flags ?? DataSyncMergeFlags.None);
+                u.Pending?.EvaluatedAtLocalSeq ?? 0, u.Pending?.Flags ?? DataSyncMergeFlags.None) with
+            {
+                AppliedBase = existing?.Pending?.AppliedBase,
+            };
             return new DataSyncBaseUpdate(u.Kind, u.Key, existing?.State ?? DataSyncBaseState.Unbound,
                 existing?.Exclusion, null, null, retry, false);
         }).ToList();

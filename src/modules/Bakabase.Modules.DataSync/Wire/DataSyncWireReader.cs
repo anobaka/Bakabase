@@ -16,7 +16,10 @@ namespace Bakabase.Modules.DataSync.Wire;
 /// malformed envelope, record or chunk, or a record whose <c>seq</c> is not above the page's <c>sinceSeq</c> or
 /// out of order; as <see cref="TooLarge"/> over <c>MaxPageBytes</c> or <c>MaxRecordsPerPage</c>; and as
 /// <see cref="WrongSnapshot"/> when it names another snapshot or kind. Record members this build does not know are
-/// ignored.
+/// ignored. A string or member name that cannot be decoded (an escaped unpaired surrogate, which a parser accepts)
+/// refuses the page in the envelope, but inside a record's <c>content</c> or a chunk's <c>items</c> it only makes that
+/// entity unreadable: the string is read as U+FFFD and the member left out, so the content no longer matches its
+/// hash and the assembler holds that one entity (<c>Invalid</c>, v3.1 §6.3).
 /// </remarks>
 public static class DataSyncWireReader
 {
@@ -63,7 +66,8 @@ public static class DataSyncWireReader
                }))
         {
             if (document.RootElement.ValueKind != JsonValueKind.Object) return Problem(Corrupted);
-            if (!TryConvert(document.RootElement, out var node) || node is not JsonObject obj) return Problem(Corrupted);
+            if (!TryConvert(document.RootElement, 0, false, out var node) || node is not JsonObject obj)
+                return Problem(Corrupted);
             root = obj;
         }
 
@@ -115,7 +119,12 @@ public static class DataSyncWireReader
     /// Copies a parsed element into a detached node tree, refusing duplicate members and numbers that are not
     /// integers in <see cref="long"/> range. Depth is already bounded by the document's MaxDepth.
     /// </summary>
-    private static bool TryConvert(JsonElement element, out JsonNode? node)
+    /// <param name="depth">The element's depth: 0 for the page, 2 for a record or chunk.</param>
+    /// <param name="content">
+    /// The element is (inside) a record's content or a chunk's items: text that cannot be decoded is replaced (see
+    /// the class remarks) instead of refusing the page.
+    /// </param>
+    private static bool TryConvert(JsonElement element, int depth, bool content, out JsonNode? node)
     {
         node = null;
         switch (element.ValueKind)
@@ -125,9 +134,16 @@ public static class DataSyncWireReader
                 var obj = new JsonObject();
                 foreach (var member in element.EnumerateObject())
                 {
-                    if (obj.ContainsKey(member.Name)) return false;
-                    if (!TryConvert(member.Value, out var value)) return false;
-                    obj.Add(member.Name, value);
+                    if (!TryDecode(member, out var name))
+                    {
+                        if (content) continue;
+                        return false;
+                    }
+
+                    if (obj.ContainsKey(name)) return false;
+                    var inner = content || (depth == 2 && name is "content" or "items");
+                    if (!TryConvert(member.Value, depth + 1, inner, out var value)) return false;
+                    obj.Add(name, value);
                 }
 
                 node = obj;
@@ -138,7 +154,7 @@ public static class DataSyncWireReader
                 var array = new JsonArray();
                 foreach (var item in element.EnumerateArray())
                 {
-                    if (!TryConvert(item, out var value)) return false;
+                    if (!TryConvert(item, depth + 1, content, out var value)) return false;
                     array.Add(value);
                 }
 
@@ -146,7 +162,9 @@ public static class DataSyncWireReader
                 return true;
             }
             case JsonValueKind.String:
-                node = JsonValue.Create(element.GetString());
+                if (TryDecode(element, out var text)) node = JsonValue.Create(text);
+                else if (content) node = JsonValue.Create(Undecodable);
+                else return false;
                 return true;
             case JsonValueKind.Number:
             {
@@ -167,6 +185,39 @@ public static class DataSyncWireReader
                 return true;
             default:
                 return false;
+        }
+    }
+
+    /// <summary>What a string that cannot be decoded reads as inside content: U+FFFD, the replacement character.</summary>
+    private const string Undecodable = "\uFFFD";
+
+    /// <summary>A member's name; false when it cannot be decoded (an escaped unpaired surrogate).</summary>
+    private static bool TryDecode(JsonProperty member, out string name)
+    {
+        try
+        {
+            name = member.Name;
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            name = "";
+            return false;
+        }
+    }
+
+    /// <summary>A string element's value; false when it cannot be decoded (an escaped unpaired surrogate).</summary>
+    private static bool TryDecode(JsonElement element, out string text)
+    {
+        try
+        {
+            text = element.GetString() ?? "";
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            text = "";
+            return false;
         }
     }
 
