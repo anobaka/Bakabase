@@ -43,7 +43,7 @@ const namesOf = async (kind: string): Promise<Map<string, Named>> => {
     return new Map(
       (rsp.data ?? []).map((property) => [
         String(property.id),
-        { name: property.name, offersDefinitionOnly: withOptions.has(property.type) },
+        { name: property.name, offersDefinitionOnly: propertyHasOptions(property.type) },
       ]),
     );
   }
@@ -60,6 +60,9 @@ const namesOf = async (kind: string): Promise<Map<string, Named>> => {
 
   return new Map();
 };
+
+/** Whether a property of this type has options that can be left out of sync. */
+export const propertyHasOptions = (type: number) => withOptions.has(type);
 
 /** A definition this device keeps apart from syncing in any way. */
 const isApart = (entity: DataSyncEntityStatusView) =>

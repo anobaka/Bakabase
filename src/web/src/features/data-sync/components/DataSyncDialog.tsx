@@ -23,6 +23,7 @@ export default function DataSyncDialog({
   busy = false,
   onClose,
   testId,
+  wide = false,
 }: {
   title: string;
   children: ReactNode;
@@ -30,6 +31,8 @@ export default function DataSyncDialog({
   busy?: boolean;
   onClose: () => void;
   testId?: string;
+  /** For what needs room: the first sync review, the undo preview. */
+  wide?: boolean;
 }) {
   const { t } = useTranslation();
   const dialog = useRef<HTMLElement>(null);
@@ -86,7 +89,9 @@ export default function DataSyncDialog({
         ref={dialog}
         aria-labelledby={titleId}
         aria-modal="true"
-        className={`${panelClass} flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col gap-3 shadow-xl`}
+        className={`${panelClass} flex max-h-[calc(100vh-2rem)] w-full ${
+          wide ? "max-w-4xl" : "max-w-xl"
+        } flex-col gap-3 shadow-xl`}
         data-testid={testId}
         role="dialog"
       >

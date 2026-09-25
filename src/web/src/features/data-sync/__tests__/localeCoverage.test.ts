@@ -1,14 +1,43 @@
 import { describe, expect, it } from "vitest";
 
 import { dataSyncKinds } from "../viewModels";
+import { changeOps, scalarPaths } from "../components/ChangeList";
+import { historyCountKeys, undoGroupOrder } from "../historyModels";
+import { actionKeyVariants, headlineVariants } from "../inboxModels";
 
 import {
+  DataSyncDecisionErrorCode,
+  DataSyncDecisionErrorCodeLabel,
+  DataSyncHeldReason,
+  DataSyncHeldReasonLabel,
+  DataSyncHistoryKind,
+  DataSyncHistoryKindLabel,
+  DataSyncInboxAction,
+  DataSyncInboxActionLabel,
+  DataSyncInboxItemType,
+  DataSyncInboxItemTypeLabel,
+  DataSyncItemAction,
+  DataSyncItemActionLabel,
+  DataSyncItemOutcome,
+  DataSyncItemOutcomeLabel,
+  DataSyncNaturalMatch,
+  DataSyncNaturalMatchLabel,
   DataSyncPauseReason,
   DataSyncPauseReasonLabel,
   DataSyncPeerErrorCode,
   DataSyncPeerErrorCodeLabel,
+  DataSyncPlanItemReason,
+  DataSyncPlanItemReasonLabel,
+  DataSyncPlanItemType,
+  DataSyncPlanItemTypeLabel,
+  DataSyncPlanResolution,
+  DataSyncPlanResolutionLabel,
   DataSyncProblemCode,
   DataSyncProblemCodeLabel,
+  DataSyncUndoBlock,
+  DataSyncUndoBlockLabel,
+  DataSyncWarningCode,
+  DataSyncWarningCodeLabel,
 } from "@/sdk/constants";
 
 /*
@@ -122,6 +151,72 @@ const dynamicKeys = [
     (status) => `dataSync.wizard.candidate.${status}`,
   ),
   ...["follow", "twoWay", "copyOnce"].map((how) => `dataSync.wizard.explain.${how}`),
+
+  // The first sync review.
+  ...labels(DataSyncPlanItemType, DataSyncPlanItemTypeLabel).flatMap((type) => [
+    `dataSync.plan.type.${type}`,
+    `dataSync.plan.summary.${type}`,
+  ]),
+  ...labels(DataSyncPlanItemReason, DataSyncPlanItemReasonLabel).map(
+    (reason) => `dataSync.plan.reason.${reason}`,
+  ),
+  ...labels(DataSyncHeldReason, DataSyncHeldReasonLabel).map(
+    (held) => `dataSync.plan.held.${held}`,
+  ),
+  ...labels(DataSyncPlanResolution, DataSyncPlanResolutionLabel).map(
+    (resolution) => `dataSync.plan.resolution.${resolution}`,
+  ),
+  ...labels(DataSyncNaturalMatch, DataSyncNaturalMatchLabel).flatMap((match) => [
+    `dataSync.plan.match.${match}`,
+    `dataSync.inbox.match.${match}`,
+  ]),
+  ...labels(DataSyncWarningCode, DataSyncWarningCodeLabel).map(
+    (code) => `dataSync.plan.warning.${code}`,
+  ),
+  ...labels(DataSyncDecisionErrorCode, DataSyncDecisionErrorCodeLabel).map(
+    (code) => `dataSync.decisionError.${code}`,
+  ),
+  ...scalarPaths.map((path) => `dataSync.plan.path.${path}`),
+  ...[...changeOps, "other"].map((op) => `dataSync.plan.change.group.${op}`),
+  ...["decisionsInvalid", "planChanged"].map((banner) => `dataSync.review.${banner}`),
+
+  // Needs you.
+  ...[...labels(DataSyncInboxItemType, DataSyncInboxItemTypeLabel), ...headlineVariants].map(
+    (type) => `dataSync.inbox.type.${type}`,
+  ),
+  ...[
+    ...labels(DataSyncInboxAction, DataSyncInboxActionLabel),
+    ...actionKeyVariants,
+    "PauseLink",
+  ].map((action) => `dataSync.inbox.action.${action}`),
+  ...["linkExact", "skipAll", "deleteAll", "keepAll", "keepLocalAll", "useRemoteAll"].map(
+    (bulk) => `dataSync.inbox.bulk.${bulk}`,
+  ),
+  ...[
+    "resolvedOn",
+    "resolvedElsewhere",
+    "resolvedHere",
+    "superseded",
+    "linkRemoved",
+    "linkStopped",
+  ].map((closure) => `dataSync.inbox.closure.${closure}`),
+
+  // The history, undo, restore.
+  ...labels(DataSyncHistoryKind, DataSyncHistoryKindLabel).map(
+    (kind) => `dataSync.history.kind.${kind}`,
+  ),
+  ...historyCountKeys.map((count) => `dataSync.history.count.${count}`),
+  ...labels(DataSyncItemAction, DataSyncItemActionLabel).map(
+    (action) => `dataSync.history.action.${action}`,
+  ),
+  ...labels(DataSyncItemOutcome, DataSyncItemOutcomeLabel).map(
+    (outcome) => `dataSync.history.outcome.${outcome}`,
+  ),
+  ...undoGroupOrder.map((group) => `dataSync.undo.group.${group}`),
+  ...labels(DataSyncUndoBlock, DataSyncUndoBlockLabel).map(
+    (block) => `dataSync.undo.blocked.${block}`,
+  ),
+  ...["own", "peer", "both"].map((evidence) => `dataSync.restore.evidence.${evidence}`),
 ];
 
 /** The device map's words for data sync (spec §11.1), which live with data sync's own. */
@@ -230,6 +325,35 @@ describe("locales for data sync", () => {
       expect(text, key).not.toContain("配置包");
       expect(text, key).not.toContain("分享给他人");
     }
+  });
+
+  it("gives the pages that list definitions their words, and says removing a device ends sync", () => {
+    for (const key of ["customProperty.empty.syncHint", "customProperty.action.syncWithDevice"]) {
+      expect(en[key], key).toEqual(expect.any(String));
+      expect(cn[key], key).toEqual(expect.any(String));
+    }
+    // Hook H-dev-remove: removing a device ends definitions sync with it, both ways.
+    expect(en["federation.devices.removeConfirm"]).toContain(
+      "definitions sync with it ends in both directions",
+    );
+    expect(cn["federation.devices.removeConfirm"]).toContain("双向定义同步也会结束");
+    expect(placeholders(cn["federation.devices.removeConfirm"])).toEqual(
+      placeholders(en["federation.devices.removeConfirm"]),
+    );
+  });
+
+  it("uses the spec's terms for the review, Needs you and the history", () => {
+    expect(cn["dataSync.inbox.title"]).toBe("待你决定");
+    expect(cn["dataSync.history.title"]).toBe("同步记录");
+    expect(cn["dataSync.inbox.action.Detach"]).toBe("不再同步此项");
+    expect(cn["dataSync.inbox.action.KeepHereOnlyChild"]).toBe("仅保留在本机");
+    expect(cn["dataSync.plan.newerHere"]).toBe("本机较新");
+    expect(en["dataSync.review.twoWayNote"]).toBe(
+      "What you keep here, and any name you choose, is also sent to {{name}}.",
+    );
+    expect(en["dataSync.plan.skipHint"]).toBe(
+      "Not synced with {{name}}. You can include it later.",
+    );
   });
 
   it("uses the spec's exact words for approval and consent", () => {

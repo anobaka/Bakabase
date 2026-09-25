@@ -84,7 +84,7 @@
   "federation.devices.revoke": "Revoke access to my library",
   "federation.devices.revokeConfirm": "Stop {{name}} from reading your library? Later requests and active media access will be denied. Data already received cannot be recalled.",
   "federation.devices.remove": "Remove device",
-  "federation.devices.removeConfirm": "Remove {{name}}? Your access to it is removed, its access to your library is revoked, and this device forgets it, including its path mappings and pending requests. Data it already received cannot be recalled. Pair again to reconnect.",
+  "federation.devices.removeConfirm": "Remove {{name}}? Your access to it is removed, its access to your library is revoked, definitions sync with it ends in both directions, and this device forgets it, including its path mappings and pending requests. Definitions already synced stay on both devices, and data it already received cannot be recalled. Pair again to reconnect.",
   "federation.sharing.on": "Sharing enabled",
   "federation.sharing.off": "Sharing disabled",
   "federation.sharing.description": "Only devices with a separate node authorization can use the new sharing protocol. Existing browser and administrator access settings still apply to the old interfaces.",

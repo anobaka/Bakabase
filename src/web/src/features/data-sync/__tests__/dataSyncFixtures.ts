@@ -1,26 +1,44 @@
 import type { TFunction } from "i18next";
 import type {
   DataSyncAccessRequestView,
+  DataSyncFieldChange,
+  DataSyncHistoryEntry,
+  DataSyncInboxItemView,
   DataSyncLinkView,
   DataSyncMapOutgoing,
   DataSyncMapPeer,
   DataSyncMapView,
   DataSyncOverview,
   DataSyncPeerCandidate,
+  DataSyncPlan,
+  DataSyncPlanCandidate,
+  DataSyncPlanItem,
   DataSyncReaderView,
+  DataSyncReviewResult,
   DataSyncStatusView,
 } from "../api";
 import type { DataSyncPanelActions } from "../hooks/useDataSyncActions";
+import type { DataSyncHistoryKind } from "@/sdk/constants";
 
 import { vi } from "vitest";
 
 import {
+  DataSyncFieldChangeKind,
+  DataSyncFieldResolution,
+  DataSyncInboxAction,
+  DataSyncInboxItemOrigin,
+  DataSyncInboxItemType,
   DataSyncLinkInitiator,
   DataSyncLinkMode,
   DataSyncLinkState,
+  DataSyncNaturalMatch,
+  DataSyncPlanItemType,
+  DataSyncPlanResolution,
   DataSyncRequestDirection,
   DataSyncRequestIntent,
+  DataSyncReviewState,
   DataSyncStatusLevel,
+  DataSyncUndoState,
   RemoteAccessMode,
 } from "@/sdk/constants";
 
@@ -202,6 +220,306 @@ export const candidate = (
   sharesDefinitions: true,
   weMayRead: false,
   theyMayRead: false,
+  ...patch,
+});
+
+// ---- the first sync review ---------------------------------------------------------------------
+
+export const changeCounts = (
+  patch: Partial<DataSyncPlanItem["changeCounts"]> = {},
+): DataSyncPlanItem["changeCounts"] => {
+  const counts = { set: 0, add: 0, rename: 0, recolor: 0, ...patch };
+
+  return { total: counts.set + counts.add + counts.rename + counts.recolor, ...counts, ...patch };
+};
+
+export const fieldChange = (
+  changeId: string,
+  kind: DataSyncFieldChangeKind,
+  path: string,
+  to: DataSyncFieldChange["to"],
+  patch: Partial<DataSyncFieldChange> = {},
+): DataSyncFieldChange => ({ changeId, kind, path, to, ...patch });
+
+/** Counts that match a list of changes, the way the planner counts them. */
+export const countsOf = (changes: DataSyncFieldChange[]) =>
+  changeCounts({
+    set: changes.filter((change) => change.kind === DataSyncFieldChangeKind.Set).length,
+    add: changes.filter((change) => change.kind === DataSyncFieldChangeKind.AddChild).length,
+    rename: changes.filter((change) => change.kind === DataSyncFieldChangeKind.RenameChild).length,
+    recolor: changes.filter((change) => change.kind === DataSyncFieldChangeKind.RecolorChild)
+      .length,
+  });
+
+export const planCandidate = (
+  localKey: string,
+  name: string,
+  patch: Partial<DataSyncPlanCandidate> = {},
+): DataSyncPlanCandidate => ({
+  localKey,
+  name,
+  subtype: "SingleChoice",
+  match: DataSyncNaturalMatch.Exact,
+  changes: [],
+  changeCounts: changeCounts(),
+  changesTruncated: false,
+  warnings: [],
+  warningCounts: [],
+  warningsTruncated: false,
+  unchangedChildren: 0,
+  localOnlyChildren: 0,
+  recordsNewKeys: true,
+  reviewToken: `token-candidate-${localKey}`,
+  ...patch,
+});
+
+const defaultsOf: Record<
+  DataSyncPlanItemType,
+  Pick<DataSyncPlanItem, "allowedResolutions" | "defaultResolution" | "requiresConfirmation">
+> = {
+  [DataSyncPlanItemType.Create]: {
+    allowedResolutions: [DataSyncPlanResolution.Create, DataSyncPlanResolution.Skip],
+    defaultResolution: DataSyncPlanResolution.Create,
+    requiresConfirmation: false,
+  },
+  [DataSyncPlanItemType.Update]: {
+    allowedResolutions: [DataSyncPlanResolution.Update, DataSyncPlanResolution.Skip],
+    defaultResolution: DataSyncPlanResolution.Update,
+    requiresConfirmation: false,
+  },
+  [DataSyncPlanItemType.Unchanged]: {
+    allowedResolutions: [DataSyncPlanResolution.Update, DataSyncPlanResolution.Skip],
+    defaultResolution: DataSyncPlanResolution.Update,
+    requiresConfirmation: false,
+  },
+  [DataSyncPlanItemType.Link]: {
+    allowedResolutions: [
+      DataSyncPlanResolution.Link,
+      DataSyncPlanResolution.CreateSeparate,
+      DataSyncPlanResolution.Skip,
+    ],
+    defaultResolution: DataSyncPlanResolution.Link,
+    requiresConfirmation: true,
+  },
+  [DataSyncPlanItemType.NeedsDecision]: {
+    allowedResolutions: [
+      DataSyncPlanResolution.Link,
+      DataSyncPlanResolution.CreateSeparate,
+      DataSyncPlanResolution.Skip,
+    ],
+    defaultResolution: undefined,
+    requiresConfirmation: true,
+  },
+  [DataSyncPlanItemType.Held]: {
+    allowedResolutions: [],
+    defaultResolution: undefined,
+    requiresConfirmation: false,
+  },
+};
+
+/** One item of a plan, with the defaults the planner gives its type (v3.1 §7.3). */
+export const planItem = (
+  key: string,
+  type: DataSyncPlanItemType,
+  name: string,
+  patch: Partial<DataSyncPlanItem> = {},
+): DataSyncPlanItem => {
+  const kind = patch.kind ?? "customProperty";
+  const local =
+    type === DataSyncPlanItemType.Update || type === DataSyncPlanItemType.Unchanged
+      ? { localKey: `local-${key}`, name, subtype: "SingleChoice", position: 0, childCount: 3 }
+      : undefined;
+  const changes = patch.changes ?? [];
+
+  return {
+    itemId: `${kind}/k/${key}`,
+    kind,
+    type,
+    incoming: { name, subtype: "SingleChoice", position: 0, childCount: 3 },
+    local,
+    candidates: [],
+    changes,
+    changeCounts: countsOf(changes),
+    changesTruncated: false,
+    unchangedChildren: 0,
+    localOnlyChildren: 0,
+    ...defaultsOf[type],
+    defaultTargetLocalKey:
+      type === DataSyncPlanItemType.Link
+        ? patch.candidates?.[0]?.localKey
+        : (local?.localKey ?? undefined),
+    bulkLinkEligible: false,
+    offersSeparateName: type === DataSyncPlanItemType.NeedsDecision,
+    recordsNewKeys: false,
+    reviewToken: `token-${key}`,
+    warnings: [],
+    warningCounts: [],
+    warningsTruncated: false,
+    ...patch,
+  };
+};
+
+/** A plan of the given items, with the summary the planner would give it. */
+export const plan = (
+  items: DataSyncPlanItem[],
+  patch: Partial<DataSyncPlan> = {},
+): DataSyncPlan => {
+  const kinds = Array.from(new Set(items.map((item) => item.kind)));
+  const counts = kinds.flatMap((kind) =>
+    Array.from(new Set(items.filter((item) => item.kind === kind).map((item) => item.type))).map(
+      (type) => ({
+        kind,
+        type,
+        count: items.filter((item) => item.kind === kind && item.type === type).length,
+      }),
+    ),
+  );
+
+  return {
+    planId: "0123456789abcdef",
+    snapshotContentHash: "e".repeat(64),
+    kinds: kinds.map((kind) => ({
+      kind,
+      schemaVersion: 1,
+      supported: true,
+      items: items.filter((item) => item.kind === kind),
+      localOnlyCount: 0,
+    })),
+    summary: {
+      counts,
+      pendingCount: items.filter((item) => item.requiresConfirmation).length,
+      bulkLinkEligibleCount: items.filter((item) => item.bulkLinkEligible).length,
+      heldCount: items.filter((item) => item.type === DataSyncPlanItemType.Held).length,
+    },
+    warnings: [],
+    ...patch,
+  };
+};
+
+export const reviewResult = (
+  items: DataSyncPlanItem[],
+  patch: Partial<DataSyncReviewResult> = {},
+): DataSyncReviewResult => ({
+  reviewId: "review-1",
+  linkId: 3,
+  copyOnce: false,
+  linkMode: DataSyncLinkMode.Follow,
+  state: DataSyncReviewState.Staged,
+  source: {
+    nodeId: "node-laptop",
+    name: "Laptop",
+    appVersion: "2.5.0-beta.10",
+    fetchedAt: minutesAgo(12),
+    kinds: [{ kind: "customProperty", count: items.length }],
+  },
+  plan: plan(items),
+  ...patch,
+});
+
+// ---- Needs you ---------------------------------------------------------------------------------
+
+export const inboxPayload = (
+  patch: Partial<DataSyncInboxItemView["payload"]> = {},
+): DataSyncInboxItemView["payload"] => ({
+  entityName: "Genre",
+  subtype: "MultipleChoice",
+  peerName: "NAS",
+  remoteEditor: { nodeId: "node-nas", name: "NAS", actorId: "actor-nas-1" },
+  originName: "This PC",
+  fields: [],
+  childrenTotal: 0,
+  ...patch,
+});
+
+export const inboxItem = (
+  id: number,
+  type: DataSyncInboxItemType,
+  actions: DataSyncInboxAction[],
+  patch: Partial<DataSyncInboxItemView> = {},
+): DataSyncInboxItemView => ({
+  id,
+  linkId: 1,
+  peerNodeId: "node-nas",
+  peerName: "NAS",
+  kind: "customProperty",
+  localKey: "12",
+  type,
+  origin: DataSyncInboxItemOrigin.Merger,
+  subjectPath: "",
+  payload: inboxPayload(),
+  allowedActions: actions,
+  token: `token-${id}`,
+  createdAt: minutesAgo(60),
+  updatedAt: minutesAgo(10),
+  ...patch,
+});
+
+/** A rename both devices made to the definition's name: this device 作者, the NAS Artists. */
+export const nameConflict = (
+  id: number,
+  patch: Partial<DataSyncInboxItemView> = {},
+  remote = "Artists",
+) =>
+  inboxItem(
+    id,
+    DataSyncInboxItemType.FieldConflict,
+    [
+      DataSyncInboxAction.KeepLocal,
+      DataSyncInboxAction.UseRemote,
+      DataSyncInboxAction.UseCustom,
+      DataSyncInboxAction.Detach,
+    ],
+    {
+      subjectPath: "name",
+      payload: inboxPayload({
+        entityName: "作者",
+        fields: [
+          {
+            path: "name",
+            resolution: DataSyncFieldResolution.Conflict,
+            base: { text: "Artist" },
+            local: { text: "作者" },
+            remote: { text: remote },
+          },
+        ],
+      }),
+      ...patch,
+    },
+  );
+
+// ---- the history --------------------------------------------------------------------------------
+
+export const historyCountsOf = (
+  patch: Partial<DataSyncHistoryEntry["counts"]> = {},
+): DataSyncHistoryEntry["counts"] => ({
+  created: 0,
+  updated: 0,
+  linked: 0,
+  unchanged: 0,
+  skipped: 0,
+  changedSinceReview: 0,
+  changedDuringApply: 0,
+  held: 0,
+  deleted: 0,
+  typeChanged: 0,
+  reordered: 0,
+  resolved: 0,
+  ...patch,
+});
+
+export const historyEntry = (
+  id: number,
+  kind: DataSyncHistoryKind,
+  patch: Partial<DataSyncHistoryEntry> = {},
+): DataSyncHistoryEntry => ({
+  id,
+  appliedAt: minutesAgo(id * 60),
+  kind,
+  linkId: 1,
+  peerNodeId: "node-nas",
+  peerName: "NAS",
+  counts: historyCountsOf({ created: 1, updated: 2 }),
+  undoState: DataSyncUndoState.Available,
   ...patch,
 });
 

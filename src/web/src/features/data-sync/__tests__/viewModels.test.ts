@@ -1,4 +1,4 @@
-import type { DataSyncEntityStatusView } from "../api";
+import type { DataSyncEntityStatusView, DataSyncPlanWarning } from "../api";
 
 import { describe, expect, it } from "vitest";
 
@@ -28,28 +28,74 @@ import {
   waitingElsewhereLine,
   withCandidates,
 } from "../viewModels";
+import {
+  bulkCreateSeparate,
+  bulkLinkExact,
+  bulkSkipPending,
+  closeExclusions,
+  footerCounts,
+  foldApplies,
+  groupByType,
+  initialDecisions,
+  isPending,
+  rebaseDecisions,
+  toApplyInput,
+  toggleGroup,
+} from "../reviewModels";
+import {
+  conflictBatch,
+  conflictDecided,
+  filterCards,
+  groupInbox,
+  inboxBulks,
+  inboxChoices,
+  recentlyResolved,
+} from "../inboxModels";
+import { historySources, isUndoable, undoGroups } from "../historyModels";
 
 import {
   candidate,
+  changeCounts,
+  fieldChange,
+  historyEntry,
+  inboxItem,
+  inboxPayload,
   keyT,
   link,
   mapPeer,
   mapView,
   minutesAgo,
+  nameConflict,
   NOW,
   outgoing,
+  plan,
+  planCandidate,
+  planItem,
   reader,
   status,
 } from "./dataSyncFixtures";
 
 import {
   DataSyncEntitySyncState,
+  DataSyncFieldChangeKind,
   DataSyncHeldReason,
+  DataSyncHistoryKind,
+  DataSyncInboxAction,
+  DataSyncInboxClosure,
+  DataSyncInboxItemType,
   DataSyncLinkInitiator,
   DataSyncLinkMode,
   DataSyncLinkState,
+  DataSyncNaturalMatch,
   DataSyncPauseReason,
+  DataSyncPlanItemReason,
+  DataSyncPlanItemType,
+  DataSyncPlanResolution,
   DataSyncStatusLevel,
+  DataSyncUndoAction,
+  DataSyncUndoBlock,
+  DataSyncUndoState,
+  DataSyncWarningCode,
 } from "@/sdk/constants";
 
 const peerOf = (patch: Parameters<typeof link>[3] = {}) =>
@@ -482,5 +528,548 @@ describe("devices to sync with", () => {
     expect(candidateStatus(candidate("a", "A", { weMayRead: true }), false)).toBe("readable");
     expect(candidateStatus(candidate("a", "A"), true)).toBe("asks");
     expect(candidateStatus(candidate("a", "A"), false)).toBe("manageElsewhere");
+  });
+});
+
+// ---- the first sync review (v3.1 models) ----------------------------------------------------------
+
+const { Create, Update, Unchanged, Link, NeedsDecision, Held } = DataSyncPlanItemType;
+const R = DataSyncPlanResolution;
+
+/** One of every type, the Link with one exact candidate, the decision with two. */
+const mixedPlan = () =>
+  plan([
+    planItem("create", Create, "Studio"),
+    planItem("update", Update, "Genre", {
+      changes: [
+        fieldChange(
+          "name",
+          DataSyncFieldChangeKind.Set,
+          "name",
+          { text: "Genres" },
+          { from: { text: "Genre" } },
+        ),
+        fieldChange("tag:add:t1", DataSyncFieldChangeKind.AddChild, "tags", { text: "Isekai" }),
+        fieldChange("tag:add:t2", DataSyncFieldChangeKind.AddChild, "tags", { text: "Mecha" }),
+      ],
+    }),
+    planItem("unchanged", Unchanged, "Mood"),
+    planItem("link", Link, "Rating", {
+      candidates: [planCandidate("15", "Rating")],
+      bulkLinkEligible: true,
+    }),
+    planItem("decide", NeedsDecision, "Artist", {
+      reason: DataSyncPlanItemReason.AmbiguousNameMatch,
+      candidates: [
+        planCandidate("17", "Artist"),
+        planCandidate("18", "artist", { match: DataSyncNaturalMatch.Similar }),
+      ],
+    }),
+    planItem("held", Held, "Huge tags", { heldReason: DataSyncHeldReason.TooLarge }),
+  ]);
+const idOf = (key: string) => `customProperty/k/${key}`;
+
+describe("the first sync review", () => {
+  it("starts every item that needs no confirmation on its default, explicitly", () => {
+    const decisions = initialDecisions(mixedPlan());
+
+    expect(decisions[idOf("create")]).toEqual({
+      resolution: R.Create,
+      targetLocalKey: undefined,
+      excludedChangeIds: [],
+    });
+    expect(decisions[idOf("update")]).toMatchObject({
+      resolution: R.Update,
+      targetLocalKey: "local-update",
+    });
+    // An Unchanged item is an Update that records keys.
+    expect(decisions[idOf("unchanged")]).toMatchObject({
+      resolution: R.Update,
+      targetLocalKey: "local-unchanged",
+    });
+    // Confirmation items — every Link included — stay pending; Held items take no decision.
+    expect(decisions[idOf("link")]).toBeUndefined();
+    expect(decisions[idOf("decide")]).toBeUndefined();
+    expect(decisions[idOf("held")]).toBeUndefined();
+    const items = mixedPlan().kinds[0].items;
+
+    expect(items.filter((item) => isPending(item, decisions)).map((item) => item.itemId)).toEqual([
+      idOf("link"),
+      idOf("decide"),
+    ]);
+  });
+
+  it("links every exact match at once, then creates or skips what is left", () => {
+    const current = mixedPlan();
+    const linked = bulkLinkExact(current, initialDecisions(current));
+
+    expect(linked[idOf("link")]).toEqual({
+      resolution: R.Link,
+      targetLocalKey: "15",
+      excludedChangeIds: [],
+    });
+    expect(linked[idOf("decide")]).toBeUndefined();
+
+    const separate = bulkCreateSeparate(
+      current,
+      linked,
+      (item) => `${item.incoming.name} (Laptop)`,
+    );
+
+    expect(separate[idOf("decide")]).toEqual({
+      resolution: R.CreateSeparate,
+      newName: "Artist (Laptop)",
+      excludedChangeIds: [],
+    });
+    expect(bulkSkipPending(current, linked)[idOf("decide")]).toEqual({
+      resolution: R.Skip,
+      excludedChangeIds: [],
+    });
+    // What was decided is left as it is by the pending bulk actions.
+    expect(bulkSkipPending(current, linked)[idOf("link")]).toEqual(linked[idOf("link")]);
+  });
+
+  it("closes an exclusion over groups and over the changes that depend on it", () => {
+    const changes = [
+      fieldChange("node:add:a", DataSyncFieldChangeKind.AddChild, "nodes", { path: ["A"] }),
+      fieldChange(
+        "node:add:b",
+        DataSyncFieldChangeKind.AddChild,
+        "nodes",
+        { path: ["A", "B"] },
+        { dependsOnChangeId: "node:add:a" },
+      ),
+      fieldChange(
+        "node:add:c",
+        DataSyncFieldChangeKind.AddChild,
+        "nodes",
+        { path: ["A", "B", "C"] },
+        { dependsOnChangeId: "node:add:b" },
+      ),
+      fieldChange("node:rename:d", DataSyncFieldChangeKind.RenameChild, "nodes", { path: ["D2"] }),
+      fieldChange("name", DataSyncFieldChangeKind.Set, "name", { text: "Place" }),
+    ];
+
+    expect([...closeExclusions(changes, ["node:add:a"])].sort()).toEqual([
+      "node:add:a",
+      "node:add:b",
+      "node:add:c",
+    ]);
+    expect([...closeExclusions(changes, ["node:rename:*"])]).toEqual(["node:rename:d"]);
+    expect([...closeExclusions(changes, ["name"])]).toEqual(["name"]);
+    expect(closeExclusions(changes, []).size).toBe(0);
+  });
+
+  it("unticks a group as the group, replacing its single exclusions", () => {
+    const decision = {
+      resolution: R.Update,
+      targetLocalKey: "12",
+      excludedChangeIds: ["tag:add:t1", "name"],
+    };
+
+    expect(toggleGroup(decision, "tag:add").excludedChangeIds).toEqual(["name", "tag:add:*"]);
+    expect(toggleGroup(toggleGroup(decision, "tag:add"), "tag:add").excludedChangeIds).toEqual([
+      "name",
+    ]);
+  });
+
+  it("sends one decision for every item that is not held, with the token of what was shown", () => {
+    const current = mixedPlan();
+    const decisions = {
+      ...bulkLinkExact(current, initialDecisions(current)),
+      [idOf("decide")]: { resolution: R.Link, targetLocalKey: "18", excludedChangeIds: [] },
+      [idOf("update")]: {
+        resolution: R.Update,
+        targetLocalKey: "local-update",
+        excludedChangeIds: ["tag:add:*"],
+      },
+    };
+    const input = toApplyInput(current, decisions);
+    const sent = (key: string) => input.find((decision) => decision.itemId === idOf(key));
+
+    expect(input.map((decision) => decision.itemId)).toEqual([
+      idOf("create"),
+      idOf("update"),
+      idOf("unchanged"),
+      idOf("link"),
+      idOf("decide"),
+    ]);
+    expect(sent("create")).toEqual({
+      itemId: idOf("create"),
+      resolution: R.Create,
+      targetLocalKey: undefined,
+      newName: undefined,
+      excludedChangeIds: [],
+      reviewToken: "token-create",
+    });
+    // Unchanged goes as an Update of its own definition, with the item's token.
+    expect(sent("unchanged")).toMatchObject({
+      resolution: R.Update,
+      targetLocalKey: "local-unchanged",
+      reviewToken: "token-unchanged",
+    });
+    // A candidate target echoes the candidate's token.
+    expect(sent("link")?.reviewToken).toBe("token-candidate-15");
+    expect(sent("decide")?.reviewToken).toBe("token-candidate-18");
+    expect(sent("update")?.excludedChangeIds).toEqual(["tag:add:*"]);
+  });
+
+  it("counts what Apply writes, groups and truncated lists included", () => {
+    const current = mixedPlan();
+    const decisions = bulkLinkExact(current, initialDecisions(current));
+
+    // One pending item still blocks.
+    expect(footerCounts(current, decisions)).toMatchObject({
+      pending: 1,
+      created: 1,
+      linked: 1,
+      changes: 3,
+    });
+    const decided = bulkSkipPending(current, decisions);
+    const excluded = {
+      ...decided,
+      [idOf("update")]: { ...decided[idOf("update")], excludedChangeIds: ["tag:add:*"] },
+    };
+
+    expect(footerCounts(current, excluded)).toMatchObject({ pending: 0, changes: 1, total: 3 });
+
+    // A truncated list: the group stands for every change of its kind, not only those inline.
+    const truncated = plan([
+      planItem("big", Update, "Genre", {
+        changes: [
+          fieldChange("tag:add:t1", DataSyncFieldChangeKind.AddChild, "tags", { text: "A" }),
+        ],
+        changeCounts: changeCounts({ add: 240, rename: 2 }),
+        changesTruncated: true,
+      }),
+    ]);
+    const big = initialDecisions(truncated);
+
+    expect(footerCounts(truncated, big).changes).toBe(242);
+    expect(
+      footerCounts(truncated, {
+        [idOf("big")]: { ...big[idOf("big")], excludedChangeIds: ["tag:add:*"] },
+      }).changes,
+    ).toBe(2);
+  });
+
+  it("has nothing to apply when every item is skipped, held, or unchanged with known keys", () => {
+    const quiet = plan([planItem("same", Unchanged, "Mood"), planItem("held", Held, "Huge")]);
+
+    expect(footerCounts(quiet, initialDecisions(quiet))).toMatchObject({
+      total: 0,
+      nothingToApply: true,
+    });
+
+    const newKeys = plan([planItem("same", Unchanged, "Mood", { recordsNewKeys: true })]);
+
+    expect(footerCounts(newKeys, initialDecisions(newKeys))).toMatchObject({
+      keyOnly: 1,
+      total: 1,
+      nothingToApply: false,
+    });
+    const skipped = plan([planItem("create", Create, "Studio")]);
+
+    expect(
+      footerCounts(skipped, { [idOf("create")]: { resolution: R.Skip, excludedChangeIds: [] } })
+        .nothingToApply,
+    ).toBe(true);
+  });
+
+  it("folds an incoming option only in the tick state its warning names", () => {
+    const fold = (when?: string): DataSyncPlanWarning => ({
+      code: DataSyncWarningCode.OptionLabelConflict,
+      changeId: "choice:add:a",
+      args: when ? { when, intoLabel: "Action" } : { intoLabel: "Action" },
+    });
+
+    expect(foldApplies(fold("always"), false)).toBe(true);
+    expect(foldApplies(fold("withIgnoreCaseChange"), true)).toBe(true);
+    expect(foldApplies(fold("withIgnoreCaseChange"), false)).toBe(false);
+    expect(foldApplies(fold("withoutIgnoreCaseChange"), false)).toBe(true);
+    expect(foldApplies(fold("withoutIgnoreCaseChange"), true)).toBe(false);
+    expect(foldApplies({ code: DataSyncWarningCode.NodeMoveIgnored }, true)).toBe(false);
+  });
+
+  it("keeps decisions across a fresh plan only where their token still matches", () => {
+    const before = mixedPlan();
+    const decisions = bulkSkipPending(before, bulkLinkExact(before, initialDecisions(before)));
+    const after = plan(
+      before.kinds[0].items.map((item) =>
+        item.itemId === idOf("link")
+          ? { ...item, candidates: [planCandidate("15", "Rating", { reviewToken: "changed" })] }
+          : item,
+      ),
+    );
+    const rebased = rebaseDecisions(before, after, decisions);
+
+    expect(rebased.dropped).toEqual([idOf("link")]);
+    expect(rebased.decisions[idOf("decide")]).toEqual(decisions[idOf("decide")]);
+    expect(rebased.decisions[idOf("link")]).toBeUndefined();
+  });
+
+  it("lists the types that need the reader first", () => {
+    expect(Array.from(groupByType(mixedPlan().kinds[0].items).keys())).toEqual([
+      NeedsDecision,
+      Link,
+      Create,
+      Update,
+      Held,
+      Unchanged,
+    ]);
+  });
+});
+
+// ---- Needs you ----------------------------------------------------------------------------------
+
+const A = DataSyncInboxAction;
+const T = DataSyncInboxItemType;
+
+describe("needs you", () => {
+  const laptopName = (id: number) =>
+    nameConflict(id, { peerNodeId: "node-laptop", peerName: "Laptop" }, "Author");
+  const optionRename = inboxItem(
+    3,
+    T.ChildRenameConflict,
+    [A.KeepLocal, A.UseRemote, A.UseCustom, A.Detach],
+    { subjectPath: "choice:c-horror" },
+  );
+
+  it("puts every conflict of one definition, from every device, on one card", () => {
+    const cards = groupInbox([
+      nameConflict(1),
+      laptopName(2),
+      optionRename,
+      inboxItem(4, T.DeletedThere, [A.DeleteHere, A.KeepHereOnly], { localKey: "14" }),
+    ]);
+    const conflict = cards.find((card) => card.key === "conflict:customProperty/12")!;
+
+    expect(conflict.items.map((item) => item.id)).toEqual([3, 1, 2]);
+    expect(conflict.peers.map((peer) => peer.name)).toEqual(["NAS", "Laptop"]);
+    expect(cards.find((card) => card.key === "item:4")?.items).toHaveLength(1);
+  });
+
+  it("keeps a filtered card whole, so its conflicts are still decided together", () => {
+    const cards = groupInbox([nameConflict(1), laptopName(2)]);
+    const [card] = filterCards(cards, { peer: "node-laptop" });
+
+    expect(card.items).toHaveLength(2);
+    expect(filterCards(cards, { kind: "extensionGroup" })).toEqual([]);
+  });
+
+  it("sends a conflict card whole: the chosen device's value, and this device's for the rest", () => {
+    const [card] = groupInbox([nameConflict(1), laptopName(2), optionRename]);
+
+    expect(conflictDecided(card, { name: { take: "remote", itemId: 2 } })).toBe(false);
+    const batch = conflictBatch(
+      card,
+      {
+        name: { take: "remote", itemId: 2 },
+        "choice:c-horror": { take: "custom", value: " Horror films " },
+      },
+      true,
+    );
+
+    expect(batch.backupBeforeDestructive).toBe(true);
+    expect(batch.items.map((input) => [input.itemId, input.action, input.customValue])).toEqual([
+      [3, A.UseCustom, "Horror films"],
+      [1, A.KeepLocal, undefined],
+      [2, A.UseRemote, undefined],
+    ]);
+    expect(
+      conflictBatch(card, "detach", false).items.every((input) => input.action === A.Detach),
+    ).toBe(true);
+  });
+
+  it("offers one button per action, candidate and record, and no typed value for a node's parent", () => {
+    const suggestion = inboxItem(6, T.LinkSuggestion, [A.Link, A.KeepBoth, A.Skip], {
+      payload: inboxPayload({
+        candidates: [
+          { localKey: "15", name: "Rating", match: DataSyncNaturalMatch.Exact, updatable: true },
+          { localKey: "16", name: "rating", match: DataSyncNaturalMatch.Clash, updatable: false },
+        ],
+      }),
+    });
+
+    expect(
+      inboxChoices(suggestion).map((choice) => [
+        choice.action,
+        choice.targetLocalKey,
+        choice.input,
+      ]),
+    ).toEqual([
+      [A.Link, "15", undefined],
+      [A.KeepBoth, undefined, "newName"],
+      [A.Skip, undefined, undefined],
+    ]);
+    const records = inboxItem(8, T.IdentityConflict, [A.KeepRecordLinked, A.Detach], {
+      payload: inboxPayload({
+        records: [
+          { primaryKey: "k-artist", name: "Artist" },
+          { primaryKey: "k-author", name: "Author" },
+        ],
+      }),
+    });
+
+    expect(inboxChoices(records).map((choice) => [choice.action, choice.targetRecordKey])).toEqual([
+      [A.KeepRecordLinked, "k-artist"],
+      [A.KeepRecordLinked, "k-author"],
+      [A.Detach, undefined],
+    ]);
+    const parent = inboxItem(9, T.ChildRenameConflict, [A.KeepLocal, A.UseRemote, A.UseCustom], {
+      subjectPath: "node:n1:parent",
+    });
+
+    expect(inboxChoices(parent).map((choice) => choice.action)).toEqual([A.KeepLocal, A.UseRemote]);
+    const deleted = inboxItem(4, T.DeletedThere, [A.DeleteHere, A.KeepHereOnly], {
+      payload: inboxPayload({ valueCount: 412 }),
+    });
+
+    expect(
+      inboxChoices(deleted).find((choice) => choice.action === A.DeleteHere)?.destructive,
+    ).toBe(true);
+  });
+
+  it("builds every bulk action as one whole batch", () => {
+    const suggestion = (id: number, match = DataSyncNaturalMatch.Exact) =>
+      inboxItem(id, T.LinkSuggestion, [A.Link, A.KeepBoth, A.Skip], {
+        localKey: undefined,
+        payload: inboxPayload({
+          candidates: [{ localKey: `c${id}`, name: "Rating", match, updatable: true }],
+        }),
+      });
+    const deletion = (id: number) =>
+      inboxItem(id, T.DeletedThere, [A.DeleteHere, A.KeepHereOnly], {
+        localKey: `d${id}`,
+        payload: inboxPayload({ valueCount: 3 }),
+      });
+    const cards = groupInbox([
+      suggestion(20),
+      suggestion(21),
+      suggestion(22, DataSyncNaturalMatch.Similar),
+      deletion(30),
+      deletion(31),
+      nameConflict(1),
+      laptopName(2),
+      nameConflict(40, { localKey: "13", peerNodeId: "node-laptop", peerName: "Laptop" }),
+      nameConflict(41, { localKey: "14" }),
+    ]);
+    const bulks = inboxBulks(cards, true);
+    const of = (id: string, peer?: string) =>
+      bulks.find((bulk) => bulk.id === id && bulk.peer?.nodeId === peer)!;
+
+    expect(
+      of("linkExact").batch.items.map((input) => [input.itemId, input.targetLocalKey]),
+    ).toEqual([
+      [20, "c20"],
+      [21, "c21"],
+    ]);
+    expect(of("skipAll").count).toBe(3);
+    expect(of("deleteAll")).toMatchObject({ destructive: true, count: 2 });
+    expect(of("deleteAll").batch.backupBeforeDestructive).toBe(true);
+    expect(of("keepAll").batch.items.every((input) => input.action === A.KeepHereOnly)).toBe(true);
+    expect(of("keepLocalAll").count).toBe(3);
+    expect(of("keepLocalAll").batch.items.every((input) => input.action === A.KeepLocal)).toBe(
+      true,
+    );
+    // Use the NAS's for all: the Laptop's conflict of the same definition keeps this device's,
+    // and a card the NAS has no part in is left out.
+    const nas = of("useRemoteAll", "node-nas");
+
+    expect(nas.count).toBe(2);
+    expect(nas.batch.items.map((input) => [input.itemId, input.action])).toEqual([
+      [1, A.UseRemote],
+      [2, A.KeepLocal],
+      [41, A.UseRemote],
+    ]);
+    expect(of("useRemoteAll", "node-laptop").count).toBe(2);
+    // One of a kind is decided on its own card.
+    expect(inboxBulks(groupInbox([deletion(30)]), true)).toEqual([]);
+  });
+
+  it("keeps what was decided in the last seven days, newest first", () => {
+    const closed = (id: number, minutes: number) =>
+      nameConflict(id, {
+        closedAt: minutesAgo(minutes),
+        closure: DataSyncInboxClosure.ResolvedElsewhere,
+        closedByName: "Laptop",
+      });
+
+    expect(
+      recentlyResolved(
+        [closed(1, 60), closed(2, 5), closed(3, 8 * 24 * 60), nameConflict(4)],
+        NOW,
+      ).map((item) => item.id),
+    ).toEqual([2, 1]);
+  });
+});
+
+// ---- the history ---------------------------------------------------------------------------------
+
+describe("the history", () => {
+  it("undoes every kind but an undo, while it can", () => {
+    expect(isUndoable(historyEntry(1, DataSyncHistoryKind.AutoSync))).toBe(true);
+    expect(isUndoable(historyEntry(2, DataSyncHistoryKind.Resolution))).toBe(true);
+    expect(isUndoable(historyEntry(3, DataSyncHistoryKind.Undo))).toBe(false);
+    expect(
+      isUndoable(
+        historyEntry(4, DataSyncHistoryKind.AutoSync, { undoState: DataSyncUndoState.Expired }),
+      ),
+    ).toBe(false);
+  });
+
+  it("sums the last 30 days per device, leaving out undos and what was undone", () => {
+    const sources = historySources(
+      [
+        historyEntry(1, DataSyncHistoryKind.AutoSync, { appliedAt: minutesAgo(10) }),
+        historyEntry(2, DataSyncHistoryKind.FirstLink, {
+          appliedAt: minutesAgo(60 * 24 * 3),
+          counts: { ...historyEntry(0, DataSyncHistoryKind.FirstLink).counts, linked: 6 },
+        }),
+        historyEntry(3, DataSyncHistoryKind.AutoSync, {
+          peerNodeId: "node-laptop",
+          peerName: "Laptop",
+          appliedAt: minutesAgo(60 * 24 * 40),
+        }),
+        historyEntry(4, DataSyncHistoryKind.AutoSync, { undoState: DataSyncUndoState.Undone }),
+        historyEntry(5, DataSyncHistoryKind.Undo),
+        historyEntry(6, DataSyncHistoryKind.Resolution, {
+          peerNodeId: undefined,
+          peerName: undefined,
+        }),
+      ],
+      NOW,
+    );
+
+    expect(sources).toHaveLength(1);
+    expect(sources[0]).toMatchObject({
+      nodeId: "node-nas",
+      syncs: 2,
+      created: 2,
+      updated: 4,
+      linked: 6,
+    });
+    expect(sources[0].lastAt).toBe(minutesAgo(10));
+  });
+
+  it("groups an undo preview by what happens, blocked rows kept", () => {
+    const row = (localKey: string, action: DataSyncUndoAction, blocked?: DataSyncUndoBlock) => ({
+      kind: "customProperty",
+      localKey,
+      name: localKey,
+      action,
+      blocked,
+      settingsMayReferenceIt: false,
+      recreatedGetsNewId: false,
+    });
+    const groups = undoGroups([
+      row("a", DataSyncUndoAction.Remove),
+      row("b", DataSyncUndoAction.Revert, DataSyncUndoBlock.ChangedSinceImport),
+      row("c", DataSyncUndoAction.Recreate),
+      row("d", DataSyncUndoAction.RemoveAliases),
+    ]);
+
+    expect(Array.from(groups.keys())).toEqual(["remove", "recreate", "unlink", "keep"]);
+    expect(groups.get("keep")?.map((item) => item.localKey)).toEqual(["b"]);
   });
 });

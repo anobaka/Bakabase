@@ -1,5 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 
+import { historySources } from "../historyModels";
+import { recentlyResolved } from "../inboxModels";
 import { hasPassed, millisecondsSince, minutesLeft, timeAgo } from "../times";
 import {
   isOffline,
@@ -12,19 +14,22 @@ import {
 } from "../viewModels";
 
 import {
+  historyEntry,
   keyT,
   link,
   mapPeer,
   mapView,
   naked,
+  nameConflict,
   NOW,
   outgoing,
   reader,
   request,
+  reviewResult,
   status,
 } from "./dataSyncFixtures";
 
-import { DataSyncLinkState } from "@/sdk/constants";
+import { DataSyncHistoryKind, DataSyncInboxClosure, DataSyncLinkState } from "@/sdk/constants";
 
 /*
  * Data sync east of UTC, where most of its users are.
@@ -132,6 +137,44 @@ describe("data sync: times the server writes without a zone", () => {
     });
 
     expect(timeAgo(keyT, peer.peerLastReadAt, NOW)).toBe("dataSync.time.days 3");
+  });
+
+  it("keeps a decision closed six days and twenty hours ago under Recently resolved", () => {
+    const closed = {
+      ...nameConflict(1),
+      closedAt: naked(NOW - (6 * 24 + 20) * 60 * MINUTE),
+      closure: DataSyncInboxClosure.ResolvedElsewhere,
+    };
+    const over = { ...closed, id: 2, closedAt: naked(NOW - (7 * 24 + 1) * 60 * MINUTE) };
+
+    // Read as local time, the first would be eight hours older: past the week.
+    expect(recentlyResolved([closed, over], NOW).map((item) => item.id)).toEqual([1]);
+    expect(
+      timeAgo(keyT, nameConflict(3, { updatedAt: naked(NOW - 10 * MINUTE) }).updatedAt, NOW),
+    ).toBe("dataSync.time.minutes 10");
+  });
+
+  it("reads the history's times as UTC: the drawing's month, and when an entry was applied", () => {
+    const edge = historyEntry(1, DataSyncHistoryKind.AutoSync, {
+      appliedAt: naked(NOW - (29 * 24 + 20) * 60 * MINUTE),
+    });
+    const late = historyEntry(2, DataSyncHistoryKind.AutoSync, {
+      appliedAt: naked(NOW - (30 * 24 + 1) * 60 * MINUTE),
+    });
+
+    expect(historySources([edge, late], NOW)[0].syncs).toBe(1);
+    expect(
+      timeAgo(
+        keyT,
+        historyEntry(3, DataSyncHistoryKind.Undo, { undoneAt: naked(NOW - 2 * 60 * MINUTE) })
+          .undoneAt,
+        NOW,
+      ),
+    ).toBe("dataSync.time.hours 2");
+  });
+
+  it("reads when a review was fetched as UTC", () => {
+    expect(timeAgo(keyT, reviewResult([]).source?.fetchedAt, NOW)).toBe("dataSync.time.minutes 12");
   });
 
   it("says never for no time at all, and treats an unreadable deadline as over", () => {

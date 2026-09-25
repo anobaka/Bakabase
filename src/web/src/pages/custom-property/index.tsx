@@ -18,6 +18,13 @@ import PropertySummary from "./components/PropertySummary";
 import TypeConversionRuleOverviewDialog from "./components/TypeConversionRuleOverviewDialog";
 
 import PropertyModal from "@/components/PropertyModal";
+import { propertyHasOptions } from "@/features/data-sync/components/EntitySyncList";
+import {
+  DataSyncEmptyStateLine,
+  DataSyncHeaderLink,
+  DefinitionSyncRow,
+  useDefinitionSync,
+} from "@/features/data-sync/components/DefinitionsPageSync";
 import BApi from "@/sdk/BApi";
 import { CustomPropertyAdditionalItem, PropertyType } from "@/sdk/constants";
 import {
@@ -76,6 +83,7 @@ const CustomPropertyPage = () => {
   useEffect(() => {
     void loadProperties();
   }, [loadProperties]);
+  const dataSync = useDefinitionSync("customProperty", loadProperties);
 
   const typeOptions = useMemo(() => {
     const counts = new Map<PropertyType, number>();
@@ -136,6 +144,7 @@ const CustomPropertyPage = () => {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <DataSyncHeaderLink />
           <Button
             color="primary"
             size="sm"
@@ -181,6 +190,7 @@ const CustomPropertyPage = () => {
           </Popover>
         </div>
       </header>
+      {dataSync.host}
       <div className="flex flex-wrap items-center gap-3">
         <Input
           isClearable
@@ -251,6 +261,7 @@ const CustomPropertyPage = () => {
               hasFilters ? "customProperty.action.clearFilters" : "customProperty.action.create",
             )}
           </Button>
+          {!hasFilters && <DataSyncEmptyStateLine />}
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl bg-content1">
@@ -281,6 +292,13 @@ const CustomPropertyPage = () => {
                     <span className="text-xs tabular-nums lg:hidden">
                       {t<string>("customProperty.valueCount", { count: property.valueCount ?? 0 })}
                     </span>
+                    <DefinitionSyncRow
+                      kind="customProperty"
+                      localKey={String(property.id)}
+                      name={property.name}
+                      offersDefinitionOnly={propertyHasOptions(property.type)}
+                      sync={dataSync}
+                    />
                   </div>
                 </div>
                 <div className="col-span-2 row-start-2 min-w-0 lg:col-span-1 lg:row-auto">

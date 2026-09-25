@@ -77,6 +77,33 @@ export type DataSyncHistoryDetail =
   Schemas["Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail"];
 export type DataSyncUndoPreview = Schemas["Bakabase.Modules.DataSync.Services.DataSyncUndoPreview"];
 export type DataSyncRestoreView = Schemas["Bakabase.Modules.DataSync.Services.DataSyncRestoreView"];
+export type DataSyncReviewSource =
+  Schemas["Bakabase.Modules.DataSync.Services.DataSyncReviewSource"];
+export type DataSyncPlan = Schemas["Bakabase.Modules.DataSync.Planning.DataSyncPlan"];
+export type DataSyncPlanItem = Schemas["Bakabase.Modules.DataSync.Planning.DataSyncPlanItem"];
+export type DataSyncPlanCandidate =
+  Schemas["Bakabase.Modules.DataSync.Planning.DataSyncPlanCandidate"];
+export type DataSyncPlanDecision =
+  Schemas["Bakabase.Modules.DataSync.Planning.DataSyncPlanDecision"];
+export type DataSyncPlanWarning = Schemas["Bakabase.Modules.DataSync.Planning.DataSyncPlanWarning"];
+export type DataSyncFieldChange = Schemas["Bakabase.Modules.DataSync.Planning.DataSyncFieldChange"];
+export type DataSyncDisplayValue =
+  Schemas["Bakabase.Modules.DataSync.Planning.DataSyncDisplayValue"];
+export type DataSyncDecisionError =
+  Schemas["Bakabase.Modules.DataSync.Planning.DataSyncDecisionError"];
+export type DataSyncInboxPayload =
+  Schemas["Bakabase.Modules.DataSync.Merging.DataSyncInboxPayload"];
+export type DataSyncFieldOutcome =
+  Schemas["Bakabase.Modules.DataSync.Abstractions.DataSyncFieldOutcome"];
+export type DataSyncTypeChangePreview =
+  Schemas["Bakabase.Modules.DataSync.Abstractions.DataSyncTypeChangePreview"];
+export type DataSyncResolveInput =
+  Schemas["Bakabase.Modules.DataSync.Services.DataSyncResolveInput"];
+export type DataSyncHistoryItem = Schemas["Bakabase.Modules.DataSync.Services.DataSyncHistoryItem"];
+export type DataSyncHistoryCounts =
+  Schemas["Bakabase.Modules.DataSync.Services.DataSyncHistoryCounts"];
+export type DataSyncUndoPreviewItem =
+  Schemas["Bakabase.Modules.DataSync.Services.DataSyncUndoPreviewItem"];
 
 /** The inbox query, as `GET /data-sync/inbox` binds it (one query parameter per member). */
 export interface DataSyncInboxQuery {
@@ -174,6 +201,12 @@ const solved = <T extends { problem?: DataSyncProblem | null }>(result: T): T =>
 
   return result;
 };
+
+/**
+ * A record answered whole (a task start, a review, an undo preview) whose problem the caller
+ * wants thrown after all: said where the action's failures are said.
+ */
+export const throwIfProblem = solved;
 
 /** An action that answers only a problem, or nothing when it worked. */
 const done = (problem: DataSyncProblem | null | undefined) => {

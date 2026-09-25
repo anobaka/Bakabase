@@ -11,9 +11,11 @@ import { useDataSyncStore } from "../stores/dataSync";
 
 import {
   candidate,
+  historyEntry,
   link,
   mapPeer,
   mapView,
+  nameConflict,
   outgoing,
   overview,
   reader,
@@ -23,9 +25,13 @@ import {
 
 import {
   ClientMode,
+  DataSyncHistoryKind,
   DataSyncLinkMode,
   DataSyncLinkState,
+  DataSyncPauseReason,
+  DataSyncProblemCode,
   DataSyncRequestDirection,
+  DataSyncRestoreChoice,
   DataSyncStatusLevel,
   RemoteAccessMode,
 } from "@/sdk/constants";
@@ -60,6 +66,17 @@ vi.mock("../api", async (importOriginal) => ({
     setSharing: vi.fn(async () => undefined),
     createInvitation: vi.fn(),
     syncNow: vi.fn(async () => ({})),
+    inbox: vi.fn(async () => ({ items: [], total: 0, openTotal: 0 })),
+    history: vi.fn(async () => []),
+    historyEntry: vi.fn(),
+    restore: vi.fn(),
+    chooseRestore: vi.fn(async () => ({ taskId: "DataSyncRestore" })),
+    review: vi.fn(),
+  },
+}));
+vi.mock("@/sdk/BApi", () => ({
+  default: {
+    app: { getAppInfo: vi.fn(async () => ({ code: 0, data: { backupPath: "/data/backups" } })) },
   },
 }));
 vi.mock("@/components/HelpCenter/HelpCenterButton", () => ({
@@ -332,14 +349,138 @@ describe("the page", () => {
     });
   });
 
-  it("says when this device's data looks restored", async () => {
+  it("asks what wins after a restore, naming the evidence", async () => {
     vi.mocked(dataSyncApi.overview).mockResolvedValue(overview({ restorePending: true }));
+    vi.mocked(dataSyncApi.restore).mockResolvedValue({
+      pending: true,
+      reason: DataSyncPauseReason.LocalRestoreDetected,
+      detectedAt: "2026-09-01 07:40:00.000",
+      pausedLinks: 2,
+      evidenceFromName: "NAS",
+    });
     renderPage();
     await loaded();
 
+    const panel = await screen.findByTestId("data-sync-restore-pending");
+
+    expect(panel).toHaveAttribute("data-evidence", "both");
+    expect(panel).toHaveTextContent("dataSync.restore.intro");
+    expect(within(panel).getByTestId("data-sync-restore-evidence")).toHaveTextContent(
+      "dataSync.restore.evidence.both NAS",
+    );
+    fireEvent.click(within(panel).getByTestId("data-sync-restore-this-device"));
+    const dialog = screen.getByRole("alertdialog");
+
+    expect(dialog).toHaveTextContent("dataSync.restore.confirm.thisDevice");
+    await act(async () => {
+      fireEvent.click(within(dialog).getByText("federation.confirm"));
+    });
+    expect(dataSyncApi.chooseRestore).toHaveBeenCalledWith(
+      DataSyncRestoreChoice.ThisDeviceWins,
+      undefined,
+    );
+  });
+
+  it("names the one device when a restore is only suspected through it", async () => {
+    vi.mocked(dataSyncApi.overview).mockResolvedValue(overview({ restorePending: true }));
+    vi.mocked(dataSyncApi.restore).mockResolvedValue({
+      pending: true,
+      reason: DataSyncPauseReason.LocalRestoreSuspected,
+      pausedLinks: 1,
+      linkId: 1,
+      evidenceFromName: "NAS",
+    });
+    renderPage();
+    await loaded();
+
+    const panel = await screen.findByTestId("data-sync-restore-pending");
+
+    expect(panel).toHaveAttribute("data-evidence", "peer");
+    expect(within(panel).getByTestId("data-sync-restore-evidence")).toHaveTextContent(
+      "dataSync.restore.evidence.peer NAS",
+    );
+    fireEvent.click(within(panel).getByTestId("data-sync-restore-others"));
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole("alertdialog")).getByText("federation.confirm"));
+    });
+    expect(dataSyncApi.chooseRestore).toHaveBeenCalledWith(DataSyncRestoreChoice.OthersWin, 1);
+  });
+
+  it("keeps the panel to one line when the reader decides later, and says so when nothing waits", async () => {
+    vi.mocked(dataSyncApi.overview).mockResolvedValue(overview({ restorePending: true }));
+    vi.mocked(dataSyncApi.restore).mockResolvedValue({
+      pending: true,
+      reason: DataSyncPauseReason.LocalRestoreDetected,
+      pausedLinks: 2,
+    });
+    renderPage();
+    await loaded();
+    const panel = await screen.findByTestId("data-sync-restore-pending");
+
+    expect(panel).toHaveAttribute("data-evidence", "own");
+    fireEvent.click(within(panel).getByTestId("data-sync-restore-later"));
     expect(screen.getByTestId("data-sync-restore-pending")).toHaveTextContent(
       "dataSync.restore.pending",
     );
+    expect(dataSyncApi.chooseRestore).not.toHaveBeenCalled();
+    cleanup();
+
+    vi.mocked(dataSyncApi.overview).mockResolvedValue(overview());
+    vi.mocked(dataSyncApi.restore).mockResolvedValue({ pending: false, pausedLinks: 0 });
+    renderPage("/data-sync?restore=1");
+    await loaded();
+    await waitFor(() =>
+      expect(screen.getByTestId("data-sync-restore-panel")).toHaveTextContent(
+        "dataSync.restore.nothing",
+      ),
+    );
+  });
+
+  it("opens a link's first sync review from the address", async () => {
+    vi.mocked(dataSyncApi.links).mockResolvedValue([
+      link(3, "node-laptop", "Laptop", {
+        state: DataSyncLinkState.AwaitingReview,
+        reviewId: "review-1",
+      }),
+    ]);
+    vi.mocked(dataSyncApi.review).mockResolvedValue({
+      copyOnce: false,
+      linkMode: DataSyncLinkMode.TwoWay,
+      problem: { code: DataSyncProblemCode.ReviewExpired },
+    });
+    renderPage("/data-sync?link=3&review=1");
+
+    await waitFor(() => expect(screen.getByTestId("data-sync-review")).toBeInTheDocument());
+    expect(dataSyncApi.review).toHaveBeenCalledWith("review-1");
+    fireEvent.click(
+      within(screen.getByTestId("data-sync-review")).getAllByText("dataSync.close")[0],
+    );
+    await waitFor(() => expect(screen.queryByTestId("data-sync-review")).toBeNull());
+  });
+
+  it("brings Needs you forward from the address, on the device asked for", async () => {
+    vi.mocked(dataSyncApi.inbox).mockResolvedValue({
+      items: [nameConflict(1)],
+      total: 1,
+      openTotal: 1,
+    });
+    renderPage("/data-sync?tab=inbox&peer=node-nas");
+    await loaded();
+
+    await waitFor(() => expect(screen.getByTestId("data-sync-inbox")).toBeInTheDocument());
+    expect(screen.getByTestId("data-sync-inbox-filter-device")).toHaveValue("node-nas");
+    expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(1);
+  });
+
+  it("lists the history below the requests", async () => {
+    vi.mocked(dataSyncApi.history).mockResolvedValue([
+      historyEntry(1, DataSyncHistoryKind.AutoSync),
+    ]);
+    renderPage();
+    await loaded();
+
+    await waitFor(() => expect(screen.getAllByTestId("data-sync-history-entry")).toHaveLength(1));
+    expect(screen.getByTestId("data-sync-history-drawing")).toBeInTheDocument();
   });
 
   it("keeps each source on its own: one that fails leaves the others", async () => {

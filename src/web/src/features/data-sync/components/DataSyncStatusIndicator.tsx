@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { AiOutlineSync } from "react-icons/ai";
 
-import { DATA_SYNC_ROUTE } from "../routes";
+import { DATA_SYNC_ROUTE, dataSyncRestoreRoute } from "../routes";
 import { useDataSyncWindow } from "../hooks/useDataSyncWindow";
 import { useDataSyncStore } from "../stores/dataSync";
 import { overallStatus, waitingElsewhereLine } from "../viewModels";
@@ -22,13 +22,16 @@ export const INDICATOR_REFRESH_MS = 60_000;
  *
  * Hidden while data sync is off — no links, no readers, no requests — and in a window that may
  * not use data sync at all. Driven by the data sync store: the overview, read on mount and
- * every minute, and the hub's status pushes in between.
+ * every minute, and the hub's status pushes in between. While this device waits for a decision
+ * after a restore, a click opens the restore panel.
  */
 export default function DataSyncStatusIndicator() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const reachable = useDataSyncWindow();
   const status = useDataSyncStore((state) => state.status);
+  // A restore waiting for a decision is what the page opens on (spec §9.5).
+  const restorePending = useDataSyncStore((state) => state.overview?.restorePending ?? false);
   const reach = useDataSyncStore((state) => state.reach);
   const load = useDataSyncStore((state) => state.load);
   const usable = (reachable === "allowed" || reachable === "unknown") && reach !== "refused";
@@ -66,7 +69,7 @@ export default function DataSyncStatusIndicator() {
         data-level={status.level}
         data-testid="data-sync-indicator"
         variant="light"
-        onPress={() => navigate(DATA_SYNC_ROUTE)}
+        onPress={() => navigate(restorePending ? dataSyncRestoreRoute : DATA_SYNC_ROUTE)}
       >
         <AiOutlineSync aria-hidden style={{ fontSize: 20 }} />
         <span

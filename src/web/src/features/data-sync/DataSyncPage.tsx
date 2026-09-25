@@ -29,10 +29,14 @@ import {
   toneText,
 } from "./components/common";
 import EntitySyncList from "./components/EntitySyncList";
+import HistoryList from "./components/HistoryList";
+import InboxList from "./components/InboxList";
 import InvitationDialog from "./components/InvitationDialog";
 import LinkDetails from "./components/LinkDetails";
 import NotAvailableNotice from "./components/NotAvailableNotice";
 import RequestsList from "./components/RequestsList";
+import RestorePanel from "./components/RestorePanel";
+import ReviewView from "./components/ReviewView";
 import SyncLinksDiagram from "./components/SyncLinksDiagram";
 import ThisDeviceSection from "./components/ThisDeviceSection";
 
@@ -111,6 +115,7 @@ function DataSync() {
   const diagramRegion = useRef<HTMLElement>(null);
   const requestsSection = useRef<HTMLElement>(null);
   const definitionsSection = useRef<HTMLElement>(null);
+  const restoreSection = useRef<HTMLDivElement>(null);
   const opener = useRef<Opener>();
   // Where the keyboard goes once the details close: to what opened them, in the diagram as it is
   // drawn then — the drawing, or the list it turns into beside the details.
@@ -179,6 +184,10 @@ function DataSync() {
       requestsSection.current?.scrollIntoView?.({ block: "start" });
   }, [query.tab, data.loaded]);
 
+  useEffect(() => {
+    if (query.restore && data.loaded) restoreSection.current?.scrollIntoView?.({ block: "start" });
+  }, [query.restore, data.loaded]);
+
   // The chosen device went away (its link was reset, its request dismissed): let go, keeping
   // what the action said — details shown on demand stay open to say it.
   useEffect(() => {
@@ -211,6 +220,14 @@ function DataSync() {
     if (fromMessage) heading.current?.focus();
   };
 
+  /** Closes the first sync review, leaving the link's details open. */
+  const closeReview = () => {
+    const next = new URLSearchParams(params);
+
+    next.delete("review");
+    setParams(next, { replace: true });
+  };
+
   const closeWizard = (nodeId?: string) => {
     setWizard(false);
     if (query.add) {
@@ -237,6 +254,12 @@ function DataSync() {
   const selfName: string = overview?.deviceName || t<string>("dataSync.thisDevice");
   const sharingEnabled = overview?.sharingEnabled ?? false;
   const remoteAccessMode = overview?.remoteAccessMode ?? RemoteAccessMode.Disabled;
+  // The review a link into the page names: a link's current one, or an older link's review id.
+  const reviewLink =
+    query.review && linkId !== undefined
+      ? data.links.value?.find((item) => item.id === linkId)
+      : undefined;
+  const reviewOpen = !!query.reviewId || (query.review && !!reviewLink);
   const outgoingRequestOf = (nodeId: string) =>
     data.requests.value?.find(
       (request) =>
@@ -308,13 +331,10 @@ function DataSync() {
           {t("dataSync.notAvailableYet")}
         </p>
       )}
-      {overview?.restorePending && (
-        <p
-          className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm"
-          data-testid="data-sync-restore-pending"
-        >
-          {t("dataSync.restore.pending")}
-        </p>
+      {(overview?.restorePending || query.restore) && (
+        <div ref={restoreSection}>
+          <RestorePanel actions={actions} asked={query.restore} version={data.version} />
+        </div>
       )}
       <DataSyncErrorNotice error={data.overviewError} onRetry={() => void data.reload()} />
       {!detailsOpen && (actions.error || notice) && (
@@ -433,6 +453,14 @@ function DataSync() {
         )}
       </div>
 
+      <InboxList
+        focus={query.tab === "inbox"}
+        initialPeer={query.peer}
+        peers={peers}
+        version={data.version}
+        onChanged={() => void data.reload()}
+      />
+
       <RequestsList
         ref={requestsSection}
         actions={actions}
@@ -445,6 +473,15 @@ function DataSync() {
         requests={data.requests.value ?? []}
         onRetry={() => void data.reload()}
       />
+
+      {overview && (
+        <HistoryList
+          links={data.links.value}
+          selfName={selfName}
+          version={data.version}
+          onChanged={() => void data.reload()}
+        />
+      )}
 
       {overview && (
         <ThisDeviceSection
@@ -505,6 +542,16 @@ function DataSync() {
           selfName={selfName}
           sharingEnabled={sharingEnabled}
           onClose={closeWizard}
+        />
+      )}
+      {reviewOpen && (
+        <ReviewView
+          peerName={reviewLink?.peerName ?? t<string>("dataSync.otherDevice")}
+          peerNodeId={reviewLink?.peerNodeId}
+          reviewId={query.reviewId ?? reviewLink?.reviewId ?? undefined}
+          selfName={selfName}
+          onChanged={() => void data.reload()}
+          onClose={closeReview}
         />
       )}
       {invitationFor && (
