@@ -248,8 +248,14 @@ namespace Bakabase.Modules.Property.Services
                 Value = conversionResult.NewDbValues[i]
             }).ToList();
 
-            // Update property and values
-            await Put(conversionResult.UpdatedToProperty.ToCustomProperty());
+            // Update property and values. Only the type and options change: writing the whole row
+            // from the converted property would reset CreatedAt and Order, which it does not carry.
+            await UpdateByKey(sourcePropertyId, cp =>
+            {
+                cp.Type = type;
+                cp.Options =
+                    conversionResult.UpdatedToProperty.Options.SerializeAsCustomPropertyOptions(throwOnError: true);
+            });
             await CustomPropertyValueService.UpdateRange(newValues);
             return BaseResponseBuilder.Ok;
         }
