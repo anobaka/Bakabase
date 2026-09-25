@@ -414,7 +414,7 @@
   "federation.map.legend.title": "图例",
   "federation.map.legend.sharing": "资源库分享 — 箭头指向可以浏览的一方",
   "federation.map.legend.management": "管理 — 由管理方指向被管理的设备",
-  "federation.map.legend.sync": "数据同步",
+  "federation.map.legend.sync": "数据同步——箭头指向接收定义的设备",
   "federation.map.legend.pending": "虚线：等待批准",
   "federation.map.legend.attention": "点线加警告标记：已建立，但目前无法使用",
   "federation.map.legend.unverified": "仅凭对方的请求得知，未经验证",

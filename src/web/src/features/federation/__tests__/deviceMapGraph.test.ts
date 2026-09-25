@@ -1,4 +1,5 @@
 import type { DeviceGraph, MapEdge } from "../map/graph";
+import type { DataSyncMapPeer, DataSyncMapView } from "@/features/data-sync/api";
 
 import { describe, expect, it } from "vitest";
 
@@ -16,6 +17,7 @@ import {
   aMinuteAgo,
   access,
   grant,
+  inTenMinutes,
   manager,
   managementRequestIn,
   managementRequestOut,
@@ -28,6 +30,9 @@ import {
 } from "./deviceMapFixtures";
 
 import {
+  DataSyncLinkMode,
+  DataSyncLinkState,
+  DataSyncRequestIntent,
   ManagedServerOutcome,
   ManagedServerState,
   RemoteAccessMode,
@@ -1108,8 +1113,126 @@ describe("device map model: order and extension", () => {
     const graph = buildDeviceGraph({ ...input(), extraEdges: [sync, stray] });
 
     expect(graph.edges.filter((item) => item.kind === "sync")).toEqual([sync]);
-    // Nothing the product builds today produces it.
+    // Without data sync's own records, nothing produces it.
     expect(buildDeviceGraph(input()).edges.some((item) => item.kind === "sync")).toBe(false);
+  });
+});
+
+describe("device map model: data sync", () => {
+  const view = (patch: Partial<DataSyncMapView> = {}): DataSyncMapView => ({
+    sharingEnabled: true,
+    remoteAccessMode: RemoteAccessMode.Enabled,
+    peers: [],
+    requests: [],
+    outgoing: [],
+    ...patch,
+  });
+  const link = (nodeId: string, name: string, patch: Partial<DataSyncMapPeer> = {}) =>
+    ({
+      nodeId,
+      name,
+      linkId: 1,
+      mode: DataSyncLinkMode.TwoWay,
+      lastMode: DataSyncLinkMode.TwoWay,
+      state: DataSyncLinkState.Active,
+      receiving: true,
+      receivingPending: false,
+      peerMayRead: true,
+      peerMode: "twoWay",
+      openItems: 0,
+      readBackDeclined: false,
+      kinds: ["customProperty", "extensionGroup"],
+      ...patch,
+    }) satisfies DataSyncMapPeer;
+
+  it("draws a line to the device the link names by its install id, with its mode", () => {
+    const graph = buildDeviceGraph({
+      status: status({ peers: [peer("nas", { label: "NAS", outboundGrant: grant("g") })] }),
+      dataSync: view({ peers: [link("nas", "NAS", { mode: DataSyncLinkMode.Follow })] }),
+    });
+
+    expect(edge(graph, "sync:peer:nas")).toMatchObject({
+      kind: "sync",
+      in: "active",
+      out: "active",
+      mode: "follow",
+    });
+    // The same device: its sharing line and its sync line.
+    expect(graph.nodes.map((item) => item.id)).toEqual(["peer:nas"]);
+    expect(graph.edges.map((item) => item.id)).toEqual(["sharing:peer:nas", "sync:peer:nas"]);
+  });
+
+  it("draws this device's request on a device of its own, and a claim on its own unverified one", () => {
+    const graph = buildDeviceGraph({
+      status: status(),
+      dataSync: view({
+        outgoing: [
+          {
+            linkId: 4,
+            nodeId: "garage",
+            nodeName: "Garage",
+            address: "http://192.168.1.70:34567",
+            state: DataSyncLinkState.AwaitingAccess,
+            outcome: "awaitingApproval",
+            expiresAt: inTenMinutes(),
+          },
+        ],
+        requests: [
+          {
+            requestId: "r1",
+            nodeId: "garage",
+            nodeName: "Garage",
+            remoteAddress: "192.168.1.70",
+            intent: DataSyncRequestIntent.Follow,
+            expiresAt: inTenMinutes(),
+            claimsKnownDevice: true,
+          },
+        ],
+      }),
+    });
+
+    expect(node(graph, "peer:garage")).toMatchObject({ unverified: false, name: "Garage" });
+    expect(directions(edge(graph, "sync:peer:garage"))).toEqual({ out: "none", in: "pending" });
+    // Its request claims the device this one asked: set against it, never merged into it.
+    expect(node(graph, "sync-request:r1")).toMatchObject({
+      unverified: true,
+      claimsToBe: { nodeId: "peer:garage" },
+    });
+    expect(directions(edge(graph, "sync:sync-request:r1"))).toEqual({
+      out: "pending",
+      in: "none",
+    });
+  });
+
+  it("puts what needs a decision on the device's card", () => {
+    const graph = buildDeviceGraph({
+      dataSync: view({
+        peers: [
+          link("nas", "NAS", {
+            state: DataSyncLinkState.Paused,
+            receiving: false,
+            openItems: 2,
+            attention: {
+              headless: true,
+              openDecisions: 1,
+              pausedLinks: 0,
+              restorePending: false,
+              awaitingReview: 0,
+            },
+          }),
+        ],
+      }),
+    });
+
+    expect(node(graph, "peer:nas")?.issues).toEqual([
+      "syncNeedsYou",
+      "syncNeedsYouThere",
+      "syncPaused",
+    ]);
+    expect(edge(graph, "sync:peer:nas")?.attention).toEqual({
+      direction: "in",
+      issue: "syncPaused",
+    });
   });
 });
 

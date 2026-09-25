@@ -414,7 +414,7 @@
   "federation.map.legend.title": "Legend",
   "federation.map.legend.sharing": "Library sharing — points to the device that may browse",
   "federation.map.legend.management": "Management — points from the manager to the managed device",
-  "federation.map.legend.sync": "Data sync",
+  "federation.map.legend.sync": "Data sync — the arrow points to the device that receives the definitions",
   "federation.map.legend.pending": "Dashed: waiting for approval",
   "federation.map.legend.attention": "Dotted, with a warning mark: set up, but not working right now",
   "federation.map.legend.unverified": "Known only from its own request — not verified",

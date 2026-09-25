@@ -4,7 +4,7 @@ import type { DevicesSection } from "./switching";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { AiOutlineLaptop, AiOutlinePlus, AiOutlineReload } from "react-icons/ai";
+import { AiOutlineLaptop, AiOutlinePlus, AiOutlineReload, AiOutlineSync } from "react-icons/ai";
 
 import {
   buttonClass,
@@ -25,6 +25,7 @@ import ManagementAccessSection from "./components/ManagementAccess";
 import PeerPathMappings from "./components/PeerPathMappings";
 
 import { useCanAdministerShownServer } from "@/stores/remoteAccess";
+import { DATA_SYNC_ROUTE } from "@/features/data-sync/routes";
 
 /** How often outgoing requests are claimed while the page is visible. */
 const CLAIM_POLL_MS = 4000;
@@ -350,6 +351,10 @@ function Devices() {
           </Link>
           <Link className={buttonClass} to="/federation">
             {t("federation.title")}
+          </Link>
+          <Link className={buttonClass} to={DATA_SYNC_ROUTE}>
+            <AiOutlineSync aria-hidden />
+            {t("dataSync.title")}
           </Link>
         </div>
       </header>

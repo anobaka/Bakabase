@@ -7,6 +7,7 @@ import type {
   DataSyncLinkView,
   DataSyncMapOutgoing,
   DataSyncMapPeer,
+  DataSyncMapRequest,
   DataSyncMapView,
   DataSyncOverview,
   DataSyncPeerCandidate,
@@ -188,6 +189,23 @@ export const request = (
   remoteAddress: "192.168.1.40",
   claimsKnownDevice: false,
   replacesExistingAccess: false,
+  ...patch,
+});
+
+/** A request to read this device's definitions, as the map view carries it: a claim. */
+export const mapRequest = (
+  requestId: string,
+  nodeId: string,
+  nodeName: string,
+  patch: Partial<DataSyncMapRequest> = {},
+): DataSyncMapRequest => ({
+  requestId,
+  nodeId,
+  nodeName,
+  remoteAddress: "192.168.1.40",
+  intent: DataSyncRequestIntent.Follow,
+  expiresAt: minutesAhead(30),
+  claimsKnownDevice: false,
   ...patch,
 });
 

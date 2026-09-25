@@ -15,6 +15,7 @@ import {
   dataSyncReviewRoute,
 } from "../routes";
 import { useElementWidth } from "../hooks/useElementWidth";
+import { useOpenPeerDataSync } from "../hooks/useOpenPeerDataSync";
 import {
   dataSyncKinds,
   linkEditor,
@@ -111,6 +112,14 @@ export default function SyncRuleDrawing({
 
   /** Sharing (and remote access) this device must turn on before the other can read it. */
   const sharingNeeded = !sharingEnabled || remoteAccessMode === RemoteAccessMode.Disabled;
+  /**
+   * Who a new link or copy goes to: the device by its id, and — where it is no device the server
+   * knows yet (one found nearby on the device map) — the address its request goes to.
+   */
+  const destination = {
+    peerNodeId: peer.nodeId,
+    ...(peer.linkId === undefined && peer.address ? { address: peer.address } : {}),
+  };
   /** Whether switching to `target` would create or widen access (§7.1.5). */
   const createsAccess = (target: ModeName) =>
     target !== "off" &&
@@ -144,12 +153,7 @@ export default function SyncRuleDrawing({
         });
       if (peer.linkId !== undefined)
         await dataSyncApi.updateLink(peer.linkId, { mode: modeValue(target) });
-      else
-        await dataSyncApi.createLink({
-          peerNodeId: peer.nodeId,
-          mode: modeValue(target),
-          kinds,
-        });
+      else await dataSyncApi.createLink({ ...destination, mode: modeValue(target), kinds });
     };
 
     if (!createsAccess(target)) {
@@ -216,7 +220,7 @@ export default function SyncRuleDrawing({
       warning:
         peer.weMayRead === true ? undefined : t("dataSync.request.follow", { name: selfName }),
       action: async () => {
-        const result = await dataSyncApi.copyOnce({ peerNodeId: peer.nodeId, kinds });
+        const result = await dataSyncApi.copyOnce({ ...destination, kinds });
 
         if (result.linkId && actions.mounted.current) navigate(dataSyncReviewRoute(result.linkId));
       },
@@ -738,6 +742,9 @@ function StatusBlock({
   const { t } = useTranslation();
   const name = peer.name;
   const linkId = peer.linkId;
+  // Decisions that wait on the other device are taken there: this window switches to it where
+  // it manages that device.
+  const elsewhere = useOpenPeerDataSync((peer.attention?.openDecisions ?? 0) > 0);
   const button = (label: string, onClick: () => void, testId?: string) => (
     <button
       key={label}
@@ -880,9 +887,16 @@ function StatusBlock({
         >
           <span className={toneText[note.tone]}>{note.text}</span>
           {note.code === "ReadBackDeclined" && askAgain(t("dataSync.link.askKeepInStep", { name }))}
-          {note.code === "NeedsYouThere" && (
-            <span className="text-default-500">{t("dataSync.link.decideThere", { name })}</span>
-          )}
+          {note.code === "NeedsYouThere" &&
+            (elsewhere.canOpen(peer.nodeId) ? (
+              button(
+                t("dataSync.inbox.elsewhere.open", { name }),
+                () => void actions.run(() => elsewhere.open(peer.nodeId), []),
+                "data-sync-open-there",
+              )
+            ) : (
+              <span className="text-default-500">{t("dataSync.link.decideThere", { name })}</span>
+            ))}
         </div>
       ))}
       {(statusActions.some(Boolean) || running || linkToPage) && (

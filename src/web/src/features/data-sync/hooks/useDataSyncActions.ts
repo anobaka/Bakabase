@@ -29,6 +29,18 @@ export interface DataSyncPanelActions {
   confirm(confirmation: DataSyncConfirmation): void;
 }
 
+/**
+ * What a dialog opened from a section needs as well: to say its own failures itself, rather
+ * than where the host says them. Method syntax again, so the map's `PanelActions` fits.
+ */
+export interface DataSyncDialogActions extends DataSyncPanelActions {
+  run(
+    operation: () => Promise<unknown>,
+    refresh: DataSyncRefresh[],
+    onError?: (cause: Error) => void,
+  ): Promise<boolean>;
+}
+
 /** What an action said, held by the page rather than by the section that ran it. */
 export interface DataSyncNoticeState {
   value?: string;

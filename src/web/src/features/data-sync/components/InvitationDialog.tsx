@@ -1,5 +1,5 @@
 import type { DataSyncInvitationView } from "../api";
-import type { DataSyncActions } from "../hooks/useDataSyncActions";
+import type { DataSyncDialogActions } from "../hooks/useDataSyncActions";
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,7 +23,7 @@ export default function InvitationDialog({
   onClose,
   now,
 }: {
-  actions: DataSyncActions;
+  actions: DataSyncDialogActions;
   /** The device the code is meant for, when it was asked for from its details. */
   forName?: string;
   onClose: () => void;

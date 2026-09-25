@@ -253,6 +253,41 @@ const fromOutgoing = (outgoing: DataSyncMapOutgoing): SyncPeer =>
     outgoing,
   );
 
+/**
+ * A device data sync has nothing to do with yet, to start syncing with: no link, no grant.
+ * `address` is where a request to it goes, when it is not a device the server knows by its id.
+ */
+export const newSyncPeer = (nodeId: string, name: string, address?: string): SyncPeer => ({
+  nodeId,
+  name,
+  address,
+  mode: DataSyncLinkMode.Off,
+  lastMode: DataSyncLinkMode.Off,
+  kinds: [...dataSyncKinds],
+  peerMayRead: false,
+  openItems: 0,
+  readBackDeclined: false,
+  pendingCount: 0,
+  heldCount: 0,
+  excludedCount: 0,
+  missingAtPeerCount: 0,
+});
+
+/**
+ * One device from the map view's records about it alone — its link or grant, and this device's
+ * own request to it — as the device map has them; none when it has neither.
+ */
+export const syncPeerOfRecords = (
+  peer?: DataSyncMapPeer,
+  outgoing?: DataSyncMapOutgoing,
+): SyncPeer | undefined => {
+  const known = peer ? syncPeerFromMapPeer(peer) : undefined;
+
+  if (!outgoing) return known;
+
+  return known ? withOutgoing(known, outgoing) : fromOutgoing(outgoing);
+};
+
 const fromReader = (reader: DataSyncReaderView): SyncPeer => ({
   nodeId: reader.nodeId,
   name: reader.name,

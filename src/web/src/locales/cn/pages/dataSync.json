@@ -631,6 +631,12 @@
   "dataSync.time.hours": "{{count}} 小时前",
   "dataSync.time.days": "{{count}} 天前",
   "dataSync.time.never": "从未",
+  "dataSync.map.none": "本机尚未与 {{name}} 同步定义。",
+  "dataSync.map.syncWith": "与 {{name}} 同步…",
+  "dataSync.map.ghost.shares": "它共享了自己的定义：本机可以与它同步。",
+  "dataSync.map.ghost.notSharing": "它没有共享自己的定义。请在它上面打开「数据同步 → 本机」并开启共享。",
+  "dataSync.map.self.receivesFrom": "本机接收其定义的设备",
+  "dataSync.map.self.readBy": "读取本机定义的设备",
   "federation.map.direction.sync.in.active": "本机接收 {{name}} 的定义",
   "federation.map.direction.sync.in.pending": "等待 {{name}} 允许本机读取其定义",
   "federation.map.direction.sync.out.active": "{{name}} 可以读取本机的定义",
@@ -643,5 +649,6 @@
   "federation.map.issue.syncUpdateNeeded": "需要更新后才能同步",
   "federation.map.issue.syncAccessLost": "已无权读取其定义",
   "federation.map.issue.syncNeedsYou": "有更改待你决定",
-  "federation.map.issue.syncNeedsYouThere": "那里有更改在等待决定"
+  "federation.map.issue.syncNeedsYouThere": "那里有更改在等待决定",
+  "federation.map.source.dataSync": "无法读取数据同步，图中缺少相应的连接。"
 }

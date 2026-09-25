@@ -227,6 +227,9 @@ const mapKeys = [
   "federation.map.sync.mode.twoWay",
   "federation.map.sync.mode.follow",
   "federation.map.attention.sync.in",
+  "federation.map.source.dataSync",
+  // This device's counts in the map's details (map/DataSyncSelfSection).
+  ...["receivesFrom", "readBy"].map((count) => `dataSync.map.self.${count}`),
   ...[
     "syncPaused",
     "syncFailed",

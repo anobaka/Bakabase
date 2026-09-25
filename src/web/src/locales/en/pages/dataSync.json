@@ -631,6 +631,12 @@
   "dataSync.time.hours": "{{count}} h ago",
   "dataSync.time.days": "{{count}} d ago",
   "dataSync.time.never": "never",
+  "dataSync.map.none": "This device does not sync definitions with {{name}} yet.",
+  "dataSync.map.syncWith": "Sync with {{name}}…",
+  "dataSync.map.ghost.shares": "It shares its definitions: this device can sync with it.",
+  "dataSync.map.ghost.notSharing": "It does not share its definitions. On it, open Data sync → This device and turn on sharing.",
+  "dataSync.map.self.receivesFrom": "Devices this device receives definitions from",
+  "dataSync.map.self.readBy": "Devices that read this device's definitions",
   "federation.map.direction.sync.in.active": "This device receives {{name}}'s definitions",
   "federation.map.direction.sync.in.pending": "Waiting for {{name}} to let this device read its definitions",
   "federation.map.direction.sync.out.active": "{{name}} may read this device's definitions",
@@ -643,5 +649,6 @@
   "federation.map.issue.syncUpdateNeeded": "Needs an update to sync",
   "federation.map.issue.syncAccessLost": "Lost access to its definitions",
   "federation.map.issue.syncNeedsYou": "Changes need you",
-  "federation.map.issue.syncNeedsYouThere": "Changes wait for a decision there"
+  "federation.map.issue.syncNeedsYouThere": "Changes wait for a decision there",
+  "federation.map.source.dataSync": "Data sync could not be read, so its connections are missing from the map."
 }
