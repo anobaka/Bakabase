@@ -228,6 +228,14 @@ public static class PropertyExtensions
     //     }
     // }
 
+    /// <summary>
+    /// Builds a <see cref="CustomProperty"/> from a custom-pool <see cref="Bakabase.Abstractions.Models.Domain.Property"/>.
+    /// It carries only <c>Id</c>, <c>Name</c>, <c>Type</c> and <c>Options</c>: it does not carry
+    /// <c>CreatedAt</c> or <c>Order</c>, so never persist its result, neither with
+    /// <c>ICustomPropertyService.Put(CustomProperty)</c> nor through <c>ToDbModel()</c> and
+    /// <c>UpdateRange</c>: any whole-row write resets both. To change the type or options of a stored
+    /// property, use <c>UpdateByKey</c> or <c>ChangeType</c>.
+    /// </summary>
     public static CustomProperty ToCustomProperty(this Bakabase.Abstractions.Models.Domain.Property property)
     {
         if (property.Pool != PropertyPool.Custom)
