@@ -78,6 +78,18 @@ public interface IDataSyncStore
     Task<DataSyncInboxItemDbModel?> GetItemAsync(long id, CancellationToken ct);
     Task<DataSyncInboxPage> QueryInboxAsync(DataSyncInboxQuery query, CancellationToken ct);
 
+    /// <summary>§9.4: the open items of the link that no notification announced yet (<c>NotifiedAtUtc</c> null).</summary>
+    Task<IReadOnlyList<long>> GetUnannouncedItemIdsAsync(int linkId, CancellationToken ct);
+
+    /// <summary>§9.4: records that <paramref name="notificationId"/> announced these items (NotificationId, NotifiedAtUtc).</summary>
+    Task SetItemsNotifiedAsync(IReadOnlyCollection<long> ids, int notificationId, DateTime nowUtc, CancellationToken ct);
+
+    /// <summary>
+    /// §9.4 read state: the notifications that announced an item closed at or after <paramref name="closedSinceUtc"/>
+    /// and announce no open item any more.
+    /// </summary>
+    Task<IReadOnlyList<int>> GetSettledNotificationsAsync(DateTime closedSinceUtc, CancellationToken ct);
+
     /// <summary>§7.5.1.</summary>
     Task<DataSyncSourceAttention> GetAttentionAsync(CancellationToken ct);
 
@@ -86,6 +98,10 @@ public interface IDataSyncStore
         CancellationToken ct);
 
     Task<IReadOnlyList<DataSyncReaderDbModel>> GetReadersAsync(CancellationToken ct);
+
+    /// <summary>§9.4: "{0} started syncing definitions with this device" was sent for this reader (<c>NotifiedAtUtc</c>).</summary>
+    Task SetReaderNotifiedAsync(string nodeId, DateTime nowUtc, CancellationToken ct);
+
     Task<int> AddHistoryAsync(DataSyncApplyLogDbModel log, CancellationToken ct);
     Task<IReadOnlyList<DataSyncApplyLogDbModel>> GetHistoryAsync(CancellationToken ct);
     Task<DataSyncApplyLogDbModel?> GetHistoryEntryAsync(int id, CancellationToken ct);

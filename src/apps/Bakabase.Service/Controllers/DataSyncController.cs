@@ -103,7 +103,12 @@ public class DataSyncController(IDataSyncService service) : Controller
     public async Task<SingletonResponse<DataSyncLinkResult>> PauseLink(int id, CancellationToken ct) =>
         new(await service.PauseLinkAsync(id, ct));
 
-    /// <summary>Asking for access again sends a new request, so it counts as creating access.</summary>
+    /// <summary>
+    /// Asking for access again sends a new request, so it counts as creating access. It is B1's "Ask X for access
+    /// again" on a peer that looks reset, "Try again" on a link that waits for access (N14, §7.2.4), and "[Ask X to
+    /// keep in step]" on a two-way link the peer does not read back (§7.2.3). Start anyway answers
+    /// <c>DecisionsInvalid</c> (<c>tooEarly</c>) before <see cref="DataSyncLinkView.StartAnywayAt"/>.
+    /// </summary>
     [HttpPost("links/{id:int}/resume")]
     [SwaggerOperation(OperationId = "ResumeDataSyncLink")]
     public async Task<SingletonResponse<DataSyncLinkResult>> ResumeLink(int id,

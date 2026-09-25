@@ -885,4 +885,136 @@
   <data name="RemoteAccess_ManagementRequest_Body" xml:space="preserve">
     <value>{0}，来自 {1}。批准后，该设备将能完全控制此处的 Bakabase。请在“配置 → 远程访问”中批准或拒绝。</value>
   </data>
+  <data name="BTask_Name_DataSync" xml:space="preserve">
+    <value>数据同步</value>
+  </data>
+  <data name="BTask_Description_DataSync" xml:space="preserve">
+    <value>检查与本机同步定义的设备，并获取它们的更改。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSync" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
+  <data name="BTask_Name_DataSyncApply" xml:space="preserve">
+    <value>应用同步的更改</value>
+  </data>
+  <data name="BTask_Description_DataSyncApply" xml:space="preserve">
+    <value>在本机应用获取到的定义更改。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncApply" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
+  <data name="BTask_Name_DataSyncReview" xml:space="preserve">
+    <value>应用首次同步</value>
+  </data>
+  <data name="BTask_Description_DataSyncReview" xml:space="preserve">
+    <value>应用已预览的与另一台设备的首次同步。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncReview" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
+  <data name="BTask_Name_DataSyncResolve" xml:space="preserve">
+    <value>应用处理结果</value>
+  </data>
+  <data name="BTask_Description_DataSyncResolve" xml:space="preserve">
+    <value>应用在「待你决定」中做出的决定。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncResolve" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
+  <data name="BTask_Name_DataSyncUndo" xml:space="preserve">
+    <value>撤销数据同步</value>
+  </data>
+  <data name="BTask_Description_DataSyncUndo" xml:space="preserve">
+    <value>还原一次数据同步所做的更改。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncUndo" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
+  <data name="BTask_Name_DataSyncRestore" xml:space="preserve">
+    <value>恢复同步状态</value>
+  </data>
+  <data name="BTask_Description_DataSyncRestore" xml:space="preserve">
+    <value>应用本机数据疑似被还原后所做的选择。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncRestore" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
+  <data name="DataSync_Request_Title" xml:space="preserve">
+    <value>{0} 请求与本机同步定义</value>
+  </data>
+  <data name="DataSync_Request_Body" xml:space="preserve">
+    <value>来自 {0}。只批准你自己的设备。</value>
+  </data>
+  <data name="DataSync_Notify_NeedsYou_Title" xml:space="preserve">
+    <value>{0}：{1} 项更改待你决定</value>
+  </data>
+  <data name="DataSync_Notify_NeedsYou_Body" xml:space="preserve">
+    <value>请在「数据同步」的「待你决定」中处理。</value>
+  </data>
+  <data name="DataSync_Notify_FollowOverride_Title" xml:space="preserve">
+    <value>本机有 {1} 项更改被 {0} 的版本替换</value>
+  </data>
+  <data name="DataSync_Notify_FollowOverride_Body" xml:space="preserve">
+    <value>本机接收 {0} 的定义，因此以它的更改为准。</value>
+  </data>
+  <data name="DataSync_Notify_Paused_Title" xml:space="preserve">
+    <value>与 {0} 的同步已暂停：{1}</value>
+  </data>
+  <data name="DataSync_Notify_Paused_Body" xml:space="preserve">
+    <value>在你于「数据同步」中做出选择之前，不会与它同步。</value>
+  </data>
+  <data name="DataSync_Notify_Restore_Title" xml:space="preserve">
+    <value>数据同步已暂停：本机数据似乎被还原过</value>
+  </data>
+  <data name="DataSync_Notify_Restore_Body" xml:space="preserve">
+    <value>请先在「数据同步」中选择以哪一方的定义为准，再继续同步。</value>
+  </data>
+  <data name="DataSync_Notify_ReviewReady_Title" xml:space="preserve">
+    <value>与 {0} 的首次同步已可预览</value>
+  </data>
+  <data name="DataSync_Notify_ReviewReady_Body" xml:space="preserve">
+    <value>在你应用之前，本机不会有任何更改。</value>
+  </data>
+  <data name="DataSync_Notify_FirstSync_Title" xml:space="preserve">
+    <value>与 {0} 首次同步：新建 {1}，关联 {2}，待你决定 {3}</value>
+  </data>
+  <data name="DataSync_Notify_FirstSync_Body" xml:space="preserve">
+    <value>可以在同步记录中撤销。</value>
+  </data>
+  <data name="DataSync_Notify_Attention_Title" xml:space="preserve">
+    <value>{0} 有 {1} 项更改在等待决定</value>
+  </data>
+  <data name="DataSync_Notify_Attention_Body" xml:space="preserve">
+    <value>这些更改在 {0} 上等待：打开它的「数据同步」，或从本机的「设备」页面切换到它。</value>
+  </data>
+  <data name="DataSync_Notify_NewReader_Title" xml:space="preserve">
+    <value>{0} 开始与本机同步定义</value>
+  </data>
+  <data name="DataSync_Notify_NewReader_Body" xml:space="preserve">
+    <value>它可以读取本机的定义。你可以在「数据同步」中停止。</value>
+  </data>
+  <data name="DataSync_Notify_PauseReason_PeerReset" xml:space="preserve">
+    <value>对方看起来被重置了</value>
+  </data>
+  <data name="DataSync_Notify_PauseReason_PeerRestored" xml:space="preserve">
+    <value>对方看起来从备份还原了</value>
+  </data>
+  <data name="DataSync_Notify_PauseReason_MassDeletion" xml:space="preserve">
+    <value>对方一次删除了 {0} 个定义</value>
+  </data>
+  <data name="DataSync_Notify_PauseReason_KindEmptied" xml:space="preserve">
+    <value>对方不再提供任何{0}</value>
+  </data>
+  <data name="DataSync_Notify_PauseReason_PeerIdentityDuplicated" xml:space="preserve">
+    <value>对方重复使用了已发布过的版本（数据目录被复制或还原过）</value>
+  </data>
+  <data name="DataSync_Notify_PauseReason_TooManyDecisions" xml:space="preserve">
+    <value>待你决定的更改过多</value>
+  </data>
+  <data name="DataSync_Kind_customProperty" xml:space="preserve">
+    <value>自定义属性</value>
+  </data>
+  <data name="DataSync_Kind_extensionGroup" xml:space="preserve">
+    <value>扩展名分组</value>
+  </data>
 </root>

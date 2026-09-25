@@ -4775,6 +4775,8 @@ export interface BakabaseModulesDataSyncServicesDataSyncLinkView {
   /** @format int32 */
   missingAtPeerCount: number;
   peerOnline: boolean;
+  /** @format date-time */
+  startAnywayAt?: string;
 }
 
 export interface BakabaseModulesDataSyncServicesDataSyncMapOutgoing {

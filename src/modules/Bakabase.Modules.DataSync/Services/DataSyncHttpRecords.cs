@@ -34,7 +34,8 @@ public sealed record DataSyncLinkView(int Id, string PeerNodeId, string PeerName
     string? LastErrorCode, string? LastErrorDetail, int OpenItems, int PendingCount, string? ReviewId,
     string? PeerAppVersion, int? PeerContractVersion, bool PeerMayReadUs, bool ReadBackDeclined,
     string? PeerModeTowardsUs, DateTime? PeerLastReadAt, DataSyncSourceAttention? PeerAttention,
-    int ExcludedCount, int HeldCount, int MissingAtPeerCount, bool PeerOnline);
+    int ExcludedCount, int HeldCount, int MissingAtPeerCount, bool PeerOnline,
+    DateTime? StartAnywayAt = null /* WaitingForPeerReview: when [Start anyway] is offered (§8.3); UTC */);
 
 /// <param name="Mode">Follow or TwoWay.</param>
 public sealed record DataSyncLinkCreateInput(string? PeerNodeId, string? Address, string? Code, DataSyncLinkMode Mode,
