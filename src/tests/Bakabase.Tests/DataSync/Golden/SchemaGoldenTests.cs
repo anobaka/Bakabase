@@ -69,16 +69,19 @@ public class SchemaGoldenTests
             Shape(typeof(ExtensionGroupContentV1)).ToJsonString());
         Assert.AreEqual("""{"items":["integer"],"label":"string?","nested":{"flag":"boolean"},"when":"enum SampleWhen: A, B"}""",
             Shape(typeof(Sample)).ToJsonString());
+        Assert.AreEqual("""{"children":["ref SampleNode"],"label":"string"}""",
+            Shape(typeof(SampleNode)).ToJsonString());
     }
 
     /// <summary>
     /// A type's shape: an object of its public instance properties (camelCase, ordinal order), a list as an array of
-    /// its item's shape, a dictionary as <c>{"*": value}</c>, and a scalar as its JSON type, <c>?</c> when nullable.
+    /// its item's shape, a dictionary as <c>{"*": value}</c>, and a scalar as its JSON type, <c>?</c> when nullable. An
+    /// object type that contains itself (a multilevel node's children) is <c>"ref {Name}"</c> where it recurs.
     /// </summary>
-    private static JsonNode Shape(Type type, bool nullable = false, int depth = 0)
+    private static JsonNode Shape(Type type, bool nullable = false, int depth = 0, IReadOnlySet<Type>? expanding = null)
     {
         if (depth > 16) throw new AssertFailedException($"{type.Name} nests too deep for a content type.");
-        if (Nullable.GetUnderlyingType(type) is { } underlying) return Shape(underlying, true, depth);
+        if (Nullable.GetUnderlyingType(type) is { } underlying) return Shape(underlying, true, depth, expanding);
         string? scalar = type switch
         {
             _ when type == typeof(string) => "string",
@@ -95,7 +98,7 @@ public class SchemaGoldenTests
         if (type.IsGenericType && type.GetInterfaces().Append(type).Any(i =>
                 i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>)))
         {
-            return new JsonObject { ["*"] = Shape(type.GetGenericArguments()[1], false, depth + 1) };
+            return new JsonObject { ["*"] = Shape(type.GetGenericArguments()[1], false, depth + 1, expanding) };
         }
 
         if (typeof(IEnumerable).IsAssignableFrom(type))
@@ -105,8 +108,11 @@ public class SchemaGoldenTests
                 : type.GetInterfaces().Append(type)
                     .First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))
                     .GetGenericArguments()[0];
-            return new JsonArray(Shape(item, false, depth + 1));
+            return new JsonArray(Shape(item, false, depth + 1, expanding));
         }
+
+        if (expanding?.Contains(type) == true) return JsonValue.Create($"ref {type.Name}");
+        var inside = new HashSet<Type>(expanding ?? new HashSet<Type>()) { type };
 
         var nullability = new NullabilityInfoContext();
         var members = new JsonObject();
@@ -116,7 +122,7 @@ public class SchemaGoldenTests
         {
             var isNullable = nullability.Create(property).ReadState == NullabilityState.Nullable;
             members[JsonNamingPolicy.CamelCase.ConvertName(property.Name)] =
-                Shape(property.PropertyType, isNullable && !property.PropertyType.IsValueType, depth + 1);
+                Shape(property.PropertyType, isNullable && !property.PropertyType.IsValueType, depth + 1, inside);
         }
 
         return members;
@@ -127,4 +133,6 @@ public class SchemaGoldenTests
     private sealed record SampleNested(bool Flag);
 
     private sealed record Sample(string? Label, IReadOnlyList<int> Items, SampleNested Nested, SampleWhen When);
+
+    private sealed record SampleNode(string Label, IReadOnlyList<SampleNode> Children);
 }

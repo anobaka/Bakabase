@@ -16,10 +16,10 @@ public static class DataSyncServiceComponentsExtensions
     /// kit's fakes stay in place. Called by <see cref="BakabaseStartup"/> after <c>AddFederatedLibrary()</c>.
     /// </summary>
     /// <remarks>
-    /// Until the persistence package registers the runtime (<c>AddDataSync()</c> → <c>AddDataSyncRuntime()</c>, made
-    /// earlier through <c>AddInsideWorldBusinesses</c>), two placeholders fill the gaps, each registered with
-    /// <c>TryAdd</c> so the runtime's own registrations win: grant events nobody listens to, and a facade that answers
-    /// that data sync is not available yet.
+    /// The facade (<see cref="IDataSyncService"/>) and the grant events are the runtime's, registered earlier through
+    /// <c>AddInsideWorldBusinesses</c> (<c>AddDataSync()</c> → <c>AddDataSyncRuntime()</c>); the feed source, the gate
+    /// and the stores are the persistence layer's, and the peer client and grant service federation's
+    /// (<c>AddFederatedLibrary()</c>).
     /// </remarks>
     public static IServiceCollection AddDataSyncServiceComponents(this IServiceCollection services)
     {
@@ -28,9 +28,6 @@ public static class DataSyncServiceComponentsExtensions
         services.TryAddSingleton<IDataSyncHostAddresses, ServiceDataSyncHostAddresses>();
         services.TryAddSingleton<IDataSyncPeerSessions, FederationDataSyncPeerSessions>();
         services.AddHostedService<DataSyncSharingAnnouncer>();
-
-        services.TryAddSingleton<IDataSyncGrantEvents, NoOpDataSyncGrantEvents>();
-        services.TryAddScoped<IDataSyncService, UnavailableDataSyncService>();
         return services;
     }
 }

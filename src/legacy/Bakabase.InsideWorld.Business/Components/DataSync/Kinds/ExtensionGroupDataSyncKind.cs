@@ -267,7 +267,9 @@ public static class ExtensionGroupDataSyncKindRegistration
 {
     /// <summary>
     /// Registers the <c>extensionGroup</c> kind with <paramref name="codec"/>, the kind's codec (the pure engine's
-    /// extension group codec in production). Call it once per container.
+    /// extension group codec in production, registered by <c>AddDataSync()</c>). A kind is registered once per
+    /// container, so a later call replaces the registration an earlier one made: a test hands in its own codec over the
+    /// production one.
     /// </summary>
     public static IServiceCollection AddExtensionGroupDataSyncKind(this IServiceCollection services,
         IDataSyncKindCodec codec)
@@ -275,9 +277,21 @@ public static class ExtensionGroupDataSyncKindRegistration
         ArgumentNullException.ThrowIfNull(codec);
         if (codec.Descriptor.Kind != DataSyncKindIds.ExtensionGroup)
             throw new ArgumentException($"The {DataSyncKindIds.ExtensionGroup} kind needs its own codec.", nameof(codec));
-        services.AddScoped<IDataSyncKind>(sp => new ExtensionGroupDataSyncKind(codec,
-            sp.GetRequiredService<IExtensionGroupService>(),
-            sp.GetRequiredService<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>()));
+        for (var i = services.Count - 1; i >= 0; i--)
+        {
+            if (services[i].ServiceType == typeof(IDataSyncKind) && services[i].ImplementationFactory?.Target is Factory)
+                services.RemoveAt(i);
+        }
+
+        services.AddScoped<IDataSyncKind>(new Factory(codec).Create);
         return services;
+    }
+
+    /// <summary>What the registration is recognised by.</summary>
+    private sealed class Factory(IDataSyncKindCodec codec)
+    {
+        public IDataSyncKind Create(IServiceProvider sp) => new ExtensionGroupDataSyncKind(codec,
+            sp.GetRequiredService<IExtensionGroupService>(),
+            sp.GetRequiredService<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>());
     }
 }

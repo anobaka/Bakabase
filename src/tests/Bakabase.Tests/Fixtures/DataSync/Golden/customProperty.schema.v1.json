@@ -1,0 +1,49 @@
+{
+  "childrenLocal": "boolean",
+  "choices": [
+    {
+      "color": "string?",
+      "label": "string",
+      "uuid": "string?"
+    }
+  ],
+  "defaultValue": [
+    {
+      "group": "string?",
+      "label": "string?",
+      "name": "string?",
+      "path": [
+        "string"
+      ],
+      "uuid": "string"
+    }
+  ],
+  "ignoreCase": "boolean?",
+  "name": "string",
+  "nodes": [
+    {
+      "children": [
+        "ref CustomPropertyNodeV1"
+      ],
+      "color": "string?",
+      "label": "string",
+      "uuid": "string?"
+    }
+  ],
+  "settings": {
+    "layout": "string?",
+    "maxValue": "integer?",
+    "precision": "integer?",
+    "showProgressBar": "boolean?",
+    "valueIsSingleton": "boolean?"
+  },
+  "tags": [
+    {
+      "color": "string?",
+      "group": "string?",
+      "name": "string",
+      "uuid": "string?"
+    }
+  ],
+  "type": "enum PropertyType: SingleLineText, MultilineText, SingleChoice, MultipleChoice, Number, Percentage, Rating, Boolean, Link, Attachment, Date, DateTime, Time, Formula, Multilevel, Tags"
+}

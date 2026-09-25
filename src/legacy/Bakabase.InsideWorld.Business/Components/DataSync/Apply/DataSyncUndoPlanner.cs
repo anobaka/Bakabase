@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
+using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Services;
@@ -32,9 +33,17 @@ internal sealed record DataSyncUndoStep(DataSyncEntityPreImage PreImage, DataSyn
 /// <item><c>AddedOptionsInUse</c>: resources use a child the apply added;</item>
 /// <item><c>Missing</c>: the entity is gone.</item>
 /// </list>
+/// It is the facade's <see cref="IDataSyncUndoPreviewer"/>.
 /// </summary>
-public sealed class DataSyncUndoPlanner(IServiceScopeFactory scopes)
+public sealed class DataSyncUndoPlanner(IServiceScopeFactory scopes) : IDataSyncUndoPreviewer
 {
+    /// <summary>The preview of an entry the facade read (§10.1): no gate, no writes.</summary>
+    public Task<DataSyncUndoPreview> PreviewAsync(DataSyncApplyLogDbModel entry, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return PreviewAsync(entry.Id, ct);
+    }
+
     /// <summary>The preview of <c>GET /data-sync/history/{id}/undo</c> (§10.1): no gate, no writes.</summary>
     public async Task<DataSyncUndoPreview> PreviewAsync(int logId, CancellationToken ct)
     {

@@ -22,6 +22,7 @@ using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bakabase.Tests.DataSync.Apply;
 
@@ -75,6 +76,8 @@ internal sealed class DataSyncApplyFixture
         {
             s.AddSingleton<TimeProvider>(clock);
             s.AddSingleton<IDataSyncDeviceIdentity>(identityOverride ?? identity);
+            // Only the fixture's kinds: the production adapters (AddProperty, AddDataSync) are taken out first.
+            s.RemoveAll<IDataSyncKind>();
             s.AddScoped<IDataSyncKind>(_ => kind);
             if (extensionGroups) s.AddExtensionGroupDataSyncKind(ExtensionGroupCodec.Instance);
             configure?.Invoke(s);

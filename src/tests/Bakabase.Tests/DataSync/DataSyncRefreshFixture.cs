@@ -12,6 +12,7 @@ using Bakabase.TestKit.DataSync;
 using Bakabase.TestKit.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bakabase.Tests.DataSync;
 
@@ -59,6 +60,10 @@ internal sealed class DataSyncRefreshFixture
         {
             s.AddSingleton<TimeProvider>(clock);
             s.AddSingleton<IDataSyncDeviceIdentity>(identity);
+            // The fixture's kind stands in for the real one of its id: a container registers a kind once (the store
+            // maps kinds by id), so the production adapters (AddProperty, AddDataSync) are taken out first. A test
+            // adds any other kind it needs in its configure step.
+            s.RemoveAll<IDataSyncKind>();
             s.AddScoped<IDataSyncKind>(_ => memoryKind);
             s.AddSingleton<IDataSyncOrderMoveDetector>(detector);
             configure?.Invoke(s);

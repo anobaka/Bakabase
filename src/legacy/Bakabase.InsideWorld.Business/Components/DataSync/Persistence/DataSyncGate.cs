@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Runtime;
 
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
@@ -11,7 +12,11 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 /// <see cref="SemaphoreSlim"/>(1, 1), so it is <b>not</b> reentrant: code that already holds a lease passes it on
 /// (Refresh takes the caller's lease and never enters the gate itself).
 /// </summary>
-public sealed class DataSyncGate
+/// <remarks>
+/// It is also the runtime's <see cref="IDataSyncGateEntry"/>, so the facade, the apply runner and the feed share this
+/// one gate (§10.1).
+/// </remarks>
+public sealed class DataSyncGate : IDataSyncGateEntry
 {
     /// <summary>How long an HTTP caller or a feed request waits before it answers Busy (§7.5.1, §10.1).</summary>
     public static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
@@ -38,6 +43,19 @@ public sealed class DataSyncGate
         }
 
         return new Lease(this);
+    }
+
+    /// <summary>A lease, or null when the gate was not free within <paramref name="timeout"/> (null: no limit).</summary>
+    public async Task<DataSyncGateLease?> TryEnterAsync(TimeSpan? timeout, CancellationToken ct)
+    {
+        try
+        {
+            return await EnterAsync(timeout, ct);
+        }
+        catch (DataSyncGateTimeoutException)
+        {
+            return null;
+        }
     }
 
     private sealed class Lease(DataSyncGate gate) : DataSyncGateLease

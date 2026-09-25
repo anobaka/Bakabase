@@ -22,8 +22,8 @@ namespace Bakabase.Tests.DataSync.Api;
 
 /// <summary>
 /// What the Service host registers for data sync (spec §2.11, H-startup): the device identity over the federation node,
-/// the host kind, the addresses, the headless sharing announcer (§7.8), and — until the runtime registers its own —
-/// the placeholders that keep every <c>/data-sync</c> request answered.
+/// the host kind, the addresses and the headless sharing announcer (§7.8). The facade and the grant events are the
+/// runtime's alone.
 /// </summary>
 [TestClass]
 public class DataSyncServiceComponentsTests
@@ -40,33 +40,20 @@ public class DataSyncServiceComponentsTests
     }
 
     [TestMethod]
-    public void Placeholders_fill_the_gaps_until_the_runtime_registers_its_own()
+    public void The_host_registers_no_facade_and_no_grant_events_of_its_own()
     {
+        // The runtime registers them earlier (through AddInsideWorldBusinesses); the host adds no second
+        // implementation and replaces none.
         var services = HostServices();
         services.AddDataSyncServiceComponents();
+        Assert.AreEqual(0, services.Count(d => d.ServiceType == typeof(IDataSyncService)));
+        Assert.AreEqual(0, services.Count(d => d.ServiceType == typeof(IDataSyncGrantEvents)));
 
-        using var provider = services.BuildServiceProvider(Strict);
-        using var scope = provider.CreateScope();
-        Assert.IsInstanceOfType<UnavailableDataSyncService>(scope.ServiceProvider.GetRequiredService<IDataSyncService>());
-        Assert.IsInstanceOfType<NoOpDataSyncGrantEvents>(provider.GetRequiredService<IDataSyncGrantEvents>());
-    }
-
-    [TestMethod]
-    public void The_runtime_registration_wins()
-    {
-        // The runtime registers its facade and grant events earlier (through AddInsideWorldBusinesses); the
-        // placeholders must then stay out, not replace them or register a second implementation.
-        var services = HostServices();
         services.AddScoped<IDataSyncService, FakeDataSyncService>();
         services.AddSingleton<IDataSyncGrantEvents, RecordingGrantEvents>();
         services.AddDataSyncServiceComponents();
-
         Assert.AreEqual(1, services.Count(d => d.ServiceType == typeof(IDataSyncService)));
         Assert.AreEqual(1, services.Count(d => d.ServiceType == typeof(IDataSyncGrantEvents)));
-        using var provider = services.BuildServiceProvider(Strict);
-        using var scope = provider.CreateScope();
-        Assert.IsInstanceOfType<FakeDataSyncService>(scope.ServiceProvider.GetRequiredService<IDataSyncService>());
-        Assert.IsInstanceOfType<RecordingGrantEvents>(provider.GetRequiredService<IDataSyncGrantEvents>());
     }
 
     [TestMethod]
@@ -175,34 +162,6 @@ public class DataSyncServiceComponentsTests
         await using var provider = services.BuildServiceProvider(Strict);
         await new DataSyncSharingAnnouncer(provider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<DataSyncSharingAnnouncer>.Instance) { ReadVariable = _ => "true" }.StartAsync(default);
-    }
-
-    [TestMethod]
-    public async Task The_controller_answers_through_the_placeholder()
-    {
-        await using var host = await ServiceGateHost.StartAsync([typeof(DataSyncController)],
-            services => services.AddDataSyncServiceComponents());
-
-        // A read answers a switched-off data sync, for this device's own window.
-        using (var overview = await host.SendAsync(HttpMethod.Get, "/data-sync/overview", "same-origin", host.Origin))
-        {
-            Assert.AreEqual(HttpStatusCode.OK, overview.StatusCode);
-            using var body = JsonDocument.Parse(await overview.Content.ReadAsStringAsync());
-            var data = body.RootElement.GetProperty("data");
-            Assert.IsTrue(data.GetProperty("canManageSharing").GetBoolean());
-            Assert.AreEqual(UnavailableDataSyncService.NotAvailableCode,
-                data.GetProperty("status").GetProperty("lastErrorCode").GetString());
-        }
-
-        // Everything else answers that this build cannot do it yet, as an expected failure.
-        using (var link = await host.SendAsync(HttpMethod.Post, "/data-sync/links", "same-origin", host.Origin,
-                   """{"peerNodeId":"node-nas","mode":1,"kinds":["customProperty"]}"""))
-        {
-            Assert.AreEqual(HttpStatusCode.OK, link.StatusCode);
-            using var body = JsonDocument.Parse(await link.Content.ReadAsStringAsync());
-            Assert.AreEqual((int) DataSyncProblemCode.ThisTooOld,
-                body.RootElement.GetProperty("data").GetProperty("problem").GetProperty("code").GetInt32());
-        }
     }
 
     private sealed class FixedNode : INodeIdentityProvider

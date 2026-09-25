@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,9 +14,10 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 /// <summary>
 /// Retention (§4.6), run by the <c>DataSync</c> task once a day, under the gate, in its own short transaction: the
 /// store's rules (<see cref="DataSyncStore.PruneAsync"/>: unserved tombstones and per-kind floors, closed items, apply
-/// logs, readers, retired actors), then the data sync database backups beyond the newest five.
+/// logs, readers, retired actors), then the data sync database backups beyond the newest five. The runtime's fetch task
+/// calls it once a day as its <see cref="IDataSyncRetention"/>.
 /// </summary>
-public sealed class DataSyncRetention
+public sealed class DataSyncRetention : IDataSyncRetention
 {
     public static readonly TimeSpan Interval = TimeSpan.FromDays(1);
 
@@ -51,21 +53,24 @@ public sealed class DataSyncRetention
     }
 
     /// <summary>Retention now. A task body waits for the gate without a limit.</summary>
-    public async Task RunAsync(CancellationToken ct)
+    public Task RunAsync(CancellationToken ct) => RunAsync(_time.GetUtcNow().UtcDateTime, ct);
+
+    /// <summary>Retention as of <paramref name="nowUtc"/> (the caller's clock). A task body waits for the gate without a limit.</summary>
+    public async Task RunAsync(DateTime nowUtc, CancellationToken ct)
     {
-        var now = _time.GetUtcNow();
+        var ranAt = _time.GetUtcNow();
         using (await _gate.EnterAsync(null, ct))
         {
             await using var scope = _scopes.CreateAsyncScope();
             var store = scope.ServiceProvider.GetRequiredService<DataSyncStore>();
             await using var transaction = await store.Db.Database.BeginTransactionAsync(ct);
-            await store.PruneAsync(now.UtcDateTime, ct);
+            await store.PruneAsync(DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc), ct);
             await transaction.CommitAsync(ct);
         }
 
         var pruned = PruneBackups(_directory.BackupsPath);
         if (pruned > 0) _logger.LogInformation("Data sync removed {Count} old database backups.", pruned);
-        _lastRunAt = now;
+        _lastRunAt = ranAt;
     }
 
     /// <summary>

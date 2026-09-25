@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Identity;
@@ -17,8 +18,36 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 /// overlays and flags, and every tombstone, served or not. An entity the lost-update guard holds carries
 /// <c>PublishHeld</c>, which freezes incoming merges of it (§6.5, §8.4 row F).
 /// </summary>
+/// <remarks>
+/// It is also the first-contact planner's <see cref="IDataSyncLocalStateReader"/> (§8.3 step 4): the last committed
+/// state, read without Refresh and without any write (F78).
+/// </remarks>
 public sealed class DataSyncLocalStateReader(DataSyncStore store, DataSyncIdentityStore identity)
+    : IDataSyncLocalStateReader
 {
+    /// <summary>
+    /// The given kinds that have an adapter here, read at one committed state: inside the caller's transaction, or in a
+    /// transaction of its own that is rolled back, since nothing is written. A kind this build has no adapter for is
+    /// left out, as the planner holds it.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<string, DataSyncLocalKindState>> ReadAsync(
+        IReadOnlyCollection<string> kinds, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(kinds);
+        var db = store.Db;
+        await using var transaction = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
+        var contents = new DataSyncLocalContentCache();
+        var result = new Dictionary<string, DataSyncLocalKindState>(StringComparer.Ordinal);
+        foreach (var kind in kinds.Distinct(StringComparer.Ordinal))
+        {
+            if (store.Kinds.ContainsKey(kind)) result[kind] = await ReadAsync(kind, ct, contents);
+        }
+
+        return result;
+    }
+
     /// <remarks>
     /// <c>ValueCount</c> is left null: the merger asks for the usage it needs (§2.7 <c>CollectUsageQueries</c>). A live
     /// row whose definition is gone since the Refresh is left out; the next Refresh tombstones it.

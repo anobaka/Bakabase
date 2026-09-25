@@ -1,8 +1,10 @@
 using System;
 using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.InsideWorld.Business.Components.DataSync.Feed;
+using Bakabase.InsideWorld.Business.Components.DataSync.Kinds;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
+using Bakabase.Modules.DataSync.Kinds.ExtensionGroups;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Wire;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +29,8 @@ public static class DataSyncServiceCollectionExtensions
     public static IServiceCollection AddDataSync(this IServiceCollection services)
     {
         services.TryAddSingleton<DataSyncGate>();
+        // The runtime's facade enters this very gate (§10.1): one gate serializes the feed, the runner and the API.
+        services.TryAddSingleton<IDataSyncGateEntry>(sp => sp.GetRequiredService<DataSyncGate>());
         services.TryAddSingleton<DataSyncReaderLog>();
         services.TryAddSingleton<IDataSyncDataDirectory, AppDataSyncDataDirectory>();
         services.TryAddSingleton<DataSyncActorWatermarkFile>();
@@ -46,6 +50,7 @@ public static class DataSyncServiceCollectionExtensions
         services.TryAddScoped<DataSyncRefresher>();
         services.TryAddScoped<IDataSyncRefresher>(sp => sp.GetRequiredService<DataSyncRefresher>());
         services.TryAddScoped<DataSyncLocalStateReader>();
+        services.TryAddScoped<IDataSyncLocalStateReader>(sp => sp.GetRequiredService<DataSyncLocalStateReader>());
         services.TryAddSingleton<DataSyncRefreshCoordinator>(sp => new DataSyncRefreshCoordinator(
             sp.GetRequiredService<DataSyncGate>(), sp.GetRequiredService<IDataSyncActorGuard>(),
             sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<DataSyncActorWatermarkFile>(),
@@ -53,6 +58,7 @@ public static class DataSyncServiceCollectionExtensions
         services.TryAddSingleton<DataSyncRetention>(sp => new DataSyncRetention(sp.GetRequiredService<DataSyncGate>(),
             sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<IDataSyncDataDirectory>(),
             sp.GetService<TimeProvider>(), sp.GetService<ILogger<DataSyncRetention>>()));
+        services.TryAddSingleton<IDataSyncRetention>(sp => sp.GetRequiredService<DataSyncRetention>());
 
         // The feed source (§7.5): D's node controller serves it to readers holding a datasync grant. Snapshots and the
         // SeenCounter high-water map are process-wide; every store feeds the map the vectors its context saves. Pages
@@ -71,8 +77,10 @@ public static class DataSyncServiceCollectionExtensions
         services.TryAddSingleton<IDataSyncFeedSource>(sp => sp.GetRequiredService<DataSyncFeedSource>());
 
         // Kind adapters register next to the services that own their tables: the custom property kind in the Property
-        // module, the extension group kind through AddExtensionGroupDataSyncKind(codec) with the pure engine's codec.
-        // Refresh of a kind with an order detects local moves with the engine's order planner.
+        // module (AddProperty), the extension group kind here with the pure engine's codec (every kind of
+        // DataSyncKindIds.All, DbSetClassificationTests). Refresh of a kind with an order detects local moves with the
+        // engine's order planner.
+        services.AddExtensionGroupDataSyncKind(ExtensionGroupCodec.Instance);
         services.TryAddSingleton<IDataSyncOrderMoveDetector, DataSyncPlannerOrderMoveDetector>();
 
         // Apply, undo and restore (§8.10, §8.11, §9.2, §9.5): the runner is process-wide and opens a scope per attempt.
@@ -82,6 +90,7 @@ public static class DataSyncServiceCollectionExtensions
             sp.GetService<TimeProvider>()));
         services.TryAddSingleton<DataSyncUndoPlanner>(sp =>
             new DataSyncUndoPlanner(sp.GetRequiredService<IServiceScopeFactory>()));
+        services.TryAddSingleton<IDataSyncUndoPreviewer>(sp => sp.GetRequiredService<DataSyncUndoPlanner>());
         services.TryAddSingleton<DataSyncApplyRunner>(sp => new DataSyncApplyRunner(sp,
             sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<DataSyncGate>(),
             sp.GetRequiredService<DataSyncActorGuard>(), sp.GetRequiredService<DataSyncActorWatermarkFile>(),

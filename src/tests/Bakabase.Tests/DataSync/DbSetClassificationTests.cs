@@ -73,18 +73,17 @@ public class DbSetClassificationTests
     }
 
     [TestMethod]
-    public async Task Every_registered_kind_is_a_known_kind_that_claims_a_DbSet()
+    public async Task Every_known_kind_is_registered_once_and_claims_a_DbSet()
     {
-        // The kind adapters register themselves next to the service that owns their table; whichever are registered
-        // must be known kinds with a synced table (the registered set equals DataSyncKindIds.All once both land).
+        // The kind adapters register themselves next to the service that owns their table (the custom property kind in
+        // the Property module, the extension group kind in AddDataSync): exactly the known kinds, each once, each with
+        // a synced table.
         var sp = await TestServiceBuilder.BuildServiceProvider();
-        var registered = sp.GetServices<IDataSyncKind>().Select(k => k.Codec.Descriptor.Kind).ToList();
+        using var scope = sp.CreateScope();
+        var registered = scope.ServiceProvider.GetServices<IDataSyncKind>().Select(k => k.Codec.Descriptor.Kind).ToList();
 
         Assert.AreEqual(registered.Count, registered.Distinct().Count(), "a kind is registered twice");
-        foreach (var kind in registered)
-        {
-            CollectionAssert.Contains(DataSyncKindIds.All.ToList(), kind);
-            CollectionAssert.Contains(DataSyncDbSetClassification.SyncedKinds.ToList(), kind);
-        }
+        CollectionAssert.AreEquivalent(DataSyncKindIds.All.ToList(), registered);
+        CollectionAssert.AreEquivalent(DataSyncKindIds.All.ToList(), DataSyncDbSetClassification.SyncedKinds.ToList());
     }
 }
