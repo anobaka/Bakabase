@@ -139,6 +139,8 @@ const dynamicKeys = [
     "localOnly",
     "detached",
     "heldAtSource",
+    "tooLarge",
+    "unreadable",
     "differs",
     "definitionOnly",
     "synced",
@@ -237,6 +239,7 @@ const mapKeys = [
     "syncAccessLost",
     "syncNeedsYou",
     "syncNeedsYouThere",
+    "syncRequestEnded",
   ].map((issue) => `federation.map.issue.${issue}`),
 ];
 
@@ -260,7 +263,6 @@ const catalogue = [
   "PeerRestorePending",
   "TooLarge",
   "Failed",
-  "FullReconciliation",
 ].map((entry) => `dataSync.status.${entry}`);
 
 const placeholders = (text: string) =>

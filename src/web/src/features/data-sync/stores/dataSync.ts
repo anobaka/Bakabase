@@ -103,8 +103,9 @@ const isApplied = (data: unknown): data is DataSyncAppliedEvent =>
   Array.isArray((data as DataSyncAppliedEvent).localKeys);
 
 /**
- * Takes one UI hub push. Answers whether it was data sync's, so the hub's dispatch can stop
- * there. Anything malformed is dropped: the next overview read corrects the store.
+ * Takes one UI hub push — `UIHubConnection`'s `GetIncrementalData` hands every one here first.
+ * Answers whether it was data sync's, so the hub's dispatch can stop there. Anything malformed
+ * is dropped: the next overview read corrects the store.
  */
 export const applyDataSyncHubData = (key: string, data: unknown): boolean => {
   const store = useDataSyncStore.getState();

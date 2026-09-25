@@ -314,6 +314,28 @@ describe("data sync on the device map: what a device's card says", () => {
   it("says nothing of data sync for a device it has nothing to do with", () => {
     expect(syncIssues({ syncOutgoing: [] })).toEqual([]);
   });
+
+  it("marks a device whose request from this device ended, until it is dismissed", () => {
+    const graph = graphOf(
+      mapView({
+        outgoing: [
+          outgoing(3, "garage", "Garage", {
+            state: DataSyncLinkState.Stopped,
+            outcome: "expired",
+            expiresAt: minutesAgo(5),
+          }),
+        ],
+      }),
+    );
+
+    // Its own words, not the words for an ended request to manage a device.
+    expect(node(graph, "peer:garage")?.issues).toEqual(["syncRequestEnded"]);
+    // Still waiting: nothing to mark.
+    expect(
+      node(graphOf(mapView({ outgoing: [outgoing(3, "garage", "Garage")] })), "peer:garage")
+        ?.issues,
+    ).toEqual([]);
+  });
 });
 
 describe("data sync on the device map: requests other devices filed", () => {

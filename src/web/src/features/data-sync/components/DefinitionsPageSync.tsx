@@ -13,6 +13,7 @@ import { DATA_SYNC_ROUTE, dataSyncAddRoute } from "../routes";
 import { useDataSyncStore } from "../stores/dataSync";
 import { isTooLargeToSync, overallStatus } from "../viewModels";
 
+import DataSyncHelp from "./DataSyncHelp";
 import EntitySyncBadge from "./EntitySyncBadge";
 import EntitySyncMenu from "./EntitySyncMenu";
 import { DataSyncErrorNotice, linkButtonClass, smallButtonClass, toneDot } from "./common";
@@ -47,24 +48,27 @@ export function DataSyncHeaderLink() {
   if (!shown) return null;
 
   return (
-    <Link
-      className={`${smallButtonClass} relative gap-1.5`}
-      data-testid="data-sync-header-link"
-      title={line?.text}
-      to={DATA_SYNC_ROUTE}
-    >
-      <AiOutlineSync aria-hidden />
-      {t("dataSync.title")}
-      {line && (
-        <span
-          aria-hidden
-          className={`h-2 w-2 rounded-full ${toneDot[line.tone]}`}
-          data-testid="data-sync-header-dot"
-          data-tone={line.tone}
-        />
-      )}
-      {line && <span className="sr-only">{line.text}</span>}
-    </Link>
+    <span className="inline-flex items-center gap-0.5">
+      <Link
+        className={`${smallButtonClass} relative gap-1.5`}
+        data-testid="data-sync-header-link"
+        title={line?.text}
+        to={DATA_SYNC_ROUTE}
+      >
+        <AiOutlineSync aria-hidden />
+        {t("dataSync.title")}
+        {line && (
+          <span
+            aria-hidden
+            className={`h-2 w-2 rounded-full ${toneDot[line.tone]}`}
+            data-testid="data-sync-header-dot"
+            data-tone={line.tone}
+          />
+        )}
+        {line && <span className="sr-only">{line.text}</span>}
+      </Link>
+      <DataSyncHelp />
+    </span>
   );
 }
 

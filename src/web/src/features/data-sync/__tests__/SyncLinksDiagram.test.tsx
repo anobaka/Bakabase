@@ -1,3 +1,5 @@
+import type { Box, Point } from "../components/diagramLayout";
+
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -96,6 +98,53 @@ describe("where the diagram puts its cards", () => {
       }
     },
   );
+
+  it("never runs a line over another device's card", () => {
+    /** Whether the segment from `a` to `b` enters the box (Liang–Barsky clipping). */
+    const crosses = (a: Point, b: Point, box: Box) => {
+      const [left, right] = [box.cx - box.w / 2, box.cx + box.w / 2];
+      const [top, bottom] = [box.cy - box.h / 2, box.cy + box.h / 2];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      let t0 = 0;
+      let t1 = 1;
+
+      for (const [p, q] of [
+        [-dx, a.x - left],
+        [dx, right - a.x],
+        [-dy, a.y - top],
+        [dy, bottom - a.y],
+      ]) {
+        if (p === 0) {
+          if (q < 0) return false;
+          continue;
+        }
+        const t = q / p;
+
+        if (p < 0) t0 = Math.max(t0, t);
+        else t1 = Math.min(t1, t);
+        if (t0 > t1) return false;
+      }
+
+      return true;
+    };
+
+    for (let count = 1; count <= 12; count += 1)
+      for (let width = 640; width <= 1500; width += 20) {
+        const layout = layoutSyncDiagram(width, count, true);
+
+        if (layout.mode === "list") continue;
+        const boxes = [...layout.peers, ...(layout.add ? [layout.add] : [])];
+
+        boxes.forEach((box, index) => {
+          const { from, to } = spokeGeometry(layout.self, box);
+
+          boxes.forEach((other, at) => {
+            if (at !== index) expect(crosses(from, to, other), `${count} at ${width}`).toBe(false);
+          });
+        });
+      }
+  });
 
   it("draws a few devices at a desktop width, and lists a crowd", () => {
     expect(layoutSyncDiagram(960, 4, true).mode).toBe("drawing");
@@ -223,6 +272,38 @@ describe("the diagram", () => {
     expect(onSelect).toHaveBeenLastCalledWith("node-nas", "keyboard", "spoke");
     fireEvent.click(spoke);
     expect(onSelect).toHaveBeenLastCalledWith("node-nas", "pointer", "spoke");
+  });
+
+  it("takes the keyboard to each device, then to its line, as the device map does", () => {
+    render(
+      <SyncLinksDiagram
+        initialWidth={1100}
+        now={NOW}
+        peers={peers()}
+        self={self}
+        onAdd={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+    const order = Array.from(
+      screen.getByTestId("data-sync-diagram").querySelectorAll<HTMLElement>('[tabindex="0"]'),
+    ).map((element) =>
+      element.dataset.syncPeer
+        ? `${element.dataset.syncPart}:${element.dataset.syncPeer}`
+        : element.dataset.testid,
+    );
+
+    expect(order).toEqual([
+      "card:node-htpc",
+      "spoke:node-htpc",
+      "card:node-nas",
+      "spoke:node-nas",
+      "card:node-pc2",
+      "spoke:node-pc2",
+      "card:node-reader",
+      "spoke:node-reader",
+      "data-sync-add",
+    ]);
   });
 
   it("says every device, both ways, to a screen reader", () => {

@@ -22,6 +22,7 @@ import { useDataSyncStore } from "../stores/dataSync";
 import { localDateTime } from "../times";
 import { dataSyncKinds, elsewhereLines } from "../viewModels";
 
+import DataSyncHelp from "./DataSyncHelp";
 import ElsewhereLines from "./ElsewhereLines";
 import InboxBulkBar from "./InboxBulkBar";
 import InboxCard, { cardValues } from "./InboxCard";
@@ -44,8 +45,52 @@ export const INBOX_LIVE_POLL_MS = 3_000;
 /** How long a card closed elsewhere stays, saying so, before it leaves. */
 export const CLOSED_CARD_MS = 4_000;
 
-const OPEN_TAKE = 500;
-const CLOSED_TAKE = 200;
+/** The largest page `GET /data-sync/inbox` answers. */
+export const INBOX_PAGE = 500;
+/**
+ * How many open items "Needs you" reads at most, a page at a time. Past it the section says how
+ * many it shows of how many, and leaves out what needs every item of a definition at once.
+ */
+export const OPEN_LIMIT = 5_000;
+/** How many of the items decided lately are read for "Recently resolved". */
+export const CLOSED_TAKE = 200;
+/** Read again less often while there is more than one page to read. */
+export const INBOX_LARGE_POLL_MS = 60_000;
+
+type Item = DataSyncInboxItemView;
+
+/**
+ * Every open item, a page at a time, up to {@link OPEN_LIMIT}. Pages can shift while they are
+ * read — an item opened or closed meanwhile — so an item met twice is kept once, and one missed
+ * is there at the next read.
+ */
+export async function readOpenItems(): Promise<{ items: Item[]; total: number }> {
+  const byId = new Map<number, Item>();
+  let total = 0;
+  let skip = 0;
+
+  for (;;) {
+    const page = await dataSyncApi.inbox({ openOnly: true, skip, take: INBOX_PAGE });
+    const items = page?.items ?? [];
+
+    total = page?.total ?? skip + items.length;
+    for (const item of items) byId.set(item.id, item);
+    skip += items.length;
+    if (items.length < INBOX_PAGE || skip >= total || byId.size >= OPEN_LIMIT) break;
+  }
+
+  return { items: Array.from(byId.values()), total: Math.max(total, byId.size) };
+}
+
+/**
+ * The items decided lately. The server lists open items first (then newest first), so the closed
+ * ones start where the open ones end.
+ */
+export async function readClosedItems(openCount: number): Promise<Item[]> {
+  const page = await dataSyncApi.inbox({ openOnly: false, skip: openCount, take: CLOSED_TAKE });
+
+  return (page?.items ?? []).filter((item) => !!item.closedAt);
+}
 
 export interface InboxListProps {
   /** Moves on whenever the page read data sync again after an action. */
@@ -59,8 +104,6 @@ export interface InboxListProps {
   now?: number;
 }
 
-type Item = DataSyncInboxItemView;
-
 export default function InboxList({
   version,
   peers,
@@ -71,6 +114,8 @@ export default function InboxList({
 }: InboxListProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<Item[]>();
+  /** How many items are open in all: more than are shown, past {@link OPEN_LIMIT}. */
+  const [openTotal, setOpenTotal] = useState(0);
   const [closed, setClosed] = useState<Item[]>([]);
   const [error, setError] = useState<Error>();
   const [peer, setPeer] = useState(initialPeer ?? "");
@@ -94,12 +139,8 @@ export default function InboxList({
 
   const load = useCallback(async () => {
     try {
-      const [openPage, allPage] = await Promise.all([
-        dataSyncApi.inbox({ openOnly: true, take: OPEN_TAKE }),
-        dataSyncApi.inbox({ openOnly: false, take: CLOSED_TAKE }),
-      ]);
-      const nextOpen = openPage?.items ?? [];
-      const nextClosed = (allPage?.items ?? []).filter((item) => !!item.closedAt);
+      const { items: nextOpen, total } = await readOpenItems();
+      const nextClosed = await readClosedItems(total);
       const stillOpen = new Set(nextOpen.map((item) => item.id));
       const closedById = new Map(nextClosed.map((item) => [item.id, item]));
 
@@ -131,6 +172,7 @@ export default function InboxList({
         return next;
       });
       setOpen(nextOpen);
+      setOpenTotal(total);
       setClosed(nextClosed);
       setError(undefined);
     } catch (cause) {
@@ -143,17 +185,19 @@ export default function InboxList({
   }, [load, version, openItemsHere]);
 
   const live = applying.size > 0;
+  // Many pages to read: read them less often, except while a decision sent from here applies.
+  const large = openTotal > INBOX_PAGE;
 
   useEffect(() => {
     const timer = setInterval(
       () => {
         if (typeof document === "undefined" || !document.hidden) void load();
       },
-      live ? INBOX_LIVE_POLL_MS : INBOX_POLL_MS,
+      live ? INBOX_LIVE_POLL_MS : large ? INBOX_LARGE_POLL_MS : INBOX_POLL_MS,
     );
 
     return () => clearInterval(timer);
-  }, [live, load]);
+  }, [live, large, load]);
 
   // A card closed elsewhere leaves after it has said so.
   useEffect(() => {
@@ -188,10 +232,13 @@ export default function InboxList({
   }, [tasks, applying, t]);
 
   const cards = useMemo(() => groupInbox(open ?? []), [open]);
+  // Past what is read, a definition's conflicts may be only partly here: nothing that needs all
+  // of them at once is offered for many until the rest is read.
+  const complete = !open || open.length >= openTotal;
 
   shownCards.current = cards;
   const filtered = filterCards(cards, { peer: peer || undefined, kind: kind || undefined });
-  const bulks = inboxBulks(filtered, bulkBackup);
+  const bulks = inboxBulks(filtered, bulkBackup, { wholeCards: complete });
   const recent = recentlyResolved(closed, now);
   const devices = useMemo(() => {
     const byId = new Map<string, string>();
@@ -285,6 +332,7 @@ export default function InboxList({
       data-testid="data-sync-inbox"
     >
       <SectionHeading id="data-sync-inbox-title" title={t("dataSync.inbox.title")}>
+        <DataSyncHelp />
         {devices.length > 1 || peer ? (
           <select
             aria-label={t("dataSync.inbox.filter.device")}
@@ -325,6 +373,15 @@ export default function InboxList({
       </SectionHeading>
 
       <ElsewhereLines peers={peers} />
+      {open && !complete && (
+        <p
+          className="rounded-lg bg-default-100 p-2 text-xs"
+          data-testid="data-sync-inbox-partial"
+          role="status"
+        >
+          {t("dataSync.inbox.partial", { shown: open.length, total: openTotal })}
+        </p>
+      )}
       <DataSyncErrorNotice error={error} onRetry={() => void load()} />
       <DataSyncErrorNotice error={bulkError} onDismiss={() => setBulkError(undefined)} />
       <InboxBulkBar

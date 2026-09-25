@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { AiOutlineEllipsis } from "react-icons/ai";
 
 import { dataSyncApi } from "../api";
+import { useMenuKeyboard } from "../hooks/useMenuKeyboard";
 import { entityMenu } from "../viewModels";
 
 import { DataSyncEntitySyncState } from "@/sdk/constants";
@@ -40,7 +41,9 @@ export default function EntitySyncMenu({
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLSpanElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLSpanElement>(null);
   const menuId = useId();
+  const menuKeys = useMenuKeyboard(open, menu, trigger, () => setOpen(false));
   const items = entityMenu(entity, offersDefinitionOnly);
 
   useEffect(() => {
@@ -114,26 +117,41 @@ export default function EntitySyncMenu({
         className="rounded p-1 text-default-500 hover:bg-default-100 disabled:opacity-50"
         data-testid="data-sync-entity-menu"
         disabled={actions.busy}
+        id={`${menuId}-button`}
         type="button"
         onClick={() => setOpen((current) => !current)}
-        onKeyDown={closeOnEscape}
+        onKeyDown={(event) => {
+          if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+            event.preventDefault();
+            setOpen(true);
+
+            return;
+          }
+          closeOnEscape(event);
+        }}
       >
         <AiOutlineEllipsis aria-hidden />
       </button>
       {open && (
         <span
+          ref={menu}
+          aria-labelledby={`${menuId}-button`}
           className="absolute right-0 top-full z-20 mt-1 flex min-w-56 flex-col rounded-lg border border-default-200 bg-content1 p-1 shadow-lg"
           id={menuId}
           role="menu"
           tabIndex={-1}
-          onKeyDown={closeOnEscape}
+          onKeyDown={(event) => {
+            closeOnEscape(event);
+            if (!event.defaultPrevented) menuKeys(event);
+          }}
         >
           {items.map((item) => (
             <button
               key={item}
-              className="rounded-md px-2 py-1.5 text-left text-xs hover:bg-default-100"
+              className="rounded-md px-2 py-1.5 text-left text-xs outline-none hover:bg-default-100 focus-visible:bg-default-100 focus-visible:ring-2 focus-visible:ring-focus"
               data-action={item}
               role="menuitem"
+              tabIndex={-1}
               type="button"
               onClick={() => choose(item)}
             >

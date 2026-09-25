@@ -3,15 +3,19 @@ import type { SyncOutcome } from "../viewModels";
 
 import { useTranslation } from "react-i18next";
 
-import { dataSyncApi } from "../api";
+import { dataSyncApi, DataSyncProblemError } from "../api";
 import { minutesLeft } from "../times";
+import { outgoingRequestIdOf } from "../viewModels";
 import { smallButtonClass } from "../components/common";
+
+import { DataSyncProblemCode } from "@/sdk/constants";
 
 /*
  * This device's own request to read another device's definitions: waiting, with [Cancel], or
  * ended — rejected or expired — with [Dismiss]. Nothing the reader filed vanishes by itself
  * (`.claude/rules/federation.md`): an ended request stays until it is dismissed, which resets
- * the link it belonged to.
+ * the link it belonged to. [Cancel] only ever withdraws the request: the link, its sync state
+ * and its pending decisions stay (resetting them is a choice of its own, confirmed apart).
  */
 
 export interface DataSyncOutgoingCardProps {
@@ -23,6 +27,11 @@ export interface DataSyncOutgoingCardProps {
   linkId?: number;
   /** The request itself, while it waits: cancelling withdraws it. */
   requestId?: string;
+  /**
+   * The device the request went to, where the request's id is not at hand (the device map's
+   * record carries none): [Cancel] finds this device's own request to it and withdraws that.
+   */
+  nodeId?: string;
   actions: DataSyncPanelActions;
   now?: number;
 }
@@ -34,6 +43,7 @@ export default function DataSyncOutgoingCard({
   expiresAt,
   linkId,
   requestId,
+  nodeId,
   actions,
   now,
 }: DataSyncOutgoingCardProps) {
@@ -43,15 +53,15 @@ export default function DataSyncOutgoingCard({
   const minutes = minutesLeft(expiresAt, now);
 
   const cancel = () =>
-    void actions.run(
-      () =>
-        requestId
-          ? dataSyncApi.cancelRequest(requestId)
-          : linkId !== undefined
-            ? dataSyncApi.resetLink(linkId)
-            : Promise.resolve(),
-      ["dataSync", "sharing"],
-    );
+    void actions.run(async () => {
+      const id =
+        requestId ??
+        (nodeId ? outgoingRequestIdOf(await dataSyncApi.requests(), nodeId) : undefined);
+
+      // Answered or withdrawn meanwhile: said so, and the listings read again show how it ended.
+      if (!id) throw new DataSyncProblemError({ code: DataSyncProblemCode.RequestNotFound });
+      await dataSyncApi.cancelRequest(id);
+    }, ["dataSync", "sharing"]);
   const dismiss = () =>
     linkId !== undefined &&
     void actions.run(() => dataSyncApi.resetLink(linkId), ["dataSync", "sharing"]);
@@ -80,7 +90,7 @@ export default function DataSyncOutgoingCard({
       )}
       <div className="flex flex-wrap gap-2">
         {waiting
-          ? (requestId || linkId !== undefined) && (
+          ? (requestId || nodeId) && (
               <button
                 className={smallButtonClass}
                 data-testid="data-sync-outgoing-cancel"

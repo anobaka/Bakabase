@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { AiOutlineClose } from "react-icons/ai";
 
 import { panelClass } from "./common";
+import DataSyncHelp from "./DataSyncHelp";
 
 const focusableSelector =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -45,6 +46,15 @@ export default function DataSyncDialog({
   useEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKeyDown = (event: KeyboardEvent) => {
+      const active = document.activeElement;
+
+      // A dialog opened over this one (the help center) has the keyboard: it is its to handle.
+      if (
+        active instanceof Element &&
+        !dialog.current?.contains(active) &&
+        active.closest('[role="dialog"], [aria-modal="true"]')
+      )
+        return;
       if (event.key === "Escape") {
         if (event.defaultPrevented) return;
         event.preventDefault();
@@ -54,7 +64,6 @@ export default function DataSyncDialog({
       }
       if (event.key !== "Tab" || !dialog.current) return;
       const focusable = Array.from(dialog.current.querySelectorAll<HTMLElement>(focusableSelector));
-      const active = document.activeElement;
       const inside = !!active && dialog.current.contains(active);
 
       if (!focusable.length) {
@@ -99,15 +108,18 @@ export default function DataSyncDialog({
           <h2 ref={heading} className="font-semibold outline-none" id={titleId} tabIndex={-1}>
             {title}
           </h2>
-          <button
-            aria-label={t("dataSync.close")}
-            className="-m-1 rounded p-1 text-default-500 hover:bg-default-100 disabled:opacity-50"
-            disabled={busy}
-            type="button"
-            onClick={onClose}
-          >
-            <AiOutlineClose aria-hidden />
-          </button>
+          <div className="-m-1 flex shrink-0 items-center gap-1">
+            <DataSyncHelp />
+            <button
+              aria-label={t("dataSync.close")}
+              className="rounded p-1 text-default-500 hover:bg-default-100 disabled:opacity-50"
+              disabled={busy}
+              type="button"
+              onClick={onClose}
+            >
+              <AiOutlineClose aria-hidden />
+            </button>
+          </div>
         </header>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">{children}</div>
         {footer && <div className="flex flex-wrap justify-end gap-2 pt-1">{footer}</div>}

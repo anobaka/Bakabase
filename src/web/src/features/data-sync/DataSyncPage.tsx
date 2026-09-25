@@ -17,7 +17,8 @@ import { useCanManageDefinitionSharing } from "./hooks/useCanManageDefinitionSha
 import { useDataSyncActions } from "./hooks/useDataSyncActions";
 import { useDataSyncPageData } from "./hooks/useDataSyncPageData";
 import { useDataSyncWindow } from "./hooks/useDataSyncWindow";
-import { overallStatus, waitingElsewhereLine } from "./viewModels";
+import { useElementWidth } from "./hooks/useElementWidth";
+import { outgoingRequestIdOf, overallStatus, waitingElsewhereLine } from "./viewModels";
 import AddLinkWizard from "./components/AddLinkWizard";
 import {
   buttonClass,
@@ -26,6 +27,7 @@ import {
   primaryClass,
   SectionHeading,
   StatusDot,
+  syncText,
   toneText,
 } from "./components/common";
 import EntitySyncList from "./components/EntitySyncList";
@@ -46,7 +48,7 @@ import { useDetailsFocus } from "@/features/federation/map/useDetailsFocus";
 import { useEscapeKey } from "@/features/federation/map/useEscapeKey";
 import { useMediaQuery } from "@/features/federation/map/useMediaQuery";
 import HelpCenterButton from "@/components/HelpCenter/HelpCenterButton";
-import { DataSyncRequestDirection, RemoteAccessMode } from "@/sdk/constants";
+import { DataSyncLinkState, RemoteAccessMode } from "@/sdk/constants";
 
 /**
  * The data sync page, under System: every device this one syncs definitions with, drawn first,
@@ -81,6 +83,13 @@ export default function DataSyncPage() {
  */
 export const DATA_SYNC_ON_DEMAND_QUERY = "(max-width: 1535.98px)";
 
+/**
+ * Below this width of the page's own content a details column (300 px at least) and a usable
+ * diagram cannot stand side by side — a phone, a narrow LAN browser: the details open under the
+ * diagram instead, full width, and are scrolled to. Still never over it.
+ */
+export const DATA_SYNC_STACKED_BELOW = 640;
+
 /** What opened the details: a device's card or its spoke, found again by its id. */
 interface Opener {
   nodeId: string;
@@ -93,7 +102,11 @@ function DataSync() {
   const [params, setParams] = useSearchParams();
   const query = readDataSyncQuery(params);
   const canManageHere = useCanManageDefinitionSharing();
-  const onDemand = useMediaQuery(DATA_SYNC_ON_DEMAND_QUERY);
+  // Measured on the layout itself, which the details never change: the navigation beside the
+  // page may be wide or folded, so the window's width alone would not say what is left.
+  const { ref: layoutRef, width: layoutWidth } = useElementWidth<HTMLDivElement>(1024);
+  const stacked = layoutWidth < DATA_SYNC_STACKED_BELOW;
+  const onDemand = useMediaQuery(DATA_SYNC_ON_DEMAND_QUERY) || stacked;
   const reducedMotion = useReducedMotion();
   const { overview, peers } = data;
   const canManage = canManageHere && (overview?.canManageSharing ?? true);
@@ -203,6 +216,15 @@ function DataSync() {
     heading.current?.focus();
   }, [chosen]);
 
+  // Under the diagram, where a narrow page puts them, the details are brought into view.
+  useEffect(() => {
+    if (stacked && chosen)
+      details.current?.scrollIntoView?.({
+        block: "start",
+        behavior: reducedMotion ? "auto" : "smooth",
+      });
+  }, [chosen, stacked]);
+
   // Escape in the diagram lets go of the device; in the details, closes them.
   useEscapeKey(diagramRegion, letGo, !!chosen || keptOpen);
   // Enabled once the details are there to listen on: they mount when they open.
@@ -260,11 +282,6 @@ function DataSync() {
       ? data.links.value?.find((item) => item.id === linkId)
       : undefined;
   const reviewOpen = !!query.reviewId || (query.review && !!reviewLink);
-  const outgoingRequestOf = (nodeId: string) =>
-    data.requests.value?.find(
-      (request) =>
-        request.nodeId === nodeId && request.direction === DataSyncRequestDirection.Outgoing,
-    )?.requestId;
 
   return (
     <div
@@ -356,15 +373,18 @@ function DataSync() {
       )}
 
       <div
+        ref={layoutRef}
         className={
           !detailsOpen
             ? undefined
-            : onDemand
-              ? "grid grid-cols-[minmax(0,1fr)_clamp(300px,34%,380px)] items-start gap-3"
-              : "grid grid-cols-[minmax(0,1fr)_minmax(360px,420px)] items-start gap-4"
+            : stacked
+              ? "flex flex-col gap-3"
+              : onDemand
+                ? "grid grid-cols-[minmax(0,1fr)_clamp(300px,34%,380px)] items-start gap-3"
+                : "grid grid-cols-[minmax(0,1fr)_minmax(360px,420px)] items-start gap-4"
         }
         data-details={detailsOpen ? "open" : "closed"}
-        data-layout={onDemand ? "on-demand" : "docked"}
+        data-layout={stacked ? "stacked" : onDemand ? "on-demand" : "docked"}
         data-testid="data-sync-layout"
       >
         <section
@@ -414,10 +434,14 @@ function DataSync() {
             ref={details}
             animate={{ x: 0, opacity: 1 }}
             aria-labelledby="data-sync-details-title"
-            className={`${panelClass} sticky top-4 max-h-[calc(100vh-2rem)] min-w-0 overflow-y-auto`}
+            className={
+              stacked
+                ? `${panelClass} min-w-0 scroll-mt-4`
+                : `${panelClass} sticky top-4 max-h-[calc(100vh-2rem)] min-w-0 overflow-y-auto`
+            }
             data-on-demand={onDemand || undefined}
             data-testid="data-sync-details"
-            initial={onDemand && !reducedMotion ? { x: 16, opacity: 0 } : false}
+            initial={onDemand && !stacked && !reducedMotion ? { x: 16, opacity: 0 } : false}
             transition={{ duration: 0.16 }}
           >
             {selected ? (
@@ -427,7 +451,7 @@ function DataSync() {
                 actions={actions}
                 canManage={canManage}
                 headingRef={heading}
-                outgoingRequestId={outgoingRequestOf(selected.nodeId)}
+                outgoingRequestId={outgoingRequestIdOf(data.requests.value, selected.nodeId)}
                 peer={selected}
                 remoteAccessMode={remoteAccessMode}
                 selfName={selfName}
@@ -546,6 +570,7 @@ function DataSync() {
       )}
       {reviewOpen && (
         <ReviewView
+          awaitingAccess={reviewLink?.state === DataSyncLinkState.AwaitingAccess}
           peerName={reviewLink?.peerName ?? t<string>("dataSync.otherDevice")}
           peerNodeId={reviewLink?.peerNodeId}
           reviewId={query.reviewId ?? reviewLink?.reviewId ?? undefined}
@@ -595,7 +620,7 @@ function SelfSummary({
     >
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium text-secondary">{t("dataSync.thisDevice")}</p>
+          <p className={`text-xs font-medium ${syncText}`}>{t("dataSync.thisDevice")}</p>
           <h2
             ref={headingRef}
             className="break-words text-lg font-semibold outline-none"

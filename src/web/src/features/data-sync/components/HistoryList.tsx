@@ -25,6 +25,7 @@ import {
   panelClass,
   SectionHeading,
   smallButtonClass,
+  syncText,
 } from "./common";
 
 import {
@@ -204,7 +205,7 @@ export default function HistoryList({
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <Icon aria-hidden className="shrink-0 text-default-500" />
                   <span className="font-medium">{t(`dataSync.history.kind.${kind}`)}</span>
-                  {entry.peerName && <span className="text-secondary">{entry.peerName}</span>}
+                  {entry.peerName && <span className={syncText}>{entry.peerName}</span>}
                   <span
                     className="text-xs text-default-500"
                     data-testid="data-sync-history-time"
@@ -223,7 +224,7 @@ export default function HistoryList({
                     )}
                     {entry.undoState === DataSyncUndoState.Expired &&
                       entry.kind !== DataSyncHistoryKind.Undo && (
-                        <span className="text-xs text-default-400">
+                        <span className="text-xs text-default-500">
                           {t("dataSync.history.expired")}
                         </span>
                       )}

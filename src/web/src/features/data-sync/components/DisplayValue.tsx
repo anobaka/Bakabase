@@ -44,7 +44,7 @@ export default function DisplayValue({
     <span
       className={`inline-flex max-w-full items-center gap-1.5 ${
         chip ? "rounded-md border border-default-200 px-1.5 py-0.5" : ""
-      } ${faint ? "opacity-60" : ""} ${value ? "" : "italic text-default-400"}`}
+      } ${faint ? "opacity-60" : ""} ${value ? "" : "italic text-default-500"}`}
       data-testid="data-sync-value"
     >
       {color && (

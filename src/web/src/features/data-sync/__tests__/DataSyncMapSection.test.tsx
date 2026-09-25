@@ -20,6 +20,7 @@ import {
   outgoing,
   overview,
   recordingActions,
+  request,
 } from "./dataSyncFixtures";
 
 import { MessageError } from "@/features/federation/components/common";
@@ -28,6 +29,7 @@ import {
   DataSyncLinkMode,
   DataSyncLinkState,
   DataSyncProblemCode,
+  DataSyncRequestDirection,
   DataSyncRequestIntent,
   RemoteAccessMode,
 } from "@/sdk/constants";
@@ -52,10 +54,16 @@ vi.mock("@/stores/remoteAccess", () => ({
   useRemoteAccessStore: (selector: (state: unknown) => unknown) =>
     selector({ initialized: true, isLocal: true, clientMode: ClientMode.AllInOne }),
 }));
+vi.mock("@/components/HelpCenter/HelpCenterButton", () => ({
+  default: ({ section, topic }: { section: string; topic: string }) => (
+    <span data-help={`${topic}/${section}`} data-testid="help" />
+  ),
+}));
 vi.mock("../api", async (importOriginal) => ({
   ...(await importOriginal<typeof Api>()),
   dataSyncApi: {
     overview: vi.fn(),
+    requests: vi.fn(async () => []),
     createLink: vi.fn(async () => ({})),
     updateLink: vi.fn(async () => ({})),
     copyOnce: vi.fn(async () => ({})),
@@ -195,6 +203,10 @@ describe("data sync in the device map's details", () => {
   it("shows this device's own request while it waits, with Cancel, and the editor only once approved", async () => {
     const waiting = outgoing(3, "nas", "NAS");
 
+    vi.mocked(dataSyncApi.requests).mockResolvedValue([
+      request("req-in", "nas", "NAS"),
+      request("req-out-7", "nas", "NAS", { direction: DataSyncRequestDirection.Outgoing }),
+    ]);
     section(mapNode({ sources: { syncRequests: [], syncOutgoing: [waiting] } }));
 
     const card = screen.getByTestId("data-sync-outgoing-card");
@@ -205,7 +217,38 @@ describe("data sync in the device map's details", () => {
       fireEvent.click(within(card).getByTestId("data-sync-outgoing-cancel"));
     });
     expect(recorded.actions.run).toHaveBeenCalledTimes(1);
-    expect(dataSyncApi.resetLink).toHaveBeenCalledWith(3);
+    // Withdraws the request, found among this device's own: never resets the link.
+    expect(dataSyncApi.cancelRequest).toHaveBeenCalledWith("req-out-7");
+    expect(dataSyncApi.resetLink).not.toHaveBeenCalled();
+  });
+
+  it("says so when the request it would cancel has already gone, and resets nothing", async () => {
+    vi.mocked(dataSyncApi.requests).mockResolvedValue([]);
+    recorded.actions.run.mockImplementation(async (operation: () => Promise<unknown>) => {
+      await expect(operation()).rejects.toMatchObject({
+        problem: { code: DataSyncProblemCode.RequestNotFound },
+      });
+
+      return false;
+    });
+    section(mapNode({ sources: { syncRequests: [], syncOutgoing: [outgoing(3, "nas", "NAS")] } }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("data-sync-outgoing-cancel"));
+    });
+    expect(recorded.actions.run).toHaveBeenCalledTimes(1);
+    expect(dataSyncApi.cancelRequest).not.toHaveBeenCalled();
+    expect(dataSyncApi.resetLink).not.toHaveBeenCalled();
+  });
+
+  it("offers data sync's help in its heading", () => {
+    section(
+      mapNode({ sources: { sync: mapPeer("nas", "NAS"), syncRequests: [], syncOutgoing: [] } }),
+    );
+
+    expect(
+      within(screen.getByTestId("device-map-sync-section")).getByTestId("help"),
+    ).toHaveAttribute("data-help", "multiDevice/dataSync");
   });
 
   it("shows the request beside the editor where the device already reads this one", () => {

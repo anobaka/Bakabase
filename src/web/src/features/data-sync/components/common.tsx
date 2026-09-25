@@ -20,6 +20,15 @@ export {
   primaryClass,
 } from "@/features/federation/components/common";
 
+/**
+ * Data sync's colour for words — labels on arrows, the mode on a line, kind chips, a device's
+ * name: the device map's secondary one step deeper, which is darker in the light theme and
+ * lighter in the dark one (HeroUI swaps its scale), so 10–11 px text keeps AA contrast where the
+ * lines' own colour would not. Lines and arrowheads keep the map's `edgeStyles.sync`.
+ */
+export const syncText = "text-secondary-600";
+export const syncFill = "fill-secondary-600";
+
 /** A small button inside a sentence or a card. */
 export const smallButtonClass =
   "inline-flex items-center justify-center gap-1.5 rounded-md border border-default-300 px-2 py-1 text-xs font-medium transition hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50";

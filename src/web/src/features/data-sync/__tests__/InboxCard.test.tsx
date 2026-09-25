@@ -7,7 +7,13 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import InboxCard from "../components/InboxCard";
-import InboxList from "../components/InboxList";
+import InboxList, {
+  CLOSED_TAKE,
+  INBOX_PAGE,
+  OPEN_LIMIT,
+  readClosedItems,
+  readOpenItems,
+} from "../components/InboxList";
 import { dataSyncApi } from "../api";
 import { forgetBackupFolder } from "../hooks/useBackupTarget";
 import { groupInbox } from "../inboxModels";
@@ -73,6 +79,11 @@ vi.mock("@/features/federation/serverApi", () => ({
 vi.mock("@/features/federation/switching", () => ({
   openManagedServer: vi.fn(async () => undefined),
   openConsoleTarget: vi.fn(async () => undefined),
+}));
+vi.mock("@/components/HelpCenter/HelpCenterButton", () => ({
+  default: ({ section, topic }: { section: string; topic: string }) => (
+    <span data-help={`${topic}/${section}`} data-testid="help" />
+  ),
 }));
 
 const A = DataSyncInboxAction;
@@ -547,17 +558,102 @@ describe("the list of what needs you", () => {
       </MemoryRouter>,
     );
 
+  /** The inbox as the server answers it: open items first, then closed ones, a page at a time. */
+  const serve = (
+    open: DataSyncInboxItemView[],
+    closed: DataSyncInboxItemView[] = [],
+    total?: number,
+  ) =>
+    vi.mocked(dataSyncApi.inbox).mockImplementation(async (query = {}) => {
+      const all = query.openOnly ? open : [...open, ...closed];
+      const skip = query.skip ?? 0;
+
+      return {
+        items: all.slice(skip, skip + (query.take ?? 100)),
+        total: total ?? all.length,
+        openTotal: total ?? open.length,
+      };
+    });
+
   beforeEach(() => {
-    vi.mocked(dataSyncApi.inbox).mockImplementation(async (query) =>
-      query?.openOnly
-        ? { items: [deletion(30), deletion(31), nameConflict(1)], total: 3, openTotal: 3 }
-        : {
-            items: [deletion(30), deletion(31), nameConflict(1), closedElsewhere],
-            total: 4,
-            openTotal: 3,
-          },
-    );
+    serve([deletion(30), deletion(31), nameConflict(1)], [closedElsewhere]);
     vi.mocked(dataSyncApi.resolve).mockResolvedValue({ taskId: "DataSyncResolve:batch-1" });
+  });
+
+  it("reads every open item a page at a time, and the decided ones after them", async () => {
+    const many = Array.from({ length: INBOX_PAGE * 2 + 20 }, (_, index) => deletion(1000 + index));
+
+    serve(many, [closedElsewhere]);
+    const read = await readOpenItems();
+
+    expect(read.items).toHaveLength(many.length);
+    expect(read.total).toBe(many.length);
+    expect(vi.mocked(dataSyncApi.inbox).mock.calls.map(([query]) => query?.skip)).toEqual([
+      0,
+      INBOX_PAGE,
+      INBOX_PAGE * 2,
+    ]);
+
+    vi.mocked(dataSyncApi.inbox).mockClear();
+    expect(await readClosedItems(read.total)).toEqual([closedElsewhere]);
+    expect(dataSyncApi.inbox).toHaveBeenCalledWith({
+      openOnly: false,
+      skip: many.length,
+      take: CLOSED_TAKE,
+    });
+  });
+
+  it("stops at its limit, and keeps an item it meets twice once", async () => {
+    const many = Array.from({ length: OPEN_LIMIT + INBOX_PAGE }, (_, index) => deletion(index));
+
+    serve(many);
+    const read = await readOpenItems();
+
+    expect(read.items).toHaveLength(OPEN_LIMIT);
+    expect(read.total).toBe(many.length);
+
+    // A page that shifted while it was read: the item at its edge comes twice.
+    vi.mocked(dataSyncApi.inbox)
+      .mockResolvedValueOnce({
+        items: many.slice(0, INBOX_PAGE),
+        total: INBOX_PAGE + 2,
+        openTotal: INBOX_PAGE + 2,
+      })
+      .mockResolvedValueOnce({
+        items: many.slice(INBOX_PAGE - 1, INBOX_PAGE + 2),
+        total: INBOX_PAGE + 2,
+        openTotal: INBOX_PAGE + 2,
+      });
+    const shifted = await readOpenItems();
+
+    expect(new Set(shifted.items.map((item) => item.id)).size).toBe(shifted.items.length);
+    expect(shifted.items).toHaveLength(INBOX_PAGE + 2);
+  });
+
+  it("says how many it shows when more is open than it read, and offers no whole-card bulks", async () => {
+    // The server says more is open than it answered: past what is read.
+    serve(
+      [deletion(30), deletion(31), nameConflict(1), nameConflict(2, { localKey: "20" })],
+      [],
+      7000,
+    );
+    renderList();
+
+    await waitFor(() => expect(screen.getByTestId("data-sync-inbox-partial")).toBeInTheDocument());
+    expect(screen.getByTestId("data-sync-inbox-partial")).toHaveTextContent(
+      "dataSync.inbox.partial 4 7000",
+    );
+    expect(document.querySelector('[data-bulk="deleteAll"]')).not.toBeNull();
+    expect(document.querySelector('[data-bulk="keepLocalAll"]')).toBeNull();
+  });
+
+  it("offers the conflicts' bulks, and says nothing of a limit, when everything is read", async () => {
+    serve([deletion(30), nameConflict(1), nameConflict(2, { localKey: "20" })]);
+    renderList();
+
+    await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(3));
+    expect(screen.queryByTestId("data-sync-inbox-partial")).toBeNull();
+    expect(document.querySelector('[data-bulk="keepLocalAll"]')).not.toBeNull();
   });
 
   it("deletes all at once, asking once, with one backup", async () => {
@@ -611,23 +707,16 @@ describe("the list of what needs you", () => {
 
     await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(3));
     // Read again: the conflict was decided on the laptop meanwhile.
-    vi.mocked(dataSyncApi.inbox).mockImplementation(async (query) =>
-      query?.openOnly
-        ? { items: [deletion(30), deletion(31)], total: 2, openTotal: 2 }
-        : {
-            items: [
-              deletion(30),
-              deletion(31),
-              {
-                ...nameConflict(1),
-                closedAt: minutesAgo(0),
-                closure: DataSyncInboxClosure.ResolvedElsewhere,
-                closedByName: "Laptop",
-              },
-            ],
-            total: 3,
-            openTotal: 2,
-          },
+    serve(
+      [deletion(30), deletion(31)],
+      [
+        {
+          ...nameConflict(1),
+          closedAt: minutesAgo(0),
+          closure: DataSyncInboxClosure.ResolvedElsewhere,
+          closedByName: "Laptop",
+        },
+      ],
     );
     page.rerender(view(1));
 
@@ -671,7 +760,7 @@ describe("the list of what needs you", () => {
       }),
     );
 
-    vi.mocked(dataSyncApi.inbox).mockResolvedValue({ items: [], total: 0, openTotal: 0 });
+    serve([]);
     renderList({ focus: true, initialPeer: "node-nas", peers: [hub] });
     await waitFor(() => expect(screen.getByTestId("data-sync-elsewhere")).toBeInTheDocument());
 

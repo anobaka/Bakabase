@@ -5,9 +5,10 @@ import type {
   DataSyncReviewSource,
 } from "../api";
 import type { ReviewDecisions } from "../reviewModels";
+import type { DataSyncConfirmation } from "../hooks/useDataSyncActions";
 import type { DataSyncDecisionErrorCode } from "@/sdk/constants";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { dataSyncApi, throwIfProblem } from "../api";
@@ -17,6 +18,7 @@ import { useCanManageDefinitionSharing } from "../hooks/useCanManageDefinitionSh
 import { footerCounts, initialDecisions, rebaseDecisions, toApplyInput } from "../reviewModels";
 import { useDataSyncStore } from "../stores/dataSync";
 import { timeAgo } from "../times";
+import { sharingNeeded, twoWayConfirmation } from "../viewModels";
 
 import DataSyncDialog from "./DataSyncDialog";
 import PlanView from "./PlanView";
@@ -50,6 +52,11 @@ export interface ReviewViewProps {
   /** The device the review reads. */
   peerName: string;
   peerNodeId?: string;
+  /**
+   * The link still waits for the other device to let this one read it: no review is coming
+   * until it is approved there, which may take hours.
+   */
+  awaitingAccess?: boolean;
   selfName: string;
   onClose: () => void;
   /** Something changed here: the page reads data sync again. */
@@ -78,6 +85,7 @@ export default function ReviewView({
   reviewId: initialReviewId,
   peerName,
   peerNodeId,
+  awaitingAccess = false,
   selfName,
   onClose,
   onChanged,
@@ -288,11 +296,17 @@ export default function ReviewView({
           {t("dataSync.loading")}
         </p>
       )}
-      {phase === "preparing" && (
-        <p className="text-sm" data-testid="data-sync-review-preparing" role="status">
-          {t("dataSync.wizard.fetching", { name })}
-        </p>
-      )}
+      {phase === "preparing" &&
+        (awaitingAccess ? (
+          <div className="space-y-1 text-sm" data-testid="data-sync-review-awaiting-access">
+            <p role="status">{t("dataSync.status.AwaitingAccess", { name })}</p>
+            <p className="text-xs text-default-500">{t("dataSync.link.approveThere", { name })}</p>
+          </div>
+        ) : (
+          <p className="text-sm" data-testid="data-sync-review-preparing" role="status">
+            {t("dataSync.wizard.fetching", { name })}
+          </p>
+        ))}
       {phase === "gone" && (
         <p className="text-sm" data-testid="data-sync-review-gone">
           {t(
@@ -468,6 +482,7 @@ function ReviewDone({
   const actions = useDataSyncActions(() => undefined);
   const canManage = useCanManageDefinitionSharing();
   const overview = useDataSyncStore((state) => state.overview);
+  const keepInStepButton = useRef<HTMLButtonElement>(null);
   const counts = detail?.entry.counts;
   const changed = (detail?.items ?? []).filter(
     (item) =>
@@ -475,8 +490,11 @@ function ReviewDone({
       item.outcome === DataSyncItemOutcome.ChangedDuringApply,
   );
   const linkId = result.linkId;
-  const sharingNeeded =
-    !overview?.sharingEnabled || overview.remoteAccessMode === RemoteAccessMode.Disabled;
+  const own = {
+    sharingEnabled: overview?.sharingEnabled ?? false,
+    remoteAccessMode: overview?.remoteAccessMode ?? RemoteAccessMode.Disabled,
+  };
+  const mustTurnOn = sharingNeeded(own);
 
   const then = (operation: () => Promise<unknown>) =>
     void actions.run(async () => {
@@ -484,6 +502,26 @@ function ReviewDone({
       onChanged();
       onClose();
     }, []);
+
+  /**
+   * Keeping in step both ways lets the other device read this one: asked first, in the words
+   * every other place that offers it uses — and saying what it turns on here, only if it is off.
+   */
+  const keepInStep = (id: number) =>
+    actions.confirm({
+      ...twoWayConfirmation(t, name, own, mustTurnOn),
+      action: async () => {
+        if (mustTurnOn)
+          await dataSyncApi.setSharing({
+            enabled: true,
+            enablePairedRemoteAccess: own.remoteAccessMode === RemoteAccessMode.Disabled,
+          });
+        await dataSyncApi.updateLink(id, { mode: DataSyncLinkMode.TwoWay });
+        onChanged();
+        onClose();
+      },
+      refresh: [],
+    });
 
   return (
     <div className="space-y-3" data-testid="data-sync-review-done">
@@ -528,21 +566,13 @@ function ReviewDone({
             </button>
             {canManage && (
               <button
+                ref={keepInStepButton}
+                aria-expanded={!!actions.confirmation}
                 className={buttonClass}
                 data-testid="data-sync-review-keep-in-step"
                 disabled={actions.busy}
                 type="button"
-                onClick={() =>
-                  then(async () => {
-                    if (sharingNeeded)
-                      await dataSyncApi.setSharing({
-                        enabled: true,
-                        enablePairedRemoteAccess:
-                          overview?.remoteAccessMode === RemoteAccessMode.Disabled,
-                      });
-                    await dataSyncApi.updateLink(linkId, { mode: DataSyncLinkMode.TwoWay });
-                  })
-                }
+                onClick={() => keepInStep(linkId)}
               >
                 {t("dataSync.mode.twoWay")}
               </button>
@@ -559,15 +589,102 @@ function ReviewDone({
               </button>
             )}
           </div>
-          {canManage && (
-            <p className="text-xs text-default-500">
-              {t("dataSync.twoWay.consent", { name })}
-              {sharingNeeded ? ` ${t("dataSync.twoWay.turnsOnSharing")}` : ""}
-            </p>
+          {actions.confirmation && (
+            <InlineConfirmation
+              busy={actions.busy}
+              confirmation={actions.confirmation}
+              error={actions.confirmationError}
+              onCancel={() => {
+                actions.cancelConfirmation();
+                keepInStepButton.current?.focus();
+              }}
+              onConfirm={actions.confirmCurrent}
+            />
           )}
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * A question asked inside the review rather than in a dialog over it: the review is a dialog
+ * already, and a second one on top would fight it for the keyboard. Takes the keyboard when it
+ * appears; Cancel gives it back to where the review's own buttons are.
+ */
+function InlineConfirmation({
+  confirmation,
+  busy,
+  error,
+  onConfirm,
+  onCancel,
+}: {
+  confirmation: DataSyncConfirmation;
+  busy: boolean;
+  error?: Error;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const { t } = useTranslation();
+  const root = useRef<HTMLElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const titleId = useId();
+  const latest = useRef({ busy, onCancel });
+
+  latest.current = { busy, onCancel };
+
+  useEffect(() => heading.current?.focus(), []);
+
+  // Escape answers the question, and only the question: it never reaches the review's dialog.
+  useEffect(() => {
+    const element = root.current;
+
+    if (!element) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!latest.current.busy) latest.current.onCancel();
+    };
+
+    element.addEventListener("keydown", onKeyDown);
+
+    return () => element.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  return (
+    <section
+      ref={root}
+      aria-labelledby={titleId}
+      className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm"
+      data-testid="data-sync-review-confirm"
+      role="group"
+    >
+      <h3 ref={heading} className="font-medium outline-none" id={titleId} tabIndex={-1}>
+        {confirmation.title}
+      </h3>
+      <p className="text-xs">{confirmation.description}</p>
+      {confirmation.warning && (
+        <p className="text-xs font-medium" data-testid="data-sync-review-confirm-warning">
+          {confirmation.warning}
+        </p>
+      )}
+      <DataSyncErrorNotice error={error} />
+      <div className="flex flex-wrap justify-end gap-2">
+        <button className={buttonClass} disabled={busy} type="button" onClick={onCancel}>
+          {t("dataSync.cancel")}
+        </button>
+        <button
+          className={primaryClass}
+          data-testid="data-sync-review-confirm-yes"
+          disabled={busy}
+          type="button"
+          onClick={onConfirm}
+        >
+          {t("federation.confirm")}
+        </button>
+      </div>
+    </section>
   );
 }
 

@@ -198,7 +198,7 @@ export default function ChangeList({
             </p>
           )}
           {byParent && (
-            <p className="text-default-400">{t("dataSync.plan.change.parentUnticked")}</p>
+            <p className="text-default-500">{t("dataSync.plan.change.parentUnticked")}</p>
           )}
         </div>
       </li>

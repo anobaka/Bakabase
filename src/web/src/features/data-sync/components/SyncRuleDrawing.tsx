@@ -15,20 +15,27 @@ import {
   dataSyncReviewRoute,
 } from "../routes";
 import { useElementWidth } from "../hooks/useElementWidth";
+import { useMenuKeyboard } from "../hooks/useMenuKeyboard";
 import { useOpenPeerDataSync } from "../hooks/useOpenPeerDataSync";
 import {
+  canStartAnyway,
   dataSyncKinds,
   linkEditor,
   linkNotes,
   linkStatus,
   modeValue,
+  offersAskToKeepInStep,
   orderKinds,
   pauseDetail,
   receiveToggleTarget,
+  sharingNeeded,
+  stillReadsWhileOff,
   toggleKind,
+  turnsOnWarning,
+  twoWayConfirmation,
 } from "../viewModels";
 
-import { linkButtonClass, smallButtonClass, StatusDot, toneText } from "./common";
+import { linkButtonClass, smallButtonClass, StatusDot, syncText, toneText } from "./common";
 
 import { edgeStyles, KindBadgeGlyph } from "@/features/federation/map/DeviceMapCanvas";
 import {
@@ -110,8 +117,15 @@ export default function SyncRuleDrawing({
   const notes = linkNotes(t, peer, now);
   const radioName = useId();
 
+  const own = { sharingEnabled, remoteAccessMode };
   /** Sharing (and remote access) this device must turn on before the other can read it. */
-  const sharingNeeded = !sharingEnabled || remoteAccessMode === RemoteAccessMode.Disabled;
+  const mustTurnOn = sharingNeeded(own);
+  /** Turns on what the other device needs to read this one: sharing, and remote access if off. */
+  const turnOnSharing = () =>
+    dataSyncApi.setSharing({
+      enabled: true,
+      enablePairedRemoteAccess: remoteAccessMode === RemoteAccessMode.Disabled,
+    });
   /**
    * Who a new link or copy goes to: the device by its id, and — where it is no device the server
    * knows yet (one found nearby on the device map) — the address its request goes to.
@@ -144,13 +158,9 @@ export default function SyncRuleDrawing({
       return;
     }
     const twoWay = target === "twoWay";
-    const turnOnSharing = twoWay && !peer.peerMayRead && sharingNeeded;
+    const turnsOn = twoWay && !peer.peerMayRead && mustTurnOn;
     const operation = async () => {
-      if (turnOnSharing)
-        await dataSyncApi.setSharing({
-          enabled: true,
-          enablePairedRemoteAccess: remoteAccessMode === RemoteAccessMode.Disabled,
-        });
+      if (turnsOn) await turnOnSharing();
       if (peer.linkId !== undefined)
         await dataSyncApi.updateLink(peer.linkId, { mode: modeValue(target) });
       else await dataSyncApi.createLink({ ...destination, mode: modeValue(target), kinds });
@@ -161,23 +171,11 @@ export default function SyncRuleDrawing({
 
       return;
     }
-    const turnsOn = turnOnSharing
-      ? [
-          !sharingEnabled ? t("dataSync.twoWay.turnsOnSharing") : undefined,
-          remoteAccessMode === RemoteAccessMode.Disabled
-            ? t("dataSync.sharing.remoteAccess")
-            : undefined,
-        ]
-          .filter(Boolean)
-          .join(" ")
-      : undefined;
 
     actions.confirm(
       twoWay
         ? {
-            title: t("dataSync.twoWay.title", { name }),
-            description: t("dataSync.twoWay.consent", { name }),
-            warning: turnsOn || undefined,
+            ...twoWayConfirmation(t, name, own, turnsOn),
             action: operation,
             refresh: ["dataSync"],
           }
@@ -221,11 +219,46 @@ export default function SyncRuleDrawing({
         peer.weMayRead === true ? undefined : t("dataSync.request.follow", { name: selfName }),
       action: async () => {
         const result = await dataSyncApi.copyOnce({ ...destination, kinds });
+        const linkId = result.linkId ?? undefined;
 
-        if (result.linkId && actions.mounted.current) navigate(dataSyncReviewRoute(result.linkId));
+        if (linkId === undefined) return;
+        // A copy this device may not read yet sent a request: its review comes once it is
+        // approved there, which may take hours. Said here, where the request now shows.
+        const requested =
+          !result.reviewId &&
+          peer.weMayRead !== true &&
+          (await dataSyncApi.links()).find((link) => link.id === linkId)?.state ===
+            DataSyncLinkState.AwaitingAccess;
+
+        if (!actions.mounted.current) return;
+        if (requested) actions.setNotice(t("dataSync.wizard.requested", { name }));
+        else navigate(dataSyncReviewRoute(linkId));
       },
       refresh: ["dataSync"],
     });
+
+  /**
+   * A code only works while this device shares its definitions and remote access is on (spec
+   * §7.2.3): where either is off, it offers to turn them on first, then shows the code.
+   */
+  const createCode = () => {
+    if (!onCreateCode) return;
+    if (!mustTurnOn) {
+      onCreateCode();
+
+      return;
+    }
+    actions.confirm({
+      title: t("dataSync.sharing.onTitle"),
+      description: t("dataSync.invitation.needsSharingFirst", { name }),
+      warning: turnsOnWarning(t, own),
+      action: async () => {
+        await turnOnSharing();
+        if (actions.mounted.current) onCreateCode();
+      },
+      refresh: ["dataSync", "sharing"],
+    });
+  };
 
   const receiveTarget = receiveToggleTarget(editor);
   const receiveAllowed =
@@ -266,7 +299,7 @@ export default function SyncRuleDrawing({
       onKeyUp={swallowSpaceUp}
     >
       <Arrow direction={horizontal ? "left" : "down"} status={editor.receive} />
-      <span className={`${ARROW_TEXT_SIZE} shrink-0 font-medium ${edgeStyles.sync.text}`}>
+      <span className={`${ARROW_TEXT_SIZE} shrink-0 font-medium ${syncText}`}>
         {t("dataSync.arrow.receive.label")}
       </span>
     </button>
@@ -289,7 +322,7 @@ export default function SyncRuleDrawing({
       onKeyDown={activate(() => editor.read === "active" && stopReading())}
       onKeyUp={swallowSpaceUp}
     >
-      <span className={`${ARROW_TEXT_SIZE} shrink-0 font-medium ${edgeStyles.sync.text}`}>
+      <span className={`${ARROW_TEXT_SIZE} shrink-0 font-medium ${syncText}`}>
         {t("dataSync.arrow.read.label")}
       </span>
       <Arrow direction={horizontal ? "right" : "up"} status={editor.read} />
@@ -380,9 +413,10 @@ export default function SyncRuleDrawing({
           {onCreateCode && (
             <button
               className={smallButtonClass}
+              data-testid="data-sync-create-code-for"
               disabled={actions.busy}
               type="button"
-              onClick={onCreateCode}
+              onClick={createCode}
             >
               {t("dataSync.invitation.createFor", { name })}
             </button>
@@ -435,9 +469,11 @@ export default function SyncRuleDrawing({
         canManage={canManage}
         linkToPage={linkToPage}
         notes={notes}
+        now={now}
         peer={peer}
         status={status}
         onStop={() => setMode("off")}
+        onStopReading={stopReading}
       />
     </div>
   );
@@ -586,7 +622,7 @@ function ReceiveControls({
             aria-pressed={on}
             className={`rounded-full border px-2 py-0.5 text-[11px] transition ${
               on
-                ? "border-secondary bg-secondary/10 text-secondary"
+                ? `border-secondary bg-secondary/10 ${syncText}`
                 : "border-default-300 text-default-500 hover:bg-default-100"
             } ${locked ? "cursor-not-allowed" : ""}`}
             data-kind={kind}
@@ -618,7 +654,7 @@ function PeerKinds({ kinds }: { kinds?: string[] }) {
       {kinds.map((kind) => (
         <span
           key={kind}
-          className="rounded-full border border-dashed border-secondary/60 px-2 py-0.5 text-[11px] text-secondary"
+          className={`rounded-full border border-dashed border-secondary/60 px-2 py-0.5 text-[11px] ${syncText}`}
         >
           {t(`dataSync.kind.${kind}`, { defaultValue: kind })}
         </span>
@@ -646,7 +682,9 @@ function ModeBadgeMenu({
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLSpanElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLSpanElement>(null);
   const menuId = useId();
+  const menuKeys = useMenuKeyboard(open, menu, trigger, () => setOpen(false));
 
   useEffect(() => {
     if (!open) return;
@@ -660,6 +698,7 @@ function ModeBadgeMenu({
   }, [open]);
 
   const choose = (mode: ModeName) => {
+    if (!allowed(mode)) return;
     setOpen(false);
     trigger.current?.focus();
     onChange(mode);
@@ -682,32 +721,48 @@ function ModeBadgeMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={t("dataSync.mode.badgeLabel", { mode: t(`dataSync.mode.${value}`) })}
-        className="inline-flex items-center gap-1 rounded-full border border-secondary bg-content1 px-2 py-0.5 text-[11px] font-medium text-secondary hover:bg-secondary/10 disabled:opacity-50"
+        className={`inline-flex items-center gap-1 rounded-full border border-secondary bg-content1 px-2 py-0.5 text-[11px] font-medium ${syncText} hover:bg-secondary/10 disabled:opacity-50`}
         data-mode={value}
         data-testid="data-sync-mode-badge"
         disabled={busy}
+        id={`${menuId}-button`}
         type="button"
         onClick={() => setOpen((current) => !current)}
-        onKeyDown={closeOnEscape}
+        onKeyDown={(event) => {
+          if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+            event.preventDefault();
+            setOpen(true);
+
+            return;
+          }
+          closeOnEscape(event);
+        }}
       >
         {t(`dataSync.mode.short.${value}`)}
         <span aria-hidden>▾</span>
       </button>
       {open && (
         <span
+          ref={menu}
+          aria-labelledby={`${menuId}-button`}
           className="absolute left-0 top-full z-20 mt-1 flex min-w-40 flex-col rounded-lg border border-default-200 bg-content1 p-1 shadow-lg"
           id={menuId}
           role="menu"
           tabIndex={-1}
-          onKeyDown={closeOnEscape}
+          onKeyDown={(event) => {
+            closeOnEscape(event);
+            if (!event.defaultPrevented) menuKeys(event);
+          }}
         >
           {(["twoWay", "follow"] as const).map((mode) => (
             <button
               key={mode}
               aria-checked={value === mode}
-              className="rounded-md px-2 py-1.5 text-left text-xs hover:bg-default-100 disabled:opacity-50"
-              disabled={!allowed(mode)}
+              aria-disabled={allowed(mode) ? undefined : "true"}
+              className="rounded-md px-2 py-1.5 text-left text-xs outline-none hover:bg-default-100 focus-visible:bg-default-100 focus-visible:ring-2 focus-visible:ring-focus aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+              data-menu-mode={mode}
               role="menuitemradio"
+              tabIndex={-1}
               type="button"
               onClick={() => choose(mode)}
             >
@@ -729,7 +784,9 @@ function StatusBlock({
   actions,
   canManage,
   linkToPage,
+  now,
   onStop,
+  onStopReading,
 }: {
   peer: SyncPeer;
   status: StatusLine;
@@ -737,7 +794,10 @@ function StatusBlock({
   actions: DataSyncPanelActions;
   canManage: boolean;
   linkToPage: boolean;
+  now?: number;
   onStop: () => void;
+  /** Stops the other device reading this one, with its own confirmation. */
+  onStopReading: () => void;
 }) {
   const { t } = useTranslation();
   const name = peer.name;
@@ -757,12 +817,13 @@ function StatusBlock({
       {label}
     </button>
   );
-  const resume = (action: DataSyncResumeAction, label: string) =>
+  const resume = (action: DataSyncResumeAction, label: string, testId?: string) =>
     linkId === undefined
       ? null
       : button(
           label,
           () => void actions.run(() => dataSyncApi.resumeLink(linkId, action), ["dataSync"]),
+          testId,
         );
   const syncNow =
     linkId === undefined
@@ -848,6 +909,17 @@ function StatusBlock({
     case "NeedsYou":
       statusActions.push(inbox);
       break;
+    case "WaitingForPeerReview":
+      // After a week the other device's review is not waited for any more (spec §8.3).
+      if (canStartAnyway(peer, now))
+        statusActions.push(
+          resume(
+            DataSyncResumeAction.StartAnyway,
+            t("dataSync.pause.startAnyway"),
+            "data-sync-start-anyway",
+          ),
+        );
+      break;
     case "Failed":
       statusActions.push(
         linkId === undefined
@@ -868,7 +940,9 @@ function StatusBlock({
       ? pauseHint(t, peer)
       : status.code === "AwaitingAccess"
         ? t("dataSync.link.approveThere", { name })
-        : undefined;
+        : canStartAnyway(peer, now)
+          ? t("dataSync.pause.startAnywayHint", { name })
+          : undefined;
 
   return (
     <div className="space-y-2 rounded-lg bg-default-50 p-2.5" data-testid="data-sync-status">
@@ -886,7 +960,9 @@ function StatusBlock({
           data-note={note.code}
         >
           <span className={toneText[note.tone]}>{note.text}</span>
-          {note.code === "ReadBackDeclined" && askAgain(t("dataSync.link.askKeepInStep", { name }))}
+          {note.code === "ReadBackDeclined" &&
+            offersAskToKeepInStep(peer) &&
+            askAgain(t("dataSync.link.askKeepInStep", { name }))}
           {note.code === "NeedsYouThere" &&
             (elsewhere.canOpen(peer.nodeId) ? (
               button(
@@ -899,6 +975,13 @@ function StatusBlock({
             ))}
         </div>
       ))}
+      {stillReadsWhileOff(peer) && (
+        // Receiving is off, reading is not: the choice the Off confirmation named, kept here.
+        <div className="flex flex-wrap items-center gap-2 text-xs" data-note="StillReads">
+          <span className="text-default-500">{t("dataSync.off.stillReads", { name })}</span>
+          {button(t("dataSync.off.alsoStop"), onStopReading, "data-sync-also-stop-reading")}
+        </div>
+      )}
       {(statusActions.some(Boolean) || running || linkToPage) && (
         <div className="flex flex-wrap items-center gap-2">
           {statusActions}

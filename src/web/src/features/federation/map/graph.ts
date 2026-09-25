@@ -84,13 +84,15 @@ export const mapIssues = [
   "unrestricted",
   "requestEnded",
   // Data sync (features/data-sync/map): what does not work receiving its definitions, changes
-  // that need this device, and decisions that wait on it.
+  // that need this device, decisions that wait on it, and this device's own request to read
+  // them that ended, until it is dismissed.
   "syncPaused",
   "syncFailed",
   "syncUpdateNeeded",
   "syncAccessLost",
   "syncNeedsYou",
   "syncNeedsYouThere",
+  "syncRequestEnded",
 ] as const;
 export type MapIssue = (typeof mapIssues)[number];
 

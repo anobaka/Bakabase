@@ -3,6 +3,7 @@ import type { DataSyncEntityStatusView, DataSyncPlanWarning } from "../api";
 import { describe, expect, it } from "vitest";
 
 import {
+  canStartAnyway,
   candidateStatus,
   elsewhereLines,
   entityBadge,
@@ -13,18 +14,23 @@ import {
   linkEditor,
   linkNotes,
   linkStatus,
+  offersAskToKeepInStep,
   orderKinds,
+  outgoingRequestIdOf,
   overallStatus,
   pauseDetail,
   peerCardLine,
   readLane,
   receiveLane,
   receiveToggleTarget,
+  sharingNeeded,
+  stillReadsWhileOff,
   syncIssueOf,
   syncPeerFromLink,
   syncPeerFromMapPeer,
   syncPeersOf,
   toggleKind,
+  twoWayConfirmation,
   waitingElsewhereLine,
   withCandidates,
 } from "../viewModels";
@@ -72,6 +78,7 @@ import {
   planCandidate,
   planItem,
   reader,
+  request,
   status,
 } from "./dataSyncFixtures";
 
@@ -91,11 +98,13 @@ import {
   DataSyncPlanItemReason,
   DataSyncPlanItemType,
   DataSyncPlanResolution,
+  DataSyncRequestDirection,
   DataSyncStatusLevel,
   DataSyncUndoAction,
   DataSyncUndoBlock,
   DataSyncUndoState,
   DataSyncWarningCode,
+  RemoteAccessMode,
 } from "@/sdk/constants";
 
 const peerOf = (patch: Parameters<typeof link>[3] = {}) =>
@@ -193,6 +202,80 @@ describe("the rule editor", () => {
     expect(linkEditor(peer).mode).toBe("follow");
     expect(linkEditor(peer).badge).toBe("follow");
     expect(linkEditor(peer).mutualFollow).toBe(true);
+  });
+
+  it("words keeping in step both ways the same everywhere, naming only what it turns on", () => {
+    const on = { sharingEnabled: true, remoteAccessMode: RemoteAccessMode.Enabled };
+
+    expect(twoWayConfirmation(keyT, "NAS", on)).toEqual({
+      title: "dataSync.twoWay.title NAS",
+      description: "dataSync.twoWay.consent NAS",
+      warning: undefined,
+    });
+    expect(
+      twoWayConfirmation(keyT, "NAS", { ...on, remoteAccessMode: RemoteAccessMode.Disabled })
+        .warning,
+    ).toBe("dataSync.sharing.remoteAccess");
+    expect(twoWayConfirmation(keyT, "NAS", { ...on, sharingEnabled: false }).warning).toBe(
+      "dataSync.twoWay.turnsOnSharing",
+    );
+    const bothOff = { sharingEnabled: false, remoteAccessMode: RemoteAccessMode.Disabled };
+
+    expect(twoWayConfirmation(keyT, "NAS", bothOff).warning).toBe(
+      "dataSync.twoWay.turnsOnSharing dataSync.sharing.remoteAccess",
+    );
+    // Where nothing is turned on — the other device reads this one already — nothing is said.
+    expect(twoWayConfirmation(keyT, "NAS", bothOff, false).warning).toBeUndefined();
+    expect(sharingNeeded(on)).toBe(false);
+    expect(sharingNeeded(bothOff)).toBe(true);
+  });
+
+  it("asks a device to keep in step only on a working two-way link it does not read back", () => {
+    expect(offersAskToKeepInStep(peerOf({ readBackDeclined: true }))).toBe(true);
+    expect(offersAskToKeepInStep(peerOf({ readBackDeclined: false }))).toBe(false);
+    expect(
+      offersAskToKeepInStep(
+        peerOf({
+          readBackDeclined: true,
+          state: DataSyncLinkState.Paused,
+          pausedReason: DataSyncPauseReason.PeerReset,
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      offersAskToKeepInStep(peerOf({ readBackDeclined: true, mode: DataSyncLinkMode.Follow })),
+    ).toBe(false);
+  });
+
+  it("offers to stop the other reading only where receiving is off and it still reads", () => {
+    const off = { mode: DataSyncLinkMode.Off, state: DataSyncLinkState.Stopped };
+
+    expect(stillReadsWhileOff(peerOf(off))).toBe(true);
+    expect(stillReadsWhileOff(peerOf({ ...off, peerMayReadUs: false }))).toBe(false);
+    expect(stillReadsWhileOff(peerOf())).toBe(false);
+    // An ended request of this device's own is dismissed, not stopped.
+    expect(stillReadsWhileOff(peerOf({ ...off, lastErrorCode: "AccessRejected" }))).toBe(false);
+  });
+
+  it("offers to start without the other device's review once the runtime says it may", () => {
+    const waiting = { state: DataSyncLinkState.WaitingForPeerReview };
+
+    expect(canStartAnyway(peerOf({ ...waiting, startAnywayAt: minutesAgo(1) }), NOW)).toBe(true);
+    expect(canStartAnyway(peerOf({ ...waiting, startAnywayAt: minutesAgo(-60) }), NOW)).toBe(false);
+    expect(canStartAnyway(peerOf(waiting), NOW)).toBe(false);
+    expect(canStartAnyway(peerOf({ startAnywayAt: minutesAgo(1) }), NOW)).toBe(false);
+  });
+
+  it("finds this device's own request to a device, never another's", () => {
+    const requests = [
+      request("in-1", "node-nas", "NAS"),
+      request("out-1", "node-pc", "PC", { direction: DataSyncRequestDirection.Outgoing }),
+      request("out-2", "node-nas", "NAS", { direction: DataSyncRequestDirection.Outgoing }),
+    ];
+
+    expect(outgoingRequestIdOf(requests, "node-nas")).toBe("out-2");
+    expect(outgoingRequestIdOf(requests, "node-other")).toBeUndefined();
+    expect(outgoingRequestIdOf(undefined, "node-nas")).toBeUndefined();
   });
 });
 
@@ -489,7 +572,17 @@ describe("one definition", () => {
       "localOnly",
     );
     expect(entityBadge(entity({ state: DataSyncEntitySyncState.Detached })).code).toBe("detached");
+    // Held back here: said by why — an update helps only a newer version's content.
     expect(entityBadge(entity({ heldAtSource: DataSyncHeldReason.TooLarge })).code).toBe(
+      "tooLarge",
+    );
+    expect(entityBadge(entity({ heldAtSource: DataSyncHeldReason.LocalUnreadable })).code).toBe(
+      "unreadable",
+    );
+    expect(entityBadge(entity({ heldAtSource: DataSyncHeldReason.NewerSchema })).code).toBe(
+      "heldAtSource",
+    );
+    expect(entityBadge(entity({ heldAtSource: DataSyncHeldReason.UnknownKind })).code).toBe(
       "heldAtSource",
     );
     expect(entityBadge(entity({ differsFromSource: true, originName: "NAS" }))).toMatchObject({

@@ -6,6 +6,8 @@ import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
 import SyncRuleDrawing from "../components/SyncRuleDrawing";
+import DataSyncHelp from "../components/DataSyncHelp";
+import { syncText } from "../components/common";
 
 import DataSyncOutgoingCard from "./DataSyncOutgoingCard";
 import DataSyncRequestCard from "./DataSyncRequestCard";
@@ -13,7 +15,7 @@ import { installIdOf, isEnded, syncPeerOfSources } from "./mapAdapter";
 import { useMapEditor } from "./useMapEditor";
 import SyncWithDevice from "./SyncWithDevice";
 
-import { edgeStyles, KindBadge } from "@/features/federation/map/DeviceMapCanvas";
+import { KindBadge } from "@/features/federation/map/DeviceMapCanvas";
 
 /*
  * Data sync with one device, in the device map's details (spec §11.1, hook H-map-panel):
@@ -87,6 +89,7 @@ export default function DataSyncMapSection({ node, ...host }: DataSyncMapSection
         address={outgoing.address}
         expiresAt={outgoing.expiresAt}
         linkId={outgoing.linkId}
+        nodeId={outgoing.nodeId}
         nodeName={name}
         now={host.now}
         outcome={outcomeOf(outgoing)}
@@ -128,13 +131,13 @@ export default function DataSyncMapSection({ node, ...host }: DataSyncMapSection
       className="space-y-3 border-t border-default-200 pt-4"
       data-testid="device-map-sync-section"
     >
-      <h3
-        className={`flex items-center gap-2 text-sm font-semibold ${edgeStyles.sync.text}`}
-        id={headingId}
-      >
-        <KindBadge kind="sync" />
-        {t("federation.map.edge.sync")}
-      </h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className={`flex items-center gap-2 text-sm font-semibold ${syncText}`} id={headingId}>
+          <KindBadge kind="sync" />
+          {t("federation.map.edge.sync")}
+        </h3>
+        <DataSyncHelp />
+      </div>
       {body()}
       {invitation}
     </section>

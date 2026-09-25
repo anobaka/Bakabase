@@ -72,6 +72,11 @@ vi.mock("../api", async (importOriginal) => ({
     setSharing: vi.fn(async () => undefined),
   },
 }));
+vi.mock("@/components/HelpCenter/HelpCenterButton", () => ({
+  default: ({ section, topic }: { section: string; topic: string }) => (
+    <span data-help={`${topic}/${section}`} data-testid="help" />
+  ),
+}));
 
 const { Create, Update, Unchanged, Link, NeedsDecision, Held } = DataSyncPlanItemType;
 const initialRemote = useRemoteAccessStore.getState();
@@ -519,6 +524,77 @@ describe("the first sync review", () => {
     expect(dataSyncApi.forgetAccess).toHaveBeenCalledWith("node-laptop");
   });
 
+  it("asks before keeping in step both ways, saying only what it turns on here", async () => {
+    // Sharing is on already; remote access is off.
+    useDataSyncStore
+      .getState()
+      .setOverview(overview({ sharingEnabled: true, remoteAccessMode: RemoteAccessMode.Disabled }));
+    vi.mocked(dataSyncApi.review).mockResolvedValue(
+      reviewResult(laptopItems(), {
+        state: DataSyncReviewState.Applied,
+        copyOnce: true,
+        linkMode: DataSyncLinkMode.Off,
+        linkId: 21,
+      }),
+    );
+    const { onClose } = renderReview();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("data-sync-review-follow-up")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByTestId("data-sync-review-keep-in-step"));
+    const question = screen.getByTestId("data-sync-review-confirm");
+
+    expect(question).toHaveTextContent("dataSync.twoWay.title Laptop");
+    expect(question).toHaveTextContent("dataSync.twoWay.consent Laptop");
+    expect(screen.getByTestId("data-sync-review-confirm-warning")).toHaveTextContent(
+      /^dataSync\.sharing\.remoteAccess$/,
+    );
+    expect(within(question).getByRole("heading")).toHaveFocus();
+    expect(dataSyncApi.setSharing).not.toHaveBeenCalled();
+    expect(dataSyncApi.updateLink).not.toHaveBeenCalled();
+
+    // Escape answers the question, not the review.
+    fireEvent.keyDown(question, { key: "Escape" });
+    expect(screen.queryByTestId("data-sync-review-confirm")).toBeNull();
+    expect(screen.getByTestId("data-sync-review-keep-in-step")).toHaveFocus();
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId("data-sync-review-keep-in-step"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("data-sync-review-confirm-yes"));
+    });
+    expect(dataSyncApi.setSharing).toHaveBeenCalledWith({
+      enabled: true,
+      enablePairedRemoteAccess: true,
+    });
+    expect(dataSyncApi.updateLink).toHaveBeenCalledWith(21, { mode: DataSyncLinkMode.TwoWay });
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("turns nothing on, and says nothing of it, where both are on already", async () => {
+    vi.mocked(dataSyncApi.review).mockResolvedValue(
+      reviewResult(laptopItems(), {
+        state: DataSyncReviewState.Applied,
+        copyOnce: true,
+        linkMode: DataSyncLinkMode.Off,
+        linkId: 21,
+      }),
+    );
+    renderReview();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("data-sync-review-follow-up")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByTestId("data-sync-review-keep-in-step"));
+    expect(screen.queryByTestId("data-sync-review-confirm-warning")).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("data-sync-review-confirm-yes"));
+    });
+    expect(dataSyncApi.setSharing).not.toHaveBeenCalled();
+    expect(dataSyncApi.updateLink).toHaveBeenCalledWith(21, { mode: DataSyncLinkMode.TwoWay });
+  });
+
   it("keeps in step both ways only where this window may create access", async () => {
     useRemoteAccessStore.setState({
       isLocal: false,
@@ -606,5 +682,26 @@ describe("the first sync review", () => {
       "dataSync.wizard.fetching Laptop",
     );
     expect(dataSyncApi.review).not.toHaveBeenCalled();
+  });
+
+  it("says the link waits for an approval there, not that a review is on its way", () => {
+    renderReview({ reviewId: undefined, awaitingAccess: true });
+
+    expect(screen.queryByTestId("data-sync-review-preparing")).toBeNull();
+    expect(screen.getByTestId("data-sync-review-awaiting-access")).toHaveTextContent(
+      "dataSync.status.AwaitingAccess Laptop",
+    );
+    expect(screen.getByTestId("data-sync-review-awaiting-access")).toHaveTextContent(
+      "dataSync.link.approveThere Laptop",
+    );
+  });
+
+  it("offers data sync's help beside its title", () => {
+    renderReview({ reviewId: undefined });
+
+    expect(within(screen.getByTestId("data-sync-review")).getByTestId("help")).toHaveAttribute(
+      "data-help",
+      "multiDevice/dataSync",
+    );
   });
 });

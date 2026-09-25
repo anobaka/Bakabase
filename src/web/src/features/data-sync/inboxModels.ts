@@ -333,6 +333,15 @@ export const BULK_MINIMUM = 2;
 export const inboxBulks = (
   cards: readonly InboxCardModel[],
   backupBeforeDestructive: boolean,
+  {
+    wholeCards = true,
+  }: {
+    /**
+     * Every open item is here, so each card holds all of its definition's conflicts. When not —
+     * more is open than was read — the conflict bulks are left out: they send every card whole.
+     */
+    wholeCards?: boolean;
+  } = {},
 ): InboxBulk[] => {
   const items = cards.flatMap((card) => card.items);
   const bulks: InboxBulk[] = [];
@@ -410,6 +419,7 @@ export const inboxBulks = (
     keepable.length,
   );
 
+  if (!wholeCards) return bulks;
   const conflicts = cards.filter((card) => card.items.some(isConflict));
   const whole = (card: InboxCardModel, remote?: string) =>
     card.items.map(

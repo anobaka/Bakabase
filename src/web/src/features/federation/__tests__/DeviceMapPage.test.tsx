@@ -126,6 +126,11 @@ vi.mock("@/sdk/BApi", () => ({
     },
   },
 }));
+vi.mock("@/components/HelpCenter/HelpCenterButton", () => ({
+  default: ({ section, topic }: { section: string; topic: string }) => (
+    <span data-help={`${topic}/${section}`} data-testid="help" />
+  ),
+}));
 vi.mock("@/features/data-sync/api", async (importOriginal) => ({
   ...(await importOriginal<typeof DataSyncApi>()),
   dataSyncApi: {

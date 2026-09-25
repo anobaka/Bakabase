@@ -10,12 +10,13 @@ import { DATA_SYNC_ROUTE, dataSyncInboxRoute } from "../routes";
 import { useCanManageDefinitionSharing } from "../hooks/useCanManageDefinitionSharing";
 import { useDataSyncStore } from "../stores/dataSync";
 import InvitationDialog from "../components/InvitationDialog";
-import { buttonClass, StatusDot, toneText } from "../components/common";
+import DataSyncHelp from "../components/DataSyncHelp";
+import { buttonClass, StatusDot, syncText, toneText } from "../components/common";
 import { overallStatus, readLane, receiveLane, syncPeerFromMapPeer } from "../viewModels";
 
 import { useWordedActions } from "./useWordedActions";
 
-import { edgeStyles, KindBadge } from "@/features/federation/map/DeviceMapCanvas";
+import { KindBadge } from "@/features/federation/map/DeviceMapCanvas";
 import { RemoteAccessMode } from "@/sdk/constants";
 
 /*
@@ -98,13 +99,13 @@ export default function DataSyncSelfSection({
       className="space-y-3 border-t border-default-200 pt-4"
       data-testid="data-sync-self-section"
     >
-      <h3
-        className={`flex items-center gap-2 text-sm font-semibold ${edgeStyles.sync.text}`}
-        id={headingId}
-      >
-        <KindBadge kind="sync" />
-        {t("federation.map.edge.sync")}
-      </h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className={`flex items-center gap-2 text-sm font-semibold ${syncText}`} id={headingId}>
+          <KindBadge kind="sync" />
+          {t("federation.map.edge.sync")}
+        </h3>
+        <DataSyncHelp />
+      </div>
       {line && (
         <p
           className={`flex items-start gap-2 text-sm ${toneText[line.tone]}`}

@@ -153,8 +153,9 @@ export const waitsThere = (attention?: DataSyncSourceAttention | null) =>
   (attention.openDecisions > 0 || attention.pausedLinks > 0 || attention.restorePending);
 
 /**
- * What a device's card says about data sync with it: what does not work on the receive
- * direction, changes that need this device, and decisions that wait on it.
+ * What a device's card says about data sync with it: a request of this device's own that ended
+ * and waits to be dismissed — as the map marks an ended request to manage a device — what does
+ * not work on the receive direction, changes that need this device, and decisions that wait on it.
  */
 export function syncIssues(sources: {
   sync?: DataSyncMapPeer;
@@ -164,6 +165,9 @@ export function syncIssues(sources: {
 
   if (!peer) return [];
   const issues: MapIssue[] = [];
+  const latest = sources.syncOutgoing[sources.syncOutgoing.length - 1];
+
+  if (latest && isEnded(latest)) issues.push("syncRequestEnded");
   const attention = syncAttention(peer);
 
   if (attention) issues.push(attention.issue);

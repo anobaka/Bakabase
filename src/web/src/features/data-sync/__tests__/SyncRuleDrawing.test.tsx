@@ -2,7 +2,7 @@ import type * as Api from "../api";
 import type { SyncPeer } from "../viewModels";
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import SyncRuleDrawing from "../components/SyncRuleDrawing";
@@ -11,7 +11,13 @@ import { syncPeerFromLink, syncPeerFromMapPeer } from "../viewModels";
 
 import { link, mapPeer, NOW, recordingActions } from "./dataSyncFixtures";
 
-import { DataSyncLinkMode, DataSyncLinkState, RemoteAccessMode } from "@/sdk/constants";
+import {
+  DataSyncLinkMode,
+  DataSyncLinkState,
+  DataSyncPauseReason,
+  DataSyncResumeAction,
+  RemoteAccessMode,
+} from "@/sdk/constants";
 
 vi.mock("react-i18next", () => ({
   // Keys as text, followed by the interpolated values, so a test can see what was said.
@@ -42,6 +48,7 @@ vi.mock("../api", async (importOriginal) => ({
     resetLink: vi.fn(async () => undefined),
     setAllPaused: vi.fn(async () => undefined),
     copyOnce: vi.fn(async () => ({ linkId: 21, copyOnce: true, linkMode: 0 })),
+    links: vi.fn(async () => []),
   },
 }));
 
@@ -73,8 +80,16 @@ const draw = (
         sharingEnabled={options.sharingEnabled ?? true}
         onCreateCode={options.onCreateCode}
       />
+      <Where />
     </MemoryRouter>,
   );
+
+/** Where the window is: what a control navigated to. */
+function Where() {
+  const location = useLocation();
+
+  return <p data-testid="location">{`${location.pathname}${location.search}`}</p>;
+}
 
 const receive = () => screen.getByTestId("data-sync-arrow-receive");
 const read = () => screen.getByTestId("data-sync-arrow-read");
@@ -323,11 +338,184 @@ describe("the mode buttons", () => {
     );
 
     fireEvent.click(screen.getByTestId("data-sync-copy-once"));
-    await lastConfirmation().action();
+    await act(async () => {
+      await lastConfirmation().action();
+    });
     expect(dataSyncApi.copyOnce).toHaveBeenCalledWith({
       peerNodeId: "node-nas",
       kinds: ["customProperty", "extensionGroup"],
     });
+    expect(screen.getByTestId("location")).toHaveTextContent("/data-sync?link=21&review=1");
+    expect(recorded.actions.setNotice).not.toHaveBeenCalled();
+  });
+
+  it("says a copy once asked for access, and opens no review that cannot come yet", async () => {
+    vi.mocked(dataSyncApi.links).mockResolvedValue([
+      link(21, "node-nas", "NAS", {
+        mode: DataSyncLinkMode.Off,
+        state: DataSyncLinkState.AwaitingAccess,
+      }),
+    ]);
+    draw(
+      nas({
+        mode: DataSyncLinkMode.Off,
+        lastMode: DataSyncLinkMode.Off,
+        state: DataSyncLinkState.Stopped,
+      }),
+    );
+
+    fireEvent.click(screen.getByTestId("data-sync-copy-once"));
+    await act(async () => {
+      await lastConfirmation().action();
+    });
+    expect(recorded.actions.setNotice).toHaveBeenCalledWith("dataSync.wizard.requested NAS");
+    expect(screen.getByTestId("location")).toHaveTextContent(/^\/$/);
+  });
+
+  it("says only what is off when keeping in step both ways turns it on", () => {
+    draw(
+      nas({ mode: DataSyncLinkMode.Follow, peerMayReadUs: false, peerModeTowardsUs: undefined }),
+      { sharingEnabled: true, remoteAccessMode: RemoteAccessMode.Disabled },
+    );
+
+    fireEvent.click(screen.getByTestId("data-sync-mode-twoWay"));
+    expect(lastConfirmation()).toMatchObject({
+      title: "dataSync.twoWay.title NAS",
+      description: "dataSync.twoWay.consent NAS",
+      warning: "dataSync.sharing.remoteAccess",
+    });
+  });
+});
+
+describe("the badge's menu", () => {
+  it("takes the keyboard on its chosen item, moves with the arrows and gives it back on Tab", () => {
+    draw(nas({ mode: DataSyncLinkMode.Follow, lastMode: DataSyncLinkMode.Follow }));
+    const badge = screen.getByTestId("data-sync-mode-badge");
+
+    act(() => badge.focus());
+    fireEvent.keyDown(badge, { key: "ArrowDown" });
+    const menu = screen.getByRole("menu");
+    const [twoWay, follow] = within(menu).getAllByRole("menuitemradio");
+
+    expect(menu).toHaveAccessibleName(badge.getAttribute("aria-label")!);
+    expect(follow).toHaveFocus();
+    expect(twoWay).toHaveAttribute("tabindex", "-1");
+    fireEvent.keyDown(follow, { key: "ArrowDown" });
+    expect(twoWay).toHaveFocus();
+    fireEvent.keyDown(twoWay, { key: "End" });
+    expect(follow).toHaveFocus();
+    fireEvent.keyDown(follow, { key: "Tab" });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(badge).toHaveFocus();
+  });
+
+  it("keeps a choice this window may not make focusable, and does not make it", () => {
+    draw(
+      nas({
+        mode: DataSyncLinkMode.Follow,
+        lastMode: DataSyncLinkMode.Follow,
+        peerMayReadUs: false,
+        peerModeTowardsUs: undefined,
+      }),
+      { canManage: false },
+    );
+
+    fireEvent.click(screen.getByTestId("data-sync-mode-badge"));
+    const twoWay = within(screen.getByRole("menu")).getByRole("menuitemradio", {
+      name: "dataSync.mode.twoWay",
+    });
+
+    expect(twoWay).toHaveAttribute("aria-disabled", "true");
+    expect(twoWay).not.toBeDisabled();
+    fireEvent.click(twoWay);
+    expect(recorded.actions.confirm).not.toHaveBeenCalled();
+    expect(recorded.actions.run).not.toHaveBeenCalled();
+  });
+});
+
+describe("what the rule editor keeps offering", () => {
+  it("offers to stop the other device reading once receiving is off", async () => {
+    draw(
+      nas({
+        mode: DataSyncLinkMode.Off,
+        lastMode: DataSyncLinkMode.TwoWay,
+        state: DataSyncLinkState.Stopped,
+      }),
+    );
+
+    expect(screen.getByText("dataSync.off.stillReads NAS")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("data-sync-also-stop-reading"));
+    expect(lastConfirmation()).toMatchObject({ title: "dataSync.arrow.read.stopTitle NAS" });
+    await lastConfirmation().action();
+    expect(dataSyncApi.revokeReader).toHaveBeenCalledWith("node-nas");
+    cleanup();
+
+    // Nothing to stop where it does not read this device.
+    draw(
+      nas({
+        mode: DataSyncLinkMode.Off,
+        state: DataSyncLinkState.Stopped,
+        peerMayReadUs: false,
+        peerModeTowardsUs: undefined,
+      }),
+    );
+    expect(screen.queryByTestId("data-sync-also-stop-reading")).toBeNull();
+  });
+
+  it("turns sharing on before it makes a code that could not work otherwise", async () => {
+    const onCreateCode = vi.fn();
+    const reader = nas({
+      mode: DataSyncLinkMode.Follow,
+      peerMayReadUs: false,
+      peerModeTowardsUs: undefined,
+    });
+
+    draw(reader, { onCreateCode, sharingEnabled: false });
+    fireEvent.click(screen.getByTestId("data-sync-create-code-for"));
+    expect(onCreateCode).not.toHaveBeenCalled();
+    expect(lastConfirmation()).toMatchObject({
+      title: "dataSync.sharing.onTitle",
+      warning: "dataSync.twoWay.turnsOnSharing",
+    });
+    await lastConfirmation().action();
+    expect(dataSyncApi.setSharing).toHaveBeenCalledWith({
+      enabled: true,
+      enablePairedRemoteAccess: false,
+    });
+    expect(onCreateCode).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    draw(reader, { onCreateCode, remoteAccessMode: RemoteAccessMode.Disabled });
+    fireEvent.click(screen.getByTestId("data-sync-create-code-for"));
+    expect(lastConfirmation().warning).toBe("dataSync.sharing.remoteAccess");
+  });
+
+  it("offers to start without the other device's review once it has waited a week", async () => {
+    draw(
+      nas({
+        state: DataSyncLinkState.WaitingForPeerReview,
+        startAnywayAt: "2026-08-31 08:00:00.000",
+      }),
+    );
+
+    expect(screen.getByText("dataSync.pause.startAnywayHint NAS")).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("data-sync-start-anyway"));
+    });
+    expect(dataSyncApi.resumeLink).toHaveBeenCalledWith(1, DataSyncResumeAction.StartAnyway);
+    cleanup();
+
+    // Not before, and not where the runtime has not said when.
+    draw(
+      nas({
+        state: DataSyncLinkState.WaitingForPeerReview,
+        startAnywayAt: "2026-09-02 08:00:00.000",
+      }),
+    );
+    expect(screen.queryByTestId("data-sync-start-anyway")).toBeNull();
+    cleanup();
+    draw(nas({ state: DataSyncLinkState.WaitingForPeerReview }));
+    expect(screen.queryByTestId("data-sync-start-anyway")).toBeNull();
   });
 });
 
@@ -347,7 +535,23 @@ describe("the status line", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("dataSync.link.askKeepInStep NAS"));
     });
-    expect(dataSyncApi.resumeLink).toHaveBeenCalledWith(1, 4);
+    // On a working two-way link the runtime answers this action with an ordinary two-way
+    // request and leaves the link's state alone (its reset recovery is for a paused link).
+    expect(dataSyncApi.resumeLink).toHaveBeenCalledWith(1, DataSyncResumeAction.AskAccessAgain);
+    cleanup();
+
+    // Paused as reset, the same action would start over: not offered for the read-back.
+    draw(
+      nas({
+        readBackDeclined: true,
+        peerMayReadUs: false,
+        peerModeTowardsUs: undefined,
+        state: DataSyncLinkState.Paused,
+        pausedReason: DataSyncPauseReason.PeerReset,
+      }),
+    );
+    expect(screen.getByText("dataSync.status.ReadBackDeclined NAS")).toBeInTheDocument();
+    expect(screen.queryByText("dataSync.link.askKeepInStep NAS")).toBeNull();
   });
 
   it("says mutual Follow works as both ways", () => {

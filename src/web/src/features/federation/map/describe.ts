@@ -55,9 +55,11 @@ export const cardLine = (t: T, node: MapNode) => {
   if (node.unverified) return t("federation.map.unverified");
   if (what) return what;
 
-  return node.issues.includes("requestEnded")
-    ? issueLabel(t, "requestEnded")
-    : presenceLabel(t, node);
+  const ended = node.issues.find(
+    (issue) => issue === "requestEnded" || issue === "syncRequestEnded",
+  );
+
+  return ended ? issueLabel(t, ended) : presenceLabel(t, node);
 };
 
 /**

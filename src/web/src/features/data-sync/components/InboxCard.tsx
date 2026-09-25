@@ -29,7 +29,13 @@ import { localDateTime, timeAgo } from "../times";
 
 import { pathLabel } from "./ChangeList";
 import DisplayValue, { displayText } from "./DisplayValue";
-import { DataSyncErrorNotice, fieldClass, linkButtonClass, smallButtonClass } from "./common";
+import {
+  DataSyncErrorNotice,
+  fieldClass,
+  linkButtonClass,
+  smallButtonClass,
+  syncText,
+} from "./common";
 
 import {
   DataSyncInboxAction,
@@ -209,10 +215,7 @@ export default function InboxCard({
             </span>
           )}
           {card.peers.map((peer) => (
-            <span
-              key={peer.nodeId}
-              className="rounded bg-secondary/10 px-1.5 py-0.5 text-secondary"
-            >
+            <span key={peer.nodeId} className={`rounded bg-secondary/10 px-1.5 py-0.5 ${syncText}`}>
               {peer.name}
             </span>
           ))}
@@ -433,7 +436,7 @@ function Comparison({
     >
       {outcome.base && (
         <>
-          <dt className="text-default-400">{t("dataSync.inbox.card.lastAgreed")}</dt>
+          <dt className="text-default-500">{t("dataSync.inbox.card.lastAgreed")}</dt>
           <dd>
             <DisplayValue faint value={outcome.base} />
           </dd>
@@ -453,7 +456,7 @@ function Comparison({
 function Other({ name, value }: { name: string; value?: DataSyncFieldOutcome["remote"] }) {
   return (
     <>
-      <dt className="font-medium text-secondary">{name}</dt>
+      <dt className={`font-medium ${syncText}`}>{name}</dt>
       <dd>
         <DisplayValue value={value} />
       </dd>
@@ -606,7 +609,7 @@ function ItemBody({
                 defaultValue: payload.localSubtype ?? payload.subtype ?? "",
               })}
             </dd>
-            <dt className="font-medium text-secondary">{name}</dt>
+            <dt className={`font-medium ${syncText}`}>{name}</dt>
             <dd>
               {t(`PropertyType.${payload.remoteSubtype ?? ""}`, {
                 defaultValue: payload.remoteSubtype ?? "",
@@ -724,7 +727,7 @@ function ItemBody({
                   : pathLabel(t, field.path)}
               </p>
               <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
-                <dt className="text-default-400">{t("dataSync.inbox.card.synced")}</dt>
+                <dt className="text-default-500">{t("dataSync.inbox.card.synced")}</dt>
                 <dd>
                   <DisplayValue value={field.base} />
                 </dd>

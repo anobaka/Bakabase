@@ -620,3 +620,99 @@ describe("the details beside the diagram, shown on demand", () => {
     expect(card).toHaveFocus();
   });
 });
+
+describe("the details on a narrow page", () => {
+  /** What the browser tells the page and the diagram when the width they are given changes. */
+  const measured = new Set<() => void>();
+  const resized = () => act(() => measured.forEach((measure) => measure()));
+  /** A phone: the page's content is 263 px wide once the navigation stands beside it. */
+  const pageWidth = 263;
+  let measuring: MockInstance<(this: HTMLElement) => DOMRect> | undefined;
+  const scrolled = vi.fn();
+  const originalScroll = HTMLElement.prototype.scrollIntoView;
+
+  beforeEach(() => {
+    narrowWindow();
+    measured.clear();
+    scrolled.mockClear();
+    HTMLElement.prototype.scrollIntoView = scrolled;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        private readonly measure: () => void;
+
+        constructor(callback: () => void) {
+          this.measure = callback;
+        }
+
+        observe() {
+          measured.add(this.measure);
+        }
+
+        unobserve() {}
+
+        disconnect() {
+          measured.delete(this.measure);
+        }
+      },
+    );
+    const original = HTMLElement.prototype.getBoundingClientRect;
+
+    measuring = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect");
+    measuring.mockImplementation(function (this: HTMLElement) {
+      const testId = this.dataset.testid;
+
+      if (testId !== "data-sync-layout" && testId !== "data-sync-diagram")
+        return original.call(this);
+
+      return {
+        width: pageWidth,
+        height: 400,
+        top: 0,
+        left: 0,
+        right: pageWidth,
+        bottom: 400,
+        x: 0,
+        y: 0,
+      } as DOMRect;
+    });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    measuring?.mockRestore();
+    HTMLElement.prototype.scrollIntoView = originalScroll;
+  });
+
+  it("opens them under the diagram, never beside it, and gives the row the keyboard back", async () => {
+    renderPage();
+    // Measured as it mounts: listed from the start.
+    await waitFor(() =>
+      expect(screen.getAllByTestId("data-sync-peer-row").length).toBeGreaterThan(0),
+    );
+    resized();
+    expect(layout()).toHaveAttribute("data-layout", "stacked");
+    expect(screen.getByTestId("data-sync-diagram")).toHaveAttribute("data-mode", "list");
+
+    const nas = row("node-nas");
+
+    act(() => nas.focus());
+    fireEvent.click(nas, { detail: 0 });
+    await waitFor(() => expect(details()).not.toBeNull());
+    const heading = within(details()!).getByRole("heading", { level: 2 });
+
+    expect(heading).toHaveFocus();
+    // Not a column beside the diagram: a block of its own after it, the page's whole width.
+    expect(layout()).toHaveAttribute("data-details", "open");
+    expect(layout().className).not.toContain("grid-cols-");
+    expect(
+      screen.getByTestId("data-sync-diagram-region").compareDocumentPosition(details()!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(details()!.className).not.toContain("sticky");
+    expect(scrolled.mock.contexts).toContain(details());
+
+    fireEvent.keyDown(heading, { key: "Escape" });
+    await waitFor(() => expect(details()).toBeNull());
+    expect(row("node-nas")).toHaveFocus();
+  });
+});

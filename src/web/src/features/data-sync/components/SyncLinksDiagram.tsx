@@ -19,7 +19,7 @@ import {
   syncIssueOf,
 } from "../viewModels";
 
-import { CountBubble, StatusDot, toneFill, toneText } from "./common";
+import { CountBubble, StatusDot, syncFill, toneFill, toneText } from "./common";
 import { layoutSyncDiagram, PEER_W, spokeGeometry } from "./diagramLayout";
 
 import {
@@ -301,30 +301,33 @@ export default function SyncLinksDiagram({
               <path className={edgeStyles.sync.fill} d="M0 0.5 L10 5 L0 9.5 L2.5 5 z" />
             </marker>
           </defs>
-          {peers.map((peer, index) => (
-            <Spoke
-              key={`spoke-${peer.nodeId}`}
-              markerId={markerId}
-              now={now}
-              peer={peer}
-              peerBox={layout.peers[index]}
-              selected={selectedId === peer.nodeId}
-              selfBox={layout.self}
-              onSelect={(via) => onSelect(peer.nodeId, via, "spoke")}
-            />
-          ))}
           {layout.add && <AddSpoke peer={layout.add} self={layout.self} />}
           <SelfCard box={layout.self} counts={countLines} self={self} />
+          {/*
+           * Each device, then its line: the order Tab takes, as on the device map. A line runs
+           * between the edges of its two cards and never over one, so drawing it after its card
+           * hides nothing.
+           */}
           {peers.map((peer, index) => (
-            <PeerCard
-              key={peer.nodeId}
-              box={layout.peers[index]}
-              label={labels.get(peer.nodeId) ?? peer.name}
-              now={now}
-              peer={peer}
-              selected={selectedId === peer.nodeId}
-              onSelect={(via) => onSelect(peer.nodeId, via, "card")}
-            />
+            <g key={peer.nodeId} data-sync-device={peer.nodeId}>
+              <PeerCard
+                box={layout.peers[index]}
+                label={labels.get(peer.nodeId) ?? peer.name}
+                now={now}
+                peer={peer}
+                selected={selectedId === peer.nodeId}
+                onSelect={(via) => onSelect(peer.nodeId, via, "card")}
+              />
+              <Spoke
+                markerId={markerId}
+                now={now}
+                peer={peer}
+                peerBox={layout.peers[index]}
+                selected={selectedId === peer.nodeId}
+                selfBox={layout.self}
+                onSelect={(via) => onSelect(peer.nodeId, via, "spoke")}
+              />
+            </g>
           ))}
           {layout.add && onAdd && <AddCard box={layout.add} onAdd={onAdd} />}
         </svg>
@@ -486,9 +489,10 @@ function Spoke({
       onKeyDown={onActivate(() => onSelect("keyboard"))}
     >
       <title>{label}</title>
+      {/* Square ends: drawn over the cards, the line's hit area stops short of both. */}
       <line
         stroke="transparent"
-        strokeLinecap="round"
+        strokeLinecap="butt"
         strokeWidth={18}
         x1={geometry.from.x}
         x2={geometry.to.x}
@@ -497,7 +501,7 @@ function Spoke({
       />
       <line
         className="stroke-focus opacity-0 group-focus-visible:opacity-60"
-        strokeLinecap="round"
+        strokeLinecap="butt"
         strokeWidth={12}
         x1={geometry.from.x}
         x2={geometry.to.x}
@@ -549,7 +553,7 @@ function Spoke({
       </g>
       {mode && (
         <text
-          className={edgeStyles.sync.fill}
+          className={syncFill}
           data-testid="data-sync-spoke-mode"
           dominantBaseline="central"
           fontSize={10}

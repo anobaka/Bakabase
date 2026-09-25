@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import type {
+  DataSyncAccessRequestView,
   DataSyncEntityStatusView,
   DataSyncLinkView,
   DataSyncMapOutgoing,
@@ -10,7 +11,7 @@ import type {
   DataSyncStatusView,
 } from "./api";
 
-import { timeAgo } from "./times";
+import { serverTime, timeAgo } from "./times";
 
 import {
   DataSyncEntitySyncState,
@@ -23,7 +24,9 @@ import {
   DataSyncPauseReasonLabel,
   DataSyncPeerErrorCode,
   DataSyncPeerErrorCodeLabel,
+  DataSyncRequestDirection,
   DataSyncStatusLevel,
+  RemoteAccessMode,
 } from "@/sdk/constants";
 
 /*
@@ -151,6 +154,11 @@ export interface SyncPeer {
   outcomeExpiresAt?: string;
   /** What reads this device's definitions there, when it has no link of this device's. */
   reader?: DataSyncReaderView;
+  /**
+   * Waiting for its first review: from when this device may start without it ([Start anyway],
+   * spec §8.3). Only a link's full view says it.
+   */
+  startAnywayAt?: string;
 }
 
 const asOutcome = (value?: string | null): SyncOutcome | undefined =>
@@ -189,6 +197,7 @@ export const syncPeerFromLink = (link: DataSyncLinkView): SyncPeer => ({
   excludedCount: link.excludedCount,
   missingAtPeerCount: link.missingAtPeerCount,
   peerAppVersion: link.peerAppVersion ?? undefined,
+  startAnywayAt: link.startAnywayAt ?? undefined,
   outcome:
     link.state === DataSyncLinkState.AwaitingAccess && link.initiator !== DataSyncLinkInitiator.Peer
       ? "awaitingApproval"
@@ -488,6 +497,77 @@ export const linkEditor = (peer: SyncPeer): LinkEditor => {
 /** What pressing the receive arrow turns the link to: off when on, else its last mode. */
 export const receiveToggleTarget = (editor: LinkEditor): ModeName =>
   editor.receiving ? "off" : editor.lastMode;
+
+/** This device's own side, as keeping in step both ways needs it. */
+export interface OwnSharing {
+  sharingEnabled: boolean;
+  remoteAccessMode: RemoteAccessMode | number;
+}
+
+/** Whether the other device can read this one only once sharing, or remote access, is turned on here. */
+export const sharingNeeded = (own: OwnSharing) =>
+  !own.sharingEnabled || own.remoteAccessMode === RemoteAccessMode.Disabled;
+
+/**
+ * The confirmation for keeping in step both ways with a device (spec §11.1, §7.2.4), worded the
+ * same wherever it is offered: the consent, and what this device turns on so the other can read
+ * it — sharing only where it is off, remote access only where it is off. `turnsOn` is false where
+ * nothing is turned on (the other device reads this one already).
+ */
+export const twoWayConfirmation = (t: T, name: string, own: OwnSharing, turnsOn = true) => ({
+  title: t("dataSync.twoWay.title", { name }),
+  description: t("dataSync.twoWay.consent", { name }),
+  warning: turnsOn ? turnsOnWarning(t, own) : undefined,
+});
+
+/**
+ * What making this device readable turns on here, said only for what is off: sharing, remote
+ * access (with pairing required). Undefined when both are on.
+ */
+export const turnsOnWarning = (t: T, own: OwnSharing) =>
+  [
+    own.sharingEnabled ? undefined : t("dataSync.twoWay.turnsOnSharing"),
+    own.remoteAccessMode === RemoteAccessMode.Disabled
+      ? t("dataSync.sharing.remoteAccess")
+      : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ") || undefined;
+
+/**
+ * Whether "[Ask {{name}} to keep in step]" is offered (spec §7.2.3): a two-way link, working, whose
+ * device took this one's access but does not read it back. The runtime answers the resume action
+ * `AskAccessAgain` on exactly such a link with an ordinary two-way request, leaving the link's
+ * state alone; on a paused or stopped link that action means something else, so it is not offered.
+ */
+export const offersAskToKeepInStep = (peer: SyncPeer) =>
+  peer.readBackDeclined &&
+  peer.linkId !== undefined &&
+  peer.mode === DataSyncLinkMode.TwoWay &&
+  peer.state !== DataSyncLinkState.Paused &&
+  peer.state !== DataSyncLinkState.Stopped;
+
+/**
+ * Receiving from it is off while it still reads this device: the rule editor offers to stop that
+ * too ([Also stop it reading], spec §11.1).
+ */
+export const stillReadsWhileOff = (peer: SyncPeer) =>
+  peer.linkId !== undefined &&
+  peer.state === DataSyncLinkState.Stopped &&
+  peer.mode === DataSyncLinkMode.Off &&
+  !peer.outcome &&
+  peer.peerMayRead;
+
+/**
+ * Whether a link that has waited for its peer's first review may start without it now ([Start
+ * anyway], spec §8.3): once the runtime says from when.
+ */
+export const canStartAnyway = (peer: SyncPeer, now: number = Date.now()) => {
+  if (peer.state !== DataSyncLinkState.WaitingForPeerReview || !peer.startAnywayAt) return false;
+  const at = serverTime(peer.startAnywayAt);
+
+  return at !== null && at.getTime() <= now;
+};
 
 // ---- the status catalogue (§11.6) ----------------------------------------------------------------
 
@@ -823,6 +903,19 @@ export const elsewhereLines = (t: T, peers: SyncPeer[]) =>
       }),
     }));
 
+/**
+ * This device's own request to read a device's definitions, as `GET /data-sync/requests` lists
+ * it: what [Cancel] withdraws. Never the link: cancelling a request keeps the link's state.
+ */
+export const outgoingRequestIdOf = (
+  requests: readonly DataSyncAccessRequestView[] | undefined,
+  nodeId: string,
+) =>
+  requests?.find(
+    (request) =>
+      request.nodeId === nodeId && request.direction === DataSyncRequestDirection.Outgoing,
+  )?.requestId;
+
 /** Whether anything data sync shows is waiting on someone right now: read again more often. */
 export const isLive = ({
   peers,
@@ -848,10 +941,28 @@ export type EntityBadgeCode =
   | "localOnly"
   | "detached"
   | "heldAtSource"
+  | "tooLarge"
+  | "unreadable"
   | "differs"
   | "definitionOnly"
   | "synced"
   | "syncedFrom";
+
+/**
+ * Why this device holds its own definition back, in the badge's words: too large to travel whole,
+ * unreadable here — neither of which an update would help — or written by a newer version.
+ */
+const heldBadge = (reason: DataSyncHeldReason): EntityBadgeCode => {
+  switch (reason) {
+    case DataSyncHeldReason.TooLarge:
+      return "tooLarge";
+    case DataSyncHeldReason.LocalUnreadable:
+    case DataSyncHeldReason.Invalid:
+      return "unreadable";
+    default:
+      return "heldAtSource";
+  }
+};
 
 /** What a definition's sync badge says (Properties and Extension groups pages, the page's list). */
 export const entityBadge = (
@@ -865,7 +976,7 @@ export const entityBadge = (
     return { code: "detached", tone: "default", values: {} };
   if (entity.heldAtSource != null)
     return {
-      code: "heldAtSource",
+      code: heldBadge(entity.heldAtSource),
       tone: "warning",
       values: { reason: entity.heldAtSource },
     };

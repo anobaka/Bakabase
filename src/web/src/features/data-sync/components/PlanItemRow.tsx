@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { chosenCandidate, decisionChanges, toggleChange, toggleGroup } from "../reviewModels";
 
 import ChangeList from "./ChangeList";
-import { fieldClass, linkButtonClass } from "./common";
+import { fieldClass, linkButtonClass, syncText } from "./common";
 
 import {
   DataSyncDecisionErrorCode,
@@ -50,7 +50,7 @@ const badgeClass: Record<DataSyncPlanItemType, string> = {
   [DataSyncPlanItemType.Create]: "bg-success/10 text-success-700 dark:text-success",
   [DataSyncPlanItemType.Update]: "bg-primary/10 text-primary",
   [DataSyncPlanItemType.Unchanged]: "bg-default-100 text-default-500",
-  [DataSyncPlanItemType.Link]: "bg-secondary/10 text-secondary",
+  [DataSyncPlanItemType.Link]: `bg-secondary/10 ${syncText}`,
   [DataSyncPlanItemType.NeedsDecision]: "bg-warning/10 text-warning-700 dark:text-warning",
   [DataSyncPlanItemType.Held]: "bg-default-100 text-default-500",
 };

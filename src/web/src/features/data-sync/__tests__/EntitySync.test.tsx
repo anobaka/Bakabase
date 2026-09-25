@@ -12,7 +12,7 @@ import { dataSyncApi } from "../api";
 import { recordingActions } from "./dataSyncFixtures";
 
 import BApi from "@/sdk/BApi";
-import { DataSyncEntitySyncState, PropertyType } from "@/sdk/constants";
+import { DataSyncEntitySyncState, DataSyncHeldReason, PropertyType } from "@/sdk/constants";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -143,6 +143,46 @@ describe("how one definition syncs", () => {
     expect(screen.queryByRole("menu")).toBeNull();
     expect(outer).not.toHaveBeenCalled();
     expect(screen.getByTestId("data-sync-entity-menu")).toHaveFocus();
+  });
+
+  it("is a menu to the keyboard: focus on its first item, arrows between them, Tab out", () => {
+    render(
+      <EntitySyncMenu
+        offersDefinitionOnly
+        actions={recorded.actions}
+        entity={entity("12")}
+        kind="customProperty"
+        name="Artist"
+      />,
+    );
+    const trigger = screen.getByTestId("data-sync-entity-menu");
+
+    act(() => trigger.focus());
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
+    const items = within(screen.getByRole("menu")).getAllByRole("menuitem");
+
+    expect(items[0]).toHaveFocus();
+    expect(items.every((item) => item.getAttribute("tabindex") === "-1")).toBe(true);
+    fireEvent.keyDown(items[0], { key: "ArrowUp" });
+    expect(items[items.length - 1]).toHaveFocus();
+    fireEvent.keyDown(items[items.length - 1], { key: "Home" });
+    expect(items[0]).toHaveFocus();
+    fireEvent.keyDown(items[0], { key: "Tab" });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("says why a definition is held back here, and never asks for an update that would not help", () => {
+    render(
+      <EntitySyncBadge entity={entity("12", { heldAtSource: DataSyncHeldReason.TooLarge })} />,
+    );
+    expect(screen.getByTestId("data-sync-entity-badge")).toHaveTextContent(
+      "dataSync.entity.badge.tooLarge",
+    );
+    expect(screen.getByTestId("data-sync-entity-badge")).toHaveAttribute(
+      "title",
+      "dataSync.entity.tooManyOptions",
+    );
   });
 });
 

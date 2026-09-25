@@ -36,6 +36,11 @@ vi.mock("../api", async (importOriginal) => ({
     setSharing: vi.fn(async () => undefined),
   },
 }));
+vi.mock("@/components/HelpCenter/HelpCenterButton", () => ({
+  default: ({ section, topic }: { section: string; topic: string }) => (
+    <span data-help={`${topic}/${section}`} data-testid="help" />
+  ),
+}));
 
 const found = [
   candidate("node-nas", "NAS", { linkId: 1, weMayRead: true, theyMayRead: true }),
@@ -106,7 +111,12 @@ describe("sync with another device", () => {
     const onClose = open();
 
     await waitFor(() => expect(option("node-new")).not.toBeNull());
+    // A plain list of buttons: the one chosen is pressed, and nothing claims a listbox.
+    expect(option("node-new")).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(option("node-new"));
+    expect(option("node-new")).toHaveAttribute("aria-pressed", "true");
+    expect(option("node-new")).not.toHaveAttribute("role");
+    expect(screen.queryByRole("listbox")).toBeNull();
     fireEvent.click(screen.getByTestId("data-sync-wizard-next"));
     expect(screen.getByTestId("data-sync-wizard-how-twoWay")).toBeChecked();
     expect(screen.getByTestId("data-sync-wizard-consent")).toHaveTextContent(
@@ -193,5 +203,27 @@ describe("sync with another device", () => {
     fireEvent.click(option("node-read"));
     fireEvent.click(screen.getByTestId("data-sync-wizard-next"));
     expect(screen.getByTestId("data-sync-wizard-how-twoWay")).not.toBeDisabled();
+  });
+
+  it("offers data sync's help, and leaves the keyboard to a dialog opened over it", async () => {
+    const onClose = open();
+
+    await waitFor(() => expect(option("node-new")).not.toBeNull());
+    expect(screen.getByTestId("help")).toHaveAttribute("data-help", "multiDevice/dataSync");
+
+    // The help center, opened over the wizard, has the keyboard.
+    const over = document.createElement("div");
+
+    over.setAttribute("role", "dialog");
+    over.innerHTML = '<button type="button">first</button><button type="button">last</button>';
+    document.body.appendChild(over);
+    const last = over.querySelector<HTMLButtonElement>("button:last-child")!;
+
+    act(() => last.focus());
+    fireEvent.keyDown(last, { key: "Tab" });
+    expect(last).toHaveFocus();
+    fireEvent.keyDown(last, { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
+    over.remove();
   });
 });

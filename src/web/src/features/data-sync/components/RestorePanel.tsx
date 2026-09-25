@@ -8,6 +8,7 @@ import { dataSyncApi, throwIfProblem } from "../api";
 import { localDateTime } from "../times";
 
 import { buttonClass, DataSyncErrorNotice, primaryClass } from "./common";
+import DataSyncHelp from "./DataSyncHelp";
 
 import { DataSyncPauseReason, DataSyncRestoreChoice } from "@/sdk/constants";
 
@@ -114,9 +115,12 @@ export default function RestorePanel({
       <div className="flex flex-wrap items-start gap-4">
         <RestoreDrawing />
         <div className="min-w-0 flex-1 space-y-1.5">
-          <h2 className="font-semibold" id="data-sync-restore-title">
-            {t("dataSync.restore.title")}
-          </h2>
+          <div className="flex items-center gap-1">
+            <h2 className="font-semibold" id="data-sync-restore-title">
+              {t("dataSync.restore.title")}
+            </h2>
+            <DataSyncHelp />
+          </div>
           <p className="text-sm">{t("dataSync.restore.intro")}</p>
           <p className="text-sm text-default-600" data-testid="data-sync-restore-evidence">
             {t(`dataSync.restore.evidence.${evidence}`, { name })}

@@ -7,6 +7,8 @@ import { HISTORY_DRAWING_ROWS, historySources } from "../historyModels";
 import { useElementWidth } from "../hooks/useElementWidth";
 import { timeAgo } from "../times";
 
+import { syncText } from "./common";
+
 import { edgeStyles } from "@/features/federation/map/DeviceMapCanvas";
 
 /*
@@ -89,7 +91,7 @@ export default function HistoryDrawing({
             >
               <p className="flex items-center gap-1.5 font-medium">
                 <span className="min-w-0 truncate">{source.name}</span>
-                <span aria-hidden className={style.text}>
+                <span aria-hidden className={syncText}>
                   →
                 </span>
                 <span className="min-w-0 truncate">{selfName}</span>

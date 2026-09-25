@@ -9,7 +9,13 @@ import { AiOutlineLoading3Quarters } from "react-icons/ai";
 
 import { dataSyncApi } from "../api";
 import { dataSyncReviewRoute } from "../routes";
-import { candidateStatus, dataSyncKinds, isPickable, toggleKind } from "../viewModels";
+import {
+  candidateStatus,
+  dataSyncKinds,
+  isPickable,
+  toggleKind,
+  twoWayConfirmation,
+} from "../viewModels";
 
 import { buttonClass, DataSyncErrorNotice, fieldClass, primaryClass } from "./common";
 import DataSyncDialog from "./DataSyncDialog";
@@ -100,6 +106,13 @@ export default function AddLinkWizard({
     twoWayCreatesAccess &&
     (!sharingEnabled || remoteAccessMode === RemoteAccessMode.Disabled);
   const addressReady = address.trim().length > 0 && /^\d{8}$/.test(code.trim());
+  // Worded as every other place that offers keeping in step both ways words it.
+  const twoWayWords = twoWayConfirmation(
+    t,
+    targetName,
+    { sharingEnabled, remoteAccessMode },
+    turnOnSharing,
+  );
 
   const start = () => {
     if (!target) return;
@@ -169,7 +182,8 @@ export default function AddLinkWizard({
       {candidates && candidates.length === 0 && !discovering && (
         <p className="text-sm text-default-500">{t("dataSync.wizard.noneFound")}</p>
       )}
-      <ul aria-label={t("dataSync.wizard.devices")} className="space-y-1.5" role="listbox">
+      {/* A plain list of buttons, the one chosen pressed: each is its own Tab stop. */}
+      <ul aria-label={t("dataSync.wizard.devices")} className="space-y-1.5">
         {(candidates ?? []).map((item) => {
           const status = candidateStatus(item, canManage);
           const pickable = isPickable(status);
@@ -179,13 +193,12 @@ export default function AddLinkWizard({
             <li key={item.nodeId}>
               <button
                 aria-disabled={pickable ? undefined : "true"}
-                aria-selected={selected}
+                aria-pressed={selected}
                 className={`w-full rounded-lg border p-2.5 text-left text-sm transition ${
                   selected ? "border-primary bg-primary/5" : "border-default-200"
                 } ${pickable ? "hover:bg-default-100" : "cursor-not-allowed opacity-70"}`}
                 data-candidate={item.nodeId}
                 data-status={status}
-                role="option"
                 type="button"
                 onClick={() => {
                   if (!pickable) return;
@@ -306,11 +319,8 @@ export default function AddLinkWizard({
           className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs"
           data-testid="data-sync-wizard-consent"
         >
-          {t("dataSync.twoWay.consent", { name: targetName })}
-          {turnOnSharing && !sharingEnabled ? ` ${t("dataSync.twoWay.turnsOnSharing")}` : ""}
-          {turnOnSharing && remoteAccessMode === RemoteAccessMode.Disabled
-            ? ` ${t("dataSync.sharing.remoteAccess")}`
-            : ""}
+          {twoWayWords.description}
+          {twoWayWords.warning ? ` ${twoWayWords.warning}` : ""}
         </p>
       )}
       {how !== "twoWay" && sendsRequest && (

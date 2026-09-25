@@ -9,7 +9,7 @@ import { AiOutlineClose } from "react-icons/ai";
 import { dataSyncApi } from "../api";
 import DataSyncOutgoingCard from "../map/DataSyncOutgoingCard";
 
-import { DataSyncErrorNotice, linkButtonClass, smallButtonClass } from "./common";
+import { DataSyncErrorNotice, linkButtonClass, smallButtonClass, syncText } from "./common";
 import SyncRuleDrawing from "./SyncRuleDrawing";
 
 import { DataSyncLinkMode, DataSyncLinkState } from "@/sdk/constants";
@@ -92,7 +92,7 @@ export default function LinkDetails({
     >
       <header className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-secondary">{t("dataSync.title")}</p>
+          <p className={`text-xs font-medium ${syncText}`}>{t("dataSync.title")}</p>
           <h2
             ref={headingRef}
             className="break-words text-lg font-semibold outline-none"
@@ -102,7 +102,7 @@ export default function LinkDetails({
             {name}
           </h2>
           {(peer.address || peer.peerAppVersion) && (
-            <p className="mt-0.5 break-all text-xs text-default-400">
+            <p className="mt-0.5 break-all text-xs text-default-500">
               {peer.address}
               {peer.peerAppVersion ? `${peer.address ? " · " : ""}v${peer.peerAppVersion}` : ""}
             </p>
