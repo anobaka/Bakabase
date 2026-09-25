@@ -255,6 +255,8 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
                 if (outcome.Outcome == "granted") granted.Add(outcome.PeerNodeId);
             }
             catch (FederationAccessException) { /* Offline or rejected; the next round retries until expiry. */ }
+            // A device too slow to answer (the client's own deadline) is only offline this round: the rest are claimed.
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
         }
         return granted;
     }

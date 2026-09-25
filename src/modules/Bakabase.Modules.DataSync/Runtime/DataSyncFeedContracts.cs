@@ -44,6 +44,30 @@ public interface IDataSyncPeerClient
 
     Task<ReadOnlyMemory<byte>> GetPageAsync(string peerNodeId, string snapshotId, string kind, long sinceSeq,
         string? cursor, CancellationToken ct);
+
+    /// <summary>
+    /// Holds the peer's fetch lock (§7.6) for a whole fetch, head to the last page, so that no other fetch of the peer
+    /// (the cycle, review staging, copy once, "Fetch again") runs in between and discards at the source the snapshot
+    /// this one is reading (one snapshot per grant). Waits up to 30 s, then throws
+    /// <see cref="DataSyncPeerException"/>(<see cref="DataSyncPeerErrorCode.Busy"/>). Dispose the result to release it.
+    /// </summary>
+    /// <remarks>
+    /// While it is held, head, manifest and page calls for the peer made from the holder's own flow (the method that
+    /// awaited this, and whatever it calls) go without waiting, and everyone else's calls wait for the lock. Await it
+    /// in the method that makes those calls: a hold taken inside an async helper and returned out of it is not seen by
+    /// the caller's calls, which would then wait for the holder. Taken again in the same flow, it holds nothing more.
+    /// The default holds nothing, for a client that is never fetched from concurrently (a test double).
+    /// </remarks>
+    Task<IAsyncDisposable> AcquireFetchAsync(string peerNodeId, CancellationToken ct) =>
+        Task.FromResult<IAsyncDisposable>(DataSyncNoFetchHold.Instance);
+}
+
+/// <summary>What <see cref="IDataSyncPeerClient.AcquireFetchAsync"/> answers by default: nothing to release.</summary>
+internal sealed class DataSyncNoFetchHold : IAsyncDisposable
+{
+    public static readonly DataSyncNoFetchHold Instance = new();
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
 
 public sealed record DataSyncPeerProbe(string NodeId, string Name, string? Address, bool HasAccess,

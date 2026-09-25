@@ -109,6 +109,11 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
         {
             throw MapPeer(e);
         }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // The device did not answer within the client's own deadline. A request already filed is still claimed.
+            throw new DataSyncPeerException(DataSyncPeerErrorCode.Unreachable, "timeout");
+        }
         if (outcome.Outcome == "granted") flow.RaiseOutboundGranted(outcome.PeerNodeId);
         return new DataSyncAccessRequestOutcome(outcome.Outcome, outcome.RequestId, outcome.PeerNodeId,
             outcome.PeerName, outcome.ReadBack);
@@ -134,7 +139,8 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
     /// Data sync hears of the grant before the read-back starts, announcing it, and then of how the read-back went
     /// (<see cref="FederationPairingFlow.ReadBackDataSyncAsync"/>): a two-way request approved to receive back makes
     /// the approver's link even when the read-back then fails (N14). Approving again reads back again only while the
-    /// offer is still there; a device this one already reads counts as read back.
+    /// offer is still there; a device this one already reads counts as read back. Once the grant is issued, the caller
+    /// going away no longer stops anything: the read-back runs to its end and data sync hears how it went.
     /// </remarks>
     public async Task<DataSyncApprovalOutcome> ApproveAsync(string requestId, bool readBack, CancellationToken ct)
     {
@@ -153,11 +159,12 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
         flow.RaiseInboundGranted(approval.NodeId, intent, receiveBack);
         var readBackGranted = false;
         string? readBackError = null;
-        if (receiveBack) (readBackGranted, readBackError) = await flow.ReadBackDataSyncAsync(approval.NodeId, ct);
-        else if (approval.HasReciprocal) await peers.TakeDataSyncReciprocalOfferAsync(approval.NodeId, ct);
+        if (receiveBack) (readBackGranted, readBackError) = await flow.ReadBackDataSyncAsync(approval.NodeId);
+        else if (approval.HasReciprocal)
+            await peers.TakeDataSyncReciprocalOfferAsync(approval.NodeId, CancellationToken.None);
         return new DataSyncApprovalOutcome(approval.NodeId,
-            await peers.GetPeerNameAsync(approval.NodeId, ct) ?? approval.NodeName, intent, readBackGranted,
-            readBackError);
+            await peers.GetPeerNameAsync(approval.NodeId, CancellationToken.None) ?? approval.NodeName, intent,
+            readBackGranted, readBackError);
     }
 
     public async Task RejectAsync(string requestId, CancellationToken ct)

@@ -15,6 +15,7 @@ using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Transport;
 using Bakabase.Service.Components.Federation;
 using Bakabase.Tests.RemoteAccess;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -23,7 +24,7 @@ namespace Bakabase.Tests.Federation;
 /// <summary>
 /// The receiver side of the feed (§7.6) between real nodes over HTTP, through the Service's gates and the real feed
 /// controller, with a scripted feed source at the source: what a reader declares arrives as it was declared, pages
-/// arrive as raw bytes, every refusal reads as the data sync error of §7.6, one exchange per peer at a time, and a
+/// arrive as raw bytes, every refusal reads as the data sync error of §7.6, one fetch per peer at a time, and a
 /// device pulls only from a node it holds a direct grant for (§7.7, D03).
 /// </summary>
 [TestClass]
@@ -133,6 +134,25 @@ public sealed class DataSyncPeerClientTests
 
         // Each refusal answered one call; the reader is not stuck behind any of them.
         Assert.AreEqual("snapshot-1", (await client.GetManifestAsync("node-nas", query, default)).SnapshotId);
+
+        // A refusal on the way to a session comes from info or the handshake, as whoever holds the address wrote it:
+        // only a code this build could have sent is passed on, never text of the answerer's choosing.
+        foreach (var (code, detail) in new[] { ("RemoteAccessDisabled", "RemoteAccessDisabled"),
+                     ("Evil\nInjected " + new string('x', 5000), "http403"), (new string('A', 65), "http403") })
+        {
+            nas.Answer = (context, _) =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return context.Response.WriteAsJsonAsync(new { code });
+            };
+            var refused = await Assert.ThrowsExactlyAsync<DataSyncPeerException>(() =>
+                desk.NewPeerClient().GetHeadAsync("node-nas", query, default));
+            Assert.AreEqual(detail, refused.Message);
+            Assert.AreEqual(detail == "http403"
+                ? DataSyncPeerErrorCode.AccessRevoked
+                : DataSyncPeerErrorCode.PeerRemoteAccessOff, refused.Code);
+        }
+        nas.Answer = null;
     }
 
     /// <summary>What the source's gate says before its feed is reached, and a source whose build has no feed yet.</summary>
@@ -310,6 +330,137 @@ public sealed class DataSyncPeerClientTests
         await first;
         Assert.AreEqual("snapshot-1", (await second).SnapshotId);
         Assert.AreEqual(1, feed.MaxInFlight);
+    }
+
+    /// <summary>
+    /// One fetch per peer at a time (§7.6, must-fix 6): a fetch holds the peer from its head to its last page, so no
+    /// other fetch's manifest comes in between and discards at the source the snapshot it reads. Its own calls never
+    /// wait; a second fetch, or a lone call, waits until it is released, and past the wait answers Busy without
+    /// reaching the source.
+    /// </summary>
+    [TestMethod]
+    public async Task AFetchHoldsThePeerFromItsHeadToItsLastPage()
+    {
+        var feed = new ScriptedFeed("node-nas");
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS", feed: feed);
+        await using var pc = await DataSyncNodeHost.StartAsync("node-pc", "PC", feed: new ScriptedFeed("node-pc"));
+        await PairAsync(desk, nas);
+        await PairAsync(desk, pc);
+        var client = desk.NewPeerClient(fetchWait: TimeSpan.FromSeconds(30));
+        var manifestRead = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var readPages = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Each fetch runs in a flow of its own, as the cycle and a review's "Fetch again" do.
+        async Task Cycle()
+        {
+            await using var fetch = await client.AcquireFetchAsync("node-nas", default);
+            await client.GetHeadAsync("node-nas", Query(), default);
+            var manifest = await client.GetManifestAsync("node-nas", Query(), default);
+            manifestRead.SetResult();
+            await readPages.Task;
+            await client.GetPageAsync("node-nas", manifest.SnapshotId, "customProperty", 0, null, default);
+            // Taken again in the same flow, it waits for nothing.
+            await using (await client.AcquireFetchAsync("node-nas", default))
+                await client.GetPageAsync("node-nas", manifest.SnapshotId, "customProperty", 0, "p2", default);
+        }
+        async Task Refetch()
+        {
+            await manifestRead.Task;
+            await using var fetch = await client.AcquireFetchAsync("node-nas", default);
+            await client.GetManifestAsync("node-nas", Query(), default);
+        }
+        async Task Lone()
+        {
+            await manifestRead.Task;
+            await client.GetHeadAsync("node-nas", Query(), default);
+        }
+
+        var cycle = Cycle();
+        var refetch = Refetch();
+        var lone = Lone();
+        await manifestRead.Task;
+        await Task.Delay(300);
+        Assert.IsFalse(refetch.IsCompleted || lone.IsCompleted, "Both wait for the fetch that holds the peer.");
+        Assert.AreEqual("node-pc", (await client.GetHeadAsync("node-pc", Query(), default)).NodeId,
+            "Another peer is not held up.");
+        readPages.SetResult();
+        await Task.WhenAll(cycle, refetch, lone);
+
+        var calls = feed.Calls.Select(c => c.Call).ToArray();
+        CollectionAssert.AreEqual(new[] { "head", "manifest", "changes", "changes" }, calls[..4],
+            "Nothing came between the cycle's manifest and its pages.");
+        CollectionAssert.AreEquivalent(new[] { "manifest", "head" }, calls[4..]);
+        Assert.AreEqual(1, feed.MaxInFlight);
+
+        // Past the wait: Busy for a second fetch and a lone call alike, and the source never hears of them.
+        var impatient = desk.NewPeerClient(fetchWait: TimeSpan.FromMilliseconds(200));
+        var holding = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        async Task Hold()
+        {
+            await using var fetch = await impatient.AcquireFetchAsync("node-nas", default);
+            holding.SetResult();
+            await release.Task;
+        }
+        var holder = Hold();
+        await holding.Task;
+        var before = feed.Calls.Count;
+        foreach (var call in new Func<Task>[]
+                 {
+                     () => impatient.AcquireFetchAsync("node-nas", default),
+                     () => impatient.GetManifestAsync("node-nas", Query(), default)
+                 })
+        {
+            var busy = await Assert.ThrowsExactlyAsync<DataSyncPeerException>(call);
+            Assert.AreEqual((DataSyncPeerErrorCode.Busy, "fetchInProgress"), (busy.Code, busy.Message));
+        }
+        Assert.AreEqual(before, feed.Calls.Count);
+        release.SetResult();
+        await holder;
+        await using (await impatient.AcquireFetchAsync("node-nas", default))
+            Assert.AreEqual("snapshot-1", (await impatient.GetManifestAsync("node-nas", Query(), default)).SnapshotId,
+                "Released, the peer is free at once.");
+        Assert.AreEqual(DataSyncPeerErrorCode.AccessMissing, (await Assert.ThrowsExactlyAsync<DataSyncPeerException>(
+            () => impatient.AcquireFetchAsync("../node-nas", default))).Code);
+    }
+
+    /// <summary>
+    /// §7.6: a source that accepts connections but does not answer info or the handshake in time is unreachable, not a
+    /// device this one lost access to, and the probe still answers. Only this device dropping its own grant mid-read
+    /// reads as access missing.
+    /// </summary>
+    [TestMethod]
+    public async Task ASourceThatDoesNotAnswerInTimeIsUnreachableAndOnlyADroppedGrantIsAccessMissing()
+    {
+        var feed = new ScriptedFeed("node-nas");
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS", feed: feed);
+        await PairAsync(desk, nas);
+
+        // Fresh sessions ask info first, which the silent source holds past the client's own deadline for it.
+        nas.Answer = DataSyncNodeHost.Silent;
+        var head = Assert.ThrowsExactlyAsync<DataSyncPeerException>(() =>
+            desk.NewPeerClient().GetHeadAsync("node-nas", Query(), default));
+        var probe = desk.NewPeerClient().ProbeAsync("node-nas", default);
+        var slow = await head;
+        Assert.AreEqual((DataSyncPeerErrorCode.Unreachable, "timeout"), (slow.Code, slow.Message));
+        Assert.AreEqual(new DataSyncPeerProbe("node-nas", "NAS", nas.Address, true, null, null, "Offline"), await probe);
+        nas.Answer = null;
+        Assert.AreEqual(0, feed.Calls.Count);
+        Assert.IsTrue(await desk.Grants.HasOutboundGrantAsync("node-nas", default));
+
+        // This device drops its grant while a head is on its way: the read ends as access missing.
+        var client = desk.PeerClient;
+        Assert.AreEqual("node-nas", (await client.GetHeadAsync("node-nas", Query(), default)).NodeId);
+        feed.HoldHeads = true;
+        var dropped = Assert.ThrowsExactlyAsync<DataSyncPeerException>(() =>
+            client.GetHeadAsync("node-nas", Query(), default));
+        await feed.WaitForInFlightAsync(1);
+        await desk.Grants.ForgetOutboundAsync("node-nas", default);
+        var missing = await dropped;
+        Assert.AreEqual((DataSyncPeerErrorCode.AccessMissing, "accessRemoved"), (missing.Code, missing.Message));
+        feed.HoldHeads = false;
     }
 
     [TestMethod]

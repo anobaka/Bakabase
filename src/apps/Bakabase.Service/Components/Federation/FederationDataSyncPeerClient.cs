@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -36,14 +37,15 @@ namespace Bakabase.Service.Components.Federation;
 /// exceeds <c>FederationJson</c>'s depth limit (F61), and <c>DataSyncWireReader</c> reads it.
 /// </para>
 /// <para>
-/// One exchange per peer at a time: a second call for the same peer waits up to <see cref="FetchWait"/>, then gets
-/// <see cref="DataSyncPeerErrorCode.Busy"/>. The contract has no member that spans calls, so a whole fetch — head to
-/// the last page, which a second manifest would discard at the source — is held by the runtime's own per-peer fetch
-/// lock around these calls.
+/// One fetch per peer at a time (§7.6): <see cref="AcquireFetchAsync"/> holds the peer's lock from head to the last
+/// page, since a second manifest would discard at the source the snapshot being read. A call made outside a hold takes
+/// the same lock for its own exchange. Either waits up to <see cref="FetchWait"/> for another holder, then gets
+/// <see cref="DataSyncPeerErrorCode.Busy"/>.
 /// </para>
 /// </remarks>
 public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, INodeTransport transport,
-    FederationHttpClient http, FederationPeerService peers, TimeProvider timeProvider) : IDataSyncPeerClient
+    FederationHttpClient http, FederationPeerService peers, GrantLeaseRegistry leases, TimeProvider timeProvider)
+    : IDataSyncPeerClient
 {
     private const string FeedRoute = "/federation/v1/export/datasync";
 
@@ -57,6 +59,9 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
     private const int MaxAppVersionLength = 128;
 
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _peerLocks = new(StringComparer.Ordinal);
+
+    /// <summary>The fetches the current flow holds, by peer: its own calls to those peers go without waiting.</summary>
+    private readonly AsyncLocal<ImmutableDictionary<string, FetchHold>?> _held = new();
 
     /// <summary>How long a call waits for another call to the same peer before it answers Busy (§7.6).</summary>
     internal TimeSpan FetchWait { get; init; } = TimeSpan.FromSeconds(30);
@@ -100,6 +105,10 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
             {
                 // The session's own state says why.
             }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // A peer that took too long to answer info or the handshake; its session says Offline.
+            }
             connection = sessions.GetConnectionState(peerNodeId, FederationScopes.DataSyncRead);
         }
         else if (known.Address != null)
@@ -142,21 +151,51 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
     }
 
     /// <summary>
-    /// One signed GET to the peer's feed with its datasync session, under the peer's lock and a deadline; a refusal
-    /// of any kind becomes a <see cref="DataSyncPeerException"/>. The caller's own cancellation stays one.
+    /// Holds the peer's fetch lock for a whole fetch (§7.6): see <see cref="IDataSyncPeerClient.AcquireFetchAsync"/>.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not an async method: the hold is recorded in the caller's flow before this returns, which an
+    /// async method would undo on its way out. Until the lock is actually taken the record is inert, and it stays inert
+    /// once the hold is released or could not be taken.
+    /// </remarks>
+    public Task<IAsyncDisposable> AcquireFetchAsync(string peerNodeId, CancellationToken ct)
+    {
+        if (!NodeRequestSignature.IsIdentifier(peerNodeId))
+            return Task.FromException<IAsyncDisposable>(
+                new DataSyncPeerException(DataSyncPeerErrorCode.AccessMissing, "unknownPeer"));
+        var held = _held.Value ?? ImmutableDictionary.Create<string, FetchHold>(StringComparer.Ordinal);
+        if (held.TryGetValue(peerNodeId, out var outer) && outer.IsHeld)
+            return Task.FromResult<IAsyncDisposable>(FetchHold.Nested);
+        var hold = new FetchHold(PeerLock(peerNodeId));
+        _held.Value = held.RemoveRange(held.Where(p => p.Value.IsOver).Select(p => p.Key)).SetItem(peerNodeId, hold);
+        return hold.AcquireAsync(FetchWait, ct);
+    }
+
+    private SemaphoreSlim PeerLock(string peerNodeId) => _peerLocks.GetOrAdd(peerNodeId, _ => new SemaphoreSlim(1, 1));
+
+    /// <summary>Whether the current flow holds a fetch of the peer, whose calls then skip the lock.</summary>
+    private bool HoldsFetch(string peerNodeId) =>
+        _held.Value is { } held && held.TryGetValue(peerNodeId, out var hold) && hold.IsHeld;
+
+    /// <summary>
+    /// One signed GET to the peer's feed with its datasync session, under the peer's lock (unless the caller's fetch
+    /// holds it) and a deadline; a refusal of any kind becomes a <see cref="DataSyncPeerException"/>. The caller's own
+    /// cancellation stays one.
     /// </summary>
     private async Task<T> ExchangeAsync<T>(string peerNodeId, string pathAndQuery, TimeSpan deadline,
         Func<HttpResponseMessage, CancellationToken, Task<T>> read, CancellationToken ct)
     {
         if (!NodeRequestSignature.IsIdentifier(peerNodeId))
             throw new DataSyncPeerException(DataSyncPeerErrorCode.AccessMissing, "unknownPeer");
-        var gate = _peerLocks.GetOrAdd(peerNodeId, _ => new SemaphoreSlim(1, 1));
-        if (!await gate.WaitAsync(FetchWait, ct))
+        var gate = HoldsFetch(peerNodeId) ? null : PeerLock(peerNodeId);
+        if (gate != null && !await gate.WaitAsync(FetchWait, ct))
             throw new DataSyncPeerException(DataSyncPeerErrorCode.Busy, "fetchInProgress");
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeout.CancelAfter(deadline);
+            // The session of the request in flight: the transport ends it when that session's grant is dropped.
+            PeerSessionSnapshot? sending = null;
             try
             {
                 for (var attempt = 0;; attempt++)
@@ -164,6 +203,7 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
                     var session = await sessions.GetAsync(peerNodeId, FederationScopes.DataSyncRead, timeout.Token);
                     try
                     {
+                        sending = session;
                         using var response = await transport.SendAsync(session, HttpMethod.Get, pathAndQuery, null,
                             timeout.Token);
                         if (!response.IsSuccessStatusCode) throw await RefusalAsync(response, timeout.Token);
@@ -173,19 +213,25 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
                     // one, which is refused as it should be when the grant is gone.
                     catch (FederationAccessException e) when (e.ErrorCode == "NodeSessionChanged" && attempt == 0)
                     {
+                        sending = null;
                     }
                 }
             }
             catch (FederationAccessException e)
             {
-                throw new DataSyncPeerException(Classify(e.ErrorCode, e.StatusCode), e.ErrorCode);
+                // On the way to a session, the code is whatever the peer's info or handshake wrote: only one this
+                // build could have sent is passed on.
+                var code = WireCode(e.ErrorCode);
+                throw new DataSyncPeerException(Classify(code, e.StatusCode), code ?? $"http{e.StatusCode}");
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
-                // Not the caller: this device's deadline, or its grant for the peer was dropped mid-read.
-                throw timeout.IsCancellationRequested
-                    ? new DataSyncPeerException(DataSyncPeerErrorCode.Unreachable, "timeout")
-                    : new DataSyncPeerException(DataSyncPeerErrorCode.AccessMissing, "accessRemoved");
+                // Not the caller. This device dropped its grant for the peer mid-read only when that grant's lease
+                // ended; anything else is a deadline: the feed's own, or one of info's or the handshake's.
+                throw sending != null && leases.GetCancellationToken(GrantLeaseRegistry.OutboundKey(sending.GrantId))
+                    .IsCancellationRequested
+                    ? new DataSyncPeerException(DataSyncPeerErrorCode.AccessMissing, "accessRemoved")
+                    : new DataSyncPeerException(DataSyncPeerErrorCode.Unreachable, "timeout");
             }
             catch (Exception e) when (e is HttpRequestException or IOException)
             {
@@ -194,7 +240,7 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
         }
         finally
         {
-            gate.Release();
+            gate?.Release();
         }
     }
 
@@ -211,9 +257,8 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
             var body = await FederationHttpClient.ReadBoundedAsync(response.Content, 64 * 1024, ct);
             using var json = JsonDocument.Parse(body);
             if (json.RootElement.ValueKind == JsonValueKind.Object &&
-                json.RootElement.TryGetProperty("code", out var wire) && wire.ValueKind == JsonValueKind.String &&
-                wire.GetString() is { Length: > 0 and <= 64 } word && word.All(char.IsAsciiLetterOrDigit))
-                code = word;
+                json.RootElement.TryGetProperty("code", out var wire) && wire.ValueKind == JsonValueKind.String)
+                code = WireCode(wire.GetString());
         }
         catch (Exception e) when (e is JsonException or FederationAccessException)
         {
@@ -222,6 +267,13 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
         return new DataSyncPeerException(Classify(code, status), code ?? $"http{status}",
             RetryAfterSeconds(response, timeProvider.GetUtcNow()));
     }
+
+    /// <summary>
+    /// A federation error code as a peer sent it, if it is one: at most 64 ASCII letters and digits. Anyone at the
+    /// peer's address chooses it, so anything else never reaches an error's detail or a log; the status stands in.
+    /// </summary>
+    internal static string? WireCode(string? code) =>
+        code is { Length: > 0 and <= 64 } && code.All(char.IsAsciiLetterOrDigit) ? code : null;
 
     /// <summary>
     /// The mapping of §7.6: a federation error code, the peer's or this device's own on the way, as data sync reads
@@ -376,6 +428,49 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             return (null, null, "Offline");
+        }
+    }
+
+    /// <summary>One fetch's hold on a peer's lock: pending until taken, then held until released.</summary>
+    private sealed class FetchHold(SemaphoreSlim peerLock) : IAsyncDisposable
+    {
+        private const int Pending = 0, Held = 1, Over = 2;
+
+        /// <summary>Taken again by a flow that holds the peer: its outer hold covers it.</summary>
+        public static readonly IAsyncDisposable Nested = new FetchHold(new SemaphoreSlim(0, 1)) { _state = Over };
+
+        private int _state = Pending;
+
+        public bool IsHeld => Volatile.Read(ref _state) == Held;
+
+        /// <summary>Released, or never taken: nothing refers to it any more.</summary>
+        public bool IsOver => Volatile.Read(ref _state) == Over;
+
+        public async Task<IAsyncDisposable> AcquireAsync(TimeSpan wait, CancellationToken ct)
+        {
+            bool taken;
+            try
+            {
+                taken = await peerLock.WaitAsync(wait, ct);
+            }
+            catch
+            {
+                Volatile.Write(ref _state, Over);
+                throw;
+            }
+            if (!taken)
+            {
+                Volatile.Write(ref _state, Over);
+                throw new DataSyncPeerException(DataSyncPeerErrorCode.Busy, "fetchInProgress");
+            }
+            Volatile.Write(ref _state, Held);
+            return this;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _state, Over) == Held) peerLock.Release();
+            return ValueTask.CompletedTask;
         }
     }
 }

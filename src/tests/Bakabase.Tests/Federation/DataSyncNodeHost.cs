@@ -4,6 +4,7 @@ using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Peers;
+using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Federation.Transport;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
@@ -12,7 +13,11 @@ using Bakabase.Service.Controllers;
 using Bakabase.Tests.RemoteAccess.Service;
 using Bakabase.TestKit.Implementations;
 using Bootstrap.Components.Configuration.Abstractions;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Bakabase.Tests.Federation;
 
@@ -24,12 +29,15 @@ namespace Bakabase.Tests.Federation;
 internal sealed class DataSyncNodeHost : IAsyncDisposable
 {
     private readonly ServiceGateHost _host;
+    private readonly Network _network;
 
-    private DataSyncNodeHost(ServiceGateHost host, AddressedRemoteAccess remote, RecordingGrantEvents events)
+    private DataSyncNodeHost(ServiceGateHost host, AddressedRemoteAccess remote, RecordingGrantEvents events,
+        Network network)
     {
         _host = host;
         Remote = remote;
         Events = events;
+        _network = network;
     }
 
     /// <param name="dataSync">Whether this build has data sync: without it, its info says nothing about it.</param>
@@ -41,10 +49,12 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
     {
         var remote = new AddressedRemoteAccess();
         var events = new RecordingGrantEvents();
+        var network = new Network();
         var host = await ServiceGateHost.StartAsync(
             [typeof(FederationPeerController), typeof(FederationDataSyncPairingController), typeof(DataSyncNodeController)],
             services =>
             {
+                services.AddSingleton<IStartupFilter>(network);
                 services.AddSingleton<INodeIdSource>(new FixedNodeId(nodeId));
                 services.AddSingleton<IRemoteAccessService>(remote);
                 services.AddSingleton<IBOptionsManager<RemoteAccessOptions>>(
@@ -59,7 +69,7 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
                 services.AddSingleton<FederationDataSyncPeerClient>();
             });
         remote.Addresses = [$"http://127.0.0.1:{host.Port}"];
-        var node = new DataSyncNodeHost(host, remote, events);
+        var node = new DataSyncNodeHost(host, remote, events, network);
         await node.Store.SetDisplayNameAsync(name);
         return node;
     }
@@ -78,6 +88,27 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
     public INodeTransport Transport => Services.GetRequiredService<INodeTransport>();
     public FederationHttpClient Http => Services.GetRequiredService<FederationHttpClient>();
 
+    /// <summary>
+    /// While set, answers every request that reaches this node's listener in its place, before any gate: what the
+    /// network shows of the node. <see cref="Silent"/> is a node that accepts connections and never answers.
+    /// </summary>
+    public Func<HttpContext, CancellationToken, Task>? Answer
+    {
+        get => _network.Answer;
+        set => _network.Answer = value;
+    }
+
+    /// <summary>
+    /// An <see cref="Answer"/>: holds every request until its caller gives up (or the node stops), so the caller's own
+    /// deadline is what ends it.
+    /// </summary>
+    public static async Task Silent(HttpContext context, CancellationToken stopping)
+    {
+        using var either = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted, stopping);
+        try { await Task.Delay(Timeout.Infinite, either.Token); }
+        catch (OperationCanceledException) { context.Abort(); }
+    }
+
     /// <summary>This node's reader of other nodes' feeds, as the Service registers it.</summary>
     public FederationDataSyncPeerClient PeerClient => Services.GetRequiredService<FederationDataSyncPeerClient>();
 
@@ -89,8 +120,9 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
     {
         var sessions = new PeerSessionFactory(Store, Services.GetRequiredService<INodeIdentityProvider>(), Http,
             TimeProvider.System);
-        var defaults = new FederationDataSyncPeerClient(sessions, Transport, Http, Peers, TimeProvider.System);
-        return new FederationDataSyncPeerClient(sessions, Transport, Http, Peers, TimeProvider.System)
+        var leases = Services.GetRequiredService<GrantLeaseRegistry>();
+        var defaults = new FederationDataSyncPeerClient(sessions, Transport, Http, Peers, leases, TimeProvider.System);
+        return new FederationDataSyncPeerClient(sessions, Transport, Http, Peers, leases, TimeProvider.System)
         {
             FetchWait = fetchWait ?? defaults.FetchWait,
             HeadDeadline = deadline ?? defaults.HeadDeadline,
@@ -112,6 +144,19 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
     }
 
     public ValueTask DisposeAsync() => _host.DisposeAsync();
+
+    /// <summary>The node as the network shows it: the node itself, unless a test answers in its place.</summary>
+    private sealed class Network : IStartupFilter
+    {
+        public Func<HttpContext, CancellationToken, Task>? Answer { get; set; }
+
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            var stopping = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
+            app.Use((context, rest) => Answer is { } answer ? answer(context, stopping) : rest(context));
+            next(app);
+        };
+    }
 
     private sealed class FixedNodeId(string id) : INodeIdSource
     {

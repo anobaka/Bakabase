@@ -70,11 +70,16 @@ public sealed class DataSyncPairingOverHttpTests
         Assert.IsTrue((await nas.Peers.GetStatusAsync()).Peers.All(p => p.InboundGrant == null && p.OutboundGrant == null));
 
         // Approving again reads nothing back and reports no failure: the NAS already reads the desk. Data sync hears
-        // of the grant again, which changes nothing for a link it already has.
+        // of the grant and of the access it announced again, in the same order, which changes nothing for a link it
+        // already has.
         var again = await nas.Grants.ApproveAsync(request.RequestId, readBack: true, default);
         Assert.AreEqual((true, (string?)null), (again.ReadBackGranted, again.ReadBackError));
         CollectionAssert.AreEqual(
-            new[] { "inbound node-desk TwoWay True", "outbound node-desk", "inbound node-desk TwoWay True" },
+            new[]
+            {
+                "inbound node-desk TwoWay True", "outbound node-desk", "inbound node-desk TwoWay True",
+                "outbound node-desk"
+            },
             nas.Events.Raised.ToArray());
         Assert.AreEqual(1, (await nas.Grants.GetGrantsAsync(default)).Count);
     }
@@ -113,6 +118,77 @@ public sealed class DataSyncPairingOverHttpTests
         CollectionAssert.AreEqual(new[] { "outbound node-nas" }, desk.Events.Raised.ToArray());
         Assert.IsTrue(await desk.Grants.HasOutboundGrantAsync("node-nas", default));
         Assert.AreEqual(0, (await desk.Grants.GetGrantsAsync(default)).Count);
+    }
+
+    /// <summary>
+    /// §7.2.4 and N14 when the requester's offered address accepts connections and never answers: the read-back gives
+    /// up as unreachable at the client's own deadline, after the grant, and data sync hears it. The page that approved
+    /// going away meanwhile changes nothing: the offer was taken, so the read-back goes on to its end.
+    /// </summary>
+    [TestMethod]
+    public async Task AReadBackNobodyAnswersFailsAsUnreachableEvenWhenTheApproverLeaves()
+    {
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
+        await desk.Grants.SetSharingEnabledAsync(true, false, default);
+        await nas.Grants.SetSharingEnabledAsync(true, false, default);
+        await desk.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput("node-nas", nas.Address, null, DataSyncRequestIntent.TwoWay), default);
+        var request = (await nas.Grants.GetRequestsAsync(default)).Single();
+        desk.Answer = DataSyncNodeHost.Silent;
+
+        using var page = new CancellationTokenSource();
+        var approving = nas.Grants.ApproveAsync(request.RequestId, readBack: true, page.Token);
+        await nas.WaitForEventAsync("inbound node-desk TwoWay True");
+        page.Cancel();
+        var approval = await approving;
+
+        Assert.AreEqual((DataSyncRequestIntent.TwoWay, false, "Unreachable"),
+            (approval.Intent, approval.ReadBackGranted, approval.ReadBackError));
+        CollectionAssert.AreEqual(new[] { "inbound node-desk TwoWay True", "readBackFailed node-desk Unreachable" },
+            nas.Events.Raised.ToArray());
+        Assert.AreEqual("node-desk", (await nas.Grants.GetGrantsAsync(default)).Single().NodeId);
+        Assert.IsFalse(await nas.Grants.HasOutboundGrantAsync("node-desk", default));
+
+        // The requester collects the access it asked for all the same.
+        desk.Answer = null;
+        await desk.Flow.ClaimPendingAsync(default);
+        CollectionAssert.AreEqual(new[] { "outbound node-nas" }, desk.Events.Raised.ToArray());
+    }
+
+    /// <summary>
+    /// A device that accepts connections and never answers: asking it for its definitions is unreachable (a data sync
+    /// error, not a cancellation nobody asked for), and it holds up no other request of the claim round.
+    /// </summary>
+    [TestMethod]
+    public async Task ADeviceThatNeverAnswersIsUnreachableAndHoldsUpNoOtherClaim()
+    {
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
+        await using var pc = await DataSyncNodeHost.StartAsync("node-pc", "PC");
+        await nas.Grants.SetSharingEnabledAsync(true, false, default);
+        await pc.Grants.SetSharingEnabledAsync(true, false, default);
+        Task<DataSyncAccessRequestOutcome> Ask(DataSyncNodeHost target) => desk.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput(null, target.Address, null, DataSyncRequestIntent.Follow), default);
+        // The PC is asked first, so its request is the first the claim round meets.
+        await Ask(pc);
+        await Ask(nas);
+        await nas.Grants.ApproveAsync((await nas.Grants.GetRequestsAsync(default)).Single().RequestId, false, default);
+        pc.Answer = DataSyncNodeHost.Silent;
+
+        var asking = Peer(Ask(pc));
+        await desk.Flow.ClaimPendingAsync(default);
+        var unanswered = await asking;
+
+        Assert.AreEqual((DataSyncPeerErrorCode.Unreachable, "timeout"), (unanswered.Code, unanswered.Message));
+        CollectionAssert.AreEqual(new[] { "outbound node-nas" }, desk.Events.Raised.ToArray());
+        Assert.IsFalse(await desk.Grants.HasOutboundGrantAsync("node-pc", default));
+
+        // Its request still waits, and is claimed once it answers again.
+        pc.Answer = null;
+        await pc.Grants.ApproveAsync((await pc.Grants.GetRequestsAsync(default)).Single().RequestId, false, default);
+        await desk.Flow.ClaimPendingAsync(default);
+        CollectionAssert.AreEqual(new[] { "outbound node-nas", "outbound node-pc" }, desk.Events.Raised.ToArray());
     }
 
     [TestMethod]

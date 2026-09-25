@@ -11,11 +11,12 @@ namespace Bakabase.Tests.Federation;
 
 /// <summary>
 /// Data sync reaches federation only through <see cref="FederationDataSyncGrants"/>, and that bridge never touches
-/// library access (§7.1.5, G29): every member of the federation services it calls is a definitions member or one
-/// that belongs to neither kind of access. Read from the compiled code, lambdas and async bodies included, so a
-/// later edit cannot quietly add a path from <c>/data-sync</c> to library grants. The federation module itself
-/// never references data sync. The feed keeps to the hub relay rule the same way (§7.7): the reader uses only a
-/// datasync session for the peer it reads, and the feed endpoint never reaches another node.
+/// library access (§7.1.5, G29): every member of the federation services it reaches, directly or through the peer
+/// service, pairing client and flow members it calls, is a definitions member or one that belongs to neither kind of
+/// access. Read from the compiled code, lambdas and async bodies included, so a later edit cannot quietly add a path
+/// from <c>/data-sync</c> to library grants. The federation module itself never references data sync. The feed keeps
+/// to the hub relay rule the same way (§7.7): the reader uses only a datasync session for the peer it reads, and the
+/// feed endpoint never reaches another node.
 /// </summary>
 [TestClass]
 public sealed class DataSyncGrantBoundaryTests
@@ -27,25 +28,46 @@ public sealed class DataSyncGrantBoundaryTests
         typeof(NodeGrantService), typeof(FederationStateStore), typeof(PeerSessionFactory)
     ];
 
-    /// <summary>Members of those services that belong to neither kind of access.</summary>
+    /// <summary>The services whose members the scan follows into: those the bridge reaches access through.</summary>
+    private static readonly Type[] Followed =
+        [typeof(FederationPeerService), typeof(NodePairingClient), typeof(FederationPairingFlow)];
+
+    /// <summary>
+    /// Members of those services that belong to neither kind of access: the state store's own reads and writes, the
+    /// grant events, and private helpers each kind calls with its own collections or values (checks, lease switching,
+    /// taking an offer, revoking a subject's grants in the collection it is given).
+    /// </summary>
     private static readonly HashSet<string> Neutral =
     [
         nameof(FederationPeerService.GetPeerNameAsync), nameof(FederationPairingFlow.GetShareBackAddresses),
         nameof(FederationPairingFlow.RaiseOutboundGranted), nameof(FederationPairingFlow.RaiseInboundGranted),
+        "RaiseReadBackFailed", "Raise", "FederationAddress", "SharedPrefixBits", "ReadAsync", "MutateAsync",
+        "ValidateInfo", "ValidateExchange", "BadRequest", "RequestNotFound", "SetLeases", "LiveGrant", "LiveGrantIds",
+        "TakeOffer", "Reject", "RevokeSubject", "AddReciprocal"
+    ];
+
+    /// <summary>What nothing the bridge reaches may set: the library switches and a peer's browsing switch.</summary>
+    private static readonly string[] LibrarySetters =
+    [
+        "FederationState.set_SharingEnabled", "FederationState.set_BrowsingEnabled", "FederationState.set_Invitation",
+        "FederationState.set_OutboundGrants", "FederationState.set_InboundGrants", "StoredPeer.set_Enabled"
     ];
 
     [TestMethod]
     public void TheDataSyncBridgeCallsNoLibraryScopeMember()
     {
-        var calls = CalledMethods(typeof(FederationDataSyncGrants)).Distinct().ToArray();
-        var reached = calls.Where(m => m.DeclaringType != null && AccessServices.Contains(m.DeclaringType)).ToArray();
+        var reachable = Reachable(typeof(FederationDataSyncGrants));
+        var reached = reachable.Where(m => m.DeclaringType != null && AccessServices.Contains(m.DeclaringType))
+            .ToArray();
 
-        // The scan sees what the bridge is known to call, so an empty result would not pass for a clean one.
+        // The scan sees what the bridge is known to call, and what those members call in turn, so an empty result
+        // would not pass for a clean one.
         foreach (var expected in new[]
                  {
                      nameof(FederationPeerService.ApproveDataSyncAsync), nameof(FederationPeerService.SetDataSyncSharingAsync),
                      nameof(FederationPeerService.IssueDataSyncInvitationAsync), nameof(FederationPeerService.RevokeDataSyncAsync),
-                     nameof(NodePairingClient.ConnectDataSyncAsync), nameof(FederationPairingFlow.ReadBackDataSyncAsync)
+                     nameof(NodePairingClient.ConnectDataSyncAsync), nameof(FederationPairingFlow.ReadBackDataSyncAsync),
+                     "SaveDataSyncExchangeAsync", nameof(FederationPeerService.CreateDataSyncReciprocalInvitationAsync)
                  })
             Assert.IsTrue(reached.Any(m => m.Name == expected), expected);
 
@@ -56,6 +78,33 @@ public sealed class DataSyncGrantBoundaryTests
                                            m.GetParameters().Length == 2))
             .Select(m => $"{m.DeclaringType!.Name}.{m.Name}").Distinct().ToArray();
         Assert.AreEqual(0, library.Length, string.Join(", ", library));
+
+        var setters = reachable.Select(m => $"{m.DeclaringType?.Name}.{m.Name}").Intersect(LibrarySetters).ToArray();
+        Assert.AreEqual(0, setters.Length, string.Join(", ", setters));
+    }
+
+    /// <summary>
+    /// The scan follows the bridge into the members it calls, so a library call added inside the read-back or the
+    /// definitions connect is seen; the library's own read-back and connect sit next to them and are not reached.
+    /// </summary>
+    [TestMethod]
+    public void TheScanFollowsTheBridgeIntoWhatItCalls()
+    {
+        var reachable = Reachable(typeof(FederationDataSyncGrants)).Select(m => $"{m.DeclaringType?.Name}.{m.Name}")
+            .ToHashSet();
+        foreach (var through in new[]
+                 {
+                     "NodePairingClient.SaveDataSyncExchangeAsync", "NodePairingClient.RequireDataSyncCapability",
+                     "FederationPeerService.CreateDataSyncReciprocalInvitationAsync",
+                     "FederationPairingFlow.RaiseReadBackFailed"
+                 })
+            Assert.IsTrue(reachable.Contains(through), through);
+        foreach (var library in new[]
+                 {
+                     "NodePairingClient.ConnectAsync", "NodePairingClient.SaveExchangeAsync",
+                     "FederationPeerService.TakeReciprocalOfferAsync", "FederationPairingFlow.ReadBack"
+                 })
+            Assert.IsFalse(reachable.Contains(library), library);
     }
 
     [TestMethod]
@@ -153,6 +202,30 @@ public sealed class DataSyncGrantBoundaryTests
         Assert.AreEqual(0, reaching.Length, string.Join(", ", reaching));
         CollectionAssert.AreEqual(new[] { typeof(FederationPeerService) },
             controller.GetConstructors().Single().GetParameters().Select(p => p.ParameterType).ToArray());
+    }
+
+    /// <summary>
+    /// Every method <paramref name="root"/>'s code calls, and, followed into the members of the peer service, pairing
+    /// client and flow it reaches (their private helpers, lambdas and async bodies included), every method those call.
+    /// </summary>
+    private static MethodBase[] Reachable(Type root)
+    {
+        var visited = new HashSet<MethodBase>();
+        var queue = new Queue<MethodBase>(CalledMethods(root));
+        while (queue.TryDequeue(out var method))
+        {
+            if (!visited.Add(method) || method.DeclaringType is not { } owner) continue;
+            if (!Followed.Any(service => owner == service || IsNestedIn(owner, service))) continue;
+            foreach (var call in CalledMethods(method)) queue.Enqueue(call);
+        }
+        return visited.ToArray();
+    }
+
+    private static bool IsNestedIn(Type type, Type outer)
+    {
+        for (var declaring = type.DeclaringType; declaring != null; declaring = declaring.DeclaringType)
+            if (declaring == outer) return true;
+        return false;
     }
 
     /// <summary>Every string constant <paramref name="type"/>'s code loads, nested compiler-made types included.</summary>
