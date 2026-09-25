@@ -30,7 +30,8 @@ public sealed record DataSyncFetchedSnapshot(DataSyncFeedManifest? Manifest, IRe
 /// staged once (§8.3); every other pull is staged for <c>DataSyncApply</c>, and no pull is fetched again while an
 /// equal one still waits for the apply. With nothing new, pending records that wait for a re-merge anyway (§8.4) are
 /// handed to <c>DataSyncApply</c> without a pull. The apply is enqueued only once the actor is verified (§5.6): the
-/// scheduler enqueues it on the tick that verifies.
+/// scheduler enqueues it on the tick that verifies. A head counts for that verification only once the evidence it
+/// carried was reported, and "Pause all" (§8.7) is read again before each link and before a pull is staged.
 /// </summary>
 public sealed class DataSyncFetcher
 {
@@ -64,7 +65,8 @@ public sealed class DataSyncFetcher
 
     /// <summary>
     /// One run of the <c>DataSync</c> task: every due link in turn, then the actor verification (§5.6) and, once a
-    /// day, retention (§4.6). A link's failure is recorded on the link and never stops the others.
+    /// day, retention (§4.6). A link's failure is recorded on the link and never stops the others. "Pause all" (§8.7
+    /// "Other pauses") takes effect between links: the local state row is read again before each one.
     /// </summary>
     public async Task RunCycleAsync(BTaskArgs args)
     {
@@ -72,18 +74,14 @@ public sealed class DataSyncFetcher
         var now = _clock.UtcNow;
         var fallback = _state.TakeFallbackDue(now);
 
-        DataSyncLocalStateDbModel? local;
-        await using (var scope = _scopes.CreateAsyncScope())
-        {
-            local = await scope.ServiceProvider.GetRequiredService<IDataSyncStore>().GetLocalStateAsync(ct);
-        }
-
+        var local = await ReadLocalStateAsync(ct);
         if (local?.AllPaused != true)
         {
             var due = (await _links.GetLinksAsync(ct))
                 .Where(l =>
                 {
-                    // A peer discovery saw (§8.2) is due now; the mark is taken whether or not it was due anyway.
+                    // A peer discovery or a session saw (§8.2) is due now; the mark is taken whether or not it was
+                    // due anyway.
                     var woken = _state.TakeWoken(l.Id);
                     return l.IsFetchable() && (woken || l.NextAttemptAtUtc is not { } next || next <= now ||
                                                (fallback && l.GetCursors().Count > 0));
@@ -93,6 +91,8 @@ public sealed class DataSyncFetcher
             for (var i = 0; i < due.Count; i++)
             {
                 await args.YieldAsync();
+                if (i > 0) local = await ReadLocalStateAsync(ct);
+                if (local?.AllPaused == true) break;
                 var index = i;
                 await args.UpdateTask(t =>
                 {
@@ -128,12 +128,18 @@ public sealed class DataSyncFetcher
         if (_state.CanVerify(await _links.GetLinksAsync(ct), _clock.UtcNow)) guard.MarkVerified();
     }
 
-    /// <summary>The fetch half for one link. Failures are recorded on the link; only cancellation escapes.</summary>
+    /// <summary>
+    /// The fetch half for one link. Failures are recorded on the link; only cancellation escapes. The observer hears
+    /// where the link's cycle starts and where its fetch half ends, so the notifier sends at most one notification per
+    /// link per cycle (§9.4).
+    /// </summary>
     /// <param name="args">The <c>DataSync</c> task's arguments, when it runs there: a pause then takes effect between
     /// the pages of a snapshot, not only between links. Null for "Fetch again", which a request runs.</param>
     public async Task FetchLinkAsync(DataSyncLinkDbModel link, bool fallback, DataSyncLocalStateDbModel? local,
         CancellationToken ct, BTaskArgs? args = null)
     {
+        var applyFollows = false;
+        await ObserveAsync(o => o.LinkCycleStartedAsync(link.Id, ct));
         try
         {
             if (link.State == DataSyncLinkState.AwaitingAccess)
@@ -144,7 +150,7 @@ public sealed class DataSyncFetcher
 
             using (await _fetchLock.AcquireAsync(link.PeerNodeId, ct))
             {
-                await FetchLockedAsync(link, fallback, local, ct, args);
+                applyFollows = await FetchLockedAsync(link, fallback, local, ct, args);
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -160,9 +166,16 @@ public sealed class DataSyncFetcher
             _logger.LogError(e, "Data sync could not fetch from {Peer}", link.PeerNodeId);
             await _links.RecordFailureAsync(link.Id, DataSyncLinkService.FetchFailed, e.Message, null, ct);
         }
+        finally
+        {
+            // A stopped cycle sends nothing more; what it held back goes out with the link's next cycle.
+            if (!ct.IsCancellationRequested)
+                await ObserveAsync(o => o.LinkFetchEndedAsync(link.Id, applyFollows, ct));
+        }
     }
 
-    private async Task FetchLockedAsync(DataSyncLinkDbModel link, bool fallback, DataSyncLocalStateDbModel? local,
+    /// <returns>Whether a pull was staged for <c>DataSyncApply</c>, whose apply ends the link's cycle.</returns>
+    private async Task<bool> FetchLockedAsync(DataSyncLinkDbModel link, bool fallback, DataSyncLocalStateDbModel? local,
         CancellationToken ct, BTaskArgs? args)
     {
         await using var scope = _scopes.CreateAsyncScope();
@@ -188,20 +201,20 @@ public sealed class DataSyncFetcher
         {
             await SetPeerErrorStateAsync(link.Id, DataSyncLinkState.PeerTooOld, DataSyncPeerErrorCode.PeerTooOld,
                 DataSyncSchedule.VersionRetry, ct, head);
-            return;
+            return false;
         }
 
         if (DataSyncContract.Version < head.MinimumPeerContract)
         {
             await SetPeerErrorStateAsync(link.Id, DataSyncLinkState.ThisTooOld, DataSyncPeerErrorCode.ThisTooOld,
                 DataSyncSchedule.VersionRetry, ct, head);
-            return;
+            return false;
         }
 
         if (BreakerOf(link, head.NodeId, head.LibraryEpoch) is { } reset)
         {
             await _links.PauseAsync(link.Id, DataSyncPauseReason.PeerReset, reset, ct);
-            return;
+            return false;
         }
 
         var headKinds = head.Kinds.GroupBy(k => k.Kind, StringComparer.Ordinal)
@@ -211,7 +224,7 @@ public sealed class DataSyncFetcher
         {
             // B1b: the same node and epoch, but a kind went back below the cursor (§5.6 "Peer restored").
             await _links.PauseAsync(link.Id, DataSyncPauseReason.PeerReset, DataSyncLinkService.RestoredDetail, ct);
-            return;
+            return false;
         }
 
         if (head.SeenCounter is { } seen && ActorOf(local) is { } selfActor &&
@@ -220,13 +233,16 @@ public sealed class DataSyncFetcher
             await guard.ReportPeerEvidenceAsync(link.PeerNodeId, selfActor, seen, ct);
         }
 
+        // Only now does the head count for the actor's verification (§5.6): its evidence was handled.
+        _state.MarkHeadAnswered(link.Id);
+
         var identityChanged = link.PeerLibraryEpoch is null || link.PeerActorId != head.ActorId ||
                               link.PeerContractVersion != head.ContractVersion;
         var peerFactsChanged = link.PeerAttentionJson != Serialize(head.Attention) ||
                                link.CounterpartJson != Serialize(head.Counterpart);
         var updated = await RecordAnswerAsync(link.Id, head.LibraryEpoch, head.ActorId, head.AppVersion,
             head.ContractVersion, head.Attention, head.Counterpart, ct);
-        if (updated is null || !updated.IsFetchable()) return;
+        if (updated is null || !updated.IsFetchable()) return false;
         if (peerFactsChanged) await ObserveChangedAsync(updated, ct);
 
         // From here on, the row as that write read it: an apply may have committed cursors, a first contact or kinds
@@ -245,7 +261,7 @@ public sealed class DataSyncFetcher
             if (head.Counterpart?.FirstContactCompleted != true)
             {
                 await RescheduleAsync(link.Id, DataSyncSchedule.PollInterval, ct);
-                return;
+                return false;
             }
 
             var active = await _links.MutateAsync(link.Id, row =>
@@ -254,7 +270,7 @@ public sealed class DataSyncFetcher
                 row.State = DataSyncLinkState.Active;
                 return DataSyncLinkWrite.Transition;
             }, ct);
-            if (active is not { State: DataSyncLinkState.Active }) return;
+            if (active is not { State: DataSyncLinkState.Active }) return false;
             link = active;
         }
 
@@ -308,7 +324,7 @@ public sealed class DataSyncFetcher
             }
 
             await RescheduleAsync(link.Id, DataSyncSchedule.PollInterval, ct);
-            return;
+            return false;
         }
 
         // 3. Manifest and pages.
@@ -327,14 +343,14 @@ public sealed class DataSyncFetcher
         if (snapshot.Problem is { } problem)
         {
             await HandlePeerErrorAsync(link.Id, problem, snapshot.ProblemDetail, null, ct);
-            return;
+            return false;
         }
 
         var manifest = snapshot.Manifest!;
         var fetchedAt = _clock.UtcNow;
         var afterManifest = await RecordAnswerAsync(link.Id, manifest.LibraryEpoch, manifest.ActorId,
             manifest.AppVersion, manifest.ContractVersion, manifest.Attention, manifest.Counterpart, ct);
-        if (afterManifest is null || !afterManifest.IsFetchable()) return;
+        if (afterManifest is null || !afterManifest.IsFetchable()) return false;
         link = afterManifest;
 
         // 4. A first contact on the initiator: stage the review once, and say so once (§8.3).
@@ -351,9 +367,12 @@ public sealed class DataSyncFetcher
             if (staged is not null) await ObserveAsync(o => o.ReviewReadyAsync(staged, entry, ct));
         }
 
-        // 5. Every other pull waits for DataSyncApply.
+        // 5. Every other pull waits for DataSyncApply, unless "Pause all" was pressed while this link was fetched
+        // (§8.7 "Other pauses"): nothing is staged then, and the unpause makes every link due again.
+        var applyFollows = false;
         if (mergeWanted)
         {
+            if ((await store.GetLocalStateAsync(ct))?.AllPaused == true) return false;
             var mergePull = new DataSyncStagedPull(link.PeerNodeId, link.PeerName, manifest,
                 snapshot.Kinds.Where(k => pullKinds.Contains(k.Kind)).ToList(), fetchedAt);
             if (mergePull.Kinds.Count > 0)
@@ -361,16 +380,18 @@ public sealed class DataSyncFetcher
                 if (!_stagedPulls.PutSized(link.Id, mergePull, snapshot.Bytes))
                 {
                     await HandlePeerErrorAsync(link.Id, DataSyncPeerErrorCode.TooLarge, "stagedPull", null, ct);
-                    return;
+                    return false;
                 }
 
                 // New work ends a person's hold on the apply (§8.10.1), whether or not it can start yet.
+                applyFollows = true;
                 _state.ReleaseApply();
                 await EnqueueApplyIfVerifiedAsync(sp);
             }
         }
 
         await RescheduleAsync(link.Id, DataSyncSchedule.PollInterval, ct);
+        return applyFollows;
     }
 
     /// <summary>
@@ -451,47 +472,55 @@ public sealed class DataSyncFetcher
         await _launcher.EnqueueApplyAsync();
     }
 
+    private async Task<DataSyncLocalStateDbModel?> ReadLocalStateAsync(CancellationToken ct)
+    {
+        await using var scope = _scopes.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<IDataSyncStore>().GetLocalStateAsync(ct);
+    }
+
     private static DataSyncFetchedSnapshot Discarded(string? problem, long bytes) =>
         new(null, [], bytes, problem == "tooLarge" ? DataSyncPeerErrorCode.TooLarge : DataSyncPeerErrorCode.InvalidResponse,
             problem ?? DataSyncKindPageReader.Corrupted);
 
     /// <summary>
     /// A link waiting for access (§8.1): the grant arrived (normally raised by the claim loop within 5 s), or the
-    /// request this device filed ended — the link then stops and stays on the map with Dismiss.
+    /// request this device filed ended — the link then stops and stays on the map with Dismiss. A link that asked a
+    /// reset peer again (§8.7 B1) goes by the answer to that request first: this device may still hold the credentials
+    /// the reset revoked, which would otherwise read as a grant and reset the link while the request waits, or after
+    /// it was rejected.
     /// </summary>
     private async Task CheckAccessAsync(DataSyncLinkDbModel link, CancellationToken ct)
     {
         await using var scope = _scopes.CreateAsyncScope();
         var grants = scope.ServiceProvider.GetRequiredService<IDataSyncGrantService>();
-        if (await grants.HasOutboundGrantAsync(link.PeerNodeId, ct))
+        var request = link.PendingRequestId is { } requestId
+            ? (await grants.GetRequestsAsync(ct)).FirstOrDefault(r =>
+                r.Direction == DataSyncRequestDirection.Outgoing &&
+                string.Equals(r.RequestId, requestId, StringComparison.Ordinal))
+            : null;
+        var status = request?.Status?.ToLowerInvariant();
+        var waiting = status is "pending" or "awaitingapproval";
+        var ended = status switch
+        {
+            "rejected" => DataSyncLinkService.AccessRejected,
+            "expired" => DataSyncLinkService.AccessExpired,
+            "cancelled" or "canceled" => DataSyncLinkService.AccessCancelled,
+            _ when waiting && request!.ExpiresAt <= _clock.UtcNow => DataSyncLinkService.AccessExpired,
+            _ => null,
+        };
+        waiting &= ended is null;
+
+        var resetDue = DataSyncLinkService.WaitsForResetGrant(link);
+        if (!(resetDue && (waiting || ended is not null)) && await grants.HasOutboundGrantAsync(link.PeerNodeId, ct))
         {
             await _links.OnOutboundGrantedAsync(link.PeerNodeId, ct);
             return;
         }
 
-        if (link.PendingRequestId is { } requestId)
+        if (ended is not null)
         {
-            var request = (await grants.GetRequestsAsync(ct)).FirstOrDefault(r =>
-                r.Direction == DataSyncRequestDirection.Outgoing &&
-                string.Equals(r.RequestId, requestId, StringComparison.Ordinal));
-            var ended = request?.Status?.ToLowerInvariant() switch
-            {
-                "rejected" => DataSyncLinkService.AccessRejected,
-                "expired" => DataSyncLinkService.AccessExpired,
-                "cancelled" or "canceled" => DataSyncLinkService.AccessCancelled,
-                _ => null,
-            };
-            if (request is not null && ended is null && request.ExpiresAt <= _clock.UtcNow &&
-                request.Status?.ToLowerInvariant() is "pending" or "awaitingapproval")
-            {
-                ended = DataSyncLinkService.AccessExpired;
-            }
-
-            if (ended is not null)
-            {
-                await _links.OnRequestEndedAsync(link.Id, ended, ct);
-                return;
-            }
+            await _links.OnRequestEndedAsync(link.Id, ended, ct);
+            return;
         }
 
         // The approver's failed read-back has no request to wait for: "Try again" sends one (§7.2.4).

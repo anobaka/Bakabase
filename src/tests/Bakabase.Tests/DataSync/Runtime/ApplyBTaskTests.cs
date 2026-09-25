@@ -62,6 +62,42 @@ public class ApplyBTaskTests
     }
 
     [TestMethod]
+    public async Task Pause_all_pressed_while_the_apply_waits_behind_Enhancement_applies_nothing_until_unpaused()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(daemon: true);
+        var link = h.AddLink("nas", l => l.SetCursors(new Dictionary<string, long>
+            {["extensionGroup"] = 3, ["customProperty"] = 2}));
+
+        var releaseEnhancement = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await h.Btm.Enqueue(BTaskBuilder.Create("Enhancement").ConflictsWith("Enhancement")
+            .Run(async args => await releaseEnhancement.Task.WaitAsync(args.CancellationToken)));
+        await h.Btm.Start("Enhancement");
+        await h.WaitForStatusAsync("Enhancement", BTaskStatus.Running);
+
+        await h.Scheduler.TickAsync(default);
+        h.Clock.Advance(DataSyncSchedule.StartupDelay);
+        await h.Scheduler.TickAsync(default);
+        await h.WaitForStatusAsync(DataSyncTaskIds.Fetch, BTaskStatus.Completed);
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Apply), "the apply waits behind Enhancement");
+
+        // "Pause all" (§8.7): the same state as pausing each link, although the apply was already enqueued.
+        h.Store.LocalState!.AllPaused = true;
+        releaseEnhancement.SetResult();
+        await h.WaitForStatusAsync(DataSyncTaskIds.Apply, BTaskStatus.Completed);
+        Assert.AreEqual(0, h.Runner.AutoSyncs.Count, "nothing was applied");
+        CollectionAssert.AreEqual(new[] {link.Id}, h.StagedPulls.LinksWaiting().ToArray(), "the pull still waits");
+
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(BTaskStatus.Completed, h.Status(DataSyncTaskIds.Apply), "not enqueued again while paused");
+
+        // Unpaused: the pull that waited is applied.
+        h.Store.LocalState!.AllPaused = false;
+        await h.Scheduler.TickAsync(default);
+        await DataSyncRuntimeHarness.WaitUntilAsync(() => h.Runner.AutoSyncs.Count == 1, "the waiting pull is applied");
+        Assert.AreEqual(link.Id, h.Runner.AutoSyncs.Single().Context.LinkId);
+    }
+
+    [TestMethod]
     public async Task Two_consecutive_pulls_in_one_process_are_both_applied()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync(daemon: true);

@@ -281,8 +281,15 @@ internal sealed class FakeDataSyncStore : IDataSyncStore
                                             (query.Kind is null || i.Kind == query.Kind)).ToList();
             var open = filtered.Count(i => i.ClosedAtUtc is null);
             if (query.OpenOnly) filtered = filtered.Where(i => i.ClosedAtUtc is null).ToList();
+            // A store's view: what it knows of the rules is not the facade's to trust, so none are given here, and a
+            // default is pre-chosen that the facade must drop (§9.1).
             var page = filtered.OrderByDescending(i => i.Id).Skip(query.Skip).Take(query.Take)
-                .Select(i => DataSyncInboxService.ToView(i, i.LinkId is { } l ? Get(l) : null)).ToList();
+                .Select(i => DataSyncInboxService.ToView(i, i.LinkId is { } l ? Get(l) : null) with
+                {
+                    AllowedActions = [],
+                    DefaultAction = DataSyncInboxAction.Skip,
+                })
+                .ToList();
             return Task.FromResult(new DataSyncInboxPage(page, filtered.Count, open));
         }
     }
@@ -777,14 +784,21 @@ internal sealed class FakeActorGuard : IDataSyncActorGuard
 {
     public bool IsVerified { get; set; } = true;
     public ConcurrentQueue<(string Peer, string Actor, long Counter)> Evidence { get; } = new();
+    public int Checks;
 
-    public Task<DataSyncPauseReason?> CheckAsync(DataSyncGateLease lease, CancellationToken ct) =>
-        Task.FromResult<DataSyncPauseReason?>(null);
+    /// <summary>Awaited by every evidence report, before it is recorded: lets a test hold one as a rotation would.</summary>
+    public Func<string, CancellationToken, Task>? BeforeEvidence { get; set; }
 
-    public Task ReportPeerEvidenceAsync(string peerNodeId, string actorId, long seenCounter, CancellationToken ct)
+    public Task<DataSyncPauseReason?> CheckAsync(DataSyncGateLease lease, CancellationToken ct)
     {
+        Interlocked.Increment(ref Checks);
+        return Task.FromResult<DataSyncPauseReason?>(null);
+    }
+
+    public async Task ReportPeerEvidenceAsync(string peerNodeId, string actorId, long seenCounter, CancellationToken ct)
+    {
+        if (BeforeEvidence is { } before) await before(peerNodeId, ct);
         Evidence.Enqueue((peerNodeId, actorId, seenCounter));
-        return Task.CompletedTask;
     }
 
     public Task ReportReaderAheadAsync(string readerNodeId, CancellationToken ct) => Task.CompletedTask;
@@ -871,6 +885,14 @@ internal sealed class FakeRowTransactions : IDataSyncRowTransactions
             if (Interlocked.Exchange(ref _released, 1) == 0) writeLock.Release();
         }
     }
+}
+
+/// <summary>Federation sessions as the scheduler reads them: the peers whose session is verified now.</summary>
+internal sealed class FakePeerSessions : IDataSyncPeerSessions
+{
+    public ConcurrentDictionary<string, byte> Online { get; } = new(StringComparer.Ordinal);
+
+    public bool IsOnline(string peerNodeId) => Online.ContainsKey(peerNodeId);
 }
 
 internal sealed class FakeHostLifetime : IHostApplicationLifetime

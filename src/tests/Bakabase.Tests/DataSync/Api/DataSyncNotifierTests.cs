@@ -268,6 +268,77 @@ public class DataSyncNotifierTests
         Assert.AreEqual(2, h.Notifications.Records.Count);
     }
 
+    private static Task FetchOnceAsync(DataSyncApiHarness h) =>
+        h.Provider.GetRequiredService<DataSyncFetcher>().RunCycleAsync(new Bakabase.Abstractions.Components.Tasks.BTaskArgs(
+            new Bootstrap.Components.Tasks.PauseTokenSource().Token, CancellationToken.None,
+            new Bakabase.Abstractions.Models.Domain.BTask("test-fetch", () => "test"), _ => Task.CompletedTask,
+            h.Provider));
+
+    [TestMethod]
+    public async Task A_first_link_to_a_source_already_waiting_on_decisions_says_only_that_its_review_is_ready()
+    {
+        // §9.4: at most one notification per link per cycle. The head's attention and the staged review come in one
+        // fetch; the review asks for something, the attention only informs.
+        await using var h = await DataSyncApiHarness.CreateAsync();
+        var link = h.AddLink("node-nas", l =>
+        {
+            l.PeerName = "NAS";
+            l.State = DataSyncLinkState.AwaitingReview;
+            l.FirstContactCompletedAtUtc = null;
+            l.FirstContactKindsJson = null;
+            l.NextAttemptAtUtc = h.Clock.UtcNow;
+        });
+        var nas = h.Peers.Peers["node-nas"];
+        nas.Attention = new DataSyncSourceAttention(true, 2, 0, false, 0);
+
+        await FetchOnceAsync(h);
+
+        var record = h.Notifications.Records.Single();
+        Assert.AreEqual(DataSyncNotifier.ReviewReadyCase, FakeNotificationService.CaseOf(record));
+        Assert.IsNull(h.Store.Get(link.Id)!.AttentionNotifiedAtUtc, "not announced, so not claimed for the day");
+
+        // A later cycle with nothing else to say announces what the source waits on.
+        h.Clock.Advance(DataSyncSchedule.PollInterval);
+        nas.Attention = new DataSyncSourceAttention(true, 3, 0, false, 0);
+        await FetchOnceAsync(h);
+        Assert.AreEqual(2, h.Notifications.Records.Count);
+        Assert.AreEqual("DataSync_Notify_Attention_Title(NAS|3)", h.Notifications.Records.Last().Title);
+    }
+
+    [TestMethod]
+    public async Task A_cycle_whose_fetch_and_apply_both_only_inform_makes_one_notification()
+    {
+        await using var h = await DataSyncApiHarness.CreateAsync();
+        var link = h.AddLink("node-nas", l =>
+        {
+            l.PeerName = "NAS";
+            l.Mode = DataSyncLinkMode.Follow;
+            l.SetPeerAttention(new DataSyncSourceAttention(true, 2, 0, false, 0));
+        });
+        var overrides = new[]
+        {
+            new DataSyncMergeNote(DataSyncKindIds.CustomProperty, "12", "Genre", DataSyncNotifier.FollowOverrideNote,
+                null),
+        };
+
+        await Observer(h).LinkCycleStartedAsync(link.Id, default);
+        await Observer(h).LinkChangedAsync(link, default);
+        await Observer(h).LinkFetchEndedAsync(link.Id, true, default);
+        Assert.AreEqual(0, h.Notifications.Records.Count, "held until the pull the fetch staged is applied");
+
+        await Observer(h).AutoSyncAppliedAsync(link, Outcome(notes: overrides), false, default);
+        var record = h.Notifications.Records.Single();
+        Assert.AreEqual(DataSyncNotifier.FollowOverrideCase, FakeNotificationService.CaseOf(record));
+
+        // A cycle that only fetches, with the attention alone: it goes out when the fetch ends.
+        h.Clock.Advance(TimeSpan.FromDays(1));
+        await Observer(h).LinkCycleStartedAsync(link.Id, default);
+        await Observer(h).LinkChangedAsync(link, default);
+        Assert.AreEqual(1, h.Notifications.Records.Count);
+        await Observer(h).LinkFetchEndedAsync(link.Id, false, default);
+        Assert.AreEqual(DataSyncNotifier.AttentionCase, FakeNotificationService.CaseOf(h.Notifications.Records.Last()));
+    }
+
     [TestMethod]
     public async Task A_device_that_started_reading_on_its_own_is_announced_once()
     {

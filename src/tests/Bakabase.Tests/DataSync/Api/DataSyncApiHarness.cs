@@ -489,11 +489,15 @@ internal sealed class FakeRefresher : IDataSyncRefresher
     public ConcurrentQueue<(IReadOnlyCollection<string> Kinds, bool LeaseHeld)> Calls { get; } = new();
     public int ActorChangesLeft;
 
+    /// <summary>Run by every Refresh that does not throw: what it writes, such as the local state row (§4.5).</summary>
+    public Action? OnRefresh { get; set; }
+
     public Task<DataSyncRefreshResult> RefreshAsync(DataSyncGateLease lease, IReadOnlyCollection<string> kinds,
         bool collectPublished, CancellationToken ct)
     {
         Calls.Enqueue((kinds, lease.IsHeld));
         if (Interlocked.Decrement(ref ActorChangesLeft) >= 0) throw new DataSyncActorChangedException();
+        OnRefresh?.Invoke();
         return Task.FromResult(new DataSyncRefreshResult(1, 0, new DataSyncActorId("a1a1a1a1a1a1a1a1"), false, null));
     }
 }

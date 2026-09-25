@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +20,8 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 /// reading link rows and the local state row (and, once at the start, making every link due):
 /// <list type="bullet">
 /// <item>it hands grant events to the link service, so a granted request reaches its review within seconds;</item>
-/// <item>it starts the <c>DataSync</c> fetch task when a link is due and the task is not active;</item>
+/// <item>it starts the <c>DataSync</c> fetch task when a link is due and the task is not active — also when a
+/// federation session to a link's peer came online since the last tick;</item>
 /// <item>it enqueues <c>DataSyncApply</c> when staged pulls wait or a link's once flags act without a pull, and the
 /// actor is verified.</item>
 /// </list>
@@ -52,6 +54,7 @@ public sealed class DataSyncScheduler : BackgroundService
 
     private DateTime? _observedFetchStopStartedAt;
     private DateTime? _observedApplyStopStartedAt;
+    private HashSet<string> _peersOnline = new(StringComparer.Ordinal);
 
     public DataSyncScheduler(IServiceScopeFactory scopes, BTaskManager btm, DataSyncTaskLauncher launcher,
         DataSyncLinkService links, DataSyncGrantEventsHandler grantEvents, IDataSyncStagedPullStore stagedPulls,
@@ -127,6 +130,7 @@ public sealed class DataSyncScheduler : BackgroundService
                 local = await scope.ServiceProvider.GetRequiredService<IDataSyncStore>().GetLocalStateAsync(ct);
                 guard = scope.ServiceProvider.GetService<IDataSyncActorGuard>();
                 if (guard is { IsVerified: false } && _state.CanVerify(links, now)) guard.MarkVerified();
+                WakeLinksWhosePeerCameOnline(scope.ServiceProvider.GetService<IDataSyncPeerSessions>(), links);
             }
 
             // A restore detection announces itself from here, whoever paused the links (§9.4).
@@ -176,6 +180,26 @@ public sealed class DataSyncScheduler : BackgroundService
     /// <summary>A link the fetch cycle looks at, whose next attempt is due.</summary>
     public static bool IsDue(DataSyncLinkDbModel link, DateTime nowUtc) =>
         link.IsFetchable() && (link.NextAttemptAtUtc is not { } next || next <= nowUtc);
+
+    /// <summary>
+    /// §8.2 "a federation session to it came online → now": a link whose peer's session was verified since the last
+    /// tick is due now — a link backing off after <c>Unreachable</c> or an access error need not wait out its timer
+    /// once the peer is back. Kept in memory like a discovered peer (<see cref="DataSyncRuntimeState.Wake"/>), so a
+    /// tick still writes nothing. Without the Service's sessions (tests, a host without federation) nothing is woken.
+    /// </summary>
+    private void WakeLinksWhosePeerCameOnline(IDataSyncPeerSessions? sessions,
+        IReadOnlyList<DataSyncLinkDbModel> links)
+    {
+        if (sessions is null) return;
+        var online = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var link in links.Where(l => l.IsFetchable() && sessions.IsOnline(l.PeerNodeId)))
+        {
+            online.Add(link.PeerNodeId);
+            if (!_peersOnline.Contains(link.PeerNodeId)) _state.Wake(link.Id);
+        }
+
+        _peersOnline = online;
+    }
 
     /// <summary>
     /// A link whose once flags act without a pull (N13), or whose pending records wait for a re-merge without one

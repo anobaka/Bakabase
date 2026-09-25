@@ -447,16 +447,10 @@ public class DataSyncLinkStateMachineTests
     }
 
     [TestMethod]
-    public async Task A_reset_peer_is_asked_for_access_again_and_gets_a_new_first_contact()
+    public async Task A_reset_peer_is_asked_for_access_again_and_only_the_grant_resets_the_link()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
-        var link = h.AddLink("a", l =>
-        {
-            l.Mode = DataSyncLinkMode.Follow;
-            l.PeerAddress = "192.168.1.20:5000";
-            l.SetKinds(["customProperty"]);
-        });
-        await h.Links.PauseAsync(link.Id, DataSyncPauseReason.PeerReset, "epochChanged", default);
+        var link = await ResetPeerLinkAsync(h);
         Assert.AreEqual(DataSyncProblemCode.DecisionsInvalid,
             (await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.Resume, true, default)).Problem!.Code,
             "a reset peer revoked every grant: resuming cannot work");
@@ -468,19 +462,84 @@ public class DataSyncLinkStateMachineTests
         var sent = h.Grants.Sent.Single();
         Assert.AreEqual(DataSyncRequestIntent.Follow, sent.Intent, "the link's mode");
         Assert.AreEqual("192.168.1.20:5000", sent.Address);
-        CollectionAssert.AreEqual(new[] {link.Id}, h.Store.Deleted, "bases cleared: the old link is reset");
 
-        var fresh = asked.Link!;
-        Assert.AreNotEqual(link.Id, fresh.Id);
-        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, fresh.State);
-        Assert.AreEqual(DataSyncLinkInitiator.ThisDevice, fresh.Initiator);
-        Assert.AreEqual("req-a", fresh.PendingRequestId);
-        Assert.IsNull(fresh.PeerLibraryEpoch, "the new epoch is learnt from the next head");
-        CollectionAssert.AreEqual(new[] {"customProperty"}, fresh.GetKinds().ToArray());
+        // Asked, not granted: the link waits with everything it had (§8.7 B1, N11).
+        Assert.AreEqual(0, h.Store.Deleted.Count, "nothing is reset before the grant");
+        var waiting = h.Link(link.Id);
+        Assert.AreEqual(link.Id, asked.Link!.Id);
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, waiting.State);
+        Assert.AreEqual(DataSyncLinkInitiator.ThisDevice, waiting.Initiator);
+        Assert.AreEqual("req-a", waiting.PendingRequestId);
+        Assert.IsNotNull(waiting.FirstContactCompletedAtUtc);
+        Assert.AreEqual("epoch-1", waiting.PeerLibraryEpoch, "the old epoch holds until the reset");
 
+        // This device still holds the credentials the reset revoked: while the request waits they grant nothing.
+        h.Grants.Requests.Add(OutgoingRequest(h, "req-a", "awaitingApproval"));
+        await h.FetchOnceAsync();
+        Assert.AreEqual(0, h.Store.Deleted.Count);
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, h.Link(link.Id).State);
+
+        // Granted (the claim loop's event): now the link is reset and runs a new first contact.
         await h.Links.OnOutboundGrantedAsync("a", default);
-        Assert.AreEqual(DataSyncLinkState.AwaitingReview, h.Link(fresh.Id).State);
+        CollectionAssert.AreEqual(new[] {link.Id}, h.Store.Deleted, "bases cleared: the old link is reset");
+        var fresh = h.Store.All().Single(l => l.PeerNodeId == "a");
+        Assert.AreNotEqual(link.Id, fresh.Id);
+        Assert.AreEqual(DataSyncLinkState.AwaitingReview, fresh.State);
+        Assert.AreEqual(DataSyncLinkInitiator.ThisDevice, fresh.Initiator);
+        Assert.AreEqual(DataSyncLinkMode.Follow, fresh.Mode);
+        Assert.IsNull(fresh.PausedReason);
+        Assert.IsNull(fresh.PeerLibraryEpoch, "the new epoch is learnt from the next head");
+        Assert.IsNull(fresh.FirstContactCompletedAtUtc);
+        Assert.AreEqual(0, fresh.GetCursors().Count);
+        CollectionAssert.AreEqual(new[] {"customProperty"}, fresh.GetKinds().ToArray());
+        Assert.AreEqual(1, h.Observer.Count($"removed:{link.Id}"));
     }
+
+    [TestMethod]
+    public async Task A_reset_peer_that_does_not_grant_leaves_the_link_paused_with_everything_it_had()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var link = await ResetPeerLinkAsync(h);
+        Assert.IsNull((await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default)).Problem);
+
+        // Rejected: back to the pause, the error says why, and the stale credentials never read as a grant.
+        h.Grants.Requests.Add(OutgoingRequest(h, "req-a", "rejected"));
+        await h.FetchOnceAsync();
+        var back = h.Link(link.Id);
+        Assert.AreEqual(DataSyncLinkState.Paused, back.State);
+        Assert.AreEqual(DataSyncPauseReason.PeerReset, back.PausedReason);
+        Assert.AreEqual("epochChanged", back.PausedDetail);
+        Assert.AreEqual(DataSyncLinkService.AccessRejected, back.LastErrorCode);
+        Assert.IsNull(back.PendingRequestId);
+        Assert.AreEqual(0, h.Store.Deleted.Count);
+
+        // Asked again, then withdrawn by the person: back to the pause as well, never deleted as a link made for
+        // the request.
+        h.Grants.Requests.Clear();
+        Assert.IsNull((await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default)).Problem);
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, h.Link(link.Id).State);
+        await h.Links.OnRequestCancelledAsync(link.Id, default);
+        Assert.AreEqual(DataSyncLinkState.Paused, h.Link(link.Id).State);
+        Assert.AreEqual(DataSyncLinkService.AccessCancelled, h.Link(link.Id).LastErrorCode);
+        Assert.AreEqual(0, h.Store.Deleted.Count);
+    }
+
+    /// <summary>A Follow link whose peer looks reset (B1), with a first contact behind it.</summary>
+    private static async Task<DataSyncLinkDbModel> ResetPeerLinkAsync(DataSyncRuntimeHarness h)
+    {
+        var link = h.AddLink("a", l =>
+        {
+            l.Mode = DataSyncLinkMode.Follow;
+            l.PeerAddress = "192.168.1.20:5000";
+            l.SetKinds(["customProperty"]);
+        });
+        await h.Links.PauseAsync(link.Id, DataSyncPauseReason.PeerReset, "epochChanged", default);
+        return link;
+    }
+
+    private static DataSyncAccessRequestView OutgoingRequest(DataSyncRuntimeHarness h, string requestId, string status) =>
+        new(requestId, DataSyncRequestDirection.Outgoing, "a", "Peer a", DataSyncRequestIntent.Follow, status,
+            h.Clock.UtcNow.AddMinutes(10), null, false, null, false);
 
     [TestMethod]
     public async Task A_local_restore_is_resumed_only_by_a_restore_choice()

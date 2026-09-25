@@ -23,8 +23,10 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 /// <see cref="IDataSyncApplyRunner.RunAutoSyncAsync"/>, and loops until nothing waits. It never waits for the actor's
 /// verification (§5.6) while holding the write tasks' conflict keys, which would hold the enhancer, resource sync and
 /// path-mark sync with it: while the actor is unverified it ends at once, and the scheduler enqueues it again on the
-/// tick that verifies. A link that fails is recorded and backs off; it is not tried again in the same run, so a
-/// failing link can never keep the task spinning.
+/// tick that verifies. "Pause all" (§8.7 "Other pauses") holds it the same way, read again before each link: what is
+/// staged stays staged, and the scheduler enqueues the apply again once sync is unpaused, so a pull that waited behind
+/// the enhancer is never applied after the person paused everything. A link that fails is recorded and backs off; it
+/// is not tried again in the same run, so a failing link can never keep the task spinning.
 /// </summary>
 public sealed class DataSyncApplyTask
 {
@@ -69,6 +71,12 @@ public sealed class DataSyncApplyTask
             {
                 await args.YieldAsync();
                 if (!_registry.ShouldRun(attempt.TaskId, attempt.AttemptId)) return;
+                if (await IsAllPausedAsync(ct))
+                {
+                    _logger.LogInformation("Data sync applies nothing while it is paused");
+                    return;
+                }
+
                 var pull = _stagedPulls.Take(linkId);
                 if (pull is null) done.Add(linkId);
                 await ApplyLinkAsync(linkId, pull, args);
@@ -206,5 +214,13 @@ public sealed class DataSyncApplyTask
         await using var scope = _scopes.CreateAsyncScope();
         var guard = scope.ServiceProvider.GetService<IDataSyncActorGuard>();
         return guard is null || guard.IsVerified;
+    }
+
+    /// <summary>"Pause all", read fresh: it may have been pressed while this task waited behind the enhancer.</summary>
+    private async Task<bool> IsAllPausedAsync(CancellationToken ct)
+    {
+        await using var scope = _scopes.CreateAsyncScope();
+        return (await scope.ServiceProvider.GetRequiredService<IDataSyncStore>().GetLocalStateAsync(ct))?.AllPaused ==
+               true;
     }
 }

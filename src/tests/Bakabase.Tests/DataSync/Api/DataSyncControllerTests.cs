@@ -215,6 +215,66 @@ public class DataSyncControllerTests
         Assert.AreEqual(0, h.Gate.Entered, "nothing here entered the gate");
     }
 
+    // ---- the local state row -----------------------------------------------------------------------------------
+
+    /// <summary>What the first Refresh writes (§4.5): the local state row with its defaults.</summary>
+    private static void MakeLocalStateOnRefresh(DataSyncApiHarness h) => h.Refresher.OnRefresh = () =>
+        h.Store.LocalState ??= new DataSyncLocalStateDbModel
+        {
+            Id = 1, NodeId = "node-self", LibraryEpoch = "epoch-self", ActorGeneration = 1,
+            ActorSalt = "0011223344556677", ActorId = "a1a1a1a1a1a1a1a1", DbInstanceId = new string('d', 32),
+        };
+
+    [TestMethod]
+    public async Task Sharing_and_share_new_definitions_off_in_one_dialog_keep_the_choice_on_first_use()
+    {
+        // A device nobody has read and that has no link: nothing has run Refresh, so there is no local state row.
+        await using var h = await DataSyncApiHarness.CreateAsync();
+        h.Store.LocalState = null;
+        MakeLocalStateOnRefresh(h);
+
+        Assert.IsNull((await h.CallAsync(Callers.Loopback,
+            c => c.SetSharing(new DataSyncSharingInput(true, true, true), default))).Data);
+
+        Assert.AreEqual("sharing:True:True", h.Grants.Changes.Single());
+        Assert.IsTrue(h.Store.LocalState!.NewDefinitionsStayLocal, "the choice was kept");
+        Assert.AreEqual(1, h.Guard.Checks, "the actor check comes first (§5.6)");
+        var refresh = h.Refresher.Calls.Single();
+        CollectionAssert.AreEquivalent(AllKinds, refresh.Kinds.ToArray());
+        Assert.IsTrue(refresh.LeaseHeld, "under the gate");
+        Assert.IsTrue((await h.CallAsync(Callers.Loopback, c => c.GetOverview(default))).Data!.NewDefinitionsStayLocal);
+    }
+
+    [TestMethod]
+    public async Task Pause_all_on_first_use_makes_the_row_and_while_the_actor_is_unverified_says_it_cannot_yet()
+    {
+        await using var h = await DataSyncApiHarness.CreateAsync();
+        h.Store.LocalState = null;
+        MakeLocalStateOnRefresh(h);
+        var pause = new DataSyncPausedInputModel { Paused = true };
+
+        // Refresh writes nothing before the verification (§5.6): no retry would help, so the answer is not Busy.
+        h.Guard.IsVerified = false;
+        var problem = (await h.CallAsync(Callers.Loopback, c => c.SetAllPaused(pause, default))).Data;
+        Assert.AreEqual(DataSyncProblemCode.DecisionsInvalid, problem?.Code);
+        Assert.AreEqual("notInitialized", problem?.Detail);
+        Assert.IsNull(h.Store.LocalState);
+        Assert.AreEqual(0, h.Refresher.Calls.Count);
+
+        h.Guard.IsVerified = true;
+        Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.SetAllPaused(pause, default))).Data);
+        Assert.IsTrue(h.Store.LocalState!.AllPaused);
+        Assert.IsTrue((await h.CallAsync(Callers.Loopback, c => c.GetOverview(default))).Data!.AllPaused);
+
+        // A Refresh that finds the actor rotated under it is checked and run once more.
+        h.Store.LocalState = null;
+        h.Refresher.ActorChangesLeft = 1;
+        var checks = h.Guard.Checks;
+        Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.SetAllPaused(pause, default))).Data);
+        Assert.AreEqual(checks + 2, h.Guard.Checks);
+        Assert.IsTrue(h.Store.LocalState!.AllPaused);
+    }
+
     // ---- GETs never write --------------------------------------------------------------------------------------
 
     [TestMethod]
@@ -618,6 +678,34 @@ public class DataSyncControllerTests
         view = (await h.CallAsync(Callers.Loopback, c => c.GetInboxItem(onFollow.Id, default))).Data!;
         Assert.AreEqual(0, view.AllowedActions.Count);
         Assert.AreEqual(DateTimeKind.Utc, view.ClosedAt!.Value.Kind);
+    }
+
+    [TestMethod]
+    public async Task The_inbox_page_offers_what_the_item_offers_whatever_the_store_says()
+    {
+        // The fake store's page carries no actions and a pre-chosen default, as a store that does not compute them
+        // would: the page's actions are the facade's, exactly as an item's and the resolve check's (§9.1).
+        await using var h = await WorldAsync();
+        var page = (await h.CallAsync(Callers.Loopback, c => c.GetInbox(false, null, null, 0, 100, default))).Data!;
+        Assert.AreEqual(2, page.Items.Count);
+        foreach (var item in page.Items)
+        {
+            var single = (await h.CallAsync(Callers.Loopback, c => c.GetInboxItem(item.Id, default))).Data!;
+            Assert.IsTrue(item.AllowedActions.Count > 0, $"item {item.Id}");
+            CollectionAssert.AreEqual(single.AllowedActions.ToArray(), item.AllowedActions.ToArray(), $"item {item.Id}");
+            Assert.IsNull(item.DefaultAction, "nothing is pre-chosen");
+            Assert.AreEqual(DateTimeKind.Utc, item.CreatedAt.Kind);
+        }
+
+        var onFollow = page.Items.Single(i => i.Type == DataSyncInboxItemType.DeletedThere);
+        CollectionAssert.AreEqual(new[] { DataSyncInboxAction.DeleteHere, DataSyncInboxAction.KeepHereOnly },
+            onFollow.AllowedActions.ToArray());
+        CollectionAssert.Contains(page.Items.Single(i => i.Type == DataSyncInboxItemType.FieldConflict)
+            .AllowedActions.ToArray(), DataSyncInboxAction.UseCustom);
+
+        h.Store.CloseWhere(i => i.Id == onFollow.Id, DataSyncInboxClosure.ResolvedHere);
+        page = (await h.CallAsync(Callers.Loopback, c => c.GetInbox(false, null, null, 0, 100, default))).Data!;
+        Assert.AreEqual(0, page.Items.Single(i => i.Id == onFollow.Id).AllowedActions.Count);
     }
 
     [TestMethod]

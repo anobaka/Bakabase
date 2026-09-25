@@ -67,6 +67,18 @@ public interface IDataSyncRuntimeObserver
     /// reader revoked, the global pause.
     /// </summary>
     Task StateChangedAsync(CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>
+    /// The fetch half of a link's cycle begins (§8.10.2). Until the cycle ends, the notifier sends at most one
+    /// notification for the link (§9.4): the fetch half's events and the apply of the pull it staged are one cycle.
+    /// </summary>
+    Task LinkCycleStartedAsync(int linkId, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>
+    /// The fetch half of a link's cycle ended. <paramref name="applyFollows"/>: it staged a pull, so the cycle ends with
+    /// that pull's apply (<see cref="AutoSyncAppliedAsync"/>) instead.
+    /// </summary>
+    Task LinkFetchEndedAsync(int linkId, bool applyFollows, CancellationToken ct) => Task.CompletedTask;
 }
 
 public sealed class NoOpDataSyncRuntimeObserver : IDataSyncRuntimeObserver
@@ -150,4 +162,14 @@ public interface IDataSyncRowTransaction : IAsyncDisposable
 public interface IDataSyncHostAddresses
 {
     IReadOnlyList<string> GetReachableAddresses();
+}
+
+/// <summary>
+/// Whether a federation session to a peer is verified now (§8.2 "a federation session to it came online → now"). The
+/// scheduler reads it on every tick, so it must answer from memory. The Service registers it over the federation
+/// sessions; without it that trigger is not wired and links wait for their own next attempt.
+/// </summary>
+public interface IDataSyncPeerSessions
+{
+    bool IsOnline(string peerNodeId);
 }

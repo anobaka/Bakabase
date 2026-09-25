@@ -5,12 +5,14 @@ using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Wire;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Tests.DataSync.Runtime;
 
 /// <summary>
-/// The scheduler (§8.2): what it starts and enqueues, the startup and "Sync now" triggers, grant events within a
-/// tick, the shutdown rule and the person-stop rule (§13.5 <c>ApplyBTaskTests</c>' scheduler rows).
+/// The scheduler (§8.2): what it starts and enqueues, the startup, "Sync now" and session-online triggers, the actor's
+/// verification (§5.6), grant events within a tick, the shutdown rule and the person-stop rule (§13.5
+/// <c>ApplyBTaskTests</c>' scheduler rows).
 /// </summary>
 [TestClass]
 public class DataSyncSchedulerTests
@@ -275,26 +277,115 @@ public class DataSyncSchedulerTests
     }
 
     [TestMethod]
-    public async Task Sync_now_and_a_discovered_peer_make_links_due_now()
+    public async Task A_head_verifies_the_actor_only_once_its_evidence_was_reported()
+    {
+        // §5.6: detection comes before any counter is reissued. b's head says a peer saw counter 1000 of this device's
+        // actor; while the guard is still recording that (it rotates the actor), the scheduler's tick must not take
+        // the answered head as verification and enqueue the apply of a's staged pull.
+        await using var h = await DataSyncRuntimeHarness.CreateAsync();
+        h.Guard.IsVerified = false;
+        var a = h.AddLink("a", l => l.SetCursors(new Dictionary<string, long>
+            { ["extensionGroup"] = 3, ["customProperty"] = 2 }));
+        h.AddLink("b");
+        h.Peers.Peers["b"].SeenCounter = 1000;
+        var inEvidence = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        h.Guard.BeforeEvidence = async (peer, ct) =>
+        {
+            if (peer != "b") return;
+            inEvidence.TrySetResult();
+            await release.Task.WaitAsync(ct);
+        };
+
+        await StartAsync(h);
+        await h.Scheduler.TickAsync(default);
+        await inEvidence.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        CollectionAssert.AreEqual(new[] { a.Id }, h.StagedPulls.LinksWaiting().ToArray(), "a's pull waits");
+
+        await h.Scheduler.TickAsync(default);
+        Assert.IsFalse(h.Guard.IsVerified, "b's evidence is still being recorded");
+        Assert.IsNull(h.Status(DataSyncTaskIds.Apply), "nothing may issue counters under the old actor yet");
+
+        release.SetResult();
+        await h.WaitForStatusAsync(DataSyncTaskIds.Fetch, BTaskStatus.Completed);
+        Assert.AreEqual(("b", "a1a1a1a1a1a1a1a1", 1000L), h.Guard.Evidence.Single());
+        Assert.IsTrue(h.Guard.IsVerified, "every Active link answered and its evidence was handled");
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Apply));
+    }
+
+    [TestMethod]
+    public async Task Sync_now_makes_a_link_due_now_even_before_the_task_is_registered()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
         var later = h.Clock.UtcNow.AddHours(1);
         var a = h.AddLink("a", l => l.NextAttemptAtUtc = later);
         var b = h.AddLink("b", l => l.NextAttemptAtUtc = later);
+
+        Assert.IsNull(await h.Scheduler.SyncNowAsync(b.Id, default), "the fetch task is not registered yet");
+        Assert.AreEqual(h.Clock.UtcNow, h.Link(b.Id).NextAttemptAtUtc, "still due at the next cycle");
+        Assert.AreEqual(later, h.Link(a.Id).NextAttemptAtUtc);
+    }
+
+    [TestMethod]
+    public async Task A_link_whose_peer_session_came_online_is_fetched_at_once_and_the_tick_writes_nothing()
+    {
+        var sessions = new FakePeerSessions();
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(
+            configure: s => s.AddSingleton<IDataSyncPeerSessions>(sessions));
+        var a = h.AddLink("a");
+        var b = h.AddLink("b");
         var stopped = h.AddLink("c", l =>
         {
             l.State = DataSyncLinkState.Stopped;
             l.Mode = DataSyncLinkMode.Off;
-            l.NextAttemptAtUtc = null;
         });
+        await StartAsync(h);
 
-        await h.Links.MarkPeersDueAsync(["a", "c"], default);
-        Assert.AreEqual(h.Clock.UtcNow, h.Link(a.Id).NextAttemptAtUtc);
-        Assert.AreEqual(later, h.Link(b.Id).NextAttemptAtUtc);
-        Assert.IsNull(h.Link(stopped.Id).NextAttemptAtUtc, "a stopped link is never pulled");
+        // Both back off after failures: not due for ten minutes.
+        foreach (var link in new[] { a, b })
+        {
+            h.Store.Edit(link.Id, l =>
+            {
+                l.ConsecutiveFailures = 4;
+                l.NextAttemptAtUtc = h.Clock.UtcNow.AddMinutes(10);
+            });
+        }
 
-        Assert.IsNull(await h.Scheduler.SyncNowAsync(b.Id, default), "the fetch task is not registered yet");
-        Assert.AreEqual(h.Clock.UtcNow, h.Link(b.Id).NextAttemptAtUtc, "still due at the next cycle");
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Fetch));
+
+        // The person opened a's library: its federation session is verified again (§8.2).
+        sessions.Online["a"] = 0;
+        sessions.Online["c"] = 0;
+        var inHead = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        h.Peers.Peers["a"].BeforeHead = async ct =>
+        {
+            inHead.TrySetResult();
+            await release.Task.WaitAsync(ct);
+        };
+        var writes = h.Store.Writes;
+        await h.Scheduler.TickAsync(default);
+        await inHead.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.AreEqual(writes, h.Store.Writes, "the link was made due in memory, like a discovered peer");
+        release.SetResult();
+        await h.WaitForStatusAsync(DataSyncTaskIds.Fetch, BTaskStatus.Completed);
+        Assert.AreEqual(1, h.Peers.Peers["a"].HeadQueries.Count);
+        Assert.AreEqual(0, h.Peers.Peers["b"].HeadQueries.Count, "b's peer is still away");
+        Assert.AreEqual(0, h.Peers.Peers["c"].HeadQueries.Count, "a stopped link is never pulled");
+
+        // Still online on the next tick: that is not news.
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(BTaskStatus.Completed, h.Status(DataSyncTaskIds.Fetch));
+
+        // Away and back again: news again.
+        sessions.Online.TryRemove("a", out _);
+        await h.Scheduler.TickAsync(default);
+        sessions.Online["a"] = 0;
+        await h.Scheduler.TickAsync(default);
+        await DataSyncRuntimeHarness.WaitUntilAsync(() => h.Peers.Peers["a"].HeadQueries.Count == 2,
+            "a is fetched again");
     }
 
     [TestMethod]

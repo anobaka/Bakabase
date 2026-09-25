@@ -53,6 +53,13 @@ internal enum DataSyncLinkWrite
 /// lock. A read-modify-write here therefore never starts from a row another transaction is about to change, and never
 /// puts an older row back over what it committed.
 /// </summary>
+/// <remarks>
+/// <b>What this asks of the apply runner [C].</b> Most writers here take no DataSyncGate — the fetch half, grant
+/// events, withdrawing a request, and approving one (whose link row §10.1 gates; here it is not, so an approval never
+/// waits behind an apply) — so the gate an apply holds does not keep them from a link row. What orders them with the
+/// runner is the database alone, which holds only if the runner reads a link row inside the same write transaction
+/// that writes it back (<c>BEGIN IMMEDIATE</c>), and never writes back a row it read before that transaction began.
+/// </remarks>
 public sealed class DataSyncLinkService
 {
     public const string AccessRejected = "AccessRejected";
@@ -682,9 +689,13 @@ public sealed class DataSyncLinkService
 
     /// <summary>
     /// B1's "Ask X for access again" (§8.7): the reset revoked every grant, so this sends a new request with the
-    /// link's mode and sets <c>Initiator = ThisDevice</c>. The old epoch's bases are useless against the new one, so
-    /// the link is reset (bases deleted, the link's items closed <c>LinkRemoved</c>) and recreated with the same peer,
-    /// mode and kinds, waiting for access; once granted it runs a new first contact (§8.3).
+    /// link's mode and sets <c>Initiator = ThisDevice</c>. The link waits for access with its bases, pending records
+    /// and items as they are, and with its pause reason kept as the mark that a reset is due
+    /// (<see cref="WaitsForResetGrant"/>): only <b>once it is granted</b> is it reset (<see cref="OnOutboundGrantedAsync"/>:
+    /// bases deleted, the link's items closed <c>LinkRemoved</c>, a new row with the same peer, mode and kinds), and a
+    /// new first contact runs against the new epoch (§8.3, N11). A request that ends without access takes it back to
+    /// <c>Paused(PeerReset)</c>, still with everything it had. The known epoch stays until the reset, so a link that
+    /// loses the mark on the way (a person's pause, a stop) trips B1 again instead of merging against the new epoch.
     /// </summary>
     private async Task<DataSyncLinkChange> AskAccessAgainAsync(DataSyncLinkDbModel link, bool callerMayCreateAccess,
         CancellationToken ct, DataSyncGateHold? gate)
@@ -705,29 +716,64 @@ public sealed class DataSyncLinkService
         var granted = outcome.Outcome == "granted";
         var requestId = outcome.Outcome == "awaitingApproval" ? outcome.RequestId : null;
 
-        var removed = await RemoveAsync(link.Id, ct);
-        if (removed is null) return DataSyncLinkChange.Refused(DataSyncProblemCode.LinkNotFound);
         var now = _clock.UtcNow;
+        var asked = await MutateAsync(link.Id, row =>
+        {
+            // Resumed, stopped or reset while the request was out: the row is no longer the one asked for.
+            if (row is not { State: DataSyncLinkState.Paused, PausedReason: DataSyncPauseReason.PeerReset } ||
+                row.PausedDetail == RestoredDetail)
+            {
+                return DataSyncLinkWrite.None;
+            }
+
+            row.State = DataSyncLinkState.AwaitingAccess;
+            row.Initiator = DataSyncLinkInitiator.ThisDevice;
+            row.PendingRequestId = requestId;
+            row.ReadBackDeclined = outcome.ReadBack == "declined";
+            if (outcome.PeerName is { Length: > 0 } name) row.PeerName = name;
+            ClearError(row);
+            row.NextAttemptAtUtc = now;
+            return DataSyncLinkWrite.Transition;
+        }, ct);
+        if (asked is null) return DataSyncLinkChange.Refused(DataSyncProblemCode.LinkNotFound);
+        if (!granted || !WaitsForResetGrant(asked)) return new DataSyncLinkChange(asked, requestId, null);
+
+        await OnOutboundGrantedAsync(link.PeerNodeId, ct);
+        return new DataSyncLinkChange(await GetByPeerAsync(link.PeerNodeId, ct), null, null);
+    }
+
+    /// <summary>
+    /// A link asked for access again after its peer was reset (§8.7 B1) and not granted yet: it waits for access with
+    /// its pause reason kept. The grant resets it; a request that ends takes it back to its pause.
+    /// </summary>
+    public static bool WaitsForResetGrant(DataSyncLinkDbModel link) =>
+        link is { State: DataSyncLinkState.AwaitingAccess, PausedReason: DataSyncPauseReason.PeerReset };
+
+    /// <summary>
+    /// The reset B1 waited for (§8.7), in one write: the old row goes with its bases and pending records (its items
+    /// close <c>LinkRemoved</c>, its holds become local-only), and a new row for the same peer, mode and kinds runs a
+    /// new first contact against the new epoch as this device's link.
+    /// </summary>
+    private static async Task<DataSyncLinkDbModel> ResetForNewEpochAsync(IDataSyncStore store,
+        DataSyncLinkDbModel row, DateTime nowUtc, CancellationToken ct)
+    {
+        await store.DeleteLinkAsync(row.Id, ct);
         var fresh = new DataSyncLinkDbModel
         {
-            PeerNodeId = link.PeerNodeId,
-            PeerName = outcome.PeerName is { Length: > 0 } name ? name : link.PeerName,
-            PeerAddress = link.PeerAddress,
-            Mode = link.Mode == DataSyncLinkMode.Off ? DataSyncLinkMode.Off : mode,
-            LastMode = link.LastMode,
-            State = granted ? DataSyncLinkState.AwaitingReview : DataSyncLinkState.AwaitingAccess,
+            PeerNodeId = row.PeerNodeId,
+            PeerName = row.PeerName,
+            PeerAddress = row.PeerAddress,
+            Mode = row.Mode,
+            LastMode = row.LastMode,
             Initiator = DataSyncLinkInitiator.ThisDevice,
-            KindsJson = link.KindsJson,
-            PendingRequestId = requestId,
-            ReadBackDeclined = outcome.ReadBack == "declined",
-            NextAttemptAtUtc = now,
-            CreatedAtUtc = now,
-            UpdatedAtUtc = now,
+            KindsJson = row.KindsJson,
+            ReadBackDeclined = row.ReadBackDeclined,
+            NextAttemptAtUtc = nowUtc,
+            CreatedAtUtc = nowUtc,
+            UpdatedAtUtc = nowUtc,
         };
-        var (row, added) = await AddUniqueAsync(fresh, null, ct);
-        return added
-            ? new DataSyncLinkChange(row, requestId, null)
-            : new DataSyncLinkChange(row, requestId, new DataSyncProblem(DataSyncProblemCode.LinkExists, null));
+        fresh.State = fresh.GetResumeState();
+        return await store.AddLinkAsync(fresh, ct);
     }
 
     // ---- reset -------------------------------------------------------------------------------------------------
@@ -778,25 +824,6 @@ public sealed class DataSyncLinkService
         }
     }
 
-    /// <summary>
-    /// Peers were discovered (<c>GetPeersAsync(discover: true)</c> saw them) or a federation session to them came
-    /// online (§8.2): their links are due now.
-    /// </summary>
-    public async Task MarkPeersDueAsync(IEnumerable<string> peerNodeIds, CancellationToken ct)
-    {
-        var peers = peerNodeIds.ToHashSet(StringComparer.Ordinal);
-        var now = _clock.UtcNow;
-        foreach (var link in (await GetLinksAsync(ct)).Where(l => l.IsFetchable() && peers.Contains(l.PeerNodeId)))
-        {
-            await MutateAsync(link.Id, row =>
-            {
-                if (row.NextAttemptAtUtc is { } next && next <= now) return DataSyncLinkWrite.None;
-                row.NextAttemptAtUtc = now;
-                return DataSyncLinkWrite.Bookkeeping;
-            }, ct);
-        }
-    }
-
     /// <summary>At the start, every link the fetch cycle looks at is due at <paramref name="dueAtUtc"/> (§8.2).</summary>
     public async Task ScheduleAllAsync(DateTime dueAtUtc, CancellationToken ct)
     {
@@ -810,13 +837,17 @@ public sealed class DataSyncLinkService
         }
     }
 
-    /// <summary>The global switch (§8.7 "Other pauses"): kept in the local state row.</summary>
-    public async Task<DataSyncProblem?> SetAllPausedAsync(bool paused, CancellationToken ct)
+    /// <summary>
+    /// The global switch (§8.7 "Other pauses"): kept in the local state row, which it makes first when it is missing
+    /// (<see cref="EnsureLocalStateAsync"/>). The caller holds the gate.
+    /// </summary>
+    public async Task<DataSyncProblem?> SetAllPausedAsync(bool paused, DataSyncGateHold gate, CancellationToken ct)
     {
+        if (await EnsureLocalStateAsync(gate, ct) is { } missing) return missing;
         var (problem, changed) = await WriteAsync(async store =>
         {
             var local = await store.GetLocalStateAsync(ct);
-            if (local is null) return (new DataSyncProblem(DataSyncProblemCode.Busy, "notInitialized"), false);
+            if (local is null) return (NotInitialized, false);
             if (local.AllPaused == paused) return ((DataSyncProblem?) null, false);
             local.AllPaused = paused;
             local.UpdatedAtUtc = _clock.UtcNow;
@@ -830,41 +861,103 @@ public sealed class DataSyncLinkService
 
     /// <summary>
     /// "Share new definitions automatically" off (§3.6): Refresh then inserts a new local definition as LocalOnly.
-    /// Kept in the local state row; the caller holds the gate, so no Refresh or apply rewrites the row meanwhile.
+    /// Kept in the local state row, made first when it is missing (<see cref="EnsureLocalStateAsync"/>); the caller
+    /// holds the gate, so no Refresh or apply rewrites the row meanwhile. On a device's first use that Refresh records
+    /// the definitions it already has, so the choice applies to the definitions made after it.
     /// </summary>
-    public Task<DataSyncProblem?> SetNewDefinitionsStayLocalAsync(bool stayLocal, CancellationToken ct) =>
-        WriteAsync(async store =>
+    public async Task<DataSyncProblem?> SetNewDefinitionsStayLocalAsync(bool stayLocal, DataSyncGateHold gate,
+        CancellationToken ct)
+    {
+        if (await EnsureLocalStateAsync(gate, ct) is { } missing) return missing;
+        return await WriteAsync(async store =>
         {
             var local = await store.GetLocalStateAsync(ct);
-            if (local is null) return new DataSyncProblem(DataSyncProblemCode.Busy, "notInitialized");
+            if (local is null) return NotInitialized;
             if (local.NewDefinitionsStayLocal == stayLocal) return null;
             local.NewDefinitionsStayLocal = stayLocal;
             local.UpdatedAtUtc = _clock.UtcNow;
             await store.SaveLocalStateAsync(local, ct);
             return (DataSyncProblem?) null;
         }, ct);
+    }
+
+    /// <summary>The local state row could not be made yet (the actor is unverified): no retry clears it before then.</summary>
+    private static DataSyncProblem NotInitialized => new(DataSyncProblemCode.DecisionsInvalid, "notInitialized");
+
+    /// <summary>
+    /// The local state row appears on the first Refresh (§4.5), and Refresh runs only for a reader, inside an apply
+    /// or after an entity setting (§6.6): a device that has no link and nobody reads may not have it when the person
+    /// first sets a switch kept there. It is made here as an entity setting makes it: under the gate the caller holds,
+    /// the actor check (§5.6), then a Refresh of every kind, each outside any transaction. While the actor is
+    /// unverified Refresh writes nothing; a row still missing afterwards answers <see cref="NotInitialized"/>.
+    /// </summary>
+    private async Task<DataSyncProblem?> EnsureLocalStateAsync(DataSyncGateHold gate, CancellationToken ct)
+    {
+        await using var scope = _scopes.CreateAsyncScope();
+        var sp = scope.ServiceProvider;
+        var store = Store(scope);
+        if (await store.GetLocalStateAsync(ct) is not null) return null;
+
+        var guard = sp.GetService<IDataSyncActorGuard>();
+        var refresher = sp.GetService<IDataSyncRefresher>();
+        for (var attempt = 0;; attempt++)
+        {
+            try
+            {
+                if (guard is not null) await guard.CheckAsync(gate.Lease, ct);
+                if (refresher is not null && guard is not { IsVerified: false })
+                    await refresher.RefreshAsync(gate.Lease, DataSyncKindIds.All, false, ct);
+                break;
+            }
+            catch (DataSyncActorChangedException) when (attempt == 0 && guard is not null)
+            {
+                // Refresh found the actor rotated under it: check, then once more (§5.6).
+            }
+        }
+
+        return await store.GetLocalStateAsync(ct) is null ? NotInitialized : null;
+    }
 
     // ---- grant events ------------------------------------------------------------------------------------------
 
     /// <summary>
     /// Our request or code was granted (§8.2: raised within 5 s by the claim loop). A link waiting for access goes on
     /// to its first contact: AwaitingReview when this device started it, WaitingForPeerReview when the peer did
-    /// (§8.1). Any other link is due now, which also brings a link out of AccessRevoked at its next head.
+    /// (§8.1); one that asked a reset peer again is reset now (<see cref="WaitsForResetGrant"/>, §8.7 B1). Any other
+    /// link is due now, which also brings a link out of AccessRevoked at its next head.
     /// </summary>
     public async Task OnOutboundGrantedAsync(string peerNodeId, CancellationToken ct)
     {
         var link = await GetByPeerAsync(peerNodeId, ct);
         if (link is null) return;
         var now = _clock.UtcNow;
-        await MutateAsync(link.Id, row =>
+        DataSyncLinkDbModel? removed = null;
+        var (row, how) = await WriteAsync(async store =>
         {
-            row.NextAttemptAtUtc = now;
-            if (row.State != DataSyncLinkState.AwaitingAccess) return DataSyncLinkWrite.Bookkeeping;
-            row.State = row.GetResumeState();
-            row.PendingRequestId = null;
-            ClearError(row);
-            return DataSyncLinkWrite.Transition;
+            var current = await store.GetLinkAsync(link.Id, ct);
+            if (current is null) return ((DataSyncLinkDbModel?) null, DataSyncLinkWrite.None);
+            if (WaitsForResetGrant(current))
+            {
+                removed = current;
+                return (await ResetForNewEpochAsync(store, current, now, ct), DataSyncLinkWrite.Transition);
+            }
+
+            current.NextAttemptAtUtc = now;
+            var write = DataSyncLinkWrite.Bookkeeping;
+            if (current.State == DataSyncLinkState.AwaitingAccess)
+            {
+                current.State = current.GetResumeState();
+                current.PendingRequestId = null;
+                ClearError(current);
+                write = DataSyncLinkWrite.Transition;
+            }
+
+            await WriteRowAsync(store, current, write, ct);
+            return (current, write);
         }, ct);
+
+        if (removed is not null) await AfterRemovedAsync(removed, ct);
+        if (row is not null && how == DataSyncLinkWrite.Transition) await ObserveAsync(o => o.LinkChangedAsync(row, ct));
     }
 
     /// <summary>
@@ -943,7 +1036,9 @@ public sealed class DataSyncLinkService
 
     /// <summary>
     /// This device's request for a link ended without access (§8.1): the link stops and stays on the map with Dismiss
-    /// (M5: nothing the user filed vanishes silently), with its last mode, bases and pending records.
+    /// (M5: nothing the user filed vanishes silently), with its last mode, bases and pending records. A link that
+    /// asked a reset peer again goes back to <c>Paused(PeerReset)</c> instead, with everything it had (§8.7 B1), so
+    /// the person can ask again or stop syncing; the error says why.
     /// </summary>
     public Task<DataSyncLinkDbModel?> OnRequestEndedAsync(int linkId, string errorCode, CancellationToken ct) =>
         MutateAsync(linkId, row => EndRequest(row, errorCode), ct);
@@ -951,6 +1046,16 @@ public sealed class DataSyncLinkService
     private static DataSyncLinkWrite EndRequest(DataSyncLinkDbModel row, string errorCode)
     {
         if (row.State != DataSyncLinkState.AwaitingAccess) return DataSyncLinkWrite.None;
+        if (WaitsForResetGrant(row))
+        {
+            row.State = DataSyncLinkState.Paused;
+            row.PendingRequestId = null;
+            row.LastErrorCode = errorCode;
+            row.LastErrorDetail = null;
+            row.NextAttemptAtUtc = null;
+            return DataSyncLinkWrite.Transition;
+        }
+
         if (row.Mode != DataSyncLinkMode.Off) row.LastMode = row.Mode;
         row.Mode = DataSyncLinkMode.Off;
         row.State = DataSyncLinkState.Stopped;
@@ -964,7 +1069,7 @@ public sealed class DataSyncLinkService
     /// The person withdrew the request a link waits for. A link made for that request has nothing yet — no first
     /// contact, no cursor, no base — and goes with it. Any other link keeps its state: one turned back on after a stop,
     /// or a copy once onto a stopped link, stops again as an ended request would (<see cref="AccessCancelled"/>), so its
-    /// bases, pending records and last mode are kept (§8.1).
+    /// bases, pending records and last mode are kept (§8.1); one that asked a reset peer again goes back to its pause.
     /// </summary>
     public async Task OnRequestCancelledAsync(int linkId, CancellationToken ct)
     {
@@ -973,7 +1078,7 @@ public sealed class DataSyncLinkService
         {
             var row = await store.GetLinkAsync(linkId, ct);
             if (row is not { State: DataSyncLinkState.AwaitingAccess }) return null;
-            if (!await HasSyncStateAsync(store, row, ct))
+            if (!WaitsForResetGrant(row) && !await HasSyncStateAsync(store, row, ct))
             {
                 await store.DeleteLinkAsync(linkId, ct);
                 return row;

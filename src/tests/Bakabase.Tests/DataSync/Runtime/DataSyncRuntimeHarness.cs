@@ -45,7 +45,9 @@ internal sealed class DataSyncRuntimeHarness : IAsyncDisposable
 
     /// <param name="daemon">Run the task manager's daemon, which starts waiting one-shot tasks within a second.</param>
     /// <param name="registerFetchTask">Register the <c>DataSync</c> task as the host does after its migrations.</param>
-    public static async Task<DataSyncRuntimeHarness> CreateAsync(bool daemon = false, bool registerFetchTask = true)
+    /// <param name="configure">More registrations, made before the runtime's own.</param>
+    public static async Task<DataSyncRuntimeHarness> CreateAsync(bool daemon = false, bool registerFetchTask = true,
+        Action<IServiceCollection>? configure = null)
     {
         var harness = new DataSyncRuntimeHarness();
         var services = new ServiceCollection();
@@ -72,6 +74,7 @@ internal sealed class DataSyncRuntimeHarness : IAsyncDisposable
         services.AddSingleton<IDataSyncReviewStore>(harness.Reviews);
         services.AddSingleton<IDataSyncActorGuard>(harness.Guard);
         services.AddSingleton<IDataSyncApplyRunner, FakeApplyRunner>();
+        configure?.Invoke(services);
 
         services.AddDataSyncRuntime();
         harness.Provider = services.BuildServiceProvider(new ServiceProviderOptions

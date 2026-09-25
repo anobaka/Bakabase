@@ -29,6 +29,15 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 /// </summary>
 /// <remarks>
 /// <para>
+/// <b>One per link per cycle.</b> A link's cycle is its fetch half and, when that staged a pull, the pull's apply
+/// (§8.10.2); the fetcher says where it starts and where its fetch half ends. Within it, the cases that ask for
+/// something — a pause, a review ready, decisions, the approver's first sync — go out as they happen. The two that only
+/// inform — a headless source's waiting decisions and follow overrides — wait for the end of the cycle and go out only
+/// if nothing else did, so a first link to a NAS that already holds decisions says "ready to review" alone. Two cases
+/// that ask for something in one cycle (a review for added kinds while the other kinds' pull opens decisions) both go
+/// out: dropping either would leave something unannounced.
+/// </para>
+/// <para>
 /// <b>Read state follows the items.</b> The notification that announces new items is recorded on them
 /// (<c>NotificationId</c>); once every item it announced has closed — here or elsewhere — it is marked read. Each
 /// payload carries <c>route</c>, which the notification center opens, and <c>case</c>, which the "at most one per …"
@@ -66,12 +75,18 @@ public sealed class DataSyncNotifier
 
     private const int SearchPageSize = 50;
 
+    /// <summary>The informing cases, in the order one gives way to the other when both wait in one cycle.</summary>
+    private const int AttentionRank = 1;
+
+    private const int FollowOverrideRank = 2;
+
     private readonly IServiceScopeFactory _scopes;
     private readonly IServiceProvider _root;
     private readonly IDataSyncClock _clock;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly ConcurrentDictionary<string, byte> _reviewsAnnounced = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, byte> _approved = new(StringComparer.Ordinal);
+    private readonly Dictionary<int, LinkCycle> _cycles = new();
     private DateTime? _restoreAnnounced;
     private DateTime? _lastSweepUtc;
     private DateTime? _lastReaderCheckUtc;
@@ -111,16 +126,23 @@ public sealed class DataSyncNotifier
             if (firstSync)
             {
                 await FirstSyncAsync(sp, link, outcome, ct);
-                return;
+            }
+            else if (outcome.NewInboxItems == 0 || !await NeedsYouAsync(sp, link, ct))
+            {
+                var overridden = outcome.Notes.Where(n => n.Code == FollowOverrideNote)
+                    .Sum(n => n.Args?.GetValueOrDefault("count") is { } c &&
+                              int.TryParse(c, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count)
+                        ? count
+                        : 1);
+                if (overridden > 0)
+                {
+                    await InformAsync(sp, link.Id, FollowOverrideRank,
+                        (s, t) => FollowOverrideAsync(s, link, overridden, t), ct);
+                }
             }
 
-            if (outcome.NewInboxItems > 0 && await NeedsYouAsync(sp, link, ct)) return;
-            var overridden = outcome.Notes.Where(n => n.Code == FollowOverrideNote)
-                .Sum(n => n.Args?.GetValueOrDefault("count") is { } c &&
-                          int.TryParse(c, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count)
-                    ? count
-                    : 1);
-            if (overridden > 0) await FollowOverrideAsync(sp, link, overridden, ct);
+            // The apply ends the link's cycle (§8.10.2).
+            await CloseCycleAsync(sp, link.Id, ct);
         }, ct);
         if (outcome.ClosedInboxItems > 0 || outcome.ClosedItemIds.Count > 0) await SweepAsync(ct);
     }
@@ -140,6 +162,7 @@ public sealed class DataSyncNotifier
         if (PauseReasonOf(sp, link) is not { } reason) return;
         await CreateAsync(sp, SourceOf(link.PeerNodeId), PausedCase, "Paused", [link.PeerName, reason], [],
             LinkRoute(link.Id), AppNotificationSeverity.Warning, ct);
+        MarkNotified(link.Id);
     }, ct);
 
     /// <summary>A first-link review was staged: once per staged review (§8.3 step 3), routed to the link.</summary>
@@ -149,11 +172,13 @@ public sealed class DataSyncNotifier
             if (!_reviewsAnnounced.TryAdd(review.ReviewId, 0)) return;
             await CreateAsync(sp, SourceOf(link.PeerNodeId), ReviewReadyCase, "ReviewReady", [link.PeerName], [],
                 $"/data-sync?link={Id(link.Id)}&review=1", AppNotificationSeverity.Info, ct);
+            MarkNotified(link.Id);
         }, ct);
 
     /// <summary>
     /// A link's peer facts changed: a headless source whose attention shows open decisions, paused links or a pending
-    /// restore is announced at most once a day per source (§9.4, example N). A stopped link may have closed items.
+    /// restore is announced at most once a day per source (§9.4, example N) — within a cycle, only if nothing else is
+    /// announced for the link in it. A stopped link may have closed items.
     /// </summary>
     public async Task LinkChangedAsync(DataSyncLinkDbModel link, CancellationToken ct)
     {
@@ -162,21 +187,36 @@ public sealed class DataSyncNotifier
             if (link.GetPeerAttention() is not { Headless: true } attention) return;
             var waiting = attention.OpenDecisions + attention.PausedLinks + (attention.RestorePending ? 1 : 0);
             if (waiting == 0) return;
-            var now = _clock.UtcNow;
-            if (link.AttentionNotifiedAtUtc is { } last && now - DataSyncViews.Utc(last) < DailyPeriod) return;
-            var claimed = await Links.MutateAsync(link.Id, row =>
-            {
-                if (row.AttentionNotifiedAtUtc is { } at && now - DataSyncViews.Utc(at) < DailyPeriod)
-                    return DataSyncLinkWrite.None;
-                row.AttentionNotifiedAtUtc = now;
-                return DataSyncLinkWrite.Bookkeeping;
-            }, ct);
-            if (claimed?.AttentionNotifiedAtUtc != now) return;
-            await CreateAsync(sp, SourceOf(link.PeerNodeId), AttentionCase, "Attention", [link.PeerName, waiting],
-                [link.PeerName], LinkRoute(link.Id), AppNotificationSeverity.Info, ct);
+            await InformAsync(sp, link.Id, AttentionRank, (s, t) => AttentionAsync(s, link, waiting, t), ct);
         }, ct);
         if (link.State == DataSyncLinkState.Stopped) await SweepAsync(ct);
     }
+
+    /// <summary>
+    /// The fetch half of a link's cycle begins (§8.10.2); what the link's previous cycle still held back — its pull
+    /// was dropped or replaced before an apply ended it — goes out first.
+    /// </summary>
+    public Task LinkCycleStartedAsync(int linkId, CancellationToken ct) => RunAsync(async sp =>
+    {
+        await CloseCycleAsync(sp, linkId, ct);
+        _cycles[linkId] = new LinkCycle();
+    }, ct);
+
+    /// <summary>
+    /// The fetch half of a link's cycle ended: without a staged pull that is the end of the cycle; with one, its apply
+    /// ends it (<see cref="AutoSyncAppliedAsync"/>).
+    /// </summary>
+    public Task LinkFetchEndedAsync(int linkId, bool applyFollows, CancellationToken ct) => RunAsync(async sp =>
+    {
+        if (!applyFollows) await CloseCycleAsync(sp, linkId, ct);
+    }, ct);
+
+    /// <summary>A link was reset: what its cycle held back is about a link that no longer exists.</summary>
+    public Task LinkRemovedAsync(int linkId, CancellationToken ct) => RunAsync(_ =>
+    {
+        _cycles.Remove(linkId);
+        return Task.CompletedTask;
+    }, ct);
 
     /// <summary>
     /// The scheduler's tick (§8.2): a restore detection is announced once, and — at most once a minute — a device that
@@ -243,6 +283,7 @@ public sealed class DataSyncNotifier
         var id = await CreateAsync(sp, SourceOf(link.PeerNodeId), NeedsYouCase, "NeedsYou",
             [link.PeerName, unannounced.Count], [], $"/data-sync?tab=inbox&peer={Uri.EscapeDataString(link.PeerNodeId)}",
             AppNotificationSeverity.Info, ct);
+        MarkNotified(link.Id);
         await store.SetItemsNotifiedAsync(unannounced, id, now, ct);
         return true;
     }
@@ -258,7 +299,28 @@ public sealed class DataSyncNotifier
         var id = await CreateAsync(sp, SourceOf(link.PeerNodeId), FirstSyncCase, "FirstSync",
             [link.PeerName, counts?.Created ?? 0, counts?.Linked ?? 0, unannounced.Count], [],
             LinkRoute(link.Id), AppNotificationSeverity.Info, ct);
+        MarkNotified(link.Id);
         if (unannounced.Count > 0) await store.SetItemsNotifiedAsync(unannounced, id, _clock.UtcNow, ct);
+    }
+
+    /// <summary>
+    /// "{0} has {1} changes waiting for a decision": at most once a day per source, claimed on the link row so two
+    /// events never both send it.
+    /// </summary>
+    private async Task AttentionAsync(IServiceProvider sp, DataSyncLinkDbModel link, int waiting, CancellationToken ct)
+    {
+        var now = _clock.UtcNow;
+        if (link.AttentionNotifiedAtUtc is { } last && now - DataSyncViews.Utc(last) < DailyPeriod) return;
+        var claimed = await Links.MutateAsync(link.Id, row =>
+        {
+            if (row.AttentionNotifiedAtUtc is { } at && now - DataSyncViews.Utc(at) < DailyPeriod)
+                return DataSyncLinkWrite.None;
+            row.AttentionNotifiedAtUtc = now;
+            return DataSyncLinkWrite.Bookkeeping;
+        }, ct);
+        if (claimed?.AttentionNotifiedAtUtc != now) return;
+        await CreateAsync(sp, SourceOf(link.PeerNodeId), AttentionCase, "Attention", [link.PeerName, waiting],
+            [link.PeerName], LinkRoute(link.Id), AppNotificationSeverity.Info, ct);
     }
 
     /// <summary>"{1} changes on this device were replaced by {0}'s": at most one per link per day (§8.1).</summary>
@@ -319,6 +381,48 @@ public sealed class DataSyncNotifier
 
             await store.SetReaderNotifiedAsync(reader.NodeId, _clock.UtcNow, ct);
         }
+    }
+
+    // ---- one per link per cycle --------------------------------------------------------------------------------
+
+    /// <summary>
+    /// A link's cycle as the notifier sees it: whether a notification went out for the link in it, and the informing
+    /// case that goes out at its end if none did.
+    /// </summary>
+    private sealed class LinkCycle
+    {
+        public bool Notified;
+        public int DeferredRank;
+        public Func<IServiceProvider, CancellationToken, Task>? Deferred;
+    }
+
+    private void MarkNotified(int linkId)
+    {
+        if (_cycles.TryGetValue(linkId, out var cycle)) cycle.Notified = true;
+    }
+
+    /// <summary>
+    /// An informing case: sent at once outside a cycle; within one, held for its end, where it goes out only if
+    /// nothing else did — the higher rank of two held ones.
+    /// </summary>
+    private async Task InformAsync(IServiceProvider sp, int linkId, int rank,
+        Func<IServiceProvider, CancellationToken, Task> send, CancellationToken ct)
+    {
+        if (!_cycles.TryGetValue(linkId, out var cycle))
+        {
+            await send(sp, ct);
+            return;
+        }
+
+        if (cycle.Notified || (cycle.Deferred is not null && cycle.DeferredRank > rank)) return;
+        cycle.Deferred = send;
+        cycle.DeferredRank = rank;
+    }
+
+    private async Task CloseCycleAsync(IServiceProvider sp, int linkId, CancellationToken ct)
+    {
+        if (!_cycles.Remove(linkId, out var cycle)) return;
+        if (!cycle.Notified && cycle.Deferred is { } deferred) await deferred(sp, ct);
     }
 
     // ---- helpers -----------------------------------------------------------------------------------------------

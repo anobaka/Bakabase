@@ -121,6 +121,18 @@ public class DataSyncServiceComponentsTests
     }
 
     [TestMethod]
+    public void Peer_sessions_come_from_federation_and_a_host_without_it_has_none_online()
+    {
+        // §8.2 "a federation session to it came online": the scheduler asks this on every tick.
+        var services = HostServices();
+        services.AddDataSyncServiceComponents();
+        using var provider = services.BuildServiceProvider(Strict);
+        var sessions = provider.GetRequiredService<IDataSyncPeerSessions>();
+        Assert.IsInstanceOfType<FederationDataSyncPeerSessions>(sessions);
+        Assert.IsFalse(sessions.IsOnline("node-nas"));
+    }
+
+    [TestMethod]
     public void A_desktop_host_is_not_headless()
     {
         var services = HostServices();

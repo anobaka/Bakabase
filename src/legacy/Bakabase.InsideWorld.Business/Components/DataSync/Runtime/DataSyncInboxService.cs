@@ -39,7 +39,11 @@ public sealed class DataSyncInboxService
 
     private DataSyncLimits Limits => _services.GetService<DataSyncLimits>() ?? DataSyncLimits.Default;
 
-    /// <summary>A page of items, open ones first (§9); never gated. Every time is UTC.</summary>
+    /// <summary>
+    /// A page of items, open ones first (§9); never gated. Every time is UTC. The allowed actions are this service's
+    /// (§9.1), computed for each item's link as it is now, exactly as <see cref="GetItemAsync"/> and the resolve check
+    /// compute them, whatever the store's page carries; nothing is pre-chosen.
+    /// </summary>
     public async Task<DataSyncInboxPage> GetPageAsync(DataSyncInboxQuery query, CancellationToken ct)
     {
         var normalized = query with
@@ -50,7 +54,15 @@ public sealed class DataSyncInboxService
             Kind = string.IsNullOrWhiteSpace(query.Kind) ? null : query.Kind,
         };
         var page = await _store.QueryInboxAsync(normalized, ct);
-        return page with { Items = page.Items.Select(WithUtcTimes).ToList() };
+        var links = page.Items.Any(i => i.LinkId is not null)
+            ? (await _store.GetLinksAsync(ct)).ToDictionary(l => l.Id)
+            : new Dictionary<int, DataSyncLinkDbModel>();
+        return page with
+        {
+            Items = page.Items
+                .Select(i => WithRules(i, i.LinkId is { } linkId ? links.GetValueOrDefault(linkId) : null))
+                .ToList(),
+        };
     }
 
     /// <summary>One item as the inbox shows it; null when it does not exist. Never gated.</summary>
@@ -160,8 +172,14 @@ public sealed class DataSyncInboxService
             DataSyncViews.Utc(item.ClosedAtUtc), item.Closure, item.Action, item.ClosedByName);
     }
 
-    private static DataSyncInboxItemView WithUtcTimes(DataSyncInboxItemView item) => item with
+    /// <summary>An item of a store's page with §9.1's actions for its link, nothing pre-chosen, and UTC times.</summary>
+    private static DataSyncInboxItemView WithRules(DataSyncInboxItemView item, DataSyncLinkDbModel? link) => item with
     {
+        AllowedActions = item.ClosedAt is null
+            ? DataSyncInboxRules.Allowed(item.Type, item.SubjectPath, item.Payload,
+                DataSyncInboxRules.IsEffectivelyTwoWay(link))
+            : [],
+        DefaultAction = null,
         CreatedAt = DataSyncViews.Utc(item.CreatedAt),
         UpdatedAt = DataSyncViews.Utc(item.UpdatedAt),
         ClosedAt = DataSyncViews.Utc(item.ClosedAt),

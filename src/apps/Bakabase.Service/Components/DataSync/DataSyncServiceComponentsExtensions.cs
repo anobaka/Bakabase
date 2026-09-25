@@ -11,9 +11,9 @@ public static class DataSyncServiceComponentsExtensions
 {
     /// <summary>
     /// What data sync takes from the Service host (spec §2.11): this install's device identity over the federation
-    /// node, its host kind, the addresses other devices reach it at, and the headless sharing announcer (§7.8).
-    /// <c>AddDataSync()</c> registers none of them, so the test kit's fakes stay in place. Called by
-    /// <see cref="BakabaseStartup"/> after <c>AddFederatedLibrary()</c>.
+    /// node, its host kind, the addresses other devices reach it at, whether a federation session to a peer is online
+    /// (§8.2), and the headless sharing announcer (§7.8). <c>AddDataSync()</c> registers none of them, so the test
+    /// kit's fakes stay in place. Called by <see cref="BakabaseStartup"/> after <c>AddFederatedLibrary()</c>.
     /// </summary>
     /// <remarks>
     /// Until the persistence package registers the runtime (<c>AddDataSync()</c> → <c>AddDataSyncRuntime()</c>, made
@@ -26,6 +26,7 @@ public static class DataSyncServiceComponentsExtensions
         services.TryAddSingleton<IDataSyncDeviceIdentity, FederationDataSyncDeviceIdentity>();
         services.TryAddSingleton<IDataSyncHostKind, ServiceDataSyncHostKind>();
         services.TryAddSingleton<IDataSyncHostAddresses, ServiceDataSyncHostAddresses>();
+        services.TryAddSingleton<IDataSyncPeerSessions, FederationDataSyncPeerSessions>();
         services.AddHostedService<DataSyncSharingAnnouncer>();
 
         services.TryAddSingleton<IDataSyncGrantEvents, NoOpDataSyncGrantEvents>();

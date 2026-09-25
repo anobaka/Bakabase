@@ -92,8 +92,10 @@ public sealed class DataSyncService : IDataSyncService
     /// The switch (§7.1.3), never gated (it is federation state, §10.1), so turning sharing off always works, even
     /// while an apply runs (§7.1.5). With <c>EnablePairedRemoteAccess</c>, remote access is turned on with pairing
     /// required only when it is Disabled. "Share new definitions automatically" is a local state write, so only that
-    /// part takes the gate, after the switch: while the gate is busy the switch still applies and the answer is
-    /// <c>Busy</c> with the detail <c>newDefinitionsStayLocal</c>; a switch that failed changes nothing else.
+    /// part takes the gate, after the switch (a departure from §10.1's "no", which cannot order it with Refresh): while
+    /// the gate is busy the switch still applies and the answer is <c>Busy</c> with the detail
+    /// <c>newDefinitionsStayLocal</c>; a switch that failed changes nothing else. On first use it makes the local state
+    /// row that keeps the choice (§4.5).
     /// </summary>
     public async Task<DataSyncProblem?> SetSharingAsync(DataSyncSharingInput input, CancellationToken ct)
     {
@@ -112,7 +114,7 @@ public sealed class DataSyncService : IDataSyncService
             await using var gate = await EnterGateAsync(ct);
             problem = gate is null
                 ? new DataSyncProblem(DataSyncProblemCode.Busy, "newDefinitionsStayLocal")
-                : await Links.SetNewDefinitionsStayLocalAsync(stayLocal, ct);
+                : await Links.SetNewDefinitionsStayLocalAsync(stayLocal, gate, ct);
         }
 
         await Observer.StateChangedAsync(ct);
@@ -196,13 +198,14 @@ public sealed class DataSyncService : IDataSyncService
         return gate is null ? Busy : await Links.ResetAsync(linkId, ct);
     }
 
+    /// <summary>"Pause all" (§8.7), under the gate; on first use it makes the local state row that keeps it (§4.5).</summary>
     public async Task<DataSyncProblem?> SetAllPausedAsync(bool paused, CancellationToken ct)
     {
         DataSyncProblem? problem;
         await using (var gate = await EnterGateAsync(ct))
         {
             if (gate is null) return Busy;
-            problem = await Links.SetAllPausedAsync(paused, ct);
+            problem = await Links.SetAllPausedAsync(paused, gate, ct);
         }
 
         if (problem is null) await Observer.StateChangedAsync(ct);
@@ -287,9 +290,11 @@ public sealed class DataSyncService : IDataSyncService
     /// <summary>
     /// Approves a datasync request (§7.2.4 step 4): only a request this device holds for definitions (a library
     /// request is not visible here, G29), and only with remote access on (G36). A two-way request approved to receive
-    /// back makes the approver's link — even when the read-back failed (N14). The link row needs no gate: the link
-    /// service orders its writes itself, and the queued grant event that writes the same row takes none either. So once
-    /// the grant is issued the answer never waits behind an apply.
+    /// back makes the approver's link — even when the read-back failed (N14). The link row takes no gate, although
+    /// §10.1 gates it: the link service orders its writes itself, in one write transaction per row, and the queued
+    /// grant event that writes the same row takes none either. So once the grant is issued the answer never waits
+    /// behind an apply — which holds only while the apply runner reads and writes link rows inside its own write
+    /// transaction (see <see cref="DataSyncLinkService"/>).
     /// </summary>
     public async Task<DataSyncRequestResult> ApproveRequestAsync(string requestId, DataSyncApproveInput input,
         CancellationToken ct)

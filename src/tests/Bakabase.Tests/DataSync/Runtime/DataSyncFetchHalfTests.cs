@@ -71,6 +71,23 @@ public class DataSyncFetchHalfTests
     }
 
     [TestMethod]
+    public async Task Pause_all_pressed_during_a_cycle_stages_nothing_more_and_fetches_no_further_link()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var a = h.AddLink("a", l => l.SetCursors(Cursors(3, 2)));
+        h.AddLink("b", l => l.SetCursors(Cursors(3, 2)));
+
+        // Pressed while a's pages are read: a's pull is not staged, and b is not asked at all.
+        h.Peers.Peers["a"].OnPage = () => h.Store.LocalState!.AllPaused = true;
+        await h.FetchOnceAsync();
+
+        Assert.AreEqual(1, h.Peers.Peers["a"].Pages);
+        Assert.IsNull(h.StagedPulls.Peek(a.Id));
+        Assert.IsNull(h.Status(DataSyncTaskIds.Apply), "nothing to apply");
+        Assert.AreEqual(0, h.Peers.Peers["b"].HeadQueries.Count);
+    }
+
+    [TestMethod]
     public async Task An_equal_staged_pull_is_not_fetched_again_and_a_newer_one_replaces_it()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);

@@ -36,9 +36,16 @@ public sealed class DataSyncRuntimeEvents : IDataSyncRuntimeObserver
     public async Task LinkRemovedAsync(DataSyncLinkDbModel removed, CancellationToken ct)
     {
         // A reset closes the link's items (§8.1), which may settle their notifications.
+        await GuardAsync(() => _notifier.LinkRemovedAsync(removed.Id, ct));
         await GuardAsync(() => _notifier.SweepAsync(ct));
         await GuardAsync(() => _hub.PublishStatusAsync(ct));
     }
+
+    public Task LinkCycleStartedAsync(int linkId, CancellationToken ct) =>
+        GuardAsync(() => _notifier.LinkCycleStartedAsync(linkId, ct));
+
+    public Task LinkFetchEndedAsync(int linkId, bool applyFollows, CancellationToken ct) =>
+        GuardAsync(() => _notifier.LinkFetchEndedAsync(linkId, applyFollows, ct));
 
     public async Task LinkPausedAsync(DataSyncLinkDbModel link, CancellationToken ct)
     {

@@ -56,13 +56,26 @@ public sealed class DataSyncRuntimeState
         }
     }
 
-    /// <summary>A head of this link's peer succeeded (§5.6: "every Active link answered one head").</summary>
+    /// <summary>
+    /// A head of this link's peer succeeded: its form versions and when ("online", §8.2). It does not yet count for
+    /// the actor's verification: <see cref="MarkHeadAnswered"/> does, once the head's evidence was handled.
+    /// </summary>
     public void RecordHead(int linkId, DataSyncFeedHead head, DateTime nowUtc)
     {
-        lock (_lock) _headAnswered.Add(linkId);
         _formVersions[linkId] = head.Kinds.GroupBy(k => k.Kind, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First().ComparisonFormVersion, StringComparer.Ordinal);
         _lastHeadAt[linkId] = nowUtc;
+    }
+
+    /// <summary>
+    /// This link's peer answered one head and the <c>SeenCounter</c> it carried was reported to the actor guard (§5.6:
+    /// "every Active link answered one head"). Counted only after the report returned: the scheduler verifies on its
+    /// own thread, and a head counted earlier would let it verify — and the apply and Refresh issue counters under the
+    /// old actor — while the evidence that rotates that actor was still being recorded.
+    /// </summary>
+    public void MarkHeadAnswered(int linkId)
+    {
+        lock (_lock) _headAnswered.Add(linkId);
     }
 
     /// <summary>The last head's per-kind comparison form versions of the link's peer (§8.4 row A2).</summary>
@@ -151,7 +164,8 @@ public sealed class DataSyncRuntimeState
 
     /// <summary>
     /// Whether the actor may be marked verified (§5.6): no Active link, every Active link's peer answered one head
-    /// since the start, or the verification window passed.
+    /// since the start and its evidence was handled (<see cref="MarkHeadAnswered"/>), or the verification window
+    /// passed.
     /// </summary>
     public bool CanVerify(IEnumerable<DataSyncLinkDbModel> links, DateTime nowUtc)
     {
