@@ -259,7 +259,11 @@ export default function InboxCard({
 
       {error && <DataSyncErrorNotice error={error} onDismiss={onDismissError} />}
       {applying && (
-        <p className="text-xs text-primary" data-testid="data-sync-inbox-applying" role="status">
+        <p
+          className="text-xs text-primary-700"
+          data-testid="data-sync-inbox-applying"
+          role="status"
+        >
           {t("dataSync.inbox.card.applying")}
         </p>
       )}
@@ -339,7 +343,7 @@ export default function InboxCard({
                 <button
                   key={`${choice.action}-${choice.targetLocalKey ?? choice.targetRecordKey ?? ""}`}
                   className={`${smallButtonClass} ${
-                    choice.destructive ? "border-danger/40 text-danger" : ""
+                    choice.destructive ? "border-danger/40 text-danger-700" : ""
                   }`}
                   data-action={actionKey(first.type, choice.action)}
                   data-testid="data-sync-inbox-action"

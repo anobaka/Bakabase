@@ -31,6 +31,7 @@ import {
 } from "./dataSyncFixtures";
 
 import {
+  BTaskStatus,
   ClientMode,
   DataSyncFieldResolution,
   DataSyncInboxAction,
@@ -38,8 +39,10 @@ import {
   DataSyncInboxItemOrigin,
   DataSyncInboxItemType,
   DataSyncNaturalMatch,
+  DataSyncProblemCode,
   RemoteAccessMode,
 } from "@/sdk/constants";
+import { useBTasksStore } from "@/stores/bTasks";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
 
 vi.mock("react-i18next", () => ({
@@ -126,6 +129,7 @@ beforeEach(() => {
   forgetBackupFolder();
   useDataSyncStore.getState().clear();
   useDataSyncStore.getState().setOverview(overview());
+  useBTasksStore.setState({ tasks: [] });
   useRemoteAccessStore.setState({
     initialized: true,
     context: "known",
@@ -745,6 +749,153 @@ describe("the list of what needs you", () => {
     expect(within(card).getByTestId("data-sync-error")).toHaveTextContent(
       "dataSync.problem.ResolveTogether",
     );
+  });
+
+  describe("a decision sent from here", () => {
+    const card31 = () => document.querySelector<HTMLElement>('[data-card="item:31"]')!;
+    const keepHereOnly = async () => {
+      await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(3));
+      await act(async () => {
+        fireEvent.click(
+          within(card31()).getByText("dataSync.inbox.action.KeepHereOnly NAS", {
+            selector: "button",
+          }),
+        );
+      });
+      await waitFor(() =>
+        expect(within(card31()).getByTestId("data-sync-inbox-applying")).toBeInTheDocument(),
+      );
+    };
+    const finish = (status: BTaskStatus) =>
+      act(() => {
+        useBTasksStore.setState({
+          tasks: [
+            {
+              id: "DataSyncResolve:batch-1",
+              name: "Resolve",
+              status,
+              createdAt: "2026-09-01 08:00:00.000",
+              isPersistent: true,
+              type: 0,
+              resourceType: 0,
+            } as never,
+          ],
+        });
+      });
+    const decidable = () =>
+      within(card31())
+        .getAllByTestId("data-sync-inbox-action")
+        .every((button) => !(button as HTMLButtonElement).disabled);
+
+    it("says an item changed meanwhile once its task is done, and lets it be decided again", async () => {
+      renderList();
+      await keepHereOnly();
+      await finish(BTaskStatus.Running);
+      // The task updated the item instead of applying it (§9.2): open still, with a new token.
+      serve([deletion(30), { ...deletion(31), token: "token-31-changed" }, nameConflict(1)]);
+      await finish(BTaskStatus.Completed);
+
+      await waitFor(() =>
+        expect(within(card31()).queryByTestId("data-sync-inbox-applying")).toBeNull(),
+      );
+      expect(within(card31()).getByTestId("data-sync-error")).toHaveTextContent(
+        "dataSync.problem.InboxItemChanged",
+      );
+      expect(decidable()).toBe(true);
+    });
+
+    it("lets the card go once its task is done, even when nothing about it changed", async () => {
+      renderList();
+      await keepHereOnly();
+      await finish(BTaskStatus.Completed);
+
+      await waitFor(() =>
+        expect(within(card31()).queryByTestId("data-sync-inbox-applying")).toBeNull(),
+      );
+      expect(within(card31()).queryByTestId("data-sync-error")).toBeNull();
+      expect(decidable()).toBe(true);
+    });
+
+    it("follows no task that was not started: the next read says where it ended", async () => {
+      vi.mocked(dataSyncApi.resolve).mockResolvedValue({});
+      renderList();
+      await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(3));
+      const reads = vi.mocked(dataSyncApi.inbox).mock.calls.length;
+
+      await act(async () => {
+        fireEvent.click(
+          within(card31()).getByText("dataSync.inbox.action.KeepHereOnly NAS", {
+            selector: "button",
+          }),
+        );
+      });
+
+      await waitFor(() =>
+        expect(within(card31()).queryByTestId("data-sync-inbox-applying")).toBeNull(),
+      );
+      expect(vi.mocked(dataSyncApi.inbox).mock.calls.length).toBeGreaterThan(reads);
+      expect(decidable()).toBe(true);
+    });
+
+    it("reads again when the server says the card is out of date", async () => {
+      vi.mocked(dataSyncApi.resolve).mockResolvedValue({
+        problem: { code: DataSyncProblemCode.InboxItemChanged },
+      });
+      renderList();
+      await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(3));
+      const reads = vi.mocked(dataSyncApi.inbox).mock.calls.length;
+
+      serve([deletion(30), { ...deletion(31), token: "token-31-changed" }, nameConflict(1)]);
+      await act(async () => {
+        fireEvent.click(
+          within(card31()).getByText("dataSync.inbox.action.KeepHereOnly NAS", {
+            selector: "button",
+          }),
+        );
+      });
+
+      await waitFor(() =>
+        expect(vi.mocked(dataSyncApi.inbox).mock.calls.length).toBeGreaterThan(reads),
+      );
+      expect(within(card31()).getByTestId("data-sync-error")).toHaveTextContent(
+        "dataSync.problem.InboxItemChanged",
+      );
+      // What is decided next is sent with the item as it is now.
+      vi.mocked(dataSyncApi.resolve).mockResolvedValue({ taskId: "DataSyncResolve:batch-2" });
+      await waitFor(() => expect(decidable()).toBe(true));
+      await act(async () => {
+        fireEvent.click(
+          within(card31()).getByText("dataSync.inbox.action.KeepHereOnly NAS", {
+            selector: "button",
+          }),
+        );
+      });
+      expect(dataSyncApi.resolve).toHaveBeenLastCalledWith({
+        items: [{ itemId: 31, action: A.KeepHereOnly, token: "token-31-changed" }],
+        backupBeforeDestructive: true,
+      });
+    });
+  });
+
+  it("reads on while the server answers smaller pages than it was asked for", async () => {
+    const many = Array.from({ length: 250 }, (_, index) => deletion(2000 + index));
+
+    // A server that keeps to 100 a page, whatever it is asked.
+    vi.mocked(dataSyncApi.inbox).mockImplementation(async (query = {}) => {
+      const skip = query.skip ?? 0;
+
+      return {
+        items: many.slice(skip, skip + Math.min(query.take ?? 100, 100)),
+        total: many.length,
+        openTotal: many.length,
+      };
+    });
+    const read = await readOpenItems();
+
+    expect(read.items).toHaveLength(250);
+    expect(vi.mocked(dataSyncApi.inbox).mock.calls.map(([query]) => query?.skip)).toEqual([
+      0, 100, 200,
+    ]);
   });
 
   it("shows only the device asked for, and says where decisions wait on another device", async () => {

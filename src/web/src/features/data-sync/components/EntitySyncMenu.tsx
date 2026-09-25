@@ -1,4 +1,3 @@
-import type { KeyboardEvent } from "react";
 import type { DataSyncEntityStatusView } from "../api";
 import type { DataSyncPanelActions } from "../hooks/useDataSyncActions";
 import type { EntityMenuAction } from "../viewModels";
@@ -43,7 +42,8 @@ export default function EntitySyncMenu({
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLSpanElement>(null);
   const menuId = useId();
-  const menuKeys = useMenuKeyboard(open, menu, trigger, () => setOpen(false));
+  // Escape closes the menu, and only the menu: the page or details around it stay as they are.
+  const menuKeys = useMenuKeyboard(open, menu, trigger, () => setOpen(false), root);
   const items = entityMenu(entity, offersDefinitionOnly);
 
   useEffect(() => {
@@ -97,15 +97,6 @@ export default function EntitySyncMenu({
     }
   };
 
-  /** Escape closes the menu, and only the menu: the details around it stay open. */
-  const closeOnEscape = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== "Escape" || !open) return;
-    event.stopPropagation();
-    event.preventDefault();
-    setOpen(false);
-    trigger.current?.focus();
-  };
-
   return (
     <span ref={root} className="relative inline-flex">
       <button
@@ -124,10 +115,7 @@ export default function EntitySyncMenu({
           if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
             event.preventDefault();
             setOpen(true);
-
-            return;
           }
-          closeOnEscape(event);
         }}
       >
         <AiOutlineEllipsis aria-hidden />
@@ -140,10 +128,7 @@ export default function EntitySyncMenu({
           id={menuId}
           role="menu"
           tabIndex={-1}
-          onKeyDown={(event) => {
-            closeOnEscape(event);
-            if (!event.defaultPrevented) menuKeys(event);
-          }}
+          onKeyDown={menuKeys}
         >
           {items.map((item) => (
             <button

@@ -10,6 +10,7 @@ import EntitySyncMenu from "../components/EntitySyncMenu";
 import { dataSyncApi } from "../api";
 
 import { recordingActions } from "./dataSyncFixtures";
+import EscapableDetails from "./EscapableDetails";
 
 import BApi from "@/sdk/BApi";
 import { DataSyncEntitySyncState, DataSyncHeldReason, PropertyType } from "@/sdk/constants";
@@ -125,23 +126,28 @@ describe("how one definition syncs", () => {
 
   it("closes its menu with Escape, and only its menu", () => {
     const outer = vi.fn();
+    const closeDetails = vi.fn();
 
     render(
       // eslint-disable-next-line jsx-a11y/no-static-element-interactions
       <div onKeyDown={outer}>
-        <EntitySyncMenu
-          actions={recorded.actions}
-          entity={entity("12")}
-          kind="customProperty"
-          name="Artist"
-          offersDefinitionOnly={false}
-        />
+        {/* Details that close on Escape by a listener of their own, as the page's do. */}
+        <EscapableDetails onEscape={closeDetails}>
+          <EntitySyncMenu
+            actions={recorded.actions}
+            entity={entity("12")}
+            kind="customProperty"
+            name="Artist"
+            offersDefinitionOnly={false}
+          />
+        </EscapableDetails>
       </div>,
     );
     fireEvent.click(screen.getByTestId("data-sync-entity-menu"));
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
     expect(screen.queryByRole("menu")).toBeNull();
     expect(outer).not.toHaveBeenCalled();
+    expect(closeDetails).not.toHaveBeenCalled();
     expect(screen.getByTestId("data-sync-entity-menu")).toHaveFocus();
   });
 

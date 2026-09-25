@@ -28,6 +28,7 @@ import {
   syncIssueOf,
   syncPeerFromLink,
   syncPeerFromMapPeer,
+  syncPeerOfRecords,
   syncPeersOf,
   toggleKind,
   twoWayConfirmation,
@@ -381,6 +382,64 @@ describe("the status catalogue", () => {
     expect(paused(DataSyncPauseReason.TooManyDecisions).code).toBe("Paused.TooManyDecisions");
   });
 
+  it("never says in step before the first sync", () => {
+    expect(statusOf({ lastSyncedAt: undefined })).toMatchObject({
+      code: "Syncing",
+      tone: "primary",
+      text: "dataSync.status.Syncing",
+    });
+    expect(peerCardLine(keyT, peerOf({ lastSyncedAt: undefined }), NOW).text).toContain(
+      "dataSync.diagram.card.syncing",
+    );
+    // What needs you, or a failure, is still said first.
+    expect(statusOf({ lastSyncedAt: undefined, openItems: 2 }).code).toBe("NeedsYou");
+    expect(statusOf({ lastSyncedAt: undefined, lastErrorCode: "InvalidResponse" }).code).toBe(
+      "Failed",
+    );
+  });
+
+  it("says reading the other device back failed, and why — never that it waits for an approval", () => {
+    const failed = {
+      state: DataSyncLinkState.AwaitingAccess,
+      mode: DataSyncLinkMode.TwoWay,
+      initiator: DataSyncLinkInitiator.Peer,
+      lastErrorCode: "Unreachable",
+    };
+
+    expect(statusOf(failed)).toMatchObject({
+      code: "ReadBackFailed",
+      tone: "danger",
+      text: "dataSync.status.ReadBackFailed NAS dataSync.peerError.Unreachable",
+    });
+    expect(syncIssueOf(peerOf(failed))).toBe("syncFailed");
+    expect(peerOf(failed).outcome).toBeUndefined();
+    // Waiting for its own request: the ordinary line.
+    expect(statusOf({ ...failed, initiator: DataSyncLinkInitiator.ThisDevice }).code).toBe(
+      "AwaitingAccess",
+    );
+    expect(statusOf({ ...failed, lastErrorCode: undefined }).code).toBe("AwaitingAccess");
+    // The map view says nothing of who started the link: one waiting with a failure and no
+    // request of this device's own is the read-back that failed.
+    const onMap = syncPeerOfRecords(
+      mapPeer("node-nas", "NAS", {
+        state: DataSyncLinkState.AwaitingAccess,
+        mode: DataSyncLinkMode.TwoWay,
+        lastErrorCode: "Unreachable",
+      }),
+    )!;
+
+    expect(linkStatus(keyT, onMap, NOW).code).toBe("ReadBackFailed");
+    const asked = syncPeerOfRecords(
+      mapPeer("node-nas", "NAS", {
+        state: DataSyncLinkState.AwaitingAccess,
+        lastErrorCode: "Unreachable",
+      }),
+      outgoing(1, "node-nas", "NAS"),
+    )!;
+
+    expect(linkStatus(keyT, asked, NOW).code).toBe("AwaitingAccess");
+  });
+
   it("says a request that was not approved, until it is dismissed", () => {
     const rejected = syncPeerFromLink(
       link(6, "node-old", "Old laptop", {
@@ -443,6 +502,16 @@ describe("the status of the whole device", () => {
     [DataSyncStatusLevel.UpdateNeeded, "UpdateNeeded"],
   ])("reads level %s as %s", (level, code) => {
     expect(overallStatus(keyT, status({ level }), NOW)?.code).toBe(code);
+  });
+
+  it("never says in step before anything was synced", () => {
+    expect(
+      overallStatus(
+        keyT,
+        status({ level: DataSyncStatusLevel.InStep, lastSyncedAt: undefined }),
+        NOW,
+      ),
+    ).toMatchObject({ code: "Syncing", text: "dataSync.status.Syncing" });
   });
 
   it("adds the devices holding decisions nobody has taken there", () => {

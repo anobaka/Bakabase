@@ -88,15 +88,29 @@ export default function InvitationDialog({
       }
       onClose={onClose}
     >
+      {/*
+       * Said as soon as it is there: a live region from the start, so the code is read out once
+       * it is created. Out of the flow while empty.
+       */}
+      <div
+        className={invitation ? "space-y-3 text-sm" : "sr-only"}
+        data-testid="data-sync-invitation-status"
+        role="status"
+      >
+        {invitation && (
+          <>
+            <p>{t("dataSync.invitation.use")}</p>
+            <p
+              className="rounded-lg bg-default-100 py-3 text-center font-mono text-3xl tracking-[0.3em]"
+              data-testid="data-sync-invitation-code"
+            >
+              {invitation.code}
+            </p>
+          </>
+        )}
+      </div>
       {invitation ? (
         <div className="space-y-3 text-sm">
-          <p>{t("dataSync.invitation.use")}</p>
-          <p
-            className="rounded-lg bg-default-100 py-3 text-center font-mono text-3xl tracking-[0.3em]"
-            data-testid="data-sync-invitation-code"
-          >
-            {invitation.code}
-          </p>
           <p className="text-xs text-default-500">
             {minutes > 0
               ? t("dataSync.invitation.expiresIn", { count: minutes })

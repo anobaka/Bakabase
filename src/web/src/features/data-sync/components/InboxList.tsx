@@ -1,5 +1,5 @@
 import type { DataSyncInboxItemView, DataSyncResolveBatchInput } from "../api";
-import type { InboxBulk, InboxCardModel } from "../inboxModels";
+import type { InboxApplying, InboxBulk, InboxCardModel } from "../inboxModels";
 import type { SyncPeer } from "../viewModels";
 import type { InboxConfirmation } from "./InboxCard";
 
@@ -7,16 +7,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, useReducedMotion } from "framer-motion";
 
-import { dataSyncApi, throwIfProblem } from "../api";
+import { dataSyncApi, DataSyncProblemError, throwIfProblem } from "../api";
 import { useBackupTarget } from "../hooks/useBackupTarget";
 import { useDataSyncActions } from "../hooks/useDataSyncActions";
 import {
+  batchTokens,
   closureKey,
   filterCards,
   groupInbox,
   headlineKey,
   inboxBulks,
   recentlyResolved,
+  settleApplying,
 } from "../inboxModels";
 import { useDataSyncStore } from "../stores/dataSync";
 import { localDateTime } from "../times";
@@ -29,7 +31,7 @@ import InboxCard, { cardValues } from "./InboxCard";
 import { DataSyncErrorNotice, fieldClass, panelClass, SectionHeading } from "./common";
 
 import ConfirmDialog from "@/features/federation/components/ConfirmDialog";
-import { BTaskStatus } from "@/sdk/constants";
+import { BTaskStatus, DataSyncProblemCode } from "@/sdk/constants";
 import { useBTasksStore } from "@/stores/bTasks";
 
 /*
@@ -45,7 +47,7 @@ export const INBOX_LIVE_POLL_MS = 3_000;
 /** How long a card closed elsewhere stays, saying so, before it leaves. */
 export const CLOSED_CARD_MS = 4_000;
 
-/** The largest page `GET /data-sync/inbox` answers. */
+/** The page asked of `GET /data-sync/inbox`. The server may answer fewer: pages are read on. */
 export const INBOX_PAGE = 500;
 /**
  * How many open items "Needs you" reads at most, a page at a time. Past it the section says how
@@ -59,8 +61,16 @@ export const INBOX_LARGE_POLL_MS = 60_000;
 
 type Item = DataSyncInboxItemView;
 
+/** Refusals that say the page no longer shows what there is to decide: read it again. */
+const staleProblems = new Set<DataSyncProblemCode>([
+  DataSyncProblemCode.InboxItemChanged,
+  DataSyncProblemCode.InboxItemClosed,
+  DataSyncProblemCode.ResolveTogether,
+]);
+
 /**
- * Every open item, a page at a time, up to {@link OPEN_LIMIT}. Pages can shift while they are
+ * Every open item, a page at a time, up to {@link OPEN_LIMIT}: until a page comes back empty or
+ * the total is reached, whatever page size the server keeps to. Pages can shift while they are
  * read — an item opened or closed meanwhile — so an item met twice is kept once, and one missed
  * is there at the next read.
  */
@@ -72,19 +82,21 @@ export async function readOpenItems(): Promise<{ items: Item[]; total: number }>
   for (;;) {
     const page = await dataSyncApi.inbox({ openOnly: true, skip, take: INBOX_PAGE });
     const items = page?.items ?? [];
+    const known = byId.size;
 
     total = page?.total ?? skip + items.length;
     for (const item of items) byId.set(item.id, item);
     skip += items.length;
-    if (items.length < INBOX_PAGE || skip >= total || byId.size >= OPEN_LIMIT) break;
+    // A page that brings nothing new: a server that does not page — never read forever.
+    if (!items.length || byId.size === known || skip >= total || byId.size >= OPEN_LIMIT) break;
   }
 
   return { items: Array.from(byId.values()), total: Math.max(total, byId.size) };
 }
 
 /**
- * The items decided lately. The server lists open items first (then newest first), so the closed
- * ones start where the open ones end.
+ * The items decided lately. The server lists open items first, then newest first, so the closed
+ * ones start where the open ones end; an open item met here anyway is left out.
  */
 export async function readClosedItems(openCount: number): Promise<Item[]> {
   const page = await dataSyncApi.inbox({ openOnly: false, skip: openCount, take: CLOSED_TAKE });
@@ -120,7 +132,7 @@ export default function InboxList({
   const [error, setError] = useState<Error>();
   const [peer, setPeer] = useState(initialPeer ?? "");
   const [kind, setKind] = useState("");
-  const [applying, setApplying] = useState<Map<string, string>>(new Map());
+  const [applying, setApplying] = useState<Map<string, InboxApplying>>(new Map());
   const [cardErrors, setCardErrors] = useState<Map<string, Error>>(new Map());
   const [leaving, setLeaving] = useState<Map<string, { card: InboxCardModel; item: Item }>>(
     new Map(),
@@ -134,10 +146,39 @@ export default function InboxList({
   const reducedMotion = useReducedMotion();
   const openItemsHere = useDataSyncStore((state) => state.status?.openItems);
   const tasks = useBTasksStore((state) => state.tasks);
+  // The decisions followed, kept here as well, so a read answered before the next render judges
+  // what was just sent; and how many reads have started, so only a read begun after a task
+  // finished settles its decision.
+  const applyingNow = useRef(applying);
+  const reads = useRef(0);
 
   useEffect(() => setPeer(initialPeer ?? ""), [initialPeer]);
 
+  const updateApplying = useCallback(
+    (change: (current: Map<string, InboxApplying>) => Map<string, InboxApplying>) => {
+      const next = change(applyingNow.current);
+
+      applyingNow.current = next;
+      setApplying(next);
+    },
+    [],
+  );
+  const setCardError = useCallback(
+    (key: string, cause?: Error) =>
+      setCardErrors((current) => {
+        const next = new Map(current);
+
+        if (cause) next.set(key, cause);
+        else next.delete(key);
+
+        return next;
+      }),
+    [],
+  );
+
   const load = useCallback(async () => {
+    const read = ++reads.current;
+
     try {
       const { items: nextOpen, total } = await readOpenItems();
       const nextClosed = await readClosedItems(total);
@@ -161,16 +202,25 @@ export default function InboxList({
 
           return next;
         });
-      // A decision is applied once its card is gone.
-      const openKeys = new Set(groupInbox(nextOpen).map((card) => card.key));
+      // A decision is over once its card is gone; once an item of it changed meanwhile, which the
+      // card then says, showing what it is now; or once its task finished before this read.
+      const outcomes = settleApplying(applyingNow.current, groupInbox(nextOpen), read, Date.now());
 
-      setApplying((current) => {
-        const next = new Map(current);
+      if (outcomes.size) {
+        updateApplying((current) => {
+          const next = new Map(current);
 
-        for (const key of current.keys()) if (!openKeys.has(key)) next.delete(key);
+          for (const key of outcomes.keys()) next.delete(key);
 
-        return next;
-      });
+          return next;
+        });
+        for (const [key, outcome] of outcomes)
+          if (outcome === "changed")
+            setCardError(
+              key,
+              new DataSyncProblemError({ code: DataSyncProblemCode.InboxItemChanged }),
+            );
+      }
       setOpen(nextOpen);
       setOpenTotal(total);
       setClosed(nextClosed);
@@ -178,7 +228,7 @@ export default function InboxList({
     } catch (cause) {
       setError(cause instanceof Error ? cause : new Error(String(cause)));
     }
-  }, []);
+  }, [updateApplying, setCardError]);
 
   useEffect(() => {
     void load();
@@ -207,29 +257,52 @@ export default function InboxList({
     return () => clearTimeout(timer);
   }, [leaving]);
 
-  // A decision whose task failed: the card says so and can be decided again.
+  // Each decision's task, as the task list tells it. One that failed: the card says why and can
+  // be decided again. One that finished — or left the list after it was seen there: over at the
+  // next read, which shows where the decision ended (applied, or an item changed meanwhile).
   useEffect(() => {
-    if (!applying.size) return;
-    for (const [key, taskId] of applying) {
-      const task = tasks.find((one) => one.id === taskId);
+    const changes = new Map<string, { taskId: string; change: "failed" | "finished" | "seen" }>();
+    const failures = new Map<string, Error>();
+
+    for (const [key, entry] of applying) {
+      if (!entry.taskId || entry.settleAfter !== undefined) continue;
+      const task = tasks.find((one) => one.id === entry.taskId);
 
       if (task?.status === BTaskStatus.Error || task?.status === BTaskStatus.Cancelled) {
-        setApplying((current) => {
-          const next = new Map(current);
-
-          next.delete(key);
-
-          return next;
-        });
-        setCardErrors((current) =>
-          new Map(current).set(
-            key,
-            new Error(task.briefError || task.error || t("dataSync.inbox.card.failed")),
-          ),
+        changes.set(key, { taskId: entry.taskId, change: "failed" });
+        failures.set(
+          key,
+          new Error(task.briefError || task.error || t("dataSync.inbox.card.failed")),
         );
-      }
+      } else if (task?.status === BTaskStatus.Completed || (!task && entry.seen))
+        changes.set(key, { taskId: entry.taskId, change: "finished" });
+      else if (task && !entry.seen) changes.set(key, { taskId: entry.taskId, change: "seen" });
     }
-  }, [tasks, applying, t]);
+    if (!changes.size) return;
+    const settleAfter = reads.current + 1;
+
+    updateApplying((current) => {
+      const next = new Map(current);
+
+      for (const [key, { taskId, change }] of changes) {
+        const entry = current.get(key);
+
+        // Sent again meanwhile: the new decision is followed on its own.
+        if (!entry || entry.taskId !== taskId) continue;
+        if (change === "failed") next.delete(key);
+        else
+          next.set(key, {
+            ...entry,
+            seen: true,
+            settleAfter: change === "finished" ? settleAfter : entry.settleAfter,
+          });
+      }
+
+      return next;
+    });
+    for (const [key, cause] of failures) setCardError(key, cause);
+    if (Array.from(changes.values()).some(({ change }) => change === "finished")) void load();
+  }, [tasks, applying, t, load, updateApplying, setCardError]);
 
   const cards = useMemo(() => groupInbox(open ?? []), [open]);
   // Past what is read, a definition's conflicts may be only partly here: nothing that needs all
@@ -263,46 +336,68 @@ export default function InboxList({
     void load();
   };
 
+  /** Follows the cards a batch decides, until the decision is over. */
+  const follow = (keys: string[], batch: DataSyncResolveBatchInput, taskId?: string | null) => {
+    const entry: InboxApplying = {
+      taskId: taskId ?? "",
+      tokens: batchTokens(batch),
+      sentAt: Date.now(),
+      // No task to follow: the read that comes next shows where it ended.
+      settleAfter: taskId ? undefined : reads.current + 1,
+    };
+
+    updateApplying((current) => {
+      const next = new Map(current);
+
+      for (const key of keys) next.set(key, entry);
+
+      return next;
+    });
+    for (const key of keys) setCardError(key);
+  };
+
+  /**
+   * Sends a batch. Refused because it no longer matches what there is to decide — an item changed
+   * or closed meanwhile, or a conflict of the definition missing from the card — "Needs you" is
+   * read again, so the card shows what there is to decide now.
+   */
+  const send = async (batch: DataSyncResolveBatchInput) => {
+    try {
+      return throwIfProblem(await dataSyncApi.resolve(batch));
+    } catch (cause) {
+      if (cause instanceof DataSyncProblemError && staleProblems.has(cause.problem.code))
+        void load();
+      throw cause;
+    }
+  };
+
   const resolve = (
     card: InboxCardModel,
     batch: DataSyncResolveBatchInput,
     confirmation?: InboxConfirmation,
   ) => {
     const operation = async () => {
-      const start = throwIfProblem(await dataSyncApi.resolve(batch));
+      const start = await send(batch);
 
-      setCardErrors((current) => {
-        const next = new Map(current);
-
-        next.delete(card.key);
-
-        return next;
-      });
-      setApplying((current) => new Map(current).set(card.key, start.taskId ?? ""));
+      follow([card.key], batch, start.taskId);
       resolved();
     };
 
     if (confirmation) actions.confirm({ ...confirmation, action: operation, refresh: [] });
-    else
-      void actions.run(operation, [], (cause) =>
-        setCardErrors((current) => new Map(current).set(card.key, cause)),
-      );
+    else void actions.run(operation, [], (cause) => setCardError(card.key, cause));
   };
 
   const runBulk = (bulk: InboxBulk) => {
     const operation = async () => {
       setBulkError(undefined);
-      const start = throwIfProblem(await dataSyncApi.resolve(bulk.batch));
-      const keys = new Set(bulk.batch.items.map((input) => input.itemId));
+      const start = await send(bulk.batch);
+      const ids = new Set(bulk.batch.items.map((input) => input.itemId));
 
-      setApplying((current) => {
-        const next = new Map(current);
-
-        for (const card of cards)
-          if (card.items.some((item) => keys.has(item.id))) next.set(card.key, start.taskId ?? "");
-
-        return next;
-      });
+      follow(
+        cards.filter((card) => card.items.some((item) => ids.has(item.id))).map((card) => card.key),
+        bulk.batch,
+        start.taskId,
+      );
       resolved();
     };
 
@@ -432,15 +527,7 @@ export default function InboxList({
             card={card}
             error={cardErrors.get(card.key)}
             now={now}
-            onDismissError={() =>
-              setCardErrors((current) => {
-                const next = new Map(current);
-
-                next.delete(card.key);
-
-                return next;
-              })
-            }
+            onDismissError={() => setCardError(card.key)}
             onPauseLink={(linkId) =>
               void actions.run(
                 async () => {
@@ -448,7 +535,7 @@ export default function InboxList({
                   resolved();
                 },
                 [],
-                (cause) => setCardErrors((current) => new Map(current).set(card.key, cause)),
+                (cause) => setCardError(card.key, cause),
               )
             }
             onResolve={(batch, confirmation) => resolve(card, batch, confirmation)}

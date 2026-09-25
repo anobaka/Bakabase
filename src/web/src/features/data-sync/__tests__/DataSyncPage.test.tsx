@@ -483,6 +483,43 @@ describe("the page", () => {
     expect(screen.getByTestId("data-sync-history-drawing")).toBeInTheDocument();
   });
 
+  it("takes a link's details to the history with that device alone", async () => {
+    vi.mocked(dataSyncApi.history).mockResolvedValue([
+      historyEntry(1, DataSyncHistoryKind.AutoSync),
+      historyEntry(2, DataSyncHistoryKind.FirstLink, {
+        linkId: 2,
+        peerNodeId: "node-pc2",
+        peerName: "PC-2",
+      }),
+    ]);
+    renderPage("/data-sync?link=1");
+    await loaded();
+    await waitFor(() => expect(screen.getAllByTestId("data-sync-history-entry")).toHaveLength(2));
+    await waitFor(() =>
+      expect(screen.getByTestId("data-sync-link-details")).toHaveAttribute("data-peer", "node-nas"),
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("data-sync-link-history"));
+      await new Promise((resolve) => setTimeout(resolve));
+    });
+    const history = screen.getByTestId("data-sync-history");
+
+    expect(within(history).getAllByTestId("data-sync-history-entry")).toHaveLength(1);
+    expect(within(history).getByTestId("data-sync-history-entry")).toHaveAttribute(
+      "data-entry",
+      "1",
+    );
+    expect(within(history).getByTestId("data-sync-history-filter-device")).toHaveValue("node-nas");
+    expect(within(history).getByRole("heading", { name: "dataSync.history.title" })).toHaveFocus();
+
+    // Every device's again, from the filter.
+    fireEvent.change(within(history).getByTestId("data-sync-history-filter-device"), {
+      target: { value: "" },
+    });
+    expect(within(history).getAllByTestId("data-sync-history-entry")).toHaveLength(2);
+  });
+
   it("keeps each source on its own: one that fails leaves the others", async () => {
     vi.mocked(dataSyncApi.readers).mockRejectedValue(
       new DataSyncRequestError("Http500", "boom", 500),

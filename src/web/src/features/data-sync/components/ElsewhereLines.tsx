@@ -56,7 +56,7 @@ export default function ElsewhereLines({ peers }: { peers: SyncPeer[] }) {
         ))}
       </ul>
       {error && (
-        <p className="text-xs text-danger" role="alert">
+        <p className="text-xs text-danger-700" role="alert">
           {error}
         </p>
       )}

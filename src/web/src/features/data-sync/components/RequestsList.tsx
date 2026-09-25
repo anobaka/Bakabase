@@ -75,12 +75,13 @@ const RequestsList = forwardRef<
     error?: Error;
     actions: DataSyncActions;
     canManage: boolean;
+    sharingEnabled: boolean;
     remoteAccessMode: RemoteAccessMode;
     onRetry: () => void;
     now?: number;
   }
 >(function RequestsList(
-  { requests, outgoing, error, actions, canManage, remoteAccessMode, onRetry, now },
+  { requests, outgoing, error, actions, canManage, sharingEnabled, remoteAccessMode, onRetry, now },
   ref,
 ) {
   const { t } = useTranslation();
@@ -111,6 +112,7 @@ const RequestsList = forwardRef<
               now={now}
               remoteAccessMode={remoteAccessMode}
               request={request}
+              sharingEnabled={sharingEnabled}
             />
           ))}
         </div>

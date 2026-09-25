@@ -80,6 +80,7 @@ export default function DataSyncMapSection({ node, ...host }: DataSyncMapSection
           now={host.now}
           remoteAccessMode={editor.remoteAccessMode}
           request={request}
+          sharingEnabled={editor.sharingEnabled}
         />
       ));
     const ended = !!outgoing && isEnded(outgoing);

@@ -617,6 +617,26 @@ describe("the first sync review", () => {
     expect(screen.getByTestId("data-sync-review-keep-receiving")).toBeInTheDocument();
   });
 
+  it("keeps in step both ways only where the server says this caller may create access", async () => {
+    // The window takes itself for this device's own — its defaults when who is looking could
+    // not be read — but the server knows better.
+    useDataSyncStore.getState().setOverview(overview({ canManageSharing: false }));
+    vi.mocked(dataSyncApi.review).mockResolvedValue(
+      reviewResult(laptopItems(), {
+        state: DataSyncReviewState.Applied,
+        copyOnce: true,
+        linkId: 21,
+      }),
+    );
+    renderReview();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("data-sync-review-follow-up")).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("data-sync-review-keep-in-step")).toBeNull();
+    expect(screen.getByTestId("data-sync-review-keep-receiving")).toBeInTheDocument();
+  });
+
   it("says what two-way sends back, marks what is newer here, and fetches again", async () => {
     vi.mocked(dataSyncApi.review).mockResolvedValue(
       reviewResult(

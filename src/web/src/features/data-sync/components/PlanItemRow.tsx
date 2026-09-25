@@ -48,7 +48,7 @@ export interface PlanItemRowProps {
 
 const badgeClass: Record<DataSyncPlanItemType, string> = {
   [DataSyncPlanItemType.Create]: "bg-success/10 text-success-700 dark:text-success",
-  [DataSyncPlanItemType.Update]: "bg-primary/10 text-primary",
+  [DataSyncPlanItemType.Update]: "bg-primary/10 text-primary-700",
   [DataSyncPlanItemType.Unchanged]: "bg-default-100 text-default-500",
   [DataSyncPlanItemType.Link]: `bg-secondary/10 ${syncText}`,
   [DataSyncPlanItemType.NeedsDecision]: "bg-warning/10 text-warning-700 dark:text-warning",
@@ -134,7 +134,7 @@ export default function PlanItemRow({
         </span>
         {item.reason === DataSyncPlanItemReason.LocalIsNewer && (
           <span
-            className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+            className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary-700"
             data-testid="data-sync-plan-newer-here"
           >
             {t("dataSync.plan.newerHere")}
@@ -242,7 +242,7 @@ export default function PlanItemRow({
         </p>
       )}
       {error && (
-        <p className="text-xs text-danger" data-testid="data-sync-plan-error" role="alert">
+        <p className="text-xs text-danger-700" data-testid="data-sync-plan-error" role="alert">
           {t(
             `dataSync.decisionError.${
               DataSyncDecisionErrorCodeLabel[error] ??

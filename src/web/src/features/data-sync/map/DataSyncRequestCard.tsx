@@ -1,14 +1,21 @@
 import type { DataSyncPanelActions } from "../hooks/useDataSyncActions";
+import type { RemoteAccessMode } from "@/sdk/constants";
 
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { dataSyncApi } from "../api";
 import { minutesLeft } from "../times";
-import { dataSyncKinds, orderKinds, toggleKind } from "../viewModels";
+import {
+  dataSyncKinds,
+  orderKinds,
+  sharingNeeded,
+  toggleKind,
+  turnsOnWarning,
+} from "../viewModels";
 import { primaryClass, smallButtonClass } from "../components/common";
 
-import { DataSyncRequestIntent, RemoteAccessMode } from "@/sdk/constants";
+import { DataSyncRequestIntent } from "@/sdk/constants";
 
 /*
  * One device asking to read this device's definitions — on the data sync page's Requests, and
@@ -35,7 +42,11 @@ export interface DataSyncRequestCardProps {
   actions: DataSyncPanelActions;
   /** Whether this window may approve (spec §7.1.5); rejecting is open to every window. */
   canManage: boolean;
-  /** Remote access here: approving turns it on, with pairing required, when it is off. */
+  /**
+   * Sharing and remote access here: an approval can only be read while both are on, so
+   * approving turns on whichever is off — remote access with pairing required — and says so.
+   */
+  sharingEnabled: boolean;
   remoteAccessMode: RemoteAccessMode;
   now?: number;
 }
@@ -44,6 +55,7 @@ export default function DataSyncRequestCard({
   request,
   actions,
   canManage,
+  sharingEnabled,
   remoteAccessMode,
   now,
 }: DataSyncRequestCardProps) {
@@ -63,18 +75,17 @@ export default function DataSyncRequestCard({
         from,
       })
     : undefined;
-  const turnsOnRemoteAccess = remoteAccessMode === RemoteAccessMode.Disabled;
+  const own = { sharingEnabled, remoteAccessMode };
   const minutes = minutesLeft(request.expiresAt, now);
 
   const approve = () =>
     actions.confirm({
       title: t("dataSync.request.approveTitle", { name }),
       description: text,
-      warning: [claim ?? fromText, turnsOnRemoteAccess ? t("dataSync.sharing.remoteAccess") : ""]
-        .filter(Boolean)
-        .join(" "),
+      warning: [claim ?? fromText, turnsOnWarning(t, own)].filter(Boolean).join(" "),
       action: async () => {
-        if (turnsOnRemoteAccess)
+        // Remote access changes only where it is off (spec §7.2.4).
+        if (sharingNeeded(own))
           await dataSyncApi.setSharing({ enabled: true, enablePairedRemoteAccess: true });
         const result = await dataSyncApi.approveRequest(request.requestId, {
           receiveBack: twoWay && receiveBack,

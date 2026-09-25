@@ -163,7 +163,7 @@ export default function HistoryDrawing({
               <text className="fill-default-500 text-[10px]" textAnchor="middle" x={260} y={y + 10}>
                 {truncate(summary(source), 48)}
               </text>
-              <text className="fill-default-400 text-[10px]" textAnchor="middle" x={260} y={y + 28}>
+              <text className="fill-default-500 text-[10px]" textAnchor="middle" x={260} y={y + 28}>
                 {timeAgo(t, source.lastAt, now)}
               </text>
               <rect

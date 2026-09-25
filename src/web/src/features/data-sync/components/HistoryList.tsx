@@ -1,7 +1,7 @@
 import type { IconType } from "react-icons";
 import type { DataSyncHistoryDetail, DataSyncHistoryEntry, DataSyncLinkView } from "../api";
 
-import { useCallback, useEffect, useState } from "react";
+import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AiOutlineCheckCircle,
@@ -21,6 +21,7 @@ import HistoryDrawing from "./HistoryDrawing";
 import UndoDialog from "./UndoDialog";
 import {
   DataSyncErrorNotice,
+  fieldClass,
   linkButtonClass,
   panelClass,
   SectionHeading,
@@ -41,7 +42,8 @@ import { useBTasksStore } from "@/stores/bTasks";
 /*
  * The history (spec §11.3): who sent definitions here, drawn, then every entry — a first sync,
  * a copy, an automatic sync, the reader's own decisions, an undo, a restore — with what it did,
- * its details, and Undo while it can still be undone.
+ * its details, and Undo while it can still be undone. It can show one device's entries alone,
+ * which is where a link's details send the reader for its history (spec §11.2).
  */
 
 /** How often the history is read again, and how often while an undo runs. */
@@ -63,19 +65,19 @@ export interface HistoryListProps {
   /** The links, for the mode an undone change syncs out through. */
   links?: DataSyncLinkView[];
   selfName: string;
+  /** The device whose entries alone are shown (its node id), or every device's. */
+  peer?: string;
+  onPeerChange?: (peer?: string) => void;
   onChanged: () => void;
   now?: number;
 }
 
-export default function HistoryList({
-  version,
-  links,
-  selfName,
-  onChanged,
-  now,
-}: HistoryListProps) {
+const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function HistoryList(
+  { version, links, selfName, peer, onPeerChange, onChanged, now },
+  heading,
+) {
   const { t } = useTranslation();
-  const [entries, setEntries] = useState<DataSyncHistoryEntry[]>();
+  const [all, setEntries] = useState<DataSyncHistoryEntry[]>();
   const [error, setError] = useState<Error>();
   const [open, setOpen] = useState<number>();
   const [details, setDetails] = useState<Record<number, DataSyncHistoryDetail | Error>>({});
@@ -168,13 +170,53 @@ export default function HistoryList({
   const modeOf = (entry: DataSyncHistoryEntry) =>
     entry.linkId != null ? links?.find((link) => link.id === entry.linkId)?.mode : undefined;
 
+  // The devices the history names, for its filter: each once, by name.
+  const devices = useMemo(() => {
+    const byId = new Map<string, string>();
+
+    for (const entry of all ?? [])
+      if (entry.peerNodeId) byId.set(entry.peerNodeId, entry.peerName ?? entry.peerNodeId);
+
+    return Array.from(byId, ([nodeId, name]) => ({ nodeId, name })).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [all]);
+  const entries = peer ? all?.filter((entry) => entry.peerNodeId === peer) : all;
+  const peerName =
+    devices.find((device) => device.nodeId === peer)?.name ??
+    links?.find((link) => link.peerNodeId === peer)?.peerName;
+
   return (
     <section
       aria-labelledby="data-sync-history-title"
       className={`${panelClass} space-y-3`}
       data-testid="data-sync-history"
     >
-      <SectionHeading id="data-sync-history-title" title={t("dataSync.history.title")} />
+      <SectionHeading
+        headingRef={heading}
+        id="data-sync-history-title"
+        title={t("dataSync.history.title")}
+      >
+        {onPeerChange && (devices.length > 1 || peer) ? (
+          <select
+            aria-label={t("dataSync.history.filter.device")}
+            className={`${fieldClass} w-auto py-1 text-xs`}
+            data-testid="data-sync-history-filter-device"
+            value={peer ?? ""}
+            onChange={(event) => onPeerChange(event.target.value || undefined)}
+          >
+            <option value="">{t("dataSync.history.filter.allDevices")}</option>
+            {devices.map((device) => (
+              <option key={device.nodeId} value={device.nodeId}>
+                {device.name}
+              </option>
+            ))}
+            {peer && !devices.some((device) => device.nodeId === peer) && (
+              <option value={peer}>{peerName ?? t("dataSync.otherDevice")}</option>
+            )}
+          </select>
+        ) : null}
+      </SectionHeading>
       <HistoryDrawing entries={entries ?? []} now={now} selfName={selfName} />
       <DataSyncErrorNotice error={error} onRetry={() => void load()} />
       {!entries && !error && (
@@ -183,7 +225,11 @@ export default function HistoryList({
         </p>
       )}
       {entries && entries.length === 0 && (
-        <p className="text-sm text-default-500">{t("dataSync.history.empty")}</p>
+        <p className="text-sm text-default-500" data-testid="data-sync-history-empty">
+          {peer
+            ? t("dataSync.history.emptyWith", { name: peerName ?? t("dataSync.otherDevice") })
+            : t("dataSync.history.empty")}
+        </p>
       )}
       {entries && entries.length > 0 && (
         <ul className="divide-y divide-default-100" data-testid="data-sync-history-list">
@@ -229,7 +275,7 @@ export default function HistoryList({
                         </span>
                       )}
                     {busy && (
-                      <span className="text-xs text-primary" role="status">
+                      <span className="text-xs text-primary-700" role="status">
                         {t("dataSync.history.undoing")}
                       </span>
                     )}
@@ -266,7 +312,7 @@ export default function HistoryList({
                   </p>
                 )}
                 {runErrors.get(entry.id) && (
-                  <p className="text-xs text-danger" role="alert">
+                  <p className="text-xs text-danger-700" role="alert">
                     {runErrors.get(entry.id)}
                   </p>
                 )}
@@ -330,4 +376,6 @@ export default function HistoryList({
       )}
     </section>
   );
-}
+});
+
+export default HistoryList;

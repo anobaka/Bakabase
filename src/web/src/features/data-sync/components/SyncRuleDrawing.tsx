@@ -498,7 +498,7 @@ function DeviceBox({
       <p className="truncate text-sm font-semibold" title={title}>
         {title}
       </p>
-      <p className={`truncate text-[11px] ${self ? "text-primary" : "text-default-500"}`}>
+      <p className={`truncate text-[11px] ${self ? "text-primary-700" : "text-default-500"}`}>
         {subtitle}
       </p>
     </div>
@@ -684,7 +684,8 @@ function ModeBadgeMenu({
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLSpanElement>(null);
   const menuId = useId();
-  const menuKeys = useMenuKeyboard(open, menu, trigger, () => setOpen(false));
+  // Escape closes the menu, and only the menu: the details around it stay open.
+  const menuKeys = useMenuKeyboard(open, menu, trigger, () => setOpen(false), root);
 
   useEffect(() => {
     if (!open) return;
@@ -702,15 +703,6 @@ function ModeBadgeMenu({
     setOpen(false);
     trigger.current?.focus();
     onChange(mode);
-  };
-
-  /** Escape closes the menu, and only the menu: the details around it stay open. */
-  const closeOnEscape = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== "Escape" || !open) return;
-    event.stopPropagation();
-    event.preventDefault();
-    setOpen(false);
-    trigger.current?.focus();
   };
 
   return (
@@ -732,10 +724,7 @@ function ModeBadgeMenu({
           if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
             event.preventDefault();
             setOpen(true);
-
-            return;
           }
-          closeOnEscape(event);
         }}
       >
         {t(`dataSync.mode.short.${value}`)}
@@ -749,10 +738,7 @@ function ModeBadgeMenu({
           id={menuId}
           role="menu"
           tabIndex={-1}
-          onKeyDown={(event) => {
-            closeOnEscape(event);
-            if (!event.defaultPrevented) menuKeys(event);
-          }}
+          onKeyDown={menuKeys}
         >
           {(["twoWay", "follow"] as const).map((mode) => (
             <button
@@ -906,6 +892,21 @@ function StatusBlock({
     case "AccessRevoked":
       statusActions.push(askAgain(t("dataSync.pause.askAgain", { name })));
       break;
+    case "ReadBackFailed":
+      // Asks the other device again, as a request of this device's own (spec §7.2.4).
+      if (canManage && linkId !== undefined)
+        statusActions.push(
+          button(
+            t("dataSync.link.tryAgain"),
+            () =>
+              void actions.run(
+                () => dataSyncApi.resumeLink(linkId, DataSyncResumeAction.AskAccessAgain),
+                ["dataSync"],
+              ),
+            "data-sync-read-back-again",
+          ),
+        );
+      break;
     case "NeedsYou":
       statusActions.push(inbox);
       break;
@@ -940,9 +941,13 @@ function StatusBlock({
       ? pauseHint(t, peer)
       : status.code === "AwaitingAccess"
         ? t("dataSync.link.approveThere", { name })
-        : canStartAnyway(peer, now)
-          ? t("dataSync.pause.startAnywayHint", { name })
-          : undefined;
+        : status.code === "ReadBackFailed"
+          ? canManage
+            ? t("dataSync.link.readBackAgain", { name })
+            : t("dataSync.manageElsewhere")
+          : canStartAnyway(peer, now)
+            ? t("dataSync.pause.startAnywayHint", { name })
+            : undefined;
 
   return (
     <div className="space-y-2 rounded-lg bg-default-50 p-2.5" data-testid="data-sync-status">

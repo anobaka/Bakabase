@@ -122,6 +122,9 @@ function DataSync() {
     open: false,
     onlyApart: false,
   });
+  // The history shows one device's entries alone once a link's details asked for them.
+  const [historyPeer, setHistoryPeer] = useState<string>();
+  const historyHeading = useRef<HTMLHeadingElement>(null);
   const page = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const details = useRef<HTMLElement>(null);
@@ -269,6 +272,18 @@ function DataSync() {
     );
   };
 
+  /** A link's history: the history with that device alone, the keyboard on its heading. */
+  const showHistory = (nodeId: string) => {
+    setHistoryPeer(nodeId);
+    // Once it shows that device's entries.
+    setTimeout(() => {
+      const target = historyHeading.current;
+
+      target?.scrollIntoView?.({ block: "start", behavior: reducedMotion ? "auto" : "smooth" });
+      target?.focus({ preventScroll: true });
+    });
+  };
+
   if (data.refused) return <NotAvailableNotice />;
 
   const status = overallStatus(t, overview?.status);
@@ -291,7 +306,7 @@ function DataSync() {
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium text-primary">{t("federation.mode")}</p>
+          <p className="text-xs font-medium text-primary-700">{t("federation.mode")}</p>
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
             <AiOutlineSync aria-hidden />
             {t("dataSync.title")}
@@ -460,6 +475,7 @@ function DataSync() {
                 onCreateCode={() => setInvitationFor({ name: selected.name })}
                 onDismissMessage={dismiss}
                 onShowDefinitions={showDefinitions}
+                onShowHistory={() => showHistory(selected.nodeId)}
               />
             ) : (
               <SelfSummary
@@ -495,15 +511,19 @@ function DataSync() {
         )}
         remoteAccessMode={remoteAccessMode}
         requests={data.requests.value ?? []}
+        sharingEnabled={sharingEnabled}
         onRetry={() => void data.reload()}
       />
 
       {overview && (
         <HistoryList
+          ref={historyHeading}
           links={data.links.value}
+          peer={historyPeer}
           selfName={selfName}
           version={data.version}
           onChanged={() => void data.reload()}
+          onPeerChange={setHistoryPeer}
         />
       )}
 

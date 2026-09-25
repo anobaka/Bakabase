@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import type { Tone } from "../viewModels";
 
 import { useTranslation } from "react-i18next";
@@ -32,13 +32,18 @@ export const syncFill = "fill-secondary-600";
 /** A small button inside a sentence or a card. */
 export const smallButtonClass =
   "inline-flex items-center justify-center gap-1.5 rounded-md border border-default-300 px-2 py-1 text-xs font-medium transition hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50";
-export const linkButtonClass = "text-xs text-primary underline disabled:opacity-50";
+export const linkButtonClass = "text-xs text-primary-700 underline disabled:opacity-50";
 
+/**
+ * A status in words, at 12–14 px: every tone a step deep enough for AA contrast on the page's
+ * panels and the status block's `default-50` in both themes (HeroUI swaps the -700 shades for
+ * light ones in the dark theme).
+ */
 export const toneText: Record<Tone, string> = {
   success: "text-success-700 dark:text-success",
-  primary: "text-primary",
+  primary: "text-primary-700",
   warning: "text-warning-700 dark:text-warning",
-  danger: "text-danger",
+  danger: "text-danger-700",
   default: "text-default-500",
 };
 
@@ -117,19 +122,29 @@ export function DataSyncErrorNotice({
   );
 }
 
-/** A heading with the section's own help and actions on its right. */
+/**
+ * A heading with the section's own help and actions on its right. With `headingRef`, the heading
+ * can be given the keyboard: where a link elsewhere on the page leads to the section.
+ */
 export function SectionHeading({
   id,
   title,
+  headingRef,
   children,
 }: {
   id: string;
   title: string;
+  headingRef?: Ref<HTMLHeadingElement>;
   children?: ReactNode;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <h2 className="text-base font-semibold" id={id}>
+      <h2
+        ref={headingRef}
+        className="text-base font-semibold outline-none"
+        id={id}
+        tabIndex={headingRef ? -1 : undefined}
+      >
         {title}
       </h2>
       {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}

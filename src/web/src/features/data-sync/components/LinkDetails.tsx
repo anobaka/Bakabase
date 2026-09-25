@@ -16,9 +16,9 @@ import { DataSyncLinkMode, DataSyncLinkState } from "@/sdk/constants";
 import { DismissButton } from "@/features/federation/components/common";
 
 /*
- * The details of one device, beside the diagram: the rule editor, then what the link keeps
- * apart — definitions skipped, withheld until this device is updated, no longer offered there —
- * and the ways to start over.
+ * The details of one device, beside the diagram: the rule editor, then the way to its history,
+ * what the link keeps apart — definitions skipped, withheld until this device is updated, no
+ * longer offered there — and the ways to start over.
  */
 
 export interface LinkDetailsProps {
@@ -36,6 +36,8 @@ export interface LinkDetailsProps {
   onCreateCode: () => void;
   /** Opens the list of definitions and how each syncs, on those not synced whole. */
   onShowDefinitions: () => void;
+  /** Shows the history with this device alone, and takes the reader there. */
+  onShowHistory: () => void;
   /** Dismisses what the last action said, the keyboard going to the heading. */
   onDismissMessage: (clear: () => void) => () => void;
   now?: number;
@@ -54,6 +56,7 @@ export default function LinkDetails({
   onClose,
   onCreateCode,
   onShowDefinitions,
+  onShowHistory,
   onDismissMessage,
   now,
 }: LinkDetailsProps) {
@@ -164,6 +167,16 @@ export default function LinkDetails({
 
       {!ended && linkId !== undefined && (
         <div className="space-y-2 text-sm" data-testid="data-sync-link-facts">
+          <p>
+            <button
+              className={linkButtonClass}
+              data-testid="data-sync-link-history"
+              type="button"
+              onClick={onShowHistory}
+            >
+              {t("dataSync.link.history", { name })}
+            </button>
+          </p>
           {peer.excludedCount > 0 && (
             <p className="flex flex-wrap items-center gap-2">
               <span>{t("dataSync.link.skipped", { count: peer.excludedCount })}</span>

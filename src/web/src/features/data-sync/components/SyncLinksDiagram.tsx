@@ -20,7 +20,7 @@ import {
 } from "../viewModels";
 
 import { CountBubble, StatusDot, syncFill, toneFill, toneText } from "./common";
-import { layoutSyncDiagram, PEER_W, spokeGeometry } from "./diagramLayout";
+import { LABEL_FONT_SIZE, layoutSyncDiagram, PEER_W, spokeGeometry } from "./diagramLayout";
 
 import {
   ATTENTION_DASH,
@@ -30,7 +30,7 @@ import {
   KindGlyph,
 } from "@/features/federation/map/DeviceMapCanvas";
 import { attributeValue } from "@/features/federation/map/mapFocus";
-import { fitEnd, fitNames, SEMIBOLD } from "@/features/federation/map/text";
+import { fitEnd, fitNames, SEMIBOLD, textWidth } from "@/features/federation/map/text";
 
 /*
  * The page's picture: this device in the middle and every device it syncs with around it,
@@ -149,9 +149,19 @@ export default function SyncLinksDiagram({
 }: SyncLinksDiagramProps) {
   const { t } = useTranslation();
   const { ref, width } = useElementWidth<HTMLDivElement>(initialWidth);
+  // Each line's mode in words, measured: the layout sets them where nothing else is drawn.
+  const modeWords = peers.map((peer) => {
+    const mode = lineMode(peer);
+
+    return mode ? t<string>(`federation.map.sync.mode.${mode}`) : undefined;
+  });
+  const labelWidths = modeWords.map((words) =>
+    words ? Math.ceil(textWidth(words, LABEL_FONT_SIZE) * SEMIBOLD) : 0,
+  );
+  const measured = labelWidths.join(",");
   const layout = useMemo(
-    () => layoutSyncDiagram(width, peers.length, !!onAdd),
-    [width, peers.length, onAdd],
+    () => layoutSyncDiagram(width, peers.length, !!onAdd, labelWidths),
+    [width, peers.length, onAdd, measured],
   );
   // What has the keyboard in the diagram, by what it stands for rather than by the element: the
   // drawing and the list replace each other as the width changes, and the keyboard stays on the
@@ -319,7 +329,9 @@ export default function SyncLinksDiagram({
                 onSelect={(via) => onSelect(peer.nodeId, via, "card")}
               />
               <Spoke
+                label={layout.labels[index]}
                 markerId={markerId}
+                modeWords={modeWords[index]}
                 now={now}
                 peer={peer}
                 peerBox={layout.peers[index]}
@@ -379,7 +391,8 @@ function SelfCard({
         {fitEnd(self.name, room, 14 * SEMIBOLD)}
       </text>
       <text
-        className="fill-primary-600 dark:fill-primary-400"
+        // Swapped for a light blue by the dark theme: AA on the card's primary-50 in both.
+        className="fill-primary-600"
         fontSize={11}
         fontWeight={600}
         x={textX}
@@ -450,6 +463,8 @@ function Spoke({
   peer,
   selfBox,
   peerBox,
+  label: labelAt,
+  modeWords,
   selected,
   markerId,
   now,
@@ -458,6 +473,9 @@ function Spoke({
   peer: SyncPeer;
   selfBox: Box;
   peerBox: Box;
+  /** Where the layout set the mode's words. */
+  label?: Box;
+  modeWords?: string;
   selected: boolean;
   markerId: string;
   now?: number;
@@ -551,18 +569,19 @@ function Spoke({
         />
         {issue && <AttentionMark x={8} y={-8} />}
       </g>
-      {mode && (
+      {labelAt && modeWords && (
+        // Beside the badge, where the layout found room clear of every line, badge and card.
         <text
           className={syncFill}
           data-testid="data-sync-spoke-mode"
           dominantBaseline="central"
-          fontSize={10}
+          fontSize={LABEL_FONT_SIZE}
           fontWeight={600}
           textAnchor="middle"
-          x={geometry.label.x}
-          y={geometry.label.y}
+          x={labelAt.cx}
+          y={labelAt.cy}
         >
-          {t(`federation.map.sync.mode.${mode}`)}
+          {modeWords}
         </text>
       )}
     </g>
@@ -834,7 +853,7 @@ function DiagramList({
     <div className="space-y-2" data-testid="data-sync-diagram-list">
       <div className="rounded-xl border border-primary bg-primary-50 p-3 text-sm">
         <p className="font-semibold">{self.name}</p>
-        <p className="text-xs text-primary">
+        <p className="text-xs text-primary-700">
           {t("dataSync.thisDevice")}
           {self.sharingEnabled ? ` · ${t("dataSync.diagram.shares")}` : ""}
         </p>
@@ -898,7 +917,7 @@ function DiagramList({
       </ul>
       {onAdd && (
         <button
-          className="flex w-full items-center gap-2 rounded-xl border border-dashed border-default-400 p-3 text-sm text-default-600 hover:border-primary hover:text-primary"
+          className="flex w-full items-center gap-2 rounded-xl border border-dashed border-default-400 p-3 text-sm text-default-600 hover:border-primary hover:text-primary-700"
           data-testid="data-sync-add"
           type="button"
           onClick={onAdd}

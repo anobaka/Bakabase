@@ -256,6 +256,14 @@ describe("data sync on the device map: the line", () => {
     expect(
       issue({ state: DataSyncLinkState.Active, lastErrorCode: "Unreachable" }),
     ).toBeUndefined();
+    // Reading back a device this one approved to keep in step failed: waiting on nobody.
+    expect(
+      issue({
+        state: DataSyncLinkState.AwaitingAccess,
+        receivingPending: true,
+        lastErrorCode: "Unreachable",
+      })?.issue,
+    ).toBe("syncFailed");
     // A paused link is still set up: drawn, dotted, with the mark — never taken off the map.
     expect(one({ state: DataSyncLinkState.Paused, receiving: false })?.in).toBe("active");
   });

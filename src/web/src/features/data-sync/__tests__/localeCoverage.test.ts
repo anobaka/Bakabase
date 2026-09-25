@@ -96,6 +96,7 @@ const dynamicKeys = [
   ...(
     [
       "inStep",
+      "syncing",
       "offline",
       "needsYou",
       "awaitingAccess",
@@ -243,10 +244,15 @@ const mapKeys = [
   ].map((issue) => `federation.map.issue.${issue}`),
 ];
 
-/** The status catalogue of spec §11.6, entry by entry. */
+/**
+ * The status catalogue of spec §11.6, entry by entry. `FullReconciliation` has its words already;
+ * nothing the server answers says one is running yet, so no line shows it.
+ */
 const catalogue = [
   "InStep",
   "Syncing",
+  "FullReconciliation",
+  "ReadBackFailed",
   "NeedsYou",
   "NeedsYouThere",
   "Offline",

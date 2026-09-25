@@ -37,7 +37,7 @@ export default function InboxBulkBar({
         {bulks.map((bulk) => (
           <button
             key={`${bulk.id}-${bulk.peer?.nodeId ?? ""}`}
-            className={`${smallButtonClass} ${bulk.destructive ? "border-danger/40 text-danger" : ""}`}
+            className={`${smallButtonClass} ${bulk.destructive ? "border-danger/40 text-danger-700" : ""}`}
             data-bulk={bulk.id}
             data-testid="data-sync-inbox-bulk-action"
             disabled={busy}

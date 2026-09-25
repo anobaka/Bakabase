@@ -10,8 +10,10 @@ import { dataSyncApi } from "../api";
 import { syncPeerFromLink, syncPeerFromMapPeer } from "../viewModels";
 
 import { link, mapPeer, NOW, recordingActions } from "./dataSyncFixtures";
+import EscapableDetails from "./EscapableDetails";
 
 import {
+  DataSyncLinkInitiator,
   DataSyncLinkMode,
   DataSyncLinkState,
   DataSyncPauseReason,
@@ -409,6 +411,40 @@ describe("the badge's menu", () => {
     expect(badge).toHaveFocus();
   });
 
+  it("closes on Escape, and only itself: the details around it stay open", () => {
+    const closeDetails = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <EscapableDetails onEscape={closeDetails}>
+          <SyncRuleDrawing
+            canManage
+            actions={recorded.actions}
+            initialWidth={520}
+            now={NOW}
+            peer={nas()}
+            remoteAccessMode={RemoteAccessMode.Enabled}
+            selfName="This PC"
+            sharingEnabled={true}
+          />
+        </EscapableDetails>
+      </MemoryRouter>,
+    );
+    const badge = screen.getByTestId("data-sync-mode-badge");
+
+    fireEvent.click(badge);
+    fireEvent.keyDown(within(screen.getByRole("menu")).getAllByRole("menuitemradio")[0], {
+      key: "Escape",
+    });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(badge).toHaveFocus();
+    expect(closeDetails).not.toHaveBeenCalled();
+
+    // With the menu closed, Escape is the details' again.
+    fireEvent.keyDown(badge, { key: "Escape" });
+    expect(closeDetails).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps a choice this window may not make focusable, and does not make it", () => {
     draw(
       nas({
@@ -552,6 +588,36 @@ describe("the status line", () => {
     );
     expect(screen.getByText("dataSync.status.ReadBackDeclined NAS")).toBeInTheDocument();
     expect(screen.queryByText("dataSync.link.askKeepInStep NAS")).toBeNull();
+  });
+
+  it("says reading the other device back failed, and offers to try again where this window may", async () => {
+    const failed = nas({
+      state: DataSyncLinkState.AwaitingAccess,
+      initiator: DataSyncLinkInitiator.Peer,
+      lastErrorCode: "Unreachable",
+      peerModeTowardsUs: "twoWay",
+    });
+
+    draw(failed);
+    const status = screen.getByTestId("data-sync-status");
+
+    expect(within(status).getByText(/dataSync\.status\.ReadBackFailed/)).toHaveTextContent(
+      "dataSync.status.ReadBackFailed NAS dataSync.peerError.Unreachable",
+    );
+    // Nothing waits for an approval there: no hint to approve it on the other device.
+    expect(within(status).queryByText(/dataSync\.link\.approveThere/)).toBeNull();
+    expect(within(status).getByText("dataSync.link.readBackAgain NAS")).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("data-sync-read-back-again"));
+    });
+    expect(recorded.actions.run).toHaveBeenCalled();
+    expect(dataSyncApi.resumeLink).toHaveBeenCalledWith(1, DataSyncResumeAction.AskAccessAgain);
+    cleanup();
+
+    // A request creates access: not offered where this window may not.
+    draw(failed, { canManage: false });
+    expect(screen.queryByTestId("data-sync-read-back-again")).toBeNull();
+    expect(screen.getByText("dataSync.manageElsewhere")).toBeInTheDocument();
   });
 
   it("says mutual Follow works as both ways", () => {

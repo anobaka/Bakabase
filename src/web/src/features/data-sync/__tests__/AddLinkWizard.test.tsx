@@ -1,6 +1,6 @@
 import type * as Api from "../api";
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,6 +8,7 @@ import AddLinkWizard from "../components/AddLinkWizard";
 import { dataSyncApi } from "../api";
 import { useDataSyncActions } from "../hooks/useDataSyncActions";
 
+import { blurWhenDisabled } from "./blurWhenDisabled";
 import { candidate, link } from "./dataSyncFixtures";
 
 import { DataSyncLinkMode, DataSyncLinkState, RemoteAccessMode } from "@/sdk/constants";
@@ -88,6 +89,40 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("sync with another device", () => {
+  it("keeps the keyboard in the dialog while it starts, and says the outcome", async () => {
+    vi.mocked(dataSyncApi.createLink).mockResolvedValue({
+      link: link(20, "node-new", "New PC", { state: DataSyncLinkState.AwaitingAccess }),
+      requestId: "req-out-2",
+    });
+    open();
+    await waitFor(() => expect(option("node-new")).not.toBeNull());
+    fireEvent.click(option("node-new"));
+    fireEvent.click(screen.getByTestId("data-sync-wizard-next"));
+    const status = screen.getByTestId("data-sync-wizard-status");
+
+    // A live region before there is anything to say.
+    expect(status).toHaveAttribute("role", "status");
+    expect(status).toBeEmptyDOMElement();
+    const start = screen.getByTestId("data-sync-wizard-start");
+
+    act(() => start.focus());
+    // The browser takes focus off the button once it is disabled while the link is made.
+    const letGo = blurWhenDisabled();
+
+    try {
+      await act(async () => {
+        fireEvent.click(start);
+      });
+    } finally {
+      letGo();
+    }
+
+    expect(within(status).getByTestId("data-sync-wizard-outcome")).toHaveTextContent(
+      "dataSync.wizard.requested New PC",
+    );
+    expect(within(screen.getByRole("dialog")).getByRole("heading")).toHaveFocus();
+  });
+
   it("says what each device can do, and lets only those pick that can be linked", async () => {
     open();
     await waitFor(() => expect(option("node-new")).not.toBeNull());

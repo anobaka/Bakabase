@@ -121,7 +121,7 @@ export default function UndoDialog({ entry, linkMode, onClose, onStarted }: Undo
         </p>
       )}
       {preview?.problem && (
-        <p className="text-sm text-danger" role="alert">
+        <p className="text-sm text-danger-700" role="alert">
           {t(
             `dataSync.problem.${DataSyncProblemCodeLabel[preview.problem.code] ?? "UndoNotAvailable"}`,
           )}

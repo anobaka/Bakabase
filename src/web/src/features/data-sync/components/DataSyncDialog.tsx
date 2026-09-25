@@ -11,11 +11,19 @@ import DataSyncHelp from "./DataSyncHelp";
 const focusableSelector =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** Focus that is nowhere — on the page's body, or on an element gone from the page — goes here. */
+const keepFocusIn = (heading: HTMLElement | null) => {
+  const active = document.activeElement;
+
+  if (active && active !== document.body && active.isConnected) return;
+  heading?.focus();
+};
+
 /**
  * A modal of data sync's own, for what takes more than a yes or a no: the "sync with another
  * device" wizard, a one-time code. Portalled over the page like the multi-device pages'
- * confirmations; Tab stays inside, Escape closes it (unless it is busy), and focus goes back to
- * what opened it.
+ * confirmations; Tab stays inside, focus it takes away goes to its heading, Escape closes it
+ * (unless it is busy), and focus goes back to what opened it.
  */
 export default function DataSyncDialog({
   title,
@@ -91,6 +99,27 @@ export default function DataSyncDialog({
       if (opener?.isConnected) opener.focus();
     };
   }, []);
+
+  // Focus the dialog itself takes away — a pressed control disabled while its action runs
+  // (Chromium moves focus off it to the page's body at once), or replaced by what the action
+  // answered — goes to its heading: the keyboard stays in the dialog, and a screen reader reads
+  // on from there. Checked on every change inside the dialog, and whenever it renders.
+  useEffect(() => {
+    const element = dialog.current;
+
+    if (!element || typeof MutationObserver !== "function") return;
+    const observer = new MutationObserver(() => keepFocusIn(heading.current));
+
+    observer.observe(element, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["disabled"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => keepFocusIn(heading.current));
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

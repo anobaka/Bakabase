@@ -11,10 +11,11 @@ import {
   noOverlap,
   spokeGeometry,
 } from "../components/diagramLayout";
-import { syncPeerFromLink, syncPeersOf } from "../viewModels";
+import { lineMode, syncPeerFromLink, syncPeersOf } from "../viewModels";
 
 import { link, mapView, NOW, outgoing, reader } from "./dataSyncFixtures";
 
+import { SEMIBOLD, textWidth } from "@/features/federation/map/text";
 import { DataSyncLinkMode, DataSyncLinkState } from "@/sdk/constants";
 
 vi.mock("react-i18next", () => ({
@@ -76,6 +77,35 @@ const peers = () =>
 
 afterEach(cleanup);
 
+/** Whether the segment from `a` to `b` enters the box (Liang–Barsky clipping). */
+const crosses = (a: Point, b: Point, box: Box) => {
+  const [left, right] = [box.cx - box.w / 2, box.cx + box.w / 2];
+  const [top, bottom] = [box.cy - box.h / 2, box.cy + box.h / 2];
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  let t0 = 0;
+  let t1 = 1;
+
+  for (const [p, q] of [
+    [-dx, a.x - left],
+    [dx, right - a.x],
+    [-dy, a.y - top],
+    [dy, bottom - a.y],
+  ]) {
+    if (p === 0) {
+      if (q < 0) return false;
+      continue;
+    }
+    const t = q / p;
+
+    if (p < 0) t0 = Math.max(t0, t);
+    else t1 = Math.min(t1, t);
+    if (t0 > t1) return false;
+  }
+
+  return true;
+};
+
 describe("where the diagram puts its cards", () => {
   it("lists the devices below 640 px", () => {
     expect(layoutSyncDiagram(LIST_BELOW - 1, 3, true)).toEqual({ mode: "list" });
@@ -100,35 +130,6 @@ describe("where the diagram puts its cards", () => {
   );
 
   it("never runs a line over another device's card", () => {
-    /** Whether the segment from `a` to `b` enters the box (Liang–Barsky clipping). */
-    const crosses = (a: Point, b: Point, box: Box) => {
-      const [left, right] = [box.cx - box.w / 2, box.cx + box.w / 2];
-      const [top, bottom] = [box.cy - box.h / 2, box.cy + box.h / 2];
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      let t0 = 0;
-      let t1 = 1;
-
-      for (const [p, q] of [
-        [-dx, a.x - left],
-        [dx, right - a.x],
-        [-dy, a.y - top],
-        [dy, bottom - a.y],
-      ]) {
-        if (p === 0) {
-          if (q < 0) return false;
-          continue;
-        }
-        const t = q / p;
-
-        if (p < 0) t0 = Math.max(t0, t);
-        else t1 = Math.min(t1, t);
-        if (t0 > t1) return false;
-      }
-
-      return true;
-    };
-
     for (let count = 1; count <= 12; count += 1)
       for (let width = 640; width <= 1500; width += 20) {
         const layout = layoutSyncDiagram(width, count, true);
@@ -144,6 +145,107 @@ describe("where the diagram puts its cards", () => {
           });
         });
       }
+  });
+
+  describe("the mode's words on each line", () => {
+    /** "both ways" and "receive only" as the drawing measures them, and the Chinese 双向. */
+    const words = [52, 63, 22];
+    /** A box grown by `by` on every side. */
+    const grown = (box: Box, by: number): Box => ({ ...box, w: box.w + 2 * by, h: box.h + 2 * by });
+    const meet = (a: Box, b: Box) =>
+      Math.abs(a.cx - b.cx) < (a.w + b.w) / 2 && Math.abs(a.cy - b.cy) < (a.h + b.h) / 2;
+    /** How far either direction's arrows reach beside a spoke's middle line. */
+    const lanes = 5 + 4.5;
+    /** A badge with its warning mark. */
+    const badge = (at: Point): Box => ({ cx: at.x, cy: at.y, w: 28, h: 28 });
+
+    it("sets them clear of every card, badge, line and other words, at any count and width", () => {
+      let drawn = 0;
+
+      for (let count = 1; count <= 12; count += 1)
+        for (let width = 640; width <= 1500; width += 20)
+          for (const withAdd of [false, true]) {
+            const widths = Array.from({ length: count }, (_, i) => words[i % words.length]);
+            const layout = layoutSyncDiagram(width, count, withAdd, widths);
+            const at = `${count}${withAdd ? " + add" : ""} at ${width}`;
+
+            if (layout.mode === "list") continue;
+            drawn += 1;
+            const cards = [layout.self, ...layout.peers, ...(layout.add ? [layout.add] : [])];
+            const spokes = cards.slice(1).map((card) => spokeGeometry(layout.self, card));
+
+            expect(layout.labels, at).toHaveLength(count);
+            layout.labels.forEach((label, index) => {
+              expect(label, at).toBeDefined();
+              if (!label) return;
+              expect(label.w, at).toBe(widths[index]);
+              // Inside the drawing.
+              expect(label.cx - label.w / 2, at).toBeGreaterThanOrEqual(0);
+              expect(label.cx + label.w / 2, at).toBeLessThanOrEqual(layout.width);
+              expect(label.cy - label.h / 2, at).toBeGreaterThanOrEqual(0);
+              expect(label.cy + label.h / 2, at).toBeLessThanOrEqual(layout.height);
+              for (const card of cards) expect(meet(label, card), `card, ${at}`).toBe(false);
+              for (const spoke of spokes) {
+                expect(meet(label, badge(spoke.badge)), `badge, ${at}`).toBe(false);
+                expect(crosses(spoke.from, spoke.to, grown(label, lanes)), `line, ${at}`).toBe(
+                  false,
+                );
+              }
+              layout.labels.forEach((other, at2) => {
+                if (other && at2 !== index) expect(meet(label, other), `words, ${at}`).toBe(false);
+              });
+            });
+          }
+
+      // Nearly every case is still drawn: a list only where the words find no room.
+      expect(drawn).toBeGreaterThan(900);
+    });
+
+    it("sets them beside a line that runs up and down, not across it", () => {
+      // Three devices and the way to add one at 960 px: one device straight above this one.
+      const layout = layoutSyncDiagram(960, 3, true, [52, 52, 52]);
+
+      if (layout.mode !== "drawing") throw new Error("drawn");
+      const top = layout.peers.findIndex((peer) => peer.cx === layout.self.cx);
+      const label = layout.labels[top]!;
+
+      expect(top).toBeGreaterThanOrEqual(0);
+      expect(
+        label.cx - label.w / 2 >= layout.self.cx + lanes ||
+          label.cx + label.w / 2 <= layout.self.cx - lanes,
+      ).toBe(true);
+    });
+
+    it("draws the words where the layout set them", () => {
+      render(
+        <SyncLinksDiagram
+          initialWidth={1100}
+          now={NOW}
+          peers={peers()}
+          self={self}
+          onSelect={vi.fn()}
+        />,
+      );
+      const layout = layoutSyncDiagram(
+        1100,
+        4,
+        false,
+        peers().map((peer) => {
+          const mode = lineMode(peer);
+
+          return mode ? Math.ceil(textWidth(`federation.map.sync.mode.${mode}`, 10) * SEMIBOLD) : 0;
+        }),
+      );
+
+      if (layout.mode !== "drawing") throw new Error("drawn");
+      const nas = screen
+        .getAllByTestId("data-sync-spoke")
+        .find((spoke) => spoke.getAttribute("data-sync-peer") === "node-nas")!;
+      const text = within(nas).getByTestId("data-sync-spoke-mode");
+
+      expect(Number(text.getAttribute("x"))).toBeCloseTo(layout.labels[1]!.cx);
+      expect(Number(text.getAttribute("y"))).toBeCloseTo(layout.labels[1]!.cy);
+    });
   });
 
   it("draws a few devices at a desktop width, and lists a crowd", () => {

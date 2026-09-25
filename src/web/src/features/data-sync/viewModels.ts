@@ -407,8 +407,21 @@ const failure = (peer: SyncPeer) =>
     ? peer.lastErrorCode
     : undefined;
 
+/**
+ * Keeping in step both ways was approved here, but reading the other device back failed (spec
+ * §7.2.4): the link waits for access nobody is asked for, with the failure on it. A link's full
+ * view says who started it; the map view does not, so there a link waiting with a failure and no
+ * request of this device's own reads the same — every request this device files is among them.
+ */
+export const readBackFailed = (peer: SyncPeer) =>
+  peer.state === DataSyncLinkState.AwaitingAccess &&
+  !!peer.lastErrorCode &&
+  (peer.initiator === DataSyncLinkInitiator.Peer ||
+    (peer.initiator === undefined && peer.outcome === undefined));
+
 /** What does not work on the receive direction right now, if anything. */
 export const syncIssueOf = (peer: SyncPeer): SyncIssue | undefined => {
+  if (readBackFailed(peer)) return "syncFailed";
   switch (peer.state) {
     case DataSyncLinkState.Paused:
       return "syncPaused";
@@ -668,7 +681,17 @@ export function linkStatus(t: T, peer: SyncPeer, now: number = Date.now()): Stat
 
   switch (peer.state) {
     case DataSyncLinkState.AwaitingAccess:
-      return line("AwaitingAccess", "primary", t("dataSync.status.AwaitingAccess", { name }));
+      // Nothing waits for an approval there: reading it back failed, and says why.
+      return readBackFailed(peer)
+        ? line(
+            "ReadBackFailed",
+            "danger",
+            t("dataSync.status.ReadBackFailed", {
+              name,
+              reason: failureReason(t, peer.lastErrorCode),
+            }),
+          )
+        : line("AwaitingAccess", "primary", t("dataSync.status.AwaitingAccess", { name }));
     case DataSyncLinkState.AwaitingReview:
       return line("AwaitingReview", "primary", t("dataSync.status.AwaitingReview"));
     case DataSyncLinkState.WaitingForPeerReview:
@@ -720,6 +743,8 @@ export function linkStatus(t: T, peer: SyncPeer, now: number = Date.now()): Stat
     );
   if (peer.openItems > 0)
     return line("NeedsYou", "warning", t("dataSync.status.NeedsYou", { count: peer.openItems }));
+  // Working, but never synced yet (§8.1 reaches Active before the first pull): not "in step".
+  if (!peer.lastSyncedAt) return line("Syncing", "primary", t("dataSync.status.Syncing"));
 
   return line(
     "InStep",
@@ -795,6 +820,8 @@ const cardKey = (code: string) => {
       return "notApproved";
     case "InStep":
       return "inStep";
+    case "Syncing":
+      return "syncing";
     case "Offline":
       return "offline";
     case "NeedsYou":
@@ -843,11 +870,14 @@ export function overallStatus(
   if (!status || status.level === DataSyncStatusLevel.Off) return undefined;
   switch (status.level) {
     case DataSyncStatusLevel.InStep:
-      return line(
-        "InStep",
-        "success",
-        t("dataSync.status.InStep", { time: timeAgo(t, status.lastSyncedAt, now) }),
-      );
+      // Nothing synced yet: not "in step · never".
+      return status.lastSyncedAt
+        ? line(
+            "InStep",
+            "success",
+            t("dataSync.status.InStep", { time: timeAgo(t, status.lastSyncedAt, now) }),
+          )
+        : line("Syncing", "primary", t("dataSync.status.Syncing"));
     case DataSyncStatusLevel.Syncing:
       return line("Syncing", "primary", t("dataSync.status.Syncing"));
     case DataSyncStatusLevel.NeedsYou:

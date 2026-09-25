@@ -340,7 +340,7 @@ export default function ReviewView({
       )}
       {phase === "failed" && (
         <div className="space-y-2" data-testid="data-sync-review-failed">
-          <p className="text-sm text-danger" role="alert">
+          <p className="text-sm text-danger-700" role="alert">
             {t("dataSync.review.failed", { reason: result?.lastError || task?.error || "" })}
           </p>
           <button
@@ -480,8 +480,10 @@ function ReviewDone({
 }) {
   const { t } = useTranslation();
   const actions = useDataSyncActions(() => undefined);
-  const canManage = useCanManageDefinitionSharing();
   const overview = useDataSyncStore((state) => state.overview);
+  // The server's word on who may create access counts too: the window's own guess keeps its
+  // defaults — this device's own window — when who is looking could not be read.
+  const canManage = useCanManageDefinitionSharing() && (overview?.canManageSharing ?? true);
   const keepInStepButton = useRef<HTMLButtonElement>(null);
   const counts = detail?.entry.counts;
   const changed = (detail?.items ?? []).filter(

@@ -38,7 +38,11 @@ let recorded = recordingActions();
 
 const card = (
   item = request("req-in-1", "node-newpc", "New PC"),
-  options: { canManage?: boolean; remoteAccessMode?: RemoteAccessMode } = {},
+  options: {
+    canManage?: boolean;
+    sharingEnabled?: boolean;
+    remoteAccessMode?: RemoteAccessMode;
+  } = {},
 ) =>
   render(
     <DataSyncRequestCard
@@ -47,6 +51,7 @@ const card = (
       now={NOW}
       remoteAccessMode={options.remoteAccessMode ?? RemoteAccessMode.Enabled}
       request={item}
+      sharingEnabled={options.sharingEnabled ?? true}
     />,
   );
 
@@ -141,18 +146,39 @@ describe("a request to read this device's definitions", () => {
     expect(recorded.actions.setNotice).toHaveBeenCalledWith("dataSync.request.approved New PC");
   });
 
-  it("turns remote access on, with pairing required, when approving needs it", async () => {
-    card(request("req-in-1", "node-newpc", "New PC", { intent: DataSyncRequestIntent.Follow }), {
-      remoteAccessMode: RemoteAccessMode.Disabled,
-    });
+  it.each([
+    ["remote access", true, RemoteAccessMode.Disabled],
+    ["sharing", false, RemoteAccessMode.Enabled],
+    ["sharing and remote access", false, RemoteAccessMode.Disabled],
+  ])(
+    "turns %s on, naming each, when approving needs it",
+    async (_, sharingEnabled, remoteAccessMode) => {
+      card(request("req-in-1", "node-newpc", "New PC", { intent: DataSyncRequestIntent.Follow }), {
+        sharingEnabled,
+        remoteAccessMode,
+      });
+      fireEvent.click(screen.getByTestId("data-sync-request-approve"));
+      const warning = confirmation().warning ?? "";
+
+      expect(warning.includes("dataSync.twoWay.turnsOnSharing")).toBe(!sharingEnabled);
+      expect(warning.includes("dataSync.sharing.remoteAccess")).toBe(
+        remoteAccessMode === RemoteAccessMode.Disabled,
+      );
+      await act(() => confirmation().action() as Promise<void>);
+      expect(dataSyncApi.setSharing).toHaveBeenCalledWith({
+        enabled: true,
+        enablePairedRemoteAccess: true,
+      });
+      expect(dataSyncApi.approveRequest).toHaveBeenCalled();
+    },
+  );
+
+  it("turns nothing on, and says nothing of it, where both are on", async () => {
+    card();
     fireEvent.click(screen.getByTestId("data-sync-request-approve"));
-    expect(confirmation().warning).toContain("dataSync.sharing.remoteAccess");
+    expect(confirmation().warning).toBe("dataSync.request.from 192.168.1.40");
     await act(() => confirmation().action() as Promise<void>);
-    expect(dataSyncApi.setSharing).toHaveBeenCalledWith({
-      enabled: true,
-      enablePairedRemoteAccess: true,
-    });
-    expect(dataSyncApi.approveRequest).toHaveBeenCalled();
+    expect(dataSyncApi.setSharing).not.toHaveBeenCalled();
   });
 
   it("rejects through the host, from any window", async () => {

@@ -205,6 +205,72 @@ export const batchOf = (
   backupBeforeDestructive: boolean,
 ): DataSyncResolveBatchInput => ({ items, backupBeforeDestructive });
 
+// ---- decisions sent from here ----------------------------------------------------------------------
+
+/**
+ * A decision sent from here, followed until it is over: its task, and the token each item was sent
+ * with — an item that comes back with another one changed while the decision was on its way, and
+ * the task updated it without applying anything (§9.2 step 2).
+ */
+export interface InboxApplying {
+  /** Empty when the server started no task to follow. */
+  taskId: string;
+  tokens: ReadonlyMap<number, string>;
+  /** When it was sent (ms): a task never seen in the task list is not waited for forever. */
+  sentAt: number;
+  /** Its task has been seen in the task list. */
+  seen?: boolean;
+  /**
+   * Over at the first read numbered this or later: its task finished, or there is none to
+   * follow — what that read shows is where the decision ended.
+   */
+  settleAfter?: number;
+}
+
+/** How long a decision's task may stay out of the task list before the next read settles it. */
+export const UNSEEN_TASK_MS = 30_000;
+
+/**
+ * How a decision still followed stands after a read of the open items: `applied` once its card is
+ * gone; `changed` once one of its items comes back with another token; `settled` once a read after
+ * its task finished — or with no task to follow — still shows the card as it was. Decisions not
+ * named are still under way.
+ */
+export type InboxApplyingOutcome = "applied" | "changed" | "settled";
+
+export const settleApplying = (
+  applying: ReadonlyMap<string, InboxApplying>,
+  cards: readonly InboxCardModel[],
+  read: number,
+  now: number,
+): Map<string, InboxApplyingOutcome> => {
+  const byKey = new Map(cards.map((card) => [card.key, card]));
+  const outcomes = new Map<string, InboxApplyingOutcome>();
+
+  for (const [key, entry] of applying) {
+    const card = byKey.get(key);
+
+    if (!card) outcomes.set(key, "applied");
+    else if (
+      card.items.some(
+        (item) => entry.tokens.has(item.id) && entry.tokens.get(item.id) !== item.token,
+      )
+    )
+      outcomes.set(key, "changed");
+    else if (
+      (entry.settleAfter !== undefined && read >= entry.settleAfter) ||
+      (!entry.seen && now - entry.sentAt >= UNSEEN_TASK_MS)
+    )
+      outcomes.set(key, "settled");
+  }
+
+  return outcomes;
+};
+
+/** The token each item of a batch is sent with. */
+export const batchTokens = (batch: DataSyncResolveBatchInput): ReadonlyMap<number, string> =>
+  new Map(batch.items.map((input) => [input.itemId, input.token]));
+
 // ---- conflict cards --------------------------------------------------------------------------------
 
 /** One field of a conflict card, and the devices that changed it differently. */

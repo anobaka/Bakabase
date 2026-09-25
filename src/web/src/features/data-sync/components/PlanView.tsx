@@ -146,7 +146,7 @@ export default function PlanView({
               aria-selected={item.kind === section?.kind}
               className={`rounded-md px-3 py-1.5 text-sm ${
                 item.kind === section?.kind
-                  ? "bg-primary/10 font-medium text-primary"
+                  ? "bg-primary/10 font-medium text-primary-700"
                   : "hover:bg-default-100"
               }`}
               role="tab"
@@ -176,7 +176,7 @@ export default function PlanView({
                 key={type}
                 aria-pressed={on}
                 className={`rounded-full border px-2.5 py-0.5 text-xs ${
-                  on ? "border-primary bg-primary/10 text-primary" : "border-default-200"
+                  on ? "border-primary bg-primary/10 text-primary-700" : "border-default-200"
                 }`}
                 data-testid="data-sync-plan-type-chip"
                 data-type={DataSyncPlanItemTypeLabel[type]}

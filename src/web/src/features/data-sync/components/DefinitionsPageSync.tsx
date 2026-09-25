@@ -223,7 +223,7 @@ export function DataSyncEmptyStateLine() {
   return (
     <p className="text-sm text-default-500" data-testid="data-sync-empty-state-line">
       {t("customProperty.empty.syncHint")}{" "}
-      <Link className="text-primary underline" to={dataSyncAddRoute}>
+      <Link className="text-primary-700 underline" to={dataSyncAddRoute}>
         {t("customProperty.action.syncWithDevice")}
       </Link>
     </p>

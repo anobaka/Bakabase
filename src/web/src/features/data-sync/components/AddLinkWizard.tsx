@@ -419,7 +419,18 @@ export default function AddLinkWizard({
       title={t("dataSync.wizard.open")}
       onClose={() => onClose(outcome?.nodeId)}
     >
-      {step === "choose" ? choose : step === "how" ? chooseHow : outcomeView}
+      {/*
+       * The outcome is said as soon as it is there: a live region from the start, out of the
+       * flow while empty.
+       */}
+      <div
+        className={step === "outcome" && outcomeView ? undefined : "sr-only"}
+        data-testid="data-sync-wizard-status"
+        role="status"
+      >
+        {step === "outcome" ? outcomeView : null}
+      </div>
+      {step === "choose" ? choose : step === "how" ? chooseHow : null}
     </DataSyncDialog>
   );
 }
