@@ -34,14 +34,22 @@ const DevicePanel = ({ id, children }: { id: DeviceId; children: ReactNode }) =>
   );
 };
 
+const nameClass = "break-words text-xs font-semibold text-foreground";
+
 /** A property name the way the pictures show one. */
-const Name = ({ children, muted }: { children: ReactNode; muted?: boolean }) => (
-  <span
-    className={`break-words text-xs ${
-      muted ? "text-default-400 line-through" : "font-semibold text-foreground"
-    }`}
-  >
-    {children}
+const Name = ({ children }: { children: ReactNode }) => (
+  <span className={nameClass}>{children}</span>
+);
+
+/**
+ * A rename: the old name struck through, an arrow, the new name. `del` and `ins` tell a
+ * screen reader which name is which, and the arrow is read too (a sign, like the "1×" mark).
+ */
+const Rename = ({ from, to }: { from: string; to: string }) => (
+  <span className="flex flex-wrap items-center gap-1">
+    <del className="break-words text-xs text-default-500 line-through">{from}</del>
+    <span className="text-default-500">→</span>
+    <ins className={`${nameClass} no-underline`}>{to}</ins>
   </span>
 );
 
@@ -84,24 +92,8 @@ const ConflictDiagram = () => {
 
   const panels: Record<ConflictStep, Record<"here" | "there", ReactNode>> = {
     rename: {
-      here: (
-        <span className="flex flex-wrap items-center gap-1">
-          <Name muted>{base}</Name>
-          <span aria-hidden className="text-default-400">
-            →
-          </span>
-          <Name>{here}</Name>
-        </span>
-      ),
-      there: (
-        <span className="flex flex-wrap items-center gap-1">
-          <Name muted>{base}</Name>
-          <span aria-hidden className="text-default-400">
-            →
-          </span>
-          <Name>{there}</Name>
-        </span>
-      ),
+      here: <Rename from={base} to={here} />,
+      there: <Rename from={base} to={there} />,
     },
     ask: { here: <AskCard />, there: <AskCard /> },
     decide: {

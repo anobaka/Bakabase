@@ -28,10 +28,10 @@ The whole multi-server mode — sharing, management, and data sync — is named
 
 `/federation/map` draws this device in the middle and every relationship it knows of as a
 spoke: library sharing (arrow towards the device that may browse), management (arrow from the
-manager), pending requests dashed, devices found nearby as outlines. It reads only the three
+manager), pending requests dashed, devices found nearby as outlines. It reads the three
 listings the devices page reads — `/federation/local/peers`, `/federation/local/servers`,
-`/remote-access/settings` — plus both discoveries on request, and acts through the same
-endpoints and confirmations.
+`/remote-access/settings` — plus data sync's `/data-sync/map` (below) and both discoveries on
+request, and acts through the same endpoints and confirmations.
 
 - **Records are merged on evidence only** (`map/graph.ts`). The install id first and always:
   a peer's NodeId is the install's remote-access ServerId unless the node was reset

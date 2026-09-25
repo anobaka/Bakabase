@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import type { DeviceId } from "../topics/multiDevice/devices";
 
 import { Children, isValidElement } from "react";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -11,6 +12,7 @@ import DataSyncSection, { syncModes } from "../topics/multiDevice/dataSync/DataS
 import { howStops } from "../topics/multiDevice/dataSync/HowItWorksDiagram";
 import { neverSynced, syncedKinds } from "../topics/multiDevice/dataSync/WhatSyncsDiagram";
 import { conflictSteps } from "../topics/multiDevice/dataSync/ConflictDiagram";
+import { deviceStyle } from "../topics/multiDevice/devices";
 
 import cnCommon from "@/locales/cn/common.json";
 import cnFederation from "@/locales/cn/pages/federation.json";
@@ -129,6 +131,26 @@ const arrows = (root: ParentNode) =>
     state: arrow.getAttribute("data-state"),
   }));
 
+/** Where an SVG path starts ("M x y …"). */
+const pathStart = (path: Element) => {
+  const [, x, y] = path.getAttribute("d")!.match(/^M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)/)!;
+
+  return { x: Number(x), y: Number(y) };
+};
+
+/** Where an arrow points, read from what is drawn: from its line's start to its head's tip. */
+const pointing = (arrow: Element) => {
+  const [line, head] = Array.from(arrow.querySelectorAll("path"));
+  const tail = pathStart(line);
+  const tip = pathStart(head);
+  const dx = tip.x - tail.x;
+  const dy = tip.y - tail.y;
+
+  if (Math.abs(dx) >= Math.abs(dy)) return dx < 0 ? "left" : "right";
+
+  return dy < 0 ? "up" : "down";
+};
+
 describe("data sync help: registration", () => {
   it("is the multi-device topic's last tab, and opens there", () => {
     expect(multiDeviceSections.at(-1)).toBe("dataSync");
@@ -230,6 +252,42 @@ describe("data sync help: diagrams", () => {
     );
   });
 
+  it("draws each arrow in the sender's colour, with its head at the receiver", () => {
+    render(<DataSyncSection onNavigate={vi.fn()} />);
+    const help = screen.getByTestId("data-sync-help");
+
+    // Every picture puts this device first: on the left, or on top where the steps stack.
+    const pictures = help.querySelectorAll("[data-stop], [data-mode], [data-step]");
+
+    expect(pictures.length).toBeGreaterThan(0);
+    pictures.forEach((picture) => {
+      const devices = Array.from(picture.querySelectorAll("[data-device]")).map((device) =>
+        device.getAttribute("data-device"),
+      );
+
+      expect(devices).toEqual(["desktop", "laptop"]);
+    });
+
+    const drawn = Array.from(help.querySelectorAll("[data-arrow]"));
+
+    expect(drawn.length).toBeGreaterThan(0);
+    for (const arrow of drawn) {
+      const from = arrow.getAttribute("data-from") as DeviceId;
+      const to = arrow.getAttribute("data-to") as DeviceId;
+      const [line, head] = Array.from(arrow.querySelectorAll("path"));
+      const idle = arrow.getAttribute("data-state") === "idle";
+
+      expect(line).toHaveClass(idle ? "stroke-default-300" : deviceStyle(from).stroke);
+      expect(head).toHaveClass(idle ? "fill-default-300" : deviceStyle(from).solid);
+      expect(to === "desktop" ? ["left", "up"] : ["right", "down"]).toContain(pointing(arrow));
+    }
+    // Both colours and both ways are drawn, so neither check above passes vacuously.
+    expect(new Set(drawn.map((arrow) => arrow.getAttribute("data-from")))).toEqual(
+      new Set(["desktop", "laptop"]),
+    );
+    expect(new Set(drawn.map(pointing))).toEqual(new Set(["left", "right", "up"]));
+  });
+
   it("names every mode with the words the pages use", () => {
     render(<DataSyncSection onNavigate={vi.fn()} />);
     const modes = screen.getByTestId("data-sync-modes");
@@ -303,6 +361,24 @@ describe("data sync help: diagrams", () => {
 
     expect(panel("rename", "desktop")).toHaveTextContent(d("conflicts.diagram.sample.here"));
     expect(panel("rename", "laptop")).toHaveTextContent(d("conflicts.diagram.sample.there"));
+    // A screen reader hears which name is the old one and which the new, and the arrow too.
+    for (const [device, renamed] of [
+      ["desktop", "here"],
+      ["laptop", "there"],
+    ]) {
+      const rename = panel("rename", device);
+
+      expect(rename.querySelector("del")).toHaveTextContent(d("conflicts.diagram.sample.base"));
+      expect(rename.querySelector("ins")).toHaveTextContent(
+        d(`conflicts.diagram.sample.${renamed}`),
+      );
+      const arrow = Array.from(rename.querySelectorAll("span")).find(
+        (span) => span.textContent === "→",
+      );
+
+      expect(arrow).toBeDefined();
+      expect(arrow!.closest("[aria-hidden]")).toBeNull();
+    }
     for (const device of ["desktop", "laptop"]) {
       expect(panel("ask", device)).toHaveTextContent(d("conflicts.diagram.card"));
     }

@@ -89,8 +89,8 @@ const sketches: Record<(typeof syncedKinds)[number], ReactNode> = {
 };
 
 /**
- * What travels and what never does. The kinds sit between the two devices, with an arrow
- * each way; everything else is shelved under a lock, because each device keeps it.
+ * What travels and what never does. The two devices, with an arrow each way, head the kinds
+ * listed below them; everything else is shelved under a lock, because each device keeps it.
  */
 const WhatSyncsDiagram = () => {
   const { t } = useTranslation();

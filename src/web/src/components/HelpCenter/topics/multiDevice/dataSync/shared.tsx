@@ -8,11 +8,12 @@ import { useTranslation } from "react-i18next";
 import { HOME_DEVICE, deviceNameKey, deviceStyle } from "../devices";
 
 /**
- * The pieces every data sync picture is drawn from. They follow two rules of the device
- * map, so a reader who knows one reads the other: an arrow points to the device that
- * **receives** the definitions, and it takes the colour of the device they come from
- * (`devices.ts`). Everything is drawn with theme colour classes, so it follows light and
- * dark mode.
+ * The pieces every data sync picture is drawn from. An arrow points to the device that
+ * **receives** the definitions, as on the device map, so a reader who knows one reads the
+ * other. Its colour is the pictures' own rule, not the map's (which colours a line by its
+ * kind): the colour of the device the definitions come from (`devices.ts`), or grey when the
+ * picture is about something else. Everything is drawn with theme colour classes, so it
+ * follows light and dark mode.
  */
 
 export const dsk = (key: string) => `helpCenter.dataSync.${key}`;
@@ -70,8 +71,8 @@ export type LaneState = "active" | "pending" | "idle" | "none";
 
 /**
  * One arrow from `from` to `to`, drawn inside an SVG. The head sits at (x2, y2), the end
- * the definitions arrive at. The data attributes say who receives, so a test can check the
- * direction without reading geometry.
+ * the definitions arrive at. The data attributes say who sends and who receives; the help
+ * test checks them against the colour and the geometry actually drawn.
  */
 export const SyncArrow = ({
   from,
@@ -135,7 +136,8 @@ export const SyncLanes = ({
   mark?: string;
 }) => (
   // Takes its share of the pair's width: in a very narrow dialog the drawing scales down.
-  <svg aria-hidden className="h-8 min-w-0 flex-1" viewBox="0 0 64 32">
+  // Its upper lane lines up with the middle of the devices' drawings above their names.
+  <svg aria-hidden className="mt-0.5 h-8 min-w-0 flex-1" viewBox="0 0 64 32">
     {toHere !== "none" && (
       <SyncArrow from={THERE} state={toHere} to={HERE} x1={60} x2={4} y1={10} y2={10} />
     )}
@@ -158,7 +160,10 @@ export const SyncLanes = ({
   </svg>
 );
 
-/** A device with its name under it and, optionally, a small sign at its corner. */
+/**
+ * A device with its name under it and, optionally, a small sign at its corner. In a very
+ * narrow dialog the name wraps onto a second line rather than being cut.
+ */
 export const DeviceBlock = ({ id, badge }: { id: DeviceId; badge?: ReactNode }) => {
   const { t } = useTranslation();
 
@@ -168,7 +173,7 @@ export const DeviceBlock = ({ id, badge }: { id: DeviceId; badge?: ReactNode }) 
         <DeviceMark id={id} />
         {badge && <span className="absolute -right-2.5 -top-1.5">{badge}</span>}
       </span>
-      <span className="w-full truncate text-center text-[10px] leading-tight text-default-500">
+      <span className="line-clamp-2 w-full break-words text-center text-[10px] leading-tight text-default-500">
         {t(deviceNameKey(id))}
       </span>
     </div>
@@ -178,6 +183,7 @@ export const DeviceBlock = ({ id, badge }: { id: DeviceId; badge?: ReactNode }) 
 /**
  * This device and the other one, with the lanes between them: at most 13rem wide, and
  * narrower when its container is, so it never makes a narrow help dialog scroll sideways.
+ * Aligned at the top, so the two drawings stay level when only one name wraps.
  */
 export const DevicePair = ({
   toHere,
@@ -192,7 +198,7 @@ export const DevicePair = ({
   badgeHere?: ReactNode;
   badgeThere?: ReactNode;
 }) => (
-  <div aria-hidden className="flex w-full max-w-52 shrink-0 items-center gap-1 self-center">
+  <div aria-hidden className="flex w-full max-w-52 shrink-0 items-start gap-1 self-center">
     <DeviceBlock badge={badgeHere} id={HERE} />
     <SyncLanes mark={mark} toHere={toHere} toThere={toThere} />
     <DeviceBlock badge={badgeThere} id={THERE} />

@@ -47,6 +47,10 @@ scopes").
   `ChildCountOf`, `MatchNatural`, `Diff`/`Merge`/`PrepareCreate` (the first-link review),
   `ComparisonFormVersion`, `Publish`, `ComparisonForm`, `ChildDeletionCandidates`,
   `Merge3` (all four `DataSyncMerge3Mode`s) and `ChildrenOf`.
+- [ ] **Peer regexes** — today's kinds carry no regular expressions. A kind whose content
+  carries a pattern from a peer compiles it with a match timeout
+  (`new Regex(pattern, options, TimeSpan)`) wherever it is used, and treats an invalid
+  pattern or a timed-out match as invalid input, never as a crash.
 - [ ] **Adapter** — an `IDataSyncKind` next to the service that owns the table. It writes
   only through that service: no `ExecuteUpdate`/`ExecuteDelete`, raw SQL or hand-built
   `UpdateRange`. `ResetCaches` drops the service's cache after a rollback. Usage counts,
