@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.DataSync.Feed;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Models.Db;
@@ -47,6 +48,9 @@ public sealed partial class DataSyncStore : IDataSyncStore
         _readerLog = readerLog;
         _services = services;
         _time = services.GetService<TimeProvider>() ?? TimeProvider.System;
+        // Every data sync write goes through a scope's store (the identity store and Refresh use its context), so
+        // the feed's SeenCounter high-water map sees every vector this context saves (§7.5.1 step 4).
+        services.GetService<DataSyncSeenCounters>()?.Attach(db);
     }
 
     internal BakabaseDbContext Db => _db;

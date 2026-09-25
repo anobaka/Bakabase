@@ -16,7 +16,8 @@ namespace Bakabase.Tests.DataSync;
 /// Retention (spec §4.6) at the store: tombstones stop being served after 180 days but are never deleted, and floors
 /// are per kind, so a kind is superseded only by its own floor; closed items, apply logs, readers and retired actors
 /// are pruned by their own rules; retention runs once a day under the gate, and keeps the newest five data sync
-/// backups. Serving a superseded cursor from 0 and row T2 are the feed's and the merger's parts of this class.
+/// backups. A superseded cursor is served from 0 in the same snapshot, by its own kind's floor only; row T2 is the
+/// merger's part of this class.
 /// </summary>
 [TestClass]
 public class RetentionTests
@@ -81,6 +82,52 @@ public class RetentionTests
         Assert.IsTrue(DataSyncCursorRules.IsSuperseded(1, 0, state.LastSeq, recordedReaderAhead: true));
         Assert.IsTrue(DataSyncCursorRules.IsReaderAhead(new Dictionary<string, long> {[Kind] = state.LastSeq + 1}, state.LastSeq));
         Assert.IsFalse(DataSyncCursorRules.IsReaderAhead(new Dictionary<string, long> {[Kind] = state.LastSeq}, state.LastSeq));
+    }
+
+    [TestMethod]
+    public async Task A_superseded_cursor_is_served_from_0_in_the_same_snapshot_and_only_by_its_own_kinds_floor()
+    {
+        var f = await DataSyncFeedFixture.CreateAsync(extensionGroups: true);
+        f.Groups!.Add("g", "Images");
+        f.Kind.Add("1", "Genre");
+        f.Kind.Add("2", "Mood");
+        var first = await f.ManifestAsync(DataSyncFeedFixture.Query((Kind, 0), (DataSyncKindIds.ExtensionGroup, 0)));
+        var groupCursor = first.Kinds.Single(k => k.Kind == DataSyncKindIds.ExtensionGroup).MaxSeq;
+        f.Kind.Remove("2");
+        await f.R.RefreshAsync();
+        f.Kind.Add("3", "Year");
+        await f.R.RefreshAsync();
+        var tombstone = await f.R.Db.DataSyncEntities.AsNoTracking().SingleAsync(e => e.DeletedAtUtc != null);
+
+        // 180 days later the tombstone stops being served: its kind's floor rises to it.
+        await f.Store.PruneAsync(f.R.Now.AddDays(181), default);
+        var floor = DataSyncCursorRules.FloorOf(await f.StateAsync(), Kind);
+        Assert.AreEqual(tombstone.Seq, floor);
+        Assert.IsTrue(groupCursor < floor, "the extension groups' cursor is below the custom properties' floor");
+
+        // A reader that may have missed the tombstone reads the kind from 0, in this same snapshot.
+        var since = DataSyncFeedFixture.Query((Kind, floor - 1), (DataSyncKindIds.ExtensionGroup, groupCursor));
+        f.Clock.Advance(DataSyncFeedSnapshots.ManifestInterval);
+        var read = await f.ReadAsync(since);
+        var properties = read.Manifest.Kinds.Single(k => k.Kind == Kind);
+        Assert.AreEqual((true, 0L, floor, 2, 2, 0), (properties.CursorSuperseded, properties.SinceSeq,
+            properties.TombstoneFloorSeq, properties.RecordCount, properties.LiveCount, properties.TombstoneCount));
+        CollectionAssert.AreEquivalent(new[] {(await f.R.RowAsync("1")).SyncKey, (await f.R.RowAsync("3")).SyncKey},
+            read.Kinds[Kind].PrimaryKeys.ToList(), "missing means unknown (§8.8): the tombstone is not served");
+        var groups = read.Manifest.Kinds.Single(k => k.Kind == DataSyncKindIds.ExtensionGroup);
+        Assert.AreEqual((false, groupCursor, 0L, 0), (groups.CursorSuperseded, groups.SinceSeq, groups.TombstoneFloorSeq,
+            groups.RecordCount), "a kind is superseded only by its own floor (gate fix B2)");
+
+        var head = await f.HeadAsync(since);
+        Assert.IsTrue(head.Kinds.Single(k => k.Kind == Kind).CursorSuperseded);
+        Assert.IsFalse(head.Kinds.Single(k => k.Kind == DataSyncKindIds.ExtensionGroup).CursorSuperseded);
+
+        // A reader that saw the tombstone before it stopped being served reads on incrementally.
+        f.Clock.Advance(DataSyncFeedSnapshots.ManifestInterval);
+        var inStep = await f.ReadAsync(DataSyncFeedFixture.Query((Kind, floor)));
+        Assert.AreEqual((false, floor),
+            (inStep.Manifest.Kinds.Single().CursorSuperseded, inStep.Manifest.Kinds.Single().SinceSeq));
+        CollectionAssert.AreEqual(new[] {(await f.R.RowAsync("3")).SyncKey}, inStep.Kinds[Kind].PrimaryKeys.ToList());
     }
 
     [TestMethod]

@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
+using Bakabase.InsideWorld.Business.Components.DataSync.Feed;
 using Bakabase.InsideWorld.Business.Components.DataSync.Kinds;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
@@ -30,9 +31,9 @@ namespace Bakabase.Tests.DataSync;
 public class LostUpdateGuardTests
 {
     /// <summary>The content before the apply: Genre, a:Horror, b:Drama, Asia/Europe with Japan under Asia, precision 1.</summary>
-    private static async Task<DataSyncRefreshFixture> BeforeTheApplyAsync()
+    private static async Task<DataSyncRefreshFixture> BeforeTheApplyAsync(DataSyncRefreshFixture? fixture = null)
     {
-        var f = await DataSyncRefreshFixture.CreateAsync();
+        var f = fixture ?? await DataSyncRefreshFixture.CreateAsync();
         var genre = f.Kind.Add("1", "Genre", ("a", "Horror"), ("b", "Drama"), ("asia", "Asia"), ("eu", "Europe"));
         genre.Children.Add(new MemoryChild("jp", "Japan", "asia"));
         genre.Extra["settings"] = new JsonObject {["precision"] = 1};
@@ -44,9 +45,10 @@ public class LostUpdateGuardTests
     /// What a sync apply wrote (rename a, add c, remove b, move Japan under Europe, rename the entity, precision 2),
     /// recorded as the runner does it: the content, the re-read hashes and the log's change list.
     /// </summary>
-    private static async Task<DataSyncRefreshFixture> AppliedAsync(DataSyncHistoryKind kind = DataSyncHistoryKind.AutoSync)
+    private static async Task<DataSyncRefreshFixture> AppliedAsync(DataSyncHistoryKind kind = DataSyncHistoryKind.AutoSync,
+        DataSyncRefreshFixture? fixture = null)
     {
-        var f = await BeforeTheApplyAsync();
+        var f = await BeforeTheApplyAsync(fixture);
         var genre = f.Kind.Definitions["1"];
         genre.Name = "Genres";
         genre.Children = [new("a", "Horror films"), new("c", "Mystery"), new("asia", "Asia"), new("eu", "Europe"), new("jp", "Japan", "eu")];
@@ -103,6 +105,27 @@ public class LostUpdateGuardTests
 
         Assert.AreEqual(0, (await f.RefreshAsync()).Changed, "held until someone decides");
         Assert.IsTrue((await f.RowAsync("1")).PublishHeld);
+    }
+
+    [TestMethod]
+    public async Task Readers_keep_their_version_the_held_entity_reaching_them_as_HeldAtSource()
+    {
+        var feed = await DataSyncFeedFixture.CreateAsync();
+        var f = await AppliedAsync(fixture: feed.R);
+        var applied = await f.RowAsync("1");
+        var before = await feed.ReadAsync(DataSyncFeedFixture.Query((f.KindId, 0)));
+        Assert.IsTrue(before.Kinds[f.KindId].Records.Single().ContainsKey("content"));
+
+        f.Kind.Definitions["1"].Children[0] = new MemoryChild("a", "Horror");
+        feed.Clock.Advance(DataSyncFeedSnapshots.ManifestInterval);
+        var after = await feed.ReadAsync(DataSyncFeedFixture.Query((f.KindId, before.Manifest.Kinds.Single().MaxSeq)));
+
+        var record = after.Kinds[f.KindId].Records.Single();
+        Assert.AreEqual(nameof(DataSyncHeldReason.PendingDecision), record["heldAtSource"]!.GetValue<string>());
+        Assert.IsFalse(record.ContainsKey("content") || record.ContainsKey("hash"),
+            "the stale overwrite never leaves this device");
+        Assert.AreEqual(applied.VvJson, CanonicalJson.Serialize(record["vv"]), "no revision");
+        Assert.IsTrue(record["seq"]!.GetValue<long>() > applied.Seq);
     }
 
     [TestMethod]

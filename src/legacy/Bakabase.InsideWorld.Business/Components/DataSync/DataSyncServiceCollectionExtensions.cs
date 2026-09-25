@@ -1,8 +1,10 @@
 using System;
 using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
+using Bakabase.InsideWorld.Business.Components.DataSync.Feed;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Runtime;
+using Bakabase.Modules.DataSync.Wire;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -12,7 +14,8 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync;
 public static class DataSyncServiceCollectionExtensions
 {
     /// <summary>
-    /// Data sync's persistence (spec §4, §5) and the runtime (<see cref="DataSyncRuntimeServiceCollectionExtensions.AddDataSyncRuntime"/>).
+    /// Data sync's persistence (spec §4, §5), change detection (§6), the feed source (§7.5) and the runtime
+    /// (<see cref="DataSyncRuntimeServiceCollectionExtensions.AddDataSyncRuntime"/>).
     /// Called from <c>AddInsideWorldBusinesses()</c>, so every host and the TestKit get it.
     /// </summary>
     /// <remarks>
@@ -50,6 +53,22 @@ public static class DataSyncServiceCollectionExtensions
         services.TryAddSingleton<DataSyncRetention>(sp => new DataSyncRetention(sp.GetRequiredService<DataSyncGate>(),
             sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<IDataSyncDataDirectory>(),
             sp.GetService<TimeProvider>(), sp.GetService<ILogger<DataSyncRetention>>()));
+
+        // The feed source (§7.5): D's node controller serves it to readers holding a datasync grant. Snapshots and the
+        // SeenCounter high-water map are process-wide; every store feeds the map the vectors its context saves. Pages
+        // are written by the pure engine's wire writer (package A) through a seam the feed's tests can fill.
+        services.TryAddSingleton(DataSyncLimits.Default);
+        services.TryAddSingleton<DataSyncFeedSnapshots>(sp => new DataSyncFeedSnapshots(sp.GetService<TimeProvider>()));
+        services.TryAddSingleton<DataSyncSeenCounters>(sp => new DataSyncSeenCounters(
+            sp.GetRequiredService<IServiceScopeFactory>(), sp.GetService<ILogger<DataSyncSeenCounters>>()));
+        services.TryAddSingleton<IDataSyncFeedPageWriter, DataSyncWireFeedPageWriter>();
+        services.TryAddSingleton<DataSyncFeedSource>(sp => new DataSyncFeedSource(
+            sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<DataSyncGate>(),
+            sp.GetRequiredService<DataSyncActorGuard>(), sp.GetRequiredService<DataSyncRefreshCoordinator>(),
+            sp.GetRequiredService<DataSyncFeedSnapshots>(), sp.GetRequiredService<DataSyncSeenCounters>(),
+            sp.GetRequiredService<IDataSyncFeedPageWriter>(), sp.GetService<DataSyncLimits>(),
+            sp.GetService<TimeProvider>(), sp.GetService<ILogger<DataSyncFeedSource>>()));
+        services.TryAddSingleton<IDataSyncFeedSource>(sp => sp.GetRequiredService<DataSyncFeedSource>());
 
         // Kind adapters register next to the services that own their tables: the custom property kind in the Property
         // module, the extension group kind through AddExtensionGroupDataSyncKind(codec) with the pure engine's codec.
