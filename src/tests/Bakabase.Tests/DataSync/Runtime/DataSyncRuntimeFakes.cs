@@ -368,8 +368,13 @@ internal sealed class FakeDataSyncStore : IDataSyncStore
     public Task<IReadOnlyList<DataSyncEntityDbModel>> GetPublishedChangedSinceAsync(string kind, long sinceSeq,
         CancellationToken ct) => throw new NotSupportedException();
 
+    /// <summary>Pending records to re-merge per link, as <see cref="GetPendingToMergeAsync"/> answers without a pull.</summary>
+    public ConcurrentDictionary<int, List<(string Kind, SyncKey Key)>> PendingToMerge { get; } = new();
+
     public Task<IReadOnlyList<(string Kind, SyncKey Key)>> GetPendingToMergeAsync(int linkId, bool fullReconciliation,
-        CancellationToken ct) => throw new NotSupportedException();
+        CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<(string Kind, SyncKey Key)>>(
+            PendingToMerge.TryGetValue(linkId, out var pending) ? pending.ToList() : []);
 
     public Task UpsertBasesAsync(int linkId, IEnumerable<DataSyncBaseUpdate> updates, CancellationToken ct) =>
         throw new NotSupportedException();
@@ -440,9 +445,13 @@ internal sealed class FakePeer(string nodeId)
             MinimumPeerContract, "2.4.0-beta.1", kinds, Counterpart, Attention);
     }
 
+    /// <summary>Called after each page is counted, before it is served.</summary>
+    public Action? OnPage { get; set; }
+
     public byte[] Page(string kind, string? cursor)
     {
         Interlocked.Increment(ref Pages);
+        OnPage?.Invoke();
         if (kind == BadPageOf) return "bad"u8.ToArray();
         var index = cursor is null ? 1 : int.Parse(cursor[1..]);
         return Encoding.UTF8.GetBytes($"page:{index}:{PagesPerKind}");
@@ -802,6 +811,65 @@ internal sealed class RecordingObserver : IDataSyncRuntimeObserver
     {
         Events.Enqueue(e);
         return Task.CompletedTask;
+    }
+}
+
+/// <summary>
+/// The database's single writer as the runtime's row transactions meet it: <c>BEGIN IMMEDIATE</c> waits while another
+/// transaction holds the write lock. A test holds it as the apply runner's open transaction would
+/// (<see cref="Hold"/>) and sees who waits for it.
+/// </summary>
+internal sealed class FakeRowTransactions : IDataSyncRowTransactions
+{
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private int _waiting;
+
+    /// <summary>Transactions waiting for the write lock now.</summary>
+    public int Waiting => Volatile.Read(ref _waiting);
+
+    public async Task<IDataSyncRowTransaction> BeginAsync(IServiceProvider scope, CancellationToken ct)
+    {
+        Interlocked.Increment(ref _waiting);
+        try
+        {
+            await _writeLock.WaitAsync(ct);
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _waiting);
+        }
+
+        return new Transaction(_writeLock);
+    }
+
+    /// <summary>Holds the write lock, as another transaction would, until disposed.</summary>
+    public IDisposable Hold()
+    {
+        if (!_writeLock.Wait(0)) throw new InvalidOperationException("The write lock is already held.");
+        return new Held(_writeLock);
+    }
+
+    private sealed class Transaction(SemaphoreSlim writeLock) : IDataSyncRowTransaction
+    {
+        private int _released;
+
+        public Task CommitAsync(CancellationToken ct) => Task.CompletedTask;
+
+        public ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _released, 1) == 0) writeLock.Release();
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class Held(SemaphoreSlim writeLock) : IDisposable
+    {
+        private int _released;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _released, 1) == 0) writeLock.Release();
+        }
     }
 }
 

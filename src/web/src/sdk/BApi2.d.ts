@@ -12951,6 +12951,8 @@ export interface components {
             /** Format: int32 */
             missingAtPeerCount: number;
             peerOnline: boolean;
+            /** Format: date-time */
+            startAnywayAt?: string;
         };
         "Bakabase.Modules.DataSync.Services.DataSyncMapOutgoing": {
             /** Format: int32 */

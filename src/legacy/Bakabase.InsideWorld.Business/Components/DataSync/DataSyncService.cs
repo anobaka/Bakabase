@@ -89,18 +89,14 @@ public sealed class DataSyncService : IDataSyncService
     public Task<DataSyncMapView> GetMapAsync(CancellationToken ct) => Views.GetMapAsync(ct);
 
     /// <summary>
-    /// The switch (§7.1.3). With <c>EnablePairedRemoteAccess</c>, remote access is turned on with pairing required
-    /// only when it is Disabled. "Share new definitions automatically" is a local state write, so it takes the gate.
+    /// The switch (§7.1.3), never gated (it is federation state, §10.1), so turning sharing off always works, even
+    /// while an apply runs (§7.1.5). With <c>EnablePairedRemoteAccess</c>, remote access is turned on with pairing
+    /// required only when it is Disabled. "Share new definitions automatically" is a local state write, so only that
+    /// part takes the gate, after the switch: while the gate is busy the switch still applies and the answer is
+    /// <c>Busy</c> with the detail <c>newDefinitionsStayLocal</c>; a switch that failed changes nothing else.
     /// </summary>
     public async Task<DataSyncProblem?> SetSharingAsync(DataSyncSharingInput input, CancellationToken ct)
     {
-        if (input.NewDefinitionsStayLocal is { } stayLocal)
-        {
-            await using var gate = await EnterGateAsync(ct);
-            if (gate is null) return Busy;
-            if (await Links.SetNewDefinitionsStayLocalAsync(stayLocal, ct) is { } problem) return problem;
-        }
-
         try
         {
             await Grants.SetSharingEnabledAsync(input.Enabled, input.EnablePairedRemoteAccess, ct);
@@ -110,8 +106,17 @@ public sealed class DataSyncService : IDataSyncService
             return e.Problem;
         }
 
+        DataSyncProblem? problem = null;
+        if (input.NewDefinitionsStayLocal is { } stayLocal)
+        {
+            await using var gate = await EnterGateAsync(ct);
+            problem = gate is null
+                ? new DataSyncProblem(DataSyncProblemCode.Busy, "newDefinitionsStayLocal")
+                : await Links.SetNewDefinitionsStayLocalAsync(stayLocal, ct);
+        }
+
         await Observer.StateChangedAsync(ct);
-        return null;
+        return problem;
     }
 
     /// <summary>
@@ -166,8 +171,9 @@ public sealed class DataSyncService : IDataSyncService
         GatedLinkAsync(_ => Links.PauseByUserAsync(linkId, ct), ct);
 
     /// <summary>
-    /// The resume actions (§8.7). Asking for access again creates access; the controller already refused it to a
-    /// caller that may not, so the facade lets it through.
+    /// The resume actions (§8.7). Asking for access again creates access — after a reset (B1), as "Try again" for a
+    /// link waiting for access (§7.2.4), or as "[Ask {name} to keep in step]" (§7.2.3); the controller already refused
+    /// it to a caller that may not, so the facade lets it through.
     /// </summary>
     public Task<DataSyncLinkResult> ResumeLinkAsync(int linkId, DataSyncResumeAction action, CancellationToken ct) =>
         GatedLinkAsync(gate => Links.ResumeAsync(linkId, action, true, ct, gate), ct);
@@ -281,7 +287,9 @@ public sealed class DataSyncService : IDataSyncService
     /// <summary>
     /// Approves a datasync request (§7.2.4 step 4): only a request this device holds for definitions (a library
     /// request is not visible here, G29), and only with remote access on (G36). A two-way request approved to receive
-    /// back makes the approver's link — even when the read-back failed (N14) — under the gate, for the row only.
+    /// back makes the approver's link — even when the read-back failed (N14). The link row needs no gate: the link
+    /// service orders its writes itself, and the queued grant event that writes the same row takes none either. So once
+    /// the grant is issued the answer never waits behind an apply.
     /// </summary>
     public async Task<DataSyncRequestResult> ApproveRequestAsync(string requestId, DataSyncApproveInput input,
         CancellationToken ct)
@@ -314,7 +322,6 @@ public sealed class DataSyncService : IDataSyncService
         DataSyncLinkView? view = null;
         if (outcome.Intent == DataSyncRequestIntent.TwoWay && input.ReceiveBack)
         {
-            await using var gate = await EnterGateAsync(ct, wait: true);
             var link = await Links.OnInboundGrantedAsync(outcome.PeerNodeId, outcome.Intent, true,
                 outcome.ReadBackGranted, outcome.ReadBackError, outcome.PeerName, input.Kinds, ct);
             if (link is not null && input.Kinds is { Count: > 0 } kinds && link.FirstContactCompletedAtUtc is null)
@@ -354,8 +361,10 @@ public sealed class DataSyncService : IDataSyncService
     }
 
     /// <summary>
-    /// Withdraws a request this device filed. The link that waited for it had nothing yet — no bases, no review — so
-    /// it goes with it rather than staying on the map as an ended request (§8.1).
+    /// Withdraws a request this device filed. A link made for that request has nothing yet and goes with it; a link
+    /// that already had sync state (turned back on after a stop, or a copy once onto a stopped link) stops again with
+    /// its bases, pending records and last mode (§8.1), as when the peer's answer ends a request. Not gated: the link
+    /// service orders its writes itself.
     /// </summary>
     public async Task<DataSyncProblem?> CancelRequestAsync(string requestId, CancellationToken ct)
     {
@@ -373,11 +382,7 @@ public sealed class DataSyncService : IDataSyncService
         var waiting = (await Store.GetLinksAsync(ct)).FirstOrDefault(l =>
             l.State == DataSyncLinkState.AwaitingAccess &&
             string.Equals(l.PendingRequestId, requestId, StringComparison.Ordinal));
-        if (waiting is not null)
-        {
-            await using var gate = await EnterGateAsync(ct, wait: true);
-            await Links.ResetAsync(waiting.Id, ct);
-        }
+        if (waiting is not null) await Links.OnRequestCancelledAsync(waiting.Id, ct);
 
         await Observer.StateChangedAsync(ct);
         return null;
@@ -606,13 +611,10 @@ public sealed class DataSyncService : IDataSyncService
 
     // ---- helpers -----------------------------------------------------------------------------------------------
 
-    /// <summary>
-    /// The gate for a request: at most 30 s, else null (the caller answers Busy). <paramref name="wait"/>: after
-    /// something was already done that must be recorded, wait without a limit.
-    /// </summary>
-    private Task<DataSyncGateHold?> EnterGateAsync(CancellationToken ct, bool wait = false) =>
+    /// <summary>The gate for a request: at most 30 s, else null (the caller answers Busy).</summary>
+    private Task<DataSyncGateHold?> EnterGateAsync(CancellationToken ct) =>
         DataSyncGateHold.TryEnterAsync(_services.GetRequiredService<IDataSyncGateEntry>(),
-            wait ? null : DataSyncGateHold.RequestTimeout, ct);
+            DataSyncGateHold.RequestTimeout, ct);
 
     private async Task<DataSyncLinkResult> GatedLinkAsync(Func<DataSyncGateHold, Task<DataSyncLinkChange>> action,
         CancellationToken ct)

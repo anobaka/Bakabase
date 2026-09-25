@@ -23,10 +23,12 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 /// <item>it enqueues <c>DataSyncApply</c> when staged pulls wait or a link's once flags act without a pull, and the
 /// actor is verified.</item>
 /// </list>
-/// Two rules keep it from fighting the person and the host: nothing is started or enqueued once
-/// <c>ApplicationStopping</c> fired (<c>BTaskManager.Start</c> has no shutdown check, F71), and a <c>DataSync</c> task
-/// the person stopped is not restarted before its next 10-minute interval unless they press "Sync now"
-/// (<c>Start</c> would otherwise restart a cancelled task one second later).
+/// Two rules keep it from fighting the person and the host: nothing is started or enqueued once the app committed to
+/// quitting (<c>BTaskManager.PrepareForShutdown</c> or <c>ApplicationStopping</c>; <c>BTaskManager.Start</c> has no
+/// shutdown check, F71), and a task the person stopped is not started again on its own: the <c>DataSync</c> task not
+/// before its next 10-minute interval unless they press "Sync now" (<c>Start</c> would otherwise restart a cancelled
+/// task one second later), <c>DataSyncApply</c> not for what already waited until the next pull, "Sync now" or that
+/// interval.
 /// </summary>
 /// <remarks>
 /// Nothing runs until the fetch task is registered with the task manager: the host registers predefined tasks after
@@ -48,8 +50,8 @@ public sealed class DataSyncScheduler : BackgroundService
     private readonly ILogger<DataSyncScheduler> _logger;
     private readonly SemaphoreSlim _tickLock = new(1, 1);
 
-    private DateTime? _observedStopStartedAt;
-    private DateTime? _personStoppedAtUtc;
+    private DateTime? _observedFetchStopStartedAt;
+    private DateTime? _observedApplyStopStartedAt;
 
     public DataSyncScheduler(IServiceScopeFactory scopes, BTaskManager btm, DataSyncTaskLauncher launcher,
         DataSyncLinkService links, DataSyncGrantEventsHandler grantEvents, IDataSyncStagedPullStore stagedPulls,
@@ -147,7 +149,7 @@ public sealed class DataSyncScheduler : BackgroundService
             if (_launcher.IsStopping) return;
             var verified = guard is null || guard.IsVerified;
             var applyWaits = _stagedPulls.LinksWaiting().Count > 0 || links.Any(l => HasApplyWork(l, now));
-            if (!allPaused && verified && applyWaits) await _launcher.EnqueueApplyAsync();
+            if (!allPaused && verified && applyWaits && CanEnqueueApply(now)) await _launcher.EnqueueApplyAsync();
         }
         finally
         {
@@ -162,7 +164,8 @@ public sealed class DataSyncScheduler : BackgroundService
     public async Task<string?> SyncNowAsync(int? linkId, CancellationToken ct)
     {
         await _links.MarkDueAsync(linkId, ct);
-        _personStoppedAtUtc = null;
+        _state.ReleaseFetch();
+        _state.ReleaseApply();
         if (_launcher.IsStopping) return null;
         var fetchTask = FetchTask();
         if (fetchTask is null) return null;
@@ -175,12 +178,13 @@ public sealed class DataSyncScheduler : BackgroundService
         link.IsFetchable() && (link.NextAttemptAtUtc is not { } next || next <= nowUtc);
 
     /// <summary>
-    /// A link whose once flags act without a pull (N13): the scheduler enqueues <c>DataSyncApply</c> for it, unless
-    /// the link is backing off after a failed apply.
+    /// A link whose once flags act without a pull (N13), or whose pending records wait for a re-merge without one
+    /// (§8.10.2 step 1): the scheduler enqueues <c>DataSyncApply</c> for it, unless the link is backing off after a
+    /// failed apply.
     /// </summary>
-    private static bool HasApplyWork(DataSyncLinkDbModel link, DateTime nowUtc) =>
+    private bool HasApplyWork(DataSyncLinkDbModel link, DateTime nowUtc) =>
         link.State == DataSyncLinkState.Active &&
-        link.GetOnceFlags().PullIndependent() != DataSyncMergeFlags.None &&
+        (link.GetOnceFlags().PullIndependent() != DataSyncMergeFlags.None || _state.IsReMergeRequested(link.Id)) &&
         !(link.ConsecutiveFailures > 0 && link.NextAttemptAtUtc is { } next && next > nowUtc);
 
     private BTaskHandler? FetchTask() =>
@@ -188,26 +192,39 @@ public sealed class DataSyncScheduler : BackgroundService
 
     /// <summary>
     /// Whether the scheduler may start the fetch task now: it is not active, and it was not stopped by a person
-    /// within its interval. A stop is recognised by the task ending Cancelled — the scheduler itself never stops it —
-    /// and is timed by this runtime's clock from when the scheduler first saw it.
+    /// within its interval. A stop is recognised by the task ending Cancelled — the scheduler itself never stops it,
+    /// and a shutdown stops the scheduler first — or recorded by a cancel through the API, and is timed by this
+    /// runtime's clock from when it was seen.
     /// </summary>
     private bool CanStartFetch(BTaskHandler fetchTask, DateTime nowUtc)
     {
         var task = fetchTask.Task;
         if (task.Status.IsActive()) return false;
-        if (task.Status == BTaskStatus.Cancelled)
+        if (task.Status == BTaskStatus.Cancelled && _observedFetchStopStartedAt != task.StartedAt)
         {
-            if (_observedStopStartedAt != task.StartedAt)
-            {
-                _observedStopStartedAt = task.StartedAt;
-                _personStoppedAtUtc = nowUtc;
-                _logger.LogInformation("The data sync task was stopped; it runs again at its next interval");
-            }
-
-            if (_personStoppedAtUtc is { } stoppedAt && nowUtc - stoppedAt < DataSyncRuntimeState.FetchInterval)
-                return false;
+            _observedFetchStopStartedAt = task.StartedAt;
+            if (!_state.IsFetchHeld(nowUtc)) _state.HoldFetch(nowUtc);
+            _logger.LogInformation("The data sync task was stopped; it runs again at its next interval");
         }
 
-        return true;
+        return !_state.IsFetchHeld(nowUtc);
+    }
+
+    /// <summary>
+    /// Whether the scheduler may enqueue <c>DataSyncApply</c> for what waits: not while a person's stop holds it
+    /// (§8.10.1). A stop through the task list is recognised by the task ending Cancelled, as for the fetch task.
+    /// </summary>
+    private bool CanEnqueueApply(DateTime nowUtc)
+    {
+        var task = _btm.Tasks
+            .FirstOrDefault(t => string.Equals(t.Id, DataSyncTaskIds.Apply, StringComparison.Ordinal))?.Task;
+        if (task?.Status == BTaskStatus.Cancelled && _observedApplyStopStartedAt != task.StartedAt)
+        {
+            _observedApplyStopStartedAt = task.StartedAt;
+            if (!_state.IsApplyHeld(nowUtc)) _state.HoldApply(nowUtc);
+            _logger.LogInformation("Applying synced changes was stopped; it runs again with the next pull");
+        }
+
+        return !_state.IsApplyHeld(nowUtc);
     }
 }

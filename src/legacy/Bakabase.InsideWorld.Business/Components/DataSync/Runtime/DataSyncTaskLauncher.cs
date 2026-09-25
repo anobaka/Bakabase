@@ -16,8 +16,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 
-/// <summary>What a cancel found (§8.10.1).</summary>
-public enum DataSyncTaskCancelOutcome
+/// <summary>What a cancel found (§8.10.1). Internal: no API answers it, so it stays out of the SDK constants.</summary>
+internal enum DataSyncTaskCancelOutcome
 {
     /// <summary>No task has that id.</summary>
     NotFound = 1,
@@ -30,6 +30,12 @@ public enum DataSyncTaskCancelOutcome
 
     /// <summary>It had already finished, or was already stopping.</summary>
     AlreadyFinished = 4,
+
+    /// <summary>
+    /// The recurring <c>DataSync</c> task was waiting for its next start. It stays registered — removing it would stop
+    /// data sync until a restart — and the scheduler does not start it before its next interval (§8.2).
+    /// </summary>
+    Held = 5,
 }
 
 /// <summary>
@@ -52,12 +58,14 @@ public sealed class DataSyncTaskLauncher
     private readonly IServiceScopeFactory _scopes;
     private readonly IHostApplicationLifetime? _lifetime;
     private readonly IDataSyncRuntimeObserver _observer;
+    private readonly DataSyncRuntimeState _state;
+    private readonly IDataSyncClock _clock;
     private readonly ILogger<DataSyncTaskLauncher> _logger;
     private readonly SemaphoreSlim _enqueueLock = new(1, 1);
 
     public DataSyncTaskLauncher(BTaskManager btm, IDataSyncTaskRegistry registry, IBakabaseLocalizer localizer,
         IServiceScopeFactory scopes, IServiceProvider services, IDataSyncRuntimeObserver observer,
-        ILogger<DataSyncTaskLauncher> logger)
+        DataSyncRuntimeState state, IDataSyncClock clock, ILogger<DataSyncTaskLauncher> logger)
     {
         _btm = btm;
         _registry = registry;
@@ -65,11 +73,17 @@ public sealed class DataSyncTaskLauncher
         _scopes = scopes;
         _lifetime = services.GetService<IHostApplicationLifetime>();
         _observer = observer;
+        _state = state;
+        _clock = clock;
         _logger = logger;
     }
 
-    /// <summary>True once the host started stopping: nothing is started or enqueued any more (§8.2).</summary>
-    public bool IsStopping => _lifetime?.ApplicationStopping.IsCancellationRequested == true;
+    /// <summary>
+    /// True once the app committed to quitting: nothing is started or enqueued any more (§8.2). That is
+    /// <c>BTaskManager.PrepareForShutdown</c>, which the desktop app's exit runs seconds before the host's
+    /// <c>ApplicationStopping</c> fires, or <c>ApplicationStopping</c> itself on a headless host.
+    /// </summary>
+    public bool IsStopping => _btm.IsShuttingDown || _lifetime?.ApplicationStopping.IsCancellationRequested == true;
 
     /// <summary>
     /// A no-op (null) while a task with this id is NotStarted or active; otherwise cleans a finished one, registers
@@ -103,11 +117,18 @@ public sealed class DataSyncTaskLauncher
         }
     }
 
-    /// <summary>Enqueues <c>DataSyncApply</c> unless it is already waiting or running (§8.2, §8.10.1).</summary>
-    public Task<DataSyncTaskAttempt?> EnqueueApplyAsync() =>
-        EnqueueOnceAsync(DataSyncTaskIds.Apply, attempt => WriteTask(DataSyncTaskIds.Apply, persistent: false,
+    /// <summary>
+    /// Enqueues <c>DataSyncApply</c> unless it is already waiting or running (§8.2, §8.10.1). Called for new work (a
+    /// new pull, "Apply all"), so it also ends a person's hold on the apply; the scheduler's own enqueue respects that
+    /// hold instead (<see cref="DataSyncRuntimeState.IsApplyHeld"/>).
+    /// </summary>
+    public Task<DataSyncTaskAttempt?> EnqueueApplyAsync()
+    {
+        _state.ReleaseApply();
+        return EnqueueOnceAsync(DataSyncTaskIds.Apply, attempt => WriteTask(DataSyncTaskIds.Apply, persistent: false,
             args => RunInScopeAsync(args, attempt,
                 sp => sp.GetRequiredService<DataSyncApplyTask>().RunAsync(args, attempt))));
+    }
 
     /// <summary>The restore choice (§9.5). <paramref name="linkId"/>: a restore suspected through one link only.</summary>
     public Task<DataSyncTaskAttempt?> EnqueueRestoreAsync(DataSyncRestoreChoice choice, int? linkId) =>
@@ -186,12 +207,16 @@ public sealed class DataSyncTaskLauncher
 
     /// <summary>
     /// Cancel (§8.10.1): sets the attempt's cancel flag <b>before</b> reading the task's status, then removes a waiting
-    /// task or stops a running one. The recurring <c>DataSync</c> task has no attempt; it is stopped as any BTask, and
-    /// the scheduler respects that stop (§8.2).
+    /// task or stops a running one. A person's cancel of <c>DataSyncApply</c> also holds it: the scheduler does not
+    /// enqueue it again for what already waited (§8.2). The recurring <c>DataSync</c> task has no attempt and is never
+    /// removed — nothing would register it again before a restart: a running one is stopped as any BTask, a waiting one
+    /// stays, and either way the scheduler does not start it before its next interval (§8.2).
     /// </summary>
-    public async Task<DataSyncTaskCancelOutcome> CancelAsync(string taskId)
+    internal async Task<DataSyncTaskCancelOutcome> CancelAsync(string taskId)
     {
+        if (string.Equals(taskId, DataSyncTaskIds.Fetch, StringComparison.Ordinal)) return await StopFetchAsync();
         _registry.RequestCancel(taskId);
+        if (string.Equals(taskId, DataSyncTaskIds.Apply, StringComparison.Ordinal)) _state.HoldApply(_clock.UtcNow);
         var task = _btm.GetTaskViewModel(taskId);
         if (task is null) return DataSyncTaskCancelOutcome.NotFound;
         switch (task.Status)
@@ -201,6 +226,24 @@ public sealed class DataSyncTaskLauncher
                 return DataSyncTaskCancelOutcome.Removed;
             case var s when s.CanBeStopped():
                 await _btm.Stop(taskId);
+                return DataSyncTaskCancelOutcome.Stopping;
+            default:
+                return DataSyncTaskCancelOutcome.AlreadyFinished;
+        }
+    }
+
+    private async Task<DataSyncTaskCancelOutcome> StopFetchAsync()
+    {
+        var task = _btm.GetTaskViewModel(DataSyncTaskIds.Fetch);
+        if (task is null) return DataSyncTaskCancelOutcome.NotFound;
+        switch (task.Status)
+        {
+            case BTaskStatus.NotStarted:
+                _state.HoldFetch(_clock.UtcNow);
+                return DataSyncTaskCancelOutcome.Held;
+            case var s when s.CanBeStopped():
+                _state.HoldFetch(_clock.UtcNow);
+                await _btm.Stop(DataSyncTaskIds.Fetch);
                 return DataSyncTaskCancelOutcome.Stopping;
             default:
                 return DataSyncTaskCancelOutcome.AlreadyFinished;

@@ -130,8 +130,6 @@ public class DataSyncControllerTests
                 ("resume link", async c => (await c.ResumeLink(1, new DataSyncLinkResumeInputModel(), default)).Data!.Problem),
                 ("reset link", async c => (await c.ResetLink(1, default)).Data),
                 ("pause all", async c => (await c.SetAllPaused(new DataSyncPausedInputModel { Paused = true }, default)).Data),
-                ("new definitions stay local", async c => (await c.SetSharing(
-                    new DataSyncSharingInput(false, false, true), default)).Data),
                 ("apply review", async c => (await c.ApplyReview("review-1", new DataSyncReviewApplyInput([], true),
                     default)).Data!.Problem),
                 ("resolve", async c => (await c.Resolve(new DataSyncResolveBatchInput(
@@ -158,6 +156,18 @@ public class DataSyncControllerTests
     public async Task Ungated_actions_answer_while_the_gate_is_held()
     {
         await using var h = await WorldAsync();
+        var outgoing = h.AddLink("node-away", l =>
+        {
+            l.State = DataSyncLinkState.AwaitingAccess;
+            l.PendingRequestId = "req-out-1";
+            l.FirstContactCompletedAtUtc = null;
+            l.FirstContactKindsJson = null;
+        });
+        h.Grants.Outbound.Remove("node-away");
+        h.Grants.Requests.Add(new DataSyncAccessRequestView("req-out-1", DataSyncRequestDirection.Outgoing, "node-away",
+            "Away", DataSyncRequestIntent.Follow, "awaitingApproval", h.Clock.UtcNow.AddMinutes(5), null, false, null,
+            false));
+        h.Grants.Outbound.Add("node-den");
         using var _ = h.Gate.Hold();
 
         Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.SetSharing(new DataSyncSharingInput(true, true),
@@ -170,6 +180,39 @@ public class DataSyncControllerTests
         Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.RejectRequest("req-in-1", default))).Data);
         Assert.AreEqual(DataSyncProblemCode.UnknownItem, (await h.CallAsync(Callers.Loopback,
             c => c.CancelTask("DataSyncUndo:42", default))).Data!.Code);
+
+        // Copy once is not gated: the fetch is asynchronous.
+        var copy = (await h.CallAsync(Callers.Loopback, c => c.CreateCopyOnce(new DataSyncCopyOnceInput("node-den",
+            null, null, AllKinds), default))).Data!;
+        Assert.IsNull(copy.Problem);
+        Assert.AreEqual(DataSyncLinkState.AwaitingReview, h.Store.All().Single(l => l.PeerNodeId == "node-den").State);
+
+        // Reviews never wait for the gate: an unknown review answers as expired, never Busy.
+        Assert.AreNotEqual(DataSyncProblemCode.Busy, (await h.CallAsync(Callers.Loopback,
+            c => c.RefetchReview("review-gone", default))).Data!.Problem?.Code);
+        Assert.AreEqual(DataSyncProblemCode.ReviewExpired, (await h.CallAsync(Callers.Loopback,
+            c => c.CancelReviewApply("review-gone", default))).Data!.Problem?.Code);
+        await h.CallAsync(Callers.Loopback, c => c.DiscardReview("review-gone", default));
+
+        // Withdrawing a request and forgetting access answer too.
+        Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.CancelRequest("req-out-1", default))).Data);
+        Assert.IsNull(h.Store.Get(outgoing.Id), "the link made for the request went with it");
+        Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.ForgetAccess("node-pc", default))).Data);
+
+        // Approving two-way with receive-back answers with its link instead of waiting for an apply to finish.
+        var approved = await h.CallAsync(Callers.Loopback, c => c.ApproveRequest("req-in-1",
+            new DataSyncApproveInput(true, null), default)).WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.IsNull(approved.Data!.Problem);
+        Assert.AreEqual(DataSyncLinkState.WaitingForPeerReview, approved.Data.CreatedLink!.State);
+
+        // Sharing off is never gated; only "share new definitions automatically" waits for the gate, and says so.
+        var stayLocal = (await h.CallAsync(Callers.Loopback, c => c.SetSharing(
+            new DataSyncSharingInput(false, false, true), default))).Data;
+        Assert.AreEqual(DataSyncProblemCode.Busy, stayLocal?.Code);
+        Assert.AreEqual("newDefinitionsStayLocal", stayLocal?.Detail);
+        Assert.AreEqual("sharing:False:False", h.Grants.Changes.Last(), "sharing went off although the gate is held");
+        Assert.IsFalse(h.Store.LocalState!.NewDefinitionsStayLocal);
+        Assert.AreEqual(0, h.Gate.Entered, "nothing here entered the gate");
     }
 
     // ---- GETs never write --------------------------------------------------------------------------------------
@@ -194,10 +237,32 @@ public class DataSyncControllerTests
 
     // ---- the access rule (§7.1.5) --------------------------------------------------------------------------------
 
+    /// <summary>
+    /// Links whose resume action "ask for access again" sends a request (§7.2.3, §7.2.4): an approver whose read-back
+    /// failed (N14), and a two-way link its peer declined to read back.
+    /// </summary>
+    private static (DataSyncLinkDbModel ReadBackFailed, DataSyncLinkDbModel ReadBackDeclined) AccessAskingLinks(
+        DataSyncApiHarness h)
+    {
+        var failed = h.AddLink("node-approver", l =>
+        {
+            l.State = DataSyncLinkState.AwaitingAccess;
+            l.Initiator = DataSyncLinkInitiator.Peer;
+            l.FirstContactCompletedAtUtc = null;
+            l.FirstContactKindsJson = null;
+            l.LastErrorCode = DataSyncLinkService.ReadBackFailed;
+        });
+        h.Grants.Outbound.Remove("node-approver");
+        var declined = h.AddLink("node-declined", l => l.ReadBackDeclined = true);
+        return (failed, declined);
+    }
+
     [TestMethod]
     public async Task An_unpaired_unrestricted_browser_may_not_create_access_and_nothing_is_sent()
     {
         await using var h = await WorldAsync();
+        var (readBackFailed, readBackDeclined) = AccessAskingLinks(h);
+        var linkCount = h.Store.All().Count;
         var browser = Callers.UnpairedUnrestricted;
 
         var link = (await h.CallAsync(browser, c => c.CreateLink(new DataSyncLinkCreateInput("node-newpc", null, null,
@@ -213,9 +278,23 @@ public class DataSyncControllerTests
         Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice, (await h.CallAsync(browser,
             c => c.ApproveRequest("req-in-1", new DataSyncApproveInput(true, null), default))).Data!.Problem?.Code);
 
+        // Turning a link two-way mints a reciprocal code for a peer that does not read this device (§7.2.4).
+        Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice, (await h.CallAsync(browser,
+            c => c.UpdateLink(2, new DataSyncLinkUpdateInput(DataSyncLinkMode.TwoWay, null), default))).Data!.Problem?.Code);
+        Assert.AreEqual(DataSyncLinkMode.Follow, h.Store.Get(2)!.Mode);
+
+        // "Try again" after a failed read-back and "Ask X to keep in step" each send a request.
+        foreach (var asking in new[] { readBackFailed, readBackDeclined })
+        {
+            Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice, (await h.CallAsync(browser,
+                c => c.ResumeLink(asking.Id,
+                    new DataSyncLinkResumeInputModel { Action = DataSyncResumeAction.AskAccessAgain }, default)))
+                .Data!.Problem?.Code);
+        }
+
         Assert.AreEqual(0, h.Grants.Sent.Count, "no request was sent");
         Assert.AreEqual(0, h.Grants.Changes.Count, "no access changed");
-        Assert.AreEqual(2, h.Store.All().Count, "no link row was made");
+        Assert.AreEqual(linkCount, h.Store.All().Count, "no link row was made");
 
         // Shutting access off stays open to it.
         Assert.IsNull((await h.CallAsync(browser, c => c.SetSharing(new DataSyncSharingInput(false), default))).Data);
@@ -239,7 +318,62 @@ public class DataSyncControllerTests
             Assert.AreEqual("req-node-newpc", result.RequestId);
             Assert.AreEqual(DataSyncRequestIntent.TwoWay, h.Grants.Sent.Single().Intent);
             Assert.IsFalse(h.Gate.IsHeld, "the gate is released after the row");
+
+            // Two-way on a followed peer that does not read this device: a request with a reciprocal offer.
+            var twoWay = (await h.CallAsync(caller, c => c.UpdateLink(2,
+                new DataSyncLinkUpdateInput(DataSyncLinkMode.TwoWay, null), default))).Data!;
+            Assert.IsNull(twoWay.Problem);
+            Assert.AreEqual(DataSyncLinkMode.TwoWay, twoWay.Link!.Mode);
+            Assert.AreEqual(("node-pc", DataSyncRequestIntent.TwoWay),
+                (h.Grants.Sent.Last().PeerNodeId, h.Grants.Sent.Last().Intent));
+
+            var (readBackFailed, _) = AccessAskingLinks(h);
+            var again = (await h.CallAsync(caller, c => c.ResumeLink(readBackFailed.Id,
+                new DataSyncLinkResumeInputModel { Action = DataSyncResumeAction.AskAccessAgain }, default))).Data!;
+            Assert.IsNull(again.Problem);
+            Assert.AreEqual(3, h.Grants.Sent.Count);
         }
+    }
+
+    [TestMethod]
+    public async Task Try_again_after_a_failed_read_back_asks_the_peer_for_a_follow_grant()
+    {
+        // N14 (§7.2.4): the approver's link waits for access with the failure recorded; "Try again" is AskAccessAgain.
+        await using var h = await WorldAsync();
+        h.Grants.Approval = (request, _) => new DataSyncApprovalOutcome(request.NodeId, request.NodeName,
+            request.Intent, false, "Unreachable");
+        var link = (await h.CallAsync(Callers.Loopback, c => c.ApproveRequest("req-in-1",
+            new DataSyncApproveInput(true, null), default))).Data!.CreatedLink!;
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, link.State);
+
+        var again = (await h.CallAsync(Callers.Paired, c => c.ResumeLink(link.Id,
+            new DataSyncLinkResumeInputModel { Action = DataSyncResumeAction.AskAccessAgain }, default))).Data!;
+
+        Assert.IsNull(again.Problem);
+        var sent = h.Grants.Sent.Single();
+        Assert.AreEqual("node-new", sent.PeerNodeId);
+        Assert.AreEqual(DataSyncRequestIntent.Follow, sent.Intent, "the peer already reads this device");
+        Assert.AreEqual("req-node-new", again.RequestId);
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, again.Link!.State);
+        Assert.IsNull(again.Link.LastErrorCode, "the failure is replaced by the new request");
+    }
+
+    [TestMethod]
+    public async Task Asking_a_peer_that_does_not_read_back_to_keep_in_step_sends_a_two_way_request()
+    {
+        // §7.2.3: a code without two-way consent, redeemed two-way, gives the redeemer's link ReadBackDeclined.
+        await using var h = await WorldAsync();
+        var (_, declined) = AccessAskingLinks(h);
+
+        var asked = (await h.CallAsync(Callers.Loopback, c => c.ResumeLink(declined.Id,
+            new DataSyncLinkResumeInputModel { Action = DataSyncResumeAction.AskAccessAgain }, default))).Data!;
+
+        Assert.IsNull(asked.Problem);
+        var sent = h.Grants.Sent.Single();
+        Assert.AreEqual("node-declined", sent.PeerNodeId);
+        Assert.AreEqual(DataSyncRequestIntent.TwoWay, sent.Intent);
+        Assert.AreEqual("req-node-declined", asked.RequestId);
+        Assert.IsFalse(asked.Link!.ReadBackDeclined);
     }
 
     [TestMethod]
@@ -333,11 +467,15 @@ public class DataSyncControllerTests
     public async Task Cancelling_a_request_this_device_filed_drops_the_link_that_waited_for_it()
     {
         await using var h = await WorldAsync();
+        // A link made for the request: no first contact, no cursor, no base.
         var waiting = h.AddLink("node-away", l =>
         {
             l.State = DataSyncLinkState.AwaitingAccess;
             l.PendingRequestId = "req-out-1";
+            l.FirstContactCompletedAtUtc = null;
+            l.FirstContactKindsJson = null;
         });
+        h.Grants.Outbound.Remove("node-away");
         h.Grants.Requests.Add(new DataSyncAccessRequestView("req-out-1", DataSyncRequestDirection.Outgoing, "node-away",
             "Away", DataSyncRequestIntent.Follow, "awaitingApproval", h.Clock.UtcNow.AddMinutes(5), null, false, null,
             false));
@@ -346,6 +484,36 @@ public class DataSyncControllerTests
         Assert.IsNull(h.Store.Get(waiting.Id));
         Assert.AreEqual(DataSyncProblemCode.RequestNotFound, (await h.CallAsync(Callers.Loopback,
             c => c.CancelRequest("req-in-1", default))).Data?.Code, "an incoming request is not withdrawn");
+    }
+
+    [TestMethod]
+    public async Task Cancelling_the_request_of_a_stopped_link_turned_back_on_stops_it_again_and_keeps_its_state()
+    {
+        // Off keeps bases so that turning a link on again is incremental (§8.1); withdrawing the request that turning
+        // it on sent must not reset it.
+        await using var h = await WorldAsync();
+        var nas = h.Store.Get(1)!;
+        Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.UpdateLink(nas.Id,
+            new DataSyncLinkUpdateInput(DataSyncLinkMode.Off, null), default))).Data!.Problem);
+        h.Grants.Outbound.Remove("node-nas");
+        var on = (await h.CallAsync(Callers.Loopback, c => c.UpdateLink(nas.Id,
+            new DataSyncLinkUpdateInput(DataSyncLinkMode.Follow, null), default))).Data!;
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, on.Link!.State);
+        Assert.AreEqual("req-node-nas", on.RequestId);
+        h.Grants.Requests.Add(new DataSyncAccessRequestView("req-node-nas", DataSyncRequestDirection.Outgoing,
+            "node-nas", "NAS", DataSyncRequestIntent.Follow, "awaitingApproval", h.Clock.UtcNow.AddMinutes(5), null,
+            false, null, false));
+
+        Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.CancelRequest("req-node-nas", default))).Data);
+
+        Assert.AreEqual(0, h.Store.Deleted.Count, "never reset: its bases and pending records stay");
+        Assert.AreEqual(2, h.Store.Bases[(nas.Id, DataSyncKindIds.CustomProperty)].Count);
+        var link = h.Store.Get(nas.Id)!;
+        Assert.AreEqual(DataSyncLinkState.Stopped, link.State);
+        Assert.AreEqual(DataSyncLinkMode.Off, link.Mode);
+        Assert.AreEqual(DataSyncLinkMode.Follow, link.LastMode, "turning it on again asks with the same mode");
+        Assert.AreEqual(DataSyncLinkService.AccessCancelled, link.LastErrorCode);
+        CollectionAssert.Contains(h.Grants.Changes.ToArray(), "cancel:req-node-nas");
     }
 
     // ---- resolving (§9.2) ----------------------------------------------------------------------------------------

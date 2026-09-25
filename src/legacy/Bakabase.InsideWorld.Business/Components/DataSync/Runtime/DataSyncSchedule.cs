@@ -20,6 +20,12 @@ public static class DataSyncSchedule
     /// <summary>A last full reconciliation older than this makes the next pull one (§8.8).</summary>
     public static readonly TimeSpan FullReconciliationInterval = TimeSpan.FromHours(24);
 
+    /// <summary>
+    /// An approver that has waited this long for its peer's first review may start anyway (§8.3,
+    /// <c>DataSyncResumeAction.StartAnyway</c>).
+    /// </summary>
+    public static readonly TimeSpan StartAnywayAfter = TimeSpan.FromDays(7);
+
     private static readonly TimeSpan[] FailureBackoff =
         [TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10)];
 

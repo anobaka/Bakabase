@@ -41,6 +41,7 @@ public static class DataSyncRuntimeServiceCollectionExtensions
         if (services.Any(d => d.ServiceType == typeof(DataSyncScheduler))) return services;
 
         services.TryAddSingleton<IDataSyncClock, SystemDataSyncClock>();
+        services.TryAddSingleton<IDataSyncRowTransactions, DataSyncDbRowTransactions>();
         services.TryAddSingleton(DataSyncLimits.Default);
         services.TryAddSingleton<DataSyncNotifier>();
         services.TryAddSingleton<DataSyncHubPublisher>();

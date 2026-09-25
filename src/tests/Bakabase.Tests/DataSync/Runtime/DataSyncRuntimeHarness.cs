@@ -30,6 +30,7 @@ internal sealed class DataSyncRuntimeHarness : IAsyncDisposable
     public FakeKindPageReader Reader { get; } = new();
     public RecordingObserver Observer { get; } = new();
     public FakeHostLifetime Lifetime { get; } = new();
+    public FakeRowTransactions RowTransactions { get; } = new();
 
     public ServiceProvider Provider { get; private set; } = null!;
     public BTaskManager Btm => Provider.GetRequiredService<BTaskManager>();
@@ -61,6 +62,7 @@ internal sealed class DataSyncRuntimeHarness : IAsyncDisposable
         // Seams the runtime registers with TryAdd: the test's win because they come first.
         services.AddSingleton<IDataSyncClock>(harness.Clock);
         services.AddSingleton<IDataSyncRuntimeObserver>(harness.Observer);
+        services.AddSingleton<IDataSyncRowTransactions>(harness.RowTransactions);
         services.AddScoped<IDataSyncKindPageReader>(_ => harness.Reader);
 
         // What packages C and D provide.
@@ -125,7 +127,11 @@ internal sealed class DataSyncRuntimeHarness : IAsyncDisposable
 
     /// <summary>Runs one fetch cycle directly, outside the task manager, with its own cancellation.</summary>
     public Task FetchOnceAsync(CancellationToken ct = default) =>
-        Fetcher.RunCycleAsync(new BTaskArgs(new Bootstrap.Components.Tasks.PauseTokenSource().Token, ct,
+        FetchOnceAsync(new Bootstrap.Components.Tasks.PauseTokenSource(), ct);
+
+    /// <summary>Runs one fetch cycle with a pause the test controls, as the task manager's pause would.</summary>
+    public Task FetchOnceAsync(Bootstrap.Components.Tasks.PauseTokenSource pause, CancellationToken ct = default) =>
+        Fetcher.RunCycleAsync(new BTaskArgs(pause.Token, ct,
             new Bakabase.Abstractions.Models.Domain.BTask("test-fetch", () => "test"),
             _ => Task.CompletedTask, Provider));
 

@@ -30,8 +30,8 @@ public sealed record DataSyncLinkChange(DataSyncLinkDbModel? Link, string? Reque
 public sealed record DataSyncLinkCreate(string? PeerNodeId, string? Address, string? Code, DataSyncLinkMode Mode,
     IReadOnlyList<string>? Kinds, bool CopyOnce = false);
 
-/// <summary>How a change to a link row is written.</summary>
-public enum DataSyncLinkWrite
+/// <summary>How a change to a link row is written. Internal: no API answers it, so it stays out of the SDK constants.</summary>
+internal enum DataSyncLinkWrite
 {
     /// <summary>Nothing changed; nothing is written.</summary>
     None = 0,
@@ -45,9 +45,13 @@ public enum DataSyncLinkWrite
 
 /// <summary>
 /// The link state machine (§8.1) and the resume actions (§8.7) [E]. One link per peer: a grant for a peer that
-/// already has a link updates it. Every write goes through <see cref="MutateAsync"/>, which reads the row fresh and
-/// writes it under one in-process lock, so the fetch cycle, the apply task, grant events and requests never write a
-/// link from a stale copy.
+/// already has a link updates it, decided in the same write as the insert. Every write reads the row fresh and writes
+/// it under one in-process lock <b>and</b> inside one write transaction (<see cref="IDataSyncRowTransactions"/>,
+/// <c>BEGIN IMMEDIATE</c>): the lock orders this service's own writers (the fetch cycle, grant events, requests, the
+/// apply task's bookkeeping); the transaction orders them with every other writer of the row — the apply runner
+/// commits cursors, first contact, pauses and consumed flags in its own transactions (§8.10.2), which cannot take the
+/// lock. A read-modify-write here therefore never starts from a row another transaction is about to change, and never
+/// puts an older row back over what it committed.
 /// </summary>
 public sealed class DataSyncLinkService
 {
@@ -67,12 +71,13 @@ public sealed class DataSyncLinkService
     private readonly DataSyncRuntimeState _state;
     private readonly IDataSyncRuntimeObserver _observer;
     private readonly DataSyncLimits _limits;
+    private readonly IDataSyncRowTransactions _transactions;
     private readonly ILogger<DataSyncLinkService> _logger;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     public DataSyncLinkService(IServiceScopeFactory scopes, IDataSyncClock clock, IDataSyncStagedPullStore stagedPulls,
         DataSyncRuntimeState state, IDataSyncRuntimeObserver observer, DataSyncLimits limits,
-        ILogger<DataSyncLinkService> logger)
+        IDataSyncRowTransactions transactions, ILogger<DataSyncLinkService> logger)
     {
         _scopes = scopes;
         _clock = clock;
@@ -80,6 +85,7 @@ public sealed class DataSyncLinkService
         _state = state;
         _observer = observer;
         _limits = limits;
+        _transactions = transactions;
         _logger = logger;
     }
 
@@ -106,33 +112,76 @@ public sealed class DataSyncLinkService
     // ---- the write primitive -----------------------------------------------------------------------------------
 
     /// <summary>
-    /// Reads the link fresh, lets <paramref name="mutate"/> change it and says how to write it, and writes it. Null
-    /// when the link no longer exists.
+    /// Reads the link fresh, lets <paramref name="mutate"/> change it and says how to write it, and writes it, all in
+    /// one write transaction. Null when the link no longer exists. <paramref name="mutate"/> runs under the lock and
+    /// inside the transaction, so it only changes the row it is given.
     /// </summary>
-    public async Task<DataSyncLinkDbModel?> MutateAsync(int linkId, Func<DataSyncLinkDbModel, DataSyncLinkWrite> mutate,
-        CancellationToken ct)
+    internal async Task<DataSyncLinkDbModel?> MutateAsync(int linkId,
+        Func<DataSyncLinkDbModel, DataSyncLinkWrite> mutate, CancellationToken ct)
     {
-        DataSyncLinkDbModel? link;
-        DataSyncLinkWrite write;
+        var (link, write) = await WriteAsync(async store =>
+        {
+            var row = await store.GetLinkAsync(linkId, ct);
+            if (row is null) return (null, DataSyncLinkWrite.None);
+            var how = mutate(row);
+            await WriteRowAsync(store, row, how, ct);
+            return ((DataSyncLinkDbModel?) row, how);
+        }, ct);
+
+        if (link is not null && write == DataSyncLinkWrite.Transition)
+            await ObserveAsync(o => o.LinkChangedAsync(link, ct));
+        return link;
+    }
+
+    /// <summary>
+    /// Runs <paramref name="write"/> on a fresh scope's store, under the lock and inside one write transaction, and
+    /// commits it. Every read and write of link rows and the local state row here goes through it.
+    /// </summary>
+    private async Task<T> WriteAsync<T>(Func<IDataSyncStore, Task<T>> write, CancellationToken ct)
+    {
         await _lock.WaitAsync(ct);
         try
         {
             await using var scope = _scopes.CreateAsyncScope();
-            var store = Store(scope);
-            link = await store.GetLinkAsync(linkId, ct);
-            if (link is null) return null;
-            write = mutate(link);
-            if (write == DataSyncLinkWrite.None) return link;
-            if (write == DataSyncLinkWrite.Transition) link.UpdatedAtUtc = _clock.UtcNow;
-            await store.UpdateLinkAsync(link, ct);
+            await using var transaction = await _transactions.BeginAsync(scope.ServiceProvider, ct);
+            var result = await write(Store(scope));
+            await transaction.CommitAsync(ct);
+            return result;
         }
         finally
         {
             _lock.Release();
         }
+    }
 
-        if (write == DataSyncLinkWrite.Transition) await ObserveAsync(o => o.LinkChangedAsync(link, ct));
-        return link;
+    private async Task WriteRowAsync(IDataSyncStore store, DataSyncLinkDbModel row, DataSyncLinkWrite how,
+        CancellationToken ct)
+    {
+        if (how == DataSyncLinkWrite.None) return;
+        if (how == DataSyncLinkWrite.Transition) row.UpdatedAtUtc = _clock.UtcNow;
+        await store.UpdateLinkAsync(row, ct);
+    }
+
+    /// <summary>
+    /// Inserts <paramref name="link"/> unless its peer already has a link (one link per peer, §8.1, §4.2), checked in
+    /// the same write as the insert, so two callers making a link for one peer at once — the approval and the queued
+    /// grant event — never both insert. An existing link is changed by <paramref name="updateExisting"/> instead, or
+    /// returned as it is.
+    /// </summary>
+    private async Task<(DataSyncLinkDbModel Link, bool Added)> AddUniqueAsync(DataSyncLinkDbModel link,
+        Func<DataSyncLinkDbModel, DataSyncLinkWrite>? updateExisting, CancellationToken ct)
+    {
+        var (row, added, how) = await WriteAsync(async store =>
+        {
+            var existing = await store.GetLinkByPeerAsync(link.PeerNodeId, ct);
+            if (existing is null) return (await store.AddLinkAsync(link, ct), true, DataSyncLinkWrite.Transition);
+            var write = updateExisting?.Invoke(existing) ?? DataSyncLinkWrite.None;
+            await WriteRowAsync(store, existing, write, ct);
+            return (existing, false, write);
+        }, ct);
+
+        if (how == DataSyncLinkWrite.Transition) await ObserveAsync(o => o.LinkChangedAsync(row, ct));
+        return (row, added);
     }
 
     // ---- create (initiator) ------------------------------------------------------------------------------------
@@ -201,15 +250,28 @@ public sealed class DataSyncLinkService
 
         if (existing is not null)
         {
-            // A copy once onto a stopped link reuses its row: one link per peer (§8.1).
+            // A copy once onto a stopped link reuses its row: one link per peer (§8.1). Its review is a first contact
+            // again, so the row's earlier one no longer counts: otherwise a pause and resume, or a peer error, would
+            // take the row back to Stopped and the copy once would silently end. Bases and cursors stay.
+            var moved = false;
             var reused = await MutateAsync(existing.Id, link =>
             {
+                // Turned on or reset meanwhile: it is a link again, not a stopped row.
+                if (link.State != DataSyncLinkState.Stopped)
+                {
+                    moved = true;
+                    return DataSyncLinkWrite.None;
+                }
+
                 link.Mode = DataSyncLinkMode.Off;
                 link.State = state;
                 link.Initiator = DataSyncLinkInitiator.ThisDevice;
                 link.PausedReason = null;
                 link.PausedDetail = null;
                 link.SetKinds(kinds);
+                link.FirstContactCompletedAtUtc = null;
+                link.FirstContactKindsJson = null;
+                link.ReviewId = null;
                 link.PendingRequestId = requestId;
                 link.PeerAddress ??= input.Address;
                 link.ReadBackDeclined = readBackDeclined;
@@ -217,7 +279,10 @@ public sealed class DataSyncLinkService
                 link.NextAttemptAtUtc = now;
                 return DataSyncLinkWrite.Transition;
             }, ct);
-            return new DataSyncLinkChange(reused, requestId, null);
+            if (reused is null) return DataSyncLinkChange.Refused(DataSyncProblemCode.LinkNotFound);
+            return moved
+                ? new DataSyncLinkChange(reused, requestId, new DataSyncProblem(DataSyncProblemCode.LinkExists, null))
+                : new DataSyncLinkChange(reused, requestId, null);
         }
 
         var created = new DataSyncLinkDbModel
@@ -236,17 +301,21 @@ public sealed class DataSyncLinkService
             UpdatedAtUtc = now,
         };
         created.SetKinds(kinds);
-        created = await AddAsync(created, ct);
-        return new DataSyncLinkChange(created, requestId, null);
+        var (row, added) = await AddUniqueAsync(created, null, ct);
+        return added
+            ? new DataSyncLinkChange(row, requestId, null)
+            : new DataSyncLinkChange(row, requestId, new DataSyncProblem(DataSyncProblemCode.LinkExists, null));
     }
 
     // ---- mode and kinds ----------------------------------------------------------------------------------------
 
     /// <summary>
     /// Changes a link's mode and kinds (§8.1). Off stops it (bases and pending records kept). Turning a stopped link
-    /// on resumes it with no new review unless kinds were added; kinds added to a link run a first contact for those
-    /// kinds only. Two-way on a peer that does not read this device sends a request with a reciprocal code (§7.2.4),
-    /// with <paramref name="gate"/> released around it.
+    /// on resumes it with no new review unless kinds were added, and its next pull is a full reconciliation, which
+    /// re-merges every pending record (§8.4 condition 4): the items its stop closed come back even when the peer has
+    /// nothing new. Kinds added to a link run a first contact for those kinds only. Two-way on a peer that does not
+    /// read this device sends a request with a reciprocal code (§7.2.4), with <paramref name="gate"/> released around
+    /// it.
     /// </summary>
     public async Task<DataSyncLinkChange> UpdateAsync(int linkId, DataSyncLinkMode? mode, IReadOnlyList<string>? kinds,
         bool callerMayCreateAccess, CancellationToken ct, DataSyncGateHold? gate = null)
@@ -265,7 +334,7 @@ public sealed class DataSyncLinkService
         {
             if (link.Mode == DataSyncLinkMode.Off && link.State == DataSyncLinkState.Stopped && newKinds is null)
                 return new DataSyncLinkChange(link, null, null);
-            return new DataSyncLinkChange(await StopAsync(link, newKinds, ct), null, null);
+            return new DataSyncLinkChange(await StopAsync(link.Id, newKinds, ct), null, null);
         }
 
         if (mode is not (null or DataSyncLinkMode.Follow or DataSyncLinkMode.TwoWay))
@@ -308,6 +377,8 @@ public sealed class DataSyncLinkService
                 row.LastMode = m;
                 if (turningOn)
                 {
+                    if (row is { State: DataSyncLinkState.Stopped, FirstContactCompletedAtUtc: not null })
+                        row.MarkFullReconciliationDue(now);
                     row.PausedReason = null;
                     row.PausedDetail = null;
                     row.State = hasAccess ? row.GetResumeState() : DataSyncLinkState.AwaitingAccess;
@@ -323,25 +394,21 @@ public sealed class DataSyncLinkService
         return new DataSyncLinkChange(updated, requestId, null);
     }
 
-    private async Task<DataSyncLinkDbModel?> StopAsync(DataSyncLinkDbModel link, IReadOnlyList<string>? kinds,
-        CancellationToken ct)
+    /// <summary>
+    /// Off (§8.1): the store stops the link (its items close <c>LinkStopped</c>, its holds become local-only; bases and
+    /// pending records stay) and the row records it, in one write.
+    /// </summary>
+    private async Task<DataSyncLinkDbModel?> StopAsync(int linkId, IReadOnlyList<string>? kinds, CancellationToken ct)
     {
-        await _lock.WaitAsync(ct);
-        try
+        var stopped = await WriteAsync(async store =>
         {
-            await using var scope = _scopes.CreateAsyncScope();
-            await Store(scope).StopLinkAsync(link.Id, ct);
-        }
-        finally
-        {
-            _lock.Release();
-        }
-
-        _stagedPulls.Take(link.Id);
-        DiscardReview(link.Id);
-        return await MutateAsync(link.Id, row =>
-        {
-            if (row.Mode != DataSyncLinkMode.Off) row.LastMode = row.Mode;
+            var row = await store.GetLinkAsync(linkId, ct);
+            if (row is null) return null;
+            var lastMode = row.Mode != DataSyncLinkMode.Off ? row.Mode : row.LastMode;
+            await store.StopLinkAsync(linkId, ct);
+            row = await store.GetLinkAsync(linkId, ct);
+            if (row is null) return null;
+            row.LastMode = lastMode;
             row.Mode = DataSyncLinkMode.Off;
             row.State = DataSyncLinkState.Stopped;
             row.PausedReason = null;
@@ -349,13 +416,20 @@ public sealed class DataSyncLinkService
             row.ReviewId = null;
             if (kinds is not null) row.SetKinds(kinds);
             row.NextAttemptAtUtc = null;
-            return DataSyncLinkWrite.Transition;
+            await WriteRowAsync(store, row, DataSyncLinkWrite.Transition, ct);
+            return row;
         }, ct);
+
+        _stagedPulls.Take(linkId);
+        DiscardReview(linkId);
+        if (stopped is not null) await ObserveAsync(o => o.LinkChangedAsync(stopped, ct));
+        return stopped;
     }
 
     /// <summary>
     /// "Try again" for a link that waits for access (§7.2.4): a fresh request to the peer. The approver of a two-way
-    /// link whose read-back failed asks only to read the peer back (Follow): the peer already reads this device.
+    /// link whose read-back failed (N14) asks only to read the peer back (Follow): the peer already reads this device.
+    /// Reached through <see cref="DataSyncResumeAction.AskAccessAgain"/> on a link in AwaitingAccess.
     /// </summary>
     public async Task<DataSyncLinkChange> RequestAccessAgainAsync(int linkId, bool callerMayCreateAccess,
         CancellationToken ct, DataSyncGateHold? gate = null)
@@ -390,6 +464,46 @@ public sealed class DataSyncLinkService
         {
             row.PendingRequestId = requestId;
             ClearError(row);
+            row.NextAttemptAtUtc = _clock.UtcNow;
+            return DataSyncLinkWrite.Transition;
+        }, ct);
+        return new DataSyncLinkChange(updated, requestId, null);
+    }
+
+    /// <summary>
+    /// "[Ask {name} to keep in step]" (§7.2.3): the peer granted this two-way link's access but declined to read this
+    /// device back (<c>ReadBackDeclined</c>), so this sends an ordinary two-way request with a reciprocal offer
+    /// (§7.2.4). A peer that reads this device by now needs nothing: the note is cleared instead.
+    /// </summary>
+    private async Task<DataSyncLinkChange> AskToKeepInStepAsync(DataSyncLinkDbModel link, bool callerMayCreateAccess,
+        CancellationToken ct, DataSyncGateHold? gate)
+    {
+        await using var scope = _scopes.CreateAsyncScope();
+        var grants = Grants(scope);
+        if (await PeerMayReadUsAsync(grants, link.PeerNodeId, ct))
+        {
+            var cleared = await MutateAsync(link.Id, row =>
+            {
+                if (!row.ReadBackDeclined) return DataSyncLinkWrite.None;
+                row.ReadBackDeclined = false;
+                return DataSyncLinkWrite.Transition;
+            }, ct);
+            return new DataSyncLinkChange(cleared, null, null);
+        }
+
+        if (await RefuseTwoWayAsync(grants, ct) is { } problem) return DataSyncLinkChange.Refused(problem, null, link);
+        if (!callerMayCreateAccess)
+            return DataSyncLinkChange.Refused(DataSyncProblemCode.NotAllowedOnThisDevice, null, link);
+
+        var sent = await gate.OutsideGateAsync(() => SendRequestAsync(grants,
+            new DataSyncAccessRequestInput(link.PeerNodeId, link.PeerAddress, null, DataSyncRequestIntent.TwoWay), ct),
+            ct);
+        if (sent.Problem is not null) return new DataSyncLinkChange(link, null, sent.Problem);
+        var outcome = sent.Outcome!;
+        var requestId = outcome.Outcome == "awaitingApproval" ? outcome.RequestId : null;
+        var updated = await MutateAsync(link.Id, row =>
+        {
+            row.ReadBackDeclined = outcome.ReadBack == "declined";
             row.NextAttemptAtUtc = _clock.UtcNow;
             return DataSyncLinkWrite.Transition;
         }, ct);
@@ -435,9 +549,11 @@ public sealed class DataSyncLinkService
     /// <summary>
     /// The resume actions of §8.7. Resume re-evaluates from the cursor (a restored peer: from 0); ApplyAsUsual and
     /// ReviewDeletions set a once flag for the next apply; AskAccessAgain asks a reset peer for access again and runs a
-    /// new first contact against its new epoch; ThisDeviceWins and TakeTheirs enqueue the restore choice (§9.5);
-    /// StartAnyway starts an approver that waits for its peer's review (§8.3). An action that does not apply to the
-    /// link's state is refused with <see cref="DataSyncProblemCode.DecisionsInvalid"/> and changes nothing.
+    /// new first contact against its new epoch, and is also "Try again" for a link waiting for access (§7.2.4, N14)
+    /// and "[Ask {name} to keep in step]" for a two-way link the peer does not read back (§7.2.3); ThisDeviceWins and
+    /// TakeTheirs enqueue the restore choice (§9.5); StartAnyway starts an approver that has waited
+    /// <see cref="DataSyncSchedule.StartAnywayAfter"/> for its peer's review (§8.3). An action that does not apply to
+    /// the link's state is refused with <see cref="DataSyncProblemCode.DecisionsInvalid"/> and changes nothing.
     /// </summary>
     public async Task<DataSyncLinkChange> ResumeAsync(int linkId, DataSyncResumeAction action,
         bool callerMayCreateAccess, CancellationToken ct, DataSyncGateHold? gate = null)
@@ -479,8 +595,17 @@ public sealed class DataSyncLinkService
             }
             case DataSyncResumeAction.AskAccessAgain:
             {
-                if (reason != DataSyncPauseReason.PeerReset || restored) return NotApplicable(link, action);
-                return await AskAccessAgainAsync(link, callerMayCreateAccess, ct, gate);
+                if (link.State == DataSyncLinkState.AwaitingAccess)
+                    return await RequestAccessAgainAsync(linkId, callerMayCreateAccess, ct, gate);
+                if (reason == DataSyncPauseReason.PeerReset && !restored)
+                    return await AskAccessAgainAsync(link, callerMayCreateAccess, ct, gate);
+                if (link is { ReadBackDeclined: true, Mode: DataSyncLinkMode.TwoWay } &&
+                    link.State is not (DataSyncLinkState.Paused or DataSyncLinkState.Stopped))
+                {
+                    return await AskToKeepInStepAsync(link, callerMayCreateAccess, ct, gate);
+                }
+
+                return NotApplicable(link, action);
             }
             case DataSyncResumeAction.ThisDeviceWins:
             case DataSyncResumeAction.TakeTheirs:
@@ -500,6 +625,10 @@ public sealed class DataSyncLinkService
             case DataSyncResumeAction.StartAnyway:
             {
                 if (link.State != DataSyncLinkState.WaitingForPeerReview) return NotApplicable(link, action);
+                // Offered only after the wait (§8.3): earlier, this device's ordinary merge would ask the questions the
+                // initiator's review is still asking.
+                if (link.GetStartAnywayAt() is { } availableAt && _clock.UtcNow < availableAt)
+                    return DataSyncLinkChange.Refused(DataSyncProblemCode.DecisionsInvalid, "tooEarly", link);
                 var started = await MutateAsync(linkId, row =>
                 {
                     if (row.State != DataSyncLinkState.WaitingForPeerReview) return DataSyncLinkWrite.None;
@@ -595,7 +724,10 @@ public sealed class DataSyncLinkService
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
         };
-        return new DataSyncLinkChange(await AddAsync(fresh, ct), requestId, null);
+        var (row, added) = await AddUniqueAsync(fresh, null, ct);
+        return added
+            ? new DataSyncLinkChange(row, requestId, null)
+            : new DataSyncLinkChange(row, requestId, new DataSyncProblem(DataSyncProblemCode.LinkExists, null));
     }
 
     // ---- reset -------------------------------------------------------------------------------------------------
@@ -609,26 +741,22 @@ public sealed class DataSyncLinkService
 
     private async Task<DataSyncLinkDbModel?> RemoveAsync(int linkId, CancellationToken ct)
     {
-        DataSyncLinkDbModel? removed;
-        await _lock.WaitAsync(ct);
-        try
+        var removed = await WriteAsync(async store =>
         {
-            await using var scope = _scopes.CreateAsyncScope();
-            var store = Store(scope);
-            removed = await store.GetLinkAsync(linkId, ct);
-            if (removed is null) return null;
-            await store.DeleteLinkAsync(linkId, ct);
-        }
-        finally
-        {
-            _lock.Release();
-        }
-
-        _stagedPulls.Take(linkId);
-        DiscardReview(linkId);
-        _state.ForgetLink(linkId);
-        await ObserveAsync(o => o.LinkRemovedAsync(removed, ct));
+            var row = await store.GetLinkAsync(linkId, ct);
+            if (row is not null) await store.DeleteLinkAsync(linkId, ct);
+            return row;
+        }, ct);
+        if (removed is not null) await AfterRemovedAsync(removed, ct);
         return removed;
+    }
+
+    private async Task AfterRemovedAsync(DataSyncLinkDbModel removed, CancellationToken ct)
+    {
+        _stagedPulls.Take(removed.Id);
+        DiscardReview(removed.Id);
+        _state.ForgetLink(removed.Id);
+        await ObserveAsync(o => o.LinkRemovedAsync(removed, ct));
     }
 
     // ---- scheduling --------------------------------------------------------------------------------------------
@@ -685,51 +813,36 @@ public sealed class DataSyncLinkService
     /// <summary>The global switch (§8.7 "Other pauses"): kept in the local state row.</summary>
     public async Task<DataSyncProblem?> SetAllPausedAsync(bool paused, CancellationToken ct)
     {
-        await _lock.WaitAsync(ct);
-        try
+        var (problem, changed) = await WriteAsync(async store =>
         {
-            await using var scope = _scopes.CreateAsyncScope();
-            var store = Store(scope);
             var local = await store.GetLocalStateAsync(ct);
-            if (local is null) return new DataSyncProblem(DataSyncProblemCode.Busy, "notInitialized");
-            if (local.AllPaused == paused) return null;
+            if (local is null) return (new DataSyncProblem(DataSyncProblemCode.Busy, "notInitialized"), false);
+            if (local.AllPaused == paused) return ((DataSyncProblem?) null, false);
             local.AllPaused = paused;
             local.UpdatedAtUtc = _clock.UtcNow;
             await store.SaveLocalStateAsync(local, ct);
-        }
-        finally
-        {
-            _lock.Release();
-        }
+            return (null, true);
+        }, ct);
 
-        if (!paused) await MarkDueAsync(null, ct);
-        return null;
+        if (changed && !paused) await MarkDueAsync(null, ct);
+        return problem;
     }
 
     /// <summary>
     /// "Share new definitions automatically" off (§3.6): Refresh then inserts a new local definition as LocalOnly.
     /// Kept in the local state row; the caller holds the gate, so no Refresh or apply rewrites the row meanwhile.
     /// </summary>
-    public async Task<DataSyncProblem?> SetNewDefinitionsStayLocalAsync(bool stayLocal, CancellationToken ct)
-    {
-        await _lock.WaitAsync(ct);
-        try
+    public Task<DataSyncProblem?> SetNewDefinitionsStayLocalAsync(bool stayLocal, CancellationToken ct) =>
+        WriteAsync(async store =>
         {
-            await using var scope = _scopes.CreateAsyncScope();
-            var store = Store(scope);
             var local = await store.GetLocalStateAsync(ct);
             if (local is null) return new DataSyncProblem(DataSyncProblemCode.Busy, "notInitialized");
             if (local.NewDefinitionsStayLocal == stayLocal) return null;
             local.NewDefinitionsStayLocal = stayLocal;
             local.UpdatedAtUtc = _clock.UtcNow;
             await store.SaveLocalStateAsync(local, ct);
-            return null;
-        }
-        finally
-        {
-            _lock.Release();
-        }
-    }
+            return (DataSyncProblem?) null;
+        }, ct);
 
     // ---- grant events ------------------------------------------------------------------------------------------
 
@@ -759,8 +872,10 @@ public sealed class DataSyncLinkService
     /// link: a new one is created as the approver's (<c>TwoWay</c>, <c>Initiator = Peer</c>), in
     /// WaitingForPeerReview, or in AwaitingAccess with the failure recorded when the read-back did not give this
     /// device access (N14). A peer that already has a link updates it instead: two-way, and a stopped link goes
-    /// Active or WaitingForPeerReview by its first contact; any other state is kept, and so are bases and pending
-    /// records. Every existing link is due now, so its next head checks the counterpart.
+    /// Active (its next pull a full reconciliation, as any stopped link turned on) or WaitingForPeerReview by its
+    /// first contact; any other state is kept, and so are bases and pending records. Every existing link is due now,
+    /// so its next head checks the counterpart. The approval and the queued grant event both call this for one
+    /// peer; whichever comes second updates the link the first made.
     /// </summary>
     /// <param name="readBackAttempted">The grant was two-way and this device tried to read the peer back.</param>
     /// <param name="readBackGranted">That read-back gave this device a datasync grant for the peer.</param>
@@ -770,33 +885,34 @@ public sealed class DataSyncLinkService
     {
         var twoWay = intent == DataSyncRequestIntent.TwoWay && readBackAttempted;
         var now = _clock.UtcNow;
-        var existing = await GetByPeerAsync(peerNodeId, ct);
-        if (existing is not null)
+
+        DataSyncLinkWrite UpdateExisting(DataSyncLinkDbModel row)
         {
-            return await MutateAsync(existing.Id, row =>
+            row.NextAttemptAtUtc = now;
+            if (!twoWay) return DataSyncLinkWrite.Bookkeeping;
+            row.Mode = DataSyncLinkMode.TwoWay;
+            row.LastMode = DataSyncLinkMode.TwoWay;
+            row.ReadBackDeclined = false;
+            if (row.State == DataSyncLinkState.Stopped)
             {
-                row.NextAttemptAtUtc = now;
-                if (!twoWay) return DataSyncLinkWrite.Bookkeeping;
-                row.Mode = DataSyncLinkMode.TwoWay;
-                row.LastMode = DataSyncLinkMode.TwoWay;
-                row.ReadBackDeclined = false;
-                if (row.State == DataSyncLinkState.Stopped)
-                {
-                    // The peer asked for two-way, so its review comes first unless this link's first contact is done.
-                    if (row.FirstContactCompletedAtUtc is null) row.Initiator = DataSyncLinkInitiator.Peer;
-                    row.State = readBackGranted ? row.GetResumeState() : DataSyncLinkState.AwaitingAccess;
-                    ClearError(row);
-                }
+                // The peer asked for two-way, so its review comes first unless this link's first contact is done.
+                if (row.FirstContactCompletedAtUtc is null) row.Initiator = DataSyncLinkInitiator.Peer;
+                else row.MarkFullReconciliationDue(now);
+                row.State = readBackGranted ? row.GetResumeState() : DataSyncLinkState.AwaitingAccess;
+                ClearError(row);
+            }
 
-                if (!readBackGranted && readBackError is not null)
-                {
-                    row.LastErrorCode = ReadBackFailed;
-                    row.LastErrorDetail = readBackError;
-                }
+            if (!readBackGranted && readBackError is not null)
+            {
+                row.LastErrorCode = ReadBackFailed;
+                row.LastErrorDetail = readBackError;
+            }
 
-                return DataSyncLinkWrite.Transition;
-            }, ct);
+            return DataSyncLinkWrite.Transition;
         }
+
+        var existing = await GetByPeerAsync(peerNodeId, ct);
+        if (existing is not null) return await MutateAsync(existing.Id, UpdateExisting, ct);
 
         if (!twoWay) return null;
         if (!TryNormalizeKinds(kinds, out var normalized, out _)) normalized = DataSyncKindIds.All.ToList();
@@ -822,32 +938,83 @@ public sealed class DataSyncLinkService
             UpdatedAtUtc = now,
         };
         created.SetKinds(normalized);
-        return await AddAsync(created, ct);
+        return (await AddUniqueAsync(created, UpdateExisting, ct)).Link;
     }
 
     /// <summary>
-    /// This device's request for a link it started ended without access (§8.1): the link stops and stays on the map
-    /// with Dismiss (M5: nothing the user filed vanishes silently).
+    /// This device's request for a link ended without access (§8.1): the link stops and stays on the map with Dismiss
+    /// (M5: nothing the user filed vanishes silently), with its last mode, bases and pending records.
     /// </summary>
     public Task<DataSyncLinkDbModel?> OnRequestEndedAsync(int linkId, string errorCode, CancellationToken ct) =>
-        MutateAsync(linkId, row =>
+        MutateAsync(linkId, row => EndRequest(row, errorCode), ct);
+
+    private static DataSyncLinkWrite EndRequest(DataSyncLinkDbModel row, string errorCode)
+    {
+        if (row.State != DataSyncLinkState.AwaitingAccess) return DataSyncLinkWrite.None;
+        if (row.Mode != DataSyncLinkMode.Off) row.LastMode = row.Mode;
+        row.Mode = DataSyncLinkMode.Off;
+        row.State = DataSyncLinkState.Stopped;
+        row.LastErrorCode = errorCode;
+        row.LastErrorDetail = null;
+        row.NextAttemptAtUtc = null;
+        return DataSyncLinkWrite.Transition;
+    }
+
+    /// <summary>
+    /// The person withdrew the request a link waits for. A link made for that request has nothing yet — no first
+    /// contact, no cursor, no base — and goes with it. Any other link keeps its state: one turned back on after a stop,
+    /// or a copy once onto a stopped link, stops again as an ended request would (<see cref="AccessCancelled"/>), so its
+    /// bases, pending records and last mode are kept (§8.1).
+    /// </summary>
+    public async Task OnRequestCancelledAsync(int linkId, CancellationToken ct)
+    {
+        DataSyncLinkDbModel? stopped = null;
+        var removed = await WriteAsync(async store =>
         {
-            if (row.State != DataSyncLinkState.AwaitingAccess) return DataSyncLinkWrite.None;
-            if (row.Mode != DataSyncLinkMode.Off) row.LastMode = row.Mode;
-            row.Mode = DataSyncLinkMode.Off;
-            row.State = DataSyncLinkState.Stopped;
-            row.LastErrorCode = errorCode;
-            row.LastErrorDetail = null;
-            row.NextAttemptAtUtc = null;
-            return DataSyncLinkWrite.Transition;
+            var row = await store.GetLinkAsync(linkId, ct);
+            if (row is not { State: DataSyncLinkState.AwaitingAccess }) return null;
+            if (!await HasSyncStateAsync(store, row, ct))
+            {
+                await store.DeleteLinkAsync(linkId, ct);
+                return row;
+            }
+
+            var how = EndRequest(row, AccessCancelled);
+            await WriteRowAsync(store, row, how, ct);
+            if (how == DataSyncLinkWrite.Transition) stopped = row;
+            return null;
         }, ct);
+
+        if (removed is not null) await AfterRemovedAsync(removed, ct);
+        if (stopped is not null) await ObserveAsync(o => o.LinkChangedAsync(stopped, ct));
+    }
+
+    /// <summary>Whether a link holds anything a reset would delete: a first contact, a cursor or a base.</summary>
+    private static async Task<bool> HasSyncStateAsync(IDataSyncStore store, DataSyncLinkDbModel link,
+        CancellationToken ct)
+    {
+        if (link.FirstContactCompletedAtUtc is not null || link.GetFirstContactKinds().Count > 0 ||
+            link.GetCursors().Count > 0)
+        {
+            return true;
+        }
+
+        foreach (var kind in DataSyncKindIds.All)
+        {
+            if ((await store.GetBasesAsync(link.Id, kind, ct)).Count > 0) return true;
+        }
+
+        return false;
+    }
 
     // ---- after the apply task ----------------------------------------------------------------------------------
 
     /// <summary>
     /// After <see cref="IDataSyncApplyRunner.RunAutoSyncAsync"/> returned: records the kinds whose first contact this
     /// pull completed (the approver's first pull, or kinds added to a link), a full reconciliation, and the once flags
-    /// the apply consumed; tells the observer what was applied and a pause the runner wrote.
+    /// the apply consumed; tells the observer what was applied and a pause the runner wrote. An apply that paused
+    /// consumed nothing: its pull is dropped before the final transaction (§8.7, §8.10.2), so the flags wait for the
+    /// apply after the resume, and the person does not have to choose again.
     /// </summary>
     /// <param name="fullReconciliation">The pull carried every kind of the link from 0 (§8.8).</param>
     public async Task<DataSyncLinkDbModel?> AfterAutoSyncAsync(DataSyncLinkContext context, DataSyncStagedPull? pull,
@@ -857,6 +1024,7 @@ public sealed class DataSyncLinkService
         var firstSync = false;
         var link = await MutateAsync(context.LinkId, row =>
         {
+            if (outcome.Paused is not null) return DataSyncLinkWrite.None;
             var write = DataSyncLinkWrite.None;
             if (context.LinkFlags != DataSyncMergeFlags.None)
             {
@@ -868,7 +1036,7 @@ public sealed class DataSyncLinkService
                 }
             }
 
-            if (outcome.Paused is not null || pull is null) return write;
+            if (pull is null) return write;
 
             var pulled = pull.Kinds.Select(k => k.Kind).ToHashSet(StringComparer.Ordinal);
             var completed = context.FirstContactKinds.Where(pulled.Contains).ToList();
@@ -937,24 +1105,6 @@ public sealed class DataSyncLinkService
     }
 
     // ---- helpers -----------------------------------------------------------------------------------------------
-
-    private async Task<DataSyncLinkDbModel> AddAsync(DataSyncLinkDbModel link, CancellationToken ct)
-    {
-        DataSyncLinkDbModel added;
-        await _lock.WaitAsync(ct);
-        try
-        {
-            await using var scope = _scopes.CreateAsyncScope();
-            added = await Store(scope).AddLinkAsync(link, ct);
-        }
-        finally
-        {
-            _lock.Release();
-        }
-
-        await ObserveAsync(o => o.LinkChangedAsync(added, ct));
-        return added;
-    }
 
     private static bool CanCopyOnceOnto(DataSyncLinkDbModel existing, bool copyOnce) =>
         copyOnce && existing.State == DataSyncLinkState.Stopped;

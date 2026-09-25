@@ -63,6 +63,107 @@ public class DataSyncSchedulerTests
     }
 
     [TestMethod]
+    public async Task The_scheduler_starts_nothing_once_the_task_manager_prepares_for_shutdown()
+    {
+        // The desktop app's exit calls PrepareForShutdown seconds before ApplicationStopping fires.
+        await using var h = await DataSyncRuntimeHarness.CreateAsync();
+        var link = h.AddLink("nas");
+        await StartAsync(h);
+        h.StagedPulls.Put(link.Id, new DataSyncStagedPull("nas", "Peer nas",
+            h.Peers.Peers["nas"].Manifest(new DataSyncFeedQuery("twoWay", new Dictionary<string, long>(), null, null)),
+            [], h.Clock.UtcNow));
+
+        await h.Btm.PrepareForShutdown();
+        Assert.IsTrue(h.Launcher.IsStopping);
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Fetch), "the due link started nothing");
+        Assert.IsNull(h.Status(DataSyncTaskIds.Apply), "the staged pull enqueued nothing");
+        Assert.IsNull(await h.Scheduler.SyncNowAsync(null, default));
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Fetch));
+    }
+
+    [TestMethod]
+    public async Task Cancelling_the_waiting_DataSync_task_keeps_it_registered_and_holds_it_for_its_interval()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync();
+        h.AddLink("nas");
+        await StartAsync(h);
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Fetch));
+
+        Assert.AreEqual(DataSyncTaskCancelOutcome.Held, await h.Launcher.CancelAsync(DataSyncTaskIds.Fetch));
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Fetch),
+            "never removed: nothing would register it again before a restart");
+
+        // The link is due, but the person's cancel holds like a stop, for the task's interval.
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Fetch));
+        Assert.AreEqual(0, h.Peers.Peers["nas"].HeadQueries.Count);
+
+        h.Clock.Advance(DataSyncRuntimeState.FetchInterval);
+        await h.Scheduler.TickAsync(default);
+        await h.WaitForStatusAsync(DataSyncTaskIds.Fetch, BTaskStatus.Completed);
+        Assert.AreEqual(1, h.Peers.Peers["nas"].HeadQueries.Count);
+    }
+
+    [TestMethod]
+    public async Task A_persons_cancel_of_the_apply_holds_it_until_the_next_pull_or_Sync_now()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync();
+        var link = h.AddLink("nas");
+        var peer = h.Peers.Peers["nas"];
+        await StartAsync(h);
+        h.Store.Edit(link.Id, l => l.NextAttemptAtUtc = h.Clock.UtcNow.AddHours(1));
+        h.StagedPulls.Put(link.Id, new DataSyncStagedPull("nas", "Peer nas",
+            peer.Manifest(new DataSyncFeedQuery("twoWay", new Dictionary<string, long>(), null, null)), [],
+            h.Clock.UtcNow));
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Apply));
+
+        // Called off while it waits: not enqueued again for what already waited…
+        Assert.AreEqual(DataSyncTaskCancelOutcome.Removed, await h.Launcher.CancelAsync(DataSyncTaskIds.Apply));
+        await h.Scheduler.TickAsync(default);
+        h.Clock.Advance(TimeSpan.FromMinutes(9));
+        await h.Scheduler.TickAsync(default);
+        Assert.IsNull(h.Status(DataSyncTaskIds.Apply));
+
+        // …until the fetch interval passed,
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+        h.Store.Edit(link.Id, l => l.NextAttemptAtUtc = h.Clock.UtcNow.AddHours(1));
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Apply));
+
+        // …or a new pull arrived.
+        Assert.AreEqual(DataSyncTaskCancelOutcome.Removed, await h.Launcher.CancelAsync(DataSyncTaskIds.Apply));
+        await h.Scheduler.TickAsync(default);
+        Assert.IsNull(h.Status(DataSyncTaskIds.Apply));
+        peer.MaxSeq["customProperty"] = 9;
+        h.Store.Edit(link.Id, l => l.NextAttemptAtUtc = h.Clock.UtcNow);
+        await h.FetchOnceAsync();
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Apply), "new work ends the hold");
+
+        // Stopped from the task list while it runs: held too, until "Sync now".
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        h.Runner.Hold = async ct =>
+        {
+            entered.TrySetResult();
+            await Task.Delay(Timeout.Infinite, ct);
+        };
+        await h.Btm.Start(DataSyncTaskIds.Apply);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await h.Btm.Stop(DataSyncTaskIds.Apply);
+        await h.WaitForStatusAsync(DataSyncTaskIds.Apply, BTaskStatus.Cancelled);
+        h.Runner.Hold = null;
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(BTaskStatus.Cancelled, h.Status(DataSyncTaskIds.Apply), "the stop is respected");
+        Assert.AreEqual(1, h.StagedPulls.LinksWaiting().Count, "its pull waits");
+
+        Assert.AreEqual(DataSyncTaskIds.Fetch, await h.Scheduler.SyncNowAsync(null, default));
+        await h.WaitForStatusAsync(DataSyncTaskIds.Fetch, BTaskStatus.Completed);
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Apply));
+    }
+
+    [TestMethod]
     public async Task A_person_stopped_DataSync_is_not_restarted_until_its_interval_unless_Sync_now()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync();

@@ -208,7 +208,7 @@ public class ApplyBTaskTests
     }
 
     [TestMethod]
-    public async Task The_apply_waits_while_the_actor_is_unverified()
+    public async Task While_the_actor_is_unverified_no_apply_holds_the_write_tasks_conflict_keys()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync(daemon: true);
         h.Guard.IsVerified = false;
@@ -224,15 +224,54 @@ public class ApplyBTaskTests
         await h.WaitForStatusAsync(DataSyncTaskIds.Fetch, BTaskStatus.Completed);
         CollectionAssert.AreEqual(new[] {changed.Id}, h.StagedPulls.LinksWaiting().ToArray());
         Assert.AreEqual(nameof(DataSyncPeerErrorCode.Unreachable), h.Link(offline.Id).LastErrorCode);
+        Assert.IsNull(h.Status(DataSyncTaskIds.Apply), "the fetch enqueues no apply before the actor is verified");
 
-        // One Active peer never answered and two minutes have not passed: still unverified, nothing applies.
-        await Task.Delay(1500);
-        Assert.IsFalse(h.Guard.IsVerified);
+        // One Active peer never answered and two minutes have not passed: resource sync, path-mark sync and the
+        // enhancer run meanwhile, because nothing sits on their conflict keys.
+        await h.Btm.Enqueue(BTaskBuilder.Create("SyncResources").ConflictsWith("SyncResources")
+            .Run(_ => Task.CompletedTask));
+        await h.Btm.Start("SyncResources");
+        await h.WaitForStatusAsync("SyncResources", BTaskStatus.Completed);
+
+        // An apply enqueued anyway (a resolution's "Apply all") ends at once without applying; the pull waits.
+        Assert.IsNotNull(await h.Launcher.EnqueueApplyAsync());
+        await h.WaitForStatusAsync(DataSyncTaskIds.Apply, BTaskStatus.Completed);
         Assert.AreEqual(0, h.Runner.AutoSyncs.Count);
+        CollectionAssert.AreEqual(new[] {changed.Id}, h.StagedPulls.LinksWaiting().ToArray());
+        await h.Scheduler.TickAsync(default);
+        Assert.IsFalse(h.Guard.IsVerified);
+        Assert.AreEqual(BTaskStatus.Completed, h.Status(DataSyncTaskIds.Apply), "the scheduler waits for it too");
 
+        // The tick that verifies enqueues it.
         h.Clock.Advance(DataSyncRuntimeState.VerificationWindow);
         await h.Scheduler.TickAsync(default);
         Assert.IsTrue(h.Guard.IsVerified, "verified two minutes after the start");
-        await DataSyncRuntimeHarness.WaitUntilAsync(() => h.Runner.AutoSyncs.Count == 1, "the pull is applied");
+        await DataSyncRuntimeHarness.WaitUntilAsync(
+            () => h.Runner.AutoSyncs.Any(c => c.Context.LinkId == changed.Id), "the pull is applied");
+    }
+
+    [TestMethod]
+    public async Task An_apply_that_paused_leaves_the_once_flags_for_the_apply_after_the_resume()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync();
+        var link = h.AddLink("nas", l => l.SetOnceFlags(DataSyncMergeFlags.None with {SkipDeletionBreaker = true}));
+        h.StagedPulls.Put(link.Id, PullFor(h, "nas"));
+        h.Runner.AutoSyncOutcome = _ =>
+            new DataSyncAutoSyncOutcome(null, DataSyncPauseReason.TooManyDecisions, 0, 0, 0, [], []);
+
+        await h.Launcher.EnqueueApplyAsync();
+        await h.Btm.Start(DataSyncTaskIds.Apply);
+        await h.WaitForStatusAsync(DataSyncTaskIds.Apply, BTaskStatus.Completed);
+        Assert.IsTrue(h.Runner.AutoSyncs.Single().Context.LinkFlags.SkipDeletionBreaker, "the apply used the flag");
+        Assert.IsTrue(h.Link(link.Id).GetOnceFlags().SkipDeletionBreaker, "a paused apply consumed nothing");
+
+        // After the resume, an apply that does not pause consumes it.
+        h.Runner.AutoSyncOutcome = _ => new DataSyncAutoSyncOutcome(1, null, 0, 0, 1, [], []);
+        h.StagedPulls.Put(link.Id, PullFor(h, "nas"));
+        await h.Launcher.EnqueueApplyAsync();
+        await h.Btm.Start(DataSyncTaskIds.Apply);
+        await DataSyncRuntimeHarness.WaitUntilAsync(() => h.Runner.AutoSyncs.Count == 2, "the second apply ran");
+        await h.WaitForStatusAsync(DataSyncTaskIds.Apply, BTaskStatus.Completed);
+        Assert.AreEqual(DataSyncMergeFlags.None, h.Link(link.Id).GetOnceFlags());
     }
 }

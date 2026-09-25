@@ -10,8 +10,8 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 
 /// <summary>
 /// What the runtime knows since this process started and never stores (§5.6, §8.2): when it started, which links
-/// answered a head, the peers' comparison form versions from their last head, and when the daily and fallback work
-/// last ran.
+/// answered a head, the peers' comparison form versions from their last head, when the daily and fallback work
+/// last ran, which links wait for a re-merge without a pull, and a person's stop of the fetch or apply task.
 /// </summary>
 public sealed class DataSyncRuntimeState
 {
@@ -28,9 +28,12 @@ public sealed class DataSyncRuntimeState
     private readonly ConcurrentDictionary<int, IReadOnlyDictionary<string, int>> _formVersions = new();
     private readonly ConcurrentDictionary<int, DateTime> _lastHeadAt = new();
     private readonly ConcurrentDictionary<int, byte> _woken = new();
+    private readonly ConcurrentDictionary<int, byte> _reMergeRequested = new();
     private DateTime? _startedAtUtc;
     private DateTime? _lastFallbackAtUtc;
     private DateTime? _lastRetentionAtUtc;
+    private DateTime? _fetchStoppedAtUtc;
+    private DateTime? _applyStoppedAtUtc;
 
     /// <summary>When the runtime became ready (the scheduler's first tick with the fetch task registered).</summary>
     public DateTime? StartedAtUtc
@@ -77,6 +80,62 @@ public sealed class DataSyncRuntimeState
         _formVersions.TryRemove(linkId, out _);
         _lastHeadAt.TryRemove(linkId, out _);
         _woken.TryRemove(linkId, out _);
+        _reMergeRequested.TryRemove(linkId, out _);
+    }
+
+    /// <summary>
+    /// The link has pending records to re-merge although nothing new arrived (§8.4 conditions 2, 3 and 5: a local
+    /// change, <c>Retry</c>/<c>OverBudget</c>, a flag), so <c>DataSyncApply</c> re-merges them without a pull
+    /// (§8.10.2 step 1, "no pending retry"). Kept in memory: after a restart the next pull re-merges them anyway.
+    /// </summary>
+    public void RequestReMerge(int linkId) => _reMergeRequested[linkId] = 0;
+
+    public bool IsReMergeRequested(int linkId) => _reMergeRequested.ContainsKey(linkId);
+
+    /// <summary>True, once, when a re-merge was requested for the link; the apply that runs it takes it.</summary>
+    public bool TakeReMerge(int linkId) => _reMergeRequested.TryRemove(linkId, out _);
+
+    // ---- a person's stop (§8.2, §8.10.1) --------------------------------------------------------------------------
+
+    /// <summary>
+    /// The person stopped (or called off) the <c>DataSync</c> task: the scheduler does not start it again before its
+    /// next interval, unless they press "Sync now" (<c>BTaskManager.Start</c> would otherwise restart a cancelled task
+    /// one second later, F71).
+    /// </summary>
+    public void HoldFetch(DateTime nowUtc)
+    {
+        lock (_lock) _fetchStoppedAtUtc = nowUtc;
+    }
+
+    public bool IsFetchHeld(DateTime nowUtc)
+    {
+        lock (_lock) return _fetchStoppedAtUtc is { } at && nowUtc - at < FetchInterval;
+    }
+
+    public void ReleaseFetch()
+    {
+        lock (_lock) _fetchStoppedAtUtc = null;
+    }
+
+    /// <summary>
+    /// The person stopped (or called off) <c>DataSyncApply</c>: the scheduler does not enqueue it again for the pulls
+    /// and flags that already waited, until the next pull, "Sync now" or the fetch interval, whichever comes first.
+    /// Without this a stop would only interrupt the current chunk: the pull is put back, and the next tick would
+    /// enqueue it again.
+    /// </summary>
+    public void HoldApply(DateTime nowUtc)
+    {
+        lock (_lock) _applyStoppedAtUtc = nowUtc;
+    }
+
+    public bool IsApplyHeld(DateTime nowUtc)
+    {
+        lock (_lock) return _applyStoppedAtUtc is { } at && nowUtc - at < FetchInterval;
+    }
+
+    public void ReleaseApply()
+    {
+        lock (_lock) _applyStoppedAtUtc = null;
     }
 
     /// <summary>

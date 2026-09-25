@@ -1,6 +1,8 @@
 using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Identity;
+using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Wire;
 
@@ -278,5 +280,139 @@ public class DataSyncFetchHalfTests
         h.Clock.Advance(TimeSpan.FromMinutes(1));
         await h.FetchOnceAsync();
         Assert.IsTrue(h.Guard.IsVerified, "every Active link answered one head; a link waiting for access does not count");
+    }
+
+    [TestMethod]
+    public async Task A_kind_waiting_for_its_review_does_not_make_the_daily_full_reconciliation_repeat()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var link = h.AddLink("nas", l =>
+        {
+            // extensionGroup was added to this link, which this device started: its first contact is a review (§8.1).
+            l.SetFirstContactKinds([DataSyncKindIds.CustomProperty]);
+            l.SetCursors(new Dictionary<string, long> {["customProperty"] = 5});
+            l.LastFullReconciliationAtUtc = h.Clock.UtcNow - TimeSpan.FromHours(25);
+        });
+        var peer = h.Peers.Peers["nas"];
+
+        await h.FetchOnceAsync();
+        Assert.AreEqual(DataSyncKindIds.ExtensionGroup, h.Reviews.Staged.Single().Pull.Kinds.Single().Kind);
+        var pull = h.StagedPulls.Peek(link.Id)!;
+        Assert.AreEqual(DataSyncKindIds.CustomProperty, pull.Kinds.Single().Kind, "the review's kind is never merged");
+        Assert.IsTrue(pull.Kinds.Single().FullReconciliation, "the daily reconciliation of the kind it merges");
+
+        await h.Btm.Start(DataSyncTaskIds.Apply);
+        await h.WaitForStatusAsync(DataSyncTaskIds.Apply, Bakabase.Abstractions.Models.Domain.Constants.BTaskStatus.Completed);
+        Assert.AreEqual(h.Clock.UtcNow, h.Link(link.Id).LastFullReconciliationAtUtc,
+            "recorded while a kind still waits for its review");
+
+        // Exactly one full pull: the next cycles are incremental.
+        h.Clock.Advance(DataSyncSchedule.PollInterval);
+        await h.FetchOnceAsync();
+        Assert.AreEqual(1, peer.Manifests, "nothing new, and no full reconciliation due");
+        peer.MaxSeq["customProperty"] = 6;
+        h.Clock.Advance(DataSyncSchedule.PollInterval);
+        await h.FetchOnceAsync();
+        Assert.AreEqual(2, peer.Manifests);
+        Assert.AreEqual(5, peer.ManifestQueries.Last().Since["customProperty"]);
+        Assert.IsFalse(h.StagedPulls.Peek(link.Id)!.Kinds.Single().FullReconciliation);
+    }
+
+    [TestMethod]
+    public async Task Pending_records_that_wait_for_a_re_merge_are_applied_without_a_pull()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync();
+        var retrying = h.AddLink("nas");
+        var quiet = h.AddLink("pc");
+        // A ChangedDuringApply record (Retry) waits on nas: nothing is new at either peer (§8.4 condition 3).
+        h.Store.PendingToMerge[retrying.Id] = [(DataSyncKindIds.CustomProperty, SyncKey.New())];
+
+        await h.FetchOnceAsync();
+        Assert.AreEqual(0, h.Peers.Peers["nas"].Manifests, "no pull: nothing new at the peer");
+        Assert.AreEqual(0, h.StagedPulls.LinksWaiting().Count);
+
+        // The scheduler hands the re-merge to DataSyncApply on its next tick, not at the next fallback pull.
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(Bakabase.Abstractions.Models.Domain.Constants.BTaskStatus.NotStarted,
+            h.Status(DataSyncTaskIds.Apply));
+        await h.Btm.Start(DataSyncTaskIds.Apply);
+        await h.WaitForStatusAsync(DataSyncTaskIds.Apply, Bakabase.Abstractions.Models.Domain.Constants.BTaskStatus.Completed);
+        var call = h.Runner.AutoSyncs.Single();
+        Assert.AreEqual(retrying.Id, call.Context.LinkId);
+        Assert.IsNull(call.Pull, "re-merged from the pending records alone");
+        Assert.AreNotEqual(quiet.Id, call.Context.LinkId);
+
+        // Taken by that apply: nothing is enqueued again until the next head finds records waiting.
+        h.Store.PendingToMerge.Clear();
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(Bakabase.Abstractions.Models.Domain.Constants.BTaskStatus.Completed,
+            h.Status(DataSyncTaskIds.Apply));
+    }
+
+    [TestMethod]
+    public async Task A_pause_takes_effect_between_the_pages_of_a_snapshot()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var link = h.AddLink("nas", l => l.SetCursors(Cursors(3, 2)));
+        var peer = h.Peers.Peers["nas"];
+        peer.PagesPerKind = 3;
+        var pause = new Bootstrap.Components.Tasks.PauseTokenSource();
+        peer.OnPage = () =>
+        {
+            if (peer.Pages == 1) pause.Pause();
+        };
+
+        var fetch = h.FetchOnceAsync(pause);
+        await DataSyncRuntimeHarness.WaitUntilAsync(() => peer.Pages >= 1, "the first page is read");
+        await Task.Delay(200);
+        Assert.AreEqual(1, peer.Pages, "no further page is read while the task is paused");
+        Assert.IsFalse(fetch.IsCompleted);
+
+        pause.Resume();
+        await fetch.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.AreEqual(3, peer.Pages);
+        Assert.IsNotNull(h.StagedPulls.Peek(link.Id));
+    }
+
+    [TestMethod]
+    public async Task A_head_poll_reads_the_link_only_after_an_open_apply_transaction_committed()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var link = h.AddLink("nas", l =>
+        {
+            l.State = DataSyncLinkState.AwaitingReview;
+            l.FirstContactKindsJson = null;
+            l.FirstContactCompletedAtUtc = null;
+            l.CursorsJson = "{}";
+        });
+        var peer = h.Peers.Peers["nas"];
+        // The review is being applied, so the cycle stages none (§8.3).
+        h.Reviews.Stage(link.Id, false, new DataSyncStagedPull("nas", "NAS",
+            peer.Manifest(new DataSyncFeedQuery("twoWay", new Dictionary<string, long>(), null, null)), [],
+            h.Clock.UtcNow));
+
+        Task fetch;
+        using (h.RowTransactions.Hold())
+        {
+            // The review's apply is in its final transaction (§8.3 step 5) when the head answers.
+            fetch = h.FetchOnceAsync();
+            await DataSyncRuntimeHarness.WaitUntilAsync(() => h.RowTransactions.Waiting == 1,
+                "the head's answer waits for the open transaction");
+            Assert.AreEqual(1, peer.HeadQueries.Count);
+            h.Store.Edit(link.Id, l =>
+            {
+                l.State = DataSyncLinkState.Active;
+                l.SetCursors(Cursors(3, 5));
+                l.SetFirstContactKinds(DataSyncKindIds.All);
+                l.FirstContactCompletedAtUtc = h.Clock.UtcNow;
+            });
+        }
+
+        await fetch.WaitAsync(TimeSpan.FromSeconds(10));
+        var after = h.Link(link.Id);
+        Assert.AreEqual(DataSyncLinkState.Active, after.State, "the committed review is never undone by the head");
+        Assert.AreEqual(5, after.GetCursors()["customProperty"]);
+        Assert.IsNotNull(after.FirstContactCompletedAtUtc);
+        Assert.AreEqual(0, peer.ManifestQueries.Count, "the fresh cursors say nothing is new");
     }
 }

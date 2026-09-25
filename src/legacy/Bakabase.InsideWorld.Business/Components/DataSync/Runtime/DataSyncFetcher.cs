@@ -28,7 +28,9 @@ public sealed record DataSyncFetchedSnapshot(DataSyncFeedManifest? Manifest, IRe
 /// carries, the approver's wait for its peer's review, then — only when the link's kinds changed, a fallback or a full
 /// reconciliation is due, or a first contact needs a review — one manifest and its pages. A first-link review is
 /// staged once (§8.3); every other pull is staged for <c>DataSyncApply</c>, and no pull is fetched again while an
-/// equal one still waits for the apply.
+/// equal one still waits for the apply. With nothing new, pending records that wait for a re-merge anyway (§8.4) are
+/// handed to <c>DataSyncApply</c> without a pull. The apply is enqueued only once the actor is verified (§5.6): the
+/// scheduler enqueues it on the tick that verifies.
 /// </summary>
 public sealed class DataSyncFetcher
 {
@@ -97,7 +99,7 @@ public sealed class DataSyncFetcher
                     t.Percentage = index * 100 / due.Count;
                     t.Process = $"{index}/{due.Count}";
                 });
-                await FetchLinkAsync(due[i], fallback, local, ct);
+                await FetchLinkAsync(due[i], fallback, local, ct, args);
             }
         }
 
@@ -127,8 +129,10 @@ public sealed class DataSyncFetcher
     }
 
     /// <summary>The fetch half for one link. Failures are recorded on the link; only cancellation escapes.</summary>
+    /// <param name="args">The <c>DataSync</c> task's arguments, when it runs there: a pause then takes effect between
+    /// the pages of a snapshot, not only between links. Null for "Fetch again", which a request runs.</param>
     public async Task FetchLinkAsync(DataSyncLinkDbModel link, bool fallback, DataSyncLocalStateDbModel? local,
-        CancellationToken ct)
+        CancellationToken ct, BTaskArgs? args = null)
     {
         try
         {
@@ -140,7 +144,7 @@ public sealed class DataSyncFetcher
 
             using (await _fetchLock.AcquireAsync(link.PeerNodeId, ct))
             {
-                await FetchLockedAsync(link, fallback, local, ct);
+                await FetchLockedAsync(link, fallback, local, ct, args);
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -159,7 +163,7 @@ public sealed class DataSyncFetcher
     }
 
     private async Task FetchLockedAsync(DataSyncLinkDbModel link, bool fallback, DataSyncLocalStateDbModel? local,
-        CancellationToken ct)
+        CancellationToken ct, BTaskArgs? args)
     {
         await using var scope = _scopes.CreateAsyncScope();
         var sp = scope.ServiceProvider;
@@ -224,7 +228,15 @@ public sealed class DataSyncFetcher
             head.ContractVersion, head.Attention, head.Counterpart, ct);
         if (updated is null || !updated.IsFetchable()) return;
         if (peerFactsChanged) await ObserveChangedAsync(updated, ct);
+
+        // From here on, the row as that write read it: an apply may have committed cursors, a first contact or kinds
+        // since this link was read for the head (§8.10.2), and a pull from the older cursors would be wasted.
         link = updated;
+        kinds = link.GetKinds().Where(reader.Supports).ToList();
+        cursors = link.GetCursors();
+        query = new DataSyncFeedQuery(link.GetDeclaredMode(),
+            kinds.ToDictionary(k => k, k => cursors.GetValueOrDefault(k), StringComparer.Ordinal),
+            ActorOf(local), link.GetDeclaredState(openItems));
 
         // The approver waits for the initiator's review (§8.3): the head's counterpart says when it is done, so a
         // waiting link never builds a snapshot.
@@ -286,6 +298,15 @@ public sealed class DataSyncFetcher
 
         if (!needReview && !mergeWanted)
         {
+            // Nothing new, but pending records may wait for a re-merge anyway (§8.4: a local change, Retry or
+            // OverBudget, a flag): the apply re-merges them without a pull rather than at the next fallback pull. The
+            // scheduler enqueues it on its next tick, under its rules (a verified actor, a person's stop).
+            if (mergeKinds.Count > 0 && _stagedPulls.Peek(link.Id) is null &&
+                (await store.GetPendingToMergeAsync(link.Id, false, ct)).Any(p => mergeKinds.Contains(p.Kind)))
+            {
+                _state.RequestReMerge(link.Id);
+            }
+
             await RescheduleAsync(link.Id, DataSyncSchedule.PollInterval, ct);
             return;
         }
@@ -302,7 +323,7 @@ public sealed class DataSyncFetcher
             foreach (var kind in pullKinds) since[kind] = fullReconciliation ? 0 : cursors.GetValueOrDefault(kind);
         }
 
-        var snapshot = await FetchSnapshotAsync(peer, reader, link, query with { Since = since }, ct);
+        var snapshot = await FetchSnapshotAsync(peer, reader, link, query with { Since = since }, ct, args);
         if (snapshot.Problem is { } problem)
         {
             await HandlePeerErrorAsync(link.Id, problem, snapshot.ProblemDetail, null, ct);
@@ -343,7 +364,9 @@ public sealed class DataSyncFetcher
                     return;
                 }
 
-                await _launcher.EnqueueApplyAsync();
+                // New work ends a person's hold on the apply (§8.10.1), whether or not it can start yet.
+                _state.ReleaseApply();
+                await EnqueueApplyIfVerifiedAsync(sp);
             }
         }
 
@@ -356,13 +379,14 @@ public sealed class DataSyncFetcher
     /// discards the whole pull, so nothing is ever planned from an incomplete snapshot.
     /// </summary>
     public async Task<DataSyncFetchedSnapshot> FetchSnapshotAsync(IDataSyncPeerClient peer,
-        IDataSyncKindPageReader reader, DataSyncLinkDbModel link, DataSyncFeedQuery query, CancellationToken ct)
+        IDataSyncKindPageReader reader, DataSyncLinkDbModel link, DataSyncFeedQuery query, CancellationToken ct,
+        BTaskArgs? args = null)
     {
         for (var attempt = 0;; attempt++)
         {
             try
             {
-                return await ReadSnapshotAsync(peer, reader, link, query, ct);
+                return await ReadSnapshotAsync(peer, reader, link, query, ct, args);
             }
             catch (DataSyncPeerException e) when (attempt == 0 &&
                                                   e.Code is DataSyncPeerErrorCode.SnapshotExpired
@@ -374,7 +398,8 @@ public sealed class DataSyncFetcher
     }
 
     private async Task<DataSyncFetchedSnapshot> ReadSnapshotAsync(IDataSyncPeerClient peer,
-        IDataSyncKindPageReader reader, DataSyncLinkDbModel link, DataSyncFeedQuery query, CancellationToken ct)
+        IDataSyncKindPageReader reader, DataSyncLinkDbModel link, DataSyncFeedQuery query, CancellationToken ct,
+        BTaskArgs? args)
     {
         var manifest = await peer.GetManifestAsync(link.PeerNodeId, query, ct);
         if (BreakerOf(link, manifest.NodeId, manifest.LibraryEpoch) is not null)
@@ -392,7 +417,9 @@ public sealed class DataSyncFetcher
             var cursorsSeen = new HashSet<string>(StringComparer.Ordinal);
             while (true)
             {
-                ct.ThrowIfCancellationRequested();
+                // A cooperative checkpoint per page: a large snapshot must not keep a pause waiting (btask.md).
+                if (args is not null) await args.YieldAsync();
+                else ct.ThrowIfCancellationRequested();
                 var page = await peer.GetPageAsync(link.PeerNodeId, manifest.SnapshotId, kind, manifestKind.SinceSeq,
                     cursor, ct);
                 bytes += page.Length;
@@ -412,6 +439,16 @@ public sealed class DataSyncFetcher
         }
 
         return new DataSyncFetchedSnapshot(manifest, kinds, bytes, null, null);
+    }
+
+    /// <summary>
+    /// Enqueues <c>DataSyncApply</c> once the actor is verified (§5.6, §8.2). Before that, a started apply could only
+    /// sit on the write tasks' conflict keys; the scheduler enqueues it on the tick that verifies.
+    /// </summary>
+    private async Task EnqueueApplyIfVerifiedAsync(IServiceProvider sp)
+    {
+        if (sp.GetService<IDataSyncActorGuard>() is { IsVerified: false }) return;
+        await _launcher.EnqueueApplyAsync();
     }
 
     private static DataSyncFetchedSnapshot Discarded(string? problem, long bytes) =>

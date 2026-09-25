@@ -123,6 +123,27 @@ public interface IDataSyncUndoPreviewer
 }
 
 /// <summary>
+/// The write transaction a read-modify-write of a link row (or the local state row) runs in
+/// (<see cref="DataSyncLinkService"/>). The default, <see cref="DataSyncDbRowTransactions"/>, opens one on the scope's
+/// <c>BakabaseDbContext</c> — <c>BEGIN IMMEDIATE</c> on SQLite (F27) — so the row is read only once no other
+/// transaction can change it before the write: the apply runner's commits of link state (§8.10.2) are ordered with the
+/// runtime's own bookkeeping by the database, not by a lock the runner cannot take.
+/// </summary>
+public interface IDataSyncRowTransactions
+{
+    /// <summary>
+    /// Begins the transaction on <paramref name="scope"/>'s context, which the store of that scope joins. Disposing it
+    /// without <see cref="IDataSyncRowTransaction.CommitAsync"/> rolls it back.
+    /// </summary>
+    Task<IDataSyncRowTransaction> BeginAsync(IServiceProvider scope, CancellationToken ct);
+}
+
+public interface IDataSyncRowTransaction : IAsyncDisposable
+{
+    Task CommitAsync(CancellationToken ct);
+}
+
+/// <summary>
 /// The addresses other devices can reach this one at (the overview, §10.1). The Service registers it over remote
 /// access; without it the overview lists none.
 /// </summary>

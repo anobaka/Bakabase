@@ -120,6 +120,26 @@ public static class DataSyncLinkColumns
             : DataSyncLinkState.WaitingForPeerReview;
     }
 
+    /// <summary>
+    /// Makes the link's next pull a full reconciliation (§8.8), which re-merges every pending record of the link (§8.4
+    /// condition 4): the last one reads as a full interval ago. Used when a stopped link is turned on again, whose stop
+    /// closed its items while its pending records stayed (§8.1).
+    /// </summary>
+    public static void MarkFullReconciliationDue(this DataSyncLinkDbModel link, DateTime nowUtc) =>
+        link.LastFullReconciliationAtUtc = nowUtc - DataSyncSchedule.FullReconciliationInterval;
+
+    /// <summary>
+    /// When an approver waiting for its peer's first review may start anyway (§8.3):
+    /// <see cref="DataSyncSchedule.StartAnywayAfter"/> after the wait began. Null in any other state. The row keeps no
+    /// time for when a state began (<c>UpdatedAtUtc</c> moves with every write), so the wait is taken to begin when the
+    /// row was made, which is when an approval makes it. Known limit: a stopped row that a later approval turns back
+    /// into a waiting approver keeps its old creation time, and may start at once, as before this check.
+    /// </summary>
+    public static DateTime? GetStartAnywayAt(this DataSyncLinkDbModel link) =>
+        link.State == DataSyncLinkState.WaitingForPeerReview
+            ? DateTime.SpecifyKind(link.CreatedAtUtc, DateTimeKind.Utc) + DataSyncSchedule.StartAnywayAfter
+            : null;
+
     /// <summary>The states a failed peer call sets (§8.1): they end when the peer answers again.</summary>
     public static bool IsPeerErrorState(this DataSyncLinkState state) =>
         state is DataSyncLinkState.AccessRevoked or DataSyncLinkState.PeerSharingOff

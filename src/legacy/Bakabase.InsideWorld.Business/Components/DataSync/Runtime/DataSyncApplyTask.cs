@@ -18,15 +18,16 @@ using Microsoft.Extensions.Logging;
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 
 /// <summary>
-/// The body of <c>DataSyncApply</c> (§8.10.1): applies every staged pull and every link whose once flags act without
-/// a pull, link by link, through <see cref="IDataSyncApplyRunner.RunAutoSyncAsync"/>, and loops until nothing waits.
-/// It waits while the actor is unverified (§5.6). A link that fails is recorded and backs off; it is not tried again
-/// in the same run, so a failing link can never keep the task spinning.
+/// The body of <c>DataSyncApply</c> (§8.10.1): applies every staged pull, every link whose once flags act without a
+/// pull and every link whose pending records wait for a re-merge, link by link, through
+/// <see cref="IDataSyncApplyRunner.RunAutoSyncAsync"/>, and loops until nothing waits. It never waits for the actor's
+/// verification (§5.6) while holding the write tasks' conflict keys, which would hold the enhancer, resource sync and
+/// path-mark sync with it: while the actor is unverified it ends at once, and the scheduler enqueues it again on the
+/// tick that verifies. A link that fails is recorded and backs off; it is not tried again in the same run, so a
+/// failing link can never keep the task spinning.
 /// </summary>
 public sealed class DataSyncApplyTask
 {
-    private static readonly TimeSpan VerificationPoll = TimeSpan.FromSeconds(1);
-
     private readonly IServiceScopeFactory _scopes;
     private readonly IDataSyncTaskRegistry _registry;
     private readonly IDataSyncStagedPullStore _stagedPulls;
@@ -56,8 +57,11 @@ public sealed class DataSyncApplyTask
         {
             await args.YieldAsync();
             if (!_registry.ShouldRun(attempt.TaskId, attempt.AttemptId)) return;
-            await WaitUntilVerifiedAsync(args);
-            if (!_registry.ShouldRun(attempt.TaskId, attempt.AttemptId)) return;
+            if (!await IsVerifiedAsync())
+            {
+                _logger.LogInformation("Data sync applies nothing until this device's actor is verified");
+                return;
+            }
 
             var work = await NextWorkAsync(done, ct);
             if (work.Count == 0) return;
@@ -72,7 +76,10 @@ public sealed class DataSyncApplyTask
         }
     }
 
-    /// <summary>Links with a staged pull, then links whose pull-independent once flags wait (not while backing off).</summary>
+    /// <summary>
+    /// Links with a staged pull, then links whose pull-independent once flags or pending re-merge wait (not while
+    /// backing off).
+    /// </summary>
     private async Task<IReadOnlyList<int>> NextWorkAsync(HashSet<int> done, CancellationToken ct)
     {
         var work = _stagedPulls.LinksWaiting().ToList();
@@ -81,7 +88,8 @@ public sealed class DataSyncApplyTask
         {
             if (work.Contains(link.Id) || done.Contains(link.Id)) continue;
             if (link.State != DataSyncLinkState.Active) continue;
-            if (link.GetOnceFlags().PullIndependent() == DataSyncMergeFlags.None) continue;
+            if (link.GetOnceFlags().PullIndependent() == DataSyncMergeFlags.None &&
+                !_state.IsReMergeRequested(link.Id)) continue;
             if (link.NextAttemptAtUtc is { } next && next > now && link.ConsecutiveFailures > 0) continue;
             work.Add(link.Id);
         }
@@ -100,11 +108,13 @@ public sealed class DataSyncApplyTask
             return;
         }
 
+        // Any apply of the link re-merges what its pending records wait for (§8.4), so it takes a requested re-merge.
+        var reMerge = _state.TakeReMerge(linkId);
         var flags = link.GetOnceFlags();
         if (pull is null)
         {
             flags = flags.PullIndependent();
-            if (flags == DataSyncMergeFlags.None) return;
+            if (flags == DataSyncMergeFlags.None && !reMerge) return;
         }
 
         await using var scope = _scopes.CreateAsyncScope();
@@ -120,6 +130,7 @@ public sealed class DataSyncApplyTask
             // A stopped apply rolled back its current chunk; put the pull back so the next run applies it without a
             // refetch, unless a newer one arrived meanwhile.
             if (pull is not null && _stagedPulls.Peek(linkId) is null) _stagedPulls.Put(linkId, pull);
+            if (reMerge) _state.RequestReMerge(linkId);
             throw;
         }
         catch (Exception e)
@@ -129,19 +140,27 @@ public sealed class DataSyncApplyTask
             return;
         }
 
-        await _links.AfterAutoSyncAsync(context, pull, outcome, IsFullReconciliation(sp, context, pull), ct);
+        await _links.AfterAutoSyncAsync(context, pull, outcome, IsFullReconciliation(sp, link, context, pull), ct);
     }
 
     /// <summary>
-    /// Whether the pull reconciled the whole link (§8.8): every kind of the link that this build reads and the peer
-    /// serves came from 0. One superseded kind alone is not a full reconciliation of the link.
+    /// Whether the pull reconciled the whole link (§8.8): every kind the fetch half merges for the link — the kinds
+    /// this build reads and the peer serves, less the kinds whose first contact is this device's review (§8.3) — came
+    /// from 0. One superseded kind alone is not a full reconciliation of the link; and a kind still waiting for its
+    /// review is never in a merge pull, so it must not keep the daily reconciliation from ever being recorded.
     /// </summary>
-    private bool IsFullReconciliation(IServiceProvider sp, DataSyncLinkContext context, DataSyncStagedPull? pull)
+    private bool IsFullReconciliation(IServiceProvider sp, DataSyncLinkDbModel link, DataSyncLinkContext context,
+        DataSyncStagedPull? pull)
     {
         if (pull is null) return false;
         var reader = sp.GetService<IDataSyncKindPageReader>();
         var served = _state.GetPeerFormVersions(context.LinkId);
-        var expected = context.Kinds.Where(k => (reader?.Supports(k) ?? true) && served.ContainsKey(k)).ToList();
+        IReadOnlyCollection<string> reviewed = link.Initiator == DataSyncLinkInitiator.ThisDevice
+            ? context.FirstContactKinds
+            : [];
+        var expected = context.Kinds
+            .Where(k => (reader?.Supports(k) ?? true) && served.ContainsKey(k) && !reviewed.Contains(k))
+            .ToList();
         return expected.Count > 0 &&
                expected.All(k => pull.Kinds.Any(s => s.Kind == k && s.FullReconciliation));
     }
@@ -182,18 +201,10 @@ public sealed class DataSyncApplyTask
         }
     }
 
-    private async Task WaitUntilVerifiedAsync(BTaskArgs args)
+    private async Task<bool> IsVerifiedAsync()
     {
-        while (true)
-        {
-            await using (var scope = _scopes.CreateAsyncScope())
-            {
-                var guard = scope.ServiceProvider.GetService<IDataSyncActorGuard>();
-                if (guard is null || guard.IsVerified) return;
-            }
-
-            await Task.Delay(VerificationPoll, args.CancellationToken);
-            await args.YieldAsync();
-        }
+        await using var scope = _scopes.CreateAsyncScope();
+        var guard = scope.ServiceProvider.GetService<IDataSyncActorGuard>();
+        return guard is null || guard.IsVerified;
     }
 }

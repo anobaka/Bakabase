@@ -3,6 +3,7 @@ using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Merging;
+using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Services;
 using Bakabase.Modules.DataSync.Wire;
@@ -179,19 +180,144 @@ public class DataSyncLinkStateMachineTests
         var link = (await h.Links.OnInboundGrantedAsync("b", DataSyncRequestIntent.TwoWay, true, false,
             "PeerUnreachable", "B", null, default))!;
 
+        // "Try again" is AskAccessAgain on a link that waits for access (§7.2.4, N14).
         Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice,
-            (await h.Links.RequestAccessAgainAsync(link.Id, false, default)).Problem!.Code);
-        var again = await h.Links.RequestAccessAgainAsync(link.Id, true, default);
+            (await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, false, default)).Problem!.Code);
+        var again = await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default);
         Assert.IsNull(again.Problem);
         Assert.AreEqual(DataSyncRequestIntent.Follow, h.Grants.Sent.Single().Intent, "the peer already reads this device");
+        Assert.AreEqual("req-b", again.RequestId);
         Assert.AreEqual("req-b", again.Link!.PendingRequestId);
         Assert.IsNull(again.Link.LastErrorCode);
         Assert.AreEqual(DataSyncLinkState.AwaitingAccess, again.Link.State);
 
         h.Grants.Answer = input => new DataSyncAccessRequestOutcome("granted", null, input.PeerNodeId!, "B", null);
         h.Grants.Outbound.Add("b");
-        var granted = await h.Links.RequestAccessAgainAsync(link.Id, true, default);
+        var granted = await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default);
         Assert.AreEqual(DataSyncLinkState.WaitingForPeerReview, granted.Link!.State);
+    }
+
+    [TestMethod]
+    public async Task Asking_a_peer_that_declined_to_read_back_to_keep_in_step_sends_a_two_way_request()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        // A code without two-way consent was redeemed two-way: this device reads the peer, the peer not this one.
+        var link = h.AddLink("a", l => l.ReadBackDeclined = true);
+        var plain = h.AddLink("b");
+
+        Assert.AreEqual(DataSyncProblemCode.DecisionsInvalid,
+            (await h.Links.ResumeAsync(plain.Id, DataSyncResumeAction.AskAccessAgain, true, default)).Problem!.Code,
+            "a link the peer reads back, or one it never declined, has nothing to ask");
+        Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice,
+            (await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, false, default)).Problem!.Code);
+        h.Grants.SharingEnabled = false;
+        Assert.AreEqual(DataSyncProblemCode.SharingOff,
+            (await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default)).Problem!.Code);
+        h.Grants.SharingEnabled = true;
+        Assert.AreEqual(0, h.Grants.Sent.Count);
+
+        var asked = await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default);
+        Assert.IsNull(asked.Problem);
+        var sent = h.Grants.Sent.Single();
+        Assert.AreEqual(DataSyncRequestIntent.TwoWay, sent.Intent, "an ordinary two-way request, with its offer");
+        Assert.AreEqual("a", sent.PeerNodeId);
+        Assert.AreEqual("req-a", asked.RequestId);
+        Assert.AreEqual(DataSyncLinkState.Active, asked.Link!.State, "the link keeps syncing meanwhile");
+        Assert.IsFalse(asked.Link.ReadBackDeclined);
+
+        // Once the peer reads this device, a declined note is only cleared.
+        h.Store.Edit(link.Id, l => l.ReadBackDeclined = true);
+        h.Grants.Readers.Add(new DataSyncGrantView("a", "A", h.Clock.UtcNow));
+        var cleared = await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default);
+        Assert.IsFalse(cleared.Link!.ReadBackDeclined);
+        Assert.AreEqual(1, h.Grants.Sent.Count);
+    }
+
+    [TestMethod]
+    public async Task The_approval_and_its_queued_grant_event_make_one_link_whichever_writes_first()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        h.Grants.Outbound.Add("b");
+        Task drained;
+        Task<DataSyncLinkDbModel?> approval;
+        using (h.RowTransactions.Hold())
+        {
+            // The pairing flow's event is drained first and waits to insert; the approval's own call has looked for
+            // a link meanwhile and found none (§8.1: one link per peer).
+            h.GrantEvents.InboundGranted("b", DataSyncRequestIntent.TwoWay, true);
+            drained = h.GrantEvents.DrainAsync(default);
+            await DataSyncRuntimeHarness.WaitUntilAsync(() => h.RowTransactions.Waiting == 1, "the event waits");
+            approval = h.Links.OnInboundGrantedAsync("b", DataSyncRequestIntent.TwoWay, true, true, null, "B",
+                ["customProperty"], default);
+            Assert.IsFalse(approval.IsCompleted, "the approval waits behind the event's insert");
+            Assert.AreEqual(0, h.Store.All().Count);
+        }
+
+        await drained.WaitAsync(TimeSpan.FromSeconds(10));
+        var approved = await approval.WaitAsync(TimeSpan.FromSeconds(10));
+        var link = h.Store.All().Single();
+        Assert.AreEqual(DataSyncLinkState.WaitingForPeerReview, link.State);
+        Assert.AreEqual(DataSyncLinkInitiator.Peer, link.Initiator);
+        Assert.AreEqual(link.Id, approved!.Id, "the second caller updated the link the first made");
+    }
+
+    [TestMethod]
+    public async Task A_copy_once_onto_a_stopped_link_stays_a_copy_once_through_a_pause_and_a_peer_error()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var stopped = h.AddLink("a", l =>
+        {
+            l.Mode = DataSyncLinkMode.Off;
+            l.LastMode = DataSyncLinkMode.Follow;
+            l.State = DataSyncLinkState.Stopped;
+            l.NextAttemptAtUtc = null;
+        });
+
+        var copy = await h.Links.CreateAsync(new DataSyncLinkCreate("a", null, null, DataSyncLinkMode.Follow, null,
+            CopyOnce: true), true, default);
+        Assert.IsNull(copy.Problem);
+        Assert.AreEqual(stopped.Id, copy.Link!.Id, "one link per peer: the stopped row is reused");
+        Assert.AreEqual(DataSyncLinkState.AwaitingReview, copy.Link.State);
+        Assert.IsNull(copy.Link.FirstContactCompletedAtUtc, "its review is a first contact again");
+        Assert.AreEqual(3, copy.Link.GetCursors()["extensionGroup"], "cursors and bases stay");
+
+        await h.Links.PauseByUserAsync(stopped.Id, default);
+        var resumed = await h.Links.ResumeAsync(stopped.Id, DataSyncResumeAction.Resume, true, default);
+        Assert.AreEqual(DataSyncLinkState.AwaitingReview, resumed.Link!.State, "the copy once did not silently end");
+
+        h.Peers.Peers["a"].HeadErrors.Enqueue(new DataSyncPeerException(DataSyncPeerErrorCode.AccessRevoked));
+        await h.FetchOnceAsync();
+        Assert.AreEqual(DataSyncLinkState.AccessRevoked, h.Link(stopped.Id).State);
+        Assert.IsTrue(h.Link(stopped.Id).IsFetchable(), "retried hourly like any link in its first contact");
+        h.Clock.Advance(DataSyncSchedule.AccessRetry);
+        await h.FetchOnceAsync();
+        Assert.AreEqual(DataSyncLinkState.AwaitingReview, h.Link(stopped.Id).State);
+    }
+
+    [TestMethod]
+    public async Task Withdrawing_a_request_drops_only_a_link_made_for_it()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var fresh = (await h.Links.CreateAsync(Create("a"), true, default)).Link!;
+        var synced = h.AddLink("b", l =>
+        {
+            l.Mode = DataSyncLinkMode.Off;
+            l.LastMode = DataSyncLinkMode.TwoWay;
+            l.State = DataSyncLinkState.Stopped;
+        });
+        h.Grants.Outbound.Remove("b");
+        var turnedOn = await h.Links.UpdateAsync(synced.Id, DataSyncLinkMode.Follow, null, true, default);
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, turnedOn.Link!.State, "no access: a request went out");
+
+        await h.Links.OnRequestCancelledAsync(fresh.Id, default);
+        await h.Links.OnRequestCancelledAsync(synced.Id, default);
+
+        CollectionAssert.AreEqual(new[] {fresh.Id}, h.Store.Deleted, "a link made for the request has nothing to keep");
+        var kept = h.Link(synced.Id);
+        Assert.AreEqual(DataSyncLinkState.Stopped, kept.State);
+        Assert.AreEqual(DataSyncLinkMode.Follow, kept.LastMode);
+        Assert.AreEqual(DataSyncLinkService.AccessCancelled, kept.LastErrorCode);
+        Assert.AreEqual(3, kept.GetCursors()["extensionGroup"], "its sync state is kept");
     }
 
     [TestMethod]
@@ -247,7 +373,24 @@ public class DataSyncLinkStateMachineTests
         Assert.IsNull(on.Problem);
         Assert.AreEqual(DataSyncLinkState.Active, on.Link!.State, "no new review: its first contact is done");
         Assert.AreEqual(0, h.Grants.Sent.Count);
-        Assert.AreEqual(3, on.Link.GetCursors()["extensionGroup"], "incremental: cursors kept");
+        Assert.AreEqual(3, on.Link.GetCursors()["extensionGroup"], "no new review: cursors and bases kept");
+
+        // The stop closed the link's items and kept its pending records: the next pull re-merges them all (§8.4
+        // condition 4), although the peer has nothing new.
+        var peer = h.Peers.Peers["a"];
+        await h.FetchOnceAsync();
+        var since = peer.ManifestQueries.Single().Since;
+        Assert.AreEqual(2, since.Count);
+        Assert.IsTrue(since.Values.All(s => s == 0), "a full reconciliation");
+        Assert.IsTrue(h.StagedPulls.Peek(link.Id)!.Kinds.All(k => k.FullReconciliation));
+        await h.Btm.Start(DataSyncTaskIds.Apply);
+        await h.WaitForStatusAsync(DataSyncTaskIds.Apply, BTaskStatus.Completed);
+        Assert.AreEqual(h.Clock.UtcNow, h.Link(link.Id).LastFullReconciliationAtUtc);
+
+        // Once: then incremental again.
+        h.Clock.Advance(DataSyncSchedule.PollInterval);
+        await h.FetchOnceAsync();
+        Assert.AreEqual(1, peer.ManifestQueries.Count);
     }
 
     [TestMethod]
@@ -362,9 +505,22 @@ public class DataSyncLinkStateMachineTests
         {
             l.State = DataSyncLinkState.WaitingForPeerReview;
             l.Initiator = DataSyncLinkInitiator.Peer;
+            l.FirstContactCompletedAtUtc = null;
+            l.FirstContactKindsJson = null;
         });
+        Assert.AreEqual(h.Clock.UtcNow + DataSyncSchedule.StartAnywayAfter, h.Link(link.Id).GetStartAnywayAt());
+
+        // Offered only after the initiator has not finished its review for 7 days (§8.3).
+        h.Clock.Advance(DataSyncSchedule.StartAnywayAfter - TimeSpan.FromMinutes(1));
+        var early = await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.StartAnyway, true, default);
+        Assert.AreEqual(DataSyncProblemCode.DecisionsInvalid, early.Problem!.Code);
+        Assert.AreEqual("tooEarly", early.Problem.Detail);
+        Assert.AreEqual(DataSyncLinkState.WaitingForPeerReview, h.Link(link.Id).State);
+
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
         var started = await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.StartAnyway, true, default);
         Assert.AreEqual(DataSyncLinkState.Active, started.Link!.State);
+        Assert.IsNull(started.Link.GetStartAnywayAt());
         Assert.AreEqual(DataSyncProblemCode.DecisionsInvalid,
             (await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.StartAnyway, true, default)).Problem!.Code);
     }

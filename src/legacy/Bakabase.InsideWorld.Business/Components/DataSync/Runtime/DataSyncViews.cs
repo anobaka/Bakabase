@@ -110,7 +110,7 @@ public sealed class DataSyncViews
             snapshot.OpenItemsOf(link.Id), pending, CurrentReviewId(link), link.PeerAppVersion, link.PeerContractVersion,
             snapshot.GrantOf(link.PeerNodeId) is not null, link.ReadBackDeclined,
             counterpart?.Mode ?? reader?.Mode, Utc(reader?.LastReadAtUtc), link.GetPeerAttention(), excluded, held,
-            missing, IsOnline(link));
+            missing, IsOnline(link), Utc(link.GetStartAnywayAt()));
     }
 
     /// <summary>The review a person can open for this link now: the staged one, unless it expired (§8.3).</summary>
