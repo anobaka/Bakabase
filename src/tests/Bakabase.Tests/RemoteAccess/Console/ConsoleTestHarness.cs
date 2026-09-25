@@ -364,6 +364,12 @@ internal sealed class FakeServer : IAsyncDisposable
     public TimeSpan ServerInfoDelay { get; set; }
 
     /// <summary>
+    /// What <c>server-info</c> says this server is, as a real server writes it (enums as
+    /// numbers); null for a server from before it said, which leaves the fields out.
+    /// </summary>
+    public (ServerKind Kind, RemoteDevicePlatform Platform)? SaysItIs { get; set; }
+
+    /// <summary>
     /// Whether a request signed by a device this server does not know is refused on every
     /// path, as a real server's gate refuses it, rather than only on
     /// <c>/remote-access/context</c>. Off by default so a test about where a request went
@@ -532,6 +538,9 @@ internal sealed class FakeServer : IAsyncDisposable
                     "{\"code\":0,\"data\":{" +
                     $"\"id\":\"{ServerId}\",\"name\":\"{Name}\",\"appVersion\":\"9.9.9\",\"protocolVersion\":1," +
                     $"\"mode\":{(int) Mode},\"pairingSupported\":true," +
+                    (SaysItIs is { } says
+                        ? $"\"kind\":{(int) says.Kind},\"platform\":{(int) says.Platform},"
+                        : "") +
                     $"\"serverTime\":\"{DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)}\"" +
                     "}}");
                 return;

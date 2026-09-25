@@ -112,9 +112,16 @@ public record RemoteAccessAddress(string Url, string InterfaceName);
 /// Remote API contract version (<see cref="RemoteAccessProtocol.CurrentVersion"/>);
 /// clients compare it against the range they support before talking further.
 /// </param>
+/// <param name="Kind">
+/// What kind of install it is, for showing. Optional: older servers do not say, and nothing
+/// is decided on it.
+/// </param>
+/// <param name="Platform">The operating system it runs on, for showing. Optional, like the kind.</param>
 public record RemoteAccessServerDescriptor(
     string Id,
     string Name,
     int? Port,
     string AppVersion,
-    int ProtocolVersion);
+    int ProtocolVersion,
+    ServerKind? Kind = null,
+    RemoteDevicePlatform? Platform = null);

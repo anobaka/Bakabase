@@ -26,6 +26,7 @@ import {
   primaryClass,
 } from "./common";
 import ConfirmDialog from "./ConfirmDialog";
+import ManagedServerPathMappings from "./ManagedServerPathMappings";
 
 import { minutesUntil } from "@/core/serverTime";
 import {
@@ -57,7 +58,7 @@ const outcomeError = (outcome: ManagedServerOutcome, detail?: string | null) =>
     0,
   );
 
-const stateBadgeClass: Record<ManagedServerState, string> = {
+export const stateBadgeClass: Record<ManagedServerState, string> = {
   [ManagedServerState.Unknown]: "bg-default-100 text-default-500",
   [ManagedServerState.Online]: "bg-success/10 text-success",
   [ManagedServerState.Offline]: "bg-default-100 text-default-500",
@@ -619,30 +620,7 @@ function ManagedServerCard({
   onSaveMappings: (mappings: ManagedServerPathMapping[]) => Promise<boolean>;
 }) {
   const { t } = useTranslation();
-  const [mappings, setMappings] = useState(server.pathMappings);
-  const [dirty, setDirty] = useState(false);
   const name = serverLabel(server);
-
-  useEffect(() => {
-    if (!dirty) setMappings(server.pathMappings);
-  }, [server.pathMappings, dirty]);
-
-  const edit = (next: (rows: ManagedServerPathMapping[]) => ManagedServerPathMapping[]) => {
-    setDirty(true);
-    setMappings(next);
-  };
-  const save = async () => {
-    // Sent whole rather than merged: a removed row has to stop mapping.
-    const proposed = mappings.map((row) => ({
-      serverPath: row.serverPath.trim(),
-      localPath: row.localPath.trim(),
-    }));
-
-    if (await onSaveMappings(proposed)) {
-      setMappings(proposed);
-      setDirty(false);
-    }
-  };
 
   return (
     <article
@@ -665,6 +643,64 @@ function ManagedServerCard({
           {t(`federation.servers.state.${server.state}`)}
         </span>
       </div>
+      <ManagedServerWarnings busy={busy} name={name} server={server} onOpen={onOpen} />
+      <div className="flex flex-wrap items-center gap-2">
+        <button className={primaryClass} disabled={busy} type="button" onClick={() => onOpen()}>
+          {t("federation.servers.open")}
+        </button>
+        <button
+          className={`${buttonClass} text-danger`}
+          disabled={busy}
+          type="button"
+          onClick={onForget}
+        >
+          {t("federation.servers.forget")}
+        </button>
+      </div>
+      <ManagedServerPathMappings busy={busy} server={server} onSave={onSaveMappings} />
+    </article>
+  );
+}
+
+/** How to find a server whose address answers as another, where the warning is shown. */
+const tips = {
+  devices: {
+    other: "federation.servers.wrongServerTip",
+    thisDevice: "federation.servers.wrongServerThisDeviceTip",
+  },
+  map: {
+    other: "federation.map.panel.wrongServerTip",
+    thisDevice: "federation.map.panel.wrongServerThisDeviceTip",
+  },
+} as const;
+
+/**
+ * What the reader should know about a managed server before using it: it lets anyone on its
+ * network manage it, it revoked this computer, or its address now answers as another server.
+ * Shown on its card here and in its panel on the device map.
+ */
+export function ManagedServerWarnings({
+  server,
+  name,
+  busy,
+  onOpen,
+  where = "devices",
+}: {
+  server: ManagedServer;
+  name: string;
+  busy: boolean;
+  /** Shows the server in this window, on one of its own routes when given one. */
+  onOpen: (route?: string) => void;
+  /**
+   * Where it is shown, so the way back from a server that moved names what is there: the
+   * devices page's search below the card, or the map's at its top and its panel.
+   */
+  where?: "devices" | "map";
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <>
       {server.mode === RemoteAccessMode.Unrestricted && (
         // Warned about, never changed from here: only the other device's owner decides.
         // The way there is the server's own Configuration page — its devices page belongs
@@ -704,12 +740,12 @@ function ManagedServerCard({
           data-testid="managed-server-wrong-server"
         >
           {server.answeredBy?.isThisDevice
-            ? t("federation.servers.wrongServerThisDeviceTip", {
+            ? t(tips[where].thisDevice, {
                 name,
                 address: server.address,
                 discover: t("federation.servers.add.discover"),
               })
-            : t("federation.servers.wrongServerTip", {
+            : t(tips[where].other, {
                 name,
                 address: server.address,
                 other: server.answeredBy?.name || server.answeredBy?.serverId || "?",
@@ -717,97 +753,6 @@ function ManagedServerCard({
               })}
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-2">
-        <button className={primaryClass} disabled={busy} type="button" onClick={() => onOpen()}>
-          {t("federation.servers.open")}
-        </button>
-        <button
-          className={`${buttonClass} text-danger`}
-          disabled={busy}
-          type="button"
-          onClick={onForget}
-        >
-          {t("federation.servers.forget")}
-        </button>
-      </div>
-      <details className="border-t border-default-200 pt-3">
-        <summary className="cursor-pointer text-sm font-medium">
-          {t("federation.servers.mappings.title")}
-          {server.pathMappings.length > 0 && (
-            <span className="ml-2 text-xs text-default-500">{server.pathMappings.length}</span>
-          )}
-        </summary>
-        <p className="mt-2 text-xs text-default-500">{t("federation.servers.mappings.tip")}</p>
-        <div className="mt-3 space-y-2">
-          {mappings.map((mapping, index) => (
-            <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-              <label className="space-y-1 text-xs">
-                <span>{t("federation.servers.mappings.server")}</span>
-                <input
-                  className={fieldClass}
-                  disabled={busy}
-                  placeholder={"D:\\Media"}
-                  value={mapping.serverPath}
-                  onChange={(event) =>
-                    edit((rows) =>
-                      rows.map((row, i) =>
-                        i === index ? { ...row, serverPath: event.target.value } : row,
-                      ),
-                    )
-                  }
-                />
-              </label>
-              <label className="space-y-1 text-xs">
-                <span>{t("federation.servers.mappings.local")}</span>
-                <input
-                  className={fieldClass}
-                  disabled={busy}
-                  placeholder="/Volumes/Media"
-                  value={mapping.localPath}
-                  onChange={(event) =>
-                    edit((rows) =>
-                      rows.map((row, i) =>
-                        i === index ? { ...row, localPath: event.target.value } : row,
-                      ),
-                    )
-                  }
-                />
-              </label>
-              <button
-                aria-label={t("federation.servers.mappings.remove")}
-                className={`${buttonClass} self-end`}
-                disabled={busy}
-                type="button"
-                onClick={() => edit((rows) => rows.filter((_, i) => i !== index))}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 flex gap-2">
-          <button
-            className={buttonClass}
-            disabled={busy}
-            type="button"
-            onClick={() => edit((rows) => [...rows, { serverPath: "", localPath: "" }])}
-          >
-            {t("federation.servers.mappings.add")}
-          </button>
-          <button
-            className={primaryClass}
-            disabled={
-              busy ||
-              !dirty ||
-              mappings.some((row) => !row.serverPath.trim() || !row.localPath.trim())
-            }
-            type="button"
-            onClick={() => void save()}
-          >
-            {t("federation.servers.mappings.save")}
-          </button>
-        </div>
-      </details>
-    </article>
+    </>
   );
 }

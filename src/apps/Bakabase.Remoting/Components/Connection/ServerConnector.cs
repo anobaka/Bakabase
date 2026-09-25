@@ -102,7 +102,9 @@ public sealed class ServerConnector(HttpClient http, ServerClock clock, ClientSe
         }
 
         var server = new ServerInfo(payload.Id, payload.Name ?? payload.Id, payload.AppVersion ?? "unknown",
-            payload.ProtocolVersion, payload.Mode, payload.PairingSupported, payload.ServerTime);
+            payload.ProtocolVersion, payload.Mode, payload.PairingSupported, payload.ServerTime,
+            ServerSelfDescriptionWords.Known(EnumOf<ServerKind>(payload.Kind)),
+            ServerSelfDescriptionWords.Known(EnumOf<RemoteDevicePlatform>(payload.Platform)));
 
         if (server.ProtocolVersion > MaxSupportedProtocolVersion)
         {
@@ -146,6 +148,21 @@ public sealed class ServerConnector(HttpClient http, ServerClock clock, ClientSe
         return trimmed.Contains("://", StringComparison.Ordinal) ? trimmed : $"http://{trimmed}";
     }
 
+    /// <summary>
+    /// An optional fact a server may add about itself, read however it was written — a number,
+    /// or a name — and read as nothing when it is neither: a newer server's new value must never
+    /// fail the handshake it rides on.
+    /// </summary>
+    private static T? EnumOf<T>(JsonElement? value) where T : struct, Enum =>
+        value switch
+        {
+            { ValueKind: JsonValueKind.Number } number when number.TryGetInt32(out var raw) &&
+                                                            Enum.IsDefined(typeof(T), raw) => (T) Enum.ToObject(typeof(T), raw),
+            { ValueKind: JsonValueKind.String } text when Enum.TryParse<T>(text.GetString(), true, out var named) &&
+                                                          Enum.IsDefined(named) => named,
+            _ => null
+        };
+
     private sealed record Envelope<T>(int Code, string? Message, T? Data);
 
     private sealed record ServerInfoPayload(
@@ -155,5 +172,7 @@ public sealed class ServerConnector(HttpClient http, ServerClock clock, ClientSe
         int ProtocolVersion,
         RemoteAccessMode Mode,
         bool PairingSupported,
-        DateTime? ServerTime);
+        DateTime? ServerTime,
+        JsonElement? Kind = null,
+        JsonElement? Platform = null);
 }

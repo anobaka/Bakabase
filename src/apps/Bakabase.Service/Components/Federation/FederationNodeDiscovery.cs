@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Bakabase.Modules.Federation;
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Peers;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 
 namespace Bakabase.Service.Components.Federation;
@@ -32,7 +33,10 @@ public sealed class FederationNodeDiscovery(IServerDiscovery discovery, INodeIde
                 if (!response.IsSuccessStatusCode) return null;
                 var info = JsonSerializer.Deserialize<NodeInfo>(await response.Content.ReadAsStringAsync(ct), FederationJson.Options);
                 return info is { ProtocolVersion: 1 } && info.NodeId != local.NodeId
-                    ? new NodeDiscoveryCandidate(info.NodeId, info.Name, server.BaseAddress) : null;
+                    ? new NodeDiscoveryCandidate(info.NodeId, info.Name, server.BaseAddress,
+                        ServerSelfDescriptionWords.KindOf(info.Kind) ?? server.Kind,
+                        ServerSelfDescriptionWords.PlatformOf(info.Platform) ?? server.Platform)
+                    : null;
             }
             catch (Exception e) when (e is HttpRequestException or JsonException or TaskCanceledException)
             {

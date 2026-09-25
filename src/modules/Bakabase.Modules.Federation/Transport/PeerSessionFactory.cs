@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Security;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 
 namespace Bakabase.Modules.Federation.Transport;
 
@@ -59,12 +60,20 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
             }
             _verified[nodeId] = snapshot;
             _statuses[nodeId] = "Online";
-            if (snapshot.Info.Name != peer.Label)
+            var kind = ServerSelfDescriptionWords.KindOf(snapshot.Info.Kind);
+            var platform = ServerSelfDescriptionWords.PlatformOf(snapshot.Info.Platform);
+            if (snapshot.Info.Name != peer.Label || kind != peer.Kind || platform != peer.Platform)
             {
-                // The name came with the authenticated handshake; follow the peer's renames.
+                // The name came with the authenticated handshake; follow the peer's renames — and
+                // what it says it is, which rides on the same verified answer.
                 await store.MutateAsync(current =>
                 {
-                    if (current.Peers.TryGetValue(nodeId, out var stored)) stored.Label = snapshot.Info.Name;
+                    if (current.Peers.TryGetValue(nodeId, out var stored))
+                    {
+                        stored.Label = snapshot.Info.Name;
+                        stored.Kind = kind;
+                        stored.Platform = platform;
+                    }
                     return true;
                 }, cancellationToken);
             }
@@ -172,7 +181,8 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
             throw new FederationAccessException("InvalidNodeResponse", 502, "The node did not return a valid identity.");
         if (string.IsNullOrWhiteSpace(info.Name) || info.Name.Length > 128 || info.Name.Any(char.IsControl) ||
             !ValidCapabilities(info.SupportedFilters) || !ValidCapabilities(info.SupportedSorts) ||
-            !ValidCapabilities(info.SupportedAssetKinds) || info.MaxBatchSize is < 1 or > 1000)
+            !ValidCapabilities(info.SupportedAssetKinds) || info.MaxBatchSize is < 1 or > 1000 ||
+            !ValidWord(info.Kind) || !ValidWord(info.Platform))
             throw new FederationAccessException("InvalidNodeResponse", 502, "The node identity exceeds the protocol metadata budget.");
         if (info.ProtocolVersion != 1)
             throw new FederationAccessException("ProtocolUnsupported", 409, "This node does not support the same federation protocol.");
@@ -184,4 +194,11 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
 
     private static bool ValidCapabilities(string[]? values) => values is { Length: <= 64 } &&
         values.All(value => value is { Length: > 0 and <= 128 } && !value.Any(char.IsControl));
+
+    /// <summary>
+    /// An optional word a node says about itself: absent, or short and printable. One this build
+    /// does not know is fine — a later build may say more — but not one outside the budget.
+    /// </summary>
+    private static bool ValidWord(string? value) => value == null ||
+        value.Length <= ServerSelfDescriptionWords.MaxLength && !value.Any(char.IsControl);
 }

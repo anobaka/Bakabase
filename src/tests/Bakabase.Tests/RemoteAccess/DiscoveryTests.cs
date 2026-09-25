@@ -116,6 +116,61 @@ public class DiscoveryProtocolTests
         CollectionAssert.Contains(entries.ToList(), "ver=2.4.0-beta");
         CollectionAssert.Contains(entries.ToList(), "proto=1");
     }
+
+    // ---- what kind of install it is, optional and added later ----
+
+    private static readonly RemoteAccessServerDescriptor Described =
+        Descriptor with {Kind = ServerKind.Headless, Platform = RemoteDevicePlatform.Linux};
+
+    [TestMethod]
+    public void Kind_and_platform_travel_both_ways_as_words()
+    {
+        Assert.AreEqual(Described,
+            DiscoveryProtocol.TryParseProbeResponse(DiscoveryProtocol.BuildProbeResponse(Described)));
+        Assert.AreEqual(Described,
+            DiscoveryProtocol.TryParseTxtEntries(DiscoveryProtocol.BuildTxtEntries(Described)));
+
+        // Words, not this build's enum numbers, which a later build may extend.
+        var response = Encoding.UTF8.GetString(DiscoveryProtocol.BuildProbeResponse(Described));
+        var json = JsonDocument.Parse(response[RemoteAccessProtocol.ProbeResponsePrefix.Length..]);
+        Assert.AreEqual("headless", json.RootElement.GetProperty("kind").GetString());
+        Assert.AreEqual("linux", json.RootElement.GetProperty("os").GetString());
+        CollectionAssert.Contains(DiscoveryProtocol.BuildTxtEntries(Described).ToList(), "kind=headless");
+        CollectionAssert.Contains(DiscoveryProtocol.BuildTxtEntries(Described).ToList(), "os=linux");
+    }
+
+    [TestMethod]
+    public void A_server_that_does_not_say_what_it_is_takes_no_room_and_reads_as_unknown()
+    {
+        // What every server before this change sends, and what one that cannot tell sends.
+        var response = Encoding.UTF8.GetString(DiscoveryProtocol.BuildProbeResponse(Descriptor));
+        var json = JsonDocument.Parse(response[RemoteAccessProtocol.ProbeResponsePrefix.Length..]);
+
+        Assert.IsFalse(json.RootElement.TryGetProperty("kind", out _));
+        Assert.IsFalse(json.RootElement.TryGetProperty("os", out _));
+        Assert.AreEqual(5, DiscoveryProtocol.BuildTxtEntries(Descriptor).Count);
+
+        var parsed = DiscoveryProtocol.TryParseProbeResponse(
+            Encoding.UTF8.GetBytes("BAKABASE_HERE_V1 {\"id\":\"abc\",\"port\":34567,\"ver\":\"2.3.0\",\"proto\":1}"));
+        Assert.IsNotNull(parsed);
+        Assert.IsNull(parsed!.Kind);
+        Assert.IsNull(parsed.Platform);
+    }
+
+    [TestMethod]
+    public void A_word_this_build_does_not_know_is_nothing_and_never_hides_the_server()
+    {
+        var parsed = DiscoveryProtocol.TryParseProbeResponse(Encoding.UTF8.GetBytes(
+            "BAKABASE_HERE_V1 {\"id\":\"abc\",\"port\":34567,\"kind\":\"tablet\",\"os\":7}"));
+        Assert.IsNotNull(parsed);
+        Assert.IsNull(parsed!.Kind);
+        Assert.IsNull(parsed.Platform);
+
+        var txt = DiscoveryProtocol.TryParseTxtEntries(["id=abc", "port=34567", "kind=", "os=haiku"]);
+        Assert.IsNotNull(txt);
+        Assert.IsNull(txt!.Kind);
+        Assert.IsNull(txt.Platform);
+    }
 }
 
 [TestClass]

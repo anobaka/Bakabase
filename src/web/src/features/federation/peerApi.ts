@@ -1,4 +1,4 @@
-import type { FederationStatus, PairingResult, PathMapping } from "./types";
+import type { FederationStatus, PairingResult, PathMapping, SharingCandidate } from "./types";
 
 import { federationRequest, jsonBody } from "./transport";
 import { notifyBrowsingChanged } from "./statusEvents";
@@ -28,7 +28,7 @@ export const federationPeerApi = {
     return result;
   },
   discover: (signal?: AbortSignal) =>
-    federationRequest<{ nodeId: string; name: string; address: string }[]>(`${prefix}/discover`, {
+    federationRequest<SharingCandidate[]>(`${prefix}/discover`, {
       signal,
     }),
   sharing: (enabled: boolean, enablePairedRemoteAccess: boolean) =>

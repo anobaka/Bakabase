@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Remoting.Abstractions.Models;
 using Bakabase.Remoting.Components.Console;
@@ -78,6 +79,27 @@ public class RemoteConsoleDiscoveryTests
         // A bounded search, the one the thin client used.
         Assert.AreEqual(1, _console.Discovery.Searches);
         Assert.AreEqual(TimeSpan.FromSeconds(3), _console.Discovery.LastTimeout);
+    }
+
+    [TestMethod]
+    public async Task A_server_is_listed_as_what_its_beacon_says_it_is_when_it_says()
+    {
+        _console.Discovery.Found =
+        [
+            Beacon("server-nas", "NAS", "http://192.168.1.5:34567") with
+            {
+                Kind = ServerKind.Headless, Platform = RemoteDevicePlatform.Linux
+            },
+            // From before beacons said.
+            Beacon("server-old", "Old", "http://192.168.1.6:34567", version: "2.3.0")
+        ];
+
+        var found = await _console.Manager.DiscoverAsync();
+
+        Assert.AreEqual(ServerKind.Headless, found.Servers[0].Kind);
+        Assert.AreEqual(RemoteDevicePlatform.Linux, found.Servers[0].Platform);
+        Assert.IsNull(found.Servers[1].Kind);
+        Assert.IsNull(found.Servers[1].Platform);
     }
 
     [TestMethod]

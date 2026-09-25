@@ -430,8 +430,10 @@ public sealed class FakeRemoteAccessService : IRemoteAccessService
         return Task.CompletedTask;
     }
 
-    public Task<RemoteAccessServerDescriptor> GetServerDescriptorAsync() =>
-        Task.FromResult(new RemoteAccessServerDescriptor("this-server", "Desk", null, "0.0.0", 1));
+    /// <summary>What <see cref="GetServerDescriptorAsync"/> answers: a server that does not say what it is, by default.</summary>
+    public RemoteAccessServerDescriptor Descriptor { get; set; } = new("this-server", "Desk", null, "0.0.0", 1);
+
+    public Task<RemoteAccessServerDescriptor> GetServerDescriptorAsync() => Task.FromResult(Descriptor);
 }
 
 public sealed class RecordingNotificationService : INotificationService

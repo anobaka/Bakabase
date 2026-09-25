@@ -15,7 +15,13 @@ import type {
   BakabaseModulesFederationPeersNodePathMapping,
   BakabaseServiceControllersFederationPeerStatusResponse,
 } from "@/sdk/Api";
-import type { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
+import type {
+  ManagedServerOutcome,
+  ManagedServerState,
+  RemoteAccessMode,
+  RemoteDevicePlatform,
+  ServerKind,
+} from "@/sdk/constants";
 
 /** Generated wire DTOs remain tied to the backend; only supported input choices are narrowed here. */
 export type ResourceRef = BakabaseModulesFederationContractsResourceRef;
@@ -91,6 +97,9 @@ export interface ManagedServer {
    * computer sends it nothing, and nothing it says is shown as this server's.
    */
   answeredBy?: ManagedServerAnswer | null;
+  /** What it said it is when last probed, if it said; older servers do not. */
+  kind?: ServerKind | null;
+  platform?: RemoteDevicePlatform | null;
 }
 
 /**
@@ -101,6 +110,11 @@ export interface ManagedServerPendingRequest {
   requestId: string;
   address: string;
   serverName?: string | null;
+  /**
+   * The install the request was filed with, as its address answered the pairing handshake.
+   * Absent from servers that listed requests before it was added.
+   */
+  serverId?: string | null;
   expiresAt: string;
   /**
    * The last thing asking about it produced. While {@link active} this can be a failed
@@ -153,6 +167,19 @@ export interface ManagedServerCandidate {
   appVersion: string;
   /** Already managed from here: listed so the user sees it was found, not to add again. */
   alreadyManaged: boolean;
+  /** What its beacon says it is, if it says. */
+  kind?: ServerKind | null;
+  platform?: RemoteDevicePlatform | null;
+}
+
+/** A device sharing its library on this network, found by library sharing's discovery. */
+export interface SharingCandidate {
+  nodeId: string;
+  name: string;
+  address: string;
+  /** What its node info says it is, if it says; older devices do not. */
+  kind?: ServerKind | null;
+  platform?: RemoteDevicePlatform | null;
 }
 
 export interface ManagedServerDiscovery {

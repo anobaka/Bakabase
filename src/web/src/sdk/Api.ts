@@ -4322,6 +4322,10 @@ export interface BakabaseModulesFederationPeersFederationPeerView {
   outboundGrant?: BakabaseModulesFederationPeersNodeGrantSummary;
   inboundGrant?: BakabaseModulesFederationPeersNodeGrantSummary;
   pathMappings: BakabaseModulesFederationPeersNodePathMapping[];
+  /** [0: Unknown, 1: Desktop, 2: Headless] */
+  kind?: BakabaseModulesRemoteAccessAbstractionsModelsServerKind;
+  /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
+  platform?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform;
 }
 
 export interface BakabaseModulesFederationPeersNodeCredentials {
@@ -4338,6 +4342,10 @@ export interface BakabaseModulesFederationPeersNodeDiscoveryCandidate {
   nodeId: string;
   name: string;
   address: string;
+  /** [0: Unknown, 1: Desktop, 2: Headless] */
+  kind?: BakabaseModulesRemoteAccessAbstractionsModelsServerKind;
+  /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
+  platform?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform;
 }
 
 export interface BakabaseModulesFederationPeersNodeGrantSummary {
@@ -4371,6 +4379,8 @@ export interface BakabaseModulesFederationPeersNodeInfo {
   supportedAssetKinds: string[];
   /** @format int32 */
   maxBatchSize: number;
+  kind?: string;
+  platform?: string;
 }
 
 export interface BakabaseModulesFederationPeersNodeInvitation {
@@ -4894,6 +4904,10 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerCandi
   address: string;
   appVersion: string;
   alreadyManaged: boolean;
+  /** [0: Unknown, 1: Desktop, 2: Headless] */
+  kind?: BakabaseModulesRemoteAccessAbstractionsModelsServerKind;
+  /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
+  platform?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform;
 }
 
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerDiscoveryView {
@@ -4955,6 +4969,7 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPendi
   /** [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported] */
   outcome: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOutcome;
   active: boolean;
+  serverId?: string;
 }
 
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerProbeView {
@@ -4992,6 +5007,10 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerView 
   appVersion?: string;
   importedFromLegacyClient: boolean;
   answeredBy?: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerAnswerView;
+  /** [0: Unknown, 1: Desktop, 2: Headless] */
+  kind?: BakabaseModulesRemoteAccessAbstractionsModelsServerKind;
+  /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
+  platform?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform;
 }
 
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView {
@@ -5017,6 +5036,12 @@ export type BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform =
   | 3
   | 4
   | 5;
+
+/**
+ * [0: Unknown, 1: Desktop, 2: Headless]
+ * @format int32
+ */
+export type BakabaseModulesRemoteAccessAbstractionsModelsServerKind = 0 | 1 | 2;
 
 export interface BakabaseModulesSearchModelsDbResourceSearchDbModel {
   group?: BakabaseModulesSearchModelsDbResourceSearchFilterGroupDbModel;
@@ -6531,6 +6556,10 @@ export interface BakabaseServiceModelsViewRemoteAccessIssuedPairingCodeViewModel
   expiresAt: string;
 }
 
+export interface BakabaseServiceModelsViewRemoteAccessPairingApprovalViewModel {
+  deviceId: string;
+}
+
 export interface BakabaseServiceModelsViewRemoteAccessPairingCodeViewModel {
   /** @format date-time */
   expiresAt: string;
@@ -6581,6 +6610,10 @@ export interface BakabaseServiceModelsViewRemoteAccessServerInfoViewModel {
   pairingSupported: boolean;
   /** @format date-time */
   serverTime: string;
+  /** [0: Unknown, 1: Desktop, 2: Headless] */
+  kind?: BakabaseModulesRemoteAccessAbstractionsModelsServerKind;
+  /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
+  platform?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform;
 }
 
 export interface BakabaseServiceModelsViewRemoteAccessSettingsViewModel {
@@ -8403,6 +8436,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewRemoteAccessIssuedPairingCodeViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessPairingApprovalViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewRemoteAccessPairingApprovalViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessPairingRequestAcceptedViewModel {
@@ -25911,7 +25951,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/remote-access/pairing/requests/{id}/approve
      */
     approveRemoteDevicePairingRequest: (id: string, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessPairingApprovalViewModel,
+        any
+      >({
         path: `/remote-access/pairing/requests/${id}/approve`,
         method: "POST",
         format: "json",

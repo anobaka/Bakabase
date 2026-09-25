@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { mapEdgeKinds, mapIssues, mapNodeKinds, mapPresences } from "../map/graph";
+
 import { remoteDevicePlatformLabelKey } from "@/core/remoteDevicePlatform";
 import {
   ManagedServerOutcome,
@@ -9,7 +11,8 @@ import {
 } from "@/sdk/constants";
 
 /*
- * Every key the server-switching screens can show exists in both languages, with the same
+ * Every key the multi-device management screens — server switching, the devices page's
+ * management sections and the device map — can show exists in both languages, with the same
  * placeholders.
  *
  * The keys are read out of the components' own source rather than listed by hand, so a
@@ -40,6 +43,14 @@ const sources = import.meta.glob<string>(
     "../components/ManagementAccess.tsx",
     "../../../layouts/BasicLayout/components/PageNav/components/ServerSwitcher/index.tsx",
     "../../../pages/client-path-mapping/index.tsx",
+    "../components/PeerPathMappings.tsx",
+    "../components/ManagedServerPathMappings.tsx",
+    "../DeviceMapPage.tsx",
+    "../map/DeviceMapCanvas.tsx",
+    "../map/DeviceMapPanel.tsx",
+    "../map/DeviceMapLegend.tsx",
+    "../map/DeviceMapList.tsx",
+    "../map/describe.ts",
   ],
   { eager: true, query: "?raw", import: "default" },
 );
@@ -83,18 +94,45 @@ const dynamicKeys = [
   // The console's menu group (routesMenuConfig) and its page.
   "menu.client.thisComputer",
   "menu.client.pathMapping",
+  // The multi-device menu group (routesMenuConfig) and its pages.
+  "federation.mode",
+  "federation.title",
+  "federation.devices.title",
+  "federation.map.title",
+  // The device map's words for what it draws (map/describe.ts, the canvas and the legend).
+  ...mapNodeKinds.filter((kind) => kind !== "unknown").map((kind) => `federation.map.kind.${kind}`),
+  ...mapPresences.map((presence) => `federation.map.presence.${presence}`),
+  ...mapIssues.map((issue) => `federation.map.issue.${issue}`),
+  ...mapEdgeKinds.map((kind) => `federation.map.edge.${kind}`),
+  ...mapEdgeKinds.map((kind) => `federation.map.legend.${kind}`),
+  ...(["sharing", "management"] as const).flatMap((kind) =>
+    ["in", "out"].flatMap((direction) =>
+      ["active", "pending"].map(
+        (status) => `federation.map.direction.${kind}.${direction}.${status}`,
+      ),
+    ),
+  ),
+  // This device's counts in the map's panel.
+  ...["sharesWith", "browses", "manages", "managedBy"].map(
+    (key) => `federation.map.panel.self.${key}`,
+  ),
+  // `federation.pair.${outcome}` after a sharing request, and `federation.connection.${state}`.
+  ...["awaitingApproval", "granted", "rejected"].map((outcome) => `federation.pair.${outcome}`),
+  ...["Online", "Offline", "Unknown", "IdentityConflict", "Unauthorized", "Incompatible"].map(
+    (state) => `federation.connection.${state}`,
+  ),
 ];
 
 const placeholders = (text: string) =>
   Array.from(text.matchAll(/{{\s*([\w.]+)\s*}}/g), (match) => match[1]).sort();
 
-describe("locales for the server-switching screens", () => {
+describe("locales for the multi-device management screens", () => {
   const keys = Array.from(
     new Set([...Object.values(sources).flatMap(staticKeys), ...dynamicKeys]),
   ).sort();
 
   it("reads keys out of every listed component", () => {
-    expect(Object.keys(sources)).toHaveLength(7);
+    expect(Object.keys(sources)).toHaveLength(15);
     for (const [path, source] of Object.entries(sources)) {
       expect(staticKeys(source).length, path).toBeGreaterThan(0);
     }
@@ -113,6 +151,11 @@ describe("locales for the server-switching screens", () => {
         "federation.console.switchToThisDevice",
         "clientPathMapping.onlyInClient",
         "menu.client.thisComputer",
+        "federation.map.panel.matchedByName",
+        "federation.map.panel.manageTip",
+        "federation.map.empty.body",
+        "federation.mappings.changedDuringReview",
+        "federation.servers.mappings.save",
       ]),
     );
   });

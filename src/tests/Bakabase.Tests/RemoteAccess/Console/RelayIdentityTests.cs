@@ -137,6 +137,36 @@ public class RelayIdentityTests
     }
 
     [TestMethod]
+    public async Task The_listing_says_what_the_server_last_said_it_is_never_what_answers_in_its_place()
+    {
+        _desk!.SaysItIs = (ServerKind.Desktop, RemoteDevicePlatform.MacOS);
+
+        var listed = (await _console.Manager.GetAsync(true)).Servers.Single();
+        Assert.AreEqual(ManagedServerState.Online, listed.State);
+        Assert.AreEqual(ServerKind.Desktop, listed.Kind);
+        Assert.AreEqual(RemoteDevicePlatform.MacOS, listed.Platform);
+
+        // Another install takes its port and says it is something else: like the mode and the
+        // version, the desk's own word stands, and nothing the newcomer said is shown as the desk's.
+        await ReplaceDeskAsync(configure: s => s.SaysItIs = (ServerKind.Headless, RemoteDevicePlatform.Linux));
+
+        listed = (await _console.Manager.GetAsync(true)).Servers.Single();
+        Assert.AreEqual(ManagedServerState.WrongServer, listed.State);
+        Assert.AreEqual(ServerKind.Desktop, listed.Kind);
+        Assert.AreEqual(RemoteDevicePlatform.MacOS, listed.Platform);
+    }
+
+    [TestMethod]
+    public async Task A_server_from_before_it_said_what_it_is_is_listed_without_it()
+    {
+        var listed = (await _console.Manager.GetAsync(true)).Servers.Single();
+
+        Assert.AreEqual(ManagedServerState.Online, listed.State);
+        Assert.IsNull(listed.Kind);
+        Assert.IsNull(listed.Platform);
+    }
+
+    [TestMethod]
     public async Task After_a_restart_a_loopback_trusting_install_at_the_old_port_gets_nothing()
     {
         // The case found on a real machine: both apps restart, and the port the desk had now

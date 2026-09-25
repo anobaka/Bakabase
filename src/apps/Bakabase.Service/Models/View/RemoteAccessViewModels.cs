@@ -171,6 +171,15 @@ namespace Bakabase.Service.Models.View
         public PairingFailure Failure { get; set; }
     }
 
+    /// <summary>
+    /// A request to manage this server, approved: the device it lets in, by the id it is
+    /// listed under once it has collected its key. Never the key.
+    /// </summary>
+    public record RemoteAccessPairingApprovalViewModel
+    {
+        public string DeviceId { get; set; } = null!;
+    }
+
     public record RemoteAccessPairingRequestAcceptedViewModel
     {
         /// <summary>
@@ -225,5 +234,15 @@ namespace Bakabase.Service.Models.View
         /// timestamp the server will accept.
         /// </summary>
         public DateTime ServerTime { get; set; }
+
+        /// <summary>
+        /// What kind of install this is — the desktop app or a headless server — for showing.
+        /// Optional and added later: an older server leaves it out, and a client decides
+        /// nothing on it. Absent when this build cannot tell.
+        /// </summary>
+        public ServerKind? Kind { get; set; }
+
+        /// <summary>The operating system it runs on, for showing. Optional, like <see cref="Kind"/>.</summary>
+        public RemoteDevicePlatform? Platform { get; set; }
     }
 }

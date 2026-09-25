@@ -27,7 +27,7 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
                 peer.Enabled ? "Unknown" : "Disabled",
                 outgoing == null ? null : new NodeGrantSummary(outgoing.GrantId, outgoing.Revision),
                 incoming == null ? null : new NodeGrantSummary(incoming.Credentials.GrantId, incoming.Credentials.Revision),
-                peer.PathMappings);
+                peer.PathMappings, peer.Kind, peer.Platform);
         }).OrderBy(p => p.Label, StringComparer.Ordinal).ToArray();
         var now = timeProvider.GetUtcNow();
         var requests = state.IncomingRequests.Where(r => r.ExpiresAt > now).Select(r =>

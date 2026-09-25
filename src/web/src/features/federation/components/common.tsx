@@ -59,7 +59,7 @@ export function FederationAccess({
   if (!local) {
     return (
       <div className="mx-auto flex max-w-2xl flex-col gap-4 p-6">
-        <h1 className="text-xl font-semibold">{t("federation.title")}</h1>
+        <h1 className="text-xl font-semibold">{t("federation.mode")}</h1>
         <p>{t("federation.localOnly")}</p>
         {elsewhere}
       </div>
@@ -81,7 +81,7 @@ function ConsoleLocalOnly({ elsewhere }: { elsewhere?: ReactNode }) {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 p-6">
-      <h1 className="text-xl font-semibold">{t("federation.title")}</h1>
+      <h1 className="text-xl font-semibold">{t("federation.mode")}</h1>
       <p>{t("federation.console.localOnly")}</p>
       <button
         className={`${buttonClass} self-start`}
