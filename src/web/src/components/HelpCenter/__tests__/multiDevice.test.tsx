@@ -13,9 +13,11 @@ import { linkState } from "../topics/multiDevice/NetworkDiagram";
 
 import cnFederation from "@/locales/cn/pages/federation.json";
 import cnHelpCenter from "@/locales/cn/components/helpCenter.json";
+import cnHelpDataSync from "@/locales/cn/components/helpDataSync.json";
 import cnHelp from "@/locales/cn/components/helpMultiDevice.json";
 import enFederation from "@/locales/en/pages/federation.json";
 import enHelpCenter from "@/locales/en/components/helpCenter.json";
+import enHelpDataSync from "@/locales/en/components/helpDataSync.json";
 import enHelp from "@/locales/en/components/helpMultiDevice.json";
 import { openLocalView } from "@/features/federation/switching";
 
@@ -45,6 +47,7 @@ vi.mock("@/stores/remoteAccess", () => ({
     selector({ initialized: reach.initialized, isLocal: reach.isLocal }),
   useIsPureClient: () => reach.pureClient,
   useIsConsole: () => reach.console,
+  useCanAdministerShownServer: () => reach.initialized && (reach.isLocal || reach.pureClient),
 }));
 vi.mock("@/features/federation/switching", () => ({
   DEVICES_ROUTE: "/federation/devices",
@@ -118,6 +121,7 @@ describe("multi-device help topic: registration", () => {
       "pathMapping",
       "remoteAccess",
       "thinClient",
+      "dataSync",
     ]);
   });
 });
@@ -351,8 +355,14 @@ describe("multi-device help topic: links to the devices pages", () => {
 
 describe("multi-device help topic: translations", () => {
   const placeholders = (text: string) => (text.match(/{{\s*\w+\s*}}/g) ?? []).sort();
-  const en = { ...enHelpCenter, ...enFederation, ...enHelp } as Record<string, string>;
-  const cn = { ...cnHelpCenter, ...cnFederation, ...cnHelp } as Record<string, string>;
+  const en = { ...enHelpCenter, ...enFederation, ...enHelp, ...enHelpDataSync } as Record<
+    string,
+    string
+  >;
+  const cn = { ...cnHelpCenter, ...cnFederation, ...cnHelp, ...cnHelpDataSync } as Record<
+    string,
+    string
+  >;
 
   /** Renders every section, every interactive state and every concept, recording keys. */
   const renderEverything = async () => {

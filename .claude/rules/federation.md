@@ -17,9 +17,10 @@ current device merges results.
 | Endpoints | `src/apps/Bakabase.Service/Controllers/Federation*.cs` |
 | UI | `src/web/src/features/federation/` |
 | Device map (`/federation/map`) | `src/web/src/features/federation/map/`, `DeviceMapPage.tsx` |
+| Data sync (definitions kept in step over `datasync.read` grants) | see `data-sync.md`; its node side is `Controllers/{DataSyncNodeController,FederationDataSyncPairingController}.cs`, `Components/Federation/FederationDataSync*.cs` and `Peers/FederationScopes.cs` |
 | Design history | `docs/multi-device-library-execution-plan.md` |
 
-The whole multi-server mode — sharing, management, and later data sync — is named
+The whole multi-server mode — sharing, management, and data sync — is named
 「多设备互联」 / "Multi-device" in the UI (`federation.mode`, the menu group, the help topic
 `multiDevice`). Route and id names stay `federation`.
 
@@ -145,8 +146,33 @@ endpoints and confirmations.
   shortened in the middle, and two different names are never shortened alike. A direction
   that does not work is a dotted lane with a warning triangle, explained in the legend and
   named in its accessible name.
-- **`sync` is a reserved edge kind.** The renderer and legend know it; nothing produces it,
-  and the legend hides it until something does. Never describe data sync as available.
+- **Data sync lines (`kind: "sync"`) are built by data sync, inside the graph.** The map reads a
+  fourth source, `GET /data-sync/map` (`useDataSyncMap`: every 5 s while a definitions request
+  or a link waiting for access is live, 15 s otherwise; a failure leaves the other sources on
+  the map). `buildSyncEdges` (`features/data-sync/map/mapAdapter.ts`, pure and tested there)
+  runs inside `buildDeviceGraph` — never through `extraEdges` — and draws one line per peer on
+  the node that carries that peer's install key. Its `in` lane is this device's link
+  (receiving, waiting for access or review, or none), its `out` lane the peer's
+  `datasync.read` grant; the arrow points to the device that **receives** the definitions, and
+  the badge says both ways or receive only (two devices receiving from each other show both
+  ways). A link that does not work marks its lane (`syncPaused`, `syncFailed`,
+  `syncUpdateNeeded`, `syncAccessLost`); open items add `syncNeedsYou` to the node, and a
+  headless peer whose heads report open decisions, paused links or a pending restore adds
+  `syncNeedsYouThere`.
+- **Definitions requests follow the request rules above.** A request this device filed finds
+  or creates its `peer:{nodeId}` node at step 3, like a library request, so a link to a device
+  that is not a peer yet still has a node, and one that ended stays with its outcome and
+  Dismiss (which resets the link). An incoming one is a claim: its own unverified
+  `sync-request:{id}` node, deduplicated like `sharing-request:` nodes and never merged into a
+  trusted device; its panel shows the request card only, never the rule editor.
+- **The data sync sections of the panel act through the map.** They live in
+  `features/data-sync/map/` and import nothing from the map: every action goes through the
+  panel's own `run`/`confirm` (`DataSyncPanelActions`, a structural subset of
+  `usePanelActions`), what an action said through `setNotice`, and they never move focus
+  themselves, so the focus rules above hold unchanged. Their rule editor (`SyncRuleDrawing`)
+  turns vertical below 420 px of container width. The per-direction phrases
+  (`federation.map.direction.sync.*`) live in `pages/dataSync.json`; the legend's sync entry,
+  like the others, shows only once a line has the kind.
 
 ## Invariants — do not weaken
 
@@ -161,6 +187,15 @@ endpoints and confirmations.
   loopback socket + loopback `Host` + matching `Origin` (`FederationAccessMiddleware.IsLocalCaller`).
   `/federation/v1/*` is node-to-node: `export/*` always needs a `Bakabase-Node` signature, even
   from loopback or in `Unrestricted` mode.
+  **The one recorded exception:** data sync's ordinary API, `/data-sync/*`, may create or widen
+  `datasync.read` access — turn definitions sharing on, approve a definitions request, create a
+  definitions code, send a request or mint a reciprocal code — for a **paired** caller
+  (`RemoteAccessContext.Device != null`: the desktop app's switching window or another paired
+  device) as well as for this device's own window and the CLI. A paired device already has full
+  control of the server, and a read-only definitions grant is less. A browser admitted only
+  because the mode is `Unrestricted` may reduce access (reject, revoke, sharing off, pause),
+  never create it (`NotAllowedOnThisDevice`). Library grants stay on `/federation/local/*` and
+  the CLI; `/data-sync` has no path to them (`DataSyncGrantBoundaryTests`).
 - **A node credential is never a legacy principal.** It must not reach options, resource
   writes, `/hub/ui`, file APIs or legacy pairing. Never map it to `IsPaired`.
 - **Default deny.** Every new federation action needs an exact entry in
@@ -169,6 +204,23 @@ endpoints and confirmations.
 - **Directional grants.** A→B never implies B→A or A→C, and a node never queries on behalf of
   another. Two-way pairing is two grants orchestrated by one flow (a single-use reciprocal code
   bound to the requester's NodeId), not one symmetric grant.
+- **Grants have scopes.** A grant is `library.read` (the whole library, read-only; every grant
+  made before data sync) or `datasync.read` (the definitions data sync publishes); `*` is only
+  ever an endpoint's declaration (the handshake), never a grant's. The two are **separate
+  grants** in separate `state.json` collections, approved, revoked and lease-cancelled on their
+  own, behind their own switches (`SharingEnabled`, `DataSyncSharingEnabled`); neither ever
+  implies the other, and approving one never touches the other. Definitions pair on their own
+  routes (`pair/datasync/{request|code|claim}`), so an older node refuses them instead of
+  taking them for library requests, and a code of one scope is never accepted on the other's
+  route. Definitions pairing never rewrites a library peer's `Label`, `Address`,
+  `LibraryEpoch`, `Kind`, `Platform` or `Enabled` (it keeps its own `DataSyncAddress`). The
+  gate checks per route: `FederationRoutePolicy.RequiredSharing` names the switch the route
+  needs, checked before authentication (`info` answers when either is on); every Export action
+  declares its scope on `FederationEndpointAttribute.Scope`, and `FederationLocalAccessFilter`
+  fails closed (403 `FederationEndpointDenied`) when an Export action declares none or the
+  principal's scope does not match. Library export services also require `library.read` in
+  `NodeGrantService.ValidateAsync` (`ScopeNotGranted`). `EveryExportActionDeclaresAScope` and
+  the generated per-action matrix in `FederationGateTests` pin it.
 - **Local actions stay local.** Playing and opening folders happen on the viewing device with its
   own player configuration. Never launch a program named by a peer; on macOS, packages are only
   revealed (`open -R`), never opened.
