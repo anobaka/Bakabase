@@ -1,8 +1,10 @@
 using System.Globalization;
 using Bakabase.Modules.DataSync.Identity;
+using Bakabase.Modules.DataSync.Kinds.CustomProperties;
 using Bakabase.Modules.DataSync.Kinds.ExtensionGroups;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Planning;
+using Bakabase.Modules.DataSync.Tests.CustomProperties;
 using Bakabase.Modules.DataSync.Tests.TestKinds;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Bakabase.Modules.DataSync.Tests.Merging.MergeFixture;
@@ -26,24 +28,37 @@ public class MergerFuzzTests
     private static readonly string[] Labels = ["Action", "Drama", "Comedy", "action"];
     private static readonly string[] Extensions = [".mkv", ".mp4", ".avi", ".jpg"];
 
-    private static (int First, int Runs) Seeds()
+    private static (int First, int Runs) Seeds(int ciRuns)
     {
         var first = int.TryParse(Environment.GetEnvironmentVariable("DATASYNC_FUZZ_SEED"), NumberStyles.Integer,
             CultureInfo.InvariantCulture, out var seed) ? seed : 1;
         var runs = int.TryParse(Environment.GetEnvironmentVariable("DATASYNC_FUZZ_RUNS"), NumberStyles.Integer,
-            CultureInfo.InvariantCulture, out var count) && count > 0 ? count : CiRuns;
+            CultureInfo.InvariantCulture, out var count) && count > 0 ? count : ciRuns;
         return (first, runs);
     }
 
+    /// <summary>Custom property inputs in CI (package B's codec, whose merges cost more): fewer than the test kind's.</summary>
+    private const int CiCustomPropertyRuns = 500;
+
     [TestMethod]
-    public void RandomInputsNeverThrowMergeDeterministicallyAndGiveApplicableRevisions()
+    public void RandomInputsNeverThrowMergeDeterministicallyAndGiveApplicableRevisions() => Fuzz(false, CiRuns);
+
+    /// <summary>
+    /// The same over custom properties in place of the test kind: contents from <c>Merge3Generator</c> (IgnoreCase,
+    /// duplicates, <c>null</c>/<c>""</c> tag groups, multilevel trees, options this device never publishes).
+    /// </summary>
+    [TestMethod]
+    public void RandomCustomPropertyInputsNeverThrowMergeDeterministicallyAndGiveApplicableRevisions() =>
+        Fuzz(true, CiCustomPropertyRuns);
+
+    private static void Fuzz(bool customProperties, int ciRuns)
     {
-        var (first, runs) = Seeds();
+        var (first, runs) = Seeds(ciRuns);
         var failures = new List<string>();
         var outcomes = new SortedDictionary<string, int>(StringComparer.Ordinal);
         for (var seed = first; seed < first + runs && failures.Count < 5; seed++)
         {
-            var f = Generate(new Random(seed));
+            var f = Generate(new Random(seed), customProperties);
             DataSyncMergeResult result;
             try
             {
@@ -129,13 +144,29 @@ public class MergerFuzzTests
     private static object Content(Random random, string kind, string name) =>
         kind == GroupKind
             ? new ExtensionGroupContentV1(name, Extensions.Where(_ => random.Next(2) == 0))
+            : kind == CustomPropertyKind
+            ? CustomPropertyContent(random, name)
             : new TestItemContent(name, random.Next(3) == 0 ? "#0090ff" : null,
                 Enumerable.Range(0, random.Next(4)).Select(i => new TestChild(
                     random.Next(2).ToString(CultureInfo.InvariantCulture) + i, Labels[random.Next(Labels.Length)])),
                 random.Next(4) == 0 ? "Choice" : null);
 
-    private static MergeFixture Generate(Random random)
+    /// <summary>
+    /// A custom property: one of the four reference types, few labels (so classes meet), option ids from one small
+    /// pool (so records and local entities share some), now and then options this device never publishes.
+    /// </summary>
+    private static CustomPropertyContentV1 CustomPropertyContent(Random random, string name)
     {
+        var generator = new Merge3Generator(random.Next());
+        var content = generator.Content(generator.Type(), "c");
+        if (random.Next(3) == 0) content = generator.Mutate(content, "m", generator.Edits());
+        if (random.Next(4) == 0) content = generator.Unpublishable(content, "x");
+        return content with { Name = name };
+    }
+
+    private static MergeFixture Generate(Random random, bool customProperties)
+    {
+        var primary = customProperties ? CustomPropertyKind : ItemKind;
         var f = new MergeFixture
         {
             ActorCounter = 3 + random.Next(4),
@@ -160,7 +191,7 @@ public class MergerFuzzTests
             return key;
         }
 
-        foreach (var kind in new[] { ItemKind, GroupKind })
+        foreach (var kind in new[] { primary, GroupKind })
         {
             // Local entities and tombstones: each key belongs to one of them at most (v3.1 §5.3).
             for (var i = random.Next(4); i > 0; i--)
@@ -175,12 +206,17 @@ public class MergerFuzzTests
                 };
                 var entity = f.Local((f.EntitiesOf(kind).Count + 1 + (kind == GroupKind ? 50 : 0)).ToString(CultureInfo.InvariantCulture),
                     key, Content(random, kind, names[random.Next(names.Length)]), RandomVv(random, f.ActorCounter),
-                    lastEditor: Editors[random.Next(3)], orderKey: kind == ItemKind ? "a" + i : null, state: state,
+                    lastEditor: Editors[random.Next(3)], orderKey: kind != GroupKind ? "a" + i : null, state: state,
                     createdBySync: random.Next(2) == 0, publishHeld: random.Next(12) == 0, seq: 5 + random.Next(20),
                     kind: kind, aliases: aliases, valueCount: random.Next(3) == 0 ? null : random.Next(2));
-                if (random.Next(2) == 0) f.Usage[(kind, entity.LocalKey)] = f.EntitiesOf(kind).Last().Content is TestItemContent item
-                    ? item.Children.ToDictionary(c => c.Id, _ => random.Next(3))
-                    : new Dictionary<string, int>();
+                if (random.Next(2) == 0)
+                {
+                    // Extensions are never in use (§8.5.3).
+                    f.Usage[(kind, entity.LocalKey)] = kind == GroupKind
+                        ? new Dictionary<string, int>()
+                        : CodecOf(kind).ChildrenOf(entity.Content).Select(c => c.Id).Distinct()
+                            .ToDictionary(id => id, _ => random.Next(3));
+                }
             }
 
             for (var i = random.Next(3); i > 0; i--)
@@ -198,7 +234,7 @@ public class MergerFuzzTests
             var kind = f.Entities.GetValueOrDefault(GroupKind)?.Any(e => e.Keys.All.Contains(key)) == true ||
                        f.Tombstones.GetValueOrDefault(GroupKind)?.Any(t => t.Keys.All.Contains(key)) == true
                 ? GroupKind
-                : ItemKind;
+                : primary;
             var record = random.Next(4) == 0
                 ? null
                 : f.Record(key, Content(random, kind, names[random.Next(names.Length)]), RandomVv(random, f.ActorCounter),
@@ -237,7 +273,7 @@ public class MergerFuzzTests
 
         // The pull: distinct keys across its records (a reader discards a pull that repeats one).
         var pulled = new HashSet<SyncKey>();
-        foreach (var kind in new[] { ItemKind, GroupKind })
+        foreach (var kind in new[] { primary, GroupKind })
         {
             for (var i = random.Next(5); i > 0; i--)
             {
@@ -258,12 +294,12 @@ public class MergerFuzzTests
                 // Sometimes exactly a local vector: row A2's verdicts.
                 if (random.Next(5) == 0 && f.EntitiesOf(kind).FirstOrDefault(e => e.Keys.All.Contains(key)) is { } same) vv = same.Vv;
                 f.Pull(f.Record(key, deleted ? null : Content(random, kind, names[random.Next(names.Length)]), vv,
-                    Editors[random.Next(Editors.Length)], deleted, kind == ItemKind ? "a" + random.Next(9) : null,
+                    Editors[random.Next(Editors.Length)], deleted, kind != GroupKind ? "a" + random.Next(9) : null,
                     aliases: aliases, kind: kind, schemaVersion: random.Next(15) == 0 ? 2 : 1), kind);
             }
         }
 
-        if (random.Next(4) == 0) f.FullReconciliation.Add(ItemKind);
+        if (random.Next(4) == 0) f.FullReconciliation.Add(primary);
         if (random.Next(6) == 0) f.LiveCounts[GroupKind] = 0;
         if (random.Next(8) == 0) f.NoPull = true;
         if (random.Next(3) == 0 && f.Bases.Count > 0)

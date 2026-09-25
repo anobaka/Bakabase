@@ -1,8 +1,10 @@
 using System.Globalization;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Canonical;
+using Bakabase.Modules.DataSync.Kinds.CustomProperties;
 using Bakabase.Modules.DataSync.Kinds.ExtensionGroups;
 using Bakabase.Modules.DataSync.Merging;
+using Bakabase.Modules.DataSync.Tests.CustomProperties;
 using Bakabase.Modules.DataSync.Tests.TestKinds;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -11,8 +13,8 @@ namespace Bakabase.Modules.DataSync.Tests.Merging;
 /// <summary>
 /// Random content for the Merge3 property tests (§13.1), per kind this package ships a codec for: the test kind
 /// (duplicate labels, renames onto a label another child has, colours set and cleared, children added, removed and
-/// moved) and extension groups (stored raw extensions in any case, with or without their dot). The custom property
-/// generators (IgnoreCase, tag groups, multilevel moves) belong to that codec's own tests.
+/// moved) and extension groups (stored raw extensions in any case, with or without their dot). Custom properties take
+/// their contents from B's own generator (<see cref="Merge3Generator"/>: IgnoreCase, tag groups, multilevel moves).
 /// </summary>
 internal sealed class MergeContentGenerator(Random random)
 {
@@ -176,6 +178,46 @@ public class FastForwardClosureTests
         Assert.AreEqual(0, failures.Count, "\n" + string.Join("\n", failures));
     }
 
+    /// <summary>
+    /// Custom properties (package B's codec) with B's generator: duplicates, IgnoreCase, <c>null</c>/<c>""</c> tag
+    /// groups, colours set and cleared, node moves and renames onto existing keys, and on the local side options this
+    /// device never publishes. The peer's names for this device's options are its own, through the child map, a third of
+    /// the time. B4 is out of the way (deletions apply): a mass deletion keeps the local content by design.
+    /// </summary>
+    [TestMethod]
+    public void FastForwardReachesTheRecordsFormForCustomProperties()
+    {
+        IDataSyncKindCodec codec = CustomPropertyCodec.Instance;
+        var failures = new List<string>();
+        for (var i = 0; i < Pairs && failures.Count < 5; i++)
+        {
+            var g = new Merge3Generator(8_5_5_000 + i);
+            var local = g.Content(g.Type(), "l");
+            var remoteRaw = g.Mutate(local, "r", g.Edits());
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (i % 3 == 1) remoteRaw = Merge3Generator.Reprefix(remoteRaw, "p", map);
+            var remote = MergeContentGenerator.Published(codec, remoteRaw);
+            local = g.Unpublishable(local, "x");
+
+            var result = codec.Merge3(new DataSyncMerge3Input(null, local, DataSyncOverlay.None, remote,
+                DataSyncMerge3Mode.FastForward, map, false, false, DataSyncLinkMode.TwoWay, true, DataSyncMergeSide.Remote,
+                MergeContentGenerator.Unused(codec, local), DataSyncChildDeletionMode.Apply));
+            // What this device publishes after the merge: a child the merge holds (a subtree holding an option that
+            // cannot be removed, such as one without a uuid, counts as in use) is withheld like any held child.
+            var held = new DataSyncOverlay([], result.HeldChildIds.Select(id => new DataSyncHeldChild(id, 1)).ToArray());
+            var expected = MergeContentGenerator.Form(codec, remote);
+            var actual = CanonicalJson.Serialize(codec.ComparisonForm(codec.Publish(result.Merged, held, false).Content!, null,
+                false));
+            if (result.TypeChanged || expected != actual)
+            {
+                failures.Add($"pair {i}:\n  L = {MergeContentGenerator.Describe(codec, local)}\n" +
+                             $"  R = {MergeContentGenerator.Describe(codec, remote)}\n  merged = {actual}\n  R's form = {expected}");
+            }
+        }
+
+        Assert.AreEqual(0, failures.Count, "\n" + string.Join("\n", failures));
+    }
+
     [TestMethod]
     public void FastForwardReachesTheRecordsFormForExtensionGroups()
     {
@@ -218,7 +260,8 @@ public class SymmetricMergeTests
         r.Fields.All(f => f.Resolution != DataSyncFieldResolution.Conflict);
 
     private static void AssertSymmetric(IDataSyncKindCodec codec, int seed,
-        Func<MergeContentGenerator, (object Base, object Local, object Remote)> triple)
+        Func<MergeContentGenerator, (object Base, object Local, object Remote)> triple,
+        DataSyncChildDeletionMode deletions = DataSyncChildDeletionMode.Normal)
     {
         var g = new MergeContentGenerator(new Random(seed));
         var failures = new List<string>();
@@ -227,9 +270,15 @@ public class SymmetricMergeTests
         {
             var (b, l, r) = triple(g);
             var here = codec.Merge3(MergeContentGenerator.Input(codec, b, l, MergeContentGenerator.Published(codec, r),
-                DataSyncMerge3Mode.ThreeWay, new Dictionary<string, string>(), DataSyncMergeSide.Remote));
+                DataSyncMerge3Mode.ThreeWay, new Dictionary<string, string>(), DataSyncMergeSide.Remote) with
+            {
+                ChildDeletions = deletions,
+            });
             var there = codec.Merge3(MergeContentGenerator.Input(codec, b, r, MergeContentGenerator.Published(codec, l),
-                DataSyncMerge3Mode.ThreeWay, new Dictionary<string, string>(), DataSyncMergeSide.Local));
+                DataSyncMerge3Mode.ThreeWay, new Dictionary<string, string>(), DataSyncMergeSide.Local) with
+            {
+                ChildDeletions = deletions,
+            });
             if (!Settles(here) || !Settles(there)) continue;
             settled++;
             var formHere = MergeContentGenerator.Form(codec, here.Merged);
@@ -256,6 +305,23 @@ public class SymmetricMergeTests
             var b = (TestItemContent)MergeContentGenerator.Published(codec, g.Item("B"));
             return (b, g.Edit(b, "L"), g.Edit(b, "R"));
         });
+    }
+
+    /// <summary>
+    /// Custom properties (package B's codec) from one base with B's generator, each side with options of its own that
+    /// it never publishes. The known failures of this property are pinned in <c>Merge3PropertyTests</c>.
+    /// </summary>
+    [TestMethod]
+    public void BothOrdersGiveOneFormForCustomProperties()
+    {
+        IDataSyncKindCodec codec = CustomPropertyCodec.Instance;
+        var index = 0;
+        AssertSymmetric(codec, 8_5_6, _ =>
+        {
+            var g = new Merge3Generator(8_5_6_000 + index++);
+            var b = (CustomPropertyContentV1)MergeContentGenerator.Published(codec, g.Content(g.Type(), "b"));
+            return (b, g.Unpublishable(g.Mutate(b, "l", g.Edits()), "xl"), g.Unpublishable(g.Mutate(b, "r", g.Edits()), "xr"));
+        }, DataSyncChildDeletionMode.Apply);
     }
 
     [TestMethod]

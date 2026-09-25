@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Canonical;
 using Bakabase.Modules.DataSync.Identity;
+using Bakabase.Modules.DataSync.Kinds.CustomProperties;
 using Bakabase.Modules.DataSync.Kinds.ExtensionGroups;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Tests.TestKinds;
@@ -33,6 +34,8 @@ internal sealed class MergeFixture
     public static readonly IDataSyncKindCodec Groups = ExtensionGroupCodec.Instance;
     public const string ItemKind = TestItemCodec.Kind;
     public const string GroupKind = DataSyncKindIds.ExtensionGroup;
+    public static readonly IDataSyncKindCodec CustomProperties = CustomPropertyCodec.Instance;
+    public const string CustomPropertyKind = DataSyncKindIds.CustomProperty;
 
     public readonly Dictionary<string, List<DataSyncLocalEntityState>> Entities = new(StringComparer.Ordinal);
     public readonly Dictionary<string, List<DataSyncTombstoneState>> Tombstones = new(StringComparer.Ordinal);
@@ -73,7 +76,8 @@ internal sealed class MergeFixture
     public static TestItemContent T(string name, string? color, string? type, params (string Id, string Label)[] children) =>
         new(name, color, children.Select(c => new TestChild(c.Id, c.Label)), type);
 
-    public static IDataSyncKindCodec CodecOf(string kind) => kind == GroupKind ? Groups : Items;
+    public static IDataSyncKindCodec CodecOf(string kind) =>
+        kind == GroupKind ? Groups : kind == CustomPropertyKind ? CustomProperties : Items;
 
     // ---- local state -----------------------------------------------------------------------------
 
@@ -168,9 +172,11 @@ internal sealed class MergeFixture
     // ---- the input ---------------------------------------------------------------------------------
 
     public DataSyncLinkContext Link() => new(LinkId, PeerNode, "PC-1", Mode, EffectiveMode ?? Mode,
-        [ItemKind, GroupKind], FirstContactKinds, false, Self,
+        [ItemKind, GroupKind, CustomPropertyKind], FirstContactKinds, false, Self,
         new Dictionary<string, long>(RetiredCounters) { [Self.Value] = ActorCounter }, PeerActorId,
-        PeerComparisonFormVersion is { } v ? new Dictionary<string, int> { [ItemKind] = v, [GroupKind] = v } : new Dictionary<string, int>(),
+        PeerComparisonFormVersion is { } v
+            ? new Dictionary<string, int> { [ItemKind] = v, [GroupKind] = v, [CustomPropertyKind] = v }
+            : new Dictionary<string, int>(),
         LinkFlags);
 
     public DataSyncStagedPull? StagedPull()
@@ -205,7 +211,8 @@ internal sealed class MergeFixture
         Entities.Keys.Union(Tombstones.Keys).Distinct().ToDictionary(k => k,
             k => new DataSyncLocalKindState(k, Entities.GetValueOrDefault(k) ?? [], Tombstones.GetValueOrDefault(k) ?? [])),
         new Dictionary<(string, SyncKey), DataSyncPeerBase>(Bases), PendingToMerge.ToList(),
-        new Dictionary<string, IDataSyncKindCodec> { [ItemKind] = ItemCodec, [GroupKind] = Groups },
+        new Dictionary<string, IDataSyncKindCodec>
+            { [ItemKind] = ItemCodec, [GroupKind] = Groups, [CustomPropertyKind] = CustomProperties },
         new Dictionary<(string, string), IReadOnlyDictionary<string, int>>(Usage),
         new Dictionary<(string, string), int>(ValueCounts), OpenItems.ToList(), Policy, Limits,
         OpenStateItems.Count == 0 ? null : OpenStateItems.ToList());
