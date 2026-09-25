@@ -74,6 +74,7 @@ jobs:
             "src/tests/Bakabase.Modules.Collection.Tests/Bakabase.Modules.Collection.Tests.csproj"
             "src/tests/Bakabase.Modules.BulkModification.Tests/Bakabase.Modules.BulkModification.Tests.csproj"
             "src/tests/Bakabase.Modules.Comparison.Tests/Bakabase.Modules.Comparison.Tests.csproj"
+            "src/tests/Bakabase.Modules.DataSync.Tests/Bakabase.Modules.DataSync.Tests.csproj"
             "src/tests/Bakabase.Modules.Enhancer.Tests/Bakabase.Modules.Enhancer.Tests.csproj"
             "src/tests/Bakabase.Modules.Federation.Tests/Bakabase.Modules.Federation.Tests.csproj"
             "src/tests/Bakabase.Modules.HealthScore.Tests/Bakabase.Modules.HealthScore.Tests.csproj"
