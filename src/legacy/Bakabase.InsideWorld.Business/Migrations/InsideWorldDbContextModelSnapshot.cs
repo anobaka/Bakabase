@@ -2861,6 +2861,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int>("LinkId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("PendingAppliedBaseJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<long?>("PendingEvaluatedLocalSeq")
                         .HasColumnType("INTEGER");
 

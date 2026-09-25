@@ -38,7 +38,10 @@ public sealed partial class DataSyncStore
                          throw new System.IO.InvalidDataException(
                              $"Base {row.Id} has a pending reason but no pending record.");
             pending = new DataSyncPendingRecord(record, row.PendingRecordHash ?? "", reason,
-                row.PendingEvaluatedLocalSeq ?? 0, DataSyncStoredJson.ReadFlags(row.PendingFlagsJson, "PendingFlagsJson"));
+                row.PendingEvaluatedLocalSeq ?? 0, DataSyncStoredJson.ReadFlags(row.PendingFlagsJson, "PendingFlagsJson"),
+                string.IsNullOrEmpty(row.PendingAppliedBaseJson)
+                    ? null
+                    : DataSyncStoredJson.Read<DataSyncAppliedBase>(row.PendingAppliedBaseJson, "PendingAppliedBaseJson"));
         }
 
         return new DataSyncPeerBase(row.Kind, new SyncKey(row.SyncKey), row.State, row.ExclusionReason,
@@ -203,6 +206,37 @@ public sealed partial class DataSyncStore
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Excludes <paramref name="keys"/> on one link under the base row keyed <paramref name="key"/> (§8.11 undo, [Include]
+    /// reverses it): the row is created when missing, its exclusion keys take <paramref name="key"/>, the given keys and
+    /// the keys of the record it held (agreed or pending), and its pending record is cleared. The last agreement stays.
+    /// </summary>
+    internal async Task ExcludeAsync(int linkId, string kind, string key, DataSyncExclusionReason reason,
+        IEnumerable<string> keys, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(keys);
+        await FlushAsync(ct);
+        var row = await _db.DataSyncPeerBases.SingleOrDefaultAsync(
+            b => b.LinkId == linkId && b.Kind == kind && b.SyncKey == key, ct);
+        if (row is null)
+        {
+            row = new DataSyncPeerBaseDbModel {LinkId = linkId, Kind = kind, SyncKey = key};
+            _db.DataSyncPeerBases.Add(row);
+        }
+
+        var exclusionKeys = new SortedSet<string>(
+            DataSyncStoredJson.ReadStrings(row.ExclusionKeysJson, "ExclusionKeysJson"), StringComparer.Ordinal) {key};
+        exclusionKeys.UnionWith(keys);
+        exclusionKeys.UnionWith(DataSyncStoredJson.ReadRecordKeys(row.RecordJson));
+        exclusionKeys.UnionWith(DataSyncStoredJson.ReadRecordKeys(row.PendingRecordJson));
+        row.State = DataSyncBaseState.Excluded;
+        row.ExclusionReason = reason;
+        row.ExclusionKeysJson = DataSyncStoredJson.Write(exclusionKeys.ToList());
+        ClearPending(row);
+        row.UpdatedAtUtc = UtcNow;
+        await _db.SaveChangesAsync(ct);
+    }
+
     internal static void SetPending(DataSyncPeerBaseDbModel row, DataSyncPendingRecord pending)
     {
         row.PendingRecordJson = DataSyncStoredJson.Write(pending.Record);
@@ -211,6 +245,8 @@ public sealed partial class DataSyncStore
         row.PendingReason = pending.Reason;
         row.PendingEvaluatedLocalSeq = pending.EvaluatedAtLocalSeq;
         row.PendingFlagsJson = DataSyncStoredJson.WriteFlags(pending.Flags);
+        // What a conflicted merge applied stays with the row until the base advances (§8.4 row K6).
+        row.PendingAppliedBaseJson = pending.AppliedBase is null ? null : DataSyncStoredJson.Write(pending.AppliedBase);
     }
 
     internal static void ClearPending(DataSyncPeerBaseDbModel row)
@@ -221,6 +257,7 @@ public sealed partial class DataSyncStore
         row.PendingReason = null;
         row.PendingEvaluatedLocalSeq = null;
         row.PendingFlagsJson = null;
+        row.PendingAppliedBaseJson = null;
     }
 
     /// <summary>

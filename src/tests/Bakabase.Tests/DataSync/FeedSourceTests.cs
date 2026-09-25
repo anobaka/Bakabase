@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Bakabase.Tests.DataSync.DataSyncFeedFixture;
+using DataSyncRestoreEvidence = Bakabase.InsideWorld.Business.Components.DataSync.Persistence.DataSyncRestoreEvidence;
 
 namespace Bakabase.Tests.DataSync;
 

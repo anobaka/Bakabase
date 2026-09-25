@@ -72,7 +72,23 @@ public static class DataSyncServiceCollectionExtensions
 
         // Kind adapters register next to the services that own their tables: the custom property kind in the Property
         // module, the extension group kind through AddExtensionGroupDataSyncKind(codec) with the pure engine's codec.
-        // Refresh of a kind with an order needs an IDataSyncOrderMoveDetector over the engine's order planner.
+        // Refresh of a kind with an order detects local moves with the engine's order planner.
+        services.TryAddSingleton<IDataSyncOrderMoveDetector, DataSyncPlannerOrderMoveDetector>();
+
+        // Apply, undo and restore (§8.10, §8.11, §9.2, §9.5): the runner is process-wide and opens a scope per attempt.
+        services.TryAddSingleton<DataSyncTaskRegistry>();
+        services.TryAddSingleton<IDataSyncTaskRegistry>(sp => sp.GetRequiredService<DataSyncTaskRegistry>());
+        services.TryAddSingleton<DataSyncBackup>(sp => new DataSyncBackup(sp.GetRequiredService<IDataSyncDataDirectory>(),
+            sp.GetService<TimeProvider>()));
+        services.TryAddSingleton<DataSyncUndoPlanner>(sp =>
+            new DataSyncUndoPlanner(sp.GetRequiredService<IServiceScopeFactory>()));
+        services.TryAddSingleton<DataSyncApplyRunner>(sp => new DataSyncApplyRunner(sp,
+            sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<DataSyncGate>(),
+            sp.GetRequiredService<DataSyncActorGuard>(), sp.GetRequiredService<DataSyncActorWatermarkFile>(),
+            sp.GetRequiredService<IDataSyncTaskRegistry>(), sp.GetRequiredService<IDataSyncReviewStore>(),
+            sp.GetRequiredService<DataSyncBackup>(), sp.GetService<DataSyncRefreshCoordinator>(),
+            sp.GetService<ILogger<DataSyncApplyRunner>>()));
+        services.TryAddSingleton<IDataSyncApplyRunner>(sp => sp.GetRequiredService<DataSyncApplyRunner>());
 
         services.AddDataSyncRuntime();
         return services;

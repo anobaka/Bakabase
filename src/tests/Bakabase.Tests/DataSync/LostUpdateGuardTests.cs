@@ -17,6 +17,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Bakabase.Tests.DataSync.DataSyncRefreshFixture;
+using DataSyncChildChange = Bakabase.InsideWorld.Business.Components.DataSync.Apply.DataSyncChildChange;
+using DataSyncLostUpdateGuard = Bakabase.InsideWorld.Business.Components.DataSync.Persistence.DataSyncLostUpdateGuard;
+using DataSyncScalarChange = Bakabase.InsideWorld.Business.Components.DataSync.Apply.DataSyncScalarChange;
 
 namespace Bakabase.Tests.DataSync;
 

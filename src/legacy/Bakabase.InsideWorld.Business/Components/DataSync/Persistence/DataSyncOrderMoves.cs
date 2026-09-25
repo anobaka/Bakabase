@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using Bakabase.Modules.DataSync.Ordering;
 
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 
@@ -26,4 +29,21 @@ public interface IDataSyncOrderMoveDetector
     /// <returns>Local key → new order key, only for the entities whose key changes.</returns>
     IReadOnlyDictionary<string, string> DetectMoves(IReadOnlyList<DataSyncOrderMoveEntry> localOrder,
         int maxOrderKeyLength);
+}
+
+/// <summary>
+/// The production move detection: the pure engine's <see cref="DataSyncOrderPlanner.DetectMoves"/> (package A). An
+/// entry Refresh creates in the same run has no key yet and no order key either, so its tie key only has to be
+/// distinct: its local key is used.
+/// </summary>
+public sealed class DataSyncPlannerOrderMoveDetector : IDataSyncOrderMoveDetector
+{
+    public IReadOnlyDictionary<string, string> DetectMoves(IReadOnlyList<DataSyncOrderMoveEntry> localOrder,
+        int maxOrderKeyLength)
+    {
+        ArgumentNullException.ThrowIfNull(localOrder);
+        return DataSyncOrderPlanner.DetectMoves(
+            localOrder.Select(e => new DataSyncOrderEntry(e.LocalKey, e.OrderKey, e.TieKey ?? e.LocalKey)).ToList(),
+            maxOrderKeyLength);
+    }
 }

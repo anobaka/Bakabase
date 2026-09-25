@@ -82,9 +82,17 @@ public sealed record DataSyncScalarChange(string Path, JsonNode? Before, JsonNod
 /// <param name="Path">The merge path the change came from (§8.5.1), shown on an item.</param>
 /// <param name="BeforeContent">
 /// The child's own local JSON before the apply, without its children: what undo writes back for a removed child.
+/// A child that is a bare value (an extension) has it as <c>{"value": …}</c>.
 /// </param>
+/// <param name="AfterContent">The child's own local JSON after the apply: what "Put the synced change back" writes (§6.5).</param>
+/// <param name="BeforeContainer">
+/// The member that held the child before the apply (<c>choices</c>, <c>children</c>…), under its parent or at the
+/// top level, and <paramref name="BeforeIndex"/> its place there: where undo puts a removed child back.
+/// </param>
+/// <param name="AfterContainer">Likewise after the apply, with <paramref name="AfterIndex"/>.</param>
 public sealed record DataSyncChildChange(string Path, DataSyncChildInfo? Before, DataSyncChildInfo? After,
-    JsonObject? BeforeContent = null)
+    JsonObject? BeforeContent = null, JsonObject? AfterContent = null, string? BeforeContainer = null,
+    int? BeforeIndex = null, string? AfterContainer = null, int? AfterIndex = null)
 {
     [JsonIgnore]
     public string ChildId => (After ?? Before ?? throw new InvalidOperationException("A child change names a child.")).Id;

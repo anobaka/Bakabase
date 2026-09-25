@@ -225,6 +225,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     PendingReason = table.Column<int>(type: "INTEGER", nullable: true),
                     PendingEvaluatedLocalSeq = table.Column<long>(type: "INTEGER", nullable: true),
                     PendingFlagsJson = table.Column<string>(type: "TEXT", nullable: true),
+                    PendingAppliedBaseJson = table.Column<string>(type: "TEXT", nullable: true),
                     UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
