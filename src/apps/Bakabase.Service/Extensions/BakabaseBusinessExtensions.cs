@@ -15,6 +15,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
+using Bakabase.InsideWorld.Business.Components.DataSync;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
@@ -291,6 +292,8 @@ namespace Bakabase.Service.Extensions
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();
+
+            services.AddDataSync();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SteamAppDbModel, int>>();
             services.AddScoped<ISteamAppService, SteamAppService>();
