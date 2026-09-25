@@ -1,0 +1,41 @@
+[
+  {
+    "keys": [
+      "key-1"
+    ],
+    "schemaVersion": 1,
+    "orderKey": null,
+    "content": {
+      "extensions": [
+        ".docx",
+        ".pdf"
+      ],
+      "name": "Documents"
+    }
+  },
+  {
+    "keys": [
+      "key-2"
+    ],
+    "schemaVersion": 1,
+    "orderKey": null,
+    "content": {
+      "extensions": [],
+      "name": "Nothing yet"
+    }
+  },
+  {
+    "keys": [
+      "key-3"
+    ],
+    "schemaVersion": 1,
+    "orderKey": null,
+    "content": {
+      "extensions": [
+        ".mkv",
+        ".mp4"
+      ],
+      "name": "Video"
+    }
+  }
+]

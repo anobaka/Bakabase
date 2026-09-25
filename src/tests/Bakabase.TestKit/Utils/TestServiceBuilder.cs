@@ -22,6 +22,7 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
@@ -30,6 +31,8 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZ
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
 using Bakabase.Modules.ThirdParty.Extensions;
@@ -37,6 +40,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using Bakabase.Service.Extensions;
+using Bakabase.TestKit.DataSync;
 using Bakabase.TestKit.Implementations;
 using Bootstrap.Components.Configuration;
 using Bootstrap.Components.DependencyInjection;
@@ -198,6 +202,13 @@ public static class TestServiceBuilder
 
         // AppService (used by SevenZipService and other dependency components)
         services.AddSingleton<Bakabase.Infrastructures.Components.App.AppService>();
+
+        // Data sync (spec §2.11, §4.7): a per-provider device identity and a desktop host kind, with TryAdd, and
+        // this provider's own data sync folders, with AddSingleton so they win over AddDataSync()'s default
+        // (AppService's data directory is shared by every provider of the process).
+        services.TryAddSingleton<IDataSyncDeviceIdentity>(_ => new TestDataSyncDeviceIdentity());
+        services.TryAddSingleton<IDataSyncHostKind>(_ => new TestDataSyncHostKind());
+        services.AddSingleton<IDataSyncDataDirectory>(FixedDataSyncDataDirectory.Under(testDir));
 
         // Auto-register all [Options]-attributed types as default IBOptions/IBOptionsManager
         // (mirrors what ConfigurationRegistrations does in production, but with empty values).

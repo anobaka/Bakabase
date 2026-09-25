@@ -12,6 +12,7 @@ using Bakabase.Modules.HealthScore.Models.Db;
 using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.Comparison.Models.Db;
 using Bakabase.Modules.DataCard.Abstractions.Models.Db;
+using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.Notification.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Subscription.Abstractions.Models.Db;
@@ -142,6 +143,16 @@ namespace Bakabase.InsideWorld.Business
             CollectionResourceMappings { get; set; }
 
         public DbSet<ResourceMatchSuggestionDbModel> ResourceMatchSuggestions { get; set; }
+
+        // Data sync state (spec §4). Never synced itself: see DataSyncDbSetClassification.
+        public DbSet<DataSyncEntityDbModel> DataSyncEntities { get; set; }
+        public DbSet<DataSyncKeyAliasDbModel> DataSyncKeyAliases { get; set; }
+        public DbSet<DataSyncApplyLogDbModel> DataSyncApplyLogs { get; set; }
+        public DbSet<DataSyncLinkDbModel> DataSyncLinks { get; set; }
+        public DbSet<DataSyncPeerBaseDbModel> DataSyncPeerBases { get; set; }
+        public DbSet<DataSyncInboxItemDbModel> DataSyncInboxItems { get; set; }
+        public DbSet<DataSyncLocalStateDbModel> DataSyncLocalStates { get; set; }
+        public DbSet<DataSyncReaderDbModel> DataSyncReaders { get; set; }
 
         public BakabaseDbContext()
         {
@@ -561,6 +572,43 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => x.Status);
                 t.HasIndex(x => x.ResourceId);
             });
+
+            // Data sync (spec §4.2). The unique indexes do not span the entity and alias tables: the rule "a key
+            // is used once per kind" is DataSyncIdentityStore's (§5.3).
+            modelBuilder.Entity<DataSyncEntityDbModel>(t =>
+            {
+                t.HasIndex(x => new { x.Kind, x.SyncKey }).IsUnique();
+                t.HasIndex(x => new { x.Kind, x.LocalKey }).IsUnique().HasFilter("\"DeletedAtUtc\" IS NULL");
+                t.HasIndex(x => new { x.Kind, x.Seq });
+            });
+            modelBuilder.Entity<DataSyncKeyAliasDbModel>(t =>
+            {
+                t.HasIndex(x => new { x.Kind, x.AliasKey }).IsUnique();
+                t.HasIndex(x => new { x.Kind, x.SyncKey });
+            });
+            modelBuilder.Entity<DataSyncApplyLogDbModel>(t =>
+            {
+                t.HasIndex(x => x.AppliedAtUtc);
+                t.HasIndex(x => x.LinkId);
+            });
+            modelBuilder.Entity<DataSyncLinkDbModel>(t => t.HasIndex(x => x.PeerNodeId).IsUnique());
+            modelBuilder.Entity<DataSyncPeerBaseDbModel>(t =>
+            {
+                t.HasIndex(x => new { x.LinkId, x.Kind, x.SyncKey }).IsUnique();
+                t.HasIndex(x => new { x.LinkId, x.PendingReason }).HasFilter("\"PendingReason\" IS NOT NULL");
+            });
+            modelBuilder.Entity<DataSyncInboxItemDbModel>(t =>
+            {
+                // One open item per subject per link, and per subject for items that belong to no link (SQLite
+                // treats NULLs as distinct, so the second index covers them).
+                t.HasIndex(x => new { x.LinkId, x.Kind, x.SyncKey, x.Type, x.SubjectPath }).IsUnique()
+                    .HasFilter("\"ClosedAtUtc\" IS NULL AND \"LinkId\" IS NOT NULL");
+                t.HasIndex(x => new { x.Kind, x.SyncKey, x.Type, x.SubjectPath }).IsUnique()
+                    .HasFilter("\"ClosedAtUtc\" IS NULL AND \"LinkId\" IS NULL");
+                t.HasIndex(x => new { x.Kind, x.SyncKey });
+                t.HasIndex(x => x.ClosedAtUtc);
+            });
+            modelBuilder.Entity<DataSyncReaderDbModel>(t => t.HasKey(x => x.NodeId));
         }
     }
 }
