@@ -43,7 +43,8 @@ public sealed class FederationDataSyncPairingController(FederationPeerService pe
 
     /// <summary>
     /// A datasync code grants at once. When the code's creator agreed to two-way and the redeemer asked for it, this
-    /// device reads the redeemer back (<c>ReadBack = "started"</c>), as a library code does (F68).
+    /// device reads the redeemer back (<c>ReadBack = "started"</c>), as a library code does (F68): in the background,
+    /// after data sync has heard of the grant, so the creator's link exists before it hears how the read-back went.
     /// </summary>
     [HttpPost("code")]
     [SwaggerOperation(OperationId = "ExchangeFederationDataSyncInvitation")]
@@ -55,10 +56,10 @@ public sealed class FederationDataSyncPairingController(FederationPeerService pe
         if (issued && exchange.Outcome == "granted")
         {
             var readBack = exchange.ReadBack == NodeDataSyncReadBack.Started;
-            if (readBack) flow.ReadBackDataSync(request.NodeId);
             flow.RaiseInboundGranted(request.NodeId,
                 intent == NodeDataSyncIntents.TwoWay ? DataSyncRequestIntent.TwoWay : DataSyncRequestIntent.Follow,
                 readBack);
+            if (readBack) flow.ReadBackDataSync(request.NodeId);
         }
         return FederationResult(exchange);
     }

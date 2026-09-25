@@ -600,6 +600,10 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
         CancellationToken ct = default) =>
         await store.MutateAsync(state => TakeOffer(state.IncomingDataSyncRequests, nodeId), ct);
 
+    /// <summary>Whether this device holds <c>datasync.read</c> credentials for the device: whether it may read it.</summary>
+    public async Task<bool> HasOutboundDataSyncGrantAsync(string nodeId, CancellationToken ct = default) =>
+        (await store.ReadAsync(ct)).OutboundDataSyncGrants.ContainsKey(nodeId);
+
     /// <summary>Stops a device reading this device's definitions: its live datasync grants and their leases.</summary>
     public async Task RevokeDataSyncAsync(string nodeId, CancellationToken ct = default)
     {

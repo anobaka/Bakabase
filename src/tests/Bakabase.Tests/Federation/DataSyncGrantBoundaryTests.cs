@@ -13,7 +13,8 @@ namespace Bakabase.Tests.Federation;
 /// Data sync reaches federation only through <see cref="FederationDataSyncGrants"/>, and that bridge never touches
 /// library access (§7.1.5, G29): every member of the federation services it calls is a definitions member or one
 /// that belongs to neither kind of access. Read from the compiled code, lambdas and async bodies included, so a
-/// later edit cannot quietly add a path from <c>/data-sync</c> to library grants.
+/// later edit cannot quietly add a path from <c>/data-sync</c> to library grants. The federation module itself
+/// never references data sync.
 /// </summary>
 [TestClass]
 public sealed class DataSyncGrantBoundaryTests
@@ -70,6 +71,23 @@ public sealed class DataSyncGrantBoundaryTests
             Assert.IsFalse(call.DeclaringType == typeof(FederationPeerService) &&
                            call.Name.Contains("DataSync", StringComparison.Ordinal),
                 $"{method.Name} calls {call.Name}");
+    }
+
+    /// <summary>
+    /// The other direction (§1, N2): the federation module knows nothing of data sync. Grants it issues or obtains
+    /// reach the data sync runtime only through the Service's pairing flow, which raises the grant events.
+    /// </summary>
+    [TestMethod]
+    public void TheFederationModuleNeverReferencesDataSync()
+    {
+        var module = typeof(FederationPeerService).Assembly;
+        var referenced = module.GetReferencedAssemblies().Select(a => a.Name!).ToArray();
+        Assert.IsTrue(referenced.Contains("Bakabase.Modules.RemoteAccess"), "The scan reads the module's real references.");
+        Assert.IsFalse(referenced.Any(name => name.StartsWith("Bakabase.Modules.DataSync", StringComparison.Ordinal)),
+            string.Join(", ", referenced));
+        // The claim loop hands data sync what it claimed as plain node ids.
+        Assert.AreEqual(typeof(Task<IReadOnlyList<string>>),
+            typeof(NodePairingClient).GetMethod(nameof(NodePairingClient.ClaimPendingDataSyncAsync))!.ReturnType);
     }
 
     /// <summary>Every method called by <paramref name="type"/>'s code, including its nested compiler-made types.</summary>

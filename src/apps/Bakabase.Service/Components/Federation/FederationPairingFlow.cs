@@ -93,7 +93,8 @@ public sealed class FederationPairingFlow(NodePairingClient pairing, FederationP
 
     /// <summary>
     /// <see cref="ReadBackDataSyncAsync"/> in the background: a code redeemed two-way is answered at once, and the
-    /// reading back follows (best effort, §7.2.4).
+    /// reading back follows (best effort, §7.2.4). Raise <see cref="RaiseInboundGranted"/> first, so data sync hears
+    /// of the grant before it hears how the read-back went.
     /// </summary>
     public void ReadBackDataSync(string nodeId) => _ = Task.Run(async () =>
     {
@@ -103,32 +104,51 @@ public sealed class FederationPairingFlow(NodePairingClient pairing, FederationP
 
     /// <summary>
     /// Takes the offer of a device this node just granted two-way definitions access, and redeems its datasync code
-    /// at each address it gave until one works, asking only to follow it (§7.2.4 step 4). A granted read-back is
-    /// told to data sync as this device's own new access.
+    /// at each address it gave until one works, asking only to follow it (§7.2.4 step 4). Data sync hears how it
+    /// went: a granted read-back as this device's own new access (<see cref="IDataSyncGrantEvents.OutboundGranted"/>),
+    /// a failed one as <see cref="IDataSyncGrantEvents.ReadBackFailed"/>, so the approver's link can say why it still
+    /// waits for access (N14). A device this one already reads needs nothing more, whatever became of the offer.
     /// </summary>
-    /// <returns>Whether this device may now read the device's definitions; if not, the last error's code.</returns>
+    /// <returns>
+    /// Whether this device may now read the device's definitions; if not, why: a <see cref="DataSyncPeerErrorCode"/>
+    /// name (<see cref="DataSyncPeerErrorCode.AccessMissing"/> when there was no offer to take), or
+    /// <see cref="Bakabase.Modules.DataSync.Services.DataSyncProblemCode.InvitationInvalid"/> when the device refused
+    /// its own code.
+    /// </returns>
     public async Task<(bool Granted, string? ErrorCode)> ReadBackDataSyncAsync(string nodeId, CancellationToken ct)
     {
         var offer = await peers.TakeDataSyncReciprocalOfferAsync(nodeId, ct);
-        if (offer == null) return (false, "NoReciprocalOffer");
-        string? error = null;
-        foreach (var address in offer.Addresses)
+        var error = nameof(DataSyncPeerErrorCode.AccessMissing);
+        foreach (var address in offer?.Addresses ?? [])
         {
             try
             {
-                var outcome = await pairing.ConnectDataSyncAsync(address, offer.Code, NodeDataSyncIntents.Follow,
+                var outcome = await pairing.ConnectDataSyncAsync(address, offer!.Code, NodeDataSyncIntents.Follow,
                     DataSyncContractOfThisBuild, expectedNodeId: nodeId, ct: ct);
-                if (outcome.Outcome != "granted") return (false, outcome.Outcome);
-                RaiseOutboundGranted(nodeId);
-                return (true, null);
+                if (outcome.Outcome == "granted")
+                {
+                    RaiseOutboundGranted(nodeId);
+                    return (true, null);
+                }
+                // A reciprocal code grants at once; anything else means the device no longer honours it.
+                error = nameof(DataSyncPeerErrorCode.AccessRevoked);
+                break;
             }
             catch (FederationAccessException e)
             {
-                error = e.ErrorCode;
+                error = FederationDataSyncGrants.ErrorCodeOf(e);
                 logger.LogInformation("Reading back the definitions of {NodeId} at {Address} failed: {Code}", nodeId,
                     address, e.ErrorCode);
             }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                // Best effort: the grant this device issued stands whatever happens here.
+                error = nameof(DataSyncPeerErrorCode.InvalidResponse);
+                logger.LogWarning(e, "Reading back the definitions of {NodeId} at {Address} failed", nodeId, address);
+            }
         }
+        if (await peers.HasOutboundDataSyncGrantAsync(nodeId, ct)) return (true, null);
+        RaiseReadBackFailed(nodeId, error);
         return (false, error);
     }
 
@@ -136,8 +156,15 @@ public sealed class FederationPairingFlow(NodePairingClient pairing, FederationP
     public void RaiseOutboundGranted(string peerNodeId) => Raise(events => events.OutboundGranted(peerNodeId));
 
     /// <summary>This device granted a device <c>datasync.read</c>.</summary>
+    /// <param name="readBackStarted">
+    /// The grant is two-way and this device reads the device back: raised before that read-back, which then raises
+    /// <see cref="RaiseOutboundGranted"/> or the failure.
+    /// </param>
     public void RaiseInboundGranted(string peerNodeId, DataSyncRequestIntent intent, bool readBackStarted) =>
         Raise(events => events.InboundGranted(peerNodeId, intent, readBackStarted));
+
+    private void RaiseReadBackFailed(string peerNodeId, string errorCode) =>
+        Raise(events => events.ReadBackFailed(peerNodeId, errorCode));
 
     private void Raise(Action<IDataSyncGrantEvents> raise)
     {

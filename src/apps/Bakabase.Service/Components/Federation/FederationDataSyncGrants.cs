@@ -130,6 +130,12 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
     /// and this device reads the requester back (best effort: a failure is reported, the grant stands). Without it,
     /// the offer is dropped unused.
     /// </summary>
+    /// <remarks>
+    /// Data sync hears of the grant before the read-back starts, announcing it, and then of how the read-back went
+    /// (<see cref="FederationPairingFlow.ReadBackDataSyncAsync"/>): a two-way request approved to receive back makes
+    /// the approver's link even when the read-back then fails (N14). Approving again reads back again only while the
+    /// offer is still there; a device this one already reads counts as read back.
+    /// </remarks>
     public async Task<DataSyncApprovalOutcome> ApproveAsync(string requestId, bool readBack, CancellationToken ct)
     {
         RequireRemoteAccess();
@@ -143,16 +149,12 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
             throw LocalProblem(e);
         }
         var intent = IntentOf(approval.Intent);
+        var receiveBack = intent == DataSyncRequestIntent.TwoWay && readBack;
+        flow.RaiseInboundGranted(approval.NodeId, intent, receiveBack);
         var readBackGranted = false;
         string? readBackError = null;
-        if (intent == DataSyncRequestIntent.TwoWay && readBack)
-        {
-            if (approval.HasReciprocal)
-                (readBackGranted, readBackError) = await flow.ReadBackDataSyncAsync(approval.NodeId, ct);
-            else readBackError = "NoReciprocalOffer";
-        }
+        if (receiveBack) (readBackGranted, readBackError) = await flow.ReadBackDataSyncAsync(approval.NodeId, ct);
         else if (approval.HasReciprocal) await peers.TakeDataSyncReciprocalOfferAsync(approval.NodeId, ct);
-        flow.RaiseInboundGranted(approval.NodeId, intent, readBackGranted);
         return new DataSyncApprovalOutcome(approval.NodeId,
             await peers.GetPeerNameAsync(approval.NodeId, ct) ?? approval.NodeName, intent, readBackGranted,
             readBackError);
@@ -195,8 +197,8 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
             input.AllowTwoWay);
     }
 
-    public async Task<bool> HasOutboundGrantAsync(string peerNodeId, CancellationToken ct) =>
-        (await peers.GetDataSyncStatusAsync(ct)).Peers.Any(p => p.NodeId == peerNodeId && p.WeMayRead);
+    public Task<bool> HasOutboundGrantAsync(string peerNodeId, CancellationToken ct) =>
+        peers.HasOutboundDataSyncGrantAsync(peerNodeId, ct);
 
     public Task ForgetOutboundAsync(string peerNodeId, CancellationToken ct) =>
         peers.ForgetOutboundDataSyncAsync(peerNodeId, ct);
@@ -274,6 +276,17 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
         "NodeResponseTooLarge" => new DataSyncPeerException(DataSyncPeerErrorCode.TooLarge, e.Message),
         _ when e.StatusCode == 503 => new DataSyncPeerException(DataSyncPeerErrorCode.Unreachable, e.Message),
         _ => new DataSyncPeerException(DataSyncPeerErrorCode.InvalidResponse, e.Message)
+    };
+
+    /// <summary>
+    /// <see cref="MapPeer"/> as the one word data sync keeps for it: a <see cref="DataSyncPeerErrorCode"/> name, or a
+    /// <see cref="DataSyncProblemCode"/> name for this device's own refusals on the way.
+    /// </summary>
+    internal static string ErrorCodeOf(FederationAccessException e) => MapPeer(e) switch
+    {
+        DataSyncPeerException peer => peer.Code.ToString(),
+        DataSyncProblemException problem => problem.Problem.Code.ToString(),
+        _ => nameof(DataSyncPeerErrorCode.InvalidResponse)
     };
 
     /// <summary>This device's own peer service refusing a change of definitions access.</summary>

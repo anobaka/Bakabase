@@ -140,4 +140,9 @@ internal sealed class RecordingGrantEvents : IDataSyncGrantEvents
     {
         lock (_raised) _raised.Add($"inbound {peerNodeId} {intent} {readBackStarted}");
     }
+
+    public void ReadBackFailed(string peerNodeId, string errorCode)
+    {
+        lock (_raised) _raised.Add($"readBackFailed {peerNodeId} {errorCode}");
+    }
 }

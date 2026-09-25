@@ -110,8 +110,9 @@ public sealed class DataSyncScopeServiceTests
             (declined.Intent, declined.ReadBackGranted, declined.ReadBackError));
         Assert.IsNull(await node.Peers.TakeDataSyncReciprocalOfferAsync("node-pc"), "The offer is never used later.");
 
+        // Asked to receive back with nothing to read back with: the approver's link still waits for access (N14).
         var nothingOffered = await node.Grants.ApproveAsync("no-offer", readBack: true, default);
-        Assert.AreEqual((false, "NoReciprocalOffer"), (nothingOffered.ReadBackGranted, nothingOffered.ReadBackError));
+        Assert.AreEqual((false, "AccessMissing"), (nothingOffered.ReadBackGranted, nothingOffered.ReadBackError));
 
         var follow = await node.Grants.ApproveAsync("follow", readBack: true, default);
         Assert.AreEqual((DataSyncRequestIntent.Follow, false, (string?)null),
@@ -119,7 +120,8 @@ public sealed class DataSyncScopeServiceTests
 
         CollectionAssert.AreEqual(new[]
         {
-            "inbound node-pc TwoWay False", "inbound node-laptop TwoWay False", "inbound node-phone Follow False"
+            "inbound node-pc TwoWay False", "inbound node-laptop TwoWay True", "readBackFailed node-laptop AccessMissing",
+            "inbound node-phone Follow False"
         }, node.Events.Raised.ToArray());
         Assert.AreEqual(0, node.Requests.Count, "Nothing connected back.");
         var grants = await node.Grants.GetGrantsAsync(default);
@@ -130,6 +132,41 @@ public sealed class DataSyncScopeServiceTests
         await node.Grants.RevokeAsync("node-pc", default);
         CollectionAssert.AreEquivalent(new[] { "node-laptop", "node-phone" },
             (await node.Grants.GetGrantsAsync(default)).Select(g => g.NodeId).ToArray());
+    }
+
+    /// <summary>
+    /// §7.2.4 and N14: a read-back that cannot reach the requester is best effort. The grant stands, the offer is used
+    /// up, data sync hears of the grant first and then why the approver's link still waits for access; approving
+    /// again tries nothing new.
+    /// </summary>
+    [TestMethod]
+    public async Task AFailedReadBackKeepsTheGrantAndSaysWhy()
+    {
+        using var node = new Node(RemoteAccessMode.Enabled);
+        await node.Grants.SetSharingEnabledAsync(true, false, default);
+        var offer = new NodeReciprocalOffer(["http://192.168.1.9:5000", "http://10.0.0.9:5000"],
+            NodeRequestSignature.RandomToken());
+        await node.Peers.SubmitDataSyncRequestAsync(new NodeDataSyncPairRequest("node-pc", "PC", "two-way",
+            NodeRequestSignature.RandomToken(), NodeDataSyncIntents.TwoWay, offer));
+
+        var approval = await node.Grants.ApproveAsync("two-way", readBack: true, default);
+
+        Assert.AreEqual(("node-pc", DataSyncRequestIntent.TwoWay, false, "Unreachable"),
+            (approval.PeerNodeId, approval.Intent, approval.ReadBackGranted, approval.ReadBackError));
+        CollectionAssert.AreEqual(new[] { "inbound node-pc TwoWay True", "readBackFailed node-pc Unreachable" },
+            node.Events.Raised.ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "GET http://192.168.1.9:5000/federation/v1/info", "GET http://10.0.0.9:5000/federation/v1/info"
+        }, node.Requests.ToArray(), "Every address offered is tried, in order.");
+        Assert.AreEqual("node-pc", (await node.Grants.GetGrantsAsync(default)).Single().NodeId, "The grant stands.");
+        Assert.IsFalse(await node.Grants.HasOutboundGrantAsync("node-pc", default));
+        Assert.IsNull(await node.Peers.TakeDataSyncReciprocalOfferAsync("node-pc"), "The offer was used up.");
+
+        var again = await node.Grants.ApproveAsync("two-way", readBack: true, default);
+        Assert.AreEqual((false, "AccessMissing"), (again.ReadBackGranted, again.ReadBackError));
+        Assert.AreEqual(2, node.Requests.Count, "Nothing is tried again without an offer.");
+        Assert.AreEqual(1, (await node.Grants.GetGrantsAsync(default)).Count, "Approving again issues nothing new.");
     }
 
     [TestMethod]

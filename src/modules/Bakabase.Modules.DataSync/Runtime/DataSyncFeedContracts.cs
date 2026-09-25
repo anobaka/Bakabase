@@ -113,11 +113,31 @@ public sealed record DataSyncApprovalOutcome(string PeerNodeId, string PeerName,
     bool ReadBackGranted, string? ReadBackError);
 
 /// <summary>Raised by D's pairing flow, handled by E's scheduler, so links react within seconds (§8.2).</summary>
+/// <remarks>
+/// For one grant this device issues, the events come in the order things happen: <see cref="InboundGranted"/> first;
+/// then, when it announced a read-back, <see cref="OutboundGranted"/> once this device may read the peer, or
+/// <see cref="ReadBackFailed"/>.
+/// </remarks>
 public interface IDataSyncGrantEvents
 {
     /// <summary>Our request or code was granted.</summary>
     void OutboundGranted(string peerNodeId);
 
     /// <summary>We granted a peer.</summary>
+    /// <param name="readBackStarted">
+    /// The grant is two-way and this device sets out to read the peer back (an approval with ReceiveBack, or a code
+    /// made with two-way consent and redeemed two-way): the approver's link is due (§8.1), whether or not that
+    /// read-back has finished or will succeed.
+    /// </param>
     void InboundGranted(string peerNodeId, DataSyncRequestIntent intent, bool readBackStarted);
+
+    /// <summary>
+    /// A read-back announced by <see cref="InboundGranted"/> did not give this device access to the peer, so the
+    /// approver's link waits for access with this failure (§7.2.4, N14). <paramref name="errorCode"/> is a
+    /// <see cref="DataSyncPeerErrorCode"/> name, or <see cref="DataSyncProblemCode.InvitationInvalid"/> when the peer
+    /// refused its own code. The default does nothing, so a handler that predates it still compiles.
+    /// </summary>
+    void ReadBackFailed(string peerNodeId, string errorCode)
+    {
+    }
 }

@@ -17,8 +17,8 @@ namespace Bakabase.Tests.Federation;
 
 /// <summary>
 /// Definitions pairing between two real nodes over HTTP, through the Service's gates, model binding and controllers
-/// (§7.2): a two-way request approved with read-back, a code made with two-way consent, the claim loop, what data
-/// sync is told, and how a device that cannot take part says so.
+/// (§7.2): a two-way request approved with read-back, a code made with two-way consent, a read-back that fails, the
+/// claim loop, what data sync is told and in which order, and how a device that cannot take part says so.
 /// </summary>
 [TestClass]
 public sealed class DataSyncPairingOverHttpTests
@@ -48,7 +48,8 @@ public sealed class DataSyncPairingOverHttpTests
         var approval = await nas.Grants.ApproveAsync(request.RequestId, readBack: true, default);
         Assert.AreEqual(("node-desk", "Desk", DataSyncRequestIntent.TwoWay, true, (string?)null),
             (approval.PeerNodeId, approval.PeerName, approval.Intent, approval.ReadBackGranted, approval.ReadBackError));
-        CollectionAssert.AreEqual(new[] { "outbound node-desk", "inbound node-desk TwoWay True" }, nas.Events.Raised.ToArray());
+        // The grant first, then how the read-back it announced went.
+        CollectionAssert.AreEqual(new[] { "inbound node-desk TwoWay True", "outbound node-desk" }, nas.Events.Raised.ToArray());
         // The desk granted the NAS through its reciprocal code: a grant made here, with nothing to read back.
         CollectionAssert.AreEqual(new[] { "inbound node-nas Follow False" }, desk.Events.Raised.ToArray());
 
@@ -67,6 +68,51 @@ public sealed class DataSyncPairingOverHttpTests
         // Neither device has library access to the other.
         Assert.IsTrue((await desk.Peers.GetStatusAsync()).Peers.All(p => p.InboundGrant == null && p.OutboundGrant == null));
         Assert.IsTrue((await nas.Peers.GetStatusAsync()).Peers.All(p => p.InboundGrant == null && p.OutboundGrant == null));
+
+        // Approving again reads nothing back and reports no failure: the NAS already reads the desk. Data sync hears
+        // of the grant again, which changes nothing for a link it already has.
+        var again = await nas.Grants.ApproveAsync(request.RequestId, readBack: true, default);
+        Assert.AreEqual((true, (string?)null), (again.ReadBackGranted, again.ReadBackError));
+        CollectionAssert.AreEqual(
+            new[] { "inbound node-desk TwoWay True", "outbound node-desk", "inbound node-desk TwoWay True" },
+            nas.Events.Raised.ToArray());
+        Assert.AreEqual(1, (await nas.Grants.GetGrantsAsync(default)).Count);
+    }
+
+    /// <summary>
+    /// §7.2.4 and N14 over HTTP: when the approver cannot read the requester back — nothing answers where the requester
+    /// said it could be read, or it stopped sharing meanwhile — the requester still gets its access, and data sync
+    /// hears of the grant and then why the approver's link waits for access.
+    /// </summary>
+    [TestMethod]
+    [DataRow(false, "Unreachable")]
+    [DataRow(true, "PeerSharingOff")]
+    public async Task AFailedReadBackLeavesTheGrantAndSaysWhy(bool reachable, string expected)
+    {
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
+        await desk.Grants.SetSharingEnabledAsync(true, false, default);
+        await nas.Grants.SetSharingEnabledAsync(true, false, default);
+        if (!reachable) desk.Remote.Addresses = [$"http://127.0.0.1:{LoopbackPortAllocator.Allocate(49000)}"];
+        await desk.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput("node-nas", nas.Address, null, DataSyncRequestIntent.TwoWay), default);
+        if (reachable) await desk.Grants.SetSharingEnabledAsync(false, false, default);
+        var request = (await nas.Grants.GetRequestsAsync(default)).Single();
+
+        var approval = await nas.Grants.ApproveAsync(request.RequestId, readBack: true, default);
+
+        Assert.AreEqual((DataSyncRequestIntent.TwoWay, false, expected),
+            (approval.Intent, approval.ReadBackGranted, approval.ReadBackError));
+        CollectionAssert.AreEqual(new[] { "inbound node-desk TwoWay True", $"readBackFailed node-desk {expected}" },
+            nas.Events.Raised.ToArray());
+        Assert.IsFalse(await nas.Grants.HasOutboundGrantAsync("node-desk", default));
+        Assert.AreEqual("node-desk", (await nas.Grants.GetGrantsAsync(default)).Single().NodeId);
+
+        // The requester collects the access it asked for all the same.
+        await desk.Flow.ClaimPendingAsync(default);
+        CollectionAssert.AreEqual(new[] { "outbound node-nas" }, desk.Events.Raised.ToArray());
+        Assert.IsTrue(await desk.Grants.HasOutboundGrantAsync("node-nas", default));
+        Assert.AreEqual(0, (await desk.Grants.GetGrantsAsync(default)).Count);
     }
 
     [TestMethod]
@@ -130,6 +176,31 @@ public sealed class DataSyncPairingOverHttpTests
         await nas.WaitForEventAsync("outbound node-desk");
         await desk.WaitForEventAsync("inbound node-nas Follow False");
         Assert.IsTrue(await nas.Grants.HasOutboundGrantAsync("node-desk", default));
+    }
+
+    /// <summary>
+    /// A code made with two-way consent answers "started" at once. When the reading back then fails, data sync hears of
+    /// it after the grant, so the creator's link can say why it waits for access (N14).
+    /// </summary>
+    [TestMethod]
+    public async Task AFailedReadBackOfARedeemedCodeIsReportedAfterTheGrant()
+    {
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
+        await nas.Grants.SetSharingEnabledAsync(true, false, default);
+        await desk.Grants.SetSharingEnabledAsync(true, false, default);
+        desk.Remote.Addresses = [$"http://127.0.0.1:{LoopbackPortAllocator.Allocate(49000)}"];
+        var invitation = await nas.Grants.CreateInvitationAsync(new DataSyncInvitationInput(true), default);
+
+        var redeemed = await desk.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput("node-nas", nas.Address, invitation.Code, DataSyncRequestIntent.TwoWay), default);
+
+        Assert.AreEqual(("granted", NodeDataSyncReadBack.Started), (redeemed.Outcome, redeemed.ReadBack));
+        await nas.WaitForEventAsync("readBackFailed node-desk Unreachable");
+        CollectionAssert.AreEqual(new[] { "inbound node-desk TwoWay True", "readBackFailed node-desk Unreachable" },
+            nas.Events.Raised.ToArray());
+        Assert.IsFalse(await nas.Grants.HasOutboundGrantAsync("node-desk", default));
+        Assert.IsTrue(await desk.Grants.HasOutboundGrantAsync("node-nas", default));
     }
 
     [TestMethod]
