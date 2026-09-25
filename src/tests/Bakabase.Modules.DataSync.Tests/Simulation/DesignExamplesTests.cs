@@ -11,11 +11,12 @@ namespace Bakabase.Modules.DataSync.Tests.Simulation;
 /// The worked examples of §9.1 (design §6.8 A–I and J–N) as fixed multi-node scenarios, plus the engineering
 /// critique's cases the test kind can express: (c) example D with concurrent and with sequential pulls, (e) a
 /// rename onto another local option's label keeps both ids, (f) a cleared colour stays cleared everywhere, and
-/// mutual Follow ending in items instead of a flip-flop. The custom-property-only cases (node moves, tag groups,
-/// IgnoreCase folding) run with B's codec.
+/// mutual Follow ending in items instead of a flip-flop. The custom-property-only cases — (a) node moves, (b) tag
+/// groups, (d) IgnoreCase folding, example D under IgnoreCase — run with B's codec
+/// (<c>DesignExamplesTests.CustomProperties.cs</c>).
 /// </summary>
 [TestClass]
-public class DesignExamplesTests
+public partial class DesignExamplesTests
 {
     private readonly SimWorld _world = new();
 
