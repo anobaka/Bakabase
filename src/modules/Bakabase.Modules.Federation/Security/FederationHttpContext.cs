@@ -1,3 +1,4 @@
+using Bakabase.Modules.Federation.Peers;
 using Microsoft.AspNetCore.Http;
 
 namespace Bakabase.Modules.Federation.Security;
@@ -8,6 +9,13 @@ public enum FederationEndpointKind { Local, Public, Export }
 public sealed class FederationEndpointAttribute(FederationEndpointKind kind) : Attribute
 {
     public FederationEndpointKind Kind { get; } = kind;
+
+    /// <summary>
+    /// Export endpoints only: the grant scope that may reach the action — <see cref="FederationScopes.LibraryRead"/>,
+    /// <see cref="FederationScopes.DataSyncRead"/>, or <see cref="FederationScopes.Any"/> for the handshake.
+    /// Every Export action declares one; Local and Public endpoints declare none.
+    /// </summary>
+    public string? Scope { get; set; }
 }
 
 public static class FederationHttpContext

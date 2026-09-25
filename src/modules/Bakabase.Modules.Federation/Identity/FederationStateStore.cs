@@ -125,6 +125,12 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
                 state.Peers == null || state.InboundGrants == null || state.OutboundGrants == null ||
                 state.IncomingRequests == null || state.OutgoingRequests == null)
                 throw new JsonException("Invalid node state schema.");
+            // Added for data sync: absent from older files, so missing or null is simply empty.
+            state.InboundDataSyncGrants ??= new(StringComparer.Ordinal);
+            state.OutboundDataSyncGrants ??= new(StringComparer.Ordinal);
+            state.IncomingDataSyncRequests ??= [];
+            state.OutgoingDataSyncRequests ??= [];
+            state.DataSyncReciprocalInvitations ??= [];
             return _state = state;
         }
         catch (Exception e) when (e is JsonException or IOException)

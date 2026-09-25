@@ -182,7 +182,10 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
         if (string.IsNullOrWhiteSpace(info.Name) || info.Name.Length > 128 || info.Name.Any(char.IsControl) ||
             !ValidCapabilities(info.SupportedFilters) || !ValidCapabilities(info.SupportedSorts) ||
             !ValidCapabilities(info.SupportedAssetKinds) || info.MaxBatchSize is < 1 or > 1000 ||
-            !ValidWord(info.Kind) || !ValidWord(info.Platform))
+            !ValidWord(info.Kind) || !ValidWord(info.Platform) ||
+            (info.DataSyncKinds != null && !ValidCapabilities(info.DataSyncKinds)) ||
+            info.DataSyncContractVersion is < 0 or > MaxDataSyncContractVersion ||
+            info.DataSyncMinimumPeerContract is < 0 or > MaxDataSyncContractVersion)
             throw new FederationAccessException("InvalidNodeResponse", 502, "The node identity exceeds the protocol metadata budget.");
         if (info.ProtocolVersion != 1)
             throw new FederationAccessException("ProtocolUnsupported", 409, "This node does not support the same federation protocol.");
@@ -191,6 +194,9 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
         if (libraryEpoch != null && libraryEpoch != info.LibraryEpoch)
             throw new FederationAccessException("LibraryEpochChanged", 409, "The source library was replaced. Pair with its current library again.");
     }
+
+    /// <summary>The data sync contract versions a node may state (§7.4): absent, or 0..1,000,000.</summary>
+    private const int MaxDataSyncContractVersion = 1_000_000;
 
     private static bool ValidCapabilities(string[]? values) => values is { Length: <= 64 } &&
         values.All(value => value is { Length: > 0 and <= 128 } && !value.Any(char.IsControl));

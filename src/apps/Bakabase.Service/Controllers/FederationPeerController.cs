@@ -334,7 +334,7 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
         FederationResult(await peers.ClaimPairingAsync(request, ct));
 
     [HttpPost("~/federation/v1/export/handshake")]
-    [FederationEndpoint(FederationEndpointKind.Export)]
+    [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.Any)]
     [SwaggerOperation(OperationId = "VerifyFederationNode")]
     [ProducesResponseType(typeof(NodeHandshakeResponse), 200)]
     public async Task<IActionResult> Handshake([FromBody] NodeHandshakeRequest request, CancellationToken ct)

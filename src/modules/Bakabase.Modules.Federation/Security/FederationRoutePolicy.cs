@@ -24,10 +24,15 @@ public static class FederationRoutePolicy
         if (kind == FederationEndpointKind.Public)
             return method == "GET" && path.Equals("/federation/v1/info", StringComparison.OrdinalIgnoreCase) ||
                    method == "POST" && segments.Length == 4 && Equal(segments[2], "pair") &&
-                   (Equal(segments[3], "code") || Equal(segments[3], "request") || Equal(segments[3], "claim"));
+                   IsPairingStep(segments[3]) ||
+                   method == "POST" && segments.Length == 5 && Equal(segments[2], "pair") &&
+                   Equal(segments[3], "datasync") && IsPairingStep(segments[4]);
         if (kind == FederationEndpointKind.Export)
         {
             if (segments.Length == 4 && Equal(segments[3], "handshake")) return method == "POST";
+            if (segments.Length == 5 && Equal(segments[3], "datasync"))
+                return method == "GET" &&
+                       (Equal(segments[4], "head") || Equal(segments[4], "manifest") || Equal(segments[4], "changes"));
             if (segments.Length == 4 && Equal(segments[3], "mapping-roots")) return method == "GET";
             if (segments.Length == 5 && Equal(segments[3], "resources") &&
                 (Equal(segments[4], "resolve") || Equal(segments[4], "location")))
@@ -89,6 +94,9 @@ public static class FederationRoutePolicy
                NodeRequestSignature.IsIdentifier(segments[4]) &&
                (Equal(segments[5], "approve") || Equal(segments[5], "reject")) && method == "POST";
     }
+
+    private static bool IsPairingStep(string segment) =>
+        Equal(segment, "code") || Equal(segment, "request") || Equal(segment, "claim");
 
     private static bool Equal(string left, string right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
 }

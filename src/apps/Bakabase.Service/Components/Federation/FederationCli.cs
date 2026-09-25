@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Bakabase.Service.Components.DataSync;
 
 namespace Bakabase.Service.Components.Federation;
 
@@ -39,6 +40,7 @@ public static class FederationCli
             Console.Error.WriteLine(Usage);
             return 2;
         }
+        if (arguments[0] == "datasync") return await DataSyncCli.RunAsync(arguments.Skip(1).ToArray(), port);
 
         using var http = new HttpClient(new SocketsHttpHandler { UseProxy = false })
             { BaseAddress = new Uri($"http://127.0.0.1:{port}/federation/local/peers/") };

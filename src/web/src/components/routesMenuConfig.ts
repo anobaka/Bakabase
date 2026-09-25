@@ -19,6 +19,7 @@ import {
   AiOutlineCode,
   AiOutlineDownload,
   AiOutlineSwap,
+  AiOutlineSync,
   AiOutlineEdit,
   AiOutlineBug,
   AiOutlineTags,
@@ -88,6 +89,8 @@ import CollectionDetailPage from "@/pages/collection/detail";
 import WorkflowPage from "@/pages/workflow";
 import WorkflowEditorPage from "@/pages/workflow/editor";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
+
+const DataSyncPage = lazy(() => import("@/features/data-sync/DataSyncPage"));
 
 // Lazy load test page to avoid circular dependency
 const Test = lazy(() => import("@/pages/test"));
@@ -503,6 +506,16 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/configuration",
         component: Configuration,
         icon: AiOutlineAppstore,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        // Not `localNodeOnly`: data sync works in a relay window and in an Unrestricted
+        // browser too, which is why it is not in the multi-device group.
+        name: "menu.dataSync",
+        path: "/data-sync",
+        component: DataSyncPage,
+        icon: AiOutlineSync,
         layout: "basic",
         menu: true,
       },

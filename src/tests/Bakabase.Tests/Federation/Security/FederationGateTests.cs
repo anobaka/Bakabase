@@ -200,21 +200,112 @@ public sealed class FederationGateTests
     [TestMethod]
     public void EveryRealFederationActionHasAnExactAllowedProtocolRoute()
     {
-        var controllers = new[] { typeof(FederationPeerController), typeof(FederationLocalController),
-            typeof(FederationExportController), typeof(FederationMediaController), typeof(FederationServerController) };
-        foreach (var type in controllers)
-        foreach (var action in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
-        foreach (var route in action.GetCustomAttributes<HttpMethodAttribute>())
+        var controllers = FederationActions().Select(x => x.Controller).Distinct().ToArray();
+        foreach (var known in new[] { typeof(FederationPeerController), typeof(FederationLocalController),
+                     typeof(FederationExportController), typeof(FederationMediaController),
+                     typeof(FederationServerController), typeof(FederationDataSyncPairingController),
+                     typeof(DataSyncNodeController) })
+            CollectionAssert.Contains(controllers, known);
+        foreach (var (type, action, path, methods, endpoint) in FederationActions())
         {
-            var prefix = type.GetCustomAttribute<RouteAttribute>()?.Template ?? "";
-            var path = route.Template?.StartsWith("~/") == true ? route.Template[1..] :
-                "/" + prefix.Trim('/') + (string.IsNullOrEmpty(route.Template) ? "" : "/" + route.Template);
-            path = System.Text.RegularExpressions.Regex.Replace(path, @"\{[^}]+\}", "test-id");
-            var kind = (action.GetCustomAttribute<FederationEndpointAttribute>() ?? type.GetCustomAttribute<FederationEndpointAttribute>())?.Kind;
+            var kind = endpoint?.Kind;
             Assert.IsNotNull(kind, type.Name + "." + action.Name);
             Assert.AreEqual(kind, FederationRoutePolicy.Classify(path), path);
-            foreach (var method in route.HttpMethods)
+            foreach (var method in methods)
                 Assert.IsTrue(FederationRoutePolicy.Allows(kind.Value, method, path), method + " " + path);
+        }
+    }
+
+    /// <summary>
+    /// A grant reaches only the Export actions of its own scope, so every Export action names one:
+    /// the library's <c>library.read</c>, the data sync feed's <c>datasync.read</c>, the handshake either.
+    /// </summary>
+    [TestMethod]
+    public void EveryExportActionDeclaresAScope()
+    {
+        var exportActions = 0;
+        foreach (var (type, action, path, _, endpoint) in FederationActions())
+        {
+            var name = type.Name + "." + action.Name;
+            Assert.IsNotNull(endpoint, name);
+            if (endpoint.Kind != FederationEndpointKind.Export)
+            {
+                Assert.IsNull(endpoint.Scope, name);
+                continue;
+            }
+            exportActions++;
+            var expected = path.Equals("/federation/v1/export/handshake", StringComparison.OrdinalIgnoreCase)
+                ? FederationScopes.Any
+                : path.StartsWith("/federation/v1/export/datasync/", StringComparison.OrdinalIgnoreCase)
+                    ? FederationScopes.DataSyncRead
+                    : FederationScopes.LibraryRead;
+            Assert.AreEqual(expected, endpoint.Scope, name);
+        }
+        Assert.IsTrue(exportActions >= 13, exportActions.ToString());
+    }
+
+    /// <summary>The data sync routes, exactly as their controllers declare them, and only as their own kind.</summary>
+    [TestMethod]
+    [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasync/request")]
+    [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasync/code")]
+    [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasync/claim")]
+    [DataRow(FederationEndpointKind.Public, "post", "/FEDERATION/V1/PAIR/DATASYNC/CLAIM/")]
+    [DataRow(FederationEndpointKind.Export, "GET", "/federation/v1/export/datasync/head")]
+    [DataRow(FederationEndpointKind.Export, "GET", "/federation/v1/export/datasync/manifest")]
+    [DataRow(FederationEndpointKind.Export, "GET", "/federation/v1/export/datasync/changes")]
+    [DataRow(FederationEndpointKind.Export, "get", "/FEDERATION/V1/EXPORT/DATASYNC/HEAD/")]
+    public void DataSyncRoutesAreAllowedOnlyAsTheirOwnKind(FederationEndpointKind kind, string method, string path)
+    {
+        Assert.AreEqual(kind, FederationRoutePolicy.Classify(path));
+        foreach (var other in Enum.GetValues<FederationEndpointKind>())
+            Assert.AreEqual(other == kind, FederationRoutePolicy.Allows(other, method, path), $"{other} {method} {path}");
+    }
+
+    /// <summary>One step off each data sync route is refused before MVC sees it.</summary>
+    [TestMethod]
+    [DataRow(FederationEndpointKind.Public, "GET", "/federation/v1/pair/datasync/request")]
+    [DataRow(FederationEndpointKind.Public, "PUT", "/federation/v1/pair/datasync/code")]
+    [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasync")]
+    [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasync/invite")]
+    [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasync/request/extra")]
+    [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/request/datasync")]
+    [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasyncx/request")]
+    [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/library/request")]
+    [DataRow(FederationEndpointKind.Export, "POST", "/federation/v1/export/datasync/manifest")]
+    [DataRow(FederationEndpointKind.Export, "HEAD", "/federation/v1/export/datasync/changes")]
+    [DataRow(FederationEndpointKind.Export, "DELETE", "/federation/v1/export/datasync/head")]
+    [DataRow(FederationEndpointKind.Export, "GET", "/federation/v1/export/datasync")]
+    [DataRow(FederationEndpointKind.Export, "GET", "/federation/v1/export/datasync/pages")]
+    [DataRow(FederationEndpointKind.Export, "GET", "/federation/v1/export/datasync/head/extra")]
+    [DataRow(FederationEndpointKind.Export, "GET", "/federation/v1/export/datasync/changes/p2")]
+    [DataRow(FederationEndpointKind.Export, "GET", "/federation/v1/export/datasyncx/head")]
+    [DataRow(FederationEndpointKind.Local, "GET", "/federation/local/datasync/head")]
+    public void NearMissesOfDataSyncRoutesAreRefused(FederationEndpointKind kind, string method, string path) =>
+        Assert.IsFalse(FederationRoutePolicy.Allows(kind, method, path), $"{kind} {method} {path}");
+
+    /// <summary>
+    /// Every federation action of the Service — found by its metadata or its route, so a new controller
+    /// is covered without being listed — with its route as a concrete path and its effective endpoint metadata.
+    /// </summary>
+    private static IEnumerable<(Type Controller, MethodInfo Action, string Path, IEnumerable<string> Methods,
+        FederationEndpointAttribute? Endpoint)> FederationActions()
+    {
+        foreach (var type in typeof(FederationPeerController).Assembly.GetTypes()
+                     .Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract))
+        {
+            // A class template may be app-relative ("~/federation/…"); its "~" is not part of the path.
+            var prefix = (type.GetCustomAttribute<RouteAttribute>()?.Template ?? "").TrimStart('~');
+            var classEndpoint = type.GetCustomAttribute<FederationEndpointAttribute>();
+            foreach (var action in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
+            foreach (var route in action.GetCustomAttributes<HttpMethodAttribute>())
+            {
+                var path = route.Template?.StartsWith("~/") == true ? route.Template[1..] :
+                    "/" + prefix.Trim('/') + (string.IsNullOrEmpty(route.Template) ? "" : "/" + route.Template);
+                var endpoint = action.GetCustomAttribute<FederationEndpointAttribute>() ?? classEndpoint;
+                if (endpoint == null && !FederationRoutePolicy.IsFederationPath(path)) continue;
+                path = System.Text.RegularExpressions.Regex.Replace(path, @"\{[^}]+\}", "test-id");
+                yield return (type, action, path, route.HttpMethods, endpoint);
+            }
         }
     }
 

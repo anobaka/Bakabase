@@ -1,0 +1,5 @@
+<Project Sdk="MSTest.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../modules/Bakabase.Modules.DataSync/Bakabase.Modules.DataSync.csproj" />
+  </ItemGroup>
+</Project>

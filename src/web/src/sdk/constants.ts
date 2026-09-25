@@ -4537,6 +4537,1254 @@ export const ServerKindLabel: Record<ServerKind, string> = {
   [ServerKind.Headless]: 'Headless'
 };
 
+export enum DataSyncVvRelation {
+  Equal = 1,
+  Dominates = 2,
+  DominatedBy = 3,
+  Concurrent = 4
+}
+
+export const dataSyncVvRelations = [
+  { label: 'Equal', value: DataSyncVvRelation.Equal },
+  { label: 'Dominates', value: DataSyncVvRelation.Dominates },
+  { label: 'DominatedBy', value: DataSyncVvRelation.DominatedBy },
+  { label: 'Concurrent', value: DataSyncVvRelation.Concurrent }
+] as const;
+
+export const DataSyncVvRelationLabel: Record<DataSyncVvRelation, string> = {
+  [DataSyncVvRelation.Equal]: 'Equal',
+  [DataSyncVvRelation.Dominates]: 'Dominates',
+  [DataSyncVvRelation.DominatedBy]: 'DominatedBy',
+  [DataSyncVvRelation.Concurrent]: 'Concurrent'
+};
+
+export enum DataSyncInboxItemType {
+  FieldConflict = 1,
+  ChildRenameConflict = 2,
+  TypeChange = 3,
+  DeletedThere = 4,
+  ChildDeletedInUse = 5,
+  DeletedHereEditedThere = 6,
+  LinkSuggestion = 7,
+  IdentityConflict = 8,
+  MassChildDeletion = 9,
+  SuspectedLostUpdate = 10,
+  LargeChange = 11
+}
+
+export const dataSyncInboxItemTypes = [
+  { label: 'FieldConflict', value: DataSyncInboxItemType.FieldConflict },
+  { label: 'ChildRenameConflict', value: DataSyncInboxItemType.ChildRenameConflict },
+  { label: 'TypeChange', value: DataSyncInboxItemType.TypeChange },
+  { label: 'DeletedThere', value: DataSyncInboxItemType.DeletedThere },
+  { label: 'ChildDeletedInUse', value: DataSyncInboxItemType.ChildDeletedInUse },
+  { label: 'DeletedHereEditedThere', value: DataSyncInboxItemType.DeletedHereEditedThere },
+  { label: 'LinkSuggestion', value: DataSyncInboxItemType.LinkSuggestion },
+  { label: 'IdentityConflict', value: DataSyncInboxItemType.IdentityConflict },
+  { label: 'MassChildDeletion', value: DataSyncInboxItemType.MassChildDeletion },
+  { label: 'SuspectedLostUpdate', value: DataSyncInboxItemType.SuspectedLostUpdate },
+  { label: 'LargeChange', value: DataSyncInboxItemType.LargeChange }
+] as const;
+
+export const DataSyncInboxItemTypeLabel: Record<DataSyncInboxItemType, string> = {
+  [DataSyncInboxItemType.FieldConflict]: 'FieldConflict',
+  [DataSyncInboxItemType.ChildRenameConflict]: 'ChildRenameConflict',
+  [DataSyncInboxItemType.TypeChange]: 'TypeChange',
+  [DataSyncInboxItemType.DeletedThere]: 'DeletedThere',
+  [DataSyncInboxItemType.ChildDeletedInUse]: 'ChildDeletedInUse',
+  [DataSyncInboxItemType.DeletedHereEditedThere]: 'DeletedHereEditedThere',
+  [DataSyncInboxItemType.LinkSuggestion]: 'LinkSuggestion',
+  [DataSyncInboxItemType.IdentityConflict]: 'IdentityConflict',
+  [DataSyncInboxItemType.MassChildDeletion]: 'MassChildDeletion',
+  [DataSyncInboxItemType.SuspectedLostUpdate]: 'SuspectedLostUpdate',
+  [DataSyncInboxItemType.LargeChange]: 'LargeChange'
+};
+
+export enum DataSyncInboxItemOrigin {
+  Merger = 1,
+  State = 2
+}
+
+export const dataSyncInboxItemOrigins = [
+  { label: 'Merger', value: DataSyncInboxItemOrigin.Merger },
+  { label: 'State', value: DataSyncInboxItemOrigin.State }
+] as const;
+
+export const DataSyncInboxItemOriginLabel: Record<DataSyncInboxItemOrigin, string> = {
+  [DataSyncInboxItemOrigin.Merger]: 'Merger',
+  [DataSyncInboxItemOrigin.State]: 'State'
+};
+
+export enum DataSyncInboxAction {
+  KeepLocal = 1,
+  UseRemote = 2,
+  UseCustom = 3,
+  Detach = 4,
+  DeleteHere = 5,
+  KeepHereOnly = 6,
+  RestoreEverywhere = 7,
+  RestoreHere = 8,
+  KeepDeleted = 9,
+  Link = 10,
+  KeepBoth = 11,
+  Convert = 12,
+  ApplyAll = 13,
+  ReviewEach = 14,
+  KeepWithEntity = 15,
+  Publish = 16,
+  Reapply = 17,
+  Skip = 18,
+  KeepRecordLinked = 19
+}
+
+export const dataSyncInboxActions = [
+  { label: 'KeepLocal', value: DataSyncInboxAction.KeepLocal },
+  { label: 'UseRemote', value: DataSyncInboxAction.UseRemote },
+  { label: 'UseCustom', value: DataSyncInboxAction.UseCustom },
+  { label: 'Detach', value: DataSyncInboxAction.Detach },
+  { label: 'DeleteHere', value: DataSyncInboxAction.DeleteHere },
+  { label: 'KeepHereOnly', value: DataSyncInboxAction.KeepHereOnly },
+  { label: 'RestoreEverywhere', value: DataSyncInboxAction.RestoreEverywhere },
+  { label: 'RestoreHere', value: DataSyncInboxAction.RestoreHere },
+  { label: 'KeepDeleted', value: DataSyncInboxAction.KeepDeleted },
+  { label: 'Link', value: DataSyncInboxAction.Link },
+  { label: 'KeepBoth', value: DataSyncInboxAction.KeepBoth },
+  { label: 'Convert', value: DataSyncInboxAction.Convert },
+  { label: 'ApplyAll', value: DataSyncInboxAction.ApplyAll },
+  { label: 'ReviewEach', value: DataSyncInboxAction.ReviewEach },
+  { label: 'KeepWithEntity', value: DataSyncInboxAction.KeepWithEntity },
+  { label: 'Publish', value: DataSyncInboxAction.Publish },
+  { label: 'Reapply', value: DataSyncInboxAction.Reapply },
+  { label: 'Skip', value: DataSyncInboxAction.Skip },
+  { label: 'KeepRecordLinked', value: DataSyncInboxAction.KeepRecordLinked }
+] as const;
+
+export const DataSyncInboxActionLabel: Record<DataSyncInboxAction, string> = {
+  [DataSyncInboxAction.KeepLocal]: 'KeepLocal',
+  [DataSyncInboxAction.UseRemote]: 'UseRemote',
+  [DataSyncInboxAction.UseCustom]: 'UseCustom',
+  [DataSyncInboxAction.Detach]: 'Detach',
+  [DataSyncInboxAction.DeleteHere]: 'DeleteHere',
+  [DataSyncInboxAction.KeepHereOnly]: 'KeepHereOnly',
+  [DataSyncInboxAction.RestoreEverywhere]: 'RestoreEverywhere',
+  [DataSyncInboxAction.RestoreHere]: 'RestoreHere',
+  [DataSyncInboxAction.KeepDeleted]: 'KeepDeleted',
+  [DataSyncInboxAction.Link]: 'Link',
+  [DataSyncInboxAction.KeepBoth]: 'KeepBoth',
+  [DataSyncInboxAction.Convert]: 'Convert',
+  [DataSyncInboxAction.ApplyAll]: 'ApplyAll',
+  [DataSyncInboxAction.ReviewEach]: 'ReviewEach',
+  [DataSyncInboxAction.KeepWithEntity]: 'KeepWithEntity',
+  [DataSyncInboxAction.Publish]: 'Publish',
+  [DataSyncInboxAction.Reapply]: 'Reapply',
+  [DataSyncInboxAction.Skip]: 'Skip',
+  [DataSyncInboxAction.KeepRecordLinked]: 'KeepRecordLinked'
+};
+
+export enum DataSyncInboxClosure {
+  ResolvedHere = 1,
+  ResolvedElsewhere = 2,
+  Superseded = 3,
+  LinkRemoved = 4,
+  LinkStopped = 5
+}
+
+export const dataSyncInboxClosures = [
+  { label: 'ResolvedHere', value: DataSyncInboxClosure.ResolvedHere },
+  { label: 'ResolvedElsewhere', value: DataSyncInboxClosure.ResolvedElsewhere },
+  { label: 'Superseded', value: DataSyncInboxClosure.Superseded },
+  { label: 'LinkRemoved', value: DataSyncInboxClosure.LinkRemoved },
+  { label: 'LinkStopped', value: DataSyncInboxClosure.LinkStopped }
+] as const;
+
+export const DataSyncInboxClosureLabel: Record<DataSyncInboxClosure, string> = {
+  [DataSyncInboxClosure.ResolvedHere]: 'ResolvedHere',
+  [DataSyncInboxClosure.ResolvedElsewhere]: 'ResolvedElsewhere',
+  [DataSyncInboxClosure.Superseded]: 'Superseded',
+  [DataSyncInboxClosure.LinkRemoved]: 'LinkRemoved',
+  [DataSyncInboxClosure.LinkStopped]: 'LinkStopped'
+};
+
+export enum DataSyncHistoryKind {
+  FirstLink = 1,
+  CopyOnce = 2,
+  AutoSync = 3,
+  Resolution = 4,
+  Undo = 5,
+  Restore = 6,
+  EntitySetting = 7
+}
+
+export const dataSyncHistoryKinds = [
+  { label: 'FirstLink', value: DataSyncHistoryKind.FirstLink },
+  { label: 'CopyOnce', value: DataSyncHistoryKind.CopyOnce },
+  { label: 'AutoSync', value: DataSyncHistoryKind.AutoSync },
+  { label: 'Resolution', value: DataSyncHistoryKind.Resolution },
+  { label: 'Undo', value: DataSyncHistoryKind.Undo },
+  { label: 'Restore', value: DataSyncHistoryKind.Restore },
+  { label: 'EntitySetting', value: DataSyncHistoryKind.EntitySetting }
+] as const;
+
+export const DataSyncHistoryKindLabel: Record<DataSyncHistoryKind, string> = {
+  [DataSyncHistoryKind.FirstLink]: 'FirstLink',
+  [DataSyncHistoryKind.CopyOnce]: 'CopyOnce',
+  [DataSyncHistoryKind.AutoSync]: 'AutoSync',
+  [DataSyncHistoryKind.Resolution]: 'Resolution',
+  [DataSyncHistoryKind.Undo]: 'Undo',
+  [DataSyncHistoryKind.Restore]: 'Restore',
+  [DataSyncHistoryKind.EntitySetting]: 'EntitySetting'
+};
+
+export enum DataSyncEntitySyncState {
+  Synced = 1,
+  LocalOnly = 2,
+  Detached = 3
+}
+
+export const dataSyncEntitySyncStates = [
+  { label: 'Synced', value: DataSyncEntitySyncState.Synced },
+  { label: 'LocalOnly', value: DataSyncEntitySyncState.LocalOnly },
+  { label: 'Detached', value: DataSyncEntitySyncState.Detached }
+] as const;
+
+export const DataSyncEntitySyncStateLabel: Record<DataSyncEntitySyncState, string> = {
+  [DataSyncEntitySyncState.Synced]: 'Synced',
+  [DataSyncEntitySyncState.LocalOnly]: 'LocalOnly',
+  [DataSyncEntitySyncState.Detached]: 'Detached'
+};
+
+export enum DataSyncTombstoneKind {
+  Deleted = 1,
+  UndoneCreate = 2
+}
+
+export const dataSyncTombstoneKinds = [
+  { label: 'Deleted', value: DataSyncTombstoneKind.Deleted },
+  { label: 'UndoneCreate', value: DataSyncTombstoneKind.UndoneCreate }
+] as const;
+
+export const DataSyncTombstoneKindLabel: Record<DataSyncTombstoneKind, string> = {
+  [DataSyncTombstoneKind.Deleted]: 'Deleted',
+  [DataSyncTombstoneKind.UndoneCreate]: 'UndoneCreate'
+};
+
+export enum DataSyncBaseState {
+  Normal = 1,
+  Excluded = 2,
+  MissingAtPeer = 3,
+  Held = 4,
+  Unbound = 5
+}
+
+export const dataSyncBaseStates = [
+  { label: 'Normal', value: DataSyncBaseState.Normal },
+  { label: 'Excluded', value: DataSyncBaseState.Excluded },
+  { label: 'MissingAtPeer', value: DataSyncBaseState.MissingAtPeer },
+  { label: 'Held', value: DataSyncBaseState.Held },
+  { label: 'Unbound', value: DataSyncBaseState.Unbound }
+] as const;
+
+export const DataSyncBaseStateLabel: Record<DataSyncBaseState, string> = {
+  [DataSyncBaseState.Normal]: 'Normal',
+  [DataSyncBaseState.Excluded]: 'Excluded',
+  [DataSyncBaseState.MissingAtPeer]: 'MissingAtPeer',
+  [DataSyncBaseState.Held]: 'Held',
+  [DataSyncBaseState.Unbound]: 'Unbound'
+};
+
+export enum DataSyncExclusionReason {
+  Skipped = 1,
+  Undone = 2,
+  NotSyncedHere = 3,
+  DroppedIdentity = 4
+}
+
+export const dataSyncExclusionReasons = [
+  { label: 'Skipped', value: DataSyncExclusionReason.Skipped },
+  { label: 'Undone', value: DataSyncExclusionReason.Undone },
+  { label: 'NotSyncedHere', value: DataSyncExclusionReason.NotSyncedHere },
+  { label: 'DroppedIdentity', value: DataSyncExclusionReason.DroppedIdentity }
+] as const;
+
+export const DataSyncExclusionReasonLabel: Record<DataSyncExclusionReason, string> = {
+  [DataSyncExclusionReason.Skipped]: 'Skipped',
+  [DataSyncExclusionReason.Undone]: 'Undone',
+  [DataSyncExclusionReason.NotSyncedHere]: 'NotSyncedHere',
+  [DataSyncExclusionReason.DroppedIdentity]: 'DroppedIdentity'
+};
+
+export enum DataSyncPendingReason {
+  Conflict = 1,
+  TypeChange = 2,
+  MassChildDeletion = 3,
+  LargeChange = 4,
+  Retry = 5,
+  Held = 6,
+  AwaitingDecision = 7,
+  OverBudget = 8,
+  PublishHeld = 9,
+  IdentityConflict = 10
+}
+
+export const dataSyncPendingReasons = [
+  { label: 'Conflict', value: DataSyncPendingReason.Conflict },
+  { label: 'TypeChange', value: DataSyncPendingReason.TypeChange },
+  { label: 'MassChildDeletion', value: DataSyncPendingReason.MassChildDeletion },
+  { label: 'LargeChange', value: DataSyncPendingReason.LargeChange },
+  { label: 'Retry', value: DataSyncPendingReason.Retry },
+  { label: 'Held', value: DataSyncPendingReason.Held },
+  { label: 'AwaitingDecision', value: DataSyncPendingReason.AwaitingDecision },
+  { label: 'OverBudget', value: DataSyncPendingReason.OverBudget },
+  { label: 'PublishHeld', value: DataSyncPendingReason.PublishHeld },
+  { label: 'IdentityConflict', value: DataSyncPendingReason.IdentityConflict }
+] as const;
+
+export const DataSyncPendingReasonLabel: Record<DataSyncPendingReason, string> = {
+  [DataSyncPendingReason.Conflict]: 'Conflict',
+  [DataSyncPendingReason.TypeChange]: 'TypeChange',
+  [DataSyncPendingReason.MassChildDeletion]: 'MassChildDeletion',
+  [DataSyncPendingReason.LargeChange]: 'LargeChange',
+  [DataSyncPendingReason.Retry]: 'Retry',
+  [DataSyncPendingReason.Held]: 'Held',
+  [DataSyncPendingReason.AwaitingDecision]: 'AwaitingDecision',
+  [DataSyncPendingReason.OverBudget]: 'OverBudget',
+  [DataSyncPendingReason.PublishHeld]: 'PublishHeld',
+  [DataSyncPendingReason.IdentityConflict]: 'IdentityConflict'
+};
+
+export enum DataSyncRevisionKind {
+  LocalEdit = 1,
+  Create = 2,
+  FastForward = 3,
+  MergedNoConflict = 4,
+  MergedWithConflicts = 5,
+  Resolution = 6,
+  LocalDelete = 7,
+  AcceptRemoteDelete = 8,
+  KeepDeleted = 9,
+  Undo = 10,
+  RestoreWins = 11,
+  FollowMerged = 12,
+  Revive = 13,
+  Retire = 14
+}
+
+export const dataSyncRevisionKinds = [
+  { label: 'LocalEdit', value: DataSyncRevisionKind.LocalEdit },
+  { label: 'Create', value: DataSyncRevisionKind.Create },
+  { label: 'FastForward', value: DataSyncRevisionKind.FastForward },
+  { label: 'MergedNoConflict', value: DataSyncRevisionKind.MergedNoConflict },
+  { label: 'MergedWithConflicts', value: DataSyncRevisionKind.MergedWithConflicts },
+  { label: 'Resolution', value: DataSyncRevisionKind.Resolution },
+  { label: 'LocalDelete', value: DataSyncRevisionKind.LocalDelete },
+  { label: 'AcceptRemoteDelete', value: DataSyncRevisionKind.AcceptRemoteDelete },
+  { label: 'KeepDeleted', value: DataSyncRevisionKind.KeepDeleted },
+  { label: 'Undo', value: DataSyncRevisionKind.Undo },
+  { label: 'RestoreWins', value: DataSyncRevisionKind.RestoreWins },
+  { label: 'FollowMerged', value: DataSyncRevisionKind.FollowMerged },
+  { label: 'Revive', value: DataSyncRevisionKind.Revive },
+  { label: 'Retire', value: DataSyncRevisionKind.Retire }
+] as const;
+
+export const DataSyncRevisionKindLabel: Record<DataSyncRevisionKind, string> = {
+  [DataSyncRevisionKind.LocalEdit]: 'LocalEdit',
+  [DataSyncRevisionKind.Create]: 'Create',
+  [DataSyncRevisionKind.FastForward]: 'FastForward',
+  [DataSyncRevisionKind.MergedNoConflict]: 'MergedNoConflict',
+  [DataSyncRevisionKind.MergedWithConflicts]: 'MergedWithConflicts',
+  [DataSyncRevisionKind.Resolution]: 'Resolution',
+  [DataSyncRevisionKind.LocalDelete]: 'LocalDelete',
+  [DataSyncRevisionKind.AcceptRemoteDelete]: 'AcceptRemoteDelete',
+  [DataSyncRevisionKind.KeepDeleted]: 'KeepDeleted',
+  [DataSyncRevisionKind.Undo]: 'Undo',
+  [DataSyncRevisionKind.RestoreWins]: 'RestoreWins',
+  [DataSyncRevisionKind.FollowMerged]: 'FollowMerged',
+  [DataSyncRevisionKind.Revive]: 'Revive',
+  [DataSyncRevisionKind.Retire]: 'Retire'
+};
+
+export enum DataSyncFieldResolution {
+  Unchanged = 1,
+  TookRemote = 2,
+  KeptLocal = 3,
+  Combined = 4,
+  Conflict = 5,
+  AppearanceTookRemote = 6,
+  AppearanceKeptLocal = 7,
+  FollowTookRemote = 8,
+  DeletionHeldInUse = 9,
+  EditWinsRestored = 10,
+  TypeChangeHeld = 11
+}
+
+export const dataSyncFieldResolutions = [
+  { label: 'Unchanged', value: DataSyncFieldResolution.Unchanged },
+  { label: 'TookRemote', value: DataSyncFieldResolution.TookRemote },
+  { label: 'KeptLocal', value: DataSyncFieldResolution.KeptLocal },
+  { label: 'Combined', value: DataSyncFieldResolution.Combined },
+  { label: 'Conflict', value: DataSyncFieldResolution.Conflict },
+  { label: 'AppearanceTookRemote', value: DataSyncFieldResolution.AppearanceTookRemote },
+  { label: 'AppearanceKeptLocal', value: DataSyncFieldResolution.AppearanceKeptLocal },
+  { label: 'FollowTookRemote', value: DataSyncFieldResolution.FollowTookRemote },
+  { label: 'DeletionHeldInUse', value: DataSyncFieldResolution.DeletionHeldInUse },
+  { label: 'EditWinsRestored', value: DataSyncFieldResolution.EditWinsRestored },
+  { label: 'TypeChangeHeld', value: DataSyncFieldResolution.TypeChangeHeld }
+] as const;
+
+export const DataSyncFieldResolutionLabel: Record<DataSyncFieldResolution, string> = {
+  [DataSyncFieldResolution.Unchanged]: 'Unchanged',
+  [DataSyncFieldResolution.TookRemote]: 'TookRemote',
+  [DataSyncFieldResolution.KeptLocal]: 'KeptLocal',
+  [DataSyncFieldResolution.Combined]: 'Combined',
+  [DataSyncFieldResolution.Conflict]: 'Conflict',
+  [DataSyncFieldResolution.AppearanceTookRemote]: 'AppearanceTookRemote',
+  [DataSyncFieldResolution.AppearanceKeptLocal]: 'AppearanceKeptLocal',
+  [DataSyncFieldResolution.FollowTookRemote]: 'FollowTookRemote',
+  [DataSyncFieldResolution.DeletionHeldInUse]: 'DeletionHeldInUse',
+  [DataSyncFieldResolution.EditWinsRestored]: 'EditWinsRestored',
+  [DataSyncFieldResolution.TypeChangeHeld]: 'TypeChangeHeld'
+};
+
+export enum DataSyncMergeSide {
+  Local = 1,
+  Remote = 2
+}
+
+export const dataSyncMergeSides = [
+  { label: 'Local', value: DataSyncMergeSide.Local },
+  { label: 'Remote', value: DataSyncMergeSide.Remote }
+] as const;
+
+export const DataSyncMergeSideLabel: Record<DataSyncMergeSide, string> = {
+  [DataSyncMergeSide.Local]: 'Local',
+  [DataSyncMergeSide.Remote]: 'Remote'
+};
+
+export enum DataSyncMerge3Mode {
+  ThreeWay = 1,
+  FastForward = 2,
+  NoBase = 3,
+  Convert = 4
+}
+
+export const dataSyncMerge3Modes = [
+  { label: 'ThreeWay', value: DataSyncMerge3Mode.ThreeWay },
+  { label: 'FastForward', value: DataSyncMerge3Mode.FastForward },
+  { label: 'NoBase', value: DataSyncMerge3Mode.NoBase },
+  { label: 'Convert', value: DataSyncMerge3Mode.Convert }
+] as const;
+
+export const DataSyncMerge3ModeLabel: Record<DataSyncMerge3Mode, string> = {
+  [DataSyncMerge3Mode.ThreeWay]: 'ThreeWay',
+  [DataSyncMerge3Mode.FastForward]: 'FastForward',
+  [DataSyncMerge3Mode.NoBase]: 'NoBase',
+  [DataSyncMerge3Mode.Convert]: 'Convert'
+};
+
+export enum DataSyncLinkMode {
+  Off = 0,
+  Follow = 1,
+  TwoWay = 2
+}
+
+export const dataSyncLinkModes = [
+  { label: 'Off', value: DataSyncLinkMode.Off },
+  { label: 'Follow', value: DataSyncLinkMode.Follow },
+  { label: 'TwoWay', value: DataSyncLinkMode.TwoWay }
+] as const;
+
+export const DataSyncLinkModeLabel: Record<DataSyncLinkMode, string> = {
+  [DataSyncLinkMode.Off]: 'Off',
+  [DataSyncLinkMode.Follow]: 'Follow',
+  [DataSyncLinkMode.TwoWay]: 'TwoWay'
+};
+
+export enum DataSyncLinkState {
+  Active = 1,
+  AwaitingAccess = 2,
+  AwaitingReview = 3,
+  WaitingForPeerReview = 4,
+  Paused = 5,
+  Stopped = 6,
+  PeerTooOld = 7,
+  ThisTooOld = 8,
+  AccessRevoked = 9,
+  PeerSharingOff = 10,
+  PeerRemoteAccessOff = 11
+}
+
+export const dataSyncLinkStates = [
+  { label: 'Active', value: DataSyncLinkState.Active },
+  { label: 'AwaitingAccess', value: DataSyncLinkState.AwaitingAccess },
+  { label: 'AwaitingReview', value: DataSyncLinkState.AwaitingReview },
+  { label: 'WaitingForPeerReview', value: DataSyncLinkState.WaitingForPeerReview },
+  { label: 'Paused', value: DataSyncLinkState.Paused },
+  { label: 'Stopped', value: DataSyncLinkState.Stopped },
+  { label: 'PeerTooOld', value: DataSyncLinkState.PeerTooOld },
+  { label: 'ThisTooOld', value: DataSyncLinkState.ThisTooOld },
+  { label: 'AccessRevoked', value: DataSyncLinkState.AccessRevoked },
+  { label: 'PeerSharingOff', value: DataSyncLinkState.PeerSharingOff },
+  { label: 'PeerRemoteAccessOff', value: DataSyncLinkState.PeerRemoteAccessOff }
+] as const;
+
+export const DataSyncLinkStateLabel: Record<DataSyncLinkState, string> = {
+  [DataSyncLinkState.Active]: 'Active',
+  [DataSyncLinkState.AwaitingAccess]: 'AwaitingAccess',
+  [DataSyncLinkState.AwaitingReview]: 'AwaitingReview',
+  [DataSyncLinkState.WaitingForPeerReview]: 'WaitingForPeerReview',
+  [DataSyncLinkState.Paused]: 'Paused',
+  [DataSyncLinkState.Stopped]: 'Stopped',
+  [DataSyncLinkState.PeerTooOld]: 'PeerTooOld',
+  [DataSyncLinkState.ThisTooOld]: 'ThisTooOld',
+  [DataSyncLinkState.AccessRevoked]: 'AccessRevoked',
+  [DataSyncLinkState.PeerSharingOff]: 'PeerSharingOff',
+  [DataSyncLinkState.PeerRemoteAccessOff]: 'PeerRemoteAccessOff'
+};
+
+export enum DataSyncPauseReason {
+  ByUser = 1,
+  AllPaused = 2,
+  PeerReset = 3,
+  PeerIdentityDuplicated = 4,
+  MassDeletion = 5,
+  KindEmptied = 6,
+  LocalRestoreDetected = 7,
+  TooManyDecisions = 8,
+  LocalRestoreSuspected = 9
+}
+
+export const dataSyncPauseReasons = [
+  { label: 'ByUser', value: DataSyncPauseReason.ByUser },
+  { label: 'AllPaused', value: DataSyncPauseReason.AllPaused },
+  { label: 'PeerReset', value: DataSyncPauseReason.PeerReset },
+  { label: 'PeerIdentityDuplicated', value: DataSyncPauseReason.PeerIdentityDuplicated },
+  { label: 'MassDeletion', value: DataSyncPauseReason.MassDeletion },
+  { label: 'KindEmptied', value: DataSyncPauseReason.KindEmptied },
+  { label: 'LocalRestoreDetected', value: DataSyncPauseReason.LocalRestoreDetected },
+  { label: 'TooManyDecisions', value: DataSyncPauseReason.TooManyDecisions },
+  { label: 'LocalRestoreSuspected', value: DataSyncPauseReason.LocalRestoreSuspected }
+] as const;
+
+export const DataSyncPauseReasonLabel: Record<DataSyncPauseReason, string> = {
+  [DataSyncPauseReason.ByUser]: 'ByUser',
+  [DataSyncPauseReason.AllPaused]: 'AllPaused',
+  [DataSyncPauseReason.PeerReset]: 'PeerReset',
+  [DataSyncPauseReason.PeerIdentityDuplicated]: 'PeerIdentityDuplicated',
+  [DataSyncPauseReason.MassDeletion]: 'MassDeletion',
+  [DataSyncPauseReason.KindEmptied]: 'KindEmptied',
+  [DataSyncPauseReason.LocalRestoreDetected]: 'LocalRestoreDetected',
+  [DataSyncPauseReason.TooManyDecisions]: 'TooManyDecisions',
+  [DataSyncPauseReason.LocalRestoreSuspected]: 'LocalRestoreSuspected'
+};
+
+export enum DataSyncLinkInitiator {
+  ThisDevice = 1,
+  Peer = 2
+}
+
+export const dataSyncLinkInitiators = [
+  { label: 'ThisDevice', value: DataSyncLinkInitiator.ThisDevice },
+  { label: 'Peer', value: DataSyncLinkInitiator.Peer }
+] as const;
+
+export const DataSyncLinkInitiatorLabel: Record<DataSyncLinkInitiator, string> = {
+  [DataSyncLinkInitiator.ThisDevice]: 'ThisDevice',
+  [DataSyncLinkInitiator.Peer]: 'Peer'
+};
+
+export enum DataSyncRequestIntent {
+  Follow = 1,
+  TwoWay = 2
+}
+
+export const dataSyncRequestIntents = [
+  { label: 'Follow', value: DataSyncRequestIntent.Follow },
+  { label: 'TwoWay', value: DataSyncRequestIntent.TwoWay }
+] as const;
+
+export const DataSyncRequestIntentLabel: Record<DataSyncRequestIntent, string> = {
+  [DataSyncRequestIntent.Follow]: 'Follow',
+  [DataSyncRequestIntent.TwoWay]: 'TwoWay'
+};
+
+export enum DataSyncRequestDirection {
+  Incoming = 1,
+  Outgoing = 2
+}
+
+export const dataSyncRequestDirections = [
+  { label: 'Incoming', value: DataSyncRequestDirection.Incoming },
+  { label: 'Outgoing', value: DataSyncRequestDirection.Outgoing }
+] as const;
+
+export const DataSyncRequestDirectionLabel: Record<DataSyncRequestDirection, string> = {
+  [DataSyncRequestDirection.Incoming]: 'Incoming',
+  [DataSyncRequestDirection.Outgoing]: 'Outgoing'
+};
+
+export enum DataSyncPeerErrorCode {
+  Unreachable = 1,
+  AccessMissing = 2,
+  AccessRevoked = 3,
+  PeerSharingOff = 4,
+  PeerReset = 5,
+  PeerTooOld = 6,
+  ThisTooOld = 7,
+  CursorSuperseded = 8,
+  SnapshotExpired = 9,
+  Busy = 10,
+  InvalidResponse = 11,
+  TooLarge = 12,
+  IdentityConflict = 13,
+  PeerRemoteAccessOff = 14,
+  PeerRestorePending = 15
+}
+
+export const dataSyncPeerErrorCodes = [
+  { label: 'Unreachable', value: DataSyncPeerErrorCode.Unreachable },
+  { label: 'AccessMissing', value: DataSyncPeerErrorCode.AccessMissing },
+  { label: 'AccessRevoked', value: DataSyncPeerErrorCode.AccessRevoked },
+  { label: 'PeerSharingOff', value: DataSyncPeerErrorCode.PeerSharingOff },
+  { label: 'PeerReset', value: DataSyncPeerErrorCode.PeerReset },
+  { label: 'PeerTooOld', value: DataSyncPeerErrorCode.PeerTooOld },
+  { label: 'ThisTooOld', value: DataSyncPeerErrorCode.ThisTooOld },
+  { label: 'CursorSuperseded', value: DataSyncPeerErrorCode.CursorSuperseded },
+  { label: 'SnapshotExpired', value: DataSyncPeerErrorCode.SnapshotExpired },
+  { label: 'Busy', value: DataSyncPeerErrorCode.Busy },
+  { label: 'InvalidResponse', value: DataSyncPeerErrorCode.InvalidResponse },
+  { label: 'TooLarge', value: DataSyncPeerErrorCode.TooLarge },
+  { label: 'IdentityConflict', value: DataSyncPeerErrorCode.IdentityConflict },
+  { label: 'PeerRemoteAccessOff', value: DataSyncPeerErrorCode.PeerRemoteAccessOff },
+  { label: 'PeerRestorePending', value: DataSyncPeerErrorCode.PeerRestorePending }
+] as const;
+
+export const DataSyncPeerErrorCodeLabel: Record<DataSyncPeerErrorCode, string> = {
+  [DataSyncPeerErrorCode.Unreachable]: 'Unreachable',
+  [DataSyncPeerErrorCode.AccessMissing]: 'AccessMissing',
+  [DataSyncPeerErrorCode.AccessRevoked]: 'AccessRevoked',
+  [DataSyncPeerErrorCode.PeerSharingOff]: 'PeerSharingOff',
+  [DataSyncPeerErrorCode.PeerReset]: 'PeerReset',
+  [DataSyncPeerErrorCode.PeerTooOld]: 'PeerTooOld',
+  [DataSyncPeerErrorCode.ThisTooOld]: 'ThisTooOld',
+  [DataSyncPeerErrorCode.CursorSuperseded]: 'CursorSuperseded',
+  [DataSyncPeerErrorCode.SnapshotExpired]: 'SnapshotExpired',
+  [DataSyncPeerErrorCode.Busy]: 'Busy',
+  [DataSyncPeerErrorCode.InvalidResponse]: 'InvalidResponse',
+  [DataSyncPeerErrorCode.TooLarge]: 'TooLarge',
+  [DataSyncPeerErrorCode.IdentityConflict]: 'IdentityConflict',
+  [DataSyncPeerErrorCode.PeerRemoteAccessOff]: 'PeerRemoteAccessOff',
+  [DataSyncPeerErrorCode.PeerRestorePending]: 'PeerRestorePending'
+};
+
+export enum DataSyncStatusLevel {
+  Off = 0,
+  InStep = 1,
+  Syncing = 2,
+  NeedsYou = 3,
+  Paused = 4,
+  Offline = 5,
+  Failed = 6,
+  UpdateNeeded = 7
+}
+
+export const dataSyncStatusLevels = [
+  { label: 'Off', value: DataSyncStatusLevel.Off },
+  { label: 'InStep', value: DataSyncStatusLevel.InStep },
+  { label: 'Syncing', value: DataSyncStatusLevel.Syncing },
+  { label: 'NeedsYou', value: DataSyncStatusLevel.NeedsYou },
+  { label: 'Paused', value: DataSyncStatusLevel.Paused },
+  { label: 'Offline', value: DataSyncStatusLevel.Offline },
+  { label: 'Failed', value: DataSyncStatusLevel.Failed },
+  { label: 'UpdateNeeded', value: DataSyncStatusLevel.UpdateNeeded }
+] as const;
+
+export const DataSyncStatusLevelLabel: Record<DataSyncStatusLevel, string> = {
+  [DataSyncStatusLevel.Off]: 'Off',
+  [DataSyncStatusLevel.InStep]: 'InStep',
+  [DataSyncStatusLevel.Syncing]: 'Syncing',
+  [DataSyncStatusLevel.NeedsYou]: 'NeedsYou',
+  [DataSyncStatusLevel.Paused]: 'Paused',
+  [DataSyncStatusLevel.Offline]: 'Offline',
+  [DataSyncStatusLevel.Failed]: 'Failed',
+  [DataSyncStatusLevel.UpdateNeeded]: 'UpdateNeeded'
+};
+
+export enum DataSyncReviewState {
+  Staged = 1,
+  Applying = 2,
+  Applied = 3,
+  Failed = 4
+}
+
+export const dataSyncReviewStates = [
+  { label: 'Staged', value: DataSyncReviewState.Staged },
+  { label: 'Applying', value: DataSyncReviewState.Applying },
+  { label: 'Applied', value: DataSyncReviewState.Applied },
+  { label: 'Failed', value: DataSyncReviewState.Failed }
+] as const;
+
+export const DataSyncReviewStateLabel: Record<DataSyncReviewState, string> = {
+  [DataSyncReviewState.Staged]: 'Staged',
+  [DataSyncReviewState.Applying]: 'Applying',
+  [DataSyncReviewState.Applied]: 'Applied',
+  [DataSyncReviewState.Failed]: 'Failed'
+};
+
+export enum DataSyncRestoreChoice {
+  ThisDeviceWins = 1,
+  OthersWin = 2
+}
+
+export const dataSyncRestoreChoices = [
+  { label: 'ThisDeviceWins', value: DataSyncRestoreChoice.ThisDeviceWins },
+  { label: 'OthersWin', value: DataSyncRestoreChoice.OthersWin }
+] as const;
+
+export const DataSyncRestoreChoiceLabel: Record<DataSyncRestoreChoice, string> = {
+  [DataSyncRestoreChoice.ThisDeviceWins]: 'ThisDeviceWins',
+  [DataSyncRestoreChoice.OthersWin]: 'OthersWin'
+};
+
+export enum DataSyncUndoState {
+  Available = 1,
+  Undone = 2,
+  Expired = 3
+}
+
+export const dataSyncUndoStates = [
+  { label: 'Available', value: DataSyncUndoState.Available },
+  { label: 'Undone', value: DataSyncUndoState.Undone },
+  { label: 'Expired', value: DataSyncUndoState.Expired }
+] as const;
+
+export const DataSyncUndoStateLabel: Record<DataSyncUndoState, string> = {
+  [DataSyncUndoState.Available]: 'Available',
+  [DataSyncUndoState.Undone]: 'Undone',
+  [DataSyncUndoState.Expired]: 'Expired'
+};
+
+export enum DataSyncUndoAction {
+  Remove = 1,
+  Revert = 2,
+  RemoveAliases = 3,
+  Recreate = 4,
+  Exclude = 5
+}
+
+export const dataSyncUndoActions = [
+  { label: 'Remove', value: DataSyncUndoAction.Remove },
+  { label: 'Revert', value: DataSyncUndoAction.Revert },
+  { label: 'RemoveAliases', value: DataSyncUndoAction.RemoveAliases },
+  { label: 'Recreate', value: DataSyncUndoAction.Recreate },
+  { label: 'Exclude', value: DataSyncUndoAction.Exclude }
+] as const;
+
+export const DataSyncUndoActionLabel: Record<DataSyncUndoAction, string> = {
+  [DataSyncUndoAction.Remove]: 'Remove',
+  [DataSyncUndoAction.Revert]: 'Revert',
+  [DataSyncUndoAction.RemoveAliases]: 'RemoveAliases',
+  [DataSyncUndoAction.Recreate]: 'Recreate',
+  [DataSyncUndoAction.Exclude]: 'Exclude'
+};
+
+export enum DataSyncUndoBlock {
+  ChangedSinceImport = 1,
+  InUse = 2,
+  AddedOptionsInUse = 3,
+  Missing = 4
+}
+
+export const dataSyncUndoBlocks = [
+  { label: 'ChangedSinceImport', value: DataSyncUndoBlock.ChangedSinceImport },
+  { label: 'InUse', value: DataSyncUndoBlock.InUse },
+  { label: 'AddedOptionsInUse', value: DataSyncUndoBlock.AddedOptionsInUse },
+  { label: 'Missing', value: DataSyncUndoBlock.Missing }
+] as const;
+
+export const DataSyncUndoBlockLabel: Record<DataSyncUndoBlock, string> = {
+  [DataSyncUndoBlock.ChangedSinceImport]: 'ChangedSinceImport',
+  [DataSyncUndoBlock.InUse]: 'InUse',
+  [DataSyncUndoBlock.AddedOptionsInUse]: 'AddedOptionsInUse',
+  [DataSyncUndoBlock.Missing]: 'Missing'
+};
+
+export enum DataSyncProblemCode {
+  Busy = 1,
+  ApplyInProgress = 2,
+  DecisionsInvalid = 3,
+  PlanChanged = 4,
+  UnknownItem = 5,
+  UnknownKind = 6,
+  ReviewExpired = 7,
+  NothingToReview = 8,
+  UndoNotAvailable = 9,
+  PeerUnreachable = 10,
+  AccessMissing = 11,
+  AccessRevoked = 12,
+  PeerSharingOff = 13,
+  PeerTooOld = 14,
+  ThisTooOld = 15,
+  PeerReset = 16,
+  LinkNotFound = 17,
+  LinkExists = 18,
+  SharingOff = 19,
+  RequestNotFound = 20,
+  InvitationInvalid = 21,
+  InboxItemChanged = 22,
+  InboxItemClosed = 23,
+  BackupFailed = 24,
+  NothingSelected = 25,
+  NotAllowedOnThisDevice = 26,
+  ResolveTogether = 27,
+  RemoteAccessOff = 28
+}
+
+export const dataSyncProblemCodes = [
+  { label: 'Busy', value: DataSyncProblemCode.Busy },
+  { label: 'ApplyInProgress', value: DataSyncProblemCode.ApplyInProgress },
+  { label: 'DecisionsInvalid', value: DataSyncProblemCode.DecisionsInvalid },
+  { label: 'PlanChanged', value: DataSyncProblemCode.PlanChanged },
+  { label: 'UnknownItem', value: DataSyncProblemCode.UnknownItem },
+  { label: 'UnknownKind', value: DataSyncProblemCode.UnknownKind },
+  { label: 'ReviewExpired', value: DataSyncProblemCode.ReviewExpired },
+  { label: 'NothingToReview', value: DataSyncProblemCode.NothingToReview },
+  { label: 'UndoNotAvailable', value: DataSyncProblemCode.UndoNotAvailable },
+  { label: 'PeerUnreachable', value: DataSyncProblemCode.PeerUnreachable },
+  { label: 'AccessMissing', value: DataSyncProblemCode.AccessMissing },
+  { label: 'AccessRevoked', value: DataSyncProblemCode.AccessRevoked },
+  { label: 'PeerSharingOff', value: DataSyncProblemCode.PeerSharingOff },
+  { label: 'PeerTooOld', value: DataSyncProblemCode.PeerTooOld },
+  { label: 'ThisTooOld', value: DataSyncProblemCode.ThisTooOld },
+  { label: 'PeerReset', value: DataSyncProblemCode.PeerReset },
+  { label: 'LinkNotFound', value: DataSyncProblemCode.LinkNotFound },
+  { label: 'LinkExists', value: DataSyncProblemCode.LinkExists },
+  { label: 'SharingOff', value: DataSyncProblemCode.SharingOff },
+  { label: 'RequestNotFound', value: DataSyncProblemCode.RequestNotFound },
+  { label: 'InvitationInvalid', value: DataSyncProblemCode.InvitationInvalid },
+  { label: 'InboxItemChanged', value: DataSyncProblemCode.InboxItemChanged },
+  { label: 'InboxItemClosed', value: DataSyncProblemCode.InboxItemClosed },
+  { label: 'BackupFailed', value: DataSyncProblemCode.BackupFailed },
+  { label: 'NothingSelected', value: DataSyncProblemCode.NothingSelected },
+  { label: 'NotAllowedOnThisDevice', value: DataSyncProblemCode.NotAllowedOnThisDevice },
+  { label: 'ResolveTogether', value: DataSyncProblemCode.ResolveTogether },
+  { label: 'RemoteAccessOff', value: DataSyncProblemCode.RemoteAccessOff }
+] as const;
+
+export const DataSyncProblemCodeLabel: Record<DataSyncProblemCode, string> = {
+  [DataSyncProblemCode.Busy]: 'Busy',
+  [DataSyncProblemCode.ApplyInProgress]: 'ApplyInProgress',
+  [DataSyncProblemCode.DecisionsInvalid]: 'DecisionsInvalid',
+  [DataSyncProblemCode.PlanChanged]: 'PlanChanged',
+  [DataSyncProblemCode.UnknownItem]: 'UnknownItem',
+  [DataSyncProblemCode.UnknownKind]: 'UnknownKind',
+  [DataSyncProblemCode.ReviewExpired]: 'ReviewExpired',
+  [DataSyncProblemCode.NothingToReview]: 'NothingToReview',
+  [DataSyncProblemCode.UndoNotAvailable]: 'UndoNotAvailable',
+  [DataSyncProblemCode.PeerUnreachable]: 'PeerUnreachable',
+  [DataSyncProblemCode.AccessMissing]: 'AccessMissing',
+  [DataSyncProblemCode.AccessRevoked]: 'AccessRevoked',
+  [DataSyncProblemCode.PeerSharingOff]: 'PeerSharingOff',
+  [DataSyncProblemCode.PeerTooOld]: 'PeerTooOld',
+  [DataSyncProblemCode.ThisTooOld]: 'ThisTooOld',
+  [DataSyncProblemCode.PeerReset]: 'PeerReset',
+  [DataSyncProblemCode.LinkNotFound]: 'LinkNotFound',
+  [DataSyncProblemCode.LinkExists]: 'LinkExists',
+  [DataSyncProblemCode.SharingOff]: 'SharingOff',
+  [DataSyncProblemCode.RequestNotFound]: 'RequestNotFound',
+  [DataSyncProblemCode.InvitationInvalid]: 'InvitationInvalid',
+  [DataSyncProblemCode.InboxItemChanged]: 'InboxItemChanged',
+  [DataSyncProblemCode.InboxItemClosed]: 'InboxItemClosed',
+  [DataSyncProblemCode.BackupFailed]: 'BackupFailed',
+  [DataSyncProblemCode.NothingSelected]: 'NothingSelected',
+  [DataSyncProblemCode.NotAllowedOnThisDevice]: 'NotAllowedOnThisDevice',
+  [DataSyncProblemCode.ResolveTogether]: 'ResolveTogether',
+  [DataSyncProblemCode.RemoteAccessOff]: 'RemoteAccessOff'
+};
+
+export enum DataSyncResumeAction {
+  Resume = 1,
+  ReviewDeletions = 2,
+  ApplyAsUsual = 3,
+  AskAccessAgain = 4,
+  ThisDeviceWins = 5,
+  TakeTheirs = 6,
+  StartAnyway = 7
+}
+
+export const dataSyncResumeActions = [
+  { label: 'Resume', value: DataSyncResumeAction.Resume },
+  { label: 'ReviewDeletions', value: DataSyncResumeAction.ReviewDeletions },
+  { label: 'ApplyAsUsual', value: DataSyncResumeAction.ApplyAsUsual },
+  { label: 'AskAccessAgain', value: DataSyncResumeAction.AskAccessAgain },
+  { label: 'ThisDeviceWins', value: DataSyncResumeAction.ThisDeviceWins },
+  { label: 'TakeTheirs', value: DataSyncResumeAction.TakeTheirs },
+  { label: 'StartAnyway', value: DataSyncResumeAction.StartAnyway }
+] as const;
+
+export const DataSyncResumeActionLabel: Record<DataSyncResumeAction, string> = {
+  [DataSyncResumeAction.Resume]: 'Resume',
+  [DataSyncResumeAction.ReviewDeletions]: 'ReviewDeletions',
+  [DataSyncResumeAction.ApplyAsUsual]: 'ApplyAsUsual',
+  [DataSyncResumeAction.AskAccessAgain]: 'AskAccessAgain',
+  [DataSyncResumeAction.ThisDeviceWins]: 'ThisDeviceWins',
+  [DataSyncResumeAction.TakeTheirs]: 'TakeTheirs',
+  [DataSyncResumeAction.StartAnyway]: 'StartAnyway'
+};
+
+export enum DataSyncPlanItemType {
+  Create = 1,
+  Update = 2,
+  Unchanged = 3,
+  Link = 4,
+  NeedsDecision = 5,
+  Held = 6
+}
+
+export const dataSyncPlanItemTypes = [
+  { label: 'Create', value: DataSyncPlanItemType.Create },
+  { label: 'Update', value: DataSyncPlanItemType.Update },
+  { label: 'Unchanged', value: DataSyncPlanItemType.Unchanged },
+  { label: 'Link', value: DataSyncPlanItemType.Link },
+  { label: 'NeedsDecision', value: DataSyncPlanItemType.NeedsDecision },
+  { label: 'Held', value: DataSyncPlanItemType.Held }
+] as const;
+
+export const DataSyncPlanItemTypeLabel: Record<DataSyncPlanItemType, string> = {
+  [DataSyncPlanItemType.Create]: 'Create',
+  [DataSyncPlanItemType.Update]: 'Update',
+  [DataSyncPlanItemType.Unchanged]: 'Unchanged',
+  [DataSyncPlanItemType.Link]: 'Link',
+  [DataSyncPlanItemType.NeedsDecision]: 'NeedsDecision',
+  [DataSyncPlanItemType.Held]: 'Held'
+};
+
+export enum DataSyncPlanItemReason {
+  AmbiguousNameMatch = 1,
+  TypeMismatch = 2,
+  NameClashDifferentType = 3,
+  IdentityConflict = 4,
+  DuplicateInPackage = 5,
+  LocalIsNewer = 6
+}
+
+export const dataSyncPlanItemReasons = [
+  { label: 'AmbiguousNameMatch', value: DataSyncPlanItemReason.AmbiguousNameMatch },
+  { label: 'TypeMismatch', value: DataSyncPlanItemReason.TypeMismatch },
+  { label: 'NameClashDifferentType', value: DataSyncPlanItemReason.NameClashDifferentType },
+  { label: 'IdentityConflict', value: DataSyncPlanItemReason.IdentityConflict },
+  { label: 'DuplicateInPackage', value: DataSyncPlanItemReason.DuplicateInPackage },
+  { label: 'LocalIsNewer', value: DataSyncPlanItemReason.LocalIsNewer }
+] as const;
+
+export const DataSyncPlanItemReasonLabel: Record<DataSyncPlanItemReason, string> = {
+  [DataSyncPlanItemReason.AmbiguousNameMatch]: 'AmbiguousNameMatch',
+  [DataSyncPlanItemReason.TypeMismatch]: 'TypeMismatch',
+  [DataSyncPlanItemReason.NameClashDifferentType]: 'NameClashDifferentType',
+  [DataSyncPlanItemReason.IdentityConflict]: 'IdentityConflict',
+  [DataSyncPlanItemReason.DuplicateInPackage]: 'DuplicateInPackage',
+  [DataSyncPlanItemReason.LocalIsNewer]: 'LocalIsNewer'
+};
+
+export enum DataSyncHeldReason {
+  NewerSchema = 1,
+  UnknownKind = 2,
+  UnknownEnumValue = 3,
+  Invalid = 4,
+  AtSource = 5,
+  LocalUnreadable = 6,
+  PendingDecision = 7,
+  TooLarge = 8
+}
+
+export const dataSyncHeldReasons = [
+  { label: 'NewerSchema', value: DataSyncHeldReason.NewerSchema },
+  { label: 'UnknownKind', value: DataSyncHeldReason.UnknownKind },
+  { label: 'UnknownEnumValue', value: DataSyncHeldReason.UnknownEnumValue },
+  { label: 'Invalid', value: DataSyncHeldReason.Invalid },
+  { label: 'AtSource', value: DataSyncHeldReason.AtSource },
+  { label: 'LocalUnreadable', value: DataSyncHeldReason.LocalUnreadable },
+  { label: 'PendingDecision', value: DataSyncHeldReason.PendingDecision },
+  { label: 'TooLarge', value: DataSyncHeldReason.TooLarge }
+] as const;
+
+export const DataSyncHeldReasonLabel: Record<DataSyncHeldReason, string> = {
+  [DataSyncHeldReason.NewerSchema]: 'NewerSchema',
+  [DataSyncHeldReason.UnknownKind]: 'UnknownKind',
+  [DataSyncHeldReason.UnknownEnumValue]: 'UnknownEnumValue',
+  [DataSyncHeldReason.Invalid]: 'Invalid',
+  [DataSyncHeldReason.AtSource]: 'AtSource',
+  [DataSyncHeldReason.LocalUnreadable]: 'LocalUnreadable',
+  [DataSyncHeldReason.PendingDecision]: 'PendingDecision',
+  [DataSyncHeldReason.TooLarge]: 'TooLarge'
+};
+
+export enum DataSyncPlanResolution {
+  Create = 1,
+  Update = 2,
+  Link = 3,
+  CreateSeparate = 4,
+  Skip = 5
+}
+
+export const dataSyncPlanResolutions = [
+  { label: 'Create', value: DataSyncPlanResolution.Create },
+  { label: 'Update', value: DataSyncPlanResolution.Update },
+  { label: 'Link', value: DataSyncPlanResolution.Link },
+  { label: 'CreateSeparate', value: DataSyncPlanResolution.CreateSeparate },
+  { label: 'Skip', value: DataSyncPlanResolution.Skip }
+] as const;
+
+export const DataSyncPlanResolutionLabel: Record<DataSyncPlanResolution, string> = {
+  [DataSyncPlanResolution.Create]: 'Create',
+  [DataSyncPlanResolution.Update]: 'Update',
+  [DataSyncPlanResolution.Link]: 'Link',
+  [DataSyncPlanResolution.CreateSeparate]: 'CreateSeparate',
+  [DataSyncPlanResolution.Skip]: 'Skip'
+};
+
+export enum DataSyncFieldChangeKind {
+  Set = 1,
+  AddChild = 2,
+  RenameChild = 3,
+  RecolorChild = 4,
+  AddMember = 5,
+  RemoveChild = 6,
+  SetType = 7,
+  MoveChild = 8
+}
+
+export const dataSyncFieldChangeKinds = [
+  { label: 'Set', value: DataSyncFieldChangeKind.Set },
+  { label: 'AddChild', value: DataSyncFieldChangeKind.AddChild },
+  { label: 'RenameChild', value: DataSyncFieldChangeKind.RenameChild },
+  { label: 'RecolorChild', value: DataSyncFieldChangeKind.RecolorChild },
+  { label: 'AddMember', value: DataSyncFieldChangeKind.AddMember },
+  { label: 'RemoveChild', value: DataSyncFieldChangeKind.RemoveChild },
+  { label: 'SetType', value: DataSyncFieldChangeKind.SetType },
+  { label: 'MoveChild', value: DataSyncFieldChangeKind.MoveChild }
+] as const;
+
+export const DataSyncFieldChangeKindLabel: Record<DataSyncFieldChangeKind, string> = {
+  [DataSyncFieldChangeKind.Set]: 'Set',
+  [DataSyncFieldChangeKind.AddChild]: 'AddChild',
+  [DataSyncFieldChangeKind.RenameChild]: 'RenameChild',
+  [DataSyncFieldChangeKind.RecolorChild]: 'RecolorChild',
+  [DataSyncFieldChangeKind.AddMember]: 'AddMember',
+  [DataSyncFieldChangeKind.RemoveChild]: 'RemoveChild',
+  [DataSyncFieldChangeKind.SetType]: 'SetType',
+  [DataSyncFieldChangeKind.MoveChild]: 'MoveChild'
+};
+
+export enum DataSyncWarningCode {
+  UnknownFieldsIgnored = 1,
+  OptionLabelConflict = 2,
+  DefaultValueRefDropped = 3,
+  PreviouslyDeletedHere = 4,
+  SettingsIgnoredForType = 5,
+  NodeMoveIgnored = 6,
+  OptionUuidRemapped = 7,
+  FromThisDevice = 8,
+  OptionDropped = 9,
+  ChildRestored = 10,
+  ChildrenOmittedByPeer = 11,
+  NameUsedEverywhere = 12,
+  NormalizationChanged = 13,
+  ChildrenLocalTurnedOff = 14
+}
+
+export const dataSyncWarningCodes = [
+  { label: 'UnknownFieldsIgnored', value: DataSyncWarningCode.UnknownFieldsIgnored },
+  { label: 'OptionLabelConflict', value: DataSyncWarningCode.OptionLabelConflict },
+  { label: 'DefaultValueRefDropped', value: DataSyncWarningCode.DefaultValueRefDropped },
+  { label: 'PreviouslyDeletedHere', value: DataSyncWarningCode.PreviouslyDeletedHere },
+  { label: 'SettingsIgnoredForType', value: DataSyncWarningCode.SettingsIgnoredForType },
+  { label: 'NodeMoveIgnored', value: DataSyncWarningCode.NodeMoveIgnored },
+  { label: 'OptionUuidRemapped', value: DataSyncWarningCode.OptionUuidRemapped },
+  { label: 'FromThisDevice', value: DataSyncWarningCode.FromThisDevice },
+  { label: 'OptionDropped', value: DataSyncWarningCode.OptionDropped },
+  { label: 'ChildRestored', value: DataSyncWarningCode.ChildRestored },
+  { label: 'ChildrenOmittedByPeer', value: DataSyncWarningCode.ChildrenOmittedByPeer },
+  { label: 'NameUsedEverywhere', value: DataSyncWarningCode.NameUsedEverywhere },
+  { label: 'NormalizationChanged', value: DataSyncWarningCode.NormalizationChanged },
+  { label: 'ChildrenLocalTurnedOff', value: DataSyncWarningCode.ChildrenLocalTurnedOff }
+] as const;
+
+export const DataSyncWarningCodeLabel: Record<DataSyncWarningCode, string> = {
+  [DataSyncWarningCode.UnknownFieldsIgnored]: 'UnknownFieldsIgnored',
+  [DataSyncWarningCode.OptionLabelConflict]: 'OptionLabelConflict',
+  [DataSyncWarningCode.DefaultValueRefDropped]: 'DefaultValueRefDropped',
+  [DataSyncWarningCode.PreviouslyDeletedHere]: 'PreviouslyDeletedHere',
+  [DataSyncWarningCode.SettingsIgnoredForType]: 'SettingsIgnoredForType',
+  [DataSyncWarningCode.NodeMoveIgnored]: 'NodeMoveIgnored',
+  [DataSyncWarningCode.OptionUuidRemapped]: 'OptionUuidRemapped',
+  [DataSyncWarningCode.FromThisDevice]: 'FromThisDevice',
+  [DataSyncWarningCode.OptionDropped]: 'OptionDropped',
+  [DataSyncWarningCode.ChildRestored]: 'ChildRestored',
+  [DataSyncWarningCode.ChildrenOmittedByPeer]: 'ChildrenOmittedByPeer',
+  [DataSyncWarningCode.NameUsedEverywhere]: 'NameUsedEverywhere',
+  [DataSyncWarningCode.NormalizationChanged]: 'NormalizationChanged',
+  [DataSyncWarningCode.ChildrenLocalTurnedOff]: 'ChildrenLocalTurnedOff'
+};
+
+export enum DataSyncDecisionErrorCode {
+  DecisionMissing = 1,
+  ResolutionNotAllowed = 2,
+  TargetNotAllowed = 3,
+  TargetUsedTwice = 4,
+  ChangedSinceReview = 5,
+  UnknownChange = 6,
+  InvalidName = 7,
+  UnknownItem = 8,
+  DuplicateDecision = 9
+}
+
+export const dataSyncDecisionErrorCodes = [
+  { label: 'DecisionMissing', value: DataSyncDecisionErrorCode.DecisionMissing },
+  { label: 'ResolutionNotAllowed', value: DataSyncDecisionErrorCode.ResolutionNotAllowed },
+  { label: 'TargetNotAllowed', value: DataSyncDecisionErrorCode.TargetNotAllowed },
+  { label: 'TargetUsedTwice', value: DataSyncDecisionErrorCode.TargetUsedTwice },
+  { label: 'ChangedSinceReview', value: DataSyncDecisionErrorCode.ChangedSinceReview },
+  { label: 'UnknownChange', value: DataSyncDecisionErrorCode.UnknownChange },
+  { label: 'InvalidName', value: DataSyncDecisionErrorCode.InvalidName },
+  { label: 'UnknownItem', value: DataSyncDecisionErrorCode.UnknownItem },
+  { label: 'DuplicateDecision', value: DataSyncDecisionErrorCode.DuplicateDecision }
+] as const;
+
+export const DataSyncDecisionErrorCodeLabel: Record<DataSyncDecisionErrorCode, string> = {
+  [DataSyncDecisionErrorCode.DecisionMissing]: 'DecisionMissing',
+  [DataSyncDecisionErrorCode.ResolutionNotAllowed]: 'ResolutionNotAllowed',
+  [DataSyncDecisionErrorCode.TargetNotAllowed]: 'TargetNotAllowed',
+  [DataSyncDecisionErrorCode.TargetUsedTwice]: 'TargetUsedTwice',
+  [DataSyncDecisionErrorCode.ChangedSinceReview]: 'ChangedSinceReview',
+  [DataSyncDecisionErrorCode.UnknownChange]: 'UnknownChange',
+  [DataSyncDecisionErrorCode.InvalidName]: 'InvalidName',
+  [DataSyncDecisionErrorCode.UnknownItem]: 'UnknownItem',
+  [DataSyncDecisionErrorCode.DuplicateDecision]: 'DuplicateDecision'
+};
+
+export enum DataSyncItemOutcome {
+  Applied = 1,
+  SkippedByUser = 2,
+  ChangedSinceReview = 3,
+  Held = 4,
+  ChangedDuringApply = 5,
+  NoChange = 6
+}
+
+export const dataSyncItemOutcomes = [
+  { label: 'Applied', value: DataSyncItemOutcome.Applied },
+  { label: 'SkippedByUser', value: DataSyncItemOutcome.SkippedByUser },
+  { label: 'ChangedSinceReview', value: DataSyncItemOutcome.ChangedSinceReview },
+  { label: 'Held', value: DataSyncItemOutcome.Held },
+  { label: 'ChangedDuringApply', value: DataSyncItemOutcome.ChangedDuringApply },
+  { label: 'NoChange', value: DataSyncItemOutcome.NoChange }
+] as const;
+
+export const DataSyncItemOutcomeLabel: Record<DataSyncItemOutcome, string> = {
+  [DataSyncItemOutcome.Applied]: 'Applied',
+  [DataSyncItemOutcome.SkippedByUser]: 'SkippedByUser',
+  [DataSyncItemOutcome.ChangedSinceReview]: 'ChangedSinceReview',
+  [DataSyncItemOutcome.Held]: 'Held',
+  [DataSyncItemOutcome.ChangedDuringApply]: 'ChangedDuringApply',
+  [DataSyncItemOutcome.NoChange]: 'NoChange'
+};
+
+export enum DataSyncItemAction {
+  None = 0,
+  Created = 1,
+  Updated = 2,
+  Linked = 3,
+  KeysRecorded = 4,
+  Deleted = 5,
+  TypeChanged = 6,
+  Reordered = 7
+}
+
+export const dataSyncItemActions = [
+  { label: 'None', value: DataSyncItemAction.None },
+  { label: 'Created', value: DataSyncItemAction.Created },
+  { label: 'Updated', value: DataSyncItemAction.Updated },
+  { label: 'Linked', value: DataSyncItemAction.Linked },
+  { label: 'KeysRecorded', value: DataSyncItemAction.KeysRecorded },
+  { label: 'Deleted', value: DataSyncItemAction.Deleted },
+  { label: 'TypeChanged', value: DataSyncItemAction.TypeChanged },
+  { label: 'Reordered', value: DataSyncItemAction.Reordered }
+] as const;
+
+export const DataSyncItemActionLabel: Record<DataSyncItemAction, string> = {
+  [DataSyncItemAction.None]: 'None',
+  [DataSyncItemAction.Created]: 'Created',
+  [DataSyncItemAction.Updated]: 'Updated',
+  [DataSyncItemAction.Linked]: 'Linked',
+  [DataSyncItemAction.KeysRecorded]: 'KeysRecorded',
+  [DataSyncItemAction.Deleted]: 'Deleted',
+  [DataSyncItemAction.TypeChanged]: 'TypeChanged',
+  [DataSyncItemAction.Reordered]: 'Reordered'
+};
+
+export enum DataSyncNaturalMatch {
+  None = 0,
+  Clash = 1,
+  Similar = 2,
+  Exact = 3,
+  Identical = 4
+}
+
+export const dataSyncNaturalMatches = [
+  { label: 'None', value: DataSyncNaturalMatch.None },
+  { label: 'Clash', value: DataSyncNaturalMatch.Clash },
+  { label: 'Similar', value: DataSyncNaturalMatch.Similar },
+  { label: 'Exact', value: DataSyncNaturalMatch.Exact },
+  { label: 'Identical', value: DataSyncNaturalMatch.Identical }
+] as const;
+
+export const DataSyncNaturalMatchLabel: Record<DataSyncNaturalMatch, string> = {
+  [DataSyncNaturalMatch.None]: 'None',
+  [DataSyncNaturalMatch.Clash]: 'Clash',
+  [DataSyncNaturalMatch.Similar]: 'Similar',
+  [DataSyncNaturalMatch.Exact]: 'Exact',
+  [DataSyncNaturalMatch.Identical]: 'Identical'
+};
+
+export enum DataSyncTableClass {
+  Synced = 1,
+  NeverSync = 2,
+  LibraryData = 3
+}
+
+export const dataSyncTableClasses = [
+  { label: 'Synced', value: DataSyncTableClass.Synced },
+  { label: 'NeverSync', value: DataSyncTableClass.NeverSync },
+  { label: 'LibraryData', value: DataSyncTableClass.LibraryData }
+] as const;
+
+export const DataSyncTableClassLabel: Record<DataSyncTableClass, string> = {
+  [DataSyncTableClass.Synced]: 'Synced',
+  [DataSyncTableClass.NeverSync]: 'NeverSync',
+  [DataSyncTableClass.LibraryData]: 'LibraryData'
+};
+
+export enum DataSyncChildDeletionMode {
+  Normal = 1,
+  Apply = 2,
+  ReviewEach = 3,
+  Restore = 4
+}
+
+export const dataSyncChildDeletionModes = [
+  { label: 'Normal', value: DataSyncChildDeletionMode.Normal },
+  { label: 'Apply', value: DataSyncChildDeletionMode.Apply },
+  { label: 'ReviewEach', value: DataSyncChildDeletionMode.ReviewEach },
+  { label: 'Restore', value: DataSyncChildDeletionMode.Restore }
+] as const;
+
+export const DataSyncChildDeletionModeLabel: Record<DataSyncChildDeletionMode, string> = {
+  [DataSyncChildDeletionMode.Normal]: 'Normal',
+  [DataSyncChildDeletionMode.Apply]: 'Apply',
+  [DataSyncChildDeletionMode.ReviewEach]: 'ReviewEach',
+  [DataSyncChildDeletionMode.Restore]: 'Restore'
+};
+
 export enum FileOperationType {
   Rename = 1,
   Move = 2,
@@ -5783,3 +7031,7 @@ export const ProxyCapableThirdPartyIds: readonly ThirdPartyId[] = [
   ThirdPartyId.SoulPlus,
   ThirdPartyId.Tmdb
 ] as const;
+
+export const DataSyncKinds: readonly string[] = ["extensionGroup", "customProperty"] as const;
+export const DataSyncContractVersion = 1;
+export const DataSyncMaxOptionsPerProperty = 20000;
