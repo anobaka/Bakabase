@@ -80,11 +80,29 @@ internal sealed partial class DataSyncMergeEngine
         if (MassDeletionOrKindEmptied() is { } breaker) return Stopped(breaker.Reason, breaker.Detail, null);
         var largeChange = ApplyLargeChangeBreaker();
         var result = Assemble(largeChange);
-        var evaluated = result.Evaluated.ToHashSet();
-        var openAfter = _in.OpenItems.Count(i => !evaluated.Contains((i.Kind, i.Key))) + result.Inbox.Count;
-        return DataSyncBreakers.TooManyDecisions(openAfter, _in.Limits) is { } tooMany
+        return DataSyncBreakers.TooManyDecisions(OpenItemsAfter(result), _in.Limits) is { } tooMany
             ? Stopped(tooMany.Reason, tooMany.Detail, null)
             : result;
+    }
+
+    /// <summary>
+    /// B8's count (§8.7): the link's open items once this pull is applied — merger-derived items of entities it did
+    /// not evaluate, every merger-derived draft, and the state-derived items open or drafted (one per subject: a
+    /// draft refreshes the open item of its subject). State-derived items are drafted once and never produced again
+    /// (a held child is invisible to later merges), so only the open ones say how many wait.
+    /// </summary>
+    private int OpenItemsAfter(DataSyncMergeResult result)
+    {
+        var evaluated = result.Evaluated.ToHashSet();
+        var merger = _in.OpenItems.Count(i => i.Origin == DataSyncInboxItemOrigin.Merger && !evaluated.Contains((i.Kind, i.Key))) +
+                     result.Inbox.Count(d => d.Origin == DataSyncInboxItemOrigin.Merger);
+        var state = new HashSet<(string, string, DataSyncInboxItemType, string)>();
+        foreach (var item in (_in.OpenStateItems ?? []).Concat(_in.OpenItems)
+                     .Where(i => i.Origin == DataSyncInboxItemOrigin.State))
+            state.Add((item.Kind, item.Key.Value, item.Type, item.SubjectPath));
+        foreach (var draft in result.Inbox.Where(d => d.Origin == DataSyncInboxItemOrigin.State))
+            state.Add((draft.Kind, draft.Key.Value, draft.Type, draft.SubjectPath));
+        return merger + state.Count;
     }
 
     private static DataSyncMergeResult Stopped(DataSyncPauseReason? pause, string? detail, DataSyncAnomaly? anomaly) =>
@@ -124,6 +142,13 @@ internal sealed partial class DataSyncMergeEngine
 
         /// <summary>The base row a re-merged pending record waited on.</summary>
         public DataSyncPeerBase? SourceBase { get; init; }
+
+        /// <summary>
+        /// Other rows that hold the same peer record (its primary key) as a pending record. A record is stored once
+        /// per link and entity (§8.4); one found on several rows is merged once, and the rows its outcome does not
+        /// write are cleared.
+        /// </summary>
+        public List<DataSyncPeerBase> DuplicateSources { get; } = [];
 
         public required DataSyncMergeFlags Flags { get; init; }
         public int Position { get; set; }
@@ -237,12 +262,37 @@ internal sealed partial class DataSyncMergeEngine
         var incomingPrimaries = incoming.SelectMany(c => c.Record.Keys).ToHashSet(StringComparer.Ordinal);
         var pending = new List<Candidate>();
         var pendingBases = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var (kind, key) in _in.PendingToMerge.Distinct())
+        var pendingByPrimary = new Dictionary<string, Candidate>(StringComparer.Ordinal);
+
+        // One peer record found on two rows (a store that lost a clear) is merged once: the newest copy, preferably
+        // on the row its own primary keys; the other rows are cleared with its outcome. Merged from both rows it made
+        // two operations on one entity, and the second failed its hash check at apply.
+        bool MergedAlready(DataSyncPeerBase b)
         {
-            if (kind != k.Kind || !k.Bases.TryGetValue(key.Value, out var b) || b.Pending is null) continue;
-            if (incomingPrimaries.Contains(b.Pending.Record.Keys[0])) continue;
-            pending.Add(PendingCandidate(k, b));
-            pendingBases.Add(key.Value);
+            if (!pendingByPrimary.TryGetValue(b.Pending!.Record.Keys[0], out var kept)) return false;
+            if (kept.SourceBase != b && !kept.DuplicateSources.Contains(b)) kept.DuplicateSources.Add(b);
+            pendingBases.Add(b.Key.Value);
+            return true;
+        }
+
+        void AddPending(Candidate candidate, DataSyncPeerBase b)
+        {
+            pending.Add(candidate);
+            pendingBases.Add(b.Key.Value);
+            pendingByPrimary[b.Pending!.Record.Keys[0]] = candidate;
+        }
+
+        var toMerge = _in.PendingToMerge.Distinct()
+            .Where(x => x.Kind == k.Kind)
+            .Select(x => k.Bases.GetValueOrDefault(x.Key.Value))
+            .Where(b => b?.Pending is not null && !incomingPrimaries.Contains(b.Pending.Record.Keys[0]))
+            .Select(b => b!)
+            .OrderByDescending(b => b.Pending!.Record.Seq)
+            .ThenBy(b => b.Key.Value == b.Pending!.Record.Keys[0] ? 0 : 1)
+            .ThenBy(b => b.Key.Value, StringComparer.Ordinal);
+        foreach (var b in toMerge)
+        {
+            if (!MergedAlready(b)) AddPending(PendingCandidate(k, b), b);
         }
 
         foreach (var candidate in incoming.Concat(pending)) candidate.Bind = BindRecord(k, candidate.Record);
@@ -255,10 +305,10 @@ internal sealed partial class DataSyncMergeEngine
             if (TargetBaseKey(candidate) is not { } target || pendingBases.Contains(target.Value)) continue;
             if (!k.Bases.TryGetValue(target.Value, out var b) || b.Pending is null) continue;
             if (b.Pending.Record.Keys[0] == candidate.Primary || incomingPrimaries.Contains(b.Pending.Record.Keys[0])) continue;
+            if (MergedAlready(b)) continue;
             var extra = PendingCandidate(k, b);
             extra.Bind = BindRecord(k, extra.Record);
-            pending.Add(extra);
-            pendingBases.Add(target.Value);
+            AddPending(extra, b);
         }
 
         // Row M again: a pull record that binds to an entity whose IdentityConflict question waits on this link with
@@ -276,8 +326,8 @@ internal sealed partial class DataSyncMergeEngine
             var extra = PendingCandidate(k, b);
             extra.Bind = BindRecord(k, extra.Record);
             if (extra.Bind.Kind != BindingKind.Live || !boundByIncoming.Contains(extra.Bind.Live!.LocalKey)) continue;
-            pending.Add(extra);
-            pendingBases.Add(key);
+            if (MergedAlready(b)) continue;
+            AddPending(extra, b);
         }
 
         // §8.4: OverBudget pending records first, then by Seq with ties by primary key.
@@ -538,6 +588,8 @@ internal sealed partial class DataSyncMergeEngine
         {
             var index = _proposals.IndexOf(p);
             var wait = Waiting(p.Kind, p.Candidate!, DataSyncPendingReason.LargeChange);
+            // The rows the record leaves are cleared as they were for the outcome it replaces.
+            AddClears(wait);
             _proposals[index] = wait;
             entries.Add(new DataSyncLargeChangeEntry(p.Name, p.Kind.Kind, p.IsCreate, p.ChangeCount));
             foreach (var u in wait.BaseUpdates) replacedBases.Add((u.Kind, u.Key.Value));

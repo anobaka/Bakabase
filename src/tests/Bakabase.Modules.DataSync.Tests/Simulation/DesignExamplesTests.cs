@@ -53,7 +53,7 @@ public class DesignExamplesTests
     private static string Form(SimNode node, string name)
     {
         var row = node.Row(name);
-        return DataSyncPublication.Of(TestItemCodec.Instance, row.Content!, row.Overlay, false, row.OrderKey, row.Unknown)
+        return DataSyncPublication.Of(TestItemCodec.Instance, row.Content!, row.Overlay, row.ChildrenLocal, row.OrderKey, row.Unknown)
             .SharedHash!;
     }
 
@@ -605,5 +605,42 @@ public class DesignExamplesTests
         Assert.IsNull(pc1.Row("Genres").Item!.Color);
         Assert.IsNull(pc2.Row("Genres").Item!.Color);
         Assert.AreEqual(0, pc1.OpenDecisions + pc2.OpenDecisions);
+    }
+
+    // ---- §8.5.5: a concurrent appearance change merged crosswise ---------------------------------------
+
+    [TestMethod]
+    public void AConcurrentAppearanceChangeMergedCrosswiseSettlesWithoutAnotherRevision()
+    {
+        var (pc1, pc2) = TwoWay(Node("PC-1"), Node("PC-2"));
+        pc1.Create(new TestItemContent("Genre", "#e5484d", []));
+        pc1.Create(new TestItemContent("Mood", null, []));
+        Settle(pc1, pc2);
+
+        // Both recolour Genre and move it, then both take their snapshot before either applies.
+        pc1.Edit("Genre", c => c.With(color: "#0090ff"));
+        pc1.Move(pc1.Row("Genre"), 1);
+        pc2.Edit("Genre", c => c.With(color: "#30a46c"));
+        Assert.AreEqual(SimPullOutcome.Applied, pc1.Fetch(pc1.LinkTo(pc2), out var toPc1));
+        Assert.AreEqual(SimPullOutcome.Applied, pc2.Fetch(pc2.LinkTo(pc1), out var toPc2));
+        pc1.Redeliver(pc1.LinkTo(pc2), toPc1!);
+        pc2.Redeliver(pc2.LinkTo(pc1), toPc2!);
+
+        // Each merged the other's revision against its own: both picked the same winner, so both hold one content.
+        Assert.AreEqual(0, pc1.OpenDecisions + pc2.OpenDecisions, "appearance is never an item");
+        AssertSameForm(pc1, pc2, "Genre");
+
+        // The two revisions are concurrent with equal content: the next pulls end at Max(Vv), no counter issued.
+        var counters = (pc1.ActorCounter, pc2.ActorCounter);
+        var max = DataSyncVersionVector.Max(pc1.Row("Genre").Vv, pc2.Row("Genre").Vv);
+        pc1.Pull(pc2);
+        pc2.Pull(pc1);
+        Assert.AreEqual(counters, (pc1.ActorCounter, pc2.ActorCounter), "no further revision");
+        Assert.AreEqual(max, pc1.Row("Genre").Vv);
+        Assert.AreEqual(max, pc2.Row("Genre").Vv);
+        var seqs = (pc1.LastSeq, pc2.LastSeq);
+        Settle(pc1, pc2);
+        Assert.AreEqual(seqs, (pc1.LastSeq, pc2.LastSeq), "settled");
+        AssertSameForm(pc1, pc2, "Genre");
     }
 }

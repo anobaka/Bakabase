@@ -19,12 +19,16 @@ namespace Bakabase.Modules.DataSync.Tests.TestKinds;
 /// is transferred) and keeps the name, the colour, the order key and the multiset of labels, which
 /// <see cref="Merge3"/> all transfer. Deletions go by usage (holds when in use) and B4 uses
 /// <see cref="DataSyncAutoApplyPolicy.Default"/>. Remapped ids are deterministic (<c>{id}~{n}</c>), so a simulator
-/// run is reproducible.
+/// run is reproducible. It offers "sync the definition only" (§3.6) as the custom property kind does: published
+/// content then carries <c>"childrenLocal":true</c> and no children, the comparison form drops the children and
+/// keeps the flag, and <see cref="Merge3"/> merges the flag as the scalar path <c>childrenLocal</c> — children stay
+/// as they are while it holds, and merge by the NoBase rules (a union) on the merge that turns it off.
 /// </remarks>
 public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
 {
     public const string Kind = "testItem";
     public const string ChildPathPrefix = "child:";
+    public const string ChildrenLocalPath = "childrenLocal";
 
     public static TestItemCodec Instance { get; } = new();
 
@@ -34,7 +38,7 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
     /// </param>
     public TestItemCodec(int schemaVersion = 1) =>
         Descriptor = new DataSyncKindDescriptor(Kind, schemaVersion, [], typeof(TestItemContent),
-            AutoLinkIdentical: false, HasOrder: true, HasChildren: true, SupportsChildrenLocal: false, ChildNoun: "child");
+            AutoLinkIdentical: false, HasOrder: true, HasChildren: true, SupportsChildrenLocal: true, ChildNoun: "child");
 
     public override DataSyncKindDescriptor Descriptor { get; }
 
@@ -51,7 +55,7 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
         JsonObject? unknown = null;
         foreach (var (member, value) in content.OrderBy(m => m.Key, StringComparer.Ordinal))
         {
-            if (member is "name" or "color" or "children" or "type") continue;
+            if (member is "name" or "color" or "children" or "type" or ChildrenLocalPath) continue;
             (unknown ??= new JsonObject())[member] = value?.DeepClone();
         }
 
@@ -74,6 +78,15 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
         {
             if (!TryGetString(content, "color", out var c)) return Held("color", warnings, unknown);
             color = c.Length <= limits.MaxColorLength ? c : null;
+        }
+
+        var childrenLocal = false;
+        if (content.ContainsKey(ChildrenLocalPath))
+        {
+            // Published with "sync the definition only": the flag is true, and no child travels with it.
+            if (content[ChildrenLocalPath] is not JsonValue flag || flag.GetValueKind() != JsonValueKind.True ||
+                content.ContainsKey("children")) return Held(ChildrenLocalPath, warnings, unknown);
+            childrenLocal = true;
         }
 
         var children = new List<TestChild>();
@@ -104,7 +117,7 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
             }
         }
 
-        return new CodecReadResult(new TestItemContent(name, color, children, type), null, [], warnings, unknown);
+        return new CodecReadResult(new TestItemContent(name, color, children, type, childrenLocal), null, [], warnings, unknown);
     }
 
     public override TestItemContent ReadLocal(JsonObject content)
@@ -115,7 +128,8 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
         var children = content["children"] is JsonArray array
             ? array.Select(n => new TestChild((string)n!["id"]!, (string)n["label"]!))
             : [];
-        return new TestItemContent(name, color, children, type);
+        return new TestItemContent(name, color, children, type,
+            content[ChildrenLocalPath] is JsonValue flag && flag.GetValueKind() == JsonValueKind.True);
     }
 
     public override JsonObject Write(TestItemContent content)
@@ -129,6 +143,7 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
                 .Select(c => (JsonNode?)new JsonObject { ["id"] = c.Id, ["label"] = c.Label }).ToArray());
         }
 
+        if (content.ChildrenLocal) json[ChildrenLocalPath] = true;
         return json;
     }
 
@@ -217,18 +232,30 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
         return new MergeResult(new TestItemContent(name, color, children), childMap, added, []);
     }
 
+    /// <summary>A create keeps no <c>childrenLocal</c> in its content: the flag lives on the side row (§3.6).</summary>
     public override MergeResult PrepareCreate(TestItemContent incoming, string? nameOverride) =>
-        new(incoming.With(name: nameOverride), incoming.Children.ToDictionary(c => c.Id, c => c.Id),
-            incoming.Children.Select(c => c.Id).ToList(), []);
+        new(new TestItemContent(nameOverride ?? incoming.Name, incoming.Color, incoming.Children, incoming.Type),
+            incoming.Children.ToDictionary(c => c.Id, c => c.Id), incoming.Children.Select(c => c.Id).ToList(), []);
 
     // ---- continuous sync ----------------------------------------------------------------------
 
     public override DataSyncPublishable Publish(TestItemContent localContent, DataSyncOverlay overlay, bool childrenLocal)
     {
+        if (childrenLocal || localContent.ChildrenLocal)
+        {
+            // §3.5 step 2: no child travels, by design (none counts as withheld).
+            var definitionOnly = new TestItemContent(localContent.Name, localContent.Color, [], localContent.Type, true);
+            var checkedRead = Read(Write(definitionOnly), DataSyncLimits.Default);
+            return checkedRead.Held is { } heldDefinition
+                ? new DataSyncPublishable(null, 0, checkedRead.Warnings.ToArray(), heldDefinition, checkedRead.Errors.FirstOrDefault())
+                : new DataSyncPublishable(checkedRead.Content!, 0, checkedRead.Warnings.ToArray());
+        }
+
         var hidden = overlay.HiddenChildIds.ToHashSet(StringComparer.Ordinal);
         var visible = localContent.Children.Where(c => !hidden.Contains(c.Id)).ToList();
         var withheld = localContent.Children.Count - visible.Count;
-        var read = Read(Write(localContent.With(children: visible)), DataSyncLimits.Default);
+        var read = Read(Write(new TestItemContent(localContent.Name, localContent.Color, visible, localContent.Type)),
+            DataSyncLimits.Default);
         if (read.Held is { } held)
             return new DataSyncPublishable(null, withheld, read.Warnings.ToArray(), held, read.Errors.FirstOrDefault());
         var published = (TestItemContent)read.Content!;
@@ -243,6 +270,13 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
         if (publishedContent.Color is not null) form["color"] = publishedContent.Color;
         if (orderKey is not null) form["orderKey"] = orderKey;
         if (publishedContent.Type is not null) form["type"] = publishedContent.Type;
+        if (childrenLocal || publishedContent.ChildrenLocal)
+        {
+            // §3.4: with "sync the definition only" the children are left out and the flag is kept.
+            form[ChildrenLocalPath] = true;
+            return form;
+        }
+
         form["children"] = new JsonArray(labels.Select(l => (JsonNode?)JsonValue.Create(l)).ToArray());
         return form;
     }
@@ -250,6 +284,8 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
     protected override IReadOnlyList<string> ChildDeletionCandidates(TestItemContent? baseContent, TestItemContent local,
         TestItemContent remote, DataSyncChildCandidatesInput input)
     {
+        // With "sync the definition only" on any side the children merge by the NoBase rules or not at all (§3.6).
+        if (input.ChildrenLocalAnySide || remote.ChildrenLocal) return [];
         var plan = PlanChildren(baseContent, local, remote, input.LocalOverlay, input.Mode3, input.ChildMap,
             DataSyncLinkMode.TwoWay, true);
         return plan.Candidates;
@@ -260,8 +296,22 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
     {
         var fields = new List<DataSyncFieldOutcome>();
         var warnings = new List<DataSyncPlanWarning>();
-        var plan = PlanChildren(baseContent, local, remote, input.LocalOverlay, input.Mode3, input.ChildMap, input.Mode,
-            input.LocalLastEditorIsSelf);
+
+        // §3.6 first: the flag decides whether the children merge at all. While it holds they stay as they are; on
+        // the merge that turns it off (the base, this device or the peer still had it) they are unioned — nothing
+        // deleted, renamed or recoloured — since nobody's children can be read as deletions or edits. A rename
+        // conflict there would keep the base from advancing, so every later merge on the link would union again.
+        var localCl = input.LocalChildrenLocal || local.ChildrenLocal;
+        var baseCl = baseContent is not null && (input.BaseChildrenLocal || baseContent.ChildrenLocal);
+        var childrenLocal = MergeFlag(ChildrenLocalPath, baseContent is null ? null : baseCl, localCl,
+            remote.ChildrenLocal, input, fields);
+        var childrenNoBase = !childrenLocal && (localCl || baseCl || remote.ChildrenLocal);
+        if (childrenNoBase) warnings.Add(Warning(DataSyncWarningCode.ChildrenLocalTurnedOff));
+        var plan = childrenLocal
+            ? ChildPlan.Unchanged(input.ChildMap, local.Children.Count)
+            : PlanChildren(childrenNoBase ? null : baseContent, local, remote, input.LocalOverlay,
+                childrenNoBase ? DataSyncMerge3Mode.NoBase : input.Mode3, input.ChildMap, input.Mode,
+                input.LocalLastEditorIsSelf, union: childrenNoBase);
 
         // B4 (§8.5.4 step 7).
         var tripped = DataSyncBreakers.IsMassChildDeletion(plan.Candidates.Count, plan.VisibleLocalCount,
@@ -323,6 +373,7 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
         }
 
         fields.AddRange(plan.Fields);
+        // The merged flag is the childrenLocal outcome's; local content never carries it (it is the side row's).
         var merged = new TestItemContent(name, color, children, type);
         return new DataSyncMerge3Result(merged, fields, plan.ChildMap, plan.Adds.Select(a => a.Id).ToList(), removed,
             held, plan.Released, [], warnings, false);
@@ -341,6 +392,11 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
         List<DataSyncFieldOutcome> Fields,
         int VisibleLocalCount)
     {
+        /// <summary>"Sync the definition only" holds: the children stay exactly as they are, the map as it was.</summary>
+        public static ChildPlan Unchanged(IReadOnlyDictionary<string, string> childMap, int localCount) =>
+            new(new Dictionary<string, string>(childMap, StringComparer.Ordinal), new Dictionary<string, string>(), [], [],
+                new Dictionary<string, string>(), [], [], [], localCount);
+
         public string PeerIdOf(string localId) =>
             ChildMap.Where(p => p.Value == localId).Select(p => p.Key).OrderBy(k => k, StringComparer.Ordinal)
                 .FirstOrDefault() ?? localId;
@@ -348,7 +404,7 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
 
     private static ChildPlan PlanChildren(TestItemContent? baseContent, TestItemContent local, TestItemContent remote,
         DataSyncOverlay overlay, DataSyncMerge3Mode mode3, IReadOnlyDictionary<string, string> childMap,
-        DataSyncLinkMode mode, bool localLastEditorIsSelf)
+        DataSyncLinkMode mode, bool localLastEditorIsSelf, bool union = false)
     {
         var hidden = overlay.HiddenChildIds.ToHashSet(StringComparer.Ordinal);
         var visible = local.Children.Where(c => !hidden.Contains(c.Id)).ToList();
@@ -373,7 +429,7 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
             if (map.TryGetValue(r.Id, out var localId))
             {
                 var l = visibleById[localId].Label;
-                if (l == r.Label) continue;
+                if (l == r.Label || union) continue;
                 var b = baseById.TryGetValue(r.Id, out var bc) ? bc.Label : null;
                 DataSyncFieldResolution resolution;
                 if (mode3 == DataSyncMerge3Mode.FastForward) resolution = DataSyncFieldResolution.TookRemote;
@@ -503,6 +559,29 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
             new DataSyncDisplayValue(l), new DataSyncDisplayValue(r), new DataSyncDisplayValue(result)));
         return result;
     }
+
+    /// <summary>
+    /// <c>childrenLocal</c> (§3.6) as a scalar (§8.5.2): three-way against the base (with a flag, one side changed
+    /// it), the peer's in FastForward and Convert, concurrent without a base.
+    /// </summary>
+    private static bool MergeFlag(string path, bool? b, bool l, bool r, DataSyncMerge3Input input,
+        List<DataSyncFieldOutcome> fields)
+    {
+        if (l == r) return l;
+        var resolution = input.Mode3 switch
+        {
+            DataSyncMerge3Mode.FastForward or DataSyncMerge3Mode.Convert => DataSyncFieldResolution.TookRemote,
+            DataSyncMerge3Mode.ThreeWay when b is { } flag =>
+                l == flag ? DataSyncFieldResolution.TookRemote : DataSyncFieldResolution.KeptLocal,
+            _ => Concurrent(input.Mode, input.LocalLastEditorIsSelf),
+        };
+        var result = resolution is DataSyncFieldResolution.TookRemote or DataSyncFieldResolution.FollowTookRemote ? r : l;
+        fields.Add(new DataSyncFieldOutcome(path, resolution, b is { } bv ? FlagValue(bv) : null, FlagValue(l),
+            FlagValue(r), FlagValue(result)));
+        return result;
+    }
+
+    private static DataSyncDisplayValue FlagValue(bool flag) => new(null, Flag: flag);
 
     /// <summary>§8.5.5: one side changed → taken; both → the appearance winner; NoBase never clears.</summary>
     private static string? MergeColor(TestItemContent? baseContent, TestItemContent local, TestItemContent remote,

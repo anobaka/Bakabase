@@ -152,6 +152,18 @@ internal sealed partial class SimNode
         if (Db.Order.TryGetValue(row.Kind, out var order)) order.Remove(row.LocalKey);
     }
 
+    /// <summary>
+    /// "Sync the definition only" turned on or off here (§3.6). The flag is shared content kept on the side row, so
+    /// the next Refresh issues a revision like any local edit.
+    /// </summary>
+    public void SetChildrenLocal(SimRow row, bool on)
+    {
+        if (!row.IsLive) throw new InvalidOperationException("Only a live definition can be edited.");
+        if (!SimKinds.Of(row.Kind).Codec.Descriptor.SupportsChildrenLocal)
+            throw new InvalidOperationException($"{row.Kind} does not offer 'sync the definition only'.");
+        row.ChildrenLocal = on;
+    }
+
     public void Use(string name, string childId, int resources) => UseChild(Row(name), childId, resources);
 
     public void UseChild(SimRow row, string childId, int resources)
@@ -244,7 +256,8 @@ internal sealed partial class SimNode
             {
                 // A new local definition: its first revision.
                 row.OrderKey = moves.GetValueOrDefault(row.LocalKey) ?? row.OrderKey;
-                var publication = DataSyncPublication.Of(codec, row.Content!, row.Overlay, false, row.OrderKey, row.Unknown);
+                var publication = DataSyncPublication.Of(codec, row.Content!, row.Overlay, row.ChildrenLocal, row.OrderKey,
+                    row.Unknown);
                 row.LocalHash = ContentHash.Of(json);
                 row.SharedHash = publication.SharedHash ?? DataSyncRefreshRules.HeldSharedHash(row.LocalHash);
                 row.Vv = DataSyncRefreshRules.LocalRevision(DataSyncVersionVector.Empty, Actor, NextCounter);
@@ -254,7 +267,7 @@ internal sealed partial class SimNode
             }
 
             var decision = DataSyncRefreshRules.Evaluate(codec,
-                new DataSyncRefreshRow(row.State, row.SharedHash, row.OrderKey, row.Overlay, false, row.PublishHeld,
+                new DataSyncRefreshRow(row.State, row.SharedHash, row.OrderKey, row.Overlay, row.ChildrenLocal, row.PublishHeld,
                     row.Unknown),
                 json, false, moves.GetValueOrDefault(row.LocalKey),
                 typed => row.LastApply is { } last && DataSyncLostUpdateGuard.InWindow(last.At, Now)
@@ -327,13 +340,24 @@ internal sealed partial class SimNode
     private static DataSyncOpenInboxItem ToOpen(SimItem i) =>
         new(i.Id, i.LinkId, i.Kind, i.Key, i.Type, i.Origin, i.Subject, i.Token, i.RecordVv);
 
+    /// <param name="reconciled">
+    /// The draft comes from <see cref="DataSyncInboxRules.Reconcile"/>, which names the open item of its subject:
+    /// finding one it did not name means one merge drafted two items with one subject, which a store holding one open
+    /// item per subject (§4.2) refuses. That is a violation, never merged silently.
+    /// </param>
     /// <returns>The item, and whether it was inserted.</returns>
-    private (SimItem Item, bool Inserted) UpsertItem(int? linkId, DataSyncInboxDraft draft, long? existingId = null)
+    private (SimItem Item, bool Inserted) UpsertItem(int? linkId, DataSyncInboxDraft draft, long? existingId = null,
+        bool reconciled = false)
     {
-        var item = existingId is { } id
-            ? Items.Single(i => i.Id == id)
-            : Items.FirstOrDefault(i => i.Open && i.LinkId == linkId && i.Kind == draft.Kind && i.Key == draft.Key &&
-                                        i.Type == draft.Type && i.Subject == draft.SubjectPath);
+        var bySubject = Items.FirstOrDefault(i => i.Open && i.LinkId == linkId && i.Kind == draft.Kind && i.Key == draft.Key &&
+                                                  i.Type == draft.Type && i.Subject == draft.SubjectPath);
+        if (reconciled && existingId is null && bySubject is not null)
+        {
+            Violations.Add($"inbox: {Name} got two drafts of {draft.Type} {draft.Kind}/{draft.Key.Value[..6]} " +
+                           $"'{draft.SubjectPath}' from one merge");
+        }
+
+        var item = existingId is { } id ? Items.Single(i => i.Id == id) : bySubject;
         var inserted = item is null;
         if (item is null)
         {

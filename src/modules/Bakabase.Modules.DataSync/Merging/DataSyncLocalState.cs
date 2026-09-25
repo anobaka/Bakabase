@@ -11,11 +11,20 @@ namespace Bakabase.Modules.DataSync.Merging;
 /// This device's stored row does not parse (§3.3, <see cref="LocalEntity.Unreadable"/>): Content is ReadLocal of
 /// <c>{name, type}</c> only. The merger never targets it, and items touching it are Held(LocalUnreadable).
 /// </param>
+/// <param name="OpenItemAnyLink">
+/// The entity has an open inbox item of either origin on ANY link (§8.6). The merge input's <c>OpenItems</c> holds
+/// only this link's merger-derived items, so the store [C] fills this from every link's open items.
+/// </param>
+/// <param name="PendingRecordAnyLink">
+/// The entity has a pending record on ANY link (§8.6): on a base row of the entity, or a record bound to it that
+/// waits under its own primary (rows I and M). The store [C] fills it from every link's bases.
+/// </param>
 public sealed record DataSyncLocalEntityState(
     string LocalKey, EntityKeys Keys, object Content /* ReadLocal */, string LocalHash, string SharedHash,
     DataSyncVersionVector Vv, DataSyncActorId? LastActor, DataSyncEditorRef? LastEditor, string? OrderKey,
     DataSyncEntitySyncState State, DataSyncOverlay Overlay, bool ChildrenLocal, bool CreatedBySync, bool PublishHeld,
-    JsonObject? Unknown, int? ValueCount, long Seq, bool Unreadable = false);
+    JsonObject? Unknown, int? ValueCount, long Seq, bool Unreadable = false, bool OpenItemAnyLink = false,
+    bool PendingRecordAnyLink = false);
 
 /// <param name="Seq">
 /// The tombstone row's feed sequence (§6.2). A pending record stored against the tombstone remembers it as

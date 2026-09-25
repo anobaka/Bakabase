@@ -19,6 +19,18 @@ internal sealed partial class SimNode
 
     public SimPullOutcome Pull(SimLink link)
     {
+        var outcome = Fetch(link, out var pull);
+        return pull is null ? outcome : Apply(link, pull, null, skipRefresh: false, retried: false);
+    }
+
+    /// <summary>
+    /// The fetch half of <see cref="Pull(SimLink)"/> alone (§8.10.2): head, breakers, evidence, the actor check, then
+    /// the manifest and pages. <paramref name="pull"/> is the staged pull when there is one to apply
+    /// (<see cref="Redeliver"/> applies it), else null with the outcome that stopped it.
+    /// </summary>
+    public SimPullOutcome Fetch(SimLink link, out DataSyncStagedPull? pull)
+    {
+        pull = null;
         if (link.Stopped) return SimPullOutcome.Skipped;
         if (link.Paused is not null) return SimPullOutcome.Paused;
         var peer = link.Peer;
@@ -59,11 +71,11 @@ internal sealed partial class SimNode
 
         // 2–3. manifest and pages
         var full = Now - link.LastFullReconciliation >= FullReconciliationInterval;
-        var pull = peer.Snapshot(this, link, full);
+        pull = peer.Snapshot(this, link, full);
         if (pull is null) return SimPullOutcome.Waiting;
         link.PeerEpoch ??= head.LibraryEpoch;
         LastPull = pull;
-        return Apply(link, pull, null, skipRefresh: false, retried: false);
+        return SimPullOutcome.Applied;
     }
 
     /// <summary>The staged pull the last <see cref="Pull(SimLink)"/> fetched.</summary>
@@ -151,9 +163,11 @@ internal sealed partial class SimNode
             SimKinds.All.ToDictionary(k => k.Kind, k => k.Codec.ComparisonFormVersion, StringComparer.Ordinal), link.OnceFlags);
         var open = Items.Where(i => i.Open && i.LinkId == link.Id && i.Origin == DataSyncInboxItemOrigin.Merger)
             .Select(ToOpen).ToList();
+        var openState = Items.Where(i => i.Open && i.LinkId == link.Id && i.Origin == DataSyncInboxItemOrigin.State)
+            .Select(ToOpen).ToList();
         var input = new DataSyncMergeInput(context, pull, LocalStates(), bases, pending, SimKinds.Codecs,
             new Dictionary<(string, string), IReadOnlyDictionary<string, int>>(), new Dictionary<(string, string), int>(),
-            open, DataSyncAutoApplyPolicy.Default, Limits);
+            open, DataSyncAutoApplyPolicy.Default, Limits, openState);
 
         var usage = new Dictionary<(string, string), IReadOnlyDictionary<string, int>>();
         var values = new Dictionary<(string, string), int>();
@@ -207,9 +221,18 @@ internal sealed partial class SimNode
             Live(k.Kind).Where(r => r.HasSideRow).Select(r => new DataSyncLocalEntityState(r.LocalKey, new EntityKeys(r.Keys),
                 r.Content!, r.LocalHash, r.SharedHash ?? "", r.Vv,
                 r.LastEditor is { } e ? new DataSyncActorId(e.ActorId) : null, r.LastEditor, r.OrderKey, r.State, r.Overlay,
-                false, r.CreatedBySync, r.PublishHeld, r.Unknown, Db.Values.GetValueOrDefault((r.Kind, r.LocalKey)), r.Seq)).ToList(),
+                r.ChildrenLocal, r.CreatedBySync, r.PublishHeld, r.Unknown, Db.Values.GetValueOrDefault((r.Kind, r.LocalKey)),
+                r.Seq, OpenItemAnyLink: HasOpenItem(r), PendingRecordAnyLink: HasPendingRecord(r))).ToList(),
             Rows.Where(r => r.Kind == k.Kind && r.Deleted).Select(r => new DataSyncTombstoneState(new EntityKeys(r.Keys), r.Vv,
                 r.LastEditor, r.StateAtDeletion, r.TombstoneKind, r.Served, r.Seq)).ToList()), StringComparer.Ordinal);
+
+    /// <summary>§8.6: an open item of either origin, on any link, about one of the row's keys.</summary>
+    private bool HasOpenItem(SimRow row) => Items.Any(i => i.Open && i.Kind == row.Kind && row.Keys.Contains(i.Key));
+
+    /// <summary>§8.6: a pending record of the row on any link — on one of its base rows, or bound to it by its keys.</summary>
+    private bool HasPendingRecord(SimRow row) => Links.Values.Any(l => l.Bases.Values.Any(b =>
+        b.Kind == row.Kind && b.Pending is { } p &&
+        (row.Keys.Contains(b.Key) || p.Record.Keys.Any(key => row.Keys.Contains(new SyncKey(key))))));
 
     /// <summary>
     /// The writes of one merge (§8.10.2 apply half): the identity pre-flight and hash checks, then content, overlays,
@@ -344,6 +367,7 @@ internal sealed partial class SimNode
                 Violations.Add($"I7: {Name} revived {row.Name} below its tombstone");
             row.Vv = applied.Vv;
             row.LastEditor = applied.LastEditor;
+            if (decision.ChildrenLocal is { } childrenLocal) row.ChildrenLocal = childrenLocal;
             if (ofTombstone)
             {
                 row.Seq = NextSeq();
@@ -409,7 +433,7 @@ internal sealed partial class SimNode
         var inserted = new List<long>();
         foreach (var upsert in reconciliation.Upserts)
         {
-            var (item, isNew) = UpsertItem(link.Id, upsert.Draft, upsert.ExistingId);
+            var (item, isNew) = UpsertItem(link.Id, upsert.Draft, upsert.ExistingId, reconciled: true);
             if (isNew) inserted.Add(item.Id);
         }
 

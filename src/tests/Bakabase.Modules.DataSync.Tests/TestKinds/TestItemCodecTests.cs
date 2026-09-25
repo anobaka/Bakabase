@@ -48,6 +48,52 @@ public class TestItemCodecTests
     }
 
     [TestMethod]
+    public void SyncTheDefinitionOnlyPublishesAndComparesNoChildren()
+    {
+        var local = T("Genre", "#fff", ("1", "Action"), ("2", "Drama"));
+        var published = Codec.Publish(local, DataSyncOverlay.None, true);
+        Assert.AreEqual(new TestItemContent("Genre", "#fff", [], null, true), published.Content);
+        Assert.AreEqual(0, published.ChildrenWithheld, "none travels by design; none is withheld");
+        Assert.AreEqual("{\"childrenLocal\":true,\"color\":\"#fff\",\"name\":\"Genre\"}",
+            CanonicalJson.Serialize(Codec.Write(published.Content!)));
+
+        // The form drops the children and keeps the flag, whichever children each side holds.
+        Assert.AreEqual(CanonicalJson.Serialize(Codec.ComparisonForm(local, null, true)),
+            CanonicalJson.Serialize(Codec.ComparisonForm(T("Genre", "#fff", ("9", "Other")), null, true)));
+        Assert.AreNotEqual(Form(local), CanonicalJson.Serialize(Codec.ComparisonForm(local, null, true)));
+
+        // A reader takes the flag as content, and holds a record that says both.
+        var read = Codec.Read(Codec.Write(published.Content!), DataSyncLimits.Default);
+        Assert.IsTrue(((TestItemContent)read.Content!).ChildrenLocal);
+        Assert.IsNull(read.Unknown, "a known member, never an unknown one");
+        var both = Codec.Write(local);
+        both["childrenLocal"] = true;
+        Assert.AreEqual(DataSyncHeldReason.Invalid, Codec.Read(both, DataSyncLimits.Default).Held);
+    }
+
+    [TestMethod]
+    public void SyncTheDefinitionOnlyMergesAsAScalar()
+    {
+        var b = T("G", null, ("1", "A"));
+        var remoteOn = new TestItemContent("G", null, [], null, true);
+
+        // Turned on there: taken, and no child is read as deleted.
+        var on = Codec.Merge3(Input(b, T("G", null, ("1", "A"), ("2", "B")), remoteOn));
+        Assert.AreEqual(DataSyncFieldResolution.TookRemote, on.Fields.Single(f => f.Path == "childrenLocal").Resolution);
+        Assert.AreEqual(0, on.RemovedChildIds.Count + on.HeldChildIds.Count);
+        Assert.AreEqual(T("G", null, ("1", "A"), ("2", "B")), Merged(on));
+
+        // Turned off there while on here and in the base: the children are unioned (NoBase), and it says so.
+        var off = Codec.Merge3(new DataSyncMerge3Input(new TestItemContent("G", null, [], null, true),
+            T("G", null, ("1", "A"), ("3", "C")), DataSyncOverlay.None, T("G", null, ("1", "A"), ("2", "B")),
+            DataSyncMerge3Mode.ThreeWay, new Dictionary<string, string>(), true, true, DataSyncLinkMode.TwoWay, true,
+            DataSyncMergeSide.Remote, new Dictionary<string, int> { ["1"] = 0, ["3"] = 0 }, DataSyncChildDeletionMode.Normal));
+        Assert.AreEqual(T("G", null, ("1", "A"), ("3", "C"), ("2", "B")), Merged(off));
+        Assert.AreEqual(0, off.RemovedChildIds.Count);
+        Assert.IsTrue(off.Warnings.Any(w => w.Code == DataSyncWarningCode.ChildrenLocalTurnedOff));
+    }
+
+    [TestMethod]
     public void PeerDeletionsGoByUsage()
     {
         var b = T("G", null, ("1", "A"), ("2", "B"), ("3", "C"));

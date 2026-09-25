@@ -4,6 +4,8 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Bakabase.Modules.DataSync.Canonical;
 using Bakabase.Modules.DataSync.Kinds.ExtensionGroups;
+using Bakabase.Modules.DataSync.Merging;
+using Bakabase.Modules.DataSync.Ordering;
 using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Tests.TestKinds;
 using Bakabase.Modules.DataSync.Wire;
@@ -315,7 +317,12 @@ public class WireReaderTests
             ["live without hash"] = r => r.Remove("hash"),
             ["negative chunks"] = r => r["chunks"] = -1,
             ["content not an object"] = r => r["content"] = "x",
+            // Taken into local state, a longer order key would make this device's own writer refuse every later
+            // snapshot (DataSyncWireWriter.Validate).
+            ["order key over 128"] = r => r["orderKey"] = "a0" + new string('V', 127),
+            ["editor name over 128"] = r => r["editedBy"]!["name"] = new string('x', 129),
         };
+        Assert.IsTrue(FractionalIndex.IsValid("a0" + new string('V', 127)), "only its length is wrong");
         foreach (var (name, mutate) in cases)
         {
             var record = (JsonObject)valid.DeepClone();
@@ -324,6 +331,105 @@ public class WireReaderTests
         }
 
         Assert.IsNull(Read(Page(valid)).Problem);
+        var longest = (JsonObject)valid.DeepClone();
+        longest["orderKey"] = "a0" + new string('V', 126);
+        longest["editedBy"]!["name"] = new string('x', 128);
+        Assert.IsNull(Read(Page(longest)).Problem, "exactly at the limits");
+    }
+
+    // ---- the assembler's own guards on peer input ------------------------------------------------------
+
+    /// <summary>A chunked record and its chunks, as a source writes them, in one page's items.</summary>
+    private static List<JsonObject> ChunkedItems()
+    {
+        var pages = Write(Live(1, 1, Item("Big", 120, 30)));
+        var items = pages.SelectMany(p => ((JsonArray)ParsePage(p)["records"]!).Select(n => (JsonObject)n!.DeepClone())).ToList();
+        Assert.IsTrue(items[0]["chunks"]!.GetValue<int>() >= 3, "the record travels in chunks");
+        return items;
+    }
+
+    private static DataSyncIncomingEntity StageChunked(IEnumerable<JsonObject> items, DataSyncLimits? assemblerLimits = null)
+    {
+        var assembler = new DataSyncRecordAssembler(TestItemCodec.Instance, assemblerLimits ?? DataSyncLimits.Default);
+        assembler.Add(DataSyncWireReader.ReadPage(Page(items.Cast<JsonNode>().ToArray()), Snapshot, Kind, DataSyncLimits.Default));
+        var entity = assembler.Complete(1, false).Entities.Single();
+        Assert.IsNull(assembler.Problem, "one entity's problem holds that entity, never the pull");
+        return entity;
+    }
+
+    [TestMethod]
+    public void ChunksMustBeExactlyZeroToNMinusOne()
+    {
+        var items = ChunkedItems();
+        foreach (var chunk in items.Skip(1)) chunk["index"] = chunk["index"]!.GetValue<int>() + 1;
+        Assert.AreEqual(DataSyncHeldReason.Invalid, StageChunked(items).Held);
+    }
+
+    [TestMethod]
+    public void ChunksMustAgreeOnTheirPath()
+    {
+        var items = ChunkedItems();
+        items[^1]["path"] = "other";
+        Assert.AreEqual(DataSyncHeldReason.Invalid, StageChunked(items).Held);
+    }
+
+    [TestMethod]
+    public void AChunkPathMustNotOverwriteTheHeadContent()
+    {
+        // The head already carries the chunks' member: put back over it, the result would still match the hash (the
+        // source hashed the whole content), so only this rule tells the two apart.
+        var items = ChunkedItems();
+        items[0]["content"]!["children"] = new JsonArray(new JsonObject { ["id"] = "zz", ["label"] = "Z" });
+        Assert.AreEqual(DataSyncHeldReason.Invalid, StageChunked(items).Held);
+    }
+
+    [TestMethod]
+    public void MoreChunksThanAllowedAreHeldOnReceiveToo()
+    {
+        var items = ChunkedItems();
+        var chunks = items[0]["chunks"]!.GetValue<int>();
+        Assert.IsNull(StageChunked(items).Held, "within the limit it is reassembled");
+        Assert.AreEqual(DataSyncHeldReason.Invalid,
+            StageChunked(ChunkedItems(), DataSyncLimits.Default with { MaxChunksPerEntity = chunks - 1 }).Held);
+    }
+
+    [TestMethod]
+    public void AChunkIndexSentTwiceDiscardsThePull()
+    {
+        var items = ChunkedItems();
+        items.Add((JsonObject)items[1].DeepClone());
+        var assembler = new DataSyncRecordAssembler(TestItemCodec.Instance, DataSyncLimits.Default);
+        assembler.Add(DataSyncWireReader.ReadPage(Page(items.Cast<JsonNode>().ToArray()), Snapshot, Kind, DataSyncLimits.Default));
+        Assert.AreEqual(DataSyncWireReader.Corrupted, assembler.Problem);
+    }
+
+    [TestMethod]
+    public void PagesMustAgreeAndKeepTheSeqOrder()
+    {
+        var first = MarkIncomplete(Page(RecordJson(Live(1, 5, Item("A", 1)))));
+
+        // A lower Seq on a later page.
+        var lower = Assemble([first, Page(RecordJson(Live(2, 3, Item("B", 1))))], TestItemCodec.Instance, Small);
+        Assert.AreEqual(DataSyncWireReader.Corrupted, lower.Problem);
+
+        // Pages served from different sinces.
+        var since = ParsePage(Page(RecordJson(Live(2, 7, Item("B", 1)))));
+        since["sinceSeq"] = 1;
+        var mixed = Assemble([first, ToBytes(since)], TestItemCodec.Instance, Small);
+        Assert.AreEqual(DataSyncWireReader.Corrupted, mixed.Problem);
+
+        var sound = Assemble([first, Page(RecordJson(Live(2, 7, Item("B", 1))))], TestItemCodec.Instance, Small);
+        Assert.IsNull(sound.Problem);
+    }
+
+    [TestMethod]
+    public void APageOfAnotherKindIsWrongSnapshot()
+    {
+        var page = DataSyncWireWriter.WritePages(Snapshot, "extensionGroup", 0, [Live(1, 1, Group("Video", ".mkv"))],
+            Small)[0];
+        var assembler = new DataSyncRecordAssembler(TestItemCodec.Instance, Small);
+        assembler.Add(DataSyncWireReader.ReadPage(page, Snapshot, "extensionGroup", Small));
+        Assert.AreEqual(DataSyncWireReader.WrongSnapshot, assembler.Problem);
     }
 
     [TestMethod]

@@ -537,4 +537,167 @@ public partial class MergerTests
         var created = next.Merge().Batches.Single().Operations.Cast<CreateEntityOperation>().ToList();
         Assert.AreEqual(B, created[0].Keys.Primary, "OverBudget records are merged first");
     }
+
+    [TestMethod]
+    public void AnEntityWhoseChildrenAloneExceedTheBudgetIsStillMerged()
+    {
+        // Liveness: the first entity of a pull is merged whatever its size, or it would wait as OverBudget forever.
+        var f = new MergeFixture { Limits = DataSyncLimits.Default with { MaxChildrenPerStagedPull = 1 } };
+        var record = f.Pull(f.Record(A, T("Big", ("1", "a"), ("2", "b")), Vv((Peer, 1))));
+
+        var r = f.Merge();
+        var create = (CreateEntityOperation)r.Batches.Single().Operations.Single();
+        Assert.AreEqual(A, create.Keys.Primary);
+        var b = BaseOf(r, A);
+        Assert.AreEqual(record, b.Record, "agreed");
+        Assert.IsNull(b.Pending, "never stored as OverBudget");
+    }
+
+    // ---- §8.6 across links ----------------------------------------------------------------------
+
+    [TestMethod]
+    [DataRow(true, false)]
+    [DataRow(false, true)]
+    public void AQuestionOrAPendingRecordOnAnotherLinkStopsTheAutomaticDeletion(bool openItem, bool pendingRecord)
+    {
+        // Created by sync, no values, dominated: deleted by itself — unless a person is still asked about it anywhere.
+        var f = new MergeFixture();
+        f.Local("1", A, T("Mood"), Vv((Peer, 1)), lastEditor: PeerEditor, createdBySync: true,
+            openItemAnyLink: openItem, pendingRecordAnyLink: pendingRecord);
+        f.ValueCounts[(ItemKind, "1")] = 0;
+        f.Pull(f.Record(A, null, Vv((Peer, 2)), deleted: true));
+
+        var r = f.Merge();
+        Assert.AreEqual(0, r.Batches.Count, "not deleted by itself");
+        Assert.AreEqual(0, r.Notes.Count(n => n.Code == DataSyncMergeNoteCodes.AutoDeleted));
+        Assert.AreEqual(DataSyncInboxItemType.DeletedThere, r.Inbox.Single().Type);
+        Assert.AreEqual(DataSyncPendingReason.AwaitingDecision, BaseOf(r, A).Pending!.Reason);
+
+        var alone = new MergeFixture();
+        alone.Local("1", A, T("Mood"), Vv((Peer, 1)), lastEditor: PeerEditor, createdBySync: true);
+        alone.ValueCounts[(ItemKind, "1")] = 0;
+        alone.Pull(alone.Record(A, null, Vv((Peer, 2)), deleted: true));
+        Assert.IsInstanceOfType<DeleteEntityOperation>(alone.Merge().Batches.Single().Operations.Single());
+    }
+
+    // ---- a stored conflict published again ---------------------------------------------------------
+
+    [TestMethod]
+    [DataRow("unchanged")]
+    [DataRow("alias")]
+    [DataRow("seq")]
+    public void AConflictRecordPublishedAgainOnlyDerivesItsItems(string republish)
+    {
+        // R1 conflicted on the name and its safe part (the colour) applied; another link's device recoloured the
+        // entity since. The same revision again — with a new alias, or a bumped Seq — must not put R1's colour back.
+        var f = new MergeFixture();
+        var r1 = f.Record(A, T("Kinds", "#0090ff", null), Vv((Peer, 2)), seq: 10);
+        f.Base(A, f.Record(A, T("Genre", "#e5484d", null), Vv((Peer, 1))),
+            pending: PendingOf(r1, DataSyncPendingReason.Conflict));
+        f.Local("1", A, T("Genres", "#30a46c", null), Vv((Peer, 1), (Self, 3), (Third, 1)), lastEditor: ThirdEditor);
+        f.Pull(republish switch
+        {
+            "alias" => r1 with { Keys = [A.Value, B.Value] },
+            "seq" => r1 with { Seq = 20 },
+            _ => r1,
+        });
+
+        var r = f.Merge();
+        Assert.IsFalse(Ops(r).OfType<UpdateEntityOperation>().Any(), "the safe part is not applied again");
+        Assert.AreEqual(0, r.Revisions.Count);
+        Assert.AreEqual("name", r.Inbox.Single().SubjectPath);
+        Assert.AreEqual(DataSyncPendingReason.Conflict, BaseOf(r, A).Pending!.Reason);
+        if (republish == "alias")
+            CollectionAssert.AreEqual(new[] { B }, ((BindOnlyOperation)Ops(r).Single()).AliasKeysToAdd.All.ToArray());
+        else Assert.AreEqual(0, Ops(r).Count);
+    }
+
+    [TestMethod]
+    public void SameRevisionIgnoresTheEnvelopeOnly()
+    {
+        var f = new MergeFixture();
+        var r = f.Record(A, T("Genre", ("1", "x")), Vv((Peer, 2)), orderKey: "a0", seq: 10);
+        Assert.IsTrue(DataSyncPendingRecords.SameRevision(r, r with { Keys = [A.Value, B.Value], Seq = 99, EditedBy = ThirdEditor }));
+        Assert.IsFalse(DataSyncPendingRecords.SameRevision(r, r with { Vv = Vv((Peer, 3)) }));
+        Assert.IsFalse(DataSyncPendingRecords.SameRevision(r, r with { OrderKey = "a1" }));
+        Assert.IsFalse(DataSyncPendingRecords.SameRevision(r,
+            f.Record(A, T("Genre!", ("1", "x")), Vv((Peer, 2)), orderKey: "a0")));
+        Assert.IsFalse(DataSyncPendingRecords.SameRevision(r, r with { HeldAtSource = DataSyncHeldReason.Invalid }));
+        Assert.IsFalse(DataSyncPendingRecords.SameRevision(r, f.Record(A, null, Vv((Peer, 2)), deleted: true, orderKey: "a0")));
+    }
+
+    // ---- one record, one row ------------------------------------------------------------------------
+
+    /// <summary>Entity 1 has keys [A, D]; the peer's record R (primary D) waits as Retry on the Unbound row D.</summary>
+    private static (MergeFixture F, DataSyncWireRecord R) WaitingOnAnAlias()
+    {
+        var f = new MergeFixture { NoPull = true };
+        f.Local("1", A, T("Genre"), Vv((Self, 1)), aliases: [D]);
+        f.Base(A, f.Record(A, T("Genre"), Vv((Self, 1))));
+        var record = f.Record(D, T("Genres"), Vv((Self, 1), (Peer, 1)));
+        f.Base(D, null, DataSyncBaseState.Unbound, pending: PendingOf(record, DataSyncPendingReason.Retry));
+        f.PendingToMerge.Add((ItemKind, D));
+        return (f, record);
+    }
+
+    [TestMethod]
+    public void B5_ARecordThatWaitsAsALargeChangeLeavesTheRowItCameFrom()
+    {
+        var (f, record) = WaitingOnAnAlias();
+        f.Policy = new DataSyncAutoApplyPolicy { MaxUpdatedEntitiesPerPull = 0 };
+
+        var r = f.Merge();
+        Assert.AreEqual(0, r.Batches.Count);
+        var waiting = BaseOf(r, A);
+        Assert.AreEqual(DataSyncPendingReason.LargeChange, waiting.Pending!.Reason);
+        Assert.AreEqual(record, waiting.Pending.Record);
+        var left = BaseOf(r, D);
+        Assert.IsTrue(left.ClearPending, "stored once per link and entity (§8.4)");
+        Assert.IsNull(left.Pending);
+    }
+
+    [TestMethod]
+    public void OneRecordStoredOnTwoRowsIsMergedOnce()
+    {
+        // A store that lost a clear: the same record waits on the entity's row and on the alias row.
+        var (f, record) = WaitingOnAnAlias();
+        f.Bases[(ItemKind, A)] = f.Bases[(ItemKind, A)] with
+        {
+            Pending = PendingOf(record, DataSyncPendingReason.LargeChange),
+        };
+        f.PendingToMerge.Add((ItemKind, A));
+        f.LinkFlags = new DataSyncMergeFlags(SkipLargeChange: true);
+
+        var r = f.Merge();
+        Assert.AreEqual(1, r.Batches.Single().Operations.Count, "one operation for one entity");
+        Assert.AreEqual(1, r.Revisions.Count);
+        Assert.AreEqual(record, BaseOf(r, A).Record);
+        Assert.IsTrue(BaseOf(r, D).ClearPending);
+        Assert.IsNull(BaseOf(r, D).Pending);
+    }
+
+    // ---- B8 counts state-derived items ------------------------------------------------------------
+
+    [TestMethod]
+    public void B8_OpenStateDerivedItemsCountTowardsTheLimit()
+    {
+        static MergeFixture Build(int held)
+        {
+            var f = new MergeFixture { Limits = DataSyncLimits.Default with { MaxOpenInboxItemsPerLink = 3 } };
+            f.Local("1", A, T("Rating"), Vv((Self, 1)));
+            f.Pull(f.Record(B, T("rating"), Vv((Peer, 1))));
+            for (var i = 1; i <= held; i++)
+            {
+                f.OpenStateItems.Add(new DataSyncOpenInboxItem(i, LinkId, ItemKind, K(0x400 + i),
+                    DataSyncInboxItemType.ChildDeletedInUse, DataSyncInboxItemOrigin.State, "child:" + i, "token", null));
+            }
+
+            return f;
+        }
+
+        Assert.IsNull(Build(2).Merge().Pause, "a link suggestion and two held children: three");
+        var r = Build(3).Merge();
+        Assert.AreEqual(DataSyncPauseReason.TooManyDecisions, r.Pause);
+        Assert.AreEqual("openItems=4", r.PauseDetail);
+    }
 }

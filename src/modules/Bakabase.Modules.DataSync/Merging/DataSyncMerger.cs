@@ -19,6 +19,10 @@ public sealed record DataSyncLinkContext(int LinkId, string PeerNodeId, string P
     IReadOnlyDictionary<string, int> PeerComparisonFormVersions,   // head.Kinds[k].ComparisonFormVersion (§8.4 row A2)
     DataSyncMergeFlags LinkFlags);                          // once flags of the link (§8.7), consumed by this pull
 
+/// <param name="OpenStateItems">
+/// This link's open state-derived items (§9.3). Only breaker B8 reads them: they are counted with the merger-derived
+/// ones against <see cref="DataSyncLimits.MaxOpenInboxItemsPerLink"/> (§8.7). Null or empty when there are none.
+/// </param>
 public sealed record DataSyncMergeInput(
     DataSyncLinkContext Link,
     DataSyncStagedPull? Incoming,                                                // null: re-merge pending records only
@@ -30,7 +34,8 @@ public sealed record DataSyncMergeInput(
     IReadOnlyDictionary<(string Kind, string LocalKey), int> ValueCounts,
     IReadOnlyList<DataSyncOpenInboxItem> OpenItems,                              // this link's open merger-derived items
     DataSyncAutoApplyPolicy Policy,
-    DataSyncLimits Limits);
+    DataSyncLimits Limits,
+    IReadOnlyList<DataSyncOpenInboxItem>? OpenStateItems = null);               // this link's open state-derived items (B8)
 
 public sealed record DataSyncUsageQuery(string Kind, string LocalKey, IReadOnlyList<string> ChildIds, bool NeedValueCount);
 

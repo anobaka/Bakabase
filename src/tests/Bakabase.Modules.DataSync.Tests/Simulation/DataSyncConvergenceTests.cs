@@ -62,6 +62,7 @@ public class DataSyncConvergenceTests
         "revision:Revive", "revision:FollowMerged", "revision:MergedWithConflicts", "tombstoneServedAgain",
         "changedDuringApply", "chooser:headless", "hold",
         "step:LongPartition", "step:RestoreOffline", "step:SyncTwice", "step:SyncStaleWrite", "step:SyncConcurrentWrite",
+        "step:ChildrenLocal", "step:SyncCrossed", "note:childrenLocalTurnedOff",
     ];
 
     /// <summary>
@@ -70,6 +71,7 @@ public class DataSyncConvergenceTests
     /// <c>SimulatorFindingsTests</c>.
     /// </summary>
     [TestMethod]
+    [DataRow(1144, DisplayName = "'sync the definition only' turned off while a child was renamed elsewhere")]
     [DataRow(4761, DisplayName = "a retired actor's counter issued twice (a collision)")]
     [DataRow(6165, DisplayName = "revisions go on while a type change waits for its decision")]
     [DataRow(7533, DisplayName = "a deletion and a live version under one vector")]

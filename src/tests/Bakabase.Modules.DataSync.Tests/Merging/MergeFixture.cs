@@ -81,25 +81,28 @@ internal sealed class MergeFixture
         DataSyncEditorRef? lastEditor = null, string? orderKey = null,
         DataSyncEntitySyncState state = DataSyncEntitySyncState.Synced, DataSyncOverlay? overlay = null,
         bool createdBySync = false, bool publishHeld = false, JsonObject? unknown = null, int? valueCount = null,
-        long seq = 10, bool unreadable = false, string kind = ItemKind, IEnumerable<SyncKey>? aliases = null)
+        long seq = 10, bool unreadable = false, string kind = ItemKind, IEnumerable<SyncKey>? aliases = null,
+        bool childrenLocal = false, bool openItemAnyLink = false, bool pendingRecordAnyLink = false)
     {
         var codec = CodecOf(kind);
         overlay ??= DataSyncOverlay.None;
         lastEditor ??= SelfEditor;
-        var publication = DataSyncPublication.Of(codec, content, overlay, false, orderKey, unknown);
+        var publication = DataSyncPublication.Of(codec, content, overlay, childrenLocal, orderKey, unknown);
         var entity = new DataSyncLocalEntityState(localKey, new EntityKeys([key, .. aliases ?? []]), content,
             ContentHash.Of(codec.Write(content)), publication.SharedHash ?? "", vv, new DataSyncActorId(lastEditor.ActorId),
-            lastEditor, orderKey, state, overlay, false, createdBySync, publishHeld, unknown, valueCount, seq, unreadable);
+            lastEditor, orderKey, state, overlay, childrenLocal, createdBySync, publishHeld, unknown, valueCount, seq,
+            unreadable, openItemAnyLink, pendingRecordAnyLink);
         EntitiesOf(kind).Add(entity);
         return entity;
     }
 
     public DataSyncTombstoneState Tombstone(SyncKey key, DataSyncVersionVector vv,
         DataSyncTombstoneKind tombstoneKind = DataSyncTombstoneKind.Deleted, bool served = true,
-        DataSyncEntitySyncState stateAtDeletion = DataSyncEntitySyncState.Synced, long seq = 20, string kind = ItemKind)
+        DataSyncEntitySyncState stateAtDeletion = DataSyncEntitySyncState.Synced, long seq = 20, string kind = ItemKind,
+        IEnumerable<SyncKey>? aliases = null)
     {
-        var tombstone = new DataSyncTombstoneState(new EntityKeys([key]), vv, SelfEditor, stateAtDeletion, tombstoneKind,
-            served, seq);
+        var tombstone = new DataSyncTombstoneState(new EntityKeys([key, .. aliases ?? []]), vv, SelfEditor, stateAtDeletion,
+            tombstoneKind, served, seq);
         if (!Tombstones.TryGetValue(kind, out var list)) Tombstones[kind] = list = [];
         list.Add(tombstone);
         return tombstone;
@@ -113,15 +116,19 @@ internal sealed class MergeFixture
 
     // ---- records and bases ------------------------------------------------------------------------
 
+    /// <param name="childrenLocal">Publish the content as "sync the definition only" (§3.6): no children, the flag set.</param>
     public DataSyncWireRecord Record(SyncKey key, object? content, DataSyncVersionVector vv,
         DataSyncEditorRef? editedBy = null, bool deleted = false, string? orderKey = null, long? seq = null,
         IEnumerable<SyncKey>? aliases = null, string kind = ItemKind, int schemaVersion = 1, string origin = PeerNode,
-        JsonObject? unknown = null)
+        JsonObject? unknown = null, bool childrenLocal = false)
     {
         JsonObject? json = null;
         if (content is not null && !deleted)
         {
-            json = CodecOf(kind).Write(content);
+            json = childrenLocal
+                ? (JsonObject)DataSyncPublication.Of(CodecOf(kind), content, DataSyncOverlay.None, true, orderKey, null).Content!
+                    .DeepClone()
+                : CodecOf(kind).Write(content);
             foreach (var (name, value) in unknown ?? []) json[name] = value?.DeepClone();
         }
 
@@ -197,9 +204,39 @@ internal sealed class MergeFixture
         new Dictionary<(string, SyncKey), DataSyncPeerBase>(Bases), PendingToMerge.ToList(),
         new Dictionary<string, IDataSyncKindCodec> { [ItemKind] = Items, [GroupKind] = Groups },
         new Dictionary<(string, string), IReadOnlyDictionary<string, int>>(Usage),
-        new Dictionary<(string, string), int>(ValueCounts), OpenItems.ToList(), Policy, Limits);
+        new Dictionary<(string, string), int>(ValueCounts), OpenItems.ToList(), Policy, Limits,
+        OpenStateItems.Count == 0 ? null : OpenStateItems.ToList());
 
-    public DataSyncMergeResult Merge() => DataSyncMerger.Merge(Input());
+    /// <summary>This link's open state-derived items (B8 counts them, §8.7).</summary>
+    public readonly List<DataSyncOpenInboxItem> OpenStateItems = [];
+
+    /// <summary>
+    /// Merges, and checks what every merge must hold whatever the case: one draft per subject
+    /// <c>(kind, key, type, subjectPath)</c> — a store keeps one open item per subject (§4.2) — and one update per
+    /// base row.
+    /// </summary>
+    public DataSyncMergeResult Merge()
+    {
+        var result = DataSyncMerger.Merge(Input());
+        AssertWellFormed(result);
+        return result;
+    }
+
+    public static void AssertWellFormed(DataSyncMergeResult result)
+    {
+        foreach (var subject in result.Inbox.GroupBy(d => (d.Kind, d.Key, d.Type, d.SubjectPath)).Where(g => g.Count() > 1))
+        {
+            throw new Microsoft.VisualStudio.TestTools.UnitTesting.AssertFailedException(
+                $"{subject.Count()} drafts of one subject {subject.Key.Type} {subject.Key.Kind}/{subject.Key.Key.Value} " +
+                $"'{subject.Key.SubjectPath}'");
+        }
+
+        foreach (var row in result.BaseUpdates.GroupBy(u => (u.Kind, u.Key)).Where(g => g.Count() > 1))
+        {
+            throw new Microsoft.VisualStudio.TestTools.UnitTesting.AssertFailedException(
+                $"{row.Count()} updates of one base row {row.Key.Kind}/{row.Key.Key.Value}");
+        }
+    }
 
     /// <summary>Every child of every local entity used by <paramref name="count"/> resources (0 = unused).</summary>
     public void UseAllChildren(int count)

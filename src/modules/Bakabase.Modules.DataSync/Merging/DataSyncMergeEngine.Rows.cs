@@ -42,6 +42,9 @@ internal sealed partial class DataSyncMergeEngine
         public bool Deletes { get; set; }
         public int ChangeCount { get; set; }
         public string Name { get; set; } = "";
+
+        /// <summary>Rows M and T3: every record the one decision covers (their source rows are cleared like the candidate's).</summary>
+        public IReadOnlyList<Candidate>? Group { get; set; }
     }
 
     private void EvaluateKind(KindState k)
@@ -62,12 +65,30 @@ internal sealed partial class DataSyncMergeEngine
     private void Add(Proposal p)
     {
         if (_collectOnly) return;
-        if (p.Candidate?.SourceBase is { } source &&
-            p.BaseUpdates.All(u => u.Key.Value != source.Key.Value || u.Kind != source.Kind))
+        AddClears(p);
+        _proposals.Add(p);
+    }
+
+    /// <summary>
+    /// The rows a proposal's records leave (<see cref="Proposal.SourceClears"/>). Every proposal gets them here,
+    /// including one a breaker puts in another's place (B5), so a record is never left behind on the row it waited
+    /// on while its outcome lands on another: stored twice, it was merged twice into one entity at the next apply.
+    /// </summary>
+    private static void AddClears(Proposal p)
+    {
+        void Clear(DataSyncPeerBase source)
         {
+            if (p.BaseUpdates.Any(u => u.Kind == source.Kind && u.Key.Value == source.Key.Value) ||
+                p.SourceClears.Any(u => u.Kind == source.Kind && u.Key.Value == source.Key.Value)) return;
             // The record's outcome now lives on another row: the row it waited on keeps its state, not the record.
             p.SourceClears.Add(new DataSyncBaseUpdate(source.Kind, source.Key, source.State, source.Exclusion, null,
                 null, null, true));
+        }
+
+        foreach (var c in p.Group ?? (p.Candidate is null ? [] : [p.Candidate]))
+        {
+            if (c.SourceBase is { } source) Clear(source);
+            foreach (var duplicate in c.DuplicateSources) Clear(duplicate);
         }
 
         if (p.Candidate is { SourceBase: null } incoming)
@@ -83,8 +104,6 @@ internal sealed partial class DataSyncMergeEngine
                                                                  p.BaseUpdates.All(u => u.Key != b.Key)))
                 p.SourceClears.Add(new DataSyncBaseUpdate(stale.Kind, stale.Key, stale.State, stale.Exclusion, null, null, null, true));
         }
-
-        _proposals.Add(p);
     }
 
     private Proposal? Evaluate(KindState k, Candidate c)
@@ -194,10 +213,12 @@ internal sealed partial class DataSyncMergeEngine
             return p;
         }
 
+        // §8.6 counts every link: an item or a pending record elsewhere waits for a person as much as one here.
         var valueCount = ValueCountOf(k, l);
-        var hasOpenItem = _in.OpenItems.Any(i => i.Kind == k.Kind && l.Keys.Contains(i.Key));
+        var hasOpenItem = l.OpenItemAnyLink || _in.OpenItems.Any(i => i.Kind == k.Kind && l.Keys.Contains(i.Key));
+        var hasPending = l.PendingRecordAnyLink || b?.Pending is not null;
         var verdict = _in.Policy.DecideEntityDeletion(new DataSyncEntityDeletionFacts(rel, l.CreatedBySync, valueCount,
-            hasOpenItem, b?.Pending is not null, l.Overlay.HeldChildren.Count > 0, c.Flags.DeletionsAsItems));
+            hasOpenItem, hasPending, l.Overlay.HeldChildren.Count > 0, c.Flags.DeletionsAsItems));
         var alreadyAsked = _in.OpenItems.Any(i => i.Type == DataSyncInboxItemType.DeletedThere && i.Kind == k.Kind &&
                                                   l.Keys.Contains(i.Key)) ||
                            b?.Pending is { Reason: DataSyncPendingReason.AwaitingDecision, Record.Deleted: true };
@@ -454,14 +475,17 @@ internal sealed partial class DataSyncMergeEngine
     }
 
     /// <summary>
-    /// The record is the one this link already stores as a <c>Conflict</c> pending record (a re-merge, or the same
-    /// record sent again by a full reconciliation or a second delivery).
+    /// The record is the revision this link already stores as a <c>Conflict</c> pending record (a re-merge, or the
+    /// same revision sent again by a full reconciliation, a second delivery or a republish). Compared by revision,
+    /// never by the whole record (<see cref="DataSyncPendingRecords.SameRevision"/>): the peer republishes one
+    /// revision with a new alias or a bumped Seq, and read as a new record its safe part applied again against the
+    /// unchanged base and reverted what changed here since.
     /// </summary>
     private bool AlreadyMergedConflict(KindState k, Candidate c)
     {
         var pending = c.SourceBase?.Pending ?? (TargetBaseKey(c) is { } baseKey ? BaseOf(k, baseKey)?.Pending : null);
         return pending is { Reason: DataSyncPendingReason.Conflict } &&
-               pending.RecordHash == DataSyncPendingRecords.RecordHashOf(c.Record);
+               DataSyncPendingRecords.SameRevision(pending.Record, c.Record);
     }
 
     /// <summary>
@@ -590,6 +614,10 @@ internal sealed partial class DataSyncMergeEngine
 
         // T3: never an automatic revive.
         if (_collectOnly) return p;
+        var askers = k.Candidates.Where(x => x.Bind.Kind == BindingKind.Tombstone && x.Bind.Tombstone == t && AsksT3(t, x))
+            .ToList();
+        if (askers.Count > 1) return askers[0] == c ? DeletedHereGroup(p, k, t, askers) : p;
+
         var pending = Pending(c, DataSyncPendingReason.AwaitingDecision, t.Seq);
         p.BaseUpdates.Add(Pend(k, key, bound: true, pending, keepState: false));
         p.Items.Add(Draft(k, key, null, DataSyncInboxItemType.DeletedHereEditedThere, DataSyncInboxDrafts.EntitySubject,
@@ -597,6 +625,55 @@ internal sealed partial class DataSyncMergeEngine
                 ? DataSyncInboxDrafts.DetailRestored
                 : DataSyncInboxDrafts.DetailChangedAfterDelete),
             pending, ItemVv(c), t.Vv, StoredFlags(c)));
+        return p;
+    }
+
+    /// <summary>A record bound to tombstone <paramref name="t"/> that row T3 asks about: live, readable, and newer or concurrent.</summary>
+    private static bool AsksT3(DataSyncTombstoneState t, Candidate x) =>
+        !x.Record.Deleted && x.Entity.Held is null && t.TombstoneKind != DataSyncTombstoneKind.UndoneCreate &&
+        (x.Collision || t.Vv.CompareTo(x.Record.Vv) is not (DataSyncVvRelation.Equal or DataSyncVvRelation.Dominates));
+
+    /// <summary>
+    /// Row T3 for two or more of the peer's records — other lineages this device had merged into the entity it
+    /// deleted — that bind to one tombstone: one decision, like row M for a live entity. One item lists the records
+    /// (<c>Payload.Records</c>) and refers to them by <see cref="DataSyncInboxDrafts.CombinedRecordHash"/>; each record
+    /// waits as its own pending record, the one with the tombstone's primary key (else the first) on the tombstone's
+    /// row and every other under its own primary, never two on one row. Decided per record, each record drafted
+    /// its own item with the same subject and wrote its pending record over the other's: one of them was lost while
+    /// the cursor moved past it, and a store keeping one open item per subject failed the apply at every cycle.
+    /// </summary>
+    private Proposal DeletedHereGroup(Proposal p, KindState k, DataSyncTombstoneState t, IReadOnlyList<Candidate> askers)
+    {
+        var key = t.Keys.Primary!.Value;
+        p.Group = askers;
+        var ordered = askers.OrderBy(x => x.Primary, StringComparer.Ordinal).ToList();
+        var lead = ordered.FirstOrDefault(x => x.Primary == key.Value) ?? ordered[0];
+        var records = new List<DataSyncInboxRecordRef>();
+        var hashes = new List<string>();
+        var vv = DataSyncVersionVector.Empty;
+        var restored = true;
+        foreach (var x in ordered)
+        {
+            Evaluated(p, key, x);
+            var pending = Pending(x, DataSyncPendingReason.AwaitingDecision, t.Seq);
+            p.BaseUpdates.Add(x == lead
+                ? Pend(k, key, bound: true, pending, keepState: false)
+                : Pend(k, new SyncKey(x.Primary), bound: false, pending, keepState: true));
+            records.Add(new DataSyncInboxRecordRef(x.Primary, x.Entity.DisplayName,
+                x.Entity.Content is { } content ? k.Codec!.SubtypeOf(content) : null));
+            hashes.Add(pending.RecordHash);
+            vv = DataSyncVersionVector.Max(vv, x.Record.Vv);
+            restored &= !x.Collision && t.Vv.CompareTo(x.Record.Vv) == DataSyncVvRelation.DominatedBy;
+        }
+
+        var payload = Payload(k, lead, null, [], records: records,
+            detail: restored ? DataSyncInboxDrafts.DetailRestored : DataSyncInboxDrafts.DetailChangedAfterDelete) with
+        {
+            RemoteEditor = null,
+        };
+        p.Items.Add(DataSyncInboxDrafts.Create(k.Kind, key, null, DataSyncInboxItemType.DeletedHereEditedThere,
+            DataSyncInboxDrafts.EntitySubject, payload, DataSyncInboxDrafts.CombinedRecordHash(hashes),
+            askers.Any(x => x.Collision) ? null : vv, t.Vv, askers.Select(StoredFlags).Aggregate(DataSyncPendingRecords.Combine)));
         return p;
     }
 
@@ -646,13 +723,11 @@ internal sealed partial class DataSyncMergeEngine
         var records = new List<DataSyncInboxRecordRef>();
         var hashes = new List<string>();
         var vv = DataSyncVersionVector.Empty;
+        p.Group = group;
         foreach (var c in group.OrderBy(c => c.Primary, StringComparer.Ordinal))
         {
             var pending = Pending(c, DataSyncPendingReason.IdentityConflict, l.Keys.Contains(new SyncKey(c.Primary)) ? l.Seq : 0);
             p.BaseUpdates.Add(Pend(k, new SyncKey(c.Primary), bound: c.Primary == key.Value, pending, keepState: true));
-            if (c.SourceBase is { } source && source.Key.Value != c.Primary)
-                p.SourceClears.Add(new DataSyncBaseUpdate(source.Kind, source.Key, source.State, source.Exclusion, null,
-                    null, null, true));
             records.Add(new DataSyncInboxRecordRef(c.Primary, c.Entity.DisplayName,
                 c.Entity.Content is { } content && codec is not null ? codec.SubtypeOf(content) : null));
             hashes.Add(pending.RecordHash);

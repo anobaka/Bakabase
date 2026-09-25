@@ -48,8 +48,8 @@ public sealed record DataSyncAutoApplyPolicy
 /// <summary>What <see cref="DataSyncAutoApplyPolicy.DecideEntityDeletion"/> needs to know about one entity.</summary>
 /// <param name="LocalToTombstone">The relation of the local version to the peer's tombstone (<c>L.Vv.CompareTo(R.Vv)</c>).</param>
 /// <param name="ValueCount">Stored values of the entity; null when unknown (asks). Extension groups have none (0).</param>
-/// <param name="HasOpenItem">An open inbox item of the entity (any link).</param>
-/// <param name="HasPendingRecord">A pending record of the entity on this link (a record not agreed to).</param>
+/// <param name="HasOpenItem">An open inbox item of the entity, of either origin, on any link.</param>
+/// <param name="HasPendingRecord">A pending record of the entity (a record not agreed to) on any link.</param>
 /// <param name="HasHeldChildren">A child of the entity is held for any link (a state-derived item waits).</param>
 /// <param name="DeletionsAsItems">The once flag of B2's "Review deletions" (§8.7), stored with the record.</param>
 public sealed record DataSyncEntityDeletionFacts(DataSyncVvRelation LocalToTombstone, bool CreatedBySync, int? ValueCount,

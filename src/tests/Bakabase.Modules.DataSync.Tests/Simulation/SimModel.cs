@@ -100,6 +100,10 @@ internal sealed class SimRow
     public string? OrderKey { get; set; }
     public DataSyncEntitySyncState State { get; set; } = DataSyncEntitySyncState.Synced;
     public DataSyncOverlay Overlay { get; set; } = DataSyncOverlay.None;
+
+    /// <summary>"Sync the definition only" (§3.6): shared content the side row keeps (<c>DataSyncEntities.ChildrenLocal</c>).</summary>
+    public bool ChildrenLocal { get; set; }
+
     public bool CreatedBySync { get; set; }
     public bool PublishHeld { get; set; }
     public JsonObject? Unknown { get; set; }

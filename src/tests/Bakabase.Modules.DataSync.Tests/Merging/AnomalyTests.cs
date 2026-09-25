@@ -89,6 +89,22 @@ public class AnomalyTests
     }
 
     [TestMethod]
+    public void ARetiredOwnActorsRevisionIsACollisionOnlyUnderThisBuildsFormVersion()
+    {
+        Assert.AreEqual(DataSyncAnomalies.Collision,
+            DataSyncAnomalies.JudgeEqualVectors(false, Retired.Value, Self, Peer.Value, 1, 1, [Retired.Value]));
+        Assert.IsNull(DataSyncAnomalies.JudgeEqualVectors(true, Retired.Value, Self, Peer.Value, 1, 1, [Retired.Value]),
+            "equal forms");
+        // §8.4 A2, §8.12: a form-version mismatch is always drift, never a duplicate actor — nor a collision.
+        Assert.AreEqual(DataSyncAnomalies.Drift,
+            DataSyncAnomalies.JudgeEqualVectors(false, Retired.Value, Self, Peer.Value, 2, 1, [Retired.Value]),
+            "another form version");
+        Assert.AreEqual(DataSyncAnomalies.Drift,
+            DataSyncAnomalies.JudgeEqualVectors(false, Retired.Value, Self, Peer.Value, null, 1, [Retired.Value]),
+            "a head that did not say");
+    }
+
+    [TestMethod]
     public void TheSameVectorsRelayedFromAThirdDeviceWithADifferentFormAreDrift()
     {
         var f = new MergeFixture();

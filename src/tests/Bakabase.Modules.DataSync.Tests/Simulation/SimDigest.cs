@@ -23,7 +23,7 @@ internal static class SimDigest
             var content = row.Content is null ? "-" : CanonicalJson.Serialize(SimKinds.Of(row.Kind).Codec.Write(row.Content));
             text.Append($"row {row.Kind} {row.LocalKey} [{string.Join(",", row.Keys.Select(k => k.Value[..8]))}] {content} " +
                         $"{row.Vv} {row.Seq} {row.State} {row.Deleted}/{row.Served}/{row.TombstoneKind} {row.OrderKey} " +
-                        $"{row.PublishHeld} {row.CreatedBySync} {row.LastEditor?.ActorId} " +
+                        $"{row.PublishHeld} {row.CreatedBySync} cl:{row.ChildrenLocal} {row.LastEditor?.ActorId} " +
                         $"lo[{string.Join(",", row.Overlay.LocalOnlyChildren)}] held[{string.Join(",", row.Overlay.HeldChildren.Select(h => h.ChildId + "@" + h.LinkId))}]\n");
         }
 
@@ -65,9 +65,10 @@ internal static class SimDigest
             var what = row.Deleted ? $"† {row.TombstoneKind}{(row.Served ? "" : " unserved")}" : row.Content?.ToString();
             var shared = row.Content is null
                 ? ""
-                : " form " + DataSyncPublication.Of(SimKinds.Of(row.Kind).Codec, row.Content, row.Overlay, false, row.OrderKey, row.Unknown).SharedHash?[7..15];
+                : " form " + DataSyncPublication.Of(SimKinds.Of(row.Kind).Codec, row.Content, row.Overlay, row.ChildrenLocal,
+                    row.OrderKey, row.Unknown).SharedHash?[7..15];
             text.Append($"    {row.Kind}:{row.LocalKey} [{string.Join(",", row.Keys.Select(k => k.Value[..6]))}] {what} " +
-                        $"{row.State} vv {row.Vv} ok {row.OrderKey}{shared}\n");
+                        $"{row.State}{(row.ChildrenLocal ? " children-local" : "")} vv {row.Vv} ok {row.OrderKey}{shared}\n");
         }
 
         foreach (var link in node.Links.Values)

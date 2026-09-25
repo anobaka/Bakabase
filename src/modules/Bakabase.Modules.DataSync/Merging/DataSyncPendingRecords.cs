@@ -22,6 +22,25 @@ public static class DataSyncPendingRecords
         return ContentHash.Of(DataSyncWireFormat.ToJson(record));
     }
 
+    /// <summary>
+    /// Whether two records carry the same revision of one entity: the same vector, both live or both deleted, the
+    /// same content (<see cref="DataSyncWireRecord.Hash"/>, or the content itself when a hash is missing), order
+    /// key and <c>HeldAtSource</c>. The envelope is left out — keys (a peer adds aliases after link decisions),
+    /// <c>Seq</c> (bumped on rejoin, on a state change or when a tombstone is served again) and <c>EditedBy</c> — so
+    /// a revision the peer publishes again is still recognised, unlike <see cref="RecordHashOf"/>.
+    /// </summary>
+    public static bool SameRevision(DataSyncWireRecord a, DataSyncWireRecord b)
+    {
+        ArgumentNullException.ThrowIfNull(a);
+        ArgumentNullException.ThrowIfNull(b);
+        if (a.Vv != b.Vv || a.Deleted != b.Deleted || a.OrderKey != b.OrderKey || a.HeldAtSource != b.HeldAtSource)
+            return false;
+        if (a.Content is null || b.Content is null) return a.Content is null && b.Content is null;
+        return a.Hash is not null && b.Hash is not null
+            ? a.Hash == b.Hash
+            : System.Text.Json.Nodes.JsonNode.DeepEquals(a.Content, b.Content);
+    }
+
     /// <summary>A pending record for <paramref name="record"/>, with its hash.</summary>
     /// <param name="evaluatedAtLocalSeq">
     /// The local entity's Seq when the record was merged (0 when it binds to nothing). The apply runner raises it to

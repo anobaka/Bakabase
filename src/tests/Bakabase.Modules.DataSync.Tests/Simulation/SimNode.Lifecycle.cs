@@ -119,7 +119,8 @@ internal sealed partial class SimNode
                     row.State = DataSyncEntitySyncState.Synced;
                     row.LocalKey = NewLocalKey();
                     row.LocalHash = ContentHash.Of(kind.Codec.Write(row.Content));
-                    row.SharedHash = DataSyncPublication.Of(kind.Codec, row.Content, row.Overlay, false, row.OrderKey, row.Unknown).SharedHash;
+                    row.SharedHash = DataSyncPublication.Of(kind.Codec, row.Content, row.Overlay, row.ChildrenLocal, row.OrderKey,
+                        row.Unknown).SharedHash;
                     row.LastEditor = Editor;
                     row.Seq = NextSeq();
                     if (kind.HasOrder) PlaceNew(row);

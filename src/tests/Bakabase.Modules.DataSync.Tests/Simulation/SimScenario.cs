@@ -14,7 +14,7 @@ internal enum SimStepKind
 {
     Create, Edit, Delete, Sync, SyncTwice, SyncConcurrentWrite, SyncAll, Resolve, Use, Values, Reorder, EntityState,
     Undo, Backup, RestoreDatabase, RestoreDirectory, Restart, StopLink, StartLink, ResetLink, Partition, Heal,
-    LongPartition, Advance, StaleWrite, Include, SyncStaleWrite, Bulk, RestoreOffline,
+    LongPartition, Advance, StaleWrite, Include, SyncStaleWrite, Bulk, RestoreOffline, ChildrenLocal, SyncCrossed,
 }
 
 /// <summary>
@@ -38,7 +38,8 @@ internal sealed record SimScenarioSpec(int Seed, int NodeCount, SimTopology Topo
         (SimStepKind.RestoreDirectory, 1), (SimStepKind.Restart, 1), (SimStepKind.StopLink, 1), (SimStepKind.StartLink, 1),
         (SimStepKind.ResetLink, 1), (SimStepKind.Partition, 2), (SimStepKind.Heal, 2), (SimStepKind.LongPartition, 1),
         (SimStepKind.Advance, 2), (SimStepKind.StaleWrite, 1), (SimStepKind.Include, 1), (SimStepKind.SyncStaleWrite, 2),
-        (SimStepKind.Bulk, 1), (SimStepKind.RestoreOffline, 1),
+        (SimStepKind.Bulk, 1), (SimStepKind.RestoreOffline, 1), (SimStepKind.ChildrenLocal, 2),
+        (SimStepKind.SyncCrossed, 3),
     ];
 
     public static SimScenarioSpec Generate(int seed, int maxSteps = 60)
@@ -343,6 +344,27 @@ internal sealed class SimScenario
                 var outcome = node.Pull(link);
                 node.BeforeApply = null;
                 return $"{node} ← {link.Peer}: {outcome}{hit}";
+            }
+            case SimStepKind.SyncCrossed:
+            {
+                // Two devices that pull each other both take their snapshot before either applies (§8.5.5): each merges
+                // the other's revision against its own, crosswise, which sequential pulls never do.
+                if (Link(s.B) is not { } link || link.Peer.Links.GetValueOrDefault(node.NodeId) is not { } back)
+                    return "no link both ways";
+                var peer = link.Peer;
+                var fetched = node.Fetch(link, out var toNode);
+                var fetchedBack = peer.Fetch(back, out var toPeer);
+                var applied = toNode is null ? fetched : node.Redeliver(link, toNode);
+                var appliedBack = toPeer is null ? fetchedBack : peer.Redeliver(back, toPeer);
+                return $"{node} ⇄ {peer} crossed: {applied}/{appliedBack}";
+            }
+            case SimStepKind.ChildrenLocal:
+            {
+                var offered = rows.Where(r => SimKinds.Of(r.Kind).Codec.Descriptor.SupportsChildrenLocal).ToList();
+                if (offered.Count == 0) return "nothing offers 'sync the definition only'";
+                var row = offered[s.B % offered.Count];
+                node.SetChildrenLocal(row, !row.ChildrenLocal);
+                return $"{node} turns 'sync the definition only' {(row.ChildrenLocal ? "on" : "off")} for {row.Kind}:{row.LocalKey}";
             }
             case SimStepKind.SyncAll:
                 SyncRound();
@@ -964,7 +986,8 @@ internal sealed class SimScenario
     }
 
     private static string FormOf(SimRow row) =>
-        DataSyncPublication.Of(SimKinds.Of(row.Kind).Codec, row.Content!, row.Overlay, false, row.OrderKey, row.Unknown).SharedHash ?? "held";
+        DataSyncPublication.Of(SimKinds.Of(row.Kind).Codec, row.Content!, row.Overlay, row.ChildrenLocal, row.OrderKey,
+            row.Unknown).SharedHash ?? "held";
 
     /// <summary>
     /// I7: every live entity's vector covers every base vector for it; two different comparison forms never share

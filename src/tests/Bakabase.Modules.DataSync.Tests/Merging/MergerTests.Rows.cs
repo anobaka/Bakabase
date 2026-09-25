@@ -175,6 +175,34 @@ public partial class MergerTests
     }
 
     [TestMethod]
+    public void A2_ARetiredActorsRevisionUnderAnotherFormVersionIsDriftNeverACollision()
+    {
+        // Retired actors exist after any identity reset or restore detection, and form versions change across betas.
+        var f = new MergeFixture { PeerComparisonFormVersion = 2 };
+        f.RetiredCounters[Retired.Value] = 5;
+        var retiredEditor = new DataSyncEditorRef(SelfNode, "This PC", Retired.Value);
+        f.Base(A, f.Record(A, T("Artist"), Vv((Retired, 4)), editedBy: retiredEditor));
+        f.Local("1", A, T("Artists"), Vv((Retired, 5)), lastEditor: retiredEditor);
+        var record = f.Pull(f.Record(A, T("Artist!"), Vv((Retired, 5)), editedBy: retiredEditor));
+
+        var r = f.Merge();
+        Assert.IsNull(r.Anomaly);
+        Assert.IsNull(r.Pause);
+        Assert.AreEqual(record, BaseOf(r, A).Record, "base := R");
+        Assert.AreEqual(DataSyncMergeNoteCodes.NormalizationChanged, r.Notes.Single().Code);
+        Assert.AreEqual(0, r.Inbox.Count, "no question");
+        Assert.AreEqual(0, r.Revisions.Count + Ops(r).Count, "no revision, nothing applied");
+
+        // Under this build's form version the same pair is a collision: merged as concurrent versions.
+        var same = new MergeFixture();
+        same.RetiredCounters[Retired.Value] = 5;
+        same.Base(A, same.Record(A, T("Artist"), Vv((Retired, 4)), editedBy: retiredEditor));
+        same.Local("1", A, T("Artists"), Vv((Retired, 5)), lastEditor: retiredEditor);
+        same.Pull(same.Record(A, T("Artist!"), Vv((Retired, 5)), editedBy: retiredEditor));
+        Assert.AreEqual("name", same.Merge().Inbox.Single().SubjectPath);
+    }
+
+    [TestMethod]
     public void A2_EqualVectorsAndEqualFormsAreRowK4()
     {
         var f = new MergeFixture();
@@ -604,6 +632,52 @@ public partial class MergerTests
         Assert.AreEqual(tombstone.Vv, item.LocalVv);
         Assert.AreEqual(DataSyncPendingReason.AwaitingDecision, BaseOf(r, A).Pending!.Reason);
         Assert.AreEqual(20, BaseOf(r, A).Pending!.EvaluatedAtLocalSeq, "the tombstone row's Seq");
+    }
+
+    [TestMethod]
+    public void T3_TwoLineagesAskingAboutOneTombstoneAreOneQuestion()
+    {
+        // This device had merged two of the peer's lineages (A and B) into one entity, then deleted it; the peer still
+        // publishes both, each changed since.
+        var f = new MergeFixture();
+        var tombstone = f.Tombstone(A, Vv((Peer, 2), (Self, 4)), aliases: [B]);
+        var a = f.Pull(f.Record(A, T("Mood"), Vv((Peer, 5))));
+        var b = f.Pull(f.Record(B, T("Feeling"), Vv((Peer, 6))));
+
+        var r = f.Merge();
+        Assert.AreEqual(0, Ops(r).Count, "never an automatic revive");
+        var item = r.Inbox.Single();
+        Assert.AreEqual(DataSyncInboxItemType.DeletedHereEditedThere, item.Type);
+        Assert.AreEqual(A, item.Key, "the tombstone's key");
+        CollectionAssert.AreEqual(new[] { A.Value, B.Value }, item.Payload.Records!.Select(x => x.PrimaryKey).ToArray());
+        Assert.AreEqual(Vv((Peer, 6)), item.RecordVv, "the records' vectors combined");
+        Assert.AreEqual(tombstone.Vv, item.LocalVv);
+
+        // Every record waits once, on its own row: none is lost, and no row holds two.
+        var onTombstone = BaseOf(r, A);
+        Assert.AreEqual(a, onTombstone.Pending!.Record);
+        Assert.AreEqual(DataSyncPendingReason.AwaitingDecision, onTombstone.Pending.Reason);
+        var own = BaseOf(r, B);
+        Assert.AreEqual(b, own.Pending!.Record);
+        Assert.AreEqual(DataSyncBaseState.Unbound, own.State);
+        Assert.AreEqual(DataSyncInboxDrafts.CombinedRecordHash([onTombstone.Pending.RecordHash, own.Pending.RecordHash]),
+            item.RecordHash);
+
+        var reconciled = DataSyncInboxRules.Reconcile([], r.Inbox, r.Evaluated, r.ClosureHints);
+        Assert.AreEqual(1, reconciled.Upserts.Count, "one item for one subject");
+
+        // Delivered again (both records waiting as they were stored), the same question and the same rows.
+        var again = new MergeFixture();
+        again.Tombstone(A, Vv((Peer, 2), (Self, 4)), aliases: [B]);
+        again.Base(A, null, pending: onTombstone.Pending);
+        again.Base(B, null, DataSyncBaseState.Unbound, pending: own.Pending);
+        again.PendingToMerge.AddRange([(ItemKind, A), (ItemKind, B)]);
+        again.NoPull = true;
+        var r2 = again.Merge();
+        Assert.AreEqual(item.Token, r2.Inbox.Single().Token);
+        Assert.AreEqual(item.RecordHash, r2.Inbox.Single().RecordHash);
+        Assert.AreEqual(a, BaseOf(r2, A).Pending!.Record);
+        Assert.AreEqual(b, BaseOf(r2, B).Pending!.Record);
     }
 
     // ---- I -------------------------------------------------------------------------------------

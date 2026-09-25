@@ -75,20 +75,21 @@ public static class DataSyncAnomalies
     /// This device's retired actors (<c>RetiredActorsJson</c>). A revision one of them produced, met with the same
     /// vector and another form, is a <see cref="Collision"/>: this device reissued the counter before it knew it had
     /// been restored. Without it, once the actor rotated the reissued revision read as drift on both sides and the
-    /// two contents kept one vector for good (found by the convergence simulator).
+    /// two contents kept one vector for good (found by the convergence simulator). Like a duplicate actor, a
+    /// collision needs the head's <c>ComparisonFormVersion</c> for the kind to be this build's: a form-version
+    /// mismatch is always drift (§8.4 row A2, §8.12), whoever produced the revision.
     /// </param>
     public static string? JudgeEqualVectors(bool formsEqual, string? editedByActorId, DataSyncActorId selfActor,
         string? peerActorId, int? peerComparisonFormVersion, int codecComparisonFormVersion,
         IReadOnlyCollection<string>? retiredOwnActors = null)
     {
         if (formsEqual) return null;
+        if (peerComparisonFormVersion != codecComparisonFormVersion) return Drift;
         if (editedByActorId is not null && editedByActorId != selfActor.Value && retiredOwnActors?.Contains(editedByActorId) == true)
             return Collision;
         var producedByOwnerOfActor = editedByActorId is not null &&
                                      (editedByActorId == selfActor.Value || editedByActorId == peerActorId);
-        return producedByOwnerOfActor && peerComparisonFormVersion == codecComparisonFormVersion
-            ? DuplicateActor
-            : Drift;
+        return producedByOwnerOfActor ? DuplicateActor : Drift;
     }
 
     /// <summary>

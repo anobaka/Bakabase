@@ -72,7 +72,8 @@ internal sealed partial class SimNode
                 }
 
                 if (row.DeletedLocally || row.State != DataSyncEntitySyncState.Synced) continue;
-                var publication = DataSyncPublication.Of(kind.Codec, row.Content!, row.Overlay, false, row.OrderKey, row.Unknown);
+                var publication = DataSyncPublication.Of(kind.Codec, row.Content!, row.Overlay, row.ChildrenLocal, row.OrderKey,
+                    row.Unknown);
                 var held = row.PublishHeld ? DataSyncHeldReason.PendingDecision : publication.Held;
                 records.Add(new DataSyncWireRecord(keys, row.Origin, row.Seq, row.Vv, row.LastEditor, false,
                     kind.Codec.Descriptor.SchemaVersion, kind.HasOrder ? row.OrderKey : null,

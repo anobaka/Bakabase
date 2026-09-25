@@ -196,6 +196,13 @@ internal sealed partial class SimNode
             remote = DataSyncVersionVector.Max(remote, pending.Record.Vv);
             if (agreed.All(a => a.Link != link)) agreed.Add((link, pending.Record));
             if (action == DataSyncInboxAction.KeepLocal) continue;
+            if (item.Subject == TestKinds.TestItemCodec.ChildrenLocalPath)
+            {
+                // §3.6: the flag is the side row's, not the content's.
+                row.ChildrenLocal = DataSyncRecordValidation.ChildrenLocalOf(pending.Record.Content);
+                continue;
+            }
+
             var value = kind.SetField(content, item.Subject, ContentOf(row.Kind, pending.Record),
                 action == DataSyncInboxAction.UseCustom ? custom ?? kind.NameOf(content) + " ✓" : null, b.ChildMap);
             content = value ?? content;
@@ -281,11 +288,20 @@ internal sealed partial class SimNode
         var link = LinkById(item.LinkId)!;
         var b = link.Bases[(row.Kind, row.Primary)];
         var record = b.Pending!.Record;
+
+        // Row T3 for several of the peer's lineages (Payload.Records): the one decision covers every record the item
+        // lists. The definition returns with the record on the tombstone's row; every record's history is absorbed
+        // and every record's pending row cleared, or the others would ask again at their next re-merge.
+        var others = PendingKeysOf(item, link).Where(k => k != (row.Kind, row.Primary)).Select(k => link.Bases[k]).ToList();
+        var remote = others.Aggregate(record.Vv, (vv, o) => DataSyncVersionVector.Max(vv, o.Pending!.Record.Vv));
+        foreach (var o in others)
+            UpsertBase(link, new DataSyncBaseUpdate(o.Kind, o.Key, o.State, o.Exclusion, null, null, null, true));
+
         if (action == DataSyncInboxAction.RestoreHere)
         {
             // The definition returns (empty of values), reviving the tombstone's key: Max(T, R) + self.
             var kind = SimKinds.Of(row.Kind);
-            row.Vv = DataSyncRevisionRules.Next(DataSyncRevisionKind.Resolution, row.Vv, record.Vv, false, false, Actor,
+            row.Vv = DataSyncRevisionRules.Next(DataSyncRevisionKind.Resolution, row.Vv, remote, false, false, Actor,
                 NextCounter);
             row.Content = kind.Store(ContentOf(row.Kind, record)!, null);
             row.Deleted = false;
@@ -295,8 +311,10 @@ internal sealed partial class SimNode
             row.LocalKey = NewLocalKey();
             row.OrderKey = record.OrderKey;
             row.Unknown = ContentOf(row.Kind, record) is null ? null : kind.Codec.Read(record.Content!, Limits).Unknown;
+            row.ChildrenLocal = kind.Codec.Descriptor.SupportsChildrenLocal && DataSyncRecordValidation.ChildrenLocalOf(record.Content);
             row.LocalHash = ContentHash.Of(kind.Codec.Write(row.Content));
-            row.SharedHash = DataSyncPublication.Of(kind.Codec, row.Content, row.Overlay, false, row.OrderKey, row.Unknown).SharedHash;
+            row.SharedHash = DataSyncPublication.Of(kind.Codec, row.Content, row.Overlay, row.ChildrenLocal, row.OrderKey,
+                row.Unknown).SharedHash;
             row.LastEditor = Editor;
             row.Seq = NextSeq();
             if (kind.HasOrder) PlaceNew(row);
@@ -305,7 +323,7 @@ internal sealed partial class SimNode
         }
         else
         {
-            row.Vv = DataSyncRevisionRules.Next(DataSyncRevisionKind.KeepDeleted, row.Vv, record.Vv, false, false, Actor,
+            row.Vv = DataSyncRevisionRules.Next(DataSyncRevisionKind.KeepDeleted, row.Vv, remote, false, false, Actor,
                 NextCounter);
             row.LastEditor = Editor;
             row.Seq = NextSeq();
@@ -392,9 +410,12 @@ internal sealed partial class SimNode
                 row.Origin = record.Origin;
                 row.CreatedBySync = true;
                 row.OrderKey = record.OrderKey;
+                row.ChildrenLocal = kind.Codec.Descriptor.SupportsChildrenLocal &&
+                                    DataSyncRecordValidation.ChildrenLocalOf(record.Content);
                 row.Vv = DataSyncRevisionRules.Next(DataSyncRevisionKind.Create, DataSyncVersionVector.Empty, record.Vv,
                     false, false, Actor, NextCounter);
-                row.SharedHash = DataSyncPublication.Of(kind.Codec, row.Content!, row.Overlay, false, row.OrderKey, null).SharedHash;
+                row.SharedHash = DataSyncPublication.Of(kind.Codec, row.Content!, row.Overlay, row.ChildrenLocal, row.OrderKey,
+                    null).SharedHash;
                 row.LastEditor = Editor;
                 row.Seq = NextSeq();
                 if (kind.HasOrder) PlaceNew(row);
@@ -549,7 +570,8 @@ internal sealed partial class SimNode
         var codec = SimKinds.Of(row.Kind).Codec;
         row.Vv = DataSyncRevisionRules.Next(kind, row.Vv, remote, false, false, Actor, NextCounter);
         row.LocalHash = ContentHash.Of(codec.Write(row.Content!));
-        row.SharedHash = DataSyncPublication.Of(codec, row.Content!, row.Overlay, false, row.OrderKey, row.Unknown).SharedHash;
+        row.SharedHash = DataSyncPublication.Of(codec, row.Content!, row.Overlay, row.ChildrenLocal, row.OrderKey, row.Unknown)
+            .SharedHash;
         row.LastEditor = Editor;
         row.Seq = NextSeq();
     }

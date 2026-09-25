@@ -166,6 +166,62 @@ public class RecordApplyTests
         Assert.AreEqual(PeerEditor, applied.LastEditor);
     }
 
+    // ---- WithoutChangedDuringApply: nothing of a skipped entity is reported --------------------------
+
+    private static DataSyncMergeResult Skip(MergeFixture f, out DataSyncMergeResult merged)
+    {
+        merged = f.Merge();
+        var itemId = merged.Batches.Single().Operations.Single().ItemId;
+        var deferred = DataSyncRecordApply.WithoutChangedDuringApply(merged, [itemId], f.Input().Bases);
+        MergeFixture.AssertWellFormed(deferred);
+        Assert.AreEqual(0, deferred.Batches.Count + deferred.Revisions.Count);
+        Assert.AreEqual(DataSyncPendingReason.Retry, deferred.BaseUpdates.Single(u => u.Key == A).Pending!.Reason);
+        Assert.IsFalse(deferred.Evaluated.Contains((ItemKind, A)), "its open items stand until the Retry record merges");
+        return deferred;
+    }
+
+    [TestMethod]
+    public void ASkippedAutomaticDeletionWritesNoHistoryFact()
+    {
+        var f = new MergeFixture();
+        f.Local("1", A, T("Mood"), Vv((Peer, 1)), lastEditor: PeerEditor, createdBySync: true);
+        f.ValueCounts[(ItemKind, "1")] = 0;
+        f.Pull(f.Record(A, null, Vv((Peer, 2)), deleted: true));
+
+        var deferred = Skip(f, out var merged);
+        Assert.AreEqual(DataSyncMergeNoteCodes.AutoDeleted, merged.Notes.Single().Code);
+        Assert.AreEqual(0, deferred.Notes.Count, "nothing was deleted");
+    }
+
+    [TestMethod]
+    public void ASkippedFollowUpdateNotifiesNothing()
+    {
+        var f = new MergeFixture { Mode = DataSyncLinkMode.Follow };
+        f.Base(A, f.Record(A, T("Artist"), Vv((Self, 3))));
+        f.Local("1", A, T("作者"), Vv((Self, 4)));
+        f.Pull(f.Record(A, T("Artists"), Vv((Self, 3), (Peer, 1))));
+
+        var deferred = Skip(f, out var merged);
+        Assert.AreEqual(DataSyncMergeNoteCodes.FollowOverride, merged.Notes.Single().Code);
+        Assert.AreEqual(0, deferred.Notes.Count, "no change on this device was replaced");
+    }
+
+    [TestMethod]
+    public void ASkippedFastForwardClosesNoItem()
+    {
+        var f = new MergeFixture();
+        f.Base(A, f.Record(A, T("Genre"), Vv((Self, 3))));
+        f.Local("1", A, T("Genre"), Vv((Self, 3)));
+        f.OpenItem(41, A, DataSyncInboxItemType.FieldConflict, "name", Vv((Self, 3), (Third, 1)));
+        f.Pull(f.Record(A, T("Genres"), Vv((Self, 3), (Peer, 1)), editedBy: ThirdEditor));
+
+        var deferred = Skip(f, out var merged);
+        Assert.AreEqual(DataSyncInboxClosure.ResolvedElsewhere, merged.ClosureHints.Single().Closure);
+        Assert.AreEqual(0, deferred.ClosureHints.Count + deferred.Inbox.Count);
+        var reconciled = DataSyncInboxRules.Reconcile(f.OpenItems, deferred.Inbox, deferred.Evaluated, deferred.ClosureHints);
+        Assert.AreEqual(0, reconciled.Closes.Count, "the entity did not take the revision");
+    }
+
     [TestMethod]
     public void CreatedEntitiesAreMappedIntoTheSharedOrder()
     {

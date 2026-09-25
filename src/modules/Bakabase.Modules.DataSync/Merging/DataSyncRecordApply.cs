@@ -88,7 +88,10 @@ public static class DataSyncRecordApply
     /// A merge result without the operations the adapter skipped as <c>ChangedDuringApply</c> (their expected hash
     /// no longer held, or the identity pre-flight refused a key): their bases are not advanced and their records
     /// become <c>Retry</c> pending records, merged again with the next pull after the cursor moved past them
-    /// (§7.5.5, §8.10.2); their revisions, hold changes and order entries are dropped. Items stay as derived.
+    /// (§7.5.5, §8.10.2). Nothing else of those entities is reported either: their revisions, hold changes and order
+    /// entries, their notes (history and notification facts: no auto deletion, no follow override happened), their
+    /// closure hints and item drafts are dropped, and their keys leave <c>Evaluated</c>, so reconciliation leaves
+    /// their open items untouched until the <c>Retry</c> record is merged again.
     /// </summary>
     /// <param name="bases">The link's bases as the merge read them (for the rows' states).</param>
     public static DataSyncMergeResult WithoutChangedDuringApply(DataSyncMergeResult result,
@@ -119,10 +122,18 @@ public static class DataSyncRecordApply
         var batches = result.Batches
             .Select(b => new ApplyBatch(b.Kind, b.Operations.Where(o => !changedItemIds.Contains(o.ItemId)).ToList()))
             .Where(b => b.Operations.Count > 0).ToList();
-        var revisions = result.Revisions
-            .Where(r => !(r.LocalKey is not null && localKeys.Contains((r.Kind, r.LocalKey))) &&
-                        !(r.LocalKey is null && r.Keys.All.Any(k => changed.Contains((r.Kind, k)))))
-            .ToList();
+        bool Skipped(DataSyncRevisionDecision r) =>
+            (r.LocalKey is not null && localKeys.Contains((r.Kind, r.LocalKey))) ||
+            (r.LocalKey is null && r.Keys.All.Any(k => changed.Contains((r.Kind, k))));
+        var revisions = result.Revisions.Where(r => !Skipped(r)).ToList();
+
+        // Every key of a skipped entity: the base key its item id names, and the keys its revision carries.
+        var skippedKeys = new HashSet<(string, SyncKey)>(changed);
+        foreach (var r in result.Revisions.Where(Skipped))
+        {
+            foreach (var key in r.Keys.All) skippedKeys.Add((r.Kind, key));
+        }
+
         var baseUpdates = result.BaseUpdates.Select(u =>
         {
             if (!changed.Contains((u.Kind, u.Key))) return u;
@@ -139,10 +150,17 @@ public static class DataSyncRecordApply
                 a.Synced.Where(e => !localKeys.Contains((a.Kind, e.LocalKey)) && !changedItemIds.Contains(e.LocalKey))
                     .ToList()))
             .ToList();
+        var notes = result.Notes.Where(n => n.LocalKey is null || !localKeys.Contains((n.Kind, n.LocalKey))).ToList();
+        var hints = result.ClosureHints.Where(h => !skippedKeys.Contains((h.Kind, h.Key))).ToList();
+        var inbox = result.Inbox.Where(d => !skippedKeys.Contains((d.Kind, d.Key)) &&
+                                            !(d.LocalKey is not null && localKeys.Contains((d.Kind, d.LocalKey))))
+            .ToList();
+        var evaluated = result.Evaluated.Where(e => !skippedKeys.Contains((e.Kind, e.Key))).ToList();
 
         return result with
         {
             Batches = batches, Revisions = revisions, BaseUpdates = baseUpdates, OverlayChanges = overlays, Order = order,
+            Notes = notes, ClosureHints = hints, Inbox = inbox, Evaluated = evaluated,
         };
     }
 }
