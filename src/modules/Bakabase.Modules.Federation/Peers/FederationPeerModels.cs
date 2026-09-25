@@ -119,6 +119,72 @@ public sealed record NodeHandshakeRequest(string Challenge);
 /// </param>
 public sealed record NodeHandshakeResponse(NodeInfo Info, string Challenge, string Proof, string? Scope = null);
 
+/// <summary>What a datasync request asks for (<see cref="NodeDataSyncPairRequest.Intent"/>).</summary>
+public static class NodeDataSyncIntents
+{
+    /// <summary>Read the source's definitions.</summary>
+    public const string Follow = "follow";
+
+    /// <summary>Keep definitions in step both ways: the source may also read the requester back.</summary>
+    public const string TwoWay = "twoWay";
+
+    public static bool IsValid(string? intent) => intent is Follow or TwoWay;
+}
+
+/// <summary>
+/// What a datasync code redemption says about reading the redeemer back (<see cref="NodePairExchange.ReadBack"/>).
+/// </summary>
+public static class NodeDataSyncReadBack
+{
+    /// <summary>The code's creator agreed to two-way when it made the code, and reads the redeemer back.</summary>
+    public const string Started = "started";
+
+    /// <summary>A two-way redemption of a code made without two-way consent: the grant only.</summary>
+    public const string Declined = "declined";
+}
+
+/// <summary>
+/// The data sync contract of this build, as the host knows it: the federation module does not know data sync, so
+/// the requester's checks of a peer's <see cref="NodeInfo"/> (§7.2.2) take it from the caller.
+/// </summary>
+public sealed record NodeDataSyncContract(int Version, int MinimumPeerVersion);
+
+/// <summary>How a datasync pairing attempt ended, on the requesting device.</summary>
+/// <param name="Outcome"><c>"granted"</c>, <c>"awaitingApproval"</c> or <c>"rejected"</c>.</param>
+/// <param name="PeerName">The name the peer's <c>/info</c> gave.</param>
+/// <param name="ReadBack">For a code: whether the peer reads this device back (<see cref="NodeDataSyncReadBack"/>).</param>
+public sealed record NodeDataSyncPairingOutcome(string Outcome, string RequestId, string PeerNodeId, string PeerName,
+    string? ReadBack = null);
+
+/// <summary>An approved datasync request, as the approving device's own flow needs it.</summary>
+/// <param name="HasReciprocal">A two-way request whose offer to be read back is still there to take.</param>
+public sealed record NodeDataSyncApproval(string NodeId, string NodeName, string Intent, bool HasReciprocal);
+
+/// <summary>A datasync request, for this device's own management plane only.</summary>
+/// <param name="Direction"><c>"incoming"</c> or <c>"outgoing"</c>.</param>
+/// <param name="RemoteAddress">Incoming: where it came from (its NodeId and name are only a claim). Outgoing: where it was sent.</param>
+/// <param name="KnownAddress">
+/// Incoming: where this device already knows the node the request claims to be, when it knows one.
+/// </param>
+/// <param name="ReplacesExistingAccess">Approving would replace a live datasync grant held under this NodeId.</param>
+public sealed record NodeDataSyncRequestView(string RequestId, string Direction, string NodeId, string NodeName,
+    string Intent, string Status, DateTimeOffset ExpiresAt, string? RemoteAddress, string? KnownAddress,
+    bool ReplacesExistingAccess);
+
+/// <summary>A live <c>datasync.read</c> grant this device issued: who may read its definitions.</summary>
+public sealed record NodeDataSyncGrantView(string NodeId, string Name, string GrantId, DateTimeOffset GrantedAt);
+
+/// <summary>A device known here, as data sync sees it.</summary>
+/// <param name="Address">Where data sync reaches it: its own address if it has one, else the library's.</param>
+/// <param name="WeMayRead">This device holds a <c>datasync.read</c> grant for it.</param>
+/// <param name="TheyMayRead">It holds a live <c>datasync.read</c> grant for this device.</param>
+public sealed record NodeDataSyncPeerView(string NodeId, string Name, string? Address, bool WeMayRead,
+    bool TheyMayRead);
+
+/// <summary>Everything about <c>datasync.read</c> this device's own management plane shows; never a key or a code.</summary>
+public sealed record FederationDataSyncStatus(bool SharingEnabled, IReadOnlyList<NodeDataSyncPeerView> Peers,
+    IReadOnlyList<NodeDataSyncRequestView> Requests, IReadOnlyList<NodeDataSyncGrantView> Grants);
+
 internal sealed class FederationState
 {
     public int SchemaVersion { get; set; } = 1;
@@ -148,6 +214,14 @@ internal sealed class FederationState
     public List<StoredOutgoingRequest> OutgoingDataSyncRequests { get; set; } = [];
     public StoredInvitation? DataSyncInvitation { get; set; }
     public List<StoredReciprocalInvitation> DataSyncReciprocalInvitations { get; set; } = [];
+
+    /// <summary>
+    /// Whether library routing belongs to this peer: a library grant in either direction. Data sync never writes
+    /// such a peer's label, address, library epoch, kind, platform or browsing switch (§7.1.1), so a definitions
+    /// pairing, even one approved for a device claiming this NodeId, can never redirect library browsing.
+    /// </summary>
+    public bool HasLibraryGrant(string nodeId) => OutboundGrants.ContainsKey(nodeId) ||
+        InboundGrants.Values.Any(g => !g.Revoked && g.Credentials.SubjectNodeId == nodeId);
 }
 
 internal sealed class StoredReciprocalInvitation
@@ -173,6 +247,12 @@ internal sealed class StoredPeer
     /// only this. Library code never reads it.
     /// </summary>
     public string? DataSyncAddress { get; set; }
+    /// <summary>
+    /// Where the peer said it could be read back when this device took its two-way offer (§7.2.4). Unverified: never
+    /// a session's address, only tried, with the peer's NodeId expected, to ask it for its definitions again when no
+    /// other address is known ("Try again" after a failed read-back). Dropped once a datasync address is verified.
+    /// </summary>
+    public string[]? DataSyncOfferedAddresses { get; set; }
 }
 
 internal sealed class StoredGrant
@@ -205,6 +285,11 @@ internal sealed class StoredPairRequest
     public NodeReciprocalOffer? Reciprocal { get; set; }
     /// <summary>Datasync requests only: <c>"follow"</c> or <c>"twoWay"</c>.</summary>
     public string? Intent { get; set; }
+    /// <summary>
+    /// Datasync code redemptions only: what the exchange said about reading the redeemer back
+    /// (<see cref="NodeDataSyncReadBack"/>), so a re-delivered exchange says the same.
+    /// </summary>
+    public string? ReadBack { get; set; }
 }
 
 internal sealed class StoredOutgoingRequest

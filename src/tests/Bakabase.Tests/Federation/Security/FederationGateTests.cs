@@ -22,7 +22,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests.Federation.Security;
 
 [TestClass]
-public sealed class FederationGateTests
+public sealed partial class FederationGateTests
 {
     [TestMethod]
     public async Task NodeExportAlwaysRequiresGrantBeforeLegacyLoopbackAndUnrestrictedBypasses()
@@ -428,7 +428,9 @@ public sealed class FederationGateTests
         .RootElement.GetProperty("code").GetString()!;
     private sealed class Actions
     {
-        [FederationEndpoint(FederationEndpointKind.Export)] public void Export() { }
+        // FederationLocalAccessFilter refuses an Export action that declares no scope (fail-closed, §7.3), so the
+        // fixture serves the library's, as every Export action before data sync did. The assertions are unchanged.
+        [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.LibraryRead)] public void Export() { }
         public void Unmarked() { }
     }
     private sealed class LateResultController : FederationControllerBase

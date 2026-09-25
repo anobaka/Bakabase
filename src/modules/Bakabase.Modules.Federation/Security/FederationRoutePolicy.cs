@@ -1,8 +1,63 @@
+using Bakabase.Modules.Federation.Peers;
+
 namespace Bakabase.Modules.Federation.Security;
+
+/// <summary>
+/// Which sharing switch a node route needs before anything else is looked at (§7.3). Library sharing and
+/// definitions sharing are separate switches, so a route never answers because the other one is on.
+/// </summary>
+public enum FederationSharingRequirement
+{
+    /// <summary>Library sharing (<c>SharingEnabled</c>).</summary>
+    Library,
+
+    /// <summary>Definitions sharing (<c>DataSyncSharingEnabled</c>).</summary>
+    DataSync,
+
+    /// <summary>Either switch: <c>info</c>, which a device sharing only its definitions must still answer.</summary>
+    Either,
+
+    /// <summary>
+    /// Either switch before authentication, then the switch of the grant's own scope: the handshake, which a grant
+    /// of either scope makes.
+    /// </summary>
+    GrantScope
+}
 
 /// <summary>Only named protocol operations may cross the node boundary, including before MVC routing.</summary>
 public static class FederationRoutePolicy
 {
+    /// <summary>
+    /// The switch a Public or Export route needs (§7.3), for a route <see cref="Allows"/> accepts; null for anything
+    /// else, which the caller refuses.
+    /// </summary>
+    public static FederationSharingRequirement? RequiredSharing(FederationEndpointKind kind, string method, string path)
+    {
+        if (kind == FederationEndpointKind.Local || !Allows(kind, method, path)) return null;
+        var segments = path.TrimEnd('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (kind == FederationEndpointKind.Public)
+            return segments.Length == 3 ? FederationSharingRequirement.Either
+                : segments.Length == 5 ? FederationSharingRequirement.DataSync
+                : FederationSharingRequirement.Library;
+        if (segments.Length == 4 && Equal(segments[3], "handshake")) return FederationSharingRequirement.GrantScope;
+        return segments.Length == 5 && Equal(segments[3], "datasync")
+            ? FederationSharingRequirement.DataSync
+            : FederationSharingRequirement.Library;
+    }
+
+    /// <summary>
+    /// The grant scope a principal must hold for a route's requirement, after authentication: the library's for
+    /// library routes, <c>datasync.read</c> for the feed, and either for the handshake (whose grant's own switch
+    /// was checked while authenticating).
+    /// </summary>
+    public static bool ScopeMatches(FederationSharingRequirement requirement, string scope) => requirement switch
+    {
+        FederationSharingRequirement.Library => scope == FederationScopes.LibraryRead,
+        FederationSharingRequirement.DataSync => scope == FederationScopes.DataSyncRead,
+        FederationSharingRequirement.GrantScope => scope is FederationScopes.LibraryRead or FederationScopes.DataSyncRead,
+        _ => false
+    };
+
     public static FederationEndpointKind? Classify(string path)
     {
         if (path.Equals("/federation/local", StringComparison.OrdinalIgnoreCase) ||

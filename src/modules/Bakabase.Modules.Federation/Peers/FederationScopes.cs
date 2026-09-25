@@ -17,4 +17,13 @@ public static class FederationScopes
 
     /// <summary>Declared by an endpoint that a grant of either scope may reach (the handshake); never a grant's scope.</summary>
     public const string Any = "*";
+
+    /// <summary>
+    /// Whether a grant of <paramref name="grantScope"/> may reach an endpoint that declares
+    /// <paramref name="endpointScope"/>. An endpoint that declares nothing admits nobody, so a new Export action
+    /// without a scope fails closed.
+    /// </summary>
+    public static bool Admits(string? endpointScope, string? grantScope) =>
+        grantScope is LibraryRead or DataSyncRead &&
+        (endpointScope == Any || string.Equals(endpointScope, grantScope, StringComparison.Ordinal));
 }

@@ -55,8 +55,11 @@ public sealed class FederationAccessMiddleware(RequestDelegate next)
                 // bypass the legacy identity gate, never its Disabled setting.
                 if (remoteAccess.GetEffectiveMode() == RemoteAccessMode.Disabled)
                     throw new FederationAccessException("RemoteAccessDisabled", 403, "Remote access is disabled on this node.");
-                if (!await store.IsSharingEnabledAsync(context.RequestAborted))
-                    throw new FederationAccessException("SharingDisabled", 403, "Resource sharing is disabled on this node.");
+                // Each route needs its own sharing switch, read once and checked before any signature work, so a
+                // switched-off scope costs nothing and one switch never opens the other's routes (§7.3).
+                var required = FederationRoutePolicy.RequiredSharing(kind.Value, context.Request.Method, path) ??
+                               throw new FederationAccessException("NodeRouteForbidden", 403, "This route is outside the node sharing protocol.");
+                RequireSharing(required, await store.GetSharingSwitchesAsync(context.RequestAborted));
                 if (kind == FederationEndpointKind.Export)
                 {
                     if (!isNodeSignature)
@@ -64,6 +67,9 @@ public sealed class FederationAccessMiddleware(RequestDelegate next)
                     var digest = await BoundBodyAsync(context, hash: true);
                     principal = await authenticator.AuthenticateAsync(authorization, context.Request.Method, path,
                         context.Request.QueryString.HasValue ? context.Request.QueryString.Value![1..] : "", digest, context.RequestAborted);
+                    // A grant reaches only the routes of its own scope; the handshake takes either.
+                    if (!FederationRoutePolicy.ScopeMatches(required, principal.Scope))
+                        throw NodeGrantService.ScopeNotGranted();
                 }
                 else await BoundBodyAsync(context, hash: false);
             }
@@ -93,6 +99,24 @@ public sealed class FederationAccessMiddleware(RequestDelegate next)
             await context.Response.WriteAsync(JsonSerializer.Serialize(new
                 { code = e.ErrorCode, message = e.Message, retryable = e.StatusCode is 429 or 503 }, FederationJson.Options),
                 context.RequestAborted);
+        }
+    }
+
+    /// <summary>
+    /// The switch check of §7.3. <c>info</c> and the handshake answer while either switch is on: <c>info</c> so a
+    /// device sharing only its definitions can be found, the handshake because the grant's own scope decides (its
+    /// switch is checked while authenticating).
+    /// </summary>
+    private static void RequireSharing(FederationSharingRequirement required, FederationSharingSwitches switches)
+    {
+        switch (required)
+        {
+            case FederationSharingRequirement.Library when !switches.Library:
+            case FederationSharingRequirement.Either or FederationSharingRequirement.GrantScope
+                when !switches.Library && !switches.DataSync:
+                throw new FederationAccessException("SharingDisabled", 403, "Resource sharing is disabled on this node.");
+            case FederationSharingRequirement.DataSync when !switches.DataSync:
+                throw NodeGrantService.DataSyncSharingDisabled();
         }
     }
 
