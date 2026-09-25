@@ -81,7 +81,7 @@ public sealed partial class CustomPropertyCodec
     /// refs whose uuid names a removed option; <paramref name="removed"/> hears each removal with the number of
     /// options it took (a node and its descendants).
     /// </summary>
-    private static CustomPropertyContentV1 RemoveChildren(CustomPropertyContentV1 content, Func<string?, string, bool> remove,
+    internal static CustomPropertyContentV1 RemoveChildren(CustomPropertyContentV1 content, Func<string?, string, bool> remove,
         Action<string?, string, int> removed)
     {
         var removedUuids = new HashSet<string>(StringComparer.Ordinal);

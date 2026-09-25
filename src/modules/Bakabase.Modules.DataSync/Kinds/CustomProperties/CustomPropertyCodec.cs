@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Wire;
 
@@ -8,8 +9,9 @@ namespace Bakabase.Modules.DataSync.Kinds.CustomProperties;
 /// <summary>
 /// The codec of kind <c>customProperty</c>, schemaVersion 1 (v3.1 §3.3, §3.3–§3.7 here). Pure: it validates peer
 /// content (<see cref="DataSyncKindCodec{TContent}.Read"/>), parses local content without validating
-/// (<see cref="ReadLocal"/>), decides what this device publishes (<see cref="Publish"/>) and computes the id-free,
-/// class-folded comparison form (<see cref="ComparisonForm(CustomPropertyContentV1, string?, bool)"/>).
+/// (<see cref="ReadLocal"/>), decides what this device publishes (<see cref="Publish"/>), computes the id-free,
+/// class-folded comparison form (<see cref="ComparisonForm(CustomPropertyContentV1, string?, bool)"/>) and merges field by
+/// field (<c>Merge3</c>, §8.5).
 /// </summary>
 public sealed partial class CustomPropertyCodec : DataSyncKindCodec<CustomPropertyContentV1>
 {
@@ -20,12 +22,20 @@ public sealed partial class CustomPropertyCodec : DataSyncKindCodec<CustomProper
     public const int CurrentComparisonFormVersion = 1;
 
     private readonly DataSyncLimits _limits;
+    private readonly DataSyncAutoApplyPolicy _policy;
 
     /// <param name="limits">The reader's limits <see cref="Publish"/> applies (§3.5 step 4); the defaults when null.</param>
-    public CustomPropertyCodec(DataSyncLimits? limits = null)
+    /// <param name="policy">
+    /// The B4 thresholds <c>Merge3</c> applies (§8.5.4 step 7), which <see cref="DataSyncMerge3Input"/> does not carry;
+    /// the defaults when null.
+    /// </param>
+    public CustomPropertyCodec(DataSyncLimits? limits = null, DataSyncAutoApplyPolicy? policy = null)
     {
         _limits = limits ?? DataSyncLimits.Default;
+        _policy = policy ?? DataSyncAutoApplyPolicy.Default;
     }
+
+    internal DataSyncLimits Limits => _limits;
 
     public override DataSyncKindDescriptor Descriptor { get; } = new(
         DataSyncKindIds.CustomProperty, SchemaVersion: 1, DependsOn: [], typeof(CustomPropertyContentV1),
