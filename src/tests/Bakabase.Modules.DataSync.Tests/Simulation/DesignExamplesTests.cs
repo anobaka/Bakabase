@@ -17,9 +17,11 @@ namespace Bakabase.Modules.DataSync.Tests.Simulation;
 [TestClass]
 public class DesignExamplesTests
 {
-    private readonly SimClock _clock = new();
+    private readonly SimWorld _world = new();
 
-    private SimNode Node(string name, bool headless = false) => new(name, _clock, headless);
+    private SimClock _clock => _world.Clock;
+
+    private SimNode Node(string name, bool headless = false) => _world.AddNode(name, headless);
 
     private static TestItemContent T(string name, params (string Id, string Label)[] children) =>
         new(name, null, children.Select(c => new TestChild(c.Id, c.Label)));
@@ -79,7 +81,7 @@ public class DesignExamplesTests
         Assert.AreEqual("作者", onPc2.Payload.Fields.Single().Local!.Text);
         Assert.AreEqual("Artists", onPc2.Payload.Fields.Single().Remote!.Text);
         Assert.AreEqual("作者", pc2.Row("作者").Name);
-        Assert.IsTrue(pc2.Row("作者").Content!.Children.Any(c => c.Label == "Added on PC-1"));
+        Assert.IsTrue(pc2.Row("作者").Item!.Children.Any(c => c.Label == "Added on PC-1"));
         Assert.IsTrue(pc2.Row("作者").Vv[pc1.Actor] < pc1.Row("Artists").Vv[pc1.Actor], "PC-2 never absorbs PC-1's counter");
 
         // PC-2 decides "作者": Max(L, R) + PC-2, dominating both.
@@ -111,7 +113,7 @@ public class DesignExamplesTests
 
         Assert.AreEqual(0, pc1.OpenDecisions + pc2.OpenDecisions);
         AssertSameForm(pc1, pc2, "类型");
-        CollectionAssert.AreEqual(new[] { "Action", "Isekai" }, pc1.Row("类型").Content!.Children.Select(c => c.Label).ToArray());
+        CollectionAssert.AreEqual(new[] { "Action", "Isekai" }, pc1.Row("类型").Item!.Children.Select(c => c.Label).ToArray());
     }
 
     // ---- C -----------------------------------------------------------------------------------------
@@ -130,7 +132,7 @@ public class DesignExamplesTests
         var item = pc2.Item(DataSyncInboxItemType.ChildDeletedInUse);
         Assert.AreEqual(DataSyncInboxItemOrigin.State, item.Origin);
         Assert.AreEqual(30, item.Payload.UsageCount);
-        Assert.IsTrue(pc2.Row("Genre").Content!.Children.Any(c => c.Label == "Horror"), "kept and held");
+        Assert.IsTrue(pc2.Row("Genre").Item!.Children.Any(c => c.Label == "Horror"), "kept and held");
         AssertSameForm(pc1, pc2, "Genre");   // not published: nothing ping-pongs
         Settle(pc1, pc2);
         Assert.IsTrue(item.Open, "a state-derived item survives pulls");
@@ -151,7 +153,7 @@ public class DesignExamplesTests
 
         pc1.Edit("Genre", c => c.With(children: c.Children.Where(x => x.Label != "Horror")));
         Settle(pc1, pc2);
-        Assert.AreEqual(1, pc2.Row("Genre").Content!.Children.Count);
+        Assert.AreEqual(1, pc2.Row("Genre").Item!.Children.Count);
         Assert.AreEqual(DataSyncMergeNoteCodes.ChildrenRemoved, pc2.Notes.Single().Code);
     }
 
@@ -200,7 +202,7 @@ public class DesignExamplesTests
         var item = pc2.Item(DataSyncInboxItemType.TypeChange);
         Assert.AreEqual("SingleChoice", item.Payload.RemoteSubtype);
         Assert.AreEqual(1234, item.Payload.ValueCount);
-        Assert.AreEqual("MultipleChoice", pc2.Row("Genre").Content!.Type, "frozen for this link");
+        Assert.AreEqual("MultipleChoice", pc2.Row("Genre").Item!.Type, "frozen for this link");
         Assert.IsNotNull(pc2.Find("Moods"), "everything else syncs");
         pc2.Pull(pc1);
         Assert.IsTrue(item.Open);
@@ -274,7 +276,7 @@ public class DesignExamplesTests
         var nasItem = nas.Item(DataSyncInboxItemType.FieldConflict);
         Assert.AreEqual("Artists", nas.Rows.Single().Name);
         Assert.AreEqual(nasVv, nas.Rows.Single().Vv, "the NAS keeps its version and absorbs nothing");
-        Assert.AreEqual(1, nas.Feed(0).Manifest.Attention.OpenDecisions, "its heads report the decision");
+        Assert.AreEqual(1, nas.Attention.OpenDecisions, "its heads report the decision");
 
         pc2.Pull(nas);                                        // PC-2 sees the conflict and decides
         pc2.Resolve(pc2.Item(DataSyncInboxItemType.FieldConflict), DataSyncInboxAction.KeepLocal);
@@ -421,7 +423,7 @@ public class DesignExamplesTests
         Assert.IsNull(item.LinkId, "it belongs to no link");
         Assert.IsTrue(pc2.Row("Genre").PublishHeld);
         pc1.Pull(pc2);
-        Assert.AreEqual("Horror films", pc1.Row("Genre").Content!.Children[0].Label, "peers keep their version");
+        Assert.AreEqual("Horror films", pc1.Row("Genre").Item!.Children[0].Label, "peers keep their version");
 
         pc1.Edit("Genre", c => c.With(name: "Genres"));
         pc2.Pull(pc1);
@@ -432,7 +434,7 @@ public class DesignExamplesTests
         Settle(pc1, pc2);
         AssertSameForm(pc1, pc2, "Genres");
         CollectionAssert.AreEqual(new[] { "Horror films", "Comedy" },
-            pc2.Row("Genres").Content!.Children.Select(c => c.Label).ToArray());
+            pc2.Row("Genres").Item!.Children.Select(c => c.Label).ToArray());
     }
 
     [TestMethod]
@@ -448,7 +450,7 @@ public class DesignExamplesTests
         pc2.Edit("Genre", _ => T("Genre", ("1", "Horror")));
         Settle(pc1, pc2);
         Assert.AreEqual(0, pc2.OpenDecisions);
-        Assert.AreEqual("Horror", pc1.Row("Genre").Content!.Children[0].Label);
+        Assert.AreEqual("Horror", pc1.Row("Genre").Item!.Children[0].Label);
     }
 
     // ---- K -----------------------------------------------------------------------------------------
@@ -538,12 +540,12 @@ public class DesignExamplesTests
         if (action == DataSyncInboxAction.ReviewEach)
         {
             Assert.AreEqual(60, inUse.Count, "every one becomes its own item, used or not");
-            Assert.AreEqual(70, pc1.Rows.Single().Content!.Children.Count);
+            Assert.AreEqual(70, pc1.Rows.Single().Item!.Children.Count);
         }
         else
         {
             Assert.AreEqual(1, inUse.Count, "only the used one is held");
-            Assert.AreEqual(11, pc1.Rows.Single().Content!.Children.Count);
+            Assert.AreEqual(11, pc1.Rows.Single().Item!.Children.Count);
         }
     }
 
@@ -565,8 +567,8 @@ public class DesignExamplesTests
         Settle(pc1, nas, pc2);
         Assert.IsNotNull(nas.Find("Mood"), "the NAS keeps it until someone decides");
         Assert.IsNotNull(pc2.Find("Mood"), "so PC-2 never receives the deletion");
-        Assert.AreEqual(1, nas.Feed(0).Manifest.Attention.OpenDecisions, "readers see what waits there");
-        Assert.IsTrue(nas.Feed(0).Manifest.Attention.Headless);
+        Assert.AreEqual(1, nas.Attention.OpenDecisions, "readers see what waits there");
+        Assert.IsTrue(nas.Attention.Headless);
 
         // Decided on the NAS (through server switching): the deletion flows on.
         nas.Resolve(nas.Item(DataSyncInboxItemType.DeletedThere), DataSyncInboxAction.DeleteHere);
@@ -585,8 +587,8 @@ public class DesignExamplesTests
 
         pc1.Edit("Genre", c => c.With(children: c.Children.Select(x => x.Id == "a2" ? x with { Label = "Action" } : x)));
         Settle(pc1, pc2);
-        CollectionAssert.AreEqual(new[] { "a1", "a2" }, pc2.Row("Genre").Content!.Children.Select(c => c.Id).ToArray());
-        Assert.IsTrue(pc2.Row("Genre").Content!.Children.All(c => c.Label == "Action"));
+        CollectionAssert.AreEqual(new[] { "a1", "a2" }, pc2.Row("Genre").Item!.Children.Select(c => c.Id).ToArray());
+        Assert.IsTrue(pc2.Row("Genre").Item!.Children.All(c => c.Label == "Action"));
         AssertSameForm(pc1, pc2, "Genre");
     }
 
@@ -600,8 +602,8 @@ public class DesignExamplesTests
         pc1.Edit("Genre", c => c.With(clearColor: true));
         pc2.Edit("Genre", c => c.With(name: "Genres"));
         Settle(pc1, pc2);
-        Assert.IsNull(pc1.Row("Genres").Content!.Color);
-        Assert.IsNull(pc2.Row("Genres").Content!.Color);
+        Assert.IsNull(pc1.Row("Genres").Item!.Color);
+        Assert.IsNull(pc2.Row("Genres").Item!.Color);
         Assert.AreEqual(0, pc1.OpenDecisions + pc2.OpenDecisions);
     }
 }

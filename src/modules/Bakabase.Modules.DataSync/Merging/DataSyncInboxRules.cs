@@ -124,14 +124,22 @@ public static class DataSyncInboxRules
     /// merger-derived item of ANY link whose record vector is ≤ the entity's new vector is settled — the entity has
     /// incorporated that record's history. It closes <c>ResolvedElsewhere</c> by the revision's editor when that
     /// revision was edited by another device, <c>Superseded</c> when it was produced here. Null when the item
-    /// stands (state-derived, no record vector, or not dominated).
+    /// stands (state-derived, no record vector, not dominated, or an identity question).
     /// </summary>
+    /// <remarks>
+    /// <c>LinkSuggestion</c> and <c>IdentityConflict</c> ask which entities are the same, which no vector settles:
+    /// a record bound to two entities here (row I) or two records bound to one (row M) stay so whatever the
+    /// entity's vector. Closing them by dominance only made the merger raise them again at the next pull, so the
+    /// question flickered and could never be answered (found by the convergence simulator). They close when the
+    /// merger no longer produces them.
+    /// </remarks>
     public static DataSyncInboxClose? DominanceClosure(DataSyncOpenInboxItem item, DataSyncVersionVector entityVv,
         DataSyncEditorRef? entityLastEditor, bool lastEditorIsThisDevice)
     {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(entityVv);
         if (item.Origin != DataSyncInboxItemOrigin.Merger || item.RecordVv is not { } recordVv) return null;
+        if (item.Type is DataSyncInboxItemType.LinkSuggestion or DataSyncInboxItemType.IdentityConflict) return null;
         if (recordVv.CompareTo(entityVv) is not (DataSyncVvRelation.Equal or DataSyncVvRelation.DominatedBy)) return null;
         return !lastEditorIsThisDevice && entityLastEditor is not null
             ? new DataSyncInboxClose(item.Id, DataSyncInboxClosure.ResolvedElsewhere, entityLastEditor)

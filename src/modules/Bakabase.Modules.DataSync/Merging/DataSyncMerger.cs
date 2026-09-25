@@ -35,9 +35,10 @@ public sealed record DataSyncMergeInput(
 public sealed record DataSyncUsageQuery(string Kind, string LocalKey, IReadOnlyList<string> ChildIds, bool NeedValueCount);
 
 /// <param name="TombstonesToServe">
-/// Row T2 (§8.4): unserved tombstones (older than retention, §4.6) that a peer still publishes a live record for.
-/// Each is served again — <c>TombstoneServed = true</c> and a Seq bump, no revision — so the peer receives this
-/// device's deletion. Null or empty when there are none.
+/// Row T2 (§8.4): tombstones a peer still publishes an older live record for — unserved ones (older than retention,
+/// §4.6) and served ones the peer read before it knew the entity. Each is served again — <c>TombstoneServed =
+/// true</c> and a Seq bump, no revision — so the peer receives this device's deletion at its next pull. Null or empty
+/// when there are none.
 /// </param>
 public sealed record DataSyncMergeResult(
     DataSyncPauseReason? Pause, string? PauseDetail,        // a breaker tripped: nothing below is applied
@@ -141,9 +142,19 @@ public static class DataSyncMergeNoteCodes
     public const string ChildrenLocalTurnedOff = "childrenLocalTurnedOff";
 }
 
+/// <param name="SeenBoth">
+/// A <c>MergedNoConflict</c> whose result equals the peer's form but not this device's: it took the peer's content
+/// over a local difference that only this link's base weighed — a union without a base bringing back what this
+/// device had removed, or a base older than what this device holds (restored from a backup). It is a state that has
+/// seen both sides, never the peer's revision: <see cref="DataSyncRecordApply.Revise"/> then adds this device's
+/// counter as <c>FollowMerged</c> does (§2.8). With a bare <c>Max</c>, a device that merged the same two versions
+/// against another base (and so kept its own side) ended with the same vector and another content, which no later
+/// merge could tell apart (found by the convergence simulator). A result equal to both sides stays a bare <c>Max</c>
+/// (example D of §9.1).
+/// </param>
 public sealed record DataSyncRevisionDecision(string Kind, EntityKeys Keys, string? LocalKey, DataSyncRevisionKind Revision,
     DataSyncVersionVector? RemoteVv, DataSyncVersionVector? TombstoneVv, bool ResultEqualsRemote, bool ResultEqualsLocal,
-    string? OrderKey, JsonObject? Unknown, bool? ChildrenLocal, DataSyncEditorRef? AdoptEditor);
+    string? OrderKey, JsonObject? Unknown, bool? ChildrenLocal, DataSyncEditorRef? AdoptEditor, bool SeenBoth = false);
 
 public sealed record DataSyncBaseUpdate(string Kind, SyncKey Key, DataSyncBaseState State, DataSyncExclusionReason? Exclusion,
     DataSyncWireRecord? Record, IReadOnlyDictionary<string, string>? ChildMap,

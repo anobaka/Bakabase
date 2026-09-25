@@ -1,0 +1,103 @@
+{
+  "current": {
+    "nodeId": "peer-node",
+    "libraryEpoch": "epoch",
+    "actorId": "0000000000000bee",
+    "contractVersion": 1,
+    "minimumPeerContract": 1,
+    "appVersion": "2.5.0-beta.1",
+    "seq": 3,
+    "kinds": [
+      {
+        "kind": "testItem",
+        "schemaVersion": 1,
+        "maxSeq": 3,
+        "cursorSuperseded": false,
+        "comparisonFormVersion": 1
+      }
+    ],
+    "attention": {
+      "headless": false,
+      "openDecisions": 0,
+      "pausedLinks": 0,
+      "restorePending": false,
+      "awaitingReview": 0
+    },
+    "futureMember": {
+      "anything": true
+    }
+  },
+  "olderThanMinimum": {
+    "nodeId": "peer-node",
+    "libraryEpoch": "epoch",
+    "actorId": "0000000000000bee",
+    "contractVersion": 0,
+    "minimumPeerContract": 0,
+    "appVersion": "2.5.0-beta.1",
+    "seq": 3,
+    "kinds": [
+      {
+        "kind": "testItem",
+        "schemaVersion": 1,
+        "maxSeq": 3,
+        "cursorSuperseded": false,
+        "comparisonFormVersion": 1
+      }
+    ],
+    "attention": {
+      "headless": false,
+      "openDecisions": 0,
+      "pausedLinks": 0,
+      "restorePending": false,
+      "awaitingReview": 0
+    }
+  },
+  "noContract": {
+    "nodeId": "peer-node",
+    "libraryEpoch": "epoch",
+    "actorId": "0000000000000bee",
+    "appVersion": "2.5.0-beta.1",
+    "seq": 3,
+    "kinds": [
+      {
+        "kind": "testItem",
+        "schemaVersion": 1,
+        "maxSeq": 3,
+        "cursorSuperseded": false,
+        "comparisonFormVersion": 1
+      }
+    ],
+    "attention": {
+      "headless": false,
+      "openDecisions": 0,
+      "pausedLinks": 0,
+      "restorePending": false,
+      "awaitingReview": 0
+    }
+  },
+  "peerMinimumAboveThis": {
+    "nodeId": "peer-node",
+    "libraryEpoch": "epoch",
+    "actorId": "0000000000000bee",
+    "contractVersion": 2,
+    "minimumPeerContract": 2,
+    "appVersion": "2.5.0-beta.1",
+    "seq": 3,
+    "kinds": [
+      {
+        "kind": "testItem",
+        "schemaVersion": 1,
+        "maxSeq": 3,
+        "cursorSuperseded": false,
+        "comparisonFormVersion": 1
+      }
+    ],
+    "attention": {
+      "headless": false,
+      "openDecisions": 0,
+      "pausedLinks": 0,
+      "restorePending": false,
+      "awaitingReview": 0
+    }
+  }
+}

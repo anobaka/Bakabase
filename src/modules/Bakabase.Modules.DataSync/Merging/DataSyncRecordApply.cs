@@ -51,8 +51,9 @@ public static class DataSyncRecordApply
 
         var equalsRemote = sharedHash is not null && sharedHash == remoteSharedHash;
         var equalsLocal = sharedHash is not null && sharedHash == localSharedHashBefore;
-        var vv = DataSyncRevisionRules.Next(decision.Revision, localVv, decision.RemoteVv, equalsRemote, equalsLocal,
-            selfActor, nextCounter, decision.TombstoneVv);
+        // A result that has seen both sides is never the peer's revision, whatever its form (SeenBoth).
+        var vv = DataSyncRevisionRules.Next(decision.Revision, localVv, decision.RemoteVv, equalsRemote && !decision.SeenBoth,
+            equalsLocal, selfActor, nextCounter, decision.TombstoneVv);
         var editor = remoteEditor is not null && decision.RemoteVv is { } remote && vv == remote ? remoteEditor : self;
         return new DataSyncAppliedRevision(vv, editor, localHash, sharedHash, publication,
             decision.ResultEqualsRemote && !equalsRemote && reRead is not null);

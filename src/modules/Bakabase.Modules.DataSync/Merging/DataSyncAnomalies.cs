@@ -24,6 +24,14 @@ public static class DataSyncAnomalies
     public const string Drift = "drift";
 
     /// <summary>
+    /// Row A2's verdict for equal vectors whose forms differ when the revision was produced by one of this device's
+    /// RETIRED actors: this device issued that counter twice (the residual restore window of §5.6, after the actor
+    /// rotated). The two contents are merged as concurrent versions — conflicts become items, the rest merges — so
+    /// both sides reach a revision that dominates the reissued one.
+    /// </summary>
+    public const string Collision = "collision";
+
+    /// <summary>
     /// Row A1 over every valid record of a merge: a record carries <c>Vv[a] &gt; recorded(a)</c> for an own actor
     /// <c>a</c> (the current one: <c>ActorCounter</c>; a retired one: its recorded counter). The anomaly names the
     /// current actor when it regressed, else the retired actor with the highest excess (ties by actor id), and
@@ -63,10 +71,19 @@ public static class DataSyncAnomalies
     /// pause, no revision, the base takes the record.
     /// </summary>
     /// <param name="peerComparisonFormVersion">The head's version for the kind; null when the head did not say.</param>
+    /// <param name="retiredOwnActors">
+    /// This device's retired actors (<c>RetiredActorsJson</c>). A revision one of them produced, met with the same
+    /// vector and another form, is a <see cref="Collision"/>: this device reissued the counter before it knew it had
+    /// been restored. Without it, once the actor rotated the reissued revision read as drift on both sides and the
+    /// two contents kept one vector for good (found by the convergence simulator).
+    /// </param>
     public static string? JudgeEqualVectors(bool formsEqual, string? editedByActorId, DataSyncActorId selfActor,
-        string? peerActorId, int? peerComparisonFormVersion, int codecComparisonFormVersion)
+        string? peerActorId, int? peerComparisonFormVersion, int codecComparisonFormVersion,
+        IReadOnlyCollection<string>? retiredOwnActors = null)
     {
         if (formsEqual) return null;
+        if (editedByActorId is not null && editedByActorId != selfActor.Value && retiredOwnActors?.Contains(editedByActorId) == true)
+            return Collision;
         var producedByOwnerOfActor = editedByActorId is not null &&
                                      (editedByActorId == selfActor.Value || editedByActorId == peerActorId);
         return producedByOwnerOfActor && peerComparisonFormVersion == codecComparisonFormVersion

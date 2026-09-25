@@ -40,6 +40,10 @@ internal sealed partial class DataSyncMergeEngine
 
     private DataSyncMergeFlags LinkFlags => _link.LinkFlags ?? DataSyncMergeFlags.None;
 
+    /// <summary>This device's retired actors: every own actor but the current one (§5.6).</summary>
+    private IReadOnlyCollection<string> RetiredOwnActors =>
+        _link.OwnActorCounters.Keys.Where(a => a != _link.SelfActor.Value).ToList();
+
     /// <summary>The mode merges run in: the effective mode, and TwoWay for a link that is off (copy once).</summary>
     private DataSyncLinkMode MergeMode =>
         _link.EffectiveMode == DataSyncLinkMode.Follow ? DataSyncLinkMode.Follow : DataSyncLinkMode.TwoWay;
@@ -69,7 +73,8 @@ internal sealed partial class DataSyncMergeEngine
         foreach (var kind in _kinds)
         {
             EvaluateKind(kind);
-            if (kind.Staged is { FullReconciliation: true }) ReconcileMissing(kind);
+            if (kind.Staged is { FullReconciliation: true }) ReconcileMissing(kind, liveOnly: false);
+            else if (kind.Staged is not null && kind.Manifest is { LiveCount: 0 }) ReconcileMissing(kind, liveOnly: true);
         }
 
         if (MassDeletionOrKindEmptied() is { } breaker) return Stopped(breaker.Reason, breaker.Detail, null);
@@ -129,6 +134,12 @@ internal sealed partial class DataSyncMergeEngine
 
         /// <summary>Row A2 found drift: equal vectors, different forms, not a duplicate actor.</summary>
         public bool Drift { get; set; }
+
+        /// <summary>
+        /// Row A2 found a collision: this device's own content and the record share a vector a retired actor of this
+        /// device issued twice. It merges as concurrent (<see cref="DataSyncAnomalies.Collision"/>).
+        /// </summary>
+        public bool Collision { get; set; }
     }
 
     private enum BindingKind { Nothing, Excluded, Live, Many, NotSynced, Tombstone }
@@ -221,13 +232,14 @@ internal sealed partial class DataSyncMergeEngine
             }
         }
 
-        var incomingPrimaries = incoming.Select(c => c.Primary).ToHashSet(StringComparer.Ordinal);
+        // §8.4 condition 1: a newer record for the same key in the pull replaces the pending one — also when the peer
+        // now publishes that key as an alias of another entity (it linked or retired the pending record's lineage).
+        var incomingPrimaries = incoming.SelectMany(c => c.Record.Keys).ToHashSet(StringComparer.Ordinal);
         var pending = new List<Candidate>();
         var pendingBases = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (kind, key) in _in.PendingToMerge.Distinct())
         {
             if (kind != k.Kind || !k.Bases.TryGetValue(key.Value, out var b) || b.Pending is null) continue;
-            // §8.4 condition 1: a newer record for the same key in the pull replaces the pending one.
             if (incomingPrimaries.Contains(b.Pending.Record.Keys[0])) continue;
             pending.Add(PendingCandidate(k, b));
             pendingBases.Add(key.Value);
@@ -247,6 +259,25 @@ internal sealed partial class DataSyncMergeEngine
             extra.Bind = BindRecord(k, extra.Record);
             pending.Add(extra);
             pendingBases.Add(target.Value);
+        }
+
+        // Row M again: a pull record that binds to an entity whose IdentityConflict question waits on this link with
+        // another record meets that record too, so the question is derived again whichever of the two the pull
+        // carries. Merged alone, the pull record merged into the entity as if the other did not exist, and one
+        // delivery asked who is who while the next merged a name conflict instead (invariant I3, found by the
+        // convergence simulator).
+        var boundByIncoming = incoming.Where(c => c.Bind.Kind == BindingKind.Live).Select(c => c.Bind.Live!.LocalKey)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var (key, b) in k.Bases.OrderBy(b => b.Key, StringComparer.Ordinal))
+        {
+            if (boundByIncoming.Count == 0) break;
+            if (b.Pending is not { Reason: DataSyncPendingReason.IdentityConflict } waiting || pendingBases.Contains(key) ||
+                incomingPrimaries.Contains(waiting.Record.Keys[0])) continue;
+            var extra = PendingCandidate(k, b);
+            extra.Bind = BindRecord(k, extra.Record);
+            if (extra.Bind.Kind != BindingKind.Live || !boundByIncoming.Contains(extra.Bind.Live!.LocalKey)) continue;
+            pending.Add(extra);
+            pendingBases.Add(key);
         }
 
         // §8.4: OverBudget pending records first, then by Seq with ties by primary key.
@@ -333,8 +364,12 @@ internal sealed partial class DataSyncMergeEngine
     }
 
     /// <summary>
-    /// Row A2 for every record whose vector equals its entity's (or its base's): marks drift on the candidate and
-    /// returns the pause of the first duplicate actor, in merge order.
+    /// Row A2 for every record whose vector equals its entity's (or its base's): marks drift or a collision on the
+    /// candidate and returns the pause of the first duplicate actor, in merge order. A deletion and a live version
+    /// under one vector differ whatever their contents: a tombstone meeting a live entity with its vector, or a live
+    /// record meeting a tombstone with its vector, is judged too (the residual restore window of §5.6 reissues a
+    /// counter the peer holds as a deletion; left to rows K1 and T2, the deletion question closed by dominance at
+    /// once and the two sides stayed apart in silence — found by the convergence simulator).
     /// </summary>
     private DataSyncBreakerTrip? JudgeEqualVectors(out DataSyncAnomaly? anomaly)
     {
@@ -344,31 +379,55 @@ internal sealed partial class DataSyncMergeEngine
             if (k.Codec is not { } codec) continue;
             foreach (var c in k.Candidates)
             {
-                if (c.Bind.Kind != BindingKind.Live || c.Entity.Held is not null || c.SameEntity is not null) continue;
-                var l = c.Bind.Live!;
-                if (l.Unreadable || l.PublishHeld) continue;
-                var b = k.Bases.GetValueOrDefault(l.Keys.Primary!.Value.Value);
-
-                // Both forms are recomputed from stored, validated content with this build's codec; a side that
-                // cannot be read (a tombstone, content this build or the peer would hold) cannot be judged here.
+                if (c.Entity.Held is not null || c.SameEntity is not null) continue;
                 bool? formsEqual = null;
-                var remoteForm = RemoteForm(k, c);
-                if (remoteForm is null) continue;
-                if (c.Record.Vv == l.Vv)
+                var againstLocal = false;
+                if (c.Bind.Kind == BindingKind.Tombstone)
                 {
-                    if (LocalForm(k, l) is { } localForm) formsEqual = remoteForm == localForm;
+                    // A live record with the vector of this device's tombstone.
+                    if (c.Record.Deleted || c.Record.Vv != c.Bind.Tombstone!.Vv) continue;
+                    formsEqual = false;
+                    againstLocal = true;
                 }
-                else if (b?.Vv is { } baseVv && c.Record.Vv == baseVv && BaseForm(k, b) is { } baseForm)
+                else if (c.Bind.Kind == BindingKind.Live && c.Record.Deleted)
                 {
-                    formsEqual = remoteForm == baseForm;
+                    // A tombstone with the vector of this device's live entity.
+                    var live = c.Bind.Live!;
+                    if (live.Unreadable || live.PublishHeld || c.Record.Vv != live.Vv) continue;
+                    formsEqual = false;
+                    againstLocal = true;
+                }
+                else if (c.Bind.Kind == BindingKind.Live)
+                {
+                    var l = c.Bind.Live!;
+                    if (l.Unreadable || l.PublishHeld) continue;
+                    var b = k.Bases.GetValueOrDefault(l.Keys.Primary!.Value.Value);
+
+                    // Both forms are recomputed from stored, validated content with this build's codec; a side that
+                    // cannot be read (content this build or the peer would hold) cannot be judged here.
+                    var remoteForm = RemoteForm(k, c);
+                    if (remoteForm is null) continue;
+                    againstLocal = c.Record.Vv == l.Vv;
+                    if (againstLocal)
+                    {
+                        if (LocalForm(k, l) is { } localForm) formsEqual = remoteForm == localForm;
+                    }
+                    else if (b?.Vv is { } baseVv && c.Record.Vv == baseVv && BaseForm(k, b) is { } baseForm)
+                    {
+                        formsEqual = remoteForm == baseForm;
+                    }
                 }
 
                 if (formsEqual is not { } equal) continue;
 
+                // A collision is only this device's own content against the record; a base re-sent with another
+                // form is drift whoever produced it.
                 var verdict = DataSyncAnomalies.JudgeEqualVectors(equal, c.Record.EditedBy?.ActorId, _link.SelfActor,
                     _link.PeerActorId, _link.PeerComparisonFormVersions.TryGetValue(k.Kind, out var v) ? v : null,
-                    codec.ComparisonFormVersion);
-                if (verdict == DataSyncAnomalies.Drift) c.Drift = true;
+                    codec.ComparisonFormVersion, againstLocal ? RetiredOwnActors : null);
+                // Drift re-records a live entity's base; against a tombstone there is no such base, so rows T decide.
+                if (verdict == DataSyncAnomalies.Drift && c.Bind.Kind == BindingKind.Live) c.Drift = true;
+                if (verdict == DataSyncAnomalies.Collision) c.Collision = true;
                 if (verdict != DataSyncAnomalies.DuplicateActor || anomaly is not null) continue;
 
                 var actor = c.Record.EditedBy!.ActorId;
@@ -389,14 +448,40 @@ internal sealed partial class DataSyncMergeEngine
     /// (no record, live or tombstone, carries its key or its agreed record's keys) becomes <c>MissingAtPeer</c>.
     /// Nothing changes locally: missing means unknown, never a deletion.
     /// </summary>
-    private void ReconcileMissing(KindState k)
+    /// <param name="liveOnly">
+    /// An incremental pull whose manifest counts no live entity of the kind (B3's condition): the complete set of
+    /// live entities is known to be empty, so every base agreed on a live record the pull does not carry is missing
+    /// there too; bases agreed on a tombstone are known deletions and stay. Without this, a person's "Apply as
+    /// usual" on B3 changed nothing B3 counts, and every later pull paused again (found by the convergence
+    /// simulator).
+    /// </param>
+    private void ReconcileMissing(KindState k, bool liveOnly)
     {
         var offered = k.Staged!.Entities.SelectMany(e => e.Record.Keys).ToHashSet(StringComparer.Ordinal);
+
+        // A pending record re-merged in this merge (not in the pull) writes the base of an entity the peer may no
+        // longer offer — a new agreement, or the agreement it keeps while it waits again: that base is recorded as
+        // missing there too, so a second delivery of the same pull finds nothing left to change (invariant I3, found
+        // by the convergence simulator).
+        foreach (var p in _proposals.Where(p => p.Kind == k && p.Candidate?.SourceBase is not null))
+        {
+            for (var i = 0; i < p.BaseUpdates.Count; i++)
+            {
+                var u = p.BaseUpdates[i];
+                if (u.State != DataSyncBaseState.Normal) continue;
+                var agreed = u.Record ?? k.Bases.GetValueOrDefault(u.Key.Value)?.Record;
+                if (agreed is null || (liveOnly && agreed.Deleted)) continue;
+                if (agreed.Keys.Any(offered.Contains) || offered.Contains(u.Key.Value)) continue;
+                p.BaseUpdates[i] = u with { State = DataSyncBaseState.MissingAtPeer };
+            }
+        }
+
         var touched = _proposals.Where(p => p.Kind == k)
             .SelectMany(p => p.BaseUpdates.Select(u => u.Key.Value)).ToHashSet(StringComparer.Ordinal);
         foreach (var (key, b) in k.Bases.OrderBy(b => b.Key, StringComparer.Ordinal))
         {
             if (b.State != DataSyncBaseState.Normal || b.Record is null || touched.Contains(key)) continue;
+            if (liveOnly && b.Record.Deleted) continue;
             if (offered.Contains(key) || b.Record.Keys.Any(offered.Contains)) continue;
             var p = new Proposal(k, null);
             p.BaseUpdates.Add(new DataSyncBaseUpdate(k.Kind, new SyncKey(key), DataSyncBaseState.MissingAtPeer,
@@ -409,17 +494,24 @@ internal sealed partial class DataSyncMergeEngine
         }
     }
 
-    /// <summary>B2 and B3 (§8.7), per kind in apply order. The once flags of B2's resume actions skip both.</summary>
+    /// <summary>
+    /// B2 and B3 (§8.7), per kind in apply order. The once flags of B2's resume actions skip both. B3 counts only
+    /// bases whose latest known peer record is live: a base agreed on a tombstone, or waiting with one for a
+    /// decision, is a deletion the peer already sent, not an entity it stopped offering — so a peer that deleted its
+    /// last three definitions of a kind never pauses its readers at every pull (found by the convergence simulator).
+    /// </summary>
     private DataSyncBreakerTrip? MassDeletionOrKindEmptied()
     {
         if (LinkFlags.SkipDeletionBreaker || LinkFlags.DeletionsAsItems) return null;
         foreach (var k in _kinds)
         {
             var agreed = k.Bases.Values.Count(b => b.State == DataSyncBaseState.Normal && b.Record is not null);
+            var agreedLive = k.Bases.Values.Count(b => b.State == DataSyncBaseState.Normal && b.Record is not null &&
+                                                       !(b.Pending?.Record ?? b.Record).Deleted);
             var deletions = _proposals.Count(p => p.Kind == k && p.IsNewDeletion);
             if (DataSyncBreakers.MassDeletion(k.Kind, deletions, agreed, _in.Policy) is { } mass) return mass;
             if (k.Manifest is { } manifest &&
-                DataSyncBreakers.KindEmptied(k.Kind, manifest.LiveCount, agreed, _in.Policy) is { } emptied)
+                DataSyncBreakers.KindEmptied(k.Kind, manifest.LiveCount, agreedLive, _in.Policy) is { } emptied)
                 return emptied;
         }
 
@@ -551,7 +643,12 @@ internal sealed partial class DataSyncMergeEngine
                     orderKey = p.NewOrderKey;
                 }
 
+                // New aliases can change the tie key (the smallest key), and with it the place among equal order
+                // keys: Place must run then too, or the next Refresh reads the unchanged local order as a move and
+                // issues a revision (invariant I3, found by the convergence simulator).
+                var before = DataSyncOrderPlanner.TieKeyOf(keys);
                 keys = keys.Concat(p.AliasKeys.Select(a => a.Value));
+                changed |= DataSyncOrderPlanner.TieKeyOf(keys) != before;
             }
 
             entries.Add(new DataSyncOrderEntry(entity.LocalKey, orderKey, DataSyncOrderPlanner.TieKeyOf(keys)));

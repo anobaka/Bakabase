@@ -70,6 +70,20 @@ internal sealed partial class DataSyncMergeEngine
                 null, null, true));
         }
 
+        if (p.Candidate is { SourceBase: null } incoming)
+        {
+            // §8.4 condition 1 wherever the older record waits: a pull record replaces the pending record of its own
+            // entity (its primary key is one of the record's keys) also when that one waits on another base row — a
+            // name match waiting as Unbound before a Link bound the entity by an alias, a lineage the peer has since
+            // linked or retired into this record. Left there, the stale record was re-merged later and overrode
+            // newer outcomes: it closed a DeletedThere question and cleared its pending record, or met the new record
+            // as a row M on one delivery and not on the next (found by the convergence simulator).
+            foreach (var stale in p.Kind.Bases.Values.Where(b => b.Pending is { } pending &&
+                                                                 incoming.Record.Keys.Contains(pending.Record.Keys[0]) &&
+                                                                 p.BaseUpdates.All(u => u.Key != b.Key)))
+                p.SourceClears.Add(new DataSyncBaseUpdate(stale.Kind, stale.Key, stale.State, stale.Exclusion, null, null, null, true));
+        }
+
         _proposals.Add(p);
     }
 
@@ -142,7 +156,8 @@ internal sealed partial class DataSyncMergeEngine
 
     private Proposal LiveDeleted(KindState k, Candidate c, DataSyncLocalEntityState l)
     {
-        var rel = l.Vv.CompareTo(c.Record.Vv);
+        // Row A2's collision: this device's live version and the peer's deletion share a reissued vector.
+        var rel = c.Collision ? DataSyncVvRelation.Concurrent : l.Vv.CompareTo(c.Record.Vv);
         var key = l.Keys.Primary!.Value;
         var b = BaseOf(k, key);
         var name = k.Codec!.NameOf(l.Content);
@@ -158,6 +173,14 @@ internal sealed partial class DataSyncMergeEngine
             {
                 p.Notes.Add(new DataSyncMergeNote(k.Kind, l.LocalKey, name, DataSyncMergeNoteCodes.EditWinsKept,
                     new Dictionary<string, string> { ["peer"] = _link.PeerName }));
+            }
+
+            // A collision's live version is reissued under a fresh counter of this device, so the deleting device
+            // meets it as newer (row T3) instead of equal to its tombstone (row T2, which ignores it).
+            if (c.Collision)
+            {
+                p.Revision = new DataSyncRevisionDecision(k.Kind, l.Keys, l.LocalKey, DataSyncRevisionKind.LocalEdit, null,
+                    null, false, true, l.OrderKey, l.Unknown, l.ChildrenLocal, null);
             }
 
             if (b?.Pending is not null) p.BaseUpdates.Add(Clear(k, key, b));
@@ -194,7 +217,7 @@ internal sealed partial class DataSyncMergeEngine
         var pending = Pending(c, DataSyncPendingReason.AwaitingDecision, l.Seq);
         p.BaseUpdates.Add(Pend(k, key, bound: true, pending, keepState: false));
         p.Items.Add(Draft(k, key, l.LocalKey, DataSyncInboxItemType.DeletedThere, DataSyncInboxDrafts.EntitySubject,
-            Payload(k, c, l, [], valueCount: valueCount), pending, c.Record.Vv, l.Vv, StoredFlags(c)));
+            Payload(k, c, l, [], valueCount: valueCount), pending, ItemVv(c), l.Vv, StoredFlags(c)));
         return p;
     }
 
@@ -207,12 +230,30 @@ internal sealed partial class DataSyncMergeEngine
         var codec = k.Codec!;
         var key = l.Keys.Primary!.Value;
         var name = codec.NameOf(l.Content);
+        // A key another local row still owns (a LocalOnly or Detached one: two Synced owners are row I) is live
+        // elsewhere, and the identity pre-flight refuses it as an alias (§5.3): proposing it made every apply
+        // ChangedDuringApply and every re-merge propose it again (found by the convergence simulator).
         var aliasKeys = c.Record.Keys.Select(x => new SyncKey(x)).Concat(aliases)
-            .Where(x => !l.Keys.Contains(x)).Distinct().ToList();
+            .Where(x => !l.Keys.Contains(x) &&
+                        (k.LiveByKey.GetValueOrDefault(x.Value) is not { } owners || owners.All(o => o == l)))
+            .Distinct().ToList();
         var p = new Proposal(k, c) { Name = name, EntityLocalKey = l.LocalKey, AliasKeys = aliasKeys };
         Evaluated(p, key, c);
 
-        var rel = l.Vv.CompareTo(c.Record.Vv);
+        // Recording the record's keys retires the tombstones that own them into this entity (§5.3: Max(L, T), no
+        // counter), so the record is compared with the vector the entity has once it holds their history — the one a
+        // second delivery meets. Compared with L alone, one record merged as concurrent (a conflict) on its first
+        // delivery and as an ancestor on its second (invariant I3, found by the convergence simulator).
+        var retiring = aliasKeys.Select(x => k.TombstoneByKey.GetValueOrDefault(x.Value)).OfType<DataSyncTombstoneState>()
+            .Distinct().ToList();
+        var localVv = retiring.Aggregate(l.Vv, (vv, t) => DataSyncVersionVector.Max(vv, t.Vv));
+        // Likewise its bases: where the entity has none on this link, a retired tombstone's base is re-pointed to it
+        // (§5.3), so the merge runs three-way against that base now, as the next delivery will.
+        b ??= retiring.Select(t => BaseOf(k, t.Keys.Primary!.Value))
+            .FirstOrDefault(tb => tb is { State: DataSyncBaseState.Normal, Record: not null });
+
+        // Row A2's collision: one vector, two contents this device's retired actor both produced — concurrent versions.
+        var rel = c.Collision ? DataSyncVvRelation.Concurrent : localVv.CompareTo(c.Record.Vv);
         if (rel is DataSyncVvRelation.Equal or DataSyncVvRelation.Dominates)
         {
             // K4: R is an ancestor (or equal). The base takes it; keys are recorded.
@@ -262,8 +303,13 @@ internal sealed partial class DataSyncMergeEngine
             return p;
         }
 
+        // The record this link already stores as a Conflict meets the local value it conflicted with: that value
+        // still came from another device, even though the MergedWithConflicts revision made this device the entity's
+        // last editor. Read as this device's, Follow would now override it silently, so the same record delivered
+        // twice changed the entity the second time (invariant I3, found by the convergence simulator).
+        var lastEditorIsSelf = LocalLastEditorIsSelf(l) && !AlreadyMergedConflict(k, c);
         var m3 = codec.Merge3(new DataSyncMerge3Input(baseRead?.Content, l.Content, l.Overlay, remote, mode3, childMap,
-            l.ChildrenLocal, baseCl, MergeMode, LocalLastEditorIsSelf(l), winner, usage, c.Flags.ChildDeletions));
+            l.ChildrenLocal, baseCl, MergeMode, lastEditorIsSelf, winner, usage, c.Flags.ChildDeletions));
         if (m3.TypeChanged)
             return Frozen(p, k, c, l, b, DataSyncPendingReason.TypeChange, baseType, localType, remoteType);
         if (m3.MassDeletionCandidates.Count > 0)
@@ -283,6 +329,8 @@ internal sealed partial class DataSyncMergeEngine
         var conflicts = m3.Fields.Where(f => f.Resolution == DataSyncFieldResolution.Conflict &&
                                              !f.Path.StartsWith(DataSyncUnknownMembers.PathPrefix, StringComparison.Ordinal))
             .ToList();
+        if (conflicts.Count > 0 && AlreadyMergedConflict(k, c))
+            return ConflictItemsOnly(p, k, c, l, b, m3, conflicts, aliasKeys);
 
         // Record-level fields: childrenLocal (§3.6), the order key (§8.5.5) and unknown members (§8.9).
         var clField = m3.Fields.FirstOrDefault(f => f.Path == "childrenLocal");
@@ -336,9 +384,12 @@ internal sealed partial class DataSyncMergeEngine
         var changes = contentChanged || !equalsLocal || p.Overlay is not null;
         if (revisionKind != DataSyncRevisionKind.MergedWithConflicts || changes)
         {
+            // A concurrent merge whose result equals the peer's content but not this device's took the peer's over a
+            // local difference that only this link's base weighed: it has seen both sides (SeenBoth).
+            var seenBoth = revisionKind == DataSyncRevisionKind.MergedNoConflict && equalsRemote && !equalsLocal;
             p.Revision = new DataSyncRevisionDecision(k.Kind, l.Keys, l.LocalKey, revisionKind, c.Record.Vv, null,
                 equalsRemote, equalsLocal, orderKey, unknown.Merged, mergedCl,
-                revisionKind == DataSyncRevisionKind.FastForward ? c.Record.EditedBy : null);
+                revisionKind == DataSyncRevisionKind.FastForward ? c.Record.EditedBy : null, seenBoth);
         }
 
         p.OrderKeySet = true;
@@ -363,7 +414,7 @@ internal sealed partial class DataSyncMergeEngine
             foreach (var field in conflicts.OrderBy(f => f.Path, StringComparer.Ordinal))
             {
                 p.Items.Add(Draft(k, key, l.LocalKey, DataSyncInboxDrafts.ConflictTypeOf(field.Path), field.Path,
-                    Payload(k, c, l, [field]), pending, c.Record.Vv, l.Vv, StoredFlags(c)));
+                    Payload(k, c, l, [field]), pending, ItemVv(c), l.Vv, StoredFlags(c)));
             }
         }
 
@@ -374,7 +425,7 @@ internal sealed partial class DataSyncMergeEngine
             p.Items.Add(Draft(k, key, l.LocalKey, DataSyncInboxItemType.ChildDeletedInUse, field.Path,
                 Payload(k, c, l, [field], usageCount: UsageOfClass(codec, l, field, m3, _in.ChildUsage),
                     children: field.Local is { } shown ? [shown] : [], childrenTotal: 1),
-                null, c.Record.Vv, l.Vv, StoredFlags(c)));
+                null, ItemVv(c), l.Vv, StoredFlags(c)));
         }
 
         var follow = m3.Fields.Count(f => f.Resolution == DataSyncFieldResolution.FollowTookRemote);
@@ -403,6 +454,44 @@ internal sealed partial class DataSyncMergeEngine
     }
 
     /// <summary>
+    /// The record is the one this link already stores as a <c>Conflict</c> pending record (a re-merge, or the same
+    /// record sent again by a full reconciliation or a second delivery).
+    /// </summary>
+    private bool AlreadyMergedConflict(KindState k, Candidate c)
+    {
+        var pending = c.SourceBase?.Pending ?? (TargetBaseKey(c) is { } baseKey ? BaseOf(k, baseKey)?.Pending : null);
+        return pending is { Reason: DataSyncPendingReason.Conflict } &&
+               pending.RecordHash == DataSyncPendingRecords.RecordHashOf(c.Record);
+    }
+
+    /// <summary>
+    /// A <c>Conflict</c> record merged again while its conflicts stand: its safe part applied when it first merged,
+    /// so only its items are derived again (and its pending record re-evaluated). Applying that part again against the
+    /// unchanged base would undo whatever changed here since — another link's merge included — so two links whose
+    /// peers disagree on a field that merges safely would flip the entity at every pull, each flip a revision, until
+    /// someone decided the conflict (found by the convergence simulator).
+    /// </summary>
+    private Proposal ConflictItemsOnly(Proposal p, KindState k, Candidate c, DataSyncLocalEntityState l, DataSyncPeerBase? b,
+        DataSyncMerge3Result m3, List<DataSyncFieldOutcome> conflicts, IReadOnlyList<SyncKey> aliasKeys)
+    {
+        var key = l.Keys.Primary!.Value;
+        if (aliasKeys.Count > 0)
+            p.Operation = new BindOnlyOperation(DataSyncMergeItemIds.Of(k.Kind, key), l.LocalKey, Keys(aliasKeys));
+        var map = new Dictionary<string, string>(b?.ChildMap ?? new Dictionary<string, string>(), StringComparer.Ordinal);
+        foreach (var (peerId, localId) in m3.ChildMap) map[peerId] = localId;
+        var pending = Pending(c, DataSyncPendingReason.Conflict, l.Seq);
+        p.BaseUpdates.Add(new DataSyncBaseUpdate(k.Kind, key, BaseStateFor(b, bound: true), b?.Exclusion, null, map, pending,
+            false));
+        foreach (var field in conflicts.OrderBy(f => f.Path, StringComparer.Ordinal))
+        {
+            p.Items.Add(Draft(k, key, l.LocalKey, DataSyncInboxDrafts.ConflictTypeOf(field.Path), field.Path,
+                Payload(k, c, l, [field]), pending, ItemVv(c), l.Vv, StoredFlags(c)));
+        }
+
+        return p;
+    }
+
+    /// <summary>
     /// K5/K6 frozen for this link: a type change waits for a <c>TypeChange</c> item (§8.5.6), a mass child deletion
     /// for a <c>MassChildDeletion</c> item (B4). Nothing of the entity applies.
     /// </summary>
@@ -426,7 +515,7 @@ internal sealed partial class DataSyncMergeEngine
                 Display(baseType), Display(localType), Display(remoteType), Display(localType));
             p.Items.Add(Draft(k, key, l.LocalKey, DataSyncInboxItemType.TypeChange, DataSyncInboxDrafts.TypeSubject,
                 Payload(k, c, l, [field], valueCount: ValueCountOf(k, l), remoteSubtype: remoteType, localSubtype: localType),
-                pending, c.Record.Vv, l.Vv, StoredFlags(c)));
+                pending, ItemVv(c), l.Vv, StoredFlags(c)));
             return p;
         }
 
@@ -434,7 +523,7 @@ internal sealed partial class DataSyncMergeEngine
         var shown = k.Codec!.ChildrenOf(l.Content).Where(child => ids.Contains(child.Id)).Select(child => child.Display)
             .Take(DataSyncInboxDrafts.MaxListed).ToList();
         p.Items.Add(Draft(k, key, l.LocalKey, DataSyncInboxItemType.MassChildDeletion, DataSyncInboxDrafts.EntitySubject,
-            Payload(k, c, l, [], children: shown, childrenTotal: ids.Count), pending, c.Record.Vv, l.Vv, StoredFlags(c)));
+            Payload(k, c, l, [], children: shown, childrenTotal: ids.Count), pending, ItemVv(c), l.Vv, StoredFlags(c)));
         return p;
     }
 
@@ -447,22 +536,55 @@ internal sealed partial class DataSyncMergeEngine
         var p = new Proposal(k, c) { Name = c.Entity.DisplayName };
         Evaluated(p, key, c);
 
+        // Other records of this merge — other lineages of the peer's that this device had merged into the entity it
+        // deleted — bound to the same tombstone share its base row. A question about it (T3) owns the row, then a
+        // live record's agreement (T2, which decides whether the tombstone is served again), then a deletion's (T1),
+        // whatever the records' order: the row decides the next delivery, and one record's agreement overwriting
+        // another's made a second delivery serve again or drop a question's pending record (invariant I3, found by
+        // the convergence simulator).
+        var siblings = k.Candidates.Where(x => x != c && x.Bind.Kind == BindingKind.Tombstone && x.Bind.Tombstone == t &&
+                                               x.Primary != c.Primary).ToList();
+        var siblingAsks = siblings.Any(x => !x.Record.Deleted && t.TombstoneKind != DataSyncTombstoneKind.UndoneCreate &&
+                                            (x.Collision || t.Vv.CompareTo(x.Record.Vv) is not
+                                                (DataSyncVvRelation.Equal or DataSyncVvRelation.Dominates)));
+
         if (c.Record.Deleted)
         {
-            // T1: both deleted.
-            p.BaseUpdates.Add(Agree(k, key, c.Record, null));
+            // T1: both deleted. The same content on both sides, so the tombstone takes the peer's deletion history too
+            // (Max, no counter; nothing when it already has it): a later revive then covers every base it had seen,
+            // instead of reviving concurrent with a deletion it already knew (invariant I7, found by the
+            // convergence simulator).
+            if (siblings.All(x => x.Record.Deleted)) p.BaseUpdates.Add(Agree(k, key, c.Record, null));
+            if (t.Vv.CompareTo(c.Record.Vv) is DataSyncVvRelation.DominatedBy or DataSyncVvRelation.Concurrent)
+            {
+                p.Revision = new DataSyncRevisionDecision(k.Kind, t.Keys, null, DataSyncRevisionKind.AcceptRemoteDelete,
+                    c.Record.Vv, null, false, false, null, null, null, null);
+            }
+
             return p;
         }
 
         if (t.TombstoneKind == DataSyncTombstoneKind.UndoneCreate)
             return Create(p, k, c, key, [key], t);                                    // T0
 
-        var rel = t.Vv.CompareTo(c.Record.Vv);
+        // Row A2's collision: the peer's live version and this device's deletion share a reissued vector (T3).
+        var rel = c.Collision ? DataSyncVvRelation.Concurrent : t.Vv.CompareTo(c.Record.Vv);
         if (rel is DataSyncVvRelation.Equal or DataSyncVvRelation.Dominates)
         {
-            // T2: the peer will receive this device's deletion; an unserved tombstone is served again.
-            if (!t.Served) p.ServeTombstone = key;
-            if (b?.Pending is not null) p.BaseUpdates.Add(Clear(k, key, b));
+            // T2: the peer still publishes what this device deleted, so it has not taken the deletion in. The tombstone
+            // is served again (a Seq bump; served too when retention had stopped serving it), so the peer receives it
+            // at its next pull: its cursor may be past the tombstone already, read while it did not know the entity
+            // yet (row N1) and learned it later from a third device (found by the convergence simulator). The base
+            // records the peer's record, so the same record — delivered twice, re-sent by a full reconciliation —
+            // serves nothing again; with live siblings the row holds one of theirs, which counts as seen too. While a
+            // sibling's question waits, its answer decides what the peer receives: nothing is served meanwhile.
+            if (siblingAsks) return p;
+            var agreedHash = b?.Record is { } agreed ? DataSyncPendingRecords.RecordHashOf(agreed) : null;
+            var seen = agreedHash is not null &&
+                       siblings.Where(x => !x.Record.Deleted).Append(c)
+                           .Any(x => DataSyncPendingRecords.RecordHashOf(x.Record) == agreedHash);
+            if (!t.Served || !seen) p.ServeTombstone = key;
+            p.BaseUpdates.Add(Agree(k, key, c.Record, null));
             return p;
         }
 
@@ -474,7 +596,7 @@ internal sealed partial class DataSyncMergeEngine
             Payload(k, c, null, [], detail: rel == DataSyncVvRelation.DominatedBy
                 ? DataSyncInboxDrafts.DetailRestored
                 : DataSyncInboxDrafts.DetailChangedAfterDelete),
-            pending, c.Record.Vv, t.Vv, StoredFlags(c)));
+            pending, ItemVv(c), t.Vv, StoredFlags(c)));
         return p;
     }
 
@@ -497,7 +619,10 @@ internal sealed partial class DataSyncMergeEngine
                 remote is null ? DataSyncNaturalMatch.None : codec.MatchNatural(remote, l.Content),
                 remote is not null && codec.SubtypeOf(l.Content) == remoteType))
             .OrderBy(x => x.Name, StringComparer.Ordinal).ThenBy(x => x.LocalKey, StringComparer.Ordinal).ToList();
-        var pending = Pending(c, DataSyncPendingReason.IdentityConflict, 0);
+        // Stored on the record's primary key: when that key is a candidate's, its Seq is the one §8.4 condition 2
+        // compares, so the record is not re-merged at every pull while nothing changed here.
+        var owner = c.Bind.Many!.FirstOrDefault(l => l.Keys.Contains(key));
+        var pending = Pending(c, DataSyncPendingReason.IdentityConflict, owner?.Seq ?? 0);
         p.BaseUpdates.Add(Pend(k, key, bound: false, pending, keepState: true));
         p.Items.Add(Draft(k, key, null, DataSyncInboxItemType.IdentityConflict, DataSyncInboxDrafts.EntitySubject,
             Payload(k, c, null, [], candidates: candidates), pending, c.Record.Vv, null, StoredFlags(c)));
@@ -523,7 +648,7 @@ internal sealed partial class DataSyncMergeEngine
         var vv = DataSyncVersionVector.Empty;
         foreach (var c in group.OrderBy(c => c.Primary, StringComparer.Ordinal))
         {
-            var pending = Pending(c, DataSyncPendingReason.IdentityConflict, c.Primary == key.Value ? l.Seq : 0);
+            var pending = Pending(c, DataSyncPendingReason.IdentityConflict, l.Keys.Contains(new SyncKey(c.Primary)) ? l.Seq : 0);
             p.BaseUpdates.Add(Pend(k, new SyncKey(c.Primary), bound: c.Primary == key.Value, pending, keepState: true));
             if (c.SourceBase is { } source && source.Key.Value != c.Primary)
                 p.SourceClears.Add(new DataSyncBaseUpdate(source.Kind, source.Key, source.State, source.Exclusion, null,
@@ -575,10 +700,13 @@ internal sealed partial class DataSyncMergeEngine
             return Create(created, k, c, key, [], null);                              // N3
         }
 
-        if (codec.Descriptor.AutoLinkIdentical && candidates is [{ Match: DataSyncNaturalMatch.Identical }])
+        if (codec.Descriptor.AutoLinkIdentical && candidates is [{ Match: DataSyncNaturalMatch.Identical }] &&
+            !AgreedOnThisLink(k, candidates[0].Local))
         {
             // The D09 exception: an identical extension group with a unique candidate links by itself, then
-            // merges as K4/K6 without a base.
+            // merges as K4/K6 without a base. Never onto an entity already agreed with another of this peer's
+            // entities: that would bind two of the peer's records to one entity here (row M next pull) and, with a
+            // third device, re-raise the identity questions it answered (found by the convergence simulator).
             var l = candidates[0].Local;
             k.AutoLinked.Add(l.LocalKey);
             return LiveChanged(k, c, l, null, []);
@@ -635,6 +763,10 @@ internal sealed partial class DataSyncMergeEngine
 
     private DataSyncPeerBase? BaseOf(KindState k, SyncKey key) => k.Bases.GetValueOrDefault(key.Value);
 
+    /// <summary>The entity already agrees with one of this link's peer records (a base holding a record).</summary>
+    private static bool AgreedOnThisLink(KindState k, DataSyncLocalEntityState l) =>
+        k.Bases.GetValueOrDefault(l.Keys.Primary!.Value.Value) is { State: DataSyncBaseState.Normal, Record: not null };
+
     private static void Evaluated(Proposal p, SyncKey key, Candidate c)
     {
         p.Evaluated.Add(key);
@@ -666,6 +798,14 @@ internal sealed partial class DataSyncMergeEngine
     /// the one pull that consumes it.
     /// </summary>
     private static DataSyncMergeFlags StoredFlags(Candidate c) => c.Flags with { SkipLargeChange = false };
+
+    /// <summary>
+    /// The record vector an item keeps for closure by dominance (§9.3). A collision's record carries the same
+    /// vector as the entity it collides with, so that vector "dominates" the record at once and the question would
+    /// close before anyone saw it, leaving the two devices apart (found by the convergence simulator): its items
+    /// keep no vector and close by reconciliation or by being answered.
+    /// </summary>
+    private static DataSyncVersionVector? ItemVv(Candidate c) => c.Collision ? null : c.Record.Vv;
 
     private static DataSyncBaseUpdate Agree(KindState k, SyncKey key, DataSyncWireRecord record,
         IReadOnlyDictionary<string, string>? childMap) =>
