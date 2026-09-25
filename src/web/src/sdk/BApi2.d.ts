@@ -13473,6 +13473,9 @@ export interface components {
             address: string;
             kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
             platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
+            /** Format: int32 */
+            dataSyncContractVersion?: number;
+            sharesDefinitions?: boolean;
         };
         "Bakabase.Modules.Federation.Peers.NodeGrantSummary": {
             grantId: string;

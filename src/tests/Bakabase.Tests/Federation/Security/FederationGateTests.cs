@@ -293,7 +293,8 @@ public sealed class FederationGateTests
         foreach (var type in typeof(FederationPeerController).Assembly.GetTypes()
                      .Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract))
         {
-            var prefix = type.GetCustomAttribute<RouteAttribute>()?.Template ?? "";
+            // A class template may be app-relative ("~/federation/…"); its "~" is not part of the path.
+            var prefix = (type.GetCustomAttribute<RouteAttribute>()?.Template ?? "").TrimStart('~');
             var classEndpoint = type.GetCustomAttribute<FederationEndpointAttribute>();
             foreach (var action in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
             foreach (var route in action.GetCustomAttributes<HttpMethodAttribute>())

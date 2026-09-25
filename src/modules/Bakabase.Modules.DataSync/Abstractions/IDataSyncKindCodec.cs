@@ -82,7 +82,8 @@ public interface IDataSyncKindCodec
 
     /// <summary>
     /// What this device publishes for a local entity (§3.5): overlays removed, withheld children removed, then the
-    /// codec's own validated Read applied, so the result is exactly what a reader will accept. Pure.
+    /// codec's own validated Read applied, so the result is exactly what a reader will accept. An entity the reader
+    /// would hold comes back with Held set and no content (§3.5 step 4). Pure.
     /// </summary>
     DataSyncPublishable Publish(object localContent, DataSyncOverlay overlay, bool childrenLocal);
 
@@ -126,8 +127,21 @@ public sealed record DataSyncOverlay(
 /// <summary>A child held because the peer of LinkId deleted it while it is in use here. One child may be held by several links.</summary>
 public sealed record DataSyncHeldChild(string ChildId, int LinkId);
 
-/// <summary>Content in the codec's typed form, after Publish. ChildrenWithheld counts children left out (null ids, invalid, overlays).</summary>
-public sealed record DataSyncPublishable(object Content, int ChildrenWithheld, DataSyncPlanWarning[] Warnings);
+/// <summary>
+/// Content in the codec's typed form, after Publish. ChildrenWithheld counts children left out (null ids, invalid,
+/// overlays).
+/// </summary>
+/// <param name="Content">The published content; null exactly when <paramref name="Held"/> is set.</param>
+/// <param name="Held">
+/// The reader would hold this entity (§3.5 step 4): it is published as <c>HeldAtSource</c> with this reason and no
+/// content — for example Invalid when it has more children than a reader accepts.
+/// </param>
+/// <param name="HeldDetail">
+/// Why, for this device's own diagnostics and UI (e.g. <c>tooManyChildren</c>); only with <paramref name="Held"/>, and
+/// never on the wire.
+/// </param>
+public sealed record DataSyncPublishable(object? Content, int ChildrenWithheld, DataSyncPlanWarning[] Warnings,
+    DataSyncHeldReason? Held = null, string? HeldDetail = null);
 
 public sealed record DataSyncChildInfo(string Id, string? ParentId, DataSyncDisplayValue Display);
 
@@ -141,7 +155,8 @@ public sealed record DataSyncMerge3Input(
     DataSyncOverlay LocalOverlay,                   // LocalOnly/Held children: invisible to merging, always kept (§8.5.4 step 0)
     object Remote,                                  // validated peer content
     DataSyncMerge3Mode Mode3,                       // ThreeWay (with Base) | FastForward (R dominates L) | NoBase
-                                                    // | Convert (§8.5.6 phase two; Base = the base before the type change)
+                                                    // | Convert (§8.5.6 phase two; Base = the base before the type
+                                                    //   change, or null: name then merges by the NoBase rule)
     IReadOnlyDictionary<string, string> ChildMap,   // peer child id → local child id (from the base row); many-to-one allowed
     bool LocalChildrenLocal,                        // childrenLocal as this device holds it
     bool BaseChildrenLocal,                         // childrenLocal in the base (false without a base)

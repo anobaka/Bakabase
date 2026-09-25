@@ -308,10 +308,13 @@ public class VersionVectorTests
         Assert.AreNotEqual(Record(DataSyncVersionVector.ParseStored(json)), Record(Vv((A, 4))));
 
         IReadOnlyDictionary<string, string> childMap = new Dictionary<string, string>();
+        IReadOnlyList<string> exclusionKeys = [];
         var key = new SyncKey(keys[0]);
+        var record = Record(Vv((A, 4)));
 
         DataSyncPeerBase Base(DataSyncVersionVector vv) =>
-            new("customProperty", key, DataSyncBaseState.Normal, null, content, vv, childMap, null);
+            new("customProperty", key, DataSyncBaseState.Normal, null, content, vv, childMap, null, record,
+                exclusionKeys);
 
         Assert.AreEqual(Base(DataSyncVersionVector.ParseStored(json)), Base(DataSyncVersionVector.ParseStored(json)));
         Assert.AreEqual(Base(DataSyncVersionVector.ParseStored(json)).GetHashCode(),

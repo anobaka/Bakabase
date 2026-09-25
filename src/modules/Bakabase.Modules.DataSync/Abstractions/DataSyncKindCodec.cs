@@ -29,7 +29,10 @@ public abstract class DataSyncKindCodec<TContent> : IDataSyncKindCodec where TCo
     public abstract MergeResult Merge(TContent local, TContent incoming, IReadOnlySet<string> acceptedChangeIds);
     public abstract MergeResult PrepareCreate(TContent incoming, string? nameOverride);
 
-    /// <summary>§3.5. The returned Content must be a TContent.</summary>
+    /// <summary>
+    /// §3.5. The returned Content must be a TContent, or null with Held set when a reader would hold the entity
+    /// (step 4); HeldDetail only with Held.
+    /// </summary>
     public abstract DataSyncPublishable Publish(TContent localContent, DataSyncOverlay overlay, bool childrenLocal);
 
     /// <summary>§3.4, over published (validated) content.</summary>
@@ -131,10 +134,14 @@ public abstract class DataSyncKindCodec<TContent> : IDataSyncKindCodec where TCo
     {
         ArgumentNullException.ThrowIfNull(overlay);
         var result = Publish(Cast(localContent), overlay, childrenLocal);
-        return result.Content is TContent
-            ? result
-            : throw new InvalidOperationException(
-                $"{Descriptor.Kind}: Publish produced {result.Content?.GetType().Name ?? "null"}, {typeof(TContent).Name} expected.");
+        if (result.Content is not null and not TContent)
+            throw new InvalidOperationException(
+                $"{Descriptor.Kind}: Publish produced {result.Content.GetType().Name}, {typeof(TContent).Name} expected.");
+        if ((result.Content is null) != (result.Held is not null))
+            throw new InvalidOperationException($"{Descriptor.Kind}: published Content and Held must be exclusive.");
+        if (result.HeldDetail is not null && result.Held is null)
+            throw new InvalidOperationException($"{Descriptor.Kind}: a published HeldDetail needs Held.");
+        return result;
     }
 
     JsonObject IDataSyncKindCodec.ComparisonForm(object publishedContent, string? orderKey, bool childrenLocal) =>
@@ -149,7 +156,8 @@ public abstract class DataSyncKindCodec<TContent> : IDataSyncKindCodec where TCo
     private (TContent? Base, TContent Local, TContent Remote) CastMergeContents(object? baseContent, object local,
         object remote, DataSyncMerge3Mode mode3)
     {
-        if (baseContent is null && mode3 is DataSyncMerge3Mode.ThreeWay or DataSyncMerge3Mode.Convert)
+        // Convert may come without a base (a key-bound entity with none, §8.5.6): name then merges by the NoBase rule.
+        if (baseContent is null && mode3 == DataSyncMerge3Mode.ThreeWay)
             throw new ArgumentException($"{Descriptor.Kind}: a {mode3} merge needs a base.", nameof(baseContent));
         return (baseContent is null ? null : Cast(baseContent), Cast(local), Cast(remote));
     }

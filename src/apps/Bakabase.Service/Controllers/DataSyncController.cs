@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Services;
 using Bakabase.Service.Components.RemoteAccess;
@@ -26,10 +25,12 @@ namespace Bakabase.Service.Controllers;
 /// <para>
 /// The remote-access gate admits an unpaired Unrestricted browser to everything, which is too wide for granting
 /// access: such a browser must not mint a node credential that outlives a later switch to RequirePairing. So every
-/// action that creates or widens definitions access also requires this device's own window or a paired device, and
-/// otherwise answers <see cref="DataSyncProblemCode.NotAllowedOnThisDevice"/> without calling the service (§7.1.5).
-/// Reducing access (reject, revoke, cancel, sharing off, pause) stays open to every caller the gate admits, so access
-/// can always be shut off from wherever a person is.
+/// action that creates or widens definitions access also requires this device's own window or a paired device
+/// (§7.1.5). Where the action always does (sharing on, approving, a code, asking for access again), it otherwise
+/// answers <see cref="DataSyncProblemCode.NotAllowedOnThisDevice"/> without calling the service. Where only the
+/// service knows whether it will send a request or mint a reciprocal code (links, copy once), the controller passes
+/// who is asking and the service refuses exactly those calls. Reducing access (reject, revoke, cancel, sharing off,
+/// pause) stays open to every caller the gate admits, so access can always be shut off from wherever a person is.
 /// </para>
 /// </remarks>
 [Route("~/data-sync")]
@@ -78,22 +79,24 @@ public class DataSyncController(IDataSyncService service) : Controller
         new(await service.GetLinksAsync(ct));
 
     /// <summary>
-    /// Creates access: a new link sends a request or claims a code, and a two-way one also offers a reciprocal code.
+    /// Creates access when it sends a request or mints a reciprocal code (a peer this device cannot read yet, or a
+    /// two-way link the peer cannot read back); which one only the service knows, so it decides for this caller.
     /// </summary>
     [HttpPost("links")]
     [SwaggerOperation(OperationId = "CreateDataSyncLink")]
     public async Task<SingletonResponse<DataSyncLinkResult>> CreateLink([FromBody] DataSyncLinkCreateInput input,
         CancellationToken ct) =>
-        new(MayCreateAccess ? await service.CreateLinkAsync(input, ct) : RefusedLink);
+        new(await service.CreateLinkAsync(input, MayCreateAccess, ct));
 
-    /// <summary>Turning a link two-way may mint a reciprocal code, so it counts as creating access.</summary>
+    /// <summary>
+    /// Turning a link two-way creates access when it mints a reciprocal code; turning a stopped link back on or
+    /// changing its kinds never does. The service decides for this caller.
+    /// </summary>
     [HttpPut("links/{id:int}")]
     [SwaggerOperation(OperationId = "UpdateDataSyncLink")]
     public async Task<SingletonResponse<DataSyncLinkResult>> UpdateLink(int id,
         [FromBody] DataSyncLinkUpdateInput input, CancellationToken ct) =>
-        new(input.Mode == DataSyncLinkMode.TwoWay && !MayCreateAccess
-            ? RefusedLink
-            : await service.UpdateLinkAsync(id, input, ct));
+        new(await service.UpdateLinkAsync(id, input, MayCreateAccess, ct));
 
     [HttpPost("links/{id:int}/pause")]
     [SwaggerOperation(OperationId = "PauseDataSyncLink")]
@@ -135,16 +138,13 @@ public class DataSyncController(IDataSyncService service) : Controller
 
     /// <summary>
     /// Creates access when it sends a request. Whether it will depends on access this device already holds, which only
-    /// the service knows, so every copy once counts as creating access here.
+    /// the service knows, so it decides for this caller.
     /// </summary>
     [HttpPost("copy-once")]
     [SwaggerOperation(OperationId = "CreateDataSyncCopyOnce")]
     public async Task<SingletonResponse<DataSyncReviewResult>> CreateCopyOnce([FromBody] DataSyncCopyOnceInput input,
         CancellationToken ct) =>
-        new(MayCreateAccess
-            ? await service.CreateCopyOnceAsync(input, ct)
-            : new DataSyncReviewResult(null, null, true, DataSyncLinkMode.Off, null, null, null, null, null, null,
-                NotAllowed));
+        new(await service.CreateCopyOnceAsync(input, MayCreateAccess, ct));
 
     /// <summary>A read-only re-plan; never gated.</summary>
     [HttpGet("reviews/{reviewId}")]

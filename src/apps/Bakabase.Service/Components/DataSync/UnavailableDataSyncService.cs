@@ -47,10 +47,12 @@ public sealed class UnavailableDataSyncService(IRemoteAccessService remoteAccess
 
     public Task<IReadOnlyList<DataSyncLinkView>> GetLinksAsync(CancellationToken ct) => Empty<DataSyncLinkView>();
 
-    public Task<DataSyncLinkResult> CreateLinkAsync(DataSyncLinkCreateInput input, CancellationToken ct) =>
+    public Task<DataSyncLinkResult> CreateLinkAsync(DataSyncLinkCreateInput input, bool callerMayCreateAccess,
+        CancellationToken ct) =>
         Task.FromResult(LinkProblem);
 
-    public Task<DataSyncLinkResult> UpdateLinkAsync(int linkId, DataSyncLinkUpdateInput input, CancellationToken ct) =>
+    public Task<DataSyncLinkResult> UpdateLinkAsync(int linkId, DataSyncLinkUpdateInput input,
+        bool callerMayCreateAccess, CancellationToken ct) =>
         Task.FromResult(LinkProblem);
 
     public Task<DataSyncLinkResult> PauseLinkAsync(int linkId, CancellationToken ct) => Task.FromResult(LinkProblem);
@@ -66,7 +68,8 @@ public sealed class UnavailableDataSyncService(IRemoteAccessService remoteAccess
 
     public Task<DataSyncProblem?> ForgetAccessAsync(string peerNodeId, CancellationToken ct) => Refuse();
 
-    public Task<DataSyncReviewResult> CreateCopyOnceAsync(DataSyncCopyOnceInput input, CancellationToken ct) =>
+    public Task<DataSyncReviewResult> CreateCopyOnceAsync(DataSyncCopyOnceInput input, bool callerMayCreateAccess,
+        CancellationToken ct) =>
         Task.FromResult(ReviewProblem);
 
     public Task<DataSyncReviewResult> GetReviewAsync(string reviewId, CancellationToken ct) =>

@@ -25,6 +25,8 @@ public record DataSyncEntityDbModel
     public bool ChildrenLocal { get; set; }                // SHARED content stored here (§3.6)
     public bool CreatedBySync { get; set; }
     public bool PublishHeld { get; set; }                  // lost-update guard (§6.5)
+    public bool Unreadable { get; set; }                   // the stored row does not parse (§3.3): set by Refresh
+                                                           // without a revision; served as HeldAtSource = LocalUnreadable
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
     public DateTime? DeletedAtUtc { get; set; }            // tombstone

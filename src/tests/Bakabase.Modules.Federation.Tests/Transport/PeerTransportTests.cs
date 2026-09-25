@@ -325,6 +325,42 @@ public sealed class PeerTransportTests
             pairing.ConnectAsync("http://remote", null))).ErrorCode);
     }
 
+    [TestMethod]
+    public async Task WhatANodeSaysAboutDataSyncIsBudgetedLikeItsOtherCapabilities()
+    {
+        using var local = new Node("local", TimeSpan.Zero);
+        using var remote = new Node("remote", TimeSpan.Zero);
+        var handler = new ProtocolHandler(new Dictionary<string, Node> { ["remote"] = remote });
+        using var http = new HttpClient(handler);
+        var pairing = new NodePairingClient(local.Store, local.Identity, new FederationHttpClient(http), local.Clock,
+            local.Leases);
+
+        // Within the budget, and kinds this build does not know, are a node's answer.
+        handler.DescribeInfo = described => described with
+        {
+            DataSyncContractVersion = 1_000_000, DataSyncMinimumPeerContract = 0,
+            DataSyncKinds = ["customProperty@1", "futureKind@7", new string('k', 128)], SharesDefinitions = true
+        };
+        Assert.AreEqual("granted", (await pairing.ConnectAsync("http://remote", await remote.InviteAsync())).Outcome);
+
+        foreach (var outside in new Func<NodeInfo, NodeInfo>[]
+                 {
+                     d => d with { DataSyncKinds = Enumerable.Range(0, 65).Select(i => $"kind{i}@1").ToArray() },
+                     d => d with { DataSyncKinds = [new string('k', 129)] },
+                     d => d with { DataSyncKinds = [""] },
+                     d => d with { DataSyncKinds = ["custom\nProperty@1"] },
+                     d => d with { DataSyncContractVersion = -1 },
+                     d => d with { DataSyncContractVersion = 1_000_001 },
+                     d => d with { DataSyncMinimumPeerContract = -1 },
+                     d => d with { DataSyncMinimumPeerContract = 1_000_001 },
+                 })
+        {
+            handler.DescribeInfo = outside;
+            Assert.AreEqual("InvalidNodeResponse", (await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
+                pairing.ConnectAsync("http://remote", null))).ErrorCode);
+        }
+    }
+
     private sealed class Says(ServerKind? kind, RemoteDevicePlatform? platform) : IServerSelfDescription
     {
         public ServerKind? Kind => kind;

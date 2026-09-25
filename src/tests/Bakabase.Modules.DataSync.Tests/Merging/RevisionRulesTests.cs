@@ -220,6 +220,7 @@ public class RevisionRulesTests
                  {
                      DataSyncRevisionKind.Create, DataSyncRevisionKind.FastForward, DataSyncRevisionKind.MergedNoConflict,
                      DataSyncRevisionKind.FollowMerged, DataSyncRevisionKind.AcceptRemoteDelete, DataSyncRevisionKind.Revive,
+                     DataSyncRevisionKind.RestoreWins,
                  })
             Assert.ThrowsException<ArgumentException>(() => Next(kind, local, null, new Counter(1),
                 tombstone: DataSyncVersionVector.Empty), kind.ToString());

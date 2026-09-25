@@ -53,8 +53,11 @@ public static class DataSyncRevisionRules
             // Never absorbs the peer's counters: the conflict is still open.
             DataSyncRevisionKind.MergedWithConflicts => resultEqualsLocal ? local : Bump(local),
             // Nothing to absorb (no resolved record, no base) reads as the empty vector.
-            DataSyncRevisionKind.Resolution or DataSyncRevisionKind.KeepDeleted or DataSyncRevisionKind.RestoreWins =>
+            DataSyncRevisionKind.Resolution or DataSyncRevisionKind.KeepDeleted =>
                 Bump(Max(local, remote ?? DataSyncVersionVector.Empty)),
+            // Always has a remote: a restore rotated the actor, so RestoreWinsRemote names at least one retired
+            // actor. A missing one is a caller bug that would drop those counters (gate fix B1(a)).
+            DataSyncRevisionKind.RestoreWins => Bump(Max(local, Remote())),
             // The tombstone already dominates.
             DataSyncRevisionKind.AcceptRemoteDelete => Max(local, Remote()),
             DataSyncRevisionKind.Retire => Max(local, Tombstone()),

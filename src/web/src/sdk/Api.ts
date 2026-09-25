@@ -5415,6 +5415,9 @@ export interface BakabaseModulesFederationPeersNodeDiscoveryCandidate {
   kind?: BakabaseModulesRemoteAccessAbstractionsModelsServerKind;
   /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
   platform?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform;
+  /** @format int32 */
+  dataSyncContractVersion?: number;
+  sharesDefinitions?: boolean;
 }
 
 export interface BakabaseModulesFederationPeersNodeGrantSummary {

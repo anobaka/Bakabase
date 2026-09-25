@@ -36,7 +36,14 @@ public interface IDataSyncRefresher
 public sealed record DataSyncRefreshResult(int Changed, int Tombstoned, DataSyncActorId Actor,
     bool Skipped, IReadOnlyDictionary<(string Kind, string LocalKey), DataSyncPublishedEntity>? Published);
 
-public sealed record DataSyncPublishedEntity(JsonObject Content, string Hash, int ChildrenWithheld);
+/// <summary>
+/// What one synced entity publishes, as Refresh computed it (§3.5, §6.6). A held entity (the reader would hold it,
+/// or this device cannot read it, §3.3) is served as a <c>HeldAtSource</c> record: Held is set, and Content and
+/// Hash are null.
+/// </summary>
+/// <param name="HeldDetail">This device's own diagnostics (e.g. <c>tooManyChildren</c>); never on the wire.</param>
+public sealed record DataSyncPublishedEntity(JsonObject? Content, string? Hash, int ChildrenWithheld,
+    DataSyncHeldReason? Held = null, string? HeldDetail = null);
 
 /// <summary>[C] The actor lifecycle of §5.6.</summary>
 public interface IDataSyncActorGuard

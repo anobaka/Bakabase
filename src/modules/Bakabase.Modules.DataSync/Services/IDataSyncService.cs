@@ -25,6 +25,13 @@ public enum DataSyncResumeAction
 }
 
 /// <summary>The facade the controller calls [E]. "never gated" methods never wait for the DataSyncGate.</summary>
+/// <remarks>
+/// <c>callerMayCreateAccess</c> (§7.1.5): whether the caller may create or widen definitions access — this device's own
+/// window, a paired device or the CLI. The controller decides it; only the service knows whether a call will send a
+/// request or mint a reciprocal code, so a false value makes exactly those calls answer
+/// <see cref="DataSyncProblemCode.NotAllowedOnThisDevice"/> before anything changes, and lets every other call through
+/// (turning a stopped link back on, changing kinds, a copy once from a peer this device already reads).
+/// </remarks>
 public interface IDataSyncService
 {
     Task<DataSyncOverview> GetOverviewAsync(CancellationToken ct);                                        // never gated
@@ -32,15 +39,21 @@ public interface IDataSyncService
     Task<DataSyncProblem?> SetSharingAsync(DataSyncSharingInput input, CancellationToken ct);
     Task<IReadOnlyList<DataSyncPeerCandidate>> GetPeersAsync(bool discover, CancellationToken ct);
     Task<IReadOnlyList<DataSyncLinkView>> GetLinksAsync(CancellationToken ct);                            // never gated
-    Task<DataSyncLinkResult> CreateLinkAsync(DataSyncLinkCreateInput input, CancellationToken ct);
-    Task<DataSyncLinkResult> UpdateLinkAsync(int linkId, DataSyncLinkUpdateInput input, CancellationToken ct);
+    Task<DataSyncLinkResult> CreateLinkAsync(DataSyncLinkCreateInput input, bool callerMayCreateAccess,
+        CancellationToken ct);
+
+    Task<DataSyncLinkResult> UpdateLinkAsync(int linkId, DataSyncLinkUpdateInput input, bool callerMayCreateAccess,
+        CancellationToken ct);
+
     Task<DataSyncLinkResult> PauseLinkAsync(int linkId, CancellationToken ct);
     Task<DataSyncLinkResult> ResumeLinkAsync(int linkId, DataSyncResumeAction action, CancellationToken ct);
     Task<DataSyncTaskStart> SyncNowAsync(int? linkId, CancellationToken ct);
     Task<DataSyncProblem?> ResetLinkAsync(int linkId, CancellationToken ct);      // forgets state, keeps definitions; also "Dismiss"
     Task<DataSyncProblem?> SetAllPausedAsync(bool paused, CancellationToken ct);
     Task<DataSyncProblem?> ForgetAccessAsync(string peerNodeId, CancellationToken ct);                    // "stop reading X"
-    Task<DataSyncReviewResult> CreateCopyOnceAsync(DataSyncCopyOnceInput input, CancellationToken ct);
+    Task<DataSyncReviewResult> CreateCopyOnceAsync(DataSyncCopyOnceInput input, bool callerMayCreateAccess,
+        CancellationToken ct);
+
     Task<DataSyncReviewResult> GetReviewAsync(string reviewId, CancellationToken ct);                     // read-only re-plan
     Task<DataSyncReviewResult> RefetchReviewAsync(string reviewId, CancellationToken ct);                 // "Fetch again"
 

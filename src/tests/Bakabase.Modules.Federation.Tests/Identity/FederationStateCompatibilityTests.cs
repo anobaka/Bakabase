@@ -119,8 +119,10 @@ public sealed class FederationStateCompatibilityTests
         Assert.IsNull(readerD.InboundGrant);
         Assert.IsNull(readerD.OutboundGrant);
         Assert.IsFalse(status.Requests.Any(r => r.RequestId.StartsWith("datasync-")));
-        Assert.AreEqual("GrantRevoked", (await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
-            restarted.Grants.ValidateAsync("datasync-grant", local.LibraryEpoch))).ErrorCode);
+        // Refused either way: unknown to library validation today, ScopeNotGranted once scopes are checked (G28).
+        var datasyncAsLibrary = await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
+            restarted.Grants.ValidateAsync("datasync-grant", local.LibraryEpoch));
+        CollectionAssert.Contains(new[] { "GrantRevoked", "ScopeNotGranted" }, datasyncAsLibrary.ErrorCode);
         await restarted.Grants.ValidateAsync(libraryGrant.GrantId, libraryGrant.LibraryEpoch);
 
         // Nor does a build from before data sync.

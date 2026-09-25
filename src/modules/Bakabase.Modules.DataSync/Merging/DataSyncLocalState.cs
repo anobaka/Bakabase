@@ -7,11 +7,15 @@ namespace Bakabase.Modules.DataSync.Merging;
 
 // §2.4: local state as the planner and merger see it.
 
+/// <param name="Unreadable">
+/// This device's stored row does not parse (§3.3, <see cref="LocalEntity.Unreadable"/>): Content is ReadLocal of
+/// <c>{name, type}</c> only. The merger never targets it, and items touching it are Held(LocalUnreadable).
+/// </param>
 public sealed record DataSyncLocalEntityState(
     string LocalKey, EntityKeys Keys, object Content /* ReadLocal */, string LocalHash, string SharedHash,
     DataSyncVersionVector Vv, DataSyncActorId? LastActor, DataSyncEditorRef? LastEditor, string? OrderKey,
     DataSyncEntitySyncState State, DataSyncOverlay Overlay, bool ChildrenLocal, bool CreatedBySync, bool PublishHeld,
-    JsonObject? Unknown, int? ValueCount, long Seq);
+    JsonObject? Unknown, int? ValueCount, long Seq, bool Unreadable = false);
 
 public sealed record DataSyncTombstoneState(EntityKeys Keys, DataSyncVersionVector Vv, DataSyncEditorRef? LastEditor,
     DataSyncEntitySyncState StateAtDeletion, DataSyncTombstoneKind TombstoneKind, bool Served);
@@ -21,10 +25,18 @@ public sealed record DataSyncLocalKindState(string Kind, IReadOnlyList<DataSyncL
 
 public sealed record DataSyncEditorRef(string NodeId, string Name, string ActorId);
 
+/// <param name="Record">
+/// The peer's wire record at the last agreement (<c>RecordJson</c>); Content is its content. It carries what is not
+/// content: the base's OrderKey (§8.5.5, row A2's comparison form), Keys and EditedBy. Null when nothing was agreed.
+/// </param>
+/// <param name="ExclusionKeys">
+/// Every record key the exclusion matches (<c>ExclusionKeysJson</c>, §5.2's exclusion index, row E); empty unless
+/// State is Excluded.
+/// </param>
 public sealed record DataSyncPeerBase(string Kind, SyncKey Key, DataSyncBaseState State, DataSyncExclusionReason? Exclusion,
     JsonObject? Content /* peer content at the last agreement, peer child ids, unknown members kept */,
     DataSyncVersionVector? Vv, IReadOnlyDictionary<string, string> ChildMap,
-    DataSyncPendingRecord? Pending);
+    DataSyncPendingRecord? Pending, DataSyncWireRecord? Record, IReadOnlyList<string> ExclusionKeys);
 
 /// <summary>A peer record this device received but did not agree to (§8.4). Stored once per link and entity.</summary>
 public sealed record DataSyncPendingRecord(DataSyncWireRecord Record, string RecordHash, DataSyncPendingReason Reason,

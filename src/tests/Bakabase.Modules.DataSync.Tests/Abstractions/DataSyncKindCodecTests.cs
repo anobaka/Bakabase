@@ -19,7 +19,7 @@ public class DataSyncKindCodecTests
         public Func<JsonObject, CodecReadResult> OnRead { get; set; } =
             c => new CodecReadResult(new TestContent((string)c["name"]!), null, [], []);
 
-        public Func<TestContent, object> OnPublish { get; set; } = c => c;
+        public Func<TestContent, DataSyncPublishable> OnPublish { get; set; } = c => new DataSyncPublishable(c, 0, []);
         public Func<TestContent?, TestContent, TestContent, DataSyncMerge3Input, object> OnMerge3 { get; set; } =
             (_, local, _, _) => local;
         public (TestContent? Base, TestContent Local, TestContent Remote)? LastMerge3 { get; private set; }
@@ -45,7 +45,7 @@ public class DataSyncKindCodecTests
             new(new OtherContent("wrong"), new Dictionary<string, string>(), [], []);
 
         public override DataSyncPublishable Publish(TestContent localContent, DataSyncOverlay overlay, bool childrenLocal) =>
-            new(OnPublish(localContent), 0, []);
+            OnPublish(localContent);
 
         public override JsonObject ComparisonForm(TestContent publishedContent, string? orderKey, bool childrenLocal) =>
             new() { ["name"] = publishedContent.Name };
@@ -188,9 +188,35 @@ public class DataSyncKindCodecTests
     [TestMethod]
     public void PublishMustReturnTheCodecsType()
     {
-        IDataSyncKindCodec codec = new TestCodec { OnPublish = _ => new OtherContent("x") };
+        IDataSyncKindCodec codec = new TestCodec { OnPublish = _ => new DataSyncPublishable(new OtherContent("x"), 0, []) };
         Assert.ThrowsException<InvalidOperationException>(() =>
             codec.Publish(new TestContent("a"), DataSyncOverlay.None, false));
+    }
+
+    [TestMethod]
+    public void PublishMayHoldAnEntityWithoutContent()
+    {
+        // §3.5 step 4: an entity the reader would hold is published HeldAtSource, with the reason and no content.
+        var held = new DataSyncPublishable(null, 20_001, [], DataSyncHeldReason.Invalid, "tooManyChildren");
+        IDataSyncKindCodec codec = new TestCodec { OnPublish = _ => held };
+        Assert.AreSame(held, codec.Publish(new TestContent("a"), DataSyncOverlay.None, false));
+    }
+
+    [TestMethod]
+    public void PublishRejectsAResultThatBreaksTheContract()
+    {
+        var content = new TestContent("a");
+        foreach (var (name, result) in new[]
+                 {
+                     ("content and held", new DataSyncPublishable(content, 0, [], DataSyncHeldReason.Invalid)),
+                     ("neither", new DataSyncPublishable(null, 0, [])),
+                     ("a detail without held", new DataSyncPublishable(content, 0, [], null, "tooManyChildren")),
+                 })
+        {
+            IDataSyncKindCodec codec = new TestCodec { OnPublish = _ => result };
+            Assert.ThrowsException<InvalidOperationException>(() =>
+                codec.Publish(content, DataSyncOverlay.None, false), name);
+        }
     }
 
     // ---- Merge3 and ChildDeletionCandidates ---------------------------------------------------
@@ -214,6 +240,11 @@ public class DataSyncKindCodecTests
         Assert.AreEqual(((TestContent?)null, l, r), codec.LastMerge3);
         codec.Merge3(Merge3Input(null, l, r, DataSyncMerge3Mode.FastForward));
         Assert.AreEqual(((TestContent?)null, l, r), codec.LastMerge3);
+        codec.Merge3(Merge3Input(b, l, r, DataSyncMerge3Mode.Convert));
+        Assert.AreEqual((b, l, r), codec.LastMerge3);
+        // A key-bound entity with no base converts too (§8.5.6): name then merges by the NoBase rule.
+        codec.Merge3(Merge3Input(null, l, r, DataSyncMerge3Mode.Convert));
+        Assert.AreEqual(((TestContent?)null, l, r), codec.LastMerge3);
     }
 
     [TestMethod]
@@ -226,7 +257,6 @@ public class DataSyncKindCodecTests
         Assert.ThrowsException<ArgumentException>(() => codec.Merge3(Merge3Input(content, content, other, DataSyncMerge3Mode.ThreeWay)));
         Assert.ThrowsException<ArgumentException>(() => codec.Merge3(Merge3Input(other, content, content, DataSyncMerge3Mode.ThreeWay)));
         Assert.ThrowsException<ArgumentException>(() => codec.Merge3(Merge3Input(null, content, content, DataSyncMerge3Mode.ThreeWay)));
-        Assert.ThrowsException<ArgumentException>(() => codec.Merge3(Merge3Input(null, content, content, DataSyncMerge3Mode.Convert)));
         Assert.ThrowsException<ArgumentNullException>(() => codec.Merge3(null!));
     }
 
@@ -253,6 +283,9 @@ public class DataSyncKindCodecTests
             codec.ChildDeletionCandidates(Input(b, new OtherContent("x"), DataSyncMerge3Mode.ThreeWay)));
         Assert.ThrowsException<ArgumentException>(() =>
             codec.ChildDeletionCandidates(Input(null, l, DataSyncMerge3Mode.ThreeWay)));
+
+        codec.ChildDeletionCandidates(Input(null, l, DataSyncMerge3Mode.Convert));
+        Assert.AreEqual(((TestContent?)null, l, r), codec.LastCandidates);
     }
 
     // ---- overlays --------------------------------------------------------------------------

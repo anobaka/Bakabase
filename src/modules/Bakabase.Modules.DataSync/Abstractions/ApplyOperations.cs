@@ -47,5 +47,8 @@ public sealed record LocalKindSnapshot(
     IReadOnlyList<LocalIdentifiedEntity> Entities,  // live entities only
     IReadOnlySet<SyncKey> TombstonedKeys);          // every key of a tombstone ∪ aliases pointing at tombstoned rows
 
+/// <param name="Unreadable">
+/// The stored row does not parse (§3.3): never a target; items touching it are Held(LocalUnreadable).
+/// </param>
 public sealed record LocalIdentifiedEntity(string LocalKey, EntityKeys Keys, int Position, object Content,
-    string ContentHash);
+    string ContentHash, bool Unreadable = false);

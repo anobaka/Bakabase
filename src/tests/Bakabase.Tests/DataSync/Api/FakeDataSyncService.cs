@@ -80,19 +80,50 @@ public sealed class FakeDataSyncService : IDataSyncService
 
     public Task<IReadOnlyList<DataSyncLinkView>> GetLinksAsync(CancellationToken ct) => Answer(Links);
 
-    public Task<DataSyncLinkResult> CreateLinkAsync(DataSyncLinkCreateInput input, CancellationToken ct) =>
-        Answer(new DataSyncLinkResult(
-            Link(20, input.PeerNodeId ?? "node-new", "New PC", DataSyncLinkState.AwaitingAccess, input.Mode,
-                peerAddress: input.Address),
-            "req-out-2", null, null));
+    /// <remarks>
+    /// Sends a request (or claims a code) unless this device already reads the peer, and offers a reciprocal code for a
+    /// two-way link the peer does not read back yet; either needs a caller that may create access (§7.1.5).
+    /// </remarks>
+    public Task<DataSyncLinkResult> CreateLinkAsync(DataSyncLinkCreateInput input, bool callerMayCreateAccess,
+        CancellationToken ct)
+    {
+        var peer = Peers.FirstOrDefault(p => p.NodeId == input.PeerNodeId);
+        var sendsRequest = peer is not {WeMayRead: true};
+        var mintsReciprocalCode = input.Mode == DataSyncLinkMode.TwoWay && peer is not {TheyMayRead: true};
+        if ((sendsRequest || mintsReciprocalCode) && !callerMayCreateAccess)
+        {
+            return Answer(NotAllowedLink);
+        }
 
-    public Task<DataSyncLinkResult> UpdateLinkAsync(int linkId, DataSyncLinkUpdateInput input, CancellationToken ct) =>
-        Answer(FindLink(linkId) is { } link
-            ? new DataSyncLinkResult(link with
-            {
-                Mode = input.Mode ?? link.Mode, Kinds = input.Kinds ?? link.Kinds
-            }, null, null, null)
-            : LinkNotFound);
+        return Answer(new DataSyncLinkResult(
+            Link(20, input.PeerNodeId ?? "node-new", peer?.Name ?? "New PC",
+                sendsRequest ? DataSyncLinkState.AwaitingAccess : DataSyncLinkState.AwaitingReview, input.Mode,
+                peerAddress: input.Address, peerMayReadUs: peer is {TheyMayRead: true}),
+            sendsRequest ? "req-out-2" : null, null, null));
+    }
+
+    /// <remarks>
+    /// Turning a link two-way offers a reciprocal code when the peer does not read this device yet (§7.2.4); turning a
+    /// stopped link back on, following, or changing kinds never creates access.
+    /// </remarks>
+    public Task<DataSyncLinkResult> UpdateLinkAsync(int linkId, DataSyncLinkUpdateInput input,
+        bool callerMayCreateAccess, CancellationToken ct)
+    {
+        if (FindLink(linkId) is not { } link)
+        {
+            return Answer(LinkNotFound);
+        }
+
+        if (input.Mode == DataSyncLinkMode.TwoWay && !link.PeerMayReadUs && !callerMayCreateAccess)
+        {
+            return Answer(NotAllowedLink);
+        }
+
+        return Answer(new DataSyncLinkResult(link with
+        {
+            Mode = input.Mode ?? link.Mode, Kinds = input.Kinds ?? link.Kinds
+        }, null, null, null));
+    }
 
     public Task<DataSyncLinkResult> PauseLinkAsync(int linkId, CancellationToken ct) =>
         Answer(FindLink(linkId) is { } link
@@ -120,9 +151,13 @@ public sealed class FakeDataSyncService : IDataSyncService
 
     public Task<DataSyncProblem?> ForgetAccessAsync(string peerNodeId, CancellationToken ct) => Ok();
 
-    public Task<DataSyncReviewResult> CreateCopyOnceAsync(DataSyncCopyOnceInput input, CancellationToken ct) =>
-        Answer(new DataSyncReviewResult(null, 21, true, DataSyncLinkMode.Off, null, null, null, null, null, null,
-            null));
+    /// <remarks>Sends a request (or claims a code) unless this device already reads the peer (§7.1.5).</remarks>
+    public Task<DataSyncReviewResult> CreateCopyOnceAsync(DataSyncCopyOnceInput input, bool callerMayCreateAccess,
+        CancellationToken ct) =>
+        Answer(Peers.Any(p => p.NodeId == input.PeerNodeId && p.WeMayRead) || callerMayCreateAccess
+            ? new DataSyncReviewResult(null, 21, true, DataSyncLinkMode.Off, null, null, null, null, null, null, null)
+            : new DataSyncReviewResult(null, null, true, DataSyncLinkMode.Off, null, null, null, null, null, null,
+                Problem(DataSyncProblemCode.NotAllowedOnThisDevice)));
 
     public Task<DataSyncReviewResult> GetReviewAsync(string reviewId, CancellationToken ct) =>
         Answer(reviewId == ReviewId ? Review : ReviewExpired);
@@ -312,6 +347,9 @@ public sealed class FakeDataSyncService : IDataSyncService
 
     private static readonly DataSyncLinkResult LinkNotFound =
         new(null, null, null, Problem(DataSyncProblemCode.LinkNotFound));
+
+    private static readonly DataSyncLinkResult NotAllowedLink =
+        new(null, null, null, Problem(DataSyncProblemCode.NotAllowedOnThisDevice));
 
     private static readonly DataSyncReviewResult ReviewExpired = new(null, null, false, DataSyncLinkMode.Off, null,
         null, null, null, null, null, Problem(DataSyncProblemCode.ReviewExpired));

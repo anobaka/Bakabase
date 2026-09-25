@@ -24,8 +24,10 @@ namespace Bakabase.Tests.DataSync.Api;
 /// </summary>
 /// <remarks>
 /// The remote-access gate decides who reaches the endpoints at all: this device's own window, a paired device, and an
-/// unpaired LAN browser only in Unrestricted mode. That last caller may read and shut access off, but never grant it,
-/// so the controller refuses it every action that creates or widens access, before the service sees the request.
+/// unpaired LAN browser only in Unrestricted mode. That last caller may read and shut access off, but never grant it:
+/// the controller refuses it the actions that always create or widen access before the service sees the request, and
+/// tells the service who is asking where only the service knows whether a call sends a request or mints a reciprocal
+/// code (links, copy once).
 /// </remarks>
 [TestClass]
 public class DataSyncEndpointExposureTests
@@ -248,34 +250,76 @@ public class DataSyncEndpointExposureTests
 
     // ---- the access rule (§7.1.5) --------------------------------------------------------------------------------
 
-    /// <summary>Every call that creates or widens definitions access, and the problem it answered.</summary>
-    private static IEnumerable<(string Name, Func<DataSyncController, Task<DataSyncProblem?>> Call)> CreatingAccess() =>
+    /// <summary>
+    /// Every call that creates or widens definitions access, the problem it answered, and whether only the service
+    /// can tell (it sends a request or mints a reciprocal code) or the action always does.
+    /// </summary>
+    private static IEnumerable<(string Name, bool ServiceDecides, Func<DataSyncController, Task<DataSyncProblem?>> Call)>
+        CreatingAccess() =>
     [
-        ("PUT sharing {enabled:true}",
+        ("PUT sharing {enabled:true}", false,
             async c => (await c.SetSharing(new DataSyncSharingInput(true, true), default)).Data),
-        ("POST links (two-way)",
+        ("POST links (two-way, to a device this one cannot read yet)", true,
             async c => (await c.CreateLink(
-                new DataSyncLinkCreateInput("node-nas", null, null, DataSyncLinkMode.TwoWay, AllKinds), default)).Data!
-                .Problem),
-        ("POST links (follow, by address and code)",
+                    new DataSyncLinkCreateInput("node-newpc", null, null, DataSyncLinkMode.TwoWay, AllKinds), default))
+                .Data!.Problem),
+        ("POST links (follow, by address and code)", true,
             async c => (await c.CreateLink(
                     new DataSyncLinkCreateInput(null, "192.168.1.40:34567", "48213705", DataSyncLinkMode.Follow, AllKinds),
                     default)).Data!
                 .Problem),
-        ("PUT links/{id} to two-way",
-            async c => (await c.UpdateLink(1, new DataSyncLinkUpdateInput(DataSyncLinkMode.TwoWay, null), default))
+        ("PUT links/{id} to two-way, the peer not reading this device yet", true,
+            async c => (await c.UpdateLink(5, new DataSyncLinkUpdateInput(DataSyncLinkMode.TwoWay, null), default))
                 .Data!.Problem),
-        ("POST links/{id}/resume asking for access again",
+        ("POST links/{id}/resume asking for access again", false,
             async c => (await c.ResumeLink(9,
                 new DataSyncLinkResumeInputModel {Action = DataSyncResumeAction.AskAccessAgain}, default)).Data!.Problem),
-        ("POST copy-once",
+        ("POST copy-once (by address and code)", true,
             async c => (await c.CreateCopyOnce(
                 new DataSyncCopyOnceInput(null, "192.168.1.40:34567", "48213705", AllKinds), default)).Data!.Problem),
-        ("POST requests/{id}/approve",
+        ("POST copy-once (from a device this one cannot read yet)", true,
+            async c => (await c.CreateCopyOnce(
+                new DataSyncCopyOnceInput("node-newpc", null, null, AllKinds), default)).Data!.Problem),
+        ("POST requests/{id}/approve", false,
             async c => (await c.ApproveRequest("req-in-1", new DataSyncApproveInput(true, null), default)).Data!
                 .Problem),
-        ("POST invitations",
+        ("POST invitations", false,
             async c => (await c.CreateInvitation(new DataSyncInvitationInput(true), default)).Data!.Problem),
+    ];
+
+    /// <summary>A stopped two-way link whose peer still reads this device: turning it back on asks nobody.</summary>
+    private const int StoppedTwoWayLinkId = 30;
+
+    /// <summary>
+    /// Link and copy-once calls that send no request and mint no code: they create no access, so the gate's word is
+    /// enough (§7.1.5, §8.1).
+    /// </summary>
+    private static IEnumerable<(string Name, Func<DataSyncController, Task<DataSyncProblem?>> Call)> CreatingNoAccess() =>
+    [
+        ("POST links (follow, a device this one already reads)",
+            async c => (await c.CreateLink(
+                new DataSyncLinkCreateInput("node-nas", null, null, DataSyncLinkMode.Follow, AllKinds), default)).Data!
+                .Problem),
+        ("POST links (two-way, a device that already reads this one)",
+            async c => (await c.CreateLink(
+                new DataSyncLinkCreateInput("node-nas", null, null, DataSyncLinkMode.TwoWay, AllKinds), default)).Data!
+                .Problem),
+        ("PUT links/{id} kinds of a two-way link, the mode sent along",
+            async c => (await c.UpdateLink(1,
+                new DataSyncLinkUpdateInput(DataSyncLinkMode.TwoWay, [DataSyncKindIds.CustomProperty]), default)).Data!
+                .Problem),
+        ("PUT links/{id} kinds only",
+            async c => (await c.UpdateLink(5, new DataSyncLinkUpdateInput(null, [DataSyncKindIds.CustomProperty]),
+                default)).Data!.Problem),
+        ("PUT links/{id} a stopped two-way link back on",
+            async c => (await c.UpdateLink(StoppedTwoWayLinkId,
+                new DataSyncLinkUpdateInput(DataSyncLinkMode.TwoWay, null), default)).Data!.Problem),
+        ("PUT links/{id} a stopped follow link back on",
+            async c => (await c.UpdateLink(6, new DataSyncLinkUpdateInput(DataSyncLinkMode.Follow, null), default))
+                .Data!.Problem),
+        ("POST copy-once (from a device this one already reads)",
+            async c => (await c.CreateCopyOnce(new DataSyncCopyOnceInput("node-nas", null, null, AllKinds), default))
+                .Data!.Problem),
     ];
 
     /// <summary>Every call that reduces access or only reads; open to whoever the gate admits.</summary>
@@ -304,13 +348,41 @@ public class DataSyncEndpointExposureTests
     {
         foreach (var context in new[] {UnpairedUnrestricted, null})
         {
-            foreach (var (name, call) in CreatingAccess())
+            foreach (var (name, serviceDecides, call) in CreatingAccess())
             {
                 var fake = new FakeDataSyncService();
                 var problem = await call(Controller(fake, context));
 
                 Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice, problem?.Code, name);
-                Assert.AreEqual(0, fake.Calls.Count, $"{name} reached the service: {string.Join(", ", fake.Calls)}");
+                // Where only the service can tell, it is asked, and told the caller may not create access; the fake
+                // refuses on that word alone.
+                Assert.AreEqual(serviceDecides ? 1 : 0, fake.Calls.Count,
+                    $"{name} reached the service: {string.Join(", ", fake.Calls)}");
+            }
+        }
+    }
+
+    [TestMethod]
+    public async Task What_creates_no_access_is_open_to_whoever_the_gate_admits()
+    {
+        foreach (var context in new[] {Loopback, Paired, UnpairedUnrestricted})
+        {
+            foreach (var (name, call) in CreatingNoAccess())
+            {
+                var fake = new FakeDataSyncService();
+                fake.Links =
+                [
+                    ..fake.Links,
+                    fake.Links.Single(l => l.Id == 1) with
+                    {
+                        Id = StoppedTwoWayLinkId, PeerNodeId = "node-den", PeerName = "Den PC",
+                        State = DataSyncLinkState.Stopped, Mode = DataSyncLinkMode.Off
+                    },
+                ];
+                var problem = await call(Controller(fake, context));
+
+                Assert.IsNull(problem, $"{name}: {problem}");
+                Assert.AreEqual(1, fake.Calls.Count, name);
             }
         }
     }
@@ -320,7 +392,7 @@ public class DataSyncEndpointExposureTests
     {
         foreach (var context in new[] {Loopback, Paired})
         {
-            foreach (var (name, call) in CreatingAccess())
+            foreach (var (name, _, call) in CreatingAccess())
             {
                 var fake = new FakeDataSyncService();
                 var problem = await call(Controller(fake, context));
