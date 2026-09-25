@@ -4045,6 +4045,1054 @@ export interface BakabaseModulesDataCardModelsInputDataCardUpdateInputModel {
   propertyValues?: BakabaseModulesDataCardModelsInputDataCardPropertyValueInputModel[];
 }
 
+export interface BakabaseModulesDataSyncAbstractionsDataSyncFieldOutcome {
+  path: string;
+  /** [1: Unchanged, 2: TookRemote, 3: KeptLocal, 4: Combined, 5: Conflict, 6: AppearanceTookRemote, 7: AppearanceKeptLocal, 8: FollowTookRemote, 9: DeletionHeldInUse, 10: EditWinsRestored, 11: TypeChangeHeld] */
+  resolution: BakabaseModulesDataSyncDataSyncFieldResolution;
+  base?: BakabaseModulesDataSyncPlanningDataSyncDisplayValue;
+  local?: BakabaseModulesDataSyncPlanningDataSyncDisplayValue;
+  remote?: BakabaseModulesDataSyncPlanningDataSyncDisplayValue;
+  result?: BakabaseModulesDataSyncPlanningDataSyncDisplayValue;
+}
+
+/**
+ * [0: None, 1: Clash, 2: Similar, 3: Exact, 4: Identical]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncAbstractionsDataSyncNaturalMatch = 0 | 1 | 2 | 3 | 4;
+
+export interface BakabaseModulesDataSyncAbstractionsDataSyncTypeChangePreview {
+  fromSubtype: string;
+  toSubtype: string;
+  /** @format int32 */
+  valueCount: number;
+  /** @format int32 */
+  changedCount: number;
+  /** @format int32 */
+  lossyCount: number;
+  samples: BakabaseModulesDataSyncAbstractionsDataSyncTypeChangeSample[];
+}
+
+export interface BakabaseModulesDataSyncAbstractionsDataSyncTypeChangeSample {
+  from?: string;
+  to?: string;
+}
+
+/**
+ * [1: Synced, 2: LocalOnly, 3: Detached]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncEntitySyncState = 1 | 2 | 3;
+
+/**
+ * [1: Unchanged, 2: TookRemote, 3: KeptLocal, 4: Combined, 5: Conflict, 6: AppearanceTookRemote, 7: AppearanceKeptLocal, 8: FollowTookRemote, 9: DeletionHeldInUse, 10: EditWinsRestored, 11: TypeChangeHeld]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncFieldResolution =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11;
+
+/**
+ * [1: FirstLink, 2: CopyOnce, 3: AutoSync, 4: Resolution, 5: Undo, 6: Restore, 7: EntitySetting]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncHistoryKind = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/**
+ * [1: KeepLocal, 2: UseRemote, 3: UseCustom, 4: Detach, 5: DeleteHere, 6: KeepHereOnly, 7: RestoreEverywhere, 8: RestoreHere, 9: KeepDeleted, 10: Link, 11: KeepBoth, 12: Convert, 13: ApplyAll, 14: ReviewEach, 15: KeepWithEntity, 16: Publish, 17: Reapply, 18: Skip, 19: KeepRecordLinked]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncInboxAction =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14
+  | 15
+  | 16
+  | 17
+  | 18
+  | 19;
+
+/**
+ * [1: ResolvedHere, 2: ResolvedElsewhere, 3: Superseded, 4: LinkRemoved, 5: LinkStopped]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncInboxClosure = 1 | 2 | 3 | 4 | 5;
+
+/**
+ * [1: Merger, 2: State]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncInboxItemOrigin = 1 | 2;
+
+/**
+ * [1: FieldConflict, 2: ChildRenameConflict, 3: TypeChange, 4: DeletedThere, 5: ChildDeletedInUse, 6: DeletedHereEditedThere, 7: LinkSuggestion, 8: IdentityConflict, 9: MassChildDeletion, 10: SuspectedLostUpdate, 11: LargeChange]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncInboxItemType =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11;
+
+/**
+ * [1: ThisDevice, 2: Peer]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncLinkInitiator = 1 | 2;
+
+/**
+ * [0: Off, 1: Follow, 2: TwoWay]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncLinkMode = 0 | 1 | 2;
+
+/**
+ * [1: Active, 2: AwaitingAccess, 3: AwaitingReview, 4: WaitingForPeerReview, 5: Paused, 6: Stopped, 7: PeerTooOld, 8: ThisTooOld, 9: AccessRevoked, 10: PeerSharingOff, 11: PeerRemoteAccessOff]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncLinkState = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+
+/**
+ * [1: ByUser, 2: AllPaused, 3: PeerReset, 4: PeerIdentityDuplicated, 5: MassDeletion, 6: KindEmptied, 7: LocalRestoreDetected, 8: TooManyDecisions, 9: LocalRestoreSuspected]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncPauseReason = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+
+/**
+ * [1: Incoming, 2: Outgoing]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncRequestDirection = 1 | 2;
+
+/**
+ * [1: Follow, 2: TwoWay]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncRequestIntent = 1 | 2;
+
+/**
+ * [1: ThisDeviceWins, 2: OthersWin]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncRestoreChoice = 1 | 2;
+
+/**
+ * [1: Staged, 2: Applying, 3: Applied, 4: Failed]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncReviewState = 1 | 2 | 3 | 4;
+
+/**
+ * [0: Off, 1: InStep, 2: Syncing, 3: NeedsYou, 4: Paused, 5: Offline, 6: Failed, 7: UpdateNeeded]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncDataSyncStatusLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+export interface BakabaseModulesDataSyncMergingDataSyncEditorRef {
+  nodeId: string;
+  name: string;
+  actorId: string;
+}
+
+export interface BakabaseModulesDataSyncMergingDataSyncInboxCandidate {
+  localKey: string;
+  name: string;
+  subtype?: string;
+  /** [0: None, 1: Clash, 2: Similar, 3: Exact, 4: Identical] */
+  match: BakabaseModulesDataSyncAbstractionsDataSyncNaturalMatch;
+  updatable: boolean;
+}
+
+export interface BakabaseModulesDataSyncMergingDataSyncInboxPayload {
+  entityName: string;
+  subtype?: string;
+  peerName?: string;
+  remoteEditor?: BakabaseModulesDataSyncMergingDataSyncEditorRef;
+  originName?: string;
+  fields: BakabaseModulesDataSyncAbstractionsDataSyncFieldOutcome[];
+  /** @format int32 */
+  valueCount?: number;
+  /** @format int32 */
+  usageCount?: number;
+  children?: BakabaseModulesDataSyncPlanningDataSyncDisplayValue[];
+  /** @format int32 */
+  childrenTotal: number;
+  remoteSubtype?: string;
+  localSubtype?: string;
+  candidates?: BakabaseModulesDataSyncMergingDataSyncInboxCandidate[];
+  records?: BakabaseModulesDataSyncMergingDataSyncInboxRecordRef[];
+  largeChange?: BakabaseModulesDataSyncMergingDataSyncLargeChangeEntry[];
+}
+
+export interface BakabaseModulesDataSyncMergingDataSyncInboxRecordRef {
+  primaryKey: string;
+  name: string;
+  subtype?: string;
+}
+
+export interface BakabaseModulesDataSyncMergingDataSyncLargeChangeEntry {
+  name: string;
+  kind: string;
+  create: boolean;
+  /** @format int32 */
+  changes: number;
+}
+
+export interface BakabaseModulesDataSyncPlanningDataSyncChangeCounts {
+  /** @format int32 */
+  total: number;
+  /** @format int32 */
+  set: number;
+  /** @format int32 */
+  add: number;
+  /** @format int32 */
+  rename: number;
+  /** @format int32 */
+  recolor: number;
+}
+
+export interface BakabaseModulesDataSyncPlanningDataSyncDecisionError {
+  itemId: string;
+  /** [1: DecisionMissing, 2: ResolutionNotAllowed, 3: TargetNotAllowed, 4: TargetUsedTwice, 5: ChangedSinceReview, 6: UnknownChange, 7: InvalidName, 8: UnknownItem, 9: DuplicateDecision] */
+  code: BakabaseModulesDataSyncPlanningDataSyncDecisionErrorCode;
+}
+
+/**
+ * [1: DecisionMissing, 2: ResolutionNotAllowed, 3: TargetNotAllowed, 4: TargetUsedTwice, 5: ChangedSinceReview, 6: UnknownChange, 7: InvalidName, 8: UnknownItem, 9: DuplicateDecision]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncPlanningDataSyncDecisionErrorCode =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9;
+
+export interface BakabaseModulesDataSyncPlanningDataSyncDisplayValue {
+  text?: string;
+  color?: string;
+  group?: string;
+  path?: string[];
+  flag?: boolean;
+  /** @format int32 */
+  number?: number;
+}
+
+export interface BakabaseModulesDataSyncPlanningDataSyncFieldChange {
+  changeId: string;
+  /** [1: Set, 2: AddChild, 3: RenameChild, 4: RecolorChild, 5: AddMember, 6: RemoveChild, 7: SetType, 8: MoveChild] */
+  kind: BakabaseModulesDataSyncPlanningDataSyncFieldChangeKind;
+  path: string;
+  from?: BakabaseModulesDataSyncPlanningDataSyncDisplayValue;
+  to?: BakabaseModulesDataSyncPlanningDataSyncDisplayValue;
+  dependsOnChangeId?: string;
+  /** @format int32 */
+  inUseCount?: number;
+}
+
+/**
+ * [1: Set, 2: AddChild, 3: RenameChild, 4: RecolorChild, 5: AddMember, 6: RemoveChild, 7: SetType, 8: MoveChild]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncPlanningDataSyncFieldChangeKind = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+/**
+ * [1: NewerSchema, 2: UnknownKind, 3: UnknownEnumValue, 4: Invalid, 5: AtSource, 6: LocalUnreadable, 7: PendingDecision, 8: TooLarge]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncPlanningDataSyncHeldReason = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+/**
+ * [0: None, 1: Created, 2: Updated, 3: Linked, 4: KeysRecorded, 5: Deleted, 6: TypeChanged, 7: Reordered]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncPlanningDataSyncItemAction = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/**
+ * [1: Applied, 2: SkippedByUser, 3: ChangedSinceReview, 4: Held, 5: ChangedDuringApply, 6: NoChange]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncPlanningDataSyncItemOutcome = 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface BakabaseModulesDataSyncPlanningDataSyncKindTypeCount {
+  kind: string;
+  /** [1: Create, 2: Update, 3: Unchanged, 4: Link, 5: NeedsDecision, 6: Held] */
+  type: BakabaseModulesDataSyncPlanningDataSyncPlanItemType;
+  /** @format int32 */
+  count: number;
+}
+
+export interface BakabaseModulesDataSyncPlanningDataSyncPlan {
+  planId: string;
+  snapshotContentHash: string;
+  kinds: BakabaseModulesDataSyncPlanningDataSyncPlanKindSection[];
+  summary: BakabaseModulesDataSyncPlanningDataSyncPlanSummary;
+  warnings: BakabaseModulesDataSyncPlanningDataSyncPlanWarning[];
+}
+
+export interface BakabaseModulesDataSyncPlanningDataSyncPlanCandidate {
+  localKey: string;
+  name: string;
+  subtype?: string;
+  /** [0: None, 1: Clash, 2: Similar, 3: Exact, 4: Identical] */
+  match: BakabaseModulesDataSyncAbstractionsDataSyncNaturalMatch;
+  changes: BakabaseModulesDataSyncPlanningDataSyncFieldChange[];
+  changeCounts: BakabaseModulesDataSyncPlanningDataSyncChangeCounts;
+  changesTruncated: boolean;
+  warnings: BakabaseModulesDataSyncPlanningDataSyncPlanWarning[];
+  warningCounts: BakabaseModulesDataSyncPlanningDataSyncWarningCount[];
+  warningsTruncated: boolean;
+  /** @format int32 */
+  unchangedChildren: number;
+  /** @format int32 */
+  localOnlyChildren: number;
+  recordsNewKeys: boolean;
+  reviewToken: string;
+}
+
+export interface BakabaseModulesDataSyncPlanningDataSyncPlanDecision {
+  itemId: string;
+  /** [1: Create, 2: Update, 3: Link, 4: CreateSeparate, 5: Skip] */
+  resolution: BakabaseModulesDataSyncPlanningDataSyncPlanResolution;
+  targetLocalKey?: string;
+  newName?: string;
+  excludedChangeIds: string[];
+  reviewToken: string;
+}
+
+export interface BakabaseModulesDataSyncPlanningDataSyncPlanEntity {
+  localKey?: string;
+  name: string;
+  subtype?: string;
+  /** @format int32 */
+  position: number;
+  /** @format int32 */
+  childCount: number;
+}
+
+export interface BakabaseModulesDataSyncPlanningDataSyncPlanItem {
+  itemId: string;
+  kind: string;
+  /** [1: Create, 2: Update, 3: Unchanged, 4: Link, 5: NeedsDecision, 6: Held] */
+  type: BakabaseModulesDataSyncPlanningDataSyncPlanItemType;
+  /** [1: AmbiguousNameMatch, 2: TypeMismatch, 3: NameClashDifferentType, 4: IdentityConflict, 5: DuplicateInPackage, 6: LocalIsNewer] */
+  reason?: BakabaseModulesDataSyncPlanningDataSyncPlanItemReason;
+  /** [1: NewerSchema, 2: UnknownKind, 3: UnknownEnumValue, 4: Invalid, 5: AtSource, 6: LocalUnreadable, 7: PendingDecision, 8: TooLarge] */
+  heldReason?: BakabaseModulesDataSyncPlanningDataSyncHeldReason;
+  incoming: BakabaseModulesDataSyncPlanningDataSyncPlanEntity;
+  local?: BakabaseModulesDataSyncPlanningDataSyncPlanEntity;
+  candidates: BakabaseModulesDataSyncPlanningDataSyncPlanCandidate[];
+  changes: BakabaseModulesDataSyncPlanningDataSyncFieldChange[];
+  changeCounts: BakabaseModulesDataSyncPlanningDataSyncChangeCounts;
+  changesTruncated: boolean;
+  /** @format int32 */
+  unchangedChildren: number;
+  /** @format int32 */
+  localOnlyChildren: number;
+  allowedResolutions: BakabaseModulesDataSyncPlanningDataSyncPlanResolution[];
+  /** [1: Create, 2: Update, 3: Link, 4: CreateSeparate, 5: Skip] */
+  defaultResolution?: BakabaseModulesDataSyncPlanningDataSyncPlanResolution;
+  defaultTargetLocalKey?: string;
+  requiresConfirmation: boolean;
+  bulkLinkEligible: boolean;
+  offersSeparateName: boolean;
+  recordsNewKeys: boolean;
+  reviewToken: string;
+  warnings: BakabaseModulesDataSyncPlanningDataSyncPlanWarning[];
+  warningCounts: BakabaseModulesDataSyncPlanningDataSyncWarningCount[];
+  warningsTruncated: boolean;
+}
+
+/**
+ * [1: AmbiguousNameMatch, 2: TypeMismatch, 3: NameClashDifferentType, 4: IdentityConflict, 5: DuplicateInPackage, 6: LocalIsNewer]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncPlanningDataSyncPlanItemReason = 1 | 2 | 3 | 4 | 5 | 6;
+
+/**
+ * [1: Create, 2: Update, 3: Unchanged, 4: Link, 5: NeedsDecision, 6: Held]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncPlanningDataSyncPlanItemType = 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface BakabaseModulesDataSyncPlanningDataSyncPlanKindSection {
+  kind: string;
+  /** @format int32 */
+  schemaVersion: number;
+  supported: boolean;
+  items: BakabaseModulesDataSyncPlanningDataSyncPlanItem[];
+  /** @format int32 */
+  localOnlyCount: number;
+}
+
+/**
+ * [1: Create, 2: Update, 3: Link, 4: CreateSeparate, 5: Skip]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncPlanningDataSyncPlanResolution = 1 | 2 | 3 | 4 | 5;
+
+export interface BakabaseModulesDataSyncPlanningDataSyncPlanSummary {
+  counts: BakabaseModulesDataSyncPlanningDataSyncKindTypeCount[];
+  /** @format int32 */
+  pendingCount: number;
+  /** @format int32 */
+  bulkLinkEligibleCount: number;
+  /** @format int32 */
+  heldCount: number;
+}
+
+export interface BakabaseModulesDataSyncPlanningDataSyncPlanWarning {
+  /** [1: UnknownFieldsIgnored, 2: OptionLabelConflict, 3: DefaultValueRefDropped, 4: PreviouslyDeletedHere, 5: SettingsIgnoredForType, 6: NodeMoveIgnored, 7: OptionUuidRemapped, 8: FromThisDevice, 9: OptionDropped, 10: ChildRestored, 11: ChildrenOmittedByPeer, 12: NameUsedEverywhere, 13: NormalizationChanged, 14: ChildrenLocalTurnedOff] */
+  code: BakabaseModulesDataSyncPlanningDataSyncWarningCode;
+  changeId?: string;
+  args?: Record<string, string>;
+}
+
+/**
+ * [1: UnknownFieldsIgnored, 2: OptionLabelConflict, 3: DefaultValueRefDropped, 4: PreviouslyDeletedHere, 5: SettingsIgnoredForType, 6: NodeMoveIgnored, 7: OptionUuidRemapped, 8: FromThisDevice, 9: OptionDropped, 10: ChildRestored, 11: ChildrenOmittedByPeer, 12: NameUsedEverywhere, 13: NormalizationChanged, 14: ChildrenLocalTurnedOff]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncPlanningDataSyncWarningCode =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14;
+
+export interface BakabaseModulesDataSyncPlanningDataSyncWarningCount {
+  /** [1: UnknownFieldsIgnored, 2: OptionLabelConflict, 3: DefaultValueRefDropped, 4: PreviouslyDeletedHere, 5: SettingsIgnoredForType, 6: NodeMoveIgnored, 7: OptionUuidRemapped, 8: FromThisDevice, 9: OptionDropped, 10: ChildRestored, 11: ChildrenOmittedByPeer, 12: NameUsedEverywhere, 13: NormalizationChanged, 14: ChildrenLocalTurnedOff] */
+  code: BakabaseModulesDataSyncPlanningDataSyncWarningCode;
+  /** @format int32 */
+  count: number;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncAccessRequestView {
+  requestId: string;
+  /** [1: Incoming, 2: Outgoing] */
+  direction: BakabaseModulesDataSyncDataSyncRequestDirection;
+  nodeId: string;
+  nodeName: string;
+  /** [1: Follow, 2: TwoWay] */
+  intent: BakabaseModulesDataSyncDataSyncRequestIntent;
+  status: string;
+  /** @format date-time */
+  expiresAt: string;
+  remoteAddress?: string;
+  claimsKnownDevice: boolean;
+  knownAddress?: string;
+  replacesExistingAccess: boolean;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncApplyStart {
+  taskId?: string;
+  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
+  decisionErrors: BakabaseModulesDataSyncPlanningDataSyncDecisionError[];
+  plan?: BakabaseModulesDataSyncPlanningDataSyncPlan;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncApproveInput {
+  receiveBack: boolean;
+  kinds?: string[];
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncChangePage {
+  planId: string;
+  changes: BakabaseModulesDataSyncPlanningDataSyncFieldChange[];
+  warnings: BakabaseModulesDataSyncPlanningDataSyncPlanWarning[];
+  /** @format int32 */
+  total: number;
+  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncCopyOnceInput {
+  peerNodeId?: string;
+  address?: string;
+  code?: string;
+  kinds: string[];
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncEntityStatusView {
+  localKey: string;
+  syncKey: string;
+  /** [1: Synced, 2: LocalOnly, 3: Detached] */
+  state: BakabaseModulesDataSyncDataSyncEntitySyncState;
+  childrenLocal: boolean;
+  /** @format int32 */
+  localOnlyChildren: number;
+  /** @format int32 */
+  heldChildren: number;
+  originNodeId?: string;
+  originName?: string;
+  lastEditorName?: string;
+  /** @format date-time */
+  lastSyncedAt?: string;
+  /** @format int32 */
+  openItems: number;
+  differsFromSource: boolean;
+  /** [1: NewerSchema, 2: UnknownKind, 3: UnknownEnumValue, 4: Invalid, 5: AtSource, 6: LocalUnreadable, 7: PendingDecision, 8: TooLarge] */
+  heldAtSource?: BakabaseModulesDataSyncPlanningDataSyncHeldReason;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncEntitySyncInput {
+  /** [1: Synced, 2: LocalOnly, 3: Detached] */
+  state?: BakabaseModulesDataSyncDataSyncEntitySyncState;
+  childrenLocal?: boolean;
+  addLocalOnlyChildren?: string[];
+  removeLocalOnlyChildren?: string[];
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncHistoryCounts {
+  /** @format int32 */
+  created: number;
+  /** @format int32 */
+  updated: number;
+  /** @format int32 */
+  linked: number;
+  /** @format int32 */
+  unchanged: number;
+  /** @format int32 */
+  skipped: number;
+  /** @format int32 */
+  changedSinceReview: number;
+  /** @format int32 */
+  changedDuringApply: number;
+  /** @format int32 */
+  held: number;
+  /** @format int32 */
+  deleted: number;
+  /** @format int32 */
+  typeChanged: number;
+  /** @format int32 */
+  reordered: number;
+  /** @format int32 */
+  resolved: number;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncHistoryDetail {
+  entry: BakabaseModulesDataSyncServicesDataSyncHistoryEntry;
+  items: BakabaseModulesDataSyncServicesDataSyncHistoryItem[];
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncHistoryEntry {
+  /** @format int32 */
+  id: number;
+  /** @format date-time */
+  appliedAt: string;
+  /** [1: FirstLink, 2: CopyOnce, 3: AutoSync, 4: Resolution, 5: Undo, 6: Restore, 7: EntitySetting] */
+  kind: BakabaseModulesDataSyncDataSyncHistoryKind;
+  /** @format int32 */
+  linkId?: number;
+  peerNodeId?: string;
+  peerName?: string;
+  counts: BakabaseModulesDataSyncServicesDataSyncHistoryCounts;
+  /** [1: Available, 2: Undone, 3: Expired] */
+  undoState: BakabaseModulesDataSyncServicesDataSyncUndoState;
+  /** @format date-time */
+  undoneAt?: string;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncHistoryItem {
+  itemId: string;
+  kind: string;
+  name: string;
+  /** [1: Applied, 2: SkippedByUser, 3: ChangedSinceReview, 4: Held, 5: ChangedDuringApply, 6: NoChange] */
+  outcome: BakabaseModulesDataSyncPlanningDataSyncItemOutcome;
+  /** [0: None, 1: Created, 2: Updated, 3: Linked, 4: KeysRecorded, 5: Deleted, 6: TypeChanged, 7: Reordered] */
+  action: BakabaseModulesDataSyncPlanningDataSyncItemAction;
+  localKey?: string;
+  /** [1: Create, 2: Update, 3: Unchanged, 4: Link, 5: NeedsDecision, 6: Held] */
+  type: BakabaseModulesDataSyncPlanningDataSyncPlanItemType;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncInboxItemView {
+  /** @format int64 */
+  id: number;
+  /** @format int32 */
+  linkId?: number;
+  peerNodeId?: string;
+  peerName?: string;
+  kind: string;
+  localKey?: string;
+  /** [1: FieldConflict, 2: ChildRenameConflict, 3: TypeChange, 4: DeletedThere, 5: ChildDeletedInUse, 6: DeletedHereEditedThere, 7: LinkSuggestion, 8: IdentityConflict, 9: MassChildDeletion, 10: SuspectedLostUpdate, 11: LargeChange] */
+  type: BakabaseModulesDataSyncDataSyncInboxItemType;
+  /** [1: Merger, 2: State] */
+  origin: BakabaseModulesDataSyncDataSyncInboxItemOrigin;
+  subjectPath: string;
+  payload: BakabaseModulesDataSyncMergingDataSyncInboxPayload;
+  allowedActions: BakabaseModulesDataSyncDataSyncInboxAction[];
+  /** [1: KeepLocal, 2: UseRemote, 3: UseCustom, 4: Detach, 5: DeleteHere, 6: KeepHereOnly, 7: RestoreEverywhere, 8: RestoreHere, 9: KeepDeleted, 10: Link, 11: KeepBoth, 12: Convert, 13: ApplyAll, 14: ReviewEach, 15: KeepWithEntity, 16: Publish, 17: Reapply, 18: Skip, 19: KeepRecordLinked] */
+  defaultAction?: BakabaseModulesDataSyncDataSyncInboxAction;
+  token: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  /** @format date-time */
+  closedAt?: string;
+  /** [1: ResolvedHere, 2: ResolvedElsewhere, 3: Superseded, 4: LinkRemoved, 5: LinkStopped] */
+  closure?: BakabaseModulesDataSyncDataSyncInboxClosure;
+  /** [1: KeepLocal, 2: UseRemote, 3: UseCustom, 4: Detach, 5: DeleteHere, 6: KeepHereOnly, 7: RestoreEverywhere, 8: RestoreHere, 9: KeepDeleted, 10: Link, 11: KeepBoth, 12: Convert, 13: ApplyAll, 14: ReviewEach, 15: KeepWithEntity, 16: Publish, 17: Reapply, 18: Skip, 19: KeepRecordLinked] */
+  action?: BakabaseModulesDataSyncDataSyncInboxAction;
+  closedByName?: string;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncInboxPage {
+  items: BakabaseModulesDataSyncServicesDataSyncInboxItemView[];
+  /** @format int32 */
+  total: number;
+  /** @format int32 */
+  openTotal: number;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncInvitationInput {
+  allowTwoWay: boolean;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncInvitationResult {
+  invitation?: BakabaseModulesDataSyncServicesDataSyncInvitationView;
+  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncInvitationView {
+  code: string;
+  /** @format date-time */
+  expiresAt: string;
+  addresses: string[];
+  allowTwoWay: boolean;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncKindCount {
+  kind: string;
+  /** @format int32 */
+  count: number;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncLinkCreateInput {
+  peerNodeId?: string;
+  address?: string;
+  code?: string;
+  /** [0: Off, 1: Follow, 2: TwoWay] */
+  mode: BakabaseModulesDataSyncDataSyncLinkMode;
+  kinds: string[];
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncLinkResult {
+  link?: BakabaseModulesDataSyncServicesDataSyncLinkView;
+  requestId?: string;
+  reviewId?: string;
+  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncLinkUpdateInput {
+  /** [0: Off, 1: Follow, 2: TwoWay] */
+  mode?: BakabaseModulesDataSyncDataSyncLinkMode;
+  kinds?: string[];
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncLinkView {
+  /** @format int32 */
+  id: number;
+  peerNodeId: string;
+  peerName: string;
+  peerAddress?: string;
+  /** [0: Off, 1: Follow, 2: TwoWay] */
+  mode: BakabaseModulesDataSyncDataSyncLinkMode;
+  /** [0: Off, 1: Follow, 2: TwoWay] */
+  lastMode: BakabaseModulesDataSyncDataSyncLinkMode;
+  /** [1: Active, 2: AwaitingAccess, 3: AwaitingReview, 4: WaitingForPeerReview, 5: Paused, 6: Stopped, 7: PeerTooOld, 8: ThisTooOld, 9: AccessRevoked, 10: PeerSharingOff, 11: PeerRemoteAccessOff] */
+  state: BakabaseModulesDataSyncDataSyncLinkState;
+  /** [1: ByUser, 2: AllPaused, 3: PeerReset, 4: PeerIdentityDuplicated, 5: MassDeletion, 6: KindEmptied, 7: LocalRestoreDetected, 8: TooManyDecisions, 9: LocalRestoreSuspected] */
+  pausedReason?: BakabaseModulesDataSyncDataSyncPauseReason;
+  pausedDetail?: string;
+  /** [1: ThisDevice, 2: Peer] */
+  initiator: BakabaseModulesDataSyncDataSyncLinkInitiator;
+  kinds: string[];
+  peerKinds?: string[];
+  /** @format date-time */
+  lastSyncedAt?: string;
+  /** @format date-time */
+  nextAttemptAt?: string;
+  lastErrorCode?: string;
+  lastErrorDetail?: string;
+  /** @format int32 */
+  openItems: number;
+  /** @format int32 */
+  pendingCount: number;
+  reviewId?: string;
+  peerAppVersion?: string;
+  /** @format int32 */
+  peerContractVersion?: number;
+  peerMayReadUs: boolean;
+  readBackDeclined: boolean;
+  peerModeTowardsUs?: string;
+  /** @format date-time */
+  peerLastReadAt?: string;
+  peerAttention?: BakabaseModulesDataSyncWireDataSyncSourceAttention;
+  /** @format int32 */
+  excludedCount: number;
+  /** @format int32 */
+  heldCount: number;
+  /** @format int32 */
+  missingAtPeerCount: number;
+  peerOnline: boolean;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncMapOutgoing {
+  /** @format int32 */
+  linkId: number;
+  nodeId: string;
+  nodeName: string;
+  address?: string;
+  /** [1: Active, 2: AwaitingAccess, 3: AwaitingReview, 4: WaitingForPeerReview, 5: Paused, 6: Stopped, 7: PeerTooOld, 8: ThisTooOld, 9: AccessRevoked, 10: PeerSharingOff, 11: PeerRemoteAccessOff] */
+  state: BakabaseModulesDataSyncDataSyncLinkState;
+  outcome?: string;
+  /** @format date-time */
+  expiresAt?: string;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncMapPeer {
+  nodeId: string;
+  name: string;
+  /** @format int32 */
+  linkId?: number;
+  /** [0: Off, 1: Follow, 2: TwoWay] */
+  mode: BakabaseModulesDataSyncDataSyncLinkMode;
+  /** [0: Off, 1: Follow, 2: TwoWay] */
+  lastMode: BakabaseModulesDataSyncDataSyncLinkMode;
+  /** [1: Active, 2: AwaitingAccess, 3: AwaitingReview, 4: WaitingForPeerReview, 5: Paused, 6: Stopped, 7: PeerTooOld, 8: ThisTooOld, 9: AccessRevoked, 10: PeerSharingOff, 11: PeerRemoteAccessOff] */
+  state?: BakabaseModulesDataSyncDataSyncLinkState;
+  /** [1: ByUser, 2: AllPaused, 3: PeerReset, 4: PeerIdentityDuplicated, 5: MassDeletion, 6: KindEmptied, 7: LocalRestoreDetected, 8: TooManyDecisions, 9: LocalRestoreSuspected] */
+  pausedReason?: BakabaseModulesDataSyncDataSyncPauseReason;
+  receiving: boolean;
+  receivingPending: boolean;
+  peerMayRead: boolean;
+  peerMode?: string;
+  peerKinds?: string[];
+  /** @format date-time */
+  peerLastReadAt?: string;
+  /** @format date-time */
+  lastSyncedAt?: string;
+  /** @format int32 */
+  openItems: number;
+  attention?: BakabaseModulesDataSyncWireDataSyncSourceAttention;
+  readBackDeclined: boolean;
+  lastErrorCode?: string;
+  kinds: string[];
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncMapRequest {
+  requestId: string;
+  nodeId: string;
+  nodeName: string;
+  remoteAddress?: string;
+  /** [1: Follow, 2: TwoWay] */
+  intent: BakabaseModulesDataSyncDataSyncRequestIntent;
+  /** @format date-time */
+  expiresAt: string;
+  claimsKnownDevice: boolean;
+  knownAddress?: string;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncMapView {
+  sharingEnabled: boolean;
+  /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
+  remoteAccessMode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+  peers: BakabaseModulesDataSyncServicesDataSyncMapPeer[];
+  requests: BakabaseModulesDataSyncServicesDataSyncMapRequest[];
+  outgoing: BakabaseModulesDataSyncServicesDataSyncMapOutgoing[];
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncOverview {
+  deviceName: string;
+  nodeId: string;
+  isHeadless: boolean;
+  sharingEnabled: boolean;
+  /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
+  remoteAccessMode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+  canManageSharing: boolean;
+  newDefinitionsStayLocal: boolean;
+  allPaused: boolean;
+  kinds: BakabaseModulesDataSyncServicesDataSyncKindCount[];
+  status: BakabaseModulesDataSyncServicesDataSyncStatusView;
+  activeTaskId?: string;
+  restorePending: boolean;
+  /** @format int32 */
+  openInboxItems: number;
+  /** @format int32 */
+  pendingRequests: number;
+  /** @format int64 */
+  databaseBytes: number;
+  backupPath: string;
+  reachableAddresses: string[];
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncPeerCandidate {
+  nodeId: string;
+  name: string;
+  address?: string;
+  known: boolean;
+  discovered: boolean;
+  /** @format int32 */
+  contractVersion?: number;
+  sharesDefinitions?: boolean;
+  weMayRead: boolean;
+  theyMayRead: boolean;
+  /** @format int32 */
+  linkId?: number;
+  connectionState?: string;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncProblem {
+  /** [1: Busy, 2: ApplyInProgress, 3: DecisionsInvalid, 4: PlanChanged, 5: UnknownItem, 6: UnknownKind, 7: ReviewExpired, 8: NothingToReview, 9: UndoNotAvailable, 10: PeerUnreachable, 11: AccessMissing, 12: AccessRevoked, 13: PeerSharingOff, 14: PeerTooOld, 15: ThisTooOld, 16: PeerReset, 17: LinkNotFound, 18: LinkExists, 19: SharingOff, 20: RequestNotFound, 21: InvitationInvalid, 22: InboxItemChanged, 23: InboxItemClosed, 24: BackupFailed, 25: NothingSelected, 26: NotAllowedOnThisDevice, 27: ResolveTogether, 28: RemoteAccessOff] */
+  code: BakabaseModulesDataSyncServicesDataSyncProblemCode;
+  detail?: string;
+}
+
+/**
+ * [1: Busy, 2: ApplyInProgress, 3: DecisionsInvalid, 4: PlanChanged, 5: UnknownItem, 6: UnknownKind, 7: ReviewExpired, 8: NothingToReview, 9: UndoNotAvailable, 10: PeerUnreachable, 11: AccessMissing, 12: AccessRevoked, 13: PeerSharingOff, 14: PeerTooOld, 15: ThisTooOld, 16: PeerReset, 17: LinkNotFound, 18: LinkExists, 19: SharingOff, 20: RequestNotFound, 21: InvitationInvalid, 22: InboxItemChanged, 23: InboxItemClosed, 24: BackupFailed, 25: NothingSelected, 26: NotAllowedOnThisDevice, 27: ResolveTogether, 28: RemoteAccessOff]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncServicesDataSyncProblemCode =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14
+  | 15
+  | 16
+  | 17
+  | 18
+  | 19
+  | 20
+  | 21
+  | 22
+  | 23
+  | 24
+  | 25
+  | 26
+  | 27
+  | 28;
+
+export interface BakabaseModulesDataSyncServicesDataSyncReaderView {
+  nodeId: string;
+  name: string;
+  /** @format date-time */
+  grantedAt?: string;
+  /** @format date-time */
+  lastReadAt?: string;
+  mode?: string;
+  state?: string;
+  upToDate: boolean;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncRequestResult {
+  createdLink?: BakabaseModulesDataSyncServicesDataSyncLinkView;
+  readBackGranted: boolean;
+  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncResolveBatchInput {
+  items: BakabaseModulesDataSyncServicesDataSyncResolveInput[];
+  backupBeforeDestructive: boolean;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncResolveInput {
+  /** @format int64 */
+  itemId: number;
+  /** [1: KeepLocal, 2: UseRemote, 3: UseCustom, 4: Detach, 5: DeleteHere, 6: KeepHereOnly, 7: RestoreEverywhere, 8: RestoreHere, 9: KeepDeleted, 10: Link, 11: KeepBoth, 12: Convert, 13: ApplyAll, 14: ReviewEach, 15: KeepWithEntity, 16: Publish, 17: Reapply, 18: Skip, 19: KeepRecordLinked] */
+  action: BakabaseModulesDataSyncDataSyncInboxAction;
+  token: string;
+  customValue?: string;
+  targetLocalKey?: string;
+  targetRecordKey?: string;
+  newName?: string;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncRestoreView {
+  pending: boolean;
+  /** [1: ByUser, 2: AllPaused, 3: PeerReset, 4: PeerIdentityDuplicated, 5: MassDeletion, 6: KindEmptied, 7: LocalRestoreDetected, 8: TooManyDecisions, 9: LocalRestoreSuspected] */
+  reason?: BakabaseModulesDataSyncDataSyncPauseReason;
+  /** @format date-time */
+  detectedAt?: string;
+  /** @format int32 */
+  pausedLinks: number;
+  detail?: string;
+  /** @format int32 */
+  linkId?: number;
+  evidenceFromName?: string;
+  backupPath: string;
+}
+
+/**
+ * [1: Resume, 2: ReviewDeletions, 3: ApplyAsUsual, 4: AskAccessAgain, 5: ThisDeviceWins, 6: TakeTheirs, 7: StartAnyway]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncServicesDataSyncResumeAction = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+export interface BakabaseModulesDataSyncServicesDataSyncReviewApplyInput {
+  decisions: BakabaseModulesDataSyncPlanningDataSyncPlanDecision[];
+  backupBeforeDestructive: boolean;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncReviewCancelResult {
+  /** [1: Staged, 2: Applying, 3: Applied, 4: Failed] */
+  state?: BakabaseModulesDataSyncDataSyncReviewState;
+  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncReviewResult {
+  reviewId?: string;
+  /** @format int32 */
+  linkId?: number;
+  copyOnce: boolean;
+  /** [0: Off, 1: Follow, 2: TwoWay] */
+  linkMode: BakabaseModulesDataSyncDataSyncLinkMode;
+  /** [1: Staged, 2: Applying, 3: Applied, 4: Failed] */
+  state?: BakabaseModulesDataSyncDataSyncReviewState;
+  source?: BakabaseModulesDataSyncServicesDataSyncReviewSource;
+  plan?: BakabaseModulesDataSyncPlanningDataSyncPlan;
+  /** @format int32 */
+  applyLogId?: number;
+  taskId?: string;
+  lastError?: string;
+  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncReviewSource {
+  nodeId: string;
+  name: string;
+  appVersion: string;
+  /** @format date-time */
+  fetchedAt: string;
+  kinds: BakabaseModulesDataSyncServicesDataSyncKindCount[];
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncSharingInput {
+  enabled: boolean;
+  enablePairedRemoteAccess: boolean;
+  newDefinitionsStayLocal?: boolean;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncStatusView {
+  /** [0: Off, 1: InStep, 2: Syncing, 3: NeedsYou, 4: Paused, 5: Offline, 6: Failed, 7: UpdateNeeded] */
+  level: BakabaseModulesDataSyncDataSyncStatusLevel;
+  /** @format int32 */
+  openItems: number;
+  /** @format int32 */
+  links: number;
+  /** @format int32 */
+  linksInStep: number;
+  /** @format int32 */
+  peersNeedingDecisions: number;
+  /** @format date-time */
+  lastSyncedAt?: string;
+  lastErrorCode?: string;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncTaskStart {
+  taskId?: string;
+  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
+}
+
+/**
+ * [1: Remove, 2: Revert, 3: RemoveAliases, 4: Recreate, 5: Exclude]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncServicesDataSyncUndoAction = 1 | 2 | 3 | 4 | 5;
+
+/**
+ * [1: ChangedSinceImport, 2: InUse, 3: AddedOptionsInUse, 4: Missing]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncServicesDataSyncUndoBlock = 1 | 2 | 3 | 4;
+
+export interface BakabaseModulesDataSyncServicesDataSyncUndoPreview {
+  canUndo: boolean;
+  items: BakabaseModulesDataSyncServicesDataSyncUndoPreviewItem[];
+  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
+  backupPath: string;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncUndoPreviewItem {
+  kind: string;
+  localKey: string;
+  name: string;
+  /** [1: Remove, 2: Revert, 3: RemoveAliases, 4: Recreate, 5: Exclude] */
+  action: BakabaseModulesDataSyncServicesDataSyncUndoAction;
+  /** [1: ChangedSinceImport, 2: InUse, 3: AddedOptionsInUse, 4: Missing] */
+  blocked?: BakabaseModulesDataSyncServicesDataSyncUndoBlock;
+  /** @format int32 */
+  valueCount?: number;
+  settingsMayReferenceIt: boolean;
+  recreatedGetsNewId: boolean;
+}
+
+/**
+ * [1: Available, 2: Undone, 3: Expired]
+ * @format int32
+ */
+export type BakabaseModulesDataSyncServicesDataSyncUndoState = 1 | 2 | 3;
+
+export interface BakabaseModulesDataSyncWireDataSyncSourceAttention {
+  headless: boolean;
+  /** @format int32 */
+  openDecisions: number;
+  /** @format int32 */
+  pausedLinks: number;
+  restorePending: boolean;
+  /** @format int32 */
+  awaitingReview: number;
+}
+
 export type BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter = object;
 
 export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor {
@@ -4326,6 +5374,8 @@ export interface BakabaseModulesFederationPeersFederationPeerView {
   kind?: BakabaseModulesRemoteAccessAbstractionsModelsServerKind;
   /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
   platform?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform;
+  inboundDataSyncGrant?: BakabaseModulesFederationPeersNodeGrantSummary;
+  outboundDataSyncGrant?: BakabaseModulesFederationPeersNodeGrantSummary;
 }
 
 export interface BakabaseModulesFederationPeersNodeCredentials {
@@ -4336,6 +5386,25 @@ export interface BakabaseModulesFederationPeersNodeCredentials {
   key: string;
   /** @format int64 */
   revision: number;
+}
+
+export interface BakabaseModulesFederationPeersNodeDataSyncPairCodeRequest {
+  nodeId: string;
+  nodeName: string;
+  code: string;
+  transactionId: string;
+  claimSecret: string;
+  intent: string;
+  reciprocal?: BakabaseModulesFederationPeersNodeReciprocalOffer;
+}
+
+export interface BakabaseModulesFederationPeersNodeDataSyncPairRequest {
+  nodeId: string;
+  nodeName: string;
+  transactionId: string;
+  claimSecret: string;
+  intent: string;
+  reciprocal?: BakabaseModulesFederationPeersNodeReciprocalOffer;
 }
 
 export interface BakabaseModulesFederationPeersNodeDiscoveryCandidate {
@@ -4362,6 +5431,7 @@ export interface BakabaseModulesFederationPeersNodeHandshakeResponse {
   info: BakabaseModulesFederationPeersNodeInfo;
   challenge: string;
   proof: string;
+  scope?: string;
 }
 
 export interface BakabaseModulesFederationPeersNodeInfo {
@@ -4381,6 +5451,12 @@ export interface BakabaseModulesFederationPeersNodeInfo {
   maxBatchSize: number;
   kind?: string;
   platform?: string;
+  /** @format int32 */
+  dataSyncContractVersion?: number;
+  /** @format int32 */
+  dataSyncMinimumPeerContract?: number;
+  dataSyncKinds?: string[];
+  sharesDefinitions?: boolean;
 }
 
 export interface BakabaseModulesFederationPeersNodeInvitation {
@@ -4410,6 +5486,7 @@ export interface BakabaseModulesFederationPeersNodePairExchange {
   /** @format date-time */
   expiresAt: string;
   credentials?: BakabaseModulesFederationPeersNodeCredentials;
+  readBack?: string;
 }
 
 export interface BakabaseModulesFederationPeersNodePairRequest {
@@ -5778,6 +6855,27 @@ export interface BakabaseServiceModelsInputCompressedFileDetectionInputModel {
   unknownFilesMinMb?: number;
 }
 
+export interface BakabaseServiceModelsInputDataSyncDataSyncLinkResumeInputModel {
+  /** [1: Resume, 2: ReviewDeletions, 3: ApplyAsUsual, 4: AskAccessAgain, 5: ThisDeviceWins, 6: TakeTheirs, 7: StartAnyway] */
+  action: BakabaseModulesDataSyncServicesDataSyncResumeAction;
+}
+
+export interface BakabaseServiceModelsInputDataSyncDataSyncPausedInputModel {
+  paused: boolean;
+}
+
+export interface BakabaseServiceModelsInputDataSyncDataSyncRestoreChoiceInputModel {
+  /** [1: ThisDeviceWins, 2: OthersWin] */
+  choice: BakabaseModulesDataSyncDataSyncRestoreChoice;
+  /** @format int32 */
+  linkId?: number;
+}
+
+export interface BakabaseServiceModelsInputDataSyncDataSyncSyncNowInputModel {
+  /** @format int32 */
+  linkId?: number;
+}
+
 export interface BakabaseServiceModelsInputDecompressionInputModel {
   onFailureContinue: boolean;
   items: BakabaseServiceModelsInputDecompressionInputModelItem[];
@@ -7126,6 +8224,48 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataCa
   data?: BakabaseModulesDataCardAbstractionsModelsDomainDataCard[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncAccessRequestView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncAccessRequestView[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncEntityStatusView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncEntityStatusView[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncHistoryEntry {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncHistoryEntry[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncLinkView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncLinkView[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncPeerCandidate {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncPeerCandidate[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncReaderView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncReaderView[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor {
   /** @format int32 */
   code: number;
@@ -8177,6 +9317,125 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesD
   code: number;
   message?: string;
   data?: BakabaseModulesDataCardAbstractionsModelsDomainDataCard;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncAbstractionsDataSyncTypeChangePreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncAbstractionsDataSyncTypeChangePreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncApplyStart {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncApplyStart;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncChangePage {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncChangePage;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncHistoryDetail {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncHistoryDetail;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInboxItemView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncInboxItemView;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInboxPage {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncInboxPage;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInvitationResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncInvitationResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncLinkResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncLinkResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncMapView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncMapView;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncOverview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncOverview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncProblem {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncProblem;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncRequestResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncRequestResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncRestoreView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncRestoreView;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncReviewCancelResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncReviewCancelResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncReviewResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncReviewResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncTaskStart {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncTaskStart;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncUndoPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncUndoPreview;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel {
@@ -16397,6 +17656,2525 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  dataSync = {
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncOverview
+     * @request GET:/data-sync/overview
+     */
+    getDataSyncOverview: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncOverview,
+        any
+      >({
+        path: `/data-sync/overview`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncOverview
+     * @name getDataSyncOverviewUrl
+     */
+    getDataSyncOverviewUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/overview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncMap
+     * @request GET:/data-sync/map
+     */
+    getDataSyncMap: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncMapView,
+        any
+      >({
+        path: `/data-sync/map`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncMap
+     * @name getDataSyncMapUrl
+     */
+    getDataSyncMapUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/map`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name SetDataSyncSharing
+     * @request PUT:/data-sync/sharing
+     */
+    setDataSyncSharing: (
+      data: BakabaseModulesDataSyncServicesDataSyncSharingInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncProblem,
+        any
+      >({
+        path: `/data-sync/sharing`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setDataSyncSharing
+     * @name setDataSyncSharingUrl
+     */
+    setDataSyncSharingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/sharing`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncPeers
+     * @request GET:/data-sync/peers
+     */
+    getDataSyncPeers: (
+      query?: {
+        discover?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncPeerCandidate,
+        any
+      >({
+        path: `/data-sync/peers`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncPeers
+     * @name getDataSyncPeersUrl
+     */
+    getDataSyncPeersUrl: (query?: {
+        discover?: boolean;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/peers`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncLinks
+     * @request GET:/data-sync/links
+     */
+    getDataSyncLinks: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncLinkView,
+        any
+      >({
+        path: `/data-sync/links`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncLinks
+     * @name getDataSyncLinksUrl
+     */
+    getDataSyncLinksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/links`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name CreateDataSyncLink
+     * @request POST:/data-sync/links
+     */
+    createDataSyncLink: (
+      data: BakabaseModulesDataSyncServicesDataSyncLinkCreateInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncLinkResult,
+        any
+      >({
+        path: `/data-sync/links`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createDataSyncLink
+     * @name createDataSyncLinkUrl
+     */
+    createDataSyncLinkUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/links`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name UpdateDataSyncLink
+     * @request PUT:/data-sync/links/{id}
+     */
+    updateDataSyncLink: (
+      id: number,
+      data: BakabaseModulesDataSyncServicesDataSyncLinkUpdateInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncLinkResult,
+        any
+      >({
+        path: `/data-sync/links/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name ResetDataSyncLink
+     * @request DELETE:/data-sync/links/{id}
+     */
+    resetDataSyncLink: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncProblem,
+        any
+      >({
+        path: `/data-sync/links/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name PauseDataSyncLink
+     * @request POST:/data-sync/links/{id}/pause
+     */
+    pauseDataSyncLink: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncLinkResult,
+        any
+      >({
+        path: `/data-sync/links/${id}/pause`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name ResumeDataSyncLink
+     * @request POST:/data-sync/links/{id}/resume
+     */
+    resumeDataSyncLink: (
+      id: number,
+      data: BakabaseServiceModelsInputDataSyncDataSyncLinkResumeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncLinkResult,
+        any
+      >({
+        path: `/data-sync/links/${id}/resume`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name SyncDataSyncNow
+     * @request POST:/data-sync/sync-now
+     */
+    syncDataSyncNow: (
+      data: BakabaseServiceModelsInputDataSyncDataSyncSyncNowInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncTaskStart,
+        any
+      >({
+        path: `/data-sync/sync-now`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for syncDataSyncNow
+     * @name syncDataSyncNowUrl
+     */
+    syncDataSyncNowUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/sync-now`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name SetDataSyncAllPaused
+     * @request PUT:/data-sync/paused
+     */
+    setDataSyncAllPaused: (
+      data: BakabaseServiceModelsInputDataSyncDataSyncPausedInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncProblem,
+        any
+      >({
+        path: `/data-sync/paused`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setDataSyncAllPaused
+     * @name setDataSyncAllPausedUrl
+     */
+    setDataSyncAllPausedUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/paused`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name ForgetDataSyncAccess
+     * @request DELETE:/data-sync/access/{nodeId}
+     */
+    forgetDataSyncAccess: (nodeId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncProblem,
+        any
+      >({
+        path: `/data-sync/access/${nodeId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name CreateDataSyncCopyOnce
+     * @request POST:/data-sync/copy-once
+     */
+    createDataSyncCopyOnce: (
+      data: BakabaseModulesDataSyncServicesDataSyncCopyOnceInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncReviewResult,
+        any
+      >({
+        path: `/data-sync/copy-once`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createDataSyncCopyOnce
+     * @name createDataSyncCopyOnceUrl
+     */
+    createDataSyncCopyOnceUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/copy-once`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncReview
+     * @request GET:/data-sync/reviews/{reviewId}
+     */
+    getDataSyncReview: (reviewId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncReviewResult,
+        any
+      >({
+        path: `/data-sync/reviews/${reviewId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name DiscardDataSyncReview
+     * @request DELETE:/data-sync/reviews/{reviewId}
+     */
+    discardDataSyncReview: (reviewId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/data-sync/reviews/${reviewId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name RefetchDataSyncReview
+     * @request POST:/data-sync/reviews/{reviewId}/refetch
+     */
+    refetchDataSyncReview: (reviewId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncReviewResult,
+        any
+      >({
+        path: `/data-sync/reviews/${reviewId}/refetch`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncReviewChanges
+     * @request GET:/data-sync/reviews/{reviewId}/changes
+     */
+    getDataSyncReviewChanges: (
+      reviewId: string,
+      query?: {
+        planId?: string;
+        itemId?: string;
+        candidate?: string;
+        /**
+         * @format int32
+         * @default 0
+         */
+        skip?: number;
+        /**
+         * @format int32
+         * @default 500
+         */
+        take?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncChangePage,
+        any
+      >({
+        path: `/data-sync/reviews/${reviewId}/changes`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name ApplyDataSyncReview
+     * @request POST:/data-sync/reviews/{reviewId}/apply
+     */
+    applyDataSyncReview: (
+      reviewId: string,
+      data: BakabaseModulesDataSyncServicesDataSyncReviewApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncApplyStart,
+        any
+      >({
+        path: `/data-sync/reviews/${reviewId}/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name CancelDataSyncReviewApply
+     * @request DELETE:/data-sync/reviews/{reviewId}/apply
+     */
+    cancelDataSyncReviewApply: (reviewId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncReviewCancelResult,
+        any
+      >({
+        path: `/data-sync/reviews/${reviewId}/apply`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncRequests
+     * @request GET:/data-sync/requests
+     */
+    getDataSyncRequests: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncAccessRequestView,
+        any
+      >({
+        path: `/data-sync/requests`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncRequests
+     * @name getDataSyncRequestsUrl
+     */
+    getDataSyncRequestsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/requests`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name ApproveDataSyncRequest
+     * @request POST:/data-sync/requests/{id}/approve
+     */
+    approveDataSyncRequest: (
+      id: string,
+      data: BakabaseModulesDataSyncServicesDataSyncApproveInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncRequestResult,
+        any
+      >({
+        path: `/data-sync/requests/${id}/approve`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name RejectDataSyncRequest
+     * @request POST:/data-sync/requests/{id}/reject
+     */
+    rejectDataSyncRequest: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncProblem,
+        any
+      >({
+        path: `/data-sync/requests/${id}/reject`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name CancelDataSyncRequest
+     * @request DELETE:/data-sync/requests/{id}
+     */
+    cancelDataSyncRequest: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncProblem,
+        any
+      >({
+        path: `/data-sync/requests/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncReaders
+     * @request GET:/data-sync/readers
+     */
+    getDataSyncReaders: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncReaderView,
+        any
+      >({
+        path: `/data-sync/readers`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncReaders
+     * @name getDataSyncReadersUrl
+     */
+    getDataSyncReadersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/readers`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name RevokeDataSyncReader
+     * @request DELETE:/data-sync/readers/{nodeId}
+     */
+    revokeDataSyncReader: (nodeId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncProblem,
+        any
+      >({
+        path: `/data-sync/readers/${nodeId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name CreateDataSyncInvitation
+     * @request POST:/data-sync/invitations
+     */
+    createDataSyncInvitation: (
+      data: BakabaseModulesDataSyncServicesDataSyncInvitationInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInvitationResult,
+        any
+      >({
+        path: `/data-sync/invitations`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createDataSyncInvitation
+     * @name createDataSyncInvitationUrl
+     */
+    createDataSyncInvitationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/invitations`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncInbox
+     * @request GET:/data-sync/inbox
+     */
+    getDataSyncInbox: (
+      query?: {
+        /** @default true */
+        openOnly?: boolean;
+        peerNodeId?: string;
+        kind?: string;
+        /**
+         * @format int32
+         * @default 0
+         */
+        skip?: number;
+        /**
+         * @format int32
+         * @default 100
+         */
+        take?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInboxPage,
+        any
+      >({
+        path: `/data-sync/inbox`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncInbox
+     * @name getDataSyncInboxUrl
+     */
+    getDataSyncInboxUrl: (query?: {
+        /** @default true */
+        openOnly?: boolean;
+        peerNodeId?: string;
+        kind?: string;
+        /**
+         * @format int32
+         * @default 0
+         */
+        skip?: number;
+        /**
+         * @format int32
+         * @default 100
+         */
+        take?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/inbox`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncInboxItem
+     * @request GET:/data-sync/inbox/{id}
+     */
+    getDataSyncInboxItem: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInboxItemView,
+        any
+      >({
+        path: `/data-sync/inbox/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name PreviewDataSyncInboxItem
+     * @request GET:/data-sync/inbox/{id}/preview
+     */
+    previewDataSyncInboxItem: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncAbstractionsDataSyncTypeChangePreview,
+        any
+      >({
+        path: `/data-sync/inbox/${id}/preview`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name ResolveDataSyncInbox
+     * @request POST:/data-sync/inbox/resolve
+     */
+    resolveDataSyncInbox: (
+      data: BakabaseModulesDataSyncServicesDataSyncResolveBatchInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncTaskStart,
+        any
+      >({
+        path: `/data-sync/inbox/resolve`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for resolveDataSyncInbox
+     * @name resolveDataSyncInboxUrl
+     */
+    resolveDataSyncInboxUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/inbox/resolve`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncEntities
+     * @request GET:/data-sync/entities
+     */
+    getDataSyncEntities: (
+      query?: {
+        kind?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncEntityStatusView,
+        any
+      >({
+        path: `/data-sync/entities`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncEntities
+     * @name getDataSyncEntitiesUrl
+     */
+    getDataSyncEntitiesUrl: (query?: {
+        kind?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/entities`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name SetDataSyncEntitySync
+     * @request PUT:/data-sync/entities/{kind}/{localKey}
+     */
+    setDataSyncEntitySync: (
+      kind: string,
+      localKey: string,
+      data: BakabaseModulesDataSyncServicesDataSyncEntitySyncInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncTaskStart,
+        any
+      >({
+        path: `/data-sync/entities/${kind}/${localKey}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncHistory
+     * @request GET:/data-sync/history
+     */
+    getDataSyncHistory: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSyncServicesDataSyncHistoryEntry,
+        any
+      >({
+        path: `/data-sync/history`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncHistory
+     * @name getDataSyncHistoryUrl
+     */
+    getDataSyncHistoryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/history`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncHistoryEntry
+     * @request GET:/data-sync/history/{id}
+     */
+    getDataSyncHistoryEntry: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncHistoryDetail,
+        any
+      >({
+        path: `/data-sync/history/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name PreviewDataSyncUndo
+     * @request GET:/data-sync/history/{id}/undo-preview
+     */
+    previewDataSyncUndo: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncUndoPreview,
+        any
+      >({
+        path: `/data-sync/history/${id}/undo-preview`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name UndoDataSync
+     * @request POST:/data-sync/history/{id}/undo
+     */
+    undoDataSync: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncTaskStart,
+        any
+      >({
+        path: `/data-sync/history/${id}/undo`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name GetDataSyncRestore
+     * @request GET:/data-sync/restore
+     */
+    getDataSyncRestore: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncRestoreView,
+        any
+      >({
+        path: `/data-sync/restore`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncRestore
+     * @name getDataSyncRestoreUrl
+     */
+    getDataSyncRestoreUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/restore`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name ChooseDataSyncRestore
+     * @request POST:/data-sync/restore
+     */
+    chooseDataSyncRestore: (
+      data: BakabaseServiceModelsInputDataSyncDataSyncRestoreChoiceInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncTaskStart,
+        any
+      >({
+        path: `/data-sync/restore`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for chooseDataSyncRestore
+     * @name chooseDataSyncRestoreUrl
+     */
+    chooseDataSyncRestoreUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/restore`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
+     * @name CancelDataSyncTask
+     * @request DELETE:/data-sync/tasks/{taskId}
+     */
+    cancelDataSyncTask: (taskId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncProblem,
+        any
+      >({
+        path: `/data-sync/tasks/${taskId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+  };
+  federation = {
+    /**
+     * No description
+     *
+     * @tags DataSyncNode
+     * @name GetFederationDataSyncHead
+     * @request GET:/federation/v1/export/datasync/head
+     */
+    getFederationDataSyncHead: (
+      query?: {
+        mode?: string;
+        since?: string;
+        actor?: string;
+        state?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/v1/export/datasync/head`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFederationDataSyncHead
+     * @name getFederationDataSyncHeadUrl
+     */
+    getFederationDataSyncHeadUrl: (query?: {
+        mode?: string;
+        since?: string;
+        actor?: string;
+        state?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/datasync/head`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSyncNode
+     * @name CreateFederationDataSyncSnapshot
+     * @request GET:/federation/v1/export/datasync/manifest
+     */
+    createFederationDataSyncSnapshot: (
+      query?: {
+        mode?: string;
+        since?: string;
+        actor?: string;
+        state?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/v1/export/datasync/manifest`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createFederationDataSyncSnapshot
+     * @name createFederationDataSyncSnapshotUrl
+     */
+    createFederationDataSyncSnapshotUrl: (query?: {
+        mode?: string;
+        since?: string;
+        actor?: string;
+        state?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/datasync/manifest`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSyncNode
+     * @name ReadFederationDataSyncChanges
+     * @request GET:/federation/v1/export/datasync/changes
+     */
+    readFederationDataSyncChanges: (
+      query?: {
+        snapshot?: string;
+        kind?: string;
+        /** @format int64 */
+        since?: number;
+        cursor?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/v1/export/datasync/changes`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for readFederationDataSyncChanges
+     * @name readFederationDataSyncChangesUrl
+     */
+    readFederationDataSyncChangesUrl: (query?: {
+        snapshot?: string;
+        kind?: string;
+        /** @format int64 */
+        since?: number;
+        cursor?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/datasync/changes`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationDataSyncPairing
+     * @name RequestFederationDataSyncPairing
+     * @request POST:/federation/v1/pair/datasync/request
+     */
+    requestFederationDataSyncPairing: (
+      data: BakabaseModulesFederationPeersNodeDataSyncPairRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
+        path: `/federation/v1/pair/datasync/request`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for requestFederationDataSyncPairing
+     * @name requestFederationDataSyncPairingUrl
+     */
+    requestFederationDataSyncPairingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/pair/datasync/request`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationDataSyncPairing
+     * @name ExchangeFederationDataSyncInvitation
+     * @request POST:/federation/v1/pair/datasync/code
+     */
+    exchangeFederationDataSyncInvitation: (
+      data: BakabaseModulesFederationPeersNodeDataSyncPairCodeRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
+        path: `/federation/v1/pair/datasync/code`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for exchangeFederationDataSyncInvitation
+     * @name exchangeFederationDataSyncInvitationUrl
+     */
+    exchangeFederationDataSyncInvitationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/pair/datasync/code`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationDataSyncPairing
+     * @name ClaimFederationDataSyncNodeGrant
+     * @request POST:/federation/v1/pair/datasync/claim
+     */
+    claimFederationDataSyncNodeGrant: (
+      data: BakabaseModulesFederationPeersNodePairClaimRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
+        path: `/federation/v1/pair/datasync/claim`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for claimFederationDataSyncNodeGrant
+     * @name claimFederationDataSyncNodeGrantUrl
+     */
+    claimFederationDataSyncNodeGrantUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/pair/datasync/claim`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name CreateFederationExportQuery
+     * @request POST:/federation/v1/export/queries
+     */
+    createFederationExportQuery: (
+      data: BakabaseModulesFederationContractsNodeExportQuery,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationContractsNodeQueryBlock, any>({
+        path: `/federation/v1/export/queries`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createFederationExportQuery
+     * @name createFederationExportQueryUrl
+     */
+    createFederationExportQueryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/queries`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name ReadFederationExportQuery
+     * @request GET:/federation/v1/export/queries/{id}/pages
+     */
+    readFederationExportQuery: (
+      id: string,
+      query?: {
+        cursor?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationContractsNodeQueryBlock, any>({
+        path: `/federation/v1/export/queries/${id}/pages`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name ValidateFederationExportQuery
+     * @request POST:/federation/v1/export/queries/{id}/validate
+     */
+    validateFederationExportQuery: (id: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/v1/export/queries/${id}/validate`,
+        method: "POST",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name ReleaseFederationExportQuery
+     * @request DELETE:/federation/v1/export/queries/{id}
+     */
+    releaseFederationExportQuery: (id: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/v1/export/queries/${id}`,
+        method: "DELETE",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name ResolveFederationExportResources
+     * @request POST:/federation/v1/export/resources/resolve
+     */
+    resolveFederationExportResources: (
+      data: BakabaseModulesFederationMediaResourceResolveRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaResourceResolveResponse, any>({
+        path: `/federation/v1/export/resources/resolve`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for resolveFederationExportResources
+     * @name resolveFederationExportResourcesUrl
+     */
+    resolveFederationExportResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/resources/resolve`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name LocateFederationExportResource
+     * @request POST:/federation/v1/export/resources/location
+     */
+    locateFederationExportResource: (
+      data: BakabaseModulesFederationMediaResourceLocationRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaResourceLocationResponse, any>({
+        path: `/federation/v1/export/resources/location`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for locateFederationExportResource
+     * @name locateFederationExportResourceUrl
+     */
+    locateFederationExportResourceUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/resources/location`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name GetFederationExportMappingRoots
+     * @request GET:/federation/v1/export/mapping-roots
+     */
+    getFederationExportMappingRoots: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesFederationMediaMappingRoot[], any>({
+        path: `/federation/v1/export/mapping-roots`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFederationExportMappingRoots
+     * @name getFederationExportMappingRootsUrl
+     */
+    getFederationExportMappingRootsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/mapping-roots`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name ReadFederationExportAsset
+     * @request GET:/federation/v1/export/assets/{assetId}
+     */
+    readFederationExportAsset: (assetId: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/v1/export/assets/${assetId}`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
+     * @name InspectFederationExportAsset
+     * @request HEAD:/federation/v1/export/assets/{assetId}
+     */
+    inspectFederationExportAsset: (assetId: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/v1/export/assets/${assetId}`,
+        method: "HEAD",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationLocal
+     * @name CreateFederatedLibraryQuery
+     * @request POST:/federation/local/queries
+     */
+    createFederatedLibraryQuery: (
+      data: BakabaseModulesFederationContractsLocalFederatedQuery,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationContractsFederatedQueryPage, any>({
+        path: `/federation/local/queries`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createFederatedLibraryQuery
+     * @name createFederatedLibraryQueryUrl
+     */
+    createFederatedLibraryQueryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/queries`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationLocal
+     * @name ReadFederatedLibraryQuery
+     * @request GET:/federation/local/queries/{id}/pages
+     */
+    readFederatedLibraryQuery: (
+      id: string,
+      query?: {
+        cursor?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationContractsFederatedQueryPage, any>({
+        path: `/federation/local/queries/${id}/pages`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationLocal
+     * @name ReleaseFederatedLibraryQuery
+     * @request DELETE:/federation/local/queries/{id}
+     */
+    releaseFederatedLibraryQuery: (id: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/local/queries/${id}`,
+        method: "DELETE",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationMedia
+     * @name ResolveFederatedResources
+     * @request POST:/federation/local/resources/resolve
+     */
+    resolveFederatedResources: (
+      data: BakabaseModulesFederationMediaResourceResolveRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaResourceResolveResponse, any>({
+        path: `/federation/local/resources/resolve`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for resolveFederatedResources
+     * @name resolveFederatedResourcesUrl
+     */
+    resolveFederatedResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/resources/resolve`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationMedia
+     * @name OpenFederatedResourceDirectory
+     * @request POST:/federation/local/resources/open-directory
+     */
+    openFederatedResourceDirectory: (
+      data: BakabaseModulesFederationMediaOpenResourceDirectoryRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaOpenResourceDirectoryResponse, any>({
+        path: `/federation/local/resources/open-directory`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for openFederatedResourceDirectory
+     * @name openFederatedResourceDirectoryUrl
+     */
+    openFederatedResourceDirectoryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/resources/open-directory`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationMedia
+     * @name CreateFederatedPlaybackSession
+     * @request POST:/federation/local/playback-sessions
+     */
+    createFederatedPlaybackSession: (
+      data: BakabaseModulesFederationMediaPlaybackSessionRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaPlaybackSessionResponse, any>({
+        path: `/federation/local/playback-sessions`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createFederatedPlaybackSession
+     * @name createFederatedPlaybackSessionUrl
+     */
+    createFederatedPlaybackSessionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/playback-sessions`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationMedia
+     * @name ReadFederatedMediaSession
+     * @request GET:/federation/local/media/{ticketId}
+     */
+    readFederatedMediaSession: (ticketId: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/local/media/${ticketId}`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationMedia
+     * @name InspectFederatedMediaSession
+     * @request HEAD:/federation/local/media/{ticketId}
+     */
+    inspectFederatedMediaSession: (ticketId: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/federation/local/media/${ticketId}`,
+        method: "HEAD",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name GetFederationPeers
+     * @request GET:/federation/local/peers
+     */
+    getFederationPeers: (params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerStatusResponse, any>({
+        path: `/federation/local/peers`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFederationPeers
+     * @name getFederationPeersUrl
+     */
+    getFederationPeersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name SetFederationBrowsing
+     * @request PUT:/federation/local/peers/browsing
+     */
+    setFederationBrowsing: (
+      data: BakabaseServiceControllersFederationBrowsingRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/browsing`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setFederationBrowsing
+     * @name setFederationBrowsingUrl
+     */
+    setFederationBrowsingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/browsing`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name SetFederationSharing
+     * @request PUT:/federation/local/peers/sharing
+     */
+    setFederationSharing: (
+      data: BakabaseServiceControllersFederationSharingRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/sharing`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setFederationSharing
+     * @name setFederationSharingUrl
+     */
+    setFederationSharingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/sharing`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name SetFederationDeviceName
+     * @request PUT:/federation/local/peers/name
+     */
+    setFederationDeviceName: (
+      data: BakabaseServiceControllersFederationDeviceNameRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/name`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setFederationDeviceName
+     * @name setFederationDeviceNameUrl
+     */
+    setFederationDeviceNameUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/name`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name CreateFederationInvitation
+     * @request POST:/federation/local/peers/invite
+     */
+    createFederationInvitation: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesFederationPeersNodeInvitation, any>({
+        path: `/federation/local/peers/invite`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createFederationInvitation
+     * @name createFederationInvitationUrl
+     */
+    createFederationInvitationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/invite`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name DiscoverFederationPeers
+     * @request GET:/federation/local/peers/discover
+     */
+    discoverFederationPeers: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesFederationPeersNodeDiscoveryCandidate[], any>({
+        path: `/federation/local/peers/discover`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for discoverFederationPeers
+     * @name discoverFederationPeersUrl
+     */
+    discoverFederationPeersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/discover`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ConnectFederationPeer
+     * @request POST:/federation/local/peers/connect
+     */
+    connectFederationPeer: (
+      data: BakabaseServiceControllersFederationConnectRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairingOutcome, any>({
+        path: `/federation/local/peers/connect`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for connectFederationPeer
+     * @name connectFederationPeerUrl
+     */
+    connectFederationPeerUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/connect`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ClaimFederationPairing
+     * @request POST:/federation/local/peers/claim
+     */
+    claimFederationPairing: (
+      data: BakabaseServiceControllersFederationClaimRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairingOutcome, any>({
+        path: `/federation/local/peers/claim`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for claimFederationPairing
+     * @name claimFederationPairingUrl
+     */
+    claimFederationPairingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/claim`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ApproveFederationPairing
+     * @request POST:/federation/local/peers/requests/{id}/approve
+     */
+    approveFederationPairing: (id: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/requests/${id}/approve`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name RejectFederationPairing
+     * @request POST:/federation/local/peers/requests/{id}/reject
+     */
+    rejectFederationPairing: (id: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/requests/${id}/reject`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name CancelFederationPairing
+     * @request DELETE:/federation/local/peers/requests/{id}
+     */
+    cancelFederationPairing: (id: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/requests/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name RevokeFederationGrant
+     * @request DELETE:/federation/local/peers/grants/{grantId}
+     */
+    revokeFederationGrant: (grantId: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/grants/${grantId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name RemoveFederationPeer
+     * @request DELETE:/federation/local/peers/{nodeId}
+     */
+    removeFederationPeer: (nodeId: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/${nodeId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ForgetFederationPeer
+     * @request DELETE:/federation/local/peers/{nodeId}/outbound
+     */
+    forgetFederationPeer: (nodeId: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/${nodeId}/outbound`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name SetFederationPeerEnabled
+     * @request PUT:/federation/local/peers/{nodeId}/enabled
+     */
+    setFederationPeerEnabled: (
+      nodeId: string,
+      data: BakabaseServiceControllersFederationPeerEnabledRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/${nodeId}/enabled`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name SetFederationPathMappings
+     * @request PUT:/federation/local/peers/{nodeId}/path-mappings
+     */
+    setFederationPathMappings: (
+      nodeId: string,
+      data: BakabaseServiceControllersFederationPathMappingsRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/peers/${nodeId}/path-mappings`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name GetFederationMappingRoots
+     * @request GET:/federation/local/peers/{nodeId}/mapping-roots
+     */
+    getFederationMappingRoots: (nodeId: string, params: RequestParams = {}) =>
+      this.request<BakabaseModulesFederationMediaMappingRoot[], any>({
+        path: `/federation/local/peers/${nodeId}/mapping-roots`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ResetFederationIdentity
+     * @request POST:/federation/local/peers/identity/reset
+     */
+    resetFederationIdentity: (
+      data: BakabaseServiceControllersFederationIdentityResetRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationIdentityNodeIdentity, any>({
+        path: `/federation/local/peers/identity/reset`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for resetFederationIdentity
+     * @name resetFederationIdentityUrl
+     */
+    resetFederationIdentityUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/peers/identity/reset`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name GetFederationNodeInfo
+     * @request GET:/federation/v1/info
+     */
+    getFederationNodeInfo: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesFederationPeersNodeInfo, any>({
+        path: `/federation/v1/info`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFederationNodeInfo
+     * @name getFederationNodeInfoUrl
+     */
+    getFederationNodeInfoUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/info`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ExchangeFederationInvitation
+     * @request POST:/federation/v1/pair/code
+     */
+    exchangeFederationInvitation: (
+      data: BakabaseModulesFederationPeersNodePairCodeRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
+        path: `/federation/v1/pair/code`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for exchangeFederationInvitation
+     * @name exchangeFederationInvitationUrl
+     */
+    exchangeFederationInvitationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/pair/code`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name RequestFederationPairing
+     * @request POST:/federation/v1/pair/request
+     */
+    requestFederationPairing: (
+      data: BakabaseModulesFederationPeersNodePairRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
+        path: `/federation/v1/pair/request`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for requestFederationPairing
+     * @name requestFederationPairingUrl
+     */
+    requestFederationPairingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/pair/request`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name ClaimFederationNodeGrant
+     * @request POST:/federation/v1/pair/claim
+     */
+    claimFederationNodeGrant: (
+      data: BakabaseModulesFederationPeersNodePairClaimRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
+        path: `/federation/v1/pair/claim`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for claimFederationNodeGrant
+     * @name claimFederationNodeGrantUrl
+     */
+    claimFederationNodeGrantUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/pair/claim`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name VerifyFederationNode
+     * @request POST:/federation/v1/export/handshake
+     */
+    verifyFederationNode: (
+      data: BakabaseModulesFederationPeersNodeHandshakeRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationPeersNodeHandshakeResponse, any>({
+        path: `/federation/v1/export/handshake`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for verifyFederationNode
+     * @name verifyFederationNodeUrl
+     */
+    verifyFederationNodeUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/handshake`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name GetManagedServers
+     * @request GET:/federation/local/servers
+     */
+    getManagedServers: (
+      query?: {
+        probe?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView, any>({
+        path: `/federation/local/servers`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getManagedServers
+     * @name getManagedServersUrl
+     */
+    getManagedServersUrl: (query?: {
+        probe?: boolean;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/servers`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name DiscoverManagedServers
+     * @request GET:/federation/local/servers/discover
+     */
+    discoverManagedServers: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerDiscoveryView, any>({
+        path: `/federation/local/servers/discover`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for discoverManagedServers
+     * @name discoverManagedServersUrl
+     */
+    discoverManagedServersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/servers/discover`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name ProbeManagedServer
+     * @request POST:/federation/local/servers/probe
+     */
+    probeManagedServer: (
+      data: BakabaseServiceControllersManagedServerAddressRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerProbeView, any>({
+        path: `/federation/local/servers/probe`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for probeManagedServer
+     * @name probeManagedServerUrl
+     */
+    probeManagedServerUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/servers/probe`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name PairManagedServer
+     * @request POST:/federation/local/servers/pair
+     */
+    pairManagedServer: (
+      data: BakabaseServiceControllersManagedServerPairRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPairingView, any>({
+        path: `/federation/local/servers/pair`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for pairManagedServer
+     * @name pairManagedServerUrl
+     */
+    pairManagedServerUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/servers/pair`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name CancelManagedServerRequest
+     * @request DELETE:/federation/local/servers/requests/{requestId}
+     */
+    cancelManagedServerRequest: (requestId: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/servers/requests/${requestId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name ForgetManagedServer
+     * @request DELETE:/federation/local/servers/{serverId}
+     */
+    forgetManagedServer: (serverId: string, params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/servers/${serverId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name SetManagedServerPathMappings
+     * @request PUT:/federation/local/servers/{serverId}/path-mappings
+     */
+    setManagedServerPathMappings: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedServerPathMappingsRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersFederationPeerChange, any>({
+        path: `/federation/local/servers/${serverId}/path-mappings`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name OpenManagedServer
+     * @request POST:/federation/local/servers/{serverId}/open
+     */
+    openManagedServer: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedServerOpenRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOpenView, any>({
+        path: `/federation/local/servers/${serverId}/open`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationServer
+     * @name ImportLegacyClientServers
+     * @request POST:/federation/local/servers/import-legacy-client
+     */
+    importLegacyClientServers: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerImportView, any>({
+        path: `/federation/local/servers/import-legacy-client`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for importLegacyClientServers
+     * @name importLegacyClientServersUrl
+     */
+    importLegacyClientServersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/servers/import-legacy-client`;
+
+      return baseUrl + path;
+    },
+  };
   dlsiteWork = {
     /**
      * No description
@@ -17848,1185 +21626,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
-  };
-  federation = {
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name CreateFederationExportQuery
-     * @request POST:/federation/v1/export/queries
-     */
-    createFederationExportQuery: (
-      data: BakabaseModulesFederationContractsNodeExportQuery,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationContractsNodeQueryBlock, any>({
-        path: `/federation/v1/export/queries`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createFederationExportQuery
-     * @name createFederationExportQueryUrl
-     */
-    createFederationExportQueryUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/export/queries`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name ReadFederationExportQuery
-     * @request GET:/federation/v1/export/queries/{id}/pages
-     */
-    readFederationExportQuery: (
-      id: string,
-      query?: {
-        cursor?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationContractsNodeQueryBlock, any>({
-        path: `/federation/v1/export/queries/${id}/pages`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name ValidateFederationExportQuery
-     * @request POST:/federation/v1/export/queries/{id}/validate
-     */
-    validateFederationExportQuery: (id: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/v1/export/queries/${id}/validate`,
-        method: "POST",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name ReleaseFederationExportQuery
-     * @request DELETE:/federation/v1/export/queries/{id}
-     */
-    releaseFederationExportQuery: (id: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/v1/export/queries/${id}`,
-        method: "DELETE",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name ResolveFederationExportResources
-     * @request POST:/federation/v1/export/resources/resolve
-     */
-    resolveFederationExportResources: (
-      data: BakabaseModulesFederationMediaResourceResolveRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationMediaResourceResolveResponse, any>({
-        path: `/federation/v1/export/resources/resolve`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for resolveFederationExportResources
-     * @name resolveFederationExportResourcesUrl
-     */
-    resolveFederationExportResourcesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/export/resources/resolve`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name LocateFederationExportResource
-     * @request POST:/federation/v1/export/resources/location
-     */
-    locateFederationExportResource: (
-      data: BakabaseModulesFederationMediaResourceLocationRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationMediaResourceLocationResponse, any>({
-        path: `/federation/v1/export/resources/location`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for locateFederationExportResource
-     * @name locateFederationExportResourceUrl
-     */
-    locateFederationExportResourceUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/export/resources/location`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name GetFederationExportMappingRoots
-     * @request GET:/federation/v1/export/mapping-roots
-     */
-    getFederationExportMappingRoots: (params: RequestParams = {}) =>
-      this.request<BakabaseModulesFederationMediaMappingRoot[], any>({
-        path: `/federation/v1/export/mapping-roots`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getFederationExportMappingRoots
-     * @name getFederationExportMappingRootsUrl
-     */
-    getFederationExportMappingRootsUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/export/mapping-roots`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name ReadFederationExportAsset
-     * @request GET:/federation/v1/export/assets/{assetId}
-     */
-    readFederationExportAsset: (assetId: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/v1/export/assets/${assetId}`,
-        method: "GET",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name InspectFederationExportAsset
-     * @request HEAD:/federation/v1/export/assets/{assetId}
-     */
-    inspectFederationExportAsset: (assetId: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/v1/export/assets/${assetId}`,
-        method: "HEAD",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationLocal
-     * @name CreateFederatedLibraryQuery
-     * @request POST:/federation/local/queries
-     */
-    createFederatedLibraryQuery: (
-      data: BakabaseModulesFederationContractsLocalFederatedQuery,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationContractsFederatedQueryPage, any>({
-        path: `/federation/local/queries`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createFederatedLibraryQuery
-     * @name createFederatedLibraryQueryUrl
-     */
-    createFederatedLibraryQueryUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/queries`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationLocal
-     * @name ReadFederatedLibraryQuery
-     * @request GET:/federation/local/queries/{id}/pages
-     */
-    readFederatedLibraryQuery: (
-      id: string,
-      query?: {
-        cursor?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationContractsFederatedQueryPage, any>({
-        path: `/federation/local/queries/${id}/pages`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationLocal
-     * @name ReleaseFederatedLibraryQuery
-     * @request DELETE:/federation/local/queries/{id}
-     */
-    releaseFederatedLibraryQuery: (id: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/local/queries/${id}`,
-        method: "DELETE",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationMedia
-     * @name ResolveFederatedResources
-     * @request POST:/federation/local/resources/resolve
-     */
-    resolveFederatedResources: (
-      data: BakabaseModulesFederationMediaResourceResolveRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationMediaResourceResolveResponse, any>({
-        path: `/federation/local/resources/resolve`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for resolveFederatedResources
-     * @name resolveFederatedResourcesUrl
-     */
-    resolveFederatedResourcesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/resources/resolve`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationMedia
-     * @name OpenFederatedResourceDirectory
-     * @request POST:/federation/local/resources/open-directory
-     */
-    openFederatedResourceDirectory: (
-      data: BakabaseModulesFederationMediaOpenResourceDirectoryRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationMediaOpenResourceDirectoryResponse, any>({
-        path: `/federation/local/resources/open-directory`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for openFederatedResourceDirectory
-     * @name openFederatedResourceDirectoryUrl
-     */
-    openFederatedResourceDirectoryUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/resources/open-directory`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationMedia
-     * @name CreateFederatedPlaybackSession
-     * @request POST:/federation/local/playback-sessions
-     */
-    createFederatedPlaybackSession: (
-      data: BakabaseModulesFederationMediaPlaybackSessionRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationMediaPlaybackSessionResponse, any>({
-        path: `/federation/local/playback-sessions`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createFederatedPlaybackSession
-     * @name createFederatedPlaybackSessionUrl
-     */
-    createFederatedPlaybackSessionUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/playback-sessions`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationMedia
-     * @name ReadFederatedMediaSession
-     * @request GET:/federation/local/media/{ticketId}
-     */
-    readFederatedMediaSession: (ticketId: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/local/media/${ticketId}`,
-        method: "GET",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationMedia
-     * @name InspectFederatedMediaSession
-     * @request HEAD:/federation/local/media/{ticketId}
-     */
-    inspectFederatedMediaSession: (ticketId: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/local/media/${ticketId}`,
-        method: "HEAD",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name GetFederationPeers
-     * @request GET:/federation/local/peers
-     */
-    getFederationPeers: (params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerStatusResponse, any>({
-        path: `/federation/local/peers`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getFederationPeers
-     * @name getFederationPeersUrl
-     */
-    getFederationPeersUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name SetFederationBrowsing
-     * @request PUT:/federation/local/peers/browsing
-     */
-    setFederationBrowsing: (
-      data: BakabaseServiceControllersFederationBrowsingRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/browsing`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for setFederationBrowsing
-     * @name setFederationBrowsingUrl
-     */
-    setFederationBrowsingUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/browsing`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name SetFederationSharing
-     * @request PUT:/federation/local/peers/sharing
-     */
-    setFederationSharing: (
-      data: BakabaseServiceControllersFederationSharingRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/sharing`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for setFederationSharing
-     * @name setFederationSharingUrl
-     */
-    setFederationSharingUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/sharing`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name SetFederationDeviceName
-     * @request PUT:/federation/local/peers/name
-     */
-    setFederationDeviceName: (
-      data: BakabaseServiceControllersFederationDeviceNameRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/name`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for setFederationDeviceName
-     * @name setFederationDeviceNameUrl
-     */
-    setFederationDeviceNameUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/name`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name CreateFederationInvitation
-     * @request POST:/federation/local/peers/invite
-     */
-    createFederationInvitation: (params: RequestParams = {}) =>
-      this.request<BakabaseModulesFederationPeersNodeInvitation, any>({
-        path: `/federation/local/peers/invite`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createFederationInvitation
-     * @name createFederationInvitationUrl
-     */
-    createFederationInvitationUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/invite`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name DiscoverFederationPeers
-     * @request GET:/federation/local/peers/discover
-     */
-    discoverFederationPeers: (params: RequestParams = {}) =>
-      this.request<BakabaseModulesFederationPeersNodeDiscoveryCandidate[], any>({
-        path: `/federation/local/peers/discover`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for discoverFederationPeers
-     * @name discoverFederationPeersUrl
-     */
-    discoverFederationPeersUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/discover`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ConnectFederationPeer
-     * @request POST:/federation/local/peers/connect
-     */
-    connectFederationPeer: (
-      data: BakabaseServiceControllersFederationConnectRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationPeersNodePairingOutcome, any>({
-        path: `/federation/local/peers/connect`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for connectFederationPeer
-     * @name connectFederationPeerUrl
-     */
-    connectFederationPeerUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/connect`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ClaimFederationPairing
-     * @request POST:/federation/local/peers/claim
-     */
-    claimFederationPairing: (
-      data: BakabaseServiceControllersFederationClaimRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationPeersNodePairingOutcome, any>({
-        path: `/federation/local/peers/claim`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for claimFederationPairing
-     * @name claimFederationPairingUrl
-     */
-    claimFederationPairingUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/claim`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ApproveFederationPairing
-     * @request POST:/federation/local/peers/requests/{id}/approve
-     */
-    approveFederationPairing: (id: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/requests/${id}/approve`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name RejectFederationPairing
-     * @request POST:/federation/local/peers/requests/{id}/reject
-     */
-    rejectFederationPairing: (id: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/requests/${id}/reject`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name CancelFederationPairing
-     * @request DELETE:/federation/local/peers/requests/{id}
-     */
-    cancelFederationPairing: (id: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/requests/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name RevokeFederationGrant
-     * @request DELETE:/federation/local/peers/grants/{grantId}
-     */
-    revokeFederationGrant: (grantId: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/grants/${grantId}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name RemoveFederationPeer
-     * @request DELETE:/federation/local/peers/{nodeId}
-     */
-    removeFederationPeer: (nodeId: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/${nodeId}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ForgetFederationPeer
-     * @request DELETE:/federation/local/peers/{nodeId}/outbound
-     */
-    forgetFederationPeer: (nodeId: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/${nodeId}/outbound`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name SetFederationPeerEnabled
-     * @request PUT:/federation/local/peers/{nodeId}/enabled
-     */
-    setFederationPeerEnabled: (
-      nodeId: string,
-      data: BakabaseServiceControllersFederationPeerEnabledRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/${nodeId}/enabled`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name SetFederationPathMappings
-     * @request PUT:/federation/local/peers/{nodeId}/path-mappings
-     */
-    setFederationPathMappings: (
-      nodeId: string,
-      data: BakabaseServiceControllersFederationPathMappingsRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/${nodeId}/path-mappings`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name GetFederationMappingRoots
-     * @request GET:/federation/local/peers/{nodeId}/mapping-roots
-     */
-    getFederationMappingRoots: (nodeId: string, params: RequestParams = {}) =>
-      this.request<BakabaseModulesFederationMediaMappingRoot[], any>({
-        path: `/federation/local/peers/${nodeId}/mapping-roots`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ResetFederationIdentity
-     * @request POST:/federation/local/peers/identity/reset
-     */
-    resetFederationIdentity: (
-      data: BakabaseServiceControllersFederationIdentityResetRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationIdentityNodeIdentity, any>({
-        path: `/federation/local/peers/identity/reset`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for resetFederationIdentity
-     * @name resetFederationIdentityUrl
-     */
-    resetFederationIdentityUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/identity/reset`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name GetFederationNodeInfo
-     * @request GET:/federation/v1/info
-     */
-    getFederationNodeInfo: (params: RequestParams = {}) =>
-      this.request<BakabaseModulesFederationPeersNodeInfo, any>({
-        path: `/federation/v1/info`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getFederationNodeInfo
-     * @name getFederationNodeInfoUrl
-     */
-    getFederationNodeInfoUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/info`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ExchangeFederationInvitation
-     * @request POST:/federation/v1/pair/code
-     */
-    exchangeFederationInvitation: (
-      data: BakabaseModulesFederationPeersNodePairCodeRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
-        path: `/federation/v1/pair/code`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for exchangeFederationInvitation
-     * @name exchangeFederationInvitationUrl
-     */
-    exchangeFederationInvitationUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/pair/code`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name RequestFederationPairing
-     * @request POST:/federation/v1/pair/request
-     */
-    requestFederationPairing: (
-      data: BakabaseModulesFederationPeersNodePairRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
-        path: `/federation/v1/pair/request`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for requestFederationPairing
-     * @name requestFederationPairingUrl
-     */
-    requestFederationPairingUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/pair/request`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ClaimFederationNodeGrant
-     * @request POST:/federation/v1/pair/claim
-     */
-    claimFederationNodeGrant: (
-      data: BakabaseModulesFederationPeersNodePairClaimRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
-        path: `/federation/v1/pair/claim`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for claimFederationNodeGrant
-     * @name claimFederationNodeGrantUrl
-     */
-    claimFederationNodeGrantUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/pair/claim`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name VerifyFederationNode
-     * @request POST:/federation/v1/export/handshake
-     */
-    verifyFederationNode: (
-      data: BakabaseModulesFederationPeersNodeHandshakeRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationPeersNodeHandshakeResponse, any>({
-        path: `/federation/v1/export/handshake`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for verifyFederationNode
-     * @name verifyFederationNodeUrl
-     */
-    verifyFederationNodeUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/export/handshake`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationServer
-     * @name GetManagedServers
-     * @request GET:/federation/local/servers
-     */
-    getManagedServers: (
-      query?: {
-        probe?: boolean;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView, any>({
-        path: `/federation/local/servers`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getManagedServers
-     * @name getManagedServersUrl
-     */
-    getManagedServersUrl: (query?: {
-        probe?: boolean;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/servers`;
-
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationServer
-     * @name DiscoverManagedServers
-     * @request GET:/federation/local/servers/discover
-     */
-    discoverManagedServers: (params: RequestParams = {}) =>
-      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerDiscoveryView, any>({
-        path: `/federation/local/servers/discover`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for discoverManagedServers
-     * @name discoverManagedServersUrl
-     */
-    discoverManagedServersUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/servers/discover`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationServer
-     * @name ProbeManagedServer
-     * @request POST:/federation/local/servers/probe
-     */
-    probeManagedServer: (
-      data: BakabaseServiceControllersManagedServerAddressRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerProbeView, any>({
-        path: `/federation/local/servers/probe`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for probeManagedServer
-     * @name probeManagedServerUrl
-     */
-    probeManagedServerUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/servers/probe`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationServer
-     * @name PairManagedServer
-     * @request POST:/federation/local/servers/pair
-     */
-    pairManagedServer: (
-      data: BakabaseServiceControllersManagedServerPairRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPairingView, any>({
-        path: `/federation/local/servers/pair`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for pairManagedServer
-     * @name pairManagedServerUrl
-     */
-    pairManagedServerUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/servers/pair`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationServer
-     * @name CancelManagedServerRequest
-     * @request DELETE:/federation/local/servers/requests/{requestId}
-     */
-    cancelManagedServerRequest: (requestId: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/servers/requests/${requestId}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationServer
-     * @name ForgetManagedServer
-     * @request DELETE:/federation/local/servers/{serverId}
-     */
-    forgetManagedServer: (serverId: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/servers/${serverId}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationServer
-     * @name SetManagedServerPathMappings
-     * @request PUT:/federation/local/servers/{serverId}/path-mappings
-     */
-    setManagedServerPathMappings: (
-      serverId: string,
-      data: BakabaseServiceControllersManagedServerPathMappingsRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/servers/${serverId}/path-mappings`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationServer
-     * @name OpenManagedServer
-     * @request POST:/federation/local/servers/{serverId}/open
-     */
-    openManagedServer: (
-      serverId: string,
-      data: BakabaseServiceControllersManagedServerOpenRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOpenView, any>({
-        path: `/federation/local/servers/${serverId}/open`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationServer
-     * @name ImportLegacyClientServers
-     * @request POST:/federation/local/servers/import-legacy-client
-     */
-    importLegacyClientServers: (params: RequestParams = {}) =>
-      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerImportView, any>({
-        path: `/federation/local/servers/import-legacy-client`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for importLegacyClientServers
-     * @name importLegacyClientServersUrl
-     */
-    importLegacyClientServersUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/servers/import-legacy-client`;
-
-      return baseUrl + path;
-    },
   };
   file = {
     /**

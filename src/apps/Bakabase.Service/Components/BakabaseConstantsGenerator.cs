@@ -3,6 +3,8 @@ using System.Linq;
 using System.Text;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Wire;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bootstrap.Components.Miscellaneous;
@@ -31,7 +33,23 @@ namespace Bakabase.Service.Components
             sb.Append(GenerateProxyTestSites());
             sb.Append(Environment.NewLine);
             sb.Append(GenerateProxyCapableThirdPartyIds());
+            sb.Append(Environment.NewLine);
+            sb.Append(GenerateDataSyncConstants());
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Data sync's build-time facts: the kinds in apply order, the wire contract this build speaks, and the
+        /// option travel limit behind the "definition only" hint.
+        /// </summary>
+        private static string GenerateDataSyncConstants()
+        {
+            var nl = Environment.NewLine;
+            var kinds = DataSyncKindIds.All.Select(k => $"\"{k}\"");
+            return
+                $"export const DataSyncKinds: readonly string[] = [{string.Join(", ", kinds)}] as const;{nl}" +
+                $"export const DataSyncContractVersion = {DataSyncContract.Version};{nl}" +
+                $"export const DataSyncMaxOptionsPerProperty = {DataSyncLimits.Default.MaxOptionsPerProperty};{nl}";
         }
 
         private static string GenerateProxyCapableThirdPartyIds()
