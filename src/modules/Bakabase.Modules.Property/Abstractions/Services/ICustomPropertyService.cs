@@ -37,7 +37,35 @@ public interface ICustomPropertyService
 
     // Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> Add(Bakabase.Abstractions.Models.Db.CustomProperty resource);
     Task<CustomProperty> Put(int id, CustomPropertyAddOrPutDto model);
+
+    /// <summary>
+    /// <see cref="AddRange(CustomPropertyAddOrPutDto[])"/> and <see cref="Put"/> storing the options exactly as given:
+    /// case-variant duplicates under IgnoreCase are not folded. Only for options that are already what should be
+    /// stored. Data sync writes a captured row back with them (undo, §8.11), which may hold duplicates the normalizer
+    /// would fold, stored before IgnoreCase was switched on (F72); and it writes a merge result with
+    /// <see cref="PutVerbatim"/>, which it folded as the normalizer folds an edit, except that it never folds a choice
+    /// stored without an id — the normalizer reads one with a fresh random id on each side and would fold it away.
+    /// </summary>
+    Task<List<CustomProperty>> AddRangeVerbatim(CustomPropertyAddOrPutDto[] models);
+
+    /// <inheritdoc cref="AddRangeVerbatim"/>
+    Task<CustomProperty> PutVerbatim(int id, CustomPropertyAddOrPutDto model);
+
     Task Sort(int[] ids);
+
+    /// <summary>
+    /// Sets <c>Order</c> on exactly the given rows (property id → order) and on no other row; every other column
+    /// stays as it is. Ids that no longer exist are skipped. Data sync places synced properties with it (§3.7).
+    /// </summary>
+    Task SetOrders(IReadOnlyDictionary<int, int> orders);
+
+    /// <summary>
+    /// The stored rows as they are, <c>Options</c> still serialized, from the service's cache. Unlike <c>GetAll</c>
+    /// it never deserializes options, so a row whose options do not read does not fail the call.
+    /// </summary>
+    Task<List<CustomPropertyDbModel>> GetAllDbModels(Expression<Func<CustomPropertyDbModel, bool>>? selector = null,
+        bool returnCopy = true);
+
     Task<BaseResponse> RemoveByKey(int id);
 
     Task<CustomPropertyTypeConversionPreviewViewModel> PreviewTypeConversion(int sourcePropertyId, PropertyType toType);

@@ -101,6 +101,21 @@ public interface IDataSyncKindCodec
 
     /// <summary>Children with display values, for pickers, overlays and inbox cards.</summary>
     IReadOnlyList<DataSyncChildInfo> ChildrenOf(object content);
+
+    /// <summary>
+    /// §3.5 steps 5–6: a record's content, <c>Write(publishedContent)</c> with the preserved unknown top-level members
+    /// (<c>UnknownJson</c>, §8.9) merged back verbatim. A member this codec knows is never overwritten.
+    /// </summary>
+    JsonObject WritePublished(object publishedContent, JsonObject? unknown);
+
+    /// <summary>
+    /// §3.4 with the preserved unknown top-level members added verbatim (never over a member of the form or one this
+    /// codec knows): the form every device hashes for an entity or a peer record that carries unknown members.
+    /// </summary>
+    JsonObject ComparisonForm(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown);
+
+    /// <summary><c>SharedHash = ContentHash(ComparisonForm(publishedContent, orderKey, childrenLocal, unknown))</c> (§3.4).</summary>
+    string SharedHash(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown);
 }
 
 /// <summary>

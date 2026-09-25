@@ -12,9 +12,22 @@ public sealed record ApplyBatch(string Kind, IReadOnlyList<ApplyOperation> Opera
 public abstract record ApplyOperation(string ItemId);
 
 /// <param name="Keys">EntityKeys.None → mint a fresh key.</param>
+/// <param name="Content">
+/// A peer's content as the codec's <c>PrepareCreate</c> left it, which the adapter hands to the service's ordinary
+/// create — or, with <paramref name="FromPreImage"/>, a captured pre-image's content.
+/// </param>
+/// <param name="FromPreImage">
+/// Undo re-creating a deleted entity from its captured pre-image (§8.11, <c>DataSyncUndoAction.Recreate</c>): the
+/// adapter stores the content exactly as captured, where the service's ordinary create could normalize it (custom
+/// properties: case-variant duplicates stored before IgnoreCase was switched on, F72).
+/// </param>
 public sealed record CreateEntityOperation(string ItemId, EntityKeys Keys, string OriginNodeId,
-    int IncomingPosition, JsonObject Content) : ApplyOperation(ItemId);
+    int IncomingPosition, JsonObject Content, bool FromPreImage = false) : ApplyOperation(ItemId);
 
+/// <param name="MergedContent">
+/// The entity's new content, stored as it is: a merge result (<c>Merge3</c>, a review's <c>Merge</c>) is already
+/// normalized as the owning service would normalize an edit.
+/// </param>
 public sealed record UpdateEntityOperation(string ItemId, string LocalKey, string ExpectedLocalHash,
     JsonObject MergedContent, EntityKeys AliasKeysToAdd, IReadOnlyList<string> AddedChildIds,
     IReadOnlyList<string> RemovedChildIds) : ApplyOperation(ItemId);

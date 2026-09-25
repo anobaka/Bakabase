@@ -149,6 +149,38 @@ public abstract class DataSyncKindCodec<TContent> : IDataSyncKindCodec where TCo
 
     IReadOnlyList<DataSyncChildInfo> IDataSyncKindCodec.ChildrenOf(object content) => ChildrenOf(Cast(content));
 
+    // ---- unknown top-level members (§3.5 step 5, §3.4, §8.9) --------------------------------
+
+    /// <summary>
+    /// The top-level content members this codec reads and writes, present or not in a given content; an unknown
+    /// member carried for preservation never takes one of these names. Members <see cref="Write"/> emitted are
+    /// protected whatever this returns.
+    /// </summary>
+    protected virtual IReadOnlyCollection<string> KnownContentMembers => [];
+
+    public JsonObject WritePublished(object publishedContent, JsonObject? unknown) =>
+        WithUnknown(Write(Cast(publishedContent)), unknown);
+
+    public JsonObject ComparisonForm(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown) =>
+        WithUnknown(ComparisonForm(Cast(publishedContent), orderKey, childrenLocal), unknown);
+
+    public string SharedHash(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown) =>
+        Canonical.ContentHash.Of(ComparisonForm(publishedContent, orderKey, childrenLocal, unknown));
+
+    private JsonObject WithUnknown(JsonObject target, JsonObject? unknown)
+    {
+        if (unknown is null) return target;
+        var known = KnownContentMembers;
+        foreach (var (name, value) in unknown)
+        {
+            // "orderKey" is the form's own member for every kind with order (§3.7), never content.
+            if (target.ContainsKey(name) || known.Contains(name) || name == "orderKey") continue;
+            target[name] = value?.DeepClone();
+        }
+
+        return target;
+    }
+
     protected static TContent Cast(object? content) => content as TContent
         ?? throw new ArgumentException(
             $"{typeof(TContent).Name} expected, got {content?.GetType().Name ?? "null"}.", nameof(content));
