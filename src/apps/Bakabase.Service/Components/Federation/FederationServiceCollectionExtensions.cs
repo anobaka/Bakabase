@@ -1,3 +1,4 @@
+using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Media;
 using Bakabase.Modules.Federation.Peers;
@@ -39,6 +40,11 @@ public static class FederationServiceCollectionExtensions
         services.AddSingleton<INodePeerDiscovery, FederationNodeDiscovery>();
         services.AddSingleton<FederationPairingFlow>();
         services.AddHostedService(sp => sp.GetRequiredService<FederationPairingFlow>());
+        // Data sync over federation (§7): what /info and the handshake say about it, and definitions access for the
+        // data sync runtime. Registered after anything data sync itself registers, so these are the ones resolved.
+        services.AddSingleton<INodeInfoContributor, DataSyncNodeInfoContributor>();
+        services.AddSingleton<FederationDataSyncGrants>();
+        services.AddSingleton<IDataSyncGrantService>(sp => sp.GetRequiredService<FederationDataSyncGrants>());
         services.AddHostedService<FederationInviteAnnouncer>();
         services.AddHostedService<FederationRemoteModeMonitor>();
         services.Configure<MvcOptions>(options => options.Filters.Add<FederationLocalAccessFilter>());

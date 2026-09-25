@@ -22,7 +22,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests.Federation.Security;
 
 [TestClass]
-public sealed class FederationGateTests
+public sealed partial class FederationGateTests
 {
     [TestMethod]
     public async Task NodeExportAlwaysRequiresGrantBeforeLegacyLoopbackAndUnrestrictedBypasses()
@@ -428,7 +428,8 @@ public sealed class FederationGateTests
         .RootElement.GetProperty("code").GetString()!;
     private sealed class Actions
     {
-        [FederationEndpoint(FederationEndpointKind.Export)] public void Export() { }
+        // An Export action serves one grant scope; one without a scope is refused (EveryExportActionDeclaresAScope).
+        [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.LibraryRead)] public void Export() { }
         public void Unmarked() { }
     }
     private sealed class LateResultController : FederationControllerBase

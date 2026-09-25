@@ -278,8 +278,12 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
         var local = await identity.GetAsync(ct);
         // What this install says it is, where the host can tell: optional on the wire.
         var self = HttpContext.RequestServices.GetService<IServerSelfDescription>();
-        return FederationResult(new NodeInfo(local.NodeId, local.LibraryEpoch, local.Name, 1, timeProvider.GetUtcNow())
-            .DescribedBy(self));
+        var info = new NodeInfo(local.NodeId, local.LibraryEpoch, local.Name, 1, timeProvider.GetUtcNow())
+            .DescribedBy(self);
+        // The data sync capability members, where the host has data sync: optional on the wire too.
+        if (HttpContext.RequestServices.GetService<INodeInfoContributor>() is { } contributor)
+            info = await contributor.ContributeAsync(info, ct);
+        return FederationResult(info);
     }
 
     [HttpPost("~/federation/v1/pair/code")]

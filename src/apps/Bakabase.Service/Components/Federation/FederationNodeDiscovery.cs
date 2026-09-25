@@ -32,10 +32,13 @@ public sealed class FederationNodeDiscovery(IServerDiscovery discovery, INodeIde
                 using var response = await client.GetAsync(server.BaseAddress.TrimEnd('/') + "/federation/v1/info", ct);
                 if (!response.IsSuccessStatusCode) return null;
                 var info = JsonSerializer.Deserialize<NodeInfo>(await response.Content.ReadAsStringAsync(ct), FederationJson.Options);
+                // A node sharing only its definitions answers info too (§7.4), and says so; a hint, like the rest.
                 return info is { ProtocolVersion: 1 } && info.NodeId != local.NodeId
                     ? new NodeDiscoveryCandidate(info.NodeId, info.Name, server.BaseAddress,
                         ServerSelfDescriptionWords.KindOf(info.Kind) ?? server.Kind,
-                        ServerSelfDescriptionWords.PlatformOf(info.Platform) ?? server.Platform)
+                        ServerSelfDescriptionWords.PlatformOf(info.Platform) ?? server.Platform,
+                        info.DataSyncContractVersion is >= 0 and <= 1_000_000 ? info.DataSyncContractVersion : null,
+                        info.SharesDefinitions)
                     : null;
             }
             catch (Exception e) when (e is HttpRequestException or JsonException or TaskCanceledException)
