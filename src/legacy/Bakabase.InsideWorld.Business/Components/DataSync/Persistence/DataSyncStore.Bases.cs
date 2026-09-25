@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
-using Bakabase.Modules.DataSync.Canonical;
 using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
@@ -229,27 +228,8 @@ public sealed partial class DataSyncStore
     /// record, a record this build holds, or a kind without a registered codec. Recomputed when the codec's
     /// ComparisonFormVersion changes (§6.1).
     /// </summary>
-    internal string? SharedHashOf(string kind, DataSyncWireRecord record)
-    {
-        if (record.Deleted || record.HeldAtSource is not null || record.Content is null) return null;
-        if (!Kinds.TryGetValue(kind, out var adapter)) return null;
-        var codec = adapter.Codec;
-        var content = (JsonObject) record.Content.DeepClone();
-        try
-        {
-            if (record.SchemaVersion != codec.Descriptor.SchemaVersion)
-                content = codec.Upgrade(content, record.SchemaVersion);
-        }
-        catch (DataSyncHeldException)
-        {
-            return null;
-        }
-
-        var read = codec.Read(content, DataSyncLimits.Default);
-        if (read.Content is null) return null;
-        var childrenLocal = content["childrenLocal"] is JsonValue flag && flag.TryGetValue<bool>(out var on) && on;
-        return ContentHash.Of(codec.ComparisonForm(read.Content, record.OrderKey, childrenLocal));
-    }
+    internal string? SharedHashOf(string kind, DataSyncWireRecord record) =>
+        Kinds.TryGetValue(kind, out var adapter) ? DataSyncEntityForms.RecordSharedHash(adapter.Codec, record) : null;
 
     /// <summary>
     /// Retire and rekey (§5.3): on every link, the base keyed <paramref name="fromKey"/> is re-keyed to

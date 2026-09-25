@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Business.Components.DataSync.Feed;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
@@ -5,6 +6,7 @@ using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Runtime;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Bakabase.Tests.DataSync.DataSyncStoreFixture;
 
@@ -12,8 +14,9 @@ namespace Bakabase.Tests.DataSync;
 
 /// <summary>
 /// Retention (spec §4.6) at the store: tombstones stop being served after 180 days but are never deleted, and floors
-/// are per kind; closed items, apply logs, readers and retired actors are pruned by their own rules. Serving a
-/// superseded cursor from 0 and row T2 are the feed's and the merger's parts of this class.
+/// are per kind, so a kind is superseded only by its own floor; closed items, apply logs, readers and retired actors
+/// are pruned by their own rules; retention runs once a day under the gate, and keeps the newest five data sync
+/// backups. Serving a superseded cursor from 0 and row T2 are the feed's and the merger's parts of this class.
 /// </summary>
 [TestClass]
 public class RetentionTests
@@ -50,6 +53,84 @@ public class RetentionTests
         // A floor never goes down, and a later prune with nothing new keeps it.
         await _f.Store.PruneAsync(Now.AddDays(1), default);
         Assert.AreEqual(old.Seq, (await FloorsAsync())[Kind]);
+    }
+
+    [TestMethod]
+    public async Task Floors_are_per_kind_so_a_kind_below_another_kinds_floor_is_never_superseded()
+    {
+        // Extension groups change early (low Seq); a custom property tombstone much later becomes unserved.
+        var group = await _f.LiveAsync("1", kind: DataSyncKindIds.ExtensionGroup);
+        await _f.LiveAsync("2");
+        var old = await _f.TombstoneAsync(await _f.LiveAsync("3"));
+        await Age(old, 181);
+        await _f.Store.PruneAsync(Now, default);
+        var state = (await _f.Store.GetLocalStateAsync(default))!;
+        var floor = DataSyncCursorRules.FloorOf(state, Kind);
+        Assert.AreEqual(old.Seq, floor);
+        Assert.IsTrue(group.Seq < floor, "the extension groups' MaxSeq is below the custom properties' floor");
+
+        Assert.AreEqual(0, DataSyncCursorRules.FloorOf(state, DataSyncKindIds.ExtensionGroup));
+        Assert.IsFalse(DataSyncCursorRules.IsSuperseded(group.Seq, DataSyncCursorRules.FloorOf(state, DataSyncKindIds.ExtensionGroup),
+            state.LastSeq, false), "a kind is superseded only by its own floor (gate fix B2)");
+        Assert.IsTrue(DataSyncCursorRules.IsSuperseded(floor - 1, floor, state.LastSeq, false),
+            "a reader that may have missed the unserved tombstone is served from 0");
+        Assert.IsFalse(DataSyncCursorRules.IsSuperseded(floor, floor, state.LastSeq, false), "it saw the tombstone");
+        Assert.IsFalse(DataSyncCursorRules.IsSuperseded(0, floor, state.LastSeq, false), "a fresh reader reads from 0 anyway");
+        Assert.IsTrue(DataSyncCursorRules.IsSuperseded(state.LastSeq + 1, 0, state.LastSeq, false),
+            "a cursor above LastSeq: sequence numbers this database never issued");
+        Assert.IsTrue(DataSyncCursorRules.IsSuperseded(1, 0, state.LastSeq, recordedReaderAhead: true));
+        Assert.IsTrue(DataSyncCursorRules.IsReaderAhead(new Dictionary<string, long> {[Kind] = state.LastSeq + 1}, state.LastSeq));
+        Assert.IsFalse(DataSyncCursorRules.IsReaderAhead(new Dictionary<string, long> {[Kind] = state.LastSeq}, state.LastSeq));
+    }
+
+    [TestMethod]
+    public async Task Retention_runs_once_a_day_under_the_gate_in_its_own_transaction()
+    {
+        var old = await _f.TombstoneAsync(await _f.LiveAsync("1"));
+        await Age(old, 181);
+        var clock = new ManualTimeProvider(Now);
+        var gate = _f.Services.GetRequiredService<DataSyncGate>();
+        var retention = new DataSyncRetention(gate, _f.Services.GetRequiredService<IServiceScopeFactory>(),
+            _f.Services.GetRequiredService<IDataSyncDataDirectory>(), clock);
+
+        Task<bool> run;
+        using (await gate.EnterAsync(null, default))
+        {
+            run = retention.RunIfDueAsync(default);
+            await Task.Delay(100);
+            Assert.IsFalse(run.IsCompleted, "retention waits for the gate");
+        }
+
+        Assert.IsTrue(await run);
+        Assert.IsFalse((await _f.ByPrimaryAsync(old.SyncKey))!.TombstoneServed);
+        Assert.IsFalse(await retention.RunIfDueAsync(default), "once a day");
+        clock.Advance(DataSyncRetention.Interval);
+        Assert.IsTrue(await retention.RunIfDueAsync(default));
+    }
+
+    [TestMethod]
+    public void Only_the_newest_five_data_sync_backups_are_kept()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"RetentionTests_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var backups = Enumerable.Range(1, 7).Select(i => $"data-sync-20260901-00000{i}.db").ToList();
+            foreach (var name in backups.Concat(["app.db", "data-sync-notes.txt"]))
+                File.WriteAllText(Path.Combine(folder, name), name);
+            Directory.CreateDirectory(Path.Combine(folder, "2.4.0"));
+
+            Assert.AreEqual(2, DataSyncRetention.PruneBackups(folder));
+
+            CollectionAssert.AreEquivalent(backups.Skip(2).Concat(["app.db", "data-sync-notes.txt"]).ToList(),
+                Directory.GetFiles(folder).Select(Path.GetFileName).ToList(), "the app's own backups are never touched");
+            Assert.IsTrue(Directory.Exists(Path.Combine(folder, "2.4.0")));
+            Assert.AreEqual(0, DataSyncRetention.PruneBackups(Path.Combine(folder, "missing")));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
     }
 
     [TestMethod]
