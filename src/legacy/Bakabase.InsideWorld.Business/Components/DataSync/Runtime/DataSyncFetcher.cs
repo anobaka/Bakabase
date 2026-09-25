@@ -79,8 +79,13 @@ public sealed class DataSyncFetcher
         if (local?.AllPaused != true)
         {
             var due = (await _links.GetLinksAsync(ct))
-                .Where(l => l.IsFetchable() && (l.NextAttemptAtUtc is not { } next || next <= now ||
-                                                (fallback && l.GetCursors().Count > 0)))
+                .Where(l =>
+                {
+                    // A peer discovery saw (§8.2) is due now; the mark is taken whether or not it was due anyway.
+                    var woken = _state.TakeWoken(l.Id);
+                    return l.IsFetchable() && (woken || l.NextAttemptAtUtc is not { } next || next <= now ||
+                                               (fallback && l.GetCursors().Count > 0));
+                })
                 .OrderBy(l => l.Id)
                 .ToList();
             for (var i = 0; i < due.Count; i++)

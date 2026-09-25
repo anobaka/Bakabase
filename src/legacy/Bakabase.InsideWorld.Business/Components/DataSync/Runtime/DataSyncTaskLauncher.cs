@@ -51,17 +51,20 @@ public sealed class DataSyncTaskLauncher
     private readonly IBakabaseLocalizer _localizer;
     private readonly IServiceScopeFactory _scopes;
     private readonly IHostApplicationLifetime? _lifetime;
+    private readonly IDataSyncRuntimeObserver _observer;
     private readonly ILogger<DataSyncTaskLauncher> _logger;
     private readonly SemaphoreSlim _enqueueLock = new(1, 1);
 
     public DataSyncTaskLauncher(BTaskManager btm, IDataSyncTaskRegistry registry, IBakabaseLocalizer localizer,
-        IServiceScopeFactory scopes, IServiceProvider services, ILogger<DataSyncTaskLauncher> logger)
+        IServiceScopeFactory scopes, IServiceProvider services, IDataSyncRuntimeObserver observer,
+        ILogger<DataSyncTaskLauncher> logger)
     {
         _btm = btm;
         _registry = registry;
         _localizer = localizer;
         _scopes = scopes;
         _lifetime = services.GetService<IHostApplicationLifetime>();
+        _observer = observer;
         _logger = logger;
     }
 
@@ -111,8 +114,9 @@ public sealed class DataSyncTaskLauncher
         EnqueueOnceAsync(DataSyncTaskIds.Restore, attempt => WriteTask(DataSyncTaskIds.Restore, persistent: true,
             args => RunInScopeAsync(args, attempt, async sp =>
             {
-                await sp.GetRequiredService<IDataSyncApplyRunner>().RunRestoreAsync(choice, linkId, args);
+                var logId = await sp.GetRequiredService<IDataSyncApplyRunner>().RunRestoreAsync(choice, linkId, args);
                 await sp.GetRequiredService<DataSyncLinkService>().AfterRestoreAsync(linkId, args.CancellationToken);
+                await ObserveAppliedAsync(DataSyncHistoryKind.Restore, logId, linkId, args.CancellationToken);
             })));
 
     /// <summary>Undo of one history entry (§8.11); retried after an Error by enqueueing it again.</summary>
@@ -120,16 +124,19 @@ public sealed class DataSyncTaskLauncher
     {
         var taskId = DataSyncTaskIds.Undo(applyLogId);
         return EnqueueOnceAsync(taskId, attempt => WriteTask(taskId, persistent: true,
-            args => RunInScopeAsync(args, attempt,
-                sp => sp.GetRequiredService<IDataSyncApplyRunner>().RunUndoAsync(applyLogId, args))));
+            args => RunInScopeAsync(args, attempt, async sp =>
+            {
+                var logId = await sp.GetRequiredService<IDataSyncApplyRunner>().RunUndoAsync(applyLogId, args);
+                await ObserveAppliedAsync(DataSyncHistoryKind.Undo, logId, null, args.CancellationToken);
+            })));
     }
 
     /// <summary>
     /// The first-link review or copy once (§8.10.3): replaces a finished task of the same review, and refuses (returns
-    /// null) while one is waiting or running.
+    /// null) while one is waiting or running. <paramref name="linkId"/>: the link the review belongs to.
     /// </summary>
     public Task<DataSyncTaskAttempt?> EnqueueReviewAsync(string reviewId, IReadOnlyList<DataSyncPlanDecision> decisions,
-        DataSyncApplyOptions options, Func<int?, Task>? onApplied = null)
+        DataSyncApplyOptions options, Func<int?, Task>? onApplied = null, int? linkId = null)
     {
         var taskId = DataSyncTaskIds.Review(reviewId);
         return EnqueueOnceAsync(taskId, attempt => WriteTask(taskId, persistent: true,
@@ -138,17 +145,43 @@ public sealed class DataSyncTaskLauncher
                 var logId = await sp.GetRequiredService<IDataSyncApplyRunner>()
                     .RunReviewAsync(reviewId, decisions, options, args);
                 if (onApplied is not null) await onApplied(logId);
+                await ObserveAppliedAsync(DataSyncHistoryKind.FirstLink, logId, linkId, args.CancellationToken);
             })));
     }
 
-    /// <summary>Inbox resolutions (§9.2), one task per batch.</summary>
+    /// <summary>
+    /// Inbox resolutions (§9.2), one task per batch. <paramref name="thenApply"/>: the batch let waiting records go
+    /// ("Apply all" of a large change), whose re-merge runs in <c>DataSyncApply</c>, so that task is enqueued right
+    /// after (§8.2, N13).
+    /// </summary>
     public Task<DataSyncTaskAttempt?> EnqueueResolveAsync(string batchId,
-        IReadOnlyList<DataSyncResolveInput> resolutions, DataSyncApplyOptions options)
+        IReadOnlyList<DataSyncResolveInput> resolutions, DataSyncApplyOptions options, bool thenApply = false)
     {
         var taskId = DataSyncTaskIds.Resolve(batchId);
         return EnqueueOnceAsync(taskId, attempt => WriteTask(taskId, persistent: true,
-            args => RunInScopeAsync(args, attempt,
-                sp => sp.GetRequiredService<IDataSyncApplyRunner>().RunResolutionsAsync(resolutions, options, args))));
+            args => RunInScopeAsync(args, attempt, async sp =>
+            {
+                var logId = await sp.GetRequiredService<IDataSyncApplyRunner>()
+                    .RunResolutionsAsync(resolutions, options, args);
+                if (thenApply) await EnqueueApplyAsync();
+                await ObserveAppliedAsync(DataSyncHistoryKind.Resolution, logId, null, args.CancellationToken);
+            })));
+    }
+
+    /// <summary>
+    /// Tells the notifier and the hub what a write task applied (§8.10.6, §9.4), after the runner committed. A failure
+    /// there is logged and never fails the task: the change is stored.
+    /// </summary>
+    private async Task ObserveAppliedAsync(DataSyncHistoryKind kind, int? logId, int? linkId, CancellationToken ct)
+    {
+        try
+        {
+            await _observer.WriteAppliedAsync(kind, logId, linkId, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            _logger.LogWarning(e, "A data sync observer failed after {Kind}", kind);
+        }
     }
 
     /// <summary>

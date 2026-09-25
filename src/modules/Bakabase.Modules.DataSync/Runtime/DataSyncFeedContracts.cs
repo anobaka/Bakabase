@@ -93,6 +93,17 @@ public interface IDataSyncGrantService
     Task ForgetOutboundAsync(string peerNodeId, CancellationToken ct);
 }
 
+/// <summary>
+/// Thrown by <see cref="IDataSyncGrantService"/> for an expected failure on this device that the facade answers as
+/// it is: sharing off, remote access off, a request that no longer exists, a wrong or expired code. What a peer
+/// answered is a <see cref="DataSyncPeerException"/> instead.
+/// </summary>
+public sealed class DataSyncProblemException(DataSyncProblem problem)
+    : Exception(problem.Detail ?? problem.Code.ToString())
+{
+    public DataSyncProblem Problem { get; } = problem;
+}
+
 public sealed record DataSyncAccessRequestInput(string? PeerNodeId, string? Address, string? Code, DataSyncRequestIntent Intent);
 
 public sealed record DataSyncAccessRequestOutcome(string Outcome /* "granted"|"awaitingApproval"|"rejected" */,

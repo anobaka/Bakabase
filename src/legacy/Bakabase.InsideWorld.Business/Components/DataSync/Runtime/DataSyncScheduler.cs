@@ -44,6 +44,7 @@ public sealed class DataSyncScheduler : BackgroundService
     private readonly IDataSyncStagedPullStore _stagedPulls;
     private readonly DataSyncRuntimeState _state;
     private readonly IDataSyncClock _clock;
+    private readonly IDataSyncRuntimeObserver _observer;
     private readonly ILogger<DataSyncScheduler> _logger;
     private readonly SemaphoreSlim _tickLock = new(1, 1);
 
@@ -52,7 +53,8 @@ public sealed class DataSyncScheduler : BackgroundService
 
     public DataSyncScheduler(IServiceScopeFactory scopes, BTaskManager btm, DataSyncTaskLauncher launcher,
         DataSyncLinkService links, DataSyncGrantEventsHandler grantEvents, IDataSyncStagedPullStore stagedPulls,
-        DataSyncRuntimeState state, IDataSyncClock clock, ILogger<DataSyncScheduler> logger)
+        DataSyncRuntimeState state, IDataSyncClock clock, IDataSyncRuntimeObserver observer,
+        ILogger<DataSyncScheduler> logger)
     {
         _scopes = scopes;
         _btm = btm;
@@ -62,6 +64,7 @@ public sealed class DataSyncScheduler : BackgroundService
         _stagedPulls = stagedPulls;
         _state = state;
         _clock = clock;
+        _observer = observer;
         _logger = logger;
     }
 
@@ -124,8 +127,19 @@ public sealed class DataSyncScheduler : BackgroundService
                 if (guard is { IsVerified: false } && _state.CanVerify(links, now)) guard.MarkVerified();
             }
 
+            // A restore detection announces itself from here, whoever paused the links (§9.4).
+            try
+            {
+                await _observer.LocalStateSeenAsync(local, ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                _logger.LogWarning(e, "A data sync observer failed");
+            }
+
             var allPaused = local?.AllPaused == true;
-            if (!allPaused && links.Any(l => IsDue(l, now)) && CanStartFetch(fetchTask, now))
+            if (!allPaused && links.Any(l => IsDue(l, now) || (l.IsFetchable() && _state.IsWoken(l.Id))) &&
+                CanStartFetch(fetchTask, now))
             {
                 await _btm.Start(DataSyncTaskIds.Fetch);
             }

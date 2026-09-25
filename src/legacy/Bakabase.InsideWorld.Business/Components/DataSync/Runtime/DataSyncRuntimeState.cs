@@ -27,6 +27,7 @@ public sealed class DataSyncRuntimeState
     private readonly HashSet<int> _headAnswered = [];
     private readonly ConcurrentDictionary<int, IReadOnlyDictionary<string, int>> _formVersions = new();
     private readonly ConcurrentDictionary<int, DateTime> _lastHeadAt = new();
+    private readonly ConcurrentDictionary<int, byte> _woken = new();
     private DateTime? _startedAtUtc;
     private DateTime? _lastFallbackAtUtc;
     private DateTime? _lastRetentionAtUtc;
@@ -75,7 +76,19 @@ public sealed class DataSyncRuntimeState
         lock (_lock) _headAnswered.Remove(linkId);
         _formVersions.TryRemove(linkId, out _);
         _lastHeadAt.TryRemove(linkId, out _);
+        _woken.TryRemove(linkId, out _);
     }
+
+    /// <summary>
+    /// The link's peer was just seen (discovery answered, §8.2): the link is due now, without writing its row, so the
+    /// request that saw it — a GET — writes nothing (F78). The next fetch cycle takes the mark.
+    /// </summary>
+    public void Wake(int linkId) => _woken[linkId] = 0;
+
+    public bool IsWoken(int linkId) => _woken.ContainsKey(linkId);
+
+    /// <summary>True, once, when the link was woken since the last cycle looked at it.</summary>
+    public bool TakeWoken(int linkId) => _woken.TryRemove(linkId, out _);
 
     /// <summary>
     /// Whether the actor may be marked verified (§5.6): no Active link, every Active link's peer answered one head

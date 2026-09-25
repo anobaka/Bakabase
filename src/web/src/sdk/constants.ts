@@ -823,6 +823,45 @@ export const DependentComponentStatusLabel: Record<DependentComponentStatus, str
   [DependentComponentStatus.Installing]: 'Installing'
 };
 
+export enum DataSyncLinkWrite {
+  None = 0,
+  Bookkeeping = 1,
+  Transition = 2
+}
+
+export const dataSyncLinkWrites = [
+  { label: 'None', value: DataSyncLinkWrite.None },
+  { label: 'Bookkeeping', value: DataSyncLinkWrite.Bookkeeping },
+  { label: 'Transition', value: DataSyncLinkWrite.Transition }
+] as const;
+
+export const DataSyncLinkWriteLabel: Record<DataSyncLinkWrite, string> = {
+  [DataSyncLinkWrite.None]: 'None',
+  [DataSyncLinkWrite.Bookkeeping]: 'Bookkeeping',
+  [DataSyncLinkWrite.Transition]: 'Transition'
+};
+
+export enum DataSyncTaskCancelOutcome {
+  NotFound = 1,
+  Removed = 2,
+  Stopping = 3,
+  AlreadyFinished = 4
+}
+
+export const dataSyncTaskCancelOutcomes = [
+  { label: 'NotFound', value: DataSyncTaskCancelOutcome.NotFound },
+  { label: 'Removed', value: DataSyncTaskCancelOutcome.Removed },
+  { label: 'Stopping', value: DataSyncTaskCancelOutcome.Stopping },
+  { label: 'AlreadyFinished', value: DataSyncTaskCancelOutcome.AlreadyFinished }
+] as const;
+
+export const DataSyncTaskCancelOutcomeLabel: Record<DataSyncTaskCancelOutcome, string> = {
+  [DataSyncTaskCancelOutcome.NotFound]: 'NotFound',
+  [DataSyncTaskCancelOutcome.Removed]: 'Removed',
+  [DataSyncTaskCancelOutcome.Stopping]: 'Stopping',
+  [DataSyncTaskCancelOutcome.AlreadyFinished]: 'AlreadyFinished'
+};
+
 export enum CloseBehavior {
   Prompt = 0,
   Exit = 1,

@@ -25,12 +25,46 @@ internal sealed class ManualDataSyncClock : IDataSyncClock
     public void Advance(TimeSpan by) => UtcNow += by;
 }
 
-/// <summary>Link rows, the local state row and open-item counts, stored as copies like a database would.</summary>
+/// <summary>
+/// Link rows, the local state row, open-item counts, and — for the facade — entities, inbox items, bases, readers and
+/// history, stored as copies like a database would. Every write counts in <see cref="Writes"/>.
+/// </summary>
 internal sealed class FakeDataSyncStore : IDataSyncStore
 {
     private readonly object _lock = new();
     private readonly Dictionary<int, DataSyncLinkDbModel> _links = new();
     private int _nextId = 1;
+    private int _writes;
+
+    /// <summary>Every call that would write the database.</summary>
+    public int Writes => Volatile.Read(ref _writes);
+
+    /// <summary>What the store stamps closures with.</summary>
+    public Func<DateTime> Now { get; set; } = () => DateTime.UtcNow;
+
+    public List<DataSyncEntityDbModel> Entities { get; } = [];
+    public List<DataSyncInboxItemDbModel> Items { get; } = [];
+    public Dictionary<(int LinkId, string Kind), List<DataSyncPeerBase>> Bases { get; } = new();
+    public List<DataSyncReaderDbModel> Readers { get; } = [];
+    public List<DataSyncApplyLogDbModel> History { get; } = [];
+    public List<(IReadOnlyCollection<(string Kind, SyncKey Key)> Touched, int? LinkId)> StaleChecks { get; } = [];
+
+    private void Wrote() => Interlocked.Increment(ref _writes);
+
+    public DataSyncInboxItemDbModel AddItem(DataSyncInboxItemDbModel item)
+    {
+        lock (_lock)
+        {
+            var copy = item with { Id = Items.Count == 0 ? 1 : Items.Max(i => i.Id) + 1 };
+            Items.Add(copy);
+            return copy with { };
+        }
+    }
+
+    public DataSyncInboxItemDbModel Item(long id)
+    {
+        lock (_lock) return Items.Single(i => i.Id == id) with { };
+    }
 
     public DataSyncLocalStateDbModel? LocalState { get; set; } = new()
     {
@@ -73,6 +107,7 @@ internal sealed class FakeDataSyncStore : IDataSyncStore
 
     public Task SaveLocalStateAsync(DataSyncLocalStateDbModel state, CancellationToken ct)
     {
+        Wrote();
         LocalState = state with { };
         return Task.CompletedTask;
     }
@@ -87,11 +122,13 @@ internal sealed class FakeDataSyncStore : IDataSyncStore
     {
         if (All().Any(l => l.PeerNodeId == link.PeerNodeId))
             throw new InvalidOperationException("PeerNodeId is unique (§4.2).");
+        Wrote();
         return Task.FromResult(Add(link));
     }
 
     public Task UpdateLinkAsync(DataSyncLinkDbModel link, CancellationToken ct)
     {
+        Wrote();
         lock (_lock)
         {
             if (!_links.ContainsKey(link.Id)) throw new InvalidOperationException($"No link {link.Id}.");
@@ -103,10 +140,12 @@ internal sealed class FakeDataSyncStore : IDataSyncStore
 
     public Task DeleteLinkAsync(int id, CancellationToken ct)
     {
+        Wrote();
         lock (_lock)
         {
             _links.Remove(id);
             Deleted.Add(id);
+            CloseWhere(i => i.LinkId == id, DataSyncInboxClosure.LinkRemoved);
         }
 
         return Task.CompletedTask;
@@ -114,43 +153,220 @@ internal sealed class FakeDataSyncStore : IDataSyncStore
 
     public Task StopLinkAsync(int id, CancellationToken ct)
     {
-        lock (_lock) Stopped.Add(id);
+        Wrote();
+        lock (_lock)
+        {
+            Stopped.Add(id);
+            CloseWhere(i => i.LinkId == id, DataSyncInboxClosure.LinkStopped);
+        }
+
         return Task.CompletedTask;
     }
 
+    /// <summary>The counted items of E1's tests, then the stored open items.</summary>
     public Task<IReadOnlyList<DataSyncOpenInboxItem>> GetOpenItemsAsync(int? linkId, CancellationToken ct)
     {
         var count = linkId is { } id ? OpenItems.GetValueOrDefault(id) : OpenItems.Values.Sum();
-        IReadOnlyList<DataSyncOpenInboxItem> items = Enumerable.Range(1, count)
-            .Select(i => new DataSyncOpenInboxItem(i, linkId, "customProperty", SyncKey.New(),
+        var items = Enumerable.Range(1, count)
+            .Select(i => new DataSyncOpenInboxItem(-i, linkId, "customProperty", SyncKey.New(),
                 DataSyncInboxItemType.FieldConflict, DataSyncInboxItemOrigin.Merger, "name", "t", null))
             .ToList();
-        return Task.FromResult(items);
+        lock (_lock)
+        {
+            items.AddRange(Items.Where(i => i.ClosedAtUtc is null && (linkId is null || i.LinkId == linkId))
+                .Select(i => new DataSyncOpenInboxItem(i.Id, i.LinkId, i.Kind, new SyncKey(i.SyncKey), i.Type,
+                    i.Origin, i.SubjectPath, i.Token, null)));
+        }
+
+        return Task.FromResult<IReadOnlyList<DataSyncOpenInboxItem>>(items);
     }
 
-    // Not used by the runtime core.
-    public Task<long> NextSeqAsync(CancellationToken ct) => throw new NotSupportedException();
-
     public Task<IReadOnlyList<DataSyncEntityDbModel>> GetEntitiesAsync(string kind, bool includeTombstones,
-        CancellationToken ct) => throw new NotSupportedException();
+        CancellationToken ct)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult<IReadOnlyList<DataSyncEntityDbModel>>(Entities
+                .Where(e => e.Kind == kind && (includeTombstones || e.DeletedAtUtc is null))
+                .Select(e => e with { }).ToList());
+        }
+    }
+
+    public Task<(int Live, int Tombstones)> CountPublishedAsync(string kind, CancellationToken ct)
+    {
+        lock (_lock)
+        {
+            var live = Entities.Count(e => e.Kind == kind && e.DeletedAtUtc is null &&
+                                           e.State == DataSyncEntitySyncState.Synced);
+            var tombstones = Entities.Count(e => e.Kind == kind && e.DeletedAtUtc is not null && e.TombstoneServed);
+            return Task.FromResult((live, tombstones));
+        }
+    }
+
+    public Task SetEntityStateAsync(string kind, string localKey, DataSyncEntitySyncState state, CancellationToken ct)
+    {
+        EditEntity(kind, localKey, e => e.State = state);
+        return Task.CompletedTask;
+    }
+
+    public Task SetOverlayAsync(string kind, string localKey, Bakabase.Modules.DataSync.Abstractions.DataSyncOverlay overlay,
+        CancellationToken ct)
+    {
+        EditEntity(kind, localKey, e => e.OverlayJson = overlay.LocalOnlyChildren.Count == 0 && overlay.HeldChildren.Count == 0
+            ? null
+            : System.Text.Json.JsonSerializer.Serialize(overlay, Bakabase.Modules.DataSync.Canonical.DataSyncJson.Options));
+        return Task.CompletedTask;
+    }
+
+    public Task SetChildrenLocalAsync(string kind, string localKey, bool childrenLocal, CancellationToken ct)
+    {
+        EditEntity(kind, localKey, e => e.ChildrenLocal = childrenLocal);
+        return Task.CompletedTask;
+    }
+
+    private void EditEntity(string kind, string localKey, Action<DataSyncEntityDbModel> edit)
+    {
+        Wrote();
+        lock (_lock) edit(Entities.Single(e => e.Kind == kind && e.LocalKey == localKey && e.DeletedAtUtc is null));
+    }
+
+    public Task<IReadOnlyList<DataSyncPeerBase>> GetBasesAsync(int linkId, string kind, CancellationToken ct)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult<IReadOnlyList<DataSyncPeerBase>>(
+                Bases.TryGetValue((linkId, kind), out var bases) ? bases.ToList() : []);
+        }
+    }
+
+    public Task CloseItemsAsync(IReadOnlyCollection<long> ids, DataSyncInboxClosure closure, DataSyncInboxAction? action,
+        DataSyncEditorRef? by, int? applyLogId, CancellationToken ct)
+    {
+        Wrote();
+        lock (_lock) CloseWhere(i => ids.Contains(i.Id), closure);
+        return Task.CompletedTask;
+    }
+
+    public Task<int> CloseStaleStateItemsAsync(IReadOnlyCollection<(string Kind, SyncKey Key)> touched, int? linkId,
+        DateTime nowUtc, CancellationToken ct)
+    {
+        Wrote();
+        lock (_lock) StaleChecks.Add((touched, linkId));
+        return Task.FromResult(0);
+    }
+
+    /// <summary>Closes the open items that match, as a store closure would.</summary>
+    public void CloseWhere(Func<DataSyncInboxItemDbModel, bool> match, DataSyncInboxClosure closure)
+    {
+        lock (_lock)
+        {
+            foreach (var item in Items.Where(i => i.ClosedAtUtc is null && match(i)))
+            {
+                item.ClosedAtUtc = Now();
+                item.Closure = closure;
+            }
+        }
+    }
+
+    public Task<DataSyncInboxItemDbModel?> GetItemAsync(long id, CancellationToken ct)
+    {
+        lock (_lock) return Task.FromResult(Items.FirstOrDefault(i => i.Id == id) is { } item ? item with { } : null);
+    }
+
+    public Task<DataSyncInboxPage> QueryInboxAsync(DataSyncInboxQuery query, CancellationToken ct)
+    {
+        lock (_lock)
+        {
+            var filtered = Items.Where(i => (query.PeerNodeId is null || i.PeerNodeId == query.PeerNodeId) &&
+                                            (query.Kind is null || i.Kind == query.Kind)).ToList();
+            var open = filtered.Count(i => i.ClosedAtUtc is null);
+            if (query.OpenOnly) filtered = filtered.Where(i => i.ClosedAtUtc is null).ToList();
+            var page = filtered.OrderByDescending(i => i.Id).Skip(query.Skip).Take(query.Take)
+                .Select(i => DataSyncInboxService.ToView(i, i.LinkId is { } l ? Get(l) : null)).ToList();
+            return Task.FromResult(new DataSyncInboxPage(page, filtered.Count, open));
+        }
+    }
+
+    public Task<IReadOnlyList<long>> GetUnannouncedItemIdsAsync(int linkId, CancellationToken ct)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult<IReadOnlyList<long>>(Items
+                .Where(i => i.LinkId == linkId && i.ClosedAtUtc is null && i.NotifiedAtUtc is null)
+                .Select(i => i.Id).ToList());
+        }
+    }
+
+    public Task SetItemsNotifiedAsync(IReadOnlyCollection<long> ids, int notificationId, DateTime nowUtc,
+        CancellationToken ct)
+    {
+        Wrote();
+        lock (_lock)
+        {
+            foreach (var item in Items.Where(i => ids.Contains(i.Id)))
+            {
+                item.NotificationId = notificationId;
+                item.NotifiedAtUtc = nowUtc;
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<int>> GetSettledNotificationsAsync(DateTime closedSinceUtc, CancellationToken ct)
+    {
+        lock (_lock)
+        {
+            var openIds = Items.Where(i => i.ClosedAtUtc is null && i.NotificationId is not null)
+                .Select(i => i.NotificationId!.Value).ToHashSet();
+            return Task.FromResult<IReadOnlyList<int>>(Items
+                .Where(i => i.ClosedAtUtc >= closedSinceUtc && i.NotificationId is { } n && !openIds.Contains(n))
+                .Select(i => i.NotificationId!.Value).Distinct().ToList());
+        }
+    }
+
+    public Task<IReadOnlyList<DataSyncReaderDbModel>> GetReadersAsync(CancellationToken ct)
+    {
+        lock (_lock) return Task.FromResult<IReadOnlyList<DataSyncReaderDbModel>>(Readers.Select(r => r with { }).ToList());
+    }
+
+    public Task SetReaderNotifiedAsync(string nodeId, DateTime nowUtc, CancellationToken ct)
+    {
+        Wrote();
+        lock (_lock)
+        {
+            foreach (var reader in Readers.Where(r => r.NodeId == nodeId)) reader.NotifiedAtUtc = nowUtc;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<int> AddHistoryAsync(DataSyncApplyLogDbModel log, CancellationToken ct)
+    {
+        Wrote();
+        lock (_lock)
+        {
+            var copy = log with { Id = History.Count == 0 ? 1 : History.Max(h => h.Id) + 1 };
+            History.Add(copy);
+            return Task.FromResult(copy.Id);
+        }
+    }
+
+    public Task<IReadOnlyList<DataSyncApplyLogDbModel>> GetHistoryAsync(CancellationToken ct)
+    {
+        lock (_lock) return Task.FromResult<IReadOnlyList<DataSyncApplyLogDbModel>>(History.Select(h => h with { }).ToList());
+    }
+
+    public Task<DataSyncApplyLogDbModel?> GetHistoryEntryAsync(int id, CancellationToken ct)
+    {
+        lock (_lock) return Task.FromResult(History.FirstOrDefault(h => h.Id == id) is { } log ? log with { } : null);
+    }
+
+    // Not used by the runtime or the facade.
+    public Task<long> NextSeqAsync(CancellationToken ct) => throw new NotSupportedException();
 
     public Task<IReadOnlyList<DataSyncEntityDbModel>> GetPublishedChangedSinceAsync(string kind, long sinceSeq,
         CancellationToken ct) => throw new NotSupportedException();
-
-    public Task<(int Live, int Tombstones)> CountPublishedAsync(string kind, CancellationToken ct) =>
-        throw new NotSupportedException();
-
-    public Task SetEntityStateAsync(string kind, string localKey, DataSyncEntitySyncState state, CancellationToken ct) =>
-        throw new NotSupportedException();
-
-    public Task SetOverlayAsync(string kind, string localKey, Bakabase.Modules.DataSync.Abstractions.DataSyncOverlay overlay,
-        CancellationToken ct) => throw new NotSupportedException();
-
-    public Task SetChildrenLocalAsync(string kind, string localKey, bool childrenLocal, CancellationToken ct) =>
-        throw new NotSupportedException();
-
-    public Task<IReadOnlyList<DataSyncPeerBase>> GetBasesAsync(int linkId, string kind, CancellationToken ct) =>
-        throw new NotSupportedException();
 
     public Task<IReadOnlyList<(string Kind, SyncKey Key)>> GetPendingToMergeAsync(int linkId, bool fullReconciliation,
         CancellationToken ct) => throw new NotSupportedException();
@@ -169,34 +385,10 @@ internal sealed class FakeDataSyncStore : IDataSyncStore
     public Task<int> CloseDominatedItemsAsync(IReadOnlyCollection<(string Kind, SyncKey Key)> touched, DateTime nowUtc,
         CancellationToken ct) => throw new NotSupportedException();
 
-    public Task<int> CloseStaleStateItemsAsync(IReadOnlyCollection<(string Kind, SyncKey Key)> touched, int? linkId,
-        DateTime nowUtc, CancellationToken ct) => throw new NotSupportedException();
-
-    public Task CloseItemsAsync(IReadOnlyCollection<long> ids, DataSyncInboxClosure closure, DataSyncInboxAction? action,
-        DataSyncEditorRef? by, int? applyLogId, CancellationToken ct) => throw new NotSupportedException();
-
-    public Task<DataSyncInboxItemDbModel?> GetItemAsync(long id, CancellationToken ct) =>
-        throw new NotSupportedException();
-
-    public Task<DataSyncInboxPage> QueryInboxAsync(DataSyncInboxQuery query, CancellationToken ct) =>
-        throw new NotSupportedException();
-
     public Task<DataSyncSourceAttention> GetAttentionAsync(CancellationToken ct) => throw new NotSupportedException();
 
     public Task TouchReaderAsync(DataSyncReader reader, DataSyncFeedQuery query, long seqServed, DateTime nowUtc,
         CancellationToken ct) => throw new NotSupportedException();
-
-    public Task<IReadOnlyList<DataSyncReaderDbModel>> GetReadersAsync(CancellationToken ct) =>
-        throw new NotSupportedException();
-
-    public Task<int> AddHistoryAsync(DataSyncApplyLogDbModel log, CancellationToken ct) =>
-        throw new NotSupportedException();
-
-    public Task<IReadOnlyList<DataSyncApplyLogDbModel>> GetHistoryAsync(CancellationToken ct) =>
-        throw new NotSupportedException();
-
-    public Task<DataSyncApplyLogDbModel?> GetHistoryEntryAsync(int id, CancellationToken ct) =>
-        throw new NotSupportedException();
 
     public Task PruneAsync(DateTime nowUtc, CancellationToken ct) => throw new NotSupportedException();
 }
@@ -358,10 +550,36 @@ internal sealed class FakeDataSyncGrantService : IDataSyncGrantService
         new DataSyncAccessRequestOutcome("awaitingApproval", "req-" + (input.PeerNodeId ?? input.Address),
             input.PeerNodeId ?? "node-by-address", "Peer by address", null);
 
+    /// <summary>Every call that changed access, in order (<c>approve:{id}:{readBack}</c>, <c>revoke:{node}</c>, …).</summary>
+    public ConcurrentQueue<string> Changes { get; } = new();
+
+    /// <summary>What an approval answers; by default the request's peer, read back when asked for two-way.</summary>
+    public Func<DataSyncAccessRequestView, bool, DataSyncApprovalOutcome>? Approval { get; set; }
+
+    /// <summary>Thrown by the next access-changing call, as the federation side refuses on this device.</summary>
+    public DataSyncProblem? Refuse { get; set; }
+
     public Task<bool> IsSharingEnabledAsync(CancellationToken ct) => Task.FromResult(SharingEnabled);
 
-    public Task SetSharingEnabledAsync(bool enabled, bool enablePairedRemoteAccess, CancellationToken ct) =>
-        throw new NotSupportedException();
+    public Task SetSharingEnabledAsync(bool enabled, bool enablePairedRemoteAccess, CancellationToken ct)
+    {
+        ThrowIfRefused();
+        Changes.Enqueue($"sharing:{enabled}:{enablePairedRemoteAccess}");
+        SharingEnabled = enabled;
+        // Only from Disabled, never touching Enabled or Unrestricted (§7.1.3).
+        if (enabled && enablePairedRemoteAccess && RemoteAccessMode == RemoteAccessMode.Disabled)
+            RemoteAccessMode = RemoteAccessMode.Enabled;
+        return Task.CompletedTask;
+    }
+
+    private void ThrowIfRefused()
+    {
+        if (Refuse is { } problem)
+        {
+            Refuse = null;
+            throw new DataSyncProblemException(problem);
+        }
+    }
 
     public Task<RemoteAccessMode> GetRemoteAccessModeAsync(CancellationToken ct) => Task.FromResult(RemoteAccessMode);
 
@@ -377,24 +595,65 @@ internal sealed class FakeDataSyncGrantService : IDataSyncGrantService
     public Task<IReadOnlyList<DataSyncAccessRequestView>> GetRequestsAsync(CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<DataSyncAccessRequestView>>(Requests.ToList());
 
-    public Task<DataSyncApprovalOutcome> ApproveAsync(string requestId, bool readBack, CancellationToken ct) =>
-        throw new NotSupportedException();
+    public Task<DataSyncApprovalOutcome> ApproveAsync(string requestId, bool readBack, CancellationToken ct)
+    {
+        ThrowIfRefused();
+        Changes.Enqueue($"approve:{requestId}:{readBack}");
+        var request = Requests.Single(r => r.RequestId == requestId);
+        var outcome = Approval?.Invoke(request, readBack) ?? new DataSyncApprovalOutcome(request.NodeId,
+            request.NodeName, request.Intent, readBack && request.Intent == DataSyncRequestIntent.TwoWay, null);
+        lock (Readers) Readers.Add(new DataSyncGrantView(request.NodeId, request.NodeName, DateTime.UtcNow));
+        if (outcome.ReadBackGranted) Outbound.Add(request.NodeId);
+        return Task.FromResult(outcome);
+    }
 
-    public Task RejectAsync(string requestId, CancellationToken ct) => throw new NotSupportedException();
-    public Task CancelOutgoingAsync(string requestId, CancellationToken ct) => throw new NotSupportedException();
+    public Task RejectAsync(string requestId, CancellationToken ct)
+    {
+        ThrowIfRefused();
+        Changes.Enqueue($"reject:{requestId}");
+        return Task.CompletedTask;
+    }
 
-    public Task<IReadOnlyList<DataSyncGrantView>> GetGrantsAsync(CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<DataSyncGrantView>>(Readers.ToList());
+    public Task CancelOutgoingAsync(string requestId, CancellationToken ct)
+    {
+        ThrowIfRefused();
+        Changes.Enqueue($"cancel:{requestId}");
+        return Task.CompletedTask;
+    }
 
-    public Task RevokeAsync(string peerNodeId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<IReadOnlyList<DataSyncGrantView>> GetGrantsAsync(CancellationToken ct)
+    {
+        lock (Readers) return Task.FromResult<IReadOnlyList<DataSyncGrantView>>(Readers.ToList());
+    }
 
-    public Task<DataSyncInvitationView> CreateInvitationAsync(DataSyncInvitationInput input, CancellationToken ct) =>
-        throw new NotSupportedException();
+    public Task RevokeAsync(string peerNodeId, CancellationToken ct)
+    {
+        ThrowIfRefused();
+        Changes.Enqueue($"revoke:{peerNodeId}");
+        lock (Readers) Readers.RemoveAll(r => r.NodeId == peerNodeId);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>A code whose expiry comes back without a kind, as a stored time would.</summary>
+    public Task<DataSyncInvitationView> CreateInvitationAsync(DataSyncInvitationInput input, CancellationToken ct)
+    {
+        ThrowIfRefused();
+        Changes.Enqueue($"invite:{input.AllowTwoWay}");
+        return Task.FromResult(new DataSyncInvitationView("48213705",
+            DateTime.SpecifyKind(new DateTime(2026, 9, 1, 8, 10, 0), DateTimeKind.Unspecified),
+            ["http://192.168.1.20:5000"], input.AllowTwoWay));
+    }
 
     public Task<bool> HasOutboundGrantAsync(string peerNodeId, CancellationToken ct) =>
         Task.FromResult(Outbound.Contains(peerNodeId));
 
-    public Task ForgetOutboundAsync(string peerNodeId, CancellationToken ct) => throw new NotSupportedException();
+    public Task ForgetOutboundAsync(string peerNodeId, CancellationToken ct)
+    {
+        ThrowIfRefused();
+        Changes.Enqueue($"forget:{peerNodeId}");
+        Outbound.Remove(peerNodeId);
+        return Task.CompletedTask;
+    }
 }
 
 internal sealed class FakeReviewStore : IDataSyncReviewStore
@@ -423,9 +682,17 @@ internal sealed class FakeReviewStore : IDataSyncReviewStore
     }
 
     public DataSyncReviewEntry? Get(string reviewId) => _entries.GetValueOrDefault(reviewId);
-    public void SetLastPlan(string reviewId, DataSyncPlan plan) => throw new NotSupportedException();
-    public void MarkApplying(string reviewId, string taskId) => throw new NotSupportedException();
-    public void MarkApplied(string reviewId, int applyLogId) => throw new NotSupportedException();
+
+    public void SetLastPlan(string reviewId, DataSyncPlan plan) => Edit(reviewId, e => e with { LastPlan = plan });
+
+    public void MarkApplying(string reviewId, string taskId) => Edit(reviewId, e => e with { TaskId = taskId });
+
+    public void MarkApplied(string reviewId, int applyLogId) => Edit(reviewId, e => e with { ApplyLogId = applyLogId });
+
+    private void Edit(string reviewId, Func<DataSyncReviewEntry, DataSyncReviewEntry> edit)
+    {
+        if (_entries.TryGetValue(reviewId, out var entry)) _entries[reviewId] = edit(entry);
+    }
 
     public void Discard(string reviewId)
     {

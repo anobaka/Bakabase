@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Modules.DataSync;
+using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Runtime;
+using Bakabase.Modules.DataSync.Services;
 
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 
@@ -42,6 +46,27 @@ public interface IDataSyncRuntimeObserver
     /// </summary>
     Task AutoSyncAppliedAsync(DataSyncLinkDbModel link, DataSyncAutoSyncOutcome outcome, bool firstSync,
         CancellationToken ct);
+
+    /// <summary>
+    /// A write that is not an automatic pull finished (§8.10.1, §6.6): a review
+    /// (<see cref="DataSyncHistoryKind.FirstLink"/>), a resolution batch, an undo, a restore choice or an entity
+    /// setting. <paramref name="applyLogId"/> is its history entry, null when nothing was applied;
+    /// <paramref name="linkId"/> the link it was about, when one.
+    /// </summary>
+    Task WriteAppliedAsync(DataSyncHistoryKind kind, int? applyLogId, int? linkId, CancellationToken ct) =>
+        Task.CompletedTask;
+
+    /// <summary>
+    /// The scheduler read the local state row on its tick (§8.2): about once a second, never inside a transaction.
+    /// What a restore detection wrote there is announced from here (§9.4), whoever paused the links.
+    /// </summary>
+    Task LocalStateSeenAsync(DataSyncLocalStateDbModel? local, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>
+    /// Something the status shows changed outside a link row: sharing switched, a request approved or rejected, a
+    /// reader revoked, the global pause.
+    /// </summary>
+    Task StateChangedAsync(CancellationToken ct) => Task.CompletedTask;
 }
 
 public sealed class NoOpDataSyncRuntimeObserver : IDataSyncRuntimeObserver
@@ -65,4 +90,43 @@ public sealed class NoOpDataSyncRuntimeObserver : IDataSyncRuntimeObserver
 public interface IDataSyncRetention
 {
     Task RunAsync(DateTime nowUtc, CancellationToken ct);
+}
+
+/// <summary>
+/// The process-wide DataSyncGate as the facade enters it (§10.1: "Gate" waits at most 30 s, else <c>Busy</c>).
+/// Package C's <c>DataSyncGate</c> issues the leases, and the host registers this over that very gate, so the facade,
+/// the apply runner and the feed share one. Nothing registers a default: a second gate would serialize nothing.
+/// </summary>
+public interface IDataSyncGateEntry
+{
+    /// <summary>A lease, or null when the gate was not free within <paramref name="timeout"/> (null: no limit).</summary>
+    Task<DataSyncGateLease?> TryEnterAsync(TimeSpan? timeout, CancellationToken ct);
+}
+
+/// <summary>
+/// This device's definitions as the first-contact planner compares a staged review with (§8.3 step 4): the last
+/// committed state of the given kinds, read in a read transaction, without Refresh and without any write (F78) [C].
+/// </summary>
+public interface IDataSyncLocalStateReader
+{
+    Task<IReadOnlyDictionary<string, DataSyncLocalKindState>> ReadAsync(IReadOnlyCollection<string> kinds,
+        CancellationToken ct);
+}
+
+/// <summary>
+/// What undoing one history entry would do (§8.11), computed read-only with the continuous rules and the per-entity
+/// refusals [C]. The facade answers for the entries nothing can undo (an undo, an undone or unknown entry) itself.
+/// </summary>
+public interface IDataSyncUndoPreviewer
+{
+    Task<DataSyncUndoPreview> PreviewAsync(DataSyncApplyLogDbModel entry, CancellationToken ct);
+}
+
+/// <summary>
+/// The addresses other devices can reach this one at (the overview, §10.1). The Service registers it over remote
+/// access; without it the overview lists none.
+/// </summary>
+public interface IDataSyncHostAddresses
+{
+    IReadOnlyList<string> GetReachableAddresses();
 }

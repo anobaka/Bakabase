@@ -142,10 +142,11 @@ public sealed class DataSyncLinkService
     /// AwaitingReview; otherwise it sends a request (§7.2.2) and waits in AwaitingAccess. A two-way link also sends a
     /// request when the peer does not read this device yet, which mints a reciprocal code (§7.2.4).
     /// <paramref name="callerMayCreateAccess"/> false refuses exactly the calls that would send a request or mint a
-    /// code (§7.1.5).
+    /// code (§7.1.5). With <paramref name="gate"/>, the caller holds the DataSyncGate and the request goes out with it
+    /// released (§10.1).
     /// </summary>
     public async Task<DataSyncLinkChange> CreateAsync(DataSyncLinkCreate input, bool callerMayCreateAccess,
-        CancellationToken ct)
+        CancellationToken ct, DataSyncGateHold? gate = null)
     {
         var mode = input.CopyOnce ? DataSyncLinkMode.Off : input.Mode;
         if (mode == DataSyncLinkMode.Off && !input.CopyOnce)
@@ -177,8 +178,8 @@ public sealed class DataSyncLinkService
         if (needsRequest)
         {
             var intent = mode == DataSyncLinkMode.TwoWay ? DataSyncRequestIntent.TwoWay : DataSyncRequestIntent.Follow;
-            var sent = await SendRequestAsync(grants, new DataSyncAccessRequestInput(input.PeerNodeId, input.Address,
-                input.Code, intent), ct);
+            var sent = await gate.OutsideGateAsync(() => SendRequestAsync(grants,
+                new DataSyncAccessRequestInput(input.PeerNodeId, input.Address, input.Code, intent), ct), ct);
             if (sent.Problem is not null) return DataSyncLinkChange.Refused(sent.Problem.Code, sent.Problem.Detail);
             var outcome = sent.Outcome!;
             peerNodeId = outcome.PeerNodeId;
@@ -244,10 +245,11 @@ public sealed class DataSyncLinkService
     /// <summary>
     /// Changes a link's mode and kinds (§8.1). Off stops it (bases and pending records kept). Turning a stopped link
     /// on resumes it with no new review unless kinds were added; kinds added to a link run a first contact for those
-    /// kinds only. Two-way on a peer that does not read this device sends a request with a reciprocal code (§7.2.4).
+    /// kinds only. Two-way on a peer that does not read this device sends a request with a reciprocal code (§7.2.4),
+    /// with <paramref name="gate"/> released around it.
     /// </summary>
     public async Task<DataSyncLinkChange> UpdateAsync(int linkId, DataSyncLinkMode? mode, IReadOnlyList<string>? kinds,
-        bool callerMayCreateAccess, CancellationToken ct)
+        bool callerMayCreateAccess, CancellationToken ct, DataSyncGateHold? gate = null)
     {
         var link = await GetAsync(linkId, ct);
         if (link is null) return DataSyncLinkChange.Refused(DataSyncProblemCode.LinkNotFound);
@@ -288,8 +290,8 @@ public sealed class DataSyncLinkService
         if (needsRequest)
         {
             var intent = target == DataSyncLinkMode.TwoWay ? DataSyncRequestIntent.TwoWay : DataSyncRequestIntent.Follow;
-            var sent = await SendRequestAsync(grants,
-                new DataSyncAccessRequestInput(link.PeerNodeId, null, null, intent), ct);
+            var sent = await gate.OutsideGateAsync(() => SendRequestAsync(grants,
+                new DataSyncAccessRequestInput(link.PeerNodeId, null, null, intent), ct), ct);
             if (sent.Problem is not null) return new DataSyncLinkChange(link, null, sent.Problem);
             outcome = sent.Outcome!;
             hasAccess |= outcome.Outcome == "granted";
@@ -356,7 +358,7 @@ public sealed class DataSyncLinkService
     /// link whose read-back failed asks only to read the peer back (Follow): the peer already reads this device.
     /// </summary>
     public async Task<DataSyncLinkChange> RequestAccessAgainAsync(int linkId, bool callerMayCreateAccess,
-        CancellationToken ct)
+        CancellationToken ct, DataSyncGateHold? gate = null)
     {
         var link = await GetAsync(linkId, ct);
         if (link is null) return DataSyncLinkChange.Refused(DataSyncProblemCode.LinkNotFound);
@@ -373,8 +375,8 @@ public sealed class DataSyncLinkService
         if (!callerMayCreateAccess)
             return DataSyncLinkChange.Refused(DataSyncProblemCode.NotAllowedOnThisDevice, null, link);
 
-        var sent = await SendRequestAsync(grants,
-            new DataSyncAccessRequestInput(link.PeerNodeId, link.PeerAddress, null, intent), ct);
+        var sent = await gate.OutsideGateAsync(() => SendRequestAsync(grants,
+            new DataSyncAccessRequestInput(link.PeerNodeId, link.PeerAddress, null, intent), ct), ct);
         if (sent.Problem is not null) return new DataSyncLinkChange(link, null, sent.Problem);
         var outcome = sent.Outcome!;
         if (outcome.Outcome == "granted")
@@ -438,7 +440,7 @@ public sealed class DataSyncLinkService
     /// link's state is refused with <see cref="DataSyncProblemCode.DecisionsInvalid"/> and changes nothing.
     /// </summary>
     public async Task<DataSyncLinkChange> ResumeAsync(int linkId, DataSyncResumeAction action,
-        bool callerMayCreateAccess, CancellationToken ct)
+        bool callerMayCreateAccess, CancellationToken ct, DataSyncGateHold? gate = null)
     {
         var link = await GetAsync(linkId, ct);
         if (link is null) return DataSyncLinkChange.Refused(DataSyncProblemCode.LinkNotFound);
@@ -478,7 +480,7 @@ public sealed class DataSyncLinkService
             case DataSyncResumeAction.AskAccessAgain:
             {
                 if (reason != DataSyncPauseReason.PeerReset || restored) return NotApplicable(link, action);
-                return await AskAccessAgainAsync(link, callerMayCreateAccess, ct);
+                return await AskAccessAgainAsync(link, callerMayCreateAccess, ct, gate);
             }
             case DataSyncResumeAction.ThisDeviceWins:
             case DataSyncResumeAction.TakeTheirs:
@@ -556,7 +558,7 @@ public sealed class DataSyncLinkService
     /// mode and kinds, waiting for access; once granted it runs a new first contact (§8.3).
     /// </summary>
     private async Task<DataSyncLinkChange> AskAccessAgainAsync(DataSyncLinkDbModel link, bool callerMayCreateAccess,
-        CancellationToken ct)
+        CancellationToken ct, DataSyncGateHold? gate)
     {
         var mode = link.Mode == DataSyncLinkMode.Off ? link.LastMode : link.Mode;
         var intent = mode == DataSyncLinkMode.TwoWay ? DataSyncRequestIntent.TwoWay : DataSyncRequestIntent.Follow;
@@ -567,8 +569,8 @@ public sealed class DataSyncLinkService
         if (!callerMayCreateAccess)
             return DataSyncLinkChange.Refused(DataSyncProblemCode.NotAllowedOnThisDevice, null, link);
 
-        var sent = await SendRequestAsync(grants,
-            new DataSyncAccessRequestInput(link.PeerNodeId, link.PeerAddress, null, intent), ct);
+        var sent = await gate.OutsideGateAsync(() => SendRequestAsync(grants,
+            new DataSyncAccessRequestInput(link.PeerNodeId, link.PeerAddress, null, intent), ct), ct);
         if (sent.Problem is not null) return new DataSyncLinkChange(link, null, sent.Problem);
         var outcome = sent.Outcome!;
         var granted = outcome.Outcome == "granted";
@@ -702,6 +704,31 @@ public sealed class DataSyncLinkService
 
         if (!paused) await MarkDueAsync(null, ct);
         return null;
+    }
+
+    /// <summary>
+    /// "Share new definitions automatically" off (§3.6): Refresh then inserts a new local definition as LocalOnly.
+    /// Kept in the local state row; the caller holds the gate, so no Refresh or apply rewrites the row meanwhile.
+    /// </summary>
+    public async Task<DataSyncProblem?> SetNewDefinitionsStayLocalAsync(bool stayLocal, CancellationToken ct)
+    {
+        await _lock.WaitAsync(ct);
+        try
+        {
+            await using var scope = _scopes.CreateAsyncScope();
+            var store = Store(scope);
+            var local = await store.GetLocalStateAsync(ct);
+            if (local is null) return new DataSyncProblem(DataSyncProblemCode.Busy, "notInitialized");
+            if (local.NewDefinitionsStayLocal == stayLocal) return null;
+            local.NewDefinitionsStayLocal = stayLocal;
+            local.UpdatedAtUtc = _clock.UtcNow;
+            await store.SaveLocalStateAsync(local, ct);
+            return null;
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     // ---- grant events ------------------------------------------------------------------------------------------
@@ -998,6 +1025,11 @@ public sealed class DataSyncLinkService
         catch (DataSyncPeerException e)
         {
             return new SentRequest(null, new DataSyncProblem(ProblemOf(e.Code), e.Code.ToCode()));
+        }
+        catch (DataSyncProblemException e)
+        {
+            // This device refused on the way (sharing or remote access off, a wrong code): the answer as it is.
+            return new SentRequest(null, e.Problem);
         }
     }
 
