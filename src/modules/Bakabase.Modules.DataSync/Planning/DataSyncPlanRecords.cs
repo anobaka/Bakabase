@@ -96,8 +96,17 @@ public sealed record DataSyncDecisionError(string ItemId, DataSyncDecisionErrorC
 /// "tokenMismatch" | "decisionMissing" | "resolutionNotAllowed" | "targetNotAllowed" | "targetUsedTwice"
 /// | "unknownChange" | "invalidName" | "hashMismatch" | "identityConflict"; null otherwise.
 /// </summary>
+/// <param name="TargetLocalKey">
+/// The local entity an Update, Link or Unchanged item is bound to, also when it writes nothing (NoChange): the review
+/// apply records a base for it (§8.3 step 5). Null for creates, skips, held and unapplied items.
+/// </param>
+/// <param name="ChildMap">
+/// Incoming child id → local child id after the merge (Update, Link, Unchanged) or the create (Create,
+/// CreateSeparate): the base's <c>ChildMap</c> (§8.3 step 5). Null when nothing was resolved.
+/// </param>
 public sealed record ResolvedItem(string ItemId, string Kind, DataSyncItemOutcome Outcome,
-    DataSyncItemAction Action, ApplyOperation? Operation, string? Detail = null);
+    DataSyncItemAction Action, ApplyOperation? Operation, string? Detail = null, string? TargetLocalKey = null,
+    IReadOnlyDictionary<string, string>? ChildMap = null);
 
 /// <summary>Errors is always empty when strict = false.</summary>
 public sealed record ResolveResult(IReadOnlyList<ResolvedItem> Items, IReadOnlyList<DataSyncDecisionError> Errors);

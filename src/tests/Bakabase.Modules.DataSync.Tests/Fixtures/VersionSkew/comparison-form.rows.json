@@ -1,0 +1,51 @@
+{
+  "comparisonFormVersion": 1,
+  "rows": [
+    {
+      "localKey": "1",
+      "content": {
+        "name": "Genre",
+        "color": "#0090ff",
+        "type": "Tags",
+        "children": [
+          {
+            "id": "1",
+            "label": "Action"
+          },
+          {
+            "id": "2",
+            "label": "Drama"
+          }
+        ]
+      },
+      "orderKey": "a0",
+      "sharedHash": "sha256:32338bfef7e801c9f2b52274c86b23cce611b7a1f22d8ec7d95d6e54d45dcedb"
+    },
+    {
+      "localKey": "2",
+      "content": {
+        "name": "Mood"
+      },
+      "orderKey": "a1",
+      "sharedHash": "sha256:c64048d287b1bdb8867198b754ec0b2e01592ced51a24c7ad1f277652b77e571"
+    },
+    {
+      "localKey": "3",
+      "content": {
+        "name": "Artist",
+        "children": [
+          {
+            "id": "7",
+            "label": "Comedy"
+          },
+          {
+            "id": "8",
+            "label": "Comedy"
+          }
+        ]
+      },
+      "orderKey": null,
+      "sharedHash": "sha256:f9255f331293077daa8e95c7de8b6309e423b9bb9c00fed8f3757bcf791e31ca"
+    }
+  ]
+}
