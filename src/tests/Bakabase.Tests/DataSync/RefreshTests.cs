@@ -413,6 +413,113 @@ public class RefreshTests
         Assert.AreEqual(0, (await f.RefreshAsync()).Changed, "and the next Refresh finds nothing");
     }
 
+    [TestMethod]
+    public async Task A_new_ComparisonFormVersion_never_takes_an_unsynced_rows_content_for_what_it_published()
+    {
+        var f = await DataSyncRefreshFixture.CreateAsync();
+        f.Kind.Add("1", "Genre");
+        await f.RefreshAsync();
+        await f.Store.SetEntityStateAsync(f.KindId, "1", DataSyncEntitySyncState.LocalOnly, default);
+        await f.RefreshAsync();
+        f.Kind.Definitions["1"].Name = "Genres";
+        Assert.AreEqual(0, (await f.RefreshAsync()).Changed, "an unsynced row takes no revision");
+        var published = await f.RowAsync("1");
+
+        f.Kind.MemoryCodec.ComparisonFormVersion = 2;
+        Assert.AreEqual(0, (await f.RefreshAsync()).Changed);
+        await f.Store.SetEntityStateAsync(f.KindId, "1", DataSyncEntitySyncState.Synced, default);
+        var result = await f.RefreshAsync(collectPublished: true);
+
+        Assert.AreEqual(1, result.Changed,
+            "it rejoins with content it never published: a revision, never the new name under the old vector");
+        var after = await f.RowAsync("1");
+        Assert.AreEqual(DataSyncVvRelation.Dominates, DataSyncRefreshFixture.Vv(after.VvJson).CompareTo(DataSyncRefreshFixture.Vv(published.VvJson)));
+        Assert.AreEqual("Genres", result.Published![(f.KindId, "1")].Content!["name"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public async Task A_new_ComparisonFormVersion_while_held_leaves_Publish_a_revision()
+    {
+        var f = await DataSyncRefreshFixture.CreateAsync();
+        f.Kind.Add("1", "Genre", ("a", "Horror"));
+        await f.RefreshAsync();
+        // What a sync apply wrote (a renamed child), recorded as the runner records it…
+        f.Kind.Definitions["1"].Children[0] = new MemoryChild("a", "Horror films");
+        await f.RefreshAsync();
+        await f.LogApplyAsync(DataSyncHistoryKind.AutoSync, new Bakabase.InsideWorld.Business.Components.DataSync.Apply
+            .DataSyncEntityChanges(f.KindId, "1", [],
+            [
+                new Bakabase.InsideWorld.Business.Components.DataSync.Apply.DataSyncChildChange("choice:pa",
+                    DataSyncRefreshFixture.Child("a", "Horror"), DataSyncRefreshFixture.Child("a", "Horror films")),
+            ]));
+        // …and a stale whole-row write that undoes it: held (§6.5).
+        f.Kind.Definitions["1"].Children[0] = new MemoryChild("a", "Horror");
+        await f.RefreshAsync();
+        var held = await f.RowAsync("1");
+        Assert.IsTrue(held.PublishHeld);
+
+        f.Kind.MemoryCodec.ComparisonFormVersion = 2;
+        Assert.AreEqual(0, (await f.RefreshAsync()).Changed);
+        Assert.IsTrue((await f.RowAsync("1")).PublishHeld);
+        var result = await f.RefreshAsync(options: new DataSyncRefreshOptions([(f.KindId, "1")]));
+
+        Assert.AreEqual(1, result.Changed, "Publish releases the held content as a revision, not under the old vector");
+        var published = await f.RowAsync("1");
+        Assert.IsFalse(published.PublishHeld);
+        Assert.AreEqual(DataSyncVvRelation.DominatedBy, DataSyncRefreshFixture.Vv(held.VvJson).CompareTo(DataSyncRefreshFixture.Vv(published.VvJson)));
+    }
+
+    #endregion
+
+    #region Kind schema versions (§8.4 condition 6)
+
+    [TestMethod]
+    public async Task Refresh_records_the_kind_schema_version_and_an_upgrade_remerges_held_records_once_on_every_link()
+    {
+        var f = await DataSyncRefreshFixture.CreateAsync();
+        f.Kind.Add("1", "Genre");
+        await f.RefreshAsync();
+        Assert.AreEqual(1, DataSyncStoredJson.ReadVersions((await f.StateAsync()).KindSchemaVersionsJson, "")[f.KindId]);
+        var entity = await f.RowAsync("1");
+        var links = new[] { await f.LinkAsync("peer-1"), await f.LinkAsync("peer-2") };
+        var record = DataSyncStoreFixture.Record([entity.SyncKey], DataSyncStoreFixture.Vv(("bbbbbbbbbbbbbbbb", 1))) with
+        {
+            SchemaVersion = 2,
+        };
+        foreach (var link in links)
+        {
+            await f.Store.UpsertBasesAsync(link.Id,
+            [
+                new DataSyncBaseUpdate(f.KindId, new SyncKey(entity.SyncKey), DataSyncBaseState.Normal, null, null, null,
+                    DataSyncPendingRecords.Create(record, DataSyncPendingReason.Held, entity.Seq, DataSyncMergeFlags.None),
+                    false),
+            ], default);
+        }
+
+        await f.RefreshAsync();
+        foreach (var link in links)
+            Assert.AreEqual(0, (await f.Store.GetPendingToMergeAsync(link.Id, false, default)).Count,
+                "the version this build recorded is its own: a held record is not merged again on every pull");
+
+        // An upgrade: this build reads schema 2 now.
+        f.Kind.MemoryCodec.SchemaVersion = 2;
+        await f.RefreshAsync();
+
+        Assert.AreEqual(2, DataSyncStoredJson.ReadVersions((await f.StateAsync()).KindSchemaVersionsJson, "")[f.KindId]);
+        foreach (var link in links)
+        {
+            Assert.AreEqual(entity.SyncKey, (await f.Store.GetPendingToMergeAsync(link.Id, false, default)).Single().Key.Value,
+                "each link merges it once after the upgrade");
+        }
+
+        // A merge evaluated it again on one link: that link leaves it alone, the other still takes it.
+        (await f.Db.DataSyncPeerBases.SingleAsync(b => b.LinkId == links[0].Id)).PendingEvaluatedLocalSeq = entity.Seq;
+        await f.Db.SaveChangesAsync();
+        await f.RefreshAsync();
+        Assert.AreEqual(0, (await f.Store.GetPendingToMergeAsync(links[0].Id, false, default)).Count);
+        Assert.AreEqual(1, (await f.Store.GetPendingToMergeAsync(links[1].Id, false, default)).Count);
+    }
+
     #endregion
 
     #region The actor

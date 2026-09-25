@@ -74,18 +74,29 @@ public sealed partial class DataSyncApplyRunner
                 if (blocked is null) applied++;
             }
 
-            // Key moves (KeepWithEntity, rekeys, KeepRecordLinked) return to their pre-image owners.
+            // Key moves (KeepWithEntity, rekeys, KeepRecordLinked) return to their pre-image owners — all of them or
+            // none: the moves are saved one by one, and one taken back halfway could leave a key that no entity owns,
+            // so a peer's record carrying it would bind as new (§5.3; undo never frees a key, §8.11).
             var document = DataSyncPreImageDocument.Read(log.PreImageJson);
             if (document.Identity is { KeyMoves.Count: > 0 } identity)
             {
+                const string savepoint = "undoKeyMoves";
+                await s.SavepointAsync(savepoint, ct);
                 try
                 {
                     await s.Identity.RestoreKeyOwnersAsync(identity, ct);
+                    await s.ReleaseSavepointAsync(savepoint, ct);
                     applied++;
                 }
                 catch (DataSyncIdentityRefusedException e)
                 {
-                    _logger.LogInformation(e, "Data sync undo kept some keys where they are: {Reason}", e.Message);
+                    await s.RollbackToSavepointAsync(savepoint);
+                    // The rollback forgot every tracked row, the log among them.
+                    log = await s.Db.DataSyncApplyLogs.SingleAsync(l => l.Id == applyLogId, ct);
+                    recorder.ChangedSinceReview++;
+                    recorder.Item("keys/" + e.Kind + "/" + e.Key, e.Kind, e.Key, DataSyncItemOutcome.ChangedSinceReview,
+                        DataSyncItemAction.None, null, DataSyncPlanItemType.Update);
+                    _logger.LogInformation(e, "Data sync undo kept every key where it is: {Reason}", e.Message);
                 }
             }
 

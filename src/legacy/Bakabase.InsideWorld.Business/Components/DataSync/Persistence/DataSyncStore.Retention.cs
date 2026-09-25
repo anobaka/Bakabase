@@ -91,9 +91,10 @@ public sealed partial class DataSyncStore
     /// <summary>
     /// Retention (§4.6), in the caller's transaction:
     /// <list type="bullet">
-    /// <item>a served tombstone deleted more than 180 days ago stops being served, and its kind's floor
-    /// (<c>TombstoneFloorSeqsJson</c>) rises to its Seq; floors are per kind and never go down; the row is kept
-    /// forever;</item>
+    /// <item>a served tombstone deleted more than 180 days ago, and not served again since (row T2 serves it again
+    /// with a new Seq and <c>UpdatedAtUtc</c>, which starts its serve window again), stops being served, and its
+    /// kind's floor (<c>TombstoneFloorSeqsJson</c>) rises to its Seq; floors are per kind and never go down; the row is
+    /// kept forever;</item>
     /// <item>items closed more than 90 days ago are deleted;</item>
     /// <item>apply logs: the newest 500 and every one newer than 30 days are kept, then the oldest go while the kept
     /// pre-images exceed 64 MiB; logs are pruned oldest first only, so a newer log is never pruned while an older
@@ -109,10 +110,13 @@ public sealed partial class DataSyncStore
         await FlushAsync(ct);
         var state = await LoadStateAsync(ct);
 
-        // Tombstones: unserved, never deleted.
+        // Tombstones: unserved, never deleted. A tombstone served again (row T2) has 180 days again from then: unserved
+        // the next day, a peer that does not pull within it would meet T2 again and again, each time superseding every
+        // reader below the kind's new floor.
         var tombstoneCutoff = nowUtc - TombstoneServedFor;
         var expiring = await _db.DataSyncEntities
-            .Where(e => e.DeletedAtUtc != null && e.TombstoneServed && e.DeletedAtUtc < tombstoneCutoff)
+            .Where(e => e.DeletedAtUtc != null && e.TombstoneServed && e.DeletedAtUtc < tombstoneCutoff &&
+                        e.UpdatedAtUtc < tombstoneCutoff)
             .ToListAsync(ct);
         if (expiring.Count > 0)
         {

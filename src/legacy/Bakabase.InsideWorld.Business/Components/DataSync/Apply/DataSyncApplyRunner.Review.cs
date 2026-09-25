@@ -159,6 +159,7 @@ public sealed partial class DataSyncApplyRunner
         private readonly Dictionary<string, string> _created = new(StringComparer.Ordinal);
         private readonly HashSet<string> _changed = new(StringComparer.Ordinal);
         private readonly HashSet<string> _orderedKinds = new(StringComparer.Ordinal);
+        private readonly DataSyncLinkState _linkStartedAs = link?.State ?? default;
 
         public async Task WriteAsync(CancellationToken ct)
         {
@@ -185,9 +186,12 @@ public sealed partial class DataSyncApplyRunner
                 foreach (var (_, op) in chunks[c]) await RecordAsync(byItem[op.ItemId], ct);
                 if (c < chunks.Count - 1)
                 {
+                    // As an auto-sync apply's chunks (§8.10.2): a rotation in the gap stops the review here, and the
+                    // task's retry plans again from what the committed chunks left.
                     await runner.CommitAsync(s, ct);
-                    await Task.Delay(ChunkGap, ct);
-                    await s.BeginAsync(ct);
+                    await runner.BetweenChunksAsync(null, null, ct);
+                    await runner.ContinueAsync(s, ct);
+                    if (link is not null) await EnsureLinkRunsAsync(s, link, _linkStartedAs, ct);
                 }
             }
 

@@ -705,6 +705,40 @@ public class ResolutionTests
         Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count);
     }
 
+    [TestMethod]
+    public async Task Reapply_after_the_apply_entry_is_gone_keeps_the_hold_and_the_item_and_withdraws_Reapply()
+    {
+        var (localKey, before) = await LostUpdateAsync();
+        // Retention pruned the apply's entry (its pre-images over the budget): nothing says what to write back.
+        var db = _f.NewDb();
+        db.DataSyncApplyLogs.RemoveRange(db.DataSyncApplyLogs);
+        await db.SaveChangesAsync();
+        var item = await SingleOpenAsync(DataSyncInboxItemType.SuspectedLostUpdate);
+
+        await _f.ResolveAsync(item, DataSyncInboxAction.Reapply);
+
+        var row = await _f.RowAsync(localKey);
+        Assert.IsTrue(row.PublishHeld, "the hold stays: clearing it would publish the stale overwrite");
+        Assert.AreEqual(before, Vv(row.VvJson));
+        Assert.AreEqual(("Genre 2", 2), (_f.Kind[localKey].Name, _f.Kind[localKey].Children.Count), "nothing written");
+        var open = await SingleOpenAsync(DataSyncInboxItemType.SuspectedLostUpdate);
+        Assert.AreEqual(item.Id, open.Id);
+        var payload = DataSyncStoredJson.Read<DataSyncInboxPayload>(open.PayloadJson, "x");
+        Assert.AreEqual(Bakabase.InsideWorld.Business.Components.DataSync.Persistence.DataSyncLostUpdateGuard.ReapplyUnavailable,
+            payload.Detail, "the card says why");
+        CollectionAssert.AreEqual(new[] { DataSyncInboxAction.Publish },
+            DataSyncInboxActions.Allowed(open.Type, open.SubjectPath, payload, false).ToArray());
+
+        await _f.RefreshAsync();
+        row = await _f.RowAsync(localKey);
+        Assert.IsTrue(row.PublishHeld);
+        Assert.AreEqual(before, Vv(row.VvJson), "no Refresh publishes it meanwhile");
+
+        await _f.ResolveAsync(open, DataSyncInboxAction.Publish);
+        Assert.IsFalse((await _f.RowAsync(localKey)).PublishHeld, "Publish still settles it");
+        Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count);
+    }
+
     #endregion
 
     #region Regressions, long batches, pausing
@@ -791,28 +825,63 @@ public class ResolutionTests
     }
 
     [TestMethod]
-    public async Task A_paused_resolution_waits_between_its_transactions_and_holds_no_write_lock()
+    public async Task A_paused_resolution_waits_between_its_transactions_holding_neither_the_write_lock_nor_the_gate()
     {
-        var inputs = await BulkSuggestionsAsync(4, 3);
+        // Three rename conflicts resolved with the peer's name: each writes through the adapter.
+        var inputs = new List<DataSyncResolveInput>();
+        for (var i = 0; i < 3; i++)
+        {
+            var key = SyncKey.New().Value;
+            var v1 = _peer.Next();
+            await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([key], v1, Content("Genre" + i), "a" + i)));
+            var localKey = _f.Kind.KeyOf("Genre" + i);
+            _f.Kind.Definitions[localKey] = _f.Kind[localKey].With(name: "Style" + i);
+            await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([key], _peer.Next(v1), Content("Kind" + i), "a" + i)));
+            var item = (await _f.OpenItemsAsync()).Single(x => x.SyncKey == key);
+            inputs.Add(new DataSyncResolveInput(item.Id, DataSyncInboxAction.UseRemote, item.Token, null, null, null, null));
+        }
+
         _f.Runner.TransactionBudget = TimeSpan.Zero;
         var pause = new PauseTokenSource();
+        var writes = 0;
         _f.Kind.FailOn = _ =>
         {
-            pause.Pause();
+            // Asked to pause at its first write, inside the first transaction: only the gap after it may wait.
+            if (Interlocked.Increment(ref writes) == 1) pause.Pause();
             return null;
         };
 
-        var resolve = Task.Run(() => _f.Runner.RunResolutionsAsync(inputs, new DataSyncApplyOptions(false),
-            _f.Args("DataSyncResolve:paused", pause: pause.Token)));
-        var free = false;
-        for (var i = 0; i < 20 && !free && !resolve.IsCompleted; i++) free = await _f.TryTakeWriteLockAsync(TimeSpan.FromSeconds(1));
-        _f.Kind.FailOn = null;
+        try
+        {
+            var resolve = Task.Run(() => _f.Runner.RunResolutionsAsync(inputs, new DataSyncApplyOptions(false),
+                _f.Args("DataSyncResolve:paused", pause: pause.Token)));
+            for (var i = 0; i < 100 && (_f.Gate.IsHeld || Volatile.Read(ref writes) == 0) && !resolve.IsCompleted; i++)
+                await Task.Delay(50);
 
-        Assert.IsTrue(free, "paused between transactions: other writers are not locked out");
-        Assert.IsFalse(resolve.IsCompleted, "it waits while paused");
-        pause.Resume();
-        Assert.IsNotNull(await resolve.WaitAsync(TimeSpan.FromSeconds(30)));
+            Assert.IsTrue(pause.IsPauseRequested);
+            await Task.Delay(TimeSpan.FromSeconds(1));
+            Assert.IsFalse(resolve.IsCompleted, "it waits while paused");
+            Assert.AreEqual(1, Volatile.Read(ref writes), "the first chunk committed; nothing after it ran");
+            Assert.IsTrue(await _f.TryTakeWriteLockAsync(TimeSpan.FromSeconds(1)), "no transaction is open while it waits");
+            using (await _f.Gate.EnterAsync(TimeSpan.FromSeconds(1), default))
+            {
+                // The gate was given back: heads and every other data sync caller keep answering.
+            }
+
+            Assert.AreEqual(1, _f.Kind.Definitions.Values.Count(d => d.Name.StartsWith("Kind", StringComparison.Ordinal)));
+
+            pause.Resume();
+            Assert.IsNotNull(await resolve.WaitAsync(TimeSpan.FromSeconds(30)));
+        }
+        finally
+        {
+            _f.Kind.FailOn = null;
+        }
+
+        Assert.AreEqual(3, writes);
         Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count, "it went on after Resume");
+        CollectionAssert.AreEquivalent(new[] { "Kind0", "Kind1", "Kind2" },
+            _f.Kind.Definitions.Values.Select(d => d.Name).ToArray());
     }
 
     [TestMethod]

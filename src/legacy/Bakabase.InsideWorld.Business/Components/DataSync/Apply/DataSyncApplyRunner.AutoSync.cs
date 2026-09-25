@@ -83,6 +83,7 @@ public sealed partial class DataSyncApplyRunner
                 return (Nothing with { Paused = linkRow.PausedReason }, false);
             }
 
+            var startedAs = linkRow.State;
             var kinds = link.Kinds.Where(s.Kinds.ContainsKey).Distinct(StringComparer.Ordinal).ToList();
             try
             {
@@ -128,9 +129,12 @@ public sealed partial class DataSyncApplyRunner
             var writes = new DataSyncEntityWrites(s, recorder);
             var writer = new DataSyncMergeWriter(s, writes, input, result, linkRow.Id, async c =>
             {
+                // A rotation in the gap (the guard handles evidence outside the gate) stops the apply here: committed
+                // chunks stand, the cursor does not move, and the retry finds the link paused (§5.6).
                 await CommitAsync(s, c);
-                await Task.Delay(ChunkGap, c);
-                await s.BeginAsync(c);
+                await BetweenChunksAsync(null, null, c);
+                await ContinueAsync(s, c);
+                await EnsureLinkRunsAsync(s, linkRow, startedAs, c);
             });
             await writer.WriteAsync(ct);
             var written = writer.Result;

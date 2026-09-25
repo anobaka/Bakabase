@@ -31,7 +31,7 @@ namespace Bakabase.Tests.DataSync;
 /// ordinary revision.
 /// </summary>
 [TestClass]
-public class LostUpdateGuardTests
+public partial class LostUpdateGuardTests
 {
     /// <summary>The content before the apply: Genre, a:Horror, b:Drama, Asia/Europe with Japan under Asia, precision 1.</summary>
     private static async Task<DataSyncRefreshFixture> BeforeTheApplyAsync(DataSyncRefreshFixture? fixture = null)

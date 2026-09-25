@@ -9,6 +9,7 @@ using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Merging;
+using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Runtime;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,20 @@ public interface IDataSyncApplyListener
 /// <c>Cancelled</c> (v3.1 M-f). After a commit: dominance closure in its own short transaction, <c>actor.json</c>, and
 /// the <see cref="IDataSyncApplyListener"/>s.
 /// </summary>
+/// <remarks>
+/// <para>
+/// A chunked task commits between chunks, and the actor guard may rotate in that gap. Each later transaction reads the
+/// local state row again and checks it against what the attempt's Refresh saw (<see cref="ContinueAsync"/>), and each
+/// commit checks the stored actor, so no transaction ever issues or commits counters under a retired actor (§5.6).
+/// </para>
+/// <para>
+/// No task waits for a pause while it holds the gate. Every task honours a pause before it enters the gate. A
+/// resolution also honours one between its chunks, with the gate given back meanwhile: each of its chunks validates
+/// its items again from what is stored. An auto-sync apply and a review do not: their later chunks write what one
+/// merge or one plan decided from the state read under the gate at the start, which other data sync work must not
+/// change halfway. Inside a transaction only a stop reaches any task.
+/// </para>
+/// </remarks>
 public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
 {
     private static readonly TimeSpan[] Backoff =
@@ -134,7 +149,10 @@ public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
         }
     }
 
-    /// <summary>Refresh first, inside the transaction (§6.6); a skipped Refresh means nothing may be applied now.</summary>
+    /// <summary>
+    /// Refresh first, inside the transaction (§6.6); a skipped Refresh means nothing may be applied now. The actor it
+    /// saw is pinned: every later transaction of the attempt must still see it (<see cref="ContinueAsync"/>).
+    /// </summary>
     private async Task RefreshAsync(DataSyncApplySession s, DataSyncGateLease lease, IReadOnlyCollection<string> kinds,
         DataSyncRefreshOptions? options, CancellationToken ct)
     {
@@ -142,15 +160,74 @@ public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
             options ?? DataSyncRefreshOptions.None, ct);
         if (refresh.Skipped) throw new DataSyncActorUnverifiedException();
         await s.LoadStateAsync(ct);
+        s.PinActor();
     }
 
-    /// <summary>Commits while the actor is still verified; else rolls back (§5.6: nothing issued under a retiring actor).</summary>
+    /// <summary>
+    /// Commits while the actor is still verified and still the one the transaction issued counters under; else rolls
+    /// back (§5.6: nothing issued under a retiring actor).
+    /// </summary>
     private async Task CommitAsync(DataSyncApplySession s, CancellationToken ct)
     {
         if (!_guard.IsVerified) throw new DataSyncActorUnverifiedException();
+        if (await s.StoredActorDiffersAsync(ct)) throw new DataSyncActorChangedException();
         await s.CommitAsync(ct);
         // Committed counters must reach actor.json (§5.6), whatever a stop requested meanwhile.
         await WriteWatermarkAsync(s);
+    }
+
+    /// <summary>
+    /// Runs between two transactions of a chunked task, after the commit and before the next <c>BEGIN</c> (tests
+    /// only): something another caller does while the task leaves SQLite's writer lock free.
+    /// </summary>
+    internal Func<Task>? BetweenChunks { get; set; }
+
+    /// <summary>
+    /// The gap between two transactions of a chunked task (§8.10.2): nothing is open, and other writers get SQLite's
+    /// lock for <see cref="ChunkGap"/> — the actor guard among them, which handles evidence outside the gate. With a
+    /// <paramref name="lease"/>, a pause of the task is honoured here, and only here: the gate is given back while it
+    /// waits (§8.10.1: heads, the feed and every other data sync caller keep answering), then the attempt and the
+    /// actor are checked again, as at the start.
+    /// </summary>
+    private async Task BetweenChunksAsync(DataSyncTaskLease? lease, BTaskArgs? args, CancellationToken ct)
+    {
+        await Task.Delay(ChunkGap, ct);
+        if (BetweenChunks is { } hook) await hook();
+        if (lease is null || args is null || !await lease.WaitWhilePausedAsync(args)) return;
+        if (!MayRun(args)) throw new DataSyncAttemptEndedException();
+        await _guard.CheckAsync(lease, ct);
+    }
+
+    /// <summary>
+    /// Begins the next transaction of a chunked task (§5.6, §8.10.2): the local state row is read again — a rotation
+    /// the actor guard committed between the two transactions is never issued under, nor is its counter overwritten
+    /// by a stale row — and must still show the actor, generation and restore state the attempt's Refresh saw, with
+    /// no evidence waiting. Otherwise <see cref="DataSyncActorChangedException"/>: this transaction rolls back, the
+    /// committed ones stand, and the caller checks the actor and retries, where the paused link stops it.
+    /// </summary>
+    private async Task ContinueAsync(DataSyncApplySession s, CancellationToken ct)
+    {
+        await s.BeginAsync(ct);
+        await s.LoadStateAsync(ct);
+        if (!_guard.IsVerified || s.ActorMoved) throw new DataSyncActorChangedException();
+    }
+
+    /// <summary>
+    /// A chunked apply's link after <see cref="ContinueAsync"/>: read again (a later write must not overwrite what was
+    /// committed meanwhile), and still as the apply found it. A link that went away, or that stopped or paused since
+    /// <paramref name="startedAs"/> — the actor guard pauses a restore's links outside the gate — stops the apply like a
+    /// changed actor.
+    /// </summary>
+    private static async Task EnsureLinkRunsAsync(DataSyncApplySession s, DataSyncLinkDbModel link,
+        DataSyncLinkState startedAs, CancellationToken ct)
+    {
+        var entry = s.Db.Entry(link);
+        await entry.ReloadAsync(ct);
+        if (entry.State == EntityState.Detached ||
+            (link.State != startedAs && link.State is DataSyncLinkState.Paused or DataSyncLinkState.Stopped))
+        {
+            throw new DataSyncActorChangedException();
+        }
     }
 
     private async Task WriteWatermarkAsync(DataSyncApplySession s)
@@ -253,6 +330,12 @@ public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
 
 /// <summary>Refresh was skipped (the actor is unverified or evidence waits): nothing may be applied now (§5.6).</summary>
 public sealed class DataSyncActorUnverifiedException() : Exception("actorUnverified");
+
+/// <summary>
+/// After a pause the attempt may no longer write (a cancel was requested, or a newer attempt of the task took over,
+/// §8.10.1): the task exits there. The transactions it committed stand.
+/// </summary>
+internal sealed class DataSyncAttemptEndedException() : Exception("attemptEnded");
 
 /// <summary>
 /// A merge inside a resolution met row A1 or A2 (§8.4): the transaction rolls back, Refresh included, and the runner

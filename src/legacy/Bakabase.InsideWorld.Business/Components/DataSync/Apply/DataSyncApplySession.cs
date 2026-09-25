@@ -65,6 +65,43 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
     public DataSyncActorId SelfActor => new(State.ActorId);
     public DataSyncEditorRef Self => new(State.NodeId, Device.Name, State.ActorId);
 
+    /// <summary>What the attempt's first transaction saw of the actor after its Refresh (<see cref="PinActor"/>).</summary>
+    private (string ActorId, int Generation, DataSyncPauseReason? Restore)? _pinned;
+
+    /// <summary>
+    /// Notes the actor the attempt issues counters under, and whether a restore was pending, as its first transaction
+    /// saw them after Refresh (§5.6). Every later transaction of a chunked task must still see the same
+    /// (<see cref="ActorMoved"/>).
+    /// </summary>
+    public void PinActor() => _pinned = (State.ActorId, State.ActorGeneration, State.RestoreReason);
+
+    /// <summary>
+    /// Since <see cref="PinActor"/>, the loaded local state row names another actor or generation, or a restore
+    /// appeared, changed or was chosen: the actor guard ran between two of the attempt's transactions.
+    /// </summary>
+    public bool ActorMoved =>
+        _pinned is { } pinned &&
+        (!string.Equals(State.ActorId, pinned.ActorId, StringComparison.Ordinal) ||
+         State.ActorGeneration != pinned.Generation || State.RestoreReason != pinned.Restore);
+
+    /// <summary>
+    /// Whether the stored local state row names another actor than the loaded one, read past this context: the last
+    /// check before a commit, so nothing a transaction issued under a retired actor ever stands (§5.6). False before
+    /// the row was loaded.
+    /// </summary>
+    public async Task<bool> StoredActorDiffersAsync(CancellationToken ct)
+    {
+        if (!_stateLoaded) return false;
+        var stored = await Db.DataSyncLocalStates.AsNoTracking()
+            .Where(x => x.Id == DataSyncLocalStateRows.SingletonId)
+            .Select(x => new { x.ActorId, x.ActorGeneration })
+            .SingleOrDefaultAsync(ct);
+        return stored is null || !string.Equals(stored.ActorId, State.ActorId, StringComparison.Ordinal) ||
+               stored.ActorGeneration != State.ActorGeneration;
+    }
+
+    private bool _stateLoaded;
+
     public bool InTransaction => _transaction is not null;
 
     public static async Task<DataSyncApplySession> OpenAsync(IServiceScopeFactory scopes, CancellationToken ct)
@@ -186,6 +223,7 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
     {
         State = await Store.LoadStateAsync(ct) ??
                 throw new InvalidOperationException("Data sync has no local state yet: Refresh creates it (§4.5).");
+        _stateLoaded = true;
         return State;
     }
 

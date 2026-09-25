@@ -37,8 +37,10 @@ public sealed partial class DataSyncApplyRunner
     /// outside it (§5.6) and the batch runs once more.
     /// </summary>
     /// <remarks>
-    /// Pausing the task waits only between chunks, where no transaction is open: inside one, only cancellation is
-    /// checked, so a paused task never keeps SQLite's writer lock.
+    /// Pausing the task waits only between chunks, where no transaction is open, and with the gate given back: inside
+    /// a transaction only cancellation is checked, so a paused task never keeps SQLite's writer lock, nor the gate that
+    /// heads and every other data sync caller wait for. After the pause the attempt and the actor are checked again,
+    /// and the next chunk validates its items from what is stored then.
     /// </remarks>
     /// <returns>The <c>Resolution</c> history entry, or null when nothing was resolved.</returns>
     public async Task<int?> RunResolutionsAsync(IReadOnlyList<DataSyncResolveInput> resolutions,
@@ -50,7 +52,7 @@ public sealed partial class DataSyncApplyRunner
         var ct = args.CancellationToken;
         if (!await StartAsync(args)) return null;
         await WaitStartupVerifiedAsync(ct);
-        using var lease = await _gate.EnterAsync(null, ct);
+        using var lease = await DataSyncTaskLease.EnterAsync(_gate, ct);
         if (!MayRun(args)) return null;
         await _guard.CheckAsync(lease, ct);
         if (options.BackupBeforeDestructive && await IsDestructiveAsync(resolutions, ct)) await BackupAsync(ct);
@@ -62,6 +64,11 @@ public sealed partial class DataSyncApplyRunner
             {
                 return await InTransactionAsync(lease,
                     s => ResolveInTransactionAsync(s, lease, resolutions, anomalyReported, args), ct);
+            }
+            catch (DataSyncAttemptEndedException)
+            {
+                // Stopped or replaced while paused between chunks: the chunks committed before stand.
+                return null;
             }
             catch (DataSyncMergeAnomalyException e) when (!anomalyReported)
             {
@@ -77,7 +84,7 @@ public sealed partial class DataSyncApplyRunner
     /// One run of the batch in the session's open transaction: Refresh, each entity's items validated and applied in
     /// time-cut chunks, the state-derived closure, the history entry, the commit.
     /// </summary>
-    private async Task<int?> ResolveInTransactionAsync(DataSyncApplySession s, DataSyncGateLease lease,
+    private async Task<int?> ResolveInTransactionAsync(DataSyncApplySession s, DataSyncTaskLease lease,
         IReadOnlyList<DataSyncResolveInput> resolutions, bool anomalyReported, BTaskArgs args)
     {
         var ct = args.CancellationToken;
@@ -98,14 +105,13 @@ public sealed partial class DataSyncApplyRunner
             if (i < groups.Count - 1 && Stopwatch.GetElapsedTime(chunkStarted) >= TransactionBudget)
             {
                 // ≈ 2 s per transaction (non-blocking note 6), whole entities only. Between chunks nothing is
-                // open: other writers get the lock, and this is where the task may be paused.
+                // open: other writers get the lock, and this is where the task may be paused (the gate given back).
+                // The next transaction must still see the actor this one's Refresh saw (§5.6).
                 await CommitAsync(s, ct);
                 await s.ForgetTrackedAsync(ct);
                 writer.ForgetChunk();
-                await Task.Delay(ChunkGap, ct);
-                await args.YieldAsync();
-                await s.BeginAsync(ct);
-                await s.LoadStateAsync(ct);
+                await BetweenChunksAsync(lease, args, ct);
+                await ContinueAsync(s, ct);
                 chunkStarted = Stopwatch.GetTimestamp();
             }
         }
@@ -1069,23 +1075,26 @@ public sealed partial class DataSyncApplyRunner
                 var codec = s.Adapter(kind).Codec;
                 var current = codec.ReadLocal((await writes.ReReadAsync(kind, row.LocalKey, ct)).Content);
                 var applied = await DataSyncAppliedChangesIndex.FindLatestAsync(s.Db, kind, row.LocalKey, ct);
-                if (applied is not null)
+                if (applied is null)
                 {
-                    var undone = DataSyncChangeLists.Undone(codec, current, row.ChildrenLocal, applied.Changes);
-                    var edit = DataSyncChangeLists.Apply(codec, current, row.ChildrenLocal, undone.Scalars, undone.Children,
-                        backward: false);
-                    if (edit.Changed && !await WriteContentAsync(kind, row, current, edit.Content, "reapply", ct)) return;
-                    row.PublishHeld = false;
-                    await writes.RecordLiveAsync(kind, row.LocalKey, current,
-                        Revision(row, await s.KeysOfAsync(row, ct), DataSyncRevisionKind.Resolution, null) with
-                        {
-                            ChildrenLocal = edit.ChildrenLocal ?? row.ChildrenLocal,
-                        }, null, null, EntityKeys.None, null, ct);
+                    // Nothing says any more what the apply wrote: retention pruned its entry (§4.6 keeps pre-images
+                    // within a budget, even inside 30 days), or it was undone. Clearing the hold alone would let the
+                    // next Refresh publish the stale overwrite — the opposite of what the person asked for. The hold
+                    // and the item stay; the item no longer offers Reapply, and Publish or a later decision settles it.
+                    await WithdrawReapplyAsync(item, ct);
+                    return;
                 }
-                else
-                {
-                    row.PublishHeld = false;
-                }
+
+                var undone = DataSyncChangeLists.Undone(codec, current, row.ChildrenLocal, applied.Changes);
+                var edit = DataSyncChangeLists.Apply(codec, current, row.ChildrenLocal, undone.Scalars, undone.Children,
+                    backward: false);
+                if (edit.Changed && !await WriteContentAsync(kind, row, current, edit.Content, "reapply", ct)) return;
+                row.PublishHeld = false;
+                await writes.RecordLiveAsync(kind, row.LocalKey, current,
+                    Revision(row, await s.KeysOfAsync(row, ct), DataSyncRevisionKind.Resolution, null) with
+                    {
+                        ChildrenLocal = edit.ChildrenLocal ?? row.ChildrenLocal,
+                    }, null, null, EntityKeys.None, null, ct);
             }
             else
             {
@@ -1106,6 +1115,22 @@ public sealed partial class DataSyncApplyRunner
                     .Select(b => b.SyncKey).ToListAsync(ct);
                 if (held.Count > 0) await RemergeAsync(link.Id, held.Select(k => (kind, new SyncKey(k))).ToList(), ct);
             }
+        }
+
+        /// <summary>
+        /// Reapply cannot run (§6.5): the item stays open, its card says why (<c>Detail</c>) and no longer lists Reapply
+        /// (<see cref="DataSyncInboxActions"/>). The decision counts as one that changed since the person saw it.
+        /// </summary>
+        private async Task WithdrawReapplyAsync(DataSyncInboxItemDbModel item, CancellationToken ct)
+        {
+            var payload = DataSyncStoredJson.Read<DataSyncInboxPayload>(item.PayloadJson, "PayloadJson");
+            item.PayloadJson = DataSyncStoredJson.Write(payload with
+            {
+                Detail = Persistence.DataSyncLostUpdateGuard.ReapplyUnavailable,
+            });
+            item.UpdatedAtUtc = s.Now;
+            await s.Db.SaveChangesAsync(ct);
+            _recorder.ChangedSinceReview++;
         }
 
         #endregion

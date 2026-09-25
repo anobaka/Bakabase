@@ -63,7 +63,9 @@ public static class DataSyncInboxActions
                 if (twoWay) actions.Add(DataSyncInboxAction.RestoreEverywhere);
                 break;
             case DataSyncInboxItemType.SuspectedLostUpdate:
-                actions.AddRange([DataSyncInboxAction.Publish, DataSyncInboxAction.Reapply]);
+                actions.Add(DataSyncInboxAction.Publish);
+                // Reapply needs the apply's change list; once it is gone the card says so (§6.5).
+                if (payload?.Detail != DataSyncLostUpdateGuard.ReapplyUnavailable) actions.Add(DataSyncInboxAction.Reapply);
                 break;
             case DataSyncInboxItemType.LargeChange:
                 // Pausing the link is a link action, not an inbox action.

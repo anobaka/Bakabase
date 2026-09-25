@@ -242,6 +242,40 @@ public class UndoTests
         Assert.AreEqual("Style", _f.Kind[localKey].Name);
     }
 
+    /// <summary>
+    /// Key moves return to their owners all together or not at all (§5.3, §8.11): here B, re-keyed by Keep with
+    /// entity, was deleted since, so its old primary cannot go back to it. Taken halfway, that key would be owned by no
+    /// entity and a record carrying it would bind as new; so every key stays, and the undo's entry says so.
+    /// </summary>
+    [TestMethod]
+    public async Task A_refused_key_restore_leaves_every_key_where_it_is()
+    {
+        var a = _f.Kind.Add(Content("Artist", ("x", "One")));
+        var b = _f.Kind.Add(Content("Author", ("y", "Two")));
+        await _f.RefreshAsync();
+        var keyA = (await _f.RowAsync(a)).SyncKey;
+        var keyB = (await _f.RowAsync(b)).SyncKey;
+        await _f.ApplyAsync(_link, _peer,
+            (Item, _peer.Record([keyA, keyB], _peer.Next(), Content("Artist", ("x", "One"), ("z", "Three")), "a0")));
+        var item = (await _f.OpenItemsAsync()).Single(i => i.Type == DataSyncInboxItemType.IdentityConflict);
+        var logId = await _f.ResolveAsync(item, DataSyncInboxAction.KeepWithEntity, target: a);
+        CollectionAssert.AreEquivalent(new[] { keyA, keyB }, (await _f.KeysOfAsync(a)).ToArray());
+        Assert.AreEqual(2, _f.Kind[a].Children.Count, "the record merged into A");
+        // B, re-keyed by the decision, is deleted here since.
+        _f.Kind.Remove(b);
+        await _f.RefreshAsync();
+
+        var undoId = await _f.UndoAsync(logId!.Value);
+
+        Assert.IsNotNull(undoId, "A's merge was undone");
+        Assert.AreEqual(1, _f.Kind[a].Children.Count);
+        CollectionAssert.AreEquivalent(new[] { keyA, keyB }, (await _f.KeysOfAsync(a)).ToArray(),
+            "B's old primary, which B's lineage was published under, is still owned: undo never frees a key");
+        await new DataSyncStoreFixtureKeys(_f).AssertKeyInvariantAsync();
+        var undo = (await _f.HistoryAsync()).Single(l => l.Id == undoId);
+        StringAssert.Contains(undo.ResultJson, "keys/" + Item + "/" + keyB, "the entry names the key it kept");
+    }
+
     #endregion
 
     #region Deletions and type changes

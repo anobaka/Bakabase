@@ -65,7 +65,9 @@ public sealed partial class DataSyncStore
     /// <c>SkipDeletionBreaker</c>/<c>DeletionsAsItems</c> the deletions, a child-deletion mode the
     /// <c>MassChildDeletion</c> records;</item>
     /// <item>its reason is <c>Held</c> and this build's schema version of the kind differs from the one recorded
-    /// in <c>KindSchemaVersionsJson</c>.</item>
+    /// in <c>KindSchemaVersionsJson</c>. Refresh records the version and, when it changed, marks every held record of
+    /// the kind never evaluated (condition 2), so each link re-merges it once after an upgrade; this condition covers
+    /// a kind no Refresh has recorded yet.</item>
     /// </list>
     /// </summary>
     public async Task<IReadOnlyList<(string Kind, SyncKey Key)>> GetPendingToMergeAsync(int linkId,

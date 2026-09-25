@@ -179,13 +179,20 @@ internal sealed class MemoryCodec(string kind, bool hasOrder) : IDataSyncKindCod
 {
     private static readonly HashSet<string> Known = ["children", "name", "tooBig", "settings", "childrenLocal", "type"];
 
-    public DataSyncKindDescriptor Descriptor { get; } =
+    public DataSyncKindDescriptor Descriptor { get; private set; } =
         new(kind, 1, [], typeof(JsonObject), false, hasOrder, true, true, "child");
+
+    /// <summary>The content schema this build reads; raising it simulates an upgrade of the build (§8.4 condition 6).</summary>
+    public int SchemaVersion
+    {
+        get => Descriptor.SchemaVersion;
+        set => Descriptor = Descriptor with { SchemaVersion = value };
+    }
 
     public int ComparisonFormVersion { get; set; } = 1;
 
     public JsonObject Upgrade(JsonObject content, int fromSchemaVersion) =>
-        fromSchemaVersion > 1 ? throw new DataSyncHeldException(DataSyncHeldReason.NewerSchema) : content;
+        fromSchemaVersion > SchemaVersion ? throw new DataSyncHeldException(DataSyncHeldReason.NewerSchema) : content;
 
     public CodecReadResult Read(JsonObject content, DataSyncLimits limits)
     {

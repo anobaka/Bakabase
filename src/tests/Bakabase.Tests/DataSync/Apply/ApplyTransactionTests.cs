@@ -5,7 +5,9 @@ using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Identity;
+using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
+using Bakabase.Modules.DataSync.Runtime;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -315,6 +317,136 @@ public class ApplyTransactionTests
         Assert.AreNotEqual(before.ActorId, after.ActorId, "a deliberate reset rotates (and pauses nothing)");
         Assert.AreEqual(DataSyncLinkState.Active, (await f.LinkRowAsync(link.Id)).State);
         Assert.AreEqual(vv, Vv((await f.ByKeyAsync(key))!.VvJson));
+    }
+
+    /// <summary><paramref name="count"/> valid order keys, ascending.</summary>
+    private static List<string> OrderKeys(int count)
+    {
+        var keys = new List<string>();
+        string? previous = null;
+        for (var i = 0; i < count; i++) keys.Add(previous = Bakabase.Modules.DataSync.Ordering.FractionalIndex.Between(previous, null));
+        return keys;
+    }
+
+    /// <summary>
+    /// The actor guard handles evidence outside the gate: in the gap between two chunks it may rotate, pause the links
+    /// and clear the evidence (§5.6). Asserts nothing of <paramref name="retired"/> was issued after that: no stored
+    /// vector names it above its recorded counter, and the new actor's counter was not overwritten by a stale row.
+    /// </summary>
+    private static async Task<long> AssertNothingIssuedUnderTheRetiredActorAsync(DataSyncApplyFixture f, string retired)
+    {
+        var state = await f.StateAsync();
+        Assert.AreNotEqual(retired, state.ActorId, "the guard rotated between the chunks");
+        var recorded = DataSyncStoredJson.ReadCounters(state.RetiredActorsJson, "x")[retired];
+        var highest = (await f.RowsAsync()).Max(r => Vv(r.VvJson).Counters.GetValueOrDefault(retired));
+        Assert.AreEqual(recorded, highest,
+            "the last counter the retired actor committed is its recorded one; none above it (§5.6)");
+        return recorded;
+    }
+
+    [TestMethod]
+    public async Task A_rotation_between_two_chunks_stops_the_apply_before_it_issues_under_the_retired_actor()
+    {
+        var f = await CreateAsync();
+        var peer = new DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer, firstContactDone: false);
+        var order = OrderKeys(250);
+        var created = Enumerable.Range(0, 250).Select(_ => (Key: SyncKey.New().Value, Vv: peer.Next())).ToList();
+        await f.ApplyAsync(link, peer, created.Select((c, i) => (Item, peer.Record([c.Key], c.Vv, Content("P" + i), order[i])))
+            .ToArray());
+        var cursor = (await f.LinkRowAsync(link.Id)).CursorsJson;
+        var history = (await f.HistoryAsync()).Count;
+
+        // Renamed here and given a child there: each merge adds a counter of this device's own (MergedNoConflict).
+        foreach (var key in f.Kind.Definitions.Keys.ToList()) f.Kind.Definitions[key] = f.Kind[key].With(name: f.Kind[key].Name + "!");
+        var db = f.NewDb();
+        (await db.DataSyncLinks.SingleAsync(l => l.Id == link.Id)).OnceFlagsJson =
+            DataSyncStoredJson.WriteFlags(new DataSyncMergeFlags(SkipLargeChange: true));
+        await db.SaveChangesAsync();
+        var edits = created.Select((c, i) => (Item, peer.Record([c.Key], peer.Next(c.Vv), Content("P" + i, ("x", "X")), order[i])))
+            .ToArray();
+
+        string? retired = null;
+        var gaps = 0;
+        f.Runner.BetweenChunks = async () =>
+        {
+            if (gaps++ > 0) return;
+            retired = (await f.StateAsync()).ActorId;
+            // A reader saw a sequence number this database never issued (§7.5.1): rotation, every link paused.
+            await f.Guard.ReportReaderAheadAsync("node-reader", default);
+        };
+        DataSyncAutoSyncOutcome outcome;
+        try
+        {
+            outcome = await f.ApplyAsync(link, peer, edits);
+        }
+        finally
+        {
+            f.Runner.BetweenChunks = null;
+        }
+
+        Assert.AreEqual(1, gaps, "the apply stopped at its first gap");
+        Assert.AreEqual((DataSyncPauseReason?) DataSyncPauseReason.LocalRestoreDetected, outcome.Paused,
+            "the retry found the link paused by the restore");
+        Assert.IsNull(outcome.ApplyLogId);
+        await AssertNothingIssuedUnderTheRetiredActorAsync(f, retired!);
+        var state = await f.StateAsync();
+        Assert.AreEqual(0, state.ActorCounter, "the new actor issued nothing, and no stale row overwrote its counter");
+        Assert.AreEqual(200, f.Kind.Definitions.Values.Count(d => d.Children.Count == 1), "only the first chunk stands");
+        var row = await f.LinkRowAsync(link.Id);
+        Assert.AreEqual((DataSyncLinkState.Paused, cursor), (row.State, row.CursorsJson), "the cursor did not move");
+        Assert.AreEqual(history, (await f.HistoryAsync()).Count, "nothing after the rotation was recorded as applied");
+    }
+
+    [TestMethod]
+    public async Task A_rotation_between_two_chunks_of_a_review_is_never_issued_under_and_the_review_plans_again()
+    {
+        var f = await CreateAsync();
+        var peer = new DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer, firstContactDone: false);
+        var order = OrderKeys(250);
+        var created = Enumerable.Range(0, 250).Select(_ => (Key: SyncKey.New().Value, Vv: peer.Next())).ToList();
+        await f.ApplyAsync(link, peer, created.Select((c, i) => (Item, peer.Record([c.Key], c.Vv, Content("P" + i), order[i])))
+            .ToArray());
+        // A child here and another there: reviewing the peer's records merges both, with a counter of this device's
+        // own and no key to add, so a stale local state row would issue it before anything reloaded the row.
+        foreach (var key in f.Kind.Definitions.Keys.ToList())
+            f.Kind.Definitions[key] = f.Kind[key].With(children: [new TestChild("h" + key, "Here")]);
+        var db = f.NewDb();
+        (await db.DataSyncLinks.SingleAsync(l => l.Id == link.Id)).State = DataSyncLinkState.AwaitingReview;
+        await db.SaveChangesAsync();
+        var review = f.Reviews.Stage(link.Id, false, f.Pull(peer, full: true, created
+            .Select((c, i) => (Item, peer.Record([c.Key], peer.Next(c.Vv), Content("P" + i, ("t" + i, "There")), order[i])))
+            .ToArray()));
+        var plan = await f.PlanAsync(review);
+        var decisions = Bakabase.Modules.DataSync.Planning.DataSyncPlanner.CompleteDecisions(plan, []).ToList();
+
+        string? retired = null;
+        var gaps = 0;
+        f.Runner.BetweenChunks = async () =>
+        {
+            if (gaps++ > 0) return;
+            retired = (await f.StateAsync()).ActorId;
+            await f.Guard.ReportReaderAheadAsync("node-reader", default);
+        };
+        int? logId;
+        try
+        {
+            logId = await f.Runner.RunReviewAsync(review.ReviewId, decisions, new DataSyncApplyOptions(false),
+                f.Args("DataSyncReview:" + review.ReviewId));
+        }
+        finally
+        {
+            f.Runner.BetweenChunks = null;
+        }
+
+        Assert.AreEqual(1, gaps, "the first attempt stopped at its first gap; the retry fit in one chunk");
+        Assert.IsNotNull(logId, "the retry planned again and applied what was left");
+        await AssertNothingIssuedUnderTheRetiredActorAsync(f, retired!);
+        var state = await f.StateAsync();
+        Assert.AreEqual(250, f.Kind.Definitions.Values.Count(d => d.Children.Count == 2), "every definition holds both children");
+        Assert.AreEqual(50, (await f.RowsAsync()).Count(r => Vv(r.VvJson).Counters.GetValueOrDefault(state.ActorId) > 0),
+            "what the first chunk did not reach was merged under the new actor");
     }
 
     [TestMethod]

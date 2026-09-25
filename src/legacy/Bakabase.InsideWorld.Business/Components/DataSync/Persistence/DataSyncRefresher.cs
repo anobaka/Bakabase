@@ -278,6 +278,7 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
             if (recompute) await RecomputeBaseFormsAsync(kind, codec, ct);
             versions[kind] = codec.ComparisonFormVersion;
             state.ComparisonFormVersionsJson = DataSyncStoredJson.WriteVersions(versions);
+            await NoteSchemaVersionAsync(kind, codec, ct);
 
             if (collectPublished) Collect(kind, codec, rows.Values, locals);
             await Db.SaveChangesAsync(ct);
@@ -404,10 +405,24 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
             var marked = row.RawHash is null;
             var unchangedSinceLastRefresh = !marked && !row.Unreadable && !local.Unreadable &&
                                             string.Equals(row.LocalHash, localHash, StringComparison.Ordinal);
-            if (recompute && unchangedSinceLastRefresh)
+            if (recompute)
             {
-                // A new ComparisonFormVersion recomputes the hash of what did not change: no revision, no Seq (§3.4).
-                row.SharedHash = Evaluate(codec, row, local, row.OrderKey).SharedHash ?? DataSyncEntityForms.NoSharedHash;
+                if (row.State == DataSyncEntitySyncState.Synced && !row.PublishHeld && unchangedSinceLastRefresh)
+                {
+                    // A new ComparisonFormVersion recomputes the hash of what did not change: no revision, no Seq
+                    // (§3.4). Only a row that publishes its current content: its SharedHash describes that content.
+                    row.SharedHash = Evaluate(codec, row, local, row.OrderKey).SharedHash ??
+                                     DataSyncEntityForms.NoSharedHash;
+                }
+                else if (row.State != DataSyncEntitySyncState.Synced || row.PublishHeld || row.Unreadable ||
+                         local.Unreadable)
+                {
+                    // An unsynced, held or unreadable row's SharedHash describes what it last published, which its
+                    // current content may no longer be; this build cannot compute that old form. A hash no form
+                    // equals makes rejoining, releasing or reading it again always a revision, never old content
+                    // published under an old vector.
+                    row.SharedHash = DataSyncEntityForms.NoSharedHash;
+                }
             }
 
             // A local-only difference (child ids, local order, folding) changes these and nothing else: no Seq.
@@ -513,6 +528,34 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
             if (_drafts.Count == 0) return;
             await Store.UpsertItemsAsync(null, null, _drafts, Now, ct);
             _drafts.Clear();
+        }
+
+        /// <summary>
+        /// §8.4 condition 6: this build's schema version of the kind, recorded in <c>KindSchemaVersionsJson</c>. When
+        /// it differs from the recorded one (an upgrade, or the first Refresh of the kind), every <c>Held</c> pending
+        /// record of the kind, on every link, is marked never evaluated, so each link's next merge takes it once — a
+        /// record held as <c>NewerSchema</c> is then applied — and later merges leave it alone until something else
+        /// changes.
+        /// </summary>
+        private async Task NoteSchemaVersionAsync(string kind, IDataSyncKindCodec codec, CancellationToken ct)
+        {
+            var schemas = new Dictionary<string, int>(
+                DataSyncStoredJson.ReadVersions(state.KindSchemaVersionsJson, "KindSchemaVersionsJson"),
+                StringComparer.Ordinal);
+            var current = codec.Descriptor.SchemaVersion;
+            if (schemas.TryGetValue(kind, out var recorded) && recorded == current) return;
+
+            foreach (var held in await Db.DataSyncPeerBases
+                         .Where(b => b.Kind == kind && b.PendingReason == DataSyncPendingReason.Held &&
+                                     b.PendingEvaluatedLocalSeq != null)
+                         .ToListAsync(ct))
+            {
+                held.PendingEvaluatedLocalSeq = null;
+                held.UpdatedAtUtc = Now;
+            }
+
+            schemas[kind] = current;
+            state.KindSchemaVersionsJson = DataSyncStoredJson.WriteVersions(schemas);
         }
 
         /// <summary>A new ComparisonFormVersion also recomputes the bases' hashes of this kind, on every link (§6.1).</summary>

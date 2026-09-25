@@ -2,6 +2,7 @@ using Bakabase.InsideWorld.Business.Components.DataSync.Feed;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Runtime;
@@ -16,8 +17,8 @@ namespace Bakabase.Tests.DataSync;
 /// Retention (spec §4.6) at the store: tombstones stop being served after 180 days but are never deleted, and floors
 /// are per kind, so a kind is superseded only by its own floor; closed items, apply logs, readers and retired actors
 /// are pruned by their own rules; retention runs once a day under the gate, and keeps the newest five data sync
-/// backups. A superseded cursor is served from 0 in the same snapshot, by its own kind's floor only; row T2 is the
-/// merger's part of this class.
+/// backups. A superseded cursor is served from 0 in the same snapshot, by its own kind's floor only; a peer offline
+/// for more than 180 days meets row T2 through the apply runner, and the tombstone served again has 180 days again.
 /// </summary>
 [TestClass]
 public class RetentionTests
@@ -54,6 +55,61 @@ public class RetentionTests
         // A floor never goes down, and a later prune with nothing new keeps it.
         await _f.Store.PruneAsync(Now.AddDays(1), default);
         Assert.AreEqual(old.Seq, (await FloorsAsync())[Kind]);
+    }
+
+    /// <summary>
+    /// §13.5: a peer offline for more than 180 days that still publishes the entity meets row T2 — no create, and the
+    /// tombstone is served again — through the apply runner, then retention. Served again, it has 180 days again: were
+    /// it unserved the next day, a peer that does not pull at once would meet T2 over and over, each time raising the
+    /// kind's floor and superseding every reader below it.
+    /// </summary>
+    [TestMethod]
+    public async Task A_peer_offline_over_180_days_meets_row_T2_and_the_tombstone_is_served_for_180_days_again()
+    {
+        var f = await Apply.DataSyncApplyFixture.CreateAsync();
+        var peer = new Apply.DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer);
+        var key = SyncKey.New().Value;
+        var record = peer.Record([key], peer.Next(), Apply.DataSyncApplyFixture.Content("Genre", ("a", "Rock")), "a0");
+        await f.ApplyAsync(link, peer, (Apply.DataSyncApplyFixture.Item, record));
+        // Deleted here; the peer stays away.
+        f.Kind.Remove(f.Kind.KeyOf("Genre"));
+        await f.RefreshAsync();
+        var deleted = (await f.ByKeyAsync(key))!;
+        Assert.IsTrue(deleted is { DeletedAtUtc: not null, TombstoneServed: true });
+
+        async Task<(DataSyncEntityDbModel Row, long Floor)> PruneAsync()
+        {
+            await using (var scope = f.Services.CreateAsyncScope())
+                await scope.ServiceProvider.GetRequiredService<DataSyncStore>().PruneAsync(f.Now, default);
+            return ((await f.ByKeyAsync(key))!, DataSyncStoredJson.ReadCounters((await f.StateAsync()).TombstoneFloorSeqsJson, "")
+                .GetValueOrDefault(Apply.DataSyncApplyFixture.Item));
+        }
+
+        f.Clock.Advance(TimeSpan.FromDays(181));
+        var (unserved, floor) = await PruneAsync();
+        Assert.IsFalse(unserved.TombstoneServed);
+        Assert.AreEqual(unserved.Seq, floor);
+
+        // The peer comes back and still publishes the entity: its full reconciliation re-sends the record (row T2).
+        var outcome = await f.ApplyAsync(link, peer, f.Pull(peer, full: true, (Apply.DataSyncApplyFixture.Item, record)));
+        Assert.AreEqual(0, outcome.Applied);
+        Assert.AreEqual(0, f.Kind.Definitions.Count, "no create");
+        var servedAgain = (await f.ByKeyAsync(key))!;
+        Assert.IsTrue(servedAgain.TombstoneServed, "served again, so the peer receives the deletion");
+        Assert.IsTrue(servedAgain.Seq > floor);
+        Assert.AreEqual(Apply.DataSyncApplyFixture.Vv(deleted.VvJson), Apply.DataSyncApplyFixture.Vv(servedAgain.VvJson),
+            "no revision");
+
+        f.Clock.Advance(TimeSpan.FromDays(1));
+        var (nextDay, sameFloor) = await PruneAsync();
+        Assert.IsTrue(nextDay.TombstoneServed, "its serve window started again with row T2");
+        Assert.AreEqual(floor, sameFloor, "the floor did not rise: no reader is superseded");
+
+        f.Clock.Advance(TimeSpan.FromDays(180));
+        var (later, laterFloor) = await PruneAsync();
+        Assert.IsFalse(later.TombstoneServed, "180 days after T2 it stops being served again, and is kept");
+        Assert.AreEqual(servedAgain.Seq, laterFloor);
     }
 
     [TestMethod]
@@ -280,9 +336,10 @@ public class RetentionTests
     private async Task<IReadOnlyDictionary<string, long>> FloorsAsync() =>
         DataSyncStoredJson.ReadCounters((await _f.Store.GetLocalStateAsync(default))!.TombstoneFloorSeqsJson, "");
 
+    /// <summary>The tombstone was written <paramref name="days"/> ago, and nothing touched it since.</summary>
     private async Task Age(DataSyncEntityDbModel tombstone, int days)
     {
-        tombstone.DeletedAtUtc = Now.AddDays(-days);
+        tombstone.DeletedAtUtc = tombstone.UpdatedAtUtc = Now.AddDays(-days);
         await _f.Db.SaveChangesAsync();
     }
 
