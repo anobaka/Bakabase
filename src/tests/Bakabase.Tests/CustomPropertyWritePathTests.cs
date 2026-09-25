@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
@@ -56,9 +55,7 @@ public sealed class CustomPropertyWritePathTests
     public async Task Setup()
     {
         _sp = await TestServiceBuilder.BuildServiceProvider();
-        _testRoot = Path.Combine(
-            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!,
-            $"CustomPropertyWritePathTests.{DateTime.Now:yyyyMMddHHmmssfff}.{Guid.NewGuid():N}");
+        _testRoot = Path.Combine(Path.GetTempPath(), $"CustomPropertyWritePathTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(_testRoot);
     }
 
