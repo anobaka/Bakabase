@@ -12517,6 +12517,7 @@ export interface components {
             candidates?: components["schemas"]["Bakabase.Modules.DataSync.Merging.DataSyncInboxCandidate"][];
             records?: components["schemas"]["Bakabase.Modules.DataSync.Merging.DataSyncInboxRecordRef"][];
             largeChange?: components["schemas"]["Bakabase.Modules.DataSync.Merging.DataSyncLargeChangeEntry"][];
+            detail?: string;
         };
         "Bakabase.Modules.DataSync.Merging.DataSyncInboxRecordRef": {
             primaryKey: string;
@@ -13191,6 +13192,73 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.DataSync.Services.DataSyncUndoState": 1 | 2 | 3;
+        "Bakabase.Modules.DataSync.Wire.DataSyncFeedCounterpart": {
+            mode: string;
+            firstContactCompleted: boolean;
+            kinds: string[];
+        };
+        "Bakabase.Modules.DataSync.Wire.DataSyncFeedHead": {
+            nodeId: string;
+            libraryEpoch: string;
+            actorId: string;
+            /** Format: int32 */
+            contractVersion: number;
+            /** Format: int32 */
+            minimumPeerContract: number;
+            appVersion: string;
+            /** Format: int64 */
+            seq: number;
+            kinds: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedKindHead"][];
+            attention: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncSourceAttention"];
+            /** Format: int64 */
+            seenCounter?: number;
+            counterpart?: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedCounterpart"];
+        };
+        "Bakabase.Modules.DataSync.Wire.DataSyncFeedKind": {
+            kind: string;
+            /** Format: int32 */
+            schemaVersion: number;
+            /** Format: int64 */
+            maxSeq: number;
+            /** Format: int64 */
+            tombstoneFloorSeq: number;
+            /** Format: int32 */
+            liveCount: number;
+            /** Format: int32 */
+            tombstoneCount: number;
+            contentHash: string;
+            /** Format: int64 */
+            sinceSeq: number;
+            /** Format: int32 */
+            recordCount: number;
+            cursorSuperseded: boolean;
+        };
+        "Bakabase.Modules.DataSync.Wire.DataSyncFeedKindHead": {
+            kind: string;
+            /** Format: int32 */
+            schemaVersion: number;
+            /** Format: int64 */
+            maxSeq: number;
+            cursorSuperseded: boolean;
+            /** Format: int32 */
+            comparisonFormVersion: number;
+        };
+        "Bakabase.Modules.DataSync.Wire.DataSyncFeedManifest": {
+            snapshotId: string;
+            /** Format: int64 */
+            expiresInMs: number;
+            nodeId: string;
+            libraryEpoch: string;
+            actorId: string;
+            /** Format: int32 */
+            contractVersion: number;
+            /** Format: int32 */
+            minimumPeerContract: number;
+            appVersion: string;
+            kinds: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedKind"][];
+            counterpart?: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedCounterpart"];
+            attention: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncSourceAttention"];
+        };
         "Bakabase.Modules.DataSync.Wire.DataSyncSourceAttention": {
             headless: boolean;
             /** Format: int32 */
@@ -23571,7 +23639,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedHead"];
+                    "application/json": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedHead"];
+                    "text/json": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedHead"];
+                };
             };
         };
     };
@@ -23594,7 +23666,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedManifest"];
+                    "application/json": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedManifest"];
+                    "text/json": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedManifest"];
+                };
             };
         };
     };
@@ -23603,7 +23679,7 @@ export interface operations {
             query?: {
                 snapshot?: string;
                 kind?: string;
-                since?: number;
+                since?: string;
                 cursor?: string;
             };
             header?: never;

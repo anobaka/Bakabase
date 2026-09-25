@@ -5941,6 +5941,27 @@ export const DataSyncItemActionLabel: Record<DataSyncItemAction, string> = {
   [DataSyncItemAction.Reordered]: 'Reordered'
 };
 
+export enum DataSyncRefreshAction {
+  HashesOnly = 1,
+  LocalEdit = 2,
+  HoldForLostUpdate = 3,
+  RefreshHeldItem = 4
+}
+
+export const dataSyncRefreshActions = [
+  { label: 'HashesOnly', value: DataSyncRefreshAction.HashesOnly },
+  { label: 'LocalEdit', value: DataSyncRefreshAction.LocalEdit },
+  { label: 'HoldForLostUpdate', value: DataSyncRefreshAction.HoldForLostUpdate },
+  { label: 'RefreshHeldItem', value: DataSyncRefreshAction.RefreshHeldItem }
+] as const;
+
+export const DataSyncRefreshActionLabel: Record<DataSyncRefreshAction, string> = {
+  [DataSyncRefreshAction.HashesOnly]: 'HashesOnly',
+  [DataSyncRefreshAction.LocalEdit]: 'LocalEdit',
+  [DataSyncRefreshAction.HoldForLostUpdate]: 'HoldForLostUpdate',
+  [DataSyncRefreshAction.RefreshHeldItem]: 'RefreshHeldItem'
+};
+
 export enum DataSyncNaturalMatch {
   None = 0,
   Clash = 1,
@@ -6728,6 +6749,27 @@ export const FederationEndpointKindLabel: Record<FederationEndpointKind, string>
   [FederationEndpointKind.Local]: 'Local',
   [FederationEndpointKind.Public]: 'Public',
   [FederationEndpointKind.Export]: 'Export'
+};
+
+export enum FederationSharingRequirement {
+  Library = 0,
+  DataSync = 1,
+  Either = 2,
+  GrantScope = 3
+}
+
+export const federationSharingRequirements = [
+  { label: 'Library', value: FederationSharingRequirement.Library },
+  { label: 'DataSync', value: FederationSharingRequirement.DataSync },
+  { label: 'Either', value: FederationSharingRequirement.Either },
+  { label: 'GrantScope', value: FederationSharingRequirement.GrantScope }
+] as const;
+
+export const FederationSharingRequirementLabel: Record<FederationSharingRequirement, string> = {
+  [FederationSharingRequirement.Library]: 'Library',
+  [FederationSharingRequirement.DataSync]: 'DataSync',
+  [FederationSharingRequirement.Either]: 'Either',
+  [FederationSharingRequirement.GrantScope]: 'GrantScope'
 };
 
 export enum ResourceMatcherLeafKind {

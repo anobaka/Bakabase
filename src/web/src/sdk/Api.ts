@@ -4250,6 +4250,7 @@ export interface BakabaseModulesDataSyncMergingDataSyncInboxPayload {
   candidates?: BakabaseModulesDataSyncMergingDataSyncInboxCandidate[];
   records?: BakabaseModulesDataSyncMergingDataSyncInboxRecordRef[];
   largeChange?: BakabaseModulesDataSyncMergingDataSyncLargeChangeEntry[];
+  detail?: string;
 }
 
 export interface BakabaseModulesDataSyncMergingDataSyncInboxRecordRef {
@@ -5081,6 +5082,78 @@ export interface BakabaseModulesDataSyncServicesDataSyncUndoPreviewItem {
  * @format int32
  */
 export type BakabaseModulesDataSyncServicesDataSyncUndoState = 1 | 2 | 3;
+
+export interface BakabaseModulesDataSyncWireDataSyncFeedCounterpart {
+  mode: string;
+  firstContactCompleted: boolean;
+  kinds: string[];
+}
+
+export interface BakabaseModulesDataSyncWireDataSyncFeedHead {
+  nodeId: string;
+  libraryEpoch: string;
+  actorId: string;
+  /** @format int32 */
+  contractVersion: number;
+  /** @format int32 */
+  minimumPeerContract: number;
+  appVersion: string;
+  /** @format int64 */
+  seq: number;
+  kinds: BakabaseModulesDataSyncWireDataSyncFeedKindHead[];
+  attention: BakabaseModulesDataSyncWireDataSyncSourceAttention;
+  /** @format int64 */
+  seenCounter?: number;
+  counterpart?: BakabaseModulesDataSyncWireDataSyncFeedCounterpart;
+}
+
+export interface BakabaseModulesDataSyncWireDataSyncFeedKind {
+  kind: string;
+  /** @format int32 */
+  schemaVersion: number;
+  /** @format int64 */
+  maxSeq: number;
+  /** @format int64 */
+  tombstoneFloorSeq: number;
+  /** @format int32 */
+  liveCount: number;
+  /** @format int32 */
+  tombstoneCount: number;
+  contentHash: string;
+  /** @format int64 */
+  sinceSeq: number;
+  /** @format int32 */
+  recordCount: number;
+  cursorSuperseded: boolean;
+}
+
+export interface BakabaseModulesDataSyncWireDataSyncFeedKindHead {
+  kind: string;
+  /** @format int32 */
+  schemaVersion: number;
+  /** @format int64 */
+  maxSeq: number;
+  cursorSuperseded: boolean;
+  /** @format int32 */
+  comparisonFormVersion: number;
+}
+
+export interface BakabaseModulesDataSyncWireDataSyncFeedManifest {
+  snapshotId: string;
+  /** @format int64 */
+  expiresInMs: number;
+  nodeId: string;
+  libraryEpoch: string;
+  actorId: string;
+  /** @format int32 */
+  contractVersion: number;
+  /** @format int32 */
+  minimumPeerContract: number;
+  appVersion: string;
+  kinds: BakabaseModulesDataSyncWireDataSyncFeedKind[];
+  counterpart?: BakabaseModulesDataSyncWireDataSyncFeedCounterpart;
+  attention: BakabaseModulesDataSyncWireDataSyncSourceAttention;
+}
 
 export interface BakabaseModulesDataSyncWireDataSyncSourceAttention {
   headless: boolean;
@@ -18768,10 +18841,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<void, any>({
+      this.request<BakabaseModulesDataSyncWireDataSyncFeedHead, any>({
         path: `/federation/v1/export/datasync/head`,
         method: "GET",
         query: query,
+        format: "json",
         ...params,
       }),
 
@@ -18819,10 +18893,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<void, any>({
+      this.request<BakabaseModulesDataSyncWireDataSyncFeedManifest, any>({
         path: `/federation/v1/export/datasync/manifest`,
         method: "GET",
         query: query,
+        format: "json",
         ...params,
       }),
 
@@ -18865,8 +18940,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       query?: {
         snapshot?: string;
         kind?: string;
-        /** @format int64 */
-        since?: number;
+        since?: string;
         cursor?: string;
       },
       params: RequestParams = {},
@@ -18885,8 +18959,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     readFederationDataSyncChangesUrl: (query?: {
         snapshot?: string;
         kind?: string;
-        /** @format int64 */
-        since?: number;
+        since?: string;
         cursor?: string;
       }) => {
       const baseUrl = this.baseUrl || "";
