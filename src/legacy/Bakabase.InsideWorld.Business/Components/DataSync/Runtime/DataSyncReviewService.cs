@@ -155,6 +155,9 @@ public sealed class DataSyncReviewService
             return new DataSyncReviewCancelResult(null, new DataSyncProblem(DataSyncProblemCode.ReviewExpired, null));
         if (entry.TaskId is not { } taskId) return new DataSyncReviewCancelResult(DataSyncReviewState.Staged, null);
         var outcome = await Launcher.CancelAsync(taskId);
+        // A waiting task was removed, so its body never runs to say the apply ended: the review is not applying any
+        // more, and expires and can be replaced again.
+        if (outcome == DataSyncTaskCancelOutcome.Removed) _reviews.MarkApplyEnded(reviewId);
         var state = outcome switch
         {
             DataSyncTaskCancelOutcome.Removed => DataSyncReviewState.Staged,

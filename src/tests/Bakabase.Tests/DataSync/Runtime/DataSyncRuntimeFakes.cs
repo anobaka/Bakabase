@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
@@ -705,6 +706,9 @@ internal sealed class FakeReviewStore : IDataSyncReviewStore
 
     public void MarkApplied(string reviewId, int applyLogId) => Edit(reviewId, e => e with { ApplyLogId = applyLogId });
 
+    public void MarkApplyEnded(string reviewId) =>
+        Edit(reviewId, e => e.ApplyLogId is null ? e with { TaskId = null } : e);
+
     private void Edit(string reviewId, Func<DataSyncReviewEntry, DataSyncReviewEntry> edit)
     {
         if (_entries.TryGetValue(reviewId, out var entry)) _entries[reviewId] = edit(entry);
@@ -744,7 +748,7 @@ internal sealed class FakeApplyRunner(IDataSyncTaskRegistry registry) : IDataSyn
         AttemptCurrentAtGate.Enqueue(registry.ShouldRunCurrent());
         if (Hold is { } hold) await hold(args.CancellationToken);
         args.CancellationToken.ThrowIfCancellationRequested();
-        var call = new AutoSyncCall(link, pull, args.Task.Id, DataSyncTaskAttemptContext.Current);
+        var call = new AutoSyncCall(link, pull, args.Task.Id, DataSyncTaskAttempts.Current);
         AutoSyncs.Enqueue(call);
         lock (AutoSyncErrors)
         {

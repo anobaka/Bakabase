@@ -85,6 +85,16 @@ public static class DataSyncTaskAttempts
         return registry is not DataSyncTaskRegistry concrete || !concrete.IsCancelRequested(taskId);
     }
 
+    /// <summary>
+    /// False when the data sync task body this code runs in must stop without writing: its ambient attempt was
+    /// replaced or cancelled. True outside a task body (a request, a test).
+    /// </summary>
+    public static bool ShouldRunCurrent(this IDataSyncTaskRegistry registry)
+    {
+        ArgumentNullException.ThrowIfNull(registry);
+        return Current is not { } attempt || registry.ShouldRun(attempt.TaskId, attempt.AttemptId);
+    }
+
     private sealed class Scope(DataSyncTaskAttempt? previous) : IDisposable
     {
         public void Dispose() => Ambient.Value = previous;

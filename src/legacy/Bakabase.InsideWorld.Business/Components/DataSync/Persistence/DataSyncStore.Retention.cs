@@ -84,6 +84,20 @@ public sealed partial class DataSyncStore
         return rows;
     }
 
+    /// <summary>
+    /// "{0} started syncing definitions with this device" went out for this reader (§9.4). A reader is written on its
+    /// first read in this process, so its row exists; an unknown node changes nothing.
+    /// </summary>
+    public async Task SetReaderNotifiedAsync(string nodeId, DateTime nowUtc, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(nodeId);
+        await FlushAsync(ct);
+        var row = await _db.DataSyncReaders.FindAsync([nodeId], ct);
+        if (row is null) return;
+        row.NotifiedAtUtc = nowUtc;
+        await _db.SaveChangesAsync(ct);
+    }
+
     #endregion
 
     #region Retention (§4.6)

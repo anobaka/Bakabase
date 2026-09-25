@@ -39,7 +39,7 @@ public static class DataSyncLostUpdateGuard
     /// The item's <c>Detail</c> once Reapply cannot run: the apply's change list is gone (retention, or the apply was
     /// undone), so nothing says what to write back. The item then offers Publish only.
     /// </summary>
-    public const string ReapplyUnavailable = "reapplyUnavailable";
+    public const string ReapplyUnavailable = DataSyncInboxRules.ReapplyUnavailableDetail;
 
     /// <summary>The apply kinds whose changes a whole-row writer can undo (§6.5).</summary>
     public static readonly IReadOnlyList<DataSyncHistoryKind> GuardedKinds =

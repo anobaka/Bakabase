@@ -219,6 +219,15 @@ internal sealed class DecoratedCodec(IDataSyncKindCodec inner) : IDataSyncKindCo
     public JsonObject ComparisonForm(object publishedContent, string? orderKey, bool childrenLocal) =>
         inner.ComparisonForm(publishedContent, orderKey, childrenLocal);
 
+    public JsonObject WritePublished(object publishedContent, JsonObject? unknown) =>
+        inner.WritePublished(publishedContent, unknown);
+
+    public JsonObject ComparisonForm(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown) =>
+        inner.ComparisonForm(publishedContent, orderKey, childrenLocal, unknown);
+
+    public string SharedHash(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown) =>
+        inner.SharedHash(publishedContent, orderKey, childrenLocal, unknown);
+
     public IReadOnlyList<string> ChildDeletionCandidates(DataSyncChildCandidatesInput input) =>
         inner.ChildDeletionCandidates(input);
 

@@ -325,7 +325,8 @@ public sealed partial class DataSyncApplyRunner
         {
             var link = item.LinkId is { } id ? await s.LinkAsync(id, ct) : null;
             var payload = DataSyncStoredJson.Read<DataSyncInboxPayload>(item.PayloadJson, "PayloadJson");
-            return DataSyncInboxActions.Allowed(item.Type, item.SubjectPath, payload, DataSyncStore.IsEffectivelyTwoWay(link))
+            return Runtime.DataSyncInboxRules.Allowed(item.Type, item.SubjectPath, payload,
+                    Runtime.DataSyncInboxRules.IsEffectivelyTwoWay(link))
                 .Contains(action);
         }
 
@@ -1119,7 +1120,7 @@ public sealed partial class DataSyncApplyRunner
 
         /// <summary>
         /// Reapply cannot run (§6.5): the item stays open, its card says why (<c>Detail</c>) and no longer lists Reapply
-        /// (<see cref="DataSyncInboxActions"/>). The decision counts as one that changed since the person saw it.
+        /// (<see cref="Runtime.DataSyncInboxRules.Allowed"/>). The decision counts as one that changed since the person saw it.
         /// </summary>
         private async Task WithdrawReapplyAsync(DataSyncInboxItemDbModel item, CancellationToken ct)
         {

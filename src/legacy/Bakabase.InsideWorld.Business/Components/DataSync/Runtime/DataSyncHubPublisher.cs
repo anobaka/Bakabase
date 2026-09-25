@@ -11,10 +11,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 
-/// <summary>What changed definitions an apply wrote, for the pages that show them to refetch (§8.10.6).</summary>
+/// <summary>
+/// What changed definitions an apply wrote, for the pages that show them to refetch (§8.10.6): the payload of
+/// <see cref="DataSyncHubPublisher.AppliedKey"/>. Local keys are bare, as the pages know them (not the apply runner's
+/// <c>kind:localKey</c> of <see cref="Apply.DataSyncAppliedEvent"/>).
+/// </summary>
 /// <param name="Kinds">The kinds with an applied change.</param>
 /// <param name="LocalKeys">The local keys of the applied entities, of any of those kinds.</param>
-public sealed record DataSyncAppliedEvent(IReadOnlyList<string> Kinds, IReadOnlyList<string> LocalKeys);
+public sealed record DataSyncAppliedHubEvent(IReadOnlyList<string> Kinds, IReadOnlyList<string> LocalKeys);
 
 /// <summary>
 /// Pushes data sync to every open window over the UI hub (§8.10.6, F57), after the change is stored:
@@ -55,7 +59,7 @@ public sealed class DataSyncHubPublisher
             .Where(i => i.Outcome == DataSyncItemOutcome.Applied && i.LocalKey is not null)
             .ToList();
         if (applied.Count == 0) return;
-        await hub.Clients.All.GetIncrementalData(AppliedKey, new DataSyncAppliedEvent(
+        await hub.Clients.All.GetIncrementalData(AppliedKey, new DataSyncAppliedHubEvent(
             applied.Select(i => i.Kind).Distinct(StringComparer.Ordinal).ToList(),
             applied.Select(i => i.LocalKey!).Distinct(StringComparer.Ordinal).ToList()));
     }

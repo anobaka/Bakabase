@@ -1,4 +1,5 @@
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
@@ -64,7 +65,7 @@ public class DataSyncRuntimePartsTests
 
         Assert.IsTrue(registry.ShouldRunCurrent(), "outside a task body");
         bool inBody;
-        using (DataSyncTaskAttemptContext.Enter(second))
+        using (DataSyncTaskAttempts.Enter(second))
         {
             inBody = await Task.Run(() => registry.ShouldRunCurrent());
             Assert.IsTrue(registry.RequestCancel("DataSyncApply"));
@@ -72,7 +73,7 @@ public class DataSyncRuntimePartsTests
         }
 
         Assert.IsTrue(inBody, "the attempt flows with the body's async calls");
-        Assert.IsNull(DataSyncTaskAttemptContext.Current);
+        Assert.IsNull(DataSyncTaskAttempts.Current);
         Assert.IsTrue(registry.ShouldRun("DataSyncApply", registry.Register("DataSyncApply").AttemptId),
             "a new attempt starts without the old cancel");
     }
@@ -143,7 +144,7 @@ public class DataSyncRuntimePartsTests
     }
 
     [TestMethod]
-    public async Task The_runtime_composes_in_the_test_kit_and_its_grant_events_win_over_the_placeholder()
+    public async Task The_runtime_composes_in_the_test_kit_with_the_only_grant_events()
     {
         IServiceCollection? registered = null;
         var sp = await TestServiceBuilder.BuildServiceProvider(services =>

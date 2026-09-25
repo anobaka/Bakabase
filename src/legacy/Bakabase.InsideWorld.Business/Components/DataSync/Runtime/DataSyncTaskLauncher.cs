@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Runtime;
@@ -278,7 +279,7 @@ public sealed class DataSyncTaskLauncher
 
     /// <summary>
     /// The shape every write task body shares: a cooperative checkpoint and the attempt check before anything else, a
-    /// scope of its own, and the attempt flowing to the runner (<see cref="DataSyncTaskAttemptContext"/>).
+    /// scope of its own, and the attempt flowing to the runner (<see cref="DataSyncTaskAttempts"/>).
     /// <see cref="OperationCanceledException"/> is never wrapped, so a stopped task ends Cancelled (v3.1 M-f).
     /// </summary>
     private async Task RunInScopeAsync(BTaskArgs args, DataSyncTaskAttempt attempt, Func<IServiceProvider, Task> body)
@@ -291,7 +292,7 @@ public sealed class DataSyncTaskLauncher
             return;
         }
 
-        using var _ = DataSyncTaskAttemptContext.Enter(attempt);
+        using var _ = DataSyncTaskAttempts.Enter(attempt);
         await using var scope = _scopes.CreateAsyncScope();
         await body(scope.ServiceProvider);
     }

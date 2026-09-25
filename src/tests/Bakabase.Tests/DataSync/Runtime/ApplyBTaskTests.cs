@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
@@ -141,7 +142,7 @@ public class ApplyBTaskTests
         Assert.IsNotNull(first);
         Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Apply));
         Assert.IsNull(await h.Launcher.EnqueueApplyAsync(), "NotStarted: no-op");
-        Assert.AreEqual(first, h.Registry.GetCurrent(DataSyncTaskIds.Apply));
+        Assert.AreEqual(first, h.Registry.Current(DataSyncTaskIds.Apply));
 
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -153,7 +154,7 @@ public class ApplyBTaskTests
         await h.Btm.Start(DataSyncTaskIds.Apply);
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.IsNull(await h.Launcher.EnqueueApplyAsync(), "active: no-op");
-        Assert.AreEqual(first, h.Registry.GetCurrent(DataSyncTaskIds.Apply));
+        Assert.AreEqual(first, h.Registry.Current(DataSyncTaskIds.Apply));
 
         release.SetResult();
         await h.WaitForStatusAsync(DataSyncTaskIds.Apply, BTaskStatus.Completed);

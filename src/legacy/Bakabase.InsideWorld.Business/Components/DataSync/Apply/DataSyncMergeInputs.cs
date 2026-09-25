@@ -32,7 +32,7 @@ internal static class DataSyncMergeInputs
         var kinds = DataSyncStoredJson.ReadStrings(link.KindsJson, "KindsJson");
         var completed = DataSyncStoredJson.ReadStrings(link.FirstContactKindsJson, "FirstContactKindsJson")
             .ToHashSet(StringComparer.Ordinal);
-        var effective = DataSyncStore.IsEffectivelyTwoWay(link) ? DataSyncLinkMode.TwoWay : link.Mode;
+        var effective = Runtime.DataSyncInboxRules.IsEffectivelyTwoWay(link) ? DataSyncLinkMode.TwoWay : link.Mode;
         return new DataSyncLinkContext(link.Id, link.PeerNodeId, link.PeerName,
             fetched?.Mode ?? link.Mode,
             fetched?.EffectiveMode ?? effective,

@@ -6,8 +6,14 @@ namespace Bakabase.Modules.DataSync.Canonical;
 /// <summary>
 /// The two JSON forms every kind shares around its codec: the content a record carries (§3.5 steps 5–6) and the
 /// comparison form behind <c>SharedHash</c> (§3.4). Both add the preserved unknown top-level members (§8.9)
-/// verbatim, and neither ever lets one override a member the codec wrote.
+/// verbatim, and neither ever lets one override a member the codec wrote or declares.
 /// </summary>
+/// <remarks>
+/// These are the codec's own unknown-aware members (<see cref="IDataSyncKindCodec.WritePublished"/>, the four-argument
+/// <see cref="IDataSyncKindCodec.ComparisonForm(object, string?, bool, JsonObject?)"/> and
+/// <see cref="IDataSyncKindCodec.SharedHash"/>), so a kind that declares its known members is honoured wherever a form
+/// is computed.
+/// </remarks>
 public static class DataSyncContentForms
 {
     /// <summary>
@@ -19,7 +25,7 @@ public static class DataSyncContentForms
     {
         ArgumentNullException.ThrowIfNull(codec);
         ArgumentNullException.ThrowIfNull(publishedContent);
-        return WithUnknown(codec.Write(publishedContent), unknown);
+        return codec.WritePublished(publishedContent, unknown);
     }
 
     /// <summary>
@@ -32,24 +38,39 @@ public static class DataSyncContentForms
     {
         ArgumentNullException.ThrowIfNull(codec);
         ArgumentNullException.ThrowIfNull(publishedContent);
-        return WithUnknown(codec.ComparisonForm(publishedContent, orderKey, childrenLocal), unknown);
+        return codec.ComparisonForm(publishedContent, orderKey, childrenLocal, unknown);
     }
 
     /// <summary><c>SharedHash = ContentHash(ComparisonForm(...))</c> (§3.4).</summary>
     public static string SharedHash(IDataSyncKindCodec codec, object publishedContent, string? orderKey,
-        bool childrenLocal, JsonObject? unknown) =>
-        ContentHash.Of(ComparisonForm(codec, publishedContent, orderKey, childrenLocal, unknown));
-
-    private static JsonObject WithUnknown(JsonObject known, JsonObject? unknown)
+        bool childrenLocal, JsonObject? unknown)
     {
-        if (unknown is null || unknown.Count == 0) return known;
-        // A codec may hand out a node it keeps; never add to it.
-        known = (JsonObject)known.DeepClone();
+        ArgumentNullException.ThrowIfNull(codec);
+        ArgumentNullException.ThrowIfNull(publishedContent);
+        return codec.SharedHash(publishedContent, orderKey, childrenLocal, unknown);
+    }
+
+    /// <summary>
+    /// Adds the preserved unknown members to a form or content the codec wrote, in ordinal order, never over a member
+    /// it already has, one of <paramref name="knownMembers"/>, or <c>orderKey</c> (the form's own member for every kind
+    /// with order, §3.7, never content). The codec's node is never changed: a copy is returned when anything is added.
+    /// </summary>
+    public static JsonObject WithUnknown(JsonObject written, JsonObject? unknown, IReadOnlyCollection<string> knownMembers)
+    {
+        ArgumentNullException.ThrowIfNull(written);
+        ArgumentNullException.ThrowIfNull(knownMembers);
+        if (unknown is null || unknown.Count == 0) return written;
+        JsonObject? result = null;
         foreach (var (name, value) in unknown.OrderBy(m => m.Key, StringComparer.Ordinal))
         {
-            if (!known.ContainsKey(name)) known[name] = value?.DeepClone();
+            if (written.ContainsKey(name) || knownMembers.Contains(name) || name == OrderKeyMember) continue;
+            // A codec may hand out a node it keeps; never add to it.
+            result ??= (JsonObject)written.DeepClone();
+            result[name] = value?.DeepClone();
         }
 
-        return known;
+        return result ?? written;
     }
+
+    private const string OrderKeyMember = "orderKey";
 }

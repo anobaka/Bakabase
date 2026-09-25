@@ -9,6 +9,12 @@ namespace Bakabase.Modules.DataSync.Merging;
 public static class DataSyncInboxRules
 {
     /// <summary>
+    /// A SuspectedLostUpdate item's <c>Detail</c> once Reapply cannot run: the apply's change list is gone (retention,
+    /// or the apply was undone), so nothing says what to write back. The item then offers Publish only (§6.5).
+    /// </summary>
+    public const string ReapplyUnavailableDetail = "reapplyUnavailable";
+
+    /// <summary>
     /// The allowed actions of an open item (§9.1, "Allowed actions"). Nothing is pre-chosen. <paramref name="twoWay"/>
     /// is the link's effective mode being TwoWay (§8.1); false for items that belong to no link.
     /// </summary>
@@ -56,7 +62,8 @@ public static class DataSyncInboxRules
                 if (twoWay) actions.Add(DataSyncInboxAction.RestoreEverywhere);
                 break;
             case DataSyncInboxItemType.SuspectedLostUpdate:
-                actions.AddRange([DataSyncInboxAction.Publish, DataSyncInboxAction.Reapply]);
+                actions.Add(DataSyncInboxAction.Publish);
+                if (payload?.Detail != ReapplyUnavailableDetail) actions.Add(DataSyncInboxAction.Reapply);
                 break;
             case DataSyncInboxItemType.LargeChange:
                 // Pausing the link is a link action, not an inbox action.

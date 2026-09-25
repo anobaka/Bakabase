@@ -727,7 +727,7 @@ public class ResolutionTests
         Assert.AreEqual(Bakabase.InsideWorld.Business.Components.DataSync.Persistence.DataSyncLostUpdateGuard.ReapplyUnavailable,
             payload.Detail, "the card says why");
         CollectionAssert.AreEqual(new[] { DataSyncInboxAction.Publish },
-            DataSyncInboxActions.Allowed(open.Type, open.SubjectPath, payload, false).ToArray());
+            DataSyncInboxRules.AllowedActions(open.Type, open.SubjectPath, payload, false).ToArray());
 
         await _f.RefreshAsync();
         row = await _f.RowAsync(localKey);

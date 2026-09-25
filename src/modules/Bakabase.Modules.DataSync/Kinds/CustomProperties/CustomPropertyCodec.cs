@@ -21,6 +21,9 @@ public sealed partial class CustomPropertyCodec : DataSyncKindCodec<CustomProper
     /// </summary>
     public const int CurrentComparisonFormVersion = 1;
 
+    /// <summary>The codec with the default limits and policy: the one the adapter, the goldens and the inventory use.</summary>
+    public static CustomPropertyCodec Instance { get; } = new();
+
     private readonly DataSyncLimits _limits;
     private readonly DataSyncAutoApplyPolicy _policy;
 

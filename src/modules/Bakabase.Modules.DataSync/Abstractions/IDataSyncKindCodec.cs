@@ -106,16 +106,25 @@ public interface IDataSyncKindCodec
     /// §3.5 steps 5–6: a record's content, <c>Write(publishedContent)</c> with the preserved unknown top-level members
     /// (<c>UnknownJson</c>, §8.9) merged back verbatim. A member this codec knows is never overwritten.
     /// </summary>
-    JsonObject WritePublished(object publishedContent, JsonObject? unknown);
+    /// <remarks>
+    /// The default protects only the members <c>Write</c> emitted; <see cref="DataSyncKindCodec{TContent}"/> also
+    /// protects the members its kind declares. <see cref="Canonical.DataSyncContentForms"/> calls this member, so the
+    /// engine, persistence and the codec compute one form.
+    /// </remarks>
+    JsonObject WritePublished(object publishedContent, JsonObject? unknown) =>
+        Canonical.DataSyncContentForms.WithUnknown(Write(publishedContent), unknown, []);
 
     /// <summary>
     /// §3.4 with the preserved unknown top-level members added verbatim (never over a member of the form or one this
     /// codec knows): the form every device hashes for an entity or a peer record that carries unknown members.
     /// </summary>
-    JsonObject ComparisonForm(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown);
+    JsonObject ComparisonForm(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown) =>
+        Canonical.DataSyncContentForms.WithUnknown(ComparisonForm(publishedContent, orderKey, childrenLocal), unknown,
+            []);
 
     /// <summary><c>SharedHash = ContentHash(ComparisonForm(publishedContent, orderKey, childrenLocal, unknown))</c> (§3.4).</summary>
-    string SharedHash(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown);
+    string SharedHash(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown) =>
+        Canonical.ContentHash.Of(ComparisonForm(publishedContent, orderKey, childrenLocal, unknown));
 }
 
 /// <summary>

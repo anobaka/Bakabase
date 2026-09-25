@@ -67,7 +67,7 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
     private const string PreImageCreatedAt = "createdAt";
     private const string PreImageContent = "content";
 
-    private static readonly CustomPropertyCodec SharedCodec = new();
+    private static readonly CustomPropertyCodec SharedCodec = CustomPropertyCodec.Instance;
 
     private readonly ICustomPropertyService _properties;
     private readonly ICustomPropertyValueService _values;

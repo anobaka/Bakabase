@@ -1,4 +1,5 @@
 using System.Linq;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Services;
 using Bakabase.Modules.DataSync.Wire;
@@ -49,7 +50,9 @@ public static class DataSyncRuntimeServiceCollectionExtensions
         services.TryAddScoped<IDataSyncKindPageReader, DataSyncKindPageReader>();
         services.TryAddScoped<IDataSyncService, DataSyncService>();
 
-        services.TryAddSingleton<IDataSyncTaskRegistry, DataSyncTaskRegistry>();
+        // The attempt registry is the apply runner's (package C, the same instance whatever registers first).
+        services.TryAddSingleton<DataSyncTaskRegistry>();
+        services.TryAddSingleton<IDataSyncTaskRegistry>(sp => sp.GetRequiredService<DataSyncTaskRegistry>());
         services.TryAddSingleton<DataSyncStagedPullStore>();
         services.TryAddSingleton<IDataSyncStagedPullStore>(sp => sp.GetRequiredService<DataSyncStagedPullStore>());
 

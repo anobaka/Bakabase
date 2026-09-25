@@ -309,7 +309,8 @@ public sealed partial class DataSyncStore
             var link = row.LinkId is { } id ? links.GetValueOrDefault(id) : null;
             var payload = DataSyncStoredJson.Read<DataSyncInboxPayload>(row.PayloadJson, "PayloadJson");
             var allowed = row.ClosedAtUtc is null
-                ? DataSyncInboxActions.Allowed(row.Type, row.SubjectPath, payload, IsEffectivelyTwoWay(link))
+                ? Runtime.DataSyncInboxRules.Allowed(row.Type, row.SubjectPath, payload,
+                    Runtime.DataSyncInboxRules.IsEffectivelyTwoWay(link))
                 : [];
             return new DataSyncInboxItemView(row.Id, row.LinkId, row.PeerNodeId, link?.PeerName ?? payload.PeerName,
                 row.Kind, row.LocalKey, row.Type, row.Origin, row.SubjectPath, payload, allowed, null, row.Token,
@@ -322,18 +323,58 @@ public sealed partial class DataSyncStore
     /// <summary>The largest page <see cref="QueryInboxAsync"/> returns.</summary>
     public const int MaxInboxPageSize = 500;
 
-    /// <summary>
-    /// §8.1: TwoWay, or both devices follow each other (the peer's counterpart says it follows us). The link's
-    /// <c>CounterpartJson</c> is written with <see cref="DataSyncStoredJson"/>.
-    /// </summary>
-    public static bool IsEffectivelyTwoWay(DataSyncLinkDbModel? link)
+    #region Notification bookkeeping (§9.4)
+
+    /// <summary>The link's open items that no notification announced yet, oldest first.</summary>
+    public async Task<IReadOnlyList<long>> GetUnannouncedItemIdsAsync(int linkId, CancellationToken ct)
     {
-        if (link is null) return false;
-        if (link.Mode == DataSyncLinkMode.TwoWay) return true;
-        if (link.Mode != DataSyncLinkMode.Follow || string.IsNullOrEmpty(link.CounterpartJson)) return false;
-        var counterpart = DataSyncStoredJson.Read<DataSyncFeedCounterpart>(link.CounterpartJson, "CounterpartJson");
-        return counterpart.Mode == "follow";
+        await FlushAsync(ct);
+        return await _db.DataSyncInboxItems.AsNoTracking()
+            .Where(i => i.LinkId == linkId && i.ClosedAtUtc == null && i.NotifiedAtUtc == null)
+            .OrderBy(i => i.Id)
+            .Select(i => i.Id)
+            .ToListAsync(ct);
     }
+
+    /// <summary>Records that <paramref name="notificationId"/> announced these items, open or closed.</summary>
+    public async Task SetItemsNotifiedAsync(IReadOnlyCollection<long> ids, int notificationId, DateTime nowUtc,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        if (ids.Count == 0) return;
+        await FlushAsync(ct);
+        var idList = ids.Distinct().ToList();
+        foreach (var item in await _db.DataSyncInboxItems.Where(i => idList.Contains(i.Id)).ToListAsync(ct))
+        {
+            item.NotificationId = notificationId;
+            item.NotifiedAtUtc = nowUtc;
+        }
+
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// The notifications that announced an item closed at or after <paramref name="closedSinceUtc"/> and announce no
+    /// open item any more: every item they announced is decided, so they are marked read.
+    /// </summary>
+    public async Task<IReadOnlyList<int>> GetSettledNotificationsAsync(DateTime closedSinceUtc, CancellationToken ct)
+    {
+        await FlushAsync(ct);
+        var closed = await _db.DataSyncInboxItems.AsNoTracking()
+            .Where(i => i.NotificationId != null && i.ClosedAtUtc != null && i.ClosedAtUtc >= closedSinceUtc)
+            .Select(i => i.NotificationId!.Value)
+            .Distinct()
+            .ToListAsync(ct);
+        if (closed.Count == 0) return [];
+        var stillOpen = await _db.DataSyncInboxItems.AsNoTracking()
+            .Where(i => i.ClosedAtUtc == null && i.NotificationId != null && closed.Contains(i.NotificationId!.Value))
+            .Select(i => i.NotificationId!.Value)
+            .Distinct()
+            .ToListAsync(ct);
+        return closed.Except(stillOpen).ToList();
+    }
+
+    #endregion
 
     private static DateTime Utc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
 

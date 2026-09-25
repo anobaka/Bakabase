@@ -159,27 +159,14 @@ public abstract class DataSyncKindCodec<TContent> : IDataSyncKindCodec where TCo
     protected virtual IReadOnlyCollection<string> KnownContentMembers => [];
 
     public JsonObject WritePublished(object publishedContent, JsonObject? unknown) =>
-        WithUnknown(Write(Cast(publishedContent)), unknown);
+        Canonical.DataSyncContentForms.WithUnknown(Write(Cast(publishedContent)), unknown, KnownContentMembers);
 
     public JsonObject ComparisonForm(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown) =>
-        WithUnknown(ComparisonForm(Cast(publishedContent), orderKey, childrenLocal), unknown);
+        Canonical.DataSyncContentForms.WithUnknown(ComparisonForm(Cast(publishedContent), orderKey, childrenLocal),
+            unknown, KnownContentMembers);
 
     public string SharedHash(object publishedContent, string? orderKey, bool childrenLocal, JsonObject? unknown) =>
         Canonical.ContentHash.Of(ComparisonForm(publishedContent, orderKey, childrenLocal, unknown));
-
-    private JsonObject WithUnknown(JsonObject target, JsonObject? unknown)
-    {
-        if (unknown is null) return target;
-        var known = KnownContentMembers;
-        foreach (var (name, value) in unknown)
-        {
-            // "orderKey" is the form's own member for every kind with order (§3.7), never content.
-            if (target.ContainsKey(name) || known.Contains(name) || name == "orderKey") continue;
-            target[name] = value?.DeepClone();
-        }
-
-        return target;
-    }
 
     protected static TContent Cast(object? content) => content as TContent
         ?? throw new ArgumentException(
