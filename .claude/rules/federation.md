@@ -17,7 +17,7 @@ current device merges results.
 | Endpoints | `src/apps/Bakabase.Service/Controllers/Federation*.cs` |
 | UI | `src/web/src/features/federation/` |
 | Device map (`/federation/map`) | `src/web/src/features/federation/map/`, `DeviceMapPage.tsx` |
-| Data sync (definitions kept in step over `datasync.read` grants) | see `data-sync.md`; its node side is `Controllers/{DataSyncNodeController,FederationDataSyncPairingController}.cs`, `Components/Federation/FederationDataSync*.cs` and `Peers/FederationScopes.cs` |
+| Data sync (definitions kept in step over `datasync.read` grants) | see `data-sync.md`; its node side is `src/apps/Bakabase.Service/Controllers/{DataSyncNodeController,FederationDataSyncPairingController}.cs`, `src/apps/Bakabase.Service/Components/Federation/{FederationDataSync*,DataSyncNodeInfoContributor}.cs` and `src/modules/Bakabase.Modules.Federation/Peers/FederationScopes.cs` |
 | Design history | `docs/multi-device-library-execution-plan.md` |
 
 The whole multi-server mode — sharing, management, and data sync — is named
@@ -215,12 +215,16 @@ request, and acts through the same endpoints and confirmations.
   route. Definitions pairing never rewrites a library peer's `Label`, `Address`,
   `LibraryEpoch`, `Kind`, `Platform` or `Enabled` (it keeps its own `DataSyncAddress`). The
   gate checks per route: `FederationRoutePolicy.RequiredSharing` names the switch the route
-  needs, checked before authentication (`info` answers when either is on); every Export action
-  declares its scope on `FederationEndpointAttribute.Scope`, and `FederationLocalAccessFilter`
-  fails closed (403 `FederationEndpointDenied`) when an Export action declares none or the
-  principal's scope does not match. Library export services also require `library.read` in
-  `NodeGrantService.ValidateAsync` (`ScopeNotGranted`). `EveryExportActionDeclaresAScope` and
-  the generated per-action matrix in `FederationGateTests` pin it.
+  needs, checked before authentication (`info` answers when either is on). After
+  authentication the middleware checks the principal's scope against the route's: a library
+  grant on `export/datasync/*`, or a definitions grant on any other Export route, gets 403
+  `ScopeNotGranted` (gate rows G6–G9). Behind it, every Export action declares its scope on
+  `FederationEndpointAttribute.Scope`, and `FederationLocalAccessFilter` is the fail-closed
+  backstop (403 `FederationEndpointDenied`) for an Export action that declares no scope, or
+  one whose scope the principal's does not match. Library export services also require
+  `library.read` in `NodeGrantService.ValidateAsync` (`ScopeNotGranted`).
+  `EveryExportActionDeclaresAScope` and the generated per-action matrix in
+  `FederationGateTests` pin it.
 - **Local actions stay local.** Playing and opening folders happen on the viewing device with its
   own player configuration. Never launch a program named by a peer; on macOS, packages are only
   revealed (`open -R`), never opened.

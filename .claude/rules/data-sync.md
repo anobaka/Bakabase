@@ -25,7 +25,7 @@ field, a DbSet or an inbox item type.
 | Persistence, apply runner, feed, extension group adapter, DbSet classification | `src/legacy/Bakabase.InsideWorld.Business/Components/DataSync/{Persistence,Apply,Feed,Kinds}/`, `DataSyncDbSetClassification.cs` |
 | Scheduler, BTasks, links, inbox, notifications, the `IDataSyncService` facade | `src/legacy/Bakabase.InsideWorld.Business/Components/DataSync/Runtime/`, `DataSyncService.cs` |
 | Local UI API `~/data-sync`, identity bridge, host kind, CLI | `src/apps/Bakabase.Service/Controllers/DataSyncController.cs`, `Components/DataSync/` |
-| Node routes `~/federation/v1/{pair,export}/datasync/*`, grants, peer client | `src/apps/Bakabase.Service/Controllers/{DataSyncNodeController,FederationDataSyncPairingController}.cs`, `Components/Federation/FederationDataSync*.cs`; scopes in `src/modules/Bakabase.Modules.Federation/Peers/FederationScopes.cs` |
+| Node routes `~/federation/v1/{pair,export}/datasync/*`, grants, peer client | `src/apps/Bakabase.Service/Controllers/{DataSyncNodeController,FederationDataSyncPairingController}.cs`, `src/apps/Bakabase.Service/Components/Federation/{FederationDataSync*,DataSyncNodeInfoContributor}.cs`; scopes in `src/modules/Bakabase.Modules.Federation/Peers/FederationScopes.cs` |
 | Page, drawings, review, inbox, history, map adapter | `src/web/src/features/data-sync/` |
 | Help section | `src/web/src/components/HelpCenter/topics/multiDevice/dataSync/`, `locales/{en,cn}/components/helpDataSync.json` |
 
@@ -78,7 +78,8 @@ scopes").
   content: local ids, `CreatedAt`, the local integer `Order`, `ValueCount`, overlays, entity
   state, `CreatedBySync`), or *overlay* (a local-only rule on an entity, never published).
 - [ ] **Portable** — add it to the content DTO, `Write`/`ReadLocal`/`Read`, the comparison form
-  when devices must agree on it, and `Merge3` as a path (scalar, set member, child class or
+  (every field `Merge3` merges must be in it, see the rule below; bump
+  `ComparisonFormVersion`), and `Merge3` as a path (scalar, set member, child class or
   appearance). Content never carries a local id: references go through `OptionRef`.
 - [ ] **Schema version.** A new **top-level** optional member at the same schema needs no bump:
   older builds preserve unknown top-level members verbatim and merge them per member. A

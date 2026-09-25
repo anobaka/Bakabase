@@ -15,11 +15,13 @@ import { conflictSteps } from "../topics/multiDevice/dataSync/ConflictDiagram";
 import { deviceStyle } from "../topics/multiDevice/devices";
 
 import cnCommon from "@/locales/cn/common.json";
+import cnDataSyncPage from "@/locales/cn/pages/dataSync.json";
 import cnFederation from "@/locales/cn/pages/federation.json";
 import cnHelpCenter from "@/locales/cn/components/helpCenter.json";
 import cnHelpDataSync from "@/locales/cn/components/helpDataSync.json";
 import cnHelpMultiDevice from "@/locales/cn/components/helpMultiDevice.json";
 import enCommon from "@/locales/en/common.json";
+import enDataSyncPage from "@/locales/en/pages/dataSync.json";
 import enFederation from "@/locales/en/pages/federation.json";
 import enHelpCenter from "@/locales/en/components/helpCenter.json";
 import enHelpDataSync from "@/locales/en/components/helpDataSync.json";
@@ -131,12 +133,14 @@ const arrows = (root: ParentNode) =>
     state: arrow.getAttribute("data-state"),
   }));
 
-/** Where an SVG path starts ("M x y …"). */
-const pathStart = (path: Element) => {
-  const [, x, y] = path.getAttribute("d")!.match(/^M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)/)!;
+/** Every point of an SVG path made of straight segments ("M x y L x y …"). */
+const pathPoints = (path: Element) =>
+  Array.from(path.getAttribute("d")!.matchAll(/[ML]\s*(-?[\d.e-]+)[\s,]+(-?[\d.e-]+)/g)).map(
+    ([, x, y]) => ({ x: Number(x), y: Number(y) }),
+  );
 
-  return { x: Number(x), y: Number(y) };
-};
+/** Where an SVG path starts ("M x y …"). */
+const pathStart = (path: Element) => pathPoints(path)[0];
 
 /** Where an arrow points, read from what is drawn: from its line's start to its head's tip. */
 const pointing = (arrow: Element) => {
@@ -240,8 +244,15 @@ describe("data sync help: diagrams", () => {
       { ...toHere, state: "active" },
       { ...toThere, state: "active" },
     ]);
-    expect(arrows(mode("copyOnce"))).toEqual([{ ...toHere, state: "active" }]);
-    expect(mode("copyOnce")).toHaveTextContent("1×");
+    // Copied once, then off: not the live lane of receiving only, and its sign is text that
+    // keeps a readable size, not part of the scaled drawing.
+    expect(arrows(mode("copyOnce"))).toEqual([{ ...toHere, state: "once" }]);
+    const mark = mode("copyOnce").querySelector("[data-mark]")!;
+
+    expect(mark).toHaveTextContent("1×");
+    expect(mark.closest("svg")).toBeNull();
+    expect(mark).toHaveClass("text-xs");
+    expect(mode("follow").querySelector("[data-mark]")).toBeNull();
 
     // The decision travels from the laptop, where it was made, to this device.
     const decide = screen.getByTestId("data-sync-conflict").querySelector('[data-step="decide"]')!;
@@ -280,15 +291,40 @@ describe("data sync help: diagrams", () => {
       expect(line).toHaveClass(idle ? "stroke-default-300" : deviceStyle(from).stroke);
       expect(head).toHaveClass(idle ? "fill-default-300" : deviceStyle(from).solid);
       expect(to === "desktop" ? ["left", "up"] : ["right", "down"]).toContain(pointing(arrow));
+
+      // Only a copy made once stops at a bar across its tail, in the sender's colour.
+      const bar = arrow.querySelector("[data-bar]");
+
+      if (arrow.getAttribute("data-state") !== "once") {
+        expect(bar).toBeNull();
+        continue;
+      }
+      expect(line).not.toHaveAttribute("stroke-dasharray");
+      expect(bar).toHaveClass(deviceStyle(from).stroke);
+      const [end1, end2] = pathPoints(bar!);
+      const tail = pathStart(line);
+      const tip = pathStart(head);
+
+      expect((end1.x + end2.x) / 2).toBeCloseTo(tail.x);
+      expect((end1.y + end2.y) / 2).toBeCloseTo(tail.y);
+      expect(Math.hypot(end2.x - end1.x, end2.y - end1.y)).toBeGreaterThan(4);
+      // Across the line, not along it.
+      expect(
+        (end2.x - end1.x) * (tip.x - tail.x) + (end2.y - end1.y) * (tip.y - tail.y),
+      ).toBeCloseTo(0);
     }
     // Both colours and both ways are drawn, so neither check above passes vacuously.
     expect(new Set(drawn.map((arrow) => arrow.getAttribute("data-from")))).toEqual(
       new Set(["desktop", "laptop"]),
     );
     expect(new Set(drawn.map(pointing))).toEqual(new Set(["left", "right", "up"]));
+    // Every look a lane can have is drawn somewhere, so the bar checks are not vacuous either.
+    expect(new Set(drawn.map((arrow) => arrow.getAttribute("data-state")))).toEqual(
+      new Set(["active", "once", "pending", "idle"]),
+    );
   });
 
-  it("names every mode with the words the pages use", () => {
+  it("names every mode with the terminology's words", () => {
     render(<DataSyncSection onNavigate={vi.fn()} />);
     const modes = screen.getByTestId("data-sync-modes");
 
@@ -389,7 +425,7 @@ describe("data sync help: diagrams", () => {
 
     const lines = screen.getByTestId("data-sync-conflicts");
 
-    for (const id of ["fields", "same", "hub", "types", "case"]) {
+    for (const id of ["fields", "same", "hub", "types", "case", "labelWriters"]) {
       expect(within(lines).getByText(d(`conflicts.${id}`))).toBeInTheDocument();
     }
   });
@@ -575,9 +611,18 @@ describe("data sync help: translations", () => {
     expect(cnOwn[m("section.dataSync")]).toBe("数据同步");
     // "Needs you" is 待你决定; 待处理 already means something else in the app.
     expect(cnOwn[d("how.needsYou.title")]).toBe("待你决定");
+    // The inbox's action has a fixed name: 仅保留在本机.
+    expect(cnOwn[d("deletes.options")]).toContain("仅保留在本机");
 
     for (const [key, text] of Object.entries(cnOwn)) {
-      for (const word of ["配置同步", "配置包", "分享给他人", "待处理", "设备地图"]) {
+      for (const word of [
+        "配置同步",
+        "配置包",
+        "分享给他人",
+        "待处理",
+        "设备地图",
+        "只保留在本机",
+      ]) {
         expect(text.includes(word), `${key}: ${word}`).toBe(false);
       }
     }
@@ -589,6 +634,41 @@ describe("data sync help: translations", () => {
     expect(enOwn[d("where.map")]).toContain(
       (enFederation as Record<string, string>)["federation.map.title"],
     );
+  });
+
+  it("quotes the Data sync page's own labels, once the page has them", () => {
+    // Where the help names a control or a tab of the page, it uses the page's words: `is`
+    // is the label itself (a button's closing ellipsis left out), `quotes` names it in a
+    // sentence.
+    const quoted: { help: string; page: string; how: "is" | "quotes" }[] = [
+      { help: d("modes.follow.title"), page: "dataSync.mode.follow", how: "is" },
+      { help: d("modes.twoWay.title"), page: "dataSync.mode.twoWay", how: "is" },
+      { help: d("modes.copyOnce.title"), page: "dataSync.copyOnce.button", how: "is" },
+      { help: d("how.link.desc"), page: "dataSync.thisDevice", how: "quotes" },
+      { help: d("how.link.desc"), page: "dataSync.sharing.label", how: "quotes" },
+      { help: d("how.link.desc"), page: "dataSync.mode.follow", how: "quotes" },
+      { help: d("how.link.desc"), page: "dataSync.mode.twoWay", how: "quotes" },
+      { help: d("how.link.descNoMap"), page: "dataSync.thisDevice", how: "quotes" },
+      { help: d("how.link.descNoMap"), page: "dataSync.wizard.open", how: "quotes" },
+      { help: d("how.needsYou.desc"), page: "dataSync.inbox.title", how: "quotes" },
+    ];
+    const pages = [
+      [enOwn, enDataSyncPage as Record<string, string>],
+      [cnOwn, cnDataSyncPage as Record<string, string>],
+    ] as const;
+
+    // The page's labels come with the page itself; until then there is nothing to compare.
+    // Once they are there, every label the help quotes must be among them.
+    for (const [help, page] of pages) {
+      if (Object.keys(page).length === 0) continue;
+      for (const { help: helpKey, page: pageKey, how } of quoted) {
+        const label = page[pageKey];
+
+        expect(label, pageKey).toBeTruthy();
+        if (how === "is") expect(help[helpKey], helpKey).toBe(label.replace(/…$/, ""));
+        else expect(help[helpKey], `${helpKey} → ${pageKey}`).toContain(label);
+      }
+    }
   });
 
   it("amends the topic's storage pillar and map words for data sync", () => {

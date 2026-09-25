@@ -64,15 +64,17 @@ export const DeviceMark = ({ id, className = "h-6 w-7" }: { id: DeviceId; classN
 );
 
 /**
- * How one direction of a link looks: `active` definitions flow, `pending` waits (for an
- * approval), `idle` is set up but not what the picture is about, `none` is not drawn.
+ * How one direction of a link looks: `active` definitions flow, `once` they are copied a
+ * single time and the lane then stays off (copy once), `pending` waits (for an approval),
+ * `idle` is set up but not what the picture is about, `none` is not drawn.
  */
-export type LaneState = "active" | "pending" | "idle" | "none";
+export type LaneState = "active" | "once" | "pending" | "idle" | "none";
 
 /**
  * One arrow from `from` to `to`, drawn inside an SVG. The head sits at (x2, y2), the end
- * the definitions arrive at. The data attributes say who sends and who receives; the help
- * test checks them against the colour and the geometry actually drawn.
+ * the definitions arrive at; a `once` arrow also has a bar across its tail, where the lane
+ * stops after the copy. The data attributes say who sends and who receives; the help test
+ * checks them against the colour and the geometry actually drawn.
  */
 export const SyncArrow = ({
   from,
@@ -100,6 +102,9 @@ export const SyncArrow = ({
   const baseY = y2 - Math.sin(angle) * head;
   const spreadX = Math.sin(angle) * head * 0.6;
   const spreadY = -Math.cos(angle) * head * 0.6;
+  // Half the tail bar of a `once` arrow, across the line.
+  const barX = Math.sin(angle) * 5;
+  const barY = -Math.cos(angle) * 5;
 
   return (
     <g data-arrow data-from={from} data-state={state} data-to={to}>
@@ -117,6 +122,16 @@ export const SyncArrow = ({
           baseY - spreadY
         } Z`}
       />
+      {state === "once" && (
+        <path
+          data-bar
+          className={stroke}
+          d={`M${x1 + barX} ${y1 + barY} L${x1 - barX} ${y1 - barY}`}
+          fill="none"
+          strokeLinecap="round"
+          strokeWidth={2}
+        />
+      )}
     </g>
   );
 };
@@ -132,32 +147,33 @@ export const SyncLanes = ({
 }: {
   toHere: LaneState;
   toThere: LaneState;
-  /** A short sign drawn under the lanes, such as "1×" for a copy made once. */
+  /**
+   * A short sign, such as "1×" for a copy made once, shown where the lower lane would be:
+   * only for a pair that draws no lower lane.
+   */
   mark?: string;
 }) => (
   // Takes its share of the pair's width: in a very narrow dialog the drawing scales down.
   // Its upper lane lines up with the middle of the devices' drawings above their names.
-  <svg aria-hidden className="mt-0.5 h-8 min-w-0 flex-1" viewBox="0 0 64 32">
-    {toHere !== "none" && (
-      <SyncArrow from={THERE} state={toHere} to={HERE} x1={60} x2={4} y1={10} y2={10} />
-    )}
-    {toThere !== "none" && (
-      <SyncArrow from={HERE} state={toThere} to={THERE} x1={4} x2={60} y1={21} y2={21} />
-    )}
+  <div className="relative mt-0.5 min-w-0 flex-1">
+    <svg aria-hidden className="block h-8 w-full" viewBox="0 0 64 32">
+      {toHere !== "none" && (
+        <SyncArrow from={THERE} state={toHere} to={HERE} x1={60} x2={4} y1={10} y2={10} />
+      )}
+      {toThere !== "none" && (
+        <SyncArrow from={HERE} state={toThere} to={THERE} x1={4} x2={60} y1={21} y2={21} />
+      )}
+    </svg>
+    {/* Text, not part of the drawing, so it keeps a readable size when the drawing scales. */}
     {mark && (
-      <text
-        className="fill-default-500"
-        dominantBaseline="middle"
-        fontSize={9}
-        fontWeight={600}
-        textAnchor="middle"
-        x={32}
-        y={24}
+      <span
+        data-mark
+        className="absolute inset-x-0 bottom-0 text-center text-xs font-semibold leading-none text-default-500"
       >
         {mark}
-      </text>
+      </span>
     )}
-  </svg>
+  </div>
 );
 
 /**

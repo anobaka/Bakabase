@@ -38,11 +38,12 @@ export const syncModes: {
 }[] = [
   { id: "follow", toHere: "active", toThere: "none" },
   { id: "twoWay", toHere: "active", toThere: "active" },
-  // A sign, not prose: the same in every language.
-  { id: "copyOnce", toHere: "active", toThere: "none", mark: "1×" },
+  // Copied a single time, then the link stays off. The mark is a sign, not prose: the same
+  // in every language.
+  { id: "copyOnce", toHere: "once", toThere: "none", mark: "1×" },
 ];
 
-const conflictLines = ["fields", "same", "hub", "types", "case"];
+const conflictLines = ["fields", "same", "hub", "types", "case", "labelWriters"];
 const deletionLines = ["options", "definitions", "edited", "filters"];
 const safetyLines = ["noValues", "noMerge", "noRemote", "stop", "grant"];
 
