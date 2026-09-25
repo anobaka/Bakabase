@@ -1,0 +1,39 @@
+{
+  "font_size": 0.4,
+  "font_color": "#FFFFFF",
+  "background_alpha": 0.5,
+  "background_color": "#9C27B0",
+  "Stroke": "none",
+  "body": [
+    {
+      "from": 3725.5,
+      "to": 3727.0,
+      "location": 2,
+      "content": "一小时以后"
+    },
+    {
+      "from": 0.13,
+      "to": 0.67,
+      "location": 2,
+      "content": "你好"
+    },
+    {
+      "from": 0.67,
+      "to": 0.5,
+      "location": 2,
+      "content": "结束早于开始"
+    },
+    {
+      "from": 1.0,
+      "to": 2.0,
+      "location": 2,
+      "content": "  "
+    },
+    {
+      "from": 2.0,
+      "to": 3.25,
+      "location": 2,
+      "content": "第一行\r\n第二行"
+    }
+  ]
+}

@@ -597,10 +597,6 @@
     <value>FFmpeg is not ready</value>
     <comment>Error message when FFmpeg is not available</comment>
   </data>
-  <data name="LuxIsNotReady" xml:space="preserve">
-    <value>Lux is not ready</value>
-    <comment>Error message when Lux downloader is not available</comment>
-  </data>
   <data name="InvalidCookie" xml:space="preserve">
     <value>Invalid cookie</value>
     <comment>Error message for invalid authentication cookie</comment>
@@ -612,5 +608,102 @@
   <data name="TransientNetworkErrorRetrying" xml:space="preserve">
     <value>Network error, retrying in {0}s ({1}/{2})</value>
     <comment>Shown as the task's current step while it waits to re-run after a transient network failure. {0}: seconds to wait, {1}: this retry, {2}: total retries</comment>
+  </data>
+  <data name="DownloadNotices.Summary" xml:space="preserve">
+    <value>{0} note(s) from this task:</value>
+    <comment>First line of a task's notes. {0}: number of notices</comment>
+  </data>
+  <data name="DownloadNotices.Truncated" xml:space="preserve">
+    <value>…and {0} more (see the log for the full list)</value>
+    <comment>Replaces the notices beyond the listed ones. {0}: how many are not listed</comment>
+  </data>
+  <data name="Bilibili.FavoritesNotFound" xml:space="preserve">
+    <value>Bilibili favorites folder {0} ({1}) was not found in this account. It may have been deleted, or the cookie belongs to another account.</value>
+    <comment>{0}: favorites id, {1}: task name</comment>
+  </data>
+  <data name="Bilibili.RiskControl" xml:space="preserve">
+    <value>Bilibili is temporarily refusing requests (risk control, code {0}). The task retries automatically; if it keeps failing, wait a while or update the cookie.</value>
+    <comment>{0}: API code or HTTP status</comment>
+  </data>
+  <data name="Bilibili.RiskControlWaiting" xml:space="preserve">
+    <value>Bilibili is refusing requests for now (risk control); retrying in {0} min ({1}/{2})</value>
+    <comment>Current step while waiting out risk control. {0}: minutes left, {1}: this retry, {2}: total retries</comment>
+  </data>
+  <data name="Bilibili.NotLoggedIn" xml:space="preserve">
+    <value>The Bilibili cookie is not logged in or has expired. Update it in the downloader settings, then run the task again.</value>
+    <comment>The cookie stopped working (e.g. it expired during a run)</comment>
+  </data>
+  <data name="Bilibili.DiskFull" xml:space="preserve">
+    <value>Not enough free disk space to write {0}. Free up space, then run the task again; downloaded parts are kept and resumed.</value>
+    <comment>{0}: the file that could not be written</comment>
+  </data>
+  <data name="Bilibili.SkipNotice" xml:space="preserve">
+    <value>{0} — skipped: {1}</value>
+    <comment>One line of a task's notes. {0}: the video (and part), {1}: the reason</comment>
+  </data>
+  <data name="Bilibili.SkipFooter" xml:space="preserve">
+    <value>Skipped items are not retried automatically, and the log lists every one. To check them again, clear this task's checkpoint.</value>
+    <comment>Last line of a Bilibili task's notes</comment>
+  </data>
+  <data name="Bilibili.Skip.InvalidItem" xml:space="preserve">
+    <value>no longer available (removed or invalidated)</value>
+  </data>
+  <data name="Bilibili.Skip.UnsupportedOgvEpisode" xml:space="preserve">
+    <value>bangumi/film episodes are not supported yet</value>
+  </data>
+  <data name="Bilibili.Skip.UnsupportedAudio" xml:space="preserve">
+    <value>audio items are not supported yet</value>
+  </data>
+  <data name="Bilibili.Skip.UnsupportedCollection" xml:space="preserve">
+    <value>video collections are not supported yet</value>
+  </data>
+  <data name="Bilibili.Skip.UnsupportedItemType" xml:space="preserve">
+    <value>unsupported favorites item type {0}</value>
+    <comment>{0}: the favorites item type</comment>
+  </data>
+  <data name="Bilibili.Skip.InteractiveVideo" xml:space="preserve">
+    <value>interactive videos are not supported</value>
+  </data>
+  <data name="Bilibili.Skip.Deleted" xml:space="preserve">
+    <value>deleted or no longer visible</value>
+  </data>
+  <data name="Bilibili.Skip.PrivateToUploader" xml:space="preserve">
+    <value>only visible to the uploader</value>
+  </data>
+  <data name="Bilibili.Skip.UnderReview" xml:space="preserve">
+    <value>under review</value>
+  </data>
+  <data name="Bilibili.Skip.RegionRestrictedOrHidden" xml:space="preserve">
+    <value>not available in your region, or hidden</value>
+  </data>
+  <data name="Bilibili.Skip.AccessDenied" xml:space="preserve">
+    <value>this account has no access</value>
+  </data>
+  <data name="Bilibili.Skip.SupporterOnly" xml:space="preserve">
+    <value>supporter-only (充电专属) video; this account has no access</value>
+  </data>
+  <data name="Bilibili.Skip.SupporterOnlyPreview" xml:space="preserve">
+    <value>supporter-only video; this account only gets a preview, which was not saved</value>
+  </data>
+  <data name="Bilibili.Skip.PgcMemberOrPaid" xml:space="preserve">
+    <value>bangumi/film episode that needs a membership or purchase (not supported yet)</value>
+  </data>
+  <data name="Bilibili.Skip.PreviewOnly" xml:space="preserve">
+    <value>this account only gets a preview, which was not saved</value>
+  </data>
+  <data name="Bilibili.Skip.Unavailable" xml:space="preserve">
+    <value>unavailable on Bilibili (code {0}) {1}</value>
+    <comment>{0}: API code, {1}: Bilibili's message (may be empty)</comment>
+  </data>
+  <data name="Bilibili.Skip.PgcEpisodeNotSupported" xml:space="preserve">
+    <value>bangumi/film episode, not supported yet (it may need a membership)</value>
+  </data>
+  <data name="Bilibili.Skip.MergeFailed" xml:space="preserve">
+    <value>ffmpeg could not merge the video and audio (exit code {0})</value>
+    <comment>{0}: ffmpeg exit code</comment>
+  </data>
+  <data name="Bilibili.Skip.CdnUnavailable" xml:space="preserve">
+    <value>no Bilibili CDN server would deliver the video (HTTP {0}); it may work later</value>
+    <comment>{0}: the last HTTP status</comment>
   </data>
 </root>

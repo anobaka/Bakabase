@@ -1,0 +1,13 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "closed": false,
+    "dm_seg": {
+      "page_size": 360000,
+      "total": 1
+    },
+    "subtitle": null
+  }
+}

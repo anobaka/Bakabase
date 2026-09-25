@@ -162,5 +162,8 @@
   "downloader.filter.status.Failed": "失败",
   "downloader.filter.status.Disabled": "已禁用",
   "downloader.action.viewError": "查看错误",
-  "downloader.tip.clickToCopyError": "点击复制完整错误信息"
+  "downloader.tip.clickToCopyError": "点击复制完整错误信息",
+  "downloader.action.viewNotices": "查看提示",
+  "downloader.label.notices": "上次运行的提示",
+  "downloader.tip.clickToCopyNotices": "点击复制全部提示"
 }

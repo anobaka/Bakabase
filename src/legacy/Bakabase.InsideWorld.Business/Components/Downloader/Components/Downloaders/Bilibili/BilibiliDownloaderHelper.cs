@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
-using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
@@ -21,8 +20,7 @@ public class BilibiliDownloaderHelper(
     IDownloaderLocalizer localizer,
     BilibiliClient bilibiliClient,
     HttpClient httpClient,
-    FfMpegService ffMpegService,
-    LuxService luxService) : AbstractDownloaderHelper<BilibiliOptions>(optionsManager, localizer, httpClient)
+    FfMpegService ffMpegService) : AbstractDownloaderHelper<BilibiliOptions>(optionsManager, localizer, httpClient)
 {
     private readonly IDownloaderLocalizer _localizer = localizer;
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.Bilibili;
@@ -36,15 +34,6 @@ public class BilibiliDownloaderHelper(
         catch (DependencyNotInstalledException)
         {
             return BaseResponseBuilder.BuildBadRequest(_localizer.FfMpegIsNotReady());
-        }
-
-        try
-        {
-            await luxService.EnsureReadyAsync(default);
-        }
-        catch (DependencyNotInstalledException)
-        {
-            return BaseResponseBuilder.BuildBadRequest(_localizer.LuxIsNotReady());
         }
 
         return await base.ValidateAdditional(options);

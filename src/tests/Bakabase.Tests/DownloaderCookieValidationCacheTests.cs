@@ -9,6 +9,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Component
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Protocol;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.Localization;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -68,10 +69,23 @@ public class DownloaderCookieValidationCacheTests
         public string? GetNamingFieldExample<TEnum>(TEnum namingFieldValue) => null;
         public string InvalidFavorites() => "";
         public string FfMpegIsNotReady() => "";
-        public string LuxIsNotReady() => "";
         public string InvalidCookie() => "invalid cookie";
         public string DownloadPathNotSet() => "";
         public string TransientNetworkErrorRetrying(int delaySeconds, int retry, int maxRetries) => "";
+
+        public string DownloadNoticesSummary(int count) => $"{count} notices";
+        public string DownloadNoticesTruncated(int remaining) => $"{remaining} more";
+        public string BilibiliFavoritesNotFound(string favoritesId, string? name) => "";
+        public string BilibiliRiskControl(int? code) => "";
+        public string BilibiliRiskControlWaiting(int minutes, int retry, int maxRetries) => "";
+        public string BilibiliNotLoggedIn() => "";
+        public string BilibiliDiskFull(string path) => "";
+
+        public string DescribeBilibiliSkip(BilibiliSkipReason reason, int? code, string? message) =>
+            reason.ToString();
+
+        public string BilibiliSkipNotice(string subject, string reason) => "";
+        public string BilibiliSkipFooter() => "";
     }
 
     private sealed class TestHelper(StubOptionsManager optionsManager, bool cookieIsValid)

@@ -88,6 +88,8 @@ public static class TransientNetworkError
         SocketException => true,
         // HttpClient.Timeout elapsed. The caller's own cancellation was ruled out up front.
         OperationCanceledException { InnerException: TimeoutException } => true,
+        // A service answered "not right now" in-band (e.g. HTTP 200 with a risk-control code).
+        ITransientServiceError => true,
         _ => false,
     };
 

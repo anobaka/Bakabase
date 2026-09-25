@@ -597,10 +597,6 @@
     <value>FFmpeg未就绪</value>
     <comment>FFmpeg不可用时的错误信息</comment>
   </data>
-  <data name="LuxIsNotReady" xml:space="preserve">
-    <value>Lux未就绪</value>
-    <comment>Lux下载器不可用时的错误信息</comment>
-  </data>
   <data name="InvalidCookie" xml:space="preserve">
     <value>Cookie无效</value>
     <comment>认证Cookie无效的错误信息</comment>
@@ -612,5 +608,102 @@
   <data name="TransientNetworkErrorRetrying" xml:space="preserve">
     <value>网络异常，{0} 秒后自动重试（第 {1}/{2} 次）</value>
     <comment>任务因临时网络错误等待重新运行时显示的当前步骤。{0}：等待秒数，{1}：本次重试序号，{2}：重试总次数</comment>
+  </data>
+  <data name="DownloadNotices.Summary" xml:space="preserve">
+    <value>本任务有 {0} 条提示：</value>
+    <comment>任务提示的第一行。{0}：提示条数</comment>
+  </data>
+  <data name="DownloadNotices.Truncated" xml:space="preserve">
+    <value>……另有 {0} 条（完整列表见日志）</value>
+    <comment>代替未列出的提示。{0}：未列出的条数</comment>
+  </data>
+  <data name="Bilibili.FavoritesNotFound" xml:space="preserve">
+    <value>当前账号中找不到 B 站收藏夹 {0}（{1}）。它可能已被删除，或 Cookie 属于其他账号。</value>
+    <comment>{0}：收藏夹 ID，{1}：任务名称</comment>
+  </data>
+  <data name="Bilibili.RiskControl" xml:space="preserve">
+    <value>B 站暂时拒绝了请求（风控，代码 {0}）。任务会自动重试；若持续失败，请稍后再试或更新 Cookie。</value>
+    <comment>{0}：接口代码或 HTTP 状态码</comment>
+  </data>
+  <data name="Bilibili.RiskControlWaiting" xml:space="preserve">
+    <value>B 站风控，{0} 分钟后自动重试（第 {1}/{2} 次）</value>
+    <comment>等待风控解除时显示的当前步骤。{0}：剩余分钟数，{1}：本次重试序号，{2}：重试总次数</comment>
+  </data>
+  <data name="Bilibili.NotLoggedIn" xml:space="preserve">
+    <value>B 站 Cookie 未登录或已过期。请在下载器设置中更新 Cookie 后重新运行任务。</value>
+    <comment>Cookie 失效（例如运行过程中过期）</comment>
+  </data>
+  <data name="Bilibili.DiskFull" xml:space="preserve">
+    <value>磁盘空间不足，无法写入 {0}。请释放空间后重新运行任务，已下载的部分会保留并继续下载。</value>
+    <comment>{0}：无法写入的文件</comment>
+  </data>
+  <data name="Bilibili.SkipNotice" xml:space="preserve">
+    <value>{0} —— 已跳过：{1}</value>
+    <comment>任务提示中的一行。{0}：视频（及分P），{1}：原因</comment>
+  </data>
+  <data name="Bilibili.SkipFooter" xml:space="preserve">
+    <value>被跳过的项目不会自动重试，日志中记录了每一项。如需重新检查，请清除该任务的检查点。</value>
+    <comment>B 站任务提示的最后一行</comment>
+  </data>
+  <data name="Bilibili.Skip.InvalidItem" xml:space="preserve">
+    <value>已失效（已删除或不可用）</value>
+  </data>
+  <data name="Bilibili.Skip.UnsupportedOgvEpisode" xml:space="preserve">
+    <value>暂不支持番剧/影视剧集</value>
+  </data>
+  <data name="Bilibili.Skip.UnsupportedAudio" xml:space="preserve">
+    <value>暂不支持音频</value>
+  </data>
+  <data name="Bilibili.Skip.UnsupportedCollection" xml:space="preserve">
+    <value>暂不支持合集</value>
+  </data>
+  <data name="Bilibili.Skip.UnsupportedItemType" xml:space="preserve">
+    <value>不支持的收藏类型 {0}</value>
+    <comment>{0}：收藏项类型</comment>
+  </data>
+  <data name="Bilibili.Skip.InteractiveVideo" xml:space="preserve">
+    <value>暂不支持互动视频</value>
+  </data>
+  <data name="Bilibili.Skip.Deleted" xml:space="preserve">
+    <value>稿件已删除或不可见</value>
+  </data>
+  <data name="Bilibili.Skip.PrivateToUploader" xml:space="preserve">
+    <value>仅 UP 主自己可见</value>
+  </data>
+  <data name="Bilibili.Skip.UnderReview" xml:space="preserve">
+    <value>稿件审核中</value>
+  </data>
+  <data name="Bilibili.Skip.RegionRestrictedOrHidden" xml:space="preserve">
+    <value>所在地区不可观看或已被隐藏</value>
+  </data>
+  <data name="Bilibili.Skip.AccessDenied" xml:space="preserve">
+    <value>当前账号无权访问</value>
+  </data>
+  <data name="Bilibili.Skip.SupporterOnly" xml:space="preserve">
+    <value>充电专属视频，当前账号无权观看</value>
+  </data>
+  <data name="Bilibili.Skip.SupporterOnlyPreview" xml:space="preserve">
+    <value>充电专属视频，当前账号只能试看，未保存试看片段</value>
+  </data>
+  <data name="Bilibili.Skip.PgcMemberOrPaid" xml:space="preserve">
+    <value>需要大会员或付费的番剧/影视剧集（暂不支持）</value>
+  </data>
+  <data name="Bilibili.Skip.PreviewOnly" xml:space="preserve">
+    <value>当前账号只能试看，未保存试看片段</value>
+  </data>
+  <data name="Bilibili.Skip.Unavailable" xml:space="preserve">
+    <value>B 站返回不可用（代码 {0}）{1}</value>
+    <comment>{0}：接口代码，{1}：B 站返回的信息（可能为空）</comment>
+  </data>
+  <data name="Bilibili.Skip.PgcEpisodeNotSupported" xml:space="preserve">
+    <value>番剧/影视剧集，暂不支持（可能需要大会员）</value>
+  </data>
+  <data name="Bilibili.Skip.MergeFailed" xml:space="preserve">
+    <value>ffmpeg 无法合并音视频（退出码 {0}）</value>
+    <comment>{0}：ffmpeg 退出码</comment>
+  </data>
+  <data name="Bilibili.Skip.CdnUnavailable" xml:space="preserve">
+    <value>B 站 CDN 无法提供该视频（HTTP {0}），稍后可能恢复</value>
+    <comment>{0}：最后一次的 HTTP 状态码</comment>
   </data>
 </root>

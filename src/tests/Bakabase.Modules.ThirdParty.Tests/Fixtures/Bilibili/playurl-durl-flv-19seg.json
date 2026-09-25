@@ -1,0 +1,327 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "from": "local",
+    "result": "suee",
+    "message": "",
+    "quality": 32,
+    "format": "flv480",
+    "timelength": 6868587,
+    "accept_format": "mp4",
+    "accept_description": [],
+    "accept_quality": [
+      80,
+      64,
+      32,
+      16
+    ],
+    "video_codecid": 7,
+    "seek_param": "start",
+    "seek_type": "second",
+    "durl": [
+      {
+        "order": 19,
+        "length": 360000,
+        "size": 1018,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-19-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-19-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 18,
+        "length": 360000,
+        "size": 1017,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-18-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-18-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 17,
+        "length": 360000,
+        "size": 1016,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-17-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-17-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 16,
+        "length": 360000,
+        "size": 1015,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-16-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-16-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 15,
+        "length": 360000,
+        "size": 1014,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-15-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-15-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 14,
+        "length": 360000,
+        "size": 1013,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-14-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-14-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 13,
+        "length": 360000,
+        "size": 1012,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-13-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-13-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 12,
+        "length": 360000,
+        "size": 1011,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-12-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-12-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 11,
+        "length": 360000,
+        "size": 1010,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-11-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-11-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 10,
+        "length": 360000,
+        "size": 1009,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-10-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-10-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 9,
+        "length": 360000,
+        "size": 1008,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-9-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-9-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 8,
+        "length": 360000,
+        "size": 1007,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-8-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-8-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 7,
+        "length": 360000,
+        "size": 1006,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-7-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-7-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 6,
+        "length": 360000,
+        "size": 1005,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-6-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-6-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 5,
+        "length": 360000,
+        "size": 1004,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-5-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-5-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 4,
+        "length": 440960,
+        "size": 1003,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-4-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-4-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 3,
+        "length": 333313,
+        "size": 1002,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-3-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-3-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 2,
+        "length": 295212,
+        "size": 1001,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-2-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-2-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      },
+      {
+        "order": 1,
+        "length": 399102,
+        "size": 1000,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://upos-sz-example.bilivideo.com/upgcxcode/00/00/5001/6652490-1-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1",
+        "backup_url": [
+          "https://cn-example-ct-01-01.bilivideo.com/upgcxcode/00/00/5001/6652490-1-32.flv?deadline=1900000000&gen=playurlv3&os=upos&upsig=00000000000000000000000000000000&uparams=e,deadline&bw=1"
+        ]
+      }
+    ],
+    "support_formats": [
+      {
+        "quality": 127,
+        "format": "fmt127",
+        "new_description": "8K 超高清",
+        "display_desc": "8K",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 126,
+        "format": "fmt126",
+        "new_description": "杜比视界",
+        "display_desc": "杜比视界",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 125,
+        "format": "fmt125",
+        "new_description": "HDR 真彩",
+        "display_desc": "HDR",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 120,
+        "format": "fmt120",
+        "new_description": "4K 超高清",
+        "display_desc": "4K",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 112,
+        "format": "fmt112",
+        "new_description": "1080P 高码率",
+        "display_desc": "1080P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 80,
+        "format": "fmt80",
+        "new_description": "1080P 高清",
+        "display_desc": "1080P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 64,
+        "format": "fmt64",
+        "new_description": "720P 准高清",
+        "display_desc": "720P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 32,
+        "format": "fmt32",
+        "new_description": "480P 标清",
+        "display_desc": "480P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      },
+      {
+        "quality": 16,
+        "format": "fmt16",
+        "new_description": "360P 流畅",
+        "display_desc": "360P",
+        "superscript": "",
+        "codecs": [
+          "avc1.640032"
+        ]
+      }
+    ]
+  }
+}

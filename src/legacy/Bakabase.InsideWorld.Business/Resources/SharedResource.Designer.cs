@@ -424,27 +424,6 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to This component is used to download online videos. 
-        ///You can go to https://github.com/iawia002/lux to download the executables manually. 
-        ///Please make sure there is a lux.exe in your folder. 
-        ///The version of lux is not limited..
-        /// </summary>
-        internal static string Dependency_Component_lux_Description {
-            get {
-                return ResourceManager.GetString("Dependency_Component_lux_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to lux.
-        /// </summary>
-        internal static string Dependency_Component_lux_Name {
-            get {
-                return ResourceManager.GetString("Dependency_Component_lux_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Discovering playable files.
         /// </summary>
         internal static string DiscoveringPlayableFiles {

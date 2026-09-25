@@ -53,7 +53,7 @@ namespace Bakabase.Service.Controllers
                     $"Unknown component id: {id}");
             }
 
-            var version = await service.GetLatestVersion(fromCache: false, ct);
+            var version = await service.GetLatestVersion(fromCache: true, ct);
             return new SingletonResponse<DependentComponentVersion>(version);
         }
     }

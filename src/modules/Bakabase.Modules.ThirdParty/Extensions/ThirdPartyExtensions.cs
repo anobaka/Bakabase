@@ -10,6 +10,7 @@ using Bakabase.Modules.ThirdParty.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Download;
 using Bakabase.Modules.ThirdParty.ThirdParties.Airav;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsex;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsox;
@@ -90,6 +91,10 @@ public static class ThirdPartyExtensions
             InternalOptions.HttpClientNames
                 .Bilibili);
         services.TryAddSingleton<BilibiliClient>();
+        // CDN downloads (videos, danmaku, subtitles, covers): no cookie, no rate limit, no request log.
+        services.AddBilibiliCdn<TBilibiliOptions>();
+        // Needs an IMediaMerger, which the host registers (FFmpeg lives in the legacy layer).
+        services.TryAddSingleton<BilibiliVideoDownloadService>();
 
         services.AddBakabaseHttpClient<SoulPlusHttpMessageHandler<TSoulPlusOptions>>(
             InternalOptions.HttpClientNames

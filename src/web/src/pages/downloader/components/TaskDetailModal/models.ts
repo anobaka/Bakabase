@@ -41,7 +41,7 @@ export enum DownloadTaskFieldType {
   BilibiliFavorites = 1,
   PageRange = 2,
   FfMpegRequired = 3,
-  LuxRequired = 4,
+  // 4 was LuxRequired (lux was removed); do not reuse.
   Key = 5,
   Keys = 6,
   DownloadPath = 7,
@@ -66,9 +66,6 @@ export const DownloadTaskFieldMap: {
     [BilibiliDownloadTaskType.Favorites]: [
       {
         type: DownloadTaskFieldType.FfMpegRequired,
-      },
-      {
-        type: DownloadTaskFieldType.LuxRequired,
       },
       {
         type: DownloadTaskFieldType.BilibiliFavorites,

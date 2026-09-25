@@ -9991,6 +9991,7 @@ export interface components {
             version: string;
             description?: string;
             canUpdate: boolean;
+            installedVersionRecognized: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.HardwareAccelerationInfo": {
             isDetected: boolean;

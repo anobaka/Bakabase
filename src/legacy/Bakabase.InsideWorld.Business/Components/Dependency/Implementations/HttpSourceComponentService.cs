@@ -15,7 +15,6 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
-using Semver;
 
 namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
 {
@@ -39,16 +38,15 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
             var latestVersion = await GetLatestVersion(ct);
             Logger.LogInformation($"Try to install latest version: {latestVersion.Version}");
 
-            var currentVer = TryParseComponentVersion(Context.Version);
-            var latestVer = TryParseComponentVersion(latestVersion.Version);
-            if (latestVer == null)
+            if (ComponentVersionComparison.TryParse(latestVersion.Version) == null)
             {
+                OnLatestVersionNotInstallable(latestVersion);
                 Logger.LogWarning(
                     $"Unable to parse latest version [{latestVersion.Version}] of {DisplayName}, skipping installation.");
                 return;
             }
 
-            if (currentVer == null || latestVer.ComparePrecedenceTo(currentVer) > 0)
+            if (ShouldDownload(Context.Version, latestVersion.Version))
             {
                 var urlAndFileNames = await GetDownloadUrls(latestVersion, ct);
                 if (urlAndFileNames.Any())
@@ -86,34 +84,21 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
         }
 
         /// <summary>
-        /// Parses a component version string tolerantly. Some components report
-        /// 4-segment versions (e.g. Locale Emulator's "2.5.0.1") that SemVer
-        /// cannot parse; those are truncated to the first three segments.
-        /// Returns null when the value still cannot be parsed.
+        /// The same decision the update prompt shows (<see cref="ComponentVersionComparison.IsUpdateAvailable"/>),
+        /// except that an explicit install over an installed copy whose version cannot be parsed
+        /// still proceeds: the prompt does not nag about such a copy, but the user asked.
         /// </summary>
-        private static SemVersion? TryParseComponentVersion(string? version)
+        internal static bool ShouldDownload(string? installedVersion, string? latestVersion) =>
+            ComponentVersionComparison.TryParse(installedVersion) == null ||
+            ComponentVersionComparison.IsUpdateAvailable(installedVersion, latestVersion);
+
+        /// <summary>
+        /// Called when the latest version carries no installable version (e.g. "N/A" for a runtime
+        /// the source publishes no build for), before the installation is skipped. Throw here to
+        /// tell an explicit install why nothing can be installed.
+        /// </summary>
+        protected virtual void OnLatestVersionNotInstallable(DependentComponentVersion latestVersion)
         {
-            if (string.IsNullOrWhiteSpace(version))
-            {
-                return null;
-            }
-
-            if (SemVersion.TryParse(version, SemVersionStyles.Any, out var semVersion))
-            {
-                return semVersion;
-            }
-
-            var segments = version.Split('.');
-            if (segments.Length > 3)
-            {
-                var truncated = string.Join('.', segments.Take(3));
-                if (SemVersion.TryParse(truncated, SemVersionStyles.Any, out semVersion))
-                {
-                    return semVersion;
-                }
-            }
-
-            return null;
         }
     }
 }

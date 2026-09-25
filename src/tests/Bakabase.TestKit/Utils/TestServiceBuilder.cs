@@ -25,7 +25,6 @@ using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
-using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Extensions;
@@ -113,7 +112,6 @@ public static class TestServiceBuilder
         // === Dependency Services ===
         services.TryAddSingleton<FfMpegService>();
         services.TryAddSingleton<HardwareAccelerationService>();
-        services.TryAddSingleton<LuxService>();
         services.TryAddSingleton<SevenZipService>();
         services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator.LocaleEmulatorService>();
         services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
