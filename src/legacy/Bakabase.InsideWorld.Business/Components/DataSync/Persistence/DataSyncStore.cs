@@ -148,6 +148,20 @@ public sealed partial class DataSyncStore : IDataSyncStore
     }
 
     /// <summary>
+    /// Like <see cref="GetEntitiesAsync"/>, as read-only copies: readers of a whole kind (the merge input, order
+    /// placement) leave the context's change tracker as small as it was, so later saves stay cheap.
+    /// </summary>
+    public async Task<IReadOnlyList<DataSyncEntityDbModel>> ReadEntitiesAsync(string kind, bool includeTombstones,
+        CancellationToken ct)
+    {
+        await FlushAsync(ct);
+        return await _db.DataSyncEntities.AsNoTracking()
+            .Where(e => e.Kind == kind && (includeTombstones || e.DeletedAtUtc == null))
+            .OrderBy(e => e.Id)
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
     /// What the feed serves after <paramref name="sinceSeq"/>, in Seq order (§7.5.2): live Synced rows (held ones
     /// included; the feed serves them as HeldAtSource) and served tombstones. Read-only copies.
     /// </summary>
@@ -230,15 +244,43 @@ public sealed partial class DataSyncStore : IDataSyncStore
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Stores the overlay (§3.6) and marks the row for Refresh, which publishes the change if it alters content.</summary>
+    /// <summary>
+    /// Stores the overlay (§3.6). Held and local-only children are both withheld, so only a change of the withheld
+    /// set can alter what the entity publishes: then the row gets the next Seq when its published record changes
+    /// (§6.2), and is marked for Refresh, which makes a change of its comparison form a revision. Moving a child
+    /// between the two lists, or storing the same overlay, changes neither.
+    /// </summary>
     public async Task SetOverlayAsync(string kind, string localKey, DataSyncOverlay overlay, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(overlay);
         var row = await RequireLiveAsync(kind, localKey, ct);
+        var before = DataSyncStoredJson.ReadOverlay(row.OverlayJson);
         row.OverlayJson = DataSyncStoredJson.WriteOverlay(overlay);
-        row.RawHash = null;
         row.UpdatedAtUtc = UtcNow;
+        if (!before.HiddenChildIds.ToHashSet(StringComparer.Ordinal).SetEquals(overlay.HiddenChildIds))
+        {
+            row.RawHash = null;
+            if (await PublishedRecordChangesAsync(row, before, overlay, ct)) row.Seq = await NextSeqAsync(ct);
+        }
+
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Whether a synced, published entity's record differs between two overlays, over its current local content.
+    /// Unknown when the kind has no adapter here: then it is taken to differ.
+    /// </summary>
+    private async Task<bool> PublishedRecordChangesAsync(DataSyncEntityDbModel row, DataSyncOverlay before,
+        DataSyncOverlay after, CancellationToken ct)
+    {
+        if (row.State != DataSyncEntitySyncState.Synced || row.PublishHeld) return false;
+        if (!Kinds.TryGetValue(row.Kind, out var adapter)) return true;
+        if ((await adapter.ReadAsync([row.LocalKey], ct)).SingleOrDefault() is not { } local) return false;
+        var unknown = DataSyncEntityForms.ReadUnknown(row.UnknownJson);
+        var was = DataSyncEntityForms.Evaluate(adapter.Codec, local, before, row.ChildrenLocal, row.OrderKey, unknown);
+        var now = DataSyncEntityForms.Evaluate(adapter.Codec, local, after, row.ChildrenLocal, row.OrderKey, unknown);
+        return was.Published.Held != now.Published.Held ||
+               !string.Equals(was.Published.Hash, now.Published.Hash, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -378,8 +420,8 @@ public sealed partial class DataSyncStore : IDataSyncStore
                 localOnly.Add(released);
             }
 
+            // Still withheld, now as local-only: what the entity publishes does not change (§6.2).
             row.OverlayJson = DataSyncStoredJson.WriteOverlay(new DataSyncOverlay(localOnly, held));
-            row.RawHash = null;
             row.UpdatedAtUtc = UtcNow;
         }
     }

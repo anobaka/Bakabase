@@ -24,7 +24,8 @@ public sealed partial class DataSyncApplyRunner
     /// to this device's definitions for everything they had seen, including the counters this device issued and lost
     /// (gate fix B1(a)). <b>Take the other devices' definitions</b>: no counters are raised; the next full
     /// reconciliation of the link pulled most recently before the restore takes the peer's version of concurrent
-    /// entities, for that cycle only. Either way cursors go to 0 (a full reconciliation), bases are kept, the paused
+    /// entities, for that cycle only — the choice is stored with the <c>Restore</c> entry, in the same transaction, so
+    /// a restart keeps it. Either way cursors go to 0 (a full reconciliation), bases are kept, the paused
     /// links resume, and the restore is cleared. Scoped to a suspected link, only that link's vectors count, only the
     /// entities it has a base for are revised, and only its cursors reset.
     /// </summary>
@@ -40,8 +41,7 @@ public sealed partial class DataSyncApplyRunner
         if (!MayRun(args)) return null;
         await _guard.CheckAsync(lease, ct);
 
-        int? others = null;
-        var logId = await InTransactionAsync(lease, async s =>
+        return await InTransactionAsync(lease, async s =>
         {
             var started = Stopwatch.GetTimestamp();
             // Refresh first: local edits made while the choice waited are revisions of the new actor, never collide.
@@ -62,8 +62,8 @@ public sealed partial class DataSyncApplyRunner
             if (choice == DataSyncRestoreChoice.ThisDeviceWins)
                 await RestoreWinsAsync(s, recorder, affected.Select(l => l.Id).ToHashSet(), scoped is not null, ct);
             else
-                others = affected.OrderByDescending(l => l.LastSyncedAtUtc ?? DateTime.MinValue).ThenBy(l => l.Id)
-                    .FirstOrDefault()?.Id;
+                recorder.TakeTheirsLinkId = affected.OrderByDescending(l => l.LastSyncedAtUtc ?? DateTime.MinValue)
+                    .ThenBy(l => l.Id).FirstOrDefault()?.Id;
 
             var now = s.Now;
             foreach (var link in affected)
@@ -92,12 +92,30 @@ public sealed partial class DataSyncApplyRunner
             var log = recorder.ToLog(DataSyncHistoryKind.Restore, scoped, args.Task.Id, now, ElapsedMs(started));
             var id = await s.Store.AddHistoryAsync(log, ct);
             await CommitAsync(s, ct);
-            await AfterCommitAsync(s, recorder, s.Kinds.Keys.ToList(), DataSyncHistoryKind.Restore, id, scoped?.Id, ct);
+            await AfterCommitAsync(s, recorder, s.Kinds.Keys.ToList(), DataSyncHistoryKind.Restore, id, scoped?.Id);
             return id;
         }, ct);
+    }
 
-        if (logId is not null && others is { } first) _othersWinNext[first] = true;
-        return logId;
+    /// <summary>
+    /// Whether <paramref name="link"/>'s next full reconciliation follows the peer (§9.5 "Take the other devices'
+    /// definitions"): the latest <c>Restore</c> entry chose it, and the link has completed no full reconciliation since.
+    /// </summary>
+    private static async Task<bool> TakesTheirsAsync(DataSyncApplySession s, DataSyncLinkDbModel link,
+        System.Threading.CancellationToken ct)
+    {
+        var restore = await s.Db.DataSyncApplyLogs.AsNoTracking().Where(l => l.Kind == DataSyncHistoryKind.Restore)
+            .OrderByDescending(l => l.Id).Select(l => new { l.AppliedAtUtc, l.ResultJson }).FirstOrDefaultAsync(ct);
+        return restore is not null && DataSyncApplyResultDocument.ReadTakeTheirsLinkId(restore.ResultJson) == link.Id &&
+               (link.LastFullReconciliationAtUtc is not { } reconciled || reconciled < restore.AppliedAtUtc);
+    }
+
+    /// <summary>Whether the link's next full reconciliation follows the peer, as a new process would read it.</summary>
+    internal async Task<bool> TakesTheirsNextAsync(int linkId, System.Threading.CancellationToken ct)
+    {
+        await using var s = await DataSyncApplySession.OpenAsync(_scopes, ct);
+        var link = await s.Db.DataSyncLinks.AsNoTracking().SingleOrDefaultAsync(l => l.Id == linkId, ct);
+        return link is not null && await TakesTheirsAsync(s, link, ct);
     }
 
     /// <summary>

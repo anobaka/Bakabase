@@ -321,6 +321,41 @@ public class LostUpdateGuardTests
             .Fields.Single().Path);
     }
 
+    [TestMethod]
+    public async Task After_Publish_a_later_local_edit_inside_the_window_is_an_ordinary_revision()
+    {
+        var f = await Apply.DataSyncApplyFixture.CreateAsync();
+        var peer = new Apply.DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer);
+        var key = SyncKey.New().Value;
+        var v1 = peer.Next();
+        await f.ApplyAsync(link, peer, (Apply.DataSyncApplyFixture.Item,
+            peer.Record([key], v1, Apply.DataSyncApplyFixture.Content("Genre", ("a", "Rock"), ("b", "Jazz")), "a0")));
+        var localKey = f.Kind.KeyOf("Genre");
+        await f.ApplyAsync(link, peer, (Apply.DataSyncApplyFixture.Item, peer.Record([key], peer.Next(v1),
+            Apply.DataSyncApplyFixture.Content("Genre", ("a", "Rock"), ("b", "Jazz"), ("c", "Pop")), "a0")));
+        // A whole-row writer that read before the apply writes back afterwards: "Pop" is gone again, and it renames.
+        f.Kind.Definitions[localKey] = Apply.DataSyncApplyFixture.Content("Genre 2", ("a", "Rock"), ("b", "Jazz"));
+        await f.RefreshAsync();
+        var item = (await f.OpenItemsAsync()).Single(i => i.Type == DataSyncInboxItemType.SuspectedLostUpdate);
+        await f.ResolveAsync(item, DataSyncInboxAction.Publish);
+        var published = await f.RowAsync(localKey);
+        Assert.IsFalse(published.PublishHeld);
+
+        // A minute later, well inside the window, the person renames it again.
+        f.Clock.Advance(TimeSpan.FromMinutes(1));
+        f.Kind.Definitions[localKey] = f.Kind[localKey].With(name: "Genre 3");
+        await f.RefreshAsync();
+
+        var after = await f.RowAsync(localKey);
+        Assert.IsFalse(after.PublishHeld,
+            "the Publish decision is the entity's latest guarded apply, and it wrote nothing a later edit could undo");
+        Assert.AreEqual(DataSyncVvRelation.Dominates,
+            Apply.DataSyncApplyFixture.Vv(after.VvJson).CompareTo(Apply.DataSyncApplyFixture.Vv(published.VvJson)),
+            "an ordinary local revision");
+        Assert.AreEqual(0, (await f.OpenItemsAsync()).Count, "nothing is asked again");
+    }
+
     private static async Task<DataSyncRefreshResult> RefreshGroupsAsync(
         DataSyncRefreshFixture f)
     {

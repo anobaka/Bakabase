@@ -1,4 +1,5 @@
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Identity;
@@ -171,6 +172,48 @@ public class ReviewApplyTests
         Assert.AreEqual(children.Count + 1, after.Count, "every local child is written back, valid or not (v3.1 B3)");
         CollectionAssert.AreEqual(children, after.Take(children.Count).ToList());
         Assert.AreEqual("New one", after[^1].Label);
+    }
+
+    [TestMethod]
+    [DataRow("fail")]
+    [DataRow("stop")]
+    public async Task A_review_apply_that_ends_without_applying_stops_counting_as_applying(string how)
+    {
+        var link = await AwaitingReviewAsync();
+        var record = _peer.Record([SyncKey.New().Value], _peer.Next(), Content("Mood", ("m", "Calm")), "a0");
+        var review = _f.Reviews.Stage(link.Id, false, _f.Pull(_peer, full: true, (Item, record)));
+        var decisions = Decide(await _f.PlanAsync(review));
+        var taskId = "DataSyncReview:" + review.ReviewId;
+        _f.Reviews.MarkApplying(review.ReviewId, taskId);
+        using var cts = new CancellationTokenSource();
+        _f.Kind.FailOn = _ =>
+        {
+            if (how == "fail") return new InvalidOperationException("injected");
+            cts.Cancel();
+            return null;
+        };
+
+        Exception? ended = null;
+        try
+        {
+            await _f.Runner.RunReviewAsync(review.ReviewId, decisions, new DataSyncApplyOptions(false),
+                _f.Args(taskId, cts.Token));
+        }
+        catch (Exception e)
+        {
+            ended = e;
+        }
+
+        _f.Kind.FailOn = null;
+        Assert.IsTrue(how == "fail" ? ended is InvalidOperationException : ended is OperationCanceledException,
+            $"ended by {ended?.GetType().Name}");
+        var entry = _f.Reviews.Get(review.ReviewId)!;
+        Assert.AreEqual((null, (int?) null), (entry.TaskId, entry.ApplyLogId), "no longer applying, nothing applied");
+        Assert.AreEqual(0, (await _f.HistoryAsync()).Count, "rolled back");
+
+        // Like any staged review it idles out now, so the link's next cycle may stage a fresh one (§8.3).
+        _f.Clock.Advance(DataSyncReviewStore.IdleTimeout);
+        Assert.IsNull(_f.Reviews.GetForLink(link.Id));
     }
 
     [TestMethod]

@@ -22,12 +22,35 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 /// the entity's most recent apply, so nothing older is compared against it.
 /// </param>
 /// <param name="TransactionMs">Diagnostics (v3.1 §8.2).</param>
+/// <param name="TakeTheirsLinkId">
+/// A <c>Restore</c> entry's "Take the other devices' definitions" (§9.5): the link whose next full reconciliation
+/// takes the peer's version of concurrent entities. Written in the restore's own transaction, so the choice survives
+/// a restart; it holds until that link completes a full reconciliation after the entry.
+/// </param>
 public sealed record DataSyncApplyResultDocument(
     IReadOnlyList<DataSyncHistoryItem> Items,
     IReadOnlyList<DataSyncEntityChanges> Entities,
-    long? TransactionMs = null)
+    long? TransactionMs = null,
+    int? TakeTheirsLinkId = null)
 {
     public string ToJson() => DataSyncStoredJson.Write(this);
+
+    /// <summary>The <see cref="TakeTheirsLinkId"/> of a stored <c>ResultJson</c>; null when absent or unreadable.</summary>
+    public static int? ReadTakeTheirsLinkId(string? resultJson)
+    {
+        if (string.IsNullOrWhiteSpace(resultJson)) return null;
+        try
+        {
+            return JsonNode.Parse(resultJson) is JsonObject document &&
+                   document["takeTheirsLinkId"] is JsonValue value && value.TryGetValue<int>(out var linkId)
+                ? linkId
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// The entity change lists of a stored <c>ResultJson</c>. A document without them (or an empty column) has

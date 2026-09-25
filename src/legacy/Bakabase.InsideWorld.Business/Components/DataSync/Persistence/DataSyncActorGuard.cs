@@ -276,8 +276,9 @@ public sealed class DataSyncActorGuard : IDataSyncActorGuard
             return (row, created || rotate, caused, anyActive);
         }, ct);
 
+        // After the commit: actor.json must follow it whatever a stop requested meanwhile (§5.6).
         if (rotated || file.Watermark != DataSyncActorWatermark.Of(state))
-            await _watermark.WriteAsync(state, ct);
+            await _watermark.WriteAsync(state, CancellationToken.None);
         // With no Active link there is no peer whose head could tell (§5.6); a device with readers only is the
         // accepted residual case.
         if (!active) MarkVerified();
@@ -337,7 +338,7 @@ public sealed class DataSyncActorGuard : IDataSyncActorGuard
                 (store, db) => next.Source == DataSyncRestoreEvidence.Peer
                     ? HandlePeerAsync(store, db, device, next, detections, ct)
                     : HandleReaderAsync(store, db, device, next, detections, ct), ct);
-            if (rotated && state is not null) await _watermark.WriteAsync(state, ct);
+            if (rotated && state is not null) await _watermark.WriteAsync(state, CancellationToken.None);
             lock (_pendingLock) _pending.Remove(next);
             strongest = Strongest(strongest, pause);
         }

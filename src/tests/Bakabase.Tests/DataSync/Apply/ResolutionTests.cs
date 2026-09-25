@@ -1,9 +1,13 @@
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
+using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
+using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Services;
+using Bootstrap.Components.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Bakabase.Tests.DataSync.Apply.DataSyncApplyFixture;
 
@@ -202,6 +206,34 @@ public class ResolutionTests
         Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count);
         var log = (await _f.HistoryAsync()).Single(l => l.Id == logId);
         StringAssert.Contains(log.PreImageJson, "typeChanged");
+    }
+
+    [TestMethod]
+    public async Task Convert_on_a_paused_link_waits_whole_and_nothing_half_converted_is_published()
+    {
+        var (key, localKey, _) = await TypeChangeAsync();
+        var item = await SingleOpenAsync(DataSyncInboxItemType.TypeChange);
+        var before = await _f.RowAsync(localKey);
+        await _f.SetLinkStateAsync(_link.Id, DataSyncLinkState.Paused, DataSyncPauseReason.ByUser);
+
+        var logId = await _f.ResolveAsync(item, DataSyncInboxAction.Convert);
+
+        Assert.IsNull(logId);
+        Assert.AreEqual("Choice", _f.Kind[localKey].Type, "no phase one while phase two cannot follow it");
+        Assert.IsFalse(_f.Kind.Applied.OfType<ChangeSubtypeOperation>().Any());
+        Assert.IsNull((await _f.ItemsAsync()).Single(i => i.Id == item.Id).ClosedAtUtc, "the question stays open");
+        await _f.RefreshAsync();
+        var after = await _f.RowAsync(localKey);
+        Assert.AreEqual((before.VvJson, before.Seq), (after.VvJson, after.Seq), "nothing is published");
+        Assert.AreEqual(DataSyncPendingReason.TypeChange,
+            (await _f.BasesAsync(_link.Id)).Single(b => b.SyncKey == key).PendingReason);
+
+        // Resumed, the same decision converts in full.
+        await _f.SetLinkStateAsync(_link.Id, DataSyncLinkState.Active);
+        await _f.ResolveAsync(item, DataSyncInboxAction.Convert);
+        Assert.AreEqual("Tags", _f.Kind[localKey].Type);
+        Assert.AreEqual(3, _f.Kind[localKey].Children.Count);
+        Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count);
     }
 
     [TestMethod]
@@ -556,6 +588,30 @@ public class ResolutionTests
     }
 
     [TestMethod]
+    public async Task Apply_all_on_a_paused_link_stays_decided_and_the_next_merge_after_resuming_applies_it()
+    {
+        var (key, localKey) = await MassDeletionAsync();
+        await _f.SetLinkStateAsync(_link.Id, DataSyncLinkState.Paused, DataSyncPauseReason.ByUser);
+
+        await _f.ResolveAsync(await SingleOpenAsync(DataSyncInboxItemType.MassChildDeletion), DataSyncInboxAction.ApplyAll);
+
+        Assert.AreEqual(20, _f.Kind[localKey].Children.Count, "a paused link merges nothing now");
+        Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count, "the decision is taken");
+        var waiting = (await _f.BasesAsync(_link.Id)).Single(b => b.SyncKey == key);
+        Assert.AreEqual(DataSyncPendingReason.MassChildDeletion, waiting.PendingReason);
+        Assert.AreEqual(DataSyncChildDeletionMode.Apply,
+            DataSyncStoredJson.ReadFlags(waiting.PendingFlagsJson, "x").ChildDeletions, "with the flags it chose");
+        Assert.IsNull(waiting.PendingEvaluatedLocalSeq, "re-merged by the link's next merge (§8.4 condition 5)");
+
+        await _f.SetLinkStateAsync(_link.Id, DataSyncLinkState.Active);
+        await _f.Runner.RunAutoSyncAsync(Context(await _f.LinkRowAsync(_link.Id), _peer), null, _f.Args());
+
+        Assert.AreEqual(8, _f.Kind[localKey].Children.Count, "the decision applies once the link merges again");
+        Assert.IsNull((await _f.BasesAsync(_link.Id)).Single(b => b.SyncKey == key).PendingReason);
+        Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count, "and asks nothing again");
+    }
+
+    [TestMethod]
     public async Task Review_each_holds_every_candidate_with_its_own_item()
     {
         var (_, localKey) = await MassDeletionAsync();
@@ -647,6 +703,145 @@ public class ResolutionTests
         Assert.IsFalse(row.PublishHeld);
         Assert.AreEqual(DataSyncVvRelation.Dominates, Vv(row.VvJson).CompareTo(before));
         Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count);
+    }
+
+    #endregion
+
+    #region Regressions, long batches, pausing
+
+    [TestMethod]
+    public async Task A_regression_met_while_validating_is_reported_and_the_batch_runs_once_more()
+    {
+        var (localKey, recordKey, _) = await SuggestionAsync();
+        var item = await SingleOpenAsync(DataSyncInboxItemType.LinkSuggestion);
+        var state = await _f.StateAsync();
+        // The waiting record shows a counter of this device's actor that this database never issued (row A1): a peer
+        // saw revisions this device lost (§5.6).
+        var db = _f.NewDb();
+        var waiting = await db.DataSyncPeerBases.SingleAsync(b => b.LinkId == _link.Id && b.SyncKey == recordKey);
+        var record = DataSyncStoredJson.ReadRecord(waiting.PendingRecordJson, "x")!;
+        waiting.PendingRecordJson = DataSyncStoredJson.Write(record with
+        {
+            Vv = record.Vv.With(new DataSyncActorId(state.ActorId), state.ActorCounter + 5),
+        });
+        await db.SaveChangesAsync();
+
+        await _f.ResolveAsync(item, DataSyncInboxAction.Link, target: localKey);
+
+        var after = await _f.StateAsync();
+        Assert.AreNotEqual(state.ActorId, after.ActorId, "reported through the actor guard, which rotated");
+        Assert.AreEqual(state.ActorCounter + 5,
+            DataSyncStoredJson.ReadCounters(after.RetiredActorsJson, "x")[state.ActorId], "the recorded counter");
+        var link = await _f.LinkRowAsync(_link.Id);
+        Assert.AreEqual((DataSyncLinkState.Paused, (DataSyncPauseReason?) DataSyncPauseReason.LocalRestoreSuspected),
+            (link.State, link.PausedReason));
+        Assert.AreEqual(DataSyncInboxClosure.ResolvedHere, (await _f.ItemsAsync()).Single(i => i.Id == item.Id).Closure,
+            "the second run decided it");
+        CollectionAssert.Contains((await _f.KeysOfAsync(localKey)).ToList(), recordKey);
+        var row = await _f.RowAsync(localKey);
+        var kept = (await _f.BasesAsync(_link.Id)).Single(b => b.SyncKey == row.SyncKey);
+        Assert.AreEqual((DataSyncPendingReason?) DataSyncPendingReason.Retry, kept.PendingReason,
+            "the paused link merges the record once it resumes");
+        Assert.IsNull(kept.PendingEvaluatedLocalSeq);
+    }
+
+    /// <summary>Definitions P0… here and the peer's records of the first <paramref name="records"/> of them: suggestions.</summary>
+    private async Task<List<DataSyncResolveInput>> BulkSuggestionsAsync(int definitions, int records)
+    {
+        for (var i = 0; i < definitions; i++) _f.Kind.Add(Content("P" + i, ("x" + i, "L" + i)));
+        await _f.RefreshAsync();
+        await _f.ApplyAsync(_link, _peer, Enumerable.Range(0, records)
+            .Select(i => (Item, _peer.Record([SyncKey.New().Value], _peer.Next(), Content("P" + i, ("a", "M" + i)), "a" + i)))
+            .ToArray());
+        var open = (await _f.OpenItemsAsync()).Where(i => i.Type == DataSyncInboxItemType.LinkSuggestion).ToList();
+        Assert.AreEqual(records, open.Count);
+        return open.Select(i => new DataSyncResolveInput(i.Id, DataSyncInboxAction.Link, i.Token, null,
+            _f.Kind.KeyOf(DataSyncStoredJson.Read<DataSyncInboxPayload>(i.PayloadJson, "x").EntityName), null, null)).ToList();
+    }
+
+    [TestMethod]
+    public async Task A_bulk_link_over_hundreds_of_definitions_never_holds_the_write_lock_for_long()
+    {
+        var inputs = await BulkSuggestionsAsync(300, 100);
+        _f.Runner.TransactionBudget = TimeSpan.FromMilliseconds(100);
+
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        var resolve = Task.Run(() => _f.ResolveAsync(inputs));
+        var longest = TimeSpan.Zero;
+        var taken = 0;
+        while (!resolve.IsCompleted)
+        {
+            // Every other writer of the app waits like this for the lock; SQLite gives up after 30 s.
+            var wait = System.Diagnostics.Stopwatch.StartNew();
+            if (await _f.TryTakeWriteLockAsync(TimeSpan.FromSeconds(30))) taken++;
+            if (wait.Elapsed > longest) longest = wait.Elapsed;
+            await Task.Delay(10);
+        }
+
+        var logId = await resolve;
+        Assert.IsNotNull(logId);
+        Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count, "every item linked");
+        Assert.AreEqual(1, (await _f.HistoryAsync()).Count(l => l.Kind == DataSyncHistoryKind.Resolution),
+            "one entry for the batch");
+        Assert.IsTrue(taken >= 2, $"other writers got in between the batch's transactions ({taken} times)");
+        Assert.IsTrue(longest < TimeSpan.FromSeconds(2),
+            $"no transaction held the lock for long: the longest wait was {longest.TotalMilliseconds:F0} ms");
+        Assert.IsTrue(started.Elapsed < TimeSpan.FromSeconds(60),
+            $"a few hundred decisions over a few hundred definitions took {started.Elapsed.TotalSeconds:F1} s");
+    }
+
+    [TestMethod]
+    public async Task A_paused_resolution_waits_between_its_transactions_and_holds_no_write_lock()
+    {
+        var inputs = await BulkSuggestionsAsync(4, 3);
+        _f.Runner.TransactionBudget = TimeSpan.Zero;
+        var pause = new PauseTokenSource();
+        _f.Kind.FailOn = _ =>
+        {
+            pause.Pause();
+            return null;
+        };
+
+        var resolve = Task.Run(() => _f.Runner.RunResolutionsAsync(inputs, new DataSyncApplyOptions(false),
+            _f.Args("DataSyncResolve:paused", pause: pause.Token)));
+        var free = false;
+        for (var i = 0; i < 20 && !free && !resolve.IsCompleted; i++) free = await _f.TryTakeWriteLockAsync(TimeSpan.FromSeconds(1));
+        _f.Kind.FailOn = null;
+
+        Assert.IsTrue(free, "paused between transactions: other writers are not locked out");
+        Assert.IsFalse(resolve.IsCompleted, "it waits while paused");
+        pause.Resume();
+        Assert.IsNotNull(await resolve.WaitAsync(TimeSpan.FromSeconds(30)));
+        Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count, "it went on after Resume");
+    }
+
+    [TestMethod]
+    public async Task A_paused_undo_never_waits_inside_its_transaction()
+    {
+        // One apply that renamed two definitions: undoing it takes two steps in one transaction.
+        var (genre, mood) = (SyncKey.New().Value, SyncKey.New().Value);
+        var (g1, m1) = (_peer.Next(), _peer.Next());
+        await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([genre], g1, Content("Genre", ("a", "Rock")), "a0")),
+            (Item, _peer.Record([mood], m1, Content("Mood", ("c", "Calm")), "a1")));
+        await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([genre], _peer.Next(g1), Content("Genres", ("a", "Rock")), "a0")),
+            (Item, _peer.Record([mood], _peer.Next(m1), Content("Moods", ("c", "Calm")), "a1")));
+        var logId = (await _f.HistoryAsync()).Last().Id;
+        var pause = new PauseTokenSource();
+        _f.Kind.FailOn = _ =>
+        {
+            pause.Pause();
+            return null;
+        };
+
+        // Asked to pause at its first write, the undo still finishes: inside the transaction only a stop counts.
+        var undone = await Task.Run(() => _f.Runner.RunUndoAsync(logId, _f.Args("DataSyncUndo:" + logId, pause: pause.Token)))
+            .WaitAsync(TimeSpan.FromSeconds(30));
+        _f.Kind.FailOn = null;
+        pause.Resume();
+
+        Assert.IsNotNull(undone);
+        CollectionAssert.AreEquivalent(new[] { "Genre", "Mood" }, _f.Kind.Definitions.Values.Select(d => d.Name).ToArray());
+        Assert.IsTrue(await _f.TryTakeWriteLockAsync(TimeSpan.FromSeconds(1)));
     }
 
     #endregion

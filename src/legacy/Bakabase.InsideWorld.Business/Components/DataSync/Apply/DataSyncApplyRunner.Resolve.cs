@@ -26,13 +26,20 @@ public sealed partial class DataSyncApplyRunner
 {
     /// <summary>
     /// Resolves a batch of inbox items (§9.2): under the gate, after a backup when the batch is destructive
-    /// (§8.10.4), in one transaction (chunked per entity for large batches) that starts with Refresh. Every item is
-    /// validated again first — a merger-derived item is derived once more by the merger over its stored pending
-    /// record, and stands only with the same token; a state-derived item stands only while its state does — then its
-    /// action is applied from the table of §9.2, with the re-merges some actions need run in the same task. Items that
-    /// changed are updated, never applied (<c>InboxItemChanged</c>); items whose subject is gone close
-    /// <c>Superseded</c>.
+    /// (§8.10.4), in one transaction that starts with Refresh, cut into chunks of whole entities once a chunk has run
+    /// for <see cref="TransactionBudget"/>. Every item is validated again first — a merger-derived item is derived
+    /// once more by the merger over its stored pending record (once per entity and link, from the state the decisions
+    /// before it left, with the definitions' contents read once per transaction), and stands only with the same
+    /// token; a state-derived item stands only while its state does —
+    /// then its action is applied from the table of §9.2, with the re-merges some actions need run in the same task.
+    /// Items that changed are updated, never applied (<c>InboxItemChanged</c>); items whose subject is gone close
+    /// <c>Superseded</c>. A regression the merger finds rolls back the current transaction; the evidence is reported
+    /// outside it (§5.6) and the batch runs once more.
     /// </summary>
+    /// <remarks>
+    /// Pausing the task waits only between chunks, where no transaction is open: inside one, only cancellation is
+    /// checked, so a paused task never keeps SQLite's writer lock.
+    /// </remarks>
     /// <returns>The <c>Resolution</c> history entry, or null when nothing was resolved.</returns>
     public async Task<int?> RunResolutionsAsync(IReadOnlyList<DataSyncResolveInput> resolutions,
         DataSyncApplyOptions options, BTaskArgs args)
@@ -48,47 +55,81 @@ public sealed partial class DataSyncApplyRunner
         await _guard.CheckAsync(lease, ct);
         if (options.BackupBeforeDestructive && await IsDestructiveAsync(resolutions, ct)) await BackupAsync(ct);
 
-        return await InTransactionAsync(lease, async s =>
+        var anomalyReported = false;
+        while (true)
         {
-            var started = Stopwatch.GetTimestamp();
-            var recorder = new DataSyncApplyRecorder();
-            var writer = new ResolutionWriter(this, s, new DataSyncEntityWrites(s, recorder));
-            var release = await writer.PublishReleasesAsync(resolutions, ct);
-            await RefreshOrFailAsync(s, lease, s.Kinds.Keys.ToList(), ct, new DataSyncRefreshOptions(release));
-
-            var groups = await writer.GroupAsync(resolutions, ct);
-            for (var i = 0; i < groups.Count; i++)
+            try
             {
+                return await InTransactionAsync(lease,
+                    s => ResolveInTransactionAsync(s, lease, resolutions, anomalyReported, args), ct);
+            }
+            catch (DataSyncMergeAnomalyException e) when (!anomalyReported)
+            {
+                // Rolled back, Refresh included: nothing issued under a regressed actor stands (§5.6). Reported outside
+                // any transaction, then once more — the link paused, or only a retired actor's recorded counter rose.
+                anomalyReported = true;
+                await HandleAnomalyAsync(lease, e.LinkId, e.PeerNodeId, e.Anomaly, e.Pause, e.PauseDetail, ct);
+            }
+        }
+    }
+
+    /// <summary>
+    /// One run of the batch in the session's open transaction: Refresh, each entity's items validated and applied in
+    /// time-cut chunks, the state-derived closure, the history entry, the commit.
+    /// </summary>
+    private async Task<int?> ResolveInTransactionAsync(DataSyncApplySession s, DataSyncGateLease lease,
+        IReadOnlyList<DataSyncResolveInput> resolutions, bool anomalyReported, BTaskArgs args)
+    {
+        var ct = args.CancellationToken;
+        var started = Stopwatch.GetTimestamp();
+        var recorder = new DataSyncApplyRecorder();
+        var writer = new ResolutionWriter(this, s, new DataSyncEntityWrites(s, recorder), anomalyReported);
+        var release = await writer.PublishReleasesAsync(resolutions, ct);
+        await RefreshOrFailAsync(s, lease, s.Kinds.Keys.ToList(), ct, new DataSyncRefreshOptions(release));
+        // Refresh tracks every entity row it read; every later save would scan them all.
+        await s.ForgetTrackedAsync(ct);
+
+        var groups = await writer.GroupAsync(resolutions, ct);
+        var chunkStarted = Stopwatch.GetTimestamp();
+        for (var i = 0; i < groups.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            await writer.ResolveGroupAsync(groups[i], ct);
+            if (i < groups.Count - 1 && Stopwatch.GetElapsedTime(chunkStarted) >= TransactionBudget)
+            {
+                // ≈ 2 s per transaction (non-blocking note 6), whole entities only. Between chunks nothing is
+                // open: other writers get the lock, and this is where the task may be paused.
+                await CommitAsync(s, ct);
+                await s.ForgetTrackedAsync(ct);
+                writer.ForgetChunk();
+                await Task.Delay(ChunkGap, ct);
                 await args.YieldAsync();
-                await writer.ResolveGroupAsync(groups[i], ct);
-                if ((i + 1) % DataSyncMergeWriter.MaxEntitiesPerTransaction == 0 && i < groups.Count - 1)
-                {
-                    await CommitAsync(s, ct);
-                    await s.BeginAsync(ct);
-                }
+                await s.BeginAsync(ct);
+                await s.LoadStateAsync(ct);
+                chunkStarted = Stopwatch.GetTimestamp();
             }
+        }
 
-            var now = s.Now;
-            await s.Store.CloseStaleStateItemsAsync(recorder.Touched.Concat(writer.Subjects).Distinct().ToList(), null, now,
-                ct);
-            int? logId = null;
-            if (writer.Closed.Count > 0 || recorder.Applied)
-            {
-                var linkIds = writer.LinkIds.Distinct().ToList();
-                var link = linkIds.Count == 1 ? await s.LinkAsync(linkIds[0], ct) : null;
-                recorder.Resolved = writer.Closed.Count;
-                logId = await s.Store.AddHistoryAsync(recorder.ToLog(DataSyncHistoryKind.Resolution, link, args.Task.Id,
-                    now, ElapsedMs(started)), ct);
-                var closed = writer.Closed.ToList();
-                foreach (var item in await s.Db.DataSyncInboxItems.Where(i => closed.Contains(i.Id)).ToListAsync(ct))
-                    item.ApplyLogId = logId;
-            }
+        var now = s.Now;
+        await s.Store.CloseStaleStateItemsAsync(recorder.Touched.Concat(writer.Subjects).Distinct().ToList(), null, now,
+            ct);
+        int? logId = null;
+        if (writer.Closed.Count > 0 || recorder.Applied)
+        {
+            var linkIds = writer.LinkIds.Distinct().ToList();
+            var link = linkIds.Count == 1 ? await s.LinkAsync(linkIds[0], ct) : null;
+            recorder.Resolved = writer.Closed.Count;
+            logId = await s.Store.AddHistoryAsync(recorder.ToLog(DataSyncHistoryKind.Resolution, link, args.Task.Id,
+                now, ElapsedMs(started)), ct);
+            var closed = writer.Closed.ToList();
+            foreach (var item in await s.Db.DataSyncInboxItems.Where(i => closed.Contains(i.Id)).ToListAsync(ct))
+                item.ApplyLogId = logId;
+        }
 
-            await CommitAsync(s, ct);
-            await AfterCommitAsync(s, recorder, s.Kinds.Keys.ToList(), DataSyncHistoryKind.Resolution, logId,
-                writer.LinkIds.Distinct().Count() == 1 ? writer.LinkIds[0] : null, ct);
-            return logId;
-        }, ct);
+        await CommitAsync(s, ct);
+        await AfterCommitAsync(s, recorder, s.Kinds.Keys.ToList(), DataSyncHistoryKind.Resolution, logId,
+            writer.LinkIds.Distinct().Count() == 1 ? writer.LinkIds[0] : null);
+        return logId;
     }
 
     /// <summary>
@@ -156,9 +197,26 @@ public sealed partial class DataSyncApplyRunner
     }
 
     /// <summary>The §9.2 action table over one session.</summary>
-    private sealed class ResolutionWriter(DataSyncApplyRunner runner, DataSyncApplySession s, DataSyncEntityWrites writes)
+    /// <param name="anomalyReported">
+    /// A regression this batch's merges met was reported already (§5.6): a merge that meets one again cannot run now
+    /// instead of rolling the batch back once more.
+    /// </param>
+    private sealed class ResolutionWriter(DataSyncApplyRunner runner, DataSyncApplySession s, DataSyncEntityWrites writes,
+        bool anomalyReported)
     {
         private readonly DataSyncApplyRecorder _recorder = writes.Recorder;
+
+        /// <summary>
+        /// The current group's derivations, per link and set of pending records: every item of one entity and link is
+        /// validated against one merge (§9.2 step 2, "re-derive once per entity").
+        /// </summary>
+        private readonly Dictionary<(int LinkId, string Keys), DataSyncMergeResult?> _derivations = new();
+
+        /// <summary>
+        /// Local contents read in the current transaction: a derivation or re-merge reads again only the entities
+        /// written since (their <c>LocalHash</c> moved), not every definition of the kind.
+        /// </summary>
+        private readonly DataSyncLocalContentCache _contents = new();
 
         /// <summary>Items closed as resolved here.</summary>
         public HashSet<long> Closed { get; } = [];
@@ -215,8 +273,16 @@ public sealed partial class DataSyncApplyRunner
             return groups.Select(g => (IReadOnlyList<DataSyncResolveInput>) g.Inputs).ToList();
         }
 
+        /// <summary>
+        /// One entity's items (§9.2): validated (step 2, re-derived once per entity and link), then those that stand
+        /// applied. Before its action each item is read again: an action before it in the group may have closed it,
+        /// or rolled back to a savepoint (Convert).
+        /// </summary>
         public async Task ResolveGroupAsync(IReadOnlyList<DataSyncResolveInput> inputs, CancellationToken ct)
         {
+            // Derived from the state earlier groups left, never from an older read: a decision before this one may
+            // have moved a record onto this entity's base row.
+            _derivations.Clear();
             var valid = new List<(DataSyncResolveInput Input, DataSyncInboxItemDbModel Item)>();
             foreach (var input in inputs)
             {
@@ -237,12 +303,16 @@ public sealed partial class DataSyncApplyRunner
                                              v.Input.Action != DataSyncInboxAction.Detach).ToList();
             if (conflicts.Count > 0) await ResolveConflictsAsync(conflicts, ct);
 
-            foreach (var (input, item) in valid.Except(conflicts))
+            foreach (var (input, _) in valid.Except(conflicts))
             {
-                if (item.ClosedAtUtc is not null) continue;
+                var item = await s.Store.GetItemAsync(input.ItemId, ct);
+                if (item is not { ClosedAtUtc: null } || item.Token != input.Token) continue;
                 await ResolveOneAsync(input, item, ct);
             }
         }
+
+        /// <summary>A chunk committed: other writers may have changed definitions since, so none is reused.</summary>
+        public void ForgetChunk() => _contents.Clear();
 
         private async Task<bool> IsAllowedAsync(DataSyncInboxItemDbModel item, DataSyncInboxAction action,
             CancellationToken ct)
@@ -276,9 +346,9 @@ public sealed partial class DataSyncApplyRunner
                 return false;
             }
 
-            var result = DataSyncMerger.Merge(await DataSyncMergeInputs.BuildAsync(s,
-                DataSyncMergeInputs.LinkContext(s, link), null, keys, ct));
-            if (result.Anomaly is not null || result.Pause is not null) return false;
+            // Null: the merge met a regression already reported; the item waits, open.
+            var result = await DeriveAsync(link, keys, ct);
+            if (result is null || result.Pause is not null) return false;
             var draft = result.Inbox.FirstOrDefault(d => d.Type == item.Type && d.Kind == item.Kind &&
                                                          d.Key.Value == item.SyncKey && d.SubjectPath == item.SubjectPath);
             if (draft is null)
@@ -304,6 +374,28 @@ public sealed partial class DataSyncApplyRunner
                     draft.Payload.Records?.Any(r => r.PrimaryKey == input.TargetRecordKey) == true,
                 _ => true,
             };
+        }
+
+        /// <summary>
+        /// The merger over the given pending records of one link, once per group and set of records, whichever items
+        /// ask; the input covers only the records' kinds, and reuses the contents the transaction read. Null when it
+        /// met a regression already reported (§5.6); a new one rolls the batch back.
+        /// </summary>
+        private async Task<DataSyncMergeResult?> DeriveAsync(DataSyncLinkDbModel link,
+            IReadOnlyList<(string Kind, SyncKey Key)> keys, CancellationToken ct)
+        {
+            var id = (link.Id, string.Join('\n', keys.Select(k => k.Kind + "/" + k.Key.Value)));
+            if (_derivations.TryGetValue(id, out var derived)) return derived;
+            var result = DataSyncMerger.Merge(await DataSyncMergeInputs.BuildAsync(s, KindsOf(link, keys), null, keys, ct,
+                _contents));
+            if (result.Anomaly is { } anomaly)
+            {
+                if (!anomalyReported)
+                    throw new DataSyncMergeAnomalyException(link.Id, link.PeerNodeId, anomaly, result.Pause, result.PauseDetail);
+                result = null;
+            }
+
+            return _derivations[id] = result;
         }
 
         private async Task<bool> StateStandsAsync(DataSyncInboxItemDbModel item, CancellationToken ct)
@@ -521,6 +613,12 @@ public sealed partial class DataSyncApplyRunner
                 return;
             }
 
+            // Convert happens only when phase two can follow it in this transaction: a converted entity that no merge
+            // completes would be published half-converted by the next Refresh. A link that is paused or off merges
+            // nothing now, so the item waits, open.
+            if (await s.LinkAsync(linkId, ct) is not { State: not (DataSyncLinkState.Paused or DataSyncLinkState.Stopped) })
+                return;
+
             // Convert, phase one (§8.5.6): the subtype changes through the service, which converts values.
             var theirs = RemoteContent(codec, pending.Record);
             var subtype = theirs is null ? null : codec.SubtypeOf(theirs);
@@ -528,17 +626,35 @@ public sealed partial class DataSyncApplyRunner
             var before = codec.ReadLocal((await writes.ReReadAsync(kind, row.LocalKey, ct)).Content);
             var fromSubtype = codec.SubtypeOf(before);
             var raw = await s.Adapter(kind).CapturePreImageAsync([row.LocalKey], ct);
-            var outcome = await s.Adapter(kind).ApplyAsync(new ApplyBatch(kind,
+            var savepoint = "convert" + item.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            await s.SavepointAsync(savepoint, ct);
+            var outcome = await s.Writer(kind).ApplyAsync(new ApplyBatch(kind,
                 [new ChangeSubtypeOperation(DataSyncMergeItemIds.Of(kind, new SyncKey(row.SyncKey)), row.LocalKey,
                     row.LocalHash, subtype)]), ct);
             writes.Written(kind);
-            if (outcome.ChangedDuringApplyItemIds.Count > 0) return;
+            if (outcome.ChangedDuringApplyItemIds.Count > 0)
+            {
+                await s.RollbackToSavepointAsync(savepoint);
+                writes.Written(kind);
+                return;
+            }
 
             // The fresh local hash (phase two merges against it, §8.5.6); no revision until phase two.
             var converted = await writes.ReReadAsync(kind, row.LocalKey, ct);
             row.LocalHash = Bakabase.Modules.DataSync.Canonical.ContentHash.Of(converted.Content);
             row.RawHash = null;
             row.UpdatedAtUtc = s.Now;
+
+            // Phase two: the waiting record meets an entity of its own type (Merge3 Convert), with no Refresh between.
+            // A merge that would pause (or a regression already reported) takes phase one back: the item waits, open.
+            var key = (kind, new SyncKey(row.SyncKey));
+            if (await PrepareRemergeAsync(linkId, [key], keepWhenStopped: false, ct) is not { } remerge)
+            {
+                await s.RollbackToSavepointAsync(savepoint);
+                writes.Written(kind);
+                return;
+            }
+
             _recorder.TypeChanged++;
             _recorder.ChangedDefinitions.Add((kind, row.LocalKey));
             _recorder.PreImages.Add(new DataSyncEntityPreImage(kind, row.Id, row.LocalKey, codec.NameOf(before),
@@ -546,9 +662,8 @@ public sealed partial class DataSyncApplyRunner
                 row.LocalHash, Content: codec.Write(before), Row: raw.GetValueOrDefault(row.LocalKey),
                 FromSubtype: fromSubtype, ToSubtype: subtype));
             await CloseAsync(item, DataSyncInboxClosure.ResolvedHere, input.Action, ct);
-
-            // Phase two: the waiting record meets an entity of its own type (Merge3 Convert), with no Refresh between.
-            await RemergeAsync(linkId, [(kind, new SyncKey(row.SyncKey))], ct);
+            await WriteRemergeAsync(remerge, ct);
+            await s.ReleaseSavepointAsync(savepoint, ct);
         }
 
         private async Task ResolveDeletedThereAsync(DataSyncResolveInput input, DataSyncInboxItemDbModel item,
@@ -585,7 +700,7 @@ public sealed partial class DataSyncApplyRunner
             // DeleteHere: through the service (values go with it, §8.10.6), after the backup (§8.10.4).
             var raw = await s.Adapter(kind).CapturePreImageAsync([row.LocalKey], ct);
             var itemId = DataSyncMergeItemIds.Of(kind, new SyncKey(row.SyncKey));
-            var outcome = await s.Adapter(kind).ApplyAsync(new ApplyBatch(kind,
+            var outcome = await s.Writer(kind).ApplyAsync(new ApplyBatch(kind,
                 [new DeleteEntityOperation(itemId, row.LocalKey, row.LocalHash)]), ct);
             writes.Written(kind);
             if (outcome.ChangedDuringApplyItemIds.Count > 0) return;
@@ -638,10 +753,11 @@ public sealed partial class DataSyncApplyRunner
                     break;
                 }
                 case DataSyncInboxAction.KeepHereOnly:
+                    // Held and local-only children are both withheld: what the entity publishes stays the same, so
+                    // there is nothing for readers to fetch again (§6.2).
                     row.OverlayJson = DataSyncStoredJson.WriteOverlay(new DataSyncOverlay(
                         overlay.LocalOnlyChildren.Where(c => c != child).Append(child).ToList(),
                         overlay.HeldChildren.Where(h => h != hold).ToList()));
-                    row.RawHash = null;
                     row.UpdatedAtUtc = s.Now;
                     break;
                 default:
@@ -913,6 +1029,9 @@ public sealed partial class DataSyncApplyRunner
                 _ => DataSyncChildDeletionMode.Restore,
             };
             DataSyncStore.SetPending(baseRow, pending with { Flags = pending.Flags with { ChildDeletions = mode } });
+            // §8.4 condition 5, "a resolution changed its flags": never evaluated with them, so the link's next merge
+            // takes the record even when the re-merge below cannot run now (a paused link).
+            baseRow.PendingEvaluatedLocalSeq = null;
             baseRow.UpdatedAtUtc = s.Now;
             await s.Db.SaveChangesAsync(ct);
             await CloseAsync(item, DataSyncInboxClosure.ResolvedHere, input.Action, ct);
@@ -971,6 +1090,9 @@ public sealed partial class DataSyncApplyRunner
             else
             {
                 _released.Add((kind, row.LocalKey));
+                // The Resolution becomes the entity's most recent guarded apply (§6.5), with nothing to undo: the
+                // person kept this content, so a later edit inside the window is an ordinary revision.
+                _recorder.Changes(new DataSyncEntityChanges(kind, row.LocalKey, [], []));
             }
 
             await CloseAsync(item, DataSyncInboxClosure.ResolvedHere, input.Action, ct);
@@ -992,22 +1114,76 @@ public sealed partial class DataSyncApplyRunner
 
         /// <summary>
         /// A re-merge in the resolving task (§9.2, §8.4): the given pending records of one link merged and written
-        /// like a pull's, in this transaction. A link that is paused or off merges them with its next pull instead,
-        /// and so does a merge that would pause.
+        /// like a pull's, in this transaction. When it cannot run now — the link is paused or off, the merge would
+        /// pause it, or it meets a regression already reported — the records stay re-mergeable instead: their
+        /// <c>PendingEvaluatedLocalSeq</c> is cleared, so the link's next merge takes them (§8.4 condition 2's
+        /// never-evaluated case), and the decision is not lost. A new regression rolls the batch back (§5.6).
         /// </summary>
         private async Task RemergeAsync(int linkId, IReadOnlyList<(string Kind, SyncKey Key)> keys, CancellationToken ct)
         {
             if (keys.Count == 0) return;
+            if (await PrepareRemergeAsync(linkId, keys, keepWhenStopped: true, ct) is { } remerge)
+                await WriteRemergeAsync(remerge, ct);
+        }
+
+        /// <summary>
+        /// The merge half of <see cref="RemergeAsync"/>: null when it cannot run now (with
+        /// <paramref name="keepWhenStopped"/>, its records are then kept re-mergeable). The input covers only the
+        /// kinds of <paramref name="keys"/>.
+        /// </summary>
+        private async Task<(DataSyncLinkDbModel Link, DataSyncMergeInput Input, DataSyncMergeResult Result)?>
+            PrepareRemergeAsync(int linkId, IReadOnlyList<(string Kind, SyncKey Key)> keys, bool keepWhenStopped,
+                CancellationToken ct)
+        {
             var link = await s.LinkAsync(linkId, ct);
-            if (link is null || link.State is DataSyncLinkState.Paused or DataSyncLinkState.Stopped) return;
-            var input = await DataSyncMergeInputs.BuildAsync(s, DataSyncMergeInputs.LinkContext(s, link), null, keys, ct);
-            var result = DataSyncMerger.Merge(input);
-            if (result.Anomaly is not null || result.Pause is not null) return;
-            var writer = new DataSyncMergeWriter(s, writes, input, result, linkId, null);
+            if (link is null) return null;
+            if (link.State is not (DataSyncLinkState.Paused or DataSyncLinkState.Stopped))
+            {
+                var input = await DataSyncMergeInputs.BuildAsync(s, KindsOf(link, keys), null, keys, ct, _contents);
+                var result = DataSyncMerger.Merge(input);
+                if (result.Anomaly is { } anomaly && !anomalyReported)
+                    throw new DataSyncMergeAnomalyException(linkId, link.PeerNodeId, anomaly, result.Pause, result.PauseDetail);
+                if (result.Anomaly is null && result.Pause is null) return (link, input, result);
+            }
+
+            if (keepWhenStopped) await KeepToRemergeAsync(linkId, keys, ct);
+            return null;
+        }
+
+        /// <summary>
+        /// The link's context for merging <paramref name="keys"/> alone: only their kinds are read. With no pull, the
+        /// merger evaluates nothing of the others (§8.4).
+        /// </summary>
+        private DataSyncLinkContext KindsOf(DataSyncLinkDbModel link, IReadOnlyList<(string Kind, SyncKey Key)> keys)
+        {
+            var context = DataSyncMergeInputs.LinkContext(s, link);
+            var kinds = keys.Select(k => k.Kind).ToHashSet(StringComparer.Ordinal);
+            return context with { Kinds = context.Kinds.Where(kinds.Contains).ToList() };
+        }
+
+        private async Task WriteRemergeAsync(
+            (DataSyncLinkDbModel Link, DataSyncMergeInput Input, DataSyncMergeResult Result) remerge, CancellationToken ct)
+        {
+            var (link, input, result) = remerge;
+            var writer = new DataSyncMergeWriter(s, writes, input, result, link.Id, null);
             await writer.WriteAsync(ct);
-            await s.Store.ReconcileInboxAsync(linkId, link.PeerNodeId, writer.Result.Inbox, writer.Result.Evaluated,
+            await s.Store.ReconcileInboxAsync(link.Id, link.PeerNodeId, writer.Result.Inbox, writer.Result.Evaluated,
                 writer.Result.ClosureHints, s.Now, ct);
             Subjects.AddRange(writer.Result.Evaluated);
+        }
+
+        /// <summary>The records wait for the link's next merge, which takes them as never evaluated (§8.4).</summary>
+        private async Task KeepToRemergeAsync(int linkId, IReadOnlyList<(string Kind, SyncKey Key)> keys,
+            CancellationToken ct)
+        {
+            foreach (var (kind, key) in keys)
+            {
+                if (await s.BaseRowAsync(linkId, kind, key.Value, ct) is not { PendingReason: not null } row) continue;
+                row.PendingEvaluatedLocalSeq = null;
+                row.UpdatedAtUtc = s.Now;
+            }
+
+            await s.Db.SaveChangesAsync(ct);
         }
 
         /// <summary>A create from a peer's record with a decision's revision (KeepBoth, RestoreHere).</summary>
@@ -1020,7 +1196,7 @@ public sealed partial class DataSyncApplyRunner
             var create = new CreateEntityOperation(itemId, keys, record.Origin, 0, codec.Write(content));
             var check = await s.Identity.CheckApplyAsync([new ApplyBatch(kind, [create])], ct);
             if (check.RefusedItemIds.Count > 0) return null;
-            var outcome = await s.Adapter(kind).ApplyAsync(new ApplyBatch(kind, [create]), ct);
+            var outcome = await s.Writer(kind).ApplyAsync(new ApplyBatch(kind, [create]), ct);
             writes.Written(kind);
             if (!outcome.CreatedLocalKeysByItemId.TryGetValue(itemId, out var localKey)) return null;
             var childrenLocal = codec.Descriptor.SupportsChildrenLocal && DataSyncRecordValidation.ChildrenLocalOf(record.Content);
@@ -1042,11 +1218,11 @@ public sealed partial class DataSyncApplyRunner
             var index = await s.Identity.GetKeyIndexAsync(kind, null, ct);
             var tie = index.Entities.Where(e => e.Live)
                 .ToDictionary(e => e.Id, e => Bakabase.Modules.DataSync.Ordering.DataSyncOrderPlanner.TieKeyOf(e.Keys));
-            var entries = (await s.Store.GetEntitiesAsync(kind, false, ct))
+            var entries = (await s.Store.ReadEntitiesAsync(kind, false, ct))
                 .Where(r => r.State == DataSyncEntitySyncState.Synced && !r.PublishHeld && !r.Unreadable && r.OrderKey is not null)
                 .Select(r => new Bakabase.Modules.DataSync.Ordering.DataSyncOrderEntry(r.LocalKey, r.OrderKey, tie[r.Id]))
                 .ToList();
-            await s.Adapter(kind).ApplyOrderAsync(
+            await s.Writer(kind).ApplyOrderAsync(
                 Bakabase.Modules.DataSync.Ordering.DataSyncOrderPlanner.Sort(entries).Select(e => e.LocalKey).ToList(), ct);
             writes.Written(kind);
         }
@@ -1080,7 +1256,7 @@ public sealed partial class DataSyncApplyRunner
             var update = new UpdateEntityOperation(DataSyncMergeItemIds.Of(kind, new SyncKey(row.SyncKey)), row.LocalKey,
                 row.LocalHash, merged, EntityKeys.None, afterIds.Except(beforeIds).ToList(),
                 beforeIds.Except(afterIds).ToList());
-            var outcome = await s.Adapter(kind).ApplyAsync(new ApplyBatch(kind, [update]), ct);
+            var outcome = await s.Writer(kind).ApplyAsync(new ApplyBatch(kind, [update]), ct);
             writes.Written(kind);
             return outcome.ChangedDuringApplyItemIds.Count == 0;
         }

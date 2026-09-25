@@ -100,7 +100,8 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
             }
 
             await transaction.CommitAsync(ct);
-            await _watermark.WriteAsync(state, ct);
+            // Committed counters must reach actor.json whatever a stop requested meanwhile (§5.6).
+            await _watermark.WriteAsync(state, CancellationToken.None);
             return result;
         }
         catch
@@ -398,7 +399,8 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
             LocalEntity local, string rawHash, string? orderKey, bool recompute, CancellationToken ct)
         {
             var localHash = ContentHash.Of(local.Content);
-            // Marked by an overlay, childrenLocal or state change since the last Refresh (§6.1).
+            // Marked by an overlay, childrenLocal or state change since the last Refresh (§6.1): read again. A mark
+            // alone is no Seq: a writer that changed what the entity publishes gave it one already (§6.2).
             var marked = row.RawHash is null;
             var unchangedSinceLastRefresh = !marked && !row.Unreadable && !local.Unreadable &&
                                             string.Equals(row.LocalHash, localHash, StringComparison.Ordinal);
@@ -443,14 +445,8 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
             if (string.Equals(form.SharedHash, row.SharedHash, StringComparison.Ordinal) &&
                 string.Equals(orderKey, row.OrderKey, StringComparison.Ordinal))
             {
-                // An overlay change can alter the published content without altering the comparison form (a
-                // duplicate of a label class kept here only): readers get the record again, with no revision (§6.2).
-                if (marked && !released)
-                {
-                    row.Seq = await Store.NextSeqAsync(ct);
-                    row.UpdatedAtUtc = Now;
-                }
-
+                // Nothing a reader compares changed. An overlay change that altered only the published content (a
+                // duplicate of a label class kept here only) got its Seq when it was stored (SetOverlayAsync).
                 return;
             }
 
@@ -526,7 +522,7 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
                          .ToListAsync(ct))
             {
                 var record = DataSyncStoredJson.ReadRecord(peerBase.RecordJson, "RecordJson")!;
-                peerBase.SharedHash = DataSyncEntityForms.RecordSharedHash(codec, record);
+                peerBase.SharedHash = DataSyncEntityForms.RecordSharedHash(codec, record, owner.Limits);
             }
         }
 

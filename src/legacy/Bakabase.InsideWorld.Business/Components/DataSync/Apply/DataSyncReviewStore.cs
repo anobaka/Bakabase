@@ -83,6 +83,19 @@ public sealed class DataSyncReviewStore(TimeProvider time) : IDataSyncReviewStor
     public void MarkApplied(string reviewId, int applyLogId) =>
         Update(reviewId, e => e with {ApplyLogId = applyLogId});
 
+    /// <summary>
+    /// The apply attempt ended without applying: the entry stops counting as applying, and its idle time starts
+    /// again, so it expires, can be evicted, and the link's next cycle may stage a fresh review once it is gone.
+    /// </summary>
+    public void MarkApplyEnded(string reviewId)
+    {
+        lock (_lock)
+        {
+            if (!_entries.TryGetValue(reviewId, out var entry) || !IsApplying(entry)) return;
+            _entries[reviewId] = entry with {TaskId = null, LastAccessUtc = Now};
+        }
+    }
+
     public void Discard(string reviewId)
     {
         lock (_lock) _entries.Remove(reviewId);

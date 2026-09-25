@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -57,13 +56,6 @@ public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
     private readonly IServiceProvider _services;
     private readonly ILogger _logger;
 
-    /// <summary>
-    /// "Take the other devices' definitions" (§9.5): the one link whose next full reconciliation takes the peer's
-    /// version of concurrent entities (the Follow rule), for that cycle only. Kept in memory: after a restart the
-    /// reconciliation merges normally, and concurrent entities become items instead.
-    /// </summary>
-    private readonly ConcurrentDictionary<int, bool> _othersWinNext = new();
-
     public DataSyncApplyRunner(IServiceProvider services, IServiceScopeFactory scopes, DataSyncGate gate,
         DataSyncActorGuard guard, DataSyncActorWatermarkFile watermark, IDataSyncTaskRegistry registry,
         IDataSyncReviewStore reviews, DataSyncBackup backup, DataSyncRefreshCoordinator? coordinator = null,
@@ -81,8 +73,18 @@ public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
         _logger = logger ?? (ILogger) NullLogger.Instance;
     }
 
-    /// <summary>The link whose next full reconciliation follows the peer after an "others win" restore choice.</summary>
-    internal bool TakesTheirsNext(int linkId) => _othersWinNext.ContainsKey(linkId);
+    /// <summary>
+    /// How long one transaction of a resolution batch runs before it commits and the next begins (≈ 2 s,
+    /// non-blocking note 6): the write lock is never held much longer, however many entities a batch decides.
+    /// </summary>
+    internal TimeSpan TransactionBudget { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// How long a chunked task leaves SQLite's write lock free between two of its transactions. Another writer of the
+    /// app that waits for the lock retries every 150 ms (Microsoft.Data.Sqlite's busy loop): a gap shorter than that
+    /// would let the task take the lock back before any waiting writer looked, until the writer's timeout ran out.
+    /// </summary>
+    internal static readonly TimeSpan ChunkGap = TimeSpan.FromMilliseconds(200);
 
     #region Shared shape
 
@@ -147,33 +149,32 @@ public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
     {
         if (!_guard.IsVerified) throw new DataSyncActorUnverifiedException();
         await s.CommitAsync(ct);
-        await WriteWatermarkAsync(s, ct);
+        // Committed counters must reach actor.json (§5.6), whatever a stop requested meanwhile.
+        await WriteWatermarkAsync(s);
     }
 
-    private async Task WriteWatermarkAsync(DataSyncApplySession s, CancellationToken ct)
+    private async Task WriteWatermarkAsync(DataSyncApplySession s)
     {
-        if (await s.Store.GetLocalStateAsync(ct) is { } state) await _watermark.WriteAsync(state, ct);
+        if (await s.Store.GetLocalStateAsync(CancellationToken.None) is { } state)
+            await _watermark.WriteAsync(state, CancellationToken.None);
     }
 
     /// <summary>
     /// After a commit (§8.10.2): dominance closure across links in its own short transaction (§9.3), the kinds noted as
-    /// refreshed, and the listeners told what changed. A failure here never undoes the committed apply.
+    /// refreshed, and the listeners told what changed. A failure here never undoes the committed apply, and neither
+    /// does a stop requested meanwhile: none of it takes the task's token, so a finished apply never ends Cancelled.
     /// </summary>
     private async Task AfterCommitAsync(DataSyncApplySession s, DataSyncApplyRecorder recorder,
-        IReadOnlyCollection<string> refreshedKinds, DataSyncHistoryKind kind, int? logId, int? linkId, CancellationToken ct)
+        IReadOnlyCollection<string> refreshedKinds, DataSyncHistoryKind kind, int? logId, int? linkId)
     {
         try
         {
             if (recorder.Touched.Count > 0)
             {
-                await s.BeginAsync(ct);
-                await s.Store.CloseDominatedItemsAsync(recorder.Touched.ToList(), s.Now, ct);
-                await s.CommitAsync(ct);
+                await s.BeginAsync(CancellationToken.None);
+                await s.Store.CloseDominatedItemsAsync(recorder.Touched.ToList(), s.Now, CancellationToken.None);
+                await s.CommitAsync(CancellationToken.None);
             }
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (Exception e)
         {
@@ -199,6 +200,27 @@ public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
                 _logger.LogError(e, "A data sync apply listener failed.");
             }
         }
+    }
+
+    /// <summary>
+    /// A merge met row A1 or A2 (§5.6, §8.4), and its transaction was rolled back: outside any transaction, a duplicate
+    /// actor pauses the link (<c>PeerIdentityDuplicated</c>); a regression is reported as the peer's evidence and the
+    /// actor checked, which rotates and pauses, or only raises a retired actor's recorded counter. Returns the link's
+    /// pause, if any.
+    /// </summary>
+    private async Task<DataSyncPauseReason?> HandleAnomalyAsync(DataSyncGateLease lease, int linkId, string peerNodeId,
+        DataSyncAnomaly anomaly, DataSyncPauseReason? pause, string? pauseDetail, CancellationToken ct)
+    {
+        if (anomaly.Code == DataSyncAnomalies.DuplicateActor)
+        {
+            var reason = pause ?? DataSyncPauseReason.PeerIdentityDuplicated;
+            await PauseLinkAsync(linkId, reason, pauseDetail, ct);
+            return reason;
+        }
+
+        await _guard.ReportPeerEvidenceAsync(peerNodeId, anomaly.ActorId, anomaly.SeenCounter, ct);
+        await _guard.CheckAsync(lease, ct);
+        return await PausedReasonAsync(linkId, ct);
     }
 
     private static async Task<HashSet<long>> OpenItemIdsAsync(DataSyncApplySession s, CancellationToken ct) =>
@@ -231,3 +253,17 @@ public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
 
 /// <summary>Refresh was skipped (the actor is unverified or evidence waits): nothing may be applied now (§5.6).</summary>
 public sealed class DataSyncActorUnverifiedException() : Exception("actorUnverified");
+
+/// <summary>
+/// A merge inside a resolution met row A1 or A2 (§8.4): the transaction rolls back, Refresh included, and the runner
+/// handles the anomaly outside it (§5.6) before it runs the batch once more.
+/// </summary>
+internal sealed class DataSyncMergeAnomalyException(int linkId, string peerNodeId, DataSyncAnomaly anomaly,
+    DataSyncPauseReason? pause, string? pauseDetail) : Exception("mergeAnomaly:" + anomaly.Code)
+{
+    public int LinkId { get; } = linkId;
+    public string PeerNodeId { get; } = peerNodeId;
+    public DataSyncAnomaly Anomaly { get; } = anomaly;
+    public DataSyncPauseReason? Pause { get; } = pause;
+    public string? PauseDetail { get; } = pauseDetail;
+}

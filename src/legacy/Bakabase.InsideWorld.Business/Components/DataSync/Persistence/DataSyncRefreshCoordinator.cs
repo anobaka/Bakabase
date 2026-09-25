@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Runtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,9 +78,16 @@ public sealed class DataSyncRefreshCoordinator
     /// A local change, such as an entity setting (§6.6, §10.1): under the gate (at most
     /// <see cref="DataSyncGate.RequestTimeout"/>), after the actor check, in one short transaction: the change, then
     /// Refresh of <paramref name="kinds"/>, so the change and the revision it makes commit together. No task runs.
-    /// <paramref name="change"/> receives the transaction's scope; it may run twice when the first attempt met a
-    /// changed actor, since that attempt is rolled back.
+    /// <paramref name="change"/> receives the transaction's scope; it may run again when an attempt met a changed
+    /// actor, or evidence of a restore arrived while its Refresh ran, since that attempt is rolled back.
     /// </summary>
+    /// <remarks>
+    /// Refresh joins this transaction, so committing is this method's job, and it commits only while the actor is
+    /// still verified (§5.6): counters issued under an actor that pending evidence is about to retire never stand.
+    /// A Refresh that was skipped (the actor unverified from the start) issued nothing: the change commits alone and
+    /// the first Refresh after verification publishes it.
+    /// </remarks>
+    /// <exception cref="DataSyncActorUnverifiedException">Evidence kept arriving during every attempt.</exception>
     public async Task<DataSyncLocalChangeResult> RunLocalChangeAsync(IReadOnlyCollection<string> kinds,
         Func<IServiceProvider, CancellationToken, Task> change, CancellationToken ct)
     {
@@ -97,22 +105,36 @@ public sealed class DataSyncRefreshCoordinator
             {
                 await change(services, ct);
                 var refresh = await services.GetRequiredService<DataSyncRefresher>().RefreshAsync(lease, kinds, false, ct);
+                if (!refresh.Skipped && !_guard.IsVerified)
+                {
+                    // Evidence arrived while Refresh ran: what it issued may reuse counters a peer has seen.
+                    await transaction.RollbackAsync(CancellationToken.None);
+                    if (attempt >= MaxLocalChangeAttempts - 1) throw new DataSyncActorUnverifiedException();
+                    pause = Strongest(pause, await _guard.CheckAsync(lease, ct));
+                    continue;
+                }
+
                 await transaction.CommitAsync(ct);
                 if (!refresh.Skipped)
                 {
-                    await _watermark.WriteAsync((await store.GetLocalStateAsync(ct))!, ct);
+                    // Committed: actor.json follows whatever a stop requested meanwhile (§5.6).
+                    await _watermark.WriteAsync((await store.GetLocalStateAsync(CancellationToken.None))!,
+                        CancellationToken.None);
                     NoteRefreshed(kinds);
                 }
 
                 return new DataSyncLocalChangeResult(pause, refresh);
             }
-            catch (DataSyncActorChangedException) when (attempt == 0)
+            catch (DataSyncActorChangedException) when (attempt < MaxLocalChangeAttempts - 1)
             {
                 await transaction.RollbackAsync(CancellationToken.None);
                 pause = Strongest(pause, await _guard.CheckAsync(lease, ct));
             }
         }
     }
+
+    /// <summary>A local change is tried at most this often when the actor changes under it (§5.6).</summary>
+    private const int MaxLocalChangeAttempts = 3;
 
     /// <summary>Another path (a snapshot, an apply) committed a Refresh of <paramref name="kinds"/> just now.</summary>
     public void NoteRefreshed(IEnumerable<string> kinds)

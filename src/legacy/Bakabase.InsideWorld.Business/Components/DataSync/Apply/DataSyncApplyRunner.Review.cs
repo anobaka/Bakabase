@@ -35,6 +35,27 @@ public sealed partial class DataSyncApplyRunner
         ArgumentException.ThrowIfNullOrEmpty(reviewId);
         ArgumentNullException.ThrowIfNull(decisions);
         ArgumentNullException.ThrowIfNull(args);
+        var applied = false;
+        try
+        {
+            var logId = await ApplyReviewAsync(reviewId, decisions, args);
+            if (logId is null) return null;
+            _reviews.MarkApplied(reviewId, logId.Value);
+            applied = true;
+            return logId;
+        }
+        finally
+        {
+            // Failed, stopped or exited early: the review is no longer applying, so it may expire again and the fetch
+            // half may stage a fresh one for its link (§8.3). Not when a newer attempt of the task took over.
+            if (!applied && OwnsAttempt(args)) _reviews.MarkApplyEnded(reviewId);
+        }
+    }
+
+    /// <summary>The body of <see cref="RunReviewAsync"/>; null when the attempt exited early.</summary>
+    private async Task<int?> ApplyReviewAsync(string reviewId, IReadOnlyList<DataSyncPlanDecision> decisions,
+        BTaskArgs args)
+    {
         var ct = args.CancellationToken;
         if (!await StartAsync(args)) return null;
         await WaitStartupVerifiedAsync(ct);
@@ -45,7 +66,7 @@ public sealed partial class DataSyncApplyRunner
         await _guard.CheckAsync(lease, ct);
 
         var kinds = review.Pull.Kinds.Select(k => k.Kind).ToList();
-        var logId = await InTransactionAsync(lease, async s =>
+        return await InTransactionAsync(lease, async s =>
         {
             var started = Stopwatch.GetTimestamp();
             var recorder = new DataSyncApplyRecorder();
@@ -96,13 +117,18 @@ public sealed partial class DataSyncApplyRunner
                 ElapsedMs(started)), ct);
             await CommitAsync(s, ct);
             await AfterCommitAsync(s, recorder, kinds,
-                review.CopyOnce ? DataSyncHistoryKind.CopyOnce : DataSyncHistoryKind.FirstLink, log, link?.Id, ct);
+                review.CopyOnce ? DataSyncHistoryKind.CopyOnce : DataSyncHistoryKind.FirstLink, log, link?.Id);
             return log;
         }, ct);
-
-        _reviews.MarkApplied(reviewId, logId);
-        return logId;
     }
+
+    /// <summary>
+    /// Whether this body runs as its task's registered attempt, cancelled or not — not one a newer attempt of the same
+    /// task id replaced (§8.10.1).
+    /// </summary>
+    private bool OwnsAttempt(BTaskArgs args) =>
+        DataSyncTaskAttempts.Current is not { } attempt || attempt.TaskId != args.Task.Id ||
+        _registry is not DataSyncTaskRegistry registry || registry.Current(args.Task.Id)?.AttemptId == attempt.AttemptId;
 
     /// <summary>Refresh at the start of a task body; a skipped one ends the task with nothing applied.</summary>
     private async Task RefreshOrFailAsync(DataSyncApplySession s, DataSyncGateLease lease,
@@ -150,7 +176,7 @@ public sealed partial class DataSyncApplyRunner
                     var run = new List<ApplyOperation>();
                     while (i < chunks[c].Length && chunks[c][i].Kind == kind) run.Add(chunks[c][i++].Op);
                     ct.ThrowIfCancellationRequested();
-                    var outcome = await s.Adapter(kind).ApplyAsync(new ApplyBatch(kind, run), ct);
+                    var outcome = await s.Writer(kind).ApplyAsync(new ApplyBatch(kind, run), ct);
                     _writes.Written(kind);
                     foreach (var (itemId, localKey) in outcome.CreatedLocalKeysByItemId) _created[itemId] = localKey;
                     _changed.UnionWith(outcome.ChangedDuringApplyItemIds);
@@ -160,6 +186,7 @@ public sealed partial class DataSyncApplyRunner
                 if (c < chunks.Count - 1)
                 {
                     await runner.CommitAsync(s, ct);
+                    await Task.Delay(ChunkGap, ct);
                     await s.BeginAsync(ct);
                 }
             }
@@ -338,15 +365,14 @@ public sealed partial class DataSyncApplyRunner
         {
             foreach (var kind in _orderedKinds)
             {
-                var adapter = s.Adapter(kind);
                 var index = await s.Identity.GetKeyIndexAsync(kind, null, ct);
-                var rows = (await s.Store.GetEntitiesAsync(kind, false, ct))
+                var rows = (await s.Store.ReadEntitiesAsync(kind, false, ct))
                     .Where(r => r.State == DataSyncEntitySyncState.Synced && !r.PublishHeld && !r.Unreadable &&
                                 r.OrderKey is not null)
                     .ToList();
                 var tie = index.Entities.Where(e => e.Live).ToDictionary(e => e.Id, e => DataSyncOrderPlanner.TieKeyOf(e.Keys));
                 var entries = rows.Select(r => new DataSyncOrderEntry(r.LocalKey, r.OrderKey, tie[r.Id])).ToList();
-                await adapter.ApplyOrderAsync(DataSyncOrderPlanner.Sort(entries).Select(e => e.LocalKey).ToList(), ct);
+                await s.Writer(kind).ApplyOrderAsync(DataSyncOrderPlanner.Sort(entries).Select(e => e.LocalKey).ToList(), ct);
                 _writes.Written(kind);
             }
         }

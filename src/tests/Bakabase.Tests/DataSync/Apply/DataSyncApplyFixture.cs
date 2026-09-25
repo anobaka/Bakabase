@@ -204,9 +204,47 @@ internal sealed class DataSyncApplyFixture
 
     #region Running the runner
 
-    public BTaskArgs Args(string? taskId = null, CancellationToken ct = default) =>
-        new(new PauseToken(), ct, new BTask(taskId ?? "DataSyncApply" + ++_task, () => "t"), _ => Task.CompletedTask,
-            Services);
+    public BTaskArgs Args(string? taskId = null, CancellationToken ct = default, PauseToken pause = default) =>
+        new(pause, ct, new BTask(taskId ?? "DataSyncApply" + ++_task, () => "t"), _ => Task.CompletedTask, Services);
+
+    /// <summary>Sets the link's state as the link actions would (a person pausing or resuming it).</summary>
+    public async Task SetLinkStateAsync(int linkId, DataSyncLinkState state, DataSyncPauseReason? reason = null)
+    {
+        var db = NewDb();
+        var link = await db.DataSyncLinks.SingleAsync(l => l.Id == linkId);
+        link.State = state;
+        link.PausedReason = reason;
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Whether another connection takes SQLite's write lock (<c>BEGIN IMMEDIATE</c>) within <paramref name="wait"/>, as
+    /// any other writer of the app would; it lets go at once.
+    /// </summary>
+    public async Task<bool> TryTakeWriteLockAsync(TimeSpan wait)
+    {
+        var builder = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(NewDb().Database.GetConnectionString())
+        {
+            DefaultTimeout = Math.Max(1, (int) Math.Ceiling(wait.TotalSeconds)),
+            Pooling = false,
+        };
+        await using var connection = new Microsoft.Data.Sqlite.SqliteConnection(builder.ToString());
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        try
+        {
+            command.CommandText = "BEGIN IMMEDIATE";
+            await command.ExecuteNonQueryAsync();
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException e) when (e.SqliteErrorCode == 5)
+        {
+            return false;
+        }
+
+        command.CommandText = "ROLLBACK";
+        await command.ExecuteNonQueryAsync();
+        return true;
+    }
 
     public async Task<DataSyncAutoSyncOutcome> ApplyAsync(DataSyncLinkDbModel link, DataSyncPeer peer,
         DataSyncStagedPull? pull) =>
@@ -256,12 +294,15 @@ internal sealed class DataSyncApplyFixture
     #endregion
 }
 
-/// <summary>A simulated peer: its actor issues counters and its feed Seq numbers, and it publishes records.</summary>
-internal sealed class DataSyncPeer(string name)
+/// <summary>
+/// A simulated peer: its actor issues counters and its feed Seq numbers, and it publishes records. With a node id
+/// and an actor it stands for another provider of the test, whose records arrive through its real feed.
+/// </summary>
+internal sealed class DataSyncPeer(string name, string? nodeId = null, string? actorId = null)
 {
-    public string NodeId { get; } = "node-" + name.ToLowerInvariant();
+    public string NodeId { get; } = nodeId ?? "node-" + name.ToLowerInvariant();
     public string Name { get; } = name;
-    public string ActorId { get; } = Guid.NewGuid().ToString("N")[..16];
+    public string ActorId { get; } = actorId ?? Guid.NewGuid().ToString("N")[..16];
     public long Counter { get; private set; }
     public long Seq { get; private set; }
     public DataSyncEditorRef Editor => new(NodeId, Name, ActorId);

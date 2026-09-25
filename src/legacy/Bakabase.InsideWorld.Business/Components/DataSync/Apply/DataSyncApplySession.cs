@@ -53,7 +53,10 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
     public IReadOnlyDictionary<string, IDataSyncKindCodec> Codecs =>
         Kinds.ToDictionary(k => k.Key, k => k.Value.Codec, StringComparer.Ordinal);
 
-    /// <summary>Kinds whose adapters may have written: their caches are dropped on a rollback (§8.10.5).</summary>
+    /// <summary>
+    /// Kinds whose adapters may have written: their caches are dropped on a rollback (§8.10.5). A kind joins before its
+    /// first write (<see cref="Writer"/>), never after it.
+    /// </summary>
     public HashSet<string> TouchedKinds { get; } = new(StringComparer.Ordinal);
 
     /// <summary>The tracked local state row; loaded by <see cref="LoadStateAsync"/> after Refresh.</summary>
@@ -84,11 +87,66 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
             ? adapter
             : throw new InvalidOperationException($"No data sync kind adapter is registered for '{kind}'.");
 
+    /// <summary>
+    /// The adapter of <paramref name="kind"/> for a write (<c>ApplyAsync</c>, <c>ApplyOrderAsync</c>, <c>DeleteAsync</c>,
+    /// …). The kind counts as touched before the write starts: a batch that wrote some rows through the service and
+    /// then threw has updated the service's cache, which the rollback must drop too (§8.10.5).
+    /// </summary>
+    public IDataSyncKind Writer(string kind)
+    {
+        var adapter = Adapter(kind);
+        TouchedKinds.Add(kind);
+        return adapter;
+    }
+
     /// <summary><c>BEGIN IMMEDIATE</c> (F27): the write lock from the first statement.</summary>
     public async Task BeginAsync(CancellationToken ct)
     {
         if (_transaction is not null) throw new InvalidOperationException("A transaction is already open.");
         _transaction = await Db.Database.BeginTransactionAsync(ct);
+    }
+
+    /// <summary>
+    /// Saves what is pending, forgets every tracked row and loads the local state row again. Refresh tracks every
+    /// entity row it read, and each later save scans them all: a long task forgets them once they are saved.
+    /// </summary>
+    public async Task ForgetTrackedAsync(CancellationToken ct)
+    {
+        if (Db.ChangeTracker.HasChanges()) await Db.SaveChangesAsync(ct);
+        Db.ChangeTracker.Clear();
+        if (_transaction is not null) await LoadStateAsync(ct);
+    }
+
+    /// <summary>A savepoint in the open transaction, after the pending changes are saved.</summary>
+    public async Task SavepointAsync(string name, CancellationToken ct)
+    {
+        if (_transaction is null) throw new InvalidOperationException("No transaction is open.");
+        await Store.FlushAsync(ct);
+        await _transaction.CreateSavepointAsync(name, ct);
+    }
+
+    /// <summary>
+    /// Takes back everything written since the savepoint: the rows, what the context tracked (rows a caller still
+    /// holds are stale afterwards) and the touched kinds' caches (§8.10.5). The local state row is loaded again.
+    /// </summary>
+    public async Task RollbackToSavepointAsync(string name)
+    {
+        if (_transaction is null) throw new InvalidOperationException("No transaction is open.");
+        await _transaction.RollbackToSavepointAsync(name, CancellationToken.None);
+        Db.ChangeTracker.Clear();
+        foreach (var kind in TouchedKinds)
+        {
+            if (Kinds.TryGetValue(kind, out var adapter)) adapter.ResetCaches();
+        }
+
+        await LoadStateAsync(CancellationToken.None);
+    }
+
+    public async Task ReleaseSavepointAsync(string name, CancellationToken ct)
+    {
+        if (_transaction is null) throw new InvalidOperationException("No transaction is open.");
+        await Store.FlushAsync(ct);
+        await _transaction.ReleaseSavepointAsync(name, ct);
     }
 
     public async Task CommitAsync(CancellationToken ct)

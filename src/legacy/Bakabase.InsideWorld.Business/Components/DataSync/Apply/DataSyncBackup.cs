@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
@@ -38,10 +39,8 @@ public sealed class DataSyncBackup(IDataSyncDataDirectory directory, TimeProvide
         try
         {
             Directory.CreateDirectory(directory.BackupsPath);
-            var stamp = _time.GetUtcNow().UtcDateTime.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
-            path = Path.Combine(directory.BackupsPath, $"data-sync-{stamp}.db");
-            for (var n = 1; File.Exists(path); n++)
-                path = Path.Combine(directory.BackupsPath, $"data-sync-{stamp}-{n}.db");
+            path = Path.Combine(directory.BackupsPath, NextFileName(directory.BackupsPath,
+                _time.GetUtcNow().UtcDateTime.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture)));
 
             var connectionString = db.Database.GetConnectionString() ??
                                    throw new InvalidOperationException("The database has no connection string.");
@@ -65,6 +64,30 @@ public sealed class DataSyncBackup(IDataSyncDataDirectory directory, TimeProvide
 
         DataSyncRetention.PruneBackups(directory.BackupsPath);
         return path;
+    }
+
+    /// <summary>
+    /// <c>data-sync-{stamp}.db</c>, or for another backup in the same second <c>data-sync-{stamp}_{n:D3}.db</c> with
+    /// <c>n</c> above every counter of that second already there: '_' sorts after '.' and the counter is zero-padded,
+    /// so the names sort by time — and a name retention freed is never taken again — so retention, which keeps the
+    /// names that sort last, keeps the newest (<see cref="DataSyncRetention.PruneBackups"/>).
+    /// </summary>
+    private static string NextFileName(string backupsPath, string stamp)
+    {
+        var first = $"data-sync-{stamp}.db";
+        var prefix = $"data-sync-{stamp}_";
+        var taken = Directory.EnumerateFiles(backupsPath, $"data-sync-{stamp}*.db", SearchOption.TopDirectoryOnly)
+            .Select(Path.GetFileName)
+            .Select(name => name == first
+                ? 0
+                : name!.StartsWith(prefix, StringComparison.Ordinal) &&
+                  int.TryParse(name.AsSpan(prefix.Length, name.Length - prefix.Length - ".db".Length),
+                      NumberStyles.None, CultureInfo.InvariantCulture, out var n)
+                    ? n
+                    : -1)
+            .Where(n => n >= 0)
+            .ToList();
+        return taken.Count == 0 ? first : $"{prefix}{taken.Max() + 1:D3}.db";
     }
 
     /// <summary>The size estimate a dialog shows: the database file's current size, or 0 when unknown.</summary>

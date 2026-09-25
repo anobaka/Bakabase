@@ -60,8 +60,12 @@ internal sealed class MemoryDataSyncKind : IDataSyncKind
         return Task.FromResult(result);
     }
 
+    /// <summary>Runs as Refresh reads the raw hashes: something happening while a Refresh is under way.</summary>
+    public Action? OnReadRawHashes { get; set; }
+
     public Task<IReadOnlyDictionary<string, string>> ReadRawHashesAsync(CancellationToken ct)
     {
+        OnReadRawHashes?.Invoke();
         IReadOnlyDictionary<string, string> result = Definitions.ToDictionary(e => e.Key, e => ContentHash.Of(
             new JsonArray(e.Value.ToContent(), JsonValue.Create(e.Value.Fingerprint), JsonValue.Create(e.Value.Unreadable))));
         return Task.FromResult(result);

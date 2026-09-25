@@ -64,7 +64,8 @@ public sealed partial class DataSyncApplyRunner
             var applied = 0;
             foreach (var step in steps)
             {
-                await args.YieldAsync();
+                // Inside the transaction only a stop is honoured: a pause here would keep SQLite's writer lock.
+                ct.ThrowIfCancellationRequested();
                 var blocked = step.Blocked ?? await UndoStepAsync(s, writes, step, ct);
                 results.Add(step.ToView() with { Blocked = blocked });
                 recorder.Item(step.PreImage.Kind + "/" + step.PreImage.EntityId, step.PreImage.Kind, step.PreImage.Name,
@@ -102,7 +103,7 @@ public sealed partial class DataSyncApplyRunner
             log.UndoResultJson = DataSyncStoredJson.Write(results);
             await s.Store.CloseStaleStateItemsAsync(recorder.Touched.ToList(), null, now, ct);
             await CommitAsync(s, ct);
-            await AfterCommitAsync(s, recorder, s.Kinds.Keys.ToList(), DataSyncHistoryKind.Undo, undoId, log.LinkId, ct);
+            await AfterCommitAsync(s, recorder, s.Kinds.Keys.ToList(), DataSyncHistoryKind.Undo, undoId, log.LinkId);
             return undoId;
         }, ct);
     }
@@ -133,7 +134,7 @@ public sealed partial class DataSyncApplyRunner
             {
                 // Deleted through the service; the side row becomes an unserved UndoneCreate tombstone with its keys and
                 // aliases (never deleted), so the peer's record never binds as new and nobody is asked to delete it.
-                await adapter.DeleteAsync(row.LocalKey, ct);
+                await s.Writer(kind).DeleteAsync(row.LocalKey, ct);
                 writes.Written(kind);
                 var vv = DataSyncRevisionRules.Next(DataSyncRevisionKind.Undo, DataSyncVersionVector.ParseStored(row.VvJson),
                     null, false, false, s.SelfActor, s.NextCounter);
@@ -162,7 +163,7 @@ public sealed partial class DataSyncApplyRunner
                 // Re-created with the same child ids; the tombstone's key revives with Undo ≥ the tombstone.
                 var itemId = DataSyncMergeItemIds.Of(kind, new SyncKey(row.SyncKey));
                 var create = new CreateEntityOperation(itemId, keys, row.OriginNodeId, 0, p.Content!);
-                var outcome = await adapter.ApplyAsync(new ApplyBatch(kind, [create]), ct);
+                var outcome = await s.Writer(kind).ApplyAsync(new ApplyBatch(kind, [create]), ct);
                 writes.Written(kind);
                 if (!outcome.CreatedLocalKeysByItemId.TryGetValue(itemId, out var localKey))
                     return DataSyncUndoBlock.ChangedSinceImport;
@@ -186,7 +187,7 @@ public sealed partial class DataSyncApplyRunner
             case DataSyncPreImageActions.TypeChanged:
             {
                 var before = codec.ReadLocal((await writes.ReReadAsync(kind, row.LocalKey, ct)).Content);
-                var outcome = await adapter.ApplyAsync(new ApplyBatch(kind,
+                var outcome = await s.Writer(kind).ApplyAsync(new ApplyBatch(kind,
                     [new ChangeSubtypeOperation(DataSyncMergeItemIds.Of(kind, new SyncKey(row.SyncKey)), row.LocalKey,
                         row.LocalHash, p.FromSubtype!)]), ct);
                 writes.Written(kind);
@@ -210,7 +211,7 @@ public sealed partial class DataSyncApplyRunner
                 {
                     var update = new UpdateEntityOperation(DataSyncMergeItemIds.Of(kind, new SyncKey(row.SyncKey)),
                         row.LocalKey, row.LocalHash, merged, EntityKeys.None, edit.AddedChildIds, edit.RemovedChildIds);
-                    var outcome = await adapter.ApplyAsync(new ApplyBatch(kind, [update]), ct);
+                    var outcome = await s.Writer(kind).ApplyAsync(new ApplyBatch(kind, [update]), ct);
                     writes.Written(kind);
                     if (outcome.ChangedDuringApplyItemIds.Count > 0) return DataSyncUndoBlock.ChangedSinceImport;
                 }
@@ -250,11 +251,11 @@ public sealed partial class DataSyncApplyRunner
         var index = await s.Identity.GetKeyIndexAsync(kind, null, ct);
         var tie = index.Entities.Where(e => e.Live)
             .ToDictionary(e => e.Id, e => Bakabase.Modules.DataSync.Ordering.DataSyncOrderPlanner.TieKeyOf(e.Keys));
-        var entries = (await s.Store.GetEntitiesAsync(kind, false, ct))
+        var entries = (await s.Store.ReadEntitiesAsync(kind, false, ct))
             .Where(r => r.State == DataSyncEntitySyncState.Synced && !r.PublishHeld && !r.Unreadable && r.OrderKey is not null)
             .Select(r => new Bakabase.Modules.DataSync.Ordering.DataSyncOrderEntry(r.LocalKey, r.OrderKey, tie[r.Id]))
             .ToList();
-        await s.Adapter(kind).ApplyOrderAsync(
+        await s.Writer(kind).ApplyOrderAsync(
             Bakabase.Modules.DataSync.Ordering.DataSyncOrderPlanner.Sort(entries).Select(e => e.LocalKey).ToList(), ct);
     }
 }

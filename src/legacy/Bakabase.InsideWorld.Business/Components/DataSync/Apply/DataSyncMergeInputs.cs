@@ -50,11 +50,13 @@ internal static class DataSyncMergeInputs
         link.Kinds.Where(s.Kinds.ContainsKey).Distinct(StringComparer.Ordinal).ToList();
 
     /// <summary>The whole input, with the usage the merger asked for already read (phase 1, §2.7).</summary>
+    /// <param name="contents">Contents read earlier in this transaction (<see cref="DataSyncLocalStateReader"/>).</param>
     public static async Task<DataSyncMergeInput> BuildAsync(DataSyncApplySession s, DataSyncLinkContext link,
-        DataSyncStagedPull? pull, IReadOnlyList<(string Kind, SyncKey Key)> pendingToMerge, CancellationToken ct)
+        DataSyncStagedPull? pull, IReadOnlyList<(string Kind, SyncKey Key)> pendingToMerge, CancellationToken ct,
+        DataSyncLocalContentCache? contents = null)
     {
         var kinds = LocalKinds(s, link);
-        var local = await ReadLocalAsync(s, kinds, ct);
+        var local = await ReadLocalAsync(s, kinds, ct, contents);
         var bases = new Dictionary<(string Kind, SyncKey Key), DataSyncPeerBase>();
         foreach (var kind in link.Kinds.Distinct(StringComparer.Ordinal))
         {
@@ -99,7 +101,7 @@ internal static class DataSyncMergeInputs
     /// <c>PendingRecordAnyLink</c> filled from every link (§8.6).
     /// </summary>
     public static async Task<IReadOnlyDictionary<string, DataSyncLocalKindState>> ReadLocalAsync(DataSyncApplySession s,
-        IEnumerable<string> kinds, CancellationToken ct)
+        IEnumerable<string> kinds, CancellationToken ct, DataSyncLocalContentCache? contents = null)
     {
         await s.Store.FlushAsync(ct);
         var openKeys = (await s.Db.DataSyncInboxItems.AsNoTracking().Where(i => i.ClosedAtUtc == null)
@@ -117,7 +119,7 @@ internal static class DataSyncMergeInputs
         var result = new Dictionary<string, DataSyncLocalKindState>(StringComparer.Ordinal);
         foreach (var kind in kinds.Distinct(StringComparer.Ordinal))
         {
-            var state = await s.Reader.ReadAsync(kind, ct);
+            var state = await s.Reader.ReadAsync(kind, ct, contents);
             // The tombstone rows' Seq (the reader does not carry it): a pending record stored against one remembers
             // it, so it is re-merged only when the row changes (§8.4 condition 2).
             var tombstoneSeqs = (await s.Db.DataSyncEntities.AsNoTracking()

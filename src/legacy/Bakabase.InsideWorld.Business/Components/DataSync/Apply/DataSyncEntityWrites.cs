@@ -28,12 +28,11 @@ internal sealed class DataSyncEntityWrites(DataSyncApplySession s, DataSyncApply
 
     public DataSyncApplyRecorder Recorder => recorder;
 
-    /// <summary>The adapter wrote <paramref name="kind"/>: its raw hashes are read again when next needed.</summary>
-    public void Written(string kind)
-    {
-        _rawHashes.Remove(kind);
-        s.TouchedKinds.Add(kind);
-    }
+    /// <summary>
+    /// The adapter wrote <paramref name="kind"/>: its raw hashes are read again when next needed. The kind was marked
+    /// touched before the write (<see cref="DataSyncApplySession.Writer"/>).
+    /// </summary>
+    public void Written(string kind) => _rawHashes.Remove(kind);
 
     public async Task<LocalEntity> ReReadAsync(string kind, string localKey, CancellationToken ct) =>
         (await s.Adapter(kind).ReadAsync([localKey], ct)).SingleOrDefault() ??

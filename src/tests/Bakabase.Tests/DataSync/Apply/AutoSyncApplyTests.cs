@@ -7,6 +7,7 @@ using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Bakabase.Tests.DataSync.Apply.DataSyncApplyFixture;
 
@@ -162,6 +163,33 @@ public class AutoSyncApplyTests
         var cleared = await f.LinkRowAsync(link.Id);
         Assert.AreEqual((0, (string?) null, (string?) null),
             (cleared.ConsecutiveFailures, cleared.LastErrorCode, cleared.LastErrorDetail));
+    }
+
+    [TestMethod]
+    public async Task A_stop_that_lands_right_after_the_commit_leaves_a_finished_apply()
+    {
+        using var cts = new CancellationTokenSource();
+        var f = await CreateAsync(s => s.AddSingleton<IDataSyncApplyListener>(new StoppingListener(cts)));
+        var peer = new DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer);
+
+        // The listeners run after the commit: the stop lands between the commit and the steps that follow it.
+        var outcome = await f.Runner.RunAutoSyncAsync(Context(link, peer),
+            f.Pull(peer, (Item, peer.Record([SyncKey.New().Value], peer.Next(), Content("Genre"), "a0"))),
+            f.Args(ct: cts.Token));
+
+        Assert.IsTrue(cts.IsCancellationRequested);
+        Assert.AreEqual(1, outcome.Applied, "committed, and reported as applied rather than Cancelled");
+        Assert.IsNotNull(outcome.ApplyLogId);
+        Assert.AreEqual((await f.StateAsync()).ActorCounter,
+            f.Services.GetRequiredService<Bakabase.InsideWorld.Business.Components.DataSync.Persistence.DataSyncActorWatermarkFile>()
+                .Read().Watermark!.Counter, "actor.json follows the commit (§5.6)");
+    }
+
+    /// <summary>A person stopping the task the moment an apply has committed.</summary>
+    private sealed class StoppingListener(CancellationTokenSource cts) : IDataSyncApplyListener
+    {
+        public void OnApplied(DataSyncAppliedEvent applied) => cts.Cancel();
     }
 
     private static string? DataSyncVersionVectorCursor(Bakabase.Modules.DataSync.Models.Db.DataSyncLinkDbModel link,

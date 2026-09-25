@@ -144,6 +144,13 @@ public interface IDataSyncReviewStore
     void SetLastPlan(string reviewId, DataSyncPlan plan);
     void MarkApplying(string reviewId, string taskId);
     void MarkApplied(string reviewId, int applyLogId);
+
+    /// <summary>
+    /// The apply attempt ended without applying (failed, stopped, or exited early): the review is no longer applying,
+    /// so it expires and can be replaced again. Nothing happens to an applied or unknown review.
+    /// </summary>
+    void MarkApplyEnded(string reviewId);
+
     void Discard(string reviewId);
 }
 

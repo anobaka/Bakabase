@@ -96,7 +96,7 @@ public sealed partial class DataSyncApplyRunner
 
             var context = DataSyncMergeInputs.LinkContext(s, linkRow, link);
             var takesTheirs = pull is not null && pull.Kinds.Any(k => k.FullReconciliation) &&
-                              _othersWinNext.ContainsKey(link.LinkId);
+                              await TakesTheirsAsync(s, linkRow, ct);
             if (takesTheirs) context = context with { EffectiveMode = DataSyncLinkMode.Follow };
 
             var pending = await PendingToMergeAsync(s, linkRow.Id, pull, ct);
@@ -106,19 +106,11 @@ public sealed partial class DataSyncApplyRunner
             if (result.Anomaly is { } anomaly)
             {
                 // The whole transaction rolls back, Refresh included (§5.6): nothing it issued stands under this actor.
+                // Outside any transaction it pauses, or only raises a retired actor's recorded counter, and then this
+                // link is merged once more.
                 await s.RollbackAsync();
-                if (anomaly.Code == DataSyncAnomalies.DuplicateActor)
-                {
-                    var reason = result.Pause ?? DataSyncPauseReason.PeerIdentityDuplicated;
-                    await PauseLinkAsync(link.LinkId, reason, result.PauseDetail, ct);
-                    return (Nothing with { Paused = reason }, false);
-                }
-
-                // Outside any transaction: it rotates and pauses (§5.6), or only raises a retired actor's recorded
-                // counter, and then this link is merged once more.
-                await _guard.ReportPeerEvidenceAsync(link.PeerNodeId, anomaly.ActorId, anomaly.SeenCounter, ct);
-                await _guard.CheckAsync(lease, ct);
-                var paused = await PausedReasonAsync(link.LinkId, ct);
+                var paused = await HandleAnomalyAsync(lease, link.LinkId, link.PeerNodeId, anomaly, result.Pause,
+                    result.PauseDetail, ct);
                 return paused is not null ? (Nothing with { Paused = paused }, false) : (Nothing, true);
             }
 
@@ -137,6 +129,7 @@ public sealed partial class DataSyncApplyRunner
             var writer = new DataSyncMergeWriter(s, writes, input, result, linkRow.Id, async c =>
             {
                 await CommitAsync(s, c);
+                await Task.Delay(ChunkGap, c);
                 await s.BeginAsync(c);
             });
             await writer.WriteAsync(ct);
@@ -157,10 +150,10 @@ public sealed partial class DataSyncApplyRunner
             }
 
             await CommitAsync(s, ct);
-            if (takesTheirs) _othersWinNext.TryRemove(link.LinkId, out _);
-            await AfterCommitAsync(s, recorder, kinds, DataSyncHistoryKind.AutoSync, logId, linkRow.Id, ct);
+            // Committed: a stop requested from here on no longer turns the apply into Cancelled.
+            await AfterCommitAsync(s, recorder, kinds, DataSyncHistoryKind.AutoSync, logId, linkRow.Id);
 
-            var closed = openBefore.Except(await OpenItemIdsAsync(s, ct)).OrderBy(i => i).ToList();
+            var closed = openBefore.Except(await OpenItemIdsAsync(s, CancellationToken.None)).OrderBy(i => i).ToList();
             return (new DataSyncAutoSyncOutcome(logId, null, inbox.Created, closed.Count, writer.Applied, written.Notes,
                 closed), false);
         }

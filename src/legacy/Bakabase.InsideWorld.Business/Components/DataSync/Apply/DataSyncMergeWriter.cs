@@ -122,7 +122,7 @@ internal sealed class DataSyncMergeWriter
             var run = new List<ApplyOperation>();
             while (i < live.Count && live[i].Kind == kind) run.Add(live[i++].Op);
             ct.ThrowIfCancellationRequested();
-            var outcome = await _s.Adapter(kind).ApplyAsync(new ApplyBatch(kind, run), ct);
+            var outcome = await _s.Writer(kind).ApplyAsync(new ApplyBatch(kind, run), ct);
             _writes.Written(kind);
             foreach (var (itemId, localKey) in outcome.CreatedLocalKeysByItemId) _created[itemId] = localKey;
             MarkChanged(outcome.ChangedDuringApplyItemIds);
@@ -281,7 +281,7 @@ internal sealed class DataSyncMergeWriter
         {
             if (!_s.Kinds.TryGetValue(assignment.Kind, out var adapter) || !adapter.Codec.Descriptor.HasOrder) continue;
             var keys = DataSyncRecordApply.ResolveOrder(assignment, _created);
-            await adapter.ApplyOrderAsync(keys, ct);
+            await _s.Writer(assignment.Kind).ApplyOrderAsync(keys, ct);
             _writes.Written(assignment.Kind);
         }
     }

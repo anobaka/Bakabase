@@ -1,3 +1,4 @@
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Identity;
@@ -142,17 +143,27 @@ public class RestoreTests
         await _f.Runner.RunRestoreAsync(DataSyncRestoreChoice.OthersWin, null, _f.Args("DataSyncRestore"));
 
         Assert.AreEqual(before.VvJson, (await _f.RowAsync(genre)).VvJson, "no counters are raised");
-        Assert.IsTrue(_f.Runner.TakesTheirsNext(_link.Id));
+        Assert.IsTrue(await _f.Runner.TakesTheirsNextAsync(_link.Id, default));
+
+        // A restart before the full reconciliation keeps the choice: it is stored with the Restore entry. A runner
+        // built afresh stands for the new process.
+        var restarted = ActivatorUtilities.CreateInstance<DataSyncApplyRunner>(_f.Services);
+        Assert.IsTrue(await restarted.TakesTheirsNextAsync(_link.Id, default), "the choice survives a restart");
+
+        // An incremental pull is not the full reconciliation: the choice waits for it.
+        await restarted.RunAutoSyncAsync(Context(await _f.LinkRowAsync(_link.Id), _peer), _f.Pull(_peer), _f.Args());
+        Assert.IsTrue(await restarted.TakesTheirsNextAsync(_link.Id, default));
 
         // A concurrent local change meets the peer's in the full reconciliation: the peer's version is taken.
         _f.Kind.Definitions[genre] = _f.Kind[genre].With(name: "Mine");
         var theirs = _peer.Next(peerVv);
-        await _f.ApplyAsync(_link, _peer, _f.Pull(_peer, full: true,
-            (Item, _peer.Record([peerKey], theirs, Content("Theirs", ("a", "Rock")), "a0"))));
+        await restarted.RunAutoSyncAsync(Context(await _f.LinkRowAsync(_link.Id), _peer), _f.Pull(_peer, full: true,
+            (Item, _peer.Record([peerKey], theirs, Content("Theirs", ("a", "Rock")), "a0"))), _f.Args());
 
         Assert.AreEqual("Theirs", _f.Kind[genre].Name, "the Follow rule, for this cycle only");
         Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count, "no question");
-        Assert.IsFalse(_f.Runner.TakesTheirsNext(_link.Id), "consumed");
+        Assert.IsFalse(await restarted.TakesTheirsNextAsync(_link.Id, default), "consumed");
+        Assert.IsFalse(await _f.Runner.TakesTheirsNextAsync(_link.Id, default), "consumed for every process");
     }
 
     [TestMethod]

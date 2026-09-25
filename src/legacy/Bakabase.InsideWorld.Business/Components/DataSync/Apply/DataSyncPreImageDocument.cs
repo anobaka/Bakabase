@@ -115,6 +115,9 @@ internal sealed class DataSyncApplyRecorder
     public int Created, Updated, Linked, Unchanged, Skipped, ChangedSinceReview, ChangedDuringApply, Held, Deleted,
         TypeChanged, Reordered, Resolved;
 
+    /// <summary>A restore's "Take the other devices' definitions" link (§9.5), stored with the entry.</summary>
+    public int? TakeTheirsLinkId { get; set; }
+
     /// <summary>Something was applied: a history entry is written only then (§8.10.2).</summary>
     public bool Applied => Created + Updated + Linked + Deleted + TypeChanged + Reordered + Resolved > 0 ||
                            PreImages.Count > 0 || !Identity.IsEmpty;
@@ -144,7 +147,8 @@ internal sealed class DataSyncApplyRecorder
             TaskId = taskId,
             AppliedAtUtc = appliedAtUtc,
             SummaryJson = DataSyncStoredJson.Write(Counts),
-            ResultJson = new DataSyncApplyResultDocument(Items, _changes.Values.ToList(), transactionMs).ToJson(),
+            ResultJson = new DataSyncApplyResultDocument(Items, _changes.Values.ToList(), transactionMs, TakeTheirsLinkId)
+                .ToJson(),
             PreImageJson = preImage,
             PreImageBytes = Encoding.UTF8.GetByteCount(preImage),
             UndoOfLogId = undoOf,

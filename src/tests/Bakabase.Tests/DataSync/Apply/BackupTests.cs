@@ -5,6 +5,7 @@ using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Models.Db;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Bakabase.Tests.DataSync.Apply.DataSyncApplyFixture;
 
@@ -94,6 +95,22 @@ public class BackupTests
         Assert.IsFalse(kept.Contains("data-sync-20200100-000000.db"), "the oldest went");
         Assert.IsTrue(kept.Last()!.StartsWith("data-sync-2026", StringComparison.Ordinal), "the new copy stays");
         Assert.IsTrue(File.Exists(Path.Combine(_f.Directory.BackupsPath, "app-backup.zip")), "other files are never touched");
+    }
+
+    [TestMethod]
+    public async Task Backups_taken_in_the_same_second_sort_by_time_and_retention_keeps_the_newest()
+    {
+        var backup = _f.Services.GetRequiredService<DataSyncBackup>();
+        var copies = new List<string>();
+        // One clock second (the fixture's clock does not move): each copy after the first carries a counter.
+        for (var i = 0; i < 12; i++) copies.Add(await backup.CreateAsync(_f.NewDb(), default));
+
+        Assert.AreEqual(12, copies.Distinct().Count());
+        var kept = copies.TakeLast(DataSyncRetention.BackupsKept).ToList();
+        CollectionAssert.AreEquivalent(kept, Backups().ToList(), "every copy pruned the oldest, never a newer one");
+        CollectionAssert.AreEqual(kept.Select(Path.GetFileName).Reverse().ToList(),
+            Backups().Select(Path.GetFileName).OrderByDescending(n => n, StringComparer.Ordinal).ToList(),
+            "newest first by name, as retention reads them");
     }
 
     [TestMethod]

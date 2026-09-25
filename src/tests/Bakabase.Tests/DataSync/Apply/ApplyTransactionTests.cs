@@ -107,6 +107,97 @@ public class ApplyTransactionTests
         Assert.IsNull((await f.LinkRowAsync(link.Id)).LastErrorCode, "cleared on success");
     }
 
+    /// <summary>
+    /// One adapter batch writes a create (AddRange: saved, and in the service's cache, at once) and then an update
+    /// (Put). A failed save of the update, or a stop between the two, rolls the create back: the kind counted as
+    /// touched before its first write, so its cache is dropped too, and nothing only the cache still holds is ever
+    /// published (§8.10.5).
+    /// </summary>
+    [TestMethod]
+    [DataRow("save")]
+    [DataRow("stop")]
+    public async Task A_batch_that_fails_between_two_of_its_writes_leaves_no_cache_ahead_of_the_database(string how)
+    {
+        var (f, injector) = await GroupsAsync();
+        var peer = new DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer);
+        var video = SyncKey.New().Value;
+        var v1 = peer.Next();
+        await f.ApplyAsync(link, peer, (Groups, peer.Record([video], v1, GroupContent("Video", ".mkv"))));
+        await f.RefreshAsync();
+        var before = await SnapshotAsync(f);
+        var rows = (await f.RowsAsync(Groups)).Count;
+
+        using var cts = new CancellationTokenSource();
+        var created = false;
+        injector.FailSave = t =>
+        {
+            if (t.Entries<Bakabase.Abstractions.Models.Db.ExtensionGroupDbModel>().Any(e => e.State == EntityState.Added))
+            {
+                created = true;
+                if (how == "stop") cts.Cancel();
+                return false;
+            }
+
+            return how == "save" && created && t.Entries<Bakabase.Abstractions.Models.Db.ExtensionGroupDbModel>()
+                .Any(e => e.State == EntityState.Modified);
+        };
+        var pull = f.Pull(peer,
+            (Groups, peer.Record([SyncKey.New().Value], peer.Next(), GroupContent("Audio", ".mp3"))),
+            (Groups, peer.Record([video], peer.Next(v1), GroupContent("Video", ".mkv", ".mp4"))));
+
+        if (how == "stop")
+        {
+            await Assert.ThrowsExceptionAsync<OperationCanceledException>(() =>
+                f.Runner.RunAutoSyncAsync(Context(link, peer), pull, f.Args(ct: cts.Token)));
+        }
+        else
+        {
+            var outcome = await f.Runner.RunAutoSyncAsync(Context(link, peer), pull, f.Args());
+            Assert.AreEqual(0, outcome.Applied);
+            Assert.AreEqual(DataSyncApplyRunner.ApplyFailedCode, (await f.LinkRowAsync(link.Id)).LastErrorCode);
+        }
+
+        injector.FailSave = null;
+        Assert.IsTrue(created, "the create was written before the failure");
+        Assert.AreEqual(before, await SnapshotAsync(f), "the service's cache matches the database again");
+        await f.RefreshAsync();
+        Assert.AreEqual(rows, (await f.RowsAsync(Groups)).Count, "Refresh finds no definition that only the cache had");
+    }
+
+    /// <summary>
+    /// The savepoint Convert writes phase one under (§8.5.6): taking it back undoes the rows and the service's cache
+    /// written since, and the transaction goes on.
+    /// </summary>
+    [TestMethod]
+    public async Task A_savepoint_rollback_takes_back_the_rows_and_the_caches_written_since()
+    {
+        var (f, _) = await GroupsAsync();
+        await f.AddGroupAsync("Docs", ".pdf");
+        await f.RefreshAsync();
+        var before = await SnapshotAsync(f);
+
+        await using (var s = await DataSyncApplySession.OpenAsync(f.Services.GetRequiredService<IServiceScopeFactory>(), default))
+        {
+            await s.BeginAsync(default);
+            await s.LoadStateAsync(default);
+            await s.SavepointAsync("phase-one", default);
+            await s.Writer(Groups).ApplyAsync(new ApplyBatch(Groups,
+            [
+                new CreateEntityOperation("item-1", new EntityKeys([SyncKey.New()]), "node-x", 0,
+                    GroupContent("Audio", ".mp3")),
+            ]), default);
+            Assert.AreEqual(2, (await s.Services.GetRequiredService<IExtensionGroupService>().GetAll()).Length);
+
+            await s.RollbackToSavepointAsync("phase-one");
+            Assert.AreEqual(1, (await s.Services.GetRequiredService<IExtensionGroupService>().GetAll()).Length,
+                "the service reads the database again");
+            await s.CommitAsync(default);
+        }
+
+        Assert.AreEqual(before, await SnapshotAsync(f));
+    }
+
     [TestMethod]
     public async Task A_failure_in_chunk_two_keeps_chunk_one_and_the_cursor_and_the_resent_records_meet_row_K4()
     {

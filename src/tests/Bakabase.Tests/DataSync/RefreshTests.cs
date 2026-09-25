@@ -600,5 +600,95 @@ public class RefreshTests
         Assert.AreEqual(DataSyncEntitySyncState.LocalOnly, (await f.RowAsync("1")).State);
     }
 
+    [TestMethod]
+    public async Task A_local_change_whose_Refresh_meets_evidence_commits_nothing_under_the_retiring_actor()
+    {
+        var f = await DataSyncRefreshFixture.CreateAsync();
+        await f.LinkAsync("peer-1");
+        f.Kind.Add("1", "Genre", ("a", "Action"));
+        await f.RefreshAsync();
+        var before = await f.StateAsync();
+        var old = new DataSyncActorId(before.ActorId);
+        var issued = DataSyncRefreshFixture.Vv((await f.RowAsync("1")).VvJson)[old];
+        var guard = new EvidenceInFlightGuard(f.Guard);
+        var coordinator = new DataSyncRefreshCoordinator(f.Gate, guard,
+            f.Services.GetRequiredService<IServiceScopeFactory>(), f.Watermark, f.Clock);
+        // A local edit the change's Refresh makes a revision of; while that Refresh runs, a head shows that a peer saw
+        // counters of this actor that this database lost.
+        f.Kind.Definitions["1"].Name = "Genres";
+        f.Kind.OnReadRawHashes = () =>
+        {
+            f.Kind.OnReadRawHashes = null;
+            guard.Arrive("peer-1", before.ActorId, before.ActorCounter + 5);
+        };
+
+        var result = await coordinator.RunLocalChangeAsync([f.KindId], (_, _) => Task.CompletedTask, default);
+
+        Assert.IsFalse(result.Refresh.Skipped);
+        Assert.AreEqual(1, result.Refresh.Changed, "the edit became a revision, on the second attempt");
+        var after = await f.StateAsync();
+        Assert.AreNotEqual(before.ActorId, after.ActorId, "rotated between the attempts, outside any transaction");
+        Assert.AreEqual(before.ActorCounter + 5, DataSyncStoredJson.ReadCounters(after.RetiredActorsJson, "x")[before.ActorId]);
+        var vv = DataSyncRefreshFixture.Vv((await f.RowAsync("1")).VvJson);
+        Assert.AreEqual(issued, vv[old], "no counter of the retiring actor was committed");
+        Assert.AreEqual(1L, vv[new DataSyncActorId(after.ActorId)]);
+        Assert.AreEqual(after.ActorId, f.Watermark.Read().Watermark!.ActorId, "actor.json follows the commit");
+    }
+
+    [TestMethod]
+    public async Task An_overlay_that_withholds_the_same_children_gives_no_Seq()
+    {
+        var f = await DataSyncRefreshFixture.CreateAsync();
+        var link = await f.LinkAsync("peer-1");
+        f.Kind.Add("1", "Genre", ("a", "Action"), ("b", "Drama"));
+        await f.RefreshAsync();
+        var before = await f.RowAsync("1");
+
+        // The same overlay again, then a held child made local-only: neither is published, before or after.
+        await f.Store.SetOverlayAsync(f.KindId, "1", DataSyncOverlay.None, default);
+        await f.Store.SetOverlayAsync(f.KindId, "1", new DataSyncOverlay([], [new DataSyncHeldChild("b", link.Id)]), default);
+        var held = await f.RowAsync("1");
+        Assert.IsTrue(held.Seq > before.Seq, "withholding a published child changes the record (§6.2)");
+        await f.RefreshAsync();
+        held = await f.RowAsync("1");
+        await f.Store.SetOverlayAsync(f.KindId, "1", new DataSyncOverlay(["b"], []), default);
+        await f.Store.SetOverlayAsync(f.KindId, "1", new DataSyncOverlay(["b"], []), default);
+        var result = await f.RefreshAsync();
+
+        var after = await f.RowAsync("1");
+        Assert.AreEqual(0, result.Changed);
+        Assert.AreEqual((held.Seq, held.VvJson, held.SharedHash), (after.Seq, after.VvJson, after.SharedHash),
+            "readers are not sent the same record again");
+    }
+
+    /// <summary>The real guard, and evidence a test makes arrive while a Refresh runs (§5.6).</summary>
+    private sealed class EvidenceInFlightGuard(DataSyncActorGuard inner) : IDataSyncActorGuard
+    {
+        private (string Peer, string Actor, long Counter)? _arrived;
+
+        public void Arrive(string peer, string actor, long counter) => _arrived = (peer, actor, counter);
+
+        public bool IsVerified => _arrived is null && inner.IsVerified;
+
+        public async Task<DataSyncPauseReason?> CheckAsync(DataSyncGateLease lease, CancellationToken ct)
+        {
+            if (_arrived is { } evidence)
+            {
+                _arrived = null;
+                await inner.ReportPeerEvidenceAsync(evidence.Peer, evidence.Actor, evidence.Counter, ct);
+            }
+
+            return await inner.CheckAsync(lease, ct);
+        }
+
+        public Task ReportPeerEvidenceAsync(string peerNodeId, string actorId, long seenCounter, CancellationToken ct) =>
+            inner.ReportPeerEvidenceAsync(peerNodeId, actorId, seenCounter, ct);
+
+        public Task ReportReaderAheadAsync(string readerNodeId, CancellationToken ct) =>
+            inner.ReportReaderAheadAsync(readerNodeId, ct);
+
+        public void MarkVerified() => inner.MarkVerified();
+    }
+
     #endregion
 }

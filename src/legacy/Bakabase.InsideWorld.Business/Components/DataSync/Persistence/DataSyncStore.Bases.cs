@@ -11,6 +11,7 @@ using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Wire;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 
@@ -55,7 +56,9 @@ public sealed partial class DataSyncStore
     /// the record's Seq and primary key. A pending record is re-merged when
     /// <list type="number">
     /// <item>(a newer record for the key in the pull replaces it — the merger's rule, not a query);</item>
-    /// <item>its local entity's Seq moved past <c>PendingEvaluatedLocalSeq</c> (or it was never evaluated);</item>
+    /// <item>its local entity's Seq moved past <c>PendingEvaluatedLocalSeq</c>, or it was never evaluated — which is also
+    /// how a resolution marks a record whose flags it changed, or whose re-merge could not run in the resolving task
+    /// (condition 5's "a resolution changed its flags");</item>
     /// <item>its reason is <c>Retry</c> or <c>OverBudget</c>;</item>
     /// <item>the pull is a full reconciliation;</item>
     /// <item>a once flag of the link targets it: <c>SkipLargeChange</c> the <c>LargeChange</c> records, B2's
@@ -266,7 +269,10 @@ public sealed partial class DataSyncStore
     /// ComparisonFormVersion changes (§6.1).
     /// </summary>
     internal string? SharedHashOf(string kind, DataSyncWireRecord record) =>
-        Kinds.TryGetValue(kind, out var adapter) ? DataSyncEntityForms.RecordSharedHash(adapter.Codec, record) : null;
+        Kinds.TryGetValue(kind, out var adapter)
+            ? DataSyncEntityForms.RecordSharedHash(adapter.Codec, record,
+                _services.GetService<DataSyncLimits>() ?? DataSyncLimits.Default)
+            : null;
 
     /// <summary>
     /// Retire and rekey (§5.3): on every link, the base keyed <paramref name="fromKey"/> is re-keyed to
