@@ -154,46 +154,21 @@ public sealed class DataSyncRecordAssembler
 
     private DataSyncIncomingEntity Stage(DataSyncWireRecord record, int index)
     {
-        var fallbackName = "#" + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        if (record.Deleted) return new DataSyncIncomingEntity(record, null, null, null, fallbackName, null, []);
-        if (record.HeldAtSource is not null)
-            return new DataSyncIncomingEntity(record, null, null, null, fallbackName, DataSyncHeldReason.AtSource, []);
-
-        var content = record.Content!;
-        if (record.Chunks > 0)
+        if (!record.Deleted && record.HeldAtSource is null && record.Chunks > 0)
         {
+            var content = record.Content!;
             var reassembled = Reassemble(record, content);
-            if (reassembled is null) return Held(record, content, fallbackName, DataSyncHeldReason.Invalid, []);
-            content = reassembled;
-            record = record with { Content = content, Chunks = 0 };
+            if (reassembled is null)
+            {
+                var fallbackName = "#" + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return Held(record, content, fallbackName, DataSyncHeldReason.Invalid, []);
+            }
+
+            record = record with { Content = reassembled, Chunks = 0 };
         }
 
-        if (record.Hash != Canonical.ContentHash.Of(content))
-            return Held(record, content, fallbackName, DataSyncHeldReason.Invalid, []);
-
-        var descriptor = _codec.Descriptor;
-        var current = (JsonObject)content.DeepClone();
-        if (record.SchemaVersion > descriptor.SchemaVersion)
-            return Held(record, content, fallbackName, DataSyncHeldReason.NewerSchema, []);
-        if (record.SchemaVersion < descriptor.SchemaVersion)
-        {
-            try
-            {
-                current = _codec.Upgrade(current, record.SchemaVersion);
-            }
-            catch (DataSyncHeldException e)
-            {
-                return Held(record, content, fallbackName, e.Reason, []);
-            }
-        }
-
-        var read = _codec.Read(current, _limits);
-        if (read.Held is { } held) return Held(record, content, fallbackName, held, read.Warnings);
-
-        var typed = read.Content!;
-        var name = _codec.NameOf(typed);
-        return new DataSyncIncomingEntity(record, typed, read.Unknown, Canonical.ContentHash.Of(_codec.Write(typed)),
-            string.IsNullOrEmpty(name) ? fallbackName : name, null, read.Warnings);
+        // Validation is shared with the merger's re-staging of pending records (§8.4).
+        return DataSyncRecordValidation.Stage(_codec, record, index, _limits);
     }
 
     /// <summary>The content with its chunks put back, or null when a chunk is missing or they disagree.</summary>

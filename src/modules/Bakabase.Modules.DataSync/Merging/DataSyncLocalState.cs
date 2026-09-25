@@ -17,9 +17,15 @@ public sealed record DataSyncLocalEntityState(
     DataSyncEntitySyncState State, DataSyncOverlay Overlay, bool ChildrenLocal, bool CreatedBySync, bool PublishHeld,
     JsonObject? Unknown, int? ValueCount, long Seq, bool Unreadable = false);
 
+/// <param name="Seq">
+/// The tombstone row's feed sequence (§6.2). A pending record stored against the tombstone remembers it as
+/// <see cref="DataSyncPendingRecord.EvaluatedAtLocalSeq"/>, so it is re-merged only when the row changes (§8.4
+/// condition 2). 0 when unknown: the record is then re-merged whenever the row has any Seq.
+/// </param>
 public sealed record DataSyncTombstoneState(EntityKeys Keys, DataSyncVersionVector Vv, DataSyncEditorRef? LastEditor,
-    DataSyncEntitySyncState StateAtDeletion, DataSyncTombstoneKind TombstoneKind, bool Served);
+    DataSyncEntitySyncState StateAtDeletion, DataSyncTombstoneKind TombstoneKind, bool Served, long Seq = 0);
 
+/// <param name="Entities">Live rows of the kind in any state, in local order (the adapter's order).</param>
 public sealed record DataSyncLocalKindState(string Kind, IReadOnlyList<DataSyncLocalEntityState> Entities,
     IReadOnlyList<DataSyncTombstoneState> Tombstones);
 
@@ -63,10 +69,27 @@ public static class DataSyncLocalStateExtensions
 {
     /// <summary>
     /// The first-contact planner's input (v3.1's LocalKindSnapshot): only Synced entities are candidates;
-    /// TombstonedKeys = every key of a tombstone ∪ aliases pointing at tombstoned rows (v3.1 §5.3).
+    /// TombstonedKeys = every key of a tombstone ∪ aliases pointing at tombstoned rows (v3.1 §5.3). A tombstone's
+    /// <see cref="DataSyncTombstoneState.Keys"/> already hold its aliases. <c>Position</c> is the entity's place in
+    /// <see cref="DataSyncLocalKindState.Entities"/> (local order), counted over every live row so it is the same
+    /// whichever rows are candidates; <c>ContentHash</c> is the local hash (§3.1).
     /// </summary>
-    public static LocalKindSnapshot ToPlannerSnapshot(this DataSyncLocalKindState state) =>
-        throw new NotImplementedException();
+    public static LocalKindSnapshot ToPlannerSnapshot(this DataSyncLocalKindState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        var entities = new List<LocalIdentifiedEntity>();
+        for (var i = 0; i < state.Entities.Count; i++)
+        {
+            var entity = state.Entities[i];
+            if (entity.State != DataSyncEntitySyncState.Synced) continue;
+            entities.Add(new LocalIdentifiedEntity(entity.LocalKey, entity.Keys, i, entity.Content, entity.LocalHash,
+                entity.Unreadable));
+        }
+
+        var tombstoned = new HashSet<SyncKey>();
+        foreach (var tombstone in state.Tombstones) tombstoned.UnionWith(tombstone.Keys.All);
+        return new LocalKindSnapshot(state.Kind, entities, tombstoned);
+    }
 }
 
 // §2.6: staged incoming data.

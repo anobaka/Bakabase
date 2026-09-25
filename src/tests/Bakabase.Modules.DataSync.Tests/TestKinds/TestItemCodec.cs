@@ -28,8 +28,18 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
 
     public static TestItemCodec Instance { get; } = new();
 
-    public override DataSyncKindDescriptor Descriptor { get; } = new(Kind, 1, [], typeof(TestItemContent),
-        AutoLinkIdentical: false, HasOrder: true, HasChildren: true, SupportsChildrenLocal: false, ChildNoun: "child");
+    /// <param name="schemaVersion">
+    /// The content schema this build writes; above 1, older content upgrades unchanged (a simulated upgrade of the
+    /// build, §8.12).
+    /// </param>
+    public TestItemCodec(int schemaVersion = 1) =>
+        Descriptor = new DataSyncKindDescriptor(Kind, schemaVersion, [], typeof(TestItemContent),
+            AutoLinkIdentical: false, HasOrder: true, HasChildren: true, SupportsChildrenLocal: false, ChildNoun: "child");
+
+    public override DataSyncKindDescriptor Descriptor { get; }
+
+    public override JsonObject Upgrade(JsonObject content, int fromSchemaVersion) =>
+        fromSchemaVersion < Descriptor.SchemaVersion ? content : base.Upgrade(content, fromSchemaVersion);
 
     public override int ComparisonFormVersion => 1;
 
@@ -41,7 +51,7 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
         JsonObject? unknown = null;
         foreach (var (member, value) in content.OrderBy(m => m.Key, StringComparer.Ordinal))
         {
-            if (member is "name" or "color" or "children") continue;
+            if (member is "name" or "color" or "children" or "type") continue;
             (unknown ??= new JsonObject())[member] = value?.DeepClone();
         }
 
@@ -50,6 +60,14 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
 
         if (!TryGetString(content, "name", out var name) || name.Length == 0 || name.Length > limits.MaxNameLength ||
             !IsClean(name)) return Held("name", warnings, unknown);
+
+        string? type = null;
+        if (content.ContainsKey("type"))
+        {
+            if (!TryGetString(content, "type", out var t) || t.Length is 0 or > 64 || !IsClean(t))
+                return Held("type", warnings, unknown);
+            type = t;
+        }
 
         string? color = null;
         if (content.ContainsKey("color"))
@@ -86,23 +104,25 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
             }
         }
 
-        return new CodecReadResult(new TestItemContent(name, color, children), null, [], warnings, unknown);
+        return new CodecReadResult(new TestItemContent(name, color, children, type), null, [], warnings, unknown);
     }
 
     public override TestItemContent ReadLocal(JsonObject content)
     {
         var name = (string?)content["name"] ?? throw new InvalidOperationException("No name.");
         var color = (string?)content["color"];
+        var type = (string?)content["type"];
         var children = content["children"] is JsonArray array
             ? array.Select(n => new TestChild((string)n!["id"]!, (string)n["label"]!))
             : [];
-        return new TestItemContent(name, color, children);
+        return new TestItemContent(name, color, children, type);
     }
 
     public override JsonObject Write(TestItemContent content)
     {
         var json = new JsonObject { ["name"] = content.Name };
         if (content.Color is not null) json["color"] = content.Color;
+        if (content.Type is not null) json["type"] = content.Type;
         if (content.Children.Count > 0)
         {
             json["children"] = new JsonArray(content.Children
@@ -113,6 +133,7 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
     }
 
     public override string NameOf(TestItemContent content) => content.Name;
+    public override string? SubtypeOf(TestItemContent content) => content.Type;
     public override int ChildCountOf(TestItemContent content) => content.Children.Count;
 
     public override IReadOnlyList<DataSyncChildInfo> ChildrenOf(TestItemContent content) =>
@@ -122,6 +143,8 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
 
     public override DataSyncNaturalMatch MatchNatural(TestItemContent incoming, TestItemContent local)
     {
+        var sameName = string.Equals(incoming.Name.Trim(), local.Name.Trim(), StringComparison.OrdinalIgnoreCase);
+        if (sameName && incoming.Type != local.Type) return DataSyncNaturalMatch.Clash;
         if (incoming.Name == local.Name)
         {
             return JsonNode.DeepEquals(ComparisonForm(incoming, null, false), ComparisonForm(local, null, false))
@@ -219,6 +242,7 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
         var form = new JsonObject { ["name"] = publishedContent.Name };
         if (publishedContent.Color is not null) form["color"] = publishedContent.Color;
         if (orderKey is not null) form["orderKey"] = orderKey;
+        if (publishedContent.Type is not null) form["type"] = publishedContent.Type;
         form["children"] = new JsonArray(labels.Select(l => (JsonNode?)JsonValue.Create(l)).ToArray());
         return form;
     }
@@ -240,18 +264,20 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
             input.LocalLastEditorIsSelf);
 
         // B4 (§8.5.4 step 7).
-        var policy = DataSyncAutoApplyPolicy.Default;
-        var visibleCount = plan.VisibleLocalCount;
-        var tripped = plan.Candidates.Count > policy.MaxChildDeletionsPerEntity ||
-                      (visibleCount >= policy.MinChildrenForRatio &&
-                       plan.Candidates.Count > policy.MaxChildDeletionRatio * visibleCount);
+        var tripped = DataSyncBreakers.IsMassChildDeletion(plan.Candidates.Count, plan.VisibleLocalCount,
+            DataSyncAutoApplyPolicy.Default);
         if (tripped && input.ChildDeletions == DataSyncChildDeletionMode.Normal)
         {
             return new DataSyncMerge3Result(local, [], new Dictionary<string, string>(input.ChildMap), [], [], [], [],
                 plan.Candidates, [], false);
         }
 
-        var name = MergeScalar("name", baseContent?.Name, local.Name, remote.Name, input, fields);
+        var name = MergeScalar("name", baseContent is not null, baseContent?.Name, local.Name, remote.Name, input, fields)!;
+        // A peer's type change never reaches Merge3 (the merger freezes it, §8.5.6); a local one is kept, and
+        // Convert takes the peer's.
+        var type = input.Mode3 == DataSyncMerge3Mode.Convert
+            ? remote.Type
+            : MergeScalar("type", baseContent is not null, baseContent?.Type, local.Type, remote.Type, input, fields);
         var color = MergeColor(baseContent, local, remote, input, fields);
 
         var children = new List<TestChild>();
@@ -297,7 +323,7 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
         }
 
         fields.AddRange(plan.Fields);
-        var merged = new TestItemContent(name, color, children);
+        var merged = new TestItemContent(name, color, children, type);
         return new DataSyncMerge3Result(merged, fields, plan.ChildMap, plan.Adds.Select(a => a.Id).ToList(), removed,
             held, plan.Released, [], warnings, false);
     }
@@ -461,13 +487,13 @@ public sealed class TestItemCodec : DataSyncKindCodec<TestItemContent>
         return map;
     }
 
-    private static string MergeScalar(string path, string? b, string l, string r, DataSyncMerge3Input input,
+    private static string? MergeScalar(string path, bool hasBase, string? b, string? l, string? r, DataSyncMerge3Input input,
         List<DataSyncFieldOutcome> fields)
     {
         if (l == r) return l;
         DataSyncFieldResolution resolution;
         if (input.Mode3 is DataSyncMerge3Mode.FastForward) resolution = DataSyncFieldResolution.TookRemote;
-        else if (b is not null && input.Mode3 is DataSyncMerge3Mode.ThreeWay or DataSyncMerge3Mode.Convert)
+        else if (hasBase && input.Mode3 is DataSyncMerge3Mode.ThreeWay or DataSyncMerge3Mode.Convert)
             resolution = l == b ? DataSyncFieldResolution.TookRemote
                 : r == b ? DataSyncFieldResolution.KeptLocal
                 : Concurrent(input.Mode, input.LocalLastEditorIsSelf);
