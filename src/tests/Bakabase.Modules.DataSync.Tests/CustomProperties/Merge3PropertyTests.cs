@@ -20,9 +20,12 @@ namespace Bakabase.Modules.DataSync.Tests.CustomProperties;
 [TestClass]
 public class Merge3PropertyTests
 {
-    /// <summary>2,000 seeded runs in CI; <c>DATASYNC_MERGE3_RUNS</c> raises it for a local hunt.</summary>
+    /// <summary>
+    /// 10,000 seeded runs per property in CI (a few seconds each); <c>DATASYNC_MERGE3_RUNS</c> raises it for a local hunt
+    /// or a nightly run (a million takes minutes).
+    /// </summary>
     private static readonly int Runs =
-        int.TryParse(Environment.GetEnvironmentVariable("DATASYNC_MERGE3_RUNS"), out var runs) && runs > 0 ? runs : 2_000;
+        int.TryParse(Environment.GetEnvironmentVariable("DATASYNC_MERGE3_RUNS"), out var runs) && runs > 0 ? runs : 10_000;
 
     [TestMethod]
     public void FastForwardClosure()
@@ -73,26 +76,181 @@ public class Merge3PropertyTests
         var compared = 0;
         for (var seed = 0; seed < Runs; seed++)
         {
-            var gen = new Merge3Generator(1_000_000 + seed);
-            var type = gen.Type();
-            var @base = Peer(gen.Content(type, "b"));
-            var l = gen.Mutate(@base, "l", gen.Edits());
-            var r = gen.Mutate(@base, "r", gen.Edits());
-            var winner = gen.Winner();
-            var other = winner == DataSyncMergeSide.Local ? DataSyncMergeSide.Remote : DataSyncMergeSide.Local;
-
-            var lr = Merge(@base, l, r, winner: winner, deletions: DataSyncChildDeletionMode.Apply);
-            var rl = Merge(@base, r, l, winner: other, deletions: DataSyncChildDeletionMode.Apply);
-            if (lr.TypeChanged || rl.TypeChanged || HasConflict(lr) || HasConflict(rl)) continue;
-            compared++;
-            var trace = $"seed {seed}\nbase {Canon(@base)}\nl    {Canon(l)}\nr    {Canon(r)}\n" +
-                        $"lr   {Canon(Merged(lr))}\nrl   {Canon(Merged(rl))}";
-            Assert.AreEqual(PublishedForm(lr), PublishedForm(rl), trace);
-            AssertNothingLost(l, lr, trace);
-            AssertNothingLost(r, rl, trace);
+            if (Symmetric(seed)) compared++;
         }
 
         Assert.IsTrue(compared > Runs / 2, $"only {compared} of {Runs} runs merged without conflicts");
+    }
+
+    /// <summary>
+    /// Seeds the symmetry property once failed at, among five million, before the merge placed a split multilevel class
+    /// part by part and chose colours by what both sides share: kept so they run in every CI run.
+    /// </summary>
+    [TestMethod]
+    [DataRow(1016)] [DataRow(1068)] [DataRow(5013)] [DataRow(11760)] [DataRow(26009)] [DataRow(43235)]
+    [DataRow(45218)] [DataRow(49155)] [DataRow(50401)] [DataRow(50411)] [DataRow(58167)] [DataRow(59591)]
+    [DataRow(72691)] [DataRow(83618)] [DataRow(95173)] [DataRow(107159)] [DataRow(108059)] [DataRow(140793)]
+    [DataRow(150733)] [DataRow(173521)] [DataRow(175462)] [DataRow(176199)] [DataRow(255156)] [DataRow(279716)]
+    [DataRow(303262)] [DataRow(331867)] [DataRow(346233)] [DataRow(449978)] [DataRow(560962)] [DataRow(709437)]
+    [DataRow(728814)] [DataRow(785827)] [DataRow(821985)] [DataRow(875631)] [DataRow(2200856)] [DataRow(2450700)]
+    [DataRow(3003340)] [DataRow(3531563)]
+    public void SymmetricMerge_AtSeedsThatOnceFailed(int seed) => Assert.IsTrue(Symmetric(seed), "merged with a conflict");
+
+    /// <summary>One run of the symmetry property: false when either direction has a conflict (nothing to compare).</summary>
+    private static bool Symmetric(int seed)
+    {
+        var gen = new Merge3Generator(1_000_000 + seed);
+        var type = gen.Type();
+        var @base = Peer(gen.Content(type, "b"));
+        var l = gen.Mutate(@base, "l", gen.Edits());
+        var r = gen.Mutate(@base, "r", gen.Edits());
+        var winner = gen.Winner();
+        var other = winner == DataSyncMergeSide.Local ? DataSyncMergeSide.Remote : DataSyncMergeSide.Local;
+
+        var lr = Merge(@base, l, r, winner: winner, deletions: DataSyncChildDeletionMode.Apply);
+        var rl = Merge(@base, r, l, winner: other, deletions: DataSyncChildDeletionMode.Apply);
+        if (lr.TypeChanged || rl.TypeChanged || HasConflict(lr) || HasConflict(rl)) return false;
+        var trace = $"seed {seed}\nbase {Canon(@base)}\nl    {Canon(l)}\nr    {Canon(r)}\n" +
+                    $"lr   {Canon(Merged(lr))}\nrl   {Canon(Merged(rl))}";
+        Assert.AreEqual(PublishedForm(lr), PublishedForm(rl), trace);
+        AssertNothingLost(l, lr, trace);
+        AssertNothingLost(r, rl, trace);
+        return true;
+    }
+
+    /// <summary>A peer that changed nothing since the base changes nothing here (§8.5.2's <c>b|l|b → l</c>, per path).</summary>
+    [TestMethod]
+    public void ThreeWay_WithTheRemoteAtTheBase_ReturnsLocalUnchanged()
+    {
+        for (var seed = 0; seed < Runs; seed++)
+        {
+            var gen = new Merge3Generator(3_000_000 + seed);
+            var @base = Peer(gen.Content(gen.Type(), "b"));
+            var l = gen.Mutate(@base, "l", gen.Edits());
+            var mode = seed % 3 == 0 ? DataSyncLinkMode.Follow : DataSyncLinkMode.TwoWay;
+            var result = Merge(@base, l, @base, winner: gen.Winner(), mode: mode,
+                deletions: DataSyncChildDeletionMode.Apply);
+            Assert.AreEqual(Canon(l), Canon(Merged(result)),
+                $"seed {seed}\nbase {Canon(@base)}\nl    {Canon(l)}\n{Outcomes(result)}");
+        }
+    }
+
+    /// <summary>Without a base nothing is moved in two-way (§8.5.4 step 6): no local node changes its parent.</summary>
+    [TestMethod]
+    public void NoBaseTwoWay_NeverChangesANodesParent()
+    {
+        for (var seed = 0; seed < Runs; seed++)
+        {
+            var gen = new Merge3Generator(4_000_000 + seed);
+            var @base = Peer(gen.Content(PropertyType.Multilevel, "b"));
+            var l = gen.Mutate(@base, "l", gen.Edits());
+            var r = gen.Mutate(@base, "r", gen.Edits());
+            var result = Merge(null, l, r, DataSyncMerge3Mode.NoBase, winner: gen.Winner());
+            if (result.TypeChanged) continue;
+            var after = Parents(Merged(result));
+            foreach (var (id, parent) in Parents(l))
+            {
+                Assert.AreEqual(parent, after.GetValueOrDefault(id, parent),
+                    $"{id} moved\nseed {seed}\nl    {Canon(l)}\nr    {Canon(r)}\nm    {Canon(Merged(result))}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Every local node whose parent changes has a <c>node:{peerId}:parent</c> outcome that took the peer's value, for
+    /// the class it ends in (§8.5.4 steps 1 and 8): in ThreeWay and NoBase, two-way and Follow.
+    /// </summary>
+    [TestMethod]
+    public void EveryParentChange_HasAParentOutcome()
+    {
+        for (var seed = 0; seed < Runs; seed++)
+        {
+            var gen = new Merge3Generator(5_000_000 + seed);
+            var @base = Peer(gen.Content(PropertyType.Multilevel, "b"));
+            var l = gen.Mutate(@base, "l", gen.Edits());
+            var r = gen.Mutate(@base, "r", gen.Edits());
+            var mode = seed % 2 == 0 ? DataSyncLinkMode.Follow : DataSyncLinkMode.TwoWay;
+            var threeWay = Merge(@base, l, r, winner: gen.Winner(), mode: mode, deletions: DataSyncChildDeletionMode.Apply);
+            var noBase = Merge(null, l, r, DataSyncMerge3Mode.NoBase, winner: gen.Winner(), mode: mode);
+            foreach (var (name, result) in new[] { ("ThreeWay", threeWay), ("NoBase", noBase) })
+            {
+                if (result.TypeChanged) continue;
+                var moved = UnreportedMove(l, r, result);
+                Assert.IsNull(moved, $"{name}: {moved} moved without an outcome\nseed {seed}\nbase {Canon(@base)}\n" +
+                                     $"l    {Canon(l)}\nr    {Canon(r)}\nm    {Canon(Merged(result))}\n{Outcomes(result)}");
+            }
+        }
+    }
+
+    private static string Outcomes(DataSyncMerge3Result result) =>
+        string.Join("; ", result.Fields.Select(f => $"{f.Path}={f.Resolution}"));
+
+    /// <summary>Every node's parent id (<c>""</c> for a root), by node id.</summary>
+    private static Dictionary<string, string> Parents(CustomPropertyContentV1 content)
+    {
+        var parents = new Dictionary<string, string>(StringComparer.Ordinal);
+        Walk(content.Nodes, "");
+        return parents;
+
+        void Walk(IReadOnlyList<CustomPropertyNodeV1> nodes, string parent)
+        {
+            foreach (var node in nodes)
+            {
+                if (node.Uuid is { } uuid) parents.TryAdd(uuid, parent);
+                Walk(node.Children, node.Uuid ?? "");
+            }
+        }
+    }
+
+    /// <summary>
+    /// A local node whose parent the merge changed although no parent outcome that took the peer's value names the
+    /// class it ends in — the peer class whose members map into that class — or null.
+    /// </summary>
+    private static string? UnreportedMove(CustomPropertyContentV1 local, CustomPropertyContentV1 remote,
+        DataSyncMerge3Result result)
+    {
+        var merged = Merged(result);
+        var ignoreCase = merged.IgnoreCase ?? false;
+        var paths = new Dictionary<string, string>(StringComparer.Ordinal);
+        KeyPaths(merged.Nodes, "");
+        var classOf = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        Index(ChildClasses.OfNodes(Peer(remote).Nodes, ignoreCase));
+        var took = result.Fields
+            .Where(f => f.Path.StartsWith("node:", StringComparison.Ordinal) &&
+                        f.Path.EndsWith(":parent", StringComparison.Ordinal) && ChildMerge3.TakesRemote(f.Resolution))
+            .Select(f => f.Path["node:".Length..^":parent".Length])
+            .ToArray();
+        var after = Parents(merged);
+        foreach (var (id, parent) in Parents(local))
+        {
+            if (!after.TryGetValue(id, out var now) || now == parent) continue;
+            var reported = took.Any(p => classOf.GetValueOrDefault(p, [p]).Any(m =>
+                result.ChildMap.TryGetValue(m, out var target) && paths.TryGetValue(target, out var path) &&
+                path == paths[id]));
+            if (!reported) return id;
+        }
+
+        return null;
+
+        void KeyPaths(IReadOnlyList<CustomPropertyNodeV1> nodes, string path)
+        {
+            foreach (var node in nodes)
+            {
+                var own = path + "\u0001" + DataSyncLabelKey.Fold(node.Label, ignoreCase);
+                if (node.Uuid is { } uuid) paths.TryAdd(uuid, own);
+                KeyPaths(node.Children, own);
+            }
+        }
+
+        void Index(IReadOnlyList<NodeClass> classes)
+        {
+            foreach (var cls in classes)
+            {
+                var ids = cls.Members.Select(m => m.Uuid!).ToArray();
+                classOf.TryAdd(ids[0], ids);
+                Index(cls.Children);
+            }
+        }
     }
 
     [TestMethod]

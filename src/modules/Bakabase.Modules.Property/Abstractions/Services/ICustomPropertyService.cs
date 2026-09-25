@@ -37,6 +37,18 @@ public interface ICustomPropertyService
 
     // Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> Add(Bakabase.Abstractions.Models.Db.CustomProperty resource);
     Task<CustomProperty> Put(int id, CustomPropertyAddOrPutDto model);
+
+    /// <summary>
+    /// <see cref="AddRange(CustomPropertyAddOrPutDto[])"/> and <see cref="Put"/> storing the options exactly as given:
+    /// case-variant duplicates under IgnoreCase are not folded. Only for options that were stored so before — data
+    /// sync writes a captured row back with them (undo, §8.11), and such a row may hold duplicates the normalizer
+    /// would fold, stored before IgnoreCase was switched on (F72).
+    /// </summary>
+    Task<List<CustomProperty>> AddRangeVerbatim(CustomPropertyAddOrPutDto[] models);
+
+    /// <inheritdoc cref="AddRangeVerbatim"/>
+    Task<CustomProperty> PutVerbatim(int id, CustomPropertyAddOrPutDto model);
+
     Task Sort(int[] ids);
 
     /// <summary>

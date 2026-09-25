@@ -147,15 +147,18 @@ public class CustomPropertyDataSyncKindTests
     }
 
     [TestMethod]
-    public async Task LocalOptionsAreReadUnvalidated_AndAnUpdateWritesThemBack()
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task LocalOptionsAreReadUnvalidated_AndAnUpdateWritesThemBack(bool ignoreCase)
     {
         // v3.1 B3, §3.3: a 200-character id, a duplicate id, a control character, a null label and an option without
-        // an id are all local data: read as they are, kept by a merge and written back by the update.
+        // an id are all local data: read as they are, kept by a merge and written back by the update. Under IgnoreCase
+        // the update goes through the service's normalizer, which must not give the option without an id a random one.
         var longUuid = new string('f', 200);
         var id = await AddAsync("Genre", PropertyType.MultipleChoice);
         await SetRawOptionsAsync(id, JsonConvert.SerializeObject(new
         {
-            IgnoreCase = false,
+            IgnoreCase = ignoreCase,
             Choices = new object[]
             {
                 new { Value = longUuid, Label = "Long", Color = (string?) null },
@@ -329,19 +332,19 @@ public class CustomPropertyDataSyncKindTests
     }
 
     [TestMethod]
-    public async Task Create_OfIgnoreCaseDuplicates_KeepsTheFirst()
+    public async Task Create_StoresItsContentAsGiven_IgnoreCaseDuplicatesIncluded()
     {
-        // PrepareCreate folds them first (v3.1 H4); if a content still held them, the service would fold them the same way.
-        var outcome = await ApplyAsync(Create("c", new CustomPropertyContentV1
+        // A peer's create never holds them: PrepareCreate folds them first (v3.1 H4). A re-created property does (§8.11,
+        // F72): it keeps every captured option id, so the service does not fold them.
+        var given = new CustomPropertyContentV1
         {
             Name = "Genre", Type = PropertyType.MultipleChoice, IgnoreCase = true,
             Choices = [new("a", "Action", null), new("b", "action", null), new("c", "Drama", null)],
             DefaultValue = [OptionRef.Choice("b", "action")],
-        }));
-        var content = (CustomPropertyContentV1) Codec.ReadLocal(
-            (await Kind.ReadAsync([outcome.CreatedLocalKeysByItemId["c"]], CancellationToken.None)).Single().Content);
-        CollectionAssert.AreEqual(new[] { "a", "c" }, content.Choices.Select(c => c.Uuid).ToArray());
-        Assert.AreEqual("a", content.DefaultValue.Single().Uuid);
+        };
+        var outcome = await ApplyAsync(Create("c", given));
+        var created = (await Kind.ReadAsync([outcome.CreatedLocalKeysByItemId["c"]], CancellationToken.None)).Single();
+        Assert.AreEqual(Canon(Codec.Write(given)), Canon(created.Content));
     }
 
     /// <summary>The data sync row of the write-path matrix (v3.1 §11.3, B0).</summary>
@@ -710,6 +713,40 @@ public class CustomPropertyDataSyncKindTests
         var brokenImage = (await Kind.CapturePreImageAsync([Key(broken)], CancellationToken.None))[Key(broken)];
         Assert.IsNull(brokenImage["content"]);
         Assert.AreEqual("{broken", brokenImage["options"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public async Task APreImageWithIgnoreCaseDuplicatesRestoresAndRecreatesThemAll()
+    {
+        // F72: duplicates added with IgnoreCase off and kept when it was switched on (the fixture's Genre, Keywords
+        // and Region). A peer deletion of the class {Action, action} removes both; undo brings both back, ids and all.
+        var id = await AddAsync("Genre", PropertyType.MultipleChoice, Choices(("a", "Action"), ("b", "action"), ("c", "Drama")));
+        var ignoring = Choices(("a", "Action"), ("b", "action"), ("c", "Drama"));
+        ignoring.IgnoreCase = true;
+        await Properties.Put(id, new CustomPropertyAddOrPutDto
+        {
+            Name = "Genre", Type = PropertyType.MultipleChoice, Options = JsonConvert.SerializeObject(ignoring),
+        });
+        var before = await ReadOneAsync(id);
+        var captured = (CustomPropertyContentV1) Codec.ReadLocal(before.Content);
+        CollectionAssert.AreEqual(new[] { "a", "b", "c" }, captured.Choices.Select(c => c.Uuid).ToArray());
+        var beforeHash = ContentHash.Of(before.Content);
+        var preImage = (await Kind.CapturePreImageAsync([Key(id)], CancellationToken.None))[Key(id)];
+
+        await ApplyAsync(Update("u", id, before, captured with { Choices = [captured.Choices[2]] }));
+        CollectionAssert.AreEqual(new[] { "c" },
+            ((CustomPropertyContentV1) Codec.ReadLocal((await ReadOneAsync(id)).Content)).Choices.Select(c => c.Uuid).ToArray());
+
+        await Kind.RestoreAsync(Key(id), preImage, CancellationToken.None);
+        Assert.AreEqual(beforeHash, ContentHash.Of((await ReadOneAsync(id)).Content), "faithful: the canonical hash");
+        Assert.AreEqual(preImage["options"]!.GetValue<string>(), (await StoredRowAsync(id)).Options, "the raw options too");
+
+        // Undo of a deletion (§8.11 Recreate): the same ids again, under a new local id.
+        await Kind.DeleteAsync(Key(id), CancellationToken.None);
+        var outcome = await ApplyAsync(new CreateEntityOperation("r", EntityKeys.None, "self", 0,
+            preImage["content"]!.AsObject()));
+        var recreated = (await Kind.ReadAsync([outcome.CreatedLocalKeysByItemId["r"]], CancellationToken.None)).Single();
+        Assert.AreEqual(Canon(before.Content), Canon(recreated.Content));
     }
 
     [TestMethod]

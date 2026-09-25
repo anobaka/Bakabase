@@ -48,6 +48,9 @@ internal sealed class ChildNode(string? uuid, string label, string? group, strin
     /// <summary>The peer class this node was created for (an add or an edit-wins restore).</summary>
     public PeerClass? CreatedFor { get; set; }
 
+    /// <summary>The part of <see cref="CreatedFor"/> it was created for, when it is not the class's own add.</summary>
+    public SplitPart? Part { get; set; }
+
     public bool Removed { get; set; }
 
     /// <summary>Held by this merge (the peer deleted it and it is in use here).</summary>

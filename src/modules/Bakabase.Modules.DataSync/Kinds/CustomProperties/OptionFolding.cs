@@ -16,8 +16,11 @@ namespace Bakabase.Modules.DataSync.Kinds.CustomProperties;
 /// its own merges. Default values are mapped through the aliases and deduplicated.
 /// </para>
 /// <para>
-/// One deliberate difference: an option without a uuid is never folded. The normalizer would fail on it (it aliases
-/// by id); here it is kept, so a merge can never drop a local option (v3.1 B3).
+/// One deliberate difference: an option without a uuid is never folded; here it is kept, so a merge can never drop a
+/// local option (v3.1 B3). The service reads such an option with a fresh random id (a choice: <c>ChoiceOptions.Value</c>
+/// defaults to a new guid) or none (a tag or a node). A Put that folds nothing stores the options exactly as given, so
+/// the option comes back without an id; one that folds, folds a duplicate choice among them away and fails on a
+/// duplicate tag or node (it aliases by id).
 /// </para>
 /// <para><c>OptionEquivalenceCrossCheckTests</c> runs this and the normalizer over the same inputs.</para>
 /// </remarks>

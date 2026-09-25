@@ -24,9 +24,9 @@ namespace Bakabase.Modules.Property.Components.DataSync;
 /// <summary>
 /// The <c>customProperty</c> adapter (v3.1 §2.2, §8.3; §2.3 here): I/O only, next to the service that owns the table.
 /// It reads the stored rows through <see cref="ICustomPropertyService"/>'s cache and writes only through the service —
-/// <c>AddRange</c>, <c>Put</c>, <c>SetOrders</c>, <c>ChangeType</c> and <c>RemoveByKey</c> — on the scope's context,
-/// so every write joins the caller's transaction. The pure half (validation, publishing, comparison, merging) is
-/// <see cref="CustomPropertyCodec"/>.
+/// <c>AddRangeVerbatim</c>, <c>Put</c>, <c>PutVerbatim</c>, <c>SetOrders</c>, <c>ChangeType</c> and <c>RemoveByKey</c> —
+/// on the scope's context, so every write joins the caller's transaction. The pure half (validation, publishing,
+/// comparison, merging) is <see cref="CustomPropertyCodec"/>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -216,9 +216,13 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
 
     /// <summary>
     /// Creates, updates, binds, deletes and changes subtypes in batch order (v3.1 §8.3, §8.5.6). Consecutive creates
-    /// are one <c>AddRange</c>, results in input order. An update, delete or subtype change whose entity is gone, is
-    /// unreadable or no longer hashes to <c>ExpectedLocalHash</c> is skipped as ChangedDuringApply; nothing throws for
-    /// it. Placement of creates is <see cref="ApplyOrderAsync"/>'s, after every batch (§3.7).
+    /// are one <c>AddRangeVerbatim</c>, results in input order: a create stores its content as given. A peer's create
+    /// is folded by <c>PrepareCreate</c> before it gets here (v3.1 H4), and a re-created property (undo of a deletion,
+    /// §8.11) keeps every captured option id, case-variant duplicates under IgnoreCase included (F72). An update is a
+    /// <c>Put</c>, whose normalizer folds nothing the merge left: its result is already folded as the service folds
+    /// it. An update, delete or subtype change whose entity is gone, is unreadable or no longer hashes to
+    /// <c>ExpectedLocalHash</c> is skipped as ChangedDuringApply; nothing throws for it. Placement of creates is
+    /// <see cref="ApplyOrderAsync"/>'s, after every batch (§3.7).
     /// </summary>
     public async Task<ApplyBatchOutcome> ApplyAsync(ApplyBatch batch, CancellationToken ct)
     {
@@ -244,7 +248,7 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
                     }
 
                     i--;
-                    var properties = await _properties.AddRange(creates.Select(c =>
+                    var properties = await _properties.AddRangeVerbatim(creates.Select(c =>
                     {
                         var content = SharedCodec.ReadLocal(c.Content);
                         return new CustomPropertyAddOrPutDto
@@ -311,7 +315,9 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
     }
 
     /// <summary>
-    /// Writes a captured pre-image back through <c>Put</c>: the name and the stored options string, exactly as captured.
+    /// Writes a captured pre-image back through <c>PutVerbatim</c>: the name and the stored options string, exactly as
+    /// captured — case-variant duplicates under IgnoreCase that are no longer stored included, which <c>Put</c> would
+    /// fold (F72).
     /// <c>CreatedAt</c> and <c>Order</c> are kept. The property must still exist with the captured type: a type change
     /// is undone by <see cref="ChangeSubtypeAsync"/> first. An unreadable property is never written, and unreadable
     /// captured options are never restored.
@@ -333,7 +339,8 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
         var options = preImage[PreImageOptions]?.GetValue<string>();
         if (CustomPropertyContentMapper.ReadRow(name, type, options).Unreadable)
             throw new InvalidOperationException($"Custom property {localKey}: the captured options do not read.");
-        await _properties.Put(row.Id, new CustomPropertyAddOrPutDto { Name = name, Type = type, Options = options });
+        await _properties.PutVerbatim(row.Id,
+            new CustomPropertyAddOrPutDto { Name = name, Type = type, Options = options });
     }
 
     /// <summary>Deletes the property and its values (<c>RemoveByKey</c>), then invalidates their resources' index entries.</summary>

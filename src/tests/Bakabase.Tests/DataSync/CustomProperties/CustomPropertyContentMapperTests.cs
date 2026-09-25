@@ -181,6 +181,12 @@ public class CustomPropertyContentMapperTests
     [DataRow(PropertyType.Multilevel, """{"Data":{"Value":"x"}}""")]
     [DataRow(PropertyType.Number, """{"Precision":"many"}""")]
     [DataRow(PropertyType.Rating, "{} trailing")]
+    // A null where an option belongs deserializes, but is no option.
+    [DataRow(PropertyType.MultipleChoice, """{"Choices":[null]}""")]
+    [DataRow(PropertyType.SingleChoice, """{"Choices":[{"Value":"a","Label":"A"},null]}""")]
+    [DataRow(PropertyType.Tags, """{"Tags":[null]}""")]
+    [DataRow(PropertyType.Multilevel, """{"Data":[null]}""")]
+    [DataRow(PropertyType.Multilevel, """{"Data":[{"Value":"a","Label":"A","Children":[null]}]}""")]
     public void OptionsThatDoNotRead_MakeTheRowUnreadable(PropertyType type, string options)
     {
         NewtonsoftDefaults.UnderEach(() =>

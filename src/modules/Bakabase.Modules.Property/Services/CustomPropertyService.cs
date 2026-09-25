@@ -119,31 +119,47 @@ namespace Bakabase.Modules.Property.Services
             return data.Data!.ToDomainModel();
         }
 
-        public async Task<List<CustomProperty>> AddRange(CustomPropertyAddOrPutDto[] models)
+        public Task<List<CustomProperty>> AddRange(CustomPropertyAddOrPutDto[] models) => AddRange(models, true);
+
+        public Task<List<CustomProperty>> AddRangeVerbatim(CustomPropertyAddOrPutDto[] models) =>
+            AddRange(models, false);
+
+        private async Task<List<CustomProperty>> AddRange(CustomPropertyAddOrPutDto[] models, bool normalize)
         {
             var now = DateTime.Now;
             var data = await AddRange(models.Select(model => new CustomPropertyDbModel()
             {
                 CreatedAt = now,
                 Name = model.Name,
-                Options = NormalizeOptions(model.Type, model.Options),
+                Options = normalize ? NormalizeOptions(model.Type, model.Options) : model.Options,
                 Type = model.Type
             }).ToList());
             return data.Data!.Select(d => d.ToDomainModel()).ToList();
         }
 
-        public async Task<CustomProperty> Put(int id, CustomPropertyAddOrPutDto model)
+        public Task<CustomProperty> Put(int id, CustomPropertyAddOrPutDto model) => Put(id, model, true);
+
+        public Task<CustomProperty> PutVerbatim(int id, CustomPropertyAddOrPutDto model) => Put(id, model, false);
+
+        private async Task<CustomProperty> Put(int id, CustomPropertyAddOrPutDto model, bool normalize)
         {
             var rsp = await UpdateByKey(id, cp =>
             {
                 cp.Name = model.Name;
-                cp.Options = NormalizeOptions(model.Type, model.Options, cp.Type == model.Type ? cp.Options : null);
+                cp.Options = normalize
+                    ? NormalizeOptions(model.Type, model.Options, cp.Type == model.Type ? cp.Options : null)
+                    : model.Options;
                 cp.Type = model.Type;
             });
 
             return rsp.Data!.ToDomainModel();
         }
 
+        /// <summary>
+        /// Folds the case-variant duplicates an edit introduces under IgnoreCase (F72). When nothing is folded the
+        /// options are stored exactly as given: re-serializing them would, among other things, give an option stored
+        /// without an id a random one (<c>ChoiceOptions.Value</c> defaults to a fresh guid).
+        /// </summary>
         private static string? NormalizeOptions(PropertyType type, string? serializedOptions,
             string? previousSerializedOptions = null)
         {
@@ -155,8 +171,10 @@ namespace Bakabase.Modules.Property.Services
             var previousOptions = string.IsNullOrEmpty(previousSerializedOptions)
                 ? null
                 : JsonConvert.DeserializeObject(previousSerializedOptions, descriptor.OptionsType);
+            var before = JsonConvert.SerializeObject(options);
             ReferencePropertyOptionsNormalizer.Normalize(options, previousOptions);
-            return JsonConvert.SerializeObject(options);
+            var after = JsonConvert.SerializeObject(options);
+            return string.Equals(before, after, StringComparison.Ordinal) ? serializedOptions : after;
         }
 
         public async Task Sort(int[] ids)

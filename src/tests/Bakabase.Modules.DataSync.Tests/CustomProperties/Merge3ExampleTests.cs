@@ -76,6 +76,37 @@ public class Merge3ExampleTests
     }
 
     [TestMethod]
+    public void AColourTieIsBrokenByWhatBothSidesShare_NotByAMemberOnlyOneSideHas()
+    {
+        // Symmetry seed 43235. Here "aB" became "A" and so joined A's class; there "A" became "É", "aB" was deleted and
+        // IgnoreCase switched off. The class É ends with a member each side decided: the tie goes to the smaller id of
+        // the options a group claimed on both sides (b1 over b2), never to b0, which only one side still has.
+        var @base = Choice("G", true, C("b0", "aB", "#2"), C("b1", "b"), C("b2", "A", "#1"));
+        var local = Choice("G", true, C("b0", "A", "#2"), C("b1", "É"), C("b2", "A", "#1"));
+        var remote = Choice("G", false, C("b1", "b"), C("b2", "É", "#1"));
+        var lr = Merge(@base, local, remote, winner: DataSyncMergeSide.Remote, deletions: DataSyncChildDeletionMode.Apply);
+        var rl = Merge(@base, remote, local, winner: DataSyncMergeSide.Local, deletions: DataSyncChildDeletionMode.Apply);
+        NoConflicts(lr);
+        NoConflicts(rl);
+        Assert.AreEqual(PublishedForm(rl), PublishedForm(lr));
+        Assert.AreEqual(Form(Peer(Choice("G", false, C("x", "É")))), PublishedForm(lr));
+    }
+
+    [TestMethod]
+    public void AClassAddedUnderAParentClassThisMergeSplitsIsAddedUnderEachPart()
+    {
+        // Symmetry seed 140793. Here the second "é" moved under the first and became "a"; there "aB" was added under
+        // both "é" and "A" under the second. Merging the other way, each added node stays under its own parent, so here
+        // "aB" is added under "é" and under "a" alike.
+        var @base = Tree("P", false, N("b0", "é", "#2"), N("b1", "é"));
+        var local = Tree("P1", false, N("b0", "é", "#2", N("b1", "a")));
+        var remote = Tree("P", false, N("b0", "é", "#2", N("r4", "aB", "#1")),
+            N("b1", "é", N("r2", "aB", "#1"), N("r3", "A")));
+        BothWays(@base, local, remote, Tree("P1", false,
+            N("x0", "é", "#2", N("x1", "a", N("x2", "A"), N("x3", "aB", "#1")), N("x4", "aB", "#1"))));
+    }
+
+    [TestMethod]
     [Timeout(60_000)]
     public void LargePropertiesMergeInLinearTime()
     {

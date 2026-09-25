@@ -72,15 +72,31 @@ public static class CustomPropertyContentMapper
             catch (Exception e) when (e is JsonException or ArgumentException or InvalidCastException
                                           or FormatException or OverflowException or InvalidOperationException)
             {
-                return new CustomPropertyStoredContent(
-                    new CustomPropertyContentV1 { Name = name ?? "", Type = type }, Unreadable: true);
+                return Unreadable(name, type);
             }
 
+            // A null in an options list ("Choices":[null]) deserializes, but is no option at all.
+            if (options is not null && HasNullOption(options)) return Unreadable(name, type);
             if (options is not null) ClearGeneratedChoiceIds(options, serializedOptions);
         }
 
         return new CustomPropertyStoredContent(ToContent(name, type, options), Unreadable: false);
     }
+
+    private static CustomPropertyStoredContent Unreadable(string? name, PropertyType type) =>
+        new(new CustomPropertyContentV1 { Name = name ?? "", Type = type }, Unreadable: true);
+
+    private static bool HasNullOption(object options) => options switch
+    {
+        SingleChoicePropertyOptions single => single.Choices?.Any(c => c is null) == true,
+        MultipleChoicePropertyOptions multiple => multiple.Choices?.Any(c => c is null) == true,
+        TagsPropertyOptions tags => tags.Tags?.Any(t => t is null) == true,
+        MultilevelPropertyOptions multilevel => HasNullNode(multilevel.Data),
+        _ => false,
+    };
+
+    private static bool HasNullNode(List<MultilevelDataOptions>? nodes) =>
+        nodes is not null && nodes.Any(n => n is null || HasNullNode(n.Children));
 
     /// <summary>
     /// Content of a property with typed <paramref name="options"/> (null: the type's defaults). Reference types carry

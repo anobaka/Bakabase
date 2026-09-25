@@ -69,11 +69,27 @@ internal sealed class PeerClass(ChildClass cls, PeerClass? parent)
     public PeerClassStatus Status { get; set; }
     public ChildNode? Created { get; set; }
 
-    /// <summary>An added or restored class's colour: the peer representative's.</summary>
-    public string? Color { get; set; }
-
     /// <summary>Where its class is here: the first node of its first group (the one adds and moves go under).</summary>
     public ChildNode PrimaryNode => Groups[0].Owned[0];
+}
+
+/// <summary>
+/// Multilevel: the members of a peer class whose parents end in one class here where the class has no node, added there
+/// (see <c>ChildMerge3.PartsOf</c>). <see cref="Member"/> is the first of them in the peer's order.
+/// </summary>
+internal sealed class SplitPart(PeerClass peer, ChildNode member, string parentPath)
+{
+    public PeerClass Peer { get; } = peer;
+    public ChildNode Member { get; } = member;
+
+    /// <summary>The class key path the part's parent ends at.</summary>
+    public string ParentPath { get; } = parentPath;
+
+    /// <summary>A present class's leading group, whose key and colour the part takes; null for an added or restored
+    /// class, whose parts are as the peer has them.</summary>
+    public ChildGroup? Leader { get; init; }
+
+    public ChildNode? Created { get; set; }
 }
 
 /// <summary>
@@ -98,6 +114,14 @@ internal sealed class ChildGroup(PeerClass peer, ChildClass local, ChildNode rem
     public ChildClass? Base { get; } = baseClass;
 
     public List<ChildNode> Owned { get; } = [];
+
+    /// <summary>Multilevel, claimed by id: the parent its members have here (a node), at the peer and in the base (ids,
+    /// <c>""</c> for the root; null without a base).</summary>
+    public (ChildNode? Local, string? Remote, string? Base) Parents { get; init; }
+
+    /// <summary>Creation order within one merge.</summary>
+    public int Index { get; init; }
+
     public bool TakeRemoteKey { get; set; }
 
     /// <summary>The colour this local class ends with (§8.5.5).</summary>
@@ -136,11 +160,14 @@ internal sealed record ChildMergeOutcome(
 /// <para>
 /// <b>Mapping.</b> Every peer class (R) is matched to local members: first by id — each member's <c>ChildMap</c>
 /// target, or a local option with the same id when the map has no entry — then, for a class with none, by an equal class
-/// key among the local classes under its parent's counterpart (only a class no other peer class claimed). Each local
-/// member is claimed at most once, by the first peer class in R's pre-order; the members a peer class claimed in one
-/// local class that come from one base class form a group. A local class's free members follow the group that claimed
-/// its first member (its leader): they take its renames and its moves. A peer class whose counterpart is an overlay
-/// child, or which lies below one, is invisible: mapped, never touched.
+/// key among the local classes under its parent's counterpart (only a class no other peer class claimed; see
+/// <see cref="SiblingsUnder"/>). Each local member is claimed at most once, by the first peer class in R's pre-order;
+/// the members a peer class claimed in one local class that come from one base class — and, multilevel by id, hang under
+/// one parent on every side — form a group. A local class's free members follow the group that claimed its first member
+/// (its leader): they take its renames, its colour and its moves; outside a FastForward a multilevel free member follows
+/// the group whose anchor ends under the same parent class, if any, and stays with its parent
+/// (<see cref="FollowedGroup"/>). A peer class whose counterpart is an overlay child, or which lies below one, is
+/// invisible: mapped, never touched.
 /// </para>
 /// <para>
 /// <b>Deciding.</b> Per group, against the base node of the member that linked it: the key three-way, the colour
@@ -148,6 +175,12 @@ internal sealed record ChildMergeOutcome(
 /// (the peer class that owns or leads a parent node, or a local class nobody claimed). Moves that would close a cycle
 /// keep their local parent and become conflicts, in the order of peer ids. A peer class with no counterpart is added
 /// (FastForward, NoBase, not in the base), restored (in the base and changed there since) or stays deleted.
+/// </para>
+/// <para>
+/// <b>Placing.</b> Where this merge splits a multilevel class — its parents end in several classes here — the peer's
+/// members are placed by where their own parents end, as merging the other way places them (<see cref="PartsOf"/>): an
+/// added or restored class is added under each of those parent classes, and a class this device has gains the members
+/// the peer added or changed there.
 /// </para>
 /// <para>
 /// <b>Deleting.</b> See <see cref="FindCandidates"/>: FastForward, every local class nobody claimed; ThreeWay, what the
@@ -158,8 +191,14 @@ internal sealed record ChildMergeOutcome(
 /// </para>
 /// <para>
 /// <b>Comparing.</b> "Changed since the base" is judged as the comparison form sees it: a class is unchanged while one
-/// of its members still sits in the base class it came from (the same key and colour, the same parent node), so moving
-/// a duplicate into another existing class changes nothing.
+/// of its members still sits in the base class it came from (the same key and colour, the same parent node, by id on
+/// both sides), so moving a duplicate into another existing class changes nothing.
+/// </para>
+/// <para>
+/// <b>Symmetry.</b> Merging (L, R, B) and (R, L, B) without conflicts ends at one comparison form (§8.5): every choice
+/// that could depend on which side is local — a class's colour among members with different decisions, where a split
+/// class's members go — is made by something both sides share (option ids, the peer's order of a class's members), never
+/// by local order.
 /// </para>
 /// <para>
 /// Nothing is reordered: renames and colours change nodes in place, a move or an add is appended at the end of its
@@ -185,9 +224,21 @@ internal sealed class ChildMerge3
     private readonly Dictionary<string, ChildNode> _baseNodeByUuid = new(StringComparer.Ordinal);
     private readonly HashSet<string> _taken = new(StringComparer.Ordinal);
     private readonly Dictionary<ChildClass, ChildGroup> _leaders = [];
-    private readonly Dictionary<object, Siblings> _siblings = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<ChildClass, List<ChildGroup>> _classGroups = [];
+    private readonly HashSet<ChildNode> _extras = [];
+    /// <summary>By the roots, a peer parent class, or a string naming groups of one (value equality).</summary>
+    private readonly Dictionary<object, Siblings> _siblings = [];
+    private int _groupCount;
     private Dictionary<ChildNode, ChildNode>? _baseOf;
     private Dictionary<ChildNode, string>? _peerIds;
+    private readonly Dictionary<ChildNode, (bool Moves, object? Target)> _moves = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<ChildNode> _decidingMoves = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<object, string> _finalPaths = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<object> _decidingPaths = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<PeerClass, Dictionary<string, object>> _parts = [];
+    private readonly HashSet<PeerClass> _placingParts = [];
+    private readonly Dictionary<string, ChildNode> _remoteByUuid = new(StringComparer.Ordinal);
+    private Dictionary<string, ChildNode>? _mergedByPath;
     private readonly List<DataSyncFieldOutcome> _fields = [];
     private readonly HashSet<string> _paths = new(StringComparer.Ordinal);
     private readonly List<DataSyncPlanWarning> _warnings = [];
@@ -375,25 +426,56 @@ internal sealed class ChildMerge3
     // ---- defaultValue (§8.5.4 step 9) --------------------------------------------------------
 
     /// <summary>
-    /// The local option a peer option ends as after the merge: its own counterpart when that is still its class's, else
-    /// the class's first counterpart, the option added or restored for it, or the overlay child it maps to. Null when
-    /// its class stays deleted here.
+    /// The local option a peer option ends as after the merge (asked once the merge is done): its own counterpart when
+    /// that is still its class's, else its class's node where its parent ends (the class's first counterpart, or the
+    /// option added or restored for it), or the overlay child it maps to. Null when its class stays deleted here.
     /// </summary>
-    public ChildNode? RemoteTarget(string uuid)
+    public ChildNode? RemoteTarget(string uuid) =>
+        _remoteByUuid.TryGetValue(uuid, out var remote) ? MergedPosition(remote) : null;
+
+    /// <summary>
+    /// The node a peer node ends at in the merged tree, or null when it is gone here. A member this device deleted,
+    /// under a parent class where its class has no node, is where that class ends under its parent, if anything ends
+    /// there; else it is gone, and so is everything below it that has no counterpart of its own. Merging the other way it
+    /// stays under its parent, in whatever class ends there, or in a class of its own that goes (see PartsOf).
+    /// </summary>
+    private ChildNode? MergedPosition(ChildNode remote)
     {
-        if (!_peerByMember.TryGetValue(uuid, out var peer)) return null;
-        switch (peer.Status)
+        var peer = _peerByMember[remote.Uuid!];
+        if (peer.Status == PeerClassStatus.Invisible) return peer.InvisibleTarget;
+        if (peer.Status is not (PeerClassStatus.Present or PeerClassStatus.Add or PeerClassStatus.Restore)) return null;
+        if (peer.Status == PeerClassStatus.Present && TargetOf(remote.Uuid!) is { Removed: false } own &&
+            own.Owner == peer) return own;
+        ChildNode? parent = null;
+        if (remote.Parent is not null && (parent = MergedPosition(remote.Parent)) is null) return null;
+        if (peer.Status == PeerClassStatus.Present && PartsOf(peer) is { } parts &&
+            !parts.ContainsKey(ParentPathOf(remote)))
         {
-            case PeerClassStatus.Present:
-                var target = TargetOf(uuid);
-                return target is { Removed: false } && target.Owner == peer ? target : peer.PrimaryNode;
-            case PeerClassStatus.Add or PeerClassStatus.Restore:
-                return peer.Created;
-            case PeerClassStatus.Invisible:
-                return peer.InvisibleTarget;
-            default:
-                return null;
+            var path = (parent is null ? "" : PathInMergedTree(parent)) + "\u0001" + peer.Key;
+            return MergedByPath().GetValueOrDefault(path);
         }
+
+        return NodeAt(PositionOfRemoteNode(remote));
+    }
+
+    /// <summary>The first published node of each class of the merged tree, by class key path.</summary>
+    private Dictionary<string, ChildNode> MergedByPath()
+    {
+        if (_mergedByPath is not null) return _mergedByPath;
+        _mergedByPath = new Dictionary<string, ChildNode>(StringComparer.Ordinal);
+        ChildNode.PreOrder(_localRoots, n =>
+        {
+            if (Token(n) is not null) _mergedByPath.TryAdd(PathInMergedTree(n), n);
+        });
+        return _mergedByPath;
+    }
+
+    private string PathInMergedTree(ChildNode node)
+    {
+        var keys = new List<string>();
+        for (var n = node; n is not null; n = n.Parent) keys.Add(KeyOf(n));
+        keys.Reverse();
+        return "\u0001" + string.Join("\u0001", keys);
     }
 
     /// <summary>A local option this device publishes (removed by this merge or not); null for one it does not.</summary>
@@ -448,7 +530,7 @@ internal sealed class ChildMerge3
                 if (target.Owner is null)
                 {
                     target.Owner = peer;
-                    var group = GroupOf(peer, target.Class!, member, BaseNodeOf([member]));
+                    var group = GroupOf(peer, target.Class!, member, BaseNodeOf([member]), target);
                     group.Owned.Add(target);
                     target.OwnerGroup = group;
                 }
@@ -476,9 +558,7 @@ internal sealed class ChildMerge3
             }
             else if (peer.Parent.Status == PeerClassStatus.Present)
             {
-                var parents = peer.Parent.Groups.Select(g => g.Local).ToArray();
-                siblings = SiblingsOf(peer.Parent, parents.SelectMany(c => c.Children),
-                    parents.SelectMany(c => c.Members).SelectMany(m => m.Children));
+                siblings = SiblingsUnder(peer);
             }
             else
             {
@@ -508,6 +588,53 @@ internal sealed class ChildMerge3
             peer.InvisibleTarget = overlay;
             peer.Status = PeerClassStatus.Invisible;
         }
+    }
+
+    /// <summary>
+    /// The local classes and overlay children a peer class is looked for among by key: those under its parent's
+    /// counterparts. Outside a FastForward a multilevel parent class this merge splits keeps its parts apart (see
+    /// <see cref="PartsOf"/>), and a class under one part is not the class under another: only the children of the
+    /// nodes that end in one class with the parents its own members have here — the groups of those parents (by id;
+    /// all of the parent's groups when none is linked), their nodes whose key ends the same, and the free members of
+    /// their local classes, never another peer class's nodes.
+    /// </summary>
+    private Siblings SiblingsUnder(PeerClass peer)
+    {
+        var parent = peer.Parent!;
+        var parents = parent.Groups.Select(g => g.Local).Distinct().ToArray();
+        if (_s.Kind != ChildListKind.Nodes || _s.Rules == ChildMergeRules.FastForward)
+        {
+            return SiblingsOf(parent, parents.SelectMany(c => c.Children),
+                parents.SelectMany(c => c.Members).SelectMany(m => m.Children));
+        }
+
+        var linked = peer.Class.Members
+            .Select(m => TargetOf(m.Parent!.Uuid!))
+            .Where(t => t is { OwnerGroup: not null } && t.Owner == parent)
+            .Select(t => t!.OwnerGroup!)
+            .Distinct()
+            .OrderBy(g => g.Index)
+            .ToArray();
+        var groups = linked.Length > 0 ? linked : parent.Groups.OrderBy(g => g.Index).ToArray();
+        var cacheKey = parent.PeerId + "\u0001" + string.Join(",", groups.Select(g => g.Index));
+        if (_siblings.TryGetValue(cacheKey, out var cached)) return cached;
+        var keys = groups.Select(FinalKeyOfGroup).ToHashSet(StringComparer.Ordinal);
+        var nodes = groups.Select(g => g.Local).Distinct().SelectMany(c => c.Members)
+            .Where(m => m.Owner is null || (m.Owner == parent && keys.Contains(FinalKeyOfGroup(m.OwnerGroup!))))
+            .ToArray();
+        var children = nodes.SelectMany(n => n.Children).ToArray();
+        return SiblingsOf(cacheKey, children.Select(n => n.Class).OfType<ChildClass>().Distinct(), children);
+    }
+
+    /// <summary>The key a group's local class ends with: the peer's, when the group takes it (§8.5.2).</summary>
+    private string FinalKeyOfGroup(ChildGroup group) =>
+        group.Local.Key == group.Peer.Key || !TakesRemote(KeyResolution(group)) ? group.Local.Key : group.Peer.Key;
+
+    private DataSyncFieldResolution KeyResolution(ChildGroup group)
+    {
+        var localBase = LocalBaseClassOf(group);
+        return Resolve(localBase?.Key, group.Base?.Key, group.Local.Key, group.Peer.Key, localBase is not null,
+            group.Base is not null);
     }
 
     /// <summary>The local classes and overlay children under the counterpart of one peer parent (or the roots).</summary>
@@ -586,8 +713,12 @@ internal sealed class ChildMerge3
             {
                 if (!_leaders.TryGetValue(group.Local, out var leader) || group.FirstSeq < leader.FirstSeq)
                     _leaders[group.Local] = group;
+                if (!_classGroups.TryGetValue(group.Local, out var groups)) _classGroups[group.Local] = groups = [];
+                groups.Add(group);
             }
         }
+
+        foreach (var groups in _classGroups.Values) groups.Sort((a, b) => a.FirstSeq.CompareTo(b.FirstSeq));
     }
 
     // ---- decisions --------------------------------------------------------------------------
@@ -599,9 +730,7 @@ internal sealed class ChildMerge3
             foreach (var group in peer.Groups)
             {
                 if (group.Local.Key == peer.Key) continue;
-                var localBase = LocalBaseClassOf(group);
-                var resolution = Resolve(localBase?.Key, group.Base?.Key, group.Local.Key, peer.Key, localBase is not null,
-                    group.Base is not null);
+                var resolution = KeyResolution(group);
                 group.TakeRemoteKey = TakesRemote(resolution);
                 var local = group.Local.Rep;
                 AddField(KeyPath(peer.PeerId), resolution, group.Base is null ? null : Display(group.Base.Rep),
@@ -717,10 +846,17 @@ internal sealed class ChildMerge3
 
         foreach (var group in _peers.SelectMany(p => p.Groups).Where(g => g.Moves)) RestoreAncestors(group.Peer.Parent);
 
+        // One outcome per class path: the representative's group's (else the first decided group's). A group whose parent
+        // went another way (its members hang under other parents) reports under the id of the peer member that linked
+        // it, so neither a move nor a conflict is hidden behind the other; that path is as stable across pulls.
         foreach (var peer in _peers.Where(p => p.Status == PeerClassStatus.Present))
         {
+            var decided = peer.Groups.Where(g => g.ParentResolution is not null).ToArray();
+            if (decided.Length == 0) continue;
+            var classResolution = (decided.FirstOrDefault(g => g.RemoteMember.Uuid == peer.PeerId) ?? decided[0])
+                .ParentResolution!.Value;
             var remoteDisplay = peer.Parent is null ? RootDisplay : Display(peer.Parent.Rep, withColor: false);
-            foreach (var group in peer.Groups.Where(g => g.ParentResolution is not null))
+            foreach (var group in decided)
             {
                 var local = group.Anchor!.OriginalParent;
                 var localDisplay = local is null ? RootDisplay : Display(local, withColor: false);
@@ -728,8 +864,10 @@ internal sealed class ChildMerge3
                 var baseDisplay = group.BaseNode is null ? null
                     : baseParent is null ? RootDisplay
                     : Display(baseParent, withColor: false);
-                AddField($"{KeyPath(peer.PeerId)}:parent", group.ParentResolution!.Value, baseDisplay, localDisplay,
-                    remoteDisplay, group.Moves ? remoteDisplay : localDisplay);
+                var resolution = group.ParentResolution!.Value;
+                var id = resolution == classResolution ? peer.PeerId : group.RemoteMember.Uuid!;
+                AddField($"{KeyPath(id)}:parent", resolution, baseDisplay, localDisplay, remoteDisplay,
+                    group.Moves ? remoteDisplay : localDisplay);
             }
         }
     }
@@ -746,6 +884,7 @@ internal sealed class ChildMerge3
         bool broke;
         do
         {
+            ForgetFinalPositions();
             broke = false;
             foreach (var group in moving)
             {
@@ -784,29 +923,108 @@ internal sealed class ChildMerge3
     private object? FinalParentPosition(object position) => position switch
     {
         PeerClass created => created.Rep.Parent is null ? null : PositionOfRemoteNode(created.Rep.Parent),
+        SplitPart part => part.Member.Parent is null ? null : PositionOfRemoteNode(part.Member.Parent),
         ChildNode node => TryMoveTarget(node, out var target) ? target : node.OriginalParent,
         _ => null,
     };
 
     /// <summary>
-    /// Whether a node moves, and where to: a group's nodes (and the free members it leads) all end under the group's
-    /// final parent, so a member that sits elsewhere here follows even when the group itself did not move. A moving group
-    /// goes under the counterpart of the peer's own parent node; a member that follows goes under the node the group's
-    /// first member already has.
+    /// Whether a node moves, and where to (§8.5.4 step 8: only a node whose parent took the peer's value moves). A
+    /// moving group's anchor goes under the counterpart of the peer's own parent node; its other members, and the free
+    /// members that follow it along (<see cref="FollowedGroup"/>), go there too unless the parent they have here ends
+    /// in that same class. A group that does not move moves nothing, except in a FastForward, where a class is taken
+    /// along as a whole: a member whose parent ends in another class than the anchor's (a peer rename or move split the
+    /// class it was in) joins the anchor's parent, unless the group's parent is a conflict.
     /// </summary>
     private bool TryMoveTarget(ChildNode node, out object? position)
     {
         position = null;
-        if (_s.Kind != ChildListKind.Nodes || MoverGroupOf(node) is not { FinalParent: { } finalParent } group) return false;
-        if (group.Moves)
+        if (_s.Kind != ChildListKind.Nodes || FollowedGroup(node) is not ({ FinalParent: not null } group, true))
+            return false;
+        if (_moves.TryGetValue(node, out var known))
         {
-            position = group.RemoteMember.Parent is null ? null : PositionOfRemoteNode(group.RemoteMember.Parent);
-            return !ReferenceEquals(position, node.OriginalParent);
+            position = known.Target;
+            return known.Moves;
         }
 
-        if (ReferenceEquals(OriginalParentOf(node), finalParent)) return false;
-        position = group.Anchor!.OriginalParent;
-        return true;
+        // Asked again while deciding itself: only a structure with a cycle still to break does that; it stays.
+        if (!_decidingMoves.Add(node)) return false;
+        try
+        {
+            var moves = DecideMove(node, group, out position);
+            if (!moves) position = null;
+            _moves[node] = (moves, position);
+            return moves;
+        }
+        finally
+        {
+            _decidingMoves.Remove(node);
+        }
+    }
+
+    private bool DecideMove(ChildNode node, ChildGroup group, out object? target)
+    {
+        if (group.Moves)
+        {
+            target = group.RemoteMember.Parent is null ? null : PositionOfRemoteNode(group.RemoteMember.Parent);
+            if (ReferenceEquals(target, node.OriginalParent)) return false;
+            // The anchor is carried node by node: a move between two members of one class is still a move.
+            if (ReferenceEquals(node, group.Anchor)) return true;
+        }
+        else
+        {
+            target = group.Anchor!.OriginalParent;
+            if (_s.Rules != ChildMergeRules.FastForward || ReferenceEquals(target, node.OriginalParent) ||
+                group.ParentResolution == DataSyncFieldResolution.Conflict) return false;
+        }
+
+        return FinalPathOf(node.OriginalParent) != FinalPathOf(target);
+    }
+
+    /// <summary>
+    /// The class key path a position ends at after this merge's keys and moves: a local node, a class still to be
+    /// created, or null for the roots. Two positions with one path are one class in the merged tree.
+    /// </summary>
+    private string FinalPathOf(object? position)
+    {
+        if (position is null) return "";
+        if (_finalPaths.TryGetValue(position, out var path)) return path;
+        // Asked again while computing itself: a cycle still to break; any answer will be recomputed once it is.
+        if (!_decidingPaths.Add(position)) return "\u0002";
+        try
+        {
+            path = position switch
+            {
+                PeerClass created => ParentPathOf(created.Rep) + "\u0001" + created.Key,
+                // A present class's part takes its leading group's key (see CreatePart).
+                SplitPart part => part.ParentPath + "\u0001" +
+                                  (part.Leader is { } leader ? FinalKeyOf(leader.Anchor!) : part.Peer.Key),
+                ChildNode { Part: { } part } => FinalPathOf(part),
+                ChildNode { CreatedFor: { } created } => FinalPathOf(created),
+                ChildNode node => FinalPathOf(TryMoveTarget(node, out var target) ? target : node.OriginalParent) +
+                                  "\u0001" + FinalKeyOf(node),
+                _ => "",
+            };
+            _finalPaths[position] = path;
+            return path;
+        }
+        finally
+        {
+            _decidingPaths.Remove(position);
+        }
+    }
+
+    /// <summary>The class key a local node ends with: the peer's, when the group it follows takes the peer's
+    /// key.</summary>
+    private string FinalKeyOf(ChildNode node) =>
+        MoverGroupOf(node) is { TakeRemoteKey: true } group ? group.Peer.Key : KeyOf(node);
+
+    /// <summary>Forgets every decided move, path and part: the groups' moves changed.</summary>
+    private void ForgetFinalPositions()
+    {
+        _moves.Clear();
+        _finalPaths.Clear();
+        _parts.Clear();
     }
 
     /// <summary>
@@ -833,8 +1051,9 @@ internal sealed class ChildMerge3
     }
 
     /// <summary>
-    /// The position a peer node has here: its own counterpart while that is still its class's, else its class's first
-    /// counterpart, the overlay child it maps to, or its class still to be created (standing for its node).
+    /// The position a peer node has here: its own counterpart while that is still its class's; else, for a multilevel
+    /// class this merge splits, the part its parent ends in (<see cref="PartsOf"/>); else its class's first counterpart,
+    /// the overlay child it maps to, or its class still to be created (standing for its node).
     /// </summary>
     private object? PositionOfRemoteNode(ChildNode remoteNode)
     {
@@ -843,8 +1062,9 @@ internal sealed class ChildMerge3
         {
             PeerClassStatus.Present => TargetOf(remoteNode.Uuid!) is { Removed: false } target && target.Owner == peer
                 ? target
-                : peer.PrimaryNode,
+                : PartOf(peer, remoteNode) ?? peer.PrimaryNode,
             PeerClassStatus.Invisible => peer.InvisibleTarget,
+            PeerClassStatus.Add or PeerClassStatus.Restore => PartOf(peer, remoteNode) ?? (object?)peer.Created ?? peer,
             _ => (object?)peer.Created ?? peer,
         };
     }
@@ -853,17 +1073,178 @@ internal sealed class ChildMerge3
     {
         ChildNode node => node,
         PeerClass peer => peer.Created,
+        SplitPart part => part.Created,
         _ => null,
     };
 
-    /// <summary>The group whose decisions a node follows: its own, or the one leading its class.</summary>
-    private ChildGroup? MoverGroupOf(ChildNode node) =>
-        node.OwnerGroup ?? (node.Class is { } cls && _leaders.TryGetValue(cls, out var leader) ? leader : null);
+    /// <summary>The part of its class a peer node without a counterpart of its own belongs to, or null for the class's
+    /// usual place.</summary>
+    private object? PartOf(PeerClass peer, ChildNode remoteNode) =>
+        PartsOf(peer) is { } parts && parts.TryGetValue(ParentPathOf(remoteNode), out var part) ? part : null;
+
+    /// <summary>
+    /// A multilevel peer class whose members' parents end in several classes here — this merge split the class they are
+    /// in: a rename or a move of one member, or two classes here that stay apart — is placed part by part, by the class
+    /// each member's parent ends in, as merging the other way places those members (a node stays with its parent,
+    /// §8.5.4 step 8). A part goes to the class's node already under that parent class, whose decisions it shares; a
+    /// part without one is added there: every part of a class added or restored here, and of a class this device has,
+    /// the members the peer added since the base or changed since (edit wins). Other members, which this device deleted,
+    /// stay deleted. Keyed by the class key path each part's parent ends at; null in a FastForward, where every member
+    /// takes the peer's place and nothing is split.
+    /// </summary>
+    private Dictionary<string, object>? PartsOf(PeerClass peer)
+    {
+        if (_s.Kind != ChildListKind.Nodes || _s.Rules == ChildMergeRules.FastForward ||
+            peer.Status is not (PeerClassStatus.Present or PeerClassStatus.Add or PeerClassStatus.Restore)) return null;
+        if (_parts.TryGetValue(peer, out var parts)) return parts;
+        // Asked again while placing itself: a structure still being settled; the class keeps its usual place.
+        if (!_placingParts.Add(peer)) return null;
+        try
+        {
+            parts = new Dictionary<string, object>(StringComparer.Ordinal);
+            if (peer.Status != PeerClassStatus.Present)
+            {
+                parts[ParentPathOf(peer.Rep)] = peer;
+                foreach (var member in peer.Class.Members)
+                {
+                    var path = ParentPathOf(member);
+                    if (!parts.ContainsKey(path)) parts[path] = new SplitPart(peer, member, path);
+                }
+
+                return _parts[peer] = parts;
+            }
+
+            // The class's groups in the peer's order — its members' order there, which is how merging the other way
+            // orders them: the first one under a parent class gives that part its node, the first of all leads.
+            var groups = GroupsInPeerOrder(peer);
+            foreach (var node in groups.SelectMany(g => g.Owned)) parts.TryAdd(FinalParentPathOf(node), node);
+            var leader = groups[0];
+            foreach (var member in peer.Class.Members)
+            {
+                if (TargetOf(member.Uuid!) is { Removed: false } target && target.Owner == peer) continue;
+                var path = ParentPathOf(member);
+                if (parts.ContainsKey(path)) continue;
+                // No node of the class under that parent class. Merging the other way, the member follows the leading
+                // group: along with a move this device made, else under its own parent with the group's key and colour.
+                if (leader.ParentResolution == DataSyncFieldResolution.KeptLocal) parts[path] = leader.Anchor!;
+                else if (AddedOrChangedThere(member) || HoldsAnAdd(member))
+                    parts[path] = new SplitPart(peer, member, path) { Leader = leader };
+            }
+
+            return _parts[peer] = parts;
+        }
+        finally
+        {
+            _placingParts.Remove(peer);
+        }
+    }
+
+    /// <summary>A present class's groups by the first of its members (in the peer's order) that claimed each by id, then
+    /// in local order.</summary>
+    private List<ChildGroup> GroupsInPeerOrder(PeerClass peer)
+    {
+        var first = new Dictionary<ChildGroup, int>();
+        for (var i = 0; i < peer.Class.Members.Count; i++)
+        {
+            if (TargetOf(peer.Class.Members[i].Uuid!) is { Owner: var owner, OwnerGroup: { } group } && owner == peer)
+                first.TryAdd(group, i);
+        }
+
+        return peer.Groups.OrderBy(g => first.GetValueOrDefault(g, -1)).ThenBy(g => g.FirstSeq).ToList();
+    }
+
+    /// <summary>
+    /// A peer node without a counterpart here that something added or restored here goes under: an option of a class
+    /// added or restored, or one the peer added or changed, below it without a counterpart of its own between. Merging
+    /// the other way that option keeps this node, its parent, alive.
+    /// </summary>
+    private bool HoldsAnAdd(ChildNode remoteNode)
+    {
+        foreach (var child in remoteNode.Children)
+        {
+            var peer = _peerByMember[child.Uuid!];
+            if (peer.Status is PeerClassStatus.Add or PeerClassStatus.Restore) return true;
+            if (peer.Status != PeerClassStatus.Present) continue;
+            if (TargetOf(child.Uuid!) is { } own && own.Owner == peer)
+            {
+                // A node of this device that moves under it (it took the peer's parent) needs it too.
+                if (own.OwnerGroup is { Moves: true }) return true;
+                continue;
+            }
+
+            if (AddedOrChangedThere(child) || HoldsAnAdd(child)) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>A peer node not in the base, or changed there since: key, colour or parent.</summary>
+    private bool AddedOrChangedThere(ChildNode remoteNode) =>
+        !_baseNodeByUuid.TryGetValue(remoteNode.Uuid!, out var baseNode) || KeyOf(remoteNode) != KeyOf(baseNode) ||
+        NormColor(remoteNode.Color) != NormColor(baseNode.Color) ||
+        (remoteNode.Parent?.Uuid ?? "") != (baseNode.Parent?.Uuid ?? "");
+
+    /// <summary>The class a peer node's parent ends in here.</summary>
+    private string ParentPathOf(ChildNode remoteNode) =>
+        FinalPathOf(remoteNode.Parent is null ? null : PositionOfRemoteNode(remoteNode.Parent));
+
+    /// <summary>The class a local node's parent ends in, after its move.</summary>
+    private string FinalParentPathOf(ChildNode node) =>
+        FinalPathOf(TryMoveTarget(node, out var target) ? target : node.OriginalParent);
+
+    /// <summary>The group whose decisions — key, colour, parent — a node follows (see
+    /// <see cref="FollowedGroup"/>).</summary>
+    private ChildGroup? MoverGroupOf(ChildNode node) => FollowedGroup(node).Group;
+
+    /// <summary>
+    /// The group whose decisions a node follows, and whether it follows that group's moves too: its own; for a free
+    /// member — a node the peer does not have — the group leading its class, which it follows wherever it goes. A
+    /// multilevel class this merge splits keeps its parts apart outside a FastForward: a free member then follows the
+    /// first group of its class whose anchor ends under the same parent class, and stays with its parent (§8.5.4
+    /// step 8), as merging the other way places it (<see cref="PartsOf"/>). With no group there it follows the leading
+    /// one.
+    /// </summary>
+    private (ChildGroup? Group, bool Along) FollowedGroup(ChildNode node)
+    {
+        if (node.OwnerGroup is { } own) return (own, true);
+        if (node.Class is not { } cls || !_leaders.TryGetValue(cls, out var leader)) return (null, false);
+        if (_s.Rules == ChildMergeRules.FastForward || leader.Anchor is null) return (leader, true);
+        var parent = FinalPathOf(node.OriginalParent);
+        var beside = _classGroups[cls].FirstOrDefault(g => g.Anchor is not null && FinalParentPathOf(g.Anchor) == parent);
+        return beside is null ? (leader, true) : (beside, false);
+    }
+
+    /// <summary>The free members of a local class that follow <paramref name="group"/> (see
+    /// <see cref="MoverGroupOf"/>).</summary>
+    private IEnumerable<ChildNode> FollowersOf(ChildGroup group) =>
+        group.Local.Members.Where(m => m.Owner is null && MoverGroupOf(m) == group);
 
     // ---- applying ---------------------------------------------------------------------------
 
     private void Realize()
     {
+        // Moves are decided first, on the structure and labels as they were read. Everything that moves is then taken
+        // out and put back in R's pre-order, so a parent is in place before its children, and a subtree is never
+        // attached below itself.
+        var moves = new List<(PeerClass Peer, ChildNode Node, object? Target)>();
+        var followed = new List<(ChildGroup Group, ChildNode Node, DataSyncDisplayValue From)>();
+        if (_s.Kind == ChildListKind.Nodes)
+        {
+            ForgetFinalPositions();
+            foreach (var peer in _peers.Where(p => p.Status == PeerClassStatus.Present))
+            {
+                foreach (var group in peer.Groups)
+                {
+                    foreach (var node in Movers(group))
+                    {
+                        if (!TryMoveTarget(node, out var target)) continue;
+                        moves.Add((peer, node, target));
+                        if (!group.Moves) followed.Add((group, node, ParentDisplay(node.OriginalParent)));
+                    }
+                }
+            }
+        }
+
         foreach (var peer in _peers.Where(p => p.Status == PeerClassStatus.Present))
         {
             foreach (var group in peer.Groups.Where(g => g.TakeRemoteKey))
@@ -876,24 +1257,12 @@ internal sealed class ChildMerge3
             }
         }
 
-        // Moves: everything that moves is taken out first and put back in R's pre-order, so a parent is in place
-        // before its children, and a subtree is never attached below itself.
         var pending = new Dictionary<PeerClass, List<(ChildNode Node, ChildNode? From, object? Target)>>();
-        if (_s.Kind == ChildListKind.Nodes)
+        foreach (var (peer, node, target) in moves)
         {
-            foreach (var peer in _peers.Where(p => p.Status == PeerClassStatus.Present))
-            {
-                foreach (var group in peer.Groups)
-                {
-                    foreach (var node in Movers(group))
-                    {
-                        if (!TryMoveTarget(node, out var target)) continue;
-                        if (!pending.TryGetValue(peer, out var list)) pending[peer] = list = [];
-                        list.Add((node, node.Parent, target));
-                        Detach(node);
-                    }
-                }
-            }
+            if (!pending.TryGetValue(peer, out var list)) pending[peer] = list = [];
+            list.Add((node, node.Parent, target));
+            Detach(node);
         }
 
         foreach (var peer in _peers)
@@ -906,22 +1275,70 @@ internal sealed class ChildMerge3
             {
                 foreach (var (node, from, target) in list) Attach(node, NodeAt(target), from);
             }
+
+            if (PartsOf(peer) is not { } parts) continue;
+            foreach (var part in parts.Values.OfType<SplitPart>()) CreatePart(part);
+        }
+
+        // A node that follows its class out of a parent class a peer change split moved too, and says so.
+        foreach (var (group, node, from) in followed)
+        {
+            var peer = group.Peer;
+            AddField($"{KeyPath(peer.PeerId)}:parent", DataSyncFieldResolution.TookRemote,
+                group.BaseNode is null ? null : ParentDisplay(group.BaseNode.Parent), from,
+                peer.Parent is null ? RootDisplay : Display(peer.Parent.Rep, withColor: false), ParentDisplay(node.Parent));
         }
     }
 
-    /// <summary>The group's own members, and the free members of its local class when it leads that class.</summary>
+    private DataSyncDisplayValue ParentDisplay(ChildNode? parent) =>
+        parent is null ? RootDisplay : Display(parent, withColor: false);
+
+    /// <summary>The group's own members, and the free members of its local class that follow it.</summary>
     private IEnumerable<ChildNode> Movers(ChildGroup group)
     {
         var nodes = new List<ChildNode>(group.Owned);
-        if (_leaders.TryGetValue(group.Local, out var leader) && leader == group)
-            nodes.AddRange(group.Local.Members.Where(m => m.Owner is null));
+        nodes.AddRange(FollowersOf(group));
         return nodes.OrderBy(n => n.Seq);
     }
 
     private void Create(PeerClass peer)
     {
         var rep = peer.Rep;
-        var uuid = rep.Uuid!;
+        var node = CreateNode(peer, rep, null);
+        peer.Created = node;
+
+        var restored = peer.Status == PeerClassStatus.Restore;
+        AddField(KeyPath(peer.PeerId),
+            restored ? DataSyncFieldResolution.EditWinsRestored : DataSyncFieldResolution.TookRemote,
+            peer.Base is null ? null : Display(peer.Base.Rep), null, Display(rep), Display(node));
+        if (restored) _warnings.Add(CustomPropertyCodec.Warning(DataSyncWarningCode.ChildRestored, ("uuid", rep.Uuid!)));
+    }
+
+    /// <summary>A part of a class split by this merge, added where its members' parents end (see <see cref="PartsOf"/>);
+    /// its path is its first member's, since it is a class of its own here.</summary>
+    private void CreatePart(SplitPart part)
+    {
+        var member = part.Member;
+        var node = part.Created = CreateNode(part.Peer, member, part);
+        if (part.Leader is { } leader)
+        {
+            node.Label = leader.Anchor!.Label;
+            node.Color = leader.Color;
+        }
+
+        var baseNode = _s.Rules == ChildMergeRules.ThreeWay ? _baseNodeByUuid.GetValueOrDefault(member.Uuid!) : null;
+        var restored = baseNode is not null;
+        AddField(KeyPath(member.Uuid!),
+            restored ? DataSyncFieldResolution.EditWinsRestored : DataSyncFieldResolution.TookRemote,
+            baseNode is null ? null : Display(baseNode), null, Display(member), Display(node));
+        if (restored) _warnings.Add(CustomPropertyCodec.Warning(DataSyncWarningCode.ChildRestored, ("uuid", member.Uuid!)));
+    }
+
+    /// <summary>A new option for <paramref name="peer"/> from one of its members, under that member's parent as it ends
+    /// here, appended after the local children (a fresh id when its own is taken here).</summary>
+    private ChildNode CreateNode(PeerClass peer, ChildNode source, SplitPart? part)
+    {
+        var uuid = source.Uuid!;
         if (_taken.Contains(uuid))
         {
             var fresh = CustomPropertyUuids.Remap(uuid, _taken.Contains);
@@ -931,22 +1348,15 @@ internal sealed class ChildMerge3
         }
 
         _taken.Add(uuid);
-        var node = new ChildNode(uuid, rep.Label, rep.Group, rep.Color)
+        var node = new ChildNode(uuid, source.Label, source.Group, source.Color)
         {
-            Visible = true, CreatedFor = peer, Seq = _local.Count + _created.Count,
+            Visible = true, CreatedFor = peer, Part = part, Seq = _local.Count + _created.Count,
         };
-        var parent = rep.Parent is null ? null : NodeAt(PositionOfRemoteNode(rep.Parent));
+        var parent = source.Parent is null ? null : NodeAt(PositionOfRemoteNode(source.Parent));
         node.Parent = parent;
         (parent?.Children ?? _localRoots).Add(node);
         _created.Add(node);
-        peer.Created = node;
-        peer.Color = NormColor(rep.Color);
-
-        var restored = peer.Status == PeerClassStatus.Restore;
-        AddField(KeyPath(peer.PeerId),
-            restored ? DataSyncFieldResolution.EditWinsRestored : DataSyncFieldResolution.TookRemote,
-            peer.Base is null ? null : Display(peer.Base.Rep), null, Display(rep), Display(node));
-        if (restored) _warnings.Add(CustomPropertyCodec.Warning(DataSyncWarningCode.ChildRestored, ("uuid", rep.Uuid!)));
+        return node;
     }
 
     private void Detach(ChildNode node)
@@ -1002,8 +1412,11 @@ internal sealed class ChildMerge3
                 {
                     foreach (var member in cls.Members.Where(m => m.Owner is null))
                     {
-                        if (baseOf.TryGetValue(member, out var baseMember) && !_peerByMember.ContainsKey(baseMember.Uuid!) &&
-                            MemberUnchangedHere(member, baseMember)) extra[member] = baseMember;
+                        if (!baseOf.TryGetValue(member, out var baseMember) ||
+                            _peerByMember.ContainsKey(baseMember.Uuid!) || !MemberUnchangedHere(member, baseMember))
+                            continue;
+                        extra[member] = baseMember;
+                        _extras.Add(member);
                     }
 
                     continue;
@@ -1050,6 +1463,32 @@ internal sealed class ChildMerge3
             .OrderBy(c => c.Rep.Seq)
             .ToList();
         var validNodes = valid.SelectMany(c => c.Members).ToHashSet();
+        // What the peer deleted and stays only for free members of the peer's classes below it gives its class nothing
+        // either (ApplyColors): merging the other way those members join their classes elsewhere, and nothing brings it
+        // back. What stays for a node of its own below it (added or changed here) is brought back there, and gives.
+        foreach (var candidate in picked.Where(c => !c.Members.All(validNodes.Contains)))
+        {
+            if (candidate.Members.SelectMany(KeepersBelow)
+                .All(d => d.Owner is null && d.Class is { } cls && _leaders.ContainsKey(cls)))
+                _extras.UnionWith(candidate.Members);
+        }
+
+        // The nearest published nodes below a candidate that are no candidates themselves: what keeps it.
+        IEnumerable<ChildNode> KeepersBelow(ChildNode node)
+        {
+            foreach (var child in node.Children)
+            {
+                if (!(child.Visible || child.CreatedFor is not null)) continue;
+                if (!nodes.Contains(child))
+                {
+                    yield return child;
+                    continue;
+                }
+
+                foreach (var keeper in KeepersBelow(child)) yield return keeper;
+            }
+        }
+
         _candidates = valid;
         _candidateRoots = valid.Where(c => !c.Members.Any(m =>
         {
@@ -1062,9 +1501,10 @@ internal sealed class ChildMerge3
         })).ToList();
     }
 
-    /// <summary>An option itself unchanged here since the base: its key, its colour and its parent.</summary>
+    /// <summary>An option itself unchanged here since the base: its key (as read, before this merge renamed anything), its
+    /// colour and its parent.</summary>
     private bool MemberUnchangedHere(ChildNode member, ChildNode baseMember) =>
-        KeyOf(member) == KeyOf(baseMember) && NormColor(member.Color) == NormColor(baseMember.Color) &&
+        member.Class!.Key == KeyOf(baseMember) && NormColor(member.Color) == NormColor(baseMember.Color) &&
         ParentUnchangedHere(member, baseMember);
 
     /// <summary>ThreeWay: every published local node that is the counterpart of a base option, with that option.</summary>
@@ -1095,29 +1535,32 @@ internal sealed class ChildMerge3
     }
 
     /// <summary>
-    /// A node still has the parent it had in the base: judged node by node where its parent here is linked by id (a move
-    /// between two members of one class counts, as it does on the other side), else as logical classes.
+    /// A node still has the parent it had in the base, judged node by node, as the other side judges it (a move between
+    /// two members of one class counts): its parent here by the peer id it is linked by, else by its own id.
     /// </summary>
     private bool ParentUnchangedHere(ChildNode member, ChildNode baseMember)
     {
         if (_s.Kind != ChildListKind.Nodes) return true;
         var parent = member.OriginalParent;
-        var localId = parent is null ? "" : PeerIds.GetValueOrDefault(parent);
-        return localId is not null
-            ? localId == (baseMember.Parent?.Uuid ?? "")
-            : ReferenceEquals(OriginalParentOf(member), BaseParentOf(baseMember));
+        var localId = parent is null ? "" : PeerIds.GetValueOrDefault(parent) ?? parent.Uuid;
+        return localId == (baseMember.Parent?.Uuid ?? "");
     }
 
     // ---- finishing --------------------------------------------------------------------------
 
     /// <summary>
     /// §8.5.5: every class as it ends takes a colour on its representative, the one member whose colour the class shows.
-    /// A member's colour is the one decided for it (an owned member's group, a free member's leading group, an added
-    /// option's peer class), else its own. When a class gathers members with different decisions (a rename or a move onto
-    /// another class), the member that most is this class gives it: first one whose class had this key on both sides,
-    /// then one whose class had it on one side, then any; among those the ordinally smallest id. Never the first in
-    /// order: moves and adds are appended, and the two directions of one merge order them differently. A class with no
-    /// decided member is left alone.
+    /// A member's colour is the one its group decided (an owned member's group, the group a free member follows), else
+    /// its own; an option this merge added gives the colour of the peer's option with the smallest id placed there. When
+    /// a class gathers members with different decisions (a rename or a move onto another class), the member that most
+    /// is this class gives it: first one whose class had this key on both sides, then one whose class had it on one side,
+    /// then any; among those the one with the ordinally smallest identity. An identity is what both directions of one
+    /// merge share: for a group, the smallest id among the options it claimed (the options both sides have); for an
+    /// added option, that peer option's id; else the option's own id. Never the first in order: moves and adds are
+    /// appended, and the two directions of one merge order them differently. A member the peer deleted, kept only
+    /// because its class stays or for free members below it (see <see cref="FindCandidates"/>), gives nothing. A class
+    /// no group decided anything about, whose members were one class before (here, or at the peer for what was added),
+    /// is left alone.
     /// </summary>
     private void ApplyColors()
     {
@@ -1125,27 +1568,50 @@ internal sealed class ChildMerge3
             n => (n.Visible || n.CreatedFor is not null) && !n.Removed && !n.HeldHere);
         foreach (var cls in classes.SelectMany(c => c.SelfAndDescendants()))
         {
-            var members = cls.Members.Where(m => m.Uuid is not null)
-                .Select(m => (Node: m, Giver: GiverOf(m, cls.Key)))
-                .ToArray();
-            if (!members.Any(m => m.Giver.Decided)) continue;
-            var giver = members.OrderBy(m => m.Giver.Tier).ThenBy(m => m.Node.Uuid, StringComparer.Ordinal).First();
+            // A member the peer deleted, which stays only because its class stays, gives nothing: merging the other way
+            // it is not there.
+            var withId = cls.Members.Where(m => m.Uuid is not null).ToArray();
+            var givers = withId.Any(m => !_extras.Contains(m)) ? withId.Where(m => !_extras.Contains(m)) : withId;
+            var members = givers.Select(m => (Node: m, Giver: GiverOf(m, cls.Key))).ToArray();
+            // Left alone: a class this merge decided nothing about, which was one class before — here, or at the peer
+            // for what this merge added.
+            if (!members.Any(m => m.Giver.Decided) && withId.Select(OriginOf).Distinct().Count() <= 1) continue;
+            var giver = members.OrderBy(m => m.Giver.Tier)
+                .ThenBy(m => m.Giver.Identity, StringComparer.Ordinal)
+                .ThenBy(m => m.Node.Uuid, StringComparer.Ordinal)
+                .First();
             if (NormColor(cls.Rep.Color) != giver.Giver.Color) cls.Rep.Color = giver.Giver.Color;
         }
     }
 
     /// <summary>
     /// What a member of a class ending with <paramref name="key"/> would give it: the colour, whether it was decided by
-    /// this merge, and its tier — 1 when its class had the key here and at the peer, 2 on one side, 3 on neither.
+    /// this merge, its tier — 1 when its class had the key here and at the peer, 2 on one side, 3 on neither — and the
+    /// identity of the decision (see <see cref="ApplyColors"/>).
     /// </summary>
-    private (bool Decided, string? Color, int Tier) GiverOf(ChildNode node, string key)
+    private (bool Decided, string? Color, int Tier, string Identity) GiverOf(ChildNode node, string key)
     {
-        var group = MoverGroupOf(node);
+        var group = MoverGroupOf(node) ?? node.Part?.Leader;
         if (group is not null)
-            return (true, group.Color, 3 - (group.Local.Key == key ? 1 : 0) - (group.Peer.Key == key ? 1 : 0));
-        if (node.CreatedFor is { } peer) return (true, peer.Color, peer.Key == key ? 2 : 3);
-        return (false, NormColor(node.Color), node.Class?.Key == key ? 2 : 3);
+            return (true, group.Color, 3 - (group.Local.Key == key ? 1 : 0) - (group.Peer.Key == key ? 1 : 0),
+                IdentityOf(group));
+        // What this merge added stands for the peer's options placed there, which merging the other way are that side's
+        // own options, each giving its own colour: the one with the smallest id speaks for them.
+        if (node.CreatedFor is { } peer)
+        {
+            var first = peer.Class.Members.Where(m => ReferenceEquals(NodeAt(PositionOfRemoteNode(m)), node))
+                .MinBy(m => m.Uuid, StringComparer.Ordinal) ?? node.Part?.Member ?? peer.Rep;
+            return (false, NormColor(first.Color), peer.Key == key ? 2 : 3, first.Uuid!);
+        }
+
+        return (false, NormColor(node.Color), node.Class?.Key == key ? 2 : 3, node.Uuid!);
     }
+
+    /// <summary>Where a node's class came from: its class here, or what this merge added it for.</summary>
+    private static object? OriginOf(ChildNode node) => node.Part ?? (object?) node.CreatedFor ?? node.Class;
+
+    private static string IdentityOf(ChildGroup group) =>
+        group.Owned.Select(n => n.Uuid!).Min(StringComparer.Ordinal)!;
 
     /// <summary>Every member of R mapped to where its class ends here; older entries kept while their target stays.</summary>
     private Dictionary<string, string> BuildChildMap()
@@ -1155,17 +1621,9 @@ internal sealed class ChildMerge3
         {
             switch (peer.Status)
             {
-                case PeerClassStatus.Present:
-                    var primary = peer.PrimaryNode.Uuid!;
+                case PeerClassStatus.Present or PeerClassStatus.Add or PeerClassStatus.Restore:
                     foreach (var member in peer.Class.Members)
-                    {
-                        var target = TargetOf(member.Uuid!);
-                        map[member.Uuid!] = target is { Removed: false } && target.Owner == peer ? target.Uuid! : primary;
-                    }
-
-                    break;
-                case PeerClassStatus.Add or PeerClassStatus.Restore:
-                    foreach (var member in peer.Class.Members) map[member.Uuid!] = peer.Created!.Uuid!;
+                        map[member.Uuid!] = NodeAt(PositionOfRemoteNode(member))!.Uuid!;
                     break;
                 case PeerClassStatus.Invisible when peer.InvisibleTarget?.Uuid is { } target:
                     foreach (var member in peer.Class.Members) map[member.Uuid!] = target;
@@ -1199,14 +1657,26 @@ internal sealed class ChildMerge3
     /// <summary>
     /// The group of <paramref name="peer"/>'s members in <paramref name="local"/> that come from one base class: members
     /// of one class here with different histories (one renamed into it here, another there) each merge against their
-    /// own base.
+    /// own base. Multilevel members claimed by id are grouped by their parent node on every side too, so a node's
+    /// parent merges node by node: a move between two members of one class, which the form does not show, is decided
+    /// for the node that moved alone, and still carried when another change splits that class.
     /// </summary>
-    private ChildGroup GroupOf(PeerClass peer, ChildClass local, ChildNode remoteMember, ChildNode? baseNode)
+    private ChildGroup GroupOf(PeerClass peer, ChildClass local, ChildNode remoteMember, ChildNode? baseNode,
+        ChildNode? localNode = null)
     {
         var baseClass = baseNode is null ? null : _baseByMember[baseNode.Uuid!];
-        var group = peer.Groups.FirstOrDefault(g => g.Local == local && g.Base == baseClass);
+        var parents = _s.Kind == ChildListKind.Nodes && localNode is not null
+            ? (localNode.OriginalParent, remoteMember.Parent?.Uuid ?? "",
+                baseNode is null ? null : baseNode.Parent?.Uuid ?? "")
+            : ((ChildNode?)null, (string?)null, (string?)null);
+        var group = peer.Groups.FirstOrDefault(g => g.Local == local && g.Base == baseClass &&
+                                                    ReferenceEquals(g.Parents.Local, parents.Item1) &&
+                                                    g.Parents.Remote == parents.Item2 && g.Parents.Base == parents.Item3);
         if (group is not null) return group;
-        group = new ChildGroup(peer, local, remoteMember, baseNode, baseClass);
+        group = new ChildGroup(peer, local, remoteMember, baseNode, baseClass)
+        {
+            Parents = parents, Index = _groupCount++,
+        };
         peer.Groups.Add(group);
         return group;
     }
@@ -1239,7 +1709,12 @@ internal sealed class ChildMerge3
     {
         var peer = new PeerClass(cls, parent);
         _peers.Add(peer);
-        foreach (var member in cls.Members) _peerByMember.TryAdd(member.Uuid!, peer);
+        foreach (var member in cls.Members)
+        {
+            _peerByMember.TryAdd(member.Uuid!, peer);
+            _remoteByUuid.TryAdd(member.Uuid!, member);
+        }
+
         foreach (var child in cls.Children) AddPeer(child, peer);
     }
 
@@ -1334,7 +1809,8 @@ internal sealed class ChildMerge3
 
     /// <summary>
     /// One outcome per path. A peer class split over several local groups reports its first group's, unless a later
-    /// group's is a conflict: the item must not be lost.
+    /// group's is a conflict: the item must not be lost. Likewise a parent that took the peer's value somewhere is
+    /// reported over one kept: every node that moves has an outcome saying so.
     /// </summary>
     private void AddField(string path, DataSyncFieldResolution resolution, DataSyncDisplayValue? b,
         DataSyncDisplayValue? l, DataSyncDisplayValue? r, DataSyncDisplayValue? result)
@@ -1346,9 +1822,12 @@ internal sealed class ChildMerge3
             return;
         }
 
-        if (resolution != DataSyncFieldResolution.Conflict) return;
         var index = _fields.FindIndex(f => f.Path == path);
-        if (_fields[index].Resolution != DataSyncFieldResolution.Conflict) _fields[index] = outcome;
+        var existing = _fields[index].Resolution;
+        if (existing == DataSyncFieldResolution.Conflict) return;
+        if (resolution == DataSyncFieldResolution.Conflict ||
+            (path.EndsWith(":parent", StringComparison.Ordinal) && TakesRemote(resolution) && !TakesRemote(existing)))
+            _fields[index] = outcome;
     }
 
     private static readonly DataSyncDisplayValue RootDisplay = new(null, Path: []);

@@ -160,6 +160,58 @@ public class Merge3TreeTests
         CollectionAssert.AreEqual(new[] { "eu" }, follow.RemovedChildIds.ToArray());
     }
 
+    /// <summary>
+    /// Two roots of one local class that different peer classes own: the class is one here and ends as one, so nothing
+    /// under it moves. Moving l1 to the other root is no peer's change (§8.5.2 b|l|b → l, §8.5.4 steps 6 and 8).
+    /// </summary>
+    [TestMethod]
+    public void NothingMovesWhileTheParentsEndInOneClass()
+    {
+        var @base = Tree("R", false, N("a1", "A", N("x1", "x")), N("b1", "B"));
+        var local = Tree("R", false, N("a1", "A", N("x1", "x")), N("b1", "A", N("l1", "x")));
+
+        // The peer changed nothing.
+        var unchanged = Merge(@base, local, @base);
+        Assert.AreEqual(Canon(local), Canon(Merged(unchanged)));
+        Assert.AreEqual(DataSyncFieldResolution.KeptLocal, Field(unchanged, "node:b1").Resolution);
+        NoField(unchanged, "node:x1:parent");
+
+        // The peer only renamed the property.
+        var renamed = Merge(@base, local, @base with { Name = "Region" });
+        Assert.AreEqual(Canon(local with { Name = "Region" }), Canon(Merged(renamed)));
+
+        // No base, two-way: the key is a conflict and stays; nothing moves.
+        var noBase = Merge(null, local, Tree("R", false, N("a1", "A", N("x1", "x")), N("b1", "B")),
+            DataSyncMerge3Mode.NoBase);
+        Assert.AreEqual("A(x),A(x)", Shape(noBase));
+        Assert.AreEqual(Canon(local), Canon(Merged(noBase)));
+        Assert.AreEqual(DataSyncFieldResolution.Conflict, Field(noBase, "node:b1").Resolution);
+    }
+
+    /// <summary>
+    /// The peer renamed one root of a local class; a node this device added under that root stays with it, as merging
+    /// the other way keeps it (§8.5.4 step 8). In a FastForward R is the truth: the class goes along, and says so.
+    /// </summary>
+    [TestMethod]
+    public void ANodeAddedUnderARenamedMemberStaysWithIt_UnlessAFastForwardTakesTheClassAlong()
+    {
+        var @base = Tree("R", false, N("a1", "A", N("x1", "x")), N("b1", "A"));
+        var local = Tree("R", false, N("a1", "A", N("x1", "x")), N("b1", "A", N("l1", "x")));
+        var remote = Tree("R", false, N("a1", "A", N("x1", "x")), N("b1", "B"));
+        var threeWay = Merge(@base, local, remote);
+        Assert.AreEqual("A(x),B(x)", Shape(threeWay));
+        NoConflicts(threeWay);
+        var expected = Form(Peer(Tree("R", false, N("p", "A", N("q", "x")), N("s", "B", N("t", "x")))));
+        Assert.AreEqual(expected, PublishedForm(threeWay));
+        Assert.AreEqual(expected, PublishedForm(Merge(@base, remote, local)), "the other way: the same form");
+
+        var fastForward = Merge(null, local, remote, DataSyncMerge3Mode.FastForward,
+            deletions: DataSyncChildDeletionMode.Apply);
+        Assert.AreEqual(Form(Peer(remote)), PublishedForm(fastForward));
+        Assert.AreEqual(DataSyncFieldResolution.TookRemote, Field(fastForward, "node:x1:parent").Resolution,
+            "l1 moved with its class");
+    }
+
     [TestMethod]
     public void OverlayNodesAndTheirSubtreesAreNeverTouched()
     {

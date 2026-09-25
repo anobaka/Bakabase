@@ -105,7 +105,7 @@ internal sealed class CustomPropertyMerge
             var fold = OptionFolding.Fold(merged, AllUuids(_local), ignoreCase: true);
             if (fold.Folds.Count > 0)
             {
-                merged = fold.Content;
+                merged = children is null ? fold.Content : KeepClassColours(merged, fold.Content, children.Kind);
                 childMap = childMap.ToDictionary(p => p.Key, p => fold.Aliases.GetValueOrDefault(p.Value, p.Value),
                     StringComparer.Ordinal);
                 added = added.Where(id => !fold.Aliases.ContainsKey(id)).ToArray();
@@ -396,6 +396,48 @@ internal sealed class CustomPropertyMerge
         string.Join("\n", tokens.OfType<string>().Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal));
 
     // ---- helpers ------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Folding keeps every class (a duplicate folds into its class, and a folded node's children into the survivor's),
+    /// but can change which member comes first in a multilevel class, and so the colour the class shows: each class of
+    /// <paramref name="folded"/> gets the colour it had in <paramref name="merged"/> (§8.5.5).
+    /// </summary>
+    private static CustomPropertyContentV1 KeepClassColours(CustomPropertyContentV1 merged,
+        CustomPropertyContentV1 folded, ChildListKind kind)
+    {
+        var colours = new Dictionary<string, string?>(StringComparer.Ordinal);
+        VisitClasses(ChildNode.Of(merged, kind), "", kind,
+            (path, rep) => colours.TryAdd(path, ChildMerge3.NormColor(rep.Color)));
+        var roots = ChildNode.Of(folded, kind);
+        var changed = false;
+        VisitClasses(roots, "", kind, (path, rep) =>
+        {
+            if (!colours.TryGetValue(path, out var colour) || ChildMerge3.NormColor(rep.Color) == colour) return;
+            rep.Color = colour;
+            changed = true;
+        });
+        if (!changed) return folded;
+        return kind switch
+        {
+            ChildListKind.Choices => folded with { Choices = ChildNode.ToChoices(roots) },
+            ChildListKind.Tags => folded with { Tags = ChildNode.ToTags(roots) },
+            _ => folded with { Nodes = ChildNode.ToNodes(roots) },
+        };
+    }
+
+    /// <summary>Every label class under IgnoreCase (the folded content's), with its key path and representative.</summary>
+    private static void VisitClasses(IEnumerable<ChildNode> level, string path, ChildListKind kind,
+        Action<string, ChildNode> visit)
+    {
+        foreach (var members in level.GroupBy(n => kind == ChildListKind.Tags
+                     ? DataSyncLabelKey.Fold(n.Group ?? "", true) + "\0" + DataSyncLabelKey.Fold(n.Label, true)
+                     : DataSyncLabelKey.Fold(n.Label, true), StringComparer.Ordinal))
+        {
+            var classPath = path + "\u0001" + members.Key;
+            visit(classPath, members.First());
+            VisitClasses(members.SelectMany(m => m.Children), classPath, kind, visit);
+        }
+    }
 
     private void AddField(string path, DataSyncFieldResolution resolution, DataSyncDisplayValue? b,
         DataSyncDisplayValue? l, DataSyncDisplayValue? r, DataSyncDisplayValue? result) =>
