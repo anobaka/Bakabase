@@ -14,7 +14,8 @@ namespace Bakabase.Tests.Federation;
 /// library access (§7.1.5, G29): every member of the federation services it calls is a definitions member or one
 /// that belongs to neither kind of access. Read from the compiled code, lambdas and async bodies included, so a
 /// later edit cannot quietly add a path from <c>/data-sync</c> to library grants. The federation module itself
-/// never references data sync.
+/// never references data sync. The feed keeps to the hub relay rule the same way (§7.7): the reader uses only a
+/// datasync session for the peer it reads, and the feed endpoint never reaches another node.
 /// </summary>
 [TestClass]
 public sealed class DataSyncGrantBoundaryTests
@@ -88,6 +89,89 @@ public sealed class DataSyncGrantBoundaryTests
         // The claim loop hands data sync what it claimed as plain node ids.
         Assert.AreEqual(typeof(Task<IReadOnlyList<string>>),
             typeof(NodePairingClient).GetMethod(nameof(NodePairingClient.ClaimPendingDataSyncAsync))!.ReturnType);
+    }
+
+    /// <summary>
+    /// The hub relay rule on the reading side (§7.7, D03): the feed reader reaches a peer only through a datasync
+    /// session for that peer — never the library's session, the transport's library overload, or a grant found any
+    /// other way — and names no scope but <c>datasync.read</c>.
+    /// </summary>
+    [TestMethod]
+    public void ThePeerClientReadsOnlyWithADirectDefinitionsGrant()
+    {
+        var calls = CalledMethods(typeof(FederationDataSyncPeerClient)).Distinct().ToArray();
+        bool Calls(Type type, string name, Func<ParameterInfo[], bool> parameters) => calls.Any(m =>
+            m.DeclaringType == type && m.Name == name && parameters(m.GetParameters()));
+
+        Assert.IsTrue(Calls(typeof(PeerSessionFactory), nameof(PeerSessionFactory.GetAsync), p => p.Length == 3),
+            "The scan sees the scoped session it reads with.");
+        Assert.IsTrue(Calls(typeof(INodeTransport), nameof(INodeTransport.SendAsync),
+            p => p[0].ParameterType == typeof(PeerSessionSnapshot)));
+        Assert.IsFalse(Calls(typeof(PeerSessionFactory), nameof(PeerSessionFactory.GetAsync), p => p.Length != 3),
+            "The library session.");
+        Assert.IsFalse(Calls(typeof(IPeerSessionFactory), nameof(IPeerSessionFactory.GetAsync), _ => true),
+            "The library session.");
+        Assert.IsFalse(Calls(typeof(INodeTransport), nameof(INodeTransport.SendAsync),
+            p => p[0].ParameterType == typeof(string)), "The transport overload that opens a library session.");
+        Assert.IsFalse(Calls(typeof(PeerSessionFactory), nameof(PeerSessionFactory.GetConnectionState), p => p.Length == 1),
+            "The library session's state.");
+        var reached = calls.Where(m => m.DeclaringType != null && AccessServices.Contains(m.DeclaringType) &&
+                                       m.DeclaringType != typeof(PeerSessionFactory))
+            .Select(m => $"{m.DeclaringType!.Name}.{m.Name}").Distinct().ToArray();
+        CollectionAssert.AreEquivalent(new[] { "FederationPeerService.GetDataSyncStatusAsync" }, reached);
+
+        var strings = LoadedStrings(typeof(FederationDataSyncPeerClient)).ToHashSet();
+        Assert.IsTrue(strings.Contains(FederationScopes.DataSyncRead));
+        Assert.IsFalse(strings.Contains(FederationScopes.LibraryRead));
+        Assert.IsFalse(strings.Contains(FederationScopes.Any));
+    }
+
+    /// <summary>
+    /// The hub relay rule on the serving side (§7.7, D03): a node answers a feed read from its own feed and never
+    /// forwards it. Nothing the feed endpoint calls or resolves can reach another node.
+    /// </summary>
+    [TestMethod]
+    public void TheFeedEndpointNeverReachesAnotherNode()
+    {
+        Type[] outbound =
+        [
+            typeof(INodeTransport), typeof(NodeTransport), typeof(IPeerSessionFactory), typeof(PeerSessionFactory),
+            typeof(FederationHttpClient), typeof(NodePairingClient), typeof(INodePeerDiscovery),
+            typeof(Bakabase.Modules.DataSync.Runtime.IDataSyncPeerClient), typeof(FederationDataSyncPeerClient),
+            typeof(FederationDataSyncGrants), typeof(FederationPairingFlow), typeof(HttpClient),
+            typeof(HttpMessageInvoker)
+        ];
+        var controller = typeof(Bakabase.Service.Controllers.DataSyncNodeController);
+        var calls = CalledMethods(controller).Distinct().ToArray();
+
+        Assert.IsTrue(calls.Any(m => m.DeclaringType == typeof(Bakabase.Modules.DataSync.Runtime.IDataSyncFeedSource) &&
+                                     m.Name == nameof(Bakabase.Modules.DataSync.Runtime.IDataSyncFeedSource.GetPageAsync)),
+            "The scan follows the actions into the feed source.");
+        var reaching = calls.Where(m => outbound.Any(t => t.IsAssignableFrom(m.DeclaringType)) ||
+                                        m.IsGenericMethod && m.GetGenericArguments().Any(a => outbound.Contains(a)))
+            .Select(m => $"{m.DeclaringType!.Name}.{m.Name}").Distinct().ToArray();
+        Assert.AreEqual(0, reaching.Length, string.Join(", ", reaching));
+        CollectionAssert.AreEqual(new[] { typeof(FederationPeerService) },
+            controller.GetConstructors().Single().GetParameters().Select(p => p.ParameterType).ToArray());
+    }
+
+    /// <summary>Every string constant <paramref name="type"/>'s code loads, nested compiler-made types included.</summary>
+    private static IEnumerable<string> LoadedStrings(Type type)
+    {
+        foreach (var nested in Nested(type))
+        foreach (var method in nested.GetMethods(All).Cast<MethodBase>().Concat(nested.GetConstructors(All)))
+        {
+            var il = method.GetMethodBody()?.GetILAsByteArray();
+            if (il == null) continue;
+            for (var i = 0; i < il.Length;)
+            {
+                var code = il[i] == 0xFE ? OpCodesByValue[(ushort)(0xFE00 | il[i + 1])] : OpCodesByValue[il[i]];
+                i += code.Size;
+                if (code.OperandType == OperandType.InlineString)
+                    yield return method.Module.ResolveString(BitConverter.ToInt32(il, i));
+                i += OperandSize(code.OperandType, il, i);
+            }
+        }
     }
 
     /// <summary>Every method called by <paramref name="type"/>'s code, including its nested compiler-made types.</summary>

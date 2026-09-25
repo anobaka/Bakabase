@@ -21,6 +21,10 @@ namespace Bakabase.Service.Controllers;
 /// Only a <c>datasync.read</c> grant reaches it, and only while definitions sharing is on (§7.3). Every query value
 /// is validated here before the feed source sees it; the source's refusals keep the federation error shape.
 /// </summary>
+/// <remarks>
+/// It answers from this node's own feed, for the grant's subject only, and never forwards a read (§7.7, D03): nothing
+/// in a request names another reader, and nothing here reaches another node (<c>DataSyncGrantBoundaryTests</c>).
+/// </remarks>
 [ApiController]
 [Route("federation/v1/export/datasync")]
 [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.DataSyncRead)]
@@ -54,15 +58,17 @@ public sealed class DataSyncNodeController(FederationPeerService peers) : Federa
     /// One precomputed page's raw canonical bytes. Never through <see cref="FederationControllerBase.FederationResult"/>,
     /// whose depth limit a deep multilevel property exceeds (F61).
     /// </summary>
+    /// <param name="since">The served since of the kind, 0..2^53. A string, parsed here, so a malformed one is refused
+    /// in the federation error shape like every other value, not by model binding.</param>
     [HttpGet("changes")]
     [SwaggerOperation(OperationId = "ReadFederationDataSyncChanges")]
     public async Task<IActionResult> Changes([FromQuery] string? snapshot, [FromQuery] string? kind,
-        [FromQuery] long? since, [FromQuery] string? cursor, CancellationToken ct)
+        [FromQuery] string? since, [FromQuery] string? cursor, CancellationToken ct)
     {
         if (!NodeRequestSignature.IsIdentifier(snapshot))
             throw DataSyncFeedQueryString.Invalid("snapshot");
         if (!DataSyncFeedQueryString.IsKind(kind)) throw DataSyncFeedQueryString.Invalid("kind");
-        if (since is not { } sinceSeq || !DataSyncFeedQueryString.IsSeq(sinceSeq))
+        if (!DataSyncFeedQueryString.TryParseSeq(since, out var sinceSeq))
             throw DataSyncFeedQueryString.Invalid("since");
         if (cursor != null && !NodeRequestSignature.IsIdentifier(cursor)) throw DataSyncFeedQueryString.Invalid("cursor");
         if (Source is not { } source) return NotAvailable();
@@ -135,6 +141,10 @@ public static class DataSyncFeedQueryString
     public static bool IsKind(string? kind) => kind != null && KindPattern.IsMatch(kind);
     public static bool IsSeq(long seq) => seq is >= 0 and <= MaxSeq;
 
+    /// <summary>A sequence number as a query carries it: digits only, 0..2^53.</summary>
+    public static bool TryParseSeq(string? value, out long seq) =>
+        long.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out seq) && IsSeq(seq);
+
     public static string FormatSince(IReadOnlyDictionary<string, long> since) =>
         string.Join(',', since.Select(p => $"{p.Key}:{p.Value.ToString(CultureInfo.InvariantCulture)}"));
 
@@ -150,9 +160,8 @@ public static class DataSyncFeedQueryString
             foreach (var pair in pairs)
             {
                 var separator = pair.IndexOf(':');
-                if (separator <= 0 || !IsKind(pair[..separator]) ||
-                    !long.TryParse(pair[(separator + 1)..], NumberStyles.None, CultureInfo.InvariantCulture,
-                        out var seq) || !IsSeq(seq) || !cursors.TryAdd(pair[..separator], seq))
+                if (separator <= 0 || !IsKind(pair[..separator]) || !TryParseSeq(pair[(separator + 1)..], out var seq) ||
+                    !cursors.TryAdd(pair[..separator], seq))
                     throw Invalid("since");
             }
         }

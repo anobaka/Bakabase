@@ -267,7 +267,7 @@ public sealed partial class FederationGateTests
         context.Request.QueryString = new QueryString("?snapshot=snapshot-1&kind=customProperty&since=0");
         gate.Sign(context, gate.DataSync);
         await gate.RunAsync(context, http => Execute(http, () => gate.FeedController(http)
-            .Changes("snapshot-1", "customProperty", 0, null, http.RequestAborted)));
+            .Changes("snapshot-1", "customProperty", "0", null, http.RequestAborted)));
 
         Assert.AreEqual(200, context.Response.StatusCode);
         Assert.AreEqual(ScopeGate.Page, Encoding.UTF8.GetString(((MemoryStream)context.Response.Body).ToArray()));

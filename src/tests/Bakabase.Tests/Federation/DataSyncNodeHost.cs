@@ -33,7 +33,11 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
     }
 
     /// <param name="dataSync">Whether this build has data sync: without it, its info says nothing about it.</param>
-    public static async Task<DataSyncNodeHost> StartAsync(string nodeId, string name, bool dataSync = true)
+    /// <param name="feed">
+    /// What this node's feed serves; without one its feed answers 501, as a build whose feed is not there yet.
+    /// </param>
+    public static async Task<DataSyncNodeHost> StartAsync(string nodeId, string name, bool dataSync = true,
+        IDataSyncFeedSource? feed = null)
     {
         var remote = new AddressedRemoteAccess();
         var events = new RecordingGrantEvents();
@@ -48,9 +52,11 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
                 services.AddSingleton<INodePeerDiscovery, NoPeerDiscovery>();
                 services.AddSingleton<FederationPairingFlow>();
                 services.AddSingleton<IDataSyncGrantEvents>(events);
+                if (feed != null) services.AddSingleton(feed);
                 if (!dataSync) return;
                 services.AddSingleton<INodeInfoContributor, DataSyncNodeInfoContributor>();
                 services.AddSingleton<FederationDataSyncGrants>();
+                services.AddSingleton<FederationDataSyncPeerClient>();
             });
         remote.Addresses = [$"http://127.0.0.1:{host.Port}"];
         var node = new DataSyncNodeHost(host, remote, events);
@@ -70,6 +76,28 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
     public FederationPairingFlow Flow => Services.GetRequiredService<FederationPairingFlow>();
     public PeerSessionFactory Sessions => Services.GetRequiredService<PeerSessionFactory>();
     public INodeTransport Transport => Services.GetRequiredService<INodeTransport>();
+    public FederationHttpClient Http => Services.GetRequiredService<FederationHttpClient>();
+
+    /// <summary>This node's reader of other nodes' feeds, as the Service registers it.</summary>
+    public FederationDataSyncPeerClient PeerClient => Services.GetRequiredService<FederationDataSyncPeerClient>();
+
+    /// <summary>
+    /// A reader of its own, with fresh sessions (nothing verified yet, so the next call asks <c>/info</c> and
+    /// handshakes again), and the wait and deadlines a test sets.
+    /// </summary>
+    public FederationDataSyncPeerClient NewPeerClient(TimeSpan? fetchWait = null, TimeSpan? deadline = null)
+    {
+        var sessions = new PeerSessionFactory(Store, Services.GetRequiredService<INodeIdentityProvider>(), Http,
+            TimeProvider.System);
+        var defaults = new FederationDataSyncPeerClient(sessions, Transport, Http, Peers, TimeProvider.System);
+        return new FederationDataSyncPeerClient(sessions, Transport, Http, Peers, TimeProvider.System)
+        {
+            FetchWait = fetchWait ?? defaults.FetchWait,
+            HeadDeadline = deadline ?? defaults.HeadDeadline,
+            ManifestDeadline = deadline ?? defaults.ManifestDeadline,
+            PageDeadline = deadline ?? defaults.PageDeadline
+        };
+    }
 
     /// <summary>Waits for an event raised in the background (a read-back that follows a code), at most ten seconds.</summary>
     public async Task WaitForEventAsync(string raised)
