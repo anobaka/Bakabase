@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Bakabase.Modules.Federation;
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Peers;
+using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 
@@ -33,7 +34,7 @@ public sealed class FederationNodeDiscovery(IServerDiscovery discovery, INodeIde
                 if (!response.IsSuccessStatusCode) return null;
                 var info = JsonSerializer.Deserialize<NodeInfo>(await response.Content.ReadAsStringAsync(ct), FederationJson.Options);
                 // A node sharing only its definitions answers info too (§7.4), and says so; a hint, like the rest.
-                return info is { ProtocolVersion: 1 } && info.NodeId != local.NodeId
+                return info is { ProtocolVersion: 1 } && IsPlausibleIdentity(info) && info.NodeId != local.NodeId
                     ? new NodeDiscoveryCandidate(info.NodeId, info.Name, server.BaseAddress,
                         ServerSelfDescriptionWords.KindOf(info.Kind) ?? server.Kind,
                         ServerSelfDescriptionWords.PlatformOf(info.Platform) ?? server.Platform,
@@ -50,4 +51,12 @@ public sealed class FederationNodeDiscovery(IServerDiscovery discovery, INodeIde
         }));
         return candidates.Where(x => x != null).Cast<NodeDiscoveryCandidate>().DistinctBy(x => x.NodeId).ToArray();
     }
+
+    /// <summary>
+    /// Anyone on the network can answer info, and what it says is listed to the Devices page and to data sync's peer
+    /// candidates, which paired devices read too (§12). So an identity a session would refuse (the checks of
+    /// <c>PeerSessionFactory.ValidateInfo</c>) is not listed at all.
+    /// </summary>
+    private static bool IsPlausibleIdentity(NodeInfo info) => NodeRequestSignature.IsIdentifier(info.NodeId) &&
+        !string.IsNullOrWhiteSpace(info.Name) && info.Name.Length <= 128 && !info.Name.Any(char.IsControl);
 }

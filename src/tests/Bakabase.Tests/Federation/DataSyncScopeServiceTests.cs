@@ -167,7 +167,62 @@ public sealed class DataSyncScopeServiceTests
         Assert.AreEqual((false, "AccessMissing"), (again.ReadBackGranted, again.ReadBackError));
         Assert.AreEqual(2, node.Requests.Count, "Nothing is tried again without an offer.");
         Assert.AreEqual(1, (await node.Grants.GetGrantsAsync(default)).Count, "Approving again issues nothing new.");
+
+        // "Try again" asks the device, known only by its NodeId, at every address it offered, in order.
+        node.Requests.Clear();
+        Assert.AreEqual(DataSyncPeerErrorCode.Unreachable, (await Assert.ThrowsExactlyAsync<DataSyncPeerException>(() =>
+            node.Grants.RequestAccessAsync(new DataSyncAccessRequestInput("node-pc", null, null,
+                DataSyncRequestIntent.Follow), default))).Code);
+        CollectionAssert.AreEqual(new[]
+        {
+            "GET http://192.168.1.9:5000/federation/v1/info", "GET http://10.0.0.9:5000/federation/v1/info"
+        }, node.Requests.ToArray());
+        Assert.IsNull((await node.Grants.GetPeersAsync(false, default)).Single().Address,
+            "What it offered is not shown as where it is.");
     }
+
+    /// <summary>
+    /// This device's own refusals on the way to a peer are its own problems, never the peer's answer (§7.6): too many
+    /// requests or offers of its own waiting, its own sharing switched off before a two-way offer could be made, its
+    /// own request gone meanwhile, and its own state unreadable. <c>DataSyncScopeTests</c> has the pairing client
+    /// raising the first two.
+    /// </summary>
+    [TestMethod]
+    public async Task ThisDevicesOwnRefusalsAreNotReportedAsThePeers()
+    {
+        using var node = new Node(RemoteAccessMode.Enabled);
+        foreach (var (code, expected) in new[]
+                 {
+                     ("LocalPairingBusy", DataSyncProblemCode.Busy),
+                     ("LocalDataSyncSharingDisabled", DataSyncProblemCode.SharingOff),
+                     ("PairingExpired", DataSyncProblemCode.RequestNotFound),
+                 })
+            Assert.AreEqual(expected, ((DataSyncProblemException)FederationDataSyncGrants.MapPeer(
+                new FederationAccessException(code, 429, "message"))).Problem.Code, code);
+
+        // An unreadable state of its own is this device's failure as it is, before any peer is asked.
+        await File.WriteAllTextAsync(Path.Combine(node.Ensure(), FederationStateStore.FileName), "{ not json");
+        var unreadable = await Assert.ThrowsExactlyAsync<FederationAccessException>(() => node.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput(null, "http://192.168.1.9:5000", null, DataSyncRequestIntent.Follow), default));
+        Assert.AreEqual("SharingStateUnavailable", unreadable.ErrorCode);
+        Assert.AreEqual(0, node.Requests.Count);
+    }
+
+    /// <summary>
+    /// The claim warning compares addresses only: a device known by a host name is not flagged for every request it
+    /// sends from its IP address.
+    /// </summary>
+    [TestMethod]
+    [DataRow("http://192.168.1.5:5000", "192.168.1.5", false)]
+    [DataRow("http://192.168.1.5:5000", "192.168.1.6", true)]
+    [DataRow("http://[::ffff:192.168.1.5]:5000", "192.168.1.5", false)]
+    [DataRow("http://[fe80::1]:5000", "fe80::2", true)]
+    [DataRow("http://nas.local:5000", "192.168.1.5", false)]
+    [DataRow("http://nas.local:5000", "192.168.1.99", false)]
+    [DataRow(null, "192.168.1.5", false)]
+    [DataRow("http://192.168.1.5:5000", null, false)]
+    public void OnlyTwoDifferentAddressesFlagAClaim(string? known, string? from, bool flagged) =>
+        Assert.AreEqual(flagged, FederationDataSyncGrants.IsElsewhere(known, from));
 
     [TestMethod]
     public async Task RejectingOrCancellingWhatIsNotThereSaysSo()

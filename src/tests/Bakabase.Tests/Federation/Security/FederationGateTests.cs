@@ -428,7 +428,8 @@ public sealed partial class FederationGateTests
         .RootElement.GetProperty("code").GetString()!;
     private sealed class Actions
     {
-        // An Export action serves one grant scope; one without a scope is refused (EveryExportActionDeclaresAScope).
+        // FederationLocalAccessFilter refuses an Export action that declares no scope (fail-closed, §7.3), so the
+        // fixture serves the library's, as every Export action before data sync did. The assertions are unchanged.
         [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.LibraryRead)] public void Export() { }
         public void Unmarked() { }
     }

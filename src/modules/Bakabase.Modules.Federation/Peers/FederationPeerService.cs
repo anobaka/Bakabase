@@ -573,10 +573,24 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
     public async Task<bool> RejectDataSyncAsync(string requestId, CancellationToken ct = default) =>
         await store.MutateAsync(state => Reject(state.IncomingDataSyncRequests, requestId), ct);
 
+    /// <summary>
+    /// Withdraws a waiting outgoing request. A two-way request's offer to be read back goes with it: the device's code
+    /// for this one is dropped, unless another two-way request to it still stands (§7.2.4).
+    /// </summary>
     /// <returns>Whether a waiting outgoing request was cancelled.</returns>
     public async Task<bool> CancelOutgoingDataSyncAsync(string requestId, CancellationToken ct = default) =>
-        await store.MutateAsync(state => state.OutgoingDataSyncRequests.RemoveAll(r =>
-            r.RequestId == requestId && r.Status == "awaitingApproval") > 0, ct);
+        await store.MutateAsync(state =>
+        {
+            var request = state.OutgoingDataSyncRequests.FirstOrDefault(r =>
+                r.RequestId == requestId && r.Status == "awaitingApproval");
+            if (request == null) return false;
+            state.OutgoingDataSyncRequests.Remove(request);
+            var now = timeProvider.GetUtcNow();
+            if (!state.OutgoingDataSyncRequests.Any(r => r.NodeId == request.NodeId && r.ExpiresAt > now &&
+                    r.Intent == NodeDataSyncIntents.TwoWay && r.Status is "awaitingApproval" or "granted"))
+                WithdrawDataSyncReadBack(state, request.NodeId);
+            return true;
+        }, ct);
 
     /// <summary>A single-use code that lets exactly <paramref name="audienceNodeId"/> read this device's definitions.</summary>
     public async Task<string> CreateDataSyncReciprocalInvitationAsync(string audienceNodeId,
@@ -595,25 +609,55 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
         return code;
     }
 
-    /// <summary>Takes (once) a granted two-way requester's offer to be read back.</summary>
+    /// <summary>
+    /// Takes (once) a granted two-way requester's offer to be read back. The code goes with it; where the requester
+    /// said it could be read stays with the peer (<c>DataSyncOfferedAddresses</c>), so asking it again after a failed
+    /// read-back has somewhere to go (<see cref="GetDataSyncAddressesAsync"/>).
+    /// </summary>
     public async Task<NodeReciprocalOffer?> TakeDataSyncReciprocalOfferAsync(string nodeId,
         CancellationToken ct = default) =>
-        await store.MutateAsync(state => TakeOffer(state.IncomingDataSyncRequests, nodeId), ct);
+        await store.MutateAsync(state =>
+        {
+            var offer = TakeOffer(state.IncomingDataSyncRequests, nodeId);
+            if (offer != null && state.Peers.TryGetValue(nodeId, out var peer))
+                peer.DataSyncOfferedAddresses = offer.Addresses;
+            return offer;
+        }, ct);
+
+    /// <summary>
+    /// Where to ask a device for its definitions when no address is given: where data sync reaches it
+    /// (<c>DataSyncAddress ?? Address</c>), else, only when this device knows no address for it at all, every address
+    /// it offered with its last two-way request, in its order. Those are unverified: the caller tries each with the
+    /// device's NodeId expected.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> GetDataSyncAddressesAsync(string nodeId, CancellationToken ct = default)
+    {
+        var peer = (await store.ReadAsync(ct)).Peers.GetValueOrDefault(nodeId);
+        return (peer?.DataSyncAddress ?? peer?.Address) is { } known ? [known] : peer?.DataSyncOfferedAddresses ?? [];
+    }
 
     /// <summary>Whether this device holds <c>datasync.read</c> credentials for the device: whether it may read it.</summary>
     public async Task<bool> HasOutboundDataSyncGrantAsync(string nodeId, CancellationToken ct = default) =>
         (await store.ReadAsync(ct)).OutboundDataSyncGrants.ContainsKey(nodeId);
 
-    /// <summary>Stops a device reading this device's definitions: its live datasync grants and their leases.</summary>
+    /// <summary>
+    /// Stops a device reading this device's definitions: its live datasync grants and their leases, and any code this
+    /// device offered it to read it back with, which a request the device still holds would otherwise redeem.
+    /// </summary>
     public async Task RevokeDataSyncAsync(string nodeId, CancellationToken ct = default)
     {
-        var revoked = await store.MutateAsync(state => RevokeSubject(state.InboundDataSyncGrants, nodeId), ct);
+        var revoked = await store.MutateAsync(state =>
+        {
+            WithdrawDataSyncReadBack(state, nodeId);
+            return RevokeSubject(state.InboundDataSyncGrants, nodeId);
+        }, ct);
         foreach (var grantId in revoked) leases.Revoke(grantId);
     }
 
     /// <summary>
     /// "Done — stop reading X": drops this device's own datasync credentials for the peer and its datasync requests
-    /// to it. Library access and the peer's browsing switch are untouched.
+    /// to it, with the offer to be read back that a two-way request made. Library access and the peer's browsing
+    /// switch are untouched.
     /// </summary>
     public async Task ForgetOutboundDataSyncAsync(string nodeId, CancellationToken ct = default)
     {
@@ -622,10 +666,18 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
             var grantId = state.OutboundDataSyncGrants.GetValueOrDefault(nodeId)?.GrantId;
             state.OutboundDataSyncGrants.Remove(nodeId);
             state.OutgoingDataSyncRequests.RemoveAll(r => r.NodeId == nodeId);
+            WithdrawDataSyncReadBack(state, nodeId);
             return grantId;
         }, ct);
         if (grantId != null) leases.Revoke(GrantLeaseRegistry.OutboundKey(grantId));
     }
+
+    /// <summary>
+    /// Consent withdrawn: the codes this device made for <paramref name="nodeId"/> to read it back with (§7.2.4). The
+    /// device may still hold the request that carried one; approving it later then reads nothing back.
+    /// </summary>
+    private static void WithdrawDataSyncReadBack(FederationState state, string nodeId) =>
+        state.DataSyncReciprocalInvitations.RemoveAll(i => i.AudienceNodeId == nodeId);
 
     // ---- Shared helpers ------------------------------------------------------------------------------------------
 

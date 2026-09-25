@@ -76,22 +76,51 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
     /// Asks a device for its definitions, by request or with its code. Two-way also offers this device back with a
     /// reciprocal datasync code, which needs definitions sharing and remote access on here (§7.2.4 step 1).
     /// </summary>
+    /// <remarks>
+    /// Without an address, the device is asked where this device knows it. A device known only by the request it
+    /// sent (a two-way requester whose read-back failed) is asked at each address it offered in turn, with its NodeId
+    /// expected, until one answers as it: that is how "Try again" reaches it (§7.2.4).
+    /// </remarks>
     public async Task<DataSyncAccessRequestOutcome> RequestAccessAsync(DataSyncAccessRequestInput input,
         CancellationToken ct)
     {
         var twoWay = input.Intent == DataSyncRequestIntent.TwoWay;
-        var address = input.Address;
-        if (string.IsNullOrWhiteSpace(address))
-            address = (await peers.GetDataSyncStatusAsync(ct)).Peers
-                .FirstOrDefault(p => p.NodeId == input.PeerNodeId)?.Address ?? throw Problem(
-                    DataSyncProblemCode.PeerUnreachable, "No address is known for this device. Enter its address.");
-        IReadOnlyList<string>? reciprocal = null;
+        var peerNodeId = string.IsNullOrWhiteSpace(input.PeerNodeId) ? null : input.PeerNodeId;
+        // This device's own state is read first: a failure to read it is this device's, never the peer's (§7.6).
+        await identity.GetAsync(ct);
+        IReadOnlyList<string> addresses = !string.IsNullOrWhiteSpace(input.Address)
+            ? [input.Address]
+            : peerNodeId == null
+                ? []
+                : await peers.GetDataSyncAddressesAsync(peerNodeId, ct);
+        if (addresses.Count == 0)
+            throw Problem(DataSyncProblemCode.PeerUnreachable, "No address is known for this device. Enter its address.");
         if (twoWay)
         {
             if (!await store.IsDataSyncSharingEnabledAsync(ct))
                 throw Problem(DataSyncProblemCode.SharingOff,
                     "Keeping in step both ways lets the other device read this one: turn definitions sharing on first.");
             RequireRemoteAccess();
+        }
+        for (var i = 0;; i++)
+        {
+            try
+            {
+                return await RequestAccessAtAsync(addresses[i], input.Code, twoWay, peerNodeId, ct);
+            }
+            catch (Exception e) when (i < addresses.Count - 1 && IsNotThere(e))
+            {
+                // Only addresses the device offered are tried in turn; the next may be where it is.
+            }
+        }
+    }
+
+    private async Task<DataSyncAccessRequestOutcome> RequestAccessAtAsync(string address, string? code, bool twoWay,
+        string? expectedNodeId, CancellationToken ct)
+    {
+        IReadOnlyList<string>? reciprocal = null;
+        if (twoWay)
+        {
             reciprocal = flow.GetShareBackAddresses(address);
             if (reciprocal.Count == 0)
                 throw Problem(DataSyncProblemCode.RemoteAccessOff,
@@ -100,10 +129,9 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
         NodeDataSyncPairingOutcome outcome;
         try
         {
-            outcome = await pairing.ConnectDataSyncAsync(address, input.Code,
+            outcome = await pairing.ConnectDataSyncAsync(address, code,
                 twoWay ? NodeDataSyncIntents.TwoWay : NodeDataSyncIntents.Follow,
-                FederationPairingFlow.DataSyncContractOfThisBuild, reciprocal,
-                string.IsNullOrWhiteSpace(input.PeerNodeId) ? null : input.PeerNodeId, ct);
+                FederationPairingFlow.DataSyncContractOfThisBuild, reciprocal, expectedNodeId, ct);
         }
         catch (FederationAccessException e)
         {
@@ -118,6 +146,15 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
         return new DataSyncAccessRequestOutcome(outcome.Outcome, outcome.RequestId, outcome.PeerNodeId,
             outcome.PeerName, outcome.ReadBack);
     }
+
+    /// <summary>A failure that says the device is not at that address, rather than an answer from it or this device.</summary>
+    private static bool IsNotThere(Exception e) => e switch
+    {
+        DataSyncPeerException peer => peer.Code is DataSyncPeerErrorCode.Unreachable or
+            DataSyncPeerErrorCode.IdentityConflict or DataSyncPeerErrorCode.InvalidResponse,
+        DataSyncProblemException problem => problem.Problem.Code == DataSyncProblemCode.PeerUnreachable,
+        _ => false
+    };
 
     public async Task<IReadOnlyList<DataSyncAccessRequestView>> GetRequestsAsync(CancellationToken ct) =>
         (await peers.GetDataSyncStatusAsync(ct)).Requests.Select(r =>
@@ -244,16 +281,15 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
         .GroupBy(url => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : url)
         .Select(g => g.First()).ToArray();
 
-    /// <summary>Whether an incoming request came from somewhere other than where this device knows the node it names.</summary>
-    private static bool IsElsewhere(string? knownAddress, string? remoteAddress)
-    {
-        if (knownAddress == null || remoteAddress == null ||
-            !Uri.TryCreate(knownAddress, UriKind.Absolute, out var known)) return false;
-        var host = known.Host.Trim('[', ']');
-        if (IPAddress.TryParse(host, out var knownIp) && IPAddress.TryParse(remoteAddress, out var remoteIp))
-            return !Normalize(knownIp).Equals(Normalize(remoteIp));
-        return !string.Equals(host, remoteAddress, StringComparison.OrdinalIgnoreCase);
-    }
+    /// <summary>
+    /// Whether an incoming request came from somewhere other than where this device knows the node it names. Only two
+    /// IP addresses can be compared: a device known by a host name (<c>nas.local</c>) is not looked up, so a request
+    /// from it is never flagged for a name that is not an address.
+    /// </summary>
+    internal static bool IsElsewhere(string? knownAddress, string? remoteAddress) =>
+        knownAddress != null && remoteAddress != null && Uri.TryCreate(knownAddress, UriKind.Absolute, out var known) &&
+        IPAddress.TryParse(known.Host.Trim('[', ']'), out var knownIp) &&
+        IPAddress.TryParse(remoteAddress, out var remoteIp) && !Normalize(knownIp).Equals(Normalize(remoteIp));
 
     private static IPAddress Normalize(IPAddress address) => address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;
 
@@ -262,12 +298,17 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
 
     /// <summary>
     /// What a peer's refusal of a pairing means to data sync (the mapping of §7.6), and this device's own refusals
-    /// on the way (a wrong code, an address that is not one) as the problem they are.
+    /// on the way as the problem they are: a wrong code, an address that is not one, its own bounds, its own sharing
+    /// switched off meanwhile, its own request gone meanwhile. A 503 is the peer, or what stands in front of it, not
+    /// answering: this device's own state is read before any peer is asked, so its failure never arrives here.
     /// </summary>
     internal static Exception MapPeer(FederationAccessException e) => e.ErrorCode switch
     {
         "InvalidPairingCode" => Problem(DataSyncProblemCode.InvitationInvalid, e.Message),
         "InvalidAddress" => Problem(DataSyncProblemCode.PeerUnreachable, e.Message),
+        "LocalPairingBusy" => Problem(DataSyncProblemCode.Busy, e.Message),
+        "LocalDataSyncSharingDisabled" => Problem(DataSyncProblemCode.SharingOff, e.Message),
+        "PairingExpired" => Problem(DataSyncProblemCode.RequestNotFound, e.Message),
         "PeerTooOld" or "NodeRouteForbidden" or "ProtocolUnsupported" =>
             new DataSyncPeerException(DataSyncPeerErrorCode.PeerTooOld, e.Message),
         "ThisTooOld" => new DataSyncPeerException(DataSyncPeerErrorCode.ThisTooOld, e.Message),

@@ -478,6 +478,140 @@ public sealed class DataSyncScopeTests
         Assert.IsNull(approver.Outbound("initiator"));
     }
 
+    /// <summary>
+    /// §7.2.4: a two-way offer the initiator withdrew — its request cancelled, its reading of the approver stopped, or
+    /// the approver's access to it revoked — reads nothing back, though the approver still holds the request that
+    /// carried it.
+    /// </summary>
+    [TestMethod]
+    [DataRow("cancel")]
+    [DataRow("stopReading")]
+    [DataRow("revoke")]
+    public async Task AWithdrawnTwoWayOfferReadsNothingBack(string withdrawal)
+    {
+        using var network = new DataSyncTestNetwork();
+        var initiator = network.Add("initiator");
+        var approver = network.Add("approver");
+        await initiator.Peers.SetDataSyncSharingAsync(true);
+        await approver.Peers.SetDataSyncSharingAsync(true);
+        var pending = await initiator.Pairing.ConnectDataSyncAsync("http://approver", null, NodeDataSyncIntents.TwoWay,
+            DataSyncTestNetwork.Contract, ["http://initiator"]);
+
+        switch (withdrawal)
+        {
+            case "cancel":
+                Assert.IsTrue(await initiator.Peers.CancelOutgoingDataSyncAsync(pending.RequestId));
+                break;
+            case "stopReading":
+                await initiator.Peers.ForgetOutboundDataSyncAsync("approver");
+                break;
+            default:
+                await initiator.Peers.RevokeDataSyncAsync("approver");
+                break;
+        }
+        Assert.AreEqual(0, initiator.ReadState().GetProperty("dataSyncReciprocalInvitations").GetArrayLength());
+
+        var approval = await approver.Peers.ApproveDataSyncAsync(pending.RequestId);
+        Assert.IsTrue(approval.HasReciprocal, "The approver's copy of the request still carries the offer.");
+        var offer = (await approver.Peers.TakeDataSyncReciprocalOfferAsync("initiator"))!;
+        Assert.AreEqual("InvalidPairingCode", await ErrorOf(approver.Pairing.ConnectDataSyncAsync(
+            offer.Addresses.Single(), offer.Code, NodeDataSyncIntents.Follow, DataSyncTestNetwork.Contract,
+            expectedNodeId: "initiator")));
+        Assert.AreEqual(0, initiator.Redeemed.Count);
+        Assert.AreEqual(0, (await initiator.Peers.GetDataSyncStatusAsync()).Grants.Count);
+        Assert.IsNull(approver.OutboundDataSync("initiator"));
+    }
+
+    /// <summary>Cancelling one two-way request leaves the offer of another that still waits for the same device.</summary>
+    [TestMethod]
+    public async Task CancellingOneTwoWayRequestKeepsTheOfferOfAnotherToTheSameDevice()
+    {
+        using var network = new DataSyncTestNetwork();
+        var initiator = network.Add("initiator");
+        var approver = network.Add("approver");
+        network.Route("approver-2", approver);
+        await initiator.Peers.SetDataSyncSharingAsync(true);
+        await approver.Peers.SetDataSyncSharingAsync(true);
+        var first = await initiator.Pairing.ConnectDataSyncAsync("http://approver", null, NodeDataSyncIntents.TwoWay,
+            DataSyncTestNetwork.Contract, ["http://initiator"]);
+        var second = await initiator.Pairing.ConnectDataSyncAsync("http://approver-2", null,
+            NodeDataSyncIntents.TwoWay, DataSyncTestNetwork.Contract, ["http://initiator"]);
+        Assert.AreNotEqual(first.RequestId, second.RequestId);
+
+        Assert.IsTrue(await initiator.Peers.CancelOutgoingDataSyncAsync(first.RequestId));
+
+        await approver.Peers.ApproveDataSyncAsync(second.RequestId);
+        var offer = (await approver.Peers.TakeDataSyncReciprocalOfferAsync("initiator"))!;
+        Assert.AreEqual("granted", (await approver.Pairing.ConnectDataSyncAsync(offer.Addresses.Single(), offer.Code,
+            NodeDataSyncIntents.Follow, DataSyncTestNetwork.Contract, expectedNodeId: "initiator")).Outcome);
+    }
+
+    /// <summary>
+    /// §7.2.4 "Try again": where a two-way requester offered to be read stays once its offer is taken, as a last resort
+    /// only. A device this one knows is asked where it is known, never where an unverified offer in its name points.
+    /// </summary>
+    [TestMethod]
+    public async Task WhereARequesterOfferedToBeReadIsAskedOnlyWhenNothingElseIsKnown()
+    {
+        using var network = new DataSyncTestNetwork();
+        var initiator = network.Add("initiator");
+        var approver = network.Add("approver");
+        network.Route("initiator-2", initiator);
+        await initiator.Peers.SetDataSyncSharingAsync(true);
+        await approver.Peers.SetDataSyncSharingAsync(true);
+        var pending = await initiator.Pairing.ConnectDataSyncAsync("http://approver", null, NodeDataSyncIntents.TwoWay,
+            DataSyncTestNetwork.Contract, ["http://initiator", "http://initiator-2"]);
+        await approver.Peers.ApproveDataSyncAsync(pending.RequestId);
+        Assert.AreEqual(0, (await approver.Peers.GetDataSyncAddressesAsync("initiator")).Count);
+
+        var offer = (await approver.Peers.TakeDataSyncReciprocalOfferAsync("initiator"))!;
+        CollectionAssert.AreEqual(new[] { "http://initiator", "http://initiator-2" },
+            (await approver.Peers.GetDataSyncAddressesAsync("initiator")).ToArray());
+        Assert.IsNull((await approver.Peers.GetDataSyncStatusAsync()).Peers.Single().Address,
+            "An offered address is not shown as where the device is.");
+
+        // Read back at the second address: verified, it replaces what was only offered.
+        await approver.Pairing.ConnectDataSyncAsync("http://initiator-2", offer.Code, NodeDataSyncIntents.Follow,
+            DataSyncTestNetwork.Contract, expectedNodeId: "initiator");
+        CollectionAssert.AreEqual(new[] { "http://initiator-2" },
+            (await approver.Peers.GetDataSyncAddressesAsync("initiator")).ToArray());
+        Assert.AreEqual(JsonValueKind.Null,
+            approver.Peer("initiator").GetProperty("dataSyncOfferedAddresses").ValueKind);
+
+        // A later two-way request in the known device's name, from elsewhere, never redirects where it is asked.
+        await approver.Peers.SubmitDataSyncRequestAsync(new NodeDataSyncPairRequest("initiator", "Initiator",
+            "impostor", NodeRequestSignature.RandomToken(), NodeDataSyncIntents.TwoWay,
+            new NodeReciprocalOffer(["http://elsewhere"], NodeRequestSignature.RandomToken())), "10.0.0.66");
+        await approver.Peers.ApproveDataSyncAsync("impostor");
+        Assert.IsNotNull(await approver.Peers.TakeDataSyncReciprocalOfferAsync("initiator"));
+        CollectionAssert.AreEqual(new[] { "http://initiator-2" },
+            (await approver.Peers.GetDataSyncAddressesAsync("initiator")).ToArray());
+    }
+
+    /// <summary>
+    /// This device's own refusals on the way to a peer carry codes no peer answers (§7.6), and nothing is sent: its own
+    /// sharing off when a two-way offer is made, and too many offers of its own waiting.
+    /// </summary>
+    [TestMethod]
+    public async Task ARequestersOwnRefusalsAreToldApartFromThePeers()
+    {
+        using var network = new DataSyncTestNetwork();
+        var initiator = network.Add("initiator");
+        var approver = network.Add("approver");
+        await approver.Peers.SetDataSyncSharingAsync(true);
+        Task<NodeDataSyncPairingOutcome> AskBothWays() => initiator.Pairing.ConnectDataSyncAsync("http://approver", null,
+            NodeDataSyncIntents.TwoWay, DataSyncTestNetwork.Contract, ["http://initiator"]);
+
+        Assert.AreEqual("LocalDataSyncSharingDisabled", await ErrorOf(AskBothWays()));
+
+        await initiator.Peers.SetDataSyncSharingAsync(true);
+        for (var i = 0; i < 64; i++) await initiator.Peers.CreateDataSyncReciprocalInvitationAsync("other-" + i);
+        Assert.AreEqual("LocalPairingBusy", await ErrorOf(AskBothWays()));
+
+        Assert.IsFalse(network.Requests.Any(r => r.Contains("/pair/")));
+        Assert.AreEqual(0, initiator.ReadState().GetProperty("outgoingDataSyncRequests").GetArrayLength());
+    }
+
     [TestMethod]
     public async Task ARequesterRefusesAPeerThatCannotTakePartBeforeSendingAnything()
     {

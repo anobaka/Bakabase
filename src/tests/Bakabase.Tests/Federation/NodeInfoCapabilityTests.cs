@@ -10,6 +10,7 @@ using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Service.Components.Federation;
 using Bootstrap.Components.Configuration.Abstractions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -106,6 +107,48 @@ public sealed class NodeInfoCapabilityTests
         Assert.AreEqual((false, true, (int?)1, (bool?)true, false),
             (candidate.Known, candidate.Discovered, candidate.ContractVersion, candidate.SharesDefinitions, candidate.WeMayRead));
         Assert.AreEqual(0, (await grants.GetPeersAsync(false, default)).Count, "Without discovering, only known devices.");
+    }
+
+    /// <summary>
+    /// Anyone on the network can answer info, and data sync's peer candidates are read by paired devices too (§12): an
+    /// identity a session would refuse — a node id that is not one, a name that is blank, too long or carries control
+    /// characters — is not listed.
+    /// </summary>
+    [TestMethod]
+    public async Task DiscoveryListsNoIdentityASessionWouldRefuse()
+    {
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
+        await nas.Grants.SetSharingEnabledAsync(true, false, default);
+        var liars = new List<DataSyncNodeHost>();
+        try
+        {
+            foreach (var (nodeId, name) in new[]
+                     {
+                         ("node-bell", "NAS\u0007\nclick here"), ("../node", "NAS"), ("node blank", "NAS"),
+                         ("node-long", new string('N', 129)), ("node-empty", " ")
+                     })
+            {
+                var liar = await DataSyncNodeHost.StartAsync("node-liar-" + liars.Count, "Liar");
+                liars.Add(liar);
+                liar.Answer = (context, _) => context.Response.WriteAsJsonAsync(
+                    new NodeInfo(nodeId, "epoch", name, 1, DateTimeOffset.UtcNow), FederationJson.Options);
+            }
+            var discovery = new FederationNodeDiscovery(
+                new FixedServers([nas.Address, ..liars.Select(l => l.Address)]),
+                desk.Services.GetRequiredService<INodeIdentityProvider>());
+
+            CollectionAssert.AreEqual(new[] { "node-nas" }, (await discovery.DiscoverAsync(default)).Select(c => c.NodeId).ToArray());
+            var grants = new FederationDataSyncGrants(desk.Peers, desk.Services.GetRequiredService<NodePairingClient>(),
+                desk.Flow, desk.Store, desk.Services.GetRequiredService<INodeIdentityProvider>(), desk.Remote,
+                desk.Services.GetRequiredService<IBOptionsManager<RemoteAccessOptions>>(), desk.Sessions, discovery);
+            CollectionAssert.AreEqual(new[] { "node-nas" },
+                (await grants.GetPeersAsync(true, default)).Select(p => p.NodeId).ToArray());
+        }
+        finally
+        {
+            foreach (var liar in liars) await liar.DisposeAsync();
+        }
     }
 
     private static IDataSyncKind Kind(string kind, int schemaVersion)

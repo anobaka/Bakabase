@@ -121,6 +121,48 @@ public sealed class DataSyncPairingOverHttpTests
     }
 
     /// <summary>
+    /// §7.2.4 "Try again": the approver knows a requester whose read-back failed only by its request. Asked again by its
+    /// NodeId alone, with a fresh request, the requester is asked where it offered to be read; once it answers there
+    /// the request is filed, approved and claimed like any other, and the address it answered at is the one kept.
+    /// </summary>
+    [TestMethod]
+    public async Task TryingAgainAfterAFailedReadBackReachesTheRequesterWhereItOffered()
+    {
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
+        await desk.Grants.SetSharingEnabledAsync(true, false, default);
+        await nas.Grants.SetSharingEnabledAsync(true, false, default);
+        await desk.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput(null, nas.Address, null, DataSyncRequestIntent.TwoWay), default);
+        var request = (await nas.Grants.GetRequestsAsync(default)).Single();
+
+        // The desk cannot be reached while the NAS reads it back.
+        desk.Answer = DataSyncNodeHost.Refuse;
+        var approval = await nas.Grants.ApproveAsync(request.RequestId, readBack: true, default);
+        Assert.AreEqual((false, "Unreachable"), (approval.ReadBackGranted, approval.ReadBackError));
+        var known = (await nas.Grants.GetPeersAsync(false, default)).Single();
+        Assert.AreEqual(("node-desk", (string?)null), (known.NodeId, known.Address),
+            "Where the desk offered to be read is not shown as where it is.");
+        Assert.AreEqual(DataSyncPeerErrorCode.Unreachable, (await Peer(nas.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput("node-desk", null, null, DataSyncRequestIntent.Follow), default))).Code);
+
+        desk.Answer = null;
+        var again = await nas.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput("node-desk", null, null, DataSyncRequestIntent.Follow), default);
+        Assert.AreEqual(("awaitingApproval", "node-desk", "Desk"), (again.Outcome, again.PeerNodeId, again.PeerName));
+        var fresh = (await desk.Grants.GetRequestsAsync(default)).Single(r => r.Direction == DataSyncRequestDirection.Incoming);
+        Assert.AreEqual(("node-nas", DataSyncRequestIntent.Follow), (fresh.NodeId, fresh.Intent));
+        await desk.Grants.ApproveAsync(fresh.RequestId, readBack: false, default);
+        await nas.Flow.ClaimPendingAsync(default);
+
+        Assert.IsTrue(await nas.Grants.HasOutboundGrantAsync("node-desk", default));
+        CollectionAssert.AreEqual(
+            new[] { "inbound node-desk TwoWay True", "readBackFailed node-desk Unreachable", "outbound node-desk" },
+            nas.Events.Raised.ToArray());
+        Assert.AreEqual(desk.Address, (await nas.Grants.GetPeersAsync(false, default)).Single().Address);
+    }
+
+    /// <summary>
     /// §7.2.4 and N14 when the requester's offered address accepts connections and never answers: the read-back gives
     /// up as unreachable at the client's own deadline, after the grant, and data sync hears it. The page that approved
     /// going away meanwhile changes nothing: the offer was taken, so the read-back goes on to its end.
@@ -129,7 +171,8 @@ public sealed class DataSyncPairingOverHttpTests
     public async Task AReadBackNobodyAnswersFailsAsUnreachableEvenWhenTheApproverLeaves()
     {
         await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
-        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS",
+            publicDeadline: DataSyncNodeHost.GiveUpSoon);
         await desk.Grants.SetSharingEnabledAsync(true, false, default);
         await nas.Grants.SetSharingEnabledAsync(true, false, default);
         await desk.Grants.RequestAccessAsync(
@@ -163,7 +206,8 @@ public sealed class DataSyncPairingOverHttpTests
     [TestMethod]
     public async Task ADeviceThatNeverAnswersIsUnreachableAndHoldsUpNoOtherClaim()
     {
-        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk",
+            publicDeadline: DataSyncNodeHost.GiveUpSoon);
         await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
         await using var pc = await DataSyncNodeHost.StartAsync("node-pc", "PC");
         await nas.Grants.SetSharingEnabledAsync(true, false, default);

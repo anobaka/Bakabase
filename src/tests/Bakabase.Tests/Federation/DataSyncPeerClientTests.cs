@@ -434,7 +434,8 @@ public sealed class DataSyncPeerClientTests
     public async Task ASourceThatDoesNotAnswerInTimeIsUnreachableAndOnlyADroppedGrantIsAccessMissing()
     {
         var feed = new ScriptedFeed("node-nas");
-        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk",
+            publicDeadline: DataSyncNodeHost.GiveUpSoon);
         await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS", feed: feed);
         await PairAsync(desk, nas);
 

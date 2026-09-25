@@ -193,7 +193,7 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
             "/federation/v1/export/handshake", new NodeHandshakeRequest(challenge));
         await FederationHttpClient.SignAsync(request, credentials, timeProvider.GetUtcNow() + offset, cancellationToken);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(TimeSpan.FromSeconds(8));
+        deadline.CancelAfter(http.PublicDeadline);
         var handshakeSentAt = timeProvider.GetUtcNow();
         using var response = await http.SendAsync(request, deadline.Token);
         var proof = await FederationHttpClient.ReadEnvelopeAsync<NodeHandshakeResponse>(response, deadline.Token);

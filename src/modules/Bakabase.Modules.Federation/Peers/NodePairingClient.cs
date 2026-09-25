@@ -149,7 +149,9 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
     /// <summary>
     /// Asks the device at <paramref name="address"/> for <c>datasync.read</c>, by request or by a datasync code, on the
     /// datasync pairing routes (never the library's). Refuses before sending anything when the peer's <c>/info</c>
-    /// says it cannot take part: <c>PeerTooOld</c>, <c>ThisTooOld</c> or <c>PeerSharingOff</c>.
+    /// says it cannot take part: <c>PeerTooOld</c>, <c>ThisTooOld</c> or <c>PeerSharingOff</c>. This device's own
+    /// refusals on the way carry codes no peer answers: <c>LocalPairingBusy</c> (too many of its own requests or
+    /// codes waiting) and <c>LocalDataSyncSharingDisabled</c> (two-way, with its own sharing off).
     /// </summary>
     /// <param name="intent"><see cref="NodeDataSyncIntents.Follow"/> or <see cref="NodeDataSyncIntents.TwoWay"/>.</param>
     /// <param name="contract">This build's data sync contract, which the peer's must meet and accept.</param>
@@ -175,8 +177,19 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
         if (reciprocalAddresses is { Count: > 0 })
         {
             if (peers == null) throw new InvalidOperationException("Reading back needs the local peer service.");
-            offer = new NodeReciprocalOffer(reciprocalAddresses.Take(8).ToArray(),
-                await peers.CreateDataSyncReciprocalInvitationAsync(info.NodeId, ct));
+            string reciprocalCode;
+            try
+            {
+                reciprocalCode = await peers.CreateDataSyncReciprocalInvitationAsync(info.NodeId, ct);
+            }
+            catch (FederationAccessException e) when (e.ErrorCode is "DataSyncSharingDisabled" or "PairingBusy")
+            {
+                // This device's own refusal, under a code no peer answers, so it is never read as the peer's.
+                throw new FederationAccessException("Local" + e.ErrorCode, e.StatusCode, e.ErrorCode == "PairingBusy"
+                    ? "This device has too many two-way requests waiting. Cancel one or try again later."
+                    : "Definitions sharing is off on this device, so no other device could read it back.");
+            }
+            offer = new NodeReciprocalOffer(reciprocalAddresses.Take(8).ToArray(), reciprocalCode);
         }
 
         // Persist the claim secret BEFORE dispatch, as for library access.
@@ -190,8 +203,10 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
                 r.Intent == intent);
             if (existing != null) return existing;
             created = true;
+            // This device's own bound, under a code no peer answers, so it is never read as the peer being busy.
             if (state.OutgoingDataSyncRequests.Count >= 64)
-                throw new FederationAccessException("PairingBusy", 429, "Too many pairing transactions are pending.");
+                throw new FederationAccessException("LocalPairingBusy", 429,
+                    "This device has too many definitions requests waiting. Cancel one or try again later.");
             var request = new StoredOutgoingRequest
             {
                 RequestId = NodeRequestSignature.RandomToken(18),
@@ -319,6 +334,8 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
                 state.OutboundDataSyncGrants[pending.NodeId] = exchange.Credentials!;
                 if (peer == null) state.Peers[pending.NodeId] = peer = new StoredPeer { NodeId = pending.NodeId };
                 peer.DataSyncAddress = pending.Address;
+                // A verified address replaces what the peer merely offered.
+                peer.DataSyncOfferedAddresses = null;
                 if (!state.HasLibraryGrant(pending.NodeId))
                 {
                     if (peer.Label.Length == 0) peer.Label = pending.NodeName;

@@ -247,6 +247,12 @@ internal sealed class StoredPeer
     /// only this. Library code never reads it.
     /// </summary>
     public string? DataSyncAddress { get; set; }
+    /// <summary>
+    /// Where the peer said it could be read back when this device took its two-way offer (§7.2.4). Unverified: never
+    /// a session's address, only tried, with the peer's NodeId expected, to ask it for its definitions again when no
+    /// other address is known ("Try again" after a failed read-back). Dropped once a datasync address is verified.
+    /// </summary>
+    public string[]? DataSyncOfferedAddresses { get; set; }
 }
 
 internal sealed class StoredGrant

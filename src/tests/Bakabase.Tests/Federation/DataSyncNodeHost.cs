@@ -44,8 +44,13 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
     /// <param name="feed">
     /// What this node's feed serves; without one its feed answers 501, as a build whose feed is not there yet.
     /// </param>
+    /// <param name="publicDeadline">
+    /// How long this node waits for another's info, pairing answer or handshake
+    /// (<see cref="FederationHttpClient.PublicDeadline"/>): shorter for a test that waits for a device that never
+    /// answers to be given up on.
+    /// </param>
     public static async Task<DataSyncNodeHost> StartAsync(string nodeId, string name, bool dataSync = true,
-        IDataSyncFeedSource? feed = null)
+        IDataSyncFeedSource? feed = null, TimeSpan? publicDeadline = null)
     {
         var remote = new AddressedRemoteAccess();
         var events = new RecordingGrantEvents();
@@ -63,6 +68,10 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
                 services.AddSingleton<FederationPairingFlow>();
                 services.AddSingleton<IDataSyncGrantEvents>(events);
                 if (feed != null) services.AddSingleton(feed);
+                // The typed client as registered (its handler), with the test's deadline; registered last, it wins.
+                if (publicDeadline is { } wait)
+                    services.AddTransient(sp => new FederationHttpClient(sp.GetRequiredService<IHttpClientFactory>()
+                        .CreateClient(nameof(FederationHttpClient))) { PublicDeadline = wait });
                 if (!dataSync) return;
                 services.AddSingleton<INodeInfoContributor, DataSyncNodeInfoContributor>();
                 services.AddSingleton<FederationDataSyncGrants>();
@@ -73,6 +82,12 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
         await node.Store.SetDisplayNameAsync(name);
         return node;
     }
+
+    /// <summary>
+    /// A <c>publicDeadline</c> for a node that must give up on a device that never answers: well above what a loopback
+    /// exchange takes, a quarter of the Service's own.
+    /// </summary>
+    public static readonly TimeSpan GiveUpSoon = TimeSpan.FromSeconds(2);
 
     public string Address => $"http://127.0.0.1:{_host.Port}";
     public int Port => _host.Port;
@@ -107,6 +122,13 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
         using var either = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted, stopping);
         try { await Task.Delay(Timeout.Infinite, either.Token); }
         catch (OperationCanceledException) { context.Abort(); }
+    }
+
+    /// <summary>An <see cref="Answer"/>: drops every connection at once, as an address where the node is not.</summary>
+    public static Task Refuse(HttpContext context, CancellationToken stopping)
+    {
+        context.Abort();
+        return Task.CompletedTask;
     }
 
     /// <summary>This node's reader of other nodes' feeds, as the Service registers it.</summary>
