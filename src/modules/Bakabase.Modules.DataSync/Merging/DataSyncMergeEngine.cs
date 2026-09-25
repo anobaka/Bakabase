@@ -175,26 +175,7 @@ internal sealed partial class DataSyncMergeEngine
     }
 
     /// <summary>Apply order (§8.4: topological by <c>DependsOn</c>, ties as <see cref="DataSyncKindIds.All"/>, then ordinal).</summary>
-    private IEnumerable<string> ApplyOrder(IEnumerable<string> kinds)
-    {
-        int Rank(string kind)
-        {
-            var index = DataSyncKindIds.All.ToList().IndexOf(kind);
-            return index < 0 ? int.MaxValue : index;
-        }
-
-        var remaining = kinds.OrderBy(Rank).ThenBy(k => k, StringComparer.Ordinal).ToList();
-        var done = new HashSet<string>(StringComparer.Ordinal);
-        while (remaining.Count > 0)
-        {
-            var next = remaining.FirstOrDefault(k => !_in.Codecs.TryGetValue(k, out var codec) ||
-                                                     codec.Descriptor.DependsOn.All(d => done.Contains(d) || !remaining.Contains(d)))
-                       ?? remaining[0];
-            remaining.Remove(next);
-            done.Add(next);
-            yield return next;
-        }
-    }
+    private IEnumerable<string> ApplyOrder(IEnumerable<string> kinds) => DataSyncKindOrder.Of(kinds, _in.Codecs);
 
     private void Index(KindState k)
     {

@@ -6,6 +6,7 @@ using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Canonical;
 using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Merging;
+using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Tests.TestKinds;
 using Bakabase.Modules.DataSync.Wire;
 
@@ -271,7 +272,7 @@ internal sealed partial class SimNode
 
             if (row.State != DataSyncEntitySyncState.Synced) continue;
             var publication = DataSyncPublication.Of(Codec, row.Content!, row.Overlay, false, row.OrderKey, row.Unknown);
-            var held = row.PublishHeld ? Planning.DataSyncHeldReason.PendingDecision : publication.Held;
+            var held = row.PublishHeld ? DataSyncHeldReason.PendingDecision : publication.Held;
             records.Add(new DataSyncWireRecord(keys, row.Origin, row.Seq, row.Vv, row.LastEditor, false, 1, row.OrderKey,
                 held is null ? publication.Content : null, held is null ? publication.Hash : null, held, 0));
         }
