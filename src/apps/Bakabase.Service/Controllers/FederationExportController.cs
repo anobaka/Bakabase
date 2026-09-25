@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Modules.Federation.Contracts;
 using Bakabase.Modules.Federation.Media;
+using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Queries;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Service.Components.Federation;
@@ -12,7 +13,7 @@ namespace Bakabase.Service.Controllers;
 
 [ApiController]
 [Route("federation/v1/export")]
-[FederationEndpoint(FederationEndpointKind.Export)]
+[FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.LibraryRead)]
 public sealed class FederationExportController(LocalSearchSnapshotService snapshots,
     FederationResourceService resources, GrantLeaseRegistry leases) : FederationControllerBase
 {

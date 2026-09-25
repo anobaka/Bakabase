@@ -10,17 +10,25 @@ public sealed record NodeGrantSummary(string GrantId, long Revision);
 /// did, and for peers too old to say.
 /// </param>
 /// <param name="Platform">What it runs on, as its last verified handshake said.</param>
+/// <param name="OutboundGrant">This device's library read access to the peer; library access only.</param>
+/// <param name="InboundGrant">The peer's library read access to this device; library access only.</param>
+/// <param name="InboundDataSyncGrant">The peer's <c>datasync.read</c> access to this device's definitions.</param>
+/// <param name="OutboundDataSyncGrant">This device's <c>datasync.read</c> access to the peer's definitions.</param>
 public sealed record FederationPeerView(string NodeId, string Label, string? Address, bool Enabled,
     string ConnectionState, NodeGrantSummary? OutboundGrant, NodeGrantSummary? InboundGrant,
-    IReadOnlyList<NodePathMapping> PathMappings, ServerKind? Kind = null, RemoteDevicePlatform? Platform = null);
+    IReadOnlyList<NodePathMapping> PathMappings, ServerKind? Kind = null, RemoteDevicePlatform? Platform = null,
+    NodeGrantSummary? InboundDataSyncGrant = null, NodeGrantSummary? OutboundDataSyncGrant = null);
 /// <param name="RemoteAddress">Where an incoming request came from; the claimed NodeId and name are unproven.</param>
 /// <param name="ReplacesExistingAccess">Approving would replace a live grant already held under this NodeId.</param>
 /// <param name="OffersReciprocalAccess">Approving also lets this device read the requester's library.</param>
 public sealed record NodePairingRequestView(string RequestId, string NodeId, string NodeName,
     string Direction, string Status, DateTimeOffset ExpiresAt, string? RemoteAddress = null,
     bool ReplacesExistingAccess = false, bool OffersReciprocalAccess = false);
+/// <param name="SharingEnabled">Library sharing.</param>
+/// <param name="DataSyncSharingEnabled">Whether devices this one approved may read its definitions.</param>
 public sealed record FederationPeerStatus(NodeIdentity Identity, bool SharingEnabled,
-    IReadOnlyList<FederationPeerView> Peers, IReadOnlyList<NodePairingRequestView> Requests);
+    IReadOnlyList<FederationPeerView> Peers, IReadOnlyList<NodePairingRequestView> Requests,
+    bool DataSyncSharingEnabled = false);
 public sealed record NodePairingOutcome(string Outcome, string? RequestId = null, string? PeerNodeId = null,
     string? Message = null);
 public sealed record NodeInvitation(string Code, DateTimeOffset ExpiresAt);
@@ -49,6 +57,22 @@ public sealed record NodeInfo(string NodeId, string LibraryEpoch, string Name, i
     /// <summary>Optional, like <see cref="Kind"/>: the operating system it runs on, as a word.</summary>
     public string? Platform { get; init; }
 
+    /// <summary>
+    /// Optional, added for data sync: the data sync contract version this node speaks. Null on nodes
+    /// without data sync. Not covered by the handshake proof, which signs a fixed field list; the
+    /// host's <see cref="INodeInfoContributor"/> fills the data sync members.
+    /// </summary>
+    public int? DataSyncContractVersion { get; init; }
+
+    /// <summary>Optional: the lowest data sync contract version a peer must speak to read this node.</summary>
+    public int? DataSyncMinimumPeerContract { get; init; }
+
+    /// <summary>Optional: the kinds of definition this node publishes, as <c>kind@schemaVersion</c>.</summary>
+    public string[]? DataSyncKinds { get; init; }
+
+    /// <summary>Optional: whether devices this node approved may read its definitions right now.</summary>
+    public bool? SharesDefinitions { get; init; }
+
     /// <summary>This node's info saying what it is, when the host can tell.</summary>
     public NodeInfo DescribedBy(IServerSelfDescription? self) => self == null
         ? this
@@ -68,11 +92,32 @@ public sealed record NodePairCodeRequest(string NodeId, string NodeName, string 
     string ClaimSecret, NodeReciprocalOffer? Reciprocal = null);
 public sealed record NodePairRequest(string NodeId, string NodeName, string TransactionId, string ClaimSecret,
     NodeReciprocalOffer? Reciprocal = null);
+/// <summary>
+/// A request for a <c>datasync.read</c> grant (<c>pair/datasync/request</c>). A separate route and
+/// record from the library's, so an older node refuses it instead of filing a library request.
+/// </summary>
+/// <param name="Intent"><c>"follow"</c> (read the source's definitions) or <c>"twoWay"</c> (keep in step both ways).</param>
+/// <param name="Reciprocal">With <c>twoWay</c>: where the source can reach the requester, and a single-use
+/// datasync code that lets the source read the requester's definitions back.</param>
+public sealed record NodeDataSyncPairRequest(string NodeId, string NodeName, string TransactionId,
+    string ClaimSecret, string Intent, NodeReciprocalOffer? Reciprocal = null);
+/// <summary>A datasync invitation code redeemed on <c>pair/datasync/code</c>; never a library code.</summary>
+/// <param name="Intent"><c>"follow"</c> or <c>"twoWay"</c>, as in <see cref="NodeDataSyncPairRequest"/>.</param>
+public sealed record NodeDataSyncPairCodeRequest(string NodeId, string NodeName, string Code, string TransactionId,
+    string ClaimSecret, string Intent, NodeReciprocalOffer? Reciprocal = null);
 public sealed record NodePairClaimRequest(string RequestId, string NodeId, string ClaimSecret);
+/// <param name="ReadBack">
+/// Datasync codes only: <c>"started"</c> when the code's creator reads the redeemer back, <c>"declined"</c>
+/// when a two-way redemption met a code created without two-way consent; null otherwise.
+/// </param>
 public sealed record NodePairExchange(string Outcome, string RequestId, DateTimeOffset ExpiresAt,
-    NodeCredentials? Credentials = null);
+    NodeCredentials? Credentials = null, string? ReadBack = null);
 public sealed record NodeHandshakeRequest(string Challenge);
-public sealed record NodeHandshakeResponse(NodeInfo Info, string Challenge, string Proof);
+/// <param name="Scope">
+/// The scope of the grant the handshake was made with (<see cref="FederationScopes"/>). Informational and
+/// outside the proof: the issuer enforces scopes, never the reader.
+/// </param>
+public sealed record NodeHandshakeResponse(NodeInfo Info, string Challenge, string Proof, string? Scope = null);
 
 internal sealed class FederationState
 {
@@ -90,6 +135,19 @@ internal sealed class FederationState
     public List<StoredReciprocalInvitation> ReciprocalInvitations { get; set; } = [];
     /// <summary>User-chosen name shown to other devices; the machine name otherwise.</summary>
     public string? DisplayName { get; set; }
+
+    // Data sync (datasync.read) state. Kept apart from the library collections above, so an older
+    // build, which ignores unknown members, can never read a datasync grant, request or code as a
+    // library one. Missing (or null) in older files; FederationStateStore reads that as empty.
+    public bool DataSyncSharingEnabled { get; set; }
+    /// <summary>By grant id; grant ids never collide with <see cref="InboundGrants"/>.</summary>
+    public Dictionary<string, StoredGrant> InboundDataSyncGrants { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>By the peer's node id.</summary>
+    public Dictionary<string, NodeCredentials> OutboundDataSyncGrants { get; set; } = new(StringComparer.Ordinal);
+    public List<StoredPairRequest> IncomingDataSyncRequests { get; set; } = [];
+    public List<StoredOutgoingRequest> OutgoingDataSyncRequests { get; set; } = [];
+    public StoredInvitation? DataSyncInvitation { get; set; }
+    public List<StoredReciprocalInvitation> DataSyncReciprocalInvitations { get; set; } = [];
 }
 
 internal sealed class StoredReciprocalInvitation
@@ -110,6 +168,11 @@ internal sealed class StoredPeer
     public string? LibraryEpoch { get; set; }
     public bool Enabled { get; set; } = true;
     public List<NodePathMapping> PathMappings { get; set; } = [];
+    /// <summary>
+    /// Where data sync reaches this peer; data sync connects to <c>DataSyncAddress ?? Address</c> and relocates
+    /// only this. Library code never reads it.
+    /// </summary>
+    public string? DataSyncAddress { get; set; }
 }
 
 internal sealed class StoredGrant
@@ -124,6 +187,8 @@ internal sealed class StoredInvitation
     public string CodeHash { get; set; } = "";
     public DateTimeOffset ExpiresAt { get; set; }
     public int FailedAttempts { get; set; }
+    /// <summary>Datasync invitations only: whoever redeems it may also be read back (two-way consent).</summary>
+    public bool AllowTwoWay { get; set; }
 }
 
 internal sealed class StoredPairRequest
@@ -138,6 +203,8 @@ internal sealed class StoredPairRequest
     public string? GrantId { get; set; }
     public string? RemoteAddress { get; set; }
     public NodeReciprocalOffer? Reciprocal { get; set; }
+    /// <summary>Datasync requests only: <c>"follow"</c> or <c>"twoWay"</c>.</summary>
+    public string? Intent { get; set; }
 }
 
 internal sealed class StoredOutgoingRequest
@@ -150,4 +217,6 @@ internal sealed class StoredOutgoingRequest
     public string ClaimSecret { get; set; } = "";
     public string Status { get; set; } = "awaitingApproval";
     public DateTimeOffset ExpiresAt { get; set; }
+    /// <summary>Datasync requests only: <c>"follow"</c> or <c>"twoWay"</c>.</summary>
+    public string? Intent { get; set; }
 }

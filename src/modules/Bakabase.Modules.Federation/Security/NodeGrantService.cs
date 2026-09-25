@@ -4,8 +4,9 @@ using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 
 namespace Bakabase.Modules.Federation.Security;
 
+/// <param name="Scope">What the grant lets the caller read (<see cref="FederationScopes"/>); never <see cref="FederationScopes.Any"/>.</param>
 public sealed record NodePrincipal(string GrantId, string SubjectNodeId, string AudienceNodeId,
-    string LibraryEpoch, long Revision);
+    string LibraryEpoch, long Revision, string Scope = FederationScopes.LibraryRead);
 
 public interface INodeGrantService
 {
