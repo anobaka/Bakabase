@@ -38,6 +38,20 @@ public interface ICustomPropertyService
     // Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> Add(Bakabase.Abstractions.Models.Db.CustomProperty resource);
     Task<CustomProperty> Put(int id, CustomPropertyAddOrPutDto model);
     Task Sort(int[] ids);
+
+    /// <summary>
+    /// Sets <c>Order</c> on exactly the given rows (property id → order) and on no other row; every other column
+    /// stays as it is. Ids that no longer exist are skipped. Data sync places synced properties with it (§3.7).
+    /// </summary>
+    Task SetOrders(IReadOnlyDictionary<int, int> orders);
+
+    /// <summary>
+    /// The stored rows as they are, <c>Options</c> still serialized, from the service's cache. Unlike <c>GetAll</c>
+    /// it never deserializes options, so a row whose options do not read does not fail the call.
+    /// </summary>
+    Task<List<CustomPropertyDbModel>> GetAllDbModels(Expression<Func<CustomPropertyDbModel, bool>>? selector = null,
+        bool returnCopy = true);
+
     Task<BaseResponse> RemoveByKey(int id);
 
     Task<CustomPropertyTypeConversionPreviewViewModel> PreviewTypeConversion(int sourcePropertyId, PropertyType toType);

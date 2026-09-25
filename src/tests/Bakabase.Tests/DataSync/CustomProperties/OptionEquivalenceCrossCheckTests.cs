@@ -4,6 +4,7 @@ using Bakabase.Modules.DataSync.Refs;
 using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.Property.Components.DataSync;
 using Bakabase.Modules.Property.Components.Properties.Choice;
 using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.Property.Components.Properties.Multilevel;
@@ -19,7 +20,8 @@ namespace Bakabase.Tests.DataSync.CustomProperties;
 /// v3.1 H4 #3, L8, §3.4 here: data sync's model of the Property module's option identity is the module's own. The
 /// codec's <see cref="OptionFolding"/> gives what <see cref="ReferencePropertyOptionsNormalizer"/> stores, its
 /// <see cref="OptionMatcher"/> finds the tag <c>TagsPropertyDescriptor</c> matches, and
-/// <see cref="DataSyncLabelKey"/> agrees with <c>GetLabelComparer()</c>. A change to either side fails here.
+/// <see cref="DataSyncLabelKey"/> agrees with <c>GetLabelComparer()</c>. Contents become options through
+/// <see cref="CustomPropertyContentMapper"/>, the adapter's own mapping. A change to either side fails here.
 /// </summary>
 [TestClass]
 public class OptionEquivalenceCrossCheckTests
@@ -188,40 +190,10 @@ public class OptionEquivalenceCrossCheckTests
     private static IEnumerable<CustomPropertyNodeV1> Flatten(IEnumerable<CustomPropertyNodeV1> nodes) =>
         nodes.SelectMany(n => Flatten(n.Children).Prepend(n));
 
-    private static object ToOptions(CustomPropertyContentV1 content) => content.Type switch
-    {
-        PropertyType.SingleChoice => new SingleChoicePropertyOptions
-        {
-            IgnoreCase = content.IgnoreCase == true, Choices = Choices(content),
-            DefaultValue = content.DefaultValue.FirstOrDefault()?.Uuid,
-        },
-        PropertyType.MultipleChoice => new MultipleChoicePropertyOptions
-        {
-            IgnoreCase = content.IgnoreCase == true, Choices = Choices(content),
-            DefaultValue = content.DefaultValue.Count == 0 ? null : content.DefaultValue.Select(r => r.Uuid).ToList(),
-        },
-        PropertyType.Tags => new TagsPropertyOptions
-        {
-            IgnoreCase = content.IgnoreCase == true,
-            Tags = content.Tags.Select(t => new TagsPropertyOptions.TagOptions(t.Group, t.Name) { Value = t.Uuid!, Color = t.Color })
-                .ToList(),
-        },
-        PropertyType.Multilevel => new MultilevelPropertyOptions
-        {
-            IgnoreCase = content.IgnoreCase == true, Data = Nodes(content.Nodes),
-            DefaultValue = content.DefaultValue.Count == 0 ? null : content.DefaultValue.Select(r => r.Uuid).ToList(),
-        },
-        _ => throw new ArgumentOutOfRangeException(nameof(content)),
-    };
-
-    private static List<ChoiceOptions> Choices(CustomPropertyContentV1 content) =>
-        content.Choices.Select(c => new ChoiceOptions { Value = c.Uuid!, Label = c.Label, Color = c.Color }).ToList();
-
-    private static List<MultilevelDataOptions> Nodes(IEnumerable<CustomPropertyNodeV1> nodes) =>
-        nodes.Select(n => new MultilevelDataOptions
-        {
-            Value = n.Uuid!, Label = n.Label, Color = n.Color!, Children = n.Children.Count == 0 ? null : Nodes(n.Children),
-        }).ToList();
+    /// <summary>The adapter's own mapping, so the check also covers what the adapter hands the service.</summary>
+    private static object ToOptions(CustomPropertyContentV1 content) =>
+        CustomPropertyContentMapper.ToOptions(content) ??
+        throw new ArgumentOutOfRangeException(nameof(content), content.Type, "A reference type has options.");
 
     private static string Describe(object options) => options switch
     {

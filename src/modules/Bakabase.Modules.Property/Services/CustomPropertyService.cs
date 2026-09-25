@@ -179,6 +179,17 @@ namespace Bakabase.Modules.Property.Services
             await UpdateRange(properties.Select(x => x.ToDbModel()).ToList());
         }
 
+        public async Task SetOrders(IReadOnlyDictionary<int, int> orders)
+        {
+            if (orders.Count == 0) return;
+            // UpdateByKeys writes only the given rows, and only the column the lambda changes (unlike Sort).
+            await UpdateByKeys(orders.Keys.ToArray(), cp => cp.Order = orders[cp.Id]);
+        }
+
+        public Task<List<CustomPropertyDbModel>> GetAllDbModels(
+            Expression<Func<CustomPropertyDbModel, bool>>? selector = null, bool returnCopy = true) =>
+            base.GetAll(selector, returnCopy);
+
         public override async Task<BaseResponse> RemoveByKey(int id)
         {
             await CustomPropertyValueService.RemoveAll(x => x.PropertyId == id);
