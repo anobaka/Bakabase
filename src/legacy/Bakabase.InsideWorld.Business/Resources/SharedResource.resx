@@ -885,4 +885,58 @@ The version of lux is not limited.</value>
   <data name="RemoteAccess_ManagementRequest_Body" xml:space="preserve">
     <value>{0}, from {1}. Approving it gives that device full control of Bakabase here. Approve or reject it in Configuration → Remote access.</value>
   </data>
+  <data name="BTask_Name_DataSync" xml:space="preserve">
+    <value>Data sync</value>
+  </data>
+  <data name="BTask_Description_DataSync" xml:space="preserve">
+    <value>Checks the devices this device syncs definitions with and fetches their changes.</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSync" xml:space="preserve">
+    <value>Nothing was changed; it will run again.</value>
+  </data>
+  <data name="BTask_Name_DataSyncApply" xml:space="preserve">
+    <value>Apply synced changes</value>
+  </data>
+  <data name="BTask_Description_DataSyncApply" xml:space="preserve">
+    <value>Applies fetched definition changes on this device.</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncApply" xml:space="preserve">
+    <value>Nothing was changed; it will run again.</value>
+  </data>
+  <data name="BTask_Name_DataSyncReview" xml:space="preserve">
+    <value>Apply first sync</value>
+  </data>
+  <data name="BTask_Description_DataSyncReview" xml:space="preserve">
+    <value>Applies the reviewed first sync with another device.</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncReview" xml:space="preserve">
+    <value>Nothing was changed; it will run again.</value>
+  </data>
+  <data name="BTask_Name_DataSyncResolve" xml:space="preserve">
+    <value>Apply decisions</value>
+  </data>
+  <data name="BTask_Description_DataSyncResolve" xml:space="preserve">
+    <value>Applies the decisions made in Needs you.</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncResolve" xml:space="preserve">
+    <value>Nothing was changed; it will run again.</value>
+  </data>
+  <data name="BTask_Name_DataSyncUndo" xml:space="preserve">
+    <value>Undo data sync</value>
+  </data>
+  <data name="BTask_Description_DataSyncUndo" xml:space="preserve">
+    <value>Reverts what one data sync apply changed.</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncUndo" xml:space="preserve">
+    <value>Nothing was changed; it will run again.</value>
+  </data>
+  <data name="BTask_Name_DataSyncRestore" xml:space="preserve">
+    <value>Restore sync state</value>
+  </data>
+  <data name="BTask_Description_DataSyncRestore" xml:space="preserve">
+    <value>Applies the choice made after this device's data looked restored.</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncRestore" xml:space="preserve">
+    <value>Nothing was changed; it will run again.</value>
+  </data>
 </root>

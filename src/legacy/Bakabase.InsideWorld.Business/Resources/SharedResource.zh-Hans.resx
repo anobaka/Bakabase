@@ -885,4 +885,58 @@
   <data name="RemoteAccess_ManagementRequest_Body" xml:space="preserve">
     <value>{0}，来自 {1}。批准后，该设备将能完全控制此处的 Bakabase。请在“配置 → 远程访问”中批准或拒绝。</value>
   </data>
+  <data name="BTask_Name_DataSync" xml:space="preserve">
+    <value>数据同步</value>
+  </data>
+  <data name="BTask_Description_DataSync" xml:space="preserve">
+    <value>检查与本机同步定义的设备，并获取它们的更改。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSync" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
+  <data name="BTask_Name_DataSyncApply" xml:space="preserve">
+    <value>应用同步的更改</value>
+  </data>
+  <data name="BTask_Description_DataSyncApply" xml:space="preserve">
+    <value>在本机应用获取到的定义更改。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncApply" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
+  <data name="BTask_Name_DataSyncReview" xml:space="preserve">
+    <value>应用首次同步</value>
+  </data>
+  <data name="BTask_Description_DataSyncReview" xml:space="preserve">
+    <value>应用已预览的与另一台设备的首次同步。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncReview" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
+  <data name="BTask_Name_DataSyncResolve" xml:space="preserve">
+    <value>应用处理结果</value>
+  </data>
+  <data name="BTask_Description_DataSyncResolve" xml:space="preserve">
+    <value>应用在「待你决定」中做出的决定。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncResolve" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
+  <data name="BTask_Name_DataSyncUndo" xml:space="preserve">
+    <value>撤销数据同步</value>
+  </data>
+  <data name="BTask_Description_DataSyncUndo" xml:space="preserve">
+    <value>还原一次数据同步所做的更改。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncUndo" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
+  <data name="BTask_Name_DataSyncRestore" xml:space="preserve">
+    <value>恢复同步状态</value>
+  </data>
+  <data name="BTask_Description_DataSyncRestore" xml:space="preserve">
+    <value>应用本机数据疑似被还原后所做的选择。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DataSyncRestore" xml:space="preserve">
+    <value>未做任何更改，稍后会再次运行。</value>
+  </data>
 </root>
