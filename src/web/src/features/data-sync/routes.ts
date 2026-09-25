@@ -52,8 +52,10 @@ const isTab = (value: string | null): value is DataSyncTab =>
   value === "inbox" || value === "requests";
 
 export function readDataSyncQuery(params: URLSearchParams): DataSyncQuery {
-  // An absent or empty `link` reads as 0, which no link has.
-  const linkId = Number(params.get("link"));
+  // Only a plain decimal id: Number() alone would also read `0x10`, `1e2` or ` 7 ` as
+  // another link's id. Anything else reads as NaN, which no link has.
+  const link = params.get("link");
+  const linkId = link && /^[1-9]\d*$/.test(link) ? Number(link) : NaN;
   const review = params.get("review");
   const tab = params.get("tab");
   const peer = params.get("peer");

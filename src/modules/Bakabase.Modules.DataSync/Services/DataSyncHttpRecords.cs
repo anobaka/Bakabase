@@ -9,11 +9,16 @@ namespace Bakabase.Modules.DataSync.Services;
 
 public sealed record DataSyncKindCount(string Kind, int Count);
 
+/// <param name="DatabaseBytes">The size estimate a backup dialog shows (§8.10.4).</param>
+/// <remarks>
+/// No <c>/data-sync</c> record carries a path on this device's disk, so the secret canary (§12) holds with no
+/// exception: the backup folder a dialog names is <c>AppInfo.BackupPath</c> (F77), read from <c>/app/info</c>.
+/// </remarks>
 public sealed record DataSyncOverview(string DeviceName, string NodeId, bool IsHeadless, bool SharingEnabled,
     RemoteAccessMode RemoteAccessMode, bool CanManageSharing /* this caller may create access, §7.1.5 */,
     bool NewDefinitionsStayLocal, bool AllPaused, IReadOnlyList<DataSyncKindCount> Kinds, DataSyncStatusView Status,
     string? ActiveTaskId, bool RestorePending, int OpenInboxItems, int PendingRequests,
-    long DatabaseBytes, string BackupPath, IReadOnlyList<string> ReachableAddresses);
+    long DatabaseBytes, IReadOnlyList<string> ReachableAddresses);
 
 public sealed record DataSyncStatusView(DataSyncStatusLevel Level, int OpenItems, int Links, int LinksInStep,
     int PeersNeedingDecisions /* sources whose attention shows open decisions, §7.5.1 */,
@@ -133,8 +138,7 @@ public sealed record DataSyncMapOutgoing(int LinkId, string NodeId, string NodeN
     DataSyncLinkState State, string? Outcome /* "awaitingApproval"|"rejected"|"expired" */, DateTime? ExpiresAt);
 
 public sealed record DataSyncRestoreView(bool Pending, DataSyncPauseReason? Reason, DateTime? DetectedAt,
-    int PausedLinks, string? Detail, int? LinkId /* suspected through one link only */, string? EvidenceFromName,
-    string BackupPath);
+    int PausedLinks, string? Detail, int? LinkId /* suspected through one link only */, string? EvidenceFromName);
 
 // History (v3.1 §9.3, adapted).
 
@@ -159,6 +163,6 @@ public sealed record DataSyncHistoryDetail(DataSyncHistoryEntry Entry, IReadOnly
 public sealed record DataSyncUndoPreviewItem(string Kind, string LocalKey, string Name, DataSyncUndoAction Action,
     DataSyncUndoBlock? Blocked, int? ValueCount, bool SettingsMayReferenceIt, bool RecreatedGetsNewId);
 
-/// <param name="BackupPath">The backup folder named in the dialog (§8.10.4, F77).</param>
+/// <remarks>The dialog names the backup folder from <c>AppInfo.BackupPath</c> (see <see cref="DataSyncOverview"/>).</remarks>
 public sealed record DataSyncUndoPreview(bool CanUndo, IReadOnlyList<DataSyncUndoPreviewItem> Items,
-    DataSyncProblem? Problem, string BackupPath);
+    DataSyncProblem? Problem);

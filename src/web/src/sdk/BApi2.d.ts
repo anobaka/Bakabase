@@ -13025,7 +13025,6 @@ export interface components {
             pendingRequests: number;
             /** Format: int64 */
             databaseBytes: number;
-            backupPath: string;
             reachableAddresses: string[];
         };
         "Bakabase.Modules.DataSync.Services.DataSyncPeerCandidate": {
@@ -13094,7 +13093,6 @@ export interface components {
             /** Format: int32 */
             linkId?: number;
             evidenceFromName?: string;
-            backupPath: string;
         };
         /**
          * Format: int32
@@ -13172,7 +13170,6 @@ export interface components {
             canUndo: boolean;
             items: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoPreviewItem"][];
             problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
-            backupPath: string;
         };
         "Bakabase.Modules.DataSync.Services.DataSyncUndoPreviewItem": {
             kind: string;

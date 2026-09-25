@@ -83,6 +83,12 @@ public class RevisionRulesTests
             resultEqualsRemote: true, tombstone: tombstone));
         Assert.AreEqual(0, counter.Issued);
 
+        // A remote equal to the tombstone includes it too: adopted as is, no counter the peer would have to absorb.
+        var equal = new Counter(5);
+        Assert.AreEqual(Vv((Self, 5), (Peer, 1)), Next(DataSyncRevisionKind.Revive, DataSyncVersionVector.Empty,
+            Vv((Self, 5), (Peer, 1)), equal, resultEqualsRemote: true, tombstone: tombstone));
+        Assert.AreEqual(0, equal.Issued);
+
         // The remote never saw the deletion: the revived entity must still dominate the tombstone.
         var older = Vv((Peer, 3));
         Assert.AreEqual(Vv((Self, 6), (Peer, 3)), Next(DataSyncRevisionKind.Revive, DataSyncVersionVector.Empty, older,

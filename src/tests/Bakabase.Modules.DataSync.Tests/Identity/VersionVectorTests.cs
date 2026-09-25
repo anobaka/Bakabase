@@ -313,12 +313,15 @@ public class VersionVectorTests
         var record = Record(Vv((A, 4)));
 
         DataSyncPeerBase Base(DataSyncVersionVector vv) =>
-            new("customProperty", key, DataSyncBaseState.Normal, null, content, vv, childMap, null, record,
-                exclusionKeys);
+            new("customProperty", key, DataSyncBaseState.Normal, null, vv, childMap, null, record, exclusionKeys);
 
         Assert.AreEqual(Base(DataSyncVersionVector.ParseStored(json)), Base(DataSyncVersionVector.ParseStored(json)));
         Assert.AreEqual(Base(DataSyncVersionVector.ParseStored(json)).GetHashCode(),
             Base(DataSyncVersionVector.ParseStored(json)).GetHashCode());
+
+        // One copy of the base content: the record's.
+        Assert.AreSame(content, Base(Vv((A, 4))).Content);
+        Assert.IsNull((Base(Vv((A, 4))) with {Record = null}).Content);
     }
 
     // ---- System.Text.Json ------------------------------------------------------------------

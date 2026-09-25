@@ -26,17 +26,24 @@ public sealed record DataSyncLocalKindState(string Kind, IReadOnlyList<DataSyncL
 public sealed record DataSyncEditorRef(string NodeId, string Name, string ActorId);
 
 /// <param name="Record">
-/// The peer's wire record at the last agreement (<c>RecordJson</c>); Content is its content. It carries what is not
-/// content: the base's OrderKey (§8.5.5, row A2's comparison form), Keys and EditedBy. Null when nothing was agreed.
+/// The peer's wire record at the last agreement (<c>RecordJson</c>), the only copy of the base content
+/// (<see cref="Content"/>). It also carries what is not content: the base's OrderKey (§8.5.5, row A2's comparison
+/// form), Keys and EditedBy. Null when nothing was agreed.
 /// </param>
 /// <param name="ExclusionKeys">
 /// Every record key the exclusion matches (<c>ExclusionKeysJson</c>, §5.2's exclusion index, row E); empty unless
 /// State is Excluded.
 /// </param>
 public sealed record DataSyncPeerBase(string Kind, SyncKey Key, DataSyncBaseState State, DataSyncExclusionReason? Exclusion,
-    JsonObject? Content /* peer content at the last agreement, peer child ids, unknown members kept */,
     DataSyncVersionVector? Vv, IReadOnlyDictionary<string, string> ChildMap,
-    DataSyncPendingRecord? Pending, DataSyncWireRecord? Record, IReadOnlyList<string> ExclusionKeys);
+    DataSyncPendingRecord? Pending, DataSyncWireRecord? Record, IReadOnlyList<string> ExclusionKeys)
+{
+    /// <summary>
+    /// Peer content at the last agreement: peer child ids, unknown members kept. Read from <see cref="Record"/>, so
+    /// the three-way merge and row A2's comparison form can never read two different bases.
+    /// </summary>
+    public JsonObject? Content => Record?.Content;
+}
 
 /// <summary>A peer record this device received but did not agree to (§8.4). Stored once per link and entity.</summary>
 public sealed record DataSyncPendingRecord(DataSyncWireRecord Record, string RecordHash, DataSyncPendingReason Reason,

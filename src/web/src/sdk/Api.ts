@@ -4862,7 +4862,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncOverview {
   pendingRequests: number;
   /** @format int64 */
   databaseBytes: number;
-  backupPath: string;
   reachableAddresses: string[];
 }
 
@@ -4969,7 +4968,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncRestoreView {
   /** @format int32 */
   linkId?: number;
   evidenceFromName?: string;
-  backupPath: string;
 }
 
 /**
@@ -5059,7 +5057,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncUndoPreview {
   canUndo: boolean;
   items: BakabaseModulesDataSyncServicesDataSyncUndoPreviewItem[];
   problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
-  backupPath: string;
 }
 
 export interface BakabaseModulesDataSyncServicesDataSyncUndoPreviewItem {

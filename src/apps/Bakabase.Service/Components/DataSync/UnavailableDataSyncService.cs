@@ -35,7 +35,7 @@ public sealed class UnavailableDataSyncService(IRemoteAccessService remoteAccess
     public Task<DataSyncOverview> GetOverviewAsync(CancellationToken ct) =>
         Task.FromResult(new DataSyncOverview(string.Empty, string.Empty, false, false, remoteAccess.GetEffectiveMode(),
             false, false, false, [], new DataSyncStatusView(DataSyncStatusLevel.Off, 0, 0, 0, 0, null, NotAvailableCode),
-            null, false, 0, 0, 0, string.Empty, []));
+            null, false, 0, 0, 0, []));
 
     public Task<DataSyncMapView> GetMapAsync(CancellationToken ct) =>
         Task.FromResult(new DataSyncMapView(false, remoteAccess.GetEffectiveMode(), [], [], []));
@@ -135,12 +135,12 @@ public sealed class UnavailableDataSyncService(IRemoteAccessService remoteAccess
         Task.FromResult<DataSyncHistoryDetail?>(null);
 
     public Task<DataSyncUndoPreview> PreviewUndoAsync(int id, CancellationToken ct) =>
-        Task.FromResult(new DataSyncUndoPreview(false, [], Problem, string.Empty));
+        Task.FromResult(new DataSyncUndoPreview(false, [], Problem));
 
     public Task<DataSyncTaskStart> StartUndoAsync(int id, CancellationToken ct) => Task.FromResult(TaskProblem);
 
     public Task<DataSyncRestoreView> GetRestoreAsync(CancellationToken ct) =>
-        Task.FromResult(new DataSyncRestoreView(false, null, null, 0, null, null, null, string.Empty));
+        Task.FromResult(new DataSyncRestoreView(false, null, null, 0, null, null, null));
 
     public Task<DataSyncTaskStart> ChooseRestoreAsync(DataSyncRestoreChoice choice, int? linkId, CancellationToken ct) =>
         Task.FromResult(TaskProblem);

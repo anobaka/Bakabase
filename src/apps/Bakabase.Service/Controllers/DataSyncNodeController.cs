@@ -8,7 +8,8 @@ namespace Bakabase.Service.Controllers;
 
 /// <summary>
 /// The data sync feed a node holding a <c>datasync.read</c> grant reads: head, snapshot manifest and pages.
-/// Never reachable with a library grant. Not wired yet: every action answers 501 until the feed lands.
+/// Only <c>datasync.read</c> grants may reach it once the endpoint scope check lands (§7.3); until then any grant
+/// reaches it, and every action answers 501 until the feed lands.
 /// </summary>
 [ApiController]
 [Route("federation/v1/export/datasync")]

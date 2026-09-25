@@ -25,7 +25,6 @@ public sealed class FakeDataSyncService : IDataSyncService
 
     public const string ReviewId = "review-1";
     public const string PlanId = "0123456789abcdef";
-    public const string BackupPath = "/data/backups";
     public const long TypeChangeItemId = 3;
 
     private static readonly string[] AllKinds = [..DataSyncKindIds.All];
@@ -309,8 +308,8 @@ public sealed class FakeDataSyncService : IDataSyncService
                     DataSyncUndoBlock.ChangedSinceImport, 412, false, false),
                 new DataSyncUndoPreviewItem(DataSyncKindIds.CustomProperty, "14", "Mood", DataSyncUndoAction.Recreate,
                     null, null, false, true),
-            ], null, BackupPath)
-            : new DataSyncUndoPreview(false, [], Problem(DataSyncProblemCode.UndoNotAvailable), BackupPath));
+            ], null)
+            : new DataSyncUndoPreview(false, [], Problem(DataSyncProblemCode.UndoNotAvailable)));
 
     public Task<DataSyncTaskStart> StartUndoAsync(int id, CancellationToken ct) =>
         Answer(History.Any(h => h.Id == id)
@@ -373,7 +372,7 @@ public sealed class FakeDataSyncService : IDataSyncService
         new("This PC", "node-self", false, true, RemoteAccessMode.Enabled, true, false, false,
             [new DataSyncKindCount(DataSyncKindIds.ExtensionGroup, 8), new DataSyncKindCount(DataSyncKindIds.CustomProperty, 100)],
             new DataSyncStatusView(DataSyncStatusLevel.NeedsYou, 12, 12, 1, 1, Now.AddMinutes(-5), null),
-            null, true, 12, 2, 52_428_800, BackupPath, ["http://192.168.1.10:34567"]);
+            null, true, 12, 2, 52_428_800, ["http://192.168.1.10:34567"]);
 
     private static DataSyncLinkView Link(int id, string peerNodeId, string peerName, DataSyncLinkState state,
         DataSyncLinkMode mode, DataSyncLinkMode? lastMode = null, DataSyncPauseReason? pausedReason = null,
@@ -677,5 +676,5 @@ public sealed class FakeDataSyncService : IDataSyncService
             .ToList();
 
     private static DataSyncRestoreView CannedRestore() =>
-        new(true, DataSyncPauseReason.LocalRestoreDetected, Now.AddMinutes(-20), 1, null, null, "NAS", BackupPath);
+        new(true, DataSyncPauseReason.LocalRestoreDetected, Now.AddMinutes(-20), 1, null, null, "NAS");
 }
