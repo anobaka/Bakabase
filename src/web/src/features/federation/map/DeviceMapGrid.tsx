@@ -78,26 +78,27 @@ function Relationship({
       <KindBadge className="h-4 w-4" kind={edge.kind} />
       <span className="min-w-0 flex-1 space-y-1">
         <span className={`block font-medium ${style.text}`}>{edgeKindLabel(t, edge)}</span>
-        {edge.kind === "sync" ? (
-          <span className="block text-default-600">{t("federation.map.edge.sync")}</span>
-        ) : (
-          (["in", "out"] as const)
-            .filter((direction) => edge[direction] !== "none")
-            .map((direction) => (
-              <span
-                key={direction}
-                className="flex items-start gap-1.5 text-default-600"
-                data-direction={direction}
-                data-status={edge[direction]}
-              >
-                <DirectionSwatch direction={direction} edge={edge} />
-                <span className="min-w-0 flex-1">
-                  {t(`federation.map.direction.${edge.kind}.${direction}.${edge[direction]}`, {
-                    name,
-                  })}
-                </span>
+        {(["in", "out"] as const)
+          .filter((direction) => edge[direction] !== "none")
+          .map((direction) => (
+            <span
+              key={direction}
+              className="flex items-start gap-1.5 text-default-600"
+              data-direction={direction}
+              data-status={edge[direction]}
+            >
+              <DirectionSwatch direction={direction} edge={edge} />
+              <span className="min-w-0 flex-1">
+                {t(`federation.map.direction.${edge.kind}.${direction}.${edge[direction]}`, {
+                  name,
+                })}
               </span>
-            ))
+            </span>
+          ))}
+        {edge.mode && (
+          <span className="block pl-[2.125rem] text-default-500" data-mode={edge.mode}>
+            {t(`federation.map.${edge.kind}.mode.${edge.mode}`)}
+          </span>
         )}
         {edge.attention && (
           <span data-attention className="flex items-start gap-1.5 text-danger">

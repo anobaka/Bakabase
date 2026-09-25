@@ -129,14 +129,18 @@ function Library() {
           ]
         : selected;
   const names = new Map(status?.peers.map((peer) => [peer.nodeId, peer.label]));
+  // Library sources are peers with a library grant either way; a device paired only for data
+  // sync has no library here to list (spec §11.3, H-lib).
   const sources = status
     ? [
         { nodeId: status.identity.nodeId, label: status.identity.name, available: true },
-        ...status.peers.map((peer) => ({
-          nodeId: peer.nodeId,
-          label: peer.label,
-          available: peer.enabled && !!peer.outboundGrant,
-        })),
+        ...status.peers
+          .filter((peer) => !!peer.outboundGrant || !!peer.inboundGrant)
+          .map((peer) => ({
+            nodeId: peer.nodeId,
+            label: peer.label,
+            available: peer.enabled && !!peer.outboundGrant,
+          })),
       ]
     : [];
 

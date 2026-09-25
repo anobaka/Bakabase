@@ -13,6 +13,12 @@ import type {
   Peer,
   SharingCandidate,
 } from "../types";
+import type {
+  DataSyncMapOutgoing,
+  DataSyncMapPeer,
+  DataSyncMapRequest,
+  DataSyncMapView,
+} from "@/features/data-sync/api";
 
 import {
   ManagedServerState,
@@ -21,6 +27,12 @@ import {
   ServerKind,
 } from "@/sdk/constants";
 import { parseServerTime } from "@/core/serverTime";
+import {
+  buildSyncEdges,
+  buildSyncOutgoingNodes,
+  syncClaims,
+  syncIssues,
+} from "@/features/data-sync/map/mapAdapter";
 
 /*
  * The device map's model: every device this one knows of, and every relationship between
@@ -46,9 +58,10 @@ import { parseServerTime } from "@/core/serverTime";
  * name is never enough against an id: two devices of one name that are not merged each say
  * they may be the same device as the other, unless what they said of themselves rules it out.
  *
- * A request someone else filed — to browse this library, to manage this device — carries only
- * the requester's claims (a name, an id). It is never merged into a device this one trusts and
- * lends it nothing: it gets its own node, marked unverified, which says whom it claims to be.
+ * A request someone else filed — to browse this library, to manage this device, to read its
+ * definitions — carries only the requester's claims (a name, an id). It is never merged into a
+ * device this one trusts and lends it nothing: it gets its own node, marked unverified, which
+ * says whom it claims to be.
  *
  * Merging only decides where a relationship is drawn. Every action still goes to the record
  * it belongs to, by that record's own identity.
@@ -70,14 +83,23 @@ export const mapIssues = [
   "incompatible",
   "unrestricted",
   "requestEnded",
+  // Data sync (features/data-sync/map): what does not work receiving its definitions, changes
+  // that need this device, decisions that wait on it, and this device's own request to read
+  // them that ended, until it is dismissed.
+  "syncPaused",
+  "syncFailed",
+  "syncUpdateNeeded",
+  "syncAccessLost",
+  "syncNeedsYou",
+  "syncNeedsYouThere",
+  "syncRequestEnded",
 ] as const;
 export type MapIssue = (typeof mapIssues)[number];
 
 /**
  * - `sharing` — read-only library sharing (federation grants).
  * - `management` — full control through remote-access pairing.
- * - `sync` — reserved for data sync of user-defined definitions. Nothing produces it yet: the
- *   renderer and legend know how to draw it so it can be added without redrawing the map.
+ * - `sync` — data sync of user-defined definitions: towards the device that receives them.
  */
 export const mapEdgeKinds = ["sharing", "management", "sync"] as const;
 export type MapEdgeKind = (typeof mapEdgeKinds)[number];
@@ -108,6 +130,12 @@ export interface MapNodeSources {
   sharingCandidate?: SharingCandidate;
   /** Seen by the remote-access beacons. */
   managementCandidate?: ManagedServerCandidate;
+  /** Data sync: this device's link to it, and whether it may read this device's definitions. */
+  sync?: DataSyncMapPeer;
+  /** Its pending requests to read this device's definitions — on the request's own unverified node. */
+  syncRequests: DataSyncMapRequest[];
+  /** This device's requests to read its definitions — live ones, and ones that ended, until dismissed. */
+  syncOutgoing: DataSyncMapOutgoing[];
 }
 
 /** A device this one knows, which an unverified request claims to be. */
@@ -182,6 +210,11 @@ export interface MapEdge {
   in: MapDirectionStatus;
   /** A direction that exists but does not work right now (revoked, another server answers…). */
   attention?: MapAttention;
+  /**
+   * Data sync only: how this device receives — both ways (also when each device receives from
+   * the other) or receive only. None while it does not receive.
+   */
+  mode?: "twoWay" | "follow";
 }
 
 export interface DeviceGraph {
@@ -198,6 +231,8 @@ export interface DeviceGraphInput {
   servers?: ManagedServersView;
   /** Who may manage this device; absent when it could not be read. */
   access?: RemoteAccessSettings;
+  /** Data sync of definitions; absent when it could not be read. */
+  dataSync?: DataSyncMapView;
   discovery?: {
     sharing?: SharingCandidate[];
     management?: ManagedServerCandidate[];
@@ -399,6 +434,8 @@ const emptySources = (): MapNodeSources => ({
   sharingRequests: [],
   managementRequestsIn: [],
   managementRequestsOut: [],
+  syncRequests: [],
+  syncOutgoing: [],
 });
 
 /** Builds the map's devices and relationships. Independent of the order the lists come in. */
@@ -559,6 +596,19 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
     addKey(draft, identityKey.request(request.requestId));
     draft.sources.sharingRequests.push(request);
   }
+  // Data sync: this device's links and grants, and its requests to read another device's
+  // definitions — ended ones too, until dismissed — each on the device of the install id it
+  // names, created when nothing else knows that device (a request to one that is no peer yet).
+  for (const record of buildSyncOutgoingNodes(input.dataSync, selfNodeId)) {
+    const draft =
+      byId(record.nodeId) ??
+      create(`peer:${record.nodeId}`, { name: record.name, address: record.address });
+
+    addInstall(draft, record.nodeId);
+    for (const key of record.keys) addKey(draft, key);
+    if (record.peer) draft.sources.sync = record.peer;
+    if (record.outgoing) draft.sources.syncOutgoing.push(record.outgoing);
+  }
   for (const request of sortBy(servers?.requests, (r) => r.requestId)) {
     const serverId = request.serverId ?? undefined;
     const eligible = joinable(serverId);
@@ -636,6 +686,20 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
     addKey(draft, identityKey.request(request.id));
     draft.sources.managementRequestsIn.push(request);
   }
+  for (const request of syncClaims(input.dataSync, now, selfNodeId)) {
+    const from = hostKey(request.remoteAddress);
+    const draft =
+      sameClaimant(request.nodeName, from) ??
+      create(`sync-request:${request.requestId}`, {
+        name: request.nodeName,
+        unverified: true,
+        from,
+      });
+
+    draft.claimedIds.add(request.nodeId);
+    addKey(draft, identityKey.request(request.requestId));
+    draft.sources.syncRequests.push(request);
+  }
 
   // 6. Found nearby: attached to a device already known, a ghost otherwise. A beacon's id is
   // the install's own claim, like its name; it is enough to say where it was seen.
@@ -709,6 +773,7 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
     // manage a server that moved joins the request to that server, by its id.
     if (sources.managementRequestsOut.some((request) => !request.active))
       draft.issues.add("requestEnded");
+    for (const issue of syncIssues(sources)) draft.issues.add(issue);
     // What it says it is, most trusted first: its sharing handshake (verified), the server
     // this device paired with, then what it answered nearby; a device that manages this one
     // only pairs as a desktop app or a phone, which its pairing's platform tells. Never a
@@ -786,7 +851,10 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
       if (edge.out !== "none" || edge.in !== "none") edges.push(edge);
   }
 
-  // A future kind (data sync) is drawn as given, between devices the map knows.
+  // Data sync, to the device that carries each record's install id, or a claim's own node.
+  edges.push(...buildSyncEdges(input.dataSync, nodes));
+
+  // A future kind is drawn as given, between devices the map knows.
   const known = new Set(nodes.filter((node) => !node.ghost).map((node) => node.id));
 
   for (const edge of input.extraEdges ?? []) {

@@ -17,6 +17,7 @@ import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import NotificationCenter from "@/components/NotificationCenter";
+import DataSyncStatusIndicator from "@/features/data-sync/components/DataSyncStatusIndicator";
 
 const OptIconStyle = { fontSize: 20 };
 
@@ -65,6 +66,7 @@ const Navigation = () => {
             <MoonOutlined style={OptIconStyle} />
           )}
         </Button>
+        <DataSyncStatusIndicator />
         <NotificationCenter />
         <LanguageSwitcher />
         {/*

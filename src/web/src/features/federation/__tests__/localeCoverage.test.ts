@@ -105,13 +105,19 @@ const dynamicKeys = [
   ...mapIssues.map((issue) => `federation.map.issue.${issue}`),
   ...mapEdgeKinds.map((kind) => `federation.map.edge.${kind}`),
   ...mapEdgeKinds.map((kind) => `federation.map.legend.${kind}`),
-  ...(["sharing", "management"] as const).flatMap((kind) =>
+  ...(["sharing", "management", "sync"] as const).flatMap((kind) =>
     ["in", "out"].flatMap((direction) =>
       ["active", "pending"].map(
         (status) => `federation.map.direction.${kind}.${direction}.${status}`,
       ),
     ),
   ),
+  // `federation.map.${kind}.mode.${mode}` — a relationship's mode, which only data sync has —
+  // and `federation.map.attention.${kind}.${direction}` for each direction that can break.
+  ...["twoWay", "follow"].map((mode) => `federation.map.sync.mode.${mode}`),
+  "federation.map.attention.sharing.in",
+  "federation.map.attention.management.out",
+  "federation.map.attention.sync.in",
   // This device's counts in the map's panel.
   ...["sharesWith", "browses", "manages", "managedBy"].map(
     (key) => `federation.map.panel.self.${key}`,

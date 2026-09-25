@@ -11,6 +11,7 @@ import {
   AiOutlineLoading3Quarters,
   AiOutlineRadarChart,
   AiOutlineReload,
+  AiOutlineSync,
 } from "react-icons/ai";
 
 import {
@@ -35,6 +36,7 @@ import { useEscapeKey } from "./map/useEscapeKey";
 import { useMediaQuery } from "./map/useMediaQuery";
 
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
+import { DATA_SYNC_ROUTE } from "@/features/data-sync/routes";
 
 /** Where the device map lives. */
 export const DEVICE_MAP_ROUTE = "/federation/map";
@@ -132,18 +134,28 @@ function DeviceMap() {
   const data = useDeviceMapData();
   const serverName = useRemoteAccessStore((state) => state.serverName);
   const platform = useMemo(() => localPlatform(), []);
-  const { status, servers, access, discovery } = data;
+  const { status, servers, access, dataSync, discovery } = data;
   const graph = useMemo(
     () =>
       buildDeviceGraph({
         status,
         servers,
         access,
+        dataSync,
         discovery: { sharing: discovery.sharing, management: discovery.management },
         selfName: serverName,
         selfPlatform: platform,
       }),
-    [status, servers, access, discovery.sharing, discovery.management, serverName, platform],
+    [
+      status,
+      servers,
+      access,
+      dataSync,
+      discovery.sharing,
+      discovery.management,
+      serverName,
+      platform,
+    ],
   );
   const onDemand = useMediaQuery(ON_DEMAND_QUERY);
   const reducedMotion = useReducedMotion();
@@ -178,9 +190,11 @@ function DeviceMap() {
     status ||
     servers ||
     access ||
+    dataSync ||
     data.sharingError ||
     data.serversError ||
-    data.accessError
+    data.accessError ||
+    data.dataSyncError
   );
   const alone = settled && graph.nodes.length === 0;
   const searched = !discovery.running && discovery.sharing !== undefined;
@@ -349,10 +363,18 @@ function DeviceMap() {
           <Link className={buttonClass} to="/federation">
             {t("federation.title")}
           </Link>
+          <Link className={buttonClass} to={DATA_SYNC_ROUTE}>
+            <AiOutlineSync aria-hidden />
+            {t("dataSync.title")}
+          </Link>
         </div>
       </header>
 
-      {(data.sharingError || data.serversError || data.accessError || discovery.error) && (
+      {(data.sharingError ||
+        data.serversError ||
+        data.accessError ||
+        data.dataSyncError ||
+        discovery.error) && (
         <div className="space-y-2" data-testid="device-map-errors">
           {data.sharingError && (
             <div className="space-y-1">
@@ -378,6 +400,15 @@ function DeviceMap() {
             <div className="space-y-1">
               <p className="text-xs text-default-500">{t("federation.map.source.access")}</p>
               <ErrorNotice error={data.accessError} onRetry={() => void data.refreshAll()} />
+            </div>
+          )}
+          {data.dataSyncError && (
+            <div className="space-y-1">
+              <p className="text-xs text-default-500">{t("federation.map.source.dataSync")}</p>
+              <ErrorNotice
+                error={data.dataSyncError}
+                onRetry={() => void data.reload(["dataSync"])}
+              />
             </div>
           )}
           <ErrorNotice error={discovery.error} onRetry={() => void data.discover()} />
@@ -456,6 +487,7 @@ function DeviceMap() {
               key={selection && chosen ? `panel-${chosen.panel}` : "overview"}
               access={access}
               closable={onDemand || !!selection}
+              dataSync={dataSync}
               graph={graph}
               headingRef={heading}
               notice={{ value: notice, set: setNotice }}

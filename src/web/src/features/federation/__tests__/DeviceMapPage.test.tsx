@@ -1,7 +1,8 @@
-import type { FederationStatus, ManagedServersView } from "../types";
+import type { FederationStatus, ManagedServersView, SharingCandidate } from "../types";
 import type * as Switching from "../switching";
 import type { BakabaseServiceModelsViewRemoteAccessSettingsViewModel as RemoteAccessSettings } from "@/sdk/Api";
 import type { MockInstance } from "vitest";
+import type * as DataSyncApi from "@/features/data-sync/api";
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -18,6 +19,7 @@ import { openManagedServer } from "../switching";
 import {
   access,
   grant,
+  inTenMinutes,
   manager,
   managementRequestIn,
   managementRequestOut,
@@ -31,12 +33,23 @@ import {
 import BApi from "@/sdk/BApi";
 import {
   ClientMode,
+  DataSyncLinkMode,
+  DataSyncLinkState,
   ManagedServerOutcome,
   ManagedServerState,
   RemoteAccessMode,
   RemoteDevicePlatform,
   ServerKind,
 } from "@/sdk/constants";
+import { dataSyncApi } from "@/features/data-sync/api";
+import { useDataSyncStore } from "@/features/data-sync/stores/dataSync";
+import {
+  mapPeer,
+  mapRequest,
+  mapView,
+  outgoing as syncOutgoing,
+  overview as syncOverview,
+} from "@/features/data-sync/__tests__/dataSyncFixtures";
 
 /** Every key asked for while rendering, with the values it was asked with. */
 const used = vi.hoisted(() => new Map<string, Record<string, unknown> | undefined>());
@@ -113,13 +126,35 @@ vi.mock("@/sdk/BApi", () => ({
     },
   },
 }));
+vi.mock("@/components/HelpCenter/HelpCenterButton", () => ({
+  default: ({ section, topic }: { section: string; topic: string }) => (
+    <span data-help={`${topic}/${section}`} data-testid="help" />
+  ),
+}));
+vi.mock("@/features/data-sync/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof DataSyncApi>()),
+  dataSyncApi: {
+    map: vi.fn(),
+    overview: vi.fn(),
+    createLink: vi.fn(async () => ({})),
+    updateLink: vi.fn(async () => ({})),
+    resetLink: vi.fn(async () => undefined),
+    approveRequest: vi.fn(async () => ({ readBackGranted: false })),
+    rejectRequest: vi.fn(async () => undefined),
+    setSharing: vi.fn(async () => undefined),
+    revokeReader: vi.fn(async () => undefined),
+    syncNow: vi.fn(async () => ({})),
+    pauseLink: vi.fn(async () => ({})),
+  },
+}));
 
 const ok = { code: 0 };
 
-/** What the three listings answer right now. */
+/** What the listings answer right now: library sharing, management both ways, data sync. */
 let sharing: FederationStatus;
 let managed: ManagedServersView;
 let settings: RemoteAccessSettings;
+let syncView: DataSyncApi.DataSyncMapView;
 
 /**
  * A home office: a NAS shared both ways and managed from here; a laptop that browses this
@@ -153,6 +188,8 @@ const homeOffice = () => {
     devices: [manager("d-lap", "Laptop")],
     pendingRequests: [managementRequestIn("m1", "Guest", { platform: RemoteDevicePlatform.Linux })],
   });
+  // Nothing synced yet.
+  syncView = mapView();
 };
 
 function Where() {
@@ -245,6 +282,9 @@ beforeEach(() => {
     pairingSupported: false,
     alreadyManaged: false,
   });
+  useDataSyncStore.getState().clear();
+  vi.mocked(dataSyncApi.map).mockImplementation(async () => syncView);
+  vi.mocked(dataSyncApi.overview).mockResolvedValue(syncOverview({ deviceName: "Studio PC" }));
 });
 afterEach(() => {
   cleanup();
@@ -1902,6 +1942,344 @@ describe("device map: more devices than a map this wide can draw", () => {
   });
 });
 
+describe("device map: data sync", () => {
+  /**
+   * The NAS kept in step both ways, a new PC asking to read this device's definitions, and this
+   * device's own request to a garage server it knew nothing else about.
+   */
+  const syncing = (patch: Partial<DataSyncApi.DataSyncMapView> = {}) => {
+    syncView = mapView({
+      peers: [mapPeer("nas", "NAS")],
+      requests: [mapRequest("r1", "newpc", "New PC", { expiresAt: inTenMinutes() })],
+      outgoing: [syncOutgoing(3, "garage", "Garage", { expiresAt: inTenMinutes() })],
+      ...patch,
+    });
+  };
+  const synced = () => waitFor(() => expect(edge("sync:peer:nas")).not.toBeNull());
+
+  it("draws a line to each device it names, a claim on its own node, and this device's request", async () => {
+    syncing();
+    renderPage();
+    await synced();
+
+    expect(edge("sync:peer:nas")).toHaveAttribute("data-kind", "sync");
+    expect(edge("sync:peer:nas")).toHaveAttribute("data-in", "active");
+    expect(edge("sync:peer:nas")).toHaveAttribute("data-out", "active");
+    // Both ways in one state: one line with two arrowheads.
+    expect(edge("sync:peer:nas").querySelector("line[data-direction]")).toHaveAttribute(
+      "data-direction",
+      "both",
+    );
+    // The NAS it syncs with is the NAS it shares with and manages: one device.
+    expect(document.querySelectorAll('[data-node="peer:nas"][role="button"]')).toHaveLength(1);
+    expect(edge("sync:sync-request:r1")).toHaveAttribute("data-out", "pending");
+    expect(node("sync-request:r1").querySelector("[data-unverified-mark]")).not.toBeNull();
+    expect(edge("sync:peer:garage")).toHaveAttribute("data-in", "pending");
+    // The legend explains the line once there is one, and which way it points.
+    expect(
+      screen.getByTestId("device-map-legend").querySelector('[data-legend="sync"]'),
+    ).not.toBeNull();
+    expect(used.has("federation.map.legend.sync")).toBe(true);
+    // In words too, direction by direction, with the mode.
+    expect(
+      within(screen.getByTestId("device-map-list")).getByText(
+        /federation\.map\.direction\.sync\.in\.active NAS/,
+      ),
+    ).toHaveTextContent("federation.map.sync.mode.twoWay");
+  });
+
+  it("shows only data sync for its line, and data sync beside the rest for its device", async () => {
+    syncing();
+    renderPage();
+    await synced();
+    fireEvent.keyDown(edge("sync:peer:nas"), { key: " " });
+
+    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "edge:sync:peer:nas"));
+    const section = screen.getByTestId("device-map-sync-section");
+
+    expect(within(section).getByTestId("data-sync-rule-drawing")).toBeInTheDocument();
+    expect(screen.queryByTestId("device-map-sharing")).toBeNull();
+    expect(screen.queryByTestId("device-map-management")).toBeNull();
+
+    fireEvent.click(
+      within(panel()).getByRole("button", { name: "federation.map.panel.showDevice NAS" }),
+    );
+    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:nas"));
+    expect(screen.getByTestId("device-map-sharing")).toBeInTheDocument();
+    expect(screen.getByTestId("device-map-management")).toBeInTheDocument();
+    expect(screen.getByTestId("device-map-sync-section")).toBeInTheDocument();
+  });
+
+  it("shows a claim only as its request, saying where it came from", async () => {
+    syncing();
+    renderPage();
+    await synced();
+    fireEvent.click(node("sync-request:r1"));
+
+    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:sync-request:r1"));
+    expect(screen.getByTestId("device-map-unverified")).toBeInTheDocument();
+    const section = screen.getByTestId("device-map-sync-section");
+
+    expect(within(section).getByTestId("data-sync-request-card")).toHaveTextContent(
+      "dataSync.request.from 192.168.1.40",
+    );
+    expect(screen.queryByTestId("data-sync-rule-drawing")).toBeNull();
+  });
+
+  it("keeps what approving said when the claim leaves the map", async () => {
+    syncing();
+    vi.mocked(dataSyncApi.approveRequest).mockImplementation(async () => {
+      syncView = mapView({ ...syncView, requests: [] });
+
+      return { readBackGranted: false } as never;
+    });
+    renderPage();
+    await synced();
+    fireEvent.click(node("sync-request:r1"));
+    fireEvent.click(await screen.findByTestId("data-sync-request-approve"));
+    expect(
+      within(dialog()).getByText(/dataSync\.request\.from 192\.168\.1\.40/),
+    ).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(within(dialog()).getByRole("button", { name: "federation.confirm" }));
+    });
+
+    await waitFor(() => expect(node("sync-request:r1")).toBeNull());
+    expect(dataSyncApi.approveRequest).toHaveBeenCalledWith("r1", {
+      receiveBack: false,
+      kinds: undefined,
+    });
+    await waitFor(() =>
+      expect(within(panel()).getByRole("status")).toHaveTextContent(
+        "dataSync.request.approved New PC",
+      ),
+    );
+  });
+
+  it("keeps the keyboard in the details through a data sync action", async () => {
+    const keepFocus = blurWhenDisabled();
+
+    syncing();
+    vi.mocked(dataSyncApi.updateLink).mockImplementation(async () => {
+      // An answer takes a moment, as over a network: the busy controls have let go of focus.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      syncView = mapView({
+        ...syncView,
+        peers: [
+          mapPeer("nas", "NAS", {
+            mode: DataSyncLinkMode.Off,
+            state: DataSyncLinkState.Stopped,
+            receiving: false,
+          }),
+        ],
+      });
+
+      return {} as never;
+    });
+    try {
+      renderPage();
+      await synced();
+      const line = edge("sync:peer:nas");
+
+      act(() => line.focus());
+      fireEvent.keyDown(line, { key: "Enter" });
+      await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "edge:sync:peer:nas"));
+      const receive = screen.getByTestId("data-sync-arrow-receive");
+
+      act(() => receive.focus());
+      fireEvent.keyDown(receive, { key: "Enter" });
+      await act(async () => {
+        fireEvent.click(within(dialog()).getByRole("button", { name: "federation.confirm" }));
+      });
+
+      await waitFor(() =>
+        expect(screen.getByTestId("data-sync-arrow-receive")).toHaveAttribute(
+          "aria-pressed",
+          "false",
+        ),
+      );
+      expect(dataSyncApi.updateLink).toHaveBeenCalledWith(1, { mode: DataSyncLinkMode.Off });
+      // It still reads this device: the line stays, and so do the details.
+      expect(panel()).toHaveAttribute("data-selection", "edge:sync:peer:nas");
+      await waitFor(() => expect(panel().contains(document.activeElement)).toBe(true));
+    } finally {
+      keepFocus();
+    }
+  });
+
+  it("says decisions wait on the NAS, and switches the window there, where this device manages it", async () => {
+    syncing({
+      peers: [
+        mapPeer("nas", "NAS", {
+          attention: {
+            headless: true,
+            openDecisions: 3,
+            pausedLinks: 0,
+            restorePending: false,
+            awaitingReview: 0,
+          },
+        }),
+      ],
+    });
+    renderPage();
+    await synced();
+    fireEvent.click(node("peer:nas"));
+
+    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:nas"));
+    expect(screen.getByTestId("device-map-issues")).toHaveTextContent(
+      "federation.map.issue.syncNeedsYouThere",
+    );
+    const open = await screen.findByTestId("data-sync-open-there");
+
+    await act(async () => {
+      fireEvent.click(open);
+    });
+    expect(openManagedServer).toHaveBeenCalledWith("nas", "/data-sync");
+  });
+
+  it("shows this device's data sync with the rest of this device", async () => {
+    syncing();
+    renderPage();
+    await synced();
+
+    expect(within(panel()).getByTestId("data-sync-self-section")).toBeInTheDocument();
+    expect(panel()).toHaveAttribute("data-overview", "true");
+  });
+
+  it("offers to sync with a device found nearby that shares its definitions", async () => {
+    vi.mocked(federationPeerApi.discover).mockResolvedValue([
+      {
+        nodeId: "garage-2",
+        name: "Garage",
+        address: "http://192.168.1.71:34567",
+        sharesDefinitions: true,
+      } as SharingCandidate & { sharesDefinitions: boolean },
+    ]);
+    renderPage();
+    await loaded();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "federation.servers.add.discover" }));
+    });
+    fireEvent.click(await waitFor(() => node("ghost:192.168.1.71:34567")));
+
+    await waitFor(() =>
+      expect(panel()).toHaveAttribute("data-selection", "node:ghost:192.168.1.71:34567"),
+    );
+    expect(screen.getByTestId("data-sync-ghost")).toHaveTextContent("dataSync.map.ghost.shares");
+    expect(screen.getByTestId("data-sync-start-toggle")).toBeInTheDocument();
+  });
+
+  it("links to the data sync page from its header", async () => {
+    renderPage();
+    await loaded();
+
+    expect(screen.getByRole("link", { name: "dataSync.title" })).toHaveAttribute(
+      "href",
+      "/data-sync",
+    );
+  });
+
+  describe("at 1280 px, with the details open beside the map", () => {
+    const measured = new Set<() => void>();
+    const layout = () => screen.getByTestId("device-map-layout");
+    /** 1280 less the page's padding; with the details open, less their column and the gap. */
+    const widthOfMap = () => (layout().getAttribute("data-details") === "open" ? 834 : 1208);
+    const resized = () => act(() => measured.forEach((measure) => measure()));
+    let measuring: MockInstance<(this: HTMLElement) => DOMRect> | undefined;
+
+    beforeEach(() => {
+      narrowWindow();
+      measured.clear();
+      vi.stubGlobal(
+        "ResizeObserver",
+        class {
+          private readonly measure: () => void;
+
+          constructor(callback: () => void) {
+            this.measure = callback;
+          }
+
+          observe() {
+            measured.add(this.measure);
+          }
+
+          unobserve() {}
+
+          disconnect() {
+            measured.delete(this.measure);
+          }
+        },
+      );
+      const original = HTMLElement.prototype.getBoundingClientRect;
+
+      measuring = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect");
+      measuring.mockImplementation(function (this: HTMLElement) {
+        if (this.dataset.testid !== "device-map-canvas") return original.call(this);
+        const width = widthOfMap();
+
+        return {
+          width,
+          height: 600,
+          top: 0,
+          left: 0,
+          right: width,
+          bottom: 600,
+          x: 0,
+          y: 0,
+        } as DOMRect;
+      });
+    });
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      measuring?.mockRestore();
+    });
+
+    it("draws, or lists, every device and every line — data sync's included", async () => {
+      syncing({
+        peers: [
+          mapPeer("nas", "NAS"),
+          ...["Office PC", "Studio Mac", "Living Room", "Attic Box"].map((name, i) =>
+            mapPeer(`s${i}`, name, { linkId: 10 + i }),
+          ),
+        ],
+      });
+      renderPage();
+      await synced();
+      const line = edge("sync:peer:nas");
+
+      act(() => line.focus());
+      fireEvent.keyDown(line, { key: "Enter" });
+      await waitFor(() => expect(layout()).toHaveAttribute("data-details", "open"));
+      resized();
+
+      const devices = [
+        "peer:nas",
+        "peer:lap",
+        "manager:d-lap",
+        "sharing-request:incoming-attic",
+        "manager-request:m1",
+        "sync-request:r1",
+        "peer:garage",
+        ...[0, 1, 2, 3].map((i) => `peer:s${i}`),
+      ];
+
+      for (const id of devices) expect(node(id) ?? listed(id), id).not.toBeNull();
+      for (const id of [
+        "sync:peer:nas",
+        "sync:sync-request:r1",
+        "sync:peer:garage",
+        ...[0, 1, 2, 3].map((i) => `sync:peer:s${i}`),
+      ])
+        expect(edge(id) ?? listedEdge(id), id).not.toBeNull();
+      // Nothing of the map is under the details: they are a column of their own beside it.
+      expect(screen.getByTestId("device-map-details").parentElement).toBe(layout());
+      expect(screen.getByTestId("device-map-details").className).not.toMatch(
+        /\b(fixed|absolute)\b/,
+      );
+    });
+  });
+});
+
 describe("device map: failures", () => {
   it("keeps the rest of the map when one listing cannot be read", async () => {
     vi.mocked(managedServerApi.list).mockRejectedValue(new Error("down"));
@@ -1913,6 +2291,18 @@ describe("device map: failures", () => {
     expect(document.querySelector('[data-edge="management:peer:nas"]')).toBeNull();
     // Without the listing, this device's kind is not guessed.
     expect(node("self")).toHaveAttribute("data-kind", "unknown");
+  });
+
+  it("keeps the rest of the map when data sync cannot be read", async () => {
+    vi.mocked(dataSyncApi.map).mockRejectedValue(new Error("down"));
+    renderPage();
+    await loaded();
+
+    await waitFor(() =>
+      expect(screen.getByText("federation.map.source.dataSync")).toBeInTheDocument(),
+    );
+    expect(edge("sharing:peer:nas")).toHaveAttribute("data-in", "active");
+    expect(edge("management:peer:nas")).toHaveAttribute("data-out", "active");
   });
 
   it("names the remote-access mode this device is in", async () => {
@@ -1960,6 +2350,61 @@ describe("device map: translations", () => {
     fireEvent.click(edge("sharing:peer:nas"));
 
     expect(used.size).toBeGreaterThan(60);
+    expectKnown();
+  });
+
+  it("asks only for such keys for data sync, too", async () => {
+    // Each state of a line, a claim, a request of this device's own, and a device to start with.
+    syncView = mapView({
+      peers: [
+        mapPeer("nas", "NAS", {
+          openItems: 2,
+          attention: {
+            headless: true,
+            openDecisions: 1,
+            pausedLinks: 0,
+            restorePending: false,
+            awaitingReview: 0,
+          },
+        }),
+        mapPeer("lap", "Laptop", {
+          linkId: 2,
+          state: DataSyncLinkState.Paused,
+          receiving: false,
+          peerMayRead: false,
+        }),
+      ],
+      requests: [mapRequest("r1", "newpc", "New PC", { expiresAt: inTenMinutes() })],
+      outgoing: [syncOutgoing(3, "garage", "Garage", { expiresAt: inTenMinutes() })],
+    });
+    managed = servers({
+      servers: [server("nas", { name: "NAS", address: "http://192.168.1.20:34567" })],
+    });
+    renderPage();
+    await waitFor(() => expect(edge("sync:peer:nas")).not.toBeNull());
+    for (const id of ["self", "peer:nas", "peer:lap", "sync-request:r1", "peer:garage"]) {
+      fireEvent.click(node(id));
+      await waitFor(() => expect(panel()).toHaveAttribute("data-selection", `node:${id}`));
+    }
+    fireEvent.click(node("manager:d-lap"));
+    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:manager:d-lap"));
+    fireEvent.click(edge("sync:peer:nas"));
+    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "edge:sync:peer:nas"));
+
+    for (const key of [
+      "federation.map.direction.sync.in.active",
+      "federation.map.sync.mode.twoWay",
+      "federation.map.issue.syncNeedsYouThere",
+      "federation.map.legend.sync",
+      "dataSync.request.from",
+      "dataSync.status.AwaitingAccess",
+    ])
+      expect(used.has(key), key).toBe(true);
+    expectKnown();
+  });
+
+  /** Every key asked for exists in both languages and names every value it was asked with. */
+  const expectKnown = () => {
     for (const [key, options] of used) {
       expect(en[key], `en: ${key}`).toEqual(expect.any(String));
       expect(cn[key], `cn: ${key}`).toEqual(expect.any(String));
@@ -1968,5 +2413,5 @@ describe("device map: translations", () => {
         expect(cn[key], key).toContain(`{{${name}}}`);
       }
     }
-  });
+  };
 });

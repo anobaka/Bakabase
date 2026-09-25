@@ -3,7 +3,7 @@
 import type { BootstrapModelsResponseModelsBaseResponse } from "@/sdk/Api";
 
 import { useTranslation } from "react-i18next";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import toast from "react-hot-toast";
 
@@ -21,6 +21,11 @@ import {
   Textarea,
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import {
+  DataSyncHeaderLink,
+  DefinitionSyncRow,
+  useDefinitionSync,
+} from "@/features/data-sync/components/DefinitionsPageSync";
 import BApi from "@/sdk/BApi";
 
 export type ExtensionGroup = {
@@ -37,11 +42,16 @@ const ExtensionGroupPage = () => {
   const [editingGroup, setEditingGroup] = useState<ExtensionGroup | undefined>(undefined);
   const [editingExtensionsText, setEditingExtensionsText] = useState<string>("");
 
-  useEffect(() => {
+  const loadGroups = useCallback(() => {
     BApi.extensionGroup.getAllExtensionGroups().then((r) => {
       setGroups(r.data || []);
     });
   }, []);
+
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
+  const dataSync = useDefinitionSync("extensionGroup", loadGroups);
 
   return (
     <div>
@@ -109,7 +119,8 @@ const ExtensionGroupPage = () => {
           </div>
         </div>
       </Modal>
-      <div>
+      {dataSync.host}
+      <div className={"flex flex-wrap items-center gap-2"}>
         <Button
           color={"primary"}
           size={"sm"}
@@ -124,6 +135,7 @@ const ExtensionGroupPage = () => {
         >
           {t<string>("extensionGroup.action.addGroup")}
         </Button>
+        <DataSyncHeaderLink />
       </div>
       <Table isStriped removeWrapper className={"mt-2"}>
         <TableHeader>
@@ -135,7 +147,18 @@ const ExtensionGroupPage = () => {
           {groups.map((eg, i) => {
             return (
               <TableRow key={eg.id ?? i}>
-                <TableCell>{eg.name}</TableCell>
+                <TableCell>
+                  <div className={"flex flex-wrap items-center gap-2"}>
+                    {eg.name}
+                    <DefinitionSyncRow
+                      kind="extensionGroup"
+                      localKey={String(eg.id)}
+                      menu={false}
+                      name={eg.name}
+                      sync={dataSync}
+                    />
+                  </div>
+                </TableCell>
                 <TableCell>
                   {eg.extensions?.map((ext, j) => {
                     return (
