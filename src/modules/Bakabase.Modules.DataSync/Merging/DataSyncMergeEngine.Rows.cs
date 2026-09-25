@@ -427,10 +427,16 @@ internal sealed partial class DataSyncMergeEngine
         if (conflicts.Count > 0 && AlreadyMergedConflict(k, c))
             return ConflictItemsOnly(p, k, c, l, b, m3, conflicts, aliasKeys);
 
+        // A fast-forward is one only while the codec reports no conflict. By the closure property (§8.5) no codec does
+        // in FastForward; one that did would otherwise give a FastForward revision that absorbs the peer's counters
+        // while this device keeps its own values, and close the entity's items as resolved elsewhere. Such a merge is
+        // treated as the concurrent merge it reports.
+        var fastForward = mode3 == DataSyncMerge3Mode.FastForward && conflicts.Count == 0;
+
         // Record-level fields: childrenLocal (§3.6), the order key (§8.5.5) and unknown members (§8.9).
         var clField = m3.Fields.FirstOrDefault(f => f.Path == "childrenLocal");
         var mergedCl = codec.Descriptor.SupportsChildrenLocal &&
-                       (mode3 == DataSyncMerge3Mode.FastForward
+                       (fastForward
                            ? remoteCl
                            : clField is { Resolution: DataSyncFieldResolution.TookRemote or DataSyncFieldResolution.FollowTookRemote }
                                ? remoteCl
@@ -472,7 +478,7 @@ internal sealed partial class DataSyncMergeEngine
             p.Operation = new BindOnlyOperation(itemId, l.LocalKey, Keys(aliasKeys));
         }
 
-        var revisionKind = mode3 == DataSyncMerge3Mode.FastForward ? DataSyncRevisionKind.FastForward
+        var revisionKind = fastForward ? DataSyncRevisionKind.FastForward
             : conflicts.Count > 0 ? DataSyncRevisionKind.MergedWithConflicts
             : m3.Fields.Any(f => f.Resolution == DataSyncFieldResolution.FollowTookRemote) ? DataSyncRevisionKind.FollowMerged
             : DataSyncRevisionKind.MergedNoConflict;
@@ -547,7 +553,7 @@ internal sealed partial class DataSyncMergeEngine
             p.Notes.Add(Note(k, l.LocalKey, p.Name, DataSyncMergeNoteCodes.ChildrenLocalTurnedOff));
 
         // Row K5 took a peer revision: the entity's items were resolved where that revision was made (§9.3).
-        if (mode3 == DataSyncMerge3Mode.FastForward && c.Record.EditedBy is { } editor && !IsOwn(editor.ActorId))
+        if (fastForward && c.Record.EditedBy is { } editor && !IsOwn(editor.ActorId))
             p.Hint = new DataSyncClosureHint(k.Kind, key, DataSyncInboxClosure.ResolvedElsewhere, editor);
         return p;
     }

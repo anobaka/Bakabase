@@ -387,6 +387,56 @@ public partial class MergerTests
         Assert.AreEqual("1", r.Order.Single().Synced.Single().LocalKey);
     }
 
+    /// <summary>
+    /// A codec that reports a conflict in FastForward breaks the closure property (§8.5), which no shipped codec does.
+    /// The merger does not trust the mode for it: the merge is concurrent, never a FastForward revision that absorbs
+    /// the peer's counters while this device keeps its own value, and it closes nothing as resolved elsewhere.
+    /// </summary>
+    [TestMethod]
+    public void K5_AConflictTheCodecReportsInAFastForwardIsNoFastForward()
+    {
+        var f = new MergeFixture
+        {
+            ItemCodec = new Planning.DecoratedCodec(Items)
+            {
+                OnMerge3 = (input, result) => input.Mode3 != DataSyncMerge3Mode.FastForward
+                    ? result
+                    : result with
+                    {
+                        // The peer's children, this device's name: the name is what the codec says conflicts.
+                        Merged = ((TestItemContent)result.Merged).With(name: ((TestItemContent)input.Local).Name),
+                        Fields =
+                        [
+                            .. result.Fields.Where(x => x.Path != "name"),
+                            new DataSyncFieldOutcome("name", DataSyncFieldResolution.Conflict,
+                                new DataSyncDisplayValue("Genre"), new DataSyncDisplayValue("Genre"),
+                                new DataSyncDisplayValue("Genres"), new DataSyncDisplayValue("Genre")),
+                        ],
+                    },
+            },
+        };
+        f.Local("1", A, T("Genre", ("1", "Action")), Vv((Self, 3)));
+        f.Base(A, f.Record(A, T("Genre", ("1", "Action")), Vv((Self, 3))),
+            childMap: new Dictionary<string, string> { ["1"] = "1" });
+        f.UseAllChildren(0);
+        f.OpenItem(40, A, DataSyncInboxItemType.FieldConflict, "name");
+        var record = f.Pull(f.Record(A, T("Genres", ("1", "Action"), ("2", "Drama")), Vv((Self, 3), (Peer, 1)),
+            editedBy: ThirdEditor));
+
+        var r = f.Merge();
+        var revision = r.Revisions.Single();
+        Assert.AreEqual(DataSyncRevisionKind.MergedWithConflicts, revision.Revision);
+        Assert.IsNull(revision.AdoptEditor, "the peer's editor is taken only by a real fast-forward");
+        var next = DataSyncRevisionRules.Next(revision.Revision, Vv((Self, 3)), revision.RemoteVv, revision.ResultEqualsRemote,
+            revision.ResultEqualsLocal, Self, () => 4);
+        Assert.AreEqual(0, next[Peer], "the peer's counter is not absorbed while its name is not taken");
+        Assert.AreEqual(0, r.ClosureHints.Count, "nothing closes as resolved elsewhere");
+        Assert.AreEqual(DataSyncPendingReason.Conflict, BaseOf(r, A).Pending!.Reason);
+        Assert.AreEqual(record, BaseOf(r, A).Pending!.Record);
+        Assert.AreEqual("name", r.Inbox.Single().SubjectPath);
+        Assert.AreEqual("Genre", Items.NameOf(Items.ReadLocal(((UpdateEntityOperation)Ops(r).Single()).MergedContent)));
+    }
+
     [TestMethod]
     public void K5_APeerTypeChangeFreezesTheEntity()
     {

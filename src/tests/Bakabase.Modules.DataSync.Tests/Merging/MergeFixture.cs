@@ -198,11 +198,14 @@ internal sealed class MergeFixture
         return new DataSyncStagedPull(PeerNode, "PC-1", manifest, kinds, new DateTime(2026, 9, 25, 0, 0, 0, DateTimeKind.Utc));
     }
 
+    /// <summary>The codec the merger is given for the test kind (records are staged with the test kind's own).</summary>
+    public IDataSyncKindCodec ItemCodec = Items;
+
     public DataSyncMergeInput Input() => new(Link(), StagedPull(),
         Entities.Keys.Union(Tombstones.Keys).Distinct().ToDictionary(k => k,
             k => new DataSyncLocalKindState(k, Entities.GetValueOrDefault(k) ?? [], Tombstones.GetValueOrDefault(k) ?? [])),
         new Dictionary<(string, SyncKey), DataSyncPeerBase>(Bases), PendingToMerge.ToList(),
-        new Dictionary<string, IDataSyncKindCodec> { [ItemKind] = Items, [GroupKind] = Groups },
+        new Dictionary<string, IDataSyncKindCodec> { [ItemKind] = ItemCodec, [GroupKind] = Groups },
         new Dictionary<(string, string), IReadOnlyDictionary<string, int>>(Usage),
         new Dictionary<(string, string), int>(ValueCounts), OpenItems.ToList(), Policy, Limits,
         OpenStateItems.Count == 0 ? null : OpenStateItems.ToList());
