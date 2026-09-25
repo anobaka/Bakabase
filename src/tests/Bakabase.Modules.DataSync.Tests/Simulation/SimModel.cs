@@ -140,6 +140,9 @@ internal sealed class SimRow
     public TestItemContent? Item => Content as TestItemContent;
     public string Name => Content is null ? "" : SimKinds.Of(Kind).NameOf(Content);
 
+    /// <summary>The content in one line (traces and failure messages).</summary>
+    public string Shown => Content is null ? "" : SimKinds.Of(Kind).Describe(Content);
+
     public SimRow Clone()
     {
         var clone = (SimRow)MemberwiseClone();
@@ -147,7 +150,7 @@ internal sealed class SimRow
         return clone;
     }
 
-    public override string ToString() => $"{Kind}:{LocalKey} {(Deleted ? "†" : "")}{Content} {Vv}";
+    public override string ToString() => $"{Kind}:{LocalKey} {(Deleted ? "†" : "")}{Shown} {Vv}";
 }
 
 /// <summary>This device's link to one peer (DataSyncLinks + its bases and pending records).</summary>
@@ -325,10 +328,14 @@ internal sealed class SimNotification
     public bool IsPrompt => Case is "newItems" or "paused" or "restore";
 }
 
-/// <summary>The kinds the simulator runs, in apply order.</summary>
+/// <summary>
+/// The kinds the simulator runs, in apply order. Custom properties come last: a scenario that creates none (the
+/// default step list, <see cref="SimScenarioSpec.CustomProperties"/>) runs exactly as it did before they joined.
+/// </summary>
 internal static class SimKinds
 {
-    public static IReadOnlyList<SimKind> All { get; } = [ExtensionGroupSimKind.Instance, TestItemSimKind.Instance];
+    public static IReadOnlyList<SimKind> All { get; } =
+        [ExtensionGroupSimKind.Instance, TestItemSimKind.Instance, CustomPropertySimKind.Instance];
 
     public static SimKind Of(string kind) => All.First(k => k.Kind == kind);
 

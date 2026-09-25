@@ -30,7 +30,12 @@ internal sealed record SimStep(SimStepKind Kind, int A, int B, int C, int D)
 }
 
 /// <summary>A scenario: the world's shape and its steps, all from one seed.</summary>
-internal sealed record SimScenarioSpec(int Seed, int NodeCount, SimTopology Topology, SimModeMix Modes, IReadOnlyList<SimStep> Steps)
+/// <param name="CustomProperties">
+/// Definitions are created as custom properties most of the time (package B's codec), beside the test kind and
+/// extension groups; off, the scenario creates none and runs exactly as before that kind joined.
+/// </param>
+internal sealed record SimScenarioSpec(int Seed, int NodeCount, SimTopology Topology, SimModeMix Modes, IReadOnlyList<SimStep> Steps,
+    bool CustomProperties = false)
 {
     private static readonly (SimStepKind Kind, int Weight)[] Weights =
     [
@@ -45,7 +50,7 @@ internal sealed record SimScenarioSpec(int Seed, int NodeCount, SimTopology Topo
         (SimStepKind.SyncCrossed, 3),
     ];
 
-    public static SimScenarioSpec Generate(int seed, int maxSteps = 60)
+    public static SimScenarioSpec Generate(int seed, int maxSteps = 60, bool customProperties = false)
     {
         var random = new Random(seed);
         var nodes = random.Next(2, 5);
@@ -79,7 +84,7 @@ internal sealed record SimScenarioSpec(int Seed, int NodeCount, SimTopology Topo
                 steps.Insert(extra.Next(prefix, steps.Count + 1), Extra(kind));
         }
 
-        return new SimScenarioSpec(seed, nodes, topology, modes, steps);
+        return new SimScenarioSpec(seed, nodes, topology, modes, steps, customProperties);
     }
 }
 
@@ -309,19 +314,23 @@ internal sealed class SimScenario
         {
             case SimStepKind.Create:
             {
-                var kind = SimKinds.All[s.B % 3 == 0 ? 0 : 1];
+                // With custom properties, three definitions in five are one; the other two keep the old split.
+                var kind = _spec.CustomProperties && s.B % 5 >= 2
+                    ? CustomPropertySimKind.Instance
+                    : SimKinds.All[s.B % 3 == 0 ? 0 : 1];
                 var name = kind.Names[s.C % kind.Names.Count];
                 var row = node.Create(kind.Kind, kind.NewContent(new Random(s.D), name, World.NewChildId));
-                return $"{node} creates {row.Kind} {row.Content}";
+                return $"{node} creates {row.Kind} {row.Shown}";
             }
             case SimStepKind.Edit:
             {
                 if (Row(s.B) is not { } row) return "nothing to edit";
                 var kind = SimKinds.Of(row.Kind);
                 if (kind.RandomEdit(new Random(s.C), row.Content!, World.NewChildId) is not { } edit) return "no edit";
-                var was = row.Content;
+                var was = row.Shown;
                 node.EditRow(row, edit.Content);
-                return $"{node} {edit.What} {was} → {edit.Content}";
+                World.Count($"edit:{row.Kind}:{edit.What}");
+                return $"{node} {edit.What} {was} → {row.Shown}";
             }
             case SimStepKind.Delete:
             {
@@ -378,7 +387,7 @@ internal sealed class SimScenario
             }
             case SimStepKind.ChildrenLocal:
             {
-                var offered = rows.Where(r => SimKinds.Of(r.Kind).Codec.Descriptor.SupportsChildrenLocal).ToList();
+                var offered = rows.Where(r => SimKinds.Of(r.Kind).OffersChildrenLocal(r.Content!)).ToList();
                 if (offered.Count == 0) return "nothing offers 'sync the definition only'";
                 var row = offered[s.B % offered.Count];
                 node.SetChildrenLocal(row, !row.ChildrenLocal);
@@ -696,7 +705,7 @@ internal sealed class SimScenario
             if (!Equals(row.Content, edited))
             {
                 Failures.Add($"K6: {node} re-merged the open conflict of {row.Name} on {link} and undid an edit made " +
-                             $"since: {edited} became {row.Content}");
+                             $"since: {SimKinds.Of(row.Kind).Describe(edited!)} became {row.Shown}");
             }
             else
             {
@@ -1072,7 +1081,7 @@ internal sealed class SimScenario
                 if (forms.Count > 1)
                 {
                     Failures.Add($"I1: {name} differs: " + string.Join(" | ",
-                        live.Select(x => $"{x.Node} {x.Row.Content} ok {x.Row.OrderKey} vv {x.Row.Vv}")));
+                        live.Select(x => $"{x.Node} {x.Row.Shown} ok {x.Row.OrderKey} vv {x.Row.Vv}")));
                 }
             }
         }
@@ -1125,7 +1134,7 @@ internal sealed class SimScenario
             {
                 if (group.Select(x => FormOf(x.Row)).Distinct().Count() > 1)
                     Failures.Add($"I7: vector {group.Key} carries different forms: " +
-                                 string.Join(" | ", group.Select(x => $"{x.Node} {x.Row.Content}")));
+                                 string.Join(" | ", group.Select(x => $"{x.Node} {x.Row.Shown}")));
             }
         }
     }
