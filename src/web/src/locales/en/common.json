@@ -347,6 +347,7 @@
   "aigc.runStatus.6": "Cancelled",
   "menu.system": "System",
   "menu.configuration": "Configuration",
+  "menu.dataSync": "Data sync",
   "menu.thirdParty": "Third Party Config",
   "menu.backgroundTask": "Background Task",
   "menu.performanceProfiler": "Performance Profiler",

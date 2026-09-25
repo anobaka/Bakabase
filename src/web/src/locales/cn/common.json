@@ -347,6 +347,7 @@
   "aigc.runStatus.6": "已取消",
   "menu.system": "系统",
   "menu.configuration": "配置",
+  "menu.dataSync": "数据同步",
   "menu.thirdParty": "第三方配置",
   "menu.backgroundTask": "后台任务",
   "menu.performanceProfiler": "性能分析器",

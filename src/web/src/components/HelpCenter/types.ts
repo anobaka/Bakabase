@@ -26,7 +26,7 @@ export type PathMarkHelpSectionId = "whatIs" | "examples" | "comparison";
 export type WorkflowHelpSectionId = "whatIs" | "examples" | "triggers";
 
 /** Horizontal tabs inside the multi-device overview. */
-export type MultiDeviceHelpSectionId = "whatIs" | "browse" | "switch" | "setup";
+export type MultiDeviceHelpSectionId = "whatIs" | "browse" | "switch" | "setup" | "dataSync";
 
 export type HelpSectionId =
   | PathMarkHelpSectionId

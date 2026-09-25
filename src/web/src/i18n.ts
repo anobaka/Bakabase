@@ -48,6 +48,7 @@ import enWorkflowTriggers from "@/locales/en/pages/workflowTriggers.json";
 import enAcquisition from "@/locales/en/pages/acquisition.json";
 import enCollection from "@/locales/en/pages/collection.json";
 import enFederation from "@/locales/en/pages/federation.json";
+import enDataSync from "@/locales/en/pages/dataSync.json";
 
 // English - Components
 import enFileExplorer from "@/locales/en/components/fileExplorer.json";
@@ -70,6 +71,7 @@ import enHelpCollection from "@/locales/en/components/helpCollection.json";
 import enHelpSubscription from "@/locales/en/components/helpSubscription.json";
 import enHelpAcquisition from "@/locales/en/components/helpAcquisition.json";
 import enHelpMultiDevice from "@/locales/en/components/helpMultiDevice.json";
+import enHelpDataSync from "@/locales/en/components/helpDataSync.json";
 import enNotices from "@/locales/en/components/notices.json";
 
 // New modular imports - Chinese
@@ -119,6 +121,7 @@ import cnWorkflowTriggers from "@/locales/cn/pages/workflowTriggers.json";
 import cnAcquisition from "@/locales/cn/pages/acquisition.json";
 import cnCollection from "@/locales/cn/pages/collection.json";
 import cnFederation from "@/locales/cn/pages/federation.json";
+import cnDataSync from "@/locales/cn/pages/dataSync.json";
 
 // Chinese - Components
 import cnFileExplorer from "@/locales/cn/components/fileExplorer.json";
@@ -141,6 +144,7 @@ import cnHelpCollection from "@/locales/cn/components/helpCollection.json";
 import cnHelpSubscription from "@/locales/cn/components/helpSubscription.json";
 import cnHelpAcquisition from "@/locales/cn/components/helpAcquisition.json";
 import cnHelpMultiDevice from "@/locales/cn/components/helpMultiDevice.json";
+import cnHelpDataSync from "@/locales/cn/components/helpDataSync.json";
 import cnNotices from "@/locales/cn/components/notices.json";
 
 // Merge all English resources
@@ -190,6 +194,7 @@ const enResources = {
   ...enAcquisition,
   ...enCollection,
   ...enFederation,
+  ...enDataSync,
   // Components
   ...enFileExplorer,
   ...enResourceFilter,
@@ -211,6 +216,7 @@ const enResources = {
   ...enHelpSubscription,
   ...enHelpAcquisition,
   ...enHelpMultiDevice,
+  ...enHelpDataSync,
   ...enNotices,
 };
 
@@ -261,6 +267,7 @@ const cnResources = {
   ...cnAcquisition,
   ...cnCollection,
   ...cnFederation,
+  ...cnDataSync,
   // Components
   ...cnFileExplorer,
   ...cnResourceFilter,
@@ -282,6 +289,7 @@ const cnResources = {
   ...cnHelpSubscription,
   ...cnHelpAcquisition,
   ...cnHelpMultiDevice,
+  ...cnHelpDataSync,
   ...cnNotices,
 };
 
