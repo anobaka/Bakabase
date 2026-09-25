@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bakabase.InsideWorld.Business.Components.DataSync.Feed;
@@ -181,139 +180,19 @@ internal sealed record ReadKind(DataSyncFeedKind Manifest, IReadOnlyList<byte[]>
 internal sealed record ReadSnapshot(DataSyncFeedManifest Manifest, IReadOnlyDictionary<string, ReadKind> Kinds);
 
 /// <summary>
-/// The page writer the feed's tests run with: the pure engine's <see cref="DataSyncWireWriter"/> once it is on the
-/// branch (package A), and until then a reference writer of the same format (§7.5.3, §7.5.4): canonical pages
-/// <c>{"complete","kind","nextCursor","records","sinceSeq","snapshotId"}</c>, cursors <c>p{n}</c>, content larger than
-/// <c>MaxChunkBytes</c> sent without its largest array and followed by chunk records, a record that cannot travel held
-/// as <c>Invalid</c>, at most <c>MaxPageBytes</c> and <c>MaxRecordsPerPage</c> items a page.
+/// The page writer the feed's tests run with: the pure engine's <see cref="DataSyncWireWriter.WriteKind"/> (package A),
+/// counting its calls.
 /// </summary>
 internal sealed class ReferenceFeedPageWriter : IDataSyncFeedPageWriter
 {
-    private static readonly UTF8Encoding Utf8 = new(false, true);
     private int _calls;
 
     public int Calls => _calls;
 
-    public IReadOnlyList<byte[]> WritePages(string snapshotId, string kind, long sinceSeq,
+    public DataSyncWrittenKind WriteKind(string snapshotId, string kind, long sinceSeq,
         IReadOnlyList<DataSyncWireRecord> records, DataSyncLimits limits)
     {
         Interlocked.Increment(ref _calls);
-        try
-        {
-            return DataSyncWireWriter.WritePages(snapshotId, kind, sinceSeq, records, limits);
-        }
-        catch (NotImplementedException)
-        {
-            return Write(snapshotId, kind, sinceSeq, records, limits);
-        }
+        return DataSyncWireWriter.WriteKind(snapshotId, kind, sinceSeq, records, limits);
     }
-
-    private static IReadOnlyList<byte[]> Write(string snapshotId, string kind, long sinceSeq,
-        IReadOnlyList<DataSyncWireRecord> records, DataSyncLimits limits)
-    {
-        var capacity = limits.MaxPageBytes - Size(Envelope(snapshotId, kind, sinceSeq, "p" + int.MaxValue, []));
-        var items = records.SelectMany(r => Items(r, limits, capacity)).ToList();
-
-        var groups = new List<List<JsonObject>>();
-        var current = new List<JsonObject>();
-        var currentBytes = 0;
-        foreach (var item in items)
-        {
-            var bytes = Size(item);
-            if (current.Count > 0 &&
-                (current.Count >= limits.MaxRecordsPerPage || currentBytes + 1 + bytes > capacity))
-            {
-                groups.Add(current);
-                current = [];
-                currentBytes = 0;
-            }
-
-            currentBytes += (current.Count > 0 ? 1 : 0) + bytes;
-            current.Add(item);
-        }
-
-        groups.Add(current);
-        return groups.Select((group, i) => CanonicalJson.SerializeToUtf8Bytes(Envelope(snapshotId, kind, sinceSeq,
-            i == groups.Count - 1 ? null : "p" + (i + 1), group))).ToList();
-    }
-
-    private static IEnumerable<JsonObject> Items(DataSyncWireRecord record, DataSyncLimits limits, int capacity)
-    {
-        if (record.Content is { } content && Size(content) > limits.MaxChunkBytes)
-        {
-            var path = content.Where(m => m.Value is JsonArray).OrderByDescending(m => Size(m.Value))
-                .ThenBy(m => m.Key, StringComparer.Ordinal).Select(m => m.Key).FirstOrDefault();
-            if (path is not null)
-            {
-                var chunks = new List<JsonArray>();
-                var chunk = new JsonArray();
-                foreach (var child in (JsonArray) content[path]!)
-                {
-                    if (Size(child) > capacity / 2) return [Record(Held(record))];
-                    if (chunk.Count > 0 && Size(chunk) + Size(child) > limits.MaxChunkBytes)
-                    {
-                        chunks.Add(chunk);
-                        chunk = new JsonArray();
-                    }
-
-                    chunk.Add(child!.DeepClone());
-                }
-
-                if (chunk.Count > 0) chunks.Add(chunk);
-                if (chunks.Count > limits.MaxChunksPerEntity) return [Record(Held(record))];
-                var head = (JsonObject) content.DeepClone();
-                head.Remove(path);
-                return new[] {Record(record with {Content = head, Chunks = chunks.Count})}.Concat(chunks.Select(
-                    (items, i) => new JsonObject
-                    {
-                        ["chunkOf"] = record.Keys[0], ["index"] = i, ["items"] = items, ["path"] = path,
-                    }));
-            }
-        }
-
-        var item = Record(record);
-        return Size(item) <= capacity ? [item] : [Record(Held(record))];
-    }
-
-    private static DataSyncWireRecord Held(DataSyncWireRecord record) =>
-        record with {Content = null, Hash = null, OrderKey = null, HeldAtSource = DataSyncHeldReason.Invalid, Chunks = 0};
-
-    private static JsonObject Record(DataSyncWireRecord record)
-    {
-        var json = new JsonObject
-        {
-            ["chunks"] = record.Chunks,
-            ["deleted"] = record.Deleted,
-            ["keys"] = new JsonArray(record.Keys.Select(k => (JsonNode?) JsonValue.Create(k)).ToArray()),
-            ["origin"] = record.Origin,
-            ["schemaVersion"] = record.SchemaVersion,
-            ["seq"] = record.Seq,
-            ["vv"] = JsonNode.Parse(record.Vv.ToCanonicalString()),
-        };
-        if (record.Content is not null) json["content"] = record.Content.DeepClone();
-        if (record.Hash is not null) json["hash"] = record.Hash;
-        if (record.HeldAtSource is { } held) json["heldAtSource"] = held.ToString();
-        if (record.OrderKey is not null) json["orderKey"] = record.OrderKey;
-        if (record.EditedBy is { } editor)
-            json["editedBy"] = new JsonObject
-                {["actorId"] = editor.ActorId, ["name"] = editor.Name, ["nodeId"] = editor.NodeId};
-        return json;
-    }
-
-    private static JsonObject Envelope(string snapshotId, string kind, long sinceSeq, string? nextCursor,
-        IEnumerable<JsonObject> items)
-    {
-        var page = new JsonObject
-        {
-            ["complete"] = nextCursor is null,
-            ["kind"] = kind,
-            ["records"] = new JsonArray(items.Select(i => (JsonNode?) i).ToArray()),
-            ["sinceSeq"] = sinceSeq,
-            ["snapshotId"] = snapshotId,
-        };
-        if (nextCursor is not null) page["nextCursor"] = nextCursor;
-        return page;
-    }
-
-    private static int Size(JsonNode? node) => Utf8.GetByteCount(CanonicalJson.Serialize(node));
 }

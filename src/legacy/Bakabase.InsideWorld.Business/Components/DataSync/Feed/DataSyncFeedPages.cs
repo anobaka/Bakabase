@@ -10,22 +10,25 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Feed;
 
 /// <summary>
 /// Writes one kind of a snapshot as pages of raw canonical JSON (§7.5.3, §7.5.4): the pure engine's
-/// <see cref="DataSyncWireWriter"/> (package A). A seam, so the feed's own tests can run before the writer lands and
-/// against it afterwards.
+/// <see cref="DataSyncWireWriter.WriteKind"/> (package A). A seam, so the feed's tests can count and fail writes.
 /// </summary>
 public interface IDataSyncFeedPageWriter
 {
     /// <param name="records">Published records with <c>Seq &gt; sinceSeq</c>, in Seq order, unchunked.</param>
-    IReadOnlyList<byte[]> WritePages(string snapshotId, string kind, long sinceSeq,
+    /// <returns>
+    /// The pages, the records as a receiver reassembles them (one whose content cannot travel is held) and the kind
+    /// content hash over those: the manifest's <c>DataSyncFeedKind.ContentHash</c>.
+    /// </returns>
+    DataSyncWrittenKind WriteKind(string snapshotId, string kind, long sinceSeq,
         IReadOnlyList<DataSyncWireRecord> records, DataSyncLimits limits);
 }
 
-/// <summary>The production writer: <see cref="DataSyncWireWriter.WritePages"/>.</summary>
+/// <summary>The production writer: <see cref="DataSyncWireWriter.WriteKind"/>.</summary>
 public sealed class DataSyncWireFeedPageWriter : IDataSyncFeedPageWriter
 {
-    public IReadOnlyList<byte[]> WritePages(string snapshotId, string kind, long sinceSeq,
+    public DataSyncWrittenKind WriteKind(string snapshotId, string kind, long sinceSeq,
         IReadOnlyList<DataSyncWireRecord> records, DataSyncLimits limits) =>
-        DataSyncWireWriter.WritePages(snapshotId, kind, sinceSeq, records, limits);
+        DataSyncWireWriter.WriteKind(snapshotId, kind, sinceSeq, records, limits);
 }
 
 /// <summary>One record as its page carries it: what the kind content hash covers (§7.5.2 step 6).</summary>
@@ -39,8 +42,8 @@ public sealed record DataSyncFeedWrittenKind(IReadOnlyList<byte[]> Pages, IReadO
 
 /// <summary>
 /// Reads back the pages the writer produced, before they are served: every page must belong to this snapshot, kind
-/// and since, the pages must chain through their cursors to one complete last page, and they must carry exactly the
-/// records handed to the writer, in order. The kind content hash is computed from what the pages carry, so a record
+/// and since, the pages must chain through their cursors to one complete last page, they must carry exactly the
+/// records the writer reports, in order, and the kind content hash of what they carry must be the writer's. So a record
 /// the writer had to hold (content too large to travel) is hashed as held, exactly as a receiver recomputes it.
 /// </summary>
 /// <remarks>Streams over each page: record content and chunk items are skipped, never materialized.</remarks>
@@ -52,12 +55,13 @@ public static class DataSyncFeedPageScanner
     /// <summary>Our own bytes: generous, since a deep multilevel property nests past federation's limit (F61).</summary>
     private const int MaxDepth = 256;
 
-    /// <exception cref="InvalidOperationException">The writer produced pages that do not match its input.</exception>
-    public static DataSyncFeedWrittenKind Scan(IReadOnlyList<byte[]> pages, string snapshotId, string kind,
-        long sinceSeq, IReadOnlyList<DataSyncWireRecord> written)
+    /// <exception cref="InvalidOperationException">The writer produced pages that do not match what it reports.</exception>
+    public static DataSyncFeedWrittenKind Scan(DataSyncWrittenKind writtenKind, string snapshotId, string kind,
+        long sinceSeq)
     {
-        ArgumentNullException.ThrowIfNull(pages);
-        ArgumentNullException.ThrowIfNull(written);
+        ArgumentNullException.ThrowIfNull(writtenKind);
+        var pages = writtenKind.Pages;
+        var written = writtenKind.Records;
         if (pages.Count == 0) throw Bug(kind, "no page was written");
 
         var cursors = new List<string?>(pages.Count) {null};
@@ -87,8 +91,11 @@ public static class DataSyncFeedPageScanner
         if (records.Count != written.Count ||
             records.Zip(written).Any(p => p.First.PrimaryKey != p.Second.Keys[0] || p.First.Seq != p.Second.Seq))
             throw Bug(kind, "the pages do not carry the records handed to the writer");
+        var contentHash = KindContentHash(records);
+        if (contentHash != writtenKind.ContentHash || bytes != writtenKind.TotalBytes)
+            throw Bug(kind, "the writer's content hash or size is not that of its pages");
 
-        return new DataSyncFeedWrittenKind(pages, cursors, records, KindContentHash(records), bytes);
+        return new DataSyncFeedWrittenKind(pages, cursors, records, contentHash, bytes);
     }
 
     /// <summary>

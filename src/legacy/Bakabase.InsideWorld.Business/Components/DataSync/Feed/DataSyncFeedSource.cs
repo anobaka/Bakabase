@@ -279,8 +279,8 @@ public sealed class DataSyncFeedSource : IDataSyncFeedSource
                 _limits.MaxKeysPerEntity);
         }
 
-        var pages = _writer.WritePages(snapshotId, kind, sinceSeq, records, _limits);
-        return DataSyncFeedPageScanner.Scan(pages, snapshotId, kind, sinceSeq, records);
+        return DataSyncFeedPageScanner.Scan(_writer.WriteKind(snapshotId, kind, sinceSeq, records, _limits), snapshotId,
+            kind, sinceSeq);
     }
 
     private void ThrowUnlessServing(DataSyncLocalStateDbModel? state)
