@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import BrowseSection from "./BrowseSection";
+import DataSyncSection from "./dataSync/DataSyncSection";
 import { mdk } from "./devices";
 import OverviewSection from "./OverviewSection";
 import SetupSection from "./SetupSection";
@@ -18,6 +19,7 @@ export const multiDeviceSections: MultiDeviceHelpSectionId[] = [
   "browse",
   "switch",
   "setup",
+  "dataSync",
 ];
 
 const isSection = (value?: string): value is MultiDeviceHelpSectionId =>
@@ -58,6 +60,7 @@ const MultiDeviceTopic = ({ section, onNavigate }: HelpTopicContentProps) => {
       {activeSection === "browse" && <BrowseSection onNavigate={onNavigate} />}
       {activeSection === "switch" && <SwitchSection onNavigate={onNavigate} />}
       {activeSection === "setup" && <SetupSection onNavigate={onNavigate} />}
+      {activeSection === "dataSync" && <DataSyncSection onNavigate={onNavigate} />}
     </div>
   );
 };
