@@ -1,0 +1,13 @@
+{
+  "type": "AIsubtitle",
+  "lang": "zh",
+  "version": "v1.7.0",
+  "body": [
+    {
+      "from": 0.0,
+      "to": 1.0,
+      "sid": 1,
+      "content": "大家好"
+    }
+  ]
+}

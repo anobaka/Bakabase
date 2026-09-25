@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "quality": "80",
+    "format": "mp4",
+    "timelength": "187106",
+    "support_formats": [
+      {
+        "quality": "80",
+        "new_description": "1080P 高清"
+      }
+    ]
+  }
+}

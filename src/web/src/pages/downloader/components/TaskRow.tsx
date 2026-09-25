@@ -11,6 +11,7 @@ import {
   AiOutlineEdit,
   AiOutlineEllipsis,
   AiOutlineFolderOpen,
+  AiOutlineInfoCircle,
   AiOutlinePlayCircle,
   AiOutlineRedo,
   AiOutlineStop,
@@ -84,6 +85,10 @@ const TaskRow = memo(function TaskRow({
 }: TaskRowProps) {
   const { t } = useTranslation();
   const hasErrorMessage = task.status === DownloadTaskStatus.Failed && !!task.message;
+  // A task can complete and still leave notes behind (e.g. items it skipped). The message is a
+  // plain-text block whose first line is the summary; the full block opens in the same dialog.
+  const hasNotices = task.status === DownloadTaskStatus.Complete && !!task.message;
+  const noticeSummary = task.message?.split("\n", 1)[0];
   const Icon = DownloadTaskTypeIconMap[task.thirdPartyId!]?.[task.type];
   const progress = Number.isFinite(task.progress) ? Math.min(100, Math.max(0, task.progress)) : 0;
   const name = task.name || task.key;
@@ -95,6 +100,7 @@ const TaskRow = memo(function TaskRow({
     task.failureTimes > 0
       ? t<string>("downloader.action.showError", { count: task.failureTimes })
       : t<string>("downloader.action.viewError");
+  const noticesLabel = t<string>("downloader.action.viewNotices");
   const estimatedRemaining = useEstimatedRemainingLabel(task);
 
   return (
@@ -167,6 +173,28 @@ const TaskRow = memo(function TaskRow({
                 >
                   <AiOutlineWarning aria-hidden className="shrink-0 text-sm" />
                   <span className="truncate">{task.message}</span>
+                </Button>
+              </span>
+            ) : hasNotices ? (
+              <span
+                data-task-action
+                className="min-w-0 flex-1"
+                role="presentation"
+                onClick={stopPropagation}
+                onContextMenu={stopPropagation}
+                onKeyDown={stopPropagation}
+              >
+                <Button
+                  aria-label={noticesLabel}
+                  className="flex h-4 min-h-0 w-full min-w-0 justify-start gap-1 rounded-sm px-0 text-xs"
+                  color="warning"
+                  size="sm"
+                  title={`${noticesLabel}: ${noticeSummary}`}
+                  variant="light"
+                  onPress={() => onShowError(task)}
+                >
+                  <AiOutlineInfoCircle aria-hidden className="shrink-0 text-sm" />
+                  <span className="truncate">{noticeSummary}</span>
                 </Button>
               </span>
             ) : (

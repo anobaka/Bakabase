@@ -1,0 +1,29 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "count": 2,
+    "list": [
+      {
+        "id": 100,
+        "fid": 1,
+        "mid": 3546571234567890,
+        "attr": 0,
+        "title": "默认收藏夹",
+        "fav_state": 0,
+        "media_count": 12
+      },
+      {
+        "id": 200,
+        "fid": 2,
+        "mid": 3546571234567890,
+        "attr": 0,
+        "title": "空收藏夹",
+        "fav_state": 0,
+        "media_count": 0
+      }
+    ],
+    "season": null
+  }
+}

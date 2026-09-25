@@ -56,8 +56,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lo
                 return new LocaleEmulatorVersion
                 {
                     Version = "N/A",
-                    Description = "Locale Emulator is only available on Windows",
-                    CanUpdate = false
+                    Description = "Locale Emulator is only available on Windows"
                 };
             }
 
@@ -81,8 +80,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lo
             {
                 Description = release.Body,
                 Version = version,
-                DownloadUrl = targetAsset.BrowserDownloadUrl,
-                CanUpdate = string.IsNullOrEmpty(Context.Version) || Context.Version != version
+                DownloadUrl = targetAsset.BrowserDownloadUrl
             };
         }
 

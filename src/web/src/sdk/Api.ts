@@ -1956,6 +1956,7 @@ export interface BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDepe
   version: string;
   description?: string;
   canUpdate: boolean;
+  installedVersionRecognized: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDependencyImplementationsFfMpegHardwareAccelerationInfo {

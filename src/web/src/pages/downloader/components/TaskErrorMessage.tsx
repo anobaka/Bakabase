@@ -9,6 +9,8 @@ import { copyTextToClipboard } from "@/core/clipboard";
 
 type Props = {
   message: string;
+  /** Hover hint on the text; defaults to the "click to copy the error" wording. */
+  copyTip?: string;
 };
 
 /**
@@ -25,8 +27,11 @@ export const CLICK_TO_COPY_DELAY_MS = 300;
  * somewhere — an issue, a chat, a search box. Selecting a few hundred lines of a scrolling block
  * by hand was the only way to do that. Clicking the text copies all of it; dragging, double- and
  * triple-clicking still select normally, so part of it can be copied the usual way.
+ *
+ * Also shows the notes a completed task left behind (e.g. items it skipped), which is why the hover
+ * hint can be replaced.
  */
-const TaskErrorMessage = ({ message }: Props) => {
+const TaskErrorMessage = ({ message, copyTip }: Props) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -78,7 +83,7 @@ const TaskErrorMessage = ({ message }: Props) => {
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
       <pre
         className="max-h-[60vh] cursor-copy overflow-auto whitespace-pre-wrap break-words rounded-lg bg-default-100 p-3 pr-12 font-mono text-xs leading-5"
-        title={t<string>("downloader.tip.clickToCopyError")}
+        title={copyTip ?? t<string>("downloader.tip.clickToCopyError")}
         onClick={(e) => {
           clearTimeout(pendingClickRef.current);
           // The second or third click of a word/line selection.

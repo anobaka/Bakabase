@@ -12,6 +12,14 @@ import { useDependentComponentContextsStore } from "@/stores/dependentComponentC
 import { DependentComponentStatus } from "@/sdk/constants";
 import { Chip, Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+
+/**
+ * The latest version the server reports when there is nothing it could offer on this platform
+ * (e.g. no ffmpeg build is published for this runtime). It is not a version to compare against,
+ * so it reads as "could not check", never as "up to date".
+ */
+const NotAvailableVersion = "N/A";
+
 const Component = ({ id }: { id: string }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -19,27 +27,24 @@ const Component = ({ id }: { id: string }) => {
     (a) => a.id == id,
   );
   const [latestVersion, setLatestVersion] = useState<{
-    version?: string;
+    version?: string | null;
+    description?: string | null;
     canUpdate: boolean;
+    installedVersionRecognized?: boolean;
     error?: string | null;
   }>();
-  // const prevInstallationProgress = usePrevious(context);
   const [discovering, setDiscovering] = useState(true);
   const [findingNewVersion, setFindingNewVersion] = useState(false);
 
   const prevStatus = usePrevious(context?.status);
 
-  useEffect(() => {
-    if (
-      context?.status == DependentComponentStatus.Installed &&
-      prevStatus == DependentComponentStatus.Installing
-    ) {
-      init();
-    }
-  }, [context]);
-
+  // Reads the store when it runs, not a render's snapshot of it: the effects below call it after
+  // the context has changed, and a captured context would describe the component as it was.
   const init = useCallback(async () => {
-    if (context && !context.isAvailableOnCurrentPlatform) {
+    const findContext = () =>
+      useDependentComponentContextsStore.getState().contexts.find((a) => a.id == id);
+
+    if (findContext()?.isAvailableOnCurrentPlatform === false) {
       setDiscovering(false);
 
       return;
@@ -51,38 +56,46 @@ const Component = ({ id }: { id: string }) => {
       setDiscovering(false);
     }
 
-    if (context?.isRequired || context?.status == DependentComponentStatus.NotInstalled) {
-      setFindingNewVersion(true);
-      try {
-        const latestVersionRsp = await BApi.component.getDependentComponentLatestVersion(id);
+    if (findContext()?.isAvailableOnCurrentPlatform === false) {
+      return;
+    }
 
-        if (!latestVersionRsp.code) {
-          // @ts-ignore
-          setLatestVersion(latestVersionRsp.data);
-        } else {
-          setLatestVersion({
-            canUpdate: false,
-            error: latestVersionRsp.message,
-          });
-        }
-      } catch (e) {
+    // Installed components are checked too: the server caches the lookup and decides whether the
+    // latest version is newer than the one installed.
+    setFindingNewVersion(true);
+    try {
+      const latestVersionRsp = await BApi.component.getDependentComponentLatestVersion(id);
+
+      if (!latestVersionRsp.code) {
+        setLatestVersion(latestVersionRsp.data);
+      } else {
         setLatestVersion({
           canUpdate: false,
-          error: e.toString(),
+          error: latestVersionRsp.message,
         });
-      } finally {
-        setFindingNewVersion(false);
       }
-    } else {
-      setLatestVersion(undefined);
+    } catch (e) {
+      setLatestVersion({
+        canUpdate: false,
+        error: String(e),
+      });
+    } finally {
+      setFindingNewVersion(false);
     }
-  }, []);
+  }, [id]);
+
+  useEffect(() => {
+    if (
+      context?.status == DependentComponentStatus.Installed &&
+      prevStatus == DependentComponentStatus.Installing
+    ) {
+      init();
+    }
+  }, [context?.status, prevStatus, init]);
 
   useEffect(() => {
     init();
-  }, []);
-
-  console.log(context?.name, latestVersion, discovering, context);
+  }, [init]);
 
   const renderNewVersionInner = useCallback(() => {
     const elements: any[] = [];
@@ -124,8 +137,34 @@ const Component = ({ id }: { id: string }) => {
               </Button>,
             );
           }
+        } else if (!latestVersion.version || latestVersion.version === NotAvailableVersion) {
+          // The lookup failed or has nothing for this platform: that is not "up to date".
+          elements.push(
+            <Chip
+              color={"default"}
+              radius={"sm"}
+              size={"sm"}
+              title={latestVersion.description ?? undefined}
+              variant={"flat"}
+            >
+              {t<string>("configuration.dependency.couldNotCheckForUpdates")}
+            </Chip>,
+          );
+        } else if (latestVersion.installedVersionRecognized === false) {
+          // The installed version (a git-date ffmpeg build, Locale Emulator's "unknown") could not
+          // be compared with the latest one: nothing says it is up to date.
+          elements.push(
+            <Chip color={"default"} radius={"sm"} size={"sm"} variant={"flat"}>
+              {t<string>("configuration.dependency.installedVersionNotRecognized")}
+            </Chip>,
+          );
         } else if (context?.status === DependentComponentStatus.Installed) {
-          elements.push(<CheckCircleOutlined className={"text-base text-success"} />);
+          elements.push(
+            <CheckCircleOutlined
+              aria-label={t<string>("configuration.dependency.upToDate")}
+              className={"text-base text-success"}
+            />,
+          );
         }
       }
     } else {
@@ -165,7 +204,7 @@ const Component = ({ id }: { id: string }) => {
     }
 
     return elements;
-  }, [latestVersion, context, discovering]);
+  }, [latestVersion, context, discovering, findingNewVersion]);
 
   if (context && !context.isAvailableOnCurrentPlatform) {
     return (

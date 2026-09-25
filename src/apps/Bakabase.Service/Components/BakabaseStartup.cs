@@ -17,7 +17,6 @@ using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
-using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bakabase.InsideWorld.Business.Components.FileMover;
@@ -176,7 +175,6 @@ namespace Bakabase.Service.Components
 
             services.TryAddSingleton<FfMpegService>();
             services.TryAddSingleton<HardwareAccelerationService>();
-            services.TryAddSingleton<LuxService>();
             services.TryAddSingleton<SevenZipService>();
             services.TryAddSingleton<LocaleEmulatorService>();
             services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
@@ -267,6 +265,12 @@ namespace Bakabase.Service.Components
                     // non-2xx response from CableAV / Fc2 / etc. into a separate
                     // event, which is noise — turn it off.
                     o.CaptureFailedRequests = false;
+                    // Breadcrumbs (every HttpClient request, and Information-level logs) must not carry
+                    // signed URLs: Bilibili CDN links hold upsig/deadline/oi/mid in their query, other
+                    // services put tokens there. Keep scheme, host and path only.
+                    o.SetBeforeBreadcrumb(SentryBreadcrumbScrubber.Scrub);
+                    // Tracing is off; never attach sentry-trace/baggage headers to third-party requests.
+                    o.TracePropagationTargets = [];
                     // Drop a couple of known-benign exceptions before they hit
                     // Sentry, otherwise they drown out actionable errors:
                     //   * OperationCanceledException — ASP.NET's signal for a
@@ -300,7 +304,7 @@ namespace Bakabase.Service.Components
                                 return null;
                             }
                             // Conditions the user resolves themselves — a dependency
-                            // (7-Zip / ffmpeg / lux / …) not installed yet, an expired
+                            // (7-Zip / ffmpeg / …) not installed yet, an expired
                             // DLsite cookie, … Bakabase already surfaces these in the
                             // UI; they are not defects. Mark the exception type with
                             // IUserActionableException instead of adding a case here.

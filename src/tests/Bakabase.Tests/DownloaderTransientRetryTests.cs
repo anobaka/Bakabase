@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Co
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Protocol;
 using Bakabase.TestKit.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -71,12 +72,25 @@ public sealed class DownloaderTransientRetryTests
         public string? GetNamingFieldExample<TEnum>(TEnum namingFieldValue) => null;
         public string InvalidFavorites() => "";
         public string FfMpegIsNotReady() => "";
-        public string LuxIsNotReady() => "";
         public string InvalidCookie() => "";
         public string DownloadPathNotSet() => "";
 
         public string TransientNetworkErrorRetrying(int delaySeconds, int retry, int maxRetries) =>
             $"retrying in {delaySeconds}s ({retry}/{maxRetries})";
+
+        public string DownloadNoticesSummary(int count) => $"{count} notices";
+        public string DownloadNoticesTruncated(int remaining) => $"{remaining} more";
+        public string BilibiliFavoritesNotFound(string favoritesId, string? name) => "";
+        public string BilibiliRiskControl(int? code) => "";
+        public string BilibiliRiskControlWaiting(int minutes, int retry, int maxRetries) => "";
+        public string BilibiliNotLoggedIn() => "";
+        public string BilibiliDiskFull(string path) => "";
+
+        public string DescribeBilibiliSkip(BilibiliSkipReason reason, int? code, string? message) =>
+            reason.ToString();
+
+        public string BilibiliSkipNotice(string subject, string reason) => "";
+        public string BilibiliSkipFooter() => "";
     }
 
     private IServiceProvider _services = null!;

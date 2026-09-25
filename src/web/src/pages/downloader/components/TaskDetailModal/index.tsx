@@ -26,7 +26,6 @@ import {
   DownloadTaskFieldType,
   DownloadTaskTypeIconMap,
 } from "@/pages/downloader/components/TaskDetailModal/models.ts";
-import LuxRequired from "@/pages/downloader/components/TaskDetailModal/components/LuxRequired.tsx";
 import FfMpegRequired from "@/pages/downloader/components/TaskDetailModal/components/FfMpegRequired.tsx";
 import PageRange from "@/pages/downloader/components/TaskDetailModal/components/PageRange.tsx";
 import BilibiliFavoritesSelector from "@/pages/downloader/components/TaskDetailModal/components/BilibiliFavoritesSelector.tsx";
@@ -248,8 +247,6 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
             );
           case DownloadTaskFieldType.FfMpegRequired:
             return <FfMpegRequired />;
-          case DownloadTaskFieldType.LuxRequired:
-            return <LuxRequired />;
           case DownloadTaskFieldType.DownloadPath:
             return (
               <DownloadPathSelectorField

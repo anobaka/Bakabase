@@ -235,6 +235,84 @@ describe("download task row interaction", () => {
     expect(element("downloader.action.showError")).not.toBeInTheDocument();
   });
 
+  it("offers a completed task's notes by their summary line and opens them without selecting the row", async () => {
+    const message = [
+      "2 note(s) from this task:",
+      "- av1 Some video — skipped: deleted or no longer visible",
+      "- av2 Another video — skipped: interactive videos are not supported",
+      "",
+      "Skipped items are not retried automatically.",
+    ].join("\n");
+    const props = await show({
+      status: DownloadTaskStatus.Complete,
+      progress: 100,
+      current: "Done",
+      message,
+    });
+    const button = element("downloader.action.viewNotices");
+
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveTextContent("2 note(s) from this task:");
+    expect(button).not.toHaveTextContent("- av1");
+    expect(button).toHaveAttribute(
+      "title",
+      "downloader.action.viewNotices: 2 note(s) from this task:",
+    );
+    // Informational, not an error.
+    expect(element("downloader.action.viewError")).not.toBeInTheDocument();
+    expect(container).not.toHaveTextContent("Done");
+
+    await click(button);
+    await act(async () => {
+      button.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true }));
+    });
+    expect(props.onShowError).toHaveBeenCalledExactlyOnceWith(props.task);
+    expect(props.onClick).not.toHaveBeenCalled();
+    expect(props.onContextMenu).not.toHaveBeenCalled();
+  });
+
+  it("opens a completed task's notes from the keyboard", async () => {
+    const props = await show({
+      status: DownloadTaskStatus.Complete,
+      message: "1 item was skipped:",
+    });
+    const button = element("downloader.action.viewNotices");
+
+    await key(button, "Enter");
+    await key(button, " ");
+    expect(props.onShowError).toHaveBeenCalledTimes(2);
+    expect(props.onClick).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, ""])(
+    "keeps the progress text on a completed task without notes (%o)",
+    async (message) => {
+      await show({ status: DownloadTaskStatus.Complete, current: "All files downloaded", message });
+
+      expect(element("downloader.action.viewNotices")).not.toBeInTheDocument();
+      expect(container).toHaveTextContent("All files downloaded");
+    },
+  );
+
+  it.each([DownloadTaskStatus.Idle, DownloadTaskStatus.Downloading, DownloadTaskStatus.Disabled])(
+    "does not offer notes for a task in status %s",
+    async (status) => {
+      await show({ status, message: "Left over from an earlier run" });
+
+      expect(element("downloader.action.viewNotices")).not.toBeInTheDocument();
+    },
+  );
+
+  it("shows a failed task's error, not notes, even when it has several lines", async () => {
+    await show({
+      status: DownloadTaskStatus.Failed,
+      message: "Bilibili is temporarily refusing requests.\n\n1 item(s) were skipped:",
+    });
+
+    expect(element("downloader.action.viewError")).toBeInTheDocument();
+    expect(element("downloader.action.viewNotices")).not.toBeInTheDocument();
+  });
+
   it.each(["pointer", "keyboard"])(
     "deletes from the portalled menu using %s without selecting the row",
     async (method) => {

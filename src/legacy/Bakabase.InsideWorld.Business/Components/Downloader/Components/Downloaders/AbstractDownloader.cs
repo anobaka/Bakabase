@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
@@ -252,6 +253,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             // a parked task read as "stuck at downloading torrent file" forever: the row kept its last
             // step next to an idle badge, with nothing to say the step had been abandoned.
             Current = null;
+            // What was noted so far (the status handler persists it); kept for the run that resumes.
+            Message = BuildNoticesMessage();
             Status = DownloaderStatus.Stopped;
         }
 
@@ -283,6 +286,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             Current = null;
             _latestCheckpoint = null;
             _transientRetries = 0;
+            if (string.IsNullOrEmpty(task.Checkpoint))
+            {
+                // From the beginning: every item noted before will be seen (and noted) again. A task resuming
+                // from its checkpoint after a failure or a stop keeps its notes instead — the items behind the
+                // checkpoint are not seen again, and a completed run has already handed its notes over.
+                ClearNotices();
+            }
+
+            OnStarting();
             if (OnProgress != null)
             {
                 await OnProgress(0);
@@ -317,6 +329,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                             // is the one thing that advances the queue.
                             StoppedBy ??= DownloaderStopBy.AppendToTheQueue;
                             Current = null;
+                            Message = BuildNoticesMessage();
                             Status = DownloaderStatus.Stopped;
                         }
                     }
@@ -364,6 +377,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     // UI, so this has to happen first — otherwise a finished task keeps rendering its last
                     // step (e.g. "downloading torrent file") right next to a Complete badge.
                     Current = null;
+                    // Before the status flips: the status handler is what persists Message. Null when
+                    // nothing was noted, so a clean run never shows a stale note.
+                    Message = BuildNoticesMessage();
+                    ClearNotices();
                     Status = DownloaderStatus.Complete;
                     FailureTimes = 0;
                     if (OnProgress != null)
@@ -377,6 +394,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     // downloader would keep claiming the source's single slot with no runner behind it.
                     Current = null;
                     StoppedBy ??= DownloaderStopBy.AppendToTheQueue;
+                    Message = BuildNoticesMessage();
                     Status = DownloaderStatus.Stopped;
                 }
             });
@@ -384,11 +402,114 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             return true;
         }
 
-        private string BuildFailureMessage(Exception e) =>
-            (_transientRetries > 0
-                ? $"An error occurred during downloading files (automatic retries after network errors: {_transientRetries}). "
-                : "An error occurred during downloading files. ") +
-            $"You can use expected checkpoint to skip current file: {NextCheckpoint}\n{e.BuildFullInformationText()}";
+        private string BuildFailureMessage(Exception e)
+        {
+            var message = (_transientRetries > 0
+                              ? $"An error occurred during downloading files (automatic retries after network errors: {_transientRetries}). "
+                              : "An error occurred during downloading files. ") +
+                          $"You can use expected checkpoint to skip current file: {NextCheckpoint}\n{e.BuildFullInformationText()}";
+            // A reason the user can act on (often localized) goes first: the task row shows the first line.
+            if (FindUserActionable(e) is { } actionable && !string.IsNullOrWhiteSpace(actionable.Message))
+            {
+                message = $"{actionable.Message}\n{message}";
+            }
+
+            return BuildNoticesMessage() is { } notices ? $"{message}\n\n{notices}" : message;
+        }
+
+        /// <summary>The outermost <see cref="IUserActionableException"/> in <paramref name="e"/>'s chain.</summary>
+        private static Exception? FindUserActionable(Exception e)
+        {
+            for (var current = e; current != null; current = current.InnerException)
+            {
+                if (current is IUserActionableException)
+                {
+                    return current;
+                }
+            }
+
+            return null;
+        }
+
+        #region Notices
+
+        /// <summary>At most this many notices are listed in <see cref="Message"/>; the rest are counted.</summary>
+        public const int MaxListedNotices = 100;
+
+        private readonly List<string> _notices = [];
+        private readonly HashSet<string> _noticeSet = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Something the user should know about a run that still succeeds (e.g. an item skipped on purpose).
+        /// De-duplicated; kept across the automatic re-runs after transient failures and across starts that resume
+        /// from the task's checkpoint after a failure or a stop; handed over (and dropped) when the task completes.
+        /// Kept in memory only: notes of a run interrupted by an app restart are in the log, not in the next
+        /// run's list.
+        /// </summary>
+        /// <remarks>
+        /// The notices become <see cref="Message"/> when the task completes (and are appended to the failure text
+        /// when it fails), as plain text: a summary line, one <c>- </c> line per notice (at most
+        /// <see cref="MaxListedNotices"/>), an optional truncation line and an optional footer
+        /// (<see cref="GetNoticesFooter"/>). The UI shows the first line and the whole text on demand.
+        /// </remarks>
+        protected void AddNotice(string notice)
+        {
+            lock (_notices)
+            {
+                if (_noticeSet.Add(notice))
+                {
+                    _notices.Add(notice);
+                }
+            }
+        }
+
+        private void ClearNotices()
+        {
+            lock (_notices)
+            {
+                _notices.Clear();
+                _noticeSet.Clear();
+            }
+        }
+
+        /// <summary>Optional last line under the notices (e.g. "skipped items are not retried").</summary>
+        protected virtual string? GetNoticesFooter() => null;
+
+        private string? BuildNoticesMessage()
+        {
+            lock (_notices)
+            {
+                if (_notices.Count == 0)
+                {
+                    return null;
+                }
+
+                var localizer = GetRequiredService<IDownloaderLocalizer>();
+                var lines = new List<string> {localizer.DownloadNoticesSummary(_notices.Count)};
+                lines.AddRange(_notices.Take(MaxListedNotices).Select(n => "- " + n));
+                if (_notices.Count > MaxListedNotices)
+                {
+                    lines.Add(localizer.DownloadNoticesTruncated(_notices.Count - MaxListedNotices));
+                }
+
+                if (GetNoticesFooter() is { } footer)
+                {
+                    lines.Add(footer);
+                }
+
+                return string.Join('\n', lines);
+            }
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Called by <see cref="Start"/> before the first run, after the downloader's own per-run state was reset:
+        /// the place to reset state a derived downloader keeps across the automatic re-runs of one start.
+        /// </summary>
+        protected virtual void OnStarting()
+        {
+        }
 
         /// <summary>
         /// How long to wait before each automatic re-run of a task that a transient network failure
@@ -409,6 +530,36 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         /// stopping a waiting task takes effect at once.
         /// </summary>
         protected virtual Task DelayBeforeRetryAsync(TimeSpan delay, CancellationToken ct) => Task.Delay(delay, ct);
+
+        /// <summary>One automatic re-run: wait <see cref="Delay"/>, then run again.</summary>
+        /// <param name="Retry">This re-run's number, shown to the user.</param>
+        /// <param name="MaxRetries">How many re-runs of this kind there can be, shown to the user.</param>
+        protected sealed record TransientRetry(TimeSpan Delay, int Retry, int MaxRetries);
+
+        /// <summary>
+        /// Whether, and after how long, to run the task again after the transient failure <paramref name="e"/>.
+        /// </summary>
+        /// <param name="e">The failure; <see cref="TransientNetworkError.IsTransient"/> already holds for it.</param>
+        /// <param name="attempt">The 1-based number of the re-run being considered, counting every re-run of this
+        /// start.</param>
+        /// <returns>The re-run, or null to fail now. The default follows
+        /// <see cref="TransientFailureRetryDelays"/>.</returns>
+        protected virtual TransientRetry? GetTransientRetry(Exception e, int attempt)
+        {
+            var delays = TransientFailureRetryDelays;
+            return attempt <= delays.Count ? new TransientRetry(delays[attempt - 1], attempt, delays.Count) : null;
+        }
+
+        /// <summary>The step shown while waiting for <paramref name="retry"/>; refreshed while the wait lasts.</summary>
+        protected virtual string DescribeTransientRetryWait(Exception e, TransientRetry retry, TimeSpan remaining) =>
+            GetRequiredService<IDownloaderLocalizer>().TransientNetworkErrorRetrying(
+                (int) Math.Ceiling(Math.Max(0, remaining.TotalSeconds)), retry.Retry, retry.MaxRetries);
+
+        /// <summary>
+        /// How often the waiting step is rewritten during a long wait. Each rewrite is also a sign of life for the
+        /// queue watchdog, so this must stay well under its stall threshold.
+        /// </summary>
+        protected virtual TimeSpan TransientRetryStepRefreshInterval => TimeSpan.FromMinutes(1);
 
         private string? _latestCheckpoint;
         private int _transientRetries;
@@ -435,10 +586,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         /// </remarks>
         private async Task RunWithTransientRetriesAsync(DownloadTask task, CancellationToken token)
         {
-            var delays = TransientFailureRetryDelays;
-            for (var retry = 0;; retry++)
+            for (var attempt = 1;; attempt++)
             {
-                TimeSpan delay;
+                TransientRetry? retry = null;
+                Exception failure;
                 // Each run gets its own token so that whatever a failed run left in flight — ExHentai
                 // gives up on a gallery while sibling image downloads are still running — is
                 // cancelled before the next run starts, instead of racing it.
@@ -449,14 +600,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                         await StartCore(task, runCts.Token);
                         return;
                     }
-                    catch (Exception e) when (retry < delays.Count && IsRetryableFailure(e, token))
+                    catch (Exception e) when (IsRetryableFailure(e, token) &&
+                                              (retry = GetTransientRetry(e, attempt)) != null)
                     {
                         await runCts.CancelAsync();
-                        delay = delays[retry];
-                        _transientRetries = retry + 1;
+                        failure = e;
+                        _transientRetries = attempt;
                         Logger.LogWarning(e,
                             "A transient network error interrupted download task {TaskId}; running it again in {Delay} ({Retry}/{MaxRetries})",
-                            task.Id, delay, retry + 1, delays.Count);
+                            task.Id, retry.Delay, retry.Retry, retry.MaxRetries);
                     }
                 }
 
@@ -464,13 +616,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 _timeEstimator.Reset();
                 // Also a sign of life for the queue watchdog, which would otherwise read a long wait
                 // as a stalled download.
-                Current = GetRequiredService<IDownloaderLocalizer>()
-                    .TransientNetworkErrorRetrying((int) Math.Ceiling(delay.TotalSeconds), retry + 1, delays.Count);
+                // Only reached through the catch above, which set both.
+                var plan = retry!;
+                Current = DescribeTransientRetryWait(failure, plan, plan.Delay);
                 await OnCurrentChangedInternal();
 
                 try
                 {
-                    await DelayBeforeRetryAsync(delay, token);
+                    await WaitBeforeRetryAsync(failure, plan, token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -490,6 +643,56 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 {
                     task.Checkpoint = _latestCheckpoint;
                 }
+            }
+        }
+
+        /// <summary>
+        /// <see cref="DelayBeforeRetryAsync"/>, while rewriting the waiting step every
+        /// <see cref="TransientRetryStepRefreshInterval"/> with the time left: a wait of several minutes must not
+        /// look like a stalled task, to the user or to the queue watchdog.
+        /// </summary>
+        private async Task WaitBeforeRetryAsync(Exception failure, TransientRetry retry, CancellationToken token)
+        {
+            using var refreshCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            var refresh = RefreshRetryStepAsync(failure, retry, refreshCts.Token);
+            try
+            {
+                await DelayBeforeRetryAsync(retry.Delay, token);
+            }
+            finally
+            {
+                await refreshCts.CancelAsync();
+                try
+                {
+                    await refresh;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Stopped with the wait.
+                }
+            }
+        }
+
+        private async Task RefreshRetryStepAsync(Exception failure, TransientRetry retry, CancellationToken ct)
+        {
+            var interval = TransientRetryStepRefreshInterval;
+            if (interval <= TimeSpan.Zero)
+            {
+                return;
+            }
+
+            var startedAt = Environment.TickCount64;
+            while (true)
+            {
+                await Task.Delay(interval, ct);
+                var remaining = retry.Delay - TimeSpan.FromMilliseconds(Environment.TickCount64 - startedAt);
+                if (remaining <= TimeSpan.Zero)
+                {
+                    return;
+                }
+
+                Current = DescribeTransientRetryWait(failure, retry, remaining);
+                await OnCurrentChangedInternal();
             }
         }
 

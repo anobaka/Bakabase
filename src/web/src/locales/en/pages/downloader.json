@@ -162,5 +162,8 @@
   "downloader.filter.status.Failed": "Failed",
   "downloader.filter.status.Disabled": "Disabled",
   "downloader.action.viewError": "View error",
-  "downloader.tip.clickToCopyError": "Click to copy the full error"
+  "downloader.tip.clickToCopyError": "Click to copy the full error",
+  "downloader.action.viewNotices": "View notes",
+  "downloader.label.notices": "Notes from the last run",
+  "downloader.tip.clickToCopyNotices": "Click to copy all notes"
 }

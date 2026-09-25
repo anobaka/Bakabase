@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "profile": {
+      "mid": 3546571234567890,
+      "name": "测试用户"
+    },
+    "level_exp": {}
+  }
+}

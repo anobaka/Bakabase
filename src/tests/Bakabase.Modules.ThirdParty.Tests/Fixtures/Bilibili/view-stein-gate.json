@@ -1,0 +1,67 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "bvid": "BV1xx411c7m3",
+    "aid": 1003,
+    "videos": 1,
+    "tid": 1,
+    "copyright": 1,
+    "pic": "http://i0.hdslb.com/bfs/archive/example.jpg",
+    "title": "测试视频",
+    "pubdate": 1600000000,
+    "ctime": 1600000000,
+    "desc": "",
+    "duration": 240,
+    "rights": {
+      "bp": 0,
+      "elec": 0,
+      "download": 1,
+      "movie": 0,
+      "pay": 0,
+      "hd5": 0,
+      "no_reprint": 1,
+      "autoplay": 1,
+      "ugc_pay": 0,
+      "is_cooperation": 0,
+      "ugc_pay_preview": 0,
+      "no_background": 0,
+      "clean_mode": 0,
+      "is_stein_gate": 1,
+      "is_360": 0,
+      "arc_pay": 0,
+      "free_watch": 0
+    },
+    "owner": {
+      "mid": 100,
+      "name": "测试UP",
+      "face": "http://i0.hdslb.com/bfs/face/example.jpg"
+    },
+    "cid": 5301,
+    "dimension": {
+      "width": 1920,
+      "height": 1080,
+      "rotate": 0
+    },
+    "pages": [
+      {
+        "cid": 5301,
+        "page": 1,
+        "from": "vupload",
+        "part": "开始",
+        "duration": 120,
+        "vid": "",
+        "weblink": "",
+        "dimension": {
+          "width": 1920,
+          "height": 1080,
+          "rotate": 0
+        }
+      }
+    ],
+    "is_upower_exclusive": false,
+    "is_upower_play": false,
+    "is_upower_preview": false
+  }
+}

@@ -115,6 +115,13 @@ namespace Bakabase.Abstractions.Components.Configuration
             public const string Default = nameof(Default);
             public const string SoulPlus = nameof(SoulPlus);
             public const string Tmdb = nameof(Tmdb);
+
+            /// <summary>
+            /// Bilibili's CDN (video/audio streams, covers, danmaku, subtitle files): no cookie, no rate limit, no
+            /// request log (signed URLs carry the user's IP and signatures), a forced browser User-Agent and a
+            /// bilibili.com Referer. Never use the <see cref="Bilibili"/> API client for these.
+            /// </summary>
+            public const string BilibiliCdn = nameof(BilibiliCdn);
         }
 
         public static string DefaultHttpUserAgent =

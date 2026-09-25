@@ -147,6 +147,8 @@ namespace Bakabase.Service.Extensions
                 Bakabase.InsideWorld.Business.Components.Configurations.AvSourceOptionsProvider>());
 
             services.AddDownloaders();
+            services.TryAddSingleton<Bakabase.Abstractions.Components.Media.IMediaMerger,
+                Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.FfMpegMediaMerger>();
             services.AddResourceResolvers();
             services.AddCoverProviders();
             services.AddPlayableItemProviders();

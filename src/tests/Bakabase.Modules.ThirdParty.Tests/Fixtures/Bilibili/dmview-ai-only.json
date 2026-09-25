@@ -1,0 +1,40 @@
+{
+  "code": 0,
+  "message": "0",
+  "ttl": 1,
+  "data": {
+    "closed": false,
+    "dm_seg": {
+      "page_size": 360000,
+      "total": 1
+    },
+    "subtitle": {
+      "lan": "",
+      "lan_doc": "",
+      "subtitles": [
+        {
+          "id": 6,
+          "id_str": "6",
+          "lan": "ai-en",
+          "lan_doc": "English (AI)",
+          "is_lock": false,
+          "subtitle_url": "//aisubtitle.hdslb.com/bfs/subtitle/0006.json?auth_key=1-0-0-0",
+          "type": 1,
+          "ai_type": 0,
+          "ai_status": 2
+        },
+        {
+          "id": 7,
+          "id_str": "7",
+          "lan": "ai-zh",
+          "lan_doc": "中文（自动生成）",
+          "is_lock": false,
+          "subtitle_url": "//aisubtitle.hdslb.com/bfs/subtitle/0007.json?auth_key=1-0-0-0",
+          "type": 1,
+          "ai_type": 0,
+          "ai_status": 2
+        }
+      ]
+    }
+  }
+}
