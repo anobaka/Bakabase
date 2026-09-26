@@ -161,6 +161,14 @@ scopes").
   completes its first contact only for `Committed`. `Failed` keeps the runner's `ApplyFailed`
   and backoff; `NotApplied` (the attempt ended, the actor unverified or changing) puts the pull
   and a requested re-merge back for the next run.
+- **A first sync is always in the history** (§8.3). The pull that completes a link's first
+  contact — the approver's first pull, or its "Start anyway" — writes a `FirstLink` entry (the
+  page's "First sync" with the device), even when it only raised link suggestions or conflicts;
+  the initiator's review writes its own. Every other pull writes an `AutoSync` entry only when it
+  applied something.
+- **Retired actors outlive retention while a restore waits** (§4.6, B1(a)). An actor lost with
+  the restore is in no stored vector, yet "This device's definitions win" must cover what it
+  issued, so retention forgets retired actors no vector names only while no restore is pending.
 - **Reads take no write lock.** A read-only read of the local state (the review page) runs in a
   deferred transaction, never EF's `BEGIN IMMEDIATE`, so a page load neither waits for nor
   holds up a writer.

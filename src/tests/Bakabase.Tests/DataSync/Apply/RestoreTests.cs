@@ -108,6 +108,42 @@ public class RestoreTests
     }
 
     [TestMethod]
+    public async Task An_actor_the_restore_lost_outlives_retention_until_this_device_wins_covers_it()
+    {
+        var (peerKey, mine, _) = await SyncedAsync();
+        var mineKey = (await _f.RowAsync(mine)).SyncKey;
+        // actor.json is ahead of the restored database and names an actor it never knew: every revision that actor
+        // issued was lost with the restore, so no stored vector names it (§5.6).
+        const string lost = "abcdefabcdef0123";
+        var before = await _f.StateAsync();
+        await _f.Services.GetRequiredService<DataSyncActorWatermarkFile>().WriteAsync(
+            new DataSyncActorWatermark(before.ActorGeneration + 1, lost, 50, before.DbInstanceId), default);
+        using (var lease = await _f.Gate.EnterAsync(null, default))
+            Assert.AreEqual(DataSyncPauseReason.LocalRestoreDetected, await _f.Guard.CheckAsync(lease, default));
+        Assert.AreEqual(50L, (await RetiredAsync())[lost]);
+
+        // Retention runs (the DataSync task's first cycle of the process) before anyone chooses.
+        var retention = _f.Services.GetRequiredService<DataSyncRetention>();
+        await retention.RunAsync(_f.Now, default);
+        Assert.AreEqual(50L, (await RetiredAsync()).GetValueOrDefault(lost), "kept while the restore waits (§4.6)");
+
+        await _f.Runner.RunRestoreAsync(DataSyncRestoreChoice.ThisDeviceWins, null, _f.Args("DataSyncRestore"));
+
+        foreach (var key in new[] { peerKey, mineKey })
+        {
+            Assert.IsTrue(Vv((await _f.ByKeyAsync(key))!.VvJson)[new DataSyncActorId(lost)] >= 50,
+                "the counters the lost actor issued are covered, so peers holding them fast-forward (B1(a))");
+        }
+
+        // Every revised vector names it now: the ordinary rule keeps it.
+        await retention.RunAsync(_f.Now, default);
+        Assert.AreEqual(50L, (await RetiredAsync()).GetValueOrDefault(lost));
+    }
+
+    private async Task<IReadOnlyDictionary<string, long>> RetiredAsync() =>
+        DataSyncStoredJson.ReadCounters((await _f.StateAsync()).RetiredActorsJson, "RetiredActorsJson");
+
+    [TestMethod]
     public async Task A_suspected_restore_is_scoped_to_its_link()
     {
         var (peerKey, mine, _) = await SyncedAsync();

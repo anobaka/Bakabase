@@ -239,8 +239,12 @@ public class DataSyncTwoHostTests
 
         Assert.AreEqual(100, (await PropertiesAsync(_a)).Count, "nothing is created on A");
 
+        // §8.3: the approver's first pull is its one "First sync with B" entry.
+        var firstPull = (await _a.HistoryAsync()).Single(h => h.Kind == DataSyncHistoryKind.FirstLink);
+        Assert.AreEqual(((int?) link.Id, link.PeerName), (firstPull.LinkId, firstPull.PeerName));
+        Assert.AreEqual(0, (await _a.HistoryAsync()).Count(h => h.Kind == DataSyncHistoryKind.AutoSync),
+            "no other entry for that pull");
         // §8.10.2: the approver's first pull of this fixture stays within the CI budget.
-        var firstPull = (await _a.HistoryAsync()).First(h => h.Kind == DataSyncHistoryKind.AutoSync);
         var transactionMs = System.Text.Json.Nodes.JsonNode.Parse(firstPull.ResultJson)!["transactionMs"]!.GetValue<long>();
         Assert.IsTrue(transactionMs <= 5_000, $"the approver's first pull took {transactionMs} ms");
     }

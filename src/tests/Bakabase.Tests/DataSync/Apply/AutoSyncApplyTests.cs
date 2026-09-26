@@ -57,6 +57,39 @@ public class AutoSyncApplyTests
     }
 
     [TestMethod]
+    public async Task The_approvers_first_pull_is_its_first_sync_entry_even_when_it_only_asks()
+    {
+        var f = await CreateAsync();
+        var peer = new DataSyncPeer("PC-1");
+        // The approver's side of a two-way request (§8.3): its first pull completes the first contact.
+        var link = await f.LinkAsync(peer, DataSyncLinkMode.TwoWay, firstContactDone: false, Item);
+        var db = f.NewDb();
+        (await db.DataSyncLinks.SingleAsync(l => l.Id == link.Id)).Initiator = DataSyncLinkInitiator.Peer;
+        await db.SaveChangesAsync();
+        f.Kind.Add(Content("Genre", ("x", "Rock")));
+        await f.RefreshAsync();
+
+        // A name-only match: a link suggestion for the person, nothing applied.
+        var outcome = await f.ApplyAsync(link, peer,
+            (Item, peer.Record([SyncKey.New().Value], peer.Next(), Content("Genre", ("a", "Rock")), "a0")));
+
+        Assert.AreEqual(0, outcome.Applied);
+        Assert.AreEqual(1, (await f.OpenItemsAsync()).Count(i => i.Type == DataSyncInboxItemType.LinkSuggestion));
+        Assert.IsNotNull((await f.LinkRowAsync(link.Id)).FirstContactCompletedAtUtc);
+        var first = (await f.HistoryAsync()).Single();
+        Assert.AreEqual(outcome.ApplyLogId, first.Id, "the notification's counts come from this entry");
+        Assert.AreEqual((DataSyncHistoryKind.FirstLink, (int?) link.Id, peer.Name),
+            (first.Kind, first.LinkId, first.PeerName), "\"First sync with PC-1\"");
+
+        // Later pulls are ordinary: an entry only when they apply something.
+        Assert.IsNull((await f.ApplyAsync(link, peer, f.Pull(peer))).ApplyLogId);
+        var created = await f.ApplyAsync(link, peer,
+            (Item, peer.Record([SyncKey.New().Value], peer.Next(), Content("Mood"), "a1")));
+        Assert.AreEqual(2, (await f.HistoryAsync()).Count);
+        Assert.AreEqual(DataSyncHistoryKind.AutoSync, (await f.HistoryAsync()).Single(l => l.Id == created.ApplyLogId).Kind);
+    }
+
+    [TestMethod]
     public async Task Pause_all_pressed_while_the_apply_waited_for_the_gate_applies_nothing()
     {
         var f = await CreateAsync();

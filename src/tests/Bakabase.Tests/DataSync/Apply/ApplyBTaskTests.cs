@@ -285,6 +285,9 @@ public class ApplyBTaskTests
         Assert.IsTrue(await HasGroupAsync("Scans"));
         // The runner's final transaction completed the first contact already: the task still announces it (§8.3).
         Assert.AreEqual(1, _observer.Count($"applied:{link.Id}:first"));
+        var entry = (await _f.HistoryAsync()).Single();
+        Assert.AreEqual((DataSyncHistoryKind.FirstLink, (int?) link.Id), (entry.Kind, entry.LinkId),
+            "its history entry is the first sync with the peer (§8.3)");
     }
 
     #endregion

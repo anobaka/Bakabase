@@ -114,8 +114,9 @@ public sealed partial class DataSyncStore
     /// pre-images exceed 64 MiB; logs are pruned oldest first only, so a newer log is never pruned while an older
     /// one is kept (v3.1 N15), and the newest log is always kept;</item>
     /// <item>readers not seen for 180 days are forgotten;</item>
-    /// <item>retired actors no stored vector names are forgotten, and at most
-    /// <see cref="DataSyncLimits.MaxActorsPerVector"/> are kept (the highest recorded counters).</item>
+    /// <item>retired actors no stored vector names are forgotten, but none while a restore waits for its choice (§9.5:
+    /// "This device's definitions win" covers them all); at most <see cref="DataSyncLimits.MaxActorsPerVector"/> are
+    /// kept (the highest recorded counters).</item>
     /// </list>
     /// Bases and pending records live as long as their link. Backups are pruned by whoever writes them.
     /// </summary>
@@ -186,15 +187,19 @@ public sealed partial class DataSyncStore
             _readerLog.Forget(reader.NodeId);
         }
 
-        // Retired actors.
+        // Retired actors. While a restore waits for the person's choice (§9.5) every one is kept: an actor the restore
+        // lost (actor.json or a peer named it, and every revision it issued is gone) is in no stored vector, yet "This
+        // device's definitions win" must cover the counters it issued (gate fix B1(a)). That choice puts every retired
+        // actor into every vector it revises, so the rule below keeps it from then on; "Take the other devices'
+        // definitions" covers nothing, and a retired actor never issues a counter again, so forgetting it is safe.
         if (state is not null)
         {
             var retired = DataSyncStoredJson.ReadCounters(state.RetiredActorsJson, "RetiredActorsJson");
             if (retired.Count > 0)
             {
-                var named = await CollectNamedActorsAsync(ct);
+                var named = state.RestoreReason is null ? await CollectNamedActorsAsync(ct) : null;
                 var keep = retired
-                    .Where(e => named.Contains(e.Key))
+                    .Where(e => named is null || named.Contains(e.Key))
                     .OrderByDescending(e => e.Value).ThenBy(e => e.Key, StringComparer.Ordinal)
                     .Take(DataSyncLimits.Default.MaxActorsPerVector)
                     .ToDictionary(e => e.Key, e => e.Value, StringComparer.Ordinal);

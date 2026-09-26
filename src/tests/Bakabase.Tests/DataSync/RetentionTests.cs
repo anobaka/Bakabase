@@ -333,6 +333,24 @@ public class RetentionTests
         CollectionAssert.AreEquivalent(new[] {ActorB}, retired.Keys.ToArray());
     }
 
+    [TestMethod]
+    public async Task Every_retired_actor_is_kept_while_a_restore_waits_for_its_choice()
+    {
+        // C was lost with the restore: no stored vector names it, and "This device's definitions win" must cover it.
+        await _f.LiveAsync("1", Vv((ActorA, 1), (ActorB, 4)));
+        var state = (await _f.Store.GetLocalStateAsync(default))!;
+        state.RetiredActorsJson = DataSyncStoredJson.WriteCounters(new Dictionary<string, long>
+            {[ActorB] = 4, [ActorC] = 9});
+        state.RestoreReason = DataSyncPauseReason.LocalRestoreDetected;
+        state.RestoreDetectedAtUtc = Now;
+        await _f.Store.SaveLocalStateAsync(state, default);
+
+        await _f.Store.PruneAsync(Now, default);
+
+        var retired = DataSyncStoredJson.ReadCounters((await _f.Store.GetLocalStateAsync(default))!.RetiredActorsJson, "");
+        CollectionAssert.AreEquivalent(new[] {ActorB, ActorC}, retired.Keys.ToArray());
+    }
+
     private async Task<IReadOnlyDictionary<string, long>> FloorsAsync() =>
         DataSyncStoredJson.ReadCounters((await _f.Store.GetLocalStateAsync(default))!.TombstoneFloorSeqsJson, "");
 

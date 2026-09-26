@@ -155,17 +155,23 @@ public sealed partial class DataSyncApplyRunner
             await s.Store.CloseStaleStateItemsAsync(written.Evaluated.Concat(recorder.Touched).Distinct().ToList(),
                 linkRow.Id, now, ct);
 
+            var firstContactOpen = linkRow.FirstContactCompletedAtUtc is null;
             AfterPull(linkRow, context, pull, written, now);
+            // The pull that completes the link's first contact — the approver's first pull, or its "Start anyway"; an
+            // initiator completes it with its review — is its "First sync with X" entry (§8.3), written even when it
+            // only raised link suggestions or conflicts. Any other pull is an entry only when it applied something.
+            var firstSync = firstContactOpen && linkRow.FirstContactCompletedAtUtc is not null;
+            var historyKind = firstSync ? DataSyncHistoryKind.FirstLink : DataSyncHistoryKind.AutoSync;
             int? logId = null;
-            if (recorder.Applied)
+            if (recorder.Applied || firstSync)
             {
-                logId = await s.Store.AddHistoryAsync(recorder.ToLog(DataSyncHistoryKind.AutoSync, linkRow, args.Task.Id,
-                    now, ElapsedMs(started)), ct);
+                logId = await s.Store.AddHistoryAsync(recorder.ToLog(historyKind, linkRow, args.Task.Id, now,
+                    ElapsedMs(started)), ct);
             }
 
             await CommitAsync(s, ct);
             // Committed: a stop requested from here on no longer turns the apply into Cancelled.
-            await AfterCommitAsync(s, recorder, kinds, DataSyncHistoryKind.AutoSync, logId, linkRow.Id);
+            await AfterCommitAsync(s, recorder, kinds, historyKind, logId, linkRow.Id);
 
             var closed = openBefore.Except(await OpenItemIdsAsync(s, CancellationToken.None)).OrderBy(i => i).ToList();
             return (new DataSyncAutoSyncOutcome(logId, null, inbox.Created + writer.ItemsCreated.Count, closed.Count,
