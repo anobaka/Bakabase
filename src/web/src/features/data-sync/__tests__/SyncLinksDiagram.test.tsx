@@ -501,7 +501,10 @@ describe("the diagram", () => {
     const nameEnd = (nodeId: string) =>
       nameStart(nodeId) + textWidth(name(nodeId).textContent!, 13 * SEMIBOLD);
     const at = (element: Element) =>
-      /translate\(([\d.-]+) ([\d.-]+)\)/.exec(element.getAttribute("transform")!)!.slice(1).map(Number);
+      /translate\(([\d.-]+) ([\d.-]+)\)/
+        .exec(element.getAttribute("transform")!)!
+        .slice(1)
+        .map(Number);
     const dotBottom = (nodeId: string) => {
       const dot = card(nodeId).querySelector("[data-status-dot]")!;
 
