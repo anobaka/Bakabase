@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "nodeId": "source",
+  "libraryEpoch": "cd3d88967ea34ad8915db0389036ccea",
+  "sharingEnabled": true,
+  "browsingEnabled": false,
+  "peers": {
+    "library-reader": {
+      "nodeId": "library-reader",
+      "label": "Library reader",
+      "kind": null,
+      "platform": null,
+      "address": "http://library-reader",
+      "libraryEpoch": "71a666b2eda04e26af7d448afa2c98ec",
+      "enabled": true,
+      "pathMappings": [],
+      "dataSyncAddress": null,
+      "dataSyncOfferedAddresses": null
+    },
+    "reader": {
+      "nodeId": "reader",
+      "label": "Reader",
+      "kind": null,
+      "platform": null,
+      "address": "http://reader",
+      "libraryEpoch": "b4da888fb5764a05aa9ca619d32f2be4",
+      "enabled": true,
+      "pathMappings": [],
+      "dataSyncAddress": "http://reader",
+      "dataSyncOfferedAddresses": null
+    }
+  },
+  "inboundGrants": {
+    "yarj-A6olgKwELNj-DtkJqk8": {
+      "credentials": {
+        "grantId": "yarj-A6olgKwELNj-DtkJqk8",
+        "subjectNodeId": "library-reader",
+        "audienceNodeId": "source",
+        "libraryEpoch": "cd3d88967ea34ad8915db0389036ccea",
+        "key": "UxzjNhm6PDlpYGcy4jgk6S4J1ZU1J-3-iN1FsEu4hVw",
+        "revision": 1
+      },
+      "revoked": false,
+      "createdAt": "2026-09-20T12:00:00\u002B00:00"
+    }
+  },
+  "outboundGrants": {
+    "library-reader": {
+      "grantId": "mFkxD6dWGlXC2lFhvSK6jUlo",
+      "subjectNodeId": "source",
+      "audienceNodeId": "library-reader",
+      "libraryEpoch": "71a666b2eda04e26af7d448afa2c98ec",
+      "key": "ExKWbxhuB7mIDq2UbePJoAs7ITDmsZMLXSM_pV4oeJY",
+      "revision": 1
+    }
+  },
+  "incomingRequests": [
+    {
+      "requestId": "3ucs6qlxl3J4yujc4J1Im5xL",
+      "transactionId": "3ucs6qlxl3J4yujc4J1Im5xL",
+      "nodeId": "library-reader",
+      "nodeName": "Library reader",
+      "claimSecretHash": "g4rMeBEHUh8bnJxR2y52cSf70E6SQ2rA_mFkHdSXuq0",
+      "status": "granted",
+      "expiresAt": "2026-09-20T12:10:00\u002B00:00",
+      "grantId": "yarj-A6olgKwELNj-DtkJqk8",
+      "remoteAddress": null,
+      "reciprocal": null,
+      "intent": null,
+      "readBack": null
+    },
+    {
+      "requestId": "8ZPvl-jGRRHn3QqvQazS64RD",
+      "transactionId": "8ZPvl-jGRRHn3QqvQazS64RD",
+      "nodeId": "library-asker",
+      "nodeName": "Library asker",
+      "claimSecretHash": "P2xSJcreF3L0Ww_hdnygxIk1WMlTcz8EdWd6kGs7ZrU",
+      "status": "awaitingApproval",
+      "expiresAt": "2026-09-20T12:10:00\u002B00:00",
+      "grantId": null,
+      "remoteAddress": null,
+      "reciprocal": null,
+      "intent": null,
+      "readBack": null
+    }
+  ],
+  "outgoingRequests": [
+    {
+      "requestId": "re4hLneCj9ctMzmM-0eby3bU",
+      "address": "http://library-reader",
+      "nodeId": "library-reader",
+      "nodeName": "Library reader",
+      "libraryEpoch": "71a666b2eda04e26af7d448afa2c98ec",
+      "claimSecret": "Eu5VkjFKOJhHec2DOi0fneUc-2bWu4W_K-wpv1awlok",
+      "status": "granted",
+      "expiresAt": "2026-09-20T12:10:00\u002B00:00",
+      "intent": null
+    }
+  ],
+  "invitation": {
+    "codeHash": "2KmCUQzrCYdj7mopfUfFqggRoSpr4Mk7lmOlu9DzR24",
+    "expiresAt": "2026-09-20T12:10:00\u002B00:00",
+    "failedAttempts": 0,
+    "allowTwoWay": false
+  },
+  "reciprocalInvitations": [],
+  "displayName": "Source",
+  "dataSyncSharingEnabled": true,
+  "inboundDataSyncGrants": {
+    "yecrr-l_y_CqlxF1PIST8NA3": {
+      "credentials": {
+        "grantId": "yecrr-l_y_CqlxF1PIST8NA3",
+        "subjectNodeId": "reader",
+        "audienceNodeId": "source",
+        "libraryEpoch": "cd3d88967ea34ad8915db0389036ccea",
+        "key": "6GwW4ZnnqPWghmJUNLJJdWhxdJ21wPjbFcbhoh_9G4c",
+        "revision": 1
+      },
+      "revoked": false,
+      "createdAt": "2026-09-20T12:00:00\u002B00:00"
+    }
+  },
+  "outboundDataSyncGrants": {
+    "reader": {
+      "grantId": "6SxVw2gV8R3Yq_bjCnc7w2LR",
+      "subjectNodeId": "source",
+      "audienceNodeId": "reader",
+      "libraryEpoch": "b4da888fb5764a05aa9ca619d32f2be4",
+      "key": "9492L5fqvXSjvONhP8a1Q8GL6Hobd7byohM5cr4D3XE",
+      "revision": 1
+    }
+  },
+  "incomingDataSyncRequests": [
+    {
+      "requestId": "7FjI0M3GZXrfJOzMQe9GhMfo",
+      "transactionId": "7FjI0M3GZXrfJOzMQe9GhMfo",
+      "nodeId": "reader",
+      "nodeName": "Reader",
+      "claimSecretHash": "ibGEmY4ZJWLo_x1IcxoznN0uZ17KUskUOBds8VjZEIU",
+      "status": "granted",
+      "expiresAt": "2026-09-20T12:10:00\u002B00:00",
+      "grantId": "yecrr-l_y_CqlxF1PIST8NA3",
+      "remoteAddress": null,
+      "reciprocal": null,
+      "intent": "twoWay",
+      "readBack": null
+    },
+    {
+      "requestId": "hkuKtcgJ5IreirzsAaNWwf65",
+      "transactionId": "hkuKtcgJ5IreirzsAaNWwf65",
+      "nodeId": "asker",
+      "nodeName": "Asker",
+      "claimSecretHash": "QGAA9BcaLaG6g3M9ytUK9Bc2FcdsP8hL_M6SkHcqvXQ",
+      "status": "awaitingApproval",
+      "expiresAt": "2026-09-20T12:10:00\u002B00:00",
+      "grantId": null,
+      "remoteAddress": null,
+      "reciprocal": null,
+      "intent": "follow",
+      "readBack": null
+    }
+  ],
+  "outgoingDataSyncRequests": [
+    {
+      "requestId": "umuI9u5q98vtOpDKwq9u0mw3",
+      "address": "http://reader",
+      "nodeId": "reader",
+      "nodeName": "Reader",
+      "libraryEpoch": "b4da888fb5764a05aa9ca619d32f2be4",
+      "claimSecret": "VWziHMKJRtgmaJ5XFWePlVqAOI1T3lNs7L_O2JF5UyQ",
+      "status": "granted",
+      "expiresAt": "2026-09-20T12:10:00\u002B00:00",
+      "intent": "follow"
+    },
+    {
+      "requestId": "jAHOlrWve9IW3sA0mto0MJx7",
+      "address": "http://other",
+      "nodeId": "other",
+      "nodeName": "Other",
+      "libraryEpoch": "b362d15ef1854b8196714cfddb1ec3c8",
+      "claimSecret": "YZPgYpgeNOtWUbZYDPqV8fEP2xf5_dti49CqoiknD-A",
+      "status": "awaitingApproval",
+      "expiresAt": "2026-09-20T12:10:00\u002B00:00",
+      "intent": "follow"
+    }
+  ],
+  "dataSyncInvitation": {
+    "codeHash": "-Xg3NglcX4RP9n4rZRRHa7rUwe6GomayLt5P6x6Q03k",
+    "expiresAt": "2026-09-20T12:10:00\u002B00:00",
+    "failedAttempts": 0,
+    "allowTwoWay": true
+  },
+  "dataSyncReciprocalInvitations": [
+    {
+      "codeHash": "nbiaeQ3JTmomE_zsZbPgB-2g7ONjRzX6xjYLumMauyo",
+      "audienceNodeId": "reader",
+      "expiresAt": "2026-09-20T12:20:00\u002B00:00"
+    }
+  ]
+}

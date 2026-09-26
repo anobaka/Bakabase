@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Canonical;
 using Bakabase.Modules.DataSync.Identity;
+using Bakabase.Modules.DataSync.Kinds.CustomProperties;
 using Bakabase.Modules.DataSync.Kinds.ExtensionGroups;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Planning;
@@ -18,8 +19,8 @@ namespace Bakabase.Modules.DataSync.Tests.Wire;
 /// <summary>
 /// §13.8, the pure part: pages and heads another build wrote, checked in under <c>Fixtures/VersionSkew</c> and read
 /// through the real reader, assembler and merger. A wire change that stops this build reading them fails here.
-/// <c>DATASYNC_WRITE_FIXTURES=&lt;dir&gt;</c> writes them again (<see cref="WriteFixtures"/>); the unknown
-/// <c>PropertyType</c> and <c>state.json</c> fixtures belong to the custom property codec and the federation state.
+/// <c>DATASYNC_WRITE_FIXTURES=&lt;dir&gt;</c> writes them again (<see cref="WriteFixtures"/>). The <c>state.json</c>
+/// fixture is the federation state's (<c>FederationStateVersionSkewTests</c>).
 /// </summary>
 [TestClass]
 public class VersionSkewFixtureTests
@@ -30,6 +31,7 @@ public class VersionSkewFixtureTests
     private const string NewerSnapshot = "snap-newer";
     private const string UnknownSnapshot = "snap-unknown";
     private const string FormSnapshot = "snap-form";
+    private const string TypeSnapshot = "snap-type";
 
     // ---- reading ---------------------------------------------------------------------------------
 
@@ -53,6 +55,7 @@ public class VersionSkewFixtureTests
         return (staged, page.Records);
     }
 
+    /// <param name="codec">A codec of a kind the fixture's link does not have: the link gets the kind too.</param>
     private static DataSyncMergeResult Merge(MergeFixture f, DataSyncStagedKind staged, IDataSyncKindCodec? codec = null)
     {
         f.NoPull = true;
@@ -69,6 +72,9 @@ public class VersionSkewFixtureTests
             input = input with
             {
                 Codecs = new Dictionary<string, IDataSyncKindCodec>(input.Codecs) { [codec.Descriptor.Kind] = codec },
+                Link = input.Link.Kinds.Contains(codec.Descriptor.Kind)
+                    ? input.Link
+                    : input.Link with { Kinds = [.. input.Link.Kinds, codec.Descriptor.Kind] },
             };
         }
 
@@ -119,6 +125,36 @@ public class VersionSkewFixtureTests
         var revision = after.Revisions.Single();
         Assert.AreEqual(DataSyncRevisionKind.FastForward, revision.Revision);
         Assert.AreEqual(5L, (long)revision.Unknown!["rating"]!, "a member even the upgrade does not know is kept");
+    }
+
+    // ---- an unknown PropertyType --------------------------------------------------------------------
+
+    /// <summary>
+    /// A newer build's property type (§8.12): the entity is held with <c>UnknownEnumValue</c>, nothing of it is read or
+    /// created, its record waits as a <c>Held</c> pending record, and the cursor still advances past it; a type this
+    /// build knows, on the same page, is read and created.
+    /// </summary>
+    [TestMethod]
+    public void AnUnknownPropertyTypeIsHeldAndTheCursorAdvances()
+    {
+        var codec = CustomPropertyCodec.Instance;
+        var (staged, records) = Stage("unknown-property-type.customProperty.page.json", TypeSnapshot, codec);
+        Assert.AreEqual("Hologram", (string)records.Single(r => r.Keys[0] == A.Value).Content!["type"]!,
+            "the page names a type this build does not have");
+        Assert.IsFalse(Enum.TryParse<Bakabase.Abstractions.Models.Domain.Constants.PropertyType>("Hologram", out _));
+        var held = staged.Entities.Single(e => e.Record.Keys[0] == A.Value);
+        Assert.AreEqual(DataSyncHeldReason.UnknownEnumValue, held.Held);
+        Assert.IsNull(held.Content, "nothing of it is read");
+        Assert.IsNull(staged.Entities.Single(e => e.Record.Keys[0] == B.Value).Held, "a type this build knows is read");
+
+        var r = Merge(new MergeFixture(), staged, codec);
+        var pending = r.BaseUpdates.Single(u => u.Key == A).Pending!;
+        Assert.AreEqual(DataSyncPendingReason.Held, pending.Reason);
+        Assert.AreEqual(held.Record.Hash, pending.Record.Hash, "the record waits as it came");
+        Assert.AreEqual(staged.MaxSeq, r.CursorAdvance[DataSyncKindIds.CustomProperty], "the cursor still advances");
+        var create = (CreateEntityOperation)r.Batches.SelectMany(b => b.Operations).Single();
+        Assert.AreEqual(B, create.Keys.Primary);
+        Assert.AreEqual(0, r.Inbox.Count, "a held record asks nothing");
     }
 
     // ---- an unknown top-level member ---------------------------------------------------------------
@@ -345,6 +381,17 @@ public class VersionSkewFixtureTests
         Page("unknown-member.extensionGroup.hop2.page.json", UnknownSnapshot, GroupKind,
             Record(A, With(new ExtensionGroupContentV1("Videos", [".mkv"]), Groups, ("icon", "film")),
                 Vv((Third, 2), (Peer, 2)), 31, 1, ThirdEditor, ThirdNode, null));
+
+        // An unknown PropertyType: record A has a type a newer build added, with settings of its own; B a known type.
+        Page("unknown-property-type.customProperty.page.json", TypeSnapshot, DataSyncKindIds.CustomProperty,
+            Record(A, new JsonObject
+            {
+                ["name"] = "Mood", ["settings"] = new JsonObject { ["depth"] = 3 }, ["type"] = "Hologram",
+            }, Vv((Peer, 1)), 51, 1, PeerEditor, PeerNode, "a0"),
+            Record(B, new JsonObject
+            {
+                ["name"] = "Score", ["settings"] = new JsonObject { ["maxValue"] = 5 }, ["type"] = "Rating",
+            }, Vv((Peer, 2)), 52, 1, PeerEditor, PeerNode, "a1"));
 
         // Contracts.
         var current = HeadJson(HeadOf(1, 1, new DataSyncFeedKindHead(ItemKind, 1, 3, false, 1))).AsObject();
