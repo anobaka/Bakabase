@@ -5,7 +5,11 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components.DataSync.Feed;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
+using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Canonical;
+using Bakabase.Modules.DataSync.Wire;
 using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
@@ -20,6 +24,7 @@ using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 using Microsoft.Extensions.FileProviders;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 // Each process owns its static AppService, independent SQLite database, options, keys and HTTP port.
 // This executable is never packaged. It uses the production startup, routes, middleware and adapters.
@@ -69,11 +74,22 @@ if (requestLog != null && !Path.IsPathFullyQualified(requestLog))
 var serverName = Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_SERVER_NAME");
 if (serverName != null && !System.Text.RegularExpressions.Regex.IsMatch(serverName, "^[a-z][a-z0-9-]{0,31}$"))
     throw new ArgumentException("The server name must be a short lowercase label.");
-var host = new FederationTestHost(port, dataDirectory, count, desktopWindow, requestLog, serverName);
+// Optional: "loopback" makes the only address this server offers other devices the loopback address it listens on.
+// Otherwise it offers this machine's interface addresses, where a fixture never listens, so a device that connects
+// back to an address it was offered (a two-way read-back, §7.2.4 of the data sync spec) could never reach it.
+var addresses = Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_ADDRESSES");
+if (addresses is not (null or "loopback"))
+    throw new ArgumentException("The only fixture address choice is \"loopback\".");
+// Optional: the host serves the custom property of this name to its data sync readers as a record of a newer schema.
+var futureSchema = Environment.GetEnvironmentVariable(FutureSchemaFeedPageWriter.Variable);
+if (futureSchema != null && string.IsNullOrWhiteSpace(futureSchema))
+    throw new ArgumentException("The future-schema property must be named.");
+var host = new FederationTestHost(port, dataDirectory, count, desktopWindow, requestLog, serverName,
+    addresses == "loopback" ? [new RemoteAccessAddress($"http://127.0.0.1:{port}", "loopback")] : null, futureSchema);
 await host.Start([]);
 
 sealed class FederationTestHost(int port, string dataDirectory, int count, string? desktopWindow, string? requestLog,
-        string? serverName)
+        string? serverName, IReadOnlyList<RemoteAccessAddress>? addresses, string? futureSchema)
     : BakabaseHost(new NullGuiAdapter(), new NullSystemService())
 {
     protected override string? SingleInstanceId => null;
@@ -100,14 +116,21 @@ sealed class FederationTestHost(int port, string dataDirectory, int count, strin
                 services.AddSingleton<INodeIdentityProvider>(provider => new BenchmarkNodeIdentityProvider(
                     new NodeIdentityProvider(provider.GetRequiredService<FederationStateStore>()), fixtureName));
             }
-            if (serverName != null)
+            if (serverName != null || addresses != null)
             {
                 // Every fixture on one machine would otherwise share its name, so nothing a
-                // test reads by name could tell one server from another.
+                // test reads by name could tell one server from another; and offer addresses
+                // where it does not listen.
                 services.RemoveAll<IRemoteAccessService>();
                 services.AddSingleton<RemoteAccessService>();
                 services.AddSingleton<IRemoteAccessService>(provider =>
-                    new FixtureNamedRemoteAccess(provider.GetRequiredService<RemoteAccessService>(), serverName));
+                    new FixtureRemoteAccess(provider.GetRequiredService<RemoteAccessService>(), serverName, addresses));
+            }
+            if (futureSchema != null)
+            {
+                // Replaces the production writer the data sync feed composes with (registered with TryAdd).
+                services.RemoveAll<IDataSyncFeedPageWriter>();
+                services.AddSingleton<IDataSyncFeedPageWriter>(new FutureSchemaFeedPageWriter(futureSchema));
             }
             services.AddSingleton<IStartupFilter, FederationTestStaticFiles>();
         }));
@@ -231,24 +254,58 @@ sealed class BenchmarkNodeIdentityProvider(INodeIdentityProvider production, str
 }
 
 /// <summary>
-/// The production remote-access service under another name. The name — what
+/// The production remote-access service under another name, or at other addresses. The name — what
 /// <c>server-info</c> and discovery announce, and so what every pairing records and every
 /// switcher shows — is <see cref="Environment.MachineName"/> with no setting, which every
-/// fixture on one machine shares. Everything else is the production service's answer.
+/// fixture on one machine shares. The addresses — what an invitation lists and a two-way
+/// request offers to be read back at — are this machine's interfaces, where a fixture, which
+/// listens on loopback only, cannot be reached. Everything else is the production service's answer.
 /// </summary>
-sealed class FixtureNamedRemoteAccess(IRemoteAccessService production, string name) : IRemoteAccessService
+sealed class FixtureRemoteAccess(IRemoteAccessService production, string? name,
+    IReadOnlyList<RemoteAccessAddress>? addresses) : IRemoteAccessService
 {
     public RemoteAccessMode GetEffectiveMode() => production.GetEffectiveMode();
     public Task SetModeAsync(RemoteAccessMode? mode) => production.SetModeAsync(mode);
-    public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses() => production.GetReachableAddresses();
+    public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses() => addresses ?? production.GetReachableAddresses();
     public Task<string> GetOrCreateServerIdAsync() => production.GetOrCreateServerIdAsync();
     public bool GetAllowLiveTranscode() => production.GetAllowLiveTranscode();
     public Task SetAllowLiveTranscodeAsync(bool allow) => production.SetAllowLiveTranscodeAsync(allow);
     public bool GetRequirePairing() => production.GetRequirePairing();
     public Task SetRequirePairingAsync(bool require) => production.SetRequirePairingAsync(require);
 
-    public async Task<RemoteAccessServerDescriptor> GetServerDescriptorAsync() =>
-        (await production.GetServerDescriptorAsync()) with { Name = name };
+    public async Task<RemoteAccessServerDescriptor> GetServerDescriptorAsync()
+    {
+        var descriptor = await production.GetServerDescriptorAsync();
+        return name == null ? descriptor : descriptor with { Name = name };
+    }
+}
+
+/// <summary>
+/// The data sync feed as a newer build would serve one custom property: every record of the property named
+/// <c>BAKABASE_DATASYNC_TEST_FUTURE_SCHEMA</c> goes out one schema version ahead, with a member this build does not
+/// know and the record hash that content has. Everything else is the production writer's, so the manifest's kind hash
+/// covers exactly what the pages carry. A reader must hold such a record (<c>Held(NewerSchema)</c>) and apply the rest
+/// of the pull (spec §13.9 step 7).
+/// </summary>
+sealed class FutureSchemaFeedPageWriter(string propertyName) : IDataSyncFeedPageWriter
+{
+    public const string Variable = "BAKABASE_DATASYNC_TEST_FUTURE_SCHEMA";
+
+    public DataSyncWrittenKind WriteKind(string snapshotId, string kind, long sinceSeq,
+        IReadOnlyList<DataSyncWireRecord> records, DataSyncLimits limits) =>
+        DataSyncWireWriter.WriteKind(snapshotId, kind, sinceSeq,
+            kind == DataSyncKindIds.CustomProperty ? records.Select(FromTheFuture).ToList() : records, limits);
+
+    private DataSyncWireRecord FromTheFuture(DataSyncWireRecord record)
+    {
+        if (record.Content is not { } content || record.Chunks > 0 ||
+            content["name"]?.GetValueKind() != JsonValueKind.String ||
+            content["name"]!.GetValue<string>() != propertyName)
+            return record;
+        var future = (JsonObject) content.DeepClone();
+        future["futureSetting"] = new JsonObject { ["addedIn"] = record.SchemaVersion + 1 };
+        return record with { SchemaVersion = record.SchemaVersion + 1, Content = future, Hash = ContentHash.Of(future) };
+    }
 }
 
 /// <summary>
