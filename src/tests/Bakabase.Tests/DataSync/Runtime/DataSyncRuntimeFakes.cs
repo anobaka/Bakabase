@@ -619,8 +619,16 @@ internal sealed class FakeDataSyncGrantService : IDataSyncGrantService
         return Task.FromResult(Answer(input));
     }
 
+    /// <summary>
+    /// The clock the listing is read at. Set, the listing leaves out every request whose time ran out, as
+    /// <c>FederationPeerService.GetDataSyncStatusAsync</c> does: an expired request is never listed as expired, it is
+    /// simply gone.
+    /// </summary>
+    public Func<DateTime>? Now { get; set; }
+
     public Task<IReadOnlyList<DataSyncAccessRequestView>> GetRequestsAsync(CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<DataSyncAccessRequestView>>(Requests.ToList());
+        Task.FromResult<IReadOnlyList<DataSyncAccessRequestView>>(Requests
+            .Where(r => Now is not { } now || r.ExpiresAt > now()).ToList());
 
     public Task<DataSyncApprovalOutcome> ApproveAsync(string requestId, bool readBack, CancellationToken ct)
     {
@@ -692,6 +700,8 @@ internal sealed class FakeReviewStore : IDataSyncReviewStore
     public List<string> Discarded { get; } = [];
 
     public DataSyncReviewEntry? GetForLink(int linkId) => _entries.Values.FirstOrDefault(e => e.LinkId == linkId);
+
+    public DataSyncReviewEntry? PeekForLink(int linkId) => GetForLink(linkId);
 
     public DataSyncReviewEntry Stage(int? linkId, bool copyOnce, DataSyncStagedPull pull)
     {

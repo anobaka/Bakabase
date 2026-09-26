@@ -86,8 +86,9 @@ public class DataSyncLinkStateMachineTests
         var expired = (await h.Links.CreateAsync(Create("b", DataSyncLinkMode.TwoWay), true, default)).Link!;
         var waiting = (await h.Links.CreateAsync(Create("c"), true, default)).Link!;
         h.Grants.Requests.Add(Request("req-a", "rejected", h.Clock.UtcNow.AddMinutes(10)));
-        h.Grants.Requests.Add(Request("req-b", "pending", h.Clock.UtcNow.AddMinutes(-1)));
-        h.Grants.Requests.Add(Request("req-c", "pending", h.Clock.UtcNow.AddMinutes(10)));
+        // The real listing leaves an expired request out rather than listing it as expired.
+        h.Grants.Requests.Add(Request("req-b", "awaitingApproval", h.Clock.UtcNow.AddMinutes(-1)));
+        h.Grants.Requests.Add(Request("req-c", "awaitingApproval", h.Clock.UtcNow.AddMinutes(10)));
 
         await h.FetchOnceAsync();
 
@@ -106,6 +107,140 @@ public class DataSyncLinkStateMachineTests
     private static DataSyncAccessRequestView Request(string id, string status, DateTime expiresAt) =>
         new(id, DataSyncRequestDirection.Outgoing, "x", "X", DataSyncRequestIntent.Follow, status, expiresAt, null,
             false, null, false);
+
+    [TestMethod]
+    public async Task A_request_no_longer_listed_ends_the_wait_unless_access_arrived()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var expiring = (await h.Links.CreateAsync(Create("a"), true, default)).Link!;
+        var forgotten = (await h.Links.CreateAsync(Create("b", DataSyncLinkMode.TwoWay), true, default)).Link!;
+        var granted = (await h.Links.CreateAsync(Create("c"), true, default)).Link!;
+        h.Grants.Requests.Add(Request("req-a", "awaitingApproval", h.Clock.UtcNow.AddMinutes(10)));
+        h.Grants.Requests.Add(Request("req-c", "awaitingApproval", h.Clock.UtcNow.AddMinutes(10)));
+        // req-b went with the device's datasync state ("Done — stop reading", the device removed): never listed.
+
+        await h.FetchOnceAsync();
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, h.Link(expiring.Id).State, "still listed: it waits");
+        var b = h.Link(forgotten.Id);
+        Assert.AreEqual((DataSyncLinkState.Stopped, DataSyncLinkService.AccessExpired, DataSyncLinkMode.TwoWay),
+            (b.State, b.LastErrorCode, b.LastMode), "nobody can answer it: it stops, kept with Dismiss");
+
+        // Nobody approved within ten minutes, and the listing dropped the requests; one was granted meanwhile, its
+        // event lost.
+        h.Grants.Outbound.Add("c");
+        h.Clock.Advance(TimeSpan.FromMinutes(11));
+        await h.FetchOnceAsync();
+        var a = h.Link(expiring.Id);
+        Assert.AreEqual((DataSyncLinkState.Stopped, DataSyncLinkMode.Off, DataSyncLinkService.AccessExpired),
+            (a.State, a.Mode, a.LastErrorCode));
+        Assert.IsNull(a.NextAttemptAtUtc, "not polled for ever");
+        Assert.AreEqual(DataSyncLinkState.AwaitingReview, h.Link(granted.Id).State, "access that arrived counts first");
+    }
+
+    [TestMethod]
+    public async Task A_revoked_link_asks_for_access_again_and_only_the_answer_brings_it_back()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var follow = h.AddLink("a", l => l.Mode = DataSyncLinkMode.Follow);
+        var twoWay = h.AddLink("b");
+        var sharingOff = h.AddLink("c");
+        h.Peers.Peers["a"].HeadErrors.Enqueue(new DataSyncPeerException(DataSyncPeerErrorCode.AccessRevoked));
+        h.Peers.Peers["b"].HeadErrors.Enqueue(new DataSyncPeerException(DataSyncPeerErrorCode.AccessMissing));
+        h.Peers.Peers["c"].HeadErrors.Enqueue(new DataSyncPeerException(DataSyncPeerErrorCode.PeerSharingOff));
+        await h.FetchOnceAsync();
+        Assert.AreEqual(DataSyncLinkState.AccessRevoked, h.Link(follow.Id).State);
+        Assert.AreEqual(DataSyncLinkState.AccessRevoked, h.Link(twoWay.Id).State);
+        Assert.AreEqual(DataSyncLinkState.PeerSharingOff, h.Link(sharingOff.Id).State);
+
+        // Asking cannot help a peer that turned sharing off; a caller who may not create access is refused.
+        Assert.AreEqual("notApplicable:askAccessAgain", (await h.Links.ResumeAsync(sharingOff.Id,
+            DataSyncResumeAction.AskAccessAgain, true, default)).Problem!.Detail);
+        Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice, (await h.Links.ResumeAsync(follow.Id,
+            DataSyncResumeAction.AskAccessAgain, false, default)).Problem!.Code);
+        Assert.AreEqual(0, h.Grants.Sent.Count);
+        Assert.IsTrue(h.Grants.Outbound.Contains("a"), "nothing is forgotten for a refused call");
+
+        // The credentials the peer refused are forgotten, then a request goes out with the link's mode.
+        var asked = await h.Links.ResumeAsync(follow.Id, DataSyncResumeAction.AskAccessAgain, true, default);
+        Assert.IsNull(asked.Problem);
+        var sent = h.Grants.Sent.Single();
+        Assert.AreEqual((DataSyncRequestIntent.Follow, "a"), (sent.Intent, sent.PeerNodeId));
+        CollectionAssert.Contains(h.Grants.Changes.ToArray(), "forget:a");
+        Assert.AreEqual((DataSyncLinkState.AwaitingAccess, "req-a"), (asked.Link!.State, asked.Link.PendingRequestId));
+        Assert.AreEqual(3, asked.Link.GetCursors()["extensionGroup"], "the same epoch: cursors and bases stay");
+        Assert.IsNotNull(asked.Link.FirstContactCompletedAtUtc);
+        Assert.IsNull(asked.Link.LastErrorCode);
+
+        // Two-way, to a peer that does not read this device: a two-way request, with its offer.
+        Assert.IsNull((await h.Links.ResumeAsync(twoWay.Id, DataSyncResumeAction.AskAccessAgain, true, default))
+            .Problem);
+        Assert.AreEqual(DataSyncRequestIntent.TwoWay, h.Grants.Sent.Last().Intent);
+
+        // Waiting, nothing reads as access; granted (the claim loop), the link goes back to work with what it had.
+        h.Grants.Requests.Add(OutgoingRequest(h, "req-a", "awaitingApproval"));
+        h.Grants.Requests.Add(OutgoingRequest(h, "req-b", "awaitingApproval"));
+        await h.FetchOnceAsync();
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, h.Link(follow.Id).State);
+        h.Grants.Outbound.Add("a");
+        await h.Links.OnOutboundGrantedAsync("a", default);
+        Assert.AreEqual((DataSyncLinkState.Active, (string?) null),
+            (h.Link(follow.Id).State, h.Link(follow.Id).PendingRequestId));
+        Assert.AreEqual(0, h.Store.Deleted.Count);
+
+        // Not approved in time: stopped like any request that ended, and turning it on again asks again.
+        h.Clock.Advance(TimeSpan.FromMinutes(11));
+        await h.FetchOnceAsync();
+        var stopped = h.Link(twoWay.Id);
+        Assert.AreEqual((DataSyncLinkState.Stopped, DataSyncLinkService.AccessExpired, DataSyncLinkMode.TwoWay),
+            (stopped.State, stopped.LastErrorCode, stopped.LastMode));
+        var on = await h.Links.UpdateAsync(twoWay.Id, DataSyncLinkMode.TwoWay, null, true, default);
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, on.Link!.State, "no credentials left to mistake for access");
+        Assert.AreEqual(3, h.Grants.Sent.Count);
+    }
+
+    [TestMethod]
+    public async Task A_two_way_request_approved_without_reading_back_says_so_until_the_peer_reads_this_device()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var link = (await h.Links.CreateAsync(Create("a", DataSyncLinkMode.TwoWay), true, default)).Link!;
+        Assert.IsFalse(link.ReadBackDeclined, "a request says nothing before it is approved");
+
+        // The claim loop: granted, and the exchange says the approver does not read this device back (§7.2.4 step 7).
+        h.Grants.Outbound.Add("a");
+        h.GrantEvents.OutboundGranted("a", "declined");
+        await h.GrantEvents.DrainAsync(default);
+        Assert.AreEqual((DataSyncLinkState.AwaitingReview, true),
+            (h.Link(link.Id).State, h.Link(link.Id).ReadBackDeclined));
+
+        // [Ask a to keep in step]: the note stays while that request waits, and after an approval without reading back.
+        h.Store.Edit(link.Id, l =>
+        {
+            l.State = DataSyncLinkState.Active;
+            l.FirstContactCompletedAtUtc = h.Clock.UtcNow;
+        });
+        var asked = await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default);
+        Assert.IsNull(asked.Problem);
+        Assert.AreEqual(DataSyncRequestIntent.TwoWay, h.Grants.Sent.Last().Intent);
+        Assert.IsTrue(asked.Link!.ReadBackDeclined, "asked, not answered");
+        h.GrantEvents.OutboundGranted("a", "declined");
+        await h.GrantEvents.DrainAsync(default);
+        Assert.IsTrue(h.Link(link.Id).ReadBackDeclined);
+
+        // Once the peer reads this device — its read-back redeemed this device's code — the note goes.
+        h.GrantEvents.InboundGranted("a", DataSyncRequestIntent.Follow, false);
+        await h.GrantEvents.DrainAsync(default);
+        Assert.IsFalse(h.Link(link.Id).ReadBackDeclined);
+
+        // A grant whose read-back started clears it too; a Follow link is never marked.
+        h.Store.Edit(link.Id, l => l.ReadBackDeclined = true);
+        h.GrantEvents.OutboundGranted("a", "started");
+        await h.GrantEvents.DrainAsync(default);
+        Assert.IsFalse(h.Link(link.Id).ReadBackDeclined);
+        var follow = h.AddLink("f", l => l.Mode = DataSyncLinkMode.Follow);
+        h.GrantEvents.OutboundGranted("f", "declined");
+        await h.GrantEvents.DrainAsync(default);
+        Assert.IsFalse(h.Link(follow.Id).ReadBackDeclined);
+    }
 
     [TestMethod]
     public async Task An_outbound_grant_moves_a_waiting_link_to_its_side_of_the_first_contact()
@@ -257,7 +392,7 @@ public class DataSyncLinkStateMachineTests
         Assert.AreEqual("a", sent.PeerNodeId);
         Assert.AreEqual("req-a", asked.RequestId);
         Assert.AreEqual(DataSyncLinkState.Active, asked.Link!.State, "the link keeps syncing meanwhile");
-        Assert.IsFalse(asked.Link.ReadBackDeclined);
+        Assert.IsTrue(asked.Link.ReadBackDeclined, "asked, not answered: it stays until the peer reads this device");
 
         // Once the peer reads this device, a declined note is only cleared.
         h.Store.Edit(link.Id, l => l.ReadBackDeclined = true);
@@ -507,7 +642,10 @@ public class DataSyncLinkStateMachineTests
         Assert.IsNotNull(waiting.FirstContactCompletedAtUtc);
         Assert.AreEqual("epoch-1", waiting.PeerLibraryEpoch, "the old epoch holds until the reset");
 
-        // This device still holds the credentials the reset revoked: while the request waits they grant nothing.
+        // The credentials the reset revoked were forgotten before asking; any this device holds while the request waits
+        // grant nothing.
+        Assert.IsFalse(h.Grants.Outbound.Contains("a"));
+        h.Grants.Outbound.Add("a");
         h.Grants.Requests.Add(OutgoingRequest(h, "req-a", "awaitingApproval"));
         await h.FetchOnceAsync();
         Assert.AreEqual(0, h.Store.Deleted.Count);
@@ -556,6 +694,43 @@ public class DataSyncLinkStateMachineTests
         Assert.AreEqual(DataSyncLinkState.Paused, h.Link(link.Id).State);
         Assert.AreEqual(DataSyncLinkService.AccessCancelled, h.Link(link.Id).LastErrorCode);
         Assert.AreEqual(0, h.Store.Deleted.Count);
+    }
+
+    [TestMethod]
+    public async Task A_reset_peers_request_that_expires_unanswered_never_reads_revoked_credentials_as_the_grant()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var link = await ResetPeerLinkAsync(h);
+        Assert.IsNull((await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default)).Problem);
+        CollectionAssert.Contains(h.Grants.Changes.ToArray(), "forget:a",
+            "the credentials the reset revoked are forgotten before asking");
+        h.Grants.Requests.Add(OutgoingRequest(h, "req-a", "awaitingApproval"));
+
+        // Credentials this device holds for the peer while the request is out are never its answer.
+        h.Grants.Outbound.Add("a");
+        await h.FetchOnceAsync();
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, h.Link(link.Id).State);
+
+        // Nobody approved within ten minutes: the listing drops the request, and the link goes back to its pause with
+        // everything it had (§8.7 B1, N11).
+        h.Clock.Advance(TimeSpan.FromMinutes(11));
+        await h.FetchOnceAsync();
+        var back = h.Link(link.Id);
+        Assert.AreEqual(
+            (DataSyncLinkState.Paused, (DataSyncPauseReason?) DataSyncPauseReason.PeerReset, "epochChanged"),
+            (back.State, back.PausedReason, back.PausedDetail));
+        Assert.AreEqual((DataSyncLinkService.AccessExpired, (string?) null),
+            (back.LastErrorCode, back.PendingRequestId));
+        Assert.AreEqual(0, h.Store.Deleted.Count, "nothing was reset");
+        Assert.AreEqual(1, h.Store.All().Count);
+
+        // Only the request's own answer resets it.
+        h.Grants.Requests.Clear();
+        Assert.IsNull((await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default)).Problem);
+        h.Grants.Requests.Add(OutgoingRequest(h, "req-a", "granted"));
+        await h.FetchOnceAsync();
+        CollectionAssert.AreEqual(new[] {link.Id}, h.Store.Deleted);
+        Assert.AreEqual(DataSyncLinkState.AwaitingReview, h.Store.All().Single().State);
     }
 
     /// <summary>A Follow link whose peer looks reset (B1), with a first contact behind it.</summary>

@@ -154,25 +154,51 @@ public class DataSyncStateFilesTests
     #region Review store
 
     [TestMethod]
-    public void At_most_three_reviews_are_staged_and_the_least_recently_used_goes_first()
+    public void A_review_waiting_for_its_person_is_never_evicted_and_applied_ones_make_room_least_recently_read_first()
     {
         var clock = new ManualTimeProvider(DateTimeOffset.UtcNow);
         var store = new DataSyncReviewStore(clock);
         var r1 = store.Stage(1, false, Pull());
-        clock.Advance(TimeSpan.FromMinutes(1));
         var r2 = store.Stage(2, false, Pull());
-        clock.Advance(TimeSpan.FromMinutes(1));
-        var r3 = store.Stage(null, true, Pull());
-        clock.Advance(TimeSpan.FromMinutes(1));
-        store.Get(r1.ReviewId); // r1 was read: r2 is now the oldest
 
+        // Applied reviews are kept for their result screens only: they make room, the one read longest ago first.
+        store.MarkApplying(r1.ReviewId, "t1");
+        store.MarkApplied(r1.ReviewId, 11);
+        clock.Advance(TimeSpan.FromMinutes(1));
+        store.MarkApplying(r2.ReviewId, "t2");
+        store.MarkApplied(r2.ReviewId, 12);
+        clock.Advance(TimeSpan.FromMinutes(1));
+        store.Get(r1.ReviewId); // r1 was read: r2 is now the applied one read longest ago
+        var r3 = store.Stage(3, true, Pull());
         var r4 = store.Stage(4, false, Pull());
-
-        Assert.IsNotNull(store.Get(r1.ReviewId));
         Assert.IsNull(store.Get(r2.ReviewId));
-        Assert.IsNotNull(store.Get(r3.ReviewId));
-        Assert.IsNotNull(store.Get(r4.ReviewId));
+        foreach (var review in new[] {r1, r3, r4}) Assert.IsNotNull(store.Get(review.ReviewId));
         Assert.IsTrue(store.Get(r3.ReviewId)!.CopyOnce);
+
+        // Four links waiting for their first review: each keeps its own (§8.3), however many there are.
+        var r5 = store.Stage(5, false, Pull());
+        var r6 = store.Stage(6, false, Pull());
+        Assert.IsNull(store.Get(r1.ReviewId), "the last applied one made room");
+        foreach (var review in new[] {r3, r4, r5, r6}) Assert.IsNotNull(store.Get(review.ReviewId));
+    }
+
+    [TestMethod]
+    public void Peeking_at_a_links_review_does_not_keep_it_from_idling_out()
+    {
+        var clock = new ManualTimeProvider(DateTimeOffset.UtcNow);
+        var store = new DataSyncReviewStore(clock);
+        var review = store.Stage(1, false, Pull());
+
+        // The fetch cycle looks every minute; only a person reading it keeps it.
+        for (var minute = 0; minute < 59; minute++)
+        {
+            clock.Advance(TimeSpan.FromMinutes(1));
+            Assert.AreEqual(review.ReviewId, store.PeekForLink(1)!.ReviewId);
+        }
+
+        clock.Advance(TimeSpan.FromMinutes(1));
+        Assert.IsNull(store.PeekForLink(1), "idle for an hour");
+        Assert.IsNull(store.GetForLink(1));
     }
 
     [TestMethod]

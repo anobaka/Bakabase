@@ -135,9 +135,13 @@ public sealed class DataSyncGrantBoundaryTests
         Assert.IsTrue(referenced.Contains("Bakabase.Modules.RemoteAccess"), "The scan reads the module's real references.");
         Assert.IsFalse(referenced.Any(name => name.StartsWith("Bakabase.Modules.DataSync", StringComparison.Ordinal)),
             string.Join(", ", referenced));
-        // The claim loop hands data sync what it claimed as plain node ids.
+        // The claim loop hands data sync what it claimed as plain node ids, and the outcomes it raises them from are
+        // the federation module's own: a node id and the read-back word.
         Assert.AreEqual(typeof(Task<IReadOnlyList<string>>),
             typeof(NodePairingClient).GetMethod(nameof(NodePairingClient.ClaimPendingDataSyncAsync))!.ReturnType);
+        Assert.AreEqual(typeof(Task<IReadOnlyList<NodeDataSyncPairingOutcome>>), typeof(NodePairingClient)
+            .GetMethod(nameof(NodePairingClient.ClaimPendingDataSyncOutcomesAsync))!.ReturnType);
+        Assert.AreEqual(module, typeof(NodeDataSyncPairingOutcome).Assembly);
     }
 
     /// <summary>

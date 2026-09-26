@@ -107,8 +107,10 @@ public sealed record NodeDataSyncPairCodeRequest(string NodeId, string NodeName,
     string ClaimSecret, string Intent, NodeReciprocalOffer? Reciprocal = null);
 public sealed record NodePairClaimRequest(string RequestId, string NodeId, string ClaimSecret);
 /// <param name="ReadBack">
-/// Datasync codes only: <c>"started"</c> when the code's creator reads the redeemer back, <c>"declined"</c>
-/// when a two-way redemption met a code created without two-way consent; null otherwise.
+/// Datasync only: <c>"started"</c> when the code's creator reads the redeemer back, <c>"declined"</c> when a two-way
+/// redemption met a code created without two-way consent; for a two-way request once approved, <c>"started"</c> or
+/// <c>"declined"</c> by whether the approver reads the requester back (§7.2.4 step 7). Null otherwise, and from older
+/// builds, which say it for codes only.
 /// </param>
 public sealed record NodePairExchange(string Outcome, string RequestId, DateTimeOffset ExpiresAt,
     NodeCredentials? Credentials = null, string? ReadBack = null);
@@ -132,14 +134,18 @@ public static class NodeDataSyncIntents
 }
 
 /// <summary>
-/// What a datasync code redemption says about reading the redeemer back (<see cref="NodePairExchange.ReadBack"/>).
+/// What a datasync code redemption, or the approval of a two-way datasync request, says about reading the other
+/// device back (<see cref="NodePairExchange.ReadBack"/>).
 /// </summary>
 public static class NodeDataSyncReadBack
 {
     /// <summary>The code's creator agreed to two-way when it made the code, and reads the redeemer back.</summary>
     public const string Started = "started";
 
-    /// <summary>A two-way redemption of a code made without two-way consent: the grant only.</summary>
+    /// <summary>
+    /// A two-way redemption of a code made without two-way consent, or a two-way request approved without reading the
+    /// requester back: the grant only.
+    /// </summary>
     public const string Declined = "declined";
 }
 
@@ -152,7 +158,10 @@ public sealed record NodeDataSyncContract(int Version, int MinimumPeerVersion);
 /// <summary>How a datasync pairing attempt ended, on the requesting device.</summary>
 /// <param name="Outcome"><c>"granted"</c>, <c>"awaitingApproval"</c> or <c>"rejected"</c>.</param>
 /// <param name="PeerName">The name the peer's <c>/info</c> gave.</param>
-/// <param name="ReadBack">For a code: whether the peer reads this device back (<see cref="NodeDataSyncReadBack"/>).</param>
+/// <param name="ReadBack">
+/// For a code, and for a two-way request once claimed granted: whether the peer reads this device back
+/// (<see cref="NodeDataSyncReadBack"/>).
+/// </param>
 public sealed record NodeDataSyncPairingOutcome(string Outcome, string RequestId, string PeerNodeId, string PeerName,
     string? ReadBack = null);
 
@@ -286,8 +295,9 @@ internal sealed class StoredPairRequest
     /// <summary>Datasync requests only: <c>"follow"</c> or <c>"twoWay"</c>.</summary>
     public string? Intent { get; set; }
     /// <summary>
-    /// Datasync code redemptions only: what the exchange said about reading the redeemer back
-    /// (<see cref="NodeDataSyncReadBack"/>), so a re-delivered exchange says the same.
+    /// Datasync only: what the exchange said about reading the other device back (<see cref="NodeDataSyncReadBack"/>) —
+    /// for a code when it was redeemed, for a two-way request when it was approved — so a re-delivered exchange and
+    /// the claim say the same.
     /// </summary>
     public string? ReadBack { get; set; }
 }

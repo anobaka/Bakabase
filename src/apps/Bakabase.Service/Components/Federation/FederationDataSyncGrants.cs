@@ -142,7 +142,7 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
             // The device did not answer within the client's own deadline. A request already filed is still claimed.
             throw new DataSyncPeerException(DataSyncPeerErrorCode.Unreachable, "timeout");
         }
-        if (outcome.Outcome == "granted") flow.RaiseOutboundGranted(outcome.PeerNodeId);
+        if (outcome.Outcome == "granted") flow.RaiseOutboundGranted(outcome.PeerNodeId, outcome.ReadBack);
         return new DataSyncAccessRequestOutcome(outcome.Outcome, outcome.RequestId, outcome.PeerNodeId,
             outcome.PeerName, outcome.ReadBack);
     }
@@ -185,7 +185,8 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
         NodeDataSyncApproval approval;
         try
         {
-            approval = await peers.ApproveDataSyncAsync(requestId, ct);
+            // The requester's claim carries whether this device reads it back, so its link can say so (§7.2.4 step 7).
+            approval = await peers.ApproveDataSyncAsync(requestId, readBack, ct);
         }
         catch (FederationAccessException e) when (IsLocalProblem(e))
         {

@@ -50,7 +50,10 @@ public sealed class DataSyncReviewService
 
     /// <summary>
     /// "Fetch again" (§8.3): the only way to replace a staged review. It fetches a fresh snapshot for the review's
-    /// link under the per-peer fetch lock (§7.6), without the gate, and answers the review that fetch staged.
+    /// link under the per-peer fetch lock (§7.6), without the gate, and answers the review that fetch staged, which
+    /// replaced this one. The review is replaced only once the new one is staged: a fetch that fails (the peer offline
+    /// or busy, a reset) answers the problem with this review still staged and shown, so the person keeps what they
+    /// were reading.
     /// </summary>
     public async Task<DataSyncReviewResult> RefetchAsync(string reviewId, CancellationToken ct)
     {
@@ -62,28 +65,26 @@ public sealed class DataSyncReviewService
             return await ToResultAsync(entry, null, new DataSyncProblem(DataSyncProblemCode.NothingToReview, null), ct);
 
         var links = _services.GetRequiredService<DataSyncLinkService>();
-        if (await links.GetAsync(linkId, ct) is null) return Refused(entry, DataSyncProblemCode.LinkNotFound, null);
-        _reviews.Discard(reviewId);
-        var link = await links.MutateAsync(linkId, row =>
-        {
-            if (row.ReviewId != reviewId) return DataSyncLinkWrite.None;
-            row.ReviewId = null;
-            return DataSyncLinkWrite.Bookkeeping;
-        }, ct);
+        var link = await links.GetAsync(linkId, ct);
         if (link is null) return Refused(entry, DataSyncProblemCode.LinkNotFound, null);
 
         var local = await Store.GetLocalStateAsync(ct);
-        await _services.GetRequiredService<DataSyncFetcher>().FetchLinkAsync(link, false, local, ct);
+        await _services.GetRequiredService<DataSyncFetcher>().FetchLinkAsync(link, false, local, ct,
+            replaceReview: true);
 
         var staged = _reviews.GetForLink(linkId);
-        if (staged is not null) return await GetAsync(staged.ReviewId, ct);
+        if (staged is not null && staged.ReviewId != reviewId) return await GetAsync(staged.ReviewId, ct);
         var after = await links.GetAsync(linkId, ct);
         var problem = after?.LastErrorCode is { } code
             ? new DataSyncProblem(Enum.TryParse<DataSyncPeerErrorCode>(code, out var peerCode)
                 ? DataSyncLinkService.ProblemOf(peerCode)
                 : DataSyncProblemCode.PeerUnreachable, code)
             : new DataSyncProblem(DataSyncProblemCode.NothingToReview, null);
-        return Refused(entry, problem.Code, problem.Detail);
+
+        // Nothing replaced it: the review the person had open stays, with why it was not refreshed.
+        var current = _reviews.Get(reviewId);
+        if (current is null || after is null) return Refused(entry, problem.Code, problem.Detail);
+        return await ToResultAsync(current, DataSyncPlanView.Truncate(await PlanAsync(current, ct)), problem, ct);
     }
 
     /// <summary>One plan item's changes beyond the inline cap (v3.1 §9.3); never gated.</summary>

@@ -72,6 +72,7 @@ internal sealed class DataSyncApiHarness : IAsyncDisposable
     {
         Notifications = new FakeNotificationService(Clock);
         Store.Now = () => Clock.UtcNow;
+        Grants.Now = () => Clock.UtcNow;
     }
 
     public static async Task<DataSyncApiHarness> CreateAsync(Action<IServiceCollection>? configure = null,

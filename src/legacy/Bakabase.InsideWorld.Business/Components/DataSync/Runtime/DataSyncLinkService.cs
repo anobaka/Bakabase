@@ -462,7 +462,7 @@ public sealed class DataSyncLinkService
         var outcome = sent.Outcome!;
         if (outcome.Outcome == "granted")
         {
-            await OnOutboundGrantedAsync(link.PeerNodeId, ct);
+            await OnOutboundGrantedAsync(link.PeerNodeId, outcome.ReadBack, ct);
             return new DataSyncLinkChange(await GetAsync(linkId, ct), null, null);
         }
 
@@ -480,7 +480,11 @@ public sealed class DataSyncLinkService
     /// <summary>
     /// "[Ask {name} to keep in step]" (§7.2.3): the peer granted this two-way link's access but declined to read this
     /// device back (<c>ReadBackDeclined</c>), so this sends an ordinary two-way request with a reciprocal offer
-    /// (§7.2.4). A peer that reads this device by now needs nothing: the note is cleared instead.
+    /// (§7.2.4). A peer that reads this device by now needs nothing: the note is cleared instead. Otherwise the note
+    /// stays until the peer does read this device — its grant for this device (<see cref="OnInboundGrantedAsync"/>),
+    /// or the request granted with the read-back started
+    /// (<see cref="OnOutboundGrantedAsync(string, string?, CancellationToken)"/>) — so a request that
+    /// is rejected, expires or is approved without the read-back leaves it where it was.
     /// </summary>
     private async Task<DataSyncLinkChange> AskToKeepInStepAsync(DataSyncLinkDbModel link, bool callerMayCreateAccess,
         CancellationToken ct, DataSyncGateHold? gate)
@@ -510,11 +514,109 @@ public sealed class DataSyncLinkService
         var requestId = outcome.Outcome == "awaitingApproval" ? outcome.RequestId : null;
         var updated = await MutateAsync(link.Id, row =>
         {
-            row.ReadBackDeclined = outcome.ReadBack == "declined";
+            NoteReadBack(row, outcome.ReadBack);
             row.NextAttemptAtUtc = _clock.UtcNow;
             return DataSyncLinkWrite.Transition;
         }, ct);
         return new DataSyncLinkChange(updated, requestId, null);
+    }
+
+    /// <summary>
+    /// "Ask {name} for access again" on a link whose peer refused this device's credentials (AccessRevoked; the same
+    /// state shows AccessMissing): the peer revoked this reader, removed the device or replaced its grant, so what this
+    /// device holds for it is dead. It is forgotten first, so only credentials that arrive afterwards — the answer to
+    /// this request — can read as access, never the ones the peer revoked; then a new request goes out, two-way when
+    /// the link is and the peer does not read this device. The link waits for access with its bases, pending records
+    /// and items (the peer's epoch has not changed), and goes back to where it was once granted; a request that ends
+    /// without access stops it like any other (§8.1), and turning it on again asks again.
+    /// </summary>
+    private async Task<DataSyncLinkChange> AskAccessAfterRevokedAsync(DataSyncLinkDbModel link,
+        bool callerMayCreateAccess, CancellationToken ct, DataSyncGateHold? gate)
+    {
+        await using var scope = _scopes.CreateAsyncScope();
+        var grants = Grants(scope);
+        var twoWay = link.Mode == DataSyncLinkMode.TwoWay && !await PeerMayReadUsAsync(grants, link.PeerNodeId, ct);
+        if (twoWay && await RefuseTwoWayAsync(grants, ct) is { } problem)
+            return DataSyncLinkChange.Refused(problem, null, link);
+        if (!callerMayCreateAccess)
+            return DataSyncLinkChange.Refused(DataSyncProblemCode.NotAllowedOnThisDevice, null, link);
+
+        if (await ForgetDeadCredentialsAsync(grants, link.PeerNodeId, ct) is { } forgetting)
+            return new DataSyncLinkChange(link, null, forgetting);
+        var intent = twoWay ? DataSyncRequestIntent.TwoWay : DataSyncRequestIntent.Follow;
+        var sent = await gate.OutsideGateAsync(() => SendRequestAsync(grants,
+            new DataSyncAccessRequestInput(link.PeerNodeId, link.PeerAddress, null, intent), ct), ct);
+        if (sent.Problem is not null) return new DataSyncLinkChange(link, null, sent.Problem);
+        var outcome = sent.Outcome!;
+        if (outcome.Outcome == "granted")
+        {
+            // Fresh credentials: the link's next head reads with them and brings it out of AccessRevoked.
+            await OnOutboundGrantedAsync(link.PeerNodeId, outcome.ReadBack, ct);
+            return new DataSyncLinkChange(await GetAsync(link.Id, ct), null, null);
+        }
+
+        var requestId = outcome.RequestId;
+        var now = _clock.UtcNow;
+        var asked = await MutateAsync(link.Id, row =>
+        {
+            // Answered again, stopped or paused while the request was out: the row is no longer the one asked for.
+            if (row.State != DataSyncLinkState.AccessRevoked) return DataSyncLinkWrite.None;
+            row.State = DataSyncLinkState.AwaitingAccess;
+            row.PendingRequestId = requestId;
+            if (outcome.PeerName is { Length: > 0 } name) row.PeerName = name;
+            ClearError(row);
+            row.NextAttemptAtUtc = now;
+            return DataSyncLinkWrite.Transition;
+        }, ct);
+        return asked is null
+            ? DataSyncLinkChange.Refused(DataSyncProblemCode.LinkNotFound)
+            : new DataSyncLinkChange(asked, requestId, null);
+    }
+
+    /// <summary>
+    /// Drops the datasync credentials this device holds for a peer that no longer honours them (a reset, a revoked
+    /// grant), before it asks the peer for new ones: only credentials the answer brings can then read as access.
+    /// Nothing is dropped when there are none, so a request of this device's that is already out stays.
+    /// </summary>
+    private static async Task<DataSyncProblem?> ForgetDeadCredentialsAsync(IDataSyncGrantService grants,
+        string peerNodeId, CancellationToken ct)
+    {
+        if (!await grants.HasOutboundGrantAsync(peerNodeId, ct)) return null;
+        try
+        {
+            await grants.ForgetOutboundAsync(peerNodeId, ct);
+            return null;
+        }
+        catch (DataSyncProblemException e)
+        {
+            return e.Problem;
+        }
+    }
+
+    /// <summary>
+    /// What a peer said about reading this device back when it answered a two-way request or code (§7.2.3, §7.2.4
+    /// step 7): <c>declined</c> puts the note "{name} does not read this device" on a two-way link, <c>started</c>
+    /// clears it; nothing said (a Follow request, an older peer) leaves it as it is.
+    /// </summary>
+    /// <returns>Whether the row changed.</returns>
+    private static bool NoteReadBack(DataSyncLinkDbModel row, string? readBack)
+    {
+        bool declined;
+        switch (readBack)
+        {
+            case "declined" when row.Mode == DataSyncLinkMode.TwoWay:
+                declined = true;
+                break;
+            case "started":
+                declined = false;
+                break;
+            default:
+                return false;
+        }
+
+        if (row.ReadBackDeclined == declined) return false;
+        row.ReadBackDeclined = declined;
+        return true;
     }
 
     // ---- pause and resume --------------------------------------------------------------------------------------
@@ -556,8 +658,9 @@ public sealed class DataSyncLinkService
     /// <summary>
     /// The resume actions of §8.7. Resume re-evaluates from the cursor (a restored peer: from 0); ApplyAsUsual and
     /// ReviewDeletions set a once flag for the next apply; AskAccessAgain asks a reset peer for access again and runs a
-    /// new first contact against its new epoch, and is also "Try again" for a link waiting for access (§7.2.4, N14)
-    /// and "[Ask {name} to keep in step]" for a two-way link the peer does not read back (§7.2.3); ThisDeviceWins and
+    /// new first contact against its new epoch, and is also "Try again" for a link waiting for access (§7.2.4, N14),
+    /// "Ask {name} for access again" for a link whose peer revoked its access (AccessRevoked, §8.1), and "[Ask {name}
+    /// to keep in step]" for a two-way link the peer does not read back (§7.2.3); ThisDeviceWins and
     /// TakeTheirs enqueue the restore choice (§9.5); StartAnyway starts an approver that has waited
     /// <see cref="DataSyncSchedule.StartAnywayAfter"/> for its peer's review (§8.3). An action that does not apply to
     /// the link's state is refused with <see cref="DataSyncProblemCode.DecisionsInvalid"/> and changes nothing.
@@ -606,6 +709,8 @@ public sealed class DataSyncLinkService
                     return await RequestAccessAgainAsync(linkId, callerMayCreateAccess, ct, gate);
                 if (reason == DataSyncPauseReason.PeerReset && !restored)
                     return await AskAccessAgainAsync(link, callerMayCreateAccess, ct, gate);
+                if (link.State == DataSyncLinkState.AccessRevoked)
+                    return await AskAccessAfterRevokedAsync(link, callerMayCreateAccess, ct, gate);
                 if (link is { ReadBackDeclined: true, Mode: DataSyncLinkMode.TwoWay } &&
                     link.State is not (DataSyncLinkState.Paused or DataSyncLinkState.Stopped))
                 {
@@ -691,11 +796,14 @@ public sealed class DataSyncLinkService
     /// B1's "Ask X for access again" (§8.7): the reset revoked every grant, so this sends a new request with the
     /// link's mode and sets <c>Initiator = ThisDevice</c>. The link waits for access with its bases, pending records
     /// and items as they are, and with its pause reason kept as the mark that a reset is due
-    /// (<see cref="WaitsForResetGrant"/>): only <b>once it is granted</b> is it reset (<see cref="OnOutboundGrantedAsync"/>:
+    /// (<see cref="WaitsForResetGrant"/>): only <b>once it is granted</b> is it reset
+    /// (<see cref="OnOutboundGrantedAsync(string, string?, CancellationToken)"/>:
     /// bases deleted, the link's items closed <c>LinkRemoved</c>, a new row with the same peer, mode and kinds), and a
     /// new first contact runs against the new epoch (§8.3, N11). A request that ends without access takes it back to
     /// <c>Paused(PeerReset)</c>, still with everything it had. The known epoch stays until the reset, so a link that
     /// loses the mark on the way (a person's pause, a stop) trips B1 again instead of merging against the new epoch.
+    /// The credentials the reset revoked are forgotten before the request goes out, so that nothing but the answer to
+    /// it — never those — can read as the grant that resets the link.
     /// </summary>
     private async Task<DataSyncLinkChange> AskAccessAgainAsync(DataSyncLinkDbModel link, bool callerMayCreateAccess,
         CancellationToken ct, DataSyncGateHold? gate)
@@ -709,6 +817,8 @@ public sealed class DataSyncLinkService
         if (!callerMayCreateAccess)
             return DataSyncLinkChange.Refused(DataSyncProblemCode.NotAllowedOnThisDevice, null, link);
 
+        if (await ForgetDeadCredentialsAsync(grants, link.PeerNodeId, ct) is { } forgetting)
+            return new DataSyncLinkChange(link, null, forgetting);
         var sent = await gate.OutsideGateAsync(() => SendRequestAsync(grants,
             new DataSyncAccessRequestInput(link.PeerNodeId, link.PeerAddress, null, intent), ct), ct);
         if (sent.Problem is not null) return new DataSyncLinkChange(link, null, sent.Problem);
@@ -738,7 +848,7 @@ public sealed class DataSyncLinkService
         if (asked is null) return DataSyncLinkChange.Refused(DataSyncProblemCode.LinkNotFound);
         if (!granted || !WaitsForResetGrant(asked)) return new DataSyncLinkChange(asked, requestId, null);
 
-        await OnOutboundGrantedAsync(link.PeerNodeId, ct);
+        await OnOutboundGrantedAsync(link.PeerNodeId, outcome.ReadBack, ct);
         return new DataSyncLinkChange(await GetByPeerAsync(link.PeerNodeId, ct), null, null);
     }
 
@@ -755,7 +865,7 @@ public sealed class DataSyncLinkService
     /// new first contact against the new epoch as this device's link.
     /// </summary>
     private static async Task<DataSyncLinkDbModel> ResetForNewEpochAsync(IDataSyncStore store,
-        DataSyncLinkDbModel row, DateTime nowUtc, CancellationToken ct)
+        DataSyncLinkDbModel row, string? readBack, DateTime nowUtc, CancellationToken ct)
     {
         await store.DeleteLinkAsync(row.Id, ct);
         var fresh = new DataSyncLinkDbModel
@@ -773,6 +883,7 @@ public sealed class DataSyncLinkService
             UpdatedAtUtc = nowUtc,
         };
         fresh.State = fresh.GetResumeState();
+        NoteReadBack(fresh, readBack);
         return await store.AddLinkAsync(fresh, ct);
     }
 
@@ -921,12 +1032,24 @@ public sealed class DataSyncLinkService
     // ---- grant events ------------------------------------------------------------------------------------------
 
     /// <summary>
+    /// <see cref="OnOutboundGrantedAsync(string, string?, CancellationToken)"/>, nothing said about reading back.
+    /// </summary>
+    public Task OnOutboundGrantedAsync(string peerNodeId, CancellationToken ct) =>
+        OnOutboundGrantedAsync(peerNodeId, null, ct);
+
+    /// <summary>
     /// Our request or code was granted (§8.2: raised within 5 s by the claim loop). A link waiting for access goes on
     /// to its first contact: AwaitingReview when this device started it, WaitingForPeerReview when the peer did
     /// (§8.1); one that asked a reset peer again is reset now (<see cref="WaitsForResetGrant"/>, §8.7 B1). Any other
     /// link is due now, which also brings a link out of AccessRevoked at its next head.
     /// </summary>
-    public async Task OnOutboundGrantedAsync(string peerNodeId, CancellationToken ct)
+    /// <param name="readBack">
+    /// What the peer said about reading this device back when it granted a two-way request (the exchange's
+    /// <c>readBack</c>, as <see cref="DataSyncAccessRequestOutcome.ReadBack"/>): approved without it
+    /// (<c>declined</c>), a two-way link says "{name} does not read this device" (§7.2.4 step 7); <c>started</c> clears
+    /// that; null says nothing.
+    /// </param>
+    public async Task OnOutboundGrantedAsync(string peerNodeId, string? readBack, CancellationToken ct)
     {
         var link = await GetByPeerAsync(peerNodeId, ct);
         if (link is null) return;
@@ -939,11 +1062,11 @@ public sealed class DataSyncLinkService
             if (WaitsForResetGrant(current))
             {
                 removed = current;
-                return (await ResetForNewEpochAsync(store, current, now, ct), DataSyncLinkWrite.Transition);
+                return (await ResetForNewEpochAsync(store, current, readBack, now, ct), DataSyncLinkWrite.Transition);
             }
 
             current.NextAttemptAtUtc = now;
-            var write = DataSyncLinkWrite.Bookkeeping;
+            var write = NoteReadBack(current, readBack) ? DataSyncLinkWrite.Transition : DataSyncLinkWrite.Bookkeeping;
             if (current.State == DataSyncLinkState.AwaitingAccess)
             {
                 current.State = current.GetResumeState();
@@ -982,10 +1105,14 @@ public sealed class DataSyncLinkService
         DataSyncLinkWrite UpdateExisting(DataSyncLinkDbModel row)
         {
             row.NextAttemptAtUtc = now;
-            if (!twoWay) return DataSyncLinkWrite.Bookkeeping;
+            // Any grant this device issues the peer lets it read this device, whatever it asked for (a Follow grant is
+            // how a peer's read-back redeems this device's reciprocal code): "{name} does not read this device" no
+            // longer holds (§7.2.3).
+            var noteCleared = row.ReadBackDeclined;
+            row.ReadBackDeclined = false;
+            if (!twoWay) return noteCleared ? DataSyncLinkWrite.Transition : DataSyncLinkWrite.Bookkeeping;
             row.Mode = DataSyncLinkMode.TwoWay;
             row.LastMode = DataSyncLinkMode.TwoWay;
-            row.ReadBackDeclined = false;
             if (row.State == DataSyncLinkState.Stopped)
             {
                 // The peer asked for two-way, so its review comes first unless this link's first contact is done.
@@ -1340,7 +1467,7 @@ public sealed class DataSyncLinkService
     {
         using var scope = _scopes.CreateScope();
         var reviews = scope.ServiceProvider.GetService<IDataSyncReviewStore>();
-        if (reviews?.GetForLink(linkId) is { } review) reviews.Discard(review.ReviewId);
+        if (reviews?.PeekForLink(linkId) is { } review) reviews.Discard(review.ReviewId);
     }
 
     private async Task ObserveAsync(Func<IDataSyncRuntimeObserver, Task> call)

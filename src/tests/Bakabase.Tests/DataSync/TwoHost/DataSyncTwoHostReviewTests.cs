@@ -110,6 +110,63 @@ public class DataSyncTwoHostReviewTests
     }
 
     [TestMethod]
+    public async Task Fetch_again_keeps_the_review_while_the_peer_cannot_be_read_and_replaces_it_once_it_can()
+    {
+        var reviewId = await PairTwoWayAsync();
+
+        // A is offline: the person keeps the review they had open, told why it was not refreshed (§8.3).
+        _b.Client.SetReachable(_a.NodeId, false);
+        var failed = await _b.CallAsync(s => s.RefetchReviewAsync(reviewId, default));
+        Assert.AreEqual(DataSyncProblemCode.PeerUnreachable, failed.Problem?.Code);
+        Assert.AreEqual(reviewId, failed.ReviewId);
+        Assert.IsNotNull(failed.Plan);
+        Assert.IsNull((await _b.CallAsync(s => s.GetReviewAsync(reviewId, default))).Problem, "still staged");
+        Assert.AreEqual(reviewId, (await _b.RequireLinkToAsync(_a)).ReviewId);
+
+        // Back online: the fresh review replaces it.
+        _b.Client.SetReachable(_a.NodeId, true);
+        _clock.Advance(Bakabase.InsideWorld.Business.Components.DataSync.Feed.DataSyncFeedSnapshots.ManifestInterval);
+        var fresh = await _b.CallAsync(s => s.RefetchReviewAsync(reviewId, default));
+        Assert.IsNull(fresh.Problem, fresh.Problem?.Code.ToString());
+        Assert.AreNotEqual(reviewId, fresh.ReviewId);
+        Assert.AreEqual(fresh.ReviewId, (await _b.RequireLinkToAsync(_a)).ReviewId);
+        Assert.AreEqual(DataSyncProblemCode.ReviewExpired,
+            (await _b.CallAsync(s => s.GetReviewAsync(reviewId, default))).Problem?.Code);
+    }
+
+    [TestMethod]
+    public async Task A_two_way_request_approved_without_reading_back_says_so_until_the_approver_reads_back()
+    {
+        var created = await _b.CallAsync(s => s.CreateLinkAsync(
+            new DataSyncLinkCreateInput(_a.NodeId, null, null, DataSyncLinkMode.TwoWay, []), true, default));
+        Assert.IsNull(created.Problem);
+        var request = (await _a.CallAsync(s => s.GetRequestsAsync(default)))
+            .Single(r => r.Direction == DataSyncRequestDirection.Incoming);
+        Assert.IsNull((await _a.CallAsync(s => s.ApproveRequestAsync(request.RequestId,
+            new DataSyncApproveInput(false, null), default))).Problem);
+
+        // B's claim hears that A does not read it back (§7.2.4 step 7): its link says so.
+        _network.Claim(_b.NodeId);
+        await _b.TickAsync();
+        var link = await _b.RequireLinkToAsync(_a);
+        Assert.AreEqual((DataSyncLinkState.AwaitingReview, true), (link.State, link.ReadBackDeclined));
+        Assert.IsNull(await _a.LinkToAsync(_b), "A makes no link of its own without reading B back");
+
+        // [Ask A to keep in step]: the note stays while that request waits, and goes once A reads B back.
+        Assert.IsNull((await _b.CallAsync(s => s.ResumeLinkAsync(link.Id, DataSyncResumeAction.AskAccessAgain,
+            default))).Problem);
+        Assert.IsTrue((await _b.RequireLinkToAsync(_a)).ReadBackDeclined);
+        var again = (await _a.CallAsync(s => s.GetRequestsAsync(default)))
+            .Single(r => r.Direction == DataSyncRequestDirection.Incoming && r.Status == "pending");
+        Assert.AreEqual(DataSyncRequestIntent.TwoWay, again.Intent);
+        Assert.IsNull((await _a.CallAsync(s => s.ApproveRequestAsync(again.RequestId,
+            new DataSyncApproveInput(true, null), default))).Problem);
+        _network.Claim(_b.NodeId);
+        await _b.TickAsync();
+        Assert.IsFalse((await _b.RequireLinkToAsync(_a)).ReadBackDeclined);
+    }
+
+    [TestMethod]
     public async Task A_two_way_approval_whose_read_back_fails_leaves_the_approvers_link_saying_why()
     {
         _network.FailNextReadBack = nameof(DataSyncPeerErrorCode.Unreachable);

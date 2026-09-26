@@ -84,7 +84,8 @@ public sealed class DataSyncNotifier
     private readonly IServiceProvider _root;
     private readonly IDataSyncClock _clock;
     private readonly SemaphoreSlim _lock = new(1, 1);
-    private readonly ConcurrentDictionary<string, byte> _reviewsAnnounced = new(StringComparer.Ordinal);
+    /// <summary>Link → the kinds its announced review is for, while the link still waits for that review.</summary>
+    private readonly ConcurrentDictionary<int, string> _reviewsAnnounced = new();
     private readonly ConcurrentDictionary<string, byte> _approved = new(StringComparer.Ordinal);
     private readonly Dictionary<int, LinkCycle> _cycles = new();
     private DateTime? _restoreAnnounced;
@@ -165,13 +166,32 @@ public sealed class DataSyncNotifier
         MarkNotified(link.Id);
     }, ct);
 
-    /// <summary>A first-link review was staged: once per staged review (§8.3 step 3), routed to the link.</summary>
+    /// <summary>
+    /// A first-link review was staged (§8.3 step 3), routed to the link: once per link and set of kinds under review
+    /// while the link waits for it. A review staged again for the same kinds — the last one idled out, "Fetch again",
+    /// a restart — is the same question and is not announced again; nor while an unread announcement of it is still
+    /// in the notification center, so a restart does not repeat it either. The link's route opens whatever review is
+    /// current.
+    /// </summary>
     public Task ReviewReadyAsync(DataSyncLinkDbModel link, DataSyncReviewEntry review, CancellationToken ct) =>
         RunAsync(async sp =>
         {
-            if (!_reviewsAnnounced.TryAdd(review.ReviewId, 0)) return;
-            await CreateAsync(sp, SourceOf(link.PeerNodeId), ReviewReadyCase, "ReviewReady", [link.PeerName], [],
-                $"/data-sync?link={Id(link.Id)}&review=1", AppNotificationSeverity.Info, ct);
+            var kinds = string.Join(",", review.Pull.Kinds.Select(k => k.Kind).Distinct(StringComparer.Ordinal)
+                .OrderBy(k => k, StringComparer.Ordinal));
+            if (_reviewsAnnounced.TryGetValue(link.Id, out var announced) && announced == kinds) return;
+            _reviewsAnnounced[link.Id] = kinds;
+            var source = SourceOf(link.PeerNodeId);
+            var linkId = Id(link.Id);
+            if ((await SearchAsync(sp, source, true)).Any(n => CaseOf(n) == ReviewReadyCase &&
+                                                              StringOf(PayloadOf(n)?["link"]) == linkId &&
+                                                              StringOf(PayloadOf(n)?["kinds"]) == kinds))
+            {
+                return;
+            }
+
+            await CreateAsync(sp, source, ReviewReadyCase, "ReviewReady", [link.PeerName], [],
+                $"/data-sync?link={linkId}&review=1", AppNotificationSeverity.Info, ct,
+                new Dictionary<string, string> { ["link"] = linkId, ["kinds"] = kinds });
             MarkNotified(link.Id);
         }, ct);
 
@@ -182,6 +202,14 @@ public sealed class DataSyncNotifier
     /// </summary>
     public async Task LinkChangedAsync(DataSyncLinkDbModel link, CancellationToken ct)
     {
+        // A link that no longer waits for a review — its review applied, or the link stopped — may be announced again
+        // when it next needs one.
+        if (link.State == DataSyncLinkState.Stopped ||
+            (link.State != DataSyncLinkState.AwaitingReview && link.GetKindsAwaitingFirstContact().Count == 0))
+        {
+            _reviewsAnnounced.TryRemove(link.Id, out _);
+        }
+
         await RunAsync(async sp =>
         {
             if (link.GetPeerAttention() is not { Headless: true } attention) return;
@@ -215,6 +243,7 @@ public sealed class DataSyncNotifier
     public Task LinkRemovedAsync(int linkId, CancellationToken ct) => RunAsync(_ =>
     {
         _cycles.Remove(linkId);
+        _reviewsAnnounced.TryRemove(linkId, out string? _);
         return Task.CompletedTask;
     }, ct);
 

@@ -549,7 +549,17 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
     }
 
     /// <summary>Issues the requester a <c>datasync.read</c> grant; library access is never created or revoked.</summary>
-    public async Task<NodeDataSyncApproval> ApproveDataSyncAsync(string requestId, CancellationToken ct = default)
+    public Task<NodeDataSyncApproval> ApproveDataSyncAsync(string requestId, CancellationToken ct = default) =>
+        ApproveDataSyncAsync(requestId, null, ct);
+
+    /// <summary>
+    /// <see cref="ApproveDataSyncAsync(string, CancellationToken)"/>, saying in the same write whether this device
+    /// reads a two-way requester back: the claim then carries it to the requester
+    /// (<see cref="NodePairExchange.ReadBack"/>), whose link shows that it is not read back when approved without
+    /// (§7.2.4 step 7). Null says nothing.
+    /// </summary>
+    public async Task<NodeDataSyncApproval> ApproveDataSyncAsync(string requestId, bool? readBack,
+        CancellationToken ct = default)
     {
         var local = await identity.GetAsync(ct);
         var revoked = new List<string>();
@@ -562,6 +572,8 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
             if (request.Status == "rejected") throw RequestNotFound("This request was rejected.");
             if (request.Status == "awaitingApproval") IssueDataSyncGrant(state, request, local, now, revoked);
             var intent = request.Intent ?? NodeDataSyncIntents.Follow;
+            if (intent == NodeDataSyncIntents.TwoWay && readBack is { } receiveBack)
+                request.ReadBack = receiveBack ? NodeDataSyncReadBack.Started : NodeDataSyncReadBack.Declined;
             return new NodeDataSyncApproval(request.NodeId, request.NodeName, intent,
                 intent == NodeDataSyncIntents.TwoWay && request.Reciprocal != null);
         }, ct);

@@ -1,9 +1,11 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Wire;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Tests.DataSync.Runtime;
 
@@ -62,6 +64,42 @@ public class DataSyncFirstContactTests
         await h.FetchOnceAsync();
         Assert.AreEqual(2, h.Reviews.Staged.Count);
         Assert.AreEqual(2, h.Observer.Count("review:"));
+    }
+
+    [TestMethod]
+    public async Task Links_awaiting_their_review_each_fetch_it_once_however_many_there_are()
+    {
+        // The real store: with more links awaiting a review than it kept before, the reviews evicted each other, and
+        // every cycle fetched a full snapshot and announced it again for each link (§8.3, §9.4).
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false,
+            configure: s => s.AddSingleton<IDataSyncReviewStore>(sp =>
+                new DataSyncReviewStore(new ClockTime(sp.GetRequiredService<IDataSyncClock>()))));
+        var peers = new[] {"a", "b", "c", "d"};
+        foreach (var peer in peers)
+            h.AddLink(peer, BeforeFirstContact(DataSyncLinkState.AwaitingReview, DataSyncLinkInitiator.ThisDevice));
+
+        for (var cycle = 0; cycle < 3; cycle++)
+        {
+            await h.FetchOnceAsync();
+            h.Clock.Advance(DataSyncSchedule.PollInterval);
+        }
+
+        foreach (var peer in peers) Assert.AreEqual(1, h.Peers.Peers[peer].Manifests, $"{peer}: one full snapshot");
+        Assert.AreEqual(peers.Length, h.Observer.Count("review:"));
+        var reviews = h.Provider.GetRequiredService<IDataSyncReviewStore>();
+        foreach (var link in h.Store.All())
+            Assert.AreEqual(link.ReviewId, reviews.PeekForLink(link.Id)?.ReviewId, "each link keeps its own review");
+
+        // The cycle's polling does not keep a review nobody reads: after an idle hour each is fetched once more.
+        h.Clock.Advance(DataSyncReviewStore.IdleTimeout);
+        await h.FetchOnceAsync();
+        foreach (var peer in peers) Assert.AreEqual(2, h.Peers.Peers[peer].Manifests, peer);
+    }
+
+    /// <summary>The runtime's clock as the review store reads time.</summary>
+    private sealed class ClockTime(IDataSyncClock clock) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(DateTime.SpecifyKind(clock.UtcNow, DateTimeKind.Utc));
     }
 
     [TestMethod]

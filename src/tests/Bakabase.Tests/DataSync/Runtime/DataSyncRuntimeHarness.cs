@@ -51,6 +51,7 @@ internal sealed class DataSyncRuntimeHarness : IAsyncDisposable
         Action<IServiceCollection>? configure = null)
     {
         var harness = new DataSyncRuntimeHarness();
+        harness.Grants.Now = () => harness.Clock.UtcNow;
         var services = new ServiceCollection();
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
         services.AddSingleton<IBakabaseLocalizer, TestBakabaseLocalizer>();

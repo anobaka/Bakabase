@@ -27,6 +27,7 @@ public static class FederationCli
           approve <requestId> Approve a pending request (lets that device read this library)
           reject <requestId>  Reject a pending request
           revoke <grantId>    Stop a device from reading this library
+          datasync <command>  Definitions sharing (run 'federation datasync' for its commands)
         The port defaults to API_LISTENING_PORTS, ASPNETCORE_HTTP_PORTS, then 8080.
         """;
 

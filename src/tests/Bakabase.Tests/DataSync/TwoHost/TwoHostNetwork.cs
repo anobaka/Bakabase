@@ -56,6 +56,9 @@ internal sealed class TwoHostNetwork
         public required DateTime ExpiresAt { get; init; }
         public string Status { get; set; } = "pending";
         public bool Claimed { get; set; }
+
+        /// <summary>A two-way request once approved: whether the approver reads the requester back (§7.2.4).</summary>
+        public string? ReadBack { get; set; }
     }
 
     /// <summary>Adds a host, or puts a restarted one in the place of its earlier process, and connects its grants.</summary>
@@ -86,15 +89,15 @@ internal sealed class TwoHostNetwork
     /// </summary>
     public void Claim(string nodeId)
     {
-        List<string> granted;
+        List<(string Peer, string? ReadBack)> granted;
         lock (_lock)
         {
             var approved = _requests.Where(r => r.From == nodeId && r.Status == "approved" && !r.Claimed).ToList();
             foreach (var request in approved) request.Claimed = true;
-            granted = approved.Select(r => r.To).ToList();
+            granted = approved.Select(r => (r.To, r.ReadBack)).ToList();
         }
 
-        foreach (var peer in granted) Events(nodeId).OutboundGranted(peer);
+        foreach (var (peer, readBack) in granted) Events(nodeId).OutboundGranted(peer, readBack);
     }
 
     private TwoHostNode Host(string nodeId)
@@ -209,6 +212,7 @@ internal sealed class TwoHostNetwork
 
             network.Grant(request.From, self);
             var receiveBack = request.Intent == DataSyncRequestIntent.TwoWay && readBack;
+            if (request.Intent == DataSyncRequestIntent.TwoWay) request.ReadBack = receiveBack ? "started" : "declined";
             var events = network.Events(self);
             events.InboundGranted(request.From, request.Intent, receiveBack);
             var granted = false;

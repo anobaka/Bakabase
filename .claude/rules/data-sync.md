@@ -183,6 +183,13 @@ scopes").
   in the method that makes the head, manifest and page calls (a hold returned out of an async
   helper is not seen by its caller's calls), so no fetch discards at the source the snapshot
   another is reading (one snapshot per grant).
+- **A staged review waits for its person** (§8.3). One per link awaiting a review, in memory,
+  never evicted to make room for another — only applied ones, kept for their result screen,
+  are — so links awaiting reviews never make each other fetch full snapshots every minute. The
+  fetch cycle and the status views only peek (`PeekForLink`), so a review nobody reads idles out
+  after an hour and the next cycle fetches it again. "Ready to review" is announced once per link
+  and set of kinds while the link waits, not per staged review. "Fetch again" replaces a review
+  only once the new one is staged; a failed fetch leaves it where it was.
 - **Wire pages are raw canonical bytes**, written and parsed with data sync's own options —
   never `FederationJson`, whose depth limit rejects a deep multilevel property.
 - **A pull is budgeted in count and time, not only bytes.** The `DataSync` task fetches its due
@@ -210,22 +217,40 @@ scopes").
 
 ## Links, requests and access
 
-- **`AskAccessAgain` is three actions, by the link's state**, and always counts as creating
+- **`AskAccessAgain` is four actions, by the link's state**, and always counts as creating
   access (§7.1.5):
   - on `Paused(PeerReset)` (not a restore): B1's "Ask X for access again" — a new request with
     the link's mode, `Initiator = ThisDevice`. The link waits in `AwaitingAccess` with its
     bases, pending records and items, keeping `PeerReset` as the mark that a reset is due;
     only **once it is granted** is it reset (the row is deleted and a new one made for the same
     peer, mode and kinds — the link id changes — its items close `LinkRemoved`, and a new first
-    contact runs against the new epoch). A request that ends without access takes it back to
-    `Paused(PeerReset)` with `LastErrorCode` saying why;
+    contact runs against the new epoch). A request that ends without access — rejected,
+    withdrawn, expired or no longer listed — takes it back to `Paused(PeerReset)` with
+    `LastErrorCode` saying why;
+  - on `AccessRevoked` (the peer revoked this reader, removed the device or replaced its grant;
+    also `AccessMissing`): "Ask X for access again" — a new request (two-way when the link is and
+    the peer does not read this device), the link waiting in `AwaitingAccess` with everything it
+    had, back to where it was once granted. Never offered for `PeerSharingOff`;
   - on `AwaitingAccess`: "Try again" — a fresh request (a Follow request for an approver whose
     read-back failed, which the peer approves; the link's mode otherwise);
   - on a working two-way link with `ReadBackDeclined`: "Ask X to keep in step" — an ordinary
     two-way request with a reciprocal offer; bases and items stay. When the peer already reads
     this device, it only clears the note.
+- **Dead credentials are never access.** The two "Ask X for access again" actions forget the
+  datasync credentials this device holds for the peer (`ForgetOutboundAsync`) before the request
+  goes out, so that only the answer can read as access. A link waiting for a reset grant goes by
+  its own request alone (`granted`, or the claim loop's event), never by `HasOutboundGrantAsync`.
+- **`ReadBackDeclined`** ("X does not read this device") is set when the peer answers a two-way
+  request or code without reading back: a code made without two-way consent, or a two-way
+  request approved without read-back — the approval stores `readBack = declined` on the
+  exchange and the claim carries it to the requester's `OutboundGranted`. It is cleared only
+  once the peer does read this device (any grant this device issues it, or a claim that says
+  `started`), never when a request is merely filed.
 - **A request that ends.** Rejected or expired, the link stops (`Mode` Off, its last mode,
-  bases and pending records kept) and stays on the map with Dismiss. Withdrawn
+  bases and pending records kept) and stays on the map with Dismiss. The listing never shows an
+  expired request — it is simply gone, as is one deleted with the peer's datasync state — so a
+  request the link waits for that is no longer listed has ended as expired, once no grant has
+  arrived. Withdrawn
   (`DELETE /data-sync/requests/{id}`), the `AwaitingAccess` link made for it goes with it when
   it has nothing yet (no first contact, cursor or base); one with sync state stops as above
   (`AccessCancelled`). A link that asked a reset peer again goes back to `Paused(PeerReset)`

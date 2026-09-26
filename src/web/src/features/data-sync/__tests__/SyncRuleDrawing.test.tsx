@@ -564,6 +564,22 @@ describe("the status line", () => {
     expect(screen.getByText("dataSync.pause.reviewDeletions")).toBeInTheDocument();
   });
 
+  it("asks for access again when the other device revoked it, not when it turned sharing off", async () => {
+    draw(nas({ state: DataSyncLinkState.AccessRevoked, lastErrorCode: "AccessRevoked" }));
+
+    expect(screen.getByText("dataSync.status.AccessRevoked NAS")).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByText("dataSync.pause.askAgain NAS"));
+    });
+    expect(dataSyncApi.resumeLink).toHaveBeenCalledWith(1, DataSyncResumeAction.AskAccessAgain);
+    cleanup();
+
+    // The same line for sharing turned off there: asking cannot help, so it is not offered.
+    draw(nas({ state: DataSyncLinkState.PeerSharingOff, lastErrorCode: "PeerSharingOff" }));
+    expect(screen.getByText("dataSync.status.AccessRevoked NAS")).toBeInTheDocument();
+    expect(screen.queryByText("dataSync.pause.askAgain NAS")).toBeNull();
+  });
+
   it("asks the other device to keep in step when it declined to read back", async () => {
     draw(nas({ readBackDeclined: true, peerMayReadUs: false, peerModeTowardsUs: undefined }));
 

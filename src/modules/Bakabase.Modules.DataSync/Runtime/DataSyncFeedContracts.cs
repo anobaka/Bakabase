@@ -147,6 +147,15 @@ public interface IDataSyncGrantEvents
     /// <summary>Our request or code was granted.</summary>
     void OutboundGranted(string peerNodeId);
 
+    /// <summary>
+    /// Our request or code was granted, and the exchange said whether the peer reads this device back:
+    /// <paramref name="readBack"/> is <c>"started"</c>, <c>"declined"</c> (a two-way request approved without reading
+    /// back, or a two-way redemption of a code made without two-way consent, §7.2.3, §7.2.4 step 7) or null, as
+    /// <see cref="DataSyncAccessRequestOutcome.ReadBack"/>. The default drops what was said, so a handler that predates
+    /// it still compiles.
+    /// </summary>
+    void OutboundGranted(string peerNodeId, string? readBack) => OutboundGranted(peerNodeId);
+
     /// <summary>We granted a peer.</summary>
     /// <param name="readBackStarted">
     /// The grant is two-way and this device sets out to read the peer back (an approval with ReceiveBack, or a code

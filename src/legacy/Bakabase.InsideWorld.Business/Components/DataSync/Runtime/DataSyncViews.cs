@@ -111,7 +111,7 @@ public sealed class DataSyncViews
         counts.GetValueOrDefault(linkId) ?? DataSyncBaseCounts.None;
 
     /// <summary>The review a person can open for this link now: the staged one, unless it expired (§8.3).</summary>
-    public string? CurrentReviewId(DataSyncLinkDbModel link) => Reviews?.GetForLink(link.Id)?.ReviewId;
+    public string? CurrentReviewId(DataSyncLinkDbModel link) => Reviews?.PeekForLink(link.Id)?.ReviewId;
 
     /// <summary>
     /// "Comparing everything with {{name}}…" (§11.6): a pull of the link with a kind from 0 (§8.8) is being fetched,

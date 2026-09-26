@@ -9,13 +9,24 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 
 /// <summary>
 /// Staged first-link reviews and copy-once pulls (§4.7, §8.3), in memory: a review survives a page reload, not a
-/// restart. At most <see cref="MaxStaged"/> are kept; each expires after <see cref="IdleTimeout"/> without access
-/// (sliding), except one that is applying. Expired entries are swept on every access. Staging beyond the limit
-/// evicts the entry accessed longest ago that is not applying.
+/// restart. Each expires after <see cref="IdleTimeout"/> without access (sliding: a person reading it — the fetch
+/// cycle and the status views only peek), except one that is applying. Expired entries are swept on every access.
 /// </summary>
+/// <remarks>
+/// A review that waits for its person is never evicted to make room for another: the fetch cycle stages one only for a
+/// link that has none, so evicting one sends its link back to fetching a full snapshot and announcing it again on the
+/// next cycle, and with more links awaiting a review than the store kept they would evict each other every minute
+/// (§8.3: "a review the person is reading is never replaced by a cycle", §9.4). What bounds them is the links: one
+/// review per link, and the store forgets it when the link stops or is reset. Only applied reviews, kept for their
+/// result screen, make room: beyond <see cref="MaxStaged"/> entries the one accessed longest ago goes.
+/// </remarks>
 public sealed class DataSyncReviewStore(TimeProvider time) : IDataSyncReviewStore
 {
+    /// <summary>
+    /// Beyond this many entries, applied reviews (their result screens) are evicted, least recently read first.
+    /// </summary>
     public const int MaxStaged = 3;
+
     public static readonly TimeSpan IdleTimeout = TimeSpan.FromMinutes(60);
 
     private readonly object _lock = new();
@@ -25,16 +36,20 @@ public sealed class DataSyncReviewStore(TimeProvider time) : IDataSyncReviewStor
     {
         lock (_lock)
         {
-            Sweep();
-            var entry = _entries.Values.Where(e => e.LinkId == linkId).OrderByDescending(e => e.LastAccessUtc)
-                .FirstOrDefault();
+            var entry = CurrentFor(linkId);
             return entry is null ? null : Touch(entry);
         }
     }
 
+    public DataSyncReviewEntry? PeekForLink(int linkId)
+    {
+        lock (_lock) return CurrentFor(linkId);
+    }
+
     /// <summary>
-    /// A new review with a new id. It replaces the link's earlier review (a cycle stages only when
-    /// <see cref="GetForLink"/> returned null, so that one had expired or was applied).
+    /// A new review with a new id. It replaces the link's earlier review unless that one is applying: a cycle stages
+    /// only when <see cref="PeekForLink"/> returned null (it had expired or was applied), and "Fetch again" replaces
+    /// the review the person asked to refresh, once the new one has been fetched.
     /// </summary>
     public DataSyncReviewEntry Stage(int? linkId, bool copyOnce, DataSyncStagedPull pull)
     {
@@ -50,7 +65,7 @@ public sealed class DataSyncReviewStore(TimeProvider time) : IDataSyncReviewStor
 
             while (_entries.Count >= MaxStaged)
             {
-                var evict = _entries.Values.Where(e => !IsApplying(e)).OrderBy(e => e.LastAccessUtc).FirstOrDefault();
+                var evict = _entries.Values.Where(IsApplied).OrderBy(e => e.LastAccessUtc).FirstOrDefault();
                 if (evict is null) break;
                 _entries.Remove(evict.ReviewId);
             }
@@ -105,6 +120,15 @@ public sealed class DataSyncReviewStore(TimeProvider time) : IDataSyncReviewStor
 
     /// <summary>Applying: a task was started and has not recorded its result yet. It never expires.</summary>
     private static bool IsApplying(DataSyncReviewEntry entry) => entry.TaskId is not null && entry.ApplyLogId is null;
+
+    /// <summary>Applied: kept only for its result screen, so it may make room for a review waiting for a person.</summary>
+    private static bool IsApplied(DataSyncReviewEntry entry) => entry.ApplyLogId is not null;
+
+    private DataSyncReviewEntry? CurrentFor(int linkId)
+    {
+        Sweep();
+        return _entries.Values.Where(e => e.LinkId == linkId).OrderByDescending(e => e.LastAccessUtc).FirstOrDefault();
+    }
 
     private DataSyncReviewEntry Touch(DataSyncReviewEntry entry) =>
         _entries[entry.ReviewId] = entry with {LastAccessUtc = Now};

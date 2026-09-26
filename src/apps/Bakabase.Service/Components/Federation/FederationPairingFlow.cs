@@ -190,7 +190,12 @@ public sealed class FederationPairingFlow(NodePairingClient pairing, FederationP
     }
 
     /// <summary>This device's request or code for a device's definitions was granted.</summary>
-    public void RaiseOutboundGranted(string peerNodeId) => Raise(events => events.OutboundGranted(peerNodeId));
+    /// <param name="readBack">
+    /// What the exchange said about the device reading this one back (<see cref="NodeDataSyncReadBack"/>), when it
+    /// said anything: a two-way request approved without it leaves this device's link saying it is not read back.
+    /// </param>
+    public void RaiseOutboundGranted(string peerNodeId, string? readBack = null) =>
+        Raise(events => events.OutboundGranted(peerNodeId, readBack));
 
     /// <summary>This device granted a device <c>datasync.read</c>.</summary>
     /// <param name="readBackStarted">
@@ -234,7 +239,8 @@ public sealed class FederationPairingFlow(NodePairingClient pairing, FederationP
         }
         try
         {
-            foreach (var nodeId in await pairing.ClaimPendingDataSyncAsync(ct)) RaiseOutboundGranted(nodeId);
+            foreach (var outcome in await pairing.ClaimPendingDataSyncOutcomesAsync(ct))
+                RaiseOutboundGranted(outcome.PeerNodeId, outcome.ReadBack);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception e)

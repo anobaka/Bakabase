@@ -433,7 +433,7 @@ public class DataSyncControllerTests
         Assert.AreEqual("node-declined", sent.PeerNodeId);
         Assert.AreEqual(DataSyncRequestIntent.TwoWay, sent.Intent);
         Assert.AreEqual("req-node-declined", asked.RequestId);
-        Assert.IsFalse(asked.Link!.ReadBackDeclined);
+        Assert.IsTrue(asked.Link!.ReadBackDeclined, "asked, not answered: the note stays until the peer reads back");
     }
 
     [TestMethod]

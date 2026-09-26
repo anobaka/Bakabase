@@ -18,7 +18,7 @@ public sealed class DataSyncGrantEventsHandler : IDataSyncGrantEvents
 {
     private abstract record GrantEvent(string PeerNodeId);
 
-    private sealed record Outbound(string PeerNodeId) : GrantEvent(PeerNodeId);
+    private sealed record Outbound(string PeerNodeId, string? ReadBack) : GrantEvent(PeerNodeId);
 
     private sealed record Inbound(string PeerNodeId, DataSyncRequestIntent Intent, bool ReadBackStarted)
         : GrantEvent(PeerNodeId);
@@ -38,7 +38,14 @@ public sealed class DataSyncGrantEventsHandler : IDataSyncGrantEvents
         _logger = logger;
     }
 
-    public void OutboundGranted(string peerNodeId) => _queue.Enqueue(new Outbound(peerNodeId));
+    public void OutboundGranted(string peerNodeId) => _queue.Enqueue(new Outbound(peerNodeId, null));
+
+    /// <summary>
+    /// Our two-way request was granted, and the peer said whether it reads this device back (§7.2.4 step 7): a link it
+    /// declined to read back shows so, with "[Ask {name} to keep in step]".
+    /// </summary>
+    public void OutboundGranted(string peerNodeId, string? readBack) =>
+        _queue.Enqueue(new Outbound(peerNodeId, readBack));
 
     public void InboundGranted(string peerNodeId, DataSyncRequestIntent intent, bool readBackStarted) =>
         _queue.Enqueue(new Inbound(peerNodeId, intent, readBackStarted));
@@ -63,7 +70,7 @@ public sealed class DataSyncGrantEventsHandler : IDataSyncGrantEvents
                 switch (grantEvent)
                 {
                     case Outbound outbound:
-                        await _links.OnOutboundGrantedAsync(outbound.PeerNodeId, ct);
+                        await _links.OnOutboundGrantedAsync(outbound.PeerNodeId, outbound.ReadBack, ct);
                         break;
                     case Inbound inbound:
                     {

@@ -130,11 +130,20 @@ public interface IDataSyncDataDirectory
     string BackupsPath { get; }
 }
 
-/// <summary>Staged first-link reviews and copy-once pulls [C], in memory: at most 3 staged, 60 min idle TTL, lost on restart.</summary>
+/// <summary>
+/// Staged first-link reviews and copy-once pulls [C], in memory: one per link waiting for its review, never evicted for
+/// another (§8.3: a review the person is reading is never replaced by a cycle); 60 min idle TTL; lost on restart.
+/// </summary>
 public interface IDataSyncReviewStore
 {
-    /// <summary>The link's current review, unless it expired. A cycle stages a new one only when this returns null (§8.3).</summary>
+    /// <summary>The link's current review, unless it expired. Reading it counts as access: its idle time restarts.</summary>
     DataSyncReviewEntry? GetForLink(int linkId);
+
+    /// <summary>
+    /// <see cref="GetForLink"/> without counting as access: what the fetch cycle and the status views look at, so a
+    /// review nobody reads still idles out (§8.3). A cycle stages a new one only when this returns null.
+    /// </summary>
+    DataSyncReviewEntry? PeekForLink(int linkId);
 
     DataSyncReviewEntry Stage(int? linkId, bool copyOnce, DataSyncStagedPull pull);
 

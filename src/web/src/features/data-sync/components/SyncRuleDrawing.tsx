@@ -890,7 +890,10 @@ function StatusBlock({
       statusActions.push(inbox, resume(DataSyncResumeAction.Resume, t("dataSync.pause.resume")));
       break;
     case "AccessRevoked":
-      statusActions.push(askAgain(t("dataSync.pause.askAgain", { name })));
+      // The same line says the other device turned sharing off, where asking again cannot help:
+      // it answers the moment sharing is back on.
+      if (peer.state === DataSyncLinkState.AccessRevoked)
+        statusActions.push(askAgain(t("dataSync.pause.askAgain", { name })));
       break;
     case "ReadBackFailed":
       // Asks the other device again, as a request of this device's own (spec §7.2.4).

@@ -132,8 +132,12 @@ public sealed class DataSyncFetcher
     /// </summary>
     /// <param name="args">The <c>DataSync</c> task's arguments, when it runs there: a pause then takes effect between
     /// the pages of a snapshot, not only between links. Null for "Fetch again", which a request runs.</param>
+    /// <param name="replaceReview">
+    /// "Fetch again" (§8.3): a link that needs a review fetches one although it has a current review, which the new
+    /// one replaces once it is staged; a fetch that fails leaves the current review as it was.
+    /// </param>
     public async Task FetchLinkAsync(DataSyncLinkDbModel link, bool fallback, DataSyncLocalStateDbModel? local,
-        CancellationToken ct, BTaskArgs? args = null)
+        CancellationToken ct, BTaskArgs? args = null, bool replaceReview = false)
     {
         var applyFollows = false;
         await ObserveAsync(o => o.LinkCycleStartedAsync(link.Id, ct));
@@ -153,7 +157,8 @@ public sealed class DataSyncFetcher
             var peer = scope.ServiceProvider.GetRequiredService<IDataSyncPeerClient>();
             await using (await peer.AcquireFetchAsync(link.PeerNodeId, ct))
             {
-                applyFollows = await FetchLockedAsync(scope.ServiceProvider, peer, link, fallback, local, ct, args);
+                applyFollows = await FetchLockedAsync(scope.ServiceProvider, peer, link, fallback, local, ct, args,
+                    replaceReview);
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -179,7 +184,7 @@ public sealed class DataSyncFetcher
 
     /// <returns>Whether a pull was staged for <c>DataSyncApply</c>, whose apply ends the link's cycle.</returns>
     private async Task<bool> FetchLockedAsync(IServiceProvider sp, IDataSyncPeerClient peer, DataSyncLinkDbModel link,
-        bool fallback, DataSyncLocalStateDbModel? local, CancellationToken ct, BTaskArgs? args)
+        bool fallback, DataSyncLocalStateDbModel? local, CancellationToken ct, BTaskArgs? args, bool replaceReview)
     {
         var reader = sp.GetRequiredService<IDataSyncKindPageReader>();
         var store = sp.GetRequiredService<IDataSyncStore>();
@@ -285,7 +290,8 @@ public sealed class DataSyncFetcher
             DataSyncLinkState.Active when link.Initiator == DataSyncLinkInitiator.ThisDevice => awaitingFirstContact,
             _ => [],
         };
-        var needReview = reviewKinds.Count > 0 && reviews.GetForLink(link.Id) is null;
+        // Peeked, not read: the cycle looking every minute must not keep a review nobody reads from idling out (§8.3).
+        var needReview = reviewKinds.Count > 0 && (replaceReview || reviews.PeekForLink(link.Id) is null);
         var mergeKinds = link.State == DataSyncLinkState.Active
             ? kinds.Where(k => !reviewKinds.Contains(k) && headKinds.ContainsKey(k)).ToList()
             : [];
@@ -501,11 +507,18 @@ public sealed class DataSyncFetcher
 
     /// <summary>
     /// A link waiting for access (§8.1): the grant arrived (normally raised by the claim loop within 5 s), or the
-    /// request this device filed ended — the link then stops and stays on the map with Dismiss. A link that asked a
-    /// reset peer again (§8.7 B1) goes by the answer to that request first: this device may still hold the credentials
-    /// the reset revoked, which would otherwise read as a grant and reset the link while the request waits, or after
-    /// it was rejected.
+    /// request this device filed ended — the link then stops and stays on the map with Dismiss. A request this device
+    /// no longer lists ended too: the listing drops a request once it expired, and "Done — stop reading" or removing
+    /// the device deletes it, so it can never be answered any more; it ends as expired once no grant has arrived.
     /// </summary>
+    /// <remarks>
+    /// A link that asked a reset peer again (§8.7 B1) goes by the answer to its own request alone: this device may
+    /// still hold credentials the reset revoked, which would otherwise read as a grant and reset the link — deleting
+    /// its bases and pending records — while the request waits, after it was rejected, or after it expired unanswered.
+    /// Only the request's own <c>granted</c>, or the claim loop's event
+    /// (<see cref="DataSyncLinkService.OnOutboundGrantedAsync(string, string?, CancellationToken)"/>), resets it; a
+    /// request that ended in any other way, or vanished, takes it back to <c>Paused(PeerReset)</c>.
+    /// </remarks>
     private async Task CheckAccessAsync(DataSyncLinkDbModel link, CancellationToken ct)
     {
         await using var scope = _scopes.CreateAsyncScope();
@@ -516,6 +529,7 @@ public sealed class DataSyncFetcher
                 string.Equals(r.RequestId, requestId, StringComparison.Ordinal))
             : null;
         var status = request?.Status?.ToLowerInvariant();
+        var granted = status == "granted";
         var waiting = status is "pending" or "awaitingapproval";
         var ended = status switch
         {
@@ -523,12 +537,22 @@ public sealed class DataSyncFetcher
             "expired" => DataSyncLinkService.AccessExpired,
             "cancelled" or "canceled" => DataSyncLinkService.AccessCancelled,
             _ when waiting && request!.ExpiresAt <= _clock.UtcNow => DataSyncLinkService.AccessExpired,
+            // Filed, but no longer listed: expired (the listing leaves expired requests out) or deleted with the
+            // device's datasync state. Nobody can answer it now.
+            _ when link.PendingRequestId is not null && request is null => DataSyncLinkService.AccessExpired,
             _ => null,
         };
         waiting &= ended is null;
 
-        var resetDue = DataSyncLinkService.WaitsForResetGrant(link);
-        if (!(resetDue && (waiting || ended is not null)) && await grants.HasOutboundGrantAsync(link.PeerNodeId, ct))
+        if (DataSyncLinkService.WaitsForResetGrant(link))
+        {
+            if (granted) await _links.OnOutboundGrantedAsync(link.PeerNodeId, ct);
+            else if (waiting) await RescheduleAsync(link.Id, DataSyncSchedule.PollInterval, ct);
+            else await _links.OnRequestEndedAsync(link.Id, ended ?? DataSyncLinkService.AccessExpired, ct);
+            return;
+        }
+
+        if (granted || await grants.HasOutboundGrantAsync(link.PeerNodeId, ct))
         {
             await _links.OnOutboundGrantedAsync(link.PeerNodeId, ct);
             return;

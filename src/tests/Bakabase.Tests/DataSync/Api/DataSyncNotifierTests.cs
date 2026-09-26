@@ -242,6 +242,64 @@ public class DataSyncNotifierTests
     }
 
     [TestMethod]
+    public async Task A_links_review_is_announced_once_however_often_it_is_staged_again()
+    {
+        // The real review store, and more links awaiting a review than it used to keep (§8.3, §9.4).
+        await using var h = await DataSyncApiHarness.CreateAsync(s => s.AddSingleton<IDataSyncReviewStore>(sp =>
+            new Bakabase.InsideWorld.Business.Components.DataSync.Apply.DataSyncReviewStore(
+                new ClockTime(sp.GetRequiredService<IDataSyncClock>()))));
+        var peers = new[] { "node-a", "node-b", "node-c", "node-d" };
+        var links = peers.Select(peer => h.AddLink(peer, l =>
+        {
+            l.State = DataSyncLinkState.AwaitingReview;
+            l.FirstContactCompletedAtUtc = null;
+            l.FirstContactKindsJson = null;
+            l.NextAttemptAtUtc = h.Clock.UtcNow;
+        })).ToList();
+
+        for (var cycle = 0; cycle < 3; cycle++)
+        {
+            await FetchOnceAsync(h);
+            h.Clock.Advance(DataSyncSchedule.PollInterval);
+        }
+
+        Assert.AreEqual(peers.Length, h.Notifications.Records.Count);
+        Assert.IsTrue(h.Notifications.Records.All(r =>
+            FakeNotificationService.CaseOf(r) == DataSyncNotifier.ReviewReadyCase));
+        CollectionAssert.AreEquivalent(links.Select(l => $"/data-sync?link={l.Id}&review=1").ToArray(),
+            h.Notifications.Records.Select(FakeNotificationService.RouteOf).ToArray());
+
+        // Nobody read them for an hour: each idled out and was fetched again — the same question, not announced again.
+        h.Clock.Advance(TimeSpan.FromMinutes(61));
+        await FetchOnceAsync(h);
+        Assert.IsTrue(peers.All(peer => h.Peers.Peers[peer].Manifests == 2));
+        Assert.AreEqual(peers.Length, h.Notifications.Records.Count);
+
+        // Nor by a new process while its announcement is unread.
+        var restarted = ActivatorUtilities.CreateInstance<DataSyncNotifier>(h.Provider);
+        var link = h.Store.Get(links[0].Id)!;
+        var review = h.Provider.GetRequiredService<IDataSyncReviewStore>().PeekForLink(link.Id)!;
+        await restarted.ReviewReadyAsync(link, review, default);
+        Assert.AreEqual(peers.Length, h.Notifications.Records.Count);
+
+        // A link that went on to work and later waits for a review of other kinds is announced again.
+        await Observer(h).LinkChangedAsync(link with
+        {
+            State = DataSyncLinkState.Active, FirstContactCompletedAtUtc = h.Clock.UtcNow,
+            FirstContactKindsJson = "[\"extensionGroup\",\"customProperty\"]",
+        }, default);
+        var added = review.Pull.Kinds.Where(k => k.Kind == DataSyncKindIds.CustomProperty).ToList();
+        await Observer(h).ReviewReadyAsync(link, review with { Pull = review.Pull with { Kinds = added } }, default);
+        Assert.AreEqual(peers.Length + 1, h.Notifications.Records.Count);
+    }
+
+    /// <summary>The runtime's clock as the review store reads time.</summary>
+    private sealed class ClockTime(IDataSyncClock clock) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(DateTime.SpecifyKind(clock.UtcNow, DateTimeKind.Utc));
+    }
+
+    [TestMethod]
     public async Task A_headless_sources_waiting_decisions_are_announced_once_a_day()
     {
         await using var h = await DataSyncApiHarness.CreateAsync();

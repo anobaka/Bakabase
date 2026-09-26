@@ -479,6 +479,37 @@ public sealed class DataSyncScopeTests
     }
 
     /// <summary>
+    /// §7.2.4 step 7: whether the approver reads a two-way requester back travels with the claim, so the requester's
+    /// link can say it is not read back. A Follow request, and an approval that says nothing, carry no word.
+    /// </summary>
+    [TestMethod]
+    [DataRow(false, NodeDataSyncReadBack.Declined)]
+    [DataRow(true, NodeDataSyncReadBack.Started)]
+    public async Task ATwoWayApprovalTellsTheRequesterWhetherItIsReadBack(bool receiveBack, string expected)
+    {
+        using var network = new DataSyncTestNetwork();
+        var initiator = network.Add("initiator");
+        var approver = network.Add("approver");
+        var follower = network.Add("follower");
+        await initiator.Peers.SetDataSyncSharingAsync(true);
+        await approver.Peers.SetDataSyncSharingAsync(true);
+
+        var twoWay = await initiator.Pairing.ConnectDataSyncAsync("http://approver", null, NodeDataSyncIntents.TwoWay,
+            DataSyncTestNetwork.Contract, ["http://initiator"]);
+        Assert.IsNull(twoWay.ReadBack, "Nothing is said before the approval.");
+        await approver.Peers.ApproveDataSyncAsync(twoWay.RequestId, receiveBack);
+        var claimed = (await initiator.Pairing.ClaimPendingDataSyncOutcomesAsync()).Single();
+        Assert.AreEqual(("approver", "granted", expected), (claimed.PeerNodeId, claimed.Outcome, claimed.ReadBack));
+        // Claimed again (a crash between the claim and its event), it says the same.
+        Assert.AreEqual(expected, (await initiator.Pairing.ClaimDataSyncAsync(twoWay.RequestId)).ReadBack);
+
+        var follow = await follower.Pairing.ConnectDataSyncAsync("http://approver", null, NodeDataSyncIntents.Follow,
+            DataSyncTestNetwork.Contract);
+        await approver.Peers.ApproveDataSyncAsync(follow.RequestId, receiveBack);
+        Assert.IsNull((await follower.Pairing.ClaimPendingDataSyncOutcomesAsync()).Single().ReadBack);
+    }
+
+    /// <summary>
     /// §7.2.4: a two-way offer the initiator withdrew — its request cancelled, its reading of the approver stopped, or
     /// the approver's access to it revoked — reads nothing back, though the approver still holds the request that
     /// carried it.

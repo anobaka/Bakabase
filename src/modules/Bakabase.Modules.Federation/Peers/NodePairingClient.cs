@@ -242,13 +242,7 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
                     state.OutgoingDataSyncRequests.RemoveAll(r => r.RequestId == pending.RequestId), ct);
             throw;
         }
-        var outcome = await SaveDataSyncExchangeAsync(local, pending, exchange, ct);
-        return outcome with
-        {
-            ReadBack = exchange.ReadBack is NodeDataSyncReadBack.Started or NodeDataSyncReadBack.Declined
-                ? exchange.ReadBack
-                : null
-        };
+        return WithDataSyncReadBack(await SaveDataSyncExchangeAsync(local, pending, exchange, ct), exchange);
     }
 
     /// <summary>
@@ -256,18 +250,28 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
     /// the UI polling.
     /// </summary>
     /// <returns>The node ids whose grant this call obtained.</returns>
-    public async Task<IReadOnlyList<string>> ClaimPendingDataSyncAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<string>> ClaimPendingDataSyncAsync(CancellationToken ct = default) =>
+        (await ClaimPendingDataSyncOutcomesAsync(ct)).Select(o => o.PeerNodeId).ToArray();
+
+    /// <summary>
+    /// <see cref="ClaimPendingDataSyncAsync"/> with each grant's outcome as the exchange gave it, including whether the
+    /// device reads this one back (<see cref="NodeDataSyncPairingOutcome.ReadBack"/>: a two-way request approved
+    /// without reading back says <see cref="NodeDataSyncReadBack.Declined"/>).
+    /// </summary>
+    /// <returns>The outcomes of the grants this call obtained.</returns>
+    public async Task<IReadOnlyList<NodeDataSyncPairingOutcome>> ClaimPendingDataSyncOutcomesAsync(
+        CancellationToken ct = default)
     {
         var now = timeProvider.GetUtcNow();
         var pending = (await store.ReadAsync(ct)).OutgoingDataSyncRequests
             .Where(r => r.Status == "awaitingApproval" && r.ExpiresAt > now).Select(r => r.RequestId).ToArray();
-        var granted = new List<string>();
+        var granted = new List<NodeDataSyncPairingOutcome>();
         foreach (var requestId in pending)
         {
             try
             {
                 var outcome = await ClaimDataSyncAsync(requestId, ct);
-                if (outcome.Outcome == "granted") granted.Add(outcome.PeerNodeId);
+                if (outcome.Outcome == "granted") granted.Add(outcome);
             }
             catch (FederationAccessException) { /* Offline or rejected; the next round retries until expiry. */ }
             // A device too slow to answer (the client's own deadline) is only offline this round: the rest are claimed.
@@ -288,8 +292,18 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
         var exchange = await http.PublicAsync<NodePairExchange>(pending.Address, HttpMethod.Post,
             "/federation/v1/pair/datasync/claim", new NodePairClaimRequest(requestId, local.NodeId, pending.ClaimSecret),
             ct);
-        return await SaveDataSyncExchangeAsync(local, pending, exchange, ct);
+        return WithDataSyncReadBack(await SaveDataSyncExchangeAsync(local, pending, exchange, ct), exchange);
     }
+
+    /// <summary>What the exchange said about reading this device back, in a word this build knows.</summary>
+    private static NodeDataSyncPairingOutcome WithDataSyncReadBack(NodeDataSyncPairingOutcome outcome,
+        NodePairExchange exchange) =>
+        outcome with
+        {
+            ReadBack = exchange.ReadBack is NodeDataSyncReadBack.Started or NodeDataSyncReadBack.Declined
+                ? exchange.ReadBack
+                : null
+        };
 
     /// <summary>What a peer's <c>/info</c> must say before this device asks it for definitions (§7.2.2).</summary>
     public static void RequireDataSyncCapability(NodeInfo info, NodeDataSyncContract contract)
