@@ -19,6 +19,49 @@ caches, then seeds through the production cache-aware ORM and checks resource
 visibility before signalling readiness; background index timing cannot leave the
 detail API reading an empty cache while SQL-based federation queries see rows.
 
+## Data sync (`datasync.py`)
+
+After its own checks, `run.py` runs data sync (definitions kept in step between
+devices) across three more hosts, within the same deadline; `--skip-datasync`
+leaves it out, and `python3 datasync.py --dotnet …` runs it alone. A and B are
+desktop apps (`BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW`), C is a headless server
+started with `BAKABASE_DATASYNC_SHARING=true`; `BAKABASE_NODE_NAME` names each.
+Every step goes through each host's own loopback API (`/data-sync/*`, and
+`/federation/local/*` for the identity reset), and C is managed through its
+headless CLI — `dotnet Bakabase.Service.dll federation datasync …` from the
+TestHost's output, in C's own environment, as `docker exec` runs it:
+
+0. C's sharing is on with nobody at a window; `share off` lasts until its next
+   start.
+1. A gets 100 custom properties (one with 2,000 tags, a multilevel one) and 4
+   extension groups; B gets 6 of the same names, each with an extra option.
+2. A asks C for a two-way link; C approves on its CLI and reads A back; A's
+   review is empty; C's first pull creates everything.
+3. B links two-way with C: 94 created, 6 linked as exact matches. B's extra
+   options reach C, then A; all three end equal.
+4. A and B rename one property differently while paused (C through its CLI).
+   C meets the conflict — and creates no notification; A sees it waiting on C;
+   B keeps its own name, which closes C's item as decided elsewhere and
+   reaches A.
+5. A deletes an option a resource on B uses: C, where nothing used it, drops
+   it; B holds it and asks.
+6. A resets its identity (same node, new epoch): C pauses its link
+   (`PeerReset`) and applies nothing A changed afterwards.
+7. B restarts serving one property as a newer schema: C holds that record and
+   applies the rest of the pull.
+8. C announced nothing under any data sync notification source; the desktops
+   did; the CLI's `status` shows what waits on each peer.
+
+Two TestHost variables exist for it. `BAKABASE_FEDERATION_TEST_ADDRESSES=loopback`
+makes the address a host offers other devices (an invitation's, a two-way
+request's read-back address) the loopback one it listens on, rather than this
+machine's interfaces, where a fixture never listens.
+`BAKABASE_DATASYNC_TEST_FUTURE_SCHEMA=<property name>` makes the host serve that
+custom property one schema version ahead, with a member this build does not
+know. Each step writes its evidence (overview, links, requests, readers, inbox,
+history of every host) to `<results>/datasync/`, with the hosts' logs and the
+CLI transcript.
+
 ## Real video and streaming failures
 
 Build the production web app and `Bakabase.Federation.TestHost`, and install this
