@@ -23,6 +23,8 @@ public sealed class DataSyncGrantEventsHandler : IDataSyncGrantEvents
     private sealed record Inbound(string PeerNodeId, DataSyncRequestIntent Intent, bool ReadBackStarted)
         : GrantEvent(PeerNodeId);
 
+    private sealed record ReadBack(string PeerNodeId, string ErrorCode) : GrantEvent(PeerNodeId);
+
     private readonly ConcurrentQueue<GrantEvent> _queue = new();
     private readonly IServiceScopeFactory _scopes;
     private readonly DataSyncLinkService _links;
@@ -40,6 +42,14 @@ public sealed class DataSyncGrantEventsHandler : IDataSyncGrantEvents
 
     public void InboundGranted(string peerNodeId, DataSyncRequestIntent intent, bool readBackStarted) =>
         _queue.Enqueue(new Inbound(peerNodeId, intent, readBackStarted));
+
+    /// <summary>
+    /// A read-back announced by <see cref="InboundGranted"/> failed (§7.2.4, N14): the approver's link records why it
+    /// still waits for access. Raised after the approval too when the read-back runs in the background (a code redeemed
+    /// two-way), where nothing else would tell the link.
+    /// </summary>
+    public void ReadBackFailed(string peerNodeId, string errorCode) =>
+        _queue.Enqueue(new ReadBack(peerNodeId, errorCode));
 
     public bool HasPending => !_queue.IsEmpty;
 
@@ -71,6 +81,9 @@ public sealed class DataSyncGrantEventsHandler : IDataSyncGrantEvents
                             readBackGranted, null, null, null, ct);
                         break;
                     }
+                    case ReadBack readBack:
+                        await _links.OnReadBackFailedAsync(readBack.PeerNodeId, readBack.ErrorCode, ct);
+                        break;
                 }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)

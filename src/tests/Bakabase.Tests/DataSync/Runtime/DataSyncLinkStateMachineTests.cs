@@ -174,6 +174,40 @@ public class DataSyncLinkStateMachineTests
     }
 
     [TestMethod]
+    public async Task A_read_back_that_fails_later_records_why_on_the_approvers_link()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+
+        // A code redeemed two-way: the grant event comes first, the read-back's outcome after it (§7.2.4).
+        h.GrantEvents.InboundGranted("b", DataSyncRequestIntent.TwoWay, true);
+        await h.GrantEvents.DrainAsync(default);
+        var link = h.Store.All().Single(l => l.PeerNodeId == "b");
+        Assert.IsNull(link.LastErrorCode, "a read-back in flight is not a failure");
+        var changes = h.Observer.Count($"changed:{link.Id}:");
+
+        h.GrantEvents.ReadBackFailed("b", nameof(DataSyncPeerErrorCode.Unreachable));
+        await h.GrantEvents.DrainAsync(default);
+        link = h.Store.All().Single(l => l.PeerNodeId == "b");
+        Assert.AreEqual((DataSyncLinkState.AwaitingAccess, DataSyncLinkInitiator.Peer), (link.State, link.Initiator));
+        Assert.AreEqual((DataSyncLinkService.ReadBackFailed, nameof(DataSyncPeerErrorCode.Unreachable)),
+            (link.LastErrorCode, link.LastErrorDetail));
+        Assert.AreEqual(changes + 1, h.Observer.Count($"changed:{link.Id}:"), "the status shows it");
+
+        // "Try again" is offered on it; a link this device reads, or one that asked on its own, is not touched.
+        Assert.IsNull((await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default)).Problem);
+        var asked = h.Store.All().Single(l => l.PeerNodeId == "b");
+        h.GrantEvents.ReadBackFailed("b", nameof(DataSyncPeerErrorCode.AccessRevoked));
+        await h.GrantEvents.DrainAsync(default);
+        Assert.AreEqual((asked.LastErrorCode, asked.PendingRequestId),
+            (h.Store.All().Single(l => l.PeerNodeId == "b").LastErrorCode, "req-b"));
+
+        var active = h.AddLink("c");
+        h.GrantEvents.ReadBackFailed("c", nameof(DataSyncPeerErrorCode.Unreachable));
+        await h.GrantEvents.DrainAsync(default);
+        Assert.IsNull(h.Link(active.Id).LastErrorCode);
+    }
+
+    [TestMethod]
     public async Task Try_again_after_a_failed_read_back_asks_only_to_read_the_peer_back()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);

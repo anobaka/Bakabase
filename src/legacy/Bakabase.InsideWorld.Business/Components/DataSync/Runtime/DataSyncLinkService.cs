@@ -1035,6 +1035,38 @@ public sealed class DataSyncLinkService
     }
 
     /// <summary>
+    /// A read-back this device set out on when it granted the peer two-way access failed (§7.2.4, N14): the approver's
+    /// link still waits for access, and now says why (<see cref="ReadBackFailed"/>, the peer error code as the
+    /// detail), so the page offers "Try again". This is how a read-back that runs in the background — a code redeemed
+    /// two-way — reaches the link; an approval's own outcome also comes through <see cref="OnInboundGrantedAsync"/>.
+    /// Only the approver's link waiting for access with no request of its own out records it, and only while this
+    /// device still cannot read the peer.
+    /// </summary>
+    public async Task OnReadBackFailedAsync(string peerNodeId, string errorCode, CancellationToken ct)
+    {
+        static bool Waits(DataSyncLinkDbModel row) => row is
+        {
+            State: DataSyncLinkState.AwaitingAccess, Initiator: DataSyncLinkInitiator.Peer, PendingRequestId: null,
+        };
+
+        var link = await GetByPeerAsync(peerNodeId, ct);
+        if (link is null || !Waits(link)) return;
+        await using (var scope = _scopes.CreateAsyncScope())
+        {
+            if (await Grants(scope).HasOutboundGrantAsync(peerNodeId, ct)) return;
+        }
+
+        await MutateAsync(link.Id, row =>
+        {
+            if (!Waits(row) || (row.LastErrorCode == ReadBackFailed && row.LastErrorDetail == errorCode))
+                return DataSyncLinkWrite.None;
+            row.LastErrorCode = ReadBackFailed;
+            row.LastErrorDetail = Truncate(errorCode);
+            return DataSyncLinkWrite.Transition;
+        }, ct);
+    }
+
+    /// <summary>
     /// This device's request for a link ended without access (§8.1): the link stops and stays on the map with Dismiss
     /// (M5: nothing the user filed vanishes silently), with its last mode, bases and pending records. A link that
     /// asked a reset peer again goes back to <c>Paused(PeerReset)</c> instead, with everything it had (§8.7 B1), so
