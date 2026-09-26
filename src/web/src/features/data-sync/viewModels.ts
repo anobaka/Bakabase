@@ -459,6 +459,28 @@ export const receiveLane = (peer: SyncPeer): LaneStatus => {
   return peer.receivingPendingFlag ? "pending" : "none";
 };
 
+/**
+ * Whether the receive direction waits for a first review — this device's, or the other one's —
+ * rather than for the other device to let this one read it: drawn as waiting all the same.
+ */
+export const receiveWaitsForReview = (peer: SyncPeer) =>
+  peer.state === DataSyncLinkState.AwaitingReview ||
+  peer.state === DataSyncLinkState.WaitingForPeerReview;
+
+/**
+ * The receive direction in words: what it does, what it waits for, or that it is off — the
+ * same wherever it is said (the drawing's spokes, the rule editor, the device map).
+ */
+export const receivePhrase = (t: T, peer: SyncPeer, name: string = peer.name) => {
+  const lane = receiveLane(peer);
+
+  if (lane === "none") return t("dataSync.arrow.receive.off", { name });
+  if (lane === "pending" && receiveWaitsForReview(peer))
+    return t("federation.map.direction.sync.in.review", { name });
+
+  return t(`federation.map.direction.sync.in.${lane}`, { name });
+};
+
 /** How the may-read direction (this device → the other device) is drawn. */
 export const readLane = (peer: SyncPeer): LaneStatus => (peer.peerMayRead ? "active" : "none");
 
@@ -887,6 +909,49 @@ const cardValues = (t: T, peer: SyncPeer, now: number) => ({
 // ---- this device, as a whole ---------------------------------------------------------------------
 
 /**
+ * The line for a device where nothing is wrong: a first sync ready to review here, links that
+ * have synced, links that wait for another device (its approval, or its first review), a link
+ * working towards its first sync — or, with no link, the devices that read this one and the
+ * requests that wait for an answer here.
+ */
+const quietStatus = (t: T, status: DataSyncStatusView, now: number): StatusLine => {
+  const toReview = status.linksToReview ?? 0;
+  const waiting = status.linksWaiting ?? 0;
+
+  if (toReview > 0)
+    return line("ToReview", "primary", t("dataSync.status.level.ToReview", { count: toReview }));
+  if (status.lastSyncedAt && status.linksInStep > 0)
+    return line(
+      "InStep",
+      "success",
+      t("dataSync.status.InStep", { time: timeAgo(t, status.lastSyncedAt, now) }),
+    );
+  if (waiting > 0)
+    return line("Waiting", "primary", t("dataSync.status.level.Waiting", { count: waiting }));
+  // Working, but nothing synced yet: not "in step · never".
+  if (status.links > 0 || !(status.readers || status.pendingRequests))
+    return status.lastSyncedAt
+      ? line(
+          "InStep",
+          "success",
+          t("dataSync.status.InStep", { time: timeAgo(t, status.lastSyncedAt, now) }),
+        )
+      : line("Syncing", "primary", t("dataSync.status.Syncing"));
+  if (status.readers)
+    return line(
+      "ReadersOnly",
+      "success",
+      t("dataSync.status.level.ReadersOnly", { count: status.readers }),
+    );
+
+  return line(
+    "Requests",
+    "primary",
+    t("dataSync.status.level.Requests", { count: status.pendingRequests ?? 0 }),
+  );
+};
+
+/**
  * The status indicator's line for the whole device, or none while data sync is off (no links,
  * no readers, no requests) — the indicator is hidden then.
  */
@@ -898,14 +963,7 @@ export function overallStatus(
   if (!status || status.level === DataSyncStatusLevel.Off) return undefined;
   switch (status.level) {
     case DataSyncStatusLevel.InStep:
-      // Nothing synced yet: not "in step · never".
-      return status.lastSyncedAt
-        ? line(
-            "InStep",
-            "success",
-            t("dataSync.status.InStep", { time: timeAgo(t, status.lastSyncedAt, now) }),
-          )
-        : line("Syncing", "primary", t("dataSync.status.Syncing"));
+      return quietStatus(t, status, now);
     case DataSyncStatusLevel.Syncing:
       return line("Syncing", "primary", t("dataSync.status.Syncing"));
     case DataSyncStatusLevel.NeedsYou:
@@ -941,6 +999,19 @@ export function overallStatus(
 export const waitingElsewhereLine = (t: T, status: DataSyncStatusView | undefined) =>
   status?.peersNeedingDecisions
     ? t("dataSync.status.peersNeedingDecisions", { count: status.peersNeedingDecisions })
+    : undefined;
+
+/**
+ * Another line: requests from other devices that wait for an answer here — unless the status
+ * line says that already.
+ */
+export const pendingRequestsLine = (
+  t: T,
+  status: DataSyncStatusView | undefined,
+  shown?: StatusLine,
+) =>
+  status?.pendingRequests && shown?.code !== "Requests"
+    ? t("dataSync.status.level.Requests", { count: status.pendingRequests })
     : undefined;
 
 /**

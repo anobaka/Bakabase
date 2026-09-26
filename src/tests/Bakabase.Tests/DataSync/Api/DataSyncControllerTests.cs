@@ -881,9 +881,11 @@ public class DataSyncControllerTests
         Assert.IsTrue(overview.CanManageSharing);
         Assert.AreEqual(2, overview.OpenInboxItems);
         Assert.AreEqual(1, overview.PendingRequests, "an expired request no longer waits");
-        Assert.AreEqual(1, overview.Kinds.Single(k => k.Kind == DataSyncKindIds.CustomProperty).Count);
+        Assert.AreEqual(0, overview.Kinds.Single(k => k.Kind == DataSyncKindIds.CustomProperty).Count,
+            "counted from the kind's own rows, of which it has none");
         Assert.AreEqual(DataSyncStatusLevel.NeedsYou, overview.Status.Level);
         Assert.AreEqual(2, overview.Status.Links);
+        Assert.AreEqual((1, 1), (overview.Status.PendingRequests, overview.Status.Readers));
 
         var nas = (await h.CallAsync(Callers.Loopback, c => c.GetLinks(default))).Data!.Single(l => l.Id == 1);
         Assert.AreEqual(1, nas.OpenItems);
@@ -895,6 +897,103 @@ public class DataSyncControllerTests
 
         var readers = (await h.CallAsync(Callers.Loopback, c => c.GetReaders(default))).Data!;
         Assert.AreEqual("NAS", readers.Single().Name);
+    }
+
+    /// <summary>
+    /// "NAS · 100 properties" (§11.1) counts what this device has to sync, from the kind itself: a device no peer has
+    /// read yet has published nothing, and a definition made since the last read is not published yet either.
+    /// </summary>
+    [TestMethod]
+    public async Task The_overview_counts_the_definitions_this_device_syncs_before_anything_is_published()
+    {
+        await using var h = await DataSyncApiHarness.CreateAsync();
+        h.CustomProperties.Order.AddRange(["10", "11", "12", "13"]);
+        h.AddEntity("11", Key(11), configure: e => e.State = DataSyncEntitySyncState.LocalOnly);
+        h.AddEntity("12", Key(12), configure: e => e.State = DataSyncEntitySyncState.Detached);
+        h.AddEntity("13", Key(13));
+        h.ExtensionGroups.Order.Add("1");
+
+        async Task<int> CountAsync(string kind) =>
+            (await h.CallAsync(Callers.Loopback, c => c.GetOverview(default))).Data!.Kinds.Single(k => k.Kind == kind)
+            .Count;
+
+        Assert.AreEqual(2, await CountAsync(DataSyncKindIds.CustomProperty),
+            "10, which Refresh has not met yet, and 13; not 11 kept here or 12 no longer synced");
+        Assert.AreEqual(1, await CountAsync(DataSyncKindIds.ExtensionGroup));
+
+        // While new definitions stay local, one Refresh has not met yet will stay here.
+        h.Store.LocalState = h.Store.LocalState! with { NewDefinitionsStayLocal = true };
+        Assert.AreEqual(1, await CountAsync(DataSyncKindIds.CustomProperty));
+        Assert.AreEqual(0, await CountAsync(DataSyncKindIds.ExtensionGroup));
+    }
+
+    /// <summary>
+    /// The indicator is hidden only when there is nothing at all (§11.3): a device that is only read, or that has a
+    /// request waiting, shows it — and says which.
+    /// </summary>
+    [TestMethod]
+    public async Task The_status_is_off_only_with_no_link_no_reader_and_no_request()
+    {
+        await using var h = await DataSyncApiHarness.CreateAsync(registerFetchTask: false);
+
+        async Task<DataSyncStatusView> StatusAsync() =>
+            (await h.CallAsync(Callers.Loopback, c => c.GetOverview(default))).Data!.Status;
+
+        Assert.AreEqual(DataSyncStatusLevel.Off, (await StatusAsync()).Level);
+
+        // A request waiting here.
+        h.Grants.Requests.Add(new DataSyncAccessRequestView("req-in-1", DataSyncRequestDirection.Incoming, "node-new",
+            "New PC", DataSyncRequestIntent.TwoWay, "awaitingApproval", h.Clock.UtcNow.AddMinutes(10), "192.168.1.40",
+            false, null, false));
+        var status = await StatusAsync();
+        Assert.AreEqual(DataSyncStatusLevel.InStep, status.Level);
+        Assert.AreEqual((0, 0, 1), (status.Links, status.Readers, status.PendingRequests));
+
+        // Answered, or run out: nothing waits any more.
+        h.Clock.Advance(TimeSpan.FromMinutes(11));
+        Assert.AreEqual(DataSyncStatusLevel.Off, (await StatusAsync()).Level);
+
+        // A device that only reads this one.
+        h.Grants.Readers.Add(new DataSyncGrantView("node-nas", "NAS",
+            DateTime.SpecifyKind(h.Clock.UtcNow, DateTimeKind.Unspecified)));
+        status = await StatusAsync();
+        Assert.AreEqual(DataSyncStatusLevel.InStep, status.Level);
+        Assert.AreEqual((0, 1, 0), (status.Links, status.Readers, status.PendingRequests));
+
+        // The hub's push says the same.
+        await using var scope = h.Provider.CreateAsyncScope();
+        var pushed = await new DataSyncViews(scope.ServiceProvider).GetStatusAsync(default);
+        Assert.AreEqual((DataSyncStatusLevel.InStep, 1), (pushed.Level, pushed.Readers));
+    }
+
+    /// <summary>
+    /// A link waiting to be approved, or for either device's first review, is not "syncing": the status counts them
+    /// apart, so the line can say whether this device or the other one is to act.
+    /// </summary>
+    [TestMethod]
+    public async Task The_status_counts_links_that_wait_for_a_review_or_for_the_other_device()
+    {
+        await using var h = await DataSyncApiHarness.CreateAsync(registerFetchTask: false);
+        h.AddLink("node-a", l =>
+        {
+            l.State = DataSyncLinkState.AwaitingAccess;
+            l.LastSyncedAtUtc = null;
+        });
+        h.AddLink("node-b", l =>
+        {
+            l.State = DataSyncLinkState.WaitingForPeerReview;
+            l.LastSyncedAtUtc = null;
+        });
+        h.AddLink("node-c", l =>
+        {
+            l.State = DataSyncLinkState.AwaitingReview;
+            l.LastSyncedAtUtc = null;
+        });
+
+        var status = (await h.CallAsync(Callers.Loopback, c => c.GetOverview(default))).Data!.Status;
+        Assert.AreEqual(DataSyncStatusLevel.InStep, status.Level);
+        Assert.AreEqual((3, 0, 1, 2), (status.Links, status.LinksInStep, status.LinksToReview, status.LinksWaiting));
+        Assert.IsNull(status.LastSyncedAt);
     }
 
     /// <summary>

@@ -8,7 +8,7 @@ namespace Bakabase.Modules.DataSync.Runtime;
 
 /// <summary>What a reader tells the source with head and manifest (§7.5).</summary>
 public sealed record DataSyncFeedQuery(string? Mode /* "follow"|"twoWay" */, IReadOnlyDictionary<string, long> Since,
-    string? ReaderActorId, string? ReaderState /* "ok"|"awaitingReview"|"paused:{reason}"|"needsYou:{n}" */);
+    string? ReaderActorId, string? ReaderState /* "ok"|"awaitingReview"|"waitingForPeerReview"|"paused:{reason}"|"needsYou:{n}" */);
 
 public sealed record DataSyncReader(string NodeId, string GrantId, string Name);
 

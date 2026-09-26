@@ -127,6 +127,43 @@ describe("the data sync status indicator", () => {
     );
   });
 
+  it("shows for a device that is only read, and says so", async () => {
+    vi.mocked(dataSyncApi.overview).mockResolvedValue(
+      overview({
+        status: status({ links: 0, linksInStep: 0, lastSyncedAt: undefined, readers: 2 }),
+      }),
+    );
+    show();
+    await waitFor(() => expect(indicator()).not.toBeNull());
+
+    expect(indicator()).toHaveAccessibleName("dataSync.status.level.ReadersOnly 2");
+    expect(screen.getByTestId("data-sync-indicator-dot")).toHaveAttribute("data-tone", "success");
+  });
+
+  it("shows for a request that waits here, and says it beside what else it says", async () => {
+    vi.mocked(dataSyncApi.overview).mockResolvedValue(
+      overview({
+        status: status({
+          links: 0,
+          linksInStep: 0,
+          lastSyncedAt: undefined,
+          pendingRequests: 1,
+        }),
+      }),
+    );
+    show();
+    await waitFor(() => expect(indicator()).not.toBeNull());
+    // Nothing else going on: the request is the line, said once.
+    expect(indicator()).toHaveAccessibleName("dataSync.status.level.Requests 1");
+
+    act(() => {
+      applyDataSyncHubData("DataSyncStatus", status({ pendingRequests: 2 }));
+    });
+    expect(indicator()).toHaveAccessibleName(
+      /^dataSync\.status\.InStep .+\. dataSync\.status\.level\.Requests 2$/,
+    );
+  });
+
   it("follows the hub's status pushes", async () => {
     vi.mocked(dataSyncApi.overview).mockResolvedValue(overview());
     show();

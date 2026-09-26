@@ -45,6 +45,37 @@ export default function EntitySyncMenu({
   // Escape closes the menu, and only the menu: the page or details around it stay as they are.
   const menuKeys = useMenuKeyboard(open, menu, trigger, () => setOpen(false), root);
   const items = entityMenu(entity, offersDefinitionOnly);
+  // A choice was made from the menu, whose item is gone: the keyboard comes back to the menu's
+  // button once the choice is over — the button is disabled while it runs, and a confirmation
+  // gives focus back to it only while it can take it.
+  const returning = useRef(false);
+
+  useEffect(() => {
+    const letGo = (event: Event) => {
+      const target = event.target instanceof Element ? event.target : null;
+
+      // The reader went elsewhere; a confirmation the choice opened is still the choice's.
+      if (target !== trigger.current && !target?.closest('[role="alertdialog"]'))
+        returning.current = false;
+    };
+
+    document.addEventListener("focusin", letGo, true);
+    document.addEventListener("pointerdown", letGo, true);
+
+    return () => {
+      document.removeEventListener("focusin", letGo, true);
+      document.removeEventListener("pointerdown", letGo, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!returning.current || actions.busy) return;
+    const active = document.activeElement;
+
+    if (active && active !== document.body && active.isConnected) return;
+    returning.current = false;
+    trigger.current?.focus();
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -63,6 +94,7 @@ export default function EntitySyncMenu({
   const choose = (item: EntityMenuAction) => {
     setOpen(false);
     trigger.current?.focus();
+    returning.current = true;
     switch (item) {
       case "keepLocal":
         void actions.run(set({ state: DataSyncEntitySyncState.LocalOnly }), ["dataSync"]);

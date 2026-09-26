@@ -129,20 +129,27 @@ public sealed class DataSyncViews
 
     /// <summary>
     /// The indicator's one line (§11.6), most urgent first: a pending restore or the global pause, decisions here, an
-    /// update this device needs, a failure, a paused link, an offline peer, a running sync, else in step. Off while
-    /// nothing syncs.
+    /// update this device needs, a failure, a paused link, an offline peer, a running sync, else in step. Off only
+    /// while there is nothing at all: no link, no reader, no request waiting here and nothing to decide (§11.3).
     /// </summary>
-    public DataSyncStatusView GetStatus(Snapshot snapshot, bool syncing)
+    /// <param name="pendingRequests">Requests from other devices that wait for an answer here.</param>
+    public DataSyncStatusView GetStatus(Snapshot snapshot, bool syncing, int pendingRequests = 0)
     {
         var links = snapshot.Links.Where(l => l.State != DataSyncLinkState.Stopped).ToList();
         var open = snapshot.OpenItems.Count;
+        var readers = snapshot.Grants.Count;
         var inStep = links.Count(l => l.State == DataSyncLinkState.Active && l.ConsecutiveFailures == 0 &&
                                       l.LastErrorCode is null && snapshot.OpenItemsOf(l.Id) == 0);
         var needThere = links.Count(l => l.GetPeerAttention() is { OpenDecisions: > 0 });
         var lastSynced = snapshot.Links.Select(l => l.LastSyncedAtUtc).Where(t => t is not null).Max();
+        var toReview = links.Count(l => l.State == DataSyncLinkState.AwaitingReview);
+        var waiting = links.Count(l =>
+            l.State is DataSyncLinkState.AwaitingAccess or DataSyncLinkState.WaitingForPeerReview);
 
         DataSyncStatusLevel level;
-        if (links.Count == 0 && open == 0 && snapshot.Local?.RestoreReason is null) level = DataSyncStatusLevel.Off;
+        if (links.Count == 0 && open == 0 && readers == 0 && pendingRequests == 0 &&
+            snapshot.Local?.RestoreReason is null)
+            level = DataSyncStatusLevel.Off;
         else if (snapshot.Local is { RestoreReason: not null } or { AllPaused: true }) level = DataSyncStatusLevel.Paused;
         else if (open > 0) level = DataSyncStatusLevel.NeedsYou;
         else if (links.Any(l => l.State == DataSyncLinkState.ThisTooOld)) level = DataSyncStatusLevel.UpdateNeeded;
@@ -163,7 +170,16 @@ public sealed class DataSyncViews
         var lastErrorCode = failing.OrderByDescending(l => l.LastAttemptAtUtc ?? DateTime.MinValue)
             .FirstOrDefault()?.LastErrorCode;
 
-        return new DataSyncStatusView(level, open, links.Count, inStep, needThere, Utc(lastSynced), lastErrorCode);
+        return new DataSyncStatusView(level, open, links.Count, inStep, needThere, Utc(lastSynced), lastErrorCode,
+            pendingRequests, readers, toReview, waiting);
+    }
+
+    /// <summary>Requests from other devices to read this one that still wait for an answer here.</summary>
+    public async Task<int> CountPendingRequestsAsync(CancellationToken ct)
+    {
+        var now = Now;
+        return (await _grants.GetRequestsAsync(ct))
+            .Count(r => r.Direction == DataSyncRequestDirection.Incoming && IsPending(r, now));
     }
 
     /// <summary>A failure that is not the peer being away: an apply or a fetch that went wrong, or an unusable answer.</summary>
@@ -183,7 +199,8 @@ public sealed class DataSyncViews
         return fetching || launcher?.IsWriteTaskActiveOrPending() == true;
     }
 
-    public async Task<DataSyncStatusView> GetStatusAsync(CancellationToken ct) => GetStatus(await ReadAsync(ct), IsSyncing());
+    public async Task<DataSyncStatusView> GetStatusAsync(CancellationToken ct) =>
+        GetStatus(await ReadAsync(ct), IsSyncing(), await CountPendingRequestsAsync(ct));
 
     // ---- the map -----------------------------------------------------------------------------------------------
 

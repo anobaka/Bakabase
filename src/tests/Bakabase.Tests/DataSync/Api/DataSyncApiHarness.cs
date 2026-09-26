@@ -396,6 +396,9 @@ internal sealed class FakeKind(string kind, bool supportsChildrenLocal) : IDataS
     public Dictionary<string, JsonObject> Contents { get; } = new();
     public ConcurrentQueue<(string LocalKey, string Subtype)> Previewed { get; } = new();
 
+    /// <summary>The kind's own rows, in their order: every local key this device has of the kind.</summary>
+    public List<string> Order { get; } = [];
+
     public Task<IReadOnlyList<LocalEntity>> ReadAsync(IReadOnlyCollection<string>? localKeys, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<LocalEntity>>(Contents
             .Where(c => localKeys is null || localKeys.Contains(c.Key))
@@ -426,7 +429,8 @@ internal sealed class FakeKind(string kind, bool supportsChildrenLocal) : IDataS
     {
     }
 
-    public Task<IReadOnlyList<string>> ReadOrderAsync(CancellationToken ct) => throw new NotSupportedException();
+    public Task<IReadOnlyList<string>> ReadOrderAsync(CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<string>>(Order.ToList());
 
     public Task ApplyOrderAsync(IReadOnlyList<string> syncedLocalKeysInSharedOrder, CancellationToken ct) =>
         throw new NotSupportedException();

@@ -9,11 +9,13 @@ import {
   DataSyncEmptyStateLine,
   DataSyncHeaderLink,
   DefinitionSyncRow,
+  STATUS_RELOAD_DELAY_MS,
   useDefinitionSync,
 } from "../components/DefinitionsPageSync";
 import { dataSyncApi } from "../api";
 import { useDataSyncStore } from "../stores/dataSync";
 
+import { blurWhenDisabled } from "./blurWhenDisabled";
 import { status } from "./dataSyncFixtures";
 
 import {
@@ -201,6 +203,71 @@ describe("the definitions pages", () => {
     expect(onApplied).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(dataSyncApi.entities).toHaveBeenCalledTimes(2));
   });
+
+  it("read the badges again when what needs you changes without an apply", async () => {
+    useDataSyncStore.getState().setStatus(status());
+    renderIn(<PropertiesRows />);
+    await waitFor(() => expect(dataSyncApi.entities).toHaveBeenCalledTimes(1));
+    vi.mocked(dataSyncApi.entities).mockResolvedValue([entity("12", { openItems: 3 })]);
+
+    // A conflict came in: nothing was applied, the status says one more needs you.
+    act(() => useDataSyncStore.getState().setStatus(status({ openItems: 1 })));
+    act(() => useDataSyncStore.getState().setStatus(status({ openItems: 2 })));
+    await waitFor(() => expect(dataSyncApi.entities).toHaveBeenCalledTimes(2), {
+      timeout: STATUS_RELOAD_DELAY_MS * 4,
+    });
+    await waitFor(() =>
+      expect(within(rowOf("12")).getByTestId("data-sync-entity-badge")).toHaveTextContent(
+        "dataSync.entity.badge.needsYou 3",
+      ),
+    );
+    // A push that changes neither reads nothing.
+    act(() => useDataSyncStore.getState().setStatus(status({ openItems: 2 })));
+    await new Promise((resolve) => setTimeout(resolve, STATUS_RELOAD_DELAY_MS * 2));
+    expect(dataSyncApi.entities).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ["confirmed", "definitionOnlyOn", true],
+    ["run at once", "keepLocal", false],
+  ] as const)(
+    "give the keyboard back to the row's menu button once a choice %s is over",
+    async (_, action, confirms) => {
+      renderIn(<PropertiesRows />);
+      await waitFor(() =>
+        expect(within(rowOf("12")).getByTestId("data-sync-entity-menu")).toBeInTheDocument(),
+      );
+      const button = within(rowOf("12")).getByTestId("data-sync-entity-menu");
+
+      fireEvent.click(button);
+      const item = rowOf("12").querySelector<HTMLElement>(`[data-action="${action}"]`)!;
+
+      act(() => item.focus());
+      // The browser takes focus off the button while it is disabled.
+      const letGo = blurWhenDisabled();
+
+      try {
+        await act(async () => {
+          fireEvent.click(item);
+        });
+        if (confirms) {
+          const dialog = screen.getByRole("alertdialog");
+          const confirm = within(dialog).getByText("federation.confirm");
+
+          act(() => confirm.focus());
+          await act(async () => {
+            fireEvent.click(confirm);
+          });
+          expect(screen.queryByRole("alertdialog")).toBeNull();
+        }
+      } finally {
+        letGo();
+      }
+
+      expect(dataSyncApi.setEntitySync).toHaveBeenCalled();
+      await waitFor(() => expect(button).toHaveFocus());
+    },
+  );
 
   it("point an empty Properties page to another device", () => {
     renderIn(<DataSyncEmptyStateLine />);

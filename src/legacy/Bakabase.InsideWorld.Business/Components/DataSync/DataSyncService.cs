@@ -11,6 +11,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Services;
@@ -71,19 +72,38 @@ public sealed class DataSyncService : IDataSyncService
         var device = await _services.GetRequiredService<IDataSyncDeviceIdentity>().GetAsync(ct);
         var views = Views;
         var snapshot = await views.ReadAsync(ct);
+        var local = snapshot.Local;
         var kinds = new List<DataSyncKindCount>();
         foreach (var kind in DataSyncKindIds.All)
-            kinds.Add(new DataSyncKindCount(kind, (await Store.CountPublishedAsync(kind, ct)).Live));
-        var now = Now;
-        var requests = (await Grants.GetRequestsAsync(ct))
-            .Count(r => r.Direction == DataSyncRequestDirection.Incoming && DataSyncViews.IsPending(r, now));
-        var local = snapshot.Local;
+            kinds.Add(new DataSyncKindCount(kind,
+                await CountDefinitionsAsync(kind, local?.NewDefinitionsStayLocal ?? false, ct)));
+        var requests = await views.CountPendingRequestsAsync(ct);
         return new DataSyncOverview(device.Name, device.NodeId,
             _services.GetService<IDataSyncHostKind>()?.IsHeadless ?? false, await Grants.IsSharingEnabledAsync(ct),
             await Grants.GetRemoteAccessModeAsync(ct), false, local?.NewDefinitionsStayLocal ?? false,
-            local?.AllPaused ?? false, kinds, views.GetStatus(snapshot, views.IsSyncing()), ActiveTaskId(),
+            local?.AllPaused ?? false, kinds, views.GetStatus(snapshot, views.IsSyncing(), requests), ActiveTaskId(),
             local?.RestoreReason is not null, snapshot.OpenItems.Count, requests, DatabaseBytes(),
             _services.GetService<IDataSyncHostAddresses>()?.GetReachableAddresses() ?? []);
+    }
+
+    /// <summary>
+    /// How many of this device's definitions of a kind sync (the page's "NAS · 100 properties", §11.1): the kind's own
+    /// rows, less those kept on this device or no longer synced, and — while new definitions stay local — less those
+    /// no Refresh has met yet, which it will keep local. Read from the kind, not from what Refresh last published: a
+    /// device no peer has read yet has published nothing, and a local edit since the last read is not in it either.
+    /// Reads only.
+    /// </summary>
+    private async Task<int> CountDefinitionsAsync(string kind, bool newDefinitionsStayLocal, CancellationToken ct)
+    {
+        var adapter = _services.GetService<IEnumerable<IDataSyncKind>>()?
+            .FirstOrDefault(k => k.Codec.Descriptor.Kind == kind);
+        if (adapter is null) return (await Store.CountPublishedAsync(kind, ct)).Live;
+        var rows = (await Store.GetEntitiesAsync(kind, false, ct))
+            .GroupBy(e => e.LocalKey, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().State, StringComparer.Ordinal);
+        return (await adapter.ReadOrderAsync(ct)).Count(key => rows.TryGetValue(key, out var state)
+            ? state == DataSyncEntitySyncState.Synced
+            : !newDefinitionsStayLocal);
     }
 
     public Task<DataSyncMapView> GetMapAsync(CancellationToken ct) => Views.GetMapAsync(ct);

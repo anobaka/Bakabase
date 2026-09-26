@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import type { DataSyncOverview, DataSyncReaderView } from "../api";
 import type { DataSyncActions } from "../hooks/useDataSyncActions";
 
@@ -18,11 +19,29 @@ import { RemoteAccessMode } from "@/sdk/constants";
  * and stopping a reader stay available everywhere, so access can always be shut.
  */
 
-/** A reader's state as the server words it (`needsYou:2`, `paused:byUser`, `awaitingReview`). */
-const readerState = (state?: string | null) => {
+/**
+ * What a reader declared about its side when it last read this device (spec §7.5.6): `ok`,
+ * `awaitingReview` (its own first review), `waitingForPeerReview` (this device's review),
+ * `paused:{reason}` or `needsYou:{n}` — in the words of the readers list, or none for a word this
+ * build does not know (a newer device may say more).
+ */
+export const readerStateText = (t: TFunction, state?: string | null): string | undefined => {
   const [code, value] = (state ?? "").split(":");
 
-  return { code: code || undefined, value };
+  switch (code) {
+    case "ok":
+      return t("dataSync.readers.state.inStep");
+    case "awaitingReview":
+      return t("dataSync.readers.state.awaitingReview");
+    case "waitingForPeerReview":
+      return t("dataSync.readers.state.waitingForPeerReview");
+    case "paused":
+      return t("dataSync.readers.state.paused");
+    case "needsYou":
+      return t("dataSync.readers.state.needsYou", { count: Number(value) || 0 });
+    default:
+      return undefined;
+  }
 };
 
 export default function ThisDeviceSection({
@@ -200,8 +219,6 @@ export default function ThisDeviceSection({
         {readers && readers.length > 0 && (
           <ul className="divide-y divide-default-100 rounded-lg border border-default-200">
             {readers.map((reader) => {
-              const state = readerState(reader.state);
-
               return (
                 <li
                   key={reader.nodeId}
@@ -216,12 +233,7 @@ export default function ThisDeviceSection({
                             `dataSync.readers.mode.${reader.mode === "twoWay" ? "twoWay" : "follow"}`,
                           )
                         : undefined,
-                      state.code
-                        ? t(`dataSync.readers.state.${state.code}`, {
-                            count: Number(state.value) || 0,
-                            defaultValue: state.code,
-                          })
-                        : undefined,
+                      readerStateText(t, reader.state),
                       t("dataSync.readers.lastRead", { time: timeAgo(t, reader.lastReadAt, now) }),
                       reader.upToDate ? t("dataSync.readers.upToDate") : undefined,
                     ]

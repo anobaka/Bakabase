@@ -63,6 +63,19 @@ export const cardLine = (t: T, node: MapNode) => {
 };
 
 /**
+ * One direction of a relationship as a sentence, e.g. "NAS can browse this device's library". A
+ * data sync line whose receive direction waits for the first review says so, rather than that
+ * it waits for access.
+ */
+export const directionPhrase = (t: T, edge: MapEdge, direction: "in" | "out", name: string) => {
+  const status = edge[direction];
+
+  return direction === "in" && status === "pending" && edge.inReview
+    ? t(`federation.map.direction.${edge.kind}.in.review`, { name })
+    : t(`federation.map.direction.${edge.kind}.${direction}.${status}`, { name });
+};
+
+/**
  * One sentence per direction the relationship has, e.g. "NAS can browse this device's
  * library", then its mode where it has one (data sync: both ways, receive only) — and, for a
  * direction that does not work right now, why.
@@ -70,12 +83,8 @@ export const cardLine = (t: T, node: MapNode) => {
 export const directionPhrases = (t: T, edge: MapEdge, name: string) => {
   const phrases: string[] = [];
 
-  for (const direction of ["in", "out"] as const) {
-    const status = edge[direction];
-
-    if (status !== "none")
-      phrases.push(t(`federation.map.direction.${edge.kind}.${direction}.${status}`, { name }));
-  }
+  for (const direction of ["in", "out"] as const)
+    if (edge[direction] !== "none") phrases.push(directionPhrase(t, edge, direction, name));
   if (edge.mode) phrases.push(t(`federation.map.${edge.kind}.mode.${edge.mode}`));
   if (edge.attention)
     phrases.push(

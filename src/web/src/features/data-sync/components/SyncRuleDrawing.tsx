@@ -27,6 +27,7 @@ import {
   offersAskToKeepInStep,
   orderKinds,
   pauseDetail,
+  receivePhrase,
   receiveToggleTarget,
   sharingNeeded,
   stillReadsWhileOff,
@@ -264,9 +265,7 @@ export default function SyncRuleDrawing({
   const receiveAllowed =
     allowed(receiveTarget) && (receiveTarget !== "off" || peer.linkId !== undefined);
   const receiveLabel = [
-    editor.receive === "none"
-      ? t("dataSync.arrow.receive.off", { name })
-      : t(`federation.map.direction.sync.in.${editor.receive}`, { name }),
+    receivePhrase(t, peer, name),
     editor.badge ? t(`dataSync.mode.${editor.badge}`) : undefined,
   ]
     .filter(Boolean)

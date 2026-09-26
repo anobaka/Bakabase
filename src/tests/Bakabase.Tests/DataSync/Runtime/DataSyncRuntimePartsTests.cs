@@ -113,6 +113,24 @@ public class DataSyncRuntimePartsTests
             DataSyncTaskIds.WriteConflictKeys.ToArray());
     }
 
+    /// <summary>
+    /// What a reader declares to its source (§7.5.6), which the source's readers list words: waiting for its own
+    /// first review, or for the source's, are two different things to say there.
+    /// </summary>
+    [TestMethod]
+    public void The_declared_state_tells_whose_first_review_the_link_waits_for()
+    {
+        DataSyncLinkDbModel Link(DataSyncLinkState state) =>
+            new() { PeerNodeId = "p", PeerName = "P", State = state, PausedReason = DataSyncPauseReason.ByUser };
+
+        Assert.AreEqual("ok", Link(DataSyncLinkState.Active).GetDeclaredState(0));
+        Assert.AreEqual("needsYou:2", Link(DataSyncLinkState.Active).GetDeclaredState(2));
+        Assert.AreEqual("awaitingReview", Link(DataSyncLinkState.AwaitingReview).GetDeclaredState(0));
+        Assert.AreEqual("waitingForPeerReview", Link(DataSyncLinkState.WaitingForPeerReview).GetDeclaredState(0));
+        Assert.AreEqual("paused:byUser", Link(DataSyncLinkState.Paused).GetDeclaredState(3));
+        Assert.AreEqual("ok", Link(DataSyncLinkState.AwaitingAccess).GetDeclaredState(0));
+    }
+
     [TestMethod]
     public void Link_columns_read_tolerantly_and_derive_the_link_facts()
     {

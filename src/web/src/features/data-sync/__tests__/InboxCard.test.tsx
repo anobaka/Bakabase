@@ -20,6 +20,7 @@ import { groupInbox } from "../inboxModels";
 import { useDataSyncStore } from "../stores/dataSync";
 import { syncPeerFromLink } from "../viewModels";
 
+import { blurWhenDisabled } from "./blurWhenDisabled";
 import {
   inboxItem,
   inboxPayload,
@@ -940,6 +941,74 @@ describe("the list of what needs you", () => {
         "dataSync.problem.InboxItemChanged",
       );
       expect(decidable()).toBe(true);
+    });
+
+    it("keeps the keyboard on the cards: on the card while it is decided, then on the next", async () => {
+      renderList();
+      await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(3));
+      const live = () =>
+        screen
+          .getAllByTestId("data-sync-inbox-card")
+          .filter((card) => !card.hasAttribute("data-closed"));
+      const next = live()[live().indexOf(card31()) + 1].getAttribute("data-card");
+      const button = within(card31()).getByText("dataSync.inbox.action.KeepHereOnly NAS", {
+        selector: "button",
+      });
+
+      act(() => button.focus());
+      // The browser takes focus off the button once it is disabled while the decision is sent.
+      const letGo = blurWhenDisabled();
+
+      try {
+        await act(async () => {
+          fireEvent.click(button);
+        });
+        await waitFor(() =>
+          expect(within(card31()).getByTestId("data-sync-inbox-applying")).toBeInTheDocument(),
+        );
+        await waitFor(() => expect(within(card31()).getByRole("heading")).toHaveFocus());
+
+        // Decided: the card goes, and the keyboard goes on to the card after it.
+        serve([deletion(30), nameConflict(1)]);
+        await finish(BTaskStatus.Completed);
+        await waitFor(() =>
+          expect(document.querySelector('[data-card="item:31"]:not([data-closed])')).toBeNull(),
+        );
+        await waitFor(() =>
+          expect(
+            within(document.querySelector<HTMLElement>(`[data-card="${next}"]`)!).getByRole(
+              "heading",
+            ),
+          ).toHaveFocus(),
+        );
+      } finally {
+        letGo();
+      }
+    });
+
+    it("gives the keyboard to the section's heading when the last card is decided", async () => {
+      serve([deletion(31)], [closedElsewhere]);
+      renderList();
+      await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(1));
+      const button = within(card31()).getByText("dataSync.inbox.action.KeepHereOnly NAS", {
+        selector: "button",
+      });
+
+      act(() => button.focus());
+      const letGo = blurWhenDisabled();
+
+      try {
+        await act(async () => {
+          fireEvent.click(button);
+        });
+        serve([], [closedElsewhere]);
+        await finish(BTaskStatus.Completed);
+        await waitFor(() =>
+          expect(screen.getByRole("heading", { name: "dataSync.inbox.title" })).toHaveFocus(),
+        );
+      } finally {
+        letGo();
+      }
     });
 
     it("lets the card go once its task is done, even when nothing about it changed", async () => {

@@ -240,6 +240,36 @@ public sealed class DataSyncScopeServiceTests
         Assert.AreEqual(DataSyncProblemCode.SharingOff, (await Problem(node.Grants.ApproveAsync("waiting", true, default))).Code);
     }
 
+    /// <summary>
+    /// A device found only nearby is known here by nothing but what it answered: "Sync with another device" names it
+    /// and the address it answered at. By its id alone there is nowhere to ask it; with the address, the request is
+    /// filed there — and only with the device that answers as it.
+    /// </summary>
+    [TestMethod]
+    public async Task ADeviceFoundOnlyNearbyIsAskedAtTheAddressItAnsweredAt()
+    {
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
+        await nas.Grants.SetSharingEnabledAsync(true, false, default);
+
+        Assert.AreEqual(DataSyncProblemCode.PeerUnreachable, (await Problem(desk.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput("node-nas", null, null, DataSyncRequestIntent.Follow), default))).Code);
+
+        var elsewhere = await Assert.ThrowsExactlyAsync<DataSyncPeerException>(() => desk.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput("node-other", nas.Address, null, DataSyncRequestIntent.Follow), default));
+        Assert.AreEqual(DataSyncPeerErrorCode.IdentityConflict, elsewhere.Code,
+            "Another device answers at that address: nothing is filed with it.");
+        Assert.IsFalse((await nas.Grants.GetRequestsAsync(default))
+            .Any(r => r.Direction == DataSyncRequestDirection.Incoming));
+
+        var outcome = await desk.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput("node-nas", nas.Address, null, DataSyncRequestIntent.Follow), default);
+        Assert.AreEqual(("awaitingApproval", "node-nas"), (outcome.Outcome, outcome.PeerNodeId));
+        var filed = (await nas.Grants.GetRequestsAsync(default))
+            .Single(r => r.Direction == DataSyncRequestDirection.Incoming);
+        Assert.AreEqual(("node-desk", "Desk"), (filed.NodeId, filed.NodeName));
+    }
+
     /// <summary>A request naming a device this one knows, from another address, carries the claim warning.</summary>
     [TestMethod]
     public async Task ARequestClaimingAKnownDeviceFromElsewhereIsFlagged()

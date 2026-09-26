@@ -25,8 +25,10 @@ import {
   overallStatus,
   pauseDetail,
   peerCardLine,
+  pendingRequestsLine,
   readLane,
   receiveLane,
+  receivePhrase,
   receiveToggleTarget,
   sharingNeeded,
   stillReadsWhileOff,
@@ -339,6 +341,20 @@ describe("the lines a link is drawn with", () => {
     ).toBe("pending");
   });
 
+  it("says what the waiting receive direction waits for: access, or the first review", () => {
+    expect(receivePhrase(keyT, peerOf({ state: DataSyncLinkState.AwaitingAccess }))).toBe(
+      "federation.map.direction.sync.in.pending NAS",
+    );
+    for (const state of [DataSyncLinkState.AwaitingReview, DataSyncLinkState.WaitingForPeerReview])
+      expect(receivePhrase(keyT, peerOf({ state })), String(state)).toBe(
+        "federation.map.direction.sync.in.review NAS",
+      );
+    expect(receivePhrase(keyT, peerOf())).toBe("federation.map.direction.sync.in.active NAS");
+    expect(
+      receivePhrase(keyT, peerOf({ mode: DataSyncLinkMode.Off, state: DataSyncLinkState.Stopped })),
+    ).toBe("dataSync.arrow.receive.off NAS");
+  });
+
   it("draws the may-read direction from this device's grant", () => {
     expect(readLane(peerOf())).toBe("active");
     expect(readLane(peerOf({ peerMayReadUs: false }))).toBe("none");
@@ -629,6 +645,50 @@ describe("the status of the whole device", () => {
       "dataSync.status.peersNeedingDecisions 2",
     );
     expect(waitingElsewhereLine(keyT, status())).toBeUndefined();
+  });
+
+  // Nothing synced yet, and nothing running: never "Syncing…" while it waits for someone.
+  const waiting = { links: 1, linksInStep: 0, lastSyncedAt: undefined };
+
+  it("says a link waiting for the other device's approval or first review waits", () => {
+    expect(overallStatus(keyT, status({ ...waiting, linksWaiting: 1 }), NOW)).toMatchObject({
+      code: "Waiting",
+      tone: "primary",
+      text: "dataSync.status.level.Waiting 1",
+    });
+  });
+
+  it("says a first sync ready to review here, before anything else that is fine", () => {
+    expect(overallStatus(keyT, status({ ...waiting, linksToReview: 1 }), NOW)).toMatchObject({
+      code: "ToReview",
+      text: "dataSync.status.level.ToReview 1",
+    });
+    // Even beside a link that is in step: the review is for the reader to do.
+    expect(overallStatus(keyT, status({ links: 2, linksToReview: 1 }), NOW)?.code).toBe("ToReview");
+    // A link in step says so, however many others still wait for another device.
+    expect(overallStatus(keyT, status({ links: 2, linksWaiting: 1 }), NOW)?.code).toBe("InStep");
+  });
+
+  it("says who reads this device, or what waits for an answer, where nothing is linked", () => {
+    const none = { links: 0, linksInStep: 0, lastSyncedAt: undefined };
+
+    expect(overallStatus(keyT, status({ ...none, readers: 2 }), NOW)).toMatchObject({
+      code: "ReadersOnly",
+      text: "dataSync.status.level.ReadersOnly 2",
+    });
+    const requests = overallStatus(keyT, status({ ...none, pendingRequests: 1 }), NOW);
+
+    expect(requests).toMatchObject({ code: "Requests", text: "dataSync.status.level.Requests 1" });
+    // Said once: not again as the line beside it.
+    expect(pendingRequestsLine(keyT, status({ ...none, pendingRequests: 1 }), requests)).toBe(
+      undefined,
+    );
+    const inStep = overallStatus(keyT, status({ pendingRequests: 2 }), NOW);
+
+    expect(inStep?.code).toBe("InStep");
+    expect(pendingRequestsLine(keyT, status({ pendingRequests: 2 }), inStep)).toBe(
+      "dataSync.status.level.Requests 2",
+    );
   });
 });
 

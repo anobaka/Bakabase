@@ -8,7 +8,14 @@ import type {
 import type { SyncPeer } from "../viewModels";
 import type { MapAttention, MapEdge, MapIssue, MapNode } from "@/features/federation/map/graph";
 
-import { lineMode, readLane, receiveLane, syncIssueOf, syncPeerOfRecords } from "../viewModels";
+import {
+  lineMode,
+  readLane,
+  receiveLane,
+  receiveWaitsForReview,
+  syncIssueOf,
+  syncPeerOfRecords,
+} from "../viewModels";
 
 import { identityKey } from "@/features/federation/map/graph";
 import { parseServerTime } from "@/core/serverTime";
@@ -192,6 +199,7 @@ const peerEdge = (node: SyncMapNode, peer: SyncPeer): MapEdge => {
     out: readLane(peer),
     ...(mode ? { mode } : {}),
     ...(attention ? { attention } : {}),
+    ...(receiveWaitsForReview(peer) ? { inReview: true } : {}),
   };
 };
 

@@ -6,7 +6,15 @@ import { useTranslation } from "react-i18next";
 
 import { edgesOf } from "./graph";
 import { ATTENTION_DASH, AttentionMark, edgeStyles, KindBadge, KindGlyph } from "./DeviceMapCanvas";
-import { cardLine, edgeKindLabel, edgeLabel, issueLabel, nodeLabel, nodeName } from "./describe";
+import {
+  cardLine,
+  directionPhrase,
+  edgeKindLabel,
+  edgeLabel,
+  issueLabel,
+  nodeLabel,
+  nodeName,
+} from "./describe";
 
 /*
  * The device map as a list, for more devices than the width can draw readably: every device a
@@ -88,11 +96,7 @@ function Relationship({
               data-status={edge[direction]}
             >
               <DirectionSwatch direction={direction} edge={edge} />
-              <span className="min-w-0 flex-1">
-                {t(`federation.map.direction.${edge.kind}.${direction}.${edge[direction]}`, {
-                  name,
-                })}
-              </span>
+              <span className="min-w-0 flex-1">{directionPhrase(t, edge, direction, name)}</span>
             </span>
           ))}
         {edge.mode && (

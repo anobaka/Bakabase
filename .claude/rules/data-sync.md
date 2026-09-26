@@ -313,10 +313,28 @@ scopes").
   the map and the indicator alike. A link's `peerOnline` is false after every restart until its first head and
   after every failure, so it never makes a device offline. The indicator's reason is the error
   of a link that set its level; a failed read-back's reason is its `LastErrorDetail`.
+- **The indicator is `Off` only when there is nothing** (§11.3): no live link, no reader, no
+  request waiting here, nothing to decide and no restore (`DataSyncViews.GetStatus`). The status
+  carries `PendingRequests`, `Readers`, `LinksToReview` and `LinksWaiting`, so a quiet device's
+  line says what it is: a first sync ready to review here, waiting for another device's approval
+  or review (never "Syncing…"), only read by others, or requests waiting for an answer.
+- **What a reader declares** (§7.5.6) is `ok|awaitingReview|waitingForPeerReview|paused:{reason}|
+  needsYou:{n}` — `waitingForPeerReview` being the reader waiting for this device's review. The
+  readers list maps each word explicitly and shows nothing for a word it does not know; it never
+  builds a key from a wire value (a missing key renders as the key itself).
+- **This device's counts** (`DataSyncOverview.Kinds`) come from the kinds' own rows, less those
+  kept local or detached (and, while new definitions stay local, those no Refresh has met):
+  never from what Refresh last published, which a device no peer has read has none of.
+- **A device found only nearby is asked at its address.** A link or copy once to a device the
+  server does not know sends its `peerNodeId` and the `address` it answered at; the wizard and
+  the map do alike. Sharing the wizard turned on for a request that then failed is turned off
+  again (remote access, a setting of its own, stays).
 - **Copy.** The feature is 数据同步 / Data sync; never 配置同步, 配置包 or 分享给他人. “Needs
   you” is 待你决定 (待处理 is taken). Device names are never quoted — no «», “ ” or 「」
   around `{{name}}`. No copy (help, menu, page, notice, legend, rule text) describes a kind or
-  capability before it works.
+  capability before it works. An English string with a `{{count}}` noun has a `_one` form
+  beside it (i18next resolves it); Chinese needs none, and the locale test holds both to that.
+  A switch's label is quoted with “ ” in both languages, as the help does.
 
 ## Headless (NAS/Docker)
 

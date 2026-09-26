@@ -59,6 +59,11 @@ export interface ReviewViewProps {
   awaitingAccess?: boolean;
   selfName: string;
   onClose: () => void;
+  /**
+   * Where the keyboard goes on closing when what opened the review is gone: the link that did
+   * is taken away once the first sync is done.
+   */
+  returnFocus?: () => HTMLElement | null | undefined;
   /** Something changed here: the page reads data sync again. */
   onChanged: () => void;
   now?: number;
@@ -88,6 +93,7 @@ export default function ReviewView({
   awaitingAccess = false,
   selfName,
   onClose,
+  returnFocus,
   onChanged,
   now,
 }: ReviewViewProps) {
@@ -248,6 +254,7 @@ export default function ReviewView({
           </button>
         )
       }
+      returnFocus={returnFocus}
       testId="data-sync-review"
       title={title}
       onClose={onClose}

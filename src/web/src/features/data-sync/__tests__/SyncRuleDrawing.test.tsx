@@ -610,7 +610,9 @@ describe("the status line", () => {
     const failed = nas({
       state: DataSyncLinkState.AwaitingAccess,
       initiator: DataSyncLinkInitiator.Peer,
-      lastErrorCode: "Unreachable",
+      // As the server says it: the failure, and why in its detail.
+      lastErrorCode: "ReadBackFailed",
+      lastErrorDetail: "Unreachable",
       peerModeTowardsUs: "twoWay",
     });
 

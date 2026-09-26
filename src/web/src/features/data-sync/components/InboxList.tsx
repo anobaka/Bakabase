@@ -2,6 +2,7 @@ import type { DataSyncInboxItemView, DataSyncInboxQuery, DataSyncResolveBatchInp
 import type { InboxApplying, InboxBulk, InboxCardModel } from "../inboxModels";
 import type { SyncPeer } from "../viewModels";
 import type { InboxConfirmation } from "./InboxCard";
+import type { RefObject } from "react";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -107,6 +108,99 @@ export const readOpenItems = () => readOpen();
 export const readEntityItems = async (kind: string, localKey: string) =>
   (await readOpen({ kind, localKey })).items;
 
+/** The cards still to decide, in their order: not those that say how they closed. */
+const liveCards = (section: HTMLElement) =>
+  Array.from(
+    section.querySelectorAll<HTMLElement>(
+      '[data-testid="data-sync-inbox-card"]:not([data-closed])',
+    ),
+  );
+
+/** Focus that is nowhere: on the page's body, or on an element no longer in the page. */
+const nowhere = (element: Element | null) =>
+  !element || element === document.body || !element.isConnected;
+
+/**
+ * Keeps the keyboard on the cards when a card takes away what had it: its control disabled while
+ * its decision is sent (Chromium moves focus to the page's body at once), or the card itself
+ * gone once decided. Focus goes to that card's heading while it is there, else to the next
+ * card's, else to the section's heading. Only focus the reader left on a card is kept: a pointer
+ * pressed elsewhere, or focus moved outside the cards, lets go.
+ */
+function useCardFocus(section: RefObject<HTMLElement>, heading: RefObject<HTMLHeadingElement>) {
+  // The card that has the keyboard, and where it stood among the cards.
+  const holder = useRef<{ key: string; index: number }>();
+  const watched = useRef<{ element: HTMLElement; observer: MutationObserver }>();
+
+  const check = useCallback(() => {
+    const held = holder.current;
+    const element = section.current;
+
+    if (!held || !element || !nowhere(document.activeElement)) return;
+    // A confirmation still asks: the keyboard is its until it closes.
+    if (document.querySelector('[role="alertdialog"]')) return;
+    const cards = liveCards(element);
+    const card = cards.find((item) => item.dataset.card === held.key) ?? cards[held.index];
+
+    holder.current = card ? { key: card.dataset.card!, index: cards.indexOf(card) } : undefined;
+    (card?.querySelector<HTMLElement>("h3") ?? heading.current)?.focus();
+  }, [section, heading]);
+
+  useEffect(() => {
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+
+      // A confirmation a card opened: the card keeps the keyboard's place.
+      if (target?.closest('[role="alertdialog"]')) return;
+      const card =
+        target && section.current?.contains(target)
+          ? target.closest<HTMLElement>('[data-testid="data-sync-inbox-card"]:not([data-closed])')
+          : null;
+
+      holder.current =
+        card && section.current
+          ? { key: card.dataset.card!, index: liveCards(section.current).indexOf(card) }
+          : undefined;
+    };
+    const onPointerDown = () => {
+      holder.current = undefined;
+    };
+
+    document.addEventListener("focusin", onFocusIn, true);
+    document.addEventListener("pointerdown", onPointerDown, true);
+
+    return () => {
+      document.removeEventListener("focusin", onFocusIn, true);
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      watched.current?.observer.disconnect();
+      watched.current = undefined;
+    };
+  }, [section]);
+
+  // Every change inside the section is checked — the section itself comes and goes with what
+  // there is to show — and every render too: a confirmation closing changes nothing inside it.
+  useEffect(() => {
+    const element = section.current;
+
+    if (watched.current?.element !== element) {
+      watched.current?.observer.disconnect();
+      watched.current = undefined;
+      if (element && typeof MutationObserver === "function") {
+        const observer = new MutationObserver(check);
+
+        observer.observe(element, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ["disabled"],
+        });
+        watched.current = { element, observer };
+      }
+    }
+    check();
+  });
+}
+
 /** Where a definition read whole is remembered: by kind and local key. */
 const entityKey = (kind: string, localKey: string) => `${kind}/${localKey}`;
 
@@ -168,6 +262,7 @@ export default function InboxList({
   const [bulkError, setBulkError] = useState<Error>();
   const backup = useBackupTarget();
   const section = useRef<HTMLElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
   const shownCards = useRef<InboxCardModel[]>([]);
   const actions = useDataSyncActions(() => undefined);
   const reducedMotion = useReducedMotion();
@@ -183,6 +278,7 @@ export default function InboxList({
   const entities = useRef(new Map<string, { kind: string; localKey: string }>());
 
   useEffect(() => setPeer(initialPeer ?? ""), [initialPeer]);
+  useCardFocus(section, heading);
 
   const updateApplying = useCallback(
     (change: (current: Map<string, InboxApplying>) => Map<string, InboxApplying>) => {
@@ -494,7 +590,11 @@ export default function InboxList({
       className={`${panelClass} space-y-3`}
       data-testid="data-sync-inbox"
     >
-      <SectionHeading id="data-sync-inbox-title" title={t("dataSync.inbox.title")}>
+      <SectionHeading
+        headingRef={heading}
+        id="data-sync-inbox-title"
+        title={t("dataSync.inbox.title")}
+      >
         <DataSyncHelp />
         {devices.length > 1 || peer ? (
           <select

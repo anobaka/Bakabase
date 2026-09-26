@@ -215,6 +215,11 @@ export interface MapEdge {
    * the other) or receive only. None while it does not receive.
    */
   mode?: "twoWay" | "follow";
+  /**
+   * Data sync only: the pending receive direction waits for the first sync's review (this
+   * device's or the other one's), not for access — drawn the same, said differently.
+   */
+  inReview?: boolean;
 }
 
 export interface DeviceGraph {

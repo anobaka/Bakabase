@@ -134,7 +134,8 @@ public class DataSyncFirstContactTests
         await h.FetchOnceAsync();
         Assert.AreEqual(0, peer.Manifests, "a waiting link never builds a snapshot");
         Assert.AreEqual(2, peer.HeadQueries.Count);
-        Assert.IsTrue(peer.HeadQueries.All(q => q.ReaderState == "awaitingReview"));
+        Assert.IsTrue(peer.HeadQueries.All(q => q.ReaderState == "waitingForPeerReview"),
+            "it waits for the initiator's review, and says so");
         Assert.AreEqual(DataSyncLinkState.WaitingForPeerReview, h.Link(link.Id).State);
 
         peer.Counterpart = new DataSyncFeedCounterpart("twoWay", true, DataSyncKindIds.All);

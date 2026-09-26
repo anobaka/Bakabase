@@ -228,8 +228,9 @@ export default function InboxCard({
           <span title={localDateTime(first.updatedAt)}>{timeAgo(t, first.updatedAt, now)}</span>
         </div>
         <h3
-          className="break-words text-sm font-semibold [overflow-wrap:anywhere]"
+          className="break-words text-sm font-semibold outline-none [overflow-wrap:anywhere]"
           id={`data-sync-inbox-${card.key}`}
+          tabIndex={-1}
         >
           {t(`dataSync.inbox.type.${headlineKey(card)}`, values)}
         </h3>

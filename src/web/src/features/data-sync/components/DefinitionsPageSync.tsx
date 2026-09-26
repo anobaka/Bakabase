@@ -29,6 +29,9 @@ import { useCanAdministerShownServer } from "@/stores/remoteAccess";
  * it shows (spec §11.3), and never where the server refuses data sync to this window.
  */
 
+/** How long the badges wait after a status change before reading again: a burst is read once. */
+export const STATUS_RELOAD_DELAY_MS = 500;
+
 /** Whether the definitions pages show data sync here. */
 export const useDefinitionPagesSync = () => {
   const administer = useCanAdministerShownServer();
@@ -120,6 +123,26 @@ export function useDefinitionSync(kind: string, onApplied?: () => void): Definit
     void reload();
     applied.current?.();
   }, [lastApplied, kind, reload]);
+
+  // What needs you, and when this device last synced, move without an apply of this kind — a
+  // conflict or a deletion waiting for a decision applies nothing: the badges follow the status
+  // (the hub's pushes, the indicator's reads), a burst of changes read once.
+  const statusMark = useDataSyncStore((state) =>
+    state.status ? `${state.status.openItems}|${state.status.lastSyncedAt ?? ""}` : undefined,
+  );
+  const seenMark = useRef(statusMark);
+
+  useEffect(() => {
+    if (statusMark === undefined || statusMark === seenMark.current) return;
+    const first = seenMark.current === undefined;
+
+    seenMark.current = statusMark;
+    // The first status this window reads says nothing new: the entities were read on mount.
+    if (first) return;
+    const timer = setTimeout(() => void reload(), STATUS_RELOAD_DELAY_MS);
+
+    return () => clearTimeout(timer);
+  }, [statusMark, reload]);
 
   const host = shown && !refused && (
     <>

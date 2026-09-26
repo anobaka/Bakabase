@@ -3,12 +3,13 @@ import type { Box, Point } from "../components/diagramLayout";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import SyncLinksDiagram from "../components/SyncLinksDiagram";
+import SyncLinksDiagram, { wrapLabel } from "../components/SyncLinksDiagram";
 import {
   GAP,
   layoutSyncDiagram,
   LIST_BELOW,
   noOverlap,
+  PEER_W,
   spokeGeometry,
 } from "../components/diagramLayout";
 import { lineMode, syncPeerFromLink, syncPeersOf } from "../viewModels";
@@ -16,6 +17,8 @@ import { lineMode, syncPeerFromLink, syncPeersOf } from "../viewModels";
 import { link, mapView, NOW, outgoing, reader } from "./dataSyncFixtures";
 
 import { SEMIBOLD, textWidth } from "@/features/federation/map/text";
+import en from "@/locales/en/pages/dataSync.json";
+import cn from "@/locales/cn/pages/dataSync.json";
 import { DataSyncLinkMode, DataSyncLinkState } from "@/sdk/constants";
 
 vi.mock("react-i18next", () => ({
@@ -467,5 +470,25 @@ describe("the diagram", () => {
       />,
     );
     expect(screen.getByTestId("data-sync-spoke")).toHaveAttribute("data-mode", "twoWay");
+  });
+});
+
+describe("the drawing's call to sync with another device", () => {
+  // As wide as the add card leaves beside its plus, in its size.
+  const room = PEER_W - 52;
+  const size = 12 * SEMIBOLD;
+
+  it("sets its English label on two lines rather than cutting it short", () => {
+    const lines = wrapLabel(en["dataSync.wizard.open"], room, size);
+
+    expect(lines.join(" ")).toBe(en["dataSync.wizard.open"]);
+    expect(lines).toHaveLength(2);
+    for (const line of lines) expect(textWidth(line, size)).toBeLessThanOrEqual(room);
+  });
+
+  it("keeps a label that fits on one line, and shortens a word that fits on none", () => {
+    expect(wrapLabel(cn["dataSync.wizard.open"], room, size)).toEqual([cn["dataSync.wizard.open"]]);
+    expect(wrapLabel("x".repeat(60), room, size)[0]).toMatch(/…$/);
+    expect(wrapLabel("one two three four five six seven eight", 60, size)).toHaveLength(2);
   });
 });

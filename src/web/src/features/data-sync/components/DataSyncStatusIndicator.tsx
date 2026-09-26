@@ -6,7 +6,7 @@ import { AiOutlineSync } from "react-icons/ai";
 import { DATA_SYNC_ROUTE, dataSyncRestoreRoute } from "../routes";
 import { useDataSyncWindow } from "../hooks/useDataSyncWindow";
 import { useDataSyncStore } from "../stores/dataSync";
-import { overallStatus, waitingElsewhereLine } from "../viewModels";
+import { overallStatus, pendingRequestsLine, waitingElsewhereLine } from "../viewModels";
 
 import { toneDot } from "./common";
 
@@ -21,7 +21,7 @@ export const INDICATOR_REFRESH_MS = 60_000;
  * nobody has taken there. Its tooltip is the status line; a click opens the page.
  *
  * Hidden while data sync is off — no links, no readers, no requests — and in a window that may
- * not use data sync at all. Driven by the data sync store: the overview, read on mount and
+ * not use data sync at all. Requests waiting for an answer here are said in the tooltip too. Driven by the data sync store: the overview, read on mount and
  * every minute, and the hub's status pushes in between. While this device waits for a decision
  * after a restore, a click opens the restore panel.
  */
@@ -49,15 +49,21 @@ export default function DataSyncStatusIndicator() {
   const line = usable ? overallStatus(t, status) : undefined;
 
   if (!line || !status) return null;
-  const elsewhere = waitingElsewhereLine(t, status);
-  const label = elsewhere ? `${line.text}. ${elsewhere}` : line.text;
+  const more = [waitingElsewhereLine(t, status), pendingRequestsLine(t, status, line)].filter(
+    (text): text is string => !!text,
+  );
+  const label = [line.text, ...more].join(". ");
 
   return (
     <Tooltip
       content={
         <div className="space-y-0.5 text-xs">
           <p>{line.text}</p>
-          {elsewhere && <p className="text-default-500">{elsewhere}</p>}
+          {more.map((text) => (
+            <p key={text} className="text-default-500">
+              {text}
+            </p>
+          ))}
         </div>
       }
     >

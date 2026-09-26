@@ -66,6 +66,10 @@ export const status = (patch: Partial<DataSyncStatusView> = {}): DataSyncStatusV
   linksInStep: 1,
   peersNeedingDecisions: 0,
   lastSyncedAt: minutesAgo(5),
+  pendingRequests: 0,
+  readers: 0,
+  linksToReview: 0,
+  linksWaiting: 0,
   ...patch,
 });
 
@@ -225,7 +229,9 @@ export const reader = (
   grantedAt: minutesAgo(60 * 24),
   lastReadAt: minutesAgo(6),
   mode: "twoWay",
-  state: "inStep",
+  // As a reader declares it (spec §7.5.6): ok, awaitingReview, waitingForPeerReview,
+  // paused:{reason} or needsYou:{n}.
+  state: "ok",
   upToDate: true,
   ...patch,
 });

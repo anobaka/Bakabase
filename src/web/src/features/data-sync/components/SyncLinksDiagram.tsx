@@ -16,6 +16,7 @@ import {
   peerCardLine,
   readLane,
   receiveLane,
+  receivePhrase,
   syncIssueOf,
 } from "../viewModels";
 
@@ -89,13 +90,10 @@ const kindOf = (peer: SyncPeer) =>
 
 /** What a spoke says, for a screen reader: both directions, the mode and the status. */
 export const spokeLabel = (t: TFunction, peer: SyncPeer, now?: number) => {
-  const receive = receiveLane(peer);
   const read = readLane(peer);
   const mode = lineMode(peer);
   const parts = [
-    receive === "none"
-      ? t("dataSync.arrow.receive.off", { name: peer.name })
-      : t(`federation.map.direction.sync.in.${receive}`, { name: peer.name }),
+    receivePhrase(t, peer),
     read === "active"
       ? t("federation.map.direction.sync.out.active", { name: peer.name })
       : t("dataSync.arrow.read.off", { name: peer.name }),
@@ -735,11 +733,46 @@ function AddSpoke({ self, peer }: { self: Box; peer: Box }) {
   );
 }
 
+/** The add card's words: their size, and the height of a line of them. */
+const ADD_FONT_SIZE = 12;
+const ADD_LINE_H = 15;
+
+/**
+ * Words set on at most `maxLines` lines of `maxWidth`, broken between words; what still does not
+ * fit is shortened at the end of the last line. Words that are one (Chinese) are shortened.
+ */
+export const wrapLabel = (text: string, maxWidth: number, fontSize: number, maxLines = 2) => {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+
+  for (const [index, word] of words.entries()) {
+    const next = current ? `${current} ${word}` : word;
+
+    if (!current || textWidth(next, fontSize) <= maxWidth) {
+      current = next;
+      continue;
+    }
+    if (lines.length === maxLines - 1) {
+      current = [current, ...words.slice(index)].join(" ");
+      break;
+    }
+    lines.push(current);
+    current = word;
+  }
+  if (current) lines.push(current);
+
+  return lines.map((item) => fitEnd(item, maxWidth, fontSize));
+};
+
 function AddCard({ box, onAdd }: { box: Box; onAdd: () => void }) {
   const { t } = useTranslation();
   const x = box.cx - box.w / 2;
   const y = box.cy - box.h / 2;
   const label = t("dataSync.wizard.open");
+  // Beside the plus, on two lines where one is not enough: never cut short in English.
+  const lines = wrapLabel(label, box.w - 52, ADD_FONT_SIZE * SEMIBOLD);
+  const firstLineY = box.cy + 4 - ((lines.length - 1) * ADD_LINE_H) / 2;
 
   return (
     <g
@@ -784,8 +817,19 @@ function AddCard({ box, onAdd }: { box: Box; onAdd: () => void }) {
           strokeWidth={1.8}
         />
       </g>
-      <text className="fill-default-600" fontSize={12} fontWeight={600} x={x + 44} y={box.cy + 4}>
-        {fitEnd(label, box.w - 52, 12 * SEMIBOLD)}
+      <text
+        className="fill-default-600"
+        data-testid="data-sync-add-label"
+        fontSize={ADD_FONT_SIZE}
+        fontWeight={600}
+        x={x + 44}
+        y={firstLineY}
+      >
+        {lines.map((item, index) => (
+          <tspan key={index} dy={index === 0 ? 0 : ADD_LINE_H} x={x + 44}>
+            {item}
+          </tspan>
+        ))}
       </text>
     </g>
   );

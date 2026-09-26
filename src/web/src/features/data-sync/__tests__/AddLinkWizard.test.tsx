@@ -5,13 +5,18 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AddLinkWizard from "../components/AddLinkWizard";
-import { dataSyncApi } from "../api";
+import { dataSyncApi, DataSyncProblemError } from "../api";
 import { useDataSyncActions } from "../hooks/useDataSyncActions";
 
 import { blurWhenDisabled } from "./blurWhenDisabled";
 import { candidate, link } from "./dataSyncFixtures";
 
-import { DataSyncLinkMode, DataSyncLinkState, RemoteAccessMode } from "@/sdk/constants";
+import {
+  DataSyncLinkMode,
+  DataSyncLinkState,
+  DataSyncProblemCode,
+  RemoteAccessMode,
+} from "@/sdk/constants";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -51,18 +56,22 @@ const found = [
   candidate("node-read", "Reader PC", { weMayRead: true, theyMayRead: true }),
 ];
 
-const open = (canManage = true, onClose = vi.fn()) => {
+const open = (
+  canManage = true,
+  onClose = vi.fn(),
+  own: { sharingEnabled?: boolean; remoteAccessMode?: RemoteAccessMode } = {},
+) => {
   // The page's own actions: the wizard shows what they say.
   const Host = () => {
     const hostActions = useDataSyncActions(() => undefined);
 
     return (
       <AddLinkWizard
-        sharingEnabled
         actions={hostActions}
         canManage={canManage}
-        remoteAccessMode={RemoteAccessMode.Enabled}
+        remoteAccessMode={own.remoteAccessMode ?? RemoteAccessMode.Enabled}
         selfName="This PC"
+        sharingEnabled={own.sharingEnabled ?? true}
         onClose={onClose}
       />
     );
@@ -160,8 +169,10 @@ describe("sync with another device", () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId("data-sync-wizard-start"));
     });
+    // Asked where it was listed: the request goes to that address.
     expect(dataSyncApi.createLink).toHaveBeenCalledWith({
       peerNodeId: "node-new",
+      address: "192.168.1.40:34567",
       mode: DataSyncLinkMode.TwoWay,
       kinds: ["customProperty", "extensionGroup"],
     });
@@ -172,6 +183,106 @@ describe("sync with another device", () => {
     expect(screen.getByText("dataSync.wizard.requested New PC")).toBeInTheDocument();
     fireEvent.click(screen.getByText("dataSync.done"));
     expect(onClose).toHaveBeenCalledWith("node-new");
+  });
+
+  it.each([
+    ["receives from", "follow", DataSyncLinkMode.Follow],
+    ["keeps in step with", "twoWay", DataSyncLinkMode.TwoWay],
+  ] as const)(
+    "%s a device found only nearby at the address it answered at",
+    async (_, how, mode) => {
+      vi.mocked(dataSyncApi.peers).mockImplementation(async (discover) =>
+        discover
+          ? [candidate("node-near", "Near PC", { known: false, address: "http://127.0.0.1:62455" })]
+          : [],
+      );
+      vi.mocked(dataSyncApi.createLink).mockResolvedValue({
+        link: link(23, "node-near", "Near PC", { state: DataSyncLinkState.AwaitingAccess }),
+        requestId: "req-out-3",
+      });
+      open();
+      await waitFor(() => expect(option("node-near")).not.toBeNull());
+      fireEvent.click(option("node-near"));
+      fireEvent.click(screen.getByTestId("data-sync-wizard-next"));
+      fireEvent.click(screen.getByTestId(`data-sync-wizard-how-${how}`));
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("data-sync-wizard-start"));
+      });
+      expect(dataSyncApi.createLink).toHaveBeenCalledWith({
+        peerNodeId: "node-near",
+        address: "http://127.0.0.1:62455",
+        mode,
+        kinds: ["customProperty", "extensionGroup"],
+      });
+      expect(screen.getByTestId("data-sync-wizard-outcome")).toHaveAttribute(
+        "data-outcome",
+        "requested",
+      );
+    },
+  );
+
+  it("copies once from a device found only nearby at its address too", async () => {
+    vi.mocked(dataSyncApi.peers).mockImplementation(async (discover) =>
+      discover
+        ? [candidate("node-near", "Near PC", { known: false, address: "http://127.0.0.1:62455" })]
+        : [],
+    );
+    vi.mocked(dataSyncApi.copyOnce).mockResolvedValue({
+      linkId: 24,
+      copyOnce: true,
+      linkMode: DataSyncLinkMode.Off,
+    });
+    open();
+    await waitFor(() => expect(option("node-near")).not.toBeNull());
+    fireEvent.click(option("node-near"));
+    fireEvent.click(screen.getByTestId("data-sync-wizard-next"));
+    fireEvent.click(screen.getByTestId("data-sync-wizard-how-copyOnce"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("data-sync-wizard-start"));
+    });
+    expect(dataSyncApi.copyOnce).toHaveBeenCalledWith({
+      peerNodeId: "node-near",
+      address: "http://127.0.0.1:62455",
+      kinds: ["customProperty", "extensionGroup"],
+    });
+  });
+
+  it("turns sharing off again when the request it turned sharing on for fails", async () => {
+    vi.mocked(dataSyncApi.createLink).mockRejectedValue(
+      new DataSyncProblemError({ code: DataSyncProblemCode.PeerUnreachable }),
+    );
+    open(true, vi.fn(), { sharingEnabled: false });
+    await waitFor(() => expect(option("node-new")).not.toBeNull());
+    fireEvent.click(option("node-new"));
+    fireEvent.click(screen.getByTestId("data-sync-wizard-next"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("data-sync-wizard-start"));
+    });
+
+    expect(vi.mocked(dataSyncApi.setSharing).mock.calls.map(([input]) => input)).toEqual([
+      { enabled: true, enablePairedRemoteAccess: false },
+      { enabled: false, enablePairedRemoteAccess: false },
+    ]);
+    // The failure is said where the wizard is, and nothing moved on.
+    expect(screen.getByTestId("data-sync-wizard-how")).toBeInTheDocument();
+    expect(screen.queryByTestId("data-sync-wizard-outcome")).toBeNull();
+  });
+
+  it("leaves sharing on that was on already, when only remote access was turned on", async () => {
+    vi.mocked(dataSyncApi.createLink).mockRejectedValue(
+      new DataSyncProblemError({ code: DataSyncProblemCode.PeerUnreachable }),
+    );
+    open(true, vi.fn(), { remoteAccessMode: RemoteAccessMode.Disabled });
+    await waitFor(() => expect(option("node-new")).not.toBeNull());
+    fireEvent.click(option("node-new"));
+    fireEvent.click(screen.getByTestId("data-sync-wizard-next"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("data-sync-wizard-start"));
+    });
+
+    expect(vi.mocked(dataSyncApi.setSharing).mock.calls.map(([input]) => input)).toEqual([
+      { enabled: true, enablePairedRemoteAccess: true },
+    ]);
   });
 
   it("copies once from a device it reads already, straight to the review", async () => {

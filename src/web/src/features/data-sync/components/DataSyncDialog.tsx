@@ -23,7 +23,8 @@ const keepFocusIn = (heading: HTMLElement | null) => {
  * A modal of data sync's own, for what takes more than a yes or a no: the "sync with another
  * device" wizard, a one-time code. Portalled over the page like the multi-device pages'
  * confirmations; Tab stays inside, focus it takes away goes to its heading, Escape closes it
- * (unless it is busy), and focus goes back to what opened it.
+ * (unless it is busy), and focus goes back to what opened it — or, when what opened it went
+ * away meanwhile (the review's link, gone once the first sync is done), to `returnFocus`.
  */
 export default function DataSyncDialog({
   title,
@@ -31,6 +32,7 @@ export default function DataSyncDialog({
   footer,
   busy = false,
   onClose,
+  returnFocus,
   testId,
   wide = false,
 }: {
@@ -39,6 +41,8 @@ export default function DataSyncDialog({
   footer?: ReactNode;
   busy?: boolean;
   onClose: () => void;
+  /** Where the keyboard goes on closing when what opened the dialog is no longer there. */
+  returnFocus?: () => HTMLElement | null | undefined;
   testId?: string;
   /** For what needs room: the first sync review, the undo preview. */
   wide?: boolean;
@@ -47,9 +51,9 @@ export default function DataSyncDialog({
   const dialog = useRef<HTMLElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
-  const latest = useRef({ busy, onClose });
+  const latest = useRef({ busy, onClose, returnFocus });
 
-  latest.current = { busy, onClose };
+  latest.current = { busy, onClose, returnFocus };
 
   useEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -96,7 +100,8 @@ export default function DataSyncDialog({
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      if (opener?.isConnected) opener.focus();
+      if (opener?.isConnected && !opener.matches(":disabled")) opener.focus();
+      else latest.current.returnFocus?.()?.focus();
     };
   }, []);
 

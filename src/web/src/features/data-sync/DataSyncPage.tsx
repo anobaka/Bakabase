@@ -18,7 +18,12 @@ import { useDataSyncActions } from "./hooks/useDataSyncActions";
 import { useDataSyncPageData } from "./hooks/useDataSyncPageData";
 import { useDataSyncWindow } from "./hooks/useDataSyncWindow";
 import { useElementWidth } from "./hooks/useElementWidth";
-import { outgoingRequestIdOf, overallStatus, waitingElsewhereLine } from "./viewModels";
+import {
+  outgoingRequestIdOf,
+  overallStatus,
+  pendingRequestsLine,
+  waitingElsewhereLine,
+} from "./viewModels";
 import AddLinkWizard from "./components/AddLinkWizard";
 import {
   buttonClass,
@@ -245,6 +250,12 @@ function DataSync() {
     if (fromMessage) heading.current?.focus();
   };
 
+  /**
+   * Where the keyboard goes when the review closes and the link that opened it is gone — as it
+   * is once the first sync is done: the heading of the details it was in.
+   */
+  const reviewReturnFocus = () => heading.current;
+
   /** Closes the first sync review, leaving the link's details open. */
   const closeReview = () => {
     const next = new URLSearchParams(params);
@@ -287,7 +298,12 @@ function DataSync() {
   if (data.refused) return <NotAvailableNotice />;
 
   const status = overallStatus(t, overview?.status);
-  const elsewhere = waitingElsewhereLine(t, overview?.status);
+  const elsewhere = [
+    waitingElsewhereLine(t, overview?.status),
+    pendingRequestsLine(t, overview?.status, status),
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const selfName: string = overview?.deviceName || t<string>("dataSync.thisDevice");
   const sharingEnabled = overview?.sharingEnabled ?? false;
   const remoteAccessMode = overview?.remoteAccessMode ?? RemoteAccessMode.Disabled;
@@ -588,6 +604,7 @@ function DataSync() {
           awaitingAccess={reviewLink?.state === DataSyncLinkState.AwaitingAccess}
           peerName={reviewLink?.peerName ?? t<string>("dataSync.otherDevice")}
           peerNodeId={reviewLink?.peerNodeId}
+          returnFocus={reviewReturnFocus}
           reviewId={query.reviewId ?? reviewLink?.reviewId ?? undefined}
           selfName={selfName}
           onChanged={() => void data.reload()}

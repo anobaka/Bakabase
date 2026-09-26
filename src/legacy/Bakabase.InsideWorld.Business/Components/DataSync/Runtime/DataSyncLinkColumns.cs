@@ -157,10 +157,16 @@ public static class DataSyncLinkColumns
                link.State.IsPeerErrorState() && link.FirstContactCompletedAtUtc is null;
     }
 
-    /// <summary>The <c>state</c> this device declares to the peer (§7.5.6): <c>ok|awaitingReview|paused:{reason}|needsYou:{n}</c>.</summary>
+    /// <summary>
+    /// The <c>state</c> this device declares to the peer (§7.5.6):
+    /// <c>ok|awaitingReview|waitingForPeerReview|paused:{reason}|needsYou:{n}</c>. <c>waitingForPeerReview</c> is this
+    /// device waiting for the peer's own first review, which the peer's readers list says as "waiting for this
+    /// device's review"; the field is free-form, and a reader that does not know a word shows nothing for it.
+    /// </summary>
     public static string GetDeclaredState(this DataSyncLinkDbModel link, int openItems) => link.State switch
     {
-        DataSyncLinkState.AwaitingReview or DataSyncLinkState.WaitingForPeerReview => "awaitingReview",
+        DataSyncLinkState.AwaitingReview => "awaitingReview",
+        DataSyncLinkState.WaitingForPeerReview => "waitingForPeerReview",
         DataSyncLinkState.Paused => "paused:" + JsonNamingPolicy.CamelCase.ConvertName(
             (link.PausedReason ?? DataSyncPauseReason.ByUser).ToString()),
         _ when openItems > 0 => "needsYou:" + openItems.ToString(System.Globalization.CultureInfo.InvariantCulture),

@@ -13165,6 +13165,14 @@ export interface components {
             /** Format: date-time */
             lastSyncedAt?: string;
             lastErrorCode?: string;
+            /** Format: int32 */
+            pendingRequests: number;
+            /** Format: int32 */
+            readers: number;
+            /** Format: int32 */
+            linksToReview: number;
+            /** Format: int32 */
+            linksWaiting: number;
         };
         "Bakabase.Modules.DataSync.Services.DataSyncTaskStart": {
             taskId?: string;

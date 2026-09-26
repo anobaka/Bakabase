@@ -35,6 +35,19 @@ type Target =
 
 type How = "follow" | "twoWay" | "copyOnce";
 
+/** Where a new link or copy goes: a device by its id — and its address — or an address and code. */
+type Destination = { peerNodeId?: string; address?: string; code?: string };
+
+/**
+ * A device the list offers, as a link or copy is sent to it: by its id, and — where this device
+ * cannot read it yet, so a request goes out — at the address it was listed with. A device found
+ * only nearby is known to the server by nothing else (the same rule as the map's).
+ */
+const candidateDestination = (candidate: DataSyncPeerCandidate): Destination => ({
+  peerNodeId: candidate.nodeId,
+  ...(candidate.address && !candidate.weMayRead ? { address: candidate.address } : {}),
+});
+
 type Outcome =
   | { kind: "requested"; name: string; nodeId?: string }
   | { kind: "ready"; name: string; linkId: number; nodeId?: string }
@@ -118,7 +131,7 @@ export default function AddLinkWizard({
     if (!target) return;
     const peer =
       target.kind === "candidate"
-        ? { peerNodeId: target.candidate.nodeId }
+        ? candidateDestination(target.candidate)
         : { address: target.address, code: target.code };
 
     void actions.run(
@@ -128,41 +141,57 @@ export default function AddLinkWizard({
             enabled: true,
             enablePairedRemoteAccess: remoteAccessMode === RemoteAccessMode.Disabled,
           });
-        if (how === "copyOnce") {
-          const review = await dataSyncApi.copyOnce({ ...peer, kinds });
-          const linkId = review.linkId ?? undefined;
-
-          setOutcome(
-            linkId === undefined
-              ? { kind: "requested", name: targetName, nodeId: candidate?.nodeId }
-              : review.reviewId
-                ? { kind: "ready", name: targetName, linkId, nodeId: candidate?.nodeId }
-                : sendsRequest
-                  ? { kind: "requested", name: targetName, nodeId: candidate?.nodeId }
-                  : { kind: "fetching", name: targetName, linkId, nodeId: candidate?.nodeId },
-          );
-        } else {
-          const result = await dataSyncApi.createLink({
-            ...peer,
-            mode: how === "twoWay" ? DataSyncLinkMode.TwoWay : DataSyncLinkMode.Follow,
-            kinds,
-          });
-          const link = result.link;
-          const name = link?.peerName ?? targetName;
-          const nodeId = link?.peerNodeId ?? candidate?.nodeId;
-
-          setOutcome(
-            link?.state === DataSyncLinkState.AwaitingAccess || (!link && result.requestId)
-              ? { kind: "requested", name, nodeId }
-              : link && (link.state === DataSyncLinkState.AwaitingReview || result.reviewId)
-                ? { kind: "ready", name, linkId: link.id, nodeId }
-                : { kind: "linked", name, nodeId },
-          );
+        try {
+          await send(peer);
+        } catch (cause) {
+          // Nothing was made: sharing is turned off again when this turned it on. Remote access,
+          // which this may have turned on too, is a setting of its own and stays as it is now.
+          if (turnOnSharing && !sharingEnabled)
+            await dataSyncApi
+              .setSharing({ enabled: false, enablePairedRemoteAccess: false })
+              .catch(() => undefined);
+          throw cause;
         }
         setStep("outcome");
       },
       ["dataSync"],
       setError,
+    );
+  };
+
+  /** Asks the device, and says what came of it. */
+  const send = async (peer: Destination) => {
+    if (how === "copyOnce") {
+      const review = await dataSyncApi.copyOnce({ ...peer, kinds });
+      const linkId = review.linkId ?? undefined;
+
+      setOutcome(
+        linkId === undefined
+          ? { kind: "requested", name: targetName, nodeId: candidate?.nodeId }
+          : review.reviewId
+            ? { kind: "ready", name: targetName, linkId, nodeId: candidate?.nodeId }
+            : sendsRequest
+              ? { kind: "requested", name: targetName, nodeId: candidate?.nodeId }
+              : { kind: "fetching", name: targetName, linkId, nodeId: candidate?.nodeId },
+      );
+
+      return;
+    }
+    const result = await dataSyncApi.createLink({
+      ...peer,
+      mode: how === "twoWay" ? DataSyncLinkMode.TwoWay : DataSyncLinkMode.Follow,
+      kinds,
+    });
+    const link = result.link;
+    const name = link?.peerName ?? targetName;
+    const nodeId = link?.peerNodeId ?? candidate?.nodeId;
+
+    setOutcome(
+      link?.state === DataSyncLinkState.AwaitingAccess || (!link && result.requestId)
+        ? { kind: "requested", name, nodeId }
+        : link && (link.state === DataSyncLinkState.AwaitingReview || result.reviewId)
+          ? { kind: "ready", name, linkId: link.id, nodeId }
+          : { kind: "linked", name, nodeId },
     );
   };
 

@@ -20,9 +20,17 @@ public sealed record DataSyncOverview(string DeviceName, string NodeId, bool IsH
     string? ActiveTaskId, bool RestorePending, int OpenInboxItems, int PendingRequests,
     long DatabaseBytes, IReadOnlyList<string> ReachableAddresses);
 
+/// <param name="PendingRequests">Requests from other devices to read this one that wait for an answer here.</param>
+/// <param name="Readers">Devices that may read this device's definitions.</param>
+/// <param name="LinksToReview">Links whose first sync waits for a review on this device (AwaitingReview).</param>
+/// <param name="LinksWaiting">
+/// Links that wait for the other device: to let this one read it (AwaitingAccess), or to review its first sync
+/// (WaitingForPeerReview).
+/// </param>
 public sealed record DataSyncStatusView(DataSyncStatusLevel Level, int OpenItems, int Links, int LinksInStep,
     int PeersNeedingDecisions /* sources whose attention shows open decisions, §7.5.1 */,
-    DateTime? LastSyncedAt, string? LastErrorCode);
+    DateTime? LastSyncedAt, string? LastErrorCode, int PendingRequests = 0, int Readers = 0, int LinksToReview = 0,
+    int LinksWaiting = 0);
 
 /// <param name="Enabled">
 /// Definitions sharing on or off; null leaves it as it is, so a change of <paramref name="NewDefinitionsStayLocal"/>

@@ -5051,6 +5051,14 @@ export interface BakabaseModulesDataSyncServicesDataSyncStatusView {
   /** @format date-time */
   lastSyncedAt?: string;
   lastErrorCode?: string;
+  /** @format int32 */
+  pendingRequests: number;
+  /** @format int32 */
+  readers: number;
+  /** @format int32 */
+  linksToReview: number;
+  /** @format int32 */
+  linksWaiting: number;
 }
 
 export interface BakabaseModulesDataSyncServicesDataSyncTaskStart {

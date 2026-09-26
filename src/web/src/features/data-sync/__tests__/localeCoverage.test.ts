@@ -115,16 +115,9 @@ const dynamicKeys = [
   ...["off", "follow", "twoWay"].map((mode) => `dataSync.mode.${mode}`),
   ...["follow", "twoWay"].map((mode) => `dataSync.mode.short.${mode}`),
   ...["follow", "twoWay"].map((mode) => `dataSync.readers.mode.${mode}`),
-  ...[
-    "inStep",
-    "needsYou",
-    "awaitingReview",
-    "waitingForPeerReview",
-    "awaitingAccess",
-    "paused",
-    "offline",
-    "failed",
-  ].map((state) => `dataSync.readers.state.${state}`),
+  ...["inStep", "needsYou", "awaitingReview", "waitingForPeerReview", "paused"].map(
+    (state) => `dataSync.readers.state.${state}`,
+  ),
   ...labels(DataSyncProblemCode, DataSyncProblemCodeLabel).map(
     (code) => `dataSync.problem.${code}`,
   ),
@@ -306,11 +299,42 @@ describe("locales for data sync", () => {
     expect(placeholders(cn[key]), key).toEqual(placeholders(en[key]));
   });
 
-  it("has the same keys in both languages", () => {
+  it("has the same keys in both languages, English adding the form for one", () => {
     const english = Object.values(pageEn)[0];
     const chinese = Object.values(pageCn)[0];
+    const [ones, rest] = [
+      Object.keys(english).filter((key) => key.endsWith("_one")),
+      Object.keys(english).filter((key) => !key.endsWith("_one")),
+    ];
 
-    expect(Object.keys(chinese).sort()).toEqual(Object.keys(english).sort());
+    expect(Object.keys(chinese).sort()).toEqual(rest.sort());
+    // Chinese has one form: a count needs none of its own there.
+    expect(Object.keys(chinese).filter((key) => /_(one|other)$/.test(key))).toEqual([]);
+    for (const key of ones) {
+      const base = key.slice(0, -"_one".length);
+
+      expect(english[base], `${key} without ${base}`).toEqual(expect.any(String));
+      expect(english[base], base).toContain("{{count}}");
+      // Only what the other form says, less the count itself where the words say one.
+      for (const name of placeholders(english[key]))
+        expect(placeholders(english[base]), key).toContain(name);
+    }
+  });
+
+  it("says a count of one in the singular in English", () => {
+    const english = Object.values(pageEn)[0];
+
+    for (const key of [
+      "dataSync.review.apply",
+      "dataSync.history.drawing.syncs",
+      "dataSync.status.NeedsYou",
+      "dataSync.diagram.count.customProperty",
+      "dataSync.inbox.card.inUse",
+      "dataSync.undo.values",
+      "dataSync.entity.localOnlyChildren",
+      "dataSync.readers.state.needsYou",
+    ])
+      expect(english[`${key}_one`], key).toEqual(expect.any(String));
   });
 
   it.each([

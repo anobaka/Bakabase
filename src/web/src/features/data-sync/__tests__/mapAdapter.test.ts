@@ -13,9 +13,10 @@ import {
   waitsThere,
 } from "../map/mapAdapter";
 
-import { mapPeer, mapRequest, mapView, minutesAgo, NOW, outgoing } from "./dataSyncFixtures";
+import { keyT, mapPeer, mapRequest, mapView, minutesAgo, NOW, outgoing } from "./dataSyncFixtures";
 
 import { buildDeviceGraph, identityKey } from "@/features/federation/map/graph";
+import { directionPhrases } from "@/features/federation/map/describe";
 import {
   grant,
   peer,
@@ -235,6 +236,29 @@ describe("data sync on the device map: the line", () => {
       );
   });
 
+  it("says a line waiting for the first review waits for that, not for access", () => {
+    const words = (state: DataSyncLinkState) => {
+      const graph = graphOf(
+        mapView({
+          peers: [mapPeer("nas", "NAS", { state, receiving: false, receivingPending: true })],
+        }),
+      );
+      const line = graph.edges.find((item) => item.kind === "sync")!;
+
+      return { inReview: line.inReview, phrases: directionPhrases(keyT, line, "NAS") };
+    };
+
+    expect(words(DataSyncLinkState.AwaitingAccess)).toEqual({
+      inReview: undefined,
+      phrases: expect.arrayContaining(["federation.map.direction.sync.in.pending NAS"]),
+    });
+    for (const state of [DataSyncLinkState.AwaitingReview, DataSyncLinkState.WaitingForPeerReview])
+      expect(words(state), String(state)).toEqual({
+        inReview: true,
+        phrases: expect.arrayContaining(["federation.map.direction.sync.in.review NAS"]),
+      });
+  });
+
   it("marks what does not work on the receive direction, and never an offline device", () => {
     const issue = (patch: Parameters<typeof mapPeer>[2]) =>
       one({ receiving: false, ...patch })?.attention;
@@ -263,7 +287,8 @@ describe("data sync on the device map: the line", () => {
         state: DataSyncLinkState.AwaitingAccess,
         initiator: DataSyncLinkInitiator.Peer,
         receivingPending: true,
-        lastErrorCode: "Unreachable",
+        lastErrorCode: "ReadBackFailed",
+        lastErrorDetail: "Unreachable",
       })?.issue,
     ).toBe("syncFailed");
     // A paused link is still set up: drawn, dotted, with the mark — never taken off the map.
