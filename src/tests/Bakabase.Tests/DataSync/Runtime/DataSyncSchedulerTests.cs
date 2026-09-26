@@ -45,6 +45,41 @@ public class DataSyncSchedulerTests
     }
 
     [TestMethod]
+    public async Task The_actor_is_checked_once_under_the_gate_at_the_start_before_any_head()
+    {
+        var gate = new Api.TestGateEntry();
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false,
+            configure: s => s.AddSingleton<IDataSyncGateEntry>(gate));
+        h.AddLink("nas");
+
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(0, h.Guard.Checks, "not ready: nothing runs");
+
+        await h.RegisterFetchTaskAsync();
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual((1, 1), (h.Guard.Checks, gate.Entered), "§5.6: the watermark is read before the first head round");
+        Assert.IsFalse(gate.IsHeld);
+        Assert.AreEqual(0, h.Peers.Peers["nas"].HeadQueries.Count);
+
+        await h.Scheduler.TickAsync(default);
+        Assert.AreEqual(1, h.Guard.Checks, "once per start");
+    }
+
+    [TestMethod]
+    public async Task A_busy_gate_at_the_start_leaves_the_actor_check_to_the_next_caller()
+    {
+        var gate = new Api.TestGateEntry();
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(configure: s => s.AddSingleton<IDataSyncGateEntry>(gate));
+        var link = h.AddLink("nas", l => l.NextAttemptAtUtc = h.Clock.UtcNow.AddHours(5));
+
+        using (gate.Hold()) await h.Scheduler.TickAsync(default);
+
+        Assert.AreEqual(0, h.Guard.Checks);
+        Assert.AreEqual(h.Clock.UtcNow + DataSyncSchedule.StartupDelay, h.Link(link.Id).NextAttemptAtUtc,
+            "the start went on without it");
+    }
+
+    [TestMethod]
     public async Task The_scheduler_starts_nothing_after_ApplicationStopping()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync();

@@ -165,6 +165,21 @@ public class DataSyncFetchHalfTests
     }
 
     [TestMethod]
+    public async Task A_peer_that_found_the_cursor_ahead_of_its_own_serves_from_0_and_is_not_paused_as_restored()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var link = h.AddLink("nas", l => l.SetCursors(Cursors(3, 9)));
+        // The source detected its own restore through this device's cursor and says so (§7.5.1 step 1).
+        h.Peers.Peers["nas"].Superseded.Add("customProperty");
+
+        await h.FetchOnceAsync();
+
+        Assert.AreEqual(DataSyncLinkState.Active, h.Link(link.Id).State, "no B1b: the peer serves the kind from 0");
+        Assert.IsTrue(h.StagedPulls.Peek(link.Id)!.Kinds.Single(k => k.Kind == "customProperty").FullReconciliation,
+            "the superseded kind comes from 0, which lowers the cursor");
+    }
+
+    [TestMethod]
     public async Task Peer_errors_set_their_states_and_retry_intervals_and_an_answer_ends_them()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);

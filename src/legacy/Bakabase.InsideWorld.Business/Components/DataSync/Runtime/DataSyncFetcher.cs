@@ -40,23 +40,20 @@ public sealed class DataSyncFetcher
     private readonly IDataSyncStagedPullStore _stagedPulls;
     private readonly DataSyncTaskLauncher _launcher;
     private readonly DataSyncRuntimeState _state;
-    private readonly DataSyncPeerFetchLock _fetchLock;
     private readonly IDataSyncRuntimeObserver _observer;
     private readonly IDataSyncClock _clock;
     private readonly DataSyncLimits _limits;
     private readonly ILogger<DataSyncFetcher> _logger;
 
     public DataSyncFetcher(IServiceScopeFactory scopes, DataSyncLinkService links, IDataSyncStagedPullStore stagedPulls,
-        DataSyncTaskLauncher launcher, DataSyncRuntimeState state, DataSyncPeerFetchLock fetchLock,
-        IDataSyncRuntimeObserver observer, IDataSyncClock clock, DataSyncLimits limits,
-        ILogger<DataSyncFetcher> logger)
+        DataSyncTaskLauncher launcher, DataSyncRuntimeState state, IDataSyncRuntimeObserver observer,
+        IDataSyncClock clock, DataSyncLimits limits, ILogger<DataSyncFetcher> logger)
     {
         _scopes = scopes;
         _links = links;
         _stagedPulls = stagedPulls;
         _launcher = launcher;
         _state = state;
-        _fetchLock = fetchLock;
         _observer = observer;
         _clock = clock;
         _limits = limits;
@@ -148,9 +145,15 @@ public sealed class DataSyncFetcher
                 return;
             }
 
-            using (await _fetchLock.AcquireAsync(link.PeerNodeId, ct))
+            // One fetch per peer at a time (§7.6), from the head to the last page: the peer client's own lock, which a
+            // second manifest would otherwise break by discarding at the source the snapshot being read. Every fetch
+            // of a peer comes through here — the cycle, review staging, copy once and "Fetch again". Held in this
+            // method, so the peer calls FetchLockedAsync makes are seen as this fetch's own (§7.6).
+            await using var scope = _scopes.CreateAsyncScope();
+            var peer = scope.ServiceProvider.GetRequiredService<IDataSyncPeerClient>();
+            await using (await peer.AcquireFetchAsync(link.PeerNodeId, ct))
             {
-                applyFollows = await FetchLockedAsync(link, fallback, local, ct, args);
+                applyFollows = await FetchLockedAsync(scope.ServiceProvider, peer, link, fallback, local, ct, args);
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -175,12 +178,9 @@ public sealed class DataSyncFetcher
     }
 
     /// <returns>Whether a pull was staged for <c>DataSyncApply</c>, whose apply ends the link's cycle.</returns>
-    private async Task<bool> FetchLockedAsync(DataSyncLinkDbModel link, bool fallback, DataSyncLocalStateDbModel? local,
-        CancellationToken ct, BTaskArgs? args)
+    private async Task<bool> FetchLockedAsync(IServiceProvider sp, IDataSyncPeerClient peer, DataSyncLinkDbModel link,
+        bool fallback, DataSyncLocalStateDbModel? local, CancellationToken ct, BTaskArgs? args)
     {
-        await using var scope = _scopes.CreateAsyncScope();
-        var sp = scope.ServiceProvider;
-        var peer = sp.GetRequiredService<IDataSyncPeerClient>();
         var reader = sp.GetRequiredService<IDataSyncKindPageReader>();
         var store = sp.GetRequiredService<IDataSyncStore>();
 
@@ -220,9 +220,11 @@ public sealed class DataSyncFetcher
         var headKinds = head.Kinds.GroupBy(k => k.Kind, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         if (kinds.Any(k => cursors.TryGetValue(k, out var c) && c > 0 && headKinds.TryGetValue(k, out var hk) &&
-                           hk.MaxSeq < c))
+                           hk.MaxSeq < c && !hk.CursorSuperseded))
         {
-            // B1b: the same node and epoch, but a kind went back below the cursor (§5.6 "Peer restored").
+            // B1b: the same node and epoch, but a kind went back below the cursor (§5.6 "Peer restored"). Not when the
+            // peer says the cursor is superseded: it found this device's cursor ahead of what it issued, detected its
+            // own restore (§7.5.1 step 1) and serves the kind from 0 in the next snapshot, which lowers the cursor.
             await _links.PauseAsync(link.Id, DataSyncPauseReason.PeerReset, DataSyncLinkService.RestoredDetail, ct);
             return false;
         }

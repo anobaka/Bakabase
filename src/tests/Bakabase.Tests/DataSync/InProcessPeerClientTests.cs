@@ -141,6 +141,46 @@ public class InProcessPeerClientTests
         Assert.IsFalse((await client.ProbeAsync(peer, default)).HasAccess);
     }
 
+    [TestMethod]
+    public async Task One_fetch_per_peer_holds_its_lock_from_the_head_to_the_last_page()
+    {
+        var (a, b) = await TwoHostsAsync();
+        b.Kind.Add("1", "Genre");
+        var client = InProcessPeerClient.ClientOf(a.Services);
+        client.FetchWait = TimeSpan.FromMilliseconds(100);
+        var peer = b.R.Identity.Device.NodeId;
+
+        var holding = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // A fetch in a flow of its own, as the cycle and a review's "Fetch again" are: its own calls go through, and
+        // taking it again in its flow holds nothing more.
+        async Task Fetch()
+        {
+            await using var fetch = await client.AcquireFetchAsync(peer, default);
+            await using (await client.AcquireFetchAsync(peer, default))
+                await client.GetHeadAsync(peer, Query((Kind, 0)), default);
+            await client.GetManifestAsync(peer, Query((Kind, 0)), default);
+            holding.SetResult();
+            await release.Task;
+        }
+
+        var holder = Fetch();
+        await holding.Task;
+
+        // Anyone else waits for it, then gets Busy.
+        var other = await RefusedAsync(() => client.AcquireFetchAsync(peer, default));
+        Assert.AreEqual((DataSyncPeerErrorCode.Busy, "fetchInProgress"), (other.Code, other.Message));
+        Assert.AreEqual(DataSyncPeerErrorCode.Busy,
+            (await RefusedAsync(() => client.GetHeadAsync(peer, Query((Kind, 0)), default))).Code);
+
+        // Released: the next fetch takes it at once.
+        release.SetResult();
+        await holder;
+        await using (await client.AcquireFetchAsync(peer, default))
+            await client.GetHeadAsync(peer, Query((Kind, 0)), default);
+    }
+
     private static async Task<DataSyncPeerException> RefusedAsync(Func<Task> call)
     {
         try

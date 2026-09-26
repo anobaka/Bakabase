@@ -13,7 +13,7 @@ public static class DataSyncRuntimeServiceCollectionExtensions
     /// <summary>
     /// The sync runtime (spec §2.9, §8.2, §8.10): the scheduler, the <c>DataSync</c> fetch task's cycle, the
     /// <c>DataSyncApply</c> task, the task launcher and attempt registry, the staged-pull store, the link service,
-    /// grant events and the per-peer fetch lock; the notifier and the hub publisher (§9.4, §8.10.6); and the
+    /// and grant events; the notifier and the hub publisher (§9.4, §8.10.6); and the
     /// <see cref="IDataSyncService"/> facade the <c>/data-sync</c> API calls (§10.1). <c>AddDataSync()</c> calls it,
     /// so the test kit gets the runtime too.
     /// </summary>
@@ -57,7 +57,6 @@ public static class DataSyncRuntimeServiceCollectionExtensions
         services.TryAddSingleton<IDataSyncStagedPullStore>(sp => sp.GetRequiredService<DataSyncStagedPullStore>());
 
         services.TryAddSingleton<DataSyncRuntimeState>();
-        services.TryAddSingleton<DataSyncPeerFetchLock>();
         services.TryAddSingleton<DataSyncTaskLauncher>();
         services.TryAddSingleton<DataSyncLinkService>();
         services.TryAddSingleton<DataSyncFetcher>();

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,7 +36,8 @@ public sealed record InProcessPeerCall(string Operation, string PeerNodeId, Data
 /// <para>
 /// Register one per provider as its <see cref="IDataSyncPeerClient"/> (it has no dependencies), build both providers,
 /// then call <see cref="WireAsync"/>. A test can take a peer offline, revoke this device's access or inject any
-/// refusal (<see cref="Fault"/>), and read back every call.
+/// refusal (<see cref="Fault"/>), and read back every call. One fetch per peer at a time (§7.6):
+/// <see cref="AcquireFetchAsync"/> holds the peer's lock as the federation peer client does.
 /// </para>
 /// </remarks>
 public sealed class InProcessPeerClient : IDataSyncPeerClient
@@ -153,10 +156,54 @@ public sealed class InProcessPeerClient : IDataSyncPeerClient
         return new DataSyncPeerException(code, e.Code, e.RetryAfterSeconds);
     }
 
+    /// <summary>How long a fetch, or a call outside one, waits for another fetch of the same peer (§7.6).</summary>
+    public TimeSpan FetchWait { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// The peer's fetch lock (§7.6), as the federation peer client holds it: from the head to the last page, the
+    /// calls made in the holder's own flow go through, every other call and fetch of the peer waits for it, up to
+    /// <see cref="FetchWait"/>, then gets <c>Busy</c>. Taken again in the same flow, it holds nothing more.
+    /// </summary>
+    /// <remarks>Not an async method: the hold is recorded in the caller's flow before this returns.</remarks>
+    public Task<IAsyncDisposable> AcquireFetchAsync(string peerNodeId, CancellationToken ct)
+    {
+        var held = _held.Value ?? ImmutableDictionary.Create<string, FetchHold>(StringComparer.Ordinal);
+        if (held.TryGetValue(peerNodeId, out var outer) && outer.IsHeld)
+            return Task.FromResult<IAsyncDisposable>(FetchHold.Nested);
+        var hold = new FetchHold(PeerLock(peerNodeId));
+        _held.Value = held.RemoveRange(held.Where(p => p.Value.IsOver).Select(p => p.Key)).SetItem(peerNodeId, hold);
+        return hold.AcquireAsync(FetchWait, ct);
+    }
+
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _peerLocks = new(StringComparer.Ordinal);
+    private readonly AsyncLocal<ImmutableDictionary<string, FetchHold>?> _held = new();
+
+    private SemaphoreSlim PeerLock(string peerNodeId) => _peerLocks.GetOrAdd(peerNodeId, _ => new SemaphoreSlim(1, 1));
+
+    private bool HoldsFetch(string peerNodeId) =>
+        _held.Value is { } held && held.TryGetValue(peerNodeId, out var hold) && hold.IsHeld;
+
     private async Task<T> CallAsync<T>(string operation, string peerNodeId, DataSyncFeedQuery? query,
         Func<IDataSyncFeedSource, DataSyncReader, Task<T>> call, CancellationToken ct, InProcessPeerCall? recorded = null)
     {
         ct.ThrowIfCancellationRequested();
+        // A call outside a fetch of the peer takes its lock for its own exchange, as over federation (§7.6).
+        var gate = HoldsFetch(peerNodeId) ? null : PeerLock(peerNodeId);
+        if (gate is not null && !await gate.WaitAsync(FetchWait, ct))
+            throw new DataSyncPeerException(DataSyncPeerErrorCode.Busy, "fetchInProgress");
+        try
+        {
+            return await ExchangeAsync(operation, peerNodeId, query, call, recorded);
+        }
+        finally
+        {
+            gate?.Release();
+        }
+    }
+
+    private async Task<T> ExchangeAsync<T>(string operation, string peerNodeId, DataSyncFeedQuery? query,
+        Func<IDataSyncFeedSource, DataSyncReader, Task<T>> call, InProcessPeerCall? recorded)
+    {
         Record(recorded ?? new InProcessPeerCall(operation, peerNodeId, query));
         if (Fault?.Invoke(operation, peerNodeId) is { } fault) throw fault;
         if (!_peers.TryGetValue(peerNodeId, out var peer))
@@ -203,6 +250,49 @@ public sealed class InProcessPeerClient : IDataSyncPeerClient
             : throw new InvalidOperationException($"{peerNodeId} is not connected.");
 
     private static string Address(Peer peer) => "inproc://" + peer.NodeId;
+
+    /// <summary>One fetch's hold on a peer's lock: pending until taken, then held until released.</summary>
+    private sealed class FetchHold(SemaphoreSlim peerLock) : IAsyncDisposable
+    {
+        private const int Pending = 0, Held = 1, Over = 2;
+
+        /// <summary>Taken again by a flow that holds the peer: its outer hold covers it.</summary>
+        public static readonly IAsyncDisposable Nested = new FetchHold(new SemaphoreSlim(0, 1)) { _state = Over };
+
+        private int _state = Pending;
+
+        public bool IsHeld => Volatile.Read(ref _state) == Held;
+        public bool IsOver => Volatile.Read(ref _state) == Over;
+
+        public async Task<IAsyncDisposable> AcquireAsync(TimeSpan wait, CancellationToken ct)
+        {
+            bool taken;
+            try
+            {
+                taken = await peerLock.WaitAsync(wait, ct);
+            }
+            catch
+            {
+                Volatile.Write(ref _state, Over);
+                throw;
+            }
+
+            if (!taken)
+            {
+                Volatile.Write(ref _state, Over);
+                throw new DataSyncPeerException(DataSyncPeerErrorCode.Busy, "fetchInProgress");
+            }
+
+            Volatile.Write(ref _state, Held);
+            return this;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _state, Over) == Held) peerLock.Release();
+            return ValueTask.CompletedTask;
+        }
+    }
 
     private sealed class Peer(string nodeId, string name, IServiceProvider services, string? grantId)
     {

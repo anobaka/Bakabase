@@ -19,6 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 /// Once per second, decides what data sync runs (§8.2). It never does network work, and its only database work is
 /// reading link rows and the local state row (and, once at the start, making every link due):
 /// <list type="bullet">
+/// <item>once at the start, it runs the actor check (§5.6) and makes every link due five seconds later;</item>
 /// <item>it hands grant events to the link service, so a granted request reaches its review within seconds;</item>
 /// <item>it starts the <c>DataSync</c> fetch task when a link is due and the task is not active — also when a
 /// federation session to a link's peer came online since the last tick;</item>
@@ -117,6 +118,7 @@ public sealed class DataSyncScheduler : BackgroundService
             {
                 // Startup: every link is due in 5 s; that first head round also verifies the actor (§5.6).
                 await _links.ScheduleAllAsync(now + DataSyncSchedule.StartupDelay, ct);
+                await CheckActorAtStartAsync(ct);
             }
 
             await _grantEvents.DrainAsync(ct);
@@ -175,6 +177,30 @@ public sealed class DataSyncScheduler : BackgroundService
         if (fetchTask is null) return null;
         if (!fetchTask.Task.Status.IsActive()) await _btm.Start(DataSyncTaskIds.Fetch);
         return DataSyncTaskIds.Fetch;
+    }
+
+    /// <summary>
+    /// The actor check once at the start (§5.6), under the gate, before the first head round: an <c>actor.json</c>
+    /// ahead of the database — the database alone restored from a backup — pauses every link <c>LocalRestoreDetected</c>
+    /// at once, and is never first taken for one peer's <c>SeenCounter</c>, which would pause only that link as
+    /// suspected. Skipped while the gate is busy: the runner's, the feed's and every other caller's check run it as
+    /// well. It never fails the tick.
+    /// </summary>
+    private async Task CheckActorAtStartAsync(CancellationToken ct)
+    {
+        try
+        {
+            await using var scope = _scopes.CreateAsyncScope();
+            var guard = scope.ServiceProvider.GetService<IDataSyncActorGuard>();
+            var gate = scope.ServiceProvider.GetService<IDataSyncGateEntry>();
+            if (guard is null || gate is null) return;
+            using var lease = await gate.TryEnterAsync(DataSyncGateHold.RequestTimeout, ct);
+            if (lease is not null) await guard.CheckAsync(lease, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            _logger.LogWarning(e, "The data sync actor check at the start failed; the next caller runs it");
+        }
     }
 
     /// <summary>A link the fetch cycle looks at, whose next attempt is due.</summary>
