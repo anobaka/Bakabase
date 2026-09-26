@@ -176,7 +176,8 @@ internal sealed record ChildMergeOutcome(
 /// Claims by key are made before the parents are decided, so they look where things will end by what is known then:
 /// the keys this merge decides and the moves the ids alone decide (<see cref="ProvisionalPath"/>). A free member's
 /// children count only where it ends with the claimed nodes, and a peer parent with no counterpart is looked for where
-/// PartsOf will place it (<see cref="UnlinkedParentGroups"/>).
+/// PartsOf will place it (<see cref="UnlinkedParentGroups"/>). A claim takes only the members of the local class whose
+/// parents end there; the others are free members, decided part by part.
 /// </para>
 /// <para>
 /// <b>Deciding.</b> Per group, against the base node of the member that linked it: the key three-way, the colour
@@ -210,10 +211,12 @@ internal sealed record ChildMergeOutcome(
 /// <b>Symmetry.</b> Merging (L, R, B) and (R, L, B) without conflicts ends at one comparison form (§8.5): every choice
 /// that could depend on which side is local — a class's colour among members with different decisions, where a split
 /// class's members go — is made by something both sides share (option ids, the peer's order of a class's members), never
-/// by local order. Known gap: a class this merge splits is judged "unchanged since the base" by the colour its
-/// representative shows, which a part without the base representative has no base value for; for a few adversarial
-/// inputs (tiny label sets, IgnoreCase toggles, subtrees one side does not publish) the two directions then decide a
-/// recoloured part differently (<c>Merge3PropertyTests.SymmetricMerge_KnownGaps_StillDiffer</c>).
+/// by local order. Known gap: class decisions are made before where every node finally ends is known. A class this
+/// merge splits is judged "unchanged since the base" by the colour its representative shows, which a part without the
+/// base representative has no base value for, and claims by key look where things end by claim-time knowledge; for
+/// about one adversarial input in two million (tiny label sets, IgnoreCase toggles, subtrees one side does not
+/// publish) the two directions then keep a part one way and delete it, or colour it, the other
+/// (<c>Merge3PropertyTests.SymmetricMerge_KnownGaps_StillDiffer</c>).
 /// </para>
 /// <para>
 /// Nothing is reordered: renames and colours change nodes in place, a move or an add is appended at the end of its
@@ -271,7 +274,14 @@ internal sealed class ChildMerge3
     private List<Candidate> _candidateRoots = [];
 
     /// <summary>The local classes and overlay children under one parent, by key, for claims by key.</summary>
-    private sealed record Siblings(Dictionary<string, List<ChildClass>> Classes, Dictionary<string, ChildNode> Overlay);
+    /// <param name="Counted">The local nodes that are siblings, where a class may have members elsewhere too (a class this
+    /// merge splits): a claim by key takes only those. Null: every member of the classes.</param>
+    private sealed record Siblings(Dictionary<string, List<ChildClass>> Classes, Dictionary<string, ChildNode> Overlay,
+        IReadOnlySet<ChildNode>? Counted = null)
+    {
+        public IEnumerable<ChildNode> MembersOf(ChildClass cls) =>
+            Counted is null ? cls.Members : cls.Members.Where(Counted.Contains);
+    }
 
     /// <summary>What a deletion takes: one class's members (with their subtrees), under the peer id of its item.</summary>
     private sealed record Candidate(IReadOnlyList<ChildNode> Members, string PeerId, ChildNode? BaseRep)
@@ -610,7 +620,9 @@ internal sealed class ChildMerge3
             {
                 var group = GroupOf(peer, match, peer.Rep, peer.BaseNode);
                 group.ByKey = true;
-                foreach (var member in match.Members)
+                // Only the members that are siblings: a member of the class under another part of a parent class this
+                // merge splits is in another class after the merge, a free member here (decided part by part).
+                foreach (var member in siblings.MembersOf(match))
                 {
                     member.Owner = peer;
                     member.OwnerGroup = group;
@@ -667,7 +679,13 @@ internal sealed class ChildMerge3
                 : m.Owner == parent && keys.Contains(FinalKeyOfGroup(m.OwnerGroup!)))
             .ToArray();
         var children = nodes.SelectMany(n => n.Children).ToArray();
-        return SiblingsOf(cacheKey, children.Select(n => n.Class).OfType<ChildClass>().Distinct(), children);
+        var classes = children.Select(n => n.Class).OfType<ChildClass>().Distinct().ToArray();
+        // The members of those classes that are siblings: under a parent that ends where these nodes do.
+        var parentPaths = nodes.Select(ProvisionalPath).ToHashSet(StringComparer.Ordinal);
+        var counted = classes.SelectMany(c => c.Members)
+            .Where(m => m.OriginalParent is { } p && parentPaths.Contains(ProvisionalPath(p)))
+            .ToHashSet();
+        return SiblingsOf(cacheKey, classes, children, counted);
     }
 
     /// <summary>
@@ -877,7 +895,8 @@ internal sealed class ChildMerge3
     }
 
     /// <summary>The local classes and overlay children under the counterpart of one peer parent (or the roots).</summary>
-    private Siblings SiblingsOf(object parent, IEnumerable<ChildClass> classes, IEnumerable<ChildNode> nodes)
+    private Siblings SiblingsOf(object parent, IEnumerable<ChildClass> classes, IEnumerable<ChildNode> nodes,
+        IReadOnlySet<ChildNode>? counted = null)
     {
         if (_siblings.TryGetValue(parent, out var siblings)) return siblings;
         var byKey = new Dictionary<string, List<ChildClass>>(StringComparer.Ordinal);
@@ -889,7 +908,7 @@ internal sealed class ChildMerge3
 
         var overlay = new Dictionary<string, ChildNode>(StringComparer.Ordinal);
         foreach (var node in nodes.Where(n => n.Overlay)) overlay.TryAdd(KeyOf(node), node);
-        return _siblings[parent] = new Siblings(byKey, overlay);
+        return _siblings[parent] = new Siblings(byKey, overlay, counted);
     }
 
     private void SettleUnclaimed()
@@ -1959,8 +1978,9 @@ internal sealed class ChildMerge3
     /// merge share: for a group, the smallest id among the options it claimed (the options both sides have); for an
     /// added option, that peer option's id; else the option's own id. Never the first in order: moves and adds are
     /// appended, and the two directions of one merge order them differently. A member the peer deleted, kept only
-    /// because its class stays or for free members below it (see <see cref="FindCandidates"/>), gives nothing. A class
-    /// no group decided anything about, whose members were one class before (here, or at the peer for what was added),
+    /// because its class stays or for free members below it (see <see cref="FindCandidates"/>), gives nothing; so does
+    /// the part of a present class this merge brings back only for what comes back below it (<see cref="PartsOf"/>),
+    /// which merging the other way is such a member. A class no group decided anything about, whose members were one class before (here, or at the peer for what was added),
     /// is left alone.
     /// </summary>
     private void ApplyColors()
@@ -1970,9 +1990,10 @@ internal sealed class ChildMerge3
         foreach (var cls in classes.SelectMany(c => c.SelfAndDescendants()))
         {
             // A member the peer deleted, which stays only because its class stays, gives nothing: merging the other way
-            // it is not there.
+            // it is not there. Nor does a part of a present class brought back only for what comes back below it, for
+            // a member unchanged since the base: merging the other way it is such a member.
             var withId = cls.Members.Where(m => m.Uuid is not null).ToArray();
-            var givers = withId.Any(m => !_extras.Contains(m)) ? withId.Where(m => !_extras.Contains(m)) : withId;
+            var givers = withId.Any(m => !GivesNothing(m)) ? withId.Where(m => !GivesNothing(m)) : withId;
             var members = givers.Select(m => (Node: m, Giver: GiverOf(m, cls.Key))).ToArray();
             // Left alone: a class this merge decided nothing about, which was one class before — here, or at the peer
             // for what this merge added.
@@ -1983,6 +2004,11 @@ internal sealed class ChildMerge3
                 .First();
             if (NormColor(cls.Rep.Color) != giver.Giver.Color) cls.Rep.Color = giver.Giver.Color;
         }
+
+        bool GivesNothing(ChildNode node) =>
+            _extras.Contains(node) ||
+            (node.Part is { Peer.Status: PeerClassStatus.Present, Member: var member } &&
+             _baseNodeByUuid.ContainsKey(member.Uuid!) && !AddedOrChangedThere(member));
     }
 
     /// <summary>
