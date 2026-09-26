@@ -32,8 +32,10 @@ internal sealed record DataSyncUndoStep(DataSyncEntityPreImage PreImage, DataSyn
 /// changed again;</item>
 /// <item><c>InUse</c>: a created custom property has values;</item>
 /// <item><c>AddedOptionsInUse</c>: resources use a child the apply added;</item>
-/// <item><c>Missing</c>: the entity is gone.</item>
+/// <item><c>Missing</c>: the entity is gone (or a type change's entry kept no raw row to restore).</item>
 /// </list>
+/// The undo task can still refuse a step while writing it: the faithfulness check (§8.11) takes back a step whose
+/// entity, re-read, is not what it restored.
 /// It is the facade's <see cref="IDataSyncUndoPreviewer"/>.
 /// </summary>
 public sealed class DataSyncUndoPlanner(IServiceScopeFactory scopes) : IDataSyncUndoPreviewer
@@ -161,7 +163,9 @@ public sealed class DataSyncUndoPlanner(IServiceScopeFactory scopes) : IDataSync
                 return live ? Step(null) : Step(DataSyncUndoBlock.Missing);
             case DataSyncPreImageActions.TypeChanged:
             {
-                if (!live) return Step(DataSyncUndoBlock.Missing);
+                // Converting back restores the captured raw row (IDataSyncKind.RestoreAsync): without one there is
+                // nothing to restore.
+                if (!live || p.Row is null || p.Content is null) return Step(DataSyncUndoBlock.Missing);
                 var current = adapter.Codec.ReadLocal((await adapter.ReadAsync([row.LocalKey], ct)).Single().Content);
                 if (adapter.Codec.SubtypeOf(current) != p.ToSubtype || p.FromSubtype is null)
                     return Step(DataSyncUndoBlock.ChangedSinceImport);

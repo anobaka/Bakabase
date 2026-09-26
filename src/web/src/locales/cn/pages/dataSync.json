@@ -533,6 +533,7 @@
   "dataSync.inbox.card.synced": "同步后",
   "dataSync.inbox.card.now": "现在",
   "dataSync.inbox.card.lostUpdateHint": "这次更改撤销了同步所做的更改。在你决定之前，其他设备保留各自的版本，传入的相关更改也会等待。",
+  "dataSync.inbox.card.reapplyInUse": "恢复同步的更改会删除这些选项，而本机有资源正在使用它们。它们仍在使用时不会被删除。",
   "dataSync.inbox.card.newDefinition": "新建",
   "dataSync.inbox.card.changes": "{{count}} 处更改",
   "dataSync.inbox.card.largeHint": "未超出限制的更改已经应用。",

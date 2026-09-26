@@ -51,6 +51,12 @@ import {
  * back the database up first unless the reader unticks it.
  */
 
+/**
+ * A SuspectedLostUpdate item's `detail` while "Put the synced change back" would remove options
+ * resources here use (`DataSyncInboxRules.ReapplyInUseDetail`); its `children` lists them.
+ */
+const REAPPLY_IN_USE = "reapplyInUse";
+
 /** A confirmation the card asks for before a destructive batch. */
 export interface InboxConfirmation {
   title: string;
@@ -742,6 +748,12 @@ function ItemBody({
               </dl>
             </div>
           ))}
+          {payload.detail === REAPPLY_IN_USE && (
+            <div className="space-y-1" data-testid="data-sync-inbox-reapply-in-use">
+              <p>{t("dataSync.inbox.card.reapplyInUse")}</p>
+              <ChildChips item={item} />
+            </div>
+          )}
           <p className="text-default-500">{t("dataSync.inbox.card.lostUpdateHint")}</p>
         </div>
       );

@@ -1089,6 +1089,16 @@ public sealed partial class DataSyncApplyRunner
                 var undone = DataSyncChangeLists.Undone(codec, current, row.ChildrenLocal, applied.Changes);
                 var edit = DataSyncChangeLists.Apply(codec, current, row.ChildrenLocal, undone.Scalars, undone.Children,
                     backward: false);
+                // Putting a removal back never takes away a child resources here use (§8.5.4 step 3 holds those, and
+                // undo refuses AddedOptionsInUse): nothing is written, the hold and the item stay, and the card
+                // names them.
+                if (await Persistence.DataSyncLostUpdateGuard.InUseAsync(s.Adapter(kind), row.LocalKey, current,
+                        edit.RemovedChildIds, ct) is { Count: > 0 } inUse)
+                {
+                    await RefuseReapplyInUseAsync(item, inUse, ct);
+                    return;
+                }
+
                 if (edit.Changed && !await WriteContentAsync(kind, row, current, edit.Content, "reapply", ct)) return;
                 row.PublishHeld = false;
                 await writes.RecordLiveAsync(kind, row.LocalKey, current,
@@ -1129,6 +1139,22 @@ public sealed partial class DataSyncApplyRunner
             {
                 Detail = Persistence.DataSyncLostUpdateGuard.ReapplyUnavailable,
             });
+            item.UpdatedAtUtc = s.Now;
+            await s.Db.SaveChangesAsync(ct);
+            _recorder.ChangedSinceReview++;
+        }
+
+        /// <summary>
+        /// Reapply would remove children resources here use (§6.5): nothing is written, the hold and the item stay,
+        /// and the card names them (<see cref="Persistence.DataSyncLostUpdateGuard.ReapplyInUse"/>). Reapply stays
+        /// offered for when nothing uses them any more. The decision counts as one that changed since the person saw it.
+        /// </summary>
+        private async Task RefuseReapplyInUseAsync(DataSyncInboxItemDbModel item,
+            IReadOnlyList<DataSyncDisplayValue> inUse, CancellationToken ct)
+        {
+            var payload = DataSyncStoredJson.Read<DataSyncInboxPayload>(item.PayloadJson, "PayloadJson");
+            item.PayloadJson = DataSyncStoredJson.Write(
+                Persistence.DataSyncLostUpdateGuard.WithReapplyInUse(payload, inUse));
             item.UpdatedAtUtc = s.Now;
             await s.Db.SaveChangesAsync(ct);
             _recorder.ChangedSinceReview++;

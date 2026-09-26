@@ -78,7 +78,8 @@ internal static class DataSyncChangeLists
     /// Writes <paramref name="changes"/> onto the current content: backward (undo: the after-state becomes the
     /// before-state) or forward (the before-state becomes the after-state again). A path is written only while it
     /// still holds the value the change left there; a path already at the target is left alone; any other path
-    /// changed since and is a conflict. Children are matched by id.
+    /// changed since and is a conflict. Children are matched by id. A child is removed with everything below it only
+    /// when the same list removes all of that too: one with a child added or moved under it since is a conflict.
     /// </summary>
     public static DataSyncChangeApplication Apply(IDataSyncKindCodec codec, object current, bool currentChildrenLocal,
         IReadOnlyList<DataSyncScalarChange> scalars, IReadOnlyList<DataSyncChildChange> children, bool backward)
@@ -155,20 +156,53 @@ internal static class DataSyncChangeLists
             }
         }
 
+        // Removals, all checked before any is taken out. A child goes with everything below it, so it is removed only
+        // while everything below it now is removed by this same list: a child added under it or moved under it since
+        // is not this list's to take away (§8.11 restores exactly the changed paths), and the path is a conflict.
+        var removals = new Dictionary<string, DataSyncChildChange>(StringComparer.Ordinal);
         foreach (var c in children.Where(c => (backward ? c.Before : c.After) is null))
         {
             var fromInfo = backward ? c.After : c.Before;
             if (fromInfo is null) continue;
             var now = infos.GetValueOrDefault(c.ChildId);
             if (now is null) continue;
-            if (!SameInfo(now, fromInfo) || nodes.GetValueOrDefault(c.ChildId) is not { } node)
+            if (!SameInfo(now, fromInfo) || !nodes.ContainsKey(c.ChildId))
             {
                 conflicts.Add(c.Path);
                 continue;
             }
 
-            removed.AddRange(WithDescendants(infos, c.ChildId).Where(id => !removed.Contains(id)));
-            DataSyncContentNodes.Remove(node);
+            removals.TryAdd(c.ChildId, c);
+        }
+
+        if (removals.Count > 0)
+        {
+            var below = ChildrenByParent(nodes);
+            bool dropped;
+            do
+            {
+                dropped = false;
+                foreach (var (id, c) in removals.ToList())
+                {
+                    if (!HoldsChildWithoutId(nodes[id].Node) && SubtreeOf(below, id).All(removals.ContainsKey)) continue;
+                    removals.Remove(id);
+                    conflicts.Add(c.Path);
+                    dropped = true;
+                }
+            } while (dropped);
+
+            var taken = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var id in removals.Keys)
+            {
+                foreach (var x in SubtreeOf(below, id))
+                {
+                    if (taken.Add(x)) removed.Add(x);
+                }
+
+                // A nested child already went with its parent; removing it from the detached array changes nothing.
+                DataSyncContentNodes.Remove(nodes[id]);
+            }
+
             nodes = DataSyncContentNodes.Index(json);
         }
 
@@ -280,24 +314,38 @@ internal static class DataSyncChangeLists
         string.Equals(a.Display.Color, b.Display.Color, StringComparison.Ordinal) &&
         string.Equals(a.ParentId, b.ParentId, StringComparison.Ordinal);
 
-    private static IEnumerable<string> WithDescendants(IReadOnlyDictionary<string, DataSyncChildInfo> infos, string id)
+    /// <summary>Each child's children as the content holds them now: nested, or by a flat <c>parent</c> member.</summary>
+    private static Dictionary<string, List<string>> ChildrenByParent(IReadOnlyDictionary<string, DataSyncContentNode> nodes)
     {
-        var result = new List<string> { id };
-        var set = new HashSet<string>(StringComparer.Ordinal) { id };
-        bool grew;
-        do
+        var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var node in nodes.Values)
         {
-            grew = false;
-            foreach (var child in infos.Values)
-            {
-                if (child.ParentId is { } parent && set.Contains(parent) && set.Add(child.Id))
-                {
-                    result.Add(child.Id);
-                    grew = true;
-                }
-            }
-        } while (grew);
+            if (DataSyncContentNodes.ParentOf(node) is not { } parent) continue;
+            if (!result.TryGetValue(parent, out var list)) result[parent] = list = [];
+            list.Add(node.Id);
+        }
 
         return result;
     }
+
+    /// <summary>A child and every child below it, parents first.</summary>
+    private static List<string> SubtreeOf(IReadOnlyDictionary<string, List<string>> below, string id)
+    {
+        var result = new List<string> { id };
+        var seen = new HashSet<string>(StringComparer.Ordinal) { id };
+        for (var i = 0; i < result.Count; i++)
+        {
+            foreach (var child in below.GetValueOrDefault(result[i]) ?? [])
+            {
+                if (seen.Add(child)) result.Add(child);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>A child holds a child without an id: nothing can say whether a change list added it.</summary>
+    private static bool HoldsChildWithoutId(JsonNode node) =>
+        node is JsonObject o && o.Any(m => m.Value is JsonArray array && array.Any(e =>
+            e is JsonObject child && (DataSyncContentNodes.IdOf(child) is null || HoldsChildWithoutId(child))));
 }

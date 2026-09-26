@@ -533,6 +533,7 @@
   "dataSync.inbox.card.synced": "Synced",
   "dataSync.inbox.card.now": "Now",
   "dataSync.inbox.card.lostUpdateHint": "The change undoes what sync applied. Until you decide, the other devices keep their version, and incoming changes to it wait.",
+  "dataSync.inbox.card.reapplyInUse": "Putting the synced change back would remove these options, and resources here use them. It removes nothing while they are in use.",
   "dataSync.inbox.card.newDefinition": "new",
   "dataSync.inbox.card.changes": "{{count}} changes",
   "dataSync.inbox.card.largeHint": "Everything under the limits already applied.",

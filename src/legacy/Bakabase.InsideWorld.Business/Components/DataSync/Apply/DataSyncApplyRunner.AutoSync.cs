@@ -146,7 +146,8 @@ public sealed partial class DataSyncApplyRunner
             var written = writer.Result;
 
             var now = s.Now;
-            var inbox = await s.Store.ReconcileInboxAsync(linkRow.Id, linkRow.PeerNodeId, written.Inbox,
+            // The chunks wrote their entities' state-derived items already; the rest are reconciled here.
+            var inbox = await s.Store.ReconcileInboxAsync(linkRow.Id, linkRow.PeerNodeId, writer.InboxLeft,
                 written.Evaluated, written.ClosureHints, now, ct);
             await s.Store.CloseStaleStateItemsAsync(written.Evaluated.Concat(recorder.Touched).Distinct().ToList(),
                 linkRow.Id, now, ct);
@@ -164,8 +165,8 @@ public sealed partial class DataSyncApplyRunner
             await AfterCommitAsync(s, recorder, kinds, DataSyncHistoryKind.AutoSync, logId, linkRow.Id);
 
             var closed = openBefore.Except(await OpenItemIdsAsync(s, CancellationToken.None)).OrderBy(i => i).ToList();
-            return (new DataSyncAutoSyncOutcome(logId, null, inbox.Created, closed.Count, writer.Applied, written.Notes,
-                closed), false);
+            return (new DataSyncAutoSyncOutcome(logId, null, inbox.Created + writer.ItemsCreated.Count, closed.Count,
+                writer.Applied, written.Notes, closed), false);
         }
         catch (DataSyncActorChangedException)
         {

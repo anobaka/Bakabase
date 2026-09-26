@@ -500,7 +500,7 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
             row.PublishHeld = true;
             row.Seq = await Store.NextSeqAsync(ct);
             row.UpdatedAtUtc = Now;
-            _drafts.Add(DraftOf(kind, codec, row, local, applied, undone));
+            _drafts.Add(await DraftOfAsync(kind, codec, row, local, applied, undone, ct));
             return true;
         }
 
@@ -512,15 +512,22 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
             if (applied is null) return;
             var undone = DataSyncLostUpdateGuard.FindUndone(codec, local.Content, row.ChildrenLocal, applied.Changes);
             if (undone.Count == 0) return;
-            _drafts.Add(DraftOf(kind, codec, row, local, applied, undone));
+            _drafts.Add(await DraftOfAsync(kind, codec, row, local, applied, undone, ct));
         }
 
-        private static DataSyncInboxDraft DraftOf(string kind, IDataSyncKindCodec codec, DataSyncEntityDbModel row,
-            LocalEntity local, DataSyncAppliedChanges applied, IReadOnlyList<DataSyncFieldOutcome> undone)
+        /// <summary>The item, with the children "Put the synced change back" would remove that resources here use.</summary>
+        private async Task<DataSyncInboxDraft> DraftOfAsync(string kind, IDataSyncKindCodec codec,
+            DataSyncEntityDbModel row, LocalEntity local, DataSyncAppliedChanges applied,
+            IReadOnlyList<DataSyncFieldOutcome> undone, CancellationToken ct)
         {
             var content = codec.ReadLocal(local.Content);
+            IReadOnlyList<DataSyncDisplayValue> inUse = Store.Kinds.TryGetValue(kind, out var adapter)
+                ? await DataSyncLostUpdateGuard.ReapplyInUseAsync(adapter, row.LocalKey, content, row.ChildrenLocal,
+                    applied.Changes, ct)
+                : [];
             return DataSyncLostUpdateGuard.Draft(kind, new SyncKey(row.SyncKey), row.LocalKey, codec.NameOf(content),
-                codec.SubtypeOf(content), applied.PeerName, undone, DataSyncVersionVector.ParseStored(row.VvJson));
+                codec.SubtypeOf(content), applied.PeerName, undone, DataSyncVersionVector.ParseStored(row.VvJson),
+                inUse);
         }
 
         public async Task FlushItemsAsync(CancellationToken ct)

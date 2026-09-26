@@ -97,12 +97,75 @@ public static class DataSyncLostUpdateGuard
         return undone;
     }
 
-    /// <summary>The state-derived item (§9.1 J): of no link, subject the whole entity, the undone changes as its fields.</summary>
-    public static DataSyncInboxDraft Draft(string kind, SyncKey key, string localKey, string entityName, string? subtype,
-        string? peerName, IReadOnlyList<DataSyncFieldOutcome> undone, DataSyncVersionVector localVv)
+    /// <summary>
+    /// The item's <c>Detail</c> while "Put the synced change back" would remove children resources here use
+    /// (<see cref="ReapplyInUseAsync"/>).
+    /// </summary>
+    public const string ReapplyInUse = DataSyncInboxRules.ReapplyInUseDetail;
+
+    /// <summary>
+    /// The children "Put the synced change back" would remove from <paramref name="current"/> (the removals of the
+    /// entity's most recent guarded apply the local content undid) that resources here use: Reapply never removes
+    /// one (§8.5.4 step 3 holds them in a merge, undo refuses <c>AddedOptionsInUse</c>).
+    /// </summary>
+    public static async Task<IReadOnlyList<DataSyncDisplayValue>> ReapplyInUseAsync(IDataSyncKind adapter,
+        string localKey, object current, bool currentChildrenLocal, DataSyncEntityChanges applied, CancellationToken ct)
     {
-        var payload = new DataSyncInboxPayload(entityName, subtype, peerName, null, null, undone, null, null, null, 0,
-            null, null, null, null, null);
+        ArgumentNullException.ThrowIfNull(adapter);
+        var codec = adapter.Codec;
+        var undone = DataSyncChangeLists.Undone(codec, current, currentChildrenLocal, applied);
+        var edit = DataSyncChangeLists.Apply(codec, current, currentChildrenLocal, undone.Scalars, undone.Children,
+            backward: false);
+        return await InUseAsync(adapter, localKey, current, edit.RemovedChildIds, ct);
+    }
+
+    /// <summary>Of <paramref name="childIds"/>, those resources here use, as the card shows them.</summary>
+    public static async Task<IReadOnlyList<DataSyncDisplayValue>> InUseAsync(IDataSyncKind adapter, string localKey,
+        object current, IReadOnlyCollection<string> childIds, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(adapter);
+        if (childIds.Count == 0) return [];
+        var usage = await adapter.GetUsageAsync(
+            new Dictionary<string, IReadOnlyCollection<string>> { [localKey] = childIds }, ct);
+        var counts = usage.GetValueOrDefault(localKey)?.ResourceCountByChildId;
+        if (counts is null) return [];
+        var displays = new Dictionary<string, DataSyncDisplayValue>(StringComparer.Ordinal);
+        foreach (var child in adapter.Codec.ChildrenOf(current)) displays.TryAdd(child.Id, child.Display);
+        return childIds.Distinct(StringComparer.Ordinal).Where(id => counts.GetValueOrDefault(id) > 0)
+            .Select(id => displays.GetValueOrDefault(id) ?? new DataSyncDisplayValue(id)).ToList();
+    }
+
+    /// <summary>
+    /// The item's payload with the children Reapply would remove that resources here use (<see cref="ReapplyInUse"/>),
+    /// or without them when there are none.
+    /// </summary>
+    public static DataSyncInboxPayload WithReapplyInUse(DataSyncInboxPayload payload,
+        IReadOnlyList<DataSyncDisplayValue> inUse)
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        ArgumentNullException.ThrowIfNull(inUse);
+        if (inUse.Count > 0)
+        {
+            return payload with
+            {
+                Children = inUse.Take(DataSyncInboxDrafts.MaxListed).ToList(), ChildrenTotal = inUse.Count,
+                Detail = ReapplyInUse,
+            };
+        }
+
+        return payload.Detail == ReapplyInUse
+            ? payload with { Children = null, ChildrenTotal = 0, Detail = null }
+            : payload;
+    }
+
+    /// <summary>The state-derived item (§9.1 J): of no link, subject the whole entity, the undone changes as its fields.</summary>
+    /// <param name="inUse">The children Reapply would remove that resources here use (<see cref="ReapplyInUseAsync"/>).</param>
+    public static DataSyncInboxDraft Draft(string kind, SyncKey key, string localKey, string entityName, string? subtype,
+        string? peerName, IReadOnlyList<DataSyncFieldOutcome> undone, DataSyncVersionVector localVv,
+        IReadOnlyList<DataSyncDisplayValue>? inUse = null)
+    {
+        var payload = WithReapplyInUse(new DataSyncInboxPayload(entityName, subtype, peerName, null, null, undone, null,
+            null, null, 0, null, null, null, null, null), inUse ?? []);
         return new DataSyncInboxDraft(kind, key, localKey, DataSyncInboxItemType.SuspectedLostUpdate,
             DataSyncInboxItemOrigin.State, "", payload, null, null, localVv, DataSyncMergeFlags.None,
             DataSyncInboxTokens.Of(DataSyncInboxItemType.SuspectedLostUpdate, "", undone));

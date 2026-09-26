@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
@@ -27,8 +28,10 @@ public sealed partial class DataSyncApplyRunner
     /// leaves an unserved <c>UndoneCreate</c> tombstone and <c>Excluded(Undone)</c> bases on every link (keys and
     /// aliases kept, nothing proposed to anyone); an undone bind excludes the supplying link's record; an undone update
     /// writes back exactly the changed paths as a new local revision (<c>Undo</c>); an undone deletion re-creates the
-    /// definition with the same child ids, reviving its key; a type change converts back (backed up first when lossy);
-    /// key moves return to their owners. Entities that changed since are refused one by one; there is no redo.
+    /// definition exactly as captured, with the same child ids, reviving its key; a type change converts back and
+    /// restores the captured row (backed up first when lossy); key moves return to their owners. Entities that changed
+    /// since are refused one by one, and so is a step whose entity, re-read, is not what it restored (the
+    /// faithfulness check): that step is taken back. There is no redo.
     /// </summary>
     /// <returns>The <c>Undo</c> history entry, or null when nothing could be undone.</returns>
     public async Task<int?> RunUndoAsync(int applyLogId, BTaskArgs args)
@@ -62,11 +65,32 @@ public sealed partial class DataSyncApplyRunner
             var writes = new DataSyncEntityWrites(s, recorder);
             var results = new List<DataSyncUndoPreviewItem>();
             var applied = 0;
-            foreach (var step in steps)
+            for (var i = 0; i < steps.Count; i++)
             {
+                var step = steps[i];
                 // Inside the transaction only a stop is honoured: a pause here would keep SQLite's writer lock.
                 ct.ThrowIfCancellationRequested();
-                var blocked = step.Blocked ?? await UndoStepAsync(s, writes, step, ct);
+                var blocked = step.Blocked;
+                if (blocked is null)
+                {
+                    // A step refused while writing (it changed during the undo, or the entity re-read afterwards is
+                    // not what the step meant to write back) takes back what it wrote; it records nothing.
+                    var savepoint = "undoStep" + i.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    await s.SavepointAsync(savepoint, ct);
+                    blocked = await UndoStepAsync(s, writes, step, ct);
+                    if (blocked is null)
+                    {
+                        await s.ReleaseSavepointAsync(savepoint, ct);
+                    }
+                    else
+                    {
+                        await s.RollbackToSavepointAsync(savepoint);
+                        writes.Written(step.PreImage.Kind);
+                        // The rollback forgot every tracked row, the log among them.
+                        log = await s.Db.DataSyncApplyLogs.SingleAsync(l => l.Id == applyLogId, ct);
+                    }
+                }
+
                 results.Add(step.ToView() with { Blocked = blocked });
                 recorder.Item(step.PreImage.Kind + "/" + step.PreImage.EntityId, step.PreImage.Kind, step.PreImage.Name,
                     blocked is null ? DataSyncItemOutcome.Applied : DataSyncItemOutcome.ChangedSinceReview,
@@ -177,12 +201,17 @@ public sealed partial class DataSyncApplyRunner
             }
             case DataSyncPreImageActions.Deleted:
             {
-                // Re-created with the same child ids; the tombstone's key revives with Undo ≥ the tombstone.
+                // Re-created with the same child ids, stored exactly as captured (FromPreImage: the service's
+                // ordinary create would fold case-variant duplicates kept under IgnoreCase, F72); the tombstone's key
+                // revives with Undo ≥ the tombstone.
+                if (p.Content is null) return DataSyncUndoBlock.Missing;
                 var itemId = DataSyncMergeItemIds.Of(kind, new SyncKey(row.SyncKey));
-                var create = new CreateEntityOperation(itemId, keys, row.OriginNodeId, 0, p.Content!);
+                var create = new CreateEntityOperation(itemId, keys, row.OriginNodeId, 0, p.Content, FromPreImage: true);
                 var outcome = await s.Writer(kind).ApplyAsync(new ApplyBatch(kind, [create]), ct);
                 writes.Written(kind);
                 if (!outcome.CreatedLocalKeysByItemId.TryGetValue(itemId, out var localKey))
+                    return DataSyncUndoBlock.ChangedSinceImport;
+                if (!await FaithfulAsync(writes, codec, kind, localKey, p.Content, ct))
                     return DataSyncUndoBlock.ChangedSinceImport;
                 var decision = new DataSyncRevisionDecision(kind, keys, null, DataSyncRevisionKind.Undo, null, null, false,
                     false, row.OrderKey, DataSyncEntityForms.ReadUnknown(row.UnknownJson), row.ChildrenLocal, null);
@@ -216,12 +245,35 @@ public sealed partial class DataSyncApplyRunner
             }
             case DataSyncPreImageActions.TypeChanged:
             {
+                // The captured raw row goes back through the adapter (IDataSyncKind.RestoreAsync): it converts the
+                // entity back, points the values at the captured children and writes those verbatim, with their ids
+                // and colours. A subtype change alone would rebuild the children from the values with fresh ids and
+                // lose every one no value used (F73).
+                if (p.Row is null || p.Content is null) return DataSyncUndoBlock.Missing;
                 var before = codec.ReadLocal((await writes.ReReadAsync(kind, row.LocalKey, ct)).Content);
-                var outcome = await s.Writer(kind).ApplyAsync(new ApplyBatch(kind,
-                    [new ChangeSubtypeOperation(DataSyncMergeItemIds.Of(kind, new SyncKey(row.SyncKey)), row.LocalKey,
-                        row.LocalHash, p.FromSubtype!)]), ct);
-                writes.Written(kind);
-                if (outcome.ChangedDuringApplyItemIds.Count > 0) return DataSyncUndoBlock.ChangedSinceImport;
+                try
+                {
+                    await s.Writer(kind).RestoreAsync(row.LocalKey, p.Row, ct);
+                }
+                catch (KeyNotFoundException)
+                {
+                    return DataSyncUndoBlock.Missing;
+                }
+                catch (InvalidOperationException e)
+                {
+                    // A value uses a child the captured row has nothing of the same class for, or the row does not
+                    // read: nothing was written (the savepoint takes back a conversion that was).
+                    _logger.LogInformation(e, "Data sync undo kept the type change of {Kind}/{LocalKey}: {Reason}",
+                        kind, row.LocalKey, e.Message);
+                    return DataSyncUndoBlock.ChangedSinceImport;
+                }
+                finally
+                {
+                    writes.Written(kind);
+                }
+
+                if (!await FaithfulAsync(writes, codec, kind, row.LocalKey, p.Content, ct))
+                    return DataSyncUndoBlock.ChangedSinceImport;
                 row.PublishHeld = false;
                 await writes.RecordLiveAsync(kind, row.LocalKey, before, UndoDecision(row, keys), null, null,
                     EntityKeys.None, null, ct);
@@ -244,6 +296,8 @@ public sealed partial class DataSyncApplyRunner
                     var outcome = await s.Writer(kind).ApplyAsync(new ApplyBatch(kind, [update]), ct);
                     writes.Written(kind);
                     if (outcome.ChangedDuringApplyItemIds.Count > 0) return DataSyncUndoBlock.ChangedSinceImport;
+                    if (!await FaithfulAsync(writes, codec, kind, row.LocalKey, merged, ct))
+                        return DataSyncUndoBlock.ChangedSinceImport;
                 }
 
                 // An undo clears PublishHeld (§6.5); its own writes are exempt from the lost-update guard.
@@ -262,6 +316,22 @@ public sealed partial class DataSyncApplyRunner
             .SequenceEqual(b.LocalOnlyChildren.OrderBy(c => c, StringComparer.Ordinal)) &&
         a.HeldChildren.OrderBy(h => h.ChildId, StringComparer.Ordinal).ThenBy(h => h.LinkId)
             .SequenceEqual(b.HeldChildren.OrderBy(h => h.ChildId, StringComparer.Ordinal).ThenBy(h => h.LinkId));
+
+    /// <summary>
+    /// The faithfulness check (§8.11, v3.1 §8.6): the entity re-read after an undo step has the canonical content the
+    /// step meant to restore — the captured content of a re-created or converted-back entity, the written-back paths
+    /// of an update. Raw bytes may differ (a service re-serializes); the canonical form may not. A step that fails it
+    /// is refused as <c>ChangedSinceImport</c> and taken back: for a type change, the values changed since so that
+    /// converting back would keep children the captured row does not have.
+    /// </summary>
+    private static async Task<bool> FaithfulAsync(DataSyncEntityWrites writes, IDataSyncKindCodec codec, string kind,
+        string localKey, JsonObject expected, CancellationToken ct)
+    {
+        var reRead = await writes.ReReadAsync(kind, localKey, ct);
+        return !reRead.Unreadable &&
+               ContentHash.Of(codec.Write(codec.ReadLocal(reRead.Content))) ==
+               ContentHash.Of(codec.Write(codec.ReadLocal(expected)));
+    }
 
     private static DataSyncRevisionDecision UndoDecision(DataSyncEntityDbModel row, EntityKeys keys) =>
         new(row.Kind, keys, row.LocalKey, DataSyncRevisionKind.Undo, null, null, false, false, row.OrderKey,

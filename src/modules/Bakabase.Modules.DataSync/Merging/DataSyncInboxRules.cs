@@ -15,6 +15,13 @@ public static class DataSyncInboxRules
     public const string ReapplyUnavailableDetail = "reapplyUnavailable";
 
     /// <summary>
+    /// A SuspectedLostUpdate item's <c>Detail</c> while Reapply would remove children resources here use (its
+    /// <c>Children</c> lists them): Reapply never removes one in use, so it waits until nothing uses them. It stays
+    /// offered (§6.5).
+    /// </summary>
+    public const string ReapplyInUseDetail = "reapplyInUse";
+
+    /// <summary>
     /// The allowed actions of an open item (§9.1, "Allowed actions"). Nothing is pre-chosen. <paramref name="twoWay"/>
     /// is the link's effective mode being TwoWay (§8.1); false for items that belong to no link.
     /// </summary>

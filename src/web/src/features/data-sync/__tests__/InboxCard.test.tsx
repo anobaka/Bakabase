@@ -491,6 +491,38 @@ describe("cards of one item", () => {
     );
     expect(screen.getByText("dataSync.inbox.card.lostUpdateHint")).toBeInTheDocument();
     expect(actionNames()).toEqual(["Publish", "Reapply"]);
+    expect(screen.queryByTestId("data-sync-inbox-reapply-in-use")).toBeNull();
+  });
+
+  it("names the options putting the synced change back would remove while resources use them", () => {
+    renderCard([
+      inboxItem(11, T.SuspectedLostUpdate, [A.Publish, A.Reapply], {
+        linkId: undefined,
+        peerNodeId: undefined,
+        peerName: undefined,
+        origin: DataSyncInboxItemOrigin.State,
+        payload: inboxPayload({
+          peerName: undefined,
+          remoteEditor: undefined,
+          fields: [
+            {
+              path: "choice:c-pop",
+              resolution: DataSyncFieldResolution.TookRemote,
+              local: { text: "Pop" },
+            },
+          ],
+          children: [{ text: "Pop" }],
+          childrenTotal: 1,
+          detail: "reapplyInUse",
+        }),
+      }),
+    ]);
+
+    const inUse = screen.getByTestId("data-sync-inbox-reapply-in-use");
+
+    expect(within(inUse).getByText("dataSync.inbox.card.reapplyInUse")).toBeInTheDocument();
+    expect(within(inUse).getAllByTestId("data-sync-value")).toHaveLength(1);
+    expect(actionNames()).toEqual(["Publish", "Reapply"]);
   });
 
   it("lists a large change, applies it all, or pauses the link", () => {

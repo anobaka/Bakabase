@@ -20,7 +20,7 @@ namespace Bakabase.Tests.DataSync.Apply;
 /// the peer creates or links anything again until the person includes it.
 /// </summary>
 [TestClass]
-public class UndoTests
+public partial class UndoTests
 {
     private DataSyncApplyFixture _f = null!;
     private DataSyncPeer _peer = null!;

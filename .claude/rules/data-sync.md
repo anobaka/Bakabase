@@ -178,6 +178,21 @@ scopes").
   pages; the fetcher gives a pull up as `Unreachable` (`timeout`) once it outlasts
   `DataSyncSchedule.SnapshotDeadline` (10 min, a restart included), on top of each call's own
   deadline and `MaxStagedPullBytes`.
+- **A state-derived item commits with its state.** A merge drafts one only when it makes the
+  state (a hold), and a later pull meets that state already agreed (row K4) and drafts nothing.
+  So a chunked apply writes the state-derived items of a chunk's entities in that chunk's own
+  transaction (`DataSyncMergeWriter`), never only at the end.
+- **Undo is faithful, or the step is taken back** (§8.11). Each step runs under a savepoint. A
+  deletion is re-created from its captured content verbatim (`CreateEntityOperation.FromPreImage`);
+  a type change goes back through `IDataSyncKind.RestoreAsync` with the captured raw row, never a
+  subtype change alone (which rebuilds children with fresh ids, F73); a change list removes a
+  child only together with everything now under it that the same list removes (a child added or
+  moved under it since is a conflict). The entity re-read after each step must have the canonical
+  content the step restored, or the step is refused as `ChangedSinceImport`.
+- **Nothing a decision writes back removes a child in use.** "Put the synced change back"
+  (`Reapply`) checks usage like a merge (§8.5.4 step 3) and undo (`AddedOptionsInUse`): while
+  resources use a child it would remove, it writes nothing and the item names them
+  (`Detail = reapplyInUse`).
 
 ## Links, requests and access
 

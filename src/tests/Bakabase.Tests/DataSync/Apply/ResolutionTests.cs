@@ -705,6 +705,50 @@ public class ResolutionTests
         Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count);
     }
 
+    /// <summary>
+    /// §6.5 with §8.5.4 step 3: putting a removal back never takes away an option resources here use. The card names
+    /// it from the start; a Reapply while it is in use writes nothing and keeps the hold; once nothing uses it,
+    /// Reapply removes it.
+    /// </summary>
+    [TestMethod]
+    public async Task Reapply_never_removes_an_option_resources_here_use()
+    {
+        var (key, localKey, v1) = await SyncedFromPeerAsync(Content("Genre", ("a", "Rock"), ("b", "Jazz"), ("c", "Pop")));
+        // The peer deletes Pop, which nothing here uses: removed by itself.
+        await _f.ApplyAsync(_link, _peer,
+            (Item, _peer.Record([key], _peer.Next(v1), Content("Genre", ("a", "Rock"), ("b", "Jazz")), "a0")));
+        CollectionAssert.AreEqual(new[] { "a", "b" }, _f.Kind[localKey].Children.Select(c => c.Id).ToArray());
+        // A whole-row writer puts it back, and seven resources then use it.
+        _f.Kind.Definitions[localKey] = Content("Genre", ("a", "Rock"), ("b", "Jazz"), ("c", "Pop"));
+        _f.Kind.Use(localKey, "c", 7);
+        await _f.RefreshAsync();
+        var item = await SingleOpenAsync(DataSyncInboxItemType.SuspectedLostUpdate);
+        var payload = DataSyncStoredJson.Read<DataSyncInboxPayload>(item.PayloadJson, "x");
+        Assert.AreEqual((DataSyncInboxRules.ReapplyInUseDetail, 1), (payload.Detail, payload.ChildrenTotal),
+            "the card says Reapply would remove an option in use");
+        Assert.AreEqual("Pop", payload.Children!.Single().Text);
+        CollectionAssert.AreEqual(new[] { DataSyncInboxAction.Publish, DataSyncInboxAction.Reapply },
+            DataSyncInboxRules.AllowedActions(item.Type, item.SubjectPath, payload, false).ToArray());
+
+        await _f.ResolveAsync(item, DataSyncInboxAction.Reapply);
+
+        CollectionAssert.AreEqual(new[] { "a", "b", "c" }, _f.Kind[localKey].Children.Select(c => c.Id).ToArray(),
+            "nothing removed while resources use it");
+        Assert.IsTrue((await _f.RowAsync(localKey)).PublishHeld, "the hold stays: the stale overwrite is not published");
+        var open = await SingleOpenAsync(DataSyncInboxItemType.SuspectedLostUpdate);
+        Assert.AreEqual(item.Id, open.Id);
+        Assert.AreEqual("Pop",
+            DataSyncStoredJson.Read<DataSyncInboxPayload>(open.PayloadJson, "x").Children!.Single().Text);
+
+        // Nothing uses it any more: Reapply puts the peer's deletion back.
+        _f.Kind.Usage.Remove(localKey);
+        await _f.ResolveAsync(open, DataSyncInboxAction.Reapply);
+
+        CollectionAssert.AreEqual(new[] { "a", "b" }, _f.Kind[localKey].Children.Select(c => c.Id).ToArray());
+        Assert.IsFalse((await _f.RowAsync(localKey)).PublishHeld);
+        Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count);
+    }
+
     [TestMethod]
     public async Task Reapply_after_the_apply_entry_is_gone_keeps_the_hold_and_the_item_and_withdraws_Reapply()
     {

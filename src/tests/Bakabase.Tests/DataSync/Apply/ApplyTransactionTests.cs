@@ -449,6 +449,69 @@ public class ApplyTransactionTests
             "what the first chunk did not reach was merged under the new actor");
     }
 
+    /// <summary>
+    /// A chunk commits its holds with their <c>ChildDeletedInUse</c> items (§9.1): state-derived items are drafted only
+    /// when the hold is made, and a later pull meets the hold already agreed (row K4) and drafts nothing. An apply that
+    /// failed after that chunk must not leave a child withheld with nobody asked.
+    /// </summary>
+    [TestMethod]
+    public async Task A_hold_a_chunk_committed_keeps_its_item_when_the_apply_fails_at_a_later_gap()
+    {
+        var f = await CreateAsync();
+        var peer = new DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer, firstContactDone: false);
+        var order = OrderKeys(250);
+        var created = Enumerable.Range(0, 250).Select(_ => (Key: SyncKey.New().Value, Vv: peer.Next())).ToList();
+        await f.ApplyAsync(link, peer, created.Select((c, i) =>
+            (Item, peer.Record([c.Key], c.Vv, Content("P" + i, ("a" + i, "A"), ("b" + i, "B")), order[i]))).ToArray());
+        var p0 = f.Kind.KeyOf("P0");
+        f.Kind.Use(p0, "a0", 3);
+
+        // The peer deletes child a of each (in use on P0 only) and renames b; the large change is let through.
+        async Task SkipLargeChangeAsync()
+        {
+            var db = f.NewDb();
+            (await db.DataSyncLinks.SingleAsync(l => l.Id == link.Id)).OnceFlagsJson =
+                DataSyncStoredJson.WriteFlags(new DataSyncMergeFlags(SkipLargeChange: true));
+            await db.SaveChangesAsync();
+        }
+
+        await SkipLargeChangeAsync();
+        var edits = created.Select((c, i) =>
+                (Item, peer.Record([c.Key], peer.Next(c.Vv), Content("P" + i, ("b" + i, "B2")), order[i])))
+            .ToArray();
+
+        var gaps = 0;
+        f.Runner.BetweenChunks = () =>
+        {
+            gaps++;
+            throw new InvalidOperationException("The disk is full.");
+        };
+        try
+        {
+            await f.ApplyAsync(link, peer, edits);
+        }
+        finally
+        {
+            f.Runner.BetweenChunks = null;
+        }
+
+        Assert.AreEqual(1, gaps);
+        Assert.AreEqual(DataSyncApplyRunner.ApplyFailedCode, (await f.LinkRowAsync(link.Id)).LastErrorCode);
+        var held = DataSyncStoredJson.ReadOverlay((await f.RowAsync(p0)).OverlayJson).HeldChildren;
+        CollectionAssert.AreEqual(new[] { "a0" }, held.Select(h => h.ChildId).ToArray(), "the first chunk stands");
+        var item = (await f.OpenItemsAsync()).Single(i => i.Type == DataSyncInboxItemType.ChildDeletedInUse);
+        Assert.AreEqual(("child:a0", (int?) link.Id), (item.SubjectPath, item.LinkId), "committed with its hold");
+
+        // The pull again: the first chunk's entities meet row K4 and draft nothing; the item stands, once.
+        await SkipLargeChangeAsync();
+        await f.ApplyAsync(link, peer, f.Pull(peer, edits));
+        Assert.IsNull((await f.LinkRowAsync(link.Id)).LastErrorCode);
+        Assert.AreEqual(250, f.Kind.Definitions.Values.Count(d => d.Children.Any(c => c.Label == "B2")));
+        Assert.AreEqual(item.Id, (await f.OpenItemsAsync()).Single(i => i.Type == DataSyncInboxItemType.ChildDeletedInUse).Id);
+        CollectionAssert.AreEqual(new[] { "a0", "b0" }, f.Kind[p0].Children.Select(c => c.Id).ToArray(), "still held");
+    }
+
     [TestMethod]
     public async Task A_stopped_apply_rolls_back_and_rethrows_the_cancellation_unchanged()
     {

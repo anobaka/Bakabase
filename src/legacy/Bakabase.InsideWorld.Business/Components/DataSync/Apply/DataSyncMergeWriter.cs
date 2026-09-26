@@ -23,6 +23,13 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 /// key the pre-flight refused) is <c>ChangedDuringApply</c>: its record becomes a <c>Retry</c> pending record and
 /// nothing else of its entity is written (<see cref="DataSyncRecordApply.WithoutChangedDuringApply"/>).
 /// </summary>
+/// <remarks>
+/// When chunks commit on their own, each chunk also writes the state-derived items (§9.1) of the entities it wrote —
+/// a hold's <c>ChildDeletedInUse</c> — in its own transaction: they are drafted only when their state is made, and a
+/// later pull meets that state already agreed (row K4) and drafts nothing, so a chunk that committed a hold without
+/// its item, the apply stopping at a later gap, would withhold the child with nobody asked. The caller reconciles
+/// the rest (<see cref="InboxLeft"/>).
+/// </remarks>
 internal sealed class DataSyncMergeWriter
 {
     /// <summary>≈ 2 s per transaction at most (non-blocking note 6).</summary>
@@ -40,6 +47,8 @@ internal sealed class DataSyncMergeWriter
     private readonly HashSet<DataSyncOverlayChange> _overlaid = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<(string Kind, string Key)> _basesWritten = new();
     private readonly Dictionary<(string Kind, DataSyncVersionVector Vv), List<DataSyncWireRecord>> _recordsByVv = new();
+    private readonly HashSet<(string Kind, string Key, DataSyncInboxItemType Type, string SubjectPath)> _itemsWritten = [];
+    private readonly List<long> _itemsCreated = [];
 
     /// <param name="commitChunk">Commits and begins the next transaction between chunks; null writes everything in one.</param>
     public DataSyncMergeWriter(DataSyncApplySession s, DataSyncEntityWrites writes, DataSyncMergeInput input,
@@ -69,6 +78,16 @@ internal sealed class DataSyncMergeWriter
     public IReadOnlyCollection<string> ChangedDuringApply => _changed;
 
     public int Applied { get; private set; }
+
+    /// <summary>The ids of the items the chunks created in their own transactions (see the remarks).</summary>
+    public IReadOnlyList<long> ItemsCreated => _itemsCreated;
+
+    /// <summary>The drafts of <see cref="Result"/> the caller still reconciles: those no chunk wrote.</summary>
+    public IReadOnlyList<DataSyncInboxDraft> InboxLeft =>
+        Result.Inbox.Where(d => !_itemsWritten.Contains(SubjectOf(d))).ToList();
+
+    private static (string, string, DataSyncInboxItemType, string) SubjectOf(DataSyncInboxDraft d) =>
+        (d.Kind, d.Key.Value, d.Type, d.SubjectPath);
 
     public async Task WriteAsync(CancellationToken ct)
     {
@@ -146,6 +165,19 @@ internal sealed class DataSyncMergeWriter
             .Select(o => DataSyncMergeItemIds.TryParse(o.Op.ItemId, out var k, out var key) ? (k, key.Value) : default)
             .Where(k => k.Item1 is not null).ToHashSet();
         await WriteBasesAsync(u => keys.Contains((u.Kind, u.Key.Value)), ct);
+        if (_commitChunk is not null) await WriteStateItemsAsync(keys, ct);
+    }
+
+    /// <summary>The state-derived items of the entities a chunk wrote, in the chunk's transaction (see the remarks).</summary>
+    private async Task WriteStateItemsAsync(IReadOnlySet<(string Kind, string Key)> keys, CancellationToken ct)
+    {
+        var drafts = Result.Inbox.Where(d => d.Origin == DataSyncInboxItemOrigin.State &&
+                                             keys.Contains((d.Kind, d.Key.Value)) &&
+                                             !_itemsWritten.Contains(SubjectOf(d))).ToList();
+        if (drafts.Count == 0) return;
+        foreach (var draft in drafts) _itemsWritten.Add(SubjectOf(draft));
+        var upsert = await _s.Store.UpsertItemsAsync(_input.Link.LinkId, _input.Link.PeerNodeId, drafts, _s.Now, ct);
+        _itemsCreated.AddRange(upsert.CreatedIds);
     }
 
     private async Task RecordAsync(string kind, ApplyOperation op,
