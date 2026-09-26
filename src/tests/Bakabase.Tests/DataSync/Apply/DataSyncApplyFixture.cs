@@ -11,12 +11,15 @@ using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Canonical;
 using Bakabase.Modules.DataSync.Identity;
+using Bakabase.Modules.DataSync.Kinds.CustomProperties;
 using Bakabase.Modules.DataSync.Kinds.ExtensionGroups;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Services;
 using Bakabase.Modules.DataSync.Wire;
+using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Components.DataSync;
 using Bakabase.TestKit.DataSync;
 using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Tasks;
@@ -28,25 +31,33 @@ namespace Bakabase.Tests.DataSync.Apply;
 
 /// <summary>
 /// One TestKit provider (real SQLite) with the <c>testItem</c> kind (in memory, with usage, values, a subtype and an
-/// order) and the real extension group kind (the pure engine's codec over the real service), a clock the test moves, a
-/// verified actor, and a simulated peer whose records a test hands the apply runner as staged pulls.
+/// order), the real extension group kind (the pure engine's codec over the real service) and, when asked, the real
+/// custom property kind (the Property module's adapter), a clock the test moves, a verified actor, and a simulated peer
+/// whose records a test hands the apply runner as staged pulls.
 /// </summary>
 internal sealed class DataSyncApplyFixture
 {
     public const string Item = TestItemCodec.Kind;
     public const string Groups = DataSyncKindIds.ExtensionGroup;
+    public const string Properties = DataSyncKindIds.CustomProperty;
     public static readonly DateTimeOffset Start = new(2026, 9, 1, 12, 0, 0, TimeSpan.Zero);
 
     private int _task;
 
     private DataSyncApplyFixture(IServiceProvider services, TestItemDataSyncKind kind, ManualTimeProvider clock,
-        TestDataSyncDeviceIdentity identity)
+        TestDataSyncDeviceIdentity identity, bool customProperties)
     {
         Services = services;
         Kind = kind;
         Clock = clock;
         Identity = identity;
+        Kinds = customProperties ? [Item, Groups, Properties] : [Item, Groups];
     }
+
+    /// <summary>The kinds the fixture registers, in the order Refresh, links and pulls take them.</summary>
+    public IReadOnlyList<string> Kinds { get; }
+
+    public ICustomPropertyService CustomProperties => Services.GetRequiredService<ICustomPropertyService>();
 
     public IServiceProvider Services { get; }
     public TestItemDataSyncKind Kind { get; }
@@ -66,8 +77,9 @@ internal sealed class DataSyncApplyFixture
     /// Registers the real extension group kind; a test that wraps it (<see cref="FailingDataSyncKind"/>) registers its
     /// own.
     /// </param>
+    /// <param name="customProperties">Registers the real custom property kind over the real Property services.</param>
     public static async Task<DataSyncApplyFixture> CreateAsync(Action<IServiceCollection>? configure = null,
-        bool extensionGroups = true, IDataSyncDeviceIdentity? identityOverride = null)
+        bool extensionGroups = true, IDataSyncDeviceIdentity? identityOverride = null, bool customProperties = false)
     {
         var kind = new TestItemDataSyncKind();
         var clock = new ManualTimeProvider(Start);
@@ -80,9 +92,10 @@ internal sealed class DataSyncApplyFixture
             s.RemoveAll<IDataSyncKind>();
             s.AddScoped<IDataSyncKind>(_ => kind);
             if (extensionGroups) s.AddExtensionGroupDataSyncKind(ExtensionGroupCodec.Instance);
+            if (customProperties) s.AddScoped<IDataSyncKind, CustomPropertyDataSyncKind<BakabaseDbContext>>();
             configure?.Invoke(s);
         });
-        var fixture = new DataSyncApplyFixture(services, kind, clock, identity);
+        var fixture = new DataSyncApplyFixture(services, kind, clock, identity, customProperties);
         fixture.Guard.MarkVerified();
         await fixture.RefreshAsync();
         return fixture;
@@ -99,7 +112,7 @@ internal sealed class DataSyncApplyFixture
         await Guard.CheckAsync(lease, default);
         await using var scope = Services.CreateAsyncScope();
         await scope.ServiceProvider.GetRequiredService<DataSyncRefresher>()
-            .RefreshAsync(lease, [Item, Groups], false, default);
+            .RefreshAsync(lease, Kinds, false, default);
     }
 
     public async Task<DataSyncLocalStateDbModel> StateAsync() =>
@@ -175,7 +188,12 @@ internal sealed class DataSyncApplyFixture
         var completed = DataSyncStoredJson.ReadStrings(link.FirstContactKindsJson, "FirstContactKindsJson");
         return new DataSyncLinkContext(link.Id, link.PeerNodeId, link.PeerName, link.Mode, link.Mode, kinds,
             kinds.Except(completed).ToList(), false, new DataSyncActorId(peer.ActorId), new Dictionary<string, long>(),
-            peer.ActorId, new Dictionary<string, int> { [Item] = 1, [Groups] = 1 }, DataSyncMergeFlags.None);
+            peer.ActorId,
+            new Dictionary<string, int>
+            {
+                [Item] = 1, [Groups] = 1, [Properties] = CustomPropertyCodec.CurrentComparisonFormVersion,
+            },
+            DataSyncMergeFlags.None);
     }
 
     public DataSyncStagedPull Pull(DataSyncPeer peer, params (string Kind, DataSyncWireRecord Record)[] records) =>
@@ -185,11 +203,16 @@ internal sealed class DataSyncApplyFixture
     {
         var kinds = new List<DataSyncStagedKind>();
         var feedKinds = new List<DataSyncFeedKind>();
-        foreach (var kind in new[] { Item, Groups })
+        foreach (var kind in Kinds)
         {
             var mine = records.Where(r => r.Kind == kind).Select(r => r.Record).ToList();
             if (mine.Count == 0 && !full) continue;
-            var codec = kind == Item ? (IDataSyncKindCodec) Codec : ExtensionGroupCodec.Instance;
+            var codec = kind switch
+            {
+                Item => (IDataSyncKindCodec) Codec,
+                Groups => ExtensionGroupCodec.Instance,
+                _ => CustomPropertyCodec.Instance,
+            };
             var staged = mine.Select((r, i) => DataSyncRecordValidation.Stage(codec, r, i, DataSyncLimits.Default)).ToList();
             var maxSeq = mine.Count == 0 ? peer.Seq : mine.Max(r => r.Seq);
             kinds.Add(new DataSyncStagedKind(kind, 1, true, null, staged, maxSeq, full));
