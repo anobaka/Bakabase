@@ -1,4 +1,4 @@
-import type { DataSyncInboxItemView, DataSyncResolveBatchInput } from "../api";
+import type { DataSyncInboxItemView, DataSyncInboxQuery, DataSyncResolveBatchInput } from "../api";
 import type { InboxApplying, InboxBulk, InboxCardModel } from "../inboxModels";
 import type { SyncPeer } from "../viewModels";
 import type { InboxConfirmation } from "./InboxCard";
@@ -17,6 +17,7 @@ import {
   groupInbox,
   headlineKey,
   inboxBulks,
+  isConflict,
   recentlyResolved,
   settleApplying,
 } from "../inboxModels";
@@ -69,18 +70,20 @@ const staleProblems = new Set<DataSyncProblemCode>([
 ]);
 
 /**
- * Every open item, a page at a time, up to {@link OPEN_LIMIT}: until a page comes back empty or
- * the total is reached, whatever page size the server keeps to. Pages can shift while they are
- * read — an item opened or closed meanwhile — so an item met twice is kept once, and one missed
- * is there at the next read.
+ * Open items, a page at a time, up to {@link OPEN_LIMIT}: until a page comes back empty or the
+ * total is reached, whatever page size the server keeps to. Pages can shift while they are read
+ * — an item opened or closed meanwhile — so an item met twice is kept once, and one missed is
+ * there at the next read.
  */
-export async function readOpenItems(): Promise<{ items: Item[]; total: number }> {
+async function readOpen(
+  query: Pick<DataSyncInboxQuery, "kind" | "localKey"> = {},
+): Promise<{ items: Item[]; total: number }> {
   const byId = new Map<number, Item>();
   let total = 0;
   let skip = 0;
 
   for (;;) {
-    const page = await dataSyncApi.inbox({ openOnly: true, skip, take: INBOX_PAGE });
+    const page = await dataSyncApi.inbox({ ...query, openOnly: true, skip, take: INBOX_PAGE });
     const items = page?.items ?? [];
     const known = byId.size;
 
@@ -93,6 +96,28 @@ export async function readOpenItems(): Promise<{ items: Item[]; total: number }>
 
   return { items: Array.from(byId.values()), total: Math.max(total, byId.size) };
 }
+
+/** Every open item, up to {@link OPEN_LIMIT}, and how many are open in all. */
+export const readOpenItems = () => readOpen();
+
+/**
+ * One definition's open items whole, however many others are open (`GET /data-sync/inbox` with
+ * its kind and local key): every conflict of it, which must be decided together (§9.2).
+ */
+export const readEntityItems = async (kind: string, localKey: string) =>
+  (await readOpen({ kind, localKey })).items;
+
+/** Where a definition read whole is remembered: by kind and local key. */
+const entityKey = (kind: string, localKey: string) => `${kind}/${localKey}`;
+
+/** `items` with `more` among them, each item once — as `more` has it, the later read. */
+const withItems = (items: readonly Item[], more: readonly Item[]) => {
+  const byId = new Map(items.map((item) => [item.id, item]));
+
+  for (const item of more) byId.set(item.id, item);
+
+  return Array.from(byId.values());
+};
 
 /**
  * The items decided lately. The server lists open items first, then newest first, so the closed
@@ -128,6 +153,8 @@ export default function InboxList({
   const [open, setOpen] = useState<Item[]>();
   /** How many items are open in all: more than are shown, past {@link OPEN_LIMIT}. */
   const [openTotal, setOpenTotal] = useState(0);
+  /** Whether the first pages held every open item; past {@link OPEN_LIMIT} they do not. */
+  const [complete, setComplete] = useState(true);
   const [closed, setClosed] = useState<Item[]>([]);
   const [error, setError] = useState<Error>();
   const [peer, setPeer] = useState(initialPeer ?? "");
@@ -151,6 +178,9 @@ export default function InboxList({
   // finished settles its decision.
   const applyingNow = useRef(applying);
   const reads = useRef(0);
+  // Definitions read whole because the first pages could not hold them all: read again with every
+  // read while there is more than those pages, and kept while they have open items.
+  const entities = useRef(new Map<string, { kind: string; localKey: string }>());
 
   useEffect(() => setPeer(initialPeer ?? ""), [initialPeer]);
 
@@ -180,8 +210,19 @@ export default function InboxList({
     const read = ++reads.current;
 
     try {
-      const { items: nextOpen, total } = await readOpenItems();
+      const { items: firstPages, total } = await readOpenItems();
       const nextClosed = await readClosedItems(total);
+      const whole = firstPages.length >= total;
+      let nextOpen = firstPages;
+
+      if (whole) entities.current.clear();
+      else
+        for (const [key, { kind, localKey }] of entities.current) {
+          const items = await readEntityItems(kind, localKey);
+
+          if (items.length) nextOpen = withItems(nextOpen, items);
+          else entities.current.delete(key);
+        }
       const stillOpen = new Set(nextOpen.map((item) => item.id));
       const closedById = new Map(nextClosed.map((item) => [item.id, item]));
 
@@ -223,6 +264,7 @@ export default function InboxList({
       }
       setOpen(nextOpen);
       setOpenTotal(total);
+      setComplete(whole);
       setClosed(nextClosed);
       setError(undefined);
     } catch (cause) {
@@ -306,8 +348,8 @@ export default function InboxList({
 
   const cards = useMemo(() => groupInbox(open ?? []), [open]);
   // Past what is read, a definition's conflicts may be only partly here: nothing that needs all
-  // of them at once is offered for many until the rest is read.
-  const complete = !open || open.length >= openTotal;
+  // of them at once is offered for many until the rest is read, and a card's own Apply reads its
+  // definition whole first (`completeCard`).
 
   shownCards.current = cards;
   const filtered = filterCards(cards, { peer: peer || undefined, kind: kind || undefined });
@@ -357,16 +399,38 @@ export default function InboxList({
   };
 
   /**
+   * Reads a conflict card's definition whole and shows every open item of it from then on, with
+   * every read. Answers whether the card lacked a conflict: it must then be decided again.
+   */
+  const completeCard = async (card: InboxCardModel) => {
+    if (!card.localKey) return false;
+    const items = await readEntityItems(card.kind, card.localKey);
+    const shown = new Set(card.items.map((item) => item.id));
+
+    entities.current.set(entityKey(card.kind, card.localKey), {
+      kind: card.kind,
+      localKey: card.localKey,
+    });
+    setOpen((current) => withItems(current ?? [], items));
+
+    return items.some((item) => isConflict(item) && !shown.has(item.id));
+  };
+
+  /**
    * Sends a batch. Refused because it no longer matches what there is to decide — an item changed
    * or closed meanwhile, or a conflict of the definition missing from the card — "Needs you" is
-   * read again, so the card shows what there is to decide now.
+   * read again, so the card shows what there is to decide now: the missing conflicts read with
+   * their definition, wherever they are among the open items.
    */
-  const send = async (batch: DataSyncResolveBatchInput) => {
+  const send = async (batch: DataSyncResolveBatchInput, card?: InboxCardModel) => {
     try {
       return throwIfProblem(await dataSyncApi.resolve(batch));
     } catch (cause) {
-      if (cause instanceof DataSyncProblemError && staleProblems.has(cause.problem.code))
+      if (cause instanceof DataSyncProblemError && staleProblems.has(cause.problem.code)) {
+        if (card && cause.problem.code === DataSyncProblemCode.ResolveTogether)
+          await completeCard(card).catch(() => false);
         void load();
+      }
       throw cause;
     }
   };
@@ -377,7 +441,11 @@ export default function InboxList({
     confirmation?: InboxConfirmation,
   ) => {
     const operation = async () => {
-      const start = await send(batch);
+      // Not every open item was read: the card may lack a conflict of its definition, decided
+      // together with it. Read the definition whole first; one it lacked shows, to decide again.
+      if (!complete && card.items.some(isConflict) && (await completeCard(card)))
+        throw new DataSyncProblemError({ code: DataSyncProblemCode.ResolveTogether });
+      const start = await send(batch, card);
 
       follow([card.key], batch, start.taskId);
       resolved();

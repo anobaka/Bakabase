@@ -105,14 +105,13 @@ export type DataSyncHistoryCounts =
 export type DataSyncUndoPreviewItem =
   Schemas["Bakabase.Modules.DataSync.Services.DataSyncUndoPreviewItem"];
 
-/** The inbox query, as `GET /data-sync/inbox` binds it (one query parameter per member). */
-export interface DataSyncInboxQuery {
-  openOnly?: boolean;
-  peerNodeId?: string;
-  kind?: string;
-  skip?: number;
-  take?: number;
-}
+/**
+ * The inbox query, as `GET /data-sync/inbox` binds it (one query parameter per member). With
+ * `kind`, `localKey` answers one definition's items whole, however many others are open.
+ */
+export type DataSyncInboxQuery = NonNullable<
+  Parameters<ReturnType<typeof api>["getDataSyncInbox"]>[0]
+>;
 
 /**
  * The request itself failed. `code` is the remote-access gate's reason when it refused

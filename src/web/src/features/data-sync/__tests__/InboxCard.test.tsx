@@ -562,13 +562,25 @@ describe("the list of what needs you", () => {
       </MemoryRouter>,
     );
 
-  /** The inbox as the server answers it: open items first, then closed ones, a page at a time. */
+  /**
+   * The inbox as the server answers it: open items first, then closed ones, a page at a time. With
+   * a kind and a local key, one definition's items whole — `beyond` among them: open items past
+   * what the first pages hold.
+   */
   const serve = (
     open: DataSyncInboxItemView[],
     closed: DataSyncInboxItemView[] = [],
     total?: number,
+    beyond: DataSyncInboxItemView[] = [],
   ) =>
     vi.mocked(dataSyncApi.inbox).mockImplementation(async (query = {}) => {
+      if (query.localKey) {
+        const whole = [...open, ...beyond].filter(
+          (item) => item.kind === query.kind && item.localKey === query.localKey,
+        );
+
+        return { items: whole, total: whole.length, openTotal: whole.length };
+      }
       const all = query.openOnly ? open : [...open, ...closed];
       const skip = query.skip ?? 0;
 
@@ -649,6 +661,100 @@ describe("the list of what needs you", () => {
     );
     expect(document.querySelector('[data-bulk="deleteAll"]')).not.toBeNull();
     expect(document.querySelector('[data-bulk="keepLocalAll"]')).toBeNull();
+  });
+
+  it("reads a definition whole before its card is decided, when not everything was read", async () => {
+    // The laptop's conflict on the same definition is past what the first pages hold.
+    const laptops = nameConflict(2, { peerNodeId: "node-laptop", peerName: "Laptop" }, "Authors");
+
+    serve([deletion(30), nameConflict(1)], [], 7000, [laptops]);
+    renderList();
+    await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(2));
+    const card = () =>
+      document.querySelector<HTMLElement>('[data-card="conflict:customProperty/12"]')!;
+
+    fireEvent.click(radio("dataSync.inbox.action.KeepLocal"));
+    await act(async () => {
+      fireEvent.click(within(card()).getByTestId("data-sync-inbox-apply"));
+    });
+
+    // Read by its kind and local key; nothing sent, and the card now shows both devices.
+    expect(dataSyncApi.inbox).toHaveBeenCalledWith(
+      expect.objectContaining({ openOnly: true, kind: "customProperty", localKey: "12" }),
+    );
+    expect(dataSyncApi.resolve).not.toHaveBeenCalled();
+    expect(within(card()).getByTestId("data-sync-error")).toHaveTextContent(
+      "dataSync.problem.ResolveTogether",
+    );
+    expect(within(card()).getByText("dataSync.inbox.action.UseRemote Laptop")).toBeInTheDocument();
+
+    // Decided again with every conflict on it: one batch, both items.
+    fireEvent.click(radio("dataSync.inbox.action.KeepLocal"));
+    await act(async () => {
+      fireEvent.click(within(card()).getByTestId("data-sync-inbox-apply"));
+    });
+    expect(dataSyncApi.resolve).toHaveBeenCalledTimes(1);
+    expect(
+      vi
+        .mocked(dataSyncApi.resolve)
+        .mock.calls[0][0].items.map((input) => input.itemId)
+        .sort(),
+    ).toEqual([1, 2]);
+  });
+
+  it("keeps a definition read whole on its card at the next read", async () => {
+    const laptops = nameConflict(2, { peerNodeId: "node-laptop", peerName: "Laptop" }, "Authors");
+    const view = (version: number) => (
+      <MemoryRouter>
+        <InboxList focus={false} now={NOW} peers={[]} version={version} onChanged={vi.fn()} />
+      </MemoryRouter>
+    );
+
+    serve([nameConflict(1)], [], 7000, [laptops]);
+    const page = render(view(0));
+
+    await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(1));
+    fireEvent.click(radio("dataSync.inbox.action.KeepLocal"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("data-sync-inbox-apply"));
+    });
+    await waitFor(() =>
+      expect(screen.getByText("dataSync.inbox.action.UseRemote Laptop")).toBeInTheDocument(),
+    );
+    page.rerender(view(1));
+    await waitFor(() =>
+      expect(
+        vi.mocked(dataSyncApi.inbox).mock.calls.filter(([query]) => query?.localKey === "12"),
+      ).toHaveLength(2),
+    );
+    expect(screen.getByText("dataSync.inbox.action.UseRemote Laptop")).toBeInTheDocument();
+  });
+
+  it("reads a card's definition whole when the server says a conflict of it is missing", async () => {
+    const laptops = nameConflict(2, { peerNodeId: "node-laptop", peerName: "Laptop" }, "Authors");
+
+    // Everything read, but the laptop's conflict arrived after the read.
+    serve([nameConflict(1)]);
+    vi.mocked(dataSyncApi.resolve).mockResolvedValueOnce({
+      problem: { code: DataSyncProblemCode.ResolveTogether },
+    });
+    renderList();
+    await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(1));
+    serve([nameConflict(1), laptops]);
+    fireEvent.click(radio("dataSync.inbox.action.KeepLocal"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("data-sync-inbox-apply"));
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText("dataSync.inbox.action.UseRemote Laptop")).toBeInTheDocument(),
+    );
+    expect(dataSyncApi.inbox).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "customProperty", localKey: "12" }),
+    );
+    expect(screen.getByTestId("data-sync-error")).toHaveTextContent(
+      "dataSync.problem.ResolveTogether",
+    );
   });
 
   it("offers the conflicts' bulks, and says nothing of a limit, when everything is read", async () => {
