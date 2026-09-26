@@ -140,7 +140,7 @@ public sealed partial class DataSyncApplyRunner
             {
                 // A rotation in the gap (the guard handles evidence outside the gate) stops the apply here: committed
                 // chunks stand, the cursor does not move, and the retry finds the link paused (§5.6).
-                await CommitAsync(s, c);
+                await CommitAsync(s, c, recorder);
                 await BetweenChunksAsync(null, null, c);
                 await ContinueAsync(s, c);
                 await EnsureLinkRunsAsync(s, linkRow, startedAs, c);
@@ -166,7 +166,7 @@ public sealed partial class DataSyncApplyRunner
             if (recorder.Applied || firstSync)
             {
                 logId = await s.Store.AddHistoryAsync(recorder.ToLog(historyKind, linkRow, args.Task.Id, now,
-                    ElapsedMs(started)), ct);
+                    ElapsedMs(started), s.TransactionMs), ct);
             }
 
             await CommitAsync(s, ct);

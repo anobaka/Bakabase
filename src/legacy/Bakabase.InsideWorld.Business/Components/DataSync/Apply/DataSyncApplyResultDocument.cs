@@ -21,17 +21,22 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 /// apply touched without changing its content (a Publish decision, a bind) is listed with empty lists: it is still
 /// the entity's most recent apply, so nothing older is compared against it.
 /// </param>
-/// <param name="TransactionMs">Diagnostics (v3.1 §8.2).</param>
+/// <param name="TransactionMs">Diagnostics (v3.1 §8.2): the whole run, every transaction and the gaps between them.</param>
 /// <param name="TakeTheirsLinkId">
 /// A <c>Restore</c> entry's "Take the other devices' definitions" (§9.5): the link whose next full reconciliation
 /// takes the peer's version of concurrent entities. Written in the restore's own transaction, so the choice survives
 /// a restart; it holds until that link completes a full reconciliation after the entry.
 /// </param>
+/// <param name="Transactions">
+/// Diagnostics (§8.10.2, §13.7): each transaction of the run in order, with how long it held SQLite's write lock and
+/// the entities it wrote. Absent in entries written before it existed.
+/// </param>
 public sealed record DataSyncApplyResultDocument(
     IReadOnlyList<DataSyncHistoryItem> Items,
     IReadOnlyList<DataSyncEntityChanges> Entities,
     long? TransactionMs = null,
-    int? TakeTheirsLinkId = null)
+    int? TakeTheirsLinkId = null,
+    IReadOnlyList<DataSyncApplyTransaction>? Transactions = null)
 {
     public string ToJson() => DataSyncStoredJson.Write(this);
 
@@ -80,6 +85,13 @@ public sealed record DataSyncApplyResultDocument(
         }
     }
 }
+
+/// <summary>
+/// One transaction of an apply's run (diagnostics, §13.7): how long it held SQLite's write lock, from its
+/// <c>BEGIN IMMEDIATE</c> to its commit — the last one, which writes the history entry, up to that write — and the
+/// entities whose change lists it recorded, as <c>kind:localKey</c>.
+/// </summary>
+public sealed record DataSyncApplyTransaction(long Ms, IReadOnlyList<string> Entities);
 
 /// <summary>One entity's changes as an apply wrote them (§6.5, §8.11), by path and by local child id.</summary>
 /// <param name="LocalKey">The entity's local key when the apply wrote it.</param>

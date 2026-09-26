@@ -384,13 +384,16 @@ export const withCandidates = (
 };
 
 /**
- * Errors that say only that the other device was away — not reachable, or busy: shown grey, never
- * as failures. The same two the server counts as offline.
+ * Errors that say only that the other device was away — it could not be reached: shown grey,
+ * never as failures. The same the server counts as offline.
  */
-const offlineErrors = new Set([
-  DataSyncPeerErrorCodeLabel[DataSyncPeerErrorCode.Unreachable],
-  DataSyncPeerErrorCodeLabel[DataSyncPeerErrorCode.Busy],
-]);
+const offlineErrors = new Set([DataSyncPeerErrorCodeLabel[DataSyncPeerErrorCode.Unreachable]]);
+
+/**
+ * The other device answered, but busy — or this device was still reading it: it is there, and
+ * tried again within minutes. Syncing, never offline and never a failure, as the server says it.
+ */
+const busyError = DataSyncPeerErrorCodeLabel[DataSyncPeerErrorCode.Busy];
 
 /** Codes a link carries that have a line of their own rather than "Sync failed". */
 const ownLineErrors = new Set([
@@ -412,11 +415,15 @@ const ownLineErrors = new Set([
 export const isOffline = (peer: SyncPeer) =>
   !!peer.lastErrorCode && offlineErrors.has(peer.lastErrorCode);
 
-/** An error on a working link that is neither "offline" nor a state of its own. */
+/** Whether the other device was busy the last time it was asked (see `busyError`). */
+const isBusy = (peer: SyncPeer) => peer.lastErrorCode === busyError;
+
+/** An error on a working link that is neither "offline", busy nor a state of its own. */
 const failure = (peer: SyncPeer) =>
   peer.state === DataSyncLinkState.Active &&
   !!peer.lastErrorCode &&
   !offlineErrors.has(peer.lastErrorCode) &&
+  !isBusy(peer) &&
   !ownLineErrors.has(peer.lastErrorCode)
     ? peer.lastErrorCode
     : undefined;
@@ -795,6 +802,8 @@ export function linkStatus(t: T, peer: SyncPeer, now: number = Date.now()): Stat
   if (!peer.lastSyncedAt) return line("Syncing", "primary", t("dataSync.status.Syncing"));
   if (peer.fullReconciliationRunning)
     return line("FullReconciliation", "primary", t("dataSync.status.FullReconciliation", { name }));
+  // It answered busy, or this device was still reading it: tried again within minutes.
+  if (isBusy(peer)) return line("Syncing", "primary", t("dataSync.status.Syncing"));
 
   return line(
     "InStep",

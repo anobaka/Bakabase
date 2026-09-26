@@ -124,7 +124,12 @@ public class DataSyncFetchHalfTests
         await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
         var epoch = h.AddLink("a");
         var node = h.AddLink("b");
-        var reported = h.AddLink("c");
+        var reported = h.AddLink("c", l =>
+        {
+            // What the grant the reset revoked read as, before the peer's new identity was seen.
+            l.State = DataSyncLinkState.AccessRevoked;
+            l.LastErrorCode = nameof(DataSyncPeerErrorCode.AccessRevoked);
+        });
         h.Peers.Peers["a"].Epoch = "epoch-2";
         h.Peers.Peers["b"].ServedNodeId = "someone-else";
         h.Peers.Peers["c"].HeadErrors.Enqueue(new DataSyncPeerException(DataSyncPeerErrorCode.IdentityConflict));
@@ -139,6 +144,7 @@ public class DataSyncFetchHalfTests
         Assert.AreEqual(3, h.Observer.Count("paused:"));
         Assert.IsTrue(h.Peers.Peers.Values.All(p => p.Manifests == 0), "a pull is checked before anything is fetched");
         Assert.IsNull(h.Link(epoch.Id).LastErrorCode, "a pause is never an error");
+        Assert.IsNull(h.Link(reported.Id).LastErrorCode, "the reset explains the revoked grant: no error stays with it");
 
         // A paused link is not fetched.
         h.Clock.Advance(TimeSpan.FromHours(1));

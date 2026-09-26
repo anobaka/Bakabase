@@ -54,7 +54,7 @@ public class DataSyncTwoHostTests
     private TwoHostNode _b = null!;
 
     [TestMethod]
-    [Timeout(180_000)]
+    [Timeout(60_000)]
     public async Task Two_hosts_link_converge_decide_undo_and_survive_restores()
     {
         var total = Stopwatch.StartNew();
@@ -205,10 +205,10 @@ public class DataSyncTwoHostTests
         var first = (await _b.HistoryAsync()).Single(h => h.Kind == DataSyncHistoryKind.FirstLink);
         var counts = await _b.CallAsync(async s => (await s.GetHistoryAsync(default)).Single(h => h.Id == first.Id).Counts);
         Assert.AreEqual((102, 6), (counts.Created, counts.Linked));
-        var transactionMs = System.Text.Json.Nodes.JsonNode.Parse(first.ResultJson)!["transactionMs"]!.GetValue<long>();
-        Assert.IsTrue(transactionMs <= 5_000, $"the whole first-sync apply took {transactionMs} ms (§8.10.2 budget)");
         Assert.AreEqual(100, (await PropertiesAsync(_b)).Count, "B holds A's 94 new properties and its own 6");
-        Assert.AreEqual(BigTagCount, TagCount((await PropertiesAsync(_b)).Single(p => p.Name == BigTagsName)));
+        var bigTags = (await PropertiesAsync(_b)).Single(p => p.Name == BigTagsName);
+        Assert.AreEqual(BigTagCount, TagCount(bigTags));
+        AssertTransactionBudgets(first.ResultJson, $"{Cp}:{bigTags.Id}", "the whole first-sync apply");
     }
 
     // ---- 3. A's first pull ---------------------------------------------------------------------------------------
@@ -245,8 +245,32 @@ public class DataSyncTwoHostTests
         Assert.AreEqual(0, (await _a.HistoryAsync()).Count(h => h.Kind == DataSyncHistoryKind.AutoSync),
             "no other entry for that pull");
         // §8.10.2: the approver's first pull of this fixture stays within the CI budget.
-        var transactionMs = System.Text.Json.Nodes.JsonNode.Parse(firstPull.ResultJson)!["transactionMs"]!.GetValue<long>();
-        Assert.IsTrue(transactionMs <= 5_000, $"the approver's first pull took {transactionMs} ms");
+        var bigTags = (await PropertiesAsync(_a)).Single(p => p.Name == BigTagsName);
+        AssertTransactionBudgets(firstPull.ResultJson, $"{Cp}:{bigTags.Id}", "the approver's first pull");
+    }
+
+    /// <summary>
+    /// §13.7 step 2's budgets, read from an apply's history entry: no transaction holds SQLite's write lock over 2 s
+    /// but the one writing the 10,000-option entity (<paramref name="bigEntity"/>, as <c>kind:localKey</c>), and the
+    /// whole apply takes at most 5 s.
+    /// </summary>
+    private static void AssertTransactionBudgets(string resultJson, string bigEntity, string what)
+    {
+        var document = System.Text.Json.Nodes.JsonNode.Parse(resultJson)!;
+        var totalMs = document["transactionMs"]!.GetValue<long>();
+        var transactions = document["transactions"]!.AsArray()
+            .Select(t => (Ms: t!["ms"]!.GetValue<long>(),
+                Entities: t["entities"]!.AsArray().Select(e => e!.GetValue<string>()).ToList()))
+            .ToList();
+        Console.WriteLine($"{what}: {totalMs} ms; transactions: " + string.Join(", ",
+            transactions.Select(t => $"{t.Ms} ms ({t.Entities.Count} entities{(t.Entities.Contains(bigEntity) ? ", big" : "")})")));
+        Assert.IsTrue(totalMs <= 5_000, $"{what} took {totalMs} ms (§8.10.2 budget)");
+        Assert.IsTrue(transactions.Count > 0, $"{what}: its transactions are recorded");
+        foreach (var (ms, entities) in transactions.Where(t => !t.Entities.Contains(bigEntity)))
+        {
+            Assert.IsTrue(ms <= 2_000,
+                $"{what}: a transaction writing {entities.Count} entities held the write lock {ms} ms (§13.7: 2 s)");
+        }
     }
 
     // ---- 4. Convergence ------------------------------------------------------------------------------------------

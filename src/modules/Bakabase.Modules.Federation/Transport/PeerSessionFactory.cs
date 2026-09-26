@@ -131,6 +131,21 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
         finally { gate.Release(); }
     }
 
+    /// <summary>
+    /// Forgets <paramref name="session"/> if it is still the verified session of its peer and scope, so the next
+    /// <see cref="GetAsync(string, string, CancellationToken)"/> asks the peer's info and handshake again instead of
+    /// reusing it for the rest of its minute. For a request the peer refused with a session verified before the
+    /// request's own call: what the peer did since — revoked the grant, or replaced its library, which revokes the
+    /// grant and whose new epoch only its info shows — is then read from the peer itself. A newer session another
+    /// caller verified meanwhile is kept.
+    /// </summary>
+    /// <returns>Whether the session was forgotten.</returns>
+    public bool Invalidate(PeerSessionSnapshot session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        return _verified.TryRemove(KeyValuePair.Create(Key(session.NodeId, session.Scope), session));
+    }
+
     private static bool IsDataSync(string scope) => scope switch
     {
         FederationScopes.LibraryRead => false,

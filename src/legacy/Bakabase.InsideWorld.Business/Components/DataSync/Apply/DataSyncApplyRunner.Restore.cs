@@ -89,7 +89,8 @@ public sealed partial class DataSyncApplyRunner
             state.RestoreDetectedAtUtc = null;
             state.UpdatedAtUtc = now;
 
-            var log = recorder.ToLog(DataSyncHistoryKind.Restore, scoped, args.Task.Id, now, ElapsedMs(started));
+            var log = recorder.ToLog(DataSyncHistoryKind.Restore, scoped, args.Task.Id, now, ElapsedMs(started),
+                s.TransactionMs);
             var id = await s.Store.AddHistoryAsync(log, ct);
             await CommitAsync(s, ct);
             await AfterCommitAsync(s, recorder, s.Kinds.Keys.ToList(), DataSyncHistoryKind.Restore, id, scoped?.Id);

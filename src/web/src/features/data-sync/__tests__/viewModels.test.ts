@@ -375,6 +375,7 @@ describe("the lines a link is drawn with", () => {
       expect(syncIssueOf(peerOf({ peerOnline: false, lastErrorCode })), lastErrorCode).toBe(
         "syncFailed",
       );
+    // Away or busy is nothing that does not work: tried again within minutes.
     for (const lastErrorCode of ["Unreachable", "Busy"])
       expect(syncIssueOf(peerOf({ peerOnline: false, lastErrorCode })), lastErrorCode).toBe(
         undefined,
@@ -402,12 +403,22 @@ describe("the status catalogue", () => {
   });
 
   it("says an offline device grey, never as a failure", () => {
-    for (const lastErrorCode of ["Unreachable", "Busy"])
-      expect(statusOf({ peerOnline: false, lastErrorCode }), lastErrorCode).toMatchObject({
-        code: "Offline",
-        tone: "default",
-        text: "dataSync.status.Offline NAS dataSync.time.minutes 5",
-      });
+    expect(statusOf({ peerOnline: false, lastErrorCode: "Unreachable" })).toMatchObject({
+      code: "Offline",
+      tone: "default",
+      text: "dataSync.status.Offline NAS dataSync.time.minutes 5",
+    });
+  });
+
+  it("says a device that answered busy as syncing, never offline or failed", () => {
+    // It answered (or this device was still reading it), and is tried again within minutes.
+    expect(statusOf({ lastErrorCode: "Busy" })).toMatchObject({
+      code: "Syncing",
+      tone: "primary",
+      text: "dataSync.status.Syncing",
+    });
+    // What needs a person still comes first.
+    expect(statusOf({ lastErrorCode: "Busy", openItems: 2 })).toMatchObject({ code: "NeedsYou" });
   });
 
   it("says a failure as one, with its reason, as the server sends it", () => {

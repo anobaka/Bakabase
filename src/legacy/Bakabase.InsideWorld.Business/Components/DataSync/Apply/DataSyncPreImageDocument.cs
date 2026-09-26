@@ -115,6 +115,14 @@ internal sealed class DataSyncApplyRecorder
 {
     private readonly Dictionary<(string Kind, string LocalKey), DataSyncEntityChanges> _changes = new();
 
+    /// <summary>The run's committed transactions (<see cref="TransactionCommitted"/>).</summary>
+    private readonly List<DataSyncApplyTransaction> _transactions = [];
+
+    /// <summary>The entities recorded since the last committed transaction, in order, as <c>kind:localKey</c>.</summary>
+    private readonly List<string> _inTransaction = [];
+
+    private readonly HashSet<string> _inTransactionSet = new(StringComparer.Ordinal);
+
     public List<DataSyncHistoryItem> Items { get; } = [];
     public List<DataSyncEntityPreImage> PreImages { get; } = [];
     public DataSyncIdentityPreImage Identity { get; } = new();
@@ -140,15 +148,37 @@ internal sealed class DataSyncApplyRecorder
         Items.Add(new DataSyncHistoryItem(itemId, kind, name, outcome, action, localKey, type));
 
     /// <summary>The entity's change list; an entity touched without a content change is listed with empty lists.</summary>
-    public void Changes(DataSyncEntityChanges changes) => _changes[(changes.Kind, changes.LocalKey)] = changes;
+    public void Changes(DataSyncEntityChanges changes)
+    {
+        _changes[(changes.Kind, changes.LocalKey)] = changes;
+        var entity = changes.Kind + ":" + changes.LocalKey;
+        if (_inTransactionSet.Add(entity)) _inTransaction.Add(entity);
+    }
+
+    /// <summary>
+    /// A transaction of a chunked run committed after holding the write lock <paramref name="ms"/> (§8.10.2): the
+    /// entities recorded since the previous one were written in it.
+    /// </summary>
+    public void TransactionCommitted(long ms)
+    {
+        _transactions.Add(new DataSyncApplyTransaction(ms, _inTransaction.ToList()));
+        _inTransaction.Clear();
+        _inTransactionSet.Clear();
+    }
 
     public DataSyncHistoryCounts Counts => new(Created, Updated, Linked, Unchanged, Skipped, ChangedSinceReview,
         ChangedDuringApply, Held, Deleted, TypeChanged, Reordered, Resolved);
 
     /// <summary>The history row (§4.1); <c>PreImageBytes</c> is the UTF-8 size of the pre-image.</summary>
+    /// <param name="transactionMs">The whole run (<see cref="DataSyncApplyResultDocument.TransactionMs"/>).</param>
+    /// <param name="lastTransactionMs">
+    /// How long the transaction that writes this row, the run's last, has held the write lock so far.
+    /// </param>
     public DataSyncApplyLogDbModel ToLog(DataSyncHistoryKind kind, DataSyncLinkDbModel? link, string? taskId,
-        DateTime appliedAtUtc, long transactionMs, int? undoOf = null)
+        DateTime appliedAtUtc, long transactionMs, long lastTransactionMs, int? undoOf = null)
     {
+        var transactions = _transactions
+            .Append(new DataSyncApplyTransaction(lastTransactionMs, _inTransaction.ToList())).ToList();
         var preImage = new DataSyncPreImageDocument(DataSyncPreImageDocument.CurrentVersion, PreImages,
             Identity.IsEmpty ? null : Identity).ToJson();
         return new DataSyncApplyLogDbModel
@@ -161,8 +191,8 @@ internal sealed class DataSyncApplyRecorder
             AppliedAtUtc = appliedAtUtc,
             // The shapes the facade reads (DataSyncHistoryJson): the counts, and ResultJson with its items member.
             SummaryJson = Runtime.DataSyncHistoryJson.WriteSummary(Counts),
-            ResultJson = new DataSyncApplyResultDocument(Items, _changes.Values.ToList(), transactionMs, TakeTheirsLinkId)
-                .ToJson(),
+            ResultJson = new DataSyncApplyResultDocument(Items, _changes.Values.ToList(), transactionMs, TakeTheirsLinkId,
+                transactions).ToJson(),
             PreImageJson = preImage,
             PreImageBytes = Encoding.UTF8.GetByteCount(preImage),
             UndoOfLogId = undoOf,

@@ -114,7 +114,7 @@ public sealed partial class DataSyncApplyRunner
 
             var log = await s.Store.AddHistoryAsync(recorder.ToLog(
                 review.CopyOnce ? DataSyncHistoryKind.CopyOnce : DataSyncHistoryKind.FirstLink, link, args.Task.Id, s.Now,
-                ElapsedMs(started)), ct);
+                ElapsedMs(started), s.TransactionMs), ct);
             await CommitAsync(s, ct);
             await AfterCommitAsync(s, recorder, kinds,
                 review.CopyOnce ? DataSyncHistoryKind.CopyOnce : DataSyncHistoryKind.FirstLink, log, link?.Id);
@@ -188,7 +188,7 @@ public sealed partial class DataSyncApplyRunner
                 {
                     // As an auto-sync apply's chunks (§8.10.2): a rotation in the gap stops the review here, and the
                     // task's retry plans again from what the committed chunks left.
-                    await runner.CommitAsync(s, ct);
+                    await runner.CommitAsync(s, ct, recorder);
                     await runner.BetweenChunksAsync(null, null, ct);
                     await runner.ContinueAsync(s, ct);
                     if (link is not null) await EnsureLinkRunsAsync(s, link, _linkStartedAs, ct);

@@ -107,7 +107,7 @@ public sealed partial class DataSyncApplyRunner
                 // ≈ 2 s per transaction (non-blocking note 6), whole entities only. Between chunks nothing is
                 // open: other writers get the lock, and this is where the task may be paused (the gate given back).
                 // The next transaction must still see the actor this one's Refresh saw (§5.6).
-                await CommitAsync(s, ct);
+                await CommitAsync(s, ct, recorder);
                 await s.ForgetTrackedAsync(ct);
                 writer.ForgetChunk();
                 await BetweenChunksAsync(lease, args, ct);
@@ -126,7 +126,7 @@ public sealed partial class DataSyncApplyRunner
             var link = linkIds.Count == 1 ? await s.LinkAsync(linkIds[0], ct) : null;
             recorder.Resolved = writer.Closed.Count;
             logId = await s.Store.AddHistoryAsync(recorder.ToLog(DataSyncHistoryKind.Resolution, link, args.Task.Id,
-                now, ElapsedMs(started)), ct);
+                now, ElapsedMs(started), s.TransactionMs), ct);
             var closed = writer.Closed.ToList();
             foreach (var item in await s.Db.DataSyncInboxItems.Where(i => closed.Contains(i.Id)).ToListAsync(ct))
                 item.ApplyLogId = logId;

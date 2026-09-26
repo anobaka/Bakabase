@@ -315,12 +315,19 @@ scopes").
   resolved together are never split across pages. Views count bases with
   `IDataSyncStore.CountBasesAsync`, never by reading every base.
 - **`/data-sync` times are UTC**, read on the web through `parseServerTime`.
-- **Offline is said by the error alone.** `Unreachable` and `Busy` are offline, grey
-  (`DataSyncViews.OfflineCodes`, the web's `offlineErrors`); `ApplyFailed`, `FetchFailed`,
-  `InvalidResponse` (with Retry) and `TooLarge` (a line of its own) are failures — on the page,
-  the map and the indicator alike. A link's `peerOnline` is false after every restart until its first head and
-  after every failure, so it never makes a device offline. The indicator's reason is the error
+- **Offline is said by the error alone.** Only `Unreachable` is offline, grey
+  (`DataSyncViews.OfflineCodes`, the web's `offlineErrors`). `Busy` — the peer answered busy (its
+  snapshot limit, its gate, a signature outside its clock window) or this device's own fetch of
+  it was still running — is a peer that is there and is tried again within minutes: "Syncing…",
+  online, never offline or failed. `ApplyFailed`, `FetchFailed`, `InvalidResponse` (with Retry)
+  and `TooLarge` (a line of its own) are failures — on the page, the map and the indicator alike.
+  A link's `peerOnline` is false after every restart until its first head and after every
+  failure but `Busy`, so it never makes a device offline. The indicator's reason is the error
   of a link that set its level; a failed read-back's reason is its `LastErrorDetail`.
+- **A reset peer reads as reset, not revoked.** A reset revokes the grant, so a request on a
+  datasync session verified before it (the factory reuses one for a minute) is refused
+  `GrantRevoked`; the peer client verifies the session again once (`PeerSessionFactory.Invalidate`),
+  whose info shows the new epoch — `PeerReset`. The pause clears the link's earlier error.
 - **The indicator is `Off` only when there is nothing** (§11.3): no live link, no reader, no
   request waiting here, nothing to decide and no restore (`DataSyncViews.GetStatus`). The status
   carries `PendingRequests`, `Readers`, `LinksToReview` and `LinksWaiting`, so a quiet device's

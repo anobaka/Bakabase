@@ -138,7 +138,8 @@ public sealed partial class DataSyncApplyRunner
 
             var now = s.Now;
             var link = log.LinkId is { } linkId ? await s.LinkAsync(linkId, ct) : null;
-            var undoLog = recorder.ToLog(DataSyncHistoryKind.Undo, link, args.Task.Id, now, ElapsedMs(started), log.Id);
+            var undoLog = recorder.ToLog(DataSyncHistoryKind.Undo, link, args.Task.Id, now, ElapsedMs(started),
+                s.TransactionMs, log.Id);
             var undoId = await s.Store.AddHistoryAsync(undoLog, ct);
             log.UndoneAtUtc = now;
             log.UndoResultJson = DataSyncStoredJson.Write(results);

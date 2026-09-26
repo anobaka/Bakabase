@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -111,6 +112,18 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
 
     public bool InTransaction => _transaction is not null;
 
+    /// <summary>When the open transaction took SQLite's write lock (a <see cref="Stopwatch"/> timestamp).</summary>
+    private long _transactionStarted;
+
+    /// <summary>
+    /// How long the open transaction has held SQLite's write lock so far, in ms, from its <c>BEGIN IMMEDIATE</c>; 0
+    /// when none is open. Diagnostics (§13.7).
+    /// </summary>
+    public long TransactionMs => _transaction is null ? 0 : ElapsedMs(_transactionStarted);
+
+    /// <summary>How long the last committed transaction held the write lock, from its <c>BEGIN IMMEDIATE</c> to its commit.</summary>
+    public long LastCommittedTransactionMs { get; private set; }
+
     public static async Task<DataSyncApplySession> OpenAsync(IServiceScopeFactory scopes, CancellationToken ct)
     {
         var scope = scopes.CreateAsyncScope();
@@ -148,6 +161,7 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
     {
         if (_transaction is not null) throw new InvalidOperationException("A transaction is already open.");
         _transaction = await Db.Database.BeginTransactionAsync(ct);
+        _transactionStarted = Stopwatch.GetTimestamp();
     }
 
     /// <summary>
@@ -212,6 +226,7 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
         if (_transaction is null) throw new InvalidOperationException("No transaction is open.");
         await Db.SaveChangesAsync(ct);
         await _transaction.CommitAsync(ct);
+        LastCommittedTransactionMs = ElapsedMs(_transactionStarted);
         await _transaction.DisposeAsync();
         _transaction = null;
         if (_resetCachesAfterCommit)
@@ -241,6 +256,8 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
         _resetCachesAfterCommit = false;
         ResetTouchedCaches();
     }
+
+    private static long ElapsedMs(long started) => (long) Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 
     private void ResetTouchedCaches()
     {

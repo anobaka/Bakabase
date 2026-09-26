@@ -219,11 +219,18 @@ public sealed class DataSyncPeerClientTests
 
             // G22b: the rotation turns definitions sharing off and revokes the grant; turned back on, info shows the
             // new epoch and the reader stops there, before it signs anything.
+            Assert.AreEqual("node-pc", (await desk.PeerClient.GetHeadAsync("node-pc", Query(), default)).NodeId);
             await pc.Peers.RotateLibraryEpochAsync();
             await pc.Grants.SetSharingEnabledAsync(true, false, default);
             var reset = await Assert.ThrowsExactlyAsync<DataSyncPeerException>(() =>
                 desk.NewPeerClient().GetHeadAsync("node-pc", Query(), default));
             Assert.AreEqual((DataSyncPeerErrorCode.PeerReset, "LibraryEpochChanged"), (reset.Code, reset.Message));
+            // The same within the minute a verified session is reused: the grant the rotation revoked is not taken
+            // for a revoke (AccessRevoked), and the session verified again reads the new epoch.
+            reset = await Assert.ThrowsExactlyAsync<DataSyncPeerException>(() =>
+                desk.PeerClient.GetHeadAsync("node-pc", Query(), default));
+            Assert.AreEqual((DataSyncPeerErrorCode.PeerReset, "LibraryEpochChanged"), (reset.Code, reset.Message),
+                "a session verified before the reset");
 
             await desk.PeerClient.GetHeadAsync("node-nas", Query(), default);
             nasStopped = true;

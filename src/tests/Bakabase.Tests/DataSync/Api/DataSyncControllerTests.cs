@@ -1054,6 +1054,45 @@ public class DataSyncControllerTests
             .Single(l => l.Id == away.Id).PeerOnline, "a device away is not online");
     }
 
+    /// <summary>
+    /// A peer that answered busy — its snapshot limit, its gate held — or that this device's own fetch was still
+    /// reading is there (§7.6): tried again within minutes (§8.2), it is online and syncing, never "offline" (§11.6).
+    /// Only a peer that could not be reached is.
+    /// </summary>
+    [TestMethod]
+    public async Task A_busy_peer_is_online_and_syncing_never_offline()
+    {
+        await using var h = await DataSyncApiHarness.CreateAsync();
+        var busy = h.AddLink("node-nas", l =>
+        {
+            l.ConsecutiveFailures = 2;
+            l.LastErrorCode = nameof(DataSyncPeerErrorCode.Busy);
+            l.LastErrorDetail = "TooManySnapshots";
+            l.LastAttemptAtUtc = h.Clock.UtcNow;
+        });
+        h.State.RecordHead(busy.Id, new DataSyncFeedHead("node-nas", "epoch-1", "0123456789abcdef",
+            DataSyncContract.Version, 1, "2.4.0", 0, [], new DataSyncSourceAttention(false, 0, 0, false, 0), null,
+            null), h.Clock.UtcNow.AddMinutes(-1));
+
+        async Task<(DataSyncStatusView Status, bool Online)> ReadAsync() =>
+            ((await h.CallAsync(Callers.Loopback, c => c.GetOverview(default))).Data!.Status,
+                (await h.CallAsync(Callers.Loopback, c => c.GetLinks(default))).Data!.Single(l => l.Id == busy.Id)
+                .PeerOnline);
+
+        var (status, online) = await ReadAsync();
+        Assert.AreEqual(DataSyncStatusLevel.Syncing, status.Level, "a busy peer is tried again soon");
+        Assert.IsTrue(online, "a busy peer answered");
+        var map = (await h.CallAsync(Callers.Loopback, c => c.GetMap(default))).Data!;
+        Assert.AreEqual(nameof(DataSyncPeerErrorCode.Busy), map.Peers.Single(p => p.NodeId == "node-nas").LastErrorCode);
+
+        // Nobody answered: offline.
+        h.Store.Edit(busy.Id, l => l.LastErrorCode = nameof(DataSyncPeerErrorCode.Unreachable));
+        (status, online) = await ReadAsync();
+        Assert.AreEqual(DataSyncStatusLevel.Offline, status.Level);
+        Assert.AreEqual(nameof(DataSyncPeerErrorCode.Unreachable), status.LastErrorCode);
+        Assert.IsFalse(online);
+    }
+
     [TestMethod]
     public async Task Sync_now_answers_the_fetch_task_or_that_the_link_is_unknown()
     {

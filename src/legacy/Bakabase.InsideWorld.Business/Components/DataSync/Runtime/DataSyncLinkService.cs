@@ -633,7 +633,9 @@ public sealed class DataSyncLinkService
 
     /// <summary>
     /// Pauses a link (§8.7): writes the reason and a short machine detail, never an error; drops the staged pull
-    /// that tripped the breaker, so the next fetch after a resume starts again from the cursor.
+    /// that tripped the breaker, so the next fetch after a resume starts again from the cursor. A peer found reset
+    /// also clears the error an earlier call left: the pause says why nothing is pulled (the grant the reset revoked
+    /// is not "stopped sharing", §11.6).
     /// </summary>
     public async Task<DataSyncLinkDbModel?> PauseAsync(int linkId, DataSyncPauseReason reason, string? detail,
         CancellationToken ct)
@@ -647,6 +649,7 @@ public sealed class DataSyncLinkService
             row.State = DataSyncLinkState.Paused;
             row.PausedReason = reason;
             row.PausedDetail = detail;
+            if (reason == DataSyncPauseReason.PeerReset) ClearError(row);
             paused = true;
             return DataSyncLinkWrite.Transition;
         }, ct);

@@ -582,15 +582,15 @@ def step6_epoch_change(smoke, a, c):
         seen.add((link["state"], link["lastErrorCode"]))
         return link["state"] == PAUSED and link["pausedReason"] == PEER_RESET and link
 
-    # C's session to A, verified in the last minute, is reused until it expires (PeerSessionFactory keeps one for a
-    # minute): until then A's reset reads as a revoked grant (AccessRevoked), and only the next handshake sees the new
-    # epoch. So this waits a minute longer than the others.
-    smoke.wait("C pauses its link to the reset A", reset_seen, nudge=lambda: smoke.sync_now(c, a), bound=90)
+    # C's session to A may have been verified in the last minute (PeerSessionFactory reuses one for a minute). The
+    # grant A's reset revoked is then refused on it, and C verifies the session again, whose info shows the new epoch:
+    # the reset reads as one at once, never as a revoked grant first.
+    link = smoke.wait("C pauses its link to the reset A", reset_seen, nudge=lambda: smoke.sync_now(c, a))
     assert smoke.shape(c) == before, "nothing is applied from a peer that was reset"
-    revoked_first = (ACCESS_REVOKED, "AccessRevoked") in seen
-    return ("A's identity reset (new epoch in its /info) pauses C's link (PeerReset" +
-            (", after reading as AccessRevoked while C's verified session lasted" if revoked_first else "") +
-            "); A's edit after it is not applied")
+    revoked = [entry for entry in seen if entry[0] == ACCESS_REVOKED or entry[1] == "AccessRevoked"]
+    assert not revoked, f"C read A's reset as a revoked grant on the way: {sorted(seen, key=str)}"
+    assert link["lastErrorCode"] is None, link
+    return "A's identity reset (new epoch in its /info) pauses C's link (PeerReset); A's edit after it is not applied"
 
 
 def step7_newer_schema(smoke, b, c):

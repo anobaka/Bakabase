@@ -180,7 +180,8 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
     /// <summary>
     /// One signed GET to the peer's feed with its datasync session, under the peer's lock (unless the caller's fetch
     /// holds it) and a deadline; a refusal of any kind becomes a <see cref="DataSyncPeerException"/>. The caller's own
-    /// cancellation stays one.
+    /// cancellation stays one. A grant refused on a session verified before the call is asked about once more with
+    /// the session verified again, so a peer reset within the session's minute reads as one (§7.6: PeerReset).
     /// </summary>
     private async Task<T> ExchangeAsync<T>(string peerNodeId, string pathAndQuery, TimeSpan deadline,
         Func<HttpResponseMessage, CancellationToken, Task<T>> read, CancellationToken ct)
@@ -198,20 +199,35 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
             PeerSessionSnapshot? sending = null;
             try
             {
-                for (var attempt = 0;; attempt++)
+                // One more attempt at most, with a session asked for again: see the two cases below.
+                for (var retried = false;; retried = true)
                 {
+                    var asked = timeProvider.GetUtcNow();
                     var session = await sessions.GetAsync(peerNodeId, FederationScopes.DataSyncRead, timeout.Token);
                     try
                     {
                         sending = session;
                         using var response = await transport.SendAsync(session, HttpMethod.Get, pathAndQuery, null,
                             timeout.Token);
-                        if (!response.IsSuccessStatusCode) throw await RefusalAsync(response, timeout.Token);
-                        return await read(response, timeout.Token);
+                        if (response.IsSuccessStatusCode) return await read(response, timeout.Token);
+                        var refusal = await RefusalAsync(response, timeout.Token);
+                        // A session verified before this call — the factory keeps one for a minute — predates whatever
+                        // the peer did since. A library it replaced revoked the grant, so the request reads as revoked,
+                        // while only the peer's info shows the new epoch (G22b: PeerReset, not AccessRevoked). Once
+                        // more with the session verified again, whose info is read before anything is signed; a grant
+                        // that is really revoked is refused again, by the handshake.
+                        if (!retried && session.VerifiedAt < asked && IsStaleSessionRefusal(response, refusal))
+                        {
+                            sessions.Invalidate(session);
+                            sending = null;
+                            continue;
+                        }
+
+                        throw refusal;
                     }
                     // The grant or address changed between the session and the request: once more with the current
                     // one, which is refused as it should be when the grant is gone.
-                    catch (FederationAccessException e) when (e.ErrorCode == "NodeSessionChanged" && attempt == 0)
+                    catch (FederationAccessException e) when (e.ErrorCode == "NodeSessionChanged" && !retried)
                     {
                         sending = null;
                     }
@@ -267,6 +283,14 @@ public sealed class FederationDataSyncPeerClient(PeerSessionFactory sessions, IN
         return new DataSyncPeerException(Classify(code, status), code ?? $"http{status}",
             RetryAfterSeconds(response, timeProvider.GetUtcNow()));
     }
+
+    /// <summary>
+    /// The peer did not accept the session's grant: revoked there, or not a grant it knows. What a replaced library
+    /// answers too, until its info is read.
+    /// </summary>
+    private static bool IsStaleSessionRefusal(HttpResponseMessage response, DataSyncPeerException refusal) =>
+        response.StatusCode == System.Net.HttpStatusCode.Unauthorized &&
+        refusal.Message is "GrantRevoked" or "InvalidNodeSignature";
 
     /// <summary>
     /// A federation error code as a peer sent it, if it is one: at most 64 ASCII letters and digits. Anyone at the

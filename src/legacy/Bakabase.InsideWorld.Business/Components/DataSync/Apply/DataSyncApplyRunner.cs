@@ -167,11 +167,13 @@ public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
     /// Commits while the actor is still verified and still the one the transaction issued counters under; else rolls
     /// back (§5.6: nothing issued under a retiring actor).
     /// </summary>
-    private async Task CommitAsync(DataSyncApplySession s, CancellationToken ct)
+    /// <param name="recorder">A chunked run's recorder, told how long the committed transaction held the lock.</param>
+    private async Task CommitAsync(DataSyncApplySession s, CancellationToken ct, DataSyncApplyRecorder? recorder = null)
     {
         if (!_guard.IsVerified) throw new DataSyncActorUnverifiedException();
         if (await s.StoredActorDiffersAsync(ct)) throw new DataSyncActorChangedException();
         await s.CommitAsync(ct);
+        recorder?.TransactionCommitted(s.LastCommittedTransactionMs);
         // Committed counters must reach actor.json (§5.6), whatever a stop requested meanwhile.
         await WriteWatermarkAsync(s);
     }

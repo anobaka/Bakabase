@@ -26,9 +26,17 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 /// </summary>
 public sealed class DataSyncViews
 {
-    /// <summary>The peer is away: shown grey as offline, never as an error (§8.2).</summary>
-    private static readonly HashSet<string> OfflineCodes =
-        [nameof(DataSyncPeerErrorCode.Unreachable), nameof(DataSyncPeerErrorCode.Busy)];
+    /// <summary>
+    /// The peer is away: shown grey as offline, never as an error (§8.2, §11.6). Only a peer that could not be reached.
+    /// </summary>
+    private static readonly HashSet<string> OfflineCodes = [nameof(DataSyncPeerErrorCode.Unreachable)];
+
+    /// <summary>
+    /// The peer answered but could not serve now — busy, its snapshot limit, its gate held, a signature out of its
+    /// clock window — or this device's own fetch of it was still running (§7.6). It is there, and tried again within
+    /// minutes (§8.2): syncing, never offline and never a failure.
+    /// </summary>
+    private const string BusyCode = nameof(DataSyncPeerErrorCode.Busy);
 
     /// <summary>Something went wrong that retrying alone may not fix: shown as "Sync failed" (§11.6).</summary>
     private static readonly HashSet<string> FailureCodes =
@@ -121,16 +129,20 @@ public sealed class DataSyncViews
         State?.IsFullReconciliationRunning(linkId) == true ||
         StagedPulls?.Peek(linkId)?.Kinds.Any(k => k.FullReconciliation) == true;
 
+    /// <summary>
+    /// A head answered in this process, and nothing failed since — a busy peer answered, so busy counts as online.
+    /// </summary>
     private bool IsOnline(DataSyncLinkDbModel link) =>
-        State?.GetLastHeadAt(link.Id) is not null && link.ConsecutiveFailures == 0 &&
-        !link.State.IsPeerErrorState() && (link.LastErrorCode is null || !OfflineCodes.Contains(link.LastErrorCode));
+        State?.GetLastHeadAt(link.Id) is not null && !link.State.IsPeerErrorState() &&
+        (IsBusy(link) || (link.ConsecutiveFailures == 0 && !IsAway(link)));
 
     // ---- status ------------------------------------------------------------------------------------------------
 
     /// <summary>
     /// The indicator's one line (§11.6), most urgent first: a pending restore or the global pause, decisions here, an
-    /// update this device needs, a failure, a paused link, an offline peer, a running sync, else in step. Off only
-    /// while there is nothing at all: no link, no reader, no request waiting here and nothing to decide (§11.3).
+    /// update this device needs, a failure, a paused link, an offline peer, a running sync (or a busy peer tried again
+    /// soon), else in step. Off only while there is nothing at all: no link, no reader, no request waiting here and
+    /// nothing to decide (§11.3).
     /// </summary>
     /// <param name="pendingRequests">Requests from other devices that wait for an answer here.</param>
     public DataSyncStatusView GetStatus(Snapshot snapshot, bool syncing, int pendingRequests = 0)
@@ -156,7 +168,8 @@ public sealed class DataSyncViews
         else if (links.Any(IsFailed)) level = DataSyncStatusLevel.Failed;
         else if (links.Any(l => l.State == DataSyncLinkState.Paused)) level = DataSyncStatusLevel.Paused;
         else if (links.Any(IsAway)) level = DataSyncStatusLevel.Offline;
-        else if (syncing) level = DataSyncStatusLevel.Syncing;
+        // A peer that was busy is tried again within minutes: still syncing.
+        else if (syncing || links.Any(IsBusy)) level = DataSyncStatusLevel.Syncing;
         else level = DataSyncStatusLevel.InStep;
 
         // The reason names the error that set the level, never a more recent one of another kind on another link:
@@ -186,9 +199,13 @@ public sealed class DataSyncViews
     private static bool IsFailed(DataSyncLinkDbModel link) =>
         link.LastErrorCode is { } code && FailureCodes.Contains(code);
 
-    /// <summary>The peer was away the last time: unreachable or busy (§8.2).</summary>
+    /// <summary>The peer was away the last time: it could not be reached (§8.2).</summary>
     private static bool IsAway(DataSyncLinkDbModel link) =>
         link.LastErrorCode is { } code && OfflineCodes.Contains(code);
+
+    /// <summary>The peer was busy the last time (<see cref="BusyCode"/>).</summary>
+    private static bool IsBusy(DataSyncLinkDbModel link) =>
+        string.Equals(link.LastErrorCode, BusyCode, StringComparison.Ordinal);
 
     /// <summary>Whether a data sync task is running or waiting to write.</summary>
     public bool IsSyncing()
