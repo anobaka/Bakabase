@@ -35,8 +35,8 @@ public class PairingEndpointExposureTests
     ];
 
     /// <summary>
-    /// The management routes a device other than the host may call. Written out rather
-    /// than derived, because each one is a decision.
+    /// The management routes a paired device calls to look after devices. Written out
+    /// rather than derived, because each one is a decision.
     /// </summary>
     private static readonly string[] PairedDeviceRoutes =
     [
@@ -110,24 +110,28 @@ public class PairingEndpointExposureTests
     }
 
     [TestMethod]
-    public void Only_the_decided_management_routes_are_open_to_a_paired_device()
+    public void No_management_route_is_open_to_an_unpaired_caller()
     {
         // A paired device may look after devices — see them, name them, cut one off, and
         // let a new one in. That was a deliberate decision: a headless server has nobody
         // standing at it to click approve, and the alternative is reading a code out of a
         // container's log every time somebody gets a new phone.
         //
-        // It is a decision about six routes, not a direction to travel in, so the list is
-        // written out. Adding a seventh fails here, which is the moment to ask whether a
-        // phone should be able to do that at all.
-        var open = Routes()
+        // A paired device reaches them through its pairing: the gate lets a paired caller
+        // reach everything. [RemoteAccessible] would add only the caller that has not
+        // paired, on an Enabled server that does not require pairing — which could then
+        // approve the request it filed itself and hold a device key. So none is marked
+        // (FederationGateTests' G31b runs the real gate over them).
+        var routes = Routes()
             .Where(r => ManagementPrefixes.Any(p => r.Path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-            .Where(r => r.RemoteAccessible)
-            .Select(r => r.ToString())
             .ToArray();
+        foreach (var route in PairedDeviceRoutes)
+        {
+            Assert.IsTrue(routes.Any(r => r.ToString() == route), $"{route} no longer exists under that name");
+        }
 
-        CollectionAssert.AreEquivalent(PairedDeviceRoutes, open,
-            $"open to a paired device: {string.Join(", ", open)}");
+        var open = routes.Where(r => r.RemoteAccessible).Select(r => r.ToString()).ToArray();
+        Assert.AreEqual(0, open.Length, $"open to an unpaired caller: {string.Join(", ", open)}");
     }
 
     [TestMethod]

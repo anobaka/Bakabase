@@ -34,7 +34,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests.Federation.Security;
 
 /// <summary>
-/// The gate split of §7.3: every row of the gate matrix (G1–G36, G22b), and the generated matrix over every Export
+/// The gate split of §7.3: every row of the gate matrix (G1–G36, G22b, G31b), and the generated matrix over every Export
 /// action × {library grant, datasync grant, none} × both switches. S is library sharing, D definitions sharing.
 /// </summary>
 public sealed partial class FederationGateTests
@@ -463,6 +463,59 @@ public sealed partial class FederationGateTests
             Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice, problem?.Code, name);
             // Nothing changes: the facade is either not asked, or told the caller may not create access.
             Assert.IsTrue(fake.Calls.All(c => c.StartsWith("Create")), name);
+        }
+    }
+
+    /// <summary>
+    /// G31 refuses a caller that has not paired, so the way to a device key is part of the row: through the real gate,
+    /// an unpaired caller of an Enabled server — pairing required or not — can neither approve a pairing request (the
+    /// one it filed itself included) nor issue a code nor manage devices; the host and paired devices can. On an
+    /// Unrestricted server every caller can, by design: the LAN browser is the operator there, and it is where a
+    /// headless server's requests are answered, so there G31 holds only until the caller pairs itself (data-sync.md,
+    /// "Who may create or widen access").
+    /// </summary>
+    [TestMethod]
+    public void G31b_AnUnpairedCallerOfAnEnabledServerCannotPairItself()
+    {
+        string[] management =
+        [
+            nameof(RemoteAccessController.IssuePairingCode),
+            nameof(RemoteAccessController.ApprovePairingRequest),
+            nameof(RemoteAccessController.RejectPairingRequest),
+            nameof(RemoteAccessController.GetPendingRequests),
+            nameof(RemoteAccessController.GetDevices),
+            nameof(RemoteAccessController.RevokeDevice),
+            nameof(RemoteAccessController.RenameDevice),
+        ];
+        var device = new RemoteDevice { Id = "device-1", Name = "Desktop", Key = "key", CreatedAt = DateTime.UtcNow };
+        var callers = new (string Who, RemoteAccessContext Remote, bool Admitted)[]
+        {
+            ("an unpaired caller of an Enabled server",
+                new RemoteAccessContext { IsLoopback = false, Mode = RemoteAccessMode.Enabled }, false),
+            ("a paired device", new RemoteAccessContext { IsLoopback = false, Mode = RemoteAccessMode.Enabled, Device = device },
+                true),
+            ("this device", new RemoteAccessContext { IsLoopback = true, Mode = RemoteAccessMode.Enabled }, true),
+            ("an unpaired caller of an Unrestricted server",
+                new RemoteAccessContext { IsLoopback = false, Mode = RemoteAccessMode.Unrestricted }, true),
+        };
+        foreach (var action in management)
+        foreach (var (who, remote, admitted) in callers)
+        {
+            var http = new DefaultHttpContext();
+            http.SetRemoteAccessContext(remote);
+            var descriptor = new ControllerActionDescriptor
+            {
+                MethodInfo = typeof(RemoteAccessController).GetMethod(action)!,
+                ControllerTypeInfo = typeof(RemoteAccessController).GetTypeInfo()
+            };
+            var filter = new AuthorizationFilterContext(new ActionContext(http, new RouteData(), descriptor), []);
+            new RemoteAccessAuthorizationFilter().OnAuthorization(filter);
+            Assert.AreEqual(admitted, filter.Result is null, $"{action} by {who}");
+            if (!admitted)
+            {
+                Assert.AreEqual(nameof(RemoteAccessDenialReason.HostOnly),
+                    http.Response.Headers["X-Bakabase-Remote-Access"].ToString(), $"{action} by {who}");
+            }
         }
     }
 

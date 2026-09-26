@@ -32,6 +32,12 @@ namespace Bakabase.Service.Controllers;
 /// who is asking and the service refuses exactly those calls. Reducing access (reject, revoke, cancel, sharing off,
 /// pause) stays open to every caller the gate admits, so access can always be shut off from wherever a person is.
 /// </para>
+/// <para>
+/// The rule is only as strong as the way to a device key. An unpaired caller of an Enabled server has none: remote
+/// access's pairing management is for the host and paired devices only. An unpaired browser of an Unrestricted server
+/// can pair itself — it is that server's operator, and where a headless server's pairing requests are answered — so
+/// there the rule makes it pair first (a device the server lists and can revoke), not stay out.
+/// </para>
 /// </remarks>
 [Route("~/data-sync")]
 public class DataSyncController(IDataSyncService service) : Controller

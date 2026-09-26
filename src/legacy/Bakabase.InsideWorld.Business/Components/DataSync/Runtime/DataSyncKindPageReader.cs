@@ -70,12 +70,22 @@ public sealed class DataSyncKindPageReader : IDataSyncKindPageReader
         return new Assembly(codec, _limits, snapshotId, manifestKind, fullReconciliation);
     }
 
+    /// <remarks>
+    /// Pages are budgeted by count as well as by bytes (§12: everything peer-supplied is budgeted), so a source cannot
+    /// keep a fetch going with pages that carry nothing. <see cref="DataSyncWireWriter"/> puts at least one item on
+    /// every page but the last, so each of these discards the whole pull: a page that is not the last and carries
+    /// neither a record nor a chunk, more records than the manifest counted, and more pages than those records could
+    /// fill (each record and each of its chunks on a page of its own, plus the last page).
+    /// </remarks>
     private sealed class Assembly(IDataSyncKindCodec codec, DataSyncLimits limits, string snapshotId,
         DataSyncFeedKind manifestKind, bool fullReconciliation) : IDataSyncKindPageAssembly
     {
         private readonly DataSyncRecordAssembler _assembler = new(codec, limits);
         private readonly List<DataSyncWireRecord> _records = [];
         private readonly HashSet<string> _keys = new(StringComparer.Ordinal);
+        private readonly long _maxPages = (long)Math.Max(0, manifestKind.RecordCount) *
+            (1 + Math.Max(0, limits.MaxChunksPerEntity)) + 1;
+        private long _pages;
         private bool _complete;
 
         public string? Problem { get; private set; }
@@ -84,10 +94,13 @@ public sealed class DataSyncKindPageReader : IDataSyncKindPageReader
         {
             if (Problem is not null) return new DataSyncPageStep(false, null, false);
             if (_complete) return Fail(Corrupted);
+            if (++_pages > _maxPages) return Fail(Corrupted);
 
             var read = DataSyncWireReader.ReadPage(page, snapshotId, manifestKind.Kind, limits);
             if (read.Problem is not null) return Fail(read.Problem);
             if (read.Page is null || read.Page.SinceSeq != manifestKind.SinceSeq) return Fail(Corrupted);
+            if (!read.Page.Complete && read.Page.Records.Count == 0) return Fail(Corrupted);
+            if (_records.Count + read.Records.Count > manifestKind.RecordCount) return Fail(Corrupted);
 
             foreach (var record in read.Records)
             {

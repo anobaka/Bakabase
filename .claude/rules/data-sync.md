@@ -171,6 +171,13 @@ scopes").
   another is reading (one snapshot per grant).
 - **Wire pages are raw canonical bytes**, written and parsed with data sync's own options —
   never `FederationJson`, whose depth limit rejects a deep multilevel property.
+- **A pull is budgeted in count and time, not only bytes.** The `DataSync` task fetches its due
+  links one after another, so a source must not be able to hold it. The page reader discards
+  the pull on a page that is not the last and carries nothing (the writer never makes one), on
+  more records than the manifest counted, and past `RecordCount × (1 + MaxChunksPerEntity) + 1`
+  pages; the fetcher gives a pull up as `Unreachable` (`timeout`) once it outlasts
+  `DataSyncSchedule.SnapshotDeadline` (10 min, a restart included), on top of each call's own
+  deadline and `MaxStagedPullBytes`.
 
 ## Links, requests and access
 
@@ -228,7 +235,14 @@ scopes").
   (`AskAccessAgain` included). The controller refuses what always widens access; for links and
   copy once it passes who is asking, and the link service refuses exactly the calls that would
   send a request or mint a code. An unpaired browser admitted only by Unrestricted mode may
-  reduce access, never widen it (`NotAllowedOnThisDevice`).
+  reduce access, never widen it (`NotAllowedOnThisDevice`). **What that holds against:** it
+  refuses callers that have not paired, so it is only as strong as the way to a device key.
+  On an Enabled server — pairing required or not — an unpaired caller has none: remote access's
+  management routes (approve a pairing request, issue a code, manage devices) are for the host
+  and paired devices only, never `[RemoteAccessible]` (G31b). On an Unrestricted server any LAN
+  caller can pair itself — its browser is the operator there, and it is where a headless
+  server's pairing requests are answered and codes issued — so there the rule only makes a
+  caller pair first (a device listed on the server, revocable), never keeps it out.
 - **A GET never writes** (`LoopbackCrossSiteGuard` lets cross-site GETs through). Reviews
   re-plan read-only.
 - **The inbox order is a contract.** `GET /data-sync/inbox` lists open items first, then closed

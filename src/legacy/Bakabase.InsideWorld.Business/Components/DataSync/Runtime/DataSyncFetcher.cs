@@ -404,17 +404,19 @@ public sealed class DataSyncFetcher
     /// <summary>
     /// A manifest and every page of the kinds it names (§8.10.2 steps 2–3), under the caller's per-peer fetch lock. A
     /// snapshot that expired or a cursor superseded mid-read restarts once with a new manifest; any other problem
-    /// discards the whole pull, so nothing is ever planned from an incomplete snapshot.
+    /// discards the whole pull, so nothing is ever planned from an incomplete snapshot. A pull still unfinished after
+    /// <see cref="DataSyncSchedule.SnapshotDeadline"/> is discarded as <c>Unreachable</c> (<c>timeout</c>).
     /// </summary>
     public async Task<DataSyncFetchedSnapshot> FetchSnapshotAsync(IDataSyncPeerClient peer,
         IDataSyncKindPageReader reader, DataSyncLinkDbModel link, DataSyncFeedQuery query, CancellationToken ct,
         BTaskArgs? args = null)
     {
+        var deadline = _clock.UtcNow + DataSyncSchedule.SnapshotDeadline;
         for (var attempt = 0;; attempt++)
         {
             try
             {
-                return await ReadSnapshotAsync(peer, reader, link, query, ct, args);
+                return await ReadSnapshotAsync(peer, reader, link, query, deadline, ct, args);
             }
             catch (DataSyncPeerException e) when (attempt == 0 &&
                                                   e.Code is DataSyncPeerErrorCode.SnapshotExpired
@@ -426,9 +428,10 @@ public sealed class DataSyncFetcher
     }
 
     private async Task<DataSyncFetchedSnapshot> ReadSnapshotAsync(IDataSyncPeerClient peer,
-        IDataSyncKindPageReader reader, DataSyncLinkDbModel link, DataSyncFeedQuery query, CancellationToken ct,
-        BTaskArgs? args)
+        IDataSyncKindPageReader reader, DataSyncLinkDbModel link, DataSyncFeedQuery query, DateTime deadline,
+        CancellationToken ct, BTaskArgs? args)
     {
+        if (_clock.UtcNow >= deadline) return TimedOut(0);
         var manifest = await peer.GetManifestAsync(link.PeerNodeId, query, ct);
         if (BreakerOf(link, manifest.NodeId, manifest.LibraryEpoch) is not null)
             return new DataSyncFetchedSnapshot(null, [], 0, DataSyncPeerErrorCode.PeerReset, "manifest");
@@ -448,6 +451,9 @@ public sealed class DataSyncFetcher
                 // A cooperative checkpoint per page: a large snapshot must not keep a pause waiting (btask.md).
                 if (args is not null) await args.YieldAsync();
                 else ct.ThrowIfCancellationRequested();
+                // The pages' own budget (the reader's count, the staged bytes) bounds what a source sends; this bounds
+                // how long it may take to send it, so one link never holds the cycle's other links waiting.
+                if (_clock.UtcNow >= deadline) return TimedOut(bytes);
                 var page = await peer.GetPageAsync(link.PeerNodeId, manifest.SnapshotId, kind, manifestKind.SinceSeq,
                     cursor, ct);
                 bytes += page.Length;
@@ -488,6 +494,10 @@ public sealed class DataSyncFetcher
     private static DataSyncFetchedSnapshot Discarded(string? problem, long bytes) =>
         new(null, [], bytes, problem == "tooLarge" ? DataSyncPeerErrorCode.TooLarge : DataSyncPeerErrorCode.InvalidResponse,
             problem ?? DataSyncKindPageReader.Corrupted);
+
+    /// <summary>A pull past <see cref="DataSyncSchedule.SnapshotDeadline"/>: retried like a peer that did not answer.</summary>
+    private static DataSyncFetchedSnapshot TimedOut(long bytes) =>
+        new(null, [], bytes, DataSyncPeerErrorCode.Unreachable, "timeout");
 
     /// <summary>
     /// A link waiting for access (§8.1): the grant arrived (normally raised by the claim loop within 5 s), or the

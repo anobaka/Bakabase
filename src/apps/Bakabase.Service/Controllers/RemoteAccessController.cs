@@ -31,7 +31,13 @@ namespace Bakabase.Service.Controllers
     /// with no key has to be able to get one — and each of those carries its secret in
     /// the body rather than the URL. Everything under <c>pairing/</c> and
     /// <c>devices/</c> is management, so it is left unmarked and only the host or an
-    /// already-paired device reaches it.
+    /// already-paired device reaches it — a paired device through its pairing, which
+    /// the gate lets reach everything. Marking one <see cref="RemoteAccessibleAttribute"/>
+    /// would add nobody a paired device needs; it would add the unpaired caller of an
+    /// Enabled server that does not require pairing, which could then approve its own
+    /// request and hold a device key. In Unrestricted mode every caller reaches them:
+    /// there the LAN browser is the operator, and it is where a headless server's
+    /// requests are answered and its codes issued.
     /// </remarks>
     [Route("~/remote-access")]
     public class RemoteAccessController(
@@ -252,17 +258,14 @@ namespace Bakabase.Service.Controllers
         #region Pairing: management, for the host and already-paired devices
 
         /// <summary>
-        /// Issues a fresh code and returns it in plain text. This is the only response
-        /// that ever carries one; the settings page can afterwards see that a code
-        /// exists and when it lapses, but not what it is.
-        /// </summary>
-        /// <summary>
-        /// Issues a code that pairs whoever types it.
+        /// Issues a code that pairs whoever types it, and returns it in plain text. This
+        /// is the only response that ever carries one; the settings page can afterwards
+        /// see that a code exists and when it lapses, but not what it is.
         /// </summary>
         /// <remarks>
-        /// Host-only, unlike approving a request. A code lets in a device nobody has
-        /// looked at — it is bearer access, and a phone that could mint one could pair
-        /// anything without the approval step ever happening.
+        /// Never for an unpaired caller of an Enabled server. A code lets in a device
+        /// nobody has looked at — it is bearer access, and a phone that could mint one
+        /// could pair anything without the approval step ever happening.
         /// </remarks>
         [HttpPost("pairing/code")]
         [SwaggerOperation(OperationId = "IssueRemoteAccessPairingCode")]
@@ -281,12 +284,14 @@ namespace Bakabase.Service.Controllers
         /// the server's log — is a worse thing to ask of somebody every time.
         /// </summary>
         /// <remarks>
+        /// Not <see cref="RemoteAccessibleAttribute"/>: an unpaired caller of an Enabled
+        /// server that does not require pairing would otherwise approve the request it
+        /// filed itself and collect a key with full control (see the class remarks).
         /// Answers the id the device will be listed under once it has collected its key, so
         /// whoever approved it can find it there. The key itself only ever goes to the device.
         /// </remarks>
         [HttpPost("pairing/requests/{id}/approve")]
         [SwaggerOperation(OperationId = "ApproveRemoteDevicePairingRequest")]
-        [RemoteAccessible]
         public async Task<SingletonResponse<RemoteAccessPairingApprovalViewModel>> ApprovePairingRequest(string id)
         {
             var approver = HttpContext.GetRemoteAccessContext()?.Device?.Id ?? HostApproverId;
@@ -301,7 +306,6 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost("pairing/requests/{id}/reject")]
         [SwaggerOperation(OperationId = "RejectRemoteDevicePairingRequest")]
-        [RemoteAccessible]
         public async Task<BaseResponse> RejectPairingRequest(string id)
         {
             await deviceService.RejectRequestAsync(id, HttpContext.RequestAborted);
@@ -320,7 +324,6 @@ namespace Bakabase.Service.Controllers
         /// </remarks>
         [HttpGet("devices")]
         [SwaggerOperation(OperationId = "GetRemoteAccessDevices")]
-        [RemoteAccessible]
         public ListResponse<RemoteAccessDeviceViewModel> GetDevices()
         {
             return new ListResponse<RemoteAccessDeviceViewModel>(
@@ -337,7 +340,6 @@ namespace Bakabase.Service.Controllers
         /// </remarks>
         [HttpGet("pairing/requests")]
         [SwaggerOperation(OperationId = "GetRemoteAccessPairingRequests")]
-        [RemoteAccessible]
         public ListResponse<RemoteAccessPendingRequestViewModel> GetPendingRequests()
         {
             return new ListResponse<RemoteAccessPendingRequestViewModel>(
@@ -355,7 +357,6 @@ namespace Bakabase.Service.Controllers
         /// </remarks>
         [HttpDelete("devices/{id}")]
         [SwaggerOperation(OperationId = "RevokeRemoteAccessDevice")]
-        [RemoteAccessible]
         public async Task<BaseResponse> RevokeDevice(string id)
         {
             await deviceService.RevokeAsync(id, HttpContext.RequestAborted);
@@ -370,7 +371,6 @@ namespace Bakabase.Service.Controllers
 
         [HttpPut("devices/{id}/name")]
         [SwaggerOperation(OperationId = "RenameRemoteAccessDevice")]
-        [RemoteAccessible]
         public async Task<BaseResponse> RenameDevice(string id, [FromBody] RemoteAccessDeviceNameInputModel model)
         {
             var renamed = await deviceService.RenameAsync(id, model.Name ?? string.Empty, HttpContext.RequestAborted);

@@ -459,10 +459,17 @@ internal sealed class FakePeer(string nodeId)
     /// <summary>Called after each page is counted, before it is served.</summary>
     public Action? OnPage { get; set; }
 
-    public byte[] Page(string kind, string? cursor)
+    /// <summary>
+    /// Serves the page bytes instead of the fake reader's (snapshot id, kind, since, cursor): a scripted source for
+    /// the real page reader.
+    /// </summary>
+    public Func<string, string, long, string?, byte[]>? Serve { get; set; }
+
+    public byte[] Page(string snapshotId, string kind, long sinceSeq, string? cursor)
     {
         Interlocked.Increment(ref Pages);
         OnPage?.Invoke();
+        if (Serve is { } serve) return serve(snapshotId, kind, sinceSeq, cursor);
         if (kind == BadPageOf) return "bad"u8.ToArray();
         var index = cursor is null ? 1 : int.Parse(cursor[1..]);
         return Encoding.UTF8.GetBytes($"page:{index}:{PagesPerKind}");
@@ -506,7 +513,7 @@ internal sealed class FakeDataSyncPeerClient : IDataSyncPeerClient
     {
         var peer = Peer(peerNodeId);
         if (peer.PageErrors.TryDequeue(out var error)) throw error;
-        return Task.FromResult<ReadOnlyMemory<byte>>(peer.Page(kind, cursor));
+        return Task.FromResult<ReadOnlyMemory<byte>>(peer.Page(snapshotId, kind, sinceSeq, cursor));
     }
 }
 

@@ -194,8 +194,12 @@ request, and acts through the same endpoints and confirmations.
   device) as well as for this device's own window and the CLI. A paired device already has full
   control of the server, and a read-only definitions grant is less. A browser admitted only
   because the mode is `Unrestricted` may reduce access (reject, revoke, sharing off, pause),
-  never create it (`NotAllowedOnThisDevice`). Library grants stay on `/federation/local/*` and
-  the CLI; `/data-sync` has no path to them (`DataSyncGrantBoundaryTests`).
+  never create it (`NotAllowedOnThisDevice`) — until it pairs, which on an Unrestricted server
+  any LAN caller can do (it may approve pairing requests there), so the rule refuses only
+  callers that have not paired; on an Enabled server an unpaired caller cannot pair itself
+  (see `data-sync.md`, "Who may create or widen access"). Library grants stay on
+  `/federation/local/*` and the CLI; `/data-sync` has no path to them
+  (`DataSyncGrantBoundaryTests`).
 - **A node credential is never a legacy principal.** It must not reach options, resource
   writes, `/hub/ui`, file APIs or legacy pairing. Never map it to `IsPaired`.
 - **Default deny.** Every new federation action needs an exact entry in

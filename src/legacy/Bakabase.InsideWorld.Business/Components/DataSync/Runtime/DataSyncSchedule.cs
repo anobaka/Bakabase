@@ -17,6 +17,14 @@ public static class DataSyncSchedule
     /// <summary><c>PeerTooOld</c>, <c>ThisTooOld</c>.</summary>
     public static readonly TimeSpan VersionRetry = TimeSpan.FromHours(6);
 
+    /// <summary>
+    /// How long one pull may take, from its manifest to its last page (a restart with a new manifest included), before
+    /// it is given up as <c>Unreachable</c> (<c>timeout</c>). The <c>DataSync</c> task fetches its due links one after
+    /// another, so a source that keeps serving pages must not hold every other link waiting (§12: everything
+    /// peer-supplied is budgeted). Checked between calls, each of which has its own deadline.
+    /// </summary>
+    public static readonly TimeSpan SnapshotDeadline = TimeSpan.FromMinutes(10);
+
     /// <summary>A last full reconciliation older than this makes the next pull one (§8.8).</summary>
     public static readonly TimeSpan FullReconciliationInterval = TimeSpan.FromHours(24);
 
