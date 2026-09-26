@@ -442,6 +442,32 @@ module.exports = async function dataSync({ browser, config, artifacts }) {
     await bCard.waitFor();
     const line = await lineOf();
     await line.waitFor();
+    // The mode buttons are pressed, never selected: the arrow keys move over them and change
+    // nothing. A radio group would have turned the link to Receive only on ArrowLeft, and asked
+    // to stop it on ArrowRight (wrapping round to Off).
+    await line.focus();
+    await map.keyboard.press('Enter');
+    await until(() => focused(map), active => active.id === 'device-map-panel-title', 'the details for the modes', 15000);
+    const linkWrites = [];
+    const onLinkWrite = request => {
+      if (request.method() === 'PUT' && /^\/data-sync\/links\/\d+$/.test(new URL(request.url()).pathname))
+        linkWrites.push(new URL(request.url()).pathname);
+    };
+    map.on('request', onLinkWrite);
+    const twoWayMode = syncSection.getByTestId('data-sync-mode-twoWay');
+    assert.equal(await twoWayMode.getAttribute('aria-pressed'), 'true');
+    await twoWayMode.focus();
+    for (const key of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']) await map.keyboard.press(key);
+    // Nothing to wait for when nothing happens: long enough for a request an arrow key started to
+    // have been seen, and for its answer to have reached A.
+    await map.waitForTimeout(1500);
+    map.off('request', onLinkWrite);
+    assert.deepEqual(linkWrites, [], 'An arrow key over the mode buttons changed the link');
+    assert.equal(await map.getByRole('alertdialog').count(), 0, 'An arrow key over the mode buttons asked to stop the link');
+    assert.equal(await twoWayMode.getAttribute('aria-pressed'), 'true');
+    assert.equal((await linkWith(a, bNode)).mode, MODE.TwoWay);
+    await map.keyboard.press('Escape');
+    report.modeButtonsIgnoreArrowKeys = { keys: ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'], linkWrites: 0 };
     const toggles = {};
     for (const width of [1440, 1280]) {
       await map.setViewportSize({ width, height: 1000 });

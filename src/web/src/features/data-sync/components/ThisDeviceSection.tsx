@@ -6,6 +6,12 @@ import { useTranslation } from "react-i18next";
 
 import { dataSyncApi } from "../api";
 import { timeAgo } from "../times";
+import {
+  codeTurnsOnConfirmation,
+  remoteAccessConfirmation,
+  sharingNeeded,
+  turnOnSharingInput,
+} from "../viewModels";
 
 import { DataSyncErrorNotice, panelClass, SectionHeading, smallButtonClass } from "./common";
 
@@ -17,6 +23,10 @@ import { RemoteAccessMode } from "@/sdk/constants";
  * everything, and who reads this device now. Turning sharing on and creating a code are
  * offered only where this window may create access (spec §7.1.5); turning things off, pausing
  * and stopping a reader stay available everywhere, so access can always be shut.
+ *
+ * Every way of letting another device read this one also offers to turn remote access on
+ * (spec §7.2.4): the switch, a code, and — while sharing is on and remote access off, which is
+ * where another device's "Remote access is off" status sends the reader — a button of its own.
  */
 
 /**
@@ -65,11 +75,34 @@ export default function ThisDeviceSection({
 }) {
   const { t } = useTranslation();
   const remoteOff = overview.remoteAccessMode === RemoteAccessMode.Disabled;
-  const codeUnavailable = !overview.sharingEnabled
-    ? t("dataSync.invitation.needsSharing")
-    : remoteOff
-      ? t("dataSync.invitation.needsRemoteAccess")
-      : undefined;
+  const own = {
+    sharingEnabled: overview.sharingEnabled,
+    remoteAccessMode: overview.remoteAccessMode,
+  };
+
+  /** A code only works while both are on: what is off is turned on first, then it is shown. */
+  const createCode = () => {
+    if (!sharingNeeded(own)) {
+      onCreateCode();
+
+      return;
+    }
+    actions.confirm({
+      ...codeTurnsOnConfirmation(t, own),
+      action: async () => {
+        await dataSyncApi.setSharing(turnOnSharingInput(own));
+        if (actions.mounted.current) onCreateCode();
+      },
+      refresh: ["dataSync", "sharing"],
+    });
+  };
+
+  const turnOnRemoteAccess = () =>
+    actions.confirm({
+      ...remoteAccessConfirmation(t),
+      action: () => dataSyncApi.setSharing({ enabled: true, enablePairedRemoteAccess: true }),
+      refresh: ["dataSync", "sharing"],
+    });
 
   const setSharing = (enabled: boolean) => {
     if (enabled) {
@@ -172,8 +205,30 @@ export default function ThisDeviceSection({
         )}
         <p className="pl-7 text-xs text-default-500" id="data-sync-sharing-hint">
           {t("dataSync.sharing.hint")}
-          {remoteOff && canManage ? ` ${t("dataSync.sharing.remoteAccess")}` : ""}
+          {/* What turning the switch on also does: said only while it is off. */}
+          {remoteOff && canManage && !overview.sharingEnabled
+            ? ` ${t("dataSync.sharing.remoteAccess")}`
+            : ""}
         </p>
+        {canManage && overview.sharingEnabled && remoteOff && (
+          <div
+            className="ml-7 flex flex-wrap items-center gap-2 rounded-lg border border-warning/30 bg-warning/5 px-2.5 py-1.5 text-xs"
+            data-testid="data-sync-remote-access-off"
+          >
+            <span className="min-w-0 flex-1 text-warning-700 dark:text-warning">
+              {t("dataSync.remoteAccess.offLine")}
+            </span>
+            <button
+              className={smallButtonClass}
+              data-testid="data-sync-remote-access-on"
+              disabled={actions.busy}
+              type="button"
+              onClick={turnOnRemoteAccess}
+            >
+              {t("dataSync.remoteAccess.turnOn")}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -192,16 +247,12 @@ export default function ThisDeviceSection({
           <button
             className={smallButtonClass}
             data-testid="data-sync-create-code"
-            disabled={actions.busy || !!codeUnavailable}
-            title={codeUnavailable}
+            disabled={actions.busy}
             type="button"
-            onClick={onCreateCode}
+            onClick={createCode}
           >
             {t("dataSync.invitation.button")}
           </button>
-        )}
-        {canManage && codeUnavailable && (
-          <span className="text-xs text-default-500">{codeUnavailable}</span>
         )}
       </div>
       {!canManage && (

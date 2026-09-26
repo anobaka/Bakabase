@@ -16,14 +16,22 @@ import { useRemoteAccessStore } from "@/stores/remoteAccess";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) =>
-      options
+      // How English joins the parts of a label, so a label reads as it will.
+      (
+        ({
+          "dataSync.a11y.sentenceBreak": ". ",
+          "dataSync.a11y.clauseBreak": ", ",
+          "dataSync.a11y.listBreak": ", ",
+        }) as Record<string, string | undefined>
+      )[key] ??
+      (options
         ? [
             key,
             ...Object.entries(options)
               .filter(([name, value]) => name !== "defaultValue" && value !== undefined)
               .map(([, value]) => String(value)),
           ].join(" ")
-        : key,
+        : key),
     i18n: { language: "en", changeLanguage: vi.fn(), exists: () => false },
   }),
   initReactI18next: { type: "3rdParty", init: vi.fn() },
@@ -105,7 +113,10 @@ describe("the data sync status indicator", () => {
     show();
     await waitFor(() => expect(indicator()).not.toBeNull());
 
-    expect(indicator()).toHaveAccessibleName("dataSync.status.NeedsYou 12");
+    // Named as data sync first: it stands next to the notifications.
+    expect(indicator()).toHaveAccessibleName(
+      "dataSync.indicator.label dataSync.status.NeedsYou 12",
+    );
     expect(screen.getByTestId("data-sync-indicator-count")).toHaveTextContent("12");
     expect(screen.getByTestId("data-sync-indicator-dot")).toHaveAttribute("data-tone", "warning");
     expect(screen.queryByTestId("data-sync-indicator-elsewhere")).toBeNull();
@@ -123,7 +134,7 @@ describe("the data sync status indicator", () => {
     expect(screen.getByTestId("data-sync-indicator-elsewhere")).toHaveTextContent("2");
     expect(screen.queryByTestId("data-sync-indicator-count")).toBeNull();
     expect(indicator()).toHaveAccessibleName(
-      /^dataSync\.status\.InStep .+\. dataSync\.status\.peersNeedingDecisions 2$/,
+      /^dataSync\.indicator\.label dataSync\.status\.InStep .+\. dataSync\.status\.peersNeedingDecisions 2$/,
     );
   });
 
@@ -136,7 +147,9 @@ describe("the data sync status indicator", () => {
     show();
     await waitFor(() => expect(indicator()).not.toBeNull());
 
-    expect(indicator()).toHaveAccessibleName("dataSync.status.level.ReadersOnly 2");
+    expect(indicator()).toHaveAccessibleName(
+      "dataSync.indicator.label dataSync.status.level.ReadersOnly 2",
+    );
     expect(screen.getByTestId("data-sync-indicator-dot")).toHaveAttribute("data-tone", "success");
   });
 
@@ -154,13 +167,15 @@ describe("the data sync status indicator", () => {
     show();
     await waitFor(() => expect(indicator()).not.toBeNull());
     // Nothing else going on: the request is the line, said once.
-    expect(indicator()).toHaveAccessibleName("dataSync.status.level.Requests 1");
+    expect(indicator()).toHaveAccessibleName(
+      "dataSync.indicator.label dataSync.status.level.Requests 1",
+    );
 
     act(() => {
       applyDataSyncHubData("DataSyncStatus", status({ pendingRequests: 2 }));
     });
     expect(indicator()).toHaveAccessibleName(
-      /^dataSync\.status\.InStep .+\. dataSync\.status\.level\.Requests 2$/,
+      /^dataSync\.indicator\.label dataSync\.status\.InStep .+\. dataSync\.status\.level\.Requests 2$/,
     );
   });
 

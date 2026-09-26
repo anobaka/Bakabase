@@ -12,7 +12,16 @@ import { useDataSyncStore } from "../stores/dataSync";
 import InvitationDialog from "../components/InvitationDialog";
 import DataSyncHelp from "../components/DataSyncHelp";
 import { buttonClass, StatusDot, syncText, toneText } from "../components/common";
-import { overallStatus, readLane, receiveLane, syncPeerFromMapPeer } from "../viewModels";
+import {
+  codeTurnsOnConfirmation,
+  overallStatus,
+  readLane,
+  receiveLane,
+  remoteAccessConfirmation,
+  sharingNeeded,
+  syncPeerFromMapPeer,
+  turnOnSharingInput,
+} from "../viewModels";
 
 import { useWordedActions } from "./useWordedActions";
 
@@ -52,9 +61,10 @@ export default function DataSyncSelfSection({
 
   const canManage = canManageHere && (overview?.canManageSharing ?? true);
   const sharingEnabled = view?.sharingEnabled ?? overview?.sharingEnabled ?? false;
-  const remoteOff =
-    (view?.remoteAccessMode ?? overview?.remoteAccessMode ?? RemoteAccessMode.Disabled) ===
-    RemoteAccessMode.Disabled;
+  const remoteAccessMode =
+    view?.remoteAccessMode ?? overview?.remoteAccessMode ?? RemoteAccessMode.Disabled;
+  const remoteOff = remoteAccessMode === RemoteAccessMode.Disabled;
+  const own = { sharingEnabled, remoteAccessMode };
   const peers = (view?.peers ?? []).map(syncPeerFromMapPeer);
   const counts = [
     ["receivesFrom", peers.filter((peer) => receiveLane(peer) === "active").length],
@@ -62,11 +72,30 @@ export default function DataSyncSelfSection({
   ] as const;
   const line = overallStatus(t, status ?? overview?.status, now);
   const openItems = overview?.openInboxItems ?? status?.openItems ?? 0;
-  const codeUnavailable = !sharingEnabled
-    ? t("dataSync.invitation.needsSharing")
-    : remoteOff
-      ? t("dataSync.invitation.needsRemoteAccess")
-      : undefined;
+
+  /** A code only works while both are on: what is off is turned on first, then it is shown. */
+  const createCode = () => {
+    if (!sharingNeeded(own)) {
+      setCode(true);
+
+      return;
+    }
+    actions.confirm({
+      ...codeTurnsOnConfirmation(t, own),
+      action: async () => {
+        await dataSyncApi.setSharing(turnOnSharingInput(own));
+        if (actions.mounted.current) setCode(true);
+      },
+      refresh: ["dataSync", "sharing"],
+    });
+  };
+
+  const turnOnRemoteAccess = () =>
+    actions.confirm({
+      ...remoteAccessConfirmation(t),
+      action: () => dataSyncApi.setSharing({ enabled: true, enablePairedRemoteAccess: true }),
+      refresh: ["dataSync", "sharing"],
+    });
 
   const setSharing = (enabled: boolean) => {
     if (!enabled) {
@@ -130,7 +159,8 @@ export default function DataSyncSelfSection({
             {t("dataSync.sharing.label")}
             <span className="mt-0.5 block text-xs text-default-500">
               {t("dataSync.sharing.hint")}
-              {remoteOff ? ` ${t("dataSync.sharing.remoteAccess")}` : ""}
+              {/* What turning the switch on also does: said only while it is off. */}
+              {remoteOff && !sharingEnabled ? ` ${t("dataSync.sharing.remoteAccess")}` : ""}
             </span>
           </span>
         </label>
@@ -138,6 +168,25 @@ export default function DataSyncSelfSection({
         <p className="text-sm">
           {t(sharingEnabled ? "dataSync.sharing.isOn" : "dataSync.sharing.isOff")}
         </p>
+      )}
+      {canManage && sharingEnabled && remoteOff && (
+        <div
+          className="flex flex-wrap items-center gap-2 rounded-lg border border-warning/30 bg-warning/5 px-2.5 py-1.5 text-xs"
+          data-testid="data-sync-self-remote-access-off"
+        >
+          <span className="min-w-0 flex-1 text-warning-700 dark:text-warning">
+            {t("dataSync.remoteAccess.offLine")}
+          </span>
+          <button
+            className={buttonClass}
+            data-testid="data-sync-self-remote-access-on"
+            disabled={actions.busy}
+            type="button"
+            onClick={turnOnRemoteAccess}
+          >
+            {t("dataSync.remoteAccess.turnOn")}
+          </button>
+        </div>
       )}
       <dl className="grid grid-cols-2 gap-2">
         {counts.map(([key, value]) => (
@@ -157,10 +206,9 @@ export default function DataSyncSelfSection({
           <button
             className={buttonClass}
             data-testid="data-sync-self-code"
-            disabled={actions.busy || !!codeUnavailable}
-            title={codeUnavailable}
+            disabled={actions.busy}
             type="button"
-            onClick={() => setCode(true)}
+            onClick={createCode}
           >
             {t("dataSync.invitation.button")}
           </button>
@@ -169,9 +217,6 @@ export default function DataSyncSelfSection({
           {t("dataSync.link.openPage")}
         </Link>
       </div>
-      {canManage && codeUnavailable && (
-        <p className="text-xs text-default-500">{codeUnavailable}</p>
-      )}
       {code && <InvitationDialog actions={actions} now={now} onClose={() => setCode(false)} />}
     </section>
   );

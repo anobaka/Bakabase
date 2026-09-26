@@ -56,7 +56,8 @@ public class DataSyncNotifierTests
         Assert.AreEqual(DataSyncNotifier.SourceOf("node-pc"), announced.Source);
         Assert.AreEqual(DataSyncNotifier.NeedsYouCase, FakeNotificationService.CaseOf(announced));
         Assert.AreEqual("/data-sync?tab=inbox&peer=node-pc", FakeNotificationService.RouteOf(announced));
-        Assert.AreEqual("DataSync_Notify_NeedsYou_Title(PC-2|1)", announced.Title);
+        // One item: the title's form for one ("1 change needs you").
+        Assert.AreEqual("DataSync_Notify_NeedsYou_Title_One(PC-2|1)", announced.Title);
         Assert.AreEqual(AppNotificationSeverity.Info, announced.Severity);
         Assert.AreEqual(announced.Id, h.Store.Item(first.Id).NotificationId);
 
@@ -137,7 +138,7 @@ public class DataSyncNotifierTests
 
         var record = h.Notifications.Records.Single();
         Assert.AreEqual(DataSyncNotifier.FirstSyncCase, FakeNotificationService.CaseOf(record));
-        Assert.AreEqual("DataSync_Notify_FirstSync_Title(PC-2|94|6|1)", record.Title);
+        Assert.AreEqual("DataSync_Notify_FirstSync_Title_One(PC-2|94|6|1)", record.Title);
         Assert.AreEqual($"/data-sync?link={link.Id}", FakeNotificationService.RouteOf(record));
         Assert.AreEqual(record.Id, h.Store.Item(suggestion.Id).NotificationId);
     }

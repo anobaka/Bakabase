@@ -325,7 +325,7 @@ public sealed class DataSyncNotifier
 
         var id = await CreateAsync(sp, SourceOf(link.PeerNodeId), NeedsYouCase, "NeedsYou",
             [link.PeerName, unannounced.Count], [], $"/data-sync?tab=inbox&peer={Uri.EscapeDataString(link.PeerNodeId)}",
-            AppNotificationSeverity.Info, ct);
+            AppNotificationSeverity.Info, ct, one: unannounced.Count == 1);
         MarkNotified(link.Id);
         await store.SetItemsNotifiedAsync(unannounced, id, now, ct);
         return true;
@@ -341,7 +341,7 @@ public sealed class DataSyncNotifier
         var unannounced = await store.GetUnannouncedItemIdsAsync(link.Id, ct);
         var id = await CreateAsync(sp, SourceOf(link.PeerNodeId), FirstSyncCase, "FirstSync",
             [link.PeerName, counts?.Created ?? 0, counts?.Linked ?? 0, unannounced.Count], [],
-            LinkRoute(link.Id), AppNotificationSeverity.Info, ct);
+            LinkRoute(link.Id), AppNotificationSeverity.Info, ct, one: unannounced.Count == 1);
         MarkNotified(link.Id);
         if (unannounced.Count > 0) await store.SetItemsNotifiedAsync(unannounced, id, _clock.UtcNow, ct);
     }
@@ -363,7 +363,7 @@ public sealed class DataSyncNotifier
         }, ct);
         if (claimed?.AttentionNotifiedAtUtc != now) return;
         await CreateAsync(sp, SourceOf(link.PeerNodeId), AttentionCase, "Attention", [link.PeerName, waiting],
-            [link.PeerName], LinkRoute(link.Id), AppNotificationSeverity.Info, ct);
+            [link.PeerName], LinkRoute(link.Id), AppNotificationSeverity.Info, ct, one: waiting == 1);
     }
 
     /// <summary>"{1} changes on this device were replaced by {0}'s": at most one per link per day (§8.1).</summary>
@@ -379,7 +379,7 @@ public sealed class DataSyncNotifier
         }
 
         await CreateAsync(sp, source, FollowOverrideCase, "FollowOverride", [link.PeerName, count], [link.PeerName],
-            LinkRoute(link.Id), AppNotificationSeverity.Info, ct);
+            LinkRoute(link.Id), AppNotificationSeverity.Info, ct, one: count == 1);
     }
 
     /// <summary>
@@ -513,9 +513,12 @@ public sealed class DataSyncNotifier
     private static string? DetailValue(string? detail, string name) =>
         detail?.Split(';').Select(p => p.Split('=', 2)).FirstOrDefault(p => p.Length == 2 && p[0] == name)?[1];
 
+    /// <param name="one">
+    /// The count the title says is one: its <c>_One</c> form is used ("1 change needs you", never "1 changes").
+    /// </param>
     private async Task<int> CreateAsync(IServiceProvider sp, string source, string @case, string textKey,
         object[] titleArgs, object[] bodyArgs, string route, AppNotificationSeverity severity, CancellationToken ct,
-        IReadOnlyDictionary<string, string>? extra = null)
+        IReadOnlyDictionary<string, string>? extra = null, bool one = false)
     {
         ct.ThrowIfCancellationRequested();
         var localizer = sp.GetRequiredService<IBakabaseLocalizer>();
@@ -524,7 +527,7 @@ public sealed class DataSyncNotifier
         var record = await sp.GetRequiredService<INotificationService>().CreateAsync(new NotificationCreationInputModel
         {
             Source = source,
-            Title = localizer[$"DataSync_Notify_{textKey}_Title", titleArgs].Value,
+            Title = localizer[$"DataSync_Notify_{textKey}_Title{(one ? "_One" : "")}", titleArgs].Value,
             Body = localizer[$"DataSync_Notify_{textKey}_Body", bodyArgs].Value,
             PayloadJson = payload.ToJsonString(),
             Severity = severity,

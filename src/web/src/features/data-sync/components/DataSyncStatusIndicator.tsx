@@ -6,7 +6,7 @@ import { AiOutlineSync } from "react-icons/ai";
 import { DATA_SYNC_ROUTE, dataSyncRestoreRoute } from "../routes";
 import { useDataSyncWindow } from "../hooks/useDataSyncWindow";
 import { useDataSyncStore } from "../stores/dataSync";
-import { overallStatus, pendingRequestsLine, waitingElsewhereLine } from "../viewModels";
+import { overallStatus, pendingRequestsLine, sentences, waitingElsewhereLine } from "../viewModels";
 
 import { toneDot } from "./common";
 
@@ -52,7 +52,8 @@ export default function DataSyncStatusIndicator() {
   const more = [waitingElsewhereLine(t, status), pendingRequestsLine(t, status, line)].filter(
     (text): text is string => !!text,
   );
-  const label = [line.text, ...more].join(". ");
+  // Named as what it is — it stands next to the notifications — then how it is.
+  const label = t("dataSync.indicator.label", { status: sentences(t, [line.text, ...more]) });
 
   return (
     <Tooltip

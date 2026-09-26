@@ -20,6 +20,8 @@ public partial class DataSyncResourceTests
         "DataSync_Request_Title", "DataSync_Request_Body",
         ..new[] { "NeedsYou", "FollowOverride", "Paused", "Restore", "ReviewReady", "FirstSync", "Attention", "NewReader" }
             .SelectMany(c => new[] { $"DataSync_Notify_{c}_Title", $"DataSync_Notify_{c}_Body" }),
+        // The titles that say a count, in their form for one.
+        ..new[] { "NeedsYou", "FollowOverride", "FirstSync", "Attention" }.Select(c => $"DataSync_Notify_{c}_Title_One"),
         ..new[] { "PeerReset", "PeerRestored", "MassDeletion", "KindEmptied", "PeerIdentityDuplicated", "TooManyDecisions" }
             .Select(r => $"DataSync_Notify_PauseReason_{r}"),
         ..DataSyncKindIds.All.Select(k => $"DataSync_Kind_{k}"),

@@ -2,14 +2,16 @@ import type { TFunction } from "i18next";
 import type * as Api from "../api";
 
 import i18next from "i18next";
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ThisDeviceSection, { readerStateText } from "../components/ThisDeviceSection";
 import { useDataSyncActions } from "../hooks/useDataSyncActions";
+import { dataSyncApi } from "../api";
 
 import { NOW, overview, reader } from "./dataSyncFixtures";
 
+import { RemoteAccessMode } from "@/sdk/constants";
 import en from "@/locales/en/pages/dataSync.json";
 import cn from "@/locales/cn/pages/dataSync.json";
 
@@ -30,9 +32,14 @@ vi.mock("react-i18next", () => ({
 }));
 vi.mock("../api", async (importOriginal) => ({
   ...(await importOriginal<typeof Api>()),
-  dataSyncApi: { setSharing: vi.fn(), setAllPaused: vi.fn(), revokeReader: vi.fn() },
+  dataSyncApi: {
+    setSharing: vi.fn(async () => undefined),
+    setAllPaused: vi.fn(),
+    revokeReader: vi.fn(),
+  },
 }));
 
+beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
 
 /** Every word a reader can declare (spec §7.5.6), as the server's `GetDeclaredState` words them. */
@@ -124,5 +131,105 @@ describe("the devices that read this device", () => {
     expect(within(screen.getByTestId("data-sync-readers")).getAllByRole("listitem")).toHaveLength(
       4,
     );
+  });
+});
+
+describe("this device's sharing while remote access is off", () => {
+  /** The section with the page's confirmation: what it asks, and a way to answer yes. */
+  const Host = ({
+    sharingEnabled,
+    onCreateCode = vi.fn(),
+  }: {
+    sharingEnabled: boolean;
+    onCreateCode?: () => void;
+  }) => {
+    const actions = useDataSyncActions(() => undefined);
+
+    return (
+      <>
+        <ThisDeviceSection
+          canManage
+          actions={actions}
+          now={NOW}
+          overview={overview({ sharingEnabled, remoteAccessMode: RemoteAccessMode.Disabled })}
+          readers={[]}
+          onCreateCode={onCreateCode}
+          onRetryReaders={vi.fn()}
+        />
+        {actions.confirmation && (
+          <div data-testid="confirmation">
+            <p data-testid="confirmation-title">{actions.confirmation.title}</p>
+            <p data-testid="confirmation-warning">{actions.confirmation.warning}</p>
+            <button type="button" onClick={actions.confirmCurrent}>
+              yes
+            </button>
+          </div>
+        )}
+      </>
+    );
+  };
+
+  it("offers to turn remote access on where another device's status sends the reader", async () => {
+    render(<Host sharingEnabled />);
+
+    // The switch is on: the hint no longer says what turning it on would do.
+    expect(screen.getByTestId("data-sync-sharing-switch")).toBeChecked();
+    expect(document.getElementById("data-sync-sharing-hint")).not.toHaveTextContent(
+      "dataSync.sharing.remoteAccess",
+    );
+    expect(screen.getByTestId("data-sync-remote-access-off")).toHaveTextContent(
+      "dataSync.remoteAccess.offLine",
+    );
+    fireEvent.click(screen.getByTestId("data-sync-remote-access-on"));
+    expect(screen.getByTestId("confirmation-title")).toHaveTextContent(
+      "dataSync.remoteAccess.onTitle",
+    );
+    expect(screen.getByTestId("confirmation-warning")).toHaveTextContent(
+      "dataSync.remoteAccess.onWarning",
+    );
+    expect(dataSyncApi.setSharing).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(screen.getByText("yes"));
+    });
+    // The server turns remote access on, with pairing required, only from off.
+    expect(dataSyncApi.setSharing).toHaveBeenCalledWith({
+      enabled: true,
+      enablePairedRemoteAccess: true,
+    });
+  });
+
+  it("offers a code that turns remote access on first, then shows it", async () => {
+    const onCreateCode = vi.fn();
+
+    render(<Host sharingEnabled onCreateCode={onCreateCode} />);
+    const code = screen.getByTestId("data-sync-create-code");
+
+    expect(code).not.toBeDisabled();
+    fireEvent.click(code);
+    expect(onCreateCode).not.toHaveBeenCalled();
+    expect(screen.getByTestId("confirmation-title")).toHaveTextContent(
+      "dataSync.remoteAccess.onTitle",
+    );
+    // Only what is off is said: sharing is on already.
+    expect(screen.getByTestId("confirmation-warning")).toHaveTextContent(
+      /^dataSync\.sharing\.remoteAccess$/,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByText("yes"));
+    });
+    expect(dataSyncApi.setSharing).toHaveBeenCalledWith({
+      enabled: true,
+      enablePairedRemoteAccess: true,
+    });
+    await waitFor(() => expect(onCreateCode).toHaveBeenCalledTimes(1));
+  });
+
+  it("says what turning sharing on also turns on, only while it is off", () => {
+    render(<Host sharingEnabled={false} />);
+
+    expect(document.getElementById("data-sync-sharing-hint")).toHaveTextContent(
+      "dataSync.sharing.remoteAccess",
+    );
+    expect(screen.queryByTestId("data-sync-remote-access-off")).toBeNull();
   });
 });

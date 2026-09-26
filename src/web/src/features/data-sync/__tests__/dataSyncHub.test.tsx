@@ -58,14 +58,22 @@ vi.mock("@/stores/options", () => ({ optionsStores: {} }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) =>
-      options
+      // How English joins the parts of a label, so a label reads as it will.
+      (
+        ({
+          "dataSync.a11y.sentenceBreak": ". ",
+          "dataSync.a11y.clauseBreak": ", ",
+          "dataSync.a11y.listBreak": ", ",
+        }) as Record<string, string | undefined>
+      )[key] ??
+      (options
         ? [
             key,
             ...Object.entries(options)
               .filter(([name, value]) => name !== "defaultValue" && value !== undefined)
               .map(([, value]) => String(value)),
           ].join(" ")
-        : key,
+        : key),
     i18n: { language: "en", changeLanguage: vi.fn(), exists: () => false },
   }),
   initReactI18next: { type: "3rdParty", init: vi.fn() },
@@ -136,7 +144,7 @@ describe("data sync over the UI hub", () => {
     push("DataSyncStatus", status({ level: DataSyncStatusLevel.NeedsYou, openItems: 4 }));
 
     expect(screen.getByTestId("data-sync-indicator")).toHaveAccessibleName(
-      "dataSync.status.NeedsYou 4",
+      "dataSync.indicator.label dataSync.status.NeedsYou 4",
     );
     expect(screen.getByTestId("data-sync-indicator-count")).toHaveTextContent("4");
     expect(dataSyncApi.overview).toHaveBeenCalledTimes(1);

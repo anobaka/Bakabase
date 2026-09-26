@@ -319,6 +319,13 @@ scopes").
   (`AccessCancelled`). A link that asked a reset peer again goes back to `Paused(PeerReset)`
   either way. "Dismiss" is `DELETE /data-sync/links/{id}` (reset), which never withdraws a
   request, and withdrawing never resets a link.
+- **Removing a device ends its link too.** "Remove device" (`DELETE /federation/local/peers/{id}`)
+  removes both scopes' grants with the peer, then resets this device's links to that node as
+  Dismiss does (`ResetLinkAsync`: every definition kept, the link, its bases and pending records
+  forgotten, its items closed). A link left behind would find its access gone on the next pull,
+  read as `AccessRevoked` — "X stopped sharing", blaming the device just removed — and put it
+  back on the map. The Service reaches data sync there through `IDataSyncService`, resolved per
+  request; a host without data sync has nothing to reset.
 - **Withdrawn consent takes the reciprocal codes with it.** Revoking a reader, "Done — stop
   reading X", removing the peer and an identity reset drop the datasync codes this device
   minted for that device to read it back with; cancelling an outgoing request drops them
@@ -501,5 +508,6 @@ request's — and says so in its heads (`Attention.Headless`).
 - Frontend: `yarn vitest run src/features/data-sync src/components/HelpCenter`.
 - Browser: `src/tests/federation-browser-smoke/data-sync.cjs`, the last stage of that smoke's `run.py`
   — started on the device map, approved in the window switched to the server, a conflict decided on
-  the page, the rule editor from the keyboard at 1440 and 1280 px, 375 px, and a LAN browser (the
+  the page, the rule editor from the keyboard at 1440 and 1280 px (its mode buttons changing
+  nothing under the arrow keys), 375 px, and a LAN browser (the
   test host's `BAKABASE_FEDERATION_TEST_LAN_PORT`) in and outside Unrestricted mode.

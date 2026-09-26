@@ -38,6 +38,25 @@ import {
 
 type T = TFunction;
 
+// ---- words put together ------------------------------------------------------------------------
+
+type Part = string | false | null | undefined;
+
+/**
+ * Sentences read as one label (a screen reader's name for a card, a line, the indicator), joined
+ * the way the language joins them: ". " in English, "。" in Chinese. Never a literal here.
+ */
+export const sentences = (t: T, parts: Part[]) =>
+  parts.filter(Boolean).join(t("dataSync.a11y.sentenceBreak"));
+
+/** Parts of one sentence, joined as the language joins them: ", " in English, "，" in Chinese. */
+export const clauses = (t: T, parts: Part[]) =>
+  parts.filter(Boolean).join(t("dataSync.a11y.clauseBreak"));
+
+/** Items of a list, joined as the language lists them: ", " in English, "、" in Chinese. */
+export const listed = (t: T, parts: Part[]) =>
+  parts.filter(Boolean).join(t("dataSync.a11y.listBreak"));
+
 // ---- kinds -------------------------------------------------------------------------------------
 
 /** Every kind this build syncs, in the order the page lists them: properties first. */
@@ -589,6 +608,39 @@ export const turnsOnWarning = (t: T, own: OwnSharing) =>
     .join(" ") || undefined;
 
 /**
+ * What turns on everything another device needs to read this one: sharing, and remote access
+ * with pairing required where it is off (spec §7.2.4). The server changes remote access only
+ * from Disabled, so asking where it is on already changes nothing there.
+ */
+export const turnOnSharingInput = (own: OwnSharing) => ({
+  enabled: true,
+  enablePairedRemoteAccess: own.remoteAccessMode === RemoteAccessMode.Disabled,
+});
+
+/**
+ * The question asked before a code is shown where it could not work yet (spec §7.2.3, §7.2.4):
+ * a code needs this device to share its definitions and remote access to be on, and what is off
+ * is turned on first. For a code meant for one device, `name` names it.
+ */
+export const codeTurnsOnConfirmation = (t: T, own: OwnSharing, name?: string) => ({
+  title: own.sharingEnabled ? t("dataSync.remoteAccess.onTitle") : t("dataSync.sharing.onTitle"),
+  description: name
+    ? t("dataSync.invitation.needsSharingFirst", { name })
+    : t("dataSync.invitation.turnOnFirst"),
+  warning: turnsOnWarning(t, own),
+});
+
+/**
+ * The question asked before remote access is turned on where sharing already is (spec §7.2.4):
+ * while it is off, no device can read this one's definitions.
+ */
+export const remoteAccessConfirmation = (t: T) => ({
+  title: t("dataSync.remoteAccess.onTitle"),
+  description: t("dataSync.remoteAccess.onDescription"),
+  warning: t("dataSync.remoteAccess.onWarning"),
+});
+
+/**
  * Whether "[Ask {{name}} to keep in step]" is offered (spec §7.2.3): a two-way link, working, whose
  * device took this one's access but does not read it back. The runtime answers the resume action
  * `AskAccessAgain` on exactly such a link with an ordinary two-way request, leaving the link's
@@ -792,7 +844,9 @@ export function linkStatus(t: T, peer: SyncPeer, now: number = Date.now()): Stat
     return line(
       "Offline",
       "default",
-      t("dataSync.status.Offline", { name, time: timeAgo(t, peer.lastSyncedAt, now) }),
+      peer.lastSyncedAt
+        ? t("dataSync.status.Offline", { name, time: timeAgo(t, peer.lastSyncedAt, now) })
+        : t("dataSync.status.OfflineNever", { name }),
     );
   if (failure(peer))
     return line(
@@ -871,7 +925,10 @@ export const peerCardLine = (t: T, peer: SyncPeer, now: number = Date.now()) => 
 
   return {
     ...status,
-    text: t(`dataSync.diagram.card.${cardKey(status.code)}`, cardValues(t, peer, now)),
+    text:
+      status.code === "Offline" && !peer.lastSyncedAt
+        ? t("dataSync.diagram.card.offlineNever")
+        : t(`dataSync.diagram.card.${cardKey(status.code)}`, cardValues(t, peer, now)),
   };
 };
 
@@ -991,7 +1048,9 @@ export function overallStatus(
       return line(
         "Offline",
         "default",
-        t("dataSync.status.level.Offline", { time: timeAgo(t, status.lastSyncedAt, now) }),
+        status.lastSyncedAt
+          ? t("dataSync.status.level.Offline", { time: timeAgo(t, status.lastSyncedAt, now) })
+          : t("dataSync.status.level.OfflineNever"),
       );
     case DataSyncStatusLevel.Failed:
       return line(

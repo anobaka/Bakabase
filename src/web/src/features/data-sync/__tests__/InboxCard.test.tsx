@@ -81,8 +81,10 @@ vi.mock("@/features/federation/serverApi", () => ({
   managedServerApi: { list: vi.fn(async () => ({ available: true, servers: [], requests: [] })) },
 }));
 vi.mock("@/features/federation/switching", () => ({
+  DEVICES_ROUTE: "/federation/devices",
   openManagedServer: vi.fn(async () => undefined),
   openConsoleTarget: vi.fn(async () => undefined),
+  openLocalView: vi.fn(async () => undefined),
 }));
 vi.mock("@/components/HelpCenter/HelpCenterButton", () => ({
   default: ({ section, topic }: { section: string; topic: string }) => (
@@ -1125,10 +1127,11 @@ describe("the list of what needs you", () => {
     expect(screen.getByTestId("data-sync-elsewhere")).toHaveTextContent(
       "dataSync.status.NeedsYouThere NAS 2",
     );
-    // This device does not manage the NAS: the line says how to get there.
+    // This device does not manage the NAS: the line says to decide there, and — this being the
+    // window with the Devices page — how this window could switch to it.
     await waitFor(() =>
-      expect(screen.getByTestId("data-sync-elsewhere")).toHaveTextContent(
-        "dataSync.inbox.elsewhere.howTo NAS",
+      expect(screen.getByTestId("data-sync-decide-there")).toHaveTextContent(
+        "dataSync.link.decideThere NAS dataSync.link.switchNeedsManagement NAS federation.mode federation.devices.title",
       ),
     );
     expect(screen.getByTestId("data-sync-inbox-filter-device")).toHaveValue("node-nas");

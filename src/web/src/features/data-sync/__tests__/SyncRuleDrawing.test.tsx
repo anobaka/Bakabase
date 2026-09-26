@@ -25,14 +25,22 @@ vi.mock("react-i18next", () => ({
   // Keys as text, followed by the interpolated values, so a test can see what was said.
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) =>
-      options
+      // How English joins the parts of a label, so a label reads as it will.
+      (
+        ({
+          "dataSync.a11y.sentenceBreak": ". ",
+          "dataSync.a11y.clauseBreak": ", ",
+          "dataSync.a11y.listBreak": ", ",
+        }) as Record<string, string | undefined>
+      )[key] ??
+      (options
         ? [
             key,
             ...Object.entries(options)
               .filter(([name, value]) => name !== "defaultValue" && value !== undefined)
               .map(([, value]) => String(value)),
           ].join(" ")
-        : key,
+        : key),
     i18n: { language: "en", changeLanguage: vi.fn(), exists: () => false },
   }),
   initReactI18next: { type: "3rdParty", init: vi.fn() },
@@ -241,9 +249,45 @@ describe("the mode buttons", () => {
   it("say the same as the arrow and its badge", () => {
     draw(nas({ mode: DataSyncLinkMode.Follow, lastMode: DataSyncLinkMode.Follow }));
 
-    expect(screen.getByTestId("data-sync-mode-follow")).toBeChecked();
+    expect(screen.getByTestId("data-sync-mode-follow")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("data-sync-mode-twoWay")).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByTestId("data-sync-mode-badge")).toHaveAttribute("data-mode", "follow");
     expect(receive()).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("are buttons in a named group, never radios the arrow keys would select", () => {
+    draw(nas());
+    const group = screen.getByTestId("data-sync-modes");
+    const twoWay = screen.getByTestId("data-sync-mode-twoWay");
+
+    expect(group).toHaveAttribute("role", "group");
+    expect(group).toHaveAccessibleName("dataSync.mode.legend NAS");
+    expect(within(group).queryAllByRole("radio")).toHaveLength(0);
+    expect(twoWay.tagName).toBe("BUTTON");
+    expect(twoWay).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("change nothing when the arrow keys move over them: only a press changes the link", () => {
+    draw(nas());
+    const twoWay = screen.getByTestId("data-sync-mode-twoWay");
+
+    act(() => twoWay.focus());
+    // A radio group would have turned the link to Receive only on ArrowLeft, and asked to stop
+    // it on ArrowRight (wrapping to Off): neither may happen from looking at the options.
+    for (const key of ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]) {
+      fireEvent.keyDown(twoWay, { key });
+      fireEvent.keyUp(twoWay, { key });
+    }
+    expect(twoWay).toHaveFocus();
+    expect(twoWay).toHaveAttribute("aria-pressed", "true");
+    expect(recorded.actions.run).not.toHaveBeenCalled();
+    expect(recorded.actions.confirm).not.toHaveBeenCalled();
+    expect(dataSyncApi.updateLink).not.toHaveBeenCalled();
+
+    // Pressing one does: Receive only, on a link the other device already reads, just runs.
+    fireEvent.click(screen.getByTestId("data-sync-mode-follow"));
+    expect(recorded.actions.run).toHaveBeenCalledTimes(1);
+    expect(dataSyncApi.updateLink).toHaveBeenCalledWith(1, { mode: DataSyncLinkMode.Follow });
   });
 
   it("switch through the badge's menu exactly as through the buttons", async () => {
@@ -714,15 +758,16 @@ describe("the drawing's layout", () => {
   });
 
   it("says both directions, as a list, to a screen reader", () => {
-    draw(nas({ peerKinds: ["customProperty"] }));
+    draw(nas({ peerKinds: ["customProperty", "extensionGroup"] }));
     const items = within(screen.getByTestId("data-sync-rule-list")).getAllByRole("listitem");
 
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent(
       "federation.map.direction.sync.in.active NAS, dataSync.mode.twoWay",
     );
+    // The direction and its kinds, put together in the language's own words.
     expect(items[1]).toHaveTextContent(
-      "federation.map.direction.sync.out.active NAS: dataSync.kind.customProperty",
+      "dataSync.a11y.labelled federation.map.direction.sync.out.active NAS dataSync.kind.customProperty, dataSync.kind.extensionGroup",
     );
   });
 });

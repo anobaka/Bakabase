@@ -37,14 +37,22 @@ import {
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) =>
-      options
+      // How English joins the parts of a label, so a label reads as it will.
+      (
+        ({
+          "dataSync.a11y.sentenceBreak": ". ",
+          "dataSync.a11y.clauseBreak": ", ",
+          "dataSync.a11y.listBreak": ", ",
+        }) as Record<string, string | undefined>
+      )[key] ??
+      (options
         ? [
             key,
             ...Object.entries(options)
               .filter(([name, value]) => name !== "defaultValue" && value !== undefined)
               .map(([, value]) => String(value)),
           ].join(" ")
-        : key,
+        : key),
     i18n: { language: "en", changeLanguage: vi.fn(), exists: () => false },
   }),
   initReactI18next: { type: "3rdParty", init: vi.fn() },
@@ -531,7 +539,6 @@ describe("this device's data sync, in the device map's details", () => {
   it("turns sharing on through a confirmation that says it also turns remote access on", async () => {
     await self(mapView({ sharingEnabled: false, remoteAccessMode: RemoteAccessMode.Disabled }));
 
-    expect(screen.getByTestId("data-sync-self-code")).toBeDisabled();
     fireEvent.click(screen.getByTestId("data-sync-self-sharing"));
     expect(confirmation()).toMatchObject({
       title: "dataSync.sharing.onTitle",
@@ -543,6 +550,54 @@ describe("this device's data sync, in the device map's details", () => {
       enabled: true,
       enablePairedRemoteAccess: true,
     });
+  });
+
+  it("offers a code that turns on what it needs first, never a disabled button", async () => {
+    await self(mapView({ sharingEnabled: false, remoteAccessMode: RemoteAccessMode.Disabled }));
+
+    expect(screen.getByTestId("data-sync-self-code")).not.toBeDisabled();
+    fireEvent.click(screen.getByTestId("data-sync-self-code"));
+    expect(screen.queryByTestId("data-sync-invitation-create")).toBeNull();
+    expect(confirmation()).toMatchObject({
+      title: "dataSync.sharing.onTitle",
+      description: "dataSync.invitation.turnOnFirst",
+      warning: "dataSync.twoWay.turnsOnSharing dataSync.sharing.remoteAccess",
+    });
+    await act(() => confirmation().action() as Promise<void>);
+    expect(dataSyncApi.setSharing).toHaveBeenCalledWith({
+      enabled: true,
+      enablePairedRemoteAccess: true,
+    });
+    // Then the code dialog opens.
+    expect(screen.getByTestId("data-sync-invitation-create")).toBeInTheDocument();
+  });
+
+  it("offers to turn remote access on while sharing is on and it is off", async () => {
+    await self(mapView({ sharingEnabled: true, remoteAccessMode: RemoteAccessMode.Disabled }));
+
+    expect(screen.getByTestId("data-sync-self-remote-access-off")).toHaveTextContent(
+      "dataSync.remoteAccess.offLine",
+    );
+    // The switch is on: what turning it on would also do is not said any more.
+    expect(screen.getByTestId("data-sync-self-section")).not.toHaveTextContent(
+      "dataSync.sharing.remoteAccess",
+    );
+    fireEvent.click(screen.getByTestId("data-sync-self-remote-access-on"));
+    expect(confirmation()).toMatchObject({
+      title: "dataSync.remoteAccess.onTitle",
+      warning: "dataSync.remoteAccess.onWarning",
+      refresh: ["dataSync", "sharing"],
+    });
+    expect(dataSyncApi.setSharing).not.toHaveBeenCalled();
+    await act(() => confirmation().action() as Promise<void>);
+    expect(dataSyncApi.setSharing).toHaveBeenCalledWith({
+      enabled: true,
+      enablePairedRemoteAccess: true,
+    });
+    cleanup();
+
+    await self(mapView({ sharingEnabled: true, remoteAccessMode: RemoteAccessMode.Enabled }));
+    expect(screen.queryByTestId("data-sync-self-remote-access-off")).toBeNull();
   });
 
   it("turns sharing off only after asking", async () => {

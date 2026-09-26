@@ -5,10 +5,11 @@ import type {
   DataSyncResolveBatchInput,
   DataSyncTypeChangePreview,
 } from "../api";
+import type { ReactNode } from "react";
 import type { BackupTarget } from "../hooks/useBackupTarget";
 import type { ConflictChoices, InboxCardModel, InboxChoice } from "../inboxModels";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { dataSyncApi } from "../api";
@@ -37,6 +38,7 @@ import {
   syncText,
 } from "./common";
 
+import { edgeStyles } from "@/features/federation/map/DeviceMapCanvas";
 import {
   DataSyncInboxAction,
   DataSyncInboxItemType,
@@ -216,7 +218,8 @@ export default function InboxCard({
       <header className="space-y-1">
         <div className="flex flex-wrap items-center gap-2 text-xs text-default-500">
           {card.kind && (
-            <span className="rounded bg-default-100 px-1.5 py-0.5">
+            // default-600: AA on default-100 at 12 px, in both themes.
+            <span className="rounded bg-default-100 px-1.5 py-0.5 text-default-600">
               {t(`dataSync.kind.${card.kind}`, { defaultValue: card.kind })}
             </span>
           )}
@@ -429,6 +432,103 @@ export function BackupCheckbox({
   );
 }
 
+/** One side of a drawn comparison: a device, or this device at one moment. */
+interface ComparedSide {
+  key: string;
+  /** Whose value it is, on top of its card. */
+  name: string;
+  /** This device's own card, drawn as the rule editor draws it. */
+  self?: boolean;
+  value: ReactNode;
+  /** The value in words, for a screen reader. */
+  text: string;
+}
+
+/**
+ * A small drawn comparison (spec §11.3): the value everyone last agreed on faint on top, lines in
+ * data sync's colour from it down to a card per side — this device's first, drawn as the rule
+ * editor draws it — each holding its value. The drawing is not read out: the same comparison, in
+ * the same order, is a list of words for a screen reader.
+ */
+function ComparisonDrawing({
+  base,
+  sides,
+  testId,
+}: {
+  base?: { label: string; value: ReactNode; text: string };
+  sides: ComparedSide[];
+  testId?: string;
+}) {
+  const columns = Math.max(sides.length, 1);
+
+  return (
+    <div className="text-xs" data-testid={testId}>
+      <dl className="sr-only">
+        {base && (
+          <>
+            <dt>{base.label}</dt>
+            <dd>{base.text}</dd>
+          </>
+        )}
+        {sides.map((side) => (
+          <Fragment key={side.key}>
+            <dt>{side.name}</dt>
+            <dd>{side.text}</dd>
+          </Fragment>
+        ))}
+      </dl>
+      <div aria-hidden data-testid="data-sync-comparison-drawing">
+        {base && (
+          <>
+            <div className="flex min-w-0 items-center justify-center gap-1.5">
+              <span className="shrink-0 text-[11px] text-default-500">{base.label}</span>
+              <span className="min-w-0">{base.value}</span>
+            </div>
+            {/* From the value agreed on to each side's own. */}
+            <svg className="block h-3 w-full" preserveAspectRatio="none" viewBox="0 0 100 12">
+              {sides.map((side, index) => (
+                <line
+                  key={side.key}
+                  className={edgeStyles.sync.stroke}
+                  strokeLinecap="round"
+                  strokeWidth={1.5}
+                  vectorEffect="non-scaling-stroke"
+                  x1={50}
+                  x2={((index + 0.5) / columns) * 100}
+                  y1={1}
+                  y2={11}
+                />
+              ))}
+            </svg>
+          </>
+        )}
+        <div
+          className="grid gap-2"
+          style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+        >
+          {sides.map((side) => (
+            <div
+              key={side.key}
+              className={`min-w-0 rounded-xl border px-2 py-1.5 ${
+                side.self ? "border-primary bg-primary-50" : "border-default-300 bg-content1"
+              }`}
+              data-side={side.self ? "self" : "other"}
+            >
+              <p
+                className={`truncate text-[11px] font-medium ${side.self ? "text-primary-700" : syncText}`}
+                title={side.name}
+              >
+                {side.name}
+              </p>
+              <div className="mt-0.5 min-w-0">{side.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Last agreed (faint), this device, and each other device, for one field. */
 function Comparison({
   outcome,
@@ -441,37 +541,33 @@ function Comparison({
   const { t } = useTranslation();
 
   return (
-    <dl
-      className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 text-xs"
-      data-testid="data-sync-inbox-comparison"
-    >
-      {outcome.base && (
-        <>
-          <dt className="text-default-500">{t("dataSync.inbox.card.lastAgreed")}</dt>
-          <dd>
-            <DisplayValue faint value={outcome.base} />
-          </dd>
-        </>
-      )}
-      <dt className="font-medium">{t("dataSync.thisDevice")}</dt>
-      <dd>
-        <DisplayValue value={outcome.local} />
-      </dd>
-      {others.map((other) => (
-        <Other key={other.name} name={other.name} value={other.value} />
-      ))}
-    </dl>
-  );
-}
-
-function Other({ name, value }: { name: string; value?: DataSyncFieldOutcome["remote"] }) {
-  return (
-    <>
-      <dt className={`font-medium ${syncText}`}>{name}</dt>
-      <dd>
-        <DisplayValue value={value} />
-      </dd>
-    </>
+    <ComparisonDrawing
+      base={
+        outcome.base
+          ? {
+              label: t("dataSync.inbox.card.lastAgreed"),
+              value: <DisplayValue faint value={outcome.base} />,
+              text: displayText(t, outcome.base),
+            }
+          : undefined
+      }
+      sides={[
+        {
+          key: "self",
+          name: t("dataSync.thisDevice"),
+          self: true,
+          value: <DisplayValue value={outcome.local} />,
+          text: displayText(t, outcome.local),
+        },
+        ...others.map((other) => ({
+          key: `peer:${other.name}`,
+          name: other.name,
+          value: <DisplayValue value={other.value} />,
+          text: displayText(t, other.value),
+        })),
+      ]}
+      testId="data-sync-inbox-comparison"
+    />
   );
 }
 
@@ -610,24 +706,28 @@ function ItemBody({
   const entity = payload.entityName;
 
   switch (item.type) {
-    case DataSyncInboxItemType.TypeChange:
+    case DataSyncInboxItemType.TypeChange: {
+      const typeName = (subtype?: string | null) =>
+        t(`PropertyType.${subtype ?? ""}`, { defaultValue: subtype ?? "" });
+      const localType = typeName(payload.localSubtype ?? payload.subtype);
+      const remoteType = typeName(payload.remoteSubtype);
+
       return (
         <div className="space-y-2 text-xs">
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
-            <dt className="font-medium">{t("dataSync.thisDevice")}</dt>
-            <dd>
-              {t(`PropertyType.${payload.localSubtype ?? payload.subtype ?? ""}`, {
-                defaultValue: payload.localSubtype ?? payload.subtype ?? "",
-              })}
-            </dd>
-            <dt className={`font-medium ${syncText}`}>{name}</dt>
-            <dd>
-              {t(`PropertyType.${payload.remoteSubtype ?? ""}`, {
-                defaultValue: payload.remoteSubtype ?? "",
-              })}
-            </dd>
-          </dl>
-          <p className="text-default-500">{t("dataSync.inbox.card.frozen", { entity })}</p>
+          <ComparisonDrawing
+            sides={[
+              {
+                key: "self",
+                name: t("dataSync.thisDevice"),
+                self: true,
+                value: localType,
+                text: localType,
+              },
+              { key: "peer", name, value: remoteType, text: remoteType },
+            ]}
+            testId="data-sync-inbox-types"
+          />
+          <p className="text-default-500">{t("dataSync.inbox.card.frozen", { entity, name })}</p>
           <button
             aria-expanded={expanded}
             className={linkButtonClass}
@@ -670,6 +770,7 @@ function ItemBody({
           )}
         </div>
       );
+    }
     case DataSyncInboxItemType.DeletedThere:
       return (
         <p className="text-xs">
@@ -737,16 +838,23 @@ function ItemBody({
                   ? t("dataSync.inbox.card.option", { label: displayText(t, field.base) })
                   : pathLabel(t, field.path)}
               </p>
-              <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
-                <dt className="text-default-500">{t("dataSync.inbox.card.synced")}</dt>
-                <dd>
-                  <DisplayValue value={field.base} />
-                </dd>
-                <dt className="font-medium">{t("dataSync.inbox.card.now")}</dt>
-                <dd>
-                  <DisplayValue value={field.local} />
-                </dd>
-              </dl>
+              {/* What sync set, faint, above what this device has now. */}
+              <ComparisonDrawing
+                base={{
+                  label: t("dataSync.inbox.card.synced"),
+                  value: <DisplayValue faint value={field.base} />,
+                  text: displayText(t, field.base),
+                }}
+                sides={[
+                  {
+                    key: "now",
+                    name: t("dataSync.inbox.card.now"),
+                    self: true,
+                    value: <DisplayValue value={field.local} />,
+                    text: displayText(t, field.local),
+                  },
+                ]}
+              />
             </div>
           ))}
           {payload.detail === REAPPLY_IN_USE && (

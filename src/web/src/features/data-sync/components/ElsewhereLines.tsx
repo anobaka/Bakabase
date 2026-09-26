@@ -15,10 +15,32 @@ import { smallButtonClass } from "./common";
  * says how to get there.
  */
 
+/**
+ * Where decisions another device holds are taken, where this window cannot switch to it: on
+ * that device, in its own window — and, where this window has the Devices page to pair from
+ * (`pairable`, from {@link useOpenPeerDataSync}), how it could switch to it.
+ */
+export function DecideThereHint({ name, pairable }: { name: string; pairable: boolean }) {
+  const { t } = useTranslation();
+
+  return (
+    <span className="text-default-500" data-testid="data-sync-decide-there">
+      {t("dataSync.link.decideThere", { name })}
+      {pairable
+        ? ` ${t("dataSync.link.switchNeedsManagement", {
+            name,
+            mode: t("federation.mode"),
+            page: t("federation.devices.title"),
+          })}`
+        : ""}
+    </span>
+  );
+}
+
 export default function ElsewhereLines({ peers }: { peers: SyncPeer[] }) {
   const { t } = useTranslation();
   const lines = elsewhereLines(t, peers);
-  const { canOpen, open } = useOpenPeerDataSync(lines.length > 0);
+  const { canOpen, open, canPair } = useOpenPeerDataSync(lines.length > 0);
   const [error, setError] = useState<string>();
 
   if (!lines.length) return null;
@@ -48,8 +70,8 @@ export default function ElsewhereLines({ peers }: { peers: SyncPeer[] }) {
                 {t("dataSync.inbox.elsewhere.open", { name: line.name })}
               </button>
             ) : (
-              <span className="text-xs text-default-500">
-                {t("dataSync.inbox.elsewhere.howTo", { name: line.name })}
+              <span className="text-xs">
+                <DecideThereHint name={line.name} pairable={canPair} />
               </span>
             )}
           </li>

@@ -232,7 +232,18 @@ describe("every definition and how it syncs", () => {
       data: [{ id: 3, name: "Archives" }],
     } as never);
     render(<EntitySyncList actions={recorded.actions} version={1} />);
-    fireEvent.click(screen.getByRole("tab", { name: "dataSync.kind.extensionGroup" }));
+    // The kinds are buttons pressed one at a time, not tabs without a tab panel.
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    expect(screen.getByRole("group", { name: "dataSync.entity.kinds" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "dataSync.kind.customProperty" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "dataSync.kind.extensionGroup" }));
+    expect(screen.getByRole("button", { name: "dataSync.kind.extensionGroup" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     await waitFor(() => expect(screen.getByText("Archives")).toBeInTheDocument());
     expect(dataSyncApi.entities).toHaveBeenLastCalledWith("extensionGroup");

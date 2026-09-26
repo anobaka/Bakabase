@@ -17,6 +17,7 @@ import {
   readLane,
   receiveLane,
   receivePhrase,
+  sentences,
   syncIssueOf,
 } from "../viewModels";
 
@@ -110,30 +111,46 @@ export const spokeLabel = (t: TFunction, peer: SyncPeer, now?: number) => {
       }),
     );
 
-  return parts.filter(Boolean).join(". ");
+  return sentences(t, parts);
 };
+
+/**
+ * What waits for a decision about a device, for a screen reader: here, unless its status line
+ * already says so, and on the device itself.
+ */
+const waitingParts = (t: TFunction, peer: SyncPeer, now?: number) => [
+  // Said once: the status already says it when that is what it is about.
+  peer.openItems > 0 && linkStatus(t, peer, now).code !== "NeedsYou"
+    ? t("dataSync.diagram.openItems", { count: peer.openItems })
+    : undefined,
+  peer.attention?.openDecisions
+    ? t("dataSync.status.NeedsYouThere", {
+        name: peer.name,
+        count: peer.attention.openDecisions,
+      })
+    : undefined,
+];
 
 /** What a card says, for a screen reader: its name, its status and what waits for a decision. */
-const cardLabel = (t: TFunction, peer: SyncPeer, now?: number) => {
-  const status = linkStatus(t, peer, now);
+const cardLabel = (t: TFunction, peer: SyncPeer, now?: number) =>
+  sentences(t, [peer.name, linkStatus(t, peer, now).text, ...waitingParts(t, peer, now)]);
 
-  return [
-    peer.name,
-    status.text,
-    // Said once: the status already says it when that is what it is about.
-    peer.openItems > 0 && status.code !== "NeedsYou"
-      ? t("dataSync.diagram.openItems", { count: peer.openItems })
-      : undefined,
-    peer.attention?.openDecisions
-      ? t("dataSync.status.NeedsYouThere", {
-          name: peer.name,
-          count: peer.attention.openDecisions,
-        })
-      : undefined,
-  ]
-    .filter(Boolean)
-    .join(". ");
-};
+/**
+ * What a row of the narrow list says, for a screen reader: its line both ways, and what waits for
+ * a decision, as the drawing's card says it — the row's own name hides the bubbles' labels.
+ */
+const rowLabel = (t: TFunction, peer: SyncPeer, now?: number) =>
+  sentences(t, [spokeLabel(t, peer, now), ...waitingParts(t, peer, now)]);
+
+/**
+ * How wide a device's name may be on its card: from beside its glyph to the card's right padding.
+ * The status dot sits above the name's line in the top-right corner, and the bubbles of what
+ * waits on the top-left corner, so neither is ever drawn over it.
+ */
+export const PEER_NAME_W = PEER_W - 58;
+
+/** Where a card's status dot sits, from the card's top-right corner: above the name's line. */
+export const STATUS_DOT = { right: 13, top: 11, r: 4.5 };
 
 export default function SyncLinksDiagram({
   peers,
@@ -242,7 +259,7 @@ export default function SyncLinksDiagram({
         peers.map((peer) => ({
           id: peer.nodeId,
           name: peer.name,
-          maxWidth: PEER_W - 58,
+          maxWidth: PEER_NAME_W,
           fontSize: 13 * SEMIBOLD,
         })),
       ),
@@ -269,8 +286,9 @@ export default function SyncLinksDiagram({
       {/* What the drawing shows, for a screen reader: every device, both ways. */}
       <ul className="sr-only" data-testid="data-sync-diagram-summary">
         <li>
-          {t("dataSync.diagram.selfSummary", { name: self.name })}
-          {counts ? `: ${counts}` : ""}
+          {counts
+            ? t("dataSync.diagram.selfSummaryCounts", { name: self.name, counts })
+            : t("dataSync.diagram.selfSummary", { name: self.name })}
         </li>
         {peers.map((peer) => (
           <li key={peer.nodeId}>{spokeLabel(t, peer, now)}</li>
@@ -407,7 +425,8 @@ function SelfCard({
       {counts.slice(0, 2).map((line, index) => (
         <text
           key={line}
-          className="fill-default-500"
+          // default-600: AA on the card's primary-50 at 11 px, in both themes.
+          className="fill-default-600"
           fontSize={11}
           x={textX}
           y={y + 56 + index * 15}
@@ -661,7 +680,14 @@ function PeerCard({
       <g transform={`translate(${x + 23} ${box.cy})`}>
         <KindGlyph className="stroke-default-600" kind={kindOf(peer)} />
       </g>
-      <text className="fill-foreground" fontSize={13} fontWeight={600} x={textX} y={box.cy - 4}>
+      <text
+        className="fill-foreground"
+        data-testid="data-sync-peer-name"
+        fontSize={13}
+        fontWeight={600}
+        x={textX}
+        y={box.cy - 4}
+      >
         {label}
       </text>
       <text className="fill-default-500" fontSize={11} x={textX} y={box.cy + 13}>
@@ -669,10 +695,10 @@ function PeerCard({
       </text>
       <circle
         className={toneFill[status.tone]}
-        cx={x + box.w - 13}
-        cy={y + 13}
+        cx={x + box.w - STATUS_DOT.right}
+        cy={y + STATUS_DOT.top}
         data-status-dot={status.tone}
-        r={4.5}
+        r={STATUS_DOT.r}
         strokeWidth={1.5}
       />
       {peer.openItems > 0 && (
@@ -694,10 +720,11 @@ function PeerCard({
         </g>
       )}
       {waiting > 0 && (
+        // Beside what waits here, on the same corner: both counts together, never over the name.
         <g
           aria-hidden
           data-testid="data-sync-waits-there"
-          transform={`translate(${x + box.w - 30} ${y + 13})`}
+          transform={`translate(${x + (peer.openItems > 0 ? 24 : 4)} ${y + 2})`}
         >
           <circle className="fill-content1 stroke-warning" r={8} strokeWidth={1.4} />
           <text
@@ -901,7 +928,7 @@ function DiagramList({
           {t("dataSync.thisDevice")}
           {self.sharingEnabled ? ` · ${t("dataSync.diagram.shares")}` : ""}
         </p>
-        {selfLine && <p className="text-xs text-default-500">{selfLine}</p>}
+        {selfLine && <p className="text-xs text-default-600">{selfLine}</p>}
       </div>
       <ul className="space-y-2">
         {peers.map((peer) => {
@@ -913,7 +940,7 @@ function DiagramList({
           return (
             <li key={peer.nodeId}>
               <button
-                aria-label={spokeLabel(t, peer, now)}
+                aria-label={rowLabel(t, peer, now)}
                 aria-pressed={selectedId === peer.nodeId}
                 className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left text-sm transition hover:bg-default-100 ${
                   selectedId === peer.nodeId ? "border-primary" : "border-default-200"

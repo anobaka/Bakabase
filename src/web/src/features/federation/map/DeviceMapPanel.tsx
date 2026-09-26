@@ -820,7 +820,8 @@ function SharingSection({ context, node }: { context: PanelContext; node: MapNod
               title: t("federation.devices.remove"),
               description: t("federation.devices.removeConfirm", { name: peer.label }),
               action: () => federationPeerApi.remove(peer.nodeId),
-              refresh: ["sharing"],
+              // Removing it also forgets this device's data sync link to it.
+              refresh: ["sharing", "dataSync"],
             })
           }
         >

@@ -57,5 +57,12 @@ export function useOpenPeerDataSync(wanted: boolean) {
     [inConsole],
   );
 
-  return { canOpen, open };
+  /**
+   * Whether this window has the Devices page this computer pairs from (its own window, or the
+   * desktop app's window showing a server it manages): where it does, a device it cannot switch
+   * to yet can be paired with for management first.
+   */
+  const canPair = inConsole || own;
+
+  return { canOpen, open, canPair };
 }

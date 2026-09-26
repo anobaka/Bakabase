@@ -24,14 +24,22 @@ import { DataSyncLinkMode, DataSyncLinkState } from "@/sdk/constants";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) =>
-      options
+      // How English joins the parts of a label, so a label reads as it will.
+      (
+        ({
+          "dataSync.a11y.sentenceBreak": ". ",
+          "dataSync.a11y.clauseBreak": ", ",
+          "dataSync.a11y.listBreak": ", ",
+        }) as Record<string, string | undefined>
+      )[key] ??
+      (options
         ? [
             key,
             ...Object.entries(options)
               .filter(([name, value]) => name !== "defaultValue" && value !== undefined)
               .map(([, value]) => String(value)),
           ].join(" ")
-        : key,
+        : key),
     i18n: { language: "en", changeLanguage: vi.fn(), exists: () => false },
   }),
   initReactI18next: { type: "3rdParty", init: vi.fn() },
@@ -424,7 +432,9 @@ describe("the diagram", () => {
     const items = within(screen.getByTestId("data-sync-diagram-summary")).getAllByRole("listitem");
 
     expect(items).toHaveLength(5);
-    expect(items[0]).toHaveTextContent("dataSync.diagram.selfSummary This PC");
+    expect(items[0]).toHaveTextContent(
+      "dataSync.diagram.selfSummaryCounts This PC dataSync.diagram.count.customProperty 100 · dataSync.diagram.count.extensionGroup 8",
+    );
     expect(items[2]).toHaveTextContent(
       "federation.map.direction.sync.in.active NAS. federation.map.direction.sync.out.active NAS. federation.map.sync.mode.twoWay",
     );
@@ -450,9 +460,82 @@ describe("the diagram", () => {
     expect(rows).toHaveLength(4);
     expect(rows[1]).toHaveAttribute("data-sync-peer", "node-nas");
     expect(rows[1].querySelector("[data-in]")).toHaveAttribute("data-in", "active");
+    // The row's name says what its bubbles show: what needs you here (its status says so), and
+    // what waits there.
+    expect(rows[1]).toHaveAccessibleName(
+      expect.stringContaining("dataSync.status.NeedsYou 9. dataSync.status.NeedsYouThere NAS 2"),
+    );
     fireEvent.click(rows[1], { detail: 1 });
     expect(onSelect).toHaveBeenLastCalledWith("node-nas", "pointer", "card");
     expect(screen.getByTestId("data-sync-add")).toBeInTheDocument();
+  });
+
+  it("keeps a name clear of the status dot and of the bubbles of what waits", () => {
+    const attention = {
+      headless: true,
+      openDecisions: 2,
+      pausedLinks: 0,
+      restorePending: false,
+      awaitingReview: 0,
+    };
+    const long = "Living-room NAS in the attic cupboard";
+
+    render(
+      <SyncLinksDiagram
+        initialWidth={1100}
+        now={NOW}
+        peers={[
+          syncPeerFromLink(link(1, "node-nas", long, { openItems: 3, peerAttention: attention })),
+          syncPeerFromLink(link(2, "node-hub", "Living-room NAS", { peerAttention: attention })),
+        ]}
+        self={self}
+        onSelect={vi.fn()}
+      />,
+    );
+    const card = (nodeId: string) =>
+      screen
+        .getAllByTestId("data-sync-peer")
+        .find((item) => item.getAttribute("data-sync-peer") === nodeId)!;
+    const name = (nodeId: string) => within(card(nodeId)).getByTestId("data-sync-peer-name");
+    const nameStart = (nodeId: string) => Number(name(nodeId).getAttribute("x"));
+    const nameEnd = (nodeId: string) =>
+      nameStart(nodeId) + textWidth(name(nodeId).textContent!, 13 * SEMIBOLD);
+    const at = (element: Element) =>
+      /translate\(([\d.-]+) ([\d.-]+)\)/.exec(element.getAttribute("transform")!)!.slice(1).map(Number);
+    const dotBottom = (nodeId: string) => {
+      const dot = card(nodeId).querySelector("[data-status-dot]")!;
+
+      // Its stroke is 1.5 wide.
+      return Number(dot.getAttribute("cy")) + Number(dot.getAttribute("r")) + 0.75;
+    };
+    // The top of the name's tallest letters: 13 px text, ascenders at about 0.75 em.
+    const nameTop = (nodeId: string) => Number(name(nodeId).getAttribute("y")) - 13 * 0.75;
+    const frame = (nodeId: string) =>
+      card(nodeId).querySelector("rect[width][height]:not([class*='stroke-focus'])")!;
+    const cardLeft = (nodeId: string) => Number(frame(nodeId).getAttribute("x"));
+    const cardRight = (nodeId: string) =>
+      cardLeft(nodeId) + Number(frame(nodeId).getAttribute("width"));
+
+    // A name as long as a hub's usually is fits whole; a longer one is shortened within the
+    // card. The dot sits above the name's line, never on it.
+    expect(name("node-hub")).toHaveTextContent(/^Living-room NAS$/);
+    expect(name("node-nas").textContent).not.toBe(long);
+    for (const nodeId of ["node-nas", "node-hub"]) {
+      expect(nameEnd(nodeId)).toBeLessThanOrEqual(cardRight(nodeId) - 10);
+      expect(nameTop(nodeId) - dotBottom(nodeId)).toBeGreaterThanOrEqual(1.5);
+    }
+    // What waits there sits beside what waits here (radii 8 and 9), both left of the name.
+    const [hereX, hereY] = at(within(card("node-nas")).getByTestId("data-sync-open-items"));
+    const [thereX, thereY] = at(within(card("node-nas")).getByTestId("data-sync-waits-there"));
+
+    expect(thereY).toBe(hereY);
+    expect(thereX - hereX).toBeGreaterThanOrEqual(8 + 9 + 2);
+    expect(thereX + 8).toBeLessThan(nameStart("node-nas"));
+    // Alone, it takes the corner where what waits here would be.
+    expect(hereX - cardLeft("node-nas")).toBe(4);
+    expect(at(within(card("node-hub")).getByTestId("data-sync-waits-there"))[0]).toBe(
+      cardLeft("node-hub") + 4,
+    );
   });
 
   it("names the modes on the line the way the map does: mutual Follow is both ways", () => {

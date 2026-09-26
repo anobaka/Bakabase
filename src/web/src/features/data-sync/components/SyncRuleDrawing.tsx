@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type { KeyboardEvent, ReactNode } from "react";
 import type { DataSyncPanelActions } from "../hooks/useDataSyncActions";
 import type { LinkEditor, ModeName, StatusLine, SyncPeer } from "../viewModels";
+import type { RemoteAccessMode } from "@/sdk/constants";
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,10 +20,13 @@ import { useMenuKeyboard } from "../hooks/useMenuKeyboard";
 import { useOpenPeerDataSync } from "../hooks/useOpenPeerDataSync";
 import {
   canStartAnyway,
+  clauses,
+  codeTurnsOnConfirmation,
   dataSyncKinds,
   linkEditor,
   linkNotes,
   linkStatus,
+  listed,
   modeValue,
   offersAskToKeepInStep,
   orderKinds,
@@ -32,11 +36,12 @@ import {
   sharingNeeded,
   stillReadsWhileOff,
   toggleKind,
-  turnsOnWarning,
+  turnOnSharingInput,
   twoWayConfirmation,
 } from "../viewModels";
 
 import { linkButtonClass, smallButtonClass, StatusDot, syncText, toneText } from "./common";
+import { DecideThereHint } from "./ElsewhereLines";
 
 import { edgeStyles, KindBadgeGlyph } from "@/features/federation/map/DeviceMapCanvas";
 import {
@@ -44,7 +49,6 @@ import {
   DataSyncLinkState,
   DataSyncPauseReason,
   DataSyncResumeAction,
-  RemoteAccessMode,
 } from "@/sdk/constants";
 
 /*
@@ -116,17 +120,13 @@ export default function SyncRuleDrawing({
   const name = peer.name;
   const status = linkStatus(t, peer, now);
   const notes = linkNotes(t, peer, now);
-  const radioName = useId();
+  const modeLegendId = useId();
 
   const own = { sharingEnabled, remoteAccessMode };
   /** Sharing (and remote access) this device must turn on before the other can read it. */
   const mustTurnOn = sharingNeeded(own);
   /** Turns on what the other device needs to read this one: sharing, and remote access if off. */
-  const turnOnSharing = () =>
-    dataSyncApi.setSharing({
-      enabled: true,
-      enablePairedRemoteAccess: remoteAccessMode === RemoteAccessMode.Disabled,
-    });
+  const turnOnSharing = () => dataSyncApi.setSharing(turnOnSharingInput(own));
   /**
    * Who a new link or copy goes to: the device by its id, and — where it is no device the server
    * knows yet (one found nearby on the device map) — the address its request goes to.
@@ -250,9 +250,7 @@ export default function SyncRuleDrawing({
       return;
     }
     actions.confirm({
-      title: t("dataSync.sharing.onTitle"),
-      description: t("dataSync.invitation.needsSharingFirst", { name }),
-      warning: turnsOnWarning(t, own),
+      ...codeTurnsOnConfirmation(t, own, name),
       action: async () => {
         await turnOnSharing();
         if (actions.mounted.current) onCreateCode();
@@ -264,12 +262,10 @@ export default function SyncRuleDrawing({
   const receiveTarget = receiveToggleTarget(editor);
   const receiveAllowed =
     allowed(receiveTarget) && (receiveTarget !== "off" || peer.linkId !== undefined);
-  const receiveLabel = [
+  const receiveLabel = clauses(t, [
     receivePhrase(t, peer, name),
     editor.badge ? t(`dataSync.mode.${editor.badge}`) : undefined,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  ]);
   const readLabel =
     editor.read === "active"
       ? t("federation.map.direction.sync.out.active", { name })
@@ -339,10 +335,15 @@ export default function SyncRuleDrawing({
       <ul className="sr-only" data-testid="data-sync-rule-list">
         <li>{receiveLabel}</li>
         <li>
-          {readLabel}
           {editor.read === "active" && peer.peerKinds?.length
-            ? `: ${peer.peerKinds.map((kind) => t(`dataSync.kind.${kind}`, { defaultValue: kind })).join(", ")}`
-            : ""}
+            ? t("dataSync.a11y.labelled", {
+                label: readLabel,
+                text: listed(
+                  t,
+                  peer.peerKinds.map((kind) => t(`dataSync.kind.${kind}`, { defaultValue: kind })),
+                ),
+              })
+            : readLabel}
         </li>
       </ul>
       <div
@@ -423,27 +424,41 @@ export default function SyncRuleDrawing({
         </div>
       )}
 
-      <fieldset className="space-y-1.5">
-        <legend className="sr-only">{t("dataSync.mode.legend", { name })}</legend>
+      <div className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          {(["off", "follow", "twoWay"] as const).map((mode) => (
-            <label
-              key={mode}
-              className={`inline-flex items-center gap-1.5 text-sm ${allowed(mode) ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`}
-            >
-              <input
-                checked={editor.mode === mode}
-                className="accent-secondary"
+          {/*
+           * The modes as buttons pressed one at a time, never radios: a radio group selects as
+           * the arrow keys move through it, and each of these changes the link at once. Only
+           * Enter, Space or a click changes it; the arrow keys move nothing here.
+           */}
+          <div
+            aria-labelledby={modeLegendId}
+            className="inline-flex flex-wrap rounded-lg border border-default-300 p-0.5"
+            data-testid="data-sync-modes"
+            role="group"
+          >
+            <span className="sr-only" id={modeLegendId}>
+              {t("dataSync.mode.legend", { name })}
+            </span>
+            {(["off", "follow", "twoWay"] as const).map((mode) => (
+              <button
+                key={mode}
+                aria-pressed={editor.mode === mode}
+                className={`rounded-md px-2.5 py-1 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed ${
+                  editor.mode === mode
+                    ? `bg-secondary/15 font-medium ${syncText}`
+                    : "hover:bg-default-100 disabled:opacity-60"
+                }`}
+                data-mode={mode}
                 data-testid={`data-sync-mode-${mode}`}
                 disabled={actions.busy || !allowed(mode)}
-                name={radioName}
-                type="radio"
-                value={mode}
-                onChange={() => setMode(mode)}
-              />
-              {t(`dataSync.mode.${mode}`)}
-            </label>
-          ))}
+                type="button"
+                onClick={() => setMode(mode)}
+              >
+                {t(`dataSync.mode.${mode}`)}
+              </button>
+            ))}
+          </div>
           {copyOnceOffered && (
             <button
               className={`${smallButtonClass} ml-auto`}
@@ -461,7 +476,7 @@ export default function SyncRuleDrawing({
             {t("dataSync.manageElsewhere")}
           </p>
         )}
-      </fieldset>
+      </div>
 
       <StatusBlock
         actions={actions}
@@ -978,7 +993,7 @@ function StatusBlock({
                 "data-sync-open-there",
               )
             ) : (
-              <span className="text-default-500">{t("dataSync.link.decideThere", { name })}</span>
+              <DecideThereHint name={name} pairable={elsewhere.canPair} />
             ))}
         </div>
       ))}
@@ -1037,7 +1052,14 @@ const pauseHint = (t: TFunction, peer: SyncPeer) => {
         ? t("dataSync.pause.restoredHint", { name: peer.name })
         : t("dataSync.pause.resetHint", { name: peer.name });
     case DataSyncPauseReason.PeerIdentityDuplicated:
-      return t("dataSync.pause.duplicatedHint", { name: peer.name });
+      // The way to the reset, in the words the Devices page uses for it, so they cannot drift.
+      return t("dataSync.pause.duplicatedHint", {
+        name: peer.name,
+        mode: t("federation.mode"),
+        page: t("federation.devices.title"),
+        panel: t("federation.identity.title"),
+        action: t("federation.identity.reset"),
+      });
     case DataSyncPauseReason.TooManyDecisions:
       return t("dataSync.pause.tooManyHint");
     default:

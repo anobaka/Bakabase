@@ -939,11 +939,17 @@ The version of ffmpeg is not limited.</value>
   <data name="DataSync_Notify_NeedsYou_Title" xml:space="preserve">
     <value>{0}: {1} changes need you</value>
   </data>
+  <data name="DataSync_Notify_NeedsYou_Title_One" xml:space="preserve">
+    <value>{0}: {1} change needs you</value>
+  </data>
   <data name="DataSync_Notify_NeedsYou_Body" xml:space="preserve">
     <value>Open Needs you in Data sync to decide.</value>
   </data>
   <data name="DataSync_Notify_FollowOverride_Title" xml:space="preserve">
     <value>{1} changes on this device were replaced by {0}'s</value>
+  </data>
+  <data name="DataSync_Notify_FollowOverride_Title_One" xml:space="preserve">
+    <value>{1} change on this device was replaced by {0}'s</value>
   </data>
   <data name="DataSync_Notify_FollowOverride_Body" xml:space="preserve">
     <value>This device receives {0}'s definitions, so its changes win over changes made here.</value>
@@ -969,14 +975,20 @@ The version of ffmpeg is not limited.</value>
   <data name="DataSync_Notify_FirstSync_Title" xml:space="preserve">
     <value>First sync with {0}: {1} created, {2} linked, {3} need you</value>
   </data>
+  <data name="DataSync_Notify_FirstSync_Title_One" xml:space="preserve">
+    <value>First sync with {0}: {1} created, {2} linked, {3} needs you</value>
+  </data>
   <data name="DataSync_Notify_FirstSync_Body" xml:space="preserve">
     <value>You can undo it from the sync history.</value>
   </data>
   <data name="DataSync_Notify_Attention_Title" xml:space="preserve">
     <value>{0} has {1} changes waiting for a decision</value>
   </data>
+  <data name="DataSync_Notify_Attention_Title_One" xml:space="preserve">
+    <value>{0} has {1} change waiting for a decision</value>
+  </data>
   <data name="DataSync_Notify_Attention_Body" xml:space="preserve">
-    <value>They wait on {0}: open its Data sync, or switch to it from this device's Devices page.</value>
+    <value>They wait on {0}: decide them in its own Data sync, on {0} itself or from a window that manages it.</value>
   </data>
   <data name="DataSync_Notify_NewReader_Title" xml:space="preserve">
     <value>{0} started syncing definitions with this device</value>
@@ -997,7 +1009,7 @@ The version of ffmpeg is not limited.</value>
     <value>it no longer offers any {0}</value>
   </data>
   <data name="DataSync_Notify_PauseReason_PeerIdentityDuplicated" xml:space="preserve">
-    <value>it reused a version it had already published</value>
+    <value>it reused a version it had already published (a copied or restored data folder)</value>
   </data>
   <data name="DataSync_Notify_PauseReason_TooManyDecisions" xml:space="preserve">
     <value>too many changes wait for you</value>

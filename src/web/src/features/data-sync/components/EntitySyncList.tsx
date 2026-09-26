@@ -119,17 +119,23 @@ export default function EntitySyncList({
   return (
     <div className="space-y-3" data-testid="data-sync-entities">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div aria-label={t("dataSync.entity.kinds")} className="flex gap-1" role="tablist">
+        {/* Which kind is listed: buttons pressed one at a time, the list below them as it is. */}
+        <div
+          aria-label={t("dataSync.entity.kinds")}
+          className="flex gap-1"
+          data-testid="data-sync-entity-kinds"
+          role="group"
+        >
           {dataSyncKinds.map((item) => (
             <button
               key={item}
-              aria-selected={kind === item}
+              aria-pressed={kind === item}
               className={`rounded-md px-3 py-1.5 text-sm ${
                 kind === item
                   ? "bg-primary/10 font-medium text-primary-700"
                   : "hover:bg-default-100"
               }`}
-              role="tab"
+              data-kind={item}
               type="button"
               onClick={() => {
                 setKind(item);

@@ -5,11 +5,18 @@ using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Services;
+using Bakabase.Modules.Federation.Identity;
+using Bakabase.Modules.Federation.Peers;
+using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components.Properties.Choice;
 using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.StandardValue.Extensions;
+using Bakabase.Service.Controllers;
+using Bakabase.Tests.Federation;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -187,6 +194,46 @@ public class DataSyncTwoHostReviewTests
         Assert.AreEqual((DataSyncLinkState.AwaitingAccess, DataSyncLinkInitiator.Peer), (link.State, link.Initiator));
         Assert.AreEqual(("ReadBackFailed", nameof(DataSyncPeerErrorCode.Unreachable)),
             (link.LastErrorCode, link.LastErrorDetail));
+    }
+
+    [TestMethod]
+    public async Task Removing_the_other_device_resets_the_link_to_it_and_the_map_forgets_it()
+    {
+        // B keeps in step with A both ways: its link is working, and A reads B.
+        await ApplyAsync(await PairTwoWayAsync(), []);
+        Assert.AreEqual(DataSyncLinkState.Active, (await _b.RequireLinkToAsync(_a)).State);
+        Assert.IsTrue((await _b.CallAsync(s => s.GetMapAsync(default))).Peers.Any(p => p.NodeId == _a.NodeId));
+
+        // "Remove device" on B (DELETE /federation/local/peers/{A}). RemovePeerAsync ends access both ways — in the
+        // Service, the same federation state data sync reads its grants from; here, the network's grants.
+        var grants = _b.Services.GetRequiredService<IDataSyncGrantService>();
+        await grants.RevokeAsync(_a.NodeId, default);
+        await grants.ForgetOutboundAsync(_a.NodeId, default);
+        using var directory = new FederationBrowsingControlTests.StateDirectory();
+        var store = new FederationStateStore(directory, directory);
+        using var leases = new GrantLeaseRegistry();
+        var peers = new FederationPeerService(store, new NodeIdentityProvider(store), leases, TimeProvider.System);
+        await using (var scope = _b.Services.GetRequiredService<IServiceScopeFactory>().CreateAsyncScope())
+        {
+            var controller = new FederationPeerController(peers, null!, null!, null!, null!, null!, null!, null!, null!,
+                null!, TimeProvider.System, null!, store)
+            {
+                ControllerContext = new ControllerContext
+                {
+                    HttpContext = new DefaultHttpContext { RequestServices = scope.ServiceProvider },
+                },
+            };
+            await controller.Remove(_a.NodeId, default);
+        }
+
+        // B's link is gone, as Reset leaves it: nothing blames A for no longer sharing, and the map draws nothing
+        // for A — no line, no request of B's own that ended.
+        Assert.AreEqual(0, (await _b.CallAsync(s => s.GetLinksAsync(default))).Count);
+        var map = await _b.CallAsync(s => s.GetMapAsync(default));
+        Assert.IsFalse(map.Peers.Any(p => p.NodeId == _a.NodeId), string.Join(", ", map.Peers.Select(p => p.NodeId)));
+        Assert.IsFalse(map.Outgoing.Any(o => o.NodeId == _a.NodeId));
+        // Every definition stays.
+        Assert.AreEqual("Genre", (await PropertiesAsync(_b)).Single().Name);
     }
 
     // ---- helpers -------------------------------------------------------------------------------------------------

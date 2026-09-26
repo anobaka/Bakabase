@@ -939,10 +939,16 @@
   <data name="DataSync_Notify_NeedsYou_Title" xml:space="preserve">
     <value>{0}：{1} 项更改待你决定</value>
   </data>
+  <data name="DataSync_Notify_NeedsYou_Title_One" xml:space="preserve">
+    <value>{0}：{1} 项更改待你决定</value>
+  </data>
   <data name="DataSync_Notify_NeedsYou_Body" xml:space="preserve">
     <value>请在「数据同步」的「待你决定」中处理。</value>
   </data>
   <data name="DataSync_Notify_FollowOverride_Title" xml:space="preserve">
+    <value>本机有 {1} 项更改被 {0} 的版本替换</value>
+  </data>
+  <data name="DataSync_Notify_FollowOverride_Title_One" xml:space="preserve">
     <value>本机有 {1} 项更改被 {0} 的版本替换</value>
   </data>
   <data name="DataSync_Notify_FollowOverride_Body" xml:space="preserve">
@@ -969,14 +975,20 @@
   <data name="DataSync_Notify_FirstSync_Title" xml:space="preserve">
     <value>与 {0} 首次同步：新建 {1}，关联 {2}，待你决定 {3}</value>
   </data>
+  <data name="DataSync_Notify_FirstSync_Title_One" xml:space="preserve">
+    <value>与 {0} 首次同步：新建 {1}，关联 {2}，待你决定 {3}</value>
+  </data>
   <data name="DataSync_Notify_FirstSync_Body" xml:space="preserve">
     <value>可以在同步记录中撤销。</value>
   </data>
   <data name="DataSync_Notify_Attention_Title" xml:space="preserve">
     <value>{0} 有 {1} 项更改在等待决定</value>
   </data>
+  <data name="DataSync_Notify_Attention_Title_One" xml:space="preserve">
+    <value>{0} 有 {1} 项更改在等待决定</value>
+  </data>
   <data name="DataSync_Notify_Attention_Body" xml:space="preserve">
-    <value>这些更改在 {0} 上等待：打开它的「数据同步」，或从本机的「设备」页面切换到它。</value>
+    <value>这些更改在 {0} 上等待：请在它自己的「数据同步」中决定——在 {0} 上，或在管理它的设备的窗口中。</value>
   </data>
   <data name="DataSync_Notify_NewReader_Title" xml:space="preserve">
     <value>{0} 开始与本机同步定义</value>
