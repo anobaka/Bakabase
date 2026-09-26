@@ -14,9 +14,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 
 /// <summary>One entity of an undo, as planned: what undo does to it, or why it refuses (§8.11).</summary>
+/// <param name="Setting">An entity setting's entry: what the entity's setting was before (§6.6).</param>
 internal sealed record DataSyncUndoStep(DataSyncEntityPreImage PreImage, DataSyncUndoAction Action,
     DataSyncUndoBlock? Blocked, int? ValueCount, bool SettingsMayReferenceIt, bool RecreatedGetsNewId,
-    bool Destructive)
+    bool Destructive, DataSyncEntitySettingPreImage? Setting = null)
 {
     public DataSyncUndoPreviewItem ToView() => new(PreImage.Kind, PreImage.LocalKey, PreImage.Name, Action, Blocked,
         ValueCount, SettingsMayReferenceIt, RecreatedGetsNewId);
@@ -69,13 +70,17 @@ public sealed class DataSyncUndoPlanner(IServiceScopeFactory scopes) : IDataSync
             return (log, [], new DataSyncProblem(DataSyncProblemCode.UndoNotAvailable, null));
         var document = DataSyncPreImageDocument.Read(log.PreImageJson);
 
-        // Newest-first per entity (v3.1 N15): a newer retained apply that is not undone owns the entity's state.
+        // Newest-first per entity (v3.1 N15): a newer retained apply that is not undone owns the entity's state, and a
+        // newer entity setting that is not undone owns how it syncs.
         var newer = new HashSet<int>();
+        var newerSettings = new HashSet<(string Kind, string LocalKey)>();
         foreach (var json in await s.Db.DataSyncApplyLogs.AsNoTracking()
                      .Where(l => l.Id > logId && l.UndoneAtUtc == null && l.Kind != DataSyncHistoryKind.Undo)
                      .Select(l => l.PreImageJson).ToListAsync(ct))
         {
-            foreach (var entity in DataSyncPreImageDocument.Read(json).Entities) newer.Add(entity.EntityId);
+            var later = DataSyncPreImageDocument.Read(json);
+            foreach (var entity in later.Entities) newer.Add(entity.EntityId);
+            foreach (var setting in later.EntitySettings ?? []) newerSettings.Add((setting.Kind, setting.LocalKey));
         }
 
         var steps = new List<DataSyncUndoStep>();
@@ -84,7 +89,37 @@ public sealed class DataSyncUndoPlanner(IServiceScopeFactory scopes) : IDataSync
             steps.Add(await PlanEntityAsync(s, entity, newer.Contains(entity.EntityId), ct));
         }
 
+        foreach (var setting in (document.EntitySettings ?? []).Reverse())
+        {
+            steps.Add(await PlanSettingAsync(s, setting, newerSettings.Contains((setting.Kind, setting.LocalKey)), ct));
+        }
+
         return (log, steps, null);
+    }
+
+    /// <summary>
+    /// An entity setting (§6.6) is undone by setting its state, shared <c>childrenLocal</c> and overlay back; refused
+    /// when the entity is gone, or a newer entity setting of it has not been undone.
+    /// </summary>
+    private static async Task<DataSyncUndoStep> PlanSettingAsync(DataSyncApplySession s,
+        DataSyncEntitySettingPreImage setting, bool newerSetting, CancellationToken ct)
+    {
+        var row = await s.Db.DataSyncEntities.AsNoTracking().SingleOrDefaultAsync(e =>
+            e.Kind == setting.Kind && e.LocalKey == setting.LocalKey && e.DeletedAtUtc == null, ct);
+        var adapter = s.Kinds.GetValueOrDefault(setting.Kind);
+        var name = setting.LocalKey;
+        if (row is not null && adapter is not null)
+        {
+            var entity = (await adapter.ReadAsync([row.LocalKey], ct)).SingleOrDefault();
+            if (entity is not null) name = adapter.Codec.NameOf(adapter.Codec.ReadLocal(entity.Content));
+        }
+
+        var preImage = new DataSyncEntityPreImage(setting.Kind, row?.Id ?? 0, setting.LocalKey, name,
+            DataSyncPreImageActions.EntitySetting, null, [], null);
+        DataSyncUndoBlock? blocked = row is null || adapter is null ? DataSyncUndoBlock.Missing
+            : newerSetting ? DataSyncUndoBlock.ChangedSinceImport
+            : null;
+        return new DataSyncUndoStep(preImage, DataSyncUndoAction.Revert, blocked, null, false, false, false, setting);
     }
 
     private static async Task<DataSyncUndoStep> PlanEntityAsync(DataSyncApplySession s, DataSyncEntityPreImage p,

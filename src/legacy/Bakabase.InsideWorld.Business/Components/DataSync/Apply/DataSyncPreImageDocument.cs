@@ -32,6 +32,12 @@ public static class DataSyncPreImageActions
 
     /// <summary>Its subtype was changed (Convert): undo converts it back.</summary>
     public const string TypeChanged = "typeChanged";
+
+    /// <summary>
+    /// How it syncs was set here (§6.6: its state, shared <c>childrenLocal</c> or overlay): undo sets it back from the
+    /// entry's <see cref="DataSyncPreImageDocument.EntitySettings"/>.
+    /// </summary>
+    public const string EntitySetting = "entitySetting";
 }
 
 /// <summary>One entity of a pre-image (version 2, §8.11): a diff for an update, whole content only where needed.</summary>
@@ -55,8 +61,13 @@ public sealed record DataSyncEntityPreImage(string Kind, int EntityId, string Lo
 /// <c>PreImageJson</c>, version 2 (§8.11): per entity what undo needs — child-level diffs for updates, the whole row
 /// only for deletes and type changes — and the identity operations (key moves) of the apply.
 /// </summary>
+/// <param name="EntitySettings">
+/// An <c>EntitySetting</c> entry's settings before the change (<c>entitySettings</c>, as
+/// <see cref="Runtime.DataSyncHistoryJson.WriteEntitySettingPreImage"/> writes it): such an entry has no
+/// <paramref name="Entities"/>.
+/// </param>
 public sealed record DataSyncPreImageDocument(int Version, IReadOnlyList<DataSyncEntityPreImage> Entities,
-    DataSyncIdentityPreImage? Identity)
+    DataSyncIdentityPreImage? Identity, IReadOnlyList<Runtime.DataSyncEntitySettingPreImage>? EntitySettings = null)
 {
     public const int CurrentVersion = 2;
 
@@ -82,7 +93,9 @@ public sealed record DataSyncPreImageDocument(int Version, IReadOnlyList<DataSyn
             version.GetValue<int>() != CurrentVersion) return Empty;
         try
         {
-            return document.Deserialize<DataSyncPreImageDocument>(DeepOptions) ?? Empty;
+            var read = document.Deserialize<DataSyncPreImageDocument>(DeepOptions) ?? Empty;
+            // An entity setting's entry names no entity of an apply (DataSyncHistoryJson).
+            return read.Entities is null ? read with { Entities = [] } : read;
         }
         catch (JsonException e)
         {
@@ -146,7 +159,8 @@ internal sealed class DataSyncApplyRecorder
             PeerName = link?.PeerName,
             TaskId = taskId,
             AppliedAtUtc = appliedAtUtc,
-            SummaryJson = DataSyncStoredJson.Write(Counts),
+            // The shapes the facade reads (DataSyncHistoryJson): the counts, and ResultJson with its items member.
+            SummaryJson = Runtime.DataSyncHistoryJson.WriteSummary(Counts),
             ResultJson = new DataSyncApplyResultDocument(Items, _changes.Values.ToList(), transactionMs, TakeTheirsLinkId)
                 .ToJson(),
             PreImageJson = preImage,

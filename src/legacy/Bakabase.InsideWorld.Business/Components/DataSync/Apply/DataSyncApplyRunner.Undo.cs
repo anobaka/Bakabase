@@ -74,6 +74,12 @@ public sealed partial class DataSyncApplyRunner
                 if (blocked is null) applied++;
             }
 
+            // An entity setting set back changes what the entity publishes, or whether it does: Refresh makes that a
+            // revision now, as the setting's own Refresh did (§6.6).
+            var settingKinds = steps.Zip(results).Where(x => x.First.Setting is not null && x.Second.Blocked is null)
+                .Select(x => x.First.PreImage.Kind).Distinct(StringComparer.Ordinal).ToList();
+            if (settingKinds.Count > 0) await s.Refresher.RefreshAsync(lease, settingKinds, false, ct);
+
             // Key moves (KeepWithEntity, rekeys, KeepRecordLinked) return to their pre-image owners — all of them or
             // none: the moves are saved one by one, and one taken back halfway could leave a key that no entity owns,
             // so a peer's record carrying it would bind as new (§5.3; undo never frees a key, §8.11).
@@ -195,6 +201,19 @@ public sealed partial class DataSyncApplyRunner
 
                 return null;
             }
+            case DataSyncPreImageActions.EntitySetting:
+            {
+                // How it syncs goes back (§6.6); the Refresh after the steps makes a shared change a revision, as the
+                // setting's own did.
+                if (row.DeletedAtUtc is not null || step.Setting is not { } setting) return DataSyncUndoBlock.Missing;
+                await s.Store.SetEntityStateAsync(kind, row.LocalKey, setting.State, ct);
+                await s.Store.SetChildrenLocalAsync(kind, row.LocalKey, setting.ChildrenLocal, ct);
+                if (!SameOverlay(Runtime.DataSyncViews.ReadOverlay(row.OverlayJson), setting.Overlay))
+                    await s.Store.SetOverlayAsync(kind, row.LocalKey, setting.Overlay, ct);
+                writes.Touch(row);
+                recorder.Updated++;
+                return null;
+            }
             case DataSyncPreImageActions.TypeChanged:
             {
                 var before = codec.ReadLocal((await writes.ReReadAsync(kind, row.LocalKey, ct)).Content);
@@ -237,6 +256,12 @@ public sealed partial class DataSyncApplyRunner
             }
         }
     }
+
+    private static bool SameOverlay(DataSyncOverlay a, DataSyncOverlay b) =>
+        a.LocalOnlyChildren.OrderBy(c => c, StringComparer.Ordinal)
+            .SequenceEqual(b.LocalOnlyChildren.OrderBy(c => c, StringComparer.Ordinal)) &&
+        a.HeldChildren.OrderBy(h => h.ChildId, StringComparer.Ordinal).ThenBy(h => h.LinkId)
+            .SequenceEqual(b.HeldChildren.OrderBy(h => h.ChildId, StringComparer.Ordinal).ThenBy(h => h.LinkId));
 
     private static DataSyncRevisionDecision UndoDecision(DataSyncEntityDbModel row, EntityKeys keys) =>
         new(row.Kind, keys, row.LocalKey, DataSyncRevisionKind.Undo, null, null, false, false, row.OrderKey,

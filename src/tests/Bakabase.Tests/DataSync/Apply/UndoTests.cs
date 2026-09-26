@@ -1,4 +1,6 @@
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Models.Input;
+using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
@@ -325,6 +327,66 @@ public class UndoTests
         var (_, _, _, logId, _) = await CreatedByPeerAsync();
         var undoId = await _f.UndoAsync(logId);
         await Assert.ThrowsExceptionAsync<BTaskException>(() => _f.UndoAsync(undoId!.Value));
+    }
+
+    #endregion
+
+    #region Entity settings
+
+    [TestMethod]
+    public async Task An_entity_setting_is_undone_back_to_how_the_entity_synced()
+    {
+        var group = await _f.ExtensionGroups.Add(new ExtensionGroupAddInputModel("Video", [".mkv", ".mp4"]));
+        var localKey = group.Id.ToString();
+        await _f.RefreshAsync();
+        var before = await _f.RowAsync(localKey, Groups);
+
+        // How it syncs, set through the facade (§6.6): kept here only, and one extension kept on this device only.
+        var logId = await SetEntitySyncAsync(localKey,
+            new DataSyncEntitySyncInput(DataSyncEntitySyncState.LocalOnly, null, [".mp4"], null));
+        var set = await _f.RowAsync(localKey, Groups);
+        Assert.AreEqual(DataSyncEntitySyncState.LocalOnly, set.State);
+        CollectionAssert.AreEqual(new[] {".mp4"}, DataSyncViews.ReadOverlay(set.OverlayJson).LocalOnlyChildren.ToArray());
+
+        var preview = await Planner.PreviewAsync(logId, default);
+        Assert.IsTrue(preview.CanUndo, preview.Problem?.Code.ToString());
+        var item = preview.Items.Single();
+        Assert.AreEqual((localKey, "Video", DataSyncUndoAction.Revert, (DataSyncUndoBlock?) null),
+            (item.LocalKey, item.Name, item.Action, item.Blocked));
+
+        var undoId = await _f.UndoAsync(logId);
+
+        Assert.IsNotNull(undoId);
+        var after = await _f.RowAsync(localKey, Groups);
+        Assert.AreEqual(DataSyncEntitySyncState.Synced, after.State);
+        Assert.AreEqual(0, DataSyncViews.ReadOverlay(after.OverlayJson).LocalOnlyChildren.Count);
+        Assert.IsTrue(after.Seq > before.Seq, "published again");
+        Assert.IsNotNull((await _f.HistoryAsync()).Single(h => h.Id == logId).UndoneAtUtc);
+    }
+
+    [TestMethod]
+    public async Task A_newer_entity_setting_refuses_undoing_an_older_one()
+    {
+        var group = await _f.ExtensionGroups.Add(new ExtensionGroupAddInputModel("Video", [".mkv"]));
+        var localKey = group.Id.ToString();
+        await _f.RefreshAsync();
+        var first = await SetEntitySyncAsync(localKey, new DataSyncEntitySyncInput(DataSyncEntitySyncState.LocalOnly,
+            null, null, null));
+        await SetEntitySyncAsync(localKey, new DataSyncEntitySyncInput(DataSyncEntitySyncState.Synced, null, null, null));
+
+        var preview = await Planner.PreviewAsync(first, default);
+
+        Assert.IsFalse(preview.CanUndo);
+        Assert.AreEqual(DataSyncUndoBlock.ChangedSinceImport, preview.Items.Single().Blocked);
+    }
+
+    private async Task<int> SetEntitySyncAsync(string localKey, DataSyncEntitySyncInput input)
+    {
+        await using var scope = _f.Services.CreateAsyncScope();
+        var start = await scope.ServiceProvider.GetRequiredService<IDataSyncService>()
+            .SetEntitySyncAsync(Groups, localKey, input, default);
+        Assert.IsNull(start.Problem, start.Problem?.Code.ToString());
+        return (await _f.HistoryAsync()).Last(h => h.Kind == DataSyncHistoryKind.EntitySetting).Id;
     }
 
     #endregion
