@@ -692,6 +692,16 @@ public sealed class DataSyncFetcher
     }
 
     /// <summary>A full reconciliation is due when the last one (else the first contact) is more than 24 h old (§8.8).</summary>
+    /// <remarks>
+    /// §8.8's other triggers come from elsewhere: a superseded cursor is served from 0 in the same snapshot, a kind
+    /// added to a link and a cursor reset (B1, B1b, a restore choice) pull from 0 by their empty cursors. A change of
+    /// this build's schema versions pulls nothing again: what it exists for — re-evaluating the records held for a
+    /// newer schema — is done by the re-merge of those held pending records. Refresh records the versions
+    /// (<c>KindSchemaVersionsJson</c>) and marks each held record for one re-merge on every link, and until a Refresh
+    /// ran, <c>GetPendingToMergeAsync</c> offers them by the version change itself; a cycle with nothing new to pull
+    /// hands them to <c>DataSyncApply</c> (§8.4). Every record this device did not apply is stored as a pending record
+    /// (§7.5.5), so a pull from 0 would bring nothing more to re-evaluate.
+    /// </remarks>
     private static bool IsFullReconciliationDue(DataSyncLinkDbModel link, DateTime nowUtc)
     {
         var last = link.LastFullReconciliationAtUtc ?? link.FirstContactCompletedAtUtc ?? link.CreatedAtUtc;
