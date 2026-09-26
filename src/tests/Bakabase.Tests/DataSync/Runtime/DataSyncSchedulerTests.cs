@@ -66,6 +66,18 @@ public class DataSyncSchedulerTests
     }
 
     [TestMethod]
+    public async Task A_device_that_never_used_data_sync_gets_no_actor_check_at_the_start()
+    {
+        var gate = new Api.TestGateEntry();
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(configure: s => s.AddSingleton<IDataSyncGateEntry>(gate));
+        h.Store.LocalState = null;
+
+        await h.Scheduler.TickAsync(default);
+
+        Assert.AreEqual((0, 0), (h.Guard.Checks, gate.Entered), "no local state row and no actor.json: nothing to detect");
+    }
+
+    [TestMethod]
     public async Task A_busy_gate_at_the_start_leaves_the_actor_check_to_the_next_caller()
     {
         var gate = new Api.TestGateEntry();

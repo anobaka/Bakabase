@@ -194,6 +194,15 @@ public sealed class DataSyncScheduler : BackgroundService
             var guard = scope.ServiceProvider.GetService<IDataSyncActorGuard>();
             var gate = scope.ServiceProvider.GetService<IDataSyncGateEntry>();
             if (guard is null || gate is null) return;
+            // A device that never used data sync — no local state row, no actor.json — has nothing to detect, and the
+            // check would make both: nothing is written for it at the start.
+            var watermark = scope.ServiceProvider.GetService<Persistence.DataSyncActorWatermarkFile>();
+            if (await scope.ServiceProvider.GetRequiredService<IDataSyncStore>().GetLocalStateAsync(ct) is null &&
+                watermark?.Read().Missing != false)
+            {
+                return;
+            }
+
             using var lease = await gate.TryEnterAsync(DataSyncGateHold.RequestTimeout, ct);
             if (lease is not null) await guard.CheckAsync(lease, ct);
         }
