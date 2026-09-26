@@ -149,8 +149,60 @@ scopes").
   unchanged, never wrapped.
 - **Actor checks** run after entering the gate and before any transaction; a rotation never
   runs inside an open apply transaction.
+- **The gate and link rows.** The `/data-sync` actions §10.1 gates (links, pause all, reset,
+  applying a review, resolving, entity settings, undo, the restore choice) wait for the
+  `DataSyncGate` at most 30 s, then answer `Busy` having changed nothing; reads never wait, and
+  a call that asks a peer for access releases the gate around that network call
+  (`OutsideGateAsync`). Two departures from §10.1's gate column, both on purpose:
+  approving a request takes **no** gate for its link row (so an approval never waits behind an
+  apply), and `PUT /data-sync/sharing` takes it for `newDefinitionsStayLocal` only, after the
+  switch — while the gate is busy the switch still applies and the answer is `Busy` with the
+  detail `newDefinitionsStayLocal`. Withdrawing a request is not gated either. Link rows are
+  ordered by `DataSyncLinkService`'s lock plus one `BEGIN IMMEDIATE` transaction per write, not
+  by the gate: the apply runner reads a link row inside the write transaction that writes it
+  back, never writes back a row it read before that transaction began, and re-checks "Pause
+  all" and the link once it holds the gate.
+- **One fetch per peer.** `IDataSyncPeerClient.AcquireFetchAsync` holds the peer's fetch lock
+  from the head to the last page; a second fetch waits up to 30 s, then gets `Busy`. The
+  fetcher takes it for every fetch — the cycle, review staging, copy once and "Fetch again" —
+  in the method that makes the head, manifest and page calls (a hold returned out of an async
+  helper is not seen by its caller's calls), so no fetch discards at the source the snapshot
+  another is reading (one snapshot per grant).
 - **Wire pages are raw canonical bytes**, written and parsed with data sync's own options —
   never `FederationJson`, whose depth limit rejects a deep multilevel property.
+
+## Links, requests and access
+
+- **`AskAccessAgain` is three actions, by the link's state**, and always counts as creating
+  access (§7.1.5):
+  - on `Paused(PeerReset)` (not a restore): B1's "Ask X for access again" — a new request with
+    the link's mode, `Initiator = ThisDevice`. The link waits in `AwaitingAccess` with its
+    bases, pending records and items, keeping `PeerReset` as the mark that a reset is due;
+    only **once it is granted** is it reset (the row is deleted and a new one made for the same
+    peer, mode and kinds — the link id changes — its items close `LinkRemoved`, and a new first
+    contact runs against the new epoch). A request that ends without access takes it back to
+    `Paused(PeerReset)` with `LastErrorCode` saying why;
+  - on `AwaitingAccess`: "Try again" — a fresh request (a Follow request for an approver whose
+    read-back failed, which the peer approves; the link's mode otherwise);
+  - on a working two-way link with `ReadBackDeclined`: "Ask X to keep in step" — an ordinary
+    two-way request with a reciprocal offer; bases and items stay. When the peer already reads
+    this device, it only clears the note.
+- **A request that ends.** Rejected or expired, the link stops (`Mode` Off, its last mode,
+  bases and pending records kept) and stays on the map with Dismiss. Withdrawn
+  (`DELETE /data-sync/requests/{id}`), the `AwaitingAccess` link made for it goes with it when
+  it has nothing yet (no first contact, cursor or base); one with sync state stops as above
+  (`AccessCancelled`). A link that asked a reset peer again goes back to `Paused(PeerReset)`
+  either way. "Dismiss" is `DELETE /data-sync/links/{id}` (reset), which never withdraws a
+  request, and withdrawing never resets a link.
+- **Withdrawn consent takes the reciprocal codes with it.** Revoking a reader, "Done — stop
+  reading X", removing the peer and an identity reset drop the datasync codes this device
+  minted for that device to read it back with; cancelling an outgoing request drops them
+  unless another unexpired two-way request to that device is waiting or granted. A stale copy
+  of the request approved later then reads nothing back.
+- **Offered addresses** a two-way request came with are kept on the peer
+  (`DataSyncOfferedAddresses`) for "Try again", used only when neither `DataSyncAddress` nor
+  `Address` is known, always expecting the peer's NodeId, never shown as its address, and
+  cleared once a datasync address is verified.
 
 ## Invariants — do not weaken
 
@@ -170,9 +222,12 @@ scopes").
   `RequiredSharing` value and gate-matrix rows; every Export action declares its scope.
   `library.read` is never reachable from `/data-sync`.
 - **Who may create or widen access.** Only this device's own window, a paired device or the
-  CLI may turn definitions sharing on, approve a definitions request, create a code, or send
-  a request / mint a reciprocal code. An unpaired browser admitted only by Unrestricted mode
-  may reduce access, never widen it (`NotAllowedOnThisDevice`).
+  CLI (and `BAKABASE_DATASYNC_SHARING` at start) may turn definitions sharing on, approve a
+  definitions request, create a code, or send a request / mint a reciprocal code
+  (`AskAccessAgain` included). The controller refuses what always widens access; for links and
+  copy once it passes who is asking, and the link service refuses exactly the calls that would
+  send a request or mint a code. An unpaired browser admitted only by Unrestricted mode may
+  reduce access, never widen it (`NotAllowedOnThisDevice`).
 - **A GET never writes** (`LoopbackCrossSiteGuard` lets cross-site GETs through). Reviews
   re-plan read-only.
 - **The inbox order is a contract.** `GET /data-sync/inbox` lists open items first, then closed
@@ -188,16 +243,27 @@ scopes").
 
 ## Headless (NAS/Docker)
 
-The desktop app and a headless server run the same code; they differ only in whether this
-install creates notifications (`IDataSyncHostKind.IsHeadless`: a headless one never does).
+The desktop app and a headless server run the same code; they differ only in notifications
+(`IDataSyncHostKind.IsHeadless`, the kind the install reports about itself through
+`IServerSelfDescription`). A headless one creates none — neither the notifier's nor a new
+request's — and says so in its heads (`Attention.Headless`).
 
-- `BAKABASE_DATASYNC_SHARING=true` turns definitions sharing on at **every** start, together
-  with remote access (pairing required) only when that is `Disabled` — a Docker install's
-  `Unrestricted` is never touched.
-- `docker exec <c> dotnet Bakabase.Service.dll federation datasync <status|share on|off|invite|requests|approve|reject|revoke|pause|resume>`
-  calls only its loopback `/data-sync/*` API. There is no CLI inbox and the CLI cannot start a
-  link: decisions waiting on a hub are made through server switching (the hub's own
-  `/data-sync` page), or close by themselves when a desktop decides the same thing.
+- `BAKABASE_DATASYNC_SHARING=true` turns definitions sharing on at **every** start
+  (`DataSyncSharingAnnouncer`), together with remote access (pairing required) only when that
+  is `Disabled` — a Docker install's `Unrestricted` is never touched. Turning sharing off (in a
+  window or with `share off`) therefore lasts only until the next start while it is set, and
+  the CLI says so. A failure to turn it on is logged and never stops the server.
+- `docker exec <c> dotnet Bakabase.Service.dll federation datasync <command> [--port <port>]`
+  calls only its loopback `/data-sync/*` API (`DataSyncCli`; the port defaults to
+  `API_LISTENING_PORTS`, `ASPNETCORE_HTTP_PORTS`, then 8080). Commands: `status` (sharing,
+  remote access, links with what waits on each peer, readers, requests), `share on|off`,
+  `invite [--two-way]` (a code and this device's addresses), `requests` (pending ones, with
+  the claim warning), `approve <requestId> [--no-receive-back]` (a two-way request is read
+  back unless told not to), `reject <requestId>`, `revoke <nodeId>`, and
+  `pause [<nodeId>]` / `resume [<nodeId>]` (every link, or the link with that device). There
+  is no CLI inbox and the CLI cannot start a link: decisions waiting on a hub are made through
+  server switching (the hub's own `/data-sync` page), or close by themselves when a desktop
+  decides the same thing.
 - A hub tells its readers how many decisions wait on it (`Attention` in every head), so the
   desktops show "NAS has N changes waiting for a decision".
 
@@ -233,6 +299,13 @@ install creates notifications (`IDataSyncHostKind.IsHeadless`: a headless one ne
 - `src/tests/Bakabase.Tests/DataSync/**` — persistence, apply, feed, guardrails
   (`DbSetClassificationTests`, `SecretCanaryTests`), `Api/**` endpoints, `TwoHost/**`.
 - `src/tests/Bakabase.Tests/Federation/**` — gate matrix, scopes, pairing.
+- `src/tests/federation-smoke/datasync.py` — three real processes (two desktops, a headless
+  server with `BAKABASE_DATASYNC_SHARING`) driven through their loopback APIs and the headless
+  CLI: pairing for definitions with a two-way read-back, first reviews and pulls, a conflict
+  decided once, an in-use option held, a reset peer, a newer-schema record held, and headless
+  silence. `run.py` runs it after the library checks (`--skip-datasync` leaves it out), so
+  CI's federation job does; the TestHost's `BAKABASE_FEDERATION_TEST_ADDRESSES=loopback` and
+  `BAKABASE_DATASYNC_TEST_FUTURE_SCHEMA` exist for it (see its README).
 - Version-skew fixtures (§13.8), rewritten with `DATASYNC_WRITE_FIXTURES=<dir>`: pages and heads
   in `Bakabase.Modules.DataSync.Tests/Fixtures/VersionSkew`, and the `state.json` an older build
   must read in `Bakabase.Modules.Federation.Tests/Fixtures/VersionSkew`.
