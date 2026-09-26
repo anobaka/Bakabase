@@ -218,7 +218,13 @@ install creates notifications (`IDataSyncHostKind.IsHeadless`: a headless one ne
 ## Tests
 
 - `src/tests/Bakabase.Modules.DataSync.Tests` — engine: identity, wire, merger rows, revision
-  rules, closure/symmetry, anomalies, convergence simulator.
+  rules, closure/symmetry, anomalies, convergence simulator (the test kind, extension groups
+  and custom properties, whose simulator kind emulates the Property service's own folding).
+  Every random run is seeded; CI keeps the project near a minute. For longer local runs:
+  `DATASYNC_FUZZ_SEED`/`DATASYNC_FUZZ_RUNS` (simulator, merger fuzz) and
+  `DATASYNC_MERGE3_RUNS` (custom property closure and symmetry). A seed a longer run finds
+  failing is pinned as a `DataRow`; `SymmetricMerge_KnownGaps_StillDiffer` lists the few
+  custom property inputs that still merge apart.
 - `src/tests/Bakabase.Tests/DataSync/**` — persistence, apply, feed, guardrails
   (`DbSetClassificationTests`, `SecretCanaryTests`), `Api/**` endpoints, `TwoHost/**`.
 - `src/tests/Bakabase.Tests/Federation/**` — gate matrix, scopes, pairing.
