@@ -27,6 +27,9 @@ public sealed partial class DataSyncApplyRunner
     /// <c>ChangedSinceReview</c> and its record a <c>Retry</c> pending record, merged by the link's first ordinary pull.
     /// The writes go in chunks; then bases (with the merges' child maps), pending records, exclusions of skipped items,
     /// revisions, order and — last — the link: cursors, first contact, <c>Active</c> (or <c>Stopped</c> for copy once).
+    /// Whether it is a copy once is the link's current mode, read in the transaction, never the flag the review was
+    /// staged with: a copy once turned into Follow or two-way before it was applied is that link's first contact
+    /// (<see cref="DataSyncReviewStore.AppliesAsCopyOnce"/>).
     /// </summary>
     /// <returns>The history entry (<c>FirstLink</c> or <c>CopyOnce</c>), or null when the attempt exited early.</returns>
     public async Task<int?> RunReviewAsync(string reviewId, IReadOnlyList<DataSyncPlanDecision> decisions,
@@ -72,7 +75,8 @@ public sealed partial class DataSyncApplyRunner
             var recorder = new DataSyncApplyRecorder();
             await RefreshOrFailAsync(s, lease, kinds, ct);
             var link = review.LinkId is { } id ? await s.LinkAsync(id, ct) : null;
-            var mode = review.CopyOnce ? DataSyncLinkMode.Off : link?.Mode ?? DataSyncLinkMode.Off;
+            var copyOnce = DataSyncReviewStore.AppliesAsCopyOnce(review, link);
+            var mode = copyOnce ? DataSyncLinkMode.Off : link?.Mode ?? DataSyncLinkMode.Off;
             var local = await DataSyncMergeInputs.ReadLocalAsync(s, kinds.Where(s.Kinds.ContainsKey), ct);
             var input = DataSyncPlanInput.FromLocalState(review.Pull, local, s.Codecs, s.State.NodeId, mode);
             var plan = DataSyncPlanner.Plan(input);
@@ -98,10 +102,8 @@ public sealed partial class DataSyncApplyRunner
                 link.LastErrorCode = null;
                 link.LastErrorDetail = null;
                 link.ReviewId = null;
-                if (review.CopyOnce)
+                if (copyOnce)
                 {
-                    if (link.Mode != DataSyncLinkMode.Off) link.LastMode = link.Mode;
-                    link.Mode = DataSyncLinkMode.Off;
                     link.State = DataSyncLinkState.Stopped;
                 }
                 else if (link.State is DataSyncLinkState.AwaitingReview or DataSyncLinkState.AwaitingAccess)
@@ -112,12 +114,11 @@ public sealed partial class DataSyncApplyRunner
                 link.UpdatedAtUtc = now;
             }
 
-            var log = await s.Store.AddHistoryAsync(recorder.ToLog(
-                review.CopyOnce ? DataSyncHistoryKind.CopyOnce : DataSyncHistoryKind.FirstLink, link, args.Task.Id, s.Now,
+            var historyKind = copyOnce ? DataSyncHistoryKind.CopyOnce : DataSyncHistoryKind.FirstLink;
+            var log = await s.Store.AddHistoryAsync(recorder.ToLog(historyKind, link, args.Task.Id, s.Now,
                 ElapsedMs(started), s.TransactionMs), ct);
             await CommitAsync(s, ct);
-            await AfterCommitAsync(s, recorder, kinds,
-                review.CopyOnce ? DataSyncHistoryKind.CopyOnce : DataSyncHistoryKind.FirstLink, log, link?.Id);
+            await AfterCommitAsync(s, recorder, kinds, historyKind, log, link?.Id);
             return log;
         }, ct);
     }

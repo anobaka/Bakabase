@@ -464,6 +464,109 @@ public class DataSyncLinkStateMachineTests
     }
 
     [TestMethod]
+    public async Task A_second_copy_once_onto_a_stopped_row_stages_its_own_review()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var stopped = h.AddLink("a", l =>
+        {
+            l.Mode = DataSyncLinkMode.Off;
+            l.LastMode = DataSyncLinkMode.TwoWay;
+            l.State = DataSyncLinkState.Stopped;
+            l.NextAttemptAtUtc = null;
+        });
+        // The first copy once's review, applied a few minutes ago and kept for its result screen.
+        var first = h.Reviews.Stage(stopped.Id, true, new DataSyncStagedPull("a", "Peer a",
+            h.Peers.Peers["a"].Manifest(new DataSyncFeedQuery("follow", new Dictionary<string, long>(), null, null)),
+            [], h.Clock.UtcNow));
+        h.Reviews.MarkApplying(first.ReviewId, "DataSyncReview:" + first.ReviewId);
+        h.Reviews.MarkApplied(first.ReviewId, 7);
+
+        var copy = await h.Links.CreateAsync(new DataSyncLinkCreate("a", null, null, DataSyncLinkMode.Follow, null,
+            CopyOnce: true), true, default);
+        Assert.IsNull(copy.Problem);
+        CollectionAssert.AreEqual(new[] {first.ReviewId}, h.Reviews.Discarded,
+            "the earlier copy once's review is not this one's");
+
+        await h.FetchOnceAsync();
+        Assert.AreEqual(2, h.Reviews.Staged.Count, "the cycle stages the new copy once's review");
+        var second = h.Reviews.Staged.Last();
+        Assert.IsTrue(second.CopyOnce);
+        Assert.AreEqual(second.ReviewId, h.Reviews.PeekForLink(stopped.Id)!.ReviewId);
+    }
+
+    [TestMethod]
+    public async Task A_copy_once_turned_on_before_its_review_is_applied_becomes_the_links_first_contact()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var stopped = h.AddLink("a", l =>
+        {
+            l.Mode = DataSyncLinkMode.Off;
+            l.LastMode = DataSyncLinkMode.TwoWay;
+            l.State = DataSyncLinkState.Stopped;
+            l.NextAttemptAtUtc = null;
+        });
+        var copy = await h.Links.CreateAsync(new DataSyncLinkCreate("a", null, null, DataSyncLinkMode.Follow, null,
+            CopyOnce: true), true, default);
+        Assert.AreEqual((DataSyncLinkMode.Off, DataSyncLinkState.AwaitingReview), (copy.Link!.Mode, copy.Link.State));
+        await h.FetchOnceAsync();
+        var copyReview = h.Reviews.Staged.Single();
+        Assert.IsTrue(copyReview.CopyOnce);
+        Assert.AreEqual(copyReview.ReviewId, h.Link(stopped.Id).ReviewId);
+
+        // The rule editor's receive arrow: Follow, still waiting for its first contact.
+        var on = await h.Links.UpdateAsync(stopped.Id, DataSyncLinkMode.Follow, null, true, default);
+        Assert.IsNull(on.Problem);
+        Assert.AreEqual((DataSyncLinkMode.Follow, DataSyncLinkMode.Follow, DataSyncLinkState.AwaitingReview),
+            (on.Link!.Mode, on.Link.LastMode, on.Link.State));
+        CollectionAssert.AreEqual(new[] {copyReview.ReviewId}, h.Reviews.Discarded, "the copy once's review goes");
+        Assert.IsNull(on.Link.ReviewId);
+        Assert.IsFalse(Bakabase.InsideWorld.Business.Components.DataSync.Apply.DataSyncReviewStore
+            .AppliesAsCopyOnce(copyReview, on.Link), "applied anyway, it would be the link's first contact");
+
+        // The next cycle stages the link's own review.
+        await h.FetchOnceAsync();
+        var review = h.Reviews.Staged.Last();
+        Assert.AreNotEqual(copyReview.ReviewId, review.ReviewId);
+        Assert.IsFalse(review.CopyOnce);
+        Assert.AreEqual(review.ReviewId, h.Link(stopped.Id).ReviewId);
+    }
+
+    [TestMethod]
+    public async Task Approving_a_two_way_request_turns_a_waiting_copy_once_into_the_link_and_leaves_an_applying_review()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        DataSyncLinkDbModel CopyOnce(string peer) => h.AddLink(peer, l =>
+        {
+            l.Mode = DataSyncLinkMode.Off;
+            l.LastMode = DataSyncLinkMode.TwoWay;
+            l.State = DataSyncLinkState.AwaitingReview;
+            l.FirstContactCompletedAtUtc = null;
+            l.FirstContactKindsJson = null;
+        });
+        var staged = CopyOnce("a");
+        var applying = CopyOnce("b");
+        DataSyncReviewEntry Stage(DataSyncLinkDbModel link) => h.Reviews.Stage(link.Id, true, new DataSyncStagedPull(
+            link.PeerNodeId, link.PeerName, h.Peers.Peers[link.PeerNodeId].Manifest(new DataSyncFeedQuery("follow",
+                new Dictionary<string, long>(), null, null)), [], h.Clock.UtcNow));
+        var stagedReview = Stage(staged);
+        var applyingReview = Stage(applying);
+        h.Reviews.MarkApplying(applyingReview.ReviewId, "DataSyncReview:" + applyingReview.ReviewId);
+
+        foreach (var peer in new[] {"a", "b"})
+            await h.Links.OnInboundGrantedAsync(peer, DataSyncRequestIntent.TwoWay, true, true, null, null, null, default);
+
+        foreach (var link in new[] {staged, applying})
+        {
+            Assert.AreEqual((DataSyncLinkMode.TwoWay, DataSyncLinkState.AwaitingReview),
+                (h.Link(link.Id).Mode, h.Link(link.Id).State));
+        }
+
+        CollectionAssert.AreEqual(new[] {stagedReview.ReviewId}, h.Reviews.Discarded,
+            "a review being applied finishes as the link's first contact");
+        Assert.IsNotNull(h.Reviews.Get(applyingReview.ReviewId));
+    }
+
+    [TestMethod]
     public async Task Withdrawing_a_request_drops_only_a_link_made_for_it()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
@@ -642,10 +745,10 @@ public class DataSyncLinkStateMachineTests
         Assert.IsNotNull(waiting.FirstContactCompletedAtUtc);
         Assert.AreEqual("epoch-1", waiting.PeerLibraryEpoch, "the old epoch holds until the reset");
 
-        // The credentials the reset revoked were forgotten before asking; any this device holds while the request waits
-        // grant nothing.
-        Assert.IsFalse(h.Grants.Outbound.Contains("a"));
-        h.Grants.Outbound.Add("a");
+        // The credentials this device held for the peer are kept (never forgotten along with the request that went
+        // out), and while the request waits they grant nothing.
+        Assert.IsTrue(h.Grants.Outbound.Contains("a"));
+        CollectionAssert.DoesNotContain(h.Grants.Changes.ToArray(), "forget:a");
         h.Grants.Requests.Add(OutgoingRequest(h, "req-a", "awaitingApproval"));
         await h.FetchOnceAsync();
         Assert.AreEqual(0, h.Store.Deleted.Count);
@@ -702,8 +805,8 @@ public class DataSyncLinkStateMachineTests
         await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
         var link = await ResetPeerLinkAsync(h);
         Assert.IsNull((await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default)).Problem);
-        CollectionAssert.Contains(h.Grants.Changes.ToArray(), "forget:a",
-            "the credentials the reset revoked are forgotten before asking");
+        CollectionAssert.DoesNotContain(h.Grants.Changes.ToArray(), "forget:a",
+            "forgetting them would withdraw the request that just went out");
         h.Grants.Requests.Add(OutgoingRequest(h, "req-a", "awaitingApproval"));
 
         // Credentials this device holds for the peer while the request is out are never its answer.
@@ -731,6 +834,32 @@ public class DataSyncLinkStateMachineTests
         await h.FetchOnceAsync();
         CollectionAssert.AreEqual(new[] {link.Id}, h.Store.Deleted);
         Assert.AreEqual(DataSyncLinkState.AwaitingReview, h.Store.All().Single().State);
+    }
+
+    [TestMethod]
+    public async Task A_reset_peer_asked_again_where_another_install_answers_keeps_the_links_credentials()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(registerFetchTask: false);
+        var link = await ResetPeerLinkAsync(h);
+        // The pause also stands for another install answering at the peer's address (IdentityConflict): the request
+        // meets it there too.
+        h.Grants.Answer = _ => throw new DataSyncPeerException(DataSyncPeerErrorCode.IdentityConflict);
+
+        var asked = await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default);
+
+        Assert.AreEqual(DataSyncProblemCode.PeerReset, asked.Problem!.Code);
+        Assert.AreEqual((DataSyncLinkState.Paused, (DataSyncPauseReason?) DataSyncPauseReason.PeerReset),
+            (h.Link(link.Id).State, h.Link(link.Id).PausedReason));
+        Assert.IsTrue(h.Grants.Outbound.Contains("a"), "the credentials, which may still be good, are kept");
+        CollectionAssert.DoesNotContain(h.Grants.Changes.ToArray(), "forget:a");
+        Assert.AreEqual(0, h.Store.Deleted.Count);
+
+        // Once the peer answers as itself, the request goes out and the link waits for its grant as usual.
+        h.Grants.Answer = input => new DataSyncAccessRequestOutcome("awaitingApproval", "req-a", "a", "Peer a", null);
+        var again = await h.Links.ResumeAsync(link.Id, DataSyncResumeAction.AskAccessAgain, true, default);
+        Assert.IsNull(again.Problem);
+        Assert.IsTrue(DataSyncLinkService.WaitsForResetGrant(h.Link(link.Id)));
+        Assert.IsTrue(h.Grants.Outbound.Contains("a"));
     }
 
     /// <summary>A Follow link whose peer looks reset (B1), with a first contact behind it.</summary>

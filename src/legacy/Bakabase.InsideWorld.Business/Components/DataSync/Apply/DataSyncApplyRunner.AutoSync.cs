@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
+using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Merging;
@@ -105,6 +106,11 @@ public sealed partial class DataSyncApplyRunner
             }
 
             var context = DataSyncMergeInputs.LinkContext(s, linkRow, link);
+            // Without a pull only the once flags that act on pending records alone are used, and so consumed: the
+            // deletion flags ride with the pull that tripped B2/B3, which the next fetch brings again (§8.7, N13). An
+            // "Apply all" or a re-merge that ran before that fetch must not use up "Apply as usual" or "Review
+            // deletions", or the refetched pull would pause the link again.
+            if (pull is null) context = context with { LinkFlags = context.LinkFlags.PullIndependent() };
             var takesTheirs = pull is not null && pull.Kinds.Any(k => k.FullReconciliation) &&
                               await TakesTheirsAsync(s, linkRow, ct);
             if (takesTheirs) context = context with { EffectiveMode = DataSyncLinkMode.Follow };
@@ -225,8 +231,9 @@ public sealed partial class DataSyncApplyRunner
     }
 
     /// <summary>
-    /// The link after a pull (§8.10.2, last): cursors advanced for every kind fully evaluated, errors cleared, once flags
-    /// consumed, the kinds' first contact completed and the full reconciliation noted.
+    /// The link after a pull (§8.10.2, last): cursors advanced for every kind fully evaluated, errors cleared, the once
+    /// flags the merge used consumed (all of them with a pull, the pull-independent ones without), the kinds' first
+    /// contact completed and the full reconciliation noted.
     /// </summary>
     private static void AfterPull(DataSyncLinkDbModel link, DataSyncLinkContext context, DataSyncStagedPull? pull,
         DataSyncMergeResult result, DateTime now)
@@ -235,7 +242,8 @@ public sealed partial class DataSyncApplyRunner
             StringComparer.Ordinal);
         foreach (var (kind, seq) in result.CursorAdvance) cursors[kind] = seq;
         link.CursorsJson = DataSyncStoredJson.WriteCounters(cursors);
-        link.OnceFlagsJson = null;
+        link.OnceFlagsJson = DataSyncStoredJson.WriteFlags(
+            DataSyncStoredJson.ReadFlags(link.OnceFlagsJson, "OnceFlagsJson").Without(context.LinkFlags));
         link.ConsecutiveFailures = 0;
         link.LastErrorCode = null;
         link.LastErrorDetail = null;

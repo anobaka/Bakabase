@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Merging;
+using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Runtime;
 
@@ -31,6 +33,16 @@ public sealed class DataSyncReviewStore(TimeProvider time) : IDataSyncReviewStor
 
     private readonly object _lock = new();
     private readonly Dictionary<string, DataSyncReviewEntry> _entries = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Whether applying <paramref name="review"/> is a copy once (§8.1): its link's current mode says so (a copy once is
+    /// a link in <c>Off</c> waiting for its review), not the flag the review was staged with. A copy once the person
+    /// turned into Follow or two-way before applying its review — the rule editor's receive arrow, or approving the
+    /// peer's two-way request — is that link's first contact, which leaves it running. Only a review without a link
+    /// goes by its own flag.
+    /// </summary>
+    public static bool AppliesAsCopyOnce(DataSyncReviewEntry review, DataSyncLinkDbModel? link) =>
+        link is null ? review.CopyOnce : link.Mode == DataSyncLinkMode.Off;
 
     public DataSyncReviewEntry? GetForLink(int linkId)
     {

@@ -314,7 +314,9 @@ public sealed class DataSyncLinkService
         {
             // A copy once onto a stopped link reuses its row: one link per peer (§8.1). Its review is a first contact
             // again, so the row's earlier one no longer counts: otherwise a pause and resume, or a peer error, would
-            // take the row back to Stopped and the copy once would silently end. Bases and cursors stay.
+            // take the row back to Stopped and the copy once would silently end. Bases and cursors stay. The earlier
+            // copy once's review, kept for its result screen, goes too: a cycle stages none while the link has one
+            // (§8.3), and the page would open that one's result as this copy once's review.
             var moved = false;
             var reused = await MutateAsync(existing.Id, link =>
             {
@@ -334,6 +336,7 @@ public sealed class DataSyncLinkService
                 link.FirstContactCompletedAtUtc = null;
                 link.FirstContactKindsJson = null;
                 link.ReviewId = null;
+                DiscardReviewUnlessApplying(link.Id);
                 link.PendingRequestId = requestId;
                 link.PeerAddress ??= input.Address;
                 link.ReadBackDeclined = readBackDeclined;
@@ -375,9 +378,10 @@ public sealed class DataSyncLinkService
     /// Changes a link's mode and kinds (§8.1). Off stops it (bases and pending records kept). Turning a stopped link
     /// on resumes it with no new review unless kinds were added, and its next pull is a full reconciliation, which
     /// re-merges every pending record (§8.4 condition 4): the items its stop closed come back even when the peer has
-    /// nothing new. Kinds added to a link run a first contact for those kinds only. Two-way on a peer that does not
-    /// read this device sends a request with a reciprocal code (§7.2.4), with <paramref name="gate"/> released around
-    /// it.
+    /// nothing new. Kinds added to a link run a first contact for those kinds only. A copy once turned on before its
+    /// review was applied becomes that link's first contact: the copy once's review goes, and the next cycle stages
+    /// the link's own (<see cref="ForgetCopyOnceReview"/>). Two-way on a peer that does not read this device sends a
+    /// request with a reciprocal code (§7.2.4), with <paramref name="gate"/> released around it.
     /// </summary>
     public async Task<DataSyncLinkChange> UpdateAsync(int linkId, DataSyncLinkMode? mode, IReadOnlyList<string>? kinds,
         bool callerMayCreateAccess, CancellationToken ct, DataSyncGateHold? gate = null)
@@ -435,6 +439,7 @@ public sealed class DataSyncLinkService
             if (newKinds is not null) row.SetKinds(newKinds);
             if (mode is { } m)
             {
+                ForgetCopyOnceReview(row);
                 row.Mode = m;
                 row.LastMode = m;
                 if (turningOn)
@@ -630,9 +635,9 @@ public sealed class DataSyncLinkService
     }
 
     /// <summary>
-    /// Drops the datasync credentials this device holds for a peer that no longer honours them (a reset, a revoked
-    /// grant), before it asks the peer for new ones: only credentials the answer brings can then read as access.
-    /// Nothing is dropped when there are none, so a request of this device's that is already out stays.
+    /// Drops the datasync credentials this device holds for a peer that refused them (a revoked grant), before it asks
+    /// the peer for new ones: only credentials the answer brings can then read as access. Nothing is dropped when there
+    /// are none, so a request of this device's that is already out stays.
     /// </summary>
     private static async Task<DataSyncProblem?> ForgetDeadCredentialsAsync(IDataSyncGrantService grants,
         string peerNodeId, CancellationToken ct)
@@ -861,9 +866,16 @@ public sealed class DataSyncLinkService
     /// new first contact runs against the new epoch (§8.3, N11). A request that ends without access takes it back to
     /// <c>Paused(PeerReset)</c>, still with everything it had. The known epoch stays until the reset, so a link that
     /// loses the mark on the way (a person's pause, a stop) trips B1 again instead of merging against the new epoch.
-    /// The credentials the reset revoked are forgotten before the request goes out, so that nothing but the answer to
-    /// it — never those — can read as the grant that resets the link.
     /// </summary>
+    /// <remarks>
+    /// The credentials this device holds for the peer are kept, unlike after a revoke
+    /// (<see cref="AskAccessAfterRevokedAsync"/>): the link goes by its own request's answer alone while it waits
+    /// (<see cref="WaitsForResetGrant"/>, the fetcher's access check), so they never read as the grant that resets it,
+    /// and the grant replaces them. They may still be good: the pause also stands for another install answering at the
+    /// peer's address (<c>IdentityConflict</c>), and a request sent there fails the same way. Forgetting them first would
+    /// lose them for nothing, and forgetting them once the request is out would withdraw the request itself
+    /// (<see cref="IDataSyncGrantService.ForgetOutboundAsync"/> drops this device's requests to the peer too).
+    /// </remarks>
     private async Task<DataSyncLinkChange> AskAccessAgainAsync(DataSyncLinkDbModel link, bool callerMayCreateAccess,
         CancellationToken ct, DataSyncGateHold? gate)
     {
@@ -876,8 +888,6 @@ public sealed class DataSyncLinkService
         if (!callerMayCreateAccess)
             return DataSyncLinkChange.Refused(DataSyncProblemCode.NotAllowedOnThisDevice, null, link);
 
-        if (await ForgetDeadCredentialsAsync(grants, link.PeerNodeId, ct) is { } forgetting)
-            return new DataSyncLinkChange(link, null, forgetting);
         var sent = await gate.OutsideGateAsync(() => SendRequestAsync(grants,
             new DataSyncAccessRequestInput(link.PeerNodeId, link.PeerAddress, null, intent), ct), ct);
         if (sent.Problem is not null) return new DataSyncLinkChange(link, null, sent.Problem);
@@ -1158,7 +1168,8 @@ public sealed class DataSyncLinkService
     /// WaitingForPeerReview, or in AwaitingAccess with the failure recorded when the read-back did not give this
     /// device access (N14). A peer that already has a link updates it instead: two-way, and a stopped link goes
     /// Active (its next pull a full reconciliation, as any stopped link turned on) or WaitingForPeerReview by its
-    /// first contact; any other state is kept, and so are bases and pending records. Every existing link is due now,
+    /// first contact; any other state is kept, and so are bases and pending records — a copy once waiting for its
+    /// review becomes the link's first contact (<see cref="ForgetCopyOnceReview"/>). Every existing link is due now,
     /// so its next head checks the counterpart. The approval and the queued grant event both call this for one
     /// peer; whichever comes second updates the link the first made.
     /// </summary>
@@ -1180,6 +1191,7 @@ public sealed class DataSyncLinkService
             var noteCleared = row.ReadBackDeclined;
             row.ReadBackDeclined = false;
             if (!twoWay) return noteCleared ? DataSyncLinkWrite.Transition : DataSyncLinkWrite.Bookkeeping;
+            ForgetCopyOnceReview(row);
             row.Mode = DataSyncLinkMode.TwoWay;
             row.LastMode = DataSyncLinkMode.TwoWay;
             if (row.State == DataSyncLinkState.Stopped)
@@ -1601,6 +1613,43 @@ public sealed class DataSyncLinkService
         using var scope = _scopes.CreateScope();
         var reviews = scope.ServiceProvider.GetService<IDataSyncReviewStore>();
         if (reviews?.PeekForLink(linkId) is { } review) reviews.Discard(review.ReviewId);
+    }
+
+    /// <summary>
+    /// Called on a row about to be turned on (Follow or two-way): if it is a copy once still waiting for its review or
+    /// its access (§8.1: <c>Off</c> in AwaitingReview or AwaitingAccess), the review staged for the copy once is
+    /// discarded, so the link's next cycle stages a first-link review under its new mode. The apply decides by the
+    /// link's mode as well (<see cref="Apply.DataSyncReviewStore.AppliesAsCopyOnce"/>), so a review already being
+    /// applied is left to finish as the link's first contact, and an applied one keeps its result screen.
+    /// </summary>
+    private void ForgetCopyOnceReview(DataSyncLinkDbModel row)
+    {
+        if (row is not
+            {
+                Mode: DataSyncLinkMode.Off,
+                State: DataSyncLinkState.AwaitingReview or DataSyncLinkState.AwaitingAccess,
+            })
+        {
+            return;
+        }
+
+        using var scope = _scopes.CreateScope();
+        var reviews = scope.ServiceProvider.GetService<IDataSyncReviewStore>();
+        if (reviews?.PeekForLink(row.Id) is not { TaskId: null, ApplyLogId: null } review) return;
+        reviews.Discard(review.ReviewId);
+        if (row.ReviewId == review.ReviewId) row.ReviewId = null;
+    }
+
+    /// <summary>
+    /// Discards the link's current review, staged or applied, unless it is being applied (its task runs and has not
+    /// recorded a result): that one finishes, and the runner reads the link as it is then.
+    /// </summary>
+    private void DiscardReviewUnlessApplying(int linkId)
+    {
+        using var scope = _scopes.CreateScope();
+        var reviews = scope.ServiceProvider.GetService<IDataSyncReviewStore>();
+        if (reviews?.PeekForLink(linkId) is { } review && review is not { TaskId: not null, ApplyLogId: null })
+            reviews.Discard(review.ReviewId);
     }
 
     private async Task ObserveAsync(Func<IDataSyncRuntimeObserver, Task> call)

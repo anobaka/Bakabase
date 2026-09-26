@@ -239,6 +239,13 @@ public sealed class DataSyncNotifier
         if (!applyFollows) await CloseCycleAsync(sp, linkId, ct);
     }, ct);
 
+    /// <summary>
+    /// A link's review was applied (§8.3): the link no longer waits for it, so the next review it needs — a copy once
+    /// onto the same stopped row, kinds added later — is announced again. The review runner moves the link on in its
+    /// own transaction, which raises no <see cref="LinkChangedAsync"/>, so this is how the announcement is let go.
+    /// </summary>
+    public void ReviewApplied(int linkId) => _reviewsAnnounced.TryRemove(linkId, out _);
+
     /// <summary>A link was reset: what its cycle held back is about a link that no longer exists.</summary>
     public Task LinkRemovedAsync(int linkId, CancellationToken ct) => RunAsync(_ =>
     {

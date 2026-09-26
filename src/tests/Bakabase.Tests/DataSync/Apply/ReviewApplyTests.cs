@@ -128,6 +128,33 @@ public class ReviewApplyTests
     }
 
     [TestMethod]
+    [DataRow(DataSyncLinkMode.Follow)]
+    [DataRow(DataSyncLinkMode.TwoWay)]
+    public async Task A_copy_once_turned_into_a_link_before_its_review_is_applied_is_the_links_first_contact(
+        DataSyncLinkMode turnedInto)
+    {
+        var link = await AwaitingReviewAsync(DataSyncLinkMode.Off);
+        var copied = _peer.Record([SyncKey.New().Value], _peer.Next(), Content("Copy me"), "a0");
+        var review = _f.Reviews.Stage(link.Id, true, _f.Pull(_peer, full: true, (Item, copied)));
+        var plan = await _f.PlanAsync(review, DataSyncLinkMode.Off);
+        // The rule editor's receive arrow, or approving the peer's two-way request, while the review was staged.
+        var db = _f.NewDb();
+        var row = db.DataSyncLinks.Single(l => l.Id == link.Id);
+        row.Mode = turnedInto;
+        row.LastMode = turnedInto;
+        await db.SaveChangesAsync();
+
+        var logId = await ApplyAsync(review, Decide(plan));
+
+        Assert.IsTrue(_f.Kind.Definitions.Values.Any(d => d.Name == "Copy me"));
+        Assert.AreEqual(DataSyncHistoryKind.FirstLink, (await _f.HistoryAsync()).Single(l => l.Id == logId).Kind);
+        var after = await _f.LinkRowAsync(link.Id);
+        Assert.AreEqual((turnedInto, DataSyncLinkState.Active), (after.Mode, after.State), "it keeps running");
+        Assert.AreEqual(turnedInto, after.LastMode);
+        Assert.IsNotNull(after.FirstContactCompletedAtUtc);
+    }
+
+    [TestMethod]
     public async Task An_item_that_changed_since_the_review_waits_as_a_Retry_record_and_the_rest_applies()
     {
         var link = await AwaitingReviewAsync();

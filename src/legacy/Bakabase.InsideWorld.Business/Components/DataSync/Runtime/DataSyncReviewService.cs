@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Merging;
@@ -193,8 +194,9 @@ public sealed class DataSyncReviewService
 
     /// <summary>
     /// The full plan of a staged pull against the last committed local state (read-only, §8.3), as the apply's
-    /// in-transaction re-plan builds it: with the mode the link will have (<c>Off</c> for copy once), so a two-way
-    /// link's separate names say they are used everywhere, and with the rename rows' reach filled in.
+    /// in-transaction re-plan builds it: with the mode the link will have (<c>Off</c> for copy once, decided by the
+    /// link as the apply decides it), so a two-way link's separate names say they are used everywhere, and with the
+    /// rename rows' reach filled in.
     /// </summary>
     private async Task<(DataSyncPlan Plan, DataSyncPlanInput Input)> PlanWithInputsAsync(DataSyncReviewEntry entry,
         CancellationToken ct)
@@ -205,7 +207,8 @@ public sealed class DataSyncReviewService
         var codecs = adapters.ToDictionary(p => p.Key, p => p.Value.Codec, StringComparer.Ordinal);
         var device = await _services.GetRequiredService<IDataSyncDeviceIdentity>().GetAsync(ct);
         var link = entry.LinkId is { } linkId ? await Store.GetLinkAsync(linkId, ct) : null;
-        var mode = entry.CopyOnce ? DataSyncLinkMode.Off : link?.Mode ?? DataSyncLinkMode.Off;
+        var mode = DataSyncReviewStore.AppliesAsCopyOnce(entry, link) ? DataSyncLinkMode.Off
+            : link?.Mode ?? DataSyncLinkMode.Off;
         var input = DataSyncPlanInput.FromLocalState(entry.Pull, state, codecs, device.NodeId, mode);
         var plan = await WithInUseCountsAsync(DataSyncPlanner.Plan(input), adapters, ct);
         _reviews.SetLastPlan(entry.ReviewId, plan);
@@ -325,7 +328,9 @@ public sealed class DataSyncReviewService
         var source = new DataSyncReviewSource(entry.Pull.PeerNodeId, entry.Pull.PeerName, manifest.AppVersion,
             DataSyncViews.Utc(entry.Pull.FetchedAtUtc),
             entry.Pull.Kinds.Select(k => new DataSyncKindCount(k.Kind, k.Entities.Count)).ToList());
-        return new DataSyncReviewResult(entry.ReviewId, entry.LinkId, entry.CopyOnce,
+        // What the apply will do, until it has: then what the review was staged as.
+        var copyOnce = entry.ApplyLogId is null ? DataSyncReviewStore.AppliesAsCopyOnce(entry, link) : entry.CopyOnce;
+        return new DataSyncReviewResult(entry.ReviewId, entry.LinkId, copyOnce,
             link?.Mode ?? DataSyncLinkMode.Off, state, source, plan, entry.ApplyLogId, entry.TaskId, error, problem);
     }
 

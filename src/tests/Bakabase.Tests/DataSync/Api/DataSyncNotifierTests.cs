@@ -293,6 +293,41 @@ public class DataSyncNotifierTests
         Assert.AreEqual(peers.Length + 1, h.Notifications.Records.Count);
     }
 
+    [TestMethod]
+    public async Task A_second_copy_once_onto_the_same_row_is_announced_again()
+    {
+        await using var h = await DataSyncApiHarness.CreateAsync();
+        var link = h.AddLink("node-pc", l =>
+        {
+            l.Mode = DataSyncLinkMode.Off;
+            l.State = DataSyncLinkState.AwaitingReview;
+            l.FirstContactCompletedAtUtc = null;
+            l.FirstContactKindsJson = null;
+        });
+        DataSyncReviewEntry Review(string id) => new(id, link.Id, true, new DataSyncStagedPull("node-pc", "PC-2",
+            new DataSyncFeedManifest("s", 1, "node-pc", "e", "0123456789abcdef", 1, 1, "2.4.0", [], null,
+                new DataSyncSourceAttention(false, 0, 0, false, 0)), [], h.Clock.UtcNow), null, null, null,
+            h.Clock.UtcNow, false);
+
+        await Observer(h).ReviewReadyAsync(link, Review("review-1"), default);
+        Assert.AreEqual(1, h.Notifications.Records.Count);
+        await h.Notifications.MarkAsReadAsync([h.Notifications.Records.Single().Id]);
+
+        // The review task applied it: the runner stopped the row in its own transaction, which raises no link event.
+        h.Store.Edit(link.Id, l => l.State = DataSyncLinkState.Stopped);
+        await Observer(h).WriteAppliedAsync(DataSyncHistoryKind.FirstLink, 7, link.Id, default);
+
+        // A week later, another copy once onto the stopped row.
+        h.Clock.Advance(TimeSpan.FromDays(7));
+        h.Store.Edit(link.Id, l => l.State = DataSyncLinkState.AwaitingReview);
+        var again = h.Store.Get(link.Id)!;
+        await Observer(h).LinkChangedAsync(again, default);
+        await Observer(h).ReviewReadyAsync(again, Review("review-2"), default);
+
+        Assert.AreEqual(2, h.Notifications.Records.Count(r =>
+            FakeNotificationService.CaseOf(r) == DataSyncNotifier.ReviewReadyCase));
+    }
+
     /// <summary>The runtime's clock as the review store reads time.</summary>
     private sealed class ClockTime(IDataSyncClock clock) : TimeProvider
     {

@@ -161,6 +161,10 @@ scopes").
   completes its first contact only for `Committed`. `Failed` keeps the runner's `ApplyFailed`
   and backoff; `NotApplied` (the attempt ended, the actor unverified or changing) puts the pull
   and a requested re-merge back for the next run.
+- **An apply consumes only the once flags it used.** With a pull, all of them; without one (a
+  re-merge, "Apply all"), only the pull-independent `SkipLargeChange` — the runner and the apply
+  task alike. "Apply as usual" and "Review deletions" ride with the pull that tripped B2/B3,
+  which the next fetch brings again, so an apply that ran before that fetch must leave them.
 - **A first sync is always in the history** (§8.3). The pull that completes a link's first
   contact — the approver's first pull, or its "Start anyway" — writes a `FirstLink` entry (the
   page's "First sync" with the device), even when it only raised link suggestions or conflicts;
@@ -207,8 +211,18 @@ scopes").
   are — so links awaiting reviews never make each other fetch full snapshots every minute. The
   fetch cycle and the status views only peek (`PeekForLink`), so a review nobody reads idles out
   after an hour and the next cycle fetches it again. "Ready to review" is announced once per link
-  and set of kinds while the link waits, not per staged review. "Fetch again" replaces a review
-  only once the new one is staged; a failed fetch leaves it where it was.
+  and set of kinds while the link waits, not per staged review; once a review is applied its
+  announcement is forgotten, so the next copy once onto the same row is announced again — and
+  that copy once discards the row's earlier review (kept for its result screen), so the cycle
+  stages its own. "Fetch again" replaces a review only once the new one is staged; a failed
+  fetch leaves it where it was.
+- **A copy once is the link's mode, not the review's flag.** Applying a review is a copy once
+  (the link ends `Stopped`, a `CopyOnce` entry) only while its link is `Off`, as read in the
+  apply's transaction; the review page plans and reports it the same way. A copy once turned
+  into Follow or two-way before its review was applied — the rule editor, or approving the
+  peer's two-way request — is that link's first contact and ends `Active`; the copy once's
+  staged review is discarded then (not one being applied), so the next cycle stages the link's
+  own.
 - **Wire pages are raw canonical bytes**, written and parsed with data sync's own options —
   never `FederationJson`, whose depth limit rejects a deep multilevel property.
 - **A pull is budgeted in count and time, not only bytes.** The `DataSync` task fetches its due
@@ -278,10 +292,14 @@ scopes").
   - on a working two-way link with `ReadBackDeclined`: "Ask X to keep in step" — an ordinary
     two-way request with a reciprocal offer; bases and items stay. When the peer already reads
     this device, it only clears the note.
-- **Dead credentials are never access.** The two "Ask X for access again" actions forget the
+- **Dead credentials are never access.** "Ask X for access again" on `AccessRevoked` forgets the
   datasync credentials this device holds for the peer (`ForgetOutboundAsync`) before the request
-  goes out, so that only the answer can read as access. A link waiting for a reset grant goes by
-  its own request alone (`granted`, or the claim loop's event), never by `HasOutboundGrantAsync`.
+  goes out, so that only the answer can read as access. On `Paused(PeerReset)` it keeps them: the
+  pause also stands for another install answering at the peer's address (`IdentityConflict`),
+  where they are still good and a request fails the same way, and `ForgetOutboundAsync` drops
+  this device's requests to the peer too, so it cannot follow the request either. A link waiting
+  for a reset grant goes by its own request alone (`granted`, or the claim loop's event), never
+  by `HasOutboundGrantAsync`, and the grant replaces what it held.
 - **`ReadBackDeclined`** ("X does not read this device") is set when the peer answers a two-way
   request or code without reading back: a code made without two-way consent, or a two-way
   request approved without read-back — the approval stores `readBack = declined` on the

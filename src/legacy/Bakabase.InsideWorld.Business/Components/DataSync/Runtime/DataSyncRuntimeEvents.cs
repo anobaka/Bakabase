@@ -92,6 +92,13 @@ public sealed class DataSyncRuntimeEvents : IDataSyncRuntimeObserver, IDataSyncA
     /// </remarks>
     public async Task WriteAppliedAsync(DataSyncHistoryKind kind, int? applyLogId, int? linkId, CancellationToken ct)
     {
+        // An applied review moved its link on without a link event: its "Ready to review" is done with.
+        if (kind is (DataSyncHistoryKind.FirstLink or DataSyncHistoryKind.CopyOnce) && applyLogId is not null &&
+            linkId is { } reviewed)
+        {
+            _notifier.ReviewApplied(reviewed);
+        }
+
         await GuardAsync(() => _notifier.SweepAsync(ct));
         if (kind == DataSyncHistoryKind.EntitySetting) await GuardAsync(() => _hub.PublishAppliedAsync(applyLogId, ct));
         await GuardAsync(() => _hub.PublishStatusAsync(ct));

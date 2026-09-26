@@ -195,6 +195,44 @@ public class AutoSyncApplyTests
     }
 
     [TestMethod]
+    public async Task An_apply_without_a_pull_leaves_the_deletion_flags_for_the_pull_that_tripped_the_breaker()
+    {
+        var f = await CreateAsync();
+        var peer = new DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer);
+        var records = Enumerable.Range(0, 11)
+            .Select(i => peer.Record([SyncKey.New().Value], peer.Next(), Content("Item " + i), "a" + i)).ToList();
+        await f.ApplyAsync(link, peer, records.Select(r => (Item, r)).ToArray());
+        var tombstones = records.Select(r => (Item, peer.Tombstone(r.Keys, peer.Next(r.Vv)))).ToArray();
+        Assert.AreEqual(DataSyncPauseReason.MassDeletion, (await f.ApplyAsync(link, peer, tombstones)).Paused);
+
+        // "Apply as usual", then "Apply all" of a large change: its re-merge runs before the fetch brings the
+        // deletions again, and the apply task hands it the pull-independent flag alone.
+        var flagged = f.NewDb();
+        var row = flagged.DataSyncLinks.Single(l => l.Id == link.Id);
+        row.State = DataSyncLinkState.Active;
+        row.PausedReason = null;
+        row.OnceFlagsJson = Bakabase.InsideWorld.Business.Components.DataSync.Persistence.DataSyncStoredJson.WriteFlags(
+            new DataSyncMergeFlags(SkipDeletionBreaker: true, SkipLargeChange: true));
+        await flagged.SaveChangesAsync();
+        var remerge = await f.Runner.RunAutoSyncAsync(
+            Context(await f.LinkRowAsync(link.Id), peer) with { LinkFlags = new DataSyncMergeFlags(SkipLargeChange: true) },
+            null, f.Args());
+
+        Assert.AreEqual((DataSyncAutoSyncEnd.Committed, (DataSyncPauseReason?) null), (remerge.End, remerge.Paused));
+        Assert.AreEqual(new DataSyncMergeFlags(SkipDeletionBreaker: true),
+            Bakabase.InsideWorld.Business.Components.DataSync.Persistence.DataSyncStoredJson.ReadFlags(
+                (await f.LinkRowAsync(link.Id)).OnceFlagsJson, "OnceFlagsJson"),
+            "only what the pull-less apply used is consumed");
+
+        // The deletions come again: "Apply as usual" still stands, so they apply rather than pause a second time.
+        var again = await f.ApplyAsync(link, peer, tombstones);
+        Assert.IsNull(again.Paused);
+        Assert.AreEqual(0, f.Kind.Definitions.Count, "created by sync, unused and unchanged: deleted");
+        Assert.IsNull((await f.LinkRowAsync(link.Id)).OnceFlagsJson, "the pull consumed it");
+    }
+
+    [TestMethod]
     public async Task A_failed_apply_is_recorded_on_the_link_with_a_backoff_and_a_later_success_clears_it()
     {
         var f = await CreateAsync();
