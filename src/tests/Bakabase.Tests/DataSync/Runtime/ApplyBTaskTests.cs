@@ -106,7 +106,8 @@ public class ApplyBTaskTests
             {["extensionGroup"] = 3, ["customProperty"] = 2}));
         var synced = h.Link(link.Id).LastSyncedAtUtc;
         // Pressed after this task's own check, while the runner waited for the gate (§8.10.2).
-        h.Runner.AutoSyncOutcome = _ => new DataSyncAutoSyncOutcome(null, DataSyncPauseReason.AllPaused, 0, 0, 0, [], []);
+        h.Runner.AutoSyncOutcome = _ => new DataSyncAutoSyncOutcome(null, DataSyncPauseReason.AllPaused, 0, 0, 0, [], [],
+            DataSyncAutoSyncEnd.NotApplied);
 
         await h.Scheduler.TickAsync(default);
         h.Clock.Advance(DataSyncSchedule.StartupDelay);
@@ -316,7 +317,8 @@ public class ApplyBTaskTests
         var link = h.AddLink("nas", l => l.SetOnceFlags(DataSyncMergeFlags.None with {SkipDeletionBreaker = true}));
         h.StagedPulls.Put(link.Id, PullFor(h, "nas"));
         h.Runner.AutoSyncOutcome = _ =>
-            new DataSyncAutoSyncOutcome(null, DataSyncPauseReason.TooManyDecisions, 0, 0, 0, [], []);
+            new DataSyncAutoSyncOutcome(null, DataSyncPauseReason.TooManyDecisions, 0, 0, 0, [], [],
+                DataSyncAutoSyncEnd.Committed);
 
         await h.Launcher.EnqueueApplyAsync();
         await h.Btm.Start(DataSyncTaskIds.Apply);
@@ -325,7 +327,7 @@ public class ApplyBTaskTests
         Assert.IsTrue(h.Link(link.Id).GetOnceFlags().SkipDeletionBreaker, "a paused apply consumed nothing");
 
         // After the resume, an apply that does not pause consumes it.
-        h.Runner.AutoSyncOutcome = _ => new DataSyncAutoSyncOutcome(1, null, 0, 0, 1, [], []);
+        h.Runner.AutoSyncOutcome = _ => new DataSyncAutoSyncOutcome(1, null, 0, 0, 1, [], [], DataSyncAutoSyncEnd.Committed);
         h.StagedPulls.Put(link.Id, PullFor(h, "nas"));
         await h.Launcher.EnqueueApplyAsync();
         await h.Btm.Start(DataSyncTaskIds.Apply);

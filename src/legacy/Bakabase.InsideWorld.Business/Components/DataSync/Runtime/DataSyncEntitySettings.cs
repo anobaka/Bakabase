@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Identity;
@@ -11,7 +12,6 @@ using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Services;
 using Bakabase.Modules.DataSync.Wire;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
@@ -19,9 +19,10 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 /// <summary>
 /// How one definition syncs (§3.6, §6.6 "After an entity setting changes"): its state (keep on this device only, stop
 /// syncing, sync again), the shared "definition only" field, and the options kept on this device only. It runs
-/// synchronously in the request, under the gate the caller holds, after the actor check and in one short transaction
-/// with a Refresh, so the change becomes a revision at once; no task is started (N15). Each change is a history entry
-/// that undo can take back.
+/// synchronously in the request, under the gate the caller holds, through <see cref="IDataSyncLocalChangeRunner"/>:
+/// after the actor check and in one short transaction with a Refresh, committed only while the actor is verified, so
+/// the change becomes a revision at once; no task is started (N15). Each change is a history entry that undo can take
+/// back.
 /// </summary>
 public sealed class DataSyncEntitySettings
 {
@@ -77,38 +78,36 @@ public sealed class DataSyncEntitySettings
             overlayChanged ? new DataSyncOverlay(localOnly, held) : null);
         if (target is { State: null, ChildrenLocal: null, Overlay: null }) return new DataSyncTaskStart(null, null);
 
-        // §5.6: the actor check after entering the gate and before any transaction.
-        var guard = _services.GetService<IDataSyncActorGuard>();
-        if (guard is not null) await guard.CheckAsync(gate.Lease, ct);
-
-        for (var attempt = 0;; attempt++)
+        var name = await NameOfAsync(adapter, localKey, ct);
+        int? logId = null;
+        try
         {
-            try
-            {
-                var logId = await ApplyAsync(adapter, entity, before, target, gate.Lease, ct);
-                await _services.GetRequiredService<IDataSyncRuntimeObserver>()
-                    .WriteAppliedAsync(DataSyncHistoryKind.EntitySetting, logId, null, ct);
-                return new DataSyncTaskStart(null, null);
-            }
-            catch (DataSyncActorChangedException) when (attempt == 0 && guard is not null)
-            {
-                // Refresh found the actor rotated under it: the transaction rolled back; check, then once more (§5.6).
-                await guard.CheckAsync(gate.Lease, ct);
-            }
+            // The actor check after entering the gate and before any transaction (§5.6), then the change and a Refresh
+            // that makes the shared change a revision, in one transaction committed only while the actor is still
+            // verified; an attempt the actor changed under is rolled back and run again in a new scope.
+            await _services.GetRequiredService<IDataSyncLocalChangeRunner>().RunAsync(gate.Lease, [kind],
+                async (scope, c) => logId = await WriteAsync(scope.GetRequiredService<IDataSyncStore>(), entity, before,
+                    target, name, c), ct);
         }
+        catch (Exception e) when (e is DataSyncActorUnverifiedException or DataSyncActorChangedException)
+        {
+            // Evidence kept arriving, or the actor kept changing, under every attempt: nothing stands; ask again.
+            return Refuse(DataSyncProblemCode.Busy, null);
+        }
+
+        await _services.GetRequiredService<IDataSyncRuntimeObserver>()
+            .WriteAppliedAsync(DataSyncHistoryKind.EntitySetting, logId, null, ct);
+        return new DataSyncTaskStart(null, null);
     }
 
     /// <summary>
-    /// The change in one short transaction: the side-row writes, the items it settles, a Refresh that makes the
-    /// shared change a revision, and the history entry. Every write sets the target value, so running it again after a
-    /// rollback writes the same thing.
+    /// The change, in the transaction the local change runner opened on <paramref name="store"/>'s scope: the side-row
+    /// writes, the items it settles and the history entry; the runner's Refresh then makes the shared change a
+    /// revision. Every write sets the target value, so an attempt run again after a rollback writes the same thing.
     /// </summary>
-    private async Task<int> ApplyAsync(IDataSyncKind adapter, DataSyncEntityDbModel entity,
-        DataSyncEntitySettingPreImage before, Target target, DataSyncGateLease lease, CancellationToken ct)
+    private async Task<int> WriteAsync(IDataSyncStore store, DataSyncEntityDbModel entity,
+        DataSyncEntitySettingPreImage before, Target target, string name, CancellationToken ct)
     {
-        var db = _services.GetService<BakabaseDbContext>();
-        await using var tx = db is null ? null : await db.Database.BeginTransactionAsync(ct);
-        var store = Store;
         var (kind, localKey) = (entity.Kind, entity.LocalKey);
         var key = new SyncKey(entity.SyncKey);
         var now = Now;
@@ -136,14 +135,10 @@ public sealed class DataSyncEntitySettings
                 await store.CloseStaleStateItemsAsync([(kind, key)], null, now, ct);
         }
 
-        // The shared field and what is published changed: Refresh makes it a revision now (§3.6, §6.6).
-        var refresher = _services.GetService<IDataSyncRefresher>();
-        if (refresher is not null) await refresher.RefreshAsync(lease, [kind], false, ct);
-
-        var item = new DataSyncHistoryItem($"{kind}/k/{entity.SyncKey}", kind, await NameOfAsync(adapter, localKey, ct),
-            DataSyncItemOutcome.Applied, DataSyncItemAction.Updated, localKey, DataSyncPlanItemType.Update);
+        var item = new DataSyncHistoryItem($"{kind}/k/{entity.SyncKey}", kind, name, DataSyncItemOutcome.Applied,
+            DataSyncItemAction.Updated, localKey, DataSyncPlanItemType.Update);
         var preImage = DataSyncHistoryJson.WriteEntitySettingPreImage([before]);
-        var logId = await store.AddHistoryAsync(new DataSyncApplyLogDbModel
+        return await store.AddHistoryAsync(new DataSyncApplyLogDbModel
         {
             Kind = DataSyncHistoryKind.EntitySetting,
             AppliedAtUtc = now,
@@ -152,9 +147,6 @@ public sealed class DataSyncEntitySettings
             PreImageJson = preImage,
             PreImageBytes = System.Text.Encoding.UTF8.GetByteCount(preImage),
         }, ct);
-
-        if (tx is not null) await tx.CommitAsync(ct);
-        return logId;
     }
 
     private static async Task<string> NameOfAsync(IDataSyncKind adapter, string localKey, CancellationToken ct)

@@ -5650,6 +5650,24 @@ export const DataSyncResumeActionLabel: Record<DataSyncResumeAction, string> = {
   [DataSyncResumeAction.StartAnyway]: 'StartAnyway'
 };
 
+export enum DataSyncAutoSyncEnd {
+  Committed = 1,
+  NotApplied = 2,
+  Failed = 3
+}
+
+export const dataSyncAutoSyncEnds = [
+  { label: 'Committed', value: DataSyncAutoSyncEnd.Committed },
+  { label: 'NotApplied', value: DataSyncAutoSyncEnd.NotApplied },
+  { label: 'Failed', value: DataSyncAutoSyncEnd.Failed }
+] as const;
+
+export const DataSyncAutoSyncEndLabel: Record<DataSyncAutoSyncEnd, string> = {
+  [DataSyncAutoSyncEnd.Committed]: 'Committed',
+  [DataSyncAutoSyncEnd.NotApplied]: 'NotApplied',
+  [DataSyncAutoSyncEnd.Failed]: 'Failed'
+};
+
 export enum DataSyncPlanItemType {
   Create = 1,
   Update = 2,

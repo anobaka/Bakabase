@@ -55,6 +55,8 @@ public static class DataSyncServiceCollectionExtensions
             sp.GetRequiredService<DataSyncGate>(), sp.GetRequiredService<IDataSyncActorGuard>(),
             sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<DataSyncActorWatermarkFile>(),
             sp.GetService<TimeProvider>()));
+        // Entity settings commit their change and its Refresh through it (§6.6).
+        services.TryAddSingleton<IDataSyncLocalChangeRunner>(sp => sp.GetRequiredService<DataSyncRefreshCoordinator>());
         services.TryAddSingleton<DataSyncRetention>(sp => new DataSyncRetention(sp.GetRequiredService<DataSyncGate>(),
             sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<IDataSyncDataDirectory>(),
             sp.GetService<TimeProvider>(), sp.GetService<ILogger<DataSyncRetention>>()));

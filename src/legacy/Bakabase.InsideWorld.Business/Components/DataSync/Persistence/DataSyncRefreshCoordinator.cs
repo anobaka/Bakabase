@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
+using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Runtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,7 +24,7 @@ public sealed record DataSyncLocalChangeResult(DataSyncPauseReason? Pause, DataS
 /// a snapshot refreshes with <c>collectPublished</c> under the gate it already holds. Never while the actor is
 /// unverified: Refresh is then skipped and writes nothing.
 /// </remarks>
-public sealed class DataSyncRefreshCoordinator
+public sealed class DataSyncRefreshCoordinator : IDataSyncLocalChangeRunner
 {
     /// <summary>A head is answered from a Refresh at most this old (§6.6, §7.5.1).</summary>
     public static readonly TimeSpan HeadRefreshMaxAge = TimeSpan.FromSeconds(5);
@@ -94,6 +95,21 @@ public sealed class DataSyncRefreshCoordinator
         ArgumentNullException.ThrowIfNull(kinds);
         ArgumentNullException.ThrowIfNull(change);
         using var lease = await _gate.EnterAsync(DataSyncGate.RequestTimeout, ct);
+        return await RunLocalChangeAsync(lease, kinds, change, ct);
+    }
+
+    /// <summary>
+    /// <see cref="RunLocalChangeAsync(IReadOnlyCollection{string},Func{IServiceProvider,CancellationToken,Task},CancellationToken)"/>
+    /// under a gate the caller already holds: a facade call that entered it (§10.1), such as an entity setting.
+    /// </summary>
+    /// <exception cref="DataSyncActorUnverifiedException">Evidence kept arriving during every attempt.</exception>
+    public async Task<DataSyncLocalChangeResult> RunLocalChangeAsync(DataSyncGateLease lease,
+        IReadOnlyCollection<string> kinds, Func<IServiceProvider, CancellationToken, Task> change, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(lease);
+        ArgumentNullException.ThrowIfNull(kinds);
+        ArgumentNullException.ThrowIfNull(change);
+        if (!lease.IsHeld) throw new InvalidOperationException("A local change runs under the data sync gate (§6.6).");
         var pause = await _guard.CheckAsync(lease, ct);
         for (var attempt = 0;; attempt++)
         {
@@ -132,6 +148,10 @@ public sealed class DataSyncRefreshCoordinator
             }
         }
     }
+
+    Task<DataSyncLocalChangeResult> IDataSyncLocalChangeRunner.RunAsync(DataSyncGateLease lease,
+        IReadOnlyCollection<string> kinds, Func<IServiceProvider, CancellationToken, Task> change, CancellationToken ct) =>
+        RunLocalChangeAsync(lease, kinds, change, ct);
 
     /// <summary>A local change is tried at most this often when the actor changes under it (§5.6).</summary>
     private const int MaxLocalChangeAttempts = 3;

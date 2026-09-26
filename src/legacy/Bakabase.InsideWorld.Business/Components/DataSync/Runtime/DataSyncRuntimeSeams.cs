@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
+using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
@@ -113,6 +115,22 @@ public interface IDataSyncGateEntry
 {
     /// <summary>A lease, or null when the gate was not free within <paramref name="timeout"/> (null: no limit).</summary>
     Task<DataSyncGateLease?> TryEnterAsync(TimeSpan? timeout, CancellationToken ct);
+}
+
+/// <summary>
+/// A local change that becomes a revision at once (§6.6 "After an entity setting changes") [C]: under the gate the
+/// caller holds, after the actor check (§5.6), <c>change</c> and a Refresh of the kinds in one short transaction,
+/// committed only while the actor is still verified, with <c>actor.json</c> written after the commit. An attempt that
+/// met a changed actor, or evidence that arrived while its Refresh ran, is rolled back and run again in a new scope,
+/// so <c>change</c> writes only through the scope it is handed. Package C's <c>DataSyncRefreshCoordinator</c> is the
+/// implementation.
+/// </summary>
+public interface IDataSyncLocalChangeRunner
+{
+    /// <exception cref="DataSyncActorUnverifiedException">Evidence kept arriving during every attempt.</exception>
+    /// <exception cref="DataSyncActorChangedException">The actor changed under every attempt.</exception>
+    Task<DataSyncLocalChangeResult> RunAsync(DataSyncGateLease lease, IReadOnlyCollection<string> kinds,
+        Func<IServiceProvider, CancellationToken, Task> change, CancellationToken ct);
 }
 
 /// <summary>

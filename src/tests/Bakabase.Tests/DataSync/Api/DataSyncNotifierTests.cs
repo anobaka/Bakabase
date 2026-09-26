@@ -26,7 +26,7 @@ public class DataSyncNotifierTests
 
     private static DataSyncAutoSyncOutcome Outcome(int newItems = 0, int? logId = null,
         IReadOnlyList<DataSyncMergeNote>? notes = null, IReadOnlyList<long>? closed = null) =>
-        new(logId, null, newItems, closed?.Count ?? 0, 1, notes ?? [], closed ?? []);
+        new(logId, null, newItems, closed?.Count ?? 0, 1, notes ?? [], closed ?? [], DataSyncAutoSyncEnd.Committed);
 
     [TestMethod]
     public async Task A_headless_install_creates_none()

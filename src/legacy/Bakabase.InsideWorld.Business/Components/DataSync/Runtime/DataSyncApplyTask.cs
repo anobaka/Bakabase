@@ -79,11 +79,7 @@ public sealed class DataSyncApplyTask
 
                 var pull = _stagedPulls.Take(linkId);
                 if (pull is null) done.Add(linkId);
-                if (!await ApplyLinkAsync(linkId, pull, args))
-                {
-                    _logger.LogInformation("Data sync applies nothing while it is paused");
-                    return;
-                }
+                if (!await ApplyLinkAsync(linkId, pull, args)) return;
             }
         }
     }
@@ -109,7 +105,11 @@ public sealed class DataSyncApplyTask
         return work;
     }
 
-    /// <returns>False when "Pause all" was found pressed once the runner held the gate: the task stops there.</returns>
+    /// <returns>
+    /// False when the task stops there: "Pause all" was found pressed once the runner held the gate, or the runner
+    /// applied nothing for a reason that holds for every link (the attempt ended, the actor is unverified or kept
+    /// changing). What the apply took waits for the next run, which the scheduler enqueues.
+    /// </returns>
     private async Task<bool> ApplyLinkAsync(int linkId, DataSyncStagedPull? pull, BTaskArgs args)
     {
         var ct = args.CancellationToken;
@@ -146,8 +146,7 @@ public sealed class DataSyncApplyTask
         {
             // A stopped apply rolled back its current chunk; put the pull back so the next run applies it without a
             // refetch, unless a newer one arrived meanwhile.
-            if (pull is not null && _stagedPulls.Peek(linkId) is null) _stagedPulls.Put(linkId, pull);
-            if (reMerge) _state.RequestReMerge(linkId);
+            KeepForNextRun(linkId, pull, reMerge);
             throw;
         }
         catch (Exception e)
@@ -162,20 +161,42 @@ public sealed class DataSyncApplyTask
         // newer one arrived meanwhile, and a requested re-merge waits too.
         if (outcome.Paused == DataSyncPauseReason.AllPaused)
         {
-            if (pull is not null && _stagedPulls.Peek(linkId) is null) _stagedPulls.Put(linkId, pull);
-            if (reMerge) _state.RequestReMerge(linkId);
+            KeepForNextRun(linkId, pull, reMerge);
+            _logger.LogInformation("Data sync applies nothing while it is paused");
             return false;
         }
 
-        // A link stopped or reset while the apply waited applied nothing either: nothing is recorded on it.
-        if (outcome is { Paused: null, ApplyLogId: null, Applied: 0 } &&
-            await _links.GetAsync(linkId, ct) is null or { State: DataSyncLinkState.Stopped })
+        if (outcome.Paused is null)
         {
-            return true;
+            switch (outcome.End)
+            {
+                case DataSyncAutoSyncEnd.Failed:
+                    // Rolled back: the runner recorded ApplyFailed and the next attempt's backoff (§8.10.2), which stand
+                    // as they are. The pull is dropped and the link is not tried again in this run.
+                    return true;
+                case DataSyncAutoSyncEnd.NotApplied:
+                    // A link stopped or reset while the apply waited: nothing is recorded on it, and the pull goes.
+                    if (await _links.GetAsync(linkId, ct) is null or { State: DataSyncLinkState.Stopped }) return true;
+                    // The attempt ended, or the actor was unverified or changed under every try (§5.6): nothing was
+                    // applied, so nothing is recorded as synced and no once flag or first contact is consumed. The
+                    // pull and a requested re-merge wait for the next run, which the scheduler enqueues.
+                    KeepForNextRun(linkId, pull, reMerge);
+                    _logger.LogInformation("Data sync applied nothing from {Peer} now; it applies it on its next run",
+                        link.PeerNodeId);
+                    return false;
+            }
         }
 
-        await _links.AfterAutoSyncAsync(context, pull, outcome, IsFullReconciliation(sp, link, context, pull), ct);
+        await _links.AfterAutoSyncAsync(context, pull, outcome, link.FirstContactCompletedAtUtc is null,
+            IsFullReconciliation(sp, link, context, pull), ct);
         return true;
+    }
+
+    /// <summary>Puts a pull back unless a newer one arrived meanwhile, and requests the re-merge again.</summary>
+    private void KeepForNextRun(int linkId, DataSyncStagedPull? pull, bool reMerge)
+    {
+        if (pull is not null && _stagedPulls.Peek(linkId) is null) _stagedPulls.Put(linkId, pull);
+        if (reMerge) _state.RequestReMerge(linkId);
     }
 
     /// <summary>

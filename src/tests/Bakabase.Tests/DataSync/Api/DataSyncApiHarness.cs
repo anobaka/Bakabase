@@ -6,6 +6,7 @@ using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.DataSync;
+using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
@@ -104,6 +105,8 @@ internal sealed class DataSyncApiHarness : IAsyncDisposable
         services.AddSingleton<INotificationService>(h.Notifications);
         services.AddSingleton<IDataSyncUndoPreviewer>(h.UndoPreviewer);
         services.AddSingleton<IDataSyncRefresher>(h.Refresher);
+        services.AddSingleton<IDataSyncLocalChangeRunner>(sp =>
+            new FakeLocalChangeRunner(h, sp.GetRequiredService<IServiceScopeFactory>()));
         services.AddScoped<IDataSyncKind>(_ => h.ExtensionGroups);
         services.AddScoped<IDataSyncKind>(_ => h.CustomProperties);
         configure?.Invoke(services);
@@ -480,6 +483,36 @@ internal sealed class FakeUndoPreviewer : IDataSyncUndoPreviewer
     {
         Previewed.Enqueue(entry.Id);
         return Task.FromResult(Preview);
+    }
+}
+
+/// <summary>
+/// The local change as package C's coordinator runs it, over the fakes: the actor check, then the change and a Refresh
+/// in a new scope per attempt, run again when the actor changed under it. The fake store keeps no transaction, so the
+/// history entries of an attempt that is run again are taken back by hand, as its rollback would.
+/// </summary>
+internal sealed class FakeLocalChangeRunner(DataSyncApiHarness h, IServiceScopeFactory scopes)
+    : IDataSyncLocalChangeRunner
+{
+    public async Task<DataSyncLocalChangeResult> RunAsync(DataSyncGateLease lease, IReadOnlyCollection<string> kinds,
+        Func<IServiceProvider, CancellationToken, Task> change, CancellationToken ct)
+    {
+        var pause = await h.Guard.CheckAsync(lease, ct);
+        for (var attempt = 0;; attempt++)
+        {
+            var history = h.Store.History.Count;
+            await using var scope = scopes.CreateAsyncScope();
+            try
+            {
+                await change(scope.ServiceProvider, ct);
+                return new DataSyncLocalChangeResult(pause, await h.Refresher.RefreshAsync(lease, kinds, false, ct));
+            }
+            catch (DataSyncActorChangedException) when (attempt < 2)
+            {
+                h.Store.History.RemoveRange(history, h.Store.History.Count - history);
+                pause = await h.Guard.CheckAsync(lease, ct) ?? pause;
+            }
+        }
     }
 }
 

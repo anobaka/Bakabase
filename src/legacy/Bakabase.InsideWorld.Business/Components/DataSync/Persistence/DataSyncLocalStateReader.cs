@@ -9,6 +9,8 @@ using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 
@@ -27,17 +29,48 @@ public sealed class DataSyncLocalStateReader(DataSyncStore store, DataSyncIdenti
 {
     /// <summary>
     /// The given kinds that have an adapter here, read at one committed state: inside the caller's transaction, or in a
-    /// transaction of its own that is rolled back, since nothing is written. A kind this build has no adapter for is
-    /// left out, as the planner holds it.
+    /// read transaction of its own that is rolled back, since nothing is written. A kind this build has no adapter for
+    /// is left out, as the planner holds it.
     /// </summary>
+    /// <remarks>
+    /// Its own transaction is a deferred one (<c>BEGIN</c>, not the <c>BEGIN IMMEDIATE</c> EF opens on SQLite): in WAL
+    /// mode it reads one snapshot from its first read without taking the write lock, so a page that reads a review
+    /// never waits for a writer and never holds up the enhancer, resource sync, the person's edits or an apply while it
+    /// reads every definition.
+    /// </remarks>
     public async Task<IReadOnlyDictionary<string, DataSyncLocalKindState>> ReadAsync(
         IReadOnlyCollection<string> kinds, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(kinds);
         var db = store.Db;
-        await using var transaction = db.Database.CurrentTransaction is null
-            ? await db.Database.BeginTransactionAsync(ct)
-            : null;
+        if (db.Database.CurrentTransaction is not null) return await ReadKindsAsync(kinds, ct);
+
+        await db.Database.OpenConnectionAsync(ct);
+        try
+        {
+            // Disposed uncommitted: rolled back.
+            await using var transaction = db.Database.GetDbConnection() is SqliteConnection sqlite
+                ? sqlite.BeginTransaction(deferred: true)
+                : await db.Database.GetDbConnection().BeginTransactionAsync(ct);
+            await db.Database.UseTransactionAsync(transaction, ct);
+            try
+            {
+                return await ReadKindsAsync(kinds, ct);
+            }
+            finally
+            {
+                await db.Database.UseTransactionAsync(null, CancellationToken.None);
+            }
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+        }
+    }
+
+    private async Task<IReadOnlyDictionary<string, DataSyncLocalKindState>> ReadKindsAsync(
+        IReadOnlyCollection<string> kinds, CancellationToken ct)
+    {
         var contents = new DataSyncLocalContentCache();
         var result = new Dictionary<string, DataSyncLocalKindState>(StringComparer.Ordinal);
         foreach (var kind in kinds.Distinct(StringComparer.Ordinal))

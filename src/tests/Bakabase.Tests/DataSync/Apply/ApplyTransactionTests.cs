@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
+using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Identity;
@@ -198,6 +200,91 @@ public class ApplyTransactionTests
         }
 
         Assert.AreEqual(before, await SnapshotAsync(f));
+    }
+
+    /// <summary>
+    /// A rollback to a savepoint keeps what the transaction wrote before it, which no other connection sees before the
+    /// commit. A scope that loads the kind's cache in between (from the committed rows) leaves nothing stale behind:
+    /// after the commit the service serves what the database holds, and the next Refresh finds nothing to publish.
+    /// </summary>
+    [TestMethod]
+    public async Task A_cache_loaded_between_a_savepoint_rollback_and_the_commit_is_dropped_by_the_commit()
+    {
+        var (f, _) = await GroupsAsync();
+        var video = await f.AddGroupAsync("Video", ".mkv");
+        await f.RefreshAsync();
+        var id = int.Parse(video, System.Globalization.CultureInfo.InvariantCulture);
+        var scopes = f.Services.GetRequiredService<IServiceScopeFactory>();
+
+        await using (var s = await DataSyncApplySession.OpenAsync(scopes, default))
+        {
+            using var lease = await f.Gate.EnterAsync(null, default);
+            await s.BeginAsync(default);
+            var groups = s.Services.GetRequiredService<IExtensionGroupService>();
+            s.Writer(Groups);
+            await groups.Put(id, new Bakabase.Abstractions.Models.Input.ExtensionGroupPutInputModel("Movies", [".mkv"]));
+            // Recorded in the same transaction, as an apply records the hashes of what it wrote.
+            await s.Refresher.RefreshAsync(lease, [Groups], false, default);
+            await s.LoadStateAsync(default);
+            await s.SavepointAsync("phase-one", default);
+            await groups.Put(id, new Bakabase.Abstractions.Models.Input.ExtensionGroupPutInputModel("Clips", [".mkv"]));
+
+            await s.RollbackToSavepointAsync("phase-one");
+            Assert.AreEqual("Movies", (await groups.Get(id)).Name, "the session serves what its transaction keeps");
+
+            // Another scope drops and loads the cache before the commit: it sees only the committed "Video".
+            await using (var other = scopes.CreateAsyncScope())
+            {
+                other.ServiceProvider.GetServices<IDataSyncKind>().Single(k => k.Codec.Descriptor.Kind == Groups)
+                    .ResetCaches();
+                Assert.AreEqual("Video",
+                    (await other.ServiceProvider.GetRequiredService<IExtensionGroupService>().Get(id)).Name);
+            }
+
+            await s.CommitAsync(default);
+            await f.Services.GetRequiredService<DataSyncActorWatermarkFile>().WriteAsync(await f.StateAsync(), default);
+        }
+
+        Assert.AreEqual("Movies", (await f.NewDb().ExtensionGroups.AsNoTracking().SingleAsync(g => g.Id == id)).Name);
+        Assert.AreEqual("Movies", (await f.GroupAsync(video))!.Name, "the service serves what was committed");
+        var committed = await f.RowAsync(video, Groups);
+        await f.RefreshAsync();
+        var refreshed = await f.RowAsync(video, Groups);
+        Assert.AreEqual((committed.Seq, committed.VvJson, committed.RawHash),
+            (refreshed.Seq, refreshed.VvJson, refreshed.RawHash), "no revision of stale content");
+    }
+
+    /// <summary>
+    /// The local state a review page reads (<c>GET /data-sync/reviews/{id}</c>) is read in a deferred transaction: it
+    /// answers while another connection holds SQLite's write lock, and so never holds up a writer either.
+    /// </summary>
+    [TestMethod]
+    public async Task The_local_state_a_review_reads_does_not_wait_for_a_writer()
+    {
+        var (f, _) = await GroupsAsync();
+        var docs = await f.AddGroupAsync("Docs", ".pdf");
+        await f.RefreshAsync();
+        var builder = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(f.NewDb().Database.GetConnectionString())
+        {
+            Pooling = false,
+        };
+        await using var writer = new Microsoft.Data.Sqlite.SqliteConnection(builder.ToString());
+        await writer.OpenAsync();
+        await using (var begin = writer.CreateCommand())
+        {
+            begin.CommandText = "BEGIN IMMEDIATE";
+            await begin.ExecuteNonQueryAsync();
+        }
+
+        await using var scope = f.Services.CreateAsyncScope();
+        var read = scope.ServiceProvider.GetRequiredService<IDataSyncLocalStateReader>().ReadAsync([Groups], default);
+        var first = await Task.WhenAny(read, Task.Delay(TimeSpan.FromSeconds(5)));
+        await writer.CloseAsync();
+
+        Assert.AreSame(read, first, "the read waited for the writer");
+        Assert.IsTrue((await read)[Groups].Entities.Any(e => e.LocalKey == docs));
+        Assert.IsNull(scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().Database.CurrentTransaction,
+            "the read transaction is gone");
     }
 
     [TestMethod]

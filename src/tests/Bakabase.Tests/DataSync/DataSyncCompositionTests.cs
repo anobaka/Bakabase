@@ -38,6 +38,9 @@ public class DataSyncCompositionTests
         Assert.AreSame(s.GetRequiredService<DataSyncUndoPlanner>(), s.GetRequiredService<IDataSyncUndoPreviewer>());
         Assert.AreSame(s.GetRequiredService<DataSyncRetention>(), s.GetRequiredService<IDataSyncRetention>());
         Assert.AreSame(s.GetRequiredService<DataSyncApplyRunner>(), s.GetRequiredService<IDataSyncApplyRunner>());
+        // Entity settings commit through the coordinator's local change rules (§5.6, §6.6).
+        Assert.AreSame(s.GetRequiredService<DataSyncRefreshCoordinator>(),
+            s.GetRequiredService<IDataSyncLocalChangeRunner>());
         Assert.IsInstanceOfType<DataSyncService>(s.GetRequiredService<IDataSyncService>());
         Assert.IsInstanceOfType<DataSyncGrantEventsHandler>(s.GetRequiredService<IDataSyncGrantEvents>());
 

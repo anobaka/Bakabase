@@ -1,12 +1,15 @@
 using System.Text.Json.Nodes;
+using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Canonical;
 using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Merging;
+using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Runtime;
+using Bakabase.Modules.DataSync.Services;
 using Bakabase.TestKit.DataSync;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -740,6 +743,98 @@ public class RefreshTests
         Assert.AreEqual(issued, vv[old], "no counter of the retiring actor was committed");
         Assert.AreEqual(1L, vv[new DataSyncActorId(after.ActorId)]);
         Assert.AreEqual(after.ActorId, f.Watermark.Read().Watermark!.ActorId, "actor.json follows the commit");
+    }
+
+    /// <summary>An entity setting through the facade (<c>PUT /data-sync/entities/…</c>), in its own request scope.</summary>
+    private static async Task<DataSyncTaskStart> SetEntitySyncAsync(DataSyncRefreshFixture f, string localKey,
+        DataSyncEntitySyncInput input)
+    {
+        await using var scope = f.Services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<IDataSyncService>()
+            .SetEntitySyncAsync(f.KindId, localKey, input, default);
+    }
+
+    private static async Task<List<DataSyncApplyLogDbModel>> EntitySettingsAsync(DataSyncRefreshFixture f)
+    {
+        await using var scope = f.Services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().DataSyncApplyLogs.AsNoTracking()
+            .Where(l => l.Kind == DataSyncHistoryKind.EntitySetting).ToListAsync();
+    }
+
+    [TestMethod]
+    public async Task An_entity_setting_through_the_facade_writes_the_counters_it_committed_to_the_watermark()
+    {
+        var f = await DataSyncRefreshFixture.CreateAsync();
+        f.Kind.Add("1", "Genre", ("a", "Action"), ("b", "Drama"));
+        await f.RefreshAsync();
+        var before = await f.StateAsync();
+
+        // Only the overlay changes: a child kept on this device only is withheld, which is a revision (§3.6, §6.6).
+        var start = await SetEntitySyncAsync(f, "1", new DataSyncEntitySyncInput(null, null, ["a"], null));
+
+        Assert.IsNull(start.Problem, start.Problem?.Code.ToString());
+        var after = await f.StateAsync();
+        Assert.AreEqual(before.ActorCounter + 1, after.ActorCounter, "the setting's Refresh issued a counter");
+        Assert.AreEqual(DataSyncActorWatermark.Of(after), f.Watermark.Read().Watermark, "actor.json follows the commit");
+        Assert.AreEqual(1, (await EntitySettingsAsync(f)).Count);
+    }
+
+    [TestMethod]
+    public async Task An_entity_setting_whose_Refresh_meets_evidence_commits_nothing_under_the_retiring_actor()
+    {
+        EvidenceInFlightGuard guard = null!;
+        var f = await DataSyncRefreshFixture.CreateAsync(configure: s => s.AddSingleton<IDataSyncActorGuard>(sp =>
+            guard = new EvidenceInFlightGuard(sp.GetRequiredService<DataSyncActorGuard>())));
+        await f.LinkAsync("peer-1");
+        f.Kind.Add("1", "Genre", ("a", "Action"));
+        await f.RefreshAsync();
+        var before = await f.StateAsync();
+        var old = new DataSyncActorId(before.ActorId);
+        var issued = DataSyncRefreshFixture.Vv((await f.RowAsync("1")).VvJson)[old];
+        _ = f.Services.GetRequiredService<IDataSyncActorGuard>();
+        // While the setting's Refresh runs, a head shows that a peer saw counters of this actor that this database lost.
+        f.Kind.OnReadRawHashes = () =>
+        {
+            f.Kind.OnReadRawHashes = null;
+            guard.Arrive("peer-1", before.ActorId, before.ActorCounter + 5);
+        };
+
+        // "Sync the definition only" is a shared field: its Refresh issues a revision (§3.6).
+        var start = await SetEntitySyncAsync(f, "1", new DataSyncEntitySyncInput(null, true, null, null));
+
+        Assert.IsNull(start.Problem, start.Problem?.Code.ToString());
+        var after = await f.StateAsync();
+        Assert.AreNotEqual(before.ActorId, after.ActorId, "rotated between the attempts, outside any transaction");
+        var row = await f.RowAsync("1");
+        Assert.IsTrue(row.ChildrenLocal, "the second attempt wrote the setting");
+        var vv = DataSyncRefreshFixture.Vv(row.VvJson);
+        Assert.AreEqual(issued, vv[old], "no counter of the retiring actor was committed");
+        Assert.AreEqual(1L, vv[new DataSyncActorId(after.ActorId)]);
+        Assert.AreEqual(after.ActorId, f.Watermark.Read().Watermark!.ActorId, "actor.json follows the commit");
+        Assert.AreEqual(1, (await EntitySettingsAsync(f)).Count, "the first attempt's history entry rolled back");
+    }
+
+    [TestMethod]
+    public async Task An_entity_setting_whose_Refresh_meets_a_changed_actor_is_written_by_the_retry()
+    {
+        var f = await DataSyncRefreshFixture.CreateAsync();
+        f.Kind.Add("1", "Genre", ("a", "Action"));
+        await f.RefreshAsync();
+        // As after an identity reset racing the request: the first attempt's Refresh finds the actor changed.
+        f.Kind.OnReadRawHashes = () =>
+        {
+            f.Kind.OnReadRawHashes = null;
+            throw new DataSyncActorChangedException();
+        };
+
+        var start = await SetEntitySyncAsync(f, "1",
+            new DataSyncEntitySyncInput(DataSyncEntitySyncState.LocalOnly, null, null, null));
+
+        Assert.IsNull(start.Problem, start.Problem?.Code.ToString());
+        Assert.IsNull(f.Kind.OnReadRawHashes, "the first attempt met the change");
+        Assert.AreEqual(DataSyncEntitySyncState.LocalOnly, (await f.RowAsync("1")).State,
+            "the retry ran in a fresh scope and wrote the setting again");
+        Assert.AreEqual(1, (await EntitySettingsAsync(f)).Count);
     }
 
     [TestMethod]

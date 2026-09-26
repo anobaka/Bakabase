@@ -1147,21 +1147,27 @@ public sealed class DataSyncLinkService
     // ---- after the apply task ----------------------------------------------------------------------------------
 
     /// <summary>
-    /// After <see cref="IDataSyncApplyRunner.RunAutoSyncAsync"/> returned: records the kinds whose first contact this
-    /// pull completed (the approver's first pull, or kinds added to a link), a full reconciliation, and the once flags
-    /// the apply consumed; tells the observer what was applied and a pause the runner wrote. An apply that paused
-    /// consumed nothing: its pull is dropped before the final transaction (§8.7, §8.10.2), so the flags wait for the
-    /// apply after the resume, and the person does not have to choose again.
+    /// After <see cref="IDataSyncApplyRunner.RunAutoSyncAsync"/> committed an apply, or paused the link: records the
+    /// kinds whose first contact this pull completed (the approver's first pull, or kinds added to a link), a full
+    /// reconciliation, and the once flags the apply consumed; tells the observer what was applied and a pause the
+    /// runner wrote. An apply that paused consumed nothing: its pull is dropped before the final transaction (§8.7,
+    /// §8.10.2), so the flags wait for the apply after the resume, and the person does not have to choose again. Never
+    /// called for an apply that failed or applied nothing (<see cref="DataSyncAutoSyncEnd"/>): that one consumed
+    /// nothing either, and its failure stands.
     /// </summary>
+    /// <param name="firstContactOpen">
+    /// The link's first contact was not complete before the apply: when it is afterwards, whoever completed it (the
+    /// runner's final transaction, or this), the apply was the first sync (§8.3, §9.4).
+    /// </param>
     /// <param name="fullReconciliation">The pull carried every kind of the link from 0 (§8.8).</param>
     public async Task<DataSyncLinkDbModel?> AfterAutoSyncAsync(DataSyncLinkContext context, DataSyncStagedPull? pull,
-        DataSyncAutoSyncOutcome outcome, bool fullReconciliation, CancellationToken ct)
+        DataSyncAutoSyncOutcome outcome, bool firstContactOpen, bool fullReconciliation, CancellationToken ct)
     {
         var now = _clock.UtcNow;
         var firstSync = false;
         var link = await MutateAsync(context.LinkId, row =>
         {
-            if (outcome.Paused is not null) return DataSyncLinkWrite.None;
+            if (outcome.Paused is not null || outcome.End != DataSyncAutoSyncEnd.Committed) return DataSyncLinkWrite.None;
             var write = DataSyncLinkWrite.None;
             if (context.LinkFlags != DataSyncMergeFlags.None)
             {
@@ -1180,14 +1186,11 @@ public sealed class DataSyncLinkService
             if (completed.Count > 0)
             {
                 row.SetFirstContactKinds(row.GetFirstContactKinds().Union(completed));
-                if (row.FirstContactCompletedAtUtc is null)
-                {
-                    row.FirstContactCompletedAtUtc = now;
-                    firstSync = true;
-                }
-
+                row.FirstContactCompletedAtUtc ??= now;
                 write = DataSyncLinkWrite.Transition;
             }
+
+            firstSync = firstContactOpen && row.FirstContactCompletedAtUtc is not null;
 
             if (fullReconciliation)
             {
@@ -1207,7 +1210,7 @@ public sealed class DataSyncLinkService
             _stagedPulls.Take(link.Id);
             await ObserveAsync(o => o.LinkPausedAsync(link, ct));
         }
-        else
+        else if (outcome.End == DataSyncAutoSyncEnd.Committed)
         {
             await ObserveAsync(o => o.AutoSyncAppliedAsync(link, outcome, firstSync, ct));
         }

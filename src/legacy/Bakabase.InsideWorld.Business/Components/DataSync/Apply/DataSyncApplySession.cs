@@ -20,7 +20,8 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 /// <summary>
 /// One attempt of a runner method (§8.10.2, §8.10.5): its own scope, so every write — the adapters' services and the
 /// side tables alike — goes through the scope's one <see cref="BakabaseDbContext"/> and joins its transaction. On a
-/// rollback the scope's change tracker is cleared and the caches of every kind the attempt touched are dropped.
+/// rollback the scope's change tracker is cleared and the caches of every kind the attempt touched are dropped; after a
+/// rollback to a savepoint they are dropped again once the transaction commits.
 /// </summary>
 internal sealed class DataSyncApplySession : IAsyncDisposable
 {
@@ -102,6 +103,12 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
 
     private bool _stateLoaded;
 
+    /// <summary>
+    /// A savepoint was rolled back in the open transaction (<see cref="RollbackToSavepointAsync"/>): the touched kinds'
+    /// caches are dropped again after the commit.
+    /// </summary>
+    private bool _resetCachesAfterCommit;
+
     public bool InTransaction => _transaction is not null;
 
     public static async Task<DataSyncApplySession> OpenAsync(IServiceScopeFactory scopes, CancellationToken ct)
@@ -166,14 +173,24 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
     /// Takes back everything written since the savepoint: the rows, what the context tracked (rows a caller still
     /// holds are stale afterwards) and the touched kinds' caches (§8.10.5). The local state row is loaded again.
     /// </summary>
+    /// <remarks>
+    /// The transaction keeps what it wrote before the savepoint, which no other connection sees before the commit. A
+    /// dropped cache is loaded again by whichever scope reads first: one that reads before the commit fills it from the
+    /// committed rows, without those writes, and would keep serving them afterwards — to Refresh too, which would
+    /// publish them as a local change. So the session loads the touched kinds' caches again at once, through its own
+    /// context (what the transaction keeps, as after any write of an apply: the caches are not transactional, F9), and
+    /// drops them once more after the commit (<see cref="CommitAsync"/>), which also covers a scope that read in between.
+    /// </remarks>
     public async Task RollbackToSavepointAsync(string name)
     {
         if (_transaction is null) throw new InvalidOperationException("No transaction is open.");
         await _transaction.RollbackToSavepointAsync(name, CancellationToken.None);
         Db.ChangeTracker.Clear();
+        _resetCachesAfterCommit = true;
+        ResetTouchedCaches();
         foreach (var kind in TouchedKinds)
         {
-            if (Kinds.TryGetValue(kind, out var adapter)) adapter.ResetCaches();
+            if (Kinds.TryGetValue(kind, out var adapter)) await adapter.ReadRawHashesAsync(CancellationToken.None);
         }
 
         await LoadStateAsync(CancellationToken.None);
@@ -186,6 +203,10 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
         await _transaction.ReleaseSavepointAsync(name, ct);
     }
 
+    /// <summary>
+    /// Commits. After a rollback to a savepoint in this transaction, the touched kinds' caches are dropped again, so
+    /// the next read loads what was committed (<see cref="RollbackToSavepointAsync"/>).
+    /// </summary>
     public async Task CommitAsync(CancellationToken ct)
     {
         if (_transaction is null) throw new InvalidOperationException("No transaction is open.");
@@ -193,6 +214,11 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
         await _transaction.CommitAsync(ct);
         await _transaction.DisposeAsync();
         _transaction = null;
+        if (_resetCachesAfterCommit)
+        {
+            _resetCachesAfterCommit = false;
+            ResetTouchedCaches();
+        }
     }
 
     /// <summary>Rolls back, forgets what the context tracked and drops the touched kinds' caches (§8.10.5).</summary>
@@ -212,6 +238,12 @@ internal sealed class DataSyncApplySession : IAsyncDisposable
         }
 
         Db.ChangeTracker.Clear();
+        _resetCachesAfterCommit = false;
+        ResetTouchedCaches();
+    }
+
+    private void ResetTouchedCaches()
+    {
         foreach (var kind in TouchedKinds)
         {
             if (Kinds.TryGetValue(kind, out var adapter)) adapter.ResetCaches();

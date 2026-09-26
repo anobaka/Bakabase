@@ -1048,8 +1048,9 @@ public class CustomPropertyDataSyncKindTests
         Assert.AreEqual(1, (await Values.GetAllDbModels(v => v.PropertyId == doomed)).Count);
         CollectionAssert.AreEqual(new[] { 31, 31 }, _index.Invalidated.ToArray(), "invalidated again after the rollback");
 
+        // Again on every reset: after a rollback to a savepoint, the session resets once more after its commit.
         Kind.ResetCaches();
-        Assert.AreEqual(2, _index.Invalidated.Count, "once per rollback");
+        CollectionAssert.AreEqual(new[] { 31, 31, 31 }, _index.Invalidated.ToArray(), "once per reset");
     }
 
     // ---- the round trip of the fixture -----------------------------------------------------------------

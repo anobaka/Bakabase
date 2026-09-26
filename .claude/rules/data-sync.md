@@ -54,7 +54,9 @@ scopes").
   pattern or a timed-out match as invalid input, never as a crash.
 - [ ] **Adapter** — an `IDataSyncKind` next to the service that owns the table. It writes
   only through that service: no `ExecuteUpdate`/`ExecuteDelete`, raw SQL or hand-built
-  `UpdateRange`. `ResetCaches` drops the service's cache after a rollback. Usage counts,
+  `UpdateRange`. `ResetCaches` drops the service's cache after a rollback; after a rollback to
+  a savepoint the apply session calls it again once the transaction commits, so it must be safe
+  to repeat (derived state it invalidates is invalidated again on every call). Usage counts,
   order, subtype changes and raw-row hashes as the interface asks.
 - [ ] **DbSet classification** — the kind's tables are `Synced` with the kind id in
   `DataSyncDbSetClassification` (`DbSetClassificationTests`).
@@ -150,6 +152,18 @@ scopes").
   unchanged, never wrapped.
 - **Actor checks** run after entering the gate and before any transaction; a rotation never
   runs inside an open apply transaction.
+- **A caller that joins Refresh to its transaction** commits only while the actor is still
+  verified, writes `actor.json` after the commit, and runs a retry in a new scope. Outside the
+  runner that is `IDataSyncLocalChangeRunner` (the refresh coordinator): an entity setting goes
+  through it, never through a hand-written transaction.
+- **Only a committed apply is recorded as a sync.** `DataSyncAutoSyncOutcome.End` says how an
+  auto-sync apply ended; the apply task records a link as synced, consumes its once flags and
+  completes its first contact only for `Committed`. `Failed` keeps the runner's `ApplyFailed`
+  and backoff; `NotApplied` (the attempt ended, the actor unverified or changing) puts the pull
+  and a requested re-merge back for the next run.
+- **Reads take no write lock.** A read-only read of the local state (the review page) runs in a
+  deferred transaction, never EF's `BEGIN IMMEDIATE`, so a page load neither waits for nor
+  holds up a writer.
 - **The gate and link rows.** The `/data-sync` actions §10.1 gates (links, pause all, reset,
   applying a review, resolving, entity settings, undo, the restore choice) wait for the
   `DataSyncGate` at most 30 s, then answer `Busy` having changed nothing; reads never wait, and

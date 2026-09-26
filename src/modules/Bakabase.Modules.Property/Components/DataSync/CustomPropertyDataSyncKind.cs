@@ -400,16 +400,17 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
 
     /// <summary>
     /// Drops the property and value caches, which are shared across scopes and not transactional (F9), and invalidates
-    /// again every resource this scope invalidated, so the index re-reads the restored rows.
+    /// again every resource this scope invalidated, so the index re-reads the restored rows. Every call does, not only
+    /// the first: after a rollback to a savepoint the apply session calls it again once its transaction committed, and
+    /// the index may have re-read, from the committed rows and before that commit, a resource whose values the
+    /// transaction converted before the savepoint.
     /// </summary>
     public void ResetCaches()
     {
         _caches.TryRemove(typeof(CustomPropertyDbModel).FullName!, out _);
         _caches.TryRemove(typeof(CustomPropertyValueDbModel).FullName!, out _);
         if (_invalidated.Count == 0) return;
-        var again = _invalidated.ToArray();
-        _invalidated.Clear();
-        _services.GetService<IResourceSearchIndexService>()?.InvalidateResources(again);
+        _services.GetService<IResourceSearchIndexService>()?.InvalidateResources(_invalidated.ToArray());
     }
 
     /// <summary>

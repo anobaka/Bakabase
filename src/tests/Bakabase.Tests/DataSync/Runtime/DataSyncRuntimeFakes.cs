@@ -744,7 +744,7 @@ internal sealed class FakeApplyRunner(IDataSyncTaskRegistry registry) : IDataSyn
     public Func<CancellationToken, Task>? Hold { get; set; }
 
     public Func<AutoSyncCall, DataSyncAutoSyncOutcome> AutoSyncOutcome { get; set; } =
-        _ => new DataSyncAutoSyncOutcome(1, null, 0, 0, 1, [], []);
+        _ => new DataSyncAutoSyncOutcome(1, null, 0, 0, 1, [], [], DataSyncAutoSyncEnd.Committed);
 
     public Queue<Exception> UndoErrors { get; } = new();
     public Queue<Exception> AutoSyncErrors { get; } = new();

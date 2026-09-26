@@ -173,5 +173,29 @@ public interface IDataSyncStagedPullStore
     IReadOnlyList<int> LinksWaiting();
 }
 
+/// <param name="End">
+/// How the apply ended, which decides what the apply task records on the link: only a committed apply is recorded as
+/// synced and consumes the link's once flags and first contact.
+/// </param>
 public sealed record DataSyncAutoSyncOutcome(int? ApplyLogId, DataSyncPauseReason? Paused, int NewInboxItems,
-    int ClosedInboxItems, int Applied, IReadOnlyList<DataSyncMergeNote> Notes, IReadOnlyList<long> ClosedItemIds);
+    int ClosedInboxItems, int Applied, IReadOnlyList<DataSyncMergeNote> Notes, IReadOnlyList<long> ClosedItemIds,
+    DataSyncAutoSyncEnd End);
+
+/// <summary>How one auto-sync apply of a link ended (§8.10.2).</summary>
+public enum DataSyncAutoSyncEnd
+{
+    /// <summary>Its final transaction committed: the pull, or the re-merge, was applied (a breaker's pause included).</summary>
+    Committed = 1,
+
+    /// <summary>
+    /// Nothing was applied and nothing recorded: the attempt ended, the link was paused, stopped or gone, or the actor
+    /// was unverified or changed under every try (§5.6). The pull and a requested re-merge wait for the next run.
+    /// </summary>
+    NotApplied = 2,
+
+    /// <summary>
+    /// It failed and rolled back: the runner recorded <c>ApplyFailed</c> and a backoff on the link, and the pull is
+    /// dropped (committed chunks stand, the cursor did not move).
+    /// </summary>
+    Failed = 3,
+}

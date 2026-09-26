@@ -1,9 +1,14 @@
 using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
+using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Identity;
+using Bakabase.Modules.DataSync.Kinds.ExtensionGroups;
+using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Services;
+using Bakabase.Modules.DataSync.Wire;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Bakabase.Tests.DataSync.Apply.DataSyncApplyFixture;
@@ -24,12 +29,19 @@ public class ApplyBTaskTests
     private DataSyncPeer _peer = null!;
     private DataSyncLinkDbModel _link = null!;
     private ObservedTaskRegistry _registry = null!;
+    private Runtime.RecordingObserver _observer = null!;
 
     [TestInitialize]
     public async Task Setup()
     {
         var registry = new ObservedTaskRegistry();
-        _f = await CreateAsync(s => s.AddSingleton<IDataSyncTaskRegistry>(registry));
+        var observer = new Runtime.RecordingObserver();
+        _f = await CreateAsync(s =>
+        {
+            s.AddSingleton<IDataSyncTaskRegistry>(registry);
+            s.AddSingleton<IDataSyncRuntimeObserver>(observer);
+        });
+        _observer = observer;
         _registry = registry;
         _peer = new DataSyncPeer("PC-1");
         _link = await _f.LinkAsync(_peer);
@@ -141,6 +153,141 @@ public class ApplyBTaskTests
         Assert.IsTrue(_f.Kind.Definitions.Values.Any(d => d.Name == "Genre"));
         Assert.IsNull((await _f.HistoryAsync()).Single().UndoneAtUtc);
     }
+
+    #region The DataSyncApply task over the real runner
+
+    private IDataSyncStagedPullStore Pulls => _f.Services.GetRequiredService<IDataSyncStagedPullStore>();
+
+    /// <summary>
+    /// A link of extension groups (a kind the runtime knows) whose first contact waits for its first pull, with a once
+    /// flag set for that apply.
+    /// </summary>
+    private async Task<DataSyncLinkDbModel> FirstContactLinkAsync(DataSyncPeer peer)
+    {
+        var link = await _f.LinkAsync(peer, DataSyncLinkMode.TwoWay, false, Groups);
+        var db = _f.NewDb();
+        var row = await db.DataSyncLinks.SingleAsync(l => l.Id == link.Id);
+        row.SetOnceFlags(DataSyncMergeFlags.None with { SkipDeletionBreaker = true });
+        await db.SaveChangesAsync();
+        // The peer's comparison forms, as the fetch half records them from its head (§8.4 row A2).
+        _f.Services.GetRequiredService<DataSyncRuntimeState>().RecordHead(row.Id,
+            new DataSyncFeedHead(peer.NodeId, "epoch-1", peer.ActorId, DataSyncContract.Version,
+                DataSyncContract.MinimumPeerVersion, "2.0.0", peer.Seq,
+                [new DataSyncFeedKindHead(Groups, 1, peer.Seq, false, ExtensionGroupCodec.Instance.ComparisonFormVersion)],
+                new DataSyncSourceAttention(false, 0, 0, false, 0), null, null), _f.Now);
+        return row;
+    }
+
+    /// <summary>A pull of one new extension group.</summary>
+    private DataSyncStagedPull GroupPull(DataSyncPeer peer, string name) =>
+        _f.Pull(peer, (Groups, peer.Record([SyncKey.New().Value], peer.Next(), GroupContent(name, ".tif"))));
+
+    private async Task<bool> HasGroupAsync(string name) =>
+        (await _f.ExtensionGroups.GetAll()).Any(g => g.Name == name);
+
+    /// <summary><c>DataSyncApply</c>'s body as the launcher runs it: its attempt registered and ambient.</summary>
+    private async Task RunApplyTaskAsync()
+    {
+        var attempt = _registry.Register(DataSyncTaskIds.Apply);
+        using (DataSyncTaskAttempts.Enter(attempt))
+        {
+            await _f.Services.GetRequiredService<DataSyncApplyTask>().RunAsync(_f.Args(DataSyncTaskIds.Apply), attempt);
+        }
+    }
+
+    /// <summary>Nothing an apply that applied nothing may record: not synced, the once flag kept, no first contact.</summary>
+    private static void AssertNothingRecordedAsSynced(DataSyncLinkDbModel row)
+    {
+        Assert.IsNull(row.LastSyncedAtUtc, "not recorded as synced");
+        Assert.IsTrue(row.GetOnceFlags().SkipDeletionBreaker, "the once flag waits for an apply that commits");
+        Assert.IsNull(row.FirstContactCompletedAtUtc, "the first contact is not complete");
+        Assert.AreEqual(0, row.GetFirstContactKinds().Count);
+    }
+
+    [TestMethod]
+    public async Task An_apply_task_that_failed_keeps_ApplyFailed_and_a_growing_backoff_and_consumes_nothing()
+    {
+        // Every write of the extension group adapter fails.
+        var failed = 0;
+        var injector = new DataSyncFailureInjector { FailOperation = (_, _) => ++failed > 0 };
+        var (registry, observer) = (_registry, _observer);
+        _f = await CreateAsync(s =>
+        {
+            s.AddSingleton<IDataSyncTaskRegistry>(registry);
+            s.AddSingleton<IDataSyncRuntimeObserver>(observer);
+            FailingDataSyncKind.AddExtensionGroups(s, injector);
+        }, extensionGroups: false);
+        var peer = new DataSyncPeer("NAS");
+        var link = await FirstContactLinkAsync(peer);
+
+        for (var run = 1; run <= 2; run++)
+        {
+            Pulls.Put(link.Id, GroupPull(peer, "Scans" + run));
+
+            await RunApplyTaskAsync();
+
+            var row = await _f.LinkRowAsync(link.Id);
+            Assert.AreEqual(DataSyncApplyRunner.ApplyFailedCode, row.LastErrorCode, $"run {run}: the failure stands");
+            Assert.AreEqual(run, row.ConsecutiveFailures);
+            Assert.AreEqual((TimeSpan?) TimeSpan.FromMinutes(run), row.NextAttemptAtUtc - row.LastAttemptAtUtc,
+                "the backoff grows (1, 2, 5, 10 minutes)");
+            AssertNothingRecordedAsSynced(row);
+            Assert.AreEqual(0, Pulls.LinksWaiting().Count, "a failed pull is dropped");
+            Assert.IsFalse(await HasGroupAsync("Scans" + run));
+        }
+
+        Assert.AreEqual(2, failed, "the adapter was asked to write once per run");
+        Assert.AreEqual(0, _observer.Count("applied:"), "never announced as a sync");
+    }
+
+    [TestMethod]
+    public async Task An_apply_task_whose_attempt_ended_at_the_gate_keeps_its_pull_and_records_nothing()
+    {
+        var peer = new DataSyncPeer("NAS");
+        var link = await FirstContactLinkAsync(peer);
+        var pull = GroupPull(peer, "Scans");
+        Pulls.Put(link.Id, pull);
+
+        Task run;
+        using (await _f.Gate.EnterAsync(null, default))
+        {
+            run = RunApplyTaskAsync();
+            await Runtime.DataSyncRuntimeHarness.WaitUntilAsync(() => Pulls.LinksWaiting().Count == 0,
+                "the task took the pull");
+            // Stopped while the runner waits for the gate: it applies nothing once it holds it.
+            _registry.RequestCancel(DataSyncTaskIds.Apply);
+        }
+
+        await run.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.AreSame(pull, Pulls.Peek(link.Id), "the next run applies it without a refetch");
+        Assert.IsFalse(await HasGroupAsync("Scans"));
+        var row = await _f.LinkRowAsync(link.Id);
+        Assert.IsNull(row.LastErrorCode);
+        AssertNothingRecordedAsSynced(row);
+        Assert.AreEqual(0, _observer.Count("applied:"));
+    }
+
+    [TestMethod]
+    public async Task An_apply_task_that_committed_the_first_pull_records_the_first_sync()
+    {
+        var peer = new DataSyncPeer("NAS");
+        var link = await FirstContactLinkAsync(peer);
+        Pulls.Put(link.Id, GroupPull(peer, "Scans"));
+
+        await RunApplyTaskAsync();
+
+        var row = await _f.LinkRowAsync(link.Id);
+        Assert.IsNull(row.LastErrorCode);
+        Assert.IsNotNull(row.LastSyncedAtUtc);
+        Assert.IsNotNull(row.FirstContactCompletedAtUtc);
+        CollectionAssert.AreEqual(new[] { Groups }, row.GetFirstContactKinds().ToArray());
+        Assert.AreEqual(DataSyncMergeFlags.None, row.GetOnceFlags(), "consumed by the apply that committed");
+        Assert.IsTrue(await HasGroupAsync("Scans"));
+        // The runner's final transaction completed the first contact already: the task still announces it (§8.3).
+        Assert.AreEqual(1, _observer.Count($"applied:{link.Id}:first"));
+    }
+
+    #endregion
 
     /// <summary>The real registry, observed: how often the runner asked, and a hook on each question.</summary>
     private sealed class ObservedTaskRegistry : IDataSyncTaskRegistry

@@ -22,7 +22,9 @@ public sealed partial class DataSyncApplyRunner
     /// <summary>The ApplyFailed error code a link carries after an apply that rolled back (§8.10.2).</summary>
     public const string ApplyFailedCode = "ApplyFailed";
 
-    private static readonly DataSyncAutoSyncOutcome Nothing = new(null, null, 0, 0, 0, [], []);
+    /// <summary>Nothing applied and nothing recorded (<see cref="DataSyncAutoSyncEnd.NotApplied"/>).</summary>
+    private static readonly DataSyncAutoSyncOutcome Nothing =
+        new(null, null, 0, 0, 0, [], [], DataSyncAutoSyncEnd.NotApplied);
 
     /// <summary>
     /// Applies a staged pull (or, with <paramref name="pull"/> null, re-merges the link's pending records) (§8.10.2):
@@ -32,7 +34,8 @@ public sealed partial class DataSyncApplyRunner
     /// (<see cref="ApplyFailedCode"/>, a backoff) and the pull is dropped: committed chunks stand, the cursor did not
     /// move, and re-sent records meet row K4. Once it holds the gate it looks again at what the task looked at before:
     /// "Pause all" applies nothing and answers <c>Paused = AllPaused</c>, and a link paused or stopped meanwhile applies
-    /// nothing either (the link row, read in the transaction).
+    /// nothing either (the link row, read in the transaction). The outcome's <see cref="DataSyncAutoSyncOutcome.End"/>
+    /// says which of these happened: only <see cref="DataSyncAutoSyncEnd.Committed"/> applied anything.
     /// </summary>
     public async Task<DataSyncAutoSyncOutcome> RunAutoSyncAsync(DataSyncLinkContext link, DataSyncStagedPull? pull,
         BTaskArgs args)
@@ -128,7 +131,7 @@ public sealed partial class DataSyncApplyRunner
                 linkRow.PausedDetail = result.PauseDetail;
                 linkRow.UpdatedAtUtc = s.Now;
                 await CommitAsync(s, ct);
-                return (Nothing with { Paused = pause }, false);
+                return (Nothing with { Paused = pause, End = DataSyncAutoSyncEnd.Committed }, false);
             }
 
             var recorder = new DataSyncApplyRecorder();
@@ -166,7 +169,7 @@ public sealed partial class DataSyncApplyRunner
 
             var closed = openBefore.Except(await OpenItemIdsAsync(s, CancellationToken.None)).OrderBy(i => i).ToList();
             return (new DataSyncAutoSyncOutcome(logId, null, inbox.Created + writer.ItemsCreated.Count, closed.Count,
-                writer.Applied, written.Notes, closed), false);
+                writer.Applied, written.Notes, closed, DataSyncAutoSyncEnd.Committed), false);
         }
         catch (DataSyncActorChangedException)
         {
@@ -188,7 +191,7 @@ public sealed partial class DataSyncApplyRunner
             await s.RollbackAsync();
             _logger.LogError(e, "Data sync could not apply a pull from {Peer}.", link.PeerName);
             await RecordFailureAsync(link.LinkId, e, ct);
-            return (Nothing, false);
+            return (Nothing with { End = DataSyncAutoSyncEnd.Failed }, false);
         }
     }
 
