@@ -279,8 +279,9 @@ public sealed partial class DataSyncStore
         await _db.DataSyncInboxItems.FindAsync([id], ct);
 
     /// <summary>
-    /// A page of items, open ones first and newest first within each group. Allowed actions follow §9.1 for the
-    /// item's link as it is now; times are UTC.
+    /// A page of items, open ones first, then closed ones, and newest (the highest id) first within each group; the
+    /// order is part of the contract (<see cref="DataSyncInboxQuery"/>). Allowed actions follow §9.1 for the item's
+    /// link as it is now; times are UTC.
     /// </summary>
     public async Task<DataSyncInboxPage> QueryInboxAsync(DataSyncInboxQuery query, CancellationToken ct)
     {
@@ -289,6 +290,7 @@ public sealed partial class DataSyncStore
         var filtered = _db.DataSyncInboxItems.AsNoTracking();
         if (query.PeerNodeId is { } peer) filtered = filtered.Where(i => i.PeerNodeId == peer);
         if (query.Kind is { } kind) filtered = filtered.Where(i => i.Kind == kind);
+        if (query.LocalKey is { } localKey) filtered = filtered.Where(i => i.LocalKey == localKey);
 
         var openTotal = await filtered.CountAsync(i => i.ClosedAtUtc == null, ct);
         if (query.OpenOnly) filtered = filtered.Where(i => i.ClosedAtUtc == null);

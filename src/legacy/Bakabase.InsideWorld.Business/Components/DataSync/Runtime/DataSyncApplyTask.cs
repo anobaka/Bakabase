@@ -130,6 +130,10 @@ public sealed class DataSyncApplyTask
             if (flags == DataSyncMergeFlags.None && !reMerge) return true;
         }
 
+        // Taken from the store, a pull that reconciles a kind in full no longer says so there: the apply does (§11.6).
+        using var reconciling = pull?.Kinds.Any(k => k.FullReconciliation) == true
+            ? _state.BeginFullReconciliation(linkId)
+            : null;
         await using var scope = _scopes.CreateAsyncScope();
         var sp = scope.ServiceProvider;
         var context = await BuildContextAsync(sp, link, flags, ct);

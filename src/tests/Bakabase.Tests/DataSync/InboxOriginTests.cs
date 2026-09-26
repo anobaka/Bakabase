@@ -278,6 +278,63 @@ public class InboxOriginTests
         Assert.AreEqual(1, (await _f.Store.QueryInboxAsync(new DataSyncInboxQuery(PeerNodeId: "peer-2"), default)).Total);
     }
 
+    /// <summary>
+    /// The order is the contract's (<see cref="DataSyncInboxQuery"/>): open items first, then closed ones, newest first
+    /// in each group, so the closed ones start at <c>Skip = OpenTotal</c>. A local key with its kind reads one
+    /// definition's items whole.
+    /// </summary>
+    [TestMethod]
+    public async Task The_inbox_lists_open_items_first_newest_first_and_reads_one_definition_whole()
+    {
+        var link = await _f.LinkAsync("peer-1");
+        var entities = new List<DataSyncEntityDbModel>();
+        for (var n = 1; n <= 5; n++) entities.Add(await _f.LiveAsync(n.ToString()));
+        var t = DateTime.UtcNow;
+        foreach (var e in entities)
+        {
+            await _f.Store.UpsertItemsAsync(link.Id, "peer-1",
+                [Draft(Kind, e.SyncKey, DataSyncInboxItemType.FieldConflict, DataSyncInboxItemOrigin.Merger, "name",
+                    localKey: e.LocalKey)], t, default);
+        }
+
+        // A second conflict of definition 2, and an item of the other kind under the same local key.
+        await _f.Store.UpsertItemsAsync(link.Id, "peer-1",
+            [Draft(Kind, entities[1].SyncKey, DataSyncInboxItemType.FieldConflict, DataSyncInboxItemOrigin.Merger,
+                "color", localKey: "2")], t, default);
+        var other = await _f.LiveAsync("2", kind: DataSyncKindIds.ExtensionGroup);
+        await _f.Store.UpsertItemsAsync(link.Id, "peer-1",
+            [Draft(DataSyncKindIds.ExtensionGroup, other.SyncKey, DataSyncInboxItemType.FieldConflict,
+                DataSyncInboxItemOrigin.Merger, "name", localKey: "2")], t, default);
+
+        var ids = (await _f.ItemsAsync()).Select(i => i.Id).ToList();
+        Assert.AreEqual(7, ids.Count);
+        var closedIds = new[] { ids[0], ids[3] };
+        await _f.Store.CloseItemsAsync(closedIds, DataSyncInboxClosure.ResolvedHere, DataSyncInboxAction.KeepLocal,
+            null, null, default);
+
+        var all = await _f.Store.QueryInboxAsync(new DataSyncInboxQuery(OpenOnly: false), default);
+        var open = ids.Except(closedIds).OrderByDescending(id => id).ToList();
+        var closed = closedIds.OrderByDescending(id => id).ToList();
+        CollectionAssert.AreEqual(open.Concat(closed).ToList(), all.Items.Select(i => i.Id).ToList());
+        Assert.AreEqual((7, 5), (all.Total, all.OpenTotal));
+
+        // Reading the closed ones after the open ones, page by page.
+        var closedPage = await _f.Store.QueryInboxAsync(new DataSyncInboxQuery(OpenOnly: false, Skip: all.OpenTotal),
+            default);
+        CollectionAssert.AreEqual(closed, closedPage.Items.Select(i => i.Id).ToList());
+        var firstTwo = await _f.Store.QueryInboxAsync(new DataSyncInboxQuery(Take: 2), default);
+        CollectionAssert.AreEqual(open.Take(2).ToList(), firstTwo.Items.Select(i => i.Id).ToList());
+        Assert.AreEqual((5, 5), (firstTwo.Total, firstTwo.OpenTotal));
+
+        // One definition: both of its conflicts, not the other kind's item under the same local key.
+        var definition = await _f.Store.QueryInboxAsync(new DataSyncInboxQuery(Kind: Kind, LocalKey: "2"), default);
+        Assert.AreEqual((2, 2), (definition.Total, definition.OpenTotal));
+        Assert.IsTrue(definition.Items.All(i => i.Kind == Kind && i.LocalKey == "2"));
+        CollectionAssert.AreEquivalent(new[] { "name", "color" }, definition.Items.Select(i => i.SubjectPath).ToArray());
+        var bothKinds = await _f.Store.QueryInboxAsync(new DataSyncInboxQuery(LocalKey: "2"), default);
+        Assert.AreEqual(3, bothKinds.Total, "a local key is unique per kind only");
+    }
+
     private static IReadOnlyList<DataSyncInboxAction> Actions(DataSyncInboxPage page, int linkId,
         DataSyncInboxItemType type) =>
         page.Items.Single(i => i.LinkId == linkId && i.Type == type).AllowedActions;

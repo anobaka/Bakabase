@@ -4779,6 +4779,7 @@ export interface BakabaseModulesDataSyncServicesDataSyncLinkView {
   peerOnline: boolean;
   /** @format date-time */
   startAnywayAt?: string;
+  fullReconciliationRunning: boolean;
 }
 
 export interface BakabaseModulesDataSyncServicesDataSyncMapOutgoing {
@@ -4822,6 +4823,17 @@ export interface BakabaseModulesDataSyncServicesDataSyncMapPeer {
   readBackDeclined: boolean;
   lastErrorCode?: string;
   kinds: string[];
+  /** @format int32 */
+  excludedCount: number;
+  /** @format int32 */
+  heldCount: number;
+  /** @format int32 */
+  missingAtPeerCount: number;
+  /** [1: ThisDevice, 2: Peer] */
+  initiator?: BakabaseModulesDataSyncDataSyncLinkInitiator;
+  /** @format date-time */
+  startAnywayAt?: string;
+  fullReconciliationRunning: boolean;
 }
 
 export interface BakabaseModulesDataSyncServicesDataSyncMapRequest {
@@ -18464,6 +18476,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
          * @default 100
          */
         take?: number;
+        localKey?: string;
       },
       params: RequestParams = {},
     ) =>
@@ -18497,6 +18510,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
          * @default 100
          */
         take?: number;
+        localKey?: string;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-sync/inbox`;

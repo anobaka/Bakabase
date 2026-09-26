@@ -279,12 +279,15 @@ internal sealed class FakeDataSyncStore : IDataSyncStore
         lock (_lock)
         {
             var filtered = Items.Where(i => (query.PeerNodeId is null || i.PeerNodeId == query.PeerNodeId) &&
-                                            (query.Kind is null || i.Kind == query.Kind)).ToList();
+                                            (query.Kind is null || i.Kind == query.Kind) &&
+                                            (query.LocalKey is null || i.LocalKey == query.LocalKey)).ToList();
             var open = filtered.Count(i => i.ClosedAtUtc is null);
             if (query.OpenOnly) filtered = filtered.Where(i => i.ClosedAtUtc is null).ToList();
             // A store's view: what it knows of the rules is not the facade's to trust, so none are given here, and a
-            // default is pre-chosen that the facade must drop (§9.1).
-            var page = filtered.OrderByDescending(i => i.Id).Skip(query.Skip).Take(query.Take)
+            // default is pre-chosen that the facade must drop (§9.1). The order is the contract's: open items first,
+            // newest first within each group.
+            var page = filtered.OrderBy(i => i.ClosedAtUtc is null ? 0 : 1).ThenByDescending(i => i.Id)
+                .Skip(query.Skip).Take(query.Take)
                 .Select(i => DataSyncInboxService.ToView(i, i.LinkId is { } l ? Get(l) : null) with
                 {
                     AllowedActions = [],

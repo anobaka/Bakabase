@@ -1142,6 +1142,10 @@ describe("device map model: data sync", () => {
       openItems: 0,
       readBackDeclined: false,
       kinds: ["customProperty", "extensionGroup"],
+      excludedCount: 0,
+      heldCount: 0,
+      missingAtPeerCount: 0,
+      fullReconciliationRunning: false,
       ...patch,
     }) satisfies DataSyncMapPeer;
 

@@ -169,6 +169,63 @@ public class DataSyncStoreTests
             _f.Store.SetChildrenLocalAsync(Kind, "missing", true, default));
     }
 
+    /// <summary>
+    /// The link views' counts come from one grouped query (§11.2): the same numbers as reading every base, per link,
+    /// over the kinds this build knows only.
+    /// </summary>
+    [TestMethod]
+    public async Task Base_counts_per_link_match_reading_every_base()
+    {
+        var one = await _f.LinkAsync("peer-1");
+        var two = await _f.LinkAsync("peer-2");
+        await _f.LinkAsync("peer-3");
+        DataSyncBaseUpdate Base(string kind, DataSyncBaseState state, DataSyncPendingReason? pending = null,
+            DataSyncExclusionReason? exclusion = null)
+        {
+            var key = NewKey();
+            var record = Record([key], Vv((ActorB, 1)));
+            return new DataSyncBaseUpdate(kind, Key(key), state, exclusion,
+                state is DataSyncBaseState.Normal or DataSyncBaseState.MissingAtPeer ? record : null, null,
+                pending is { } reason ? Pending(Record([key], Vv((ActorB, 2)), seq: 2), reason) : null, false);
+        }
+
+        await _f.Store.UpsertBasesAsync(one.Id,
+        [
+            Base(Kind, DataSyncBaseState.Normal),
+            Base(Kind, DataSyncBaseState.Normal, DataSyncPendingReason.Conflict),
+            Base(Kind, DataSyncBaseState.Normal, DataSyncPendingReason.Held),
+            Base(Kind, DataSyncBaseState.Held),
+            Base(Kind, DataSyncBaseState.Held, DataSyncPendingReason.Held),
+            Base(Kind, DataSyncBaseState.Excluded, exclusion: DataSyncExclusionReason.Skipped),
+            Base(DataSyncKindIds.ExtensionGroup, DataSyncBaseState.MissingAtPeer),
+            Base(DataSyncKindIds.ExtensionGroup, DataSyncBaseState.Unbound, DataSyncPendingReason.Retry),
+        ], default);
+        await _f.Store.UpsertBasesAsync(two.Id,
+        [
+            Base(Kind, DataSyncBaseState.Excluded, exclusion: DataSyncExclusionReason.NotSyncedHere),
+            // A kind this build does not know is never counted.
+            Base("futureKind", DataSyncBaseState.Excluded, exclusion: DataSyncExclusionReason.Skipped),
+        ], default);
+
+        var all = await _f.Store.CountBasesAsync(null, default);
+        Assert.AreEqual(new DataSyncBaseCounts(Pending: 4, Excluded: 1, Held: 3, MissingAtPeer: 1), all[one.Id]);
+        Assert.AreEqual(new DataSyncBaseCounts(0, 1, 0, 0), all[two.Id]);
+        Assert.AreEqual(2, all.Count, "a link without bases has no entry");
+        foreach (var link in new[] { one, two })
+        {
+            var bases = new List<DataSyncPeerBase>();
+            foreach (var kind in DataSyncKindIds.All) bases.AddRange(await _f.Store.GetBasesAsync(link.Id, kind, default));
+            Assert.AreEqual(new DataSyncBaseCounts(bases.Count(b => b.Pending is not null),
+                    bases.Count(b => b.State == DataSyncBaseState.Excluded),
+                    bases.Count(b => b.State == DataSyncBaseState.Held || b.Pending?.Reason == DataSyncPendingReason.Held),
+                    bases.Count(b => b.State == DataSyncBaseState.MissingAtPeer)),
+                all[link.Id], $"link {link.Id}");
+        }
+
+        var single = await _f.Store.CountBasesAsync(two.Id, default);
+        Assert.AreEqual(all[two.Id], single.Single().Value);
+    }
+
     [TestMethod]
     public async Task One_link_per_peer()
     {

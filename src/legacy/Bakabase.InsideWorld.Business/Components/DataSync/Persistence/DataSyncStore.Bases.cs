@@ -9,6 +9,7 @@ using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
+using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Wire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +29,30 @@ public sealed partial class DataSyncStore
             .OrderBy(b => b.SyncKey)
             .ToListAsync(ct);
         return rows.Select(ToPeerBase).ToList();
+    }
+
+    /// <summary>
+    /// What the link views count, per link, in one grouped query over the base rows' columns: no record is read or
+    /// parsed (§11.2).
+    /// </summary>
+    public async Task<IReadOnlyDictionary<int, DataSyncBaseCounts>> CountBasesAsync(int? linkId, CancellationToken ct)
+    {
+        await FlushAsync(ct);
+        var kinds = DataSyncKindIds.All.ToList();
+        var rows = _db.DataSyncPeerBases.AsNoTracking().Where(b => kinds.Contains(b.Kind));
+        if (linkId is { } id) rows = rows.Where(b => b.LinkId == id);
+        var counts = await rows
+            .GroupBy(b => b.LinkId)
+            .Select(g => new
+            {
+                LinkId = g.Key,
+                Pending = g.Count(b => b.PendingReason != null),
+                Excluded = g.Count(b => b.State == DataSyncBaseState.Excluded),
+                Held = g.Count(b => b.State == DataSyncBaseState.Held || b.PendingReason == DataSyncPendingReason.Held),
+                Missing = g.Count(b => b.State == DataSyncBaseState.MissingAtPeer),
+            })
+            .ToListAsync(ct);
+        return counts.ToDictionary(c => c.LinkId, c => new DataSyncBaseCounts(c.Pending, c.Excluded, c.Held, c.Missing));
     }
 
     internal static DataSyncPeerBase ToPeerBase(DataSyncPeerBaseDbModel row)

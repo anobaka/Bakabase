@@ -2,7 +2,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Bakabase.Modules.DataSync;
+using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Wire;
 
@@ -11,7 +13,8 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 /// <summary>
 /// What the runtime knows since this process started and never stores (§5.6, §8.2): when it started, which links
 /// answered a head, the peers' comparison form versions from their last head, when the daily and fallback work
-/// last ran, which links wait for a re-merge without a pull, and a person's stop of the fetch or apply task.
+/// last ran, which links wait for a re-merge without a pull, which links fetch or apply a full reconciliation, and a
+/// person's stop of the fetch or apply task.
 /// </summary>
 public sealed class DataSyncRuntimeState
 {
@@ -29,6 +32,7 @@ public sealed class DataSyncRuntimeState
     private readonly ConcurrentDictionary<int, DateTime> _lastHeadAt = new();
     private readonly ConcurrentDictionary<int, byte> _woken = new();
     private readonly ConcurrentDictionary<int, byte> _reMergeRequested = new();
+    private readonly Dictionary<int, int> _fullReconciliations = new();
     private DateTime? _startedAtUtc;
     private DateTime? _lastFallbackAtUtc;
     private DateTime? _lastRetentionAtUtc;
@@ -107,6 +111,45 @@ public sealed class DataSyncRuntimeState
 
     /// <summary>True, once, when a re-merge was requested for the link; the apply that runs it takes it.</summary>
     public bool TakeReMerge(int linkId) => _reMergeRequested.TryRemove(linkId, out _);
+
+    // ---- a running full reconciliation (§8.8, §11.6) ---------------------------------------------------------------
+
+    /// <summary>
+    /// The link's peer is being read, or its pull applied, with a kind from 0 (§8.8): "Comparing everything with
+    /// {{name}}…" (§11.6) until the returned mark is disposed. The fetch holds one while it reads such a pull and the
+    /// apply while it applies it; in between, the staged pull says so itself (<see cref="DataSyncStagedKind"/>).
+    /// </summary>
+    public IDisposable BeginFullReconciliation(int linkId)
+    {
+        lock (_lock) _fullReconciliations[linkId] = _fullReconciliations.GetValueOrDefault(linkId) + 1;
+        return new FullReconciliationMark(this, linkId);
+    }
+
+    /// <summary>Whether a fetch or an apply of the link holds a full reconciliation mark now.</summary>
+    public bool IsFullReconciliationRunning(int linkId)
+    {
+        lock (_lock) return _fullReconciliations.ContainsKey(linkId);
+    }
+
+    private void EndFullReconciliation(int linkId)
+    {
+        lock (_lock)
+        {
+            if (!_fullReconciliations.TryGetValue(linkId, out var holders)) return;
+            if (holders <= 1) _fullReconciliations.Remove(linkId);
+            else _fullReconciliations[linkId] = holders - 1;
+        }
+    }
+
+    private sealed class FullReconciliationMark(DataSyncRuntimeState state, int linkId) : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0) state.EndFullReconciliation(linkId);
+        }
+    }
 
     // ---- a person's stop (§8.2, §8.10.1) --------------------------------------------------------------------------
 

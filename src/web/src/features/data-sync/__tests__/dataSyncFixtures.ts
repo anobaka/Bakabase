@@ -121,6 +121,7 @@ export const link = (
   heldCount: 0,
   missingAtPeerCount: 0,
   peerOnline: true,
+  fullReconciliationRunning: false,
   ...patch,
 });
 
@@ -145,6 +146,11 @@ export const mapPeer = (
   openItems: 0,
   readBackDeclined: false,
   kinds: allKinds,
+  excludedCount: 0,
+  heldCount: 0,
+  missingAtPeerCount: 0,
+  initiator: DataSyncLinkInitiator.ThisDevice,
+  fullReconciliationRunning: false,
   ...patch,
 });
 

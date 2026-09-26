@@ -40,9 +40,12 @@ public sealed class DataSyncInboxService
     private DataSyncLimits Limits => _services.GetService<DataSyncLimits>() ?? DataSyncLimits.Default;
 
     /// <summary>
-    /// A page of items, open ones first (§9); never gated. Every time is UTC. The allowed actions are this service's
-    /// (§9.1), computed for each item's link as it is now, exactly as <see cref="GetItemAsync"/> and the resolve check
-    /// compute them, whatever the store's page carries; nothing is pre-chosen.
+    /// A page of items (§9); never gated. Open items come first, then closed ones, newest first within each group, so a
+    /// reader of every item finds the closed ones from <c>Skip = OpenTotal</c> on. A local key (with its kind) narrows
+    /// the page to one definition, so its open conflicts, which resolve together (§9.2), are read whole however many
+    /// other items are open. Every time is UTC. The allowed actions are this service's (§9.1), computed for each item's
+    /// link as it is now, exactly as <see cref="GetItemAsync"/> and the resolve check compute them, whatever the
+    /// store's page carries; nothing is pre-chosen.
     /// </summary>
     public async Task<DataSyncInboxPage> GetPageAsync(DataSyncInboxQuery query, CancellationToken ct)
     {
@@ -52,6 +55,7 @@ public sealed class DataSyncInboxService
             Take = Math.Clamp(query.Take, 1, MaxPageSize),
             PeerNodeId = string.IsNullOrWhiteSpace(query.PeerNodeId) ? null : query.PeerNodeId,
             Kind = string.IsNullOrWhiteSpace(query.Kind) ? null : query.Kind,
+            LocalKey = string.IsNullOrWhiteSpace(query.LocalKey) ? null : query.LocalKey,
         };
         var page = await _store.QueryInboxAsync(normalized, ct);
         var links = page.Items.Any(i => i.LinkId is not null)

@@ -12955,6 +12955,7 @@ export interface components {
             peerOnline: boolean;
             /** Format: date-time */
             startAnywayAt?: string;
+            fullReconciliationRunning: boolean;
         };
         "Bakabase.Modules.DataSync.Services.DataSyncMapOutgoing": {
             /** Format: int32 */
@@ -12991,6 +12992,16 @@ export interface components {
             readBackDeclined: boolean;
             lastErrorCode?: string;
             kinds: string[];
+            /** Format: int32 */
+            excludedCount: number;
+            /** Format: int32 */
+            heldCount: number;
+            /** Format: int32 */
+            missingAtPeerCount: number;
+            initiator?: components["schemas"]["Bakabase.Modules.DataSync.DataSyncLinkInitiator"];
+            /** Format: date-time */
+            startAnywayAt?: string;
+            fullReconciliationRunning: boolean;
         };
         "Bakabase.Modules.DataSync.Services.DataSyncMapRequest": {
             requestId: string;
@@ -23298,6 +23309,7 @@ export interface operations {
                 kind?: string;
                 skip?: number;
                 take?: number;
+                localKey?: string;
             };
             header?: never;
             path?: never;

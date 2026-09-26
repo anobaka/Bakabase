@@ -234,7 +234,7 @@ public class DataSyncEndpointExposureTests
         var fake = new FakeDataSyncService();
         var controller = Controller(fake, Loopback);
 
-        var inbox = (await controller.GetInbox(false, "node-nas", DataSyncKindIds.CustomProperty, 0, 5, default)).Data!;
+        var inbox = (await controller.GetInbox(false, "node-nas", DataSyncKindIds.CustomProperty, 0, 5, null, default)).Data!;
         Assert.AreEqual(5, inbox.Items.Count);
         Assert.IsTrue(inbox.Items.All(i => i.PeerNodeId == "node-nas" && i.Kind == DataSyncKindIds.CustomProperty));
 

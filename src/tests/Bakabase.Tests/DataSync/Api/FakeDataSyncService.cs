@@ -239,13 +239,19 @@ public sealed class FakeDataSyncService : IDataSyncService
 
     public Task<DataSyncInboxPage> GetInboxAsync(DataSyncInboxQuery query, CancellationToken ct)
     {
-        var matching = Inbox
-            .Where(i => !query.OpenOnly || i.ClosedAt == null)
+        // The contract's order: open items first, then closed ones, newest first within each group.
+        var filtered = Inbox
             .Where(i => query.PeerNodeId == null || i.PeerNodeId == query.PeerNodeId)
             .Where(i => query.Kind == null || i.Kind == query.Kind)
+            .Where(i => query.LocalKey == null || i.LocalKey == query.LocalKey)
+            .ToList();
+        var matching = filtered
+            .Where(i => !query.OpenOnly || i.ClosedAt == null)
+            .OrderBy(i => i.ClosedAt == null ? 0 : 1)
+            .ThenByDescending(i => i.Id)
             .ToList();
         return Answer(new DataSyncInboxPage(matching.Skip(query.Skip).Take(query.Take).ToList(), matching.Count,
-            Inbox.Count(i => i.ClosedAt == null)));
+            filtered.Count(i => i.ClosedAt == null)));
     }
 
     public Task<DataSyncInboxItemView?> GetInboxItemAsync(long id, CancellationToken ct) =>

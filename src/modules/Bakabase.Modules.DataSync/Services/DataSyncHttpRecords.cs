@@ -27,6 +27,11 @@ public sealed record DataSyncStatusView(DataSyncStatusLevel Level, int OpenItems
 public sealed record DataSyncSharingInput(bool Enabled, bool EnablePairedRemoteAccess = false,
     bool? NewDefinitionsStayLocal = null);
 
+/// <param name="StartAnywayAt">WaitingForPeerReview only: from when [Start anyway] is offered (§8.3); UTC.</param>
+/// <param name="FullReconciliationRunning">
+/// A full reconciliation of the link (§8.8) is being fetched, waits to be applied, or is being applied: "Comparing
+/// everything with {{name}}…" (§11.6). Known since this process started; false after a restart until the next one.
+/// </param>
 public sealed record DataSyncLinkView(int Id, string PeerNodeId, string PeerName, string? PeerAddress, DataSyncLinkMode Mode,
     DataSyncLinkMode LastMode /* the mode the receive arrow turns back on, §11.1 */,
     DataSyncLinkState State, DataSyncPauseReason? PausedReason, string? PausedDetail, DataSyncLinkInitiator Initiator,
@@ -35,7 +40,7 @@ public sealed record DataSyncLinkView(int Id, string PeerNodeId, string PeerName
     string? PeerAppVersion, int? PeerContractVersion, bool PeerMayReadUs, bool ReadBackDeclined,
     string? PeerModeTowardsUs, DateTime? PeerLastReadAt, DataSyncSourceAttention? PeerAttention,
     int ExcludedCount, int HeldCount, int MissingAtPeerCount, bool PeerOnline,
-    DateTime? StartAnywayAt = null /* WaitingForPeerReview: when [Start anyway] is offered (§8.3); UTC */);
+    DateTime? StartAnywayAt = null, bool FullReconciliationRunning = false);
 
 /// <param name="Mode">Follow or TwoWay.</param>
 public sealed record DataSyncLinkCreateInput(string? PeerNodeId, string? Address, string? Code, DataSyncLinkMode Mode,
@@ -93,8 +98,17 @@ public sealed record DataSyncReviewCancelResult(DataSyncReviewState? State, Data
 public sealed record DataSyncChangePage(string PlanId, IReadOnlyList<DataSyncFieldChange> Changes,
     IReadOnlyList<DataSyncPlanWarning> Warnings, int Total, DataSyncProblem? Problem);
 
+/// <summary>
+/// A page of "Needs you" (§9). Items come open ones first, then closed ones; newest first (the latest created) within
+/// each group. So with <see cref="OpenOnly"/> false, the closed items start at <c>Skip = OpenTotal</c>.
+/// </summary>
+/// <param name="LocalKey">
+/// Only the items of the definition with this local key, together with <see cref="Kind"/> (a local key is unique per
+/// kind only): every open conflict of one definition at once, which a resolution must carry together (§9.2), however
+/// many other items are open.
+/// </param>
 public sealed record DataSyncInboxQuery(bool OpenOnly = true, string? PeerNodeId = null, string? Kind = null,
-    int Skip = 0, int Take = 100);
+    int Skip = 0, int Take = 100, string? LocalKey = null);
 
 public sealed record DataSyncInboxItemView(long Id, int? LinkId, string? PeerNodeId, string? PeerName, string Kind,
     string? LocalKey, DataSyncInboxItemType Type, DataSyncInboxItemOrigin Origin, string SubjectPath,
@@ -124,11 +138,19 @@ public sealed record DataSyncMapView(bool SharingEnabled, RemoteAccessMode Remot
     IReadOnlyList<DataSyncMapPeer> Peers, IReadOnlyList<DataSyncMapRequest> Requests,
     IReadOnlyList<DataSyncMapOutgoing> Outgoing);
 
+/// <summary>
+/// One device on the map's sync lines (§11.1). The trailing members say what the link's details on the /data-sync
+/// page say, as <see cref="DataSyncLinkView"/> does: the definitions skipped, withheld and no longer offered by the
+/// peer, who started the link (null without one), when [Start anyway] is offered, and whether a full reconciliation
+/// runs.
+/// </summary>
 public sealed record DataSyncMapPeer(string NodeId, string Name, int? LinkId, DataSyncLinkMode Mode, DataSyncLinkMode LastMode,
     DataSyncLinkState? State, DataSyncPauseReason? PausedReason, bool Receiving, bool ReceivingPending,
     bool PeerMayRead, string? PeerMode, IReadOnlyList<string>? PeerKinds, DateTime? PeerLastReadAt,
     DateTime? LastSyncedAt, int OpenItems, DataSyncSourceAttention? Attention, bool ReadBackDeclined,
-    string? LastErrorCode, IReadOnlyList<string> Kinds);
+    string? LastErrorCode, IReadOnlyList<string> Kinds, int ExcludedCount = 0, int HeldCount = 0,
+    int MissingAtPeerCount = 0, DataSyncLinkInitiator? Initiator = null, DateTime? StartAnywayAt = null,
+    bool FullReconciliationRunning = false);
 
 /// <summary>An incoming datasync request: a claim, drawn on its own unverified node (M5).</summary>
 public sealed record DataSyncMapRequest(string RequestId, string NodeId, string NodeName, string? RemoteAddress,

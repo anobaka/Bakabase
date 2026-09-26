@@ -88,7 +88,7 @@ public class DataSyncControllerTests
         ("review changes", async c => (await c.GetReviewChanges("review-gone", "plan", "item", null, 0, 10, default)).Data),
         ("requests", async c => (await c.GetRequests(default)).Data),
         ("readers", async c => (await c.GetReaders(default)).Data),
-        ("inbox", async c => (await c.GetInbox(false, null, null, 0, 100, default)).Data),
+        ("inbox", async c => (await c.GetInbox(false, null, null, 0, 100, null, default)).Data),
         ("inbox item", async c => (await c.GetInboxItem(1, default)).Data),
         ("inbox preview", async c => (await c.PreviewInboxItem(1, default)).Data),
         ("entities", async c => (await c.GetEntities(DataSyncKindIds.CustomProperty, default)).Data),
@@ -686,7 +686,7 @@ public class DataSyncControllerTests
         // The fake store's page carries no actions and a pre-chosen default, as a store that does not compute them
         // would: the page's actions are the facade's, exactly as an item's and the resolve check's (§9.1).
         await using var h = await WorldAsync();
-        var page = (await h.CallAsync(Callers.Loopback, c => c.GetInbox(false, null, null, 0, 100, default))).Data!;
+        var page = (await h.CallAsync(Callers.Loopback, c => c.GetInbox(false, null, null, 0, 100, null, default))).Data!;
         Assert.AreEqual(2, page.Items.Count);
         foreach (var item in page.Items)
         {
@@ -704,8 +704,143 @@ public class DataSyncControllerTests
             .AllowedActions.ToArray(), DataSyncInboxAction.UseCustom);
 
         h.Store.CloseWhere(i => i.Id == onFollow.Id, DataSyncInboxClosure.ResolvedHere);
-        page = (await h.CallAsync(Callers.Loopback, c => c.GetInbox(false, null, null, 0, 100, default))).Data!;
+        page = (await h.CallAsync(Callers.Loopback, c => c.GetInbox(false, null, null, 0, 100, null, default))).Data!;
         Assert.AreEqual(0, page.Items.Single(i => i.Id == onFollow.Id).AllowedActions.Count);
+    }
+
+    /// <summary>
+    /// The page reads the closed items from <c>skip = openTotal</c> of an <c>openOnly=false</c> query, which holds
+    /// only because the order is the contract's: open items first, then closed ones, newest first in each group.
+    /// </summary>
+    [TestMethod]
+    public async Task The_inbox_lists_open_items_first_then_newest_first()
+    {
+        await using var h = await WorldAsync();
+        h.AddItem(DataSyncInboxItemType.FieldConflict, 1, Key(4), localKey: "40");
+        h.AddItem(DataSyncInboxItemType.FieldConflict, 1, Key(5), localKey: "50");
+        h.AddItem(DataSyncInboxItemType.FieldConflict, 2, Key(6), localKey: "60");
+        h.Store.CloseWhere(i => i.Id is 1 or 4, DataSyncInboxClosure.ResolvedHere);
+
+        var all = (await h.CallAsync(Callers.Loopback, c => c.GetInbox(false, null, null, 0, 100, null, default))).Data!;
+        CollectionAssert.AreEqual(new long[] { 5, 3, 2, 4, 1 }, all.Items.Select(i => i.Id).ToArray());
+        Assert.AreEqual((5, 3), (all.Total, all.OpenTotal));
+
+        var closed = (await h.CallAsync(Callers.Loopback,
+            c => c.GetInbox(false, null, null, all.OpenTotal, 100, null, default))).Data!;
+        CollectionAssert.AreEqual(new long[] { 4, 1 }, closed.Items.Select(i => i.Id).ToArray());
+        var open = (await h.CallAsync(Callers.Loopback, c => c.GetInbox(true, null, null, 1, 2, null, default))).Data!;
+        CollectionAssert.AreEqual(new long[] { 3, 2 }, open.Items.Select(i => i.Id).ToArray());
+        Assert.AreEqual((3, 3), (open.Total, open.OpenTotal));
+    }
+
+    /// <summary>
+    /// However many other items are open, a definition's own come in one page (its kind and local key), so the page
+    /// can send every open conflict of it in one resolution, which the resolve check requires (§9.2).
+    /// </summary>
+    [TestMethod]
+    public async Task One_definitions_items_are_read_whole_past_a_full_page()
+    {
+        await using var h = await WorldAsync();
+        for (var n = 0; n < 600; n++)
+            h.AddItem(DataSyncInboxItemType.FieldConflict, 1, Key(1000 + n), localKey: (1000 + n).ToString());
+        var name = h.AddItem(DataSyncInboxItemType.FieldConflict, 1, Key(70), "name", localKey: "70");
+        var color = h.AddItem(DataSyncInboxItemType.FieldConflict, 2, Key(70), "color", localKey: "70");
+        h.AddItem(DataSyncInboxItemType.FieldConflict, 1, Key(71), localKey: "70", kind: DataSyncKindIds.ExtensionGroup);
+
+        var first = (await h.CallAsync(Callers.Loopback,
+            c => c.GetInbox(true, null, null, 0, 1000, null, default))).Data!;
+        Assert.AreEqual(DataSyncInboxService.MaxPageSize, first.Items.Count, "a page holds at most 500 items");
+        Assert.AreEqual(605, first.OpenTotal);
+
+        var definition = (await h.CallAsync(Callers.Loopback,
+            c => c.GetInbox(true, null, DataSyncKindIds.CustomProperty, 0, 100, "70", default))).Data!;
+        CollectionAssert.AreEquivalent(new[] { name.Id, color.Id }, definition.Items.Select(i => i.Id).ToArray());
+        Assert.AreEqual((2, 2), (definition.Total, definition.OpenTotal));
+        Assert.IsTrue(definition.Items.All(i => i.AllowedActions.Count > 0), "the facade's actions, as on every page");
+
+        // Resolving one of them alone is refused; both together pass the check.
+        var alone = (await h.CallAsync(Callers.Loopback, c => c.Resolve(new DataSyncResolveBatchInput(
+            [Resolution(name, DataSyncInboxAction.KeepLocal)], false), default))).Data!;
+        Assert.AreEqual((DataSyncProblemCode.ResolveTogether, color.Id.ToString()),
+            (alone.Problem?.Code, alone.Problem?.Detail));
+        var together = (await h.CallAsync(Callers.Loopback, c => c.Resolve(new DataSyncResolveBatchInput(
+            definition.Items.Select(i => new DataSyncResolveInput(i.Id, DataSyncInboxAction.KeepLocal, i.Token, null,
+                null, null, null)).ToList(), false), default))).Data!;
+        Assert.IsNull(together.Problem, together.Problem?.Detail);
+
+        // Blank filters are no filters.
+        var blank = (await h.CallAsync(Callers.Loopback, c => c.GetInbox(true, " ", " ", 0, 10, " ", default))).Data!;
+        Assert.AreEqual(605, blank.Total);
+    }
+
+    /// <summary>
+    /// The map's sync section says what the link's details say (§11.1, §11.2): skipped, withheld and no longer offered
+    /// definitions, who started the link, when [Start anyway] is offered, and a running full reconciliation, which the
+    /// link view says too.
+    /// </summary>
+    [TestMethod]
+    public async Task The_map_and_the_link_views_carry_the_links_counts_and_what_runs()
+    {
+        await using var h = await WorldAsync();
+        var waiting = h.AddLink("node-waiting", l =>
+        {
+            l.PeerName = "Waiting";
+            l.State = DataSyncLinkState.WaitingForPeerReview;
+            l.Initiator = DataSyncLinkInitiator.Peer;
+            l.CreatedAtUtc = DateTime.SpecifyKind(h.Clock.UtcNow, DateTimeKind.Unspecified);
+        });
+        h.Store.Bases[(1, DataSyncKindIds.ExtensionGroup)] =
+        [
+            new DataSyncPeerBase(DataSyncKindIds.ExtensionGroup, new SyncKey(Key(10)), DataSyncBaseState.Held, null,
+                null, new Dictionary<string, string>(), null, null, []),
+            new DataSyncPeerBase(DataSyncKindIds.ExtensionGroup, new SyncKey(Key(11)), DataSyncBaseState.MissingAtPeer,
+                null, null, new Dictionary<string, string>(), null, null, []),
+        ];
+
+        var map = (await h.CallAsync(Callers.Loopback, c => c.GetMap(default))).Data!;
+        var nas = map.Peers.Single(p => p.NodeId == "node-nas");
+        Assert.AreEqual((1, 1, 1), (nas.ExcludedCount, nas.HeldCount, nas.MissingAtPeerCount));
+        Assert.AreEqual(DataSyncLinkInitiator.ThisDevice, nas.Initiator);
+        Assert.IsNull(nas.StartAnywayAt, "only a link waiting for its peer's first review");
+        Assert.IsFalse(nas.FullReconciliationRunning);
+        var peer = map.Peers.Single(p => p.NodeId == "node-waiting");
+        Assert.AreEqual(DataSyncLinkInitiator.Peer, peer.Initiator);
+        Assert.AreEqual(h.Clock.UtcNow + DataSyncSchedule.StartAnywayAfter, peer.StartAnywayAt);
+        Assert.AreEqual(DateTimeKind.Utc, peer.StartAnywayAt!.Value.Kind);
+        var links = (await h.CallAsync(Callers.Loopback, c => c.GetLinks(default))).Data!;
+        Assert.AreEqual(peer.StartAnywayAt, links.Single(l => l.Id == waiting.Id).StartAnywayAt);
+        var nasView = links.Single(l => l.Id == 1);
+        Assert.AreEqual((nas.ExcludedCount, nas.HeldCount, nas.MissingAtPeerCount),
+            (nasView.ExcludedCount, nasView.HeldCount, nasView.MissingAtPeerCount));
+
+        // A device that only reads this one has no link to count or to have started.
+        h.Grants.Readers.Add(new DataSyncGrantView("node-reader", "Reader", h.Clock.UtcNow));
+        var reader = (await h.CallAsync(Callers.Loopback, c => c.GetMap(default))).Data!.Peers
+            .Single(p => p.NodeId == "node-reader");
+        Assert.AreEqual((null, 0, 0, 0, (DateTime?) null, false), (reader.Initiator, reader.ExcludedCount,
+            reader.HeldCount, reader.MissingAtPeerCount, reader.StartAnywayAt, reader.FullReconciliationRunning));
+
+        // While a pull with a kind from 0 waits for the apply (§8.8), and while a fetch or an apply holds the mark.
+        var staged = h.Provider.GetRequiredService<IDataSyncStagedPullStore>();
+        staged.Put(1, new DataSyncStagedPull("node-nas", "NAS",
+            new DataSyncFeedManifest("snap", 1, "node-nas", "epoch-1", "0123456789abcdef", 1, 1, "2.4.0", [], null,
+                new DataSyncSourceAttention(false, 0, 0, false, 0)),
+            [new DataSyncStagedKind(DataSyncKindIds.CustomProperty, 1, true, null, [], 3, FullReconciliation: true)],
+            h.Clock.UtcNow));
+        using (h.State.BeginFullReconciliation(2))
+        {
+            map = (await h.CallAsync(Callers.Loopback, c => c.GetMap(default))).Data!;
+            Assert.IsTrue(map.Peers.Single(p => p.NodeId == "node-nas").FullReconciliationRunning);
+            Assert.IsTrue(map.Peers.Single(p => p.NodeId == "node-pc").FullReconciliationRunning);
+            Assert.IsFalse(map.Peers.Single(p => p.NodeId == "node-waiting").FullReconciliationRunning);
+            links = (await h.CallAsync(Callers.Loopback, c => c.GetLinks(default))).Data!;
+            CollectionAssert.AreEquivalent(new[] { 1, 2 },
+                links.Where(l => l.FullReconciliationRunning).Select(l => l.Id).ToArray());
+        }
+
+        staged.Take(1);
+        links = (await h.CallAsync(Callers.Loopback, c => c.GetLinks(default))).Data!;
+        Assert.IsFalse(links.Any(l => l.FullReconciliationRunning), "nothing runs any more");
     }
 
     [TestMethod]

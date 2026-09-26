@@ -341,6 +341,11 @@ public sealed class DataSyncFetcher
             foreach (var kind in pullKinds) since[kind] = fullReconciliation ? 0 : cursors.GetValueOrDefault(kind);
         }
 
+        // A merge pull with a kind from 0 is a full reconciliation of that kind (§8.8): the link view says so while it
+        // is read (§11.6), and once staged, the pull says so until it is applied. A first review is not one.
+        using var reconciling = mergeWanted && pullKinds.Any(k => since[k] == 0)
+            ? _state.BeginFullReconciliation(link.Id)
+            : null;
         var snapshot = await FetchSnapshotAsync(peer, reader, link, query with { Since = since }, ct, args);
         if (snapshot.Problem is { } problem)
         {

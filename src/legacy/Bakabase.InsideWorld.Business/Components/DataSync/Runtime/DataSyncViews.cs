@@ -51,6 +51,7 @@ public sealed class DataSyncViews
 
     private DataSyncRuntimeState? State => _services.GetService<DataSyncRuntimeState>();
     private IDataSyncReviewStore? Reviews => _services.GetService<IDataSyncReviewStore>();
+    private IDataSyncStagedPullStore? StagedPulls => _services.GetService<IDataSyncStagedPullStore>();
     private DateTime Now => _services.GetService<IDataSyncClock>()?.UtcNow ?? DateTime.UtcNow;
 
     /// <summary>Everything several views share, read once.</summary>
@@ -76,9 +77,9 @@ public sealed class DataSyncViews
     public async Task<IReadOnlyList<DataSyncLinkView>> GetLinksAsync(CancellationToken ct)
     {
         var snapshot = await ReadAsync(ct);
-        var views = new List<DataSyncLinkView>();
-        foreach (var link in snapshot.Links.OrderBy(l => l.Id)) views.Add(await ToViewAsync(link, snapshot, ct));
-        return views;
+        var counts = await _store.CountBasesAsync(null, ct);
+        return snapshot.Links.OrderBy(l => l.Id).Select(link => ToView(link, snapshot, CountsOf(counts, link.Id)))
+            .ToList();
     }
 
     public async Task<DataSyncLinkView?> GetLinkAsync(int linkId, CancellationToken ct)
@@ -88,33 +89,37 @@ public sealed class DataSyncViews
         return link is null ? null : await ToViewAsync(link, snapshot, ct);
     }
 
-    public async Task<DataSyncLinkView> ToViewAsync(DataSyncLinkDbModel link, Snapshot snapshot, CancellationToken ct)
-    {
-        int pending = 0, excluded = 0, held = 0, missing = 0;
-        foreach (var kind in DataSyncKindIds.All)
-        {
-            foreach (var b in await _store.GetBasesAsync(link.Id, kind, ct))
-            {
-                if (b.Pending is not null) pending++;
-                if (b.State == DataSyncBaseState.Excluded) excluded++;
-                if (b.State == DataSyncBaseState.MissingAtPeer) missing++;
-                if (b.State == DataSyncBaseState.Held || b.Pending?.Reason == DataSyncPendingReason.Held) held++;
-            }
-        }
+    public async Task<DataSyncLinkView> ToViewAsync(DataSyncLinkDbModel link, Snapshot snapshot, CancellationToken ct) =>
+        ToView(link, snapshot, CountsOf(await _store.CountBasesAsync(link.Id, ct), link.Id));
 
+    /// <param name="counts">The link's bases as the store counts them (§11.2): no base is read for a view.</param>
+    private DataSyncLinkView ToView(DataSyncLinkDbModel link, Snapshot snapshot, DataSyncBaseCounts counts)
+    {
         var counterpart = link.GetCounterpart();
         var reader = snapshot.ReaderOf(link.PeerNodeId);
         return new DataSyncLinkView(link.Id, link.PeerNodeId, link.PeerName, link.PeerAddress, link.Mode, link.LastMode,
             link.State, link.PausedReason, link.PausedDetail, link.Initiator, link.GetKinds(), counterpart?.Kinds,
             Utc(link.LastSyncedAtUtc), Utc(link.NextAttemptAtUtc), link.LastErrorCode, link.LastErrorDetail,
-            snapshot.OpenItemsOf(link.Id), pending, CurrentReviewId(link), link.PeerAppVersion, link.PeerContractVersion,
-            snapshot.GrantOf(link.PeerNodeId) is not null, link.ReadBackDeclined,
-            counterpart?.Mode ?? reader?.Mode, Utc(reader?.LastReadAtUtc), link.GetPeerAttention(), excluded, held,
-            missing, IsOnline(link), Utc(link.GetStartAnywayAt()));
+            snapshot.OpenItemsOf(link.Id), counts.Pending, CurrentReviewId(link), link.PeerAppVersion,
+            link.PeerContractVersion, snapshot.GrantOf(link.PeerNodeId) is not null, link.ReadBackDeclined,
+            counterpart?.Mode ?? reader?.Mode, Utc(reader?.LastReadAtUtc), link.GetPeerAttention(), counts.Excluded,
+            counts.Held, counts.MissingAtPeer, IsOnline(link), Utc(link.GetStartAnywayAt()),
+            IsFullReconciliationRunning(link.Id));
     }
+
+    private static DataSyncBaseCounts CountsOf(IReadOnlyDictionary<int, DataSyncBaseCounts> counts, int linkId) =>
+        counts.GetValueOrDefault(linkId) ?? DataSyncBaseCounts.None;
 
     /// <summary>The review a person can open for this link now: the staged one, unless it expired (§8.3).</summary>
     public string? CurrentReviewId(DataSyncLinkDbModel link) => Reviews?.GetForLink(link.Id)?.ReviewId;
+
+    /// <summary>
+    /// "Comparing everything with {{name}}…" (§11.6): a pull of the link with a kind from 0 (§8.8) is being fetched,
+    /// waits to be applied, or is being applied. What this process knows: after a restart, nothing runs.
+    /// </summary>
+    public bool IsFullReconciliationRunning(int linkId) =>
+        State?.IsFullReconciliationRunning(linkId) == true ||
+        StagedPulls?.Peek(linkId)?.Kinds.Any(k => k.FullReconciliation) == true;
 
     private bool IsOnline(DataSyncLinkDbModel link) =>
         State?.GetLastHeadAt(link.Id) is not null && link.ConsecutiveFailures == 0 &&
@@ -179,6 +184,7 @@ public sealed class DataSyncViews
     {
         var snapshot = await ReadAsync(ct);
         var requests = await _grants.GetRequestsAsync(ct);
+        var counts = await _store.CountBasesAsync(null, ct);
         var now = Now;
 
         var outgoing = new List<DataSyncMapOutgoing>();
@@ -206,12 +212,15 @@ public sealed class DataSyncViews
                                    link.State is DataSyncLinkState.AwaitingReview
                                        or DataSyncLinkState.WaitingForPeerReview or DataSyncLinkState.AwaitingAccess;
             var counterpart = link?.GetCounterpart();
+            var linkCounts = link is null ? DataSyncBaseCounts.None : CountsOf(counts, link.Id);
             peers.Add(new DataSyncMapPeer(node, link?.PeerName ?? grant?.Name ?? reader?.Name ?? node, link?.Id,
                 link?.Mode ?? DataSyncLinkMode.Off, link?.LastMode ?? DataSyncLinkMode.TwoWay, link?.State,
                 link?.State == DataSyncLinkState.Paused ? link.PausedReason : null, receiving, receivingPending,
                 grant is not null, reader?.Mode ?? counterpart?.Mode, counterpart?.Kinds, Utc(reader?.LastReadAtUtc),
                 Utc(link?.LastSyncedAtUtc), link is null ? 0 : snapshot.OpenItemsOf(link.Id), link?.GetPeerAttention(),
-                link?.ReadBackDeclined ?? false, link?.LastErrorCode, link?.GetKinds() ?? []));
+                link?.ReadBackDeclined ?? false, link?.LastErrorCode, link?.GetKinds() ?? [], linkCounts.Excluded,
+                linkCounts.Held, linkCounts.MissingAtPeer, link?.Initiator, Utc(link?.GetStartAnywayAt()),
+                link is not null && IsFullReconciliationRunning(link.Id)));
         }
 
         var incoming = requests

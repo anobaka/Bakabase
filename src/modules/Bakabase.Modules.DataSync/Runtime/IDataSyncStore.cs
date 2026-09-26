@@ -46,6 +46,30 @@ public interface IDataSyncStore
     Task<IReadOnlyList<DataSyncPeerBase>> GetBasesAsync(int linkId, string kind, CancellationToken ct);
 
     /// <summary>
+    /// What the link views count (§11.2), per link, over the bases of <see cref="DataSyncKindIds.All"/>: bases with a
+    /// pending record, excluded, held (the base, or its pending record) and missing at the peer. One count for every
+    /// link when <paramref name="linkId"/> is null; a link without bases has no entry. Reads no record, so it is cheap
+    /// for a link with many definitions. The default reads every base; a store should count instead.
+    /// </summary>
+    async Task<IReadOnlyDictionary<int, DataSyncBaseCounts>> CountBasesAsync(int? linkId, CancellationToken ct)
+    {
+        IReadOnlyList<int> ids = linkId is { } id ? [id] : (await GetLinksAsync(ct)).Select(l => l.Id).ToList();
+        var counts = new Dictionary<int, DataSyncBaseCounts>();
+        foreach (var link in ids)
+        {
+            var bases = new List<DataSyncPeerBase>();
+            foreach (var kind in DataSyncKindIds.All) bases.AddRange(await GetBasesAsync(link, kind, ct));
+            if (bases.Count == 0) continue;
+            counts[link] = new DataSyncBaseCounts(bases.Count(b => b.Pending is not null),
+                bases.Count(b => b.State == DataSyncBaseState.Excluded),
+                bases.Count(b => b.State == DataSyncBaseState.Held || b.Pending?.Reason == DataSyncPendingReason.Held),
+                bases.Count(b => b.State == DataSyncBaseState.MissingAtPeer));
+        }
+
+        return counts;
+    }
+
+    /// <summary>
     /// Pending records to re-merge this pull: newer record arrived, local Seq moved since evaluation,
     /// Retry/OverBudget, flags set, full reconciliation (§8.4). Returns (kind, key) pairs.
     /// </summary>
@@ -76,6 +100,11 @@ public interface IDataSyncStore
         DataSyncEditorRef? by, int? applyLogId, CancellationToken ct);
 
     Task<DataSyncInboxItemDbModel?> GetItemAsync(long id, CancellationToken ct);
+    /// <summary>
+    /// A page of items, open ones first, then closed ones, newest (the highest id) first within each group; filtered by
+    /// peer, kind and local key as given (§9, <see cref="DataSyncInboxQuery"/>). <c>OpenTotal</c> counts the open items
+    /// that match the filters, whatever <c>OpenOnly</c> says.
+    /// </summary>
     Task<DataSyncInboxPage> QueryInboxAsync(DataSyncInboxQuery query, CancellationToken ct);
 
     /// <summary>§9.4: the open items of the link that no notification announced yet (<c>NotifiedAtUtc</c> null).</summary>
@@ -108,6 +137,12 @@ public interface IDataSyncStore
 
     /// <summary>§4.6.</summary>
     Task PruneAsync(DateTime nowUtc, CancellationToken ct);
+}
+
+/// <summary>A link's bases as its view counts them (<see cref="IDataSyncStore.CountBasesAsync"/>).</summary>
+public sealed record DataSyncBaseCounts(int Pending, int Excluded, int Held, int MissingAtPeer)
+{
+    public static readonly DataSyncBaseCounts None = new(0, 0, 0, 0);
 }
 
 public sealed record DataSyncInboxReconcileResult(int Created, int Updated, int Closed, IReadOnlyList<long> CreatedIds);

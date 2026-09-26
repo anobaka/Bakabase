@@ -244,13 +244,21 @@ public class DataSyncController(IDataSyncService service) : Controller
             ? await service.CreateInvitationAsync(input, ct)
             : new DataSyncInvitationResult(null, NotAllowed));
 
-    /// <summary>"Needs you"; never gated.</summary>
+    /// <summary>
+    /// "Needs you"; never gated. Open items first, then closed ones, newest first within each group: with
+    /// <paramref name="openOnly"/> false, the closed items start at <c>skip = openTotal</c>.
+    /// </summary>
+    /// <param name="take">At most 500.</param>
+    /// <param name="localKey">
+    /// With <paramref name="kind"/>: only that definition's items, so every open conflict of it, which must be
+    /// resolved together, comes in one page.
+    /// </param>
     [HttpGet("inbox")]
     [SwaggerOperation(OperationId = "GetDataSyncInbox")]
     public async Task<SingletonResponse<DataSyncInboxPage>> GetInbox([FromQuery] bool openOnly = true,
         [FromQuery] string? peerNodeId = null, [FromQuery] string? kind = null, [FromQuery] int skip = 0,
-        [FromQuery] int take = 100, CancellationToken ct = default) =>
-        new(await service.GetInboxAsync(new DataSyncInboxQuery(openOnly, peerNodeId, kind, skip, take), ct));
+        [FromQuery] int take = 100, [FromQuery] string? localKey = null, CancellationToken ct = default) =>
+        new(await service.GetInboxAsync(new DataSyncInboxQuery(openOnly, peerNodeId, kind, skip, take, localKey), ct));
 
     [HttpGet("inbox/{id:long}")]
     [SwaggerOperation(OperationId = "GetDataSyncInboxItem")]

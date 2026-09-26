@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
@@ -5,6 +6,7 @@ using Bakabase.Modules.DataSync.Identity;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Wire;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Tests.DataSync.Runtime;
 
@@ -295,6 +297,50 @@ public class DataSyncFetchHalfTests
         await h.FetchOnceAsync();
         Assert.IsTrue(peer.ManifestQueries.Last().Since.Values.All(s => s == 0));
         Assert.IsTrue(h.StagedPulls.Peek(link.Id)!.Kinds.All(k => k.FullReconciliation));
+    }
+
+    /// <summary>
+    /// "Comparing everything with {{name}}…" (§11.6): the link view says a full reconciliation runs while its pages are
+    /// read, while the pull waits for <c>DataSyncApply</c> and while it is applied, and not for an incremental pull.
+    /// </summary>
+    [TestMethod]
+    public async Task A_link_says_its_full_reconciliation_runs_from_the_fetch_to_the_end_of_the_apply()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync();
+        var link = h.AddLink("nas", l => l.LastFullReconciliationAtUtc = h.Clock.UtcNow - TimeSpan.FromHours(25));
+        var peer = h.Peers.Peers["nas"];
+        async Task<bool> RunningAsync()
+        {
+            await using var scope = h.Provider.CreateAsyncScope();
+            var view = await new DataSyncViews(scope.ServiceProvider).GetLinkAsync(link.Id, default);
+            return view!.FullReconciliationRunning;
+        }
+
+        Assert.IsFalse(await RunningAsync());
+        var whileRead = new ConcurrentQueue<bool>();
+        peer.OnPage = () => whileRead.Enqueue(h.Provider.GetRequiredService<DataSyncRuntimeState>()
+            .IsFullReconciliationRunning(link.Id));
+        await h.FetchOnceAsync();
+        Assert.IsTrue(whileRead.Count > 0 && whileRead.All(r => r), "while its pages are read");
+        Assert.IsTrue(h.StagedPulls.Peek(link.Id)!.Kinds.All(k => k.FullReconciliation));
+        Assert.IsTrue(await RunningAsync(), "while it waits for the apply");
+
+        var whileApplied = new ConcurrentQueue<bool>();
+        h.Runner.Hold = async _ => whileApplied.Enqueue(await RunningAsync());
+        await h.Btm.Start(DataSyncTaskIds.Apply);
+        await h.WaitForStatusAsync(DataSyncTaskIds.Apply, Bakabase.Abstractions.Models.Domain.Constants.BTaskStatus.Completed);
+        CollectionAssert.AreEqual(new[] { true }, whileApplied.ToArray(), "while it is applied");
+        Assert.IsFalse(await RunningAsync(), "applied");
+
+        // The next pull is incremental: nothing says it compares everything.
+        h.Runner.Hold = null;
+        whileRead.Clear();
+        peer.MaxSeq["customProperty"] = 6;
+        h.Clock.Advance(DataSyncSchedule.PollInterval);
+        await h.FetchOnceAsync();
+        Assert.IsTrue(whileRead.Count > 0 && whileRead.All(r => !r));
+        Assert.IsFalse(h.StagedPulls.Peek(link.Id)!.Kinds.Single().FullReconciliation);
+        Assert.IsFalse(await RunningAsync());
     }
 
     [TestMethod]
