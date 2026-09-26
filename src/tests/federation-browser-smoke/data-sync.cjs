@@ -37,13 +37,20 @@ module.exports = async function dataSync({ browser, config, artifacts }) {
   // Where this browser shows A: the origin A recorded as its main window's.
   const home = a.window;
   assert.ok(b.lan, 'The runner gave B no port for a browser on another device');
-  const locales = ['en', 'cn'].map(lang => Object.assign({}, ...['pages/dataSync', 'pages/federation']
-    .map(file => JSON.parse(fs.readFileSync(path.join(config.repo, `src/web/src/locales/${lang}/${file}.json`), 'utf8')))));
+  // Each UI language's strings, with the plural rules of the language the page registers them
+  // under (en-US, zh-CN).
+  const locales = [['en', 'en-US'], ['cn', 'zh-CN']].map(([dir, language]) => ({
+    plural: new Intl.PluralRules(language),
+    strings: Object.assign({}, ...['pages/dataSync', 'pages/federation']
+      .map(file => JSON.parse(fs.readFileSync(path.join(config.repo, `src/web/src/locales/${dir}/${file}.json`), 'utf8')))),
+  }));
   // A translated string as a pattern, in either UI language; {{placeholders}} take the given
-  // values, or anything when not given.
-  const pattern = (key, values = {}) => locales.map(locale => {
-    assert.ok(locale[key], `Missing locale key ${key}`);
-    return locale[key].split(/(\{\{\w+\}\})/).map(part => {
+  // values, or anything when not given. A given count picks the form i18next picks: the key's
+  // plural form for it (English "_one" for 1) where the language has one, else the key itself.
+  const pattern = (key, values = {}) => locales.map(({ plural, strings }) => {
+    const text = ('count' in values ? strings[`${key}_${plural.select(Number(values.count))}`] : undefined) ?? strings[key];
+    assert.ok(text, `Missing locale key ${key}`);
+    return text.split(/(\{\{\w+\}\})/).map(part => {
       const slot = /^\{\{(\w+)\}\}$/.exec(part);
       if (!slot) return escape(part);
       return slot[1] in values ? escape(values[slot[1]]) : '.*?';
