@@ -525,6 +525,34 @@ public sealed class DataSyncPeerClientTests
         Assert.AreEqual(1, nasFeed.Calls.Count);
     }
 
+    /// <summary>
+    /// §8.2 "a federation session to it came online → now", as the scheduler reads it on every tick
+    /// (<see cref="FederationDataSyncPeerSessions"/>): a verified library session — browsing the peer — is the signal.
+    /// Data sync's own fetch is not (its session only echoes the fetch that is already running), and a grant alone,
+    /// never verified, is not either.
+    /// </summary>
+    [TestMethod]
+    public async Task APeerComesOnlineForDataSyncOnceALibrarySessionToItIsVerified()
+    {
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS", feed: new ScriptedFeed("node-nas"));
+        var sessions = new Bakabase.Service.Components.DataSync.FederationDataSyncPeerSessions(desk.Services);
+        await PairAsync(desk, nas);
+        Assert.AreEqual("node-nas", (await desk.PeerClient.GetHeadAsync("node-nas", Query(), default)).NodeId);
+        Assert.AreEqual("Online", desk.Sessions.GetConnectionState("node-nas", FederationScopes.DataSyncRead));
+        Assert.IsFalse(sessions.IsOnline("node-nas"), "the fetch's own session");
+
+        await nas.Peers.SetSharingAsync(true);
+        var code = await nas.Peers.IssueInvitationAsync();
+        Assert.AreEqual("granted", (await desk.Services.GetRequiredService<NodePairingClient>()
+            .ConnectAsync(nas.Address, code.Code)).Outcome);
+        Assert.IsFalse(sessions.IsOnline("node-nas"), "a library grant nobody used yet");
+
+        await desk.Sessions.GetAsync("node-nas");
+        Assert.IsTrue(sessions.IsOnline("node-nas"));
+        Assert.IsFalse(sessions.IsOnline("node-pc"), "a device this one never reached");
+    }
+
     /// <summary>The source reads for the grant's subject only: nothing in a request names another reader (§7.7).</summary>
     [TestMethod]
     public async Task TheReaderIsTheGrantsSubjectWhateverTheRequestSays()
