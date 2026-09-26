@@ -31,11 +31,11 @@ namespace Bakabase.Tests.DataSync;
 /// preview, and not in the Information-level log output. The test temp root never appears either.
 /// </summary>
 /// <remarks>
-/// Federation's <c>state.json</c> and remote-access keys, pairing, and the <c>/data-sync/*</c> responses and
-/// notifications are asserted where they are built (the federation and endpoint tests).
+/// Federation's <c>state.json</c>, the remote-access and managed-connection keys, pairing by request, code and
+/// read-back, and the <c>/data-sync/*</c> answers and notifications: the second test (SecretCanaryTests.Pairing.cs).
 /// </remarks>
 [TestClass]
-public class SecretCanaryTests
+public partial class SecretCanaryTests
 {
     private const string Marker = "CANARY-7f1d";
 

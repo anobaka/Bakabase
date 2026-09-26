@@ -49,8 +49,12 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
     /// (<see cref="FederationHttpClient.PublicDeadline"/>): shorter for a test that waits for a device that never
     /// answers to be given up on.
     /// </param>
+    /// <param name="configure">
+    /// Last word on the node's container: its data folders seeded before it starts, a log a test reads, what pairing
+    /// tells data sync.
+    /// </param>
     public static async Task<DataSyncNodeHost> StartAsync(string nodeId, string name, bool dataSync = true,
-        IDataSyncFeedSource? feed = null, TimeSpan? publicDeadline = null)
+        IDataSyncFeedSource? feed = null, TimeSpan? publicDeadline = null, Action<IServiceCollection>? configure = null)
     {
         var remote = new AddressedRemoteAccess();
         var events = new RecordingGrantEvents();
@@ -72,10 +76,14 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
                 if (publicDeadline is { } wait)
                     services.AddTransient(sp => new FederationHttpClient(sp.GetRequiredService<IHttpClientFactory>()
                         .CreateClient(nameof(FederationHttpClient))) { PublicDeadline = wait });
-                if (!dataSync) return;
-                services.AddSingleton<INodeInfoContributor, DataSyncNodeInfoContributor>();
-                services.AddSingleton<FederationDataSyncGrants>();
-                services.AddSingleton<FederationDataSyncPeerClient>();
+                if (dataSync)
+                {
+                    services.AddSingleton<INodeInfoContributor, DataSyncNodeInfoContributor>();
+                    services.AddSingleton<FederationDataSyncGrants>();
+                    services.AddSingleton<FederationDataSyncPeerClient>();
+                }
+
+                configure?.Invoke(services);
             });
         remote.Addresses = [$"http://127.0.0.1:{host.Port}"];
         var node = new DataSyncNodeHost(host, remote, events, network);
