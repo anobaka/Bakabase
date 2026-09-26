@@ -71,12 +71,30 @@ public static class TestServiceBuilder
     /// <c>IResourceProfileService</c> implementation when a test needs to drive
     /// downstream consumers with synthetic profile data.
     /// </param>
-    public static async Task<IServiceProvider> BuildServiceProvider(
-        Action<IServiceCollection>? configure = null)
+    public static Task<IServiceProvider> BuildServiceProvider(
+        Action<IServiceCollection>? configure = null) =>
+        BuildServiceProvider(NewTestDirectory(), configure);
+
+    /// <summary>
+    /// A fresh test directory under the temp folder, as <see cref="BuildServiceProvider(Action{IServiceCollection})"/>
+    /// uses: a test that restarts a provider over what an earlier one left (its <c>test.db</c> and data sync folder)
+    /// fills one and passes it to <see cref="BuildServiceProvider(string, Action{IServiceCollection})"/>.
+    /// </summary>
+    public static string NewTestDirectory()
     {
         // Use unique database file names to avoid conflicts between parallel tests
         var uniqueId = Guid.NewGuid().ToString("N")[..8];
-        var testDir = Path.Combine(Path.GetTempPath(), $"BakabaseTests_{uniqueId}");
+        return Path.Combine(Path.GetTempPath(), $"BakabaseTests_{uniqueId}");
+    }
+
+    /// <summary>
+    /// Build a fully wired test service provider whose database (<c>test.db</c>) and data sync folders live in
+    /// <paramref name="testDir"/>; a database already there is migrated, not replaced.
+    /// </summary>
+    public static async Task<IServiceProvider> BuildServiceProvider(string testDir,
+        Action<IServiceCollection>? configure = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(testDir);
         Directory.CreateDirectory(testDir);
 
         var dbFilePath = Path.Combine(testDir, "test.db");
