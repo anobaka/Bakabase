@@ -100,8 +100,46 @@ public class Merge3PropertyTests
     [DataRow(3003340)] [DataRow(3531563)]
     public void SymmetricMerge_AtSeedsThatOnceFailed(int seed) => Assert.IsTrue(Symmetric(seed), "merged with a conflict");
 
-    /// <summary>One run of the symmetry property: false when either direction has a conflict (nothing to compare).</summary>
-    private static bool Symmetric(int seed)
+    /// <summary>
+    /// Seeds found by the integration's longer runs (DATASYNC_MERGE3_RUNS up to four million) that failed the symmetry
+    /// property, each for a class this merge splits into parts (a rename or move of a parent kept on one side, often with
+    /// a subtree one side does not publish or IgnoreCase toggled). Fixed by: a default value naming a member placed along
+    /// with its class's leading group (928496, 2438107, 3054065, 4577387, 1162158, 2383611); a free member counted as a
+    /// sibling only where it ends with the claimed nodes, by the keys and the moves the ids decide (600405, 68260, 167057,
+    /// 2124198, 1261175, 1151420, 1371407, 696710, 1428671, 2250044); deletion candidates, and a class this device
+    /// deleted or the peer changed, judged part by part (4533733, 1800636, 42597, 295617, 629278, 960539, 2761156,
+    /// 2171286, 3414350, 1489074, 2589585, 2900221, 1818715, 3698092); and seeds a member-level judgement of those parts
+    /// broke (269883, 335998, 414103, 1122162, 1288754, 2002123, 2111220, 3010313).
+    /// </summary>
+    [TestMethod]
+    [DataRow(42597)] [DataRow(68260)] [DataRow(167057)] [DataRow(269883)] [DataRow(295617)] [DataRow(335998)]
+    [DataRow(414103)] [DataRow(600405)] [DataRow(629278)] [DataRow(696710)] [DataRow(928496)] [DataRow(960539)]
+    [DataRow(1122162)] [DataRow(1151420)] [DataRow(1162158)] [DataRow(1261175)] [DataRow(1288754)] [DataRow(1371407)]
+    [DataRow(1428671)] [DataRow(1489074)] [DataRow(1800636)] [DataRow(1818715)] [DataRow(2002123)] [DataRow(2111220)]
+    [DataRow(2124198)] [DataRow(2171286)] [DataRow(2250044)] [DataRow(2383611)] [DataRow(2438107)] [DataRow(2589585)]
+    [DataRow(2761156)] [DataRow(2900221)] [DataRow(3010313)] [DataRow(3054065)] [DataRow(3414350)] [DataRow(3698092)]
+    [DataRow(4533733)] [DataRow(4577387)]
+    public void SymmetricMerge_AtSplitClassSeedsThatOnceFailed(int seed) =>
+        Assert.IsTrue(Symmetric(seed), "merged with a conflict");
+
+    /// <summary>
+    /// Seeds where the two directions still end at different forms: a known gap, not a passing test. A class this merge
+    /// splits into parts is judged "unchanged since the base" (§8.5.4 step 1) by its key and the colour its
+    /// representative shows, which a part has no base value for when its first member was not the base class's
+    /// representative; the two directions can then differ on whether a part the peer recoloured or changed comes back
+    /// (edit wins) or stays deleted. Judging each part by its own members fixes these seeds and breaks others, where the
+    /// two directions see the split differently. A consistent rule needs every node's final placement before any class
+    /// decision (claims by key, statuses, edit wins) — a second pass over ChildMerge3's pipeline, not a local rule. When a
+    /// change makes one of these symmetric, move it to the list above.
+    /// </summary>
+    [TestMethod]
+    [DataRow(167300)] [DataRow(3192919)] [DataRow(3585492)]
+    public void SymmetricMerge_KnownGaps_StillDiffer(int seed) =>
+        Assert.IsFalse(SameForms(seed), $"seed {seed} is symmetric now: move it to SymmetricMerge_AtSplitClassSeedsThatOnceFailed");
+
+    /// <summary>Both directions of one run, or null when either has a conflict (nothing to compare).</summary>
+    private static (DataSyncMerge3Result Lr, DataSyncMerge3Result Rl, CustomPropertyContentV1 L, CustomPropertyContentV1 R,
+        string Trace)? Directions(int seed)
     {
         var gen = new Merge3Generator(1_000_000 + seed);
         var type = gen.Type();
@@ -118,9 +156,20 @@ public class Merge3PropertyTests
 
         var lr = Merge(@base, l, Published(r), winner: winner, deletions: DataSyncChildDeletionMode.Apply);
         var rl = Merge(@base, r, Published(l), winner: other, deletions: DataSyncChildDeletionMode.Apply);
-        if (lr.TypeChanged || rl.TypeChanged || HasConflict(lr) || HasConflict(rl)) return false;
+        if (lr.TypeChanged || rl.TypeChanged || HasConflict(lr) || HasConflict(rl)) return null;
         var trace = $"seed {seed}\nbase {Canon(@base)}\nl    {Canon(l)}\nr    {Canon(r)}\n" +
                     $"lr   {Canon(Merged(lr))}\nrl   {Canon(Merged(rl))}";
+        return (lr, rl, l, r, trace);
+    }
+
+    private static bool SameForms(int seed) =>
+        Directions(seed) is not { } run || PublishedForm(run.Lr) == PublishedForm(run.Rl);
+
+    /// <summary>One run of the symmetry property: false when either direction has a conflict (nothing to compare).</summary>
+    private static bool Symmetric(int seed)
+    {
+        if (Directions(seed) is not { } run) return false;
+        var (lr, rl, l, r, trace) = run;
         Assert.AreEqual(PublishedForm(lr), PublishedForm(rl), trace);
         AssertNothingLost(l, lr, trace);
         AssertNothingLost(r, rl, trace);
