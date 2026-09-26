@@ -156,9 +156,11 @@ export interface SyncPeer {
   reader?: DataSyncReaderView;
   /**
    * Waiting for its first review: from when this device may start without it ([Start anyway],
-   * spec §8.3). Only a link's full view says it.
+   * spec §8.3).
    */
   startAnywayAt?: string;
+  /** A full reconciliation with it is being fetched, waits to be applied, or is being applied (§8.8). */
+  fullReconciliationRunning?: boolean;
 }
 
 const asOutcome = (value?: string | null): SyncOutcome | undefined =>
@@ -198,6 +200,7 @@ export const syncPeerFromLink = (link: DataSyncLinkView): SyncPeer => ({
   missingAtPeerCount: link.missingAtPeerCount,
   peerAppVersion: link.peerAppVersion ?? undefined,
   startAnywayAt: link.startAnywayAt ?? undefined,
+  fullReconciliationRunning: link.fullReconciliationRunning,
   outcome:
     link.state === DataSyncLinkState.AwaitingAccess && link.initiator !== DataSyncLinkInitiator.Peer
       ? "awaitingApproval"
@@ -214,6 +217,7 @@ export const syncPeerFromMapPeer = (peer: DataSyncMapPeer): SyncPeer => ({
   lastMode: peer.lastMode,
   state: peer.state ?? undefined,
   pausedReason: peer.pausedReason ?? undefined,
+  initiator: peer.initiator ?? undefined,
   kinds: orderKinds(peer.kinds ?? []),
   peerKinds: peer.peerKinds ? orderKinds(peer.peerKinds) : undefined,
   peerMayRead: peer.peerMayRead,
@@ -227,9 +231,11 @@ export const syncPeerFromMapPeer = (peer: DataSyncMapPeer): SyncPeer => ({
   receivingFlag: peer.receiving,
   receivingPendingFlag: peer.receivingPending,
   pendingCount: 0,
-  heldCount: 0,
-  excludedCount: 0,
-  missingAtPeerCount: 0,
+  heldCount: peer.heldCount,
+  excludedCount: peer.excludedCount,
+  missingAtPeerCount: peer.missingAtPeerCount,
+  startAnywayAt: peer.startAnywayAt ?? undefined,
+  fullReconciliationRunning: peer.fullReconciliationRunning,
   outcome:
     peer.state === DataSyncLinkState.Stopped ? outcomeOfError(peer.lastErrorCode) : undefined,
 });
@@ -409,9 +415,10 @@ const failure = (peer: SyncPeer) =>
 
 /**
  * Keeping in step both ways was approved here, but reading the other device back failed (spec
- * §7.2.4): the link waits for access nobody is asked for, with the failure on it. A link's full
- * view says who started it; the map view does not, so there a link waiting with a failure and no
- * request of this device's own reads the same — every request this device files is among them.
+ * §7.2.4): the link waits for access nobody is asked for, with the failure on it. Both views say
+ * who started the link; where nothing says (a device known only by this device's own request), a
+ * link waiting with a failure and no request of this device's own reads the same — every request
+ * this device files is among them.
  */
 export const readBackFailed = (peer: SyncPeer) =>
   peer.state === DataSyncLinkState.AwaitingAccess &&
@@ -745,6 +752,8 @@ export function linkStatus(t: T, peer: SyncPeer, now: number = Date.now()): Stat
     return line("NeedsYou", "warning", t("dataSync.status.NeedsYou", { count: peer.openItems }));
   // Working, but never synced yet (§8.1 reaches Active before the first pull): not "in step".
   if (!peer.lastSyncedAt) return line("Syncing", "primary", t("dataSync.status.Syncing"));
+  if (peer.fullReconciliationRunning)
+    return line("FullReconciliation", "primary", t("dataSync.status.FullReconciliation", { name }));
 
   return line(
     "InStep",

@@ -26,6 +26,7 @@ import {
   status,
 } from "@/features/federation/__tests__/deviceMapFixtures";
 import {
+  DataSyncLinkInitiator,
   DataSyncLinkMode,
   DataSyncLinkState,
   DataSyncPauseReason,
@@ -260,6 +261,7 @@ describe("data sync on the device map: the line", () => {
     expect(
       issue({
         state: DataSyncLinkState.AwaitingAccess,
+        initiator: DataSyncLinkInitiator.Peer,
         receivingPending: true,
         lastErrorCode: "Unreachable",
       })?.issue,

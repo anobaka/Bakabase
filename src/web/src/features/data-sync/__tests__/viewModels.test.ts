@@ -265,6 +265,30 @@ describe("the rule editor", () => {
     expect(canStartAnyway(peerOf({ ...waiting, startAnywayAt: minutesAgo(-60) }), NOW)).toBe(false);
     expect(canStartAnyway(peerOf(waiting), NOW)).toBe(false);
     expect(canStartAnyway(peerOf({ startAnywayAt: minutesAgo(1) }), NOW)).toBe(false);
+    // The map view says it as the link's full view does.
+    const onMap = mapPeer("node-nas", "NAS", {
+      state: DataSyncLinkState.WaitingForPeerReview,
+      startAnywayAt: minutesAgo(1),
+    });
+
+    expect(canStartAnyway(syncPeerFromMapPeer(onMap), NOW)).toBe(true);
+  });
+
+  it("takes the skipped, withheld and missing counts and who started the link from the map too", () => {
+    const peer = syncPeerFromMapPeer(
+      mapPeer("node-nas", "NAS", {
+        excludedCount: 3,
+        heldCount: 2,
+        missingAtPeerCount: 1,
+        initiator: DataSyncLinkInitiator.Peer,
+      }),
+    );
+
+    expect([peer.excludedCount, peer.heldCount, peer.missingAtPeerCount]).toEqual([3, 2, 1]);
+    expect(peer.initiator).toBe(DataSyncLinkInitiator.Peer);
+    const reader = mapPeer("node-r", "Reader", { linkId: undefined, initiator: undefined });
+
+    expect(syncPeerFromMapPeer(reader).initiator).toBeUndefined();
   });
 
   it("finds this device's own request to a device, never another's", () => {
@@ -418,12 +442,12 @@ describe("the status catalogue", () => {
       "AwaitingAccess",
     );
     expect(statusOf({ ...failed, lastErrorCode: undefined }).code).toBe("AwaitingAccess");
-    // The map view says nothing of who started the link: one waiting with a failure and no
-    // request of this device's own is the read-back that failed.
+    // The map view says who started the link too.
     const onMap = syncPeerOfRecords(
       mapPeer("node-nas", "NAS", {
         state: DataSyncLinkState.AwaitingAccess,
         mode: DataSyncLinkMode.TwoWay,
+        initiator: DataSyncLinkInitiator.Peer,
         lastErrorCode: "Unreachable",
       }),
     )!;
@@ -438,6 +462,34 @@ describe("the status catalogue", () => {
     )!;
 
     expect(linkStatus(keyT, asked, NOW).code).toBe("AwaitingAccess");
+    // Where nothing says who started it, one waiting with a failure and no request of this
+    // device's own is the read-back that failed.
+    const unsaid = syncPeerOfRecords(
+      mapPeer("node-nas", "NAS", {
+        state: DataSyncLinkState.AwaitingAccess,
+        initiator: undefined,
+        lastErrorCode: "Unreachable",
+      }),
+    )!;
+
+    expect(linkStatus(keyT, unsaid, NOW).code).toBe("ReadBackFailed");
+  });
+
+  it("says a full reconciliation runs, after what needs you and never before the first sync", () => {
+    expect(statusOf({ fullReconciliationRunning: true })).toMatchObject({
+      code: "FullReconciliation",
+      tone: "primary",
+      text: "dataSync.status.FullReconciliation NAS",
+    });
+    expect(statusOf({ fullReconciliationRunning: true, openItems: 2 }).code).toBe("NeedsYou");
+    expect(statusOf({ fullReconciliationRunning: true, lastSyncedAt: undefined }).code).toBe(
+      "Syncing",
+    );
+    const onMap = syncPeerOfRecords(
+      mapPeer("node-nas", "NAS", { fullReconciliationRunning: true }),
+    )!;
+
+    expect(linkStatus(keyT, onMap, NOW).code).toBe("FullReconciliation");
   });
 
   it("says a request that was not approved, until it is dismissed", () => {

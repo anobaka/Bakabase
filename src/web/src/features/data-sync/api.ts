@@ -29,16 +29,7 @@ export type DataSyncMapView = Schemas["Bakabase.Modules.DataSync.Services.DataSy
 export type DataSyncMapPeer = Schemas["Bakabase.Modules.DataSync.Services.DataSyncMapPeer"];
 export type DataSyncMapRequest = Schemas["Bakabase.Modules.DataSync.Services.DataSyncMapRequest"];
 export type DataSyncMapOutgoing = Schemas["Bakabase.Modules.DataSync.Services.DataSyncMapOutgoing"];
-/**
- * A link as the page reads it. `startAnywayAt` — from when a link waiting for its peer's first
- * review may start without it ([Start anyway], spec §8.3; UTC) — is not on the server's
- * `DataSyncLinkView` yet: the runtime is to add it as a trailing optional member, and this
- * declaration goes once the generated SDK carries it. Until then it is always absent, and
- * [Start anyway] is never offered.
- */
-export type DataSyncLinkView = Schemas["Bakabase.Modules.DataSync.Services.DataSyncLinkView"] & {
-  startAnywayAt?: string | null;
-};
+export type DataSyncLinkView = Schemas["Bakabase.Modules.DataSync.Services.DataSyncLinkView"];
 export type DataSyncLinkResult = Schemas["Bakabase.Modules.DataSync.Services.DataSyncLinkResult"];
 export type DataSyncLinkCreateInput =
   Schemas["Bakabase.Modules.DataSync.Services.DataSyncLinkCreateInput"];
