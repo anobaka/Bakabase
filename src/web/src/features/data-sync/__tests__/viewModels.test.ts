@@ -462,17 +462,17 @@ describe("the status catalogue", () => {
     )!;
 
     expect(linkStatus(keyT, asked, NOW).code).toBe("AwaitingAccess");
-    // Where nothing says who started it, one waiting with a failure and no request of this
-    // device's own is the read-back that failed.
-    const unsaid = syncPeerOfRecords(
+    // Nothing is inferred: a link this device started is waiting for its own request, whatever
+    // failed on the way.
+    const started = syncPeerOfRecords(
       mapPeer("node-nas", "NAS", {
         state: DataSyncLinkState.AwaitingAccess,
-        initiator: undefined,
+        initiator: DataSyncLinkInitiator.ThisDevice,
         lastErrorCode: "Unreachable",
       }),
     )!;
 
-    expect(linkStatus(keyT, unsaid, NOW).code).toBe("ReadBackFailed");
+    expect(linkStatus(keyT, started, NOW).code).not.toBe("ReadBackFailed");
   });
 
   it("says a full reconciliation runs, after what needs you and never before the first sync", () => {

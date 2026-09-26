@@ -167,6 +167,60 @@ describe("data sync in the device map's details", () => {
     expect(screen.queryByTestId("data-sync-outgoing-card")).toBeNull();
   });
 
+  it("names what is not synced with it, and shows it on the page", () => {
+    section(
+      mapNode({
+        sources: {
+          sync: mapPeer("nas", "NAS", { excludedCount: 3, heldCount: 2 }),
+          syncRequests: [],
+          syncOutgoing: [],
+        },
+      }),
+    );
+
+    const counts = screen.getByTestId("data-sync-not-synced");
+
+    expect(counts.querySelector('[data-count="skipped"]')).toHaveTextContent(
+      "dataSync.link.skipped 3",
+    );
+    expect(
+      within(counts.querySelector<HTMLElement>('[data-count="skipped"]')!)
+        .getByText("dataSync.link.show")
+        .closest("a"),
+    ).toHaveAttribute("href", "/data-sync?link=1");
+    expect(counts.querySelector('[data-count="withheld"]')).toHaveTextContent(
+      "dataSync.link.withheld 2",
+    );
+  });
+
+  it("says nothing of what is not synced where everything is", () => {
+    section(
+      mapNode({ sources: { sync: mapPeer("nas", "NAS"), syncRequests: [], syncOutgoing: [] } }),
+    );
+
+    expect(screen.queryByTestId("data-sync-not-synced")).toBeNull();
+  });
+
+  it("offers to start without the other device's first review once the map says it may", () => {
+    section(
+      mapNode({
+        sources: {
+          sync: mapPeer("nas", "NAS", {
+            state: DataSyncLinkState.WaitingForPeerReview,
+            lastSyncedAt: undefined,
+            startAnywayAt: minutesAgo(1),
+          }),
+          syncRequests: [],
+          syncOutgoing: [],
+        },
+      }),
+    );
+
+    expect(screen.getByTestId("data-sync-start-anyway")).toHaveTextContent(
+      "dataSync.pause.startAnyway",
+    );
+  });
+
   it("turns receiving off through the map's confirmation", async () => {
     section(
       mapNode({ sources: { sync: mapPeer("nas", "NAS"), syncRequests: [], syncOutgoing: [] } }),

@@ -415,16 +415,13 @@ const failure = (peer: SyncPeer) =>
 
 /**
  * Keeping in step both ways was approved here, but reading the other device back failed (spec
- * §7.2.4): the link waits for access nobody is asked for, with the failure on it. Both views say
- * who started the link; where nothing says (a device known only by this device's own request), a
- * link waiting with a failure and no request of this device's own reads the same — every request
- * this device files is among them.
+ * §7.2.4): the link waits for access nobody is asked for, with the failure on it. Both the link
+ * view and the map view say who started the link.
  */
 export const readBackFailed = (peer: SyncPeer) =>
   peer.state === DataSyncLinkState.AwaitingAccess &&
   !!peer.lastErrorCode &&
-  (peer.initiator === DataSyncLinkInitiator.Peer ||
-    (peer.initiator === undefined && peer.outcome === undefined));
+  peer.initiator === DataSyncLinkInitiator.Peer;
 
 /** What does not work on the receive direction right now, if anything. */
 export const syncIssueOf = (peer: SyncPeer): SyncIssue | undefined => {

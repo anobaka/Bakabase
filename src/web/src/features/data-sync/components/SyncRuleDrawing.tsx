@@ -1004,15 +1004,21 @@ function StatusBlock({
           )}
         </div>
       )}
+      {/* What is not synced with it, where only the page lists it (spec §11.1). */}
       {linkToPage && linkId !== undefined && (peer.excludedCount > 0 || peer.heldCount > 0) && (
-        <p className="text-xs text-default-500">
-          {[
-            peer.excludedCount > 0 ? t("dataSync.link.skipped", { count: peer.excludedCount }) : "",
-            peer.heldCount > 0 ? t("dataSync.link.withheld", { count: peer.heldCount }) : "",
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
+        <div className="space-y-0.5 text-xs text-default-500" data-testid="data-sync-not-synced">
+          {peer.excludedCount > 0 && (
+            <p className="flex flex-wrap items-center gap-2" data-count="skipped">
+              <span>{t("dataSync.link.skipped", { count: peer.excludedCount })}</span>
+              <Link className={linkButtonClass} to={dataSyncLinkRoute(linkId)}>
+                {t("dataSync.link.show")}
+              </Link>
+            </p>
+          )}
+          {peer.heldCount > 0 && (
+            <p data-count="withheld">{t("dataSync.link.withheld", { count: peer.heldCount })}</p>
+          )}
+        </div>
       )}
     </div>
   );
