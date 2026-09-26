@@ -101,15 +101,17 @@ public class Merge3PropertyTests
     public void SymmetricMerge_AtSeedsThatOnceFailed(int seed) => Assert.IsTrue(Symmetric(seed), "merged with a conflict");
 
     /// <summary>
-    /// Seeds found by the integration's longer runs (DATASYNC_MERGE3_RUNS up to four million) that failed the symmetry
+    /// Seeds found by the integration's longer runs (DATASYNC_MERGE3_RUNS up to six million) that failed the symmetry
     /// property, each for a class this merge splits into parts (a rename or move of a parent kept on one side, often with
     /// a subtree one side does not publish or IgnoreCase toggled). Fixed by: a default value naming a member placed along
     /// with its class's leading group (928496, 2438107, 3054065, 4577387, 1162158, 2383611); a free member counted as a
     /// sibling only where it ends with the claimed nodes, by the keys and the moves the ids decide (600405, 68260, 167057,
     /// 2124198, 1261175, 1151420, 1371407, 696710, 1428671, 2250044); deletion candidates, and a class this device
     /// deleted or the peer changed, judged part by part (4533733, 1800636, 42597, 295617, 629278, 960539, 2761156,
-    /// 2171286, 3414350, 1489074, 2589585, 2900221, 1818715, 3698092); and seeds a member-level judgement of those parts
-    /// broke (269883, 335998, 414103, 1122162, 1288754, 2002123, 2111220, 3010313).
+    /// 2171286, 3414350, 1489074, 2589585, 2900221, 1818715, 3698092); seeds a member-level judgement of those parts
+    /// broke (269883, 335998, 414103, 1122162, 1288754, 2002123, 2111220, 3010313); and a base default value naming a
+    /// member of a restored class whose part stays deleted, which one direction placed at the part that comes back
+    /// (5191647).
     /// </summary>
     [TestMethod]
     [DataRow(42597)] [DataRow(68260)] [DataRow(167057)] [DataRow(269883)] [DataRow(295617)] [DataRow(335998)]
@@ -118,7 +120,7 @@ public class Merge3PropertyTests
     [DataRow(1428671)] [DataRow(1489074)] [DataRow(1800636)] [DataRow(1818715)] [DataRow(2002123)] [DataRow(2111220)]
     [DataRow(2124198)] [DataRow(2171286)] [DataRow(2250044)] [DataRow(2383611)] [DataRow(2438107)] [DataRow(2589585)]
     [DataRow(2761156)] [DataRow(2900221)] [DataRow(3010313)] [DataRow(3054065)] [DataRow(3414350)] [DataRow(3698092)]
-    [DataRow(4533733)] [DataRow(4577387)]
+    [DataRow(4533733)] [DataRow(4577387)] [DataRow(5191647)]
     public void SymmetricMerge_AtSplitClassSeedsThatOnceFailed(int seed) =>
         Assert.IsTrue(Symmetric(seed), "merged with a conflict");
 
@@ -182,19 +184,31 @@ public class Merge3PropertyTests
     [TestMethod]
     public void ThreeWay_WithTheRemoteAtTheBase_ReturnsLocalUnchanged()
     {
-        for (var seed = 0; seed < Runs; seed++)
-        {
-            var gen = new Merge3Generator(3_000_000 + seed);
-            var @base = Peer(gen.Content(gen.Type(), "b"));
-            var l = gen.Mutate(@base, "l", gen.Edits());
-            var mode = seed % 3 == 0 ? DataSyncLinkMode.Follow : DataSyncLinkMode.TwoWay;
-            var winner = gen.Winner();
-            l = new Merge3Generator(9_000_000 + seed).Unpublishable(l, "x");
-            var result = Merge(@base, l, @base, winner: winner, mode: mode,
-                deletions: DataSyncChildDeletionMode.Apply);
-            Assert.AreEqual(Canon(l), Canon(Merged(result)),
-                $"seed {seed}\nbase {Canon(@base)}\nl    {Canon(l)}\n{Outcomes(result)}");
-        }
+        for (var seed = 0; seed < Runs; seed++) RemoteAtTheBase(seed);
+    }
+
+    /// <summary>
+    /// Seeds the property above once failed at (DATASYNC_MERGE3_RUNS at a million): 145692, where this device moved a
+    /// node from a parent it also moved away into a new node of the parent's old class — one class the merge's keys
+    /// split — and the parent was judged unchanged on both sides, so Follow took the peer's (the base's) parent.
+    /// </summary>
+    [TestMethod]
+    [DataRow(145692)]
+    public void ThreeWay_WithTheRemoteAtTheBase_AtSeedsThatOnceFailed(int seed) => RemoteAtTheBase(seed);
+
+    private static void RemoteAtTheBase(int seed)
+    {
+        var gen = new Merge3Generator(3_000_000 + seed);
+        var @base = Peer(gen.Content(gen.Type(), "b"));
+        var l = gen.Mutate(@base, "l", gen.Edits());
+        var mode = seed % 3 == 0 ? DataSyncLinkMode.Follow : DataSyncLinkMode.TwoWay;
+        var winner = gen.Winner();
+        l = new Merge3Generator(9_000_000 + seed).Unpublishable(l, "x");
+        var result = Merge(@base, l, @base, winner: winner, mode: mode,
+            deletions: DataSyncChildDeletionMode.Apply);
+        var trace = $"seed {seed}\nbase {Canon(@base)}\nl    {Canon(l)}\n{Outcomes(result)}";
+        Assert.AreEqual(Canon(l), Canon(Merged(result)), trace);
+        Assert.IsFalse(HasConflict(result), trace);
     }
 
     /// <summary>Without a base nothing is moved in two-way (§8.5.4 step 6): no local node changes its parent.</summary>

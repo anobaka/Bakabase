@@ -481,7 +481,9 @@ internal sealed class ChildMerge3
             FinalParentPathOf(along) != ParentPathOf(remote)) return along;
         ChildNode? parent = null;
         if (remote.Parent is not null && (parent = MergedPosition(remote.Parent)) is null) return null;
-        if (peer.Status == PeerClassStatus.Present && PartsOf(peer) is { } parts &&
+        // A member of a class this merge splits whose part does not come back (a part of a restored class nobody changed
+        // stays deleted too) is no node of the class that does: merging the other way it goes with its own parent.
+        if (peer.Status is PeerClassStatus.Present or PeerClassStatus.Restore && PartsOf(peer) is { } parts &&
             !parts.ContainsKey(ParentPathOf(remote)))
         {
             var path = (parent is null ? "" : PathInMergedTree(parent)) + "\u0001" + peer.Key;
@@ -824,6 +826,19 @@ internal sealed class ChildMerge3
     }
 
     /// <summary>
+    /// Whether two parent nodes on the peer's side (the peer's and the base's) are one node, or end with one class key
+    /// path by their counterparts here; true when either has no counterpart here to tell by.
+    /// </summary>
+    private bool PeerParentsEndTogether(ChildNode? parent, ChildNode? baseParent)
+    {
+        if (parent?.Uuid == baseParent?.Uuid) return true;
+        if (parent is null || baseParent is null) return false;
+        return TargetOf(parent.Uuid!) is not { Visible: true } counterpart ||
+               TargetOf(baseParent.Uuid!) is not { Visible: true } baseCounterpart ||
+               KeyPathAfterRenames(counterpart) == KeyPathAfterRenames(baseCounterpart);
+    }
+
+    /// <summary>
     /// The class key path a local node ends at by the keys this merge decides, before any move is (claims by key need it
     /// before the parents are decided): an owned node takes its group's key, a free member the key of the group that
     /// leads its class among the claims by id (the one holding its first member), a node of a class nobody claimed its
@@ -1057,9 +1072,17 @@ internal sealed class ChildMerge3
                 else if (_s.Rules == ChildMergeRules.ThreeWay && (group.BaseNode is not null || LocalBaseNodeOf(group) is not null))
                 {
                     var localBase = LocalBaseNodeOf(group);
-                    resolution = Decide(localBase is null || !ReferenceEquals(l, BaseParentOf(localBase)),
-                        group.BaseNode is null || !ReferenceEquals(r, BaseParentOf(group.BaseNode)),
-                        Concurrent());
+                    var localChanged = localBase is null || !ReferenceEquals(l, BaseParentOf(localBase));
+                    var remoteChanged = group.BaseNode is null || !ReferenceEquals(r, BaseParentOf(group.BaseNode));
+                    // One class this merge's keys split (the only way l is r here): each side against the part its
+                    // base parent ends in, so a side that kept its parent still changes nothing.
+                    if (ReferenceEquals(l, r) && !localChanged && !remoteChanged)
+                    {
+                        localChanged = !EndTogether(anchor.OriginalParent, localBase!.Parent);
+                        remoteChanged = !PeerParentsEndTogether(group.RemoteMember.Parent, group.BaseNode!.Parent);
+                    }
+
+                    resolution = Decide(localChanged, remoteChanged, Concurrent());
                 }
                 else
                 {
