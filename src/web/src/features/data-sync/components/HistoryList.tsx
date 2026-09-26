@@ -1,7 +1,7 @@
 import type { IconType } from "react-icons";
 import type { DataSyncHistoryDetail, DataSyncHistoryEntry, DataSyncLinkView } from "../api";
 
-import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AiOutlineCheckCircle,
@@ -15,6 +15,7 @@ import {
 
 import { dataSyncApi } from "../api";
 import { historyCounts, historyKindName, isUndoable } from "../historyModels";
+import { findTask, listedTasks } from "../hooks/useDataSyncTask";
 import { localDateTime, timeAgo } from "../times";
 
 import HistoryDrawing from "./HistoryDrawing";
@@ -27,6 +28,7 @@ import {
   SectionHeading,
   smallButtonClass,
   syncText,
+  taskFailureText,
 } from "./common";
 
 import {
@@ -72,6 +74,13 @@ export interface HistoryListProps {
   now?: number;
 }
 
+/** An undo that was started: its task, and an earlier run under that id still listed then. */
+interface RunningUndo {
+  taskId: string;
+  /** That earlier run's creation time (`listedTasks`): not this undo's task. */
+  earlier?: string;
+}
+
 const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function HistoryList(
   { version, links, selfName, peer, onPeerChange, onChanged, now },
   heading,
@@ -82,26 +91,48 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
   const [open, setOpen] = useState<number>();
   const [details, setDetails] = useState<Record<number, DataSyncHistoryDetail | Error>>({});
   const [undoing, setUndoing] = useState<DataSyncHistoryEntry>();
-  const [running, setRunning] = useState<Map<number, string>>(new Map());
+  // What the task list showed as the undo dialog opened: a retried undo reuses its task id.
+  const listedAtOpen = useRef<ReadonlyMap<string, string>>(new Map());
+  const [running, setRunning] = useState<Map<number, RunningUndo>>(new Map());
   const [runErrors, setRunErrors] = useState<Map<number, string>>(new Map());
+  // Undos whose task completed: the next read says whether they undid anything.
+  const completed = useRef(new Set<number>());
   const tasks = useBTasksStore((state) => state.tasks);
+  const latestT = useRef(t);
+
+  latestT.current = t;
 
   const load = useCallback(async () => {
+    // Taken before the read: a task that completed before it began has written what it undid.
+    const settled = new Set(completed.current);
+
     try {
       const next = await dataSyncApi.history();
+      const available = (id: number) =>
+        next.find((entry) => entry.id === id)?.undoState === DataSyncUndoState.Available;
+      // A completed undo whose entry can still be undone undid nothing: every step was refused.
+      const nothingUndone = [...settled].filter(available);
 
+      for (const id of settled) completed.current.delete(id);
       setEntries(next);
       setError(undefined);
-      // An undo is over once its entry says it is undone.
+      // An undo is over once its entry says it is undone — or once it completed without that.
       setRunning((current) => {
         const kept = new Map(current);
 
-        for (const id of current.keys())
-          if (next.find((entry) => entry.id === id)?.undoState !== DataSyncUndoState.Available)
-            kept.delete(id);
+        for (const id of current.keys()) if (!available(id) || settled.has(id)) kept.delete(id);
 
         return kept;
       });
+      if (nothingUndone.length > 0)
+        setRunErrors((current) => {
+          const errors = new Map(current);
+
+          for (const id of nothingUndone)
+            errors.set(id, latestT.current("dataSync.history.undoNothing"));
+
+          return errors;
+        });
     } catch (cause) {
       setError(cause instanceof Error ? cause : new Error(String(cause)));
     }
@@ -124,10 +155,10 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
     return () => clearInterval(timer);
   }, [live, load]);
 
-  // An undo whose task failed says so on its row.
+  // An undo whose task failed says so on its row; one that completed is read again at once.
   useEffect(() => {
-    for (const [id, taskId] of running) {
-      const task = tasks.find((one) => one.id === taskId);
+    for (const [id, { taskId, earlier }] of running) {
+      const task = findTask(tasks, taskId, earlier);
 
       if (task?.status === BTaskStatus.Error || task?.status === BTaskStatus.Cancelled) {
         setRunning((current) => {
@@ -138,14 +169,14 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
           return next;
         });
         setRunErrors((current) =>
-          new Map(current).set(
-            id,
-            task.briefError || task.error || t("dataSync.history.undoFailed"),
-          ),
+          new Map(current).set(id, taskFailureText(t, task, t("dataSync.history.undoFailed"))),
         );
+      } else if (task?.status === BTaskStatus.Completed && !completed.current.has(id)) {
+        completed.current.add(id);
+        void load();
       }
     }
-  }, [tasks, running, t]);
+  }, [tasks, running, t, load]);
 
   const toggle = async (entry: DataSyncHistoryEntry) => {
     if (open === entry.id) {
@@ -284,7 +315,10 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
                         className={smallButtonClass}
                         data-testid="data-sync-history-undo"
                         type="button"
-                        onClick={() => setUndoing(entry)}
+                        onClick={() => {
+                          listedAtOpen.current = listedTasks();
+                          setUndoing(entry);
+                        }}
                       >
                         {t("dataSync.undo.button")}
                       </button>
@@ -359,6 +393,7 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
           onClose={() => setUndoing(undefined)}
           onStarted={(taskId) => {
             const id = undoing.id;
+            const started = taskId ?? "";
 
             setUndoing(undefined);
             setRunErrors((current) => {
@@ -368,7 +403,13 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
 
               return next;
             });
-            setRunning((current) => new Map(current).set(id, taskId ?? ""));
+            completed.current.delete(id);
+            setRunning((current) =>
+              new Map(current).set(id, {
+                taskId: started,
+                earlier: listedAtOpen.current.get(started),
+              }),
+            );
             onChanged();
             void load();
           }}

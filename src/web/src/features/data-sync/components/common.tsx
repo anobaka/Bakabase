@@ -1,12 +1,16 @@
 import type { TFunction } from "i18next";
-import type { ReactNode, Ref } from "react";
+import type { ComponentProps, ReactNode, Ref } from "react";
 import type { Tone } from "../viewModels";
+import type { BTask } from "@/core/models/BTask";
+import type { DataSyncProblemCode } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
 
 import { DataSyncProblemError, DataSyncRequestError } from "../api";
 
+import ConfirmDialog from "@/features/federation/components/ConfirmDialog";
 import { buttonClass, DismissButton, MessageError } from "@/features/federation/components/common";
+import { DataSyncProblemCodeLabel } from "@/sdk/constants";
 
 /*
  * Pieces every data sync surface shares. The classes are the multi-device pages' own, so data
@@ -73,9 +77,35 @@ export function StatusDot({ tone }: { tone: Tone }) {
   );
 }
 
+/**
+ * A problem's details that change what it means, by problem: each has words of its own
+ * (`dataSync.problem.detail.{code}.{detail}`), said instead of the problem's. Every other detail
+ * the server sends — an id, a token, a sentence of its own in English — is for whoever looks into
+ * it, never copy: it is shown only under "Technical details".
+ */
+export const wordedProblemDetails: Partial<
+  Record<keyof typeof DataSyncProblemCode, readonly string[]>
+> = {
+  DecisionsInvalid: ["tooEarly", "noRestore", "notInitialized", "notAwaitingAccess"],
+  Busy: ["newDefinitionsStayLocal", "notRunning", "stopping"],
+  UndoNotAvailable: ["undone", "undo", "expired", "notFound"],
+  NothingToReview: ["applied"],
+};
+
+/** The words for a problem's detail, when it has some (see {@link wordedProblemDetails}). */
+const problemDetailKey = (error: DataSyncProblemError) => {
+  const detail = error.problem.detail;
+
+  return detail &&
+    wordedProblemDetails[error.label as keyof typeof DataSyncProblemCode]?.includes(detail)
+    ? `dataSync.problem.detail.${error.label}.${detail}`
+    : undefined;
+};
+
 /** What went wrong with a data sync call, in the page's words. */
 export const errorText = (t: TFunction, error: Error): string => {
-  if (error instanceof DataSyncProblemError) return t(`dataSync.problem.${error.label}`);
+  if (error instanceof DataSyncProblemError)
+    return t(problemDetailKey(error) ?? `dataSync.problem.${error.label}`);
   if (error instanceof DataSyncRequestError) {
     if (error.code === "HostOnly") return t("dataSync.notAvailable");
     if (error.code === "Network") return t("dataSync.error.network");
@@ -86,6 +116,33 @@ export const errorText = (t: TFunction, error: Error): string => {
 
   return error.message || t("dataSync.error.network");
 };
+
+/**
+ * A failure of data sync's own, in data sync's words, for what shows an error by its message —
+ * the multi-device confirmation, the device map; anything else as it is.
+ */
+export const wordedError = <T,>(t: TFunction, cause: T): T | MessageError =>
+  cause instanceof DataSyncProblemError || cause instanceof DataSyncRequestError
+    ? new MessageError(errorText(t, cause))
+    : cause;
+
+const problemCodeNames = new Set<string>(Object.values(DataSyncProblemCodeLabel));
+
+/**
+ * Why a data sync task failed, in the page's words: the problem it ended with (its brief error
+ * names one), else `fallback`. Never the task's full error, which is a stack trace.
+ */
+export const taskFailureText = (t: TFunction, task: BTask | undefined, fallback: string) =>
+  task?.briefError && problemCodeNames.has(task.briefError)
+    ? t(`dataSync.problem.${task.briefError}`)
+    : fallback;
+
+/** The multi-device confirmation, with a failure of data sync's own said in data sync's words. */
+export function DataSyncConfirmDialog(props: ComponentProps<typeof ConfirmDialog>) {
+  const { t } = useTranslation();
+
+  return <ConfirmDialog {...props} error={props.error && wordedError(t, props.error)} />;
+}
 
 export function DataSyncErrorNotice({
   error,
@@ -99,6 +156,11 @@ export function DataSyncErrorNotice({
   const { t } = useTranslation();
 
   if (!error) return null;
+  // A detail with no words of its own is for whoever looks into it, not for the reader.
+  const technical =
+    error instanceof DataSyncProblemError && !problemDetailKey(error)
+      ? error.problem.detail
+      : undefined;
 
   return (
     <div
@@ -110,8 +172,11 @@ export function DataSyncErrorNotice({
         <p>{errorText(t, error)}</p>
         {onDismiss && <DismissButton onClick={onDismiss} />}
       </div>
-      {error instanceof DataSyncProblemError && error.problem.detail && (
-        <p className="mt-1 text-xs text-default-500">{error.problem.detail}</p>
+      {technical && (
+        <details className="mt-1 text-xs text-default-500" data-testid="data-sync-error-technical">
+          <summary className="cursor-pointer select-none">{t("dataSync.error.technical")}</summary>
+          <p className="mt-0.5 break-all font-mono">{technical}</p>
+        </details>
       )}
       {onRetry && (
         <button className={`${buttonClass} mt-2`} type="button" onClick={onRetry}>

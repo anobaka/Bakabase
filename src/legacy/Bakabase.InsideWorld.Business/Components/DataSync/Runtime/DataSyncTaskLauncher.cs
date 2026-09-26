@@ -254,8 +254,12 @@ public sealed class DataSyncTaskLauncher
     /// <summary>
     /// <c>ApplyInProgress</c> (§8.10.3): a data sync task that writes definitions is waiting or running.
     /// </summary>
-    public bool IsWriteTaskActiveOrPending() =>
-        _btm.Tasks.Any(t => DataSyncTaskIds.IsWriteTask(t.Id) && t.Task.Status.IsActiveOrPending());
+    /// <param name="exceptTaskId">
+    /// A task not counted: one whose body has just ended (<see cref="RunInScopeAsync"/>).
+    /// </param>
+    public bool IsWriteTaskActiveOrPending(string? exceptTaskId = null) =>
+        _btm.Tasks.Any(t => DataSyncTaskIds.IsWriteTask(t.Id) && t.Task.Status.IsActiveOrPending() &&
+                            !string.Equals(t.Id, exceptTaskId, StringComparison.Ordinal));
 
     /// <summary>The id of a write task that is waiting or running, preferring a running one.</summary>
     public string? GetActiveWriteTaskId() =>
@@ -282,18 +286,46 @@ public sealed class DataSyncTaskLauncher
     /// scope of its own, and the attempt flowing to the runner (<see cref="DataSyncTaskAttempts"/>).
     /// <see cref="OperationCanceledException"/> is never wrapped, so a stopped task ends Cancelled (v3.1 M-f).
     /// </summary>
+    /// <remarks>
+    /// However the body ends, the observer hears it (<see cref="IDataSyncRuntimeObserver.TaskEndedAsync"/>): what the
+    /// body pushed while it ran counted the task itself as syncing, and nothing else says it is over.
+    /// </remarks>
     private async Task RunInScopeAsync(BTaskArgs args, DataSyncTaskAttempt attempt, Func<IServiceProvider, Task> body)
     {
-        await args.YieldAsync();
-        if (!_registry.ShouldRun(attempt.TaskId, attempt.AttemptId))
+        try
         {
-            _logger.LogInformation("Data sync task {TaskId} exits without running: its attempt was cancelled or replaced",
-                attempt.TaskId);
-            return;
-        }
+            await args.YieldAsync();
+            if (!_registry.ShouldRun(attempt.TaskId, attempt.AttemptId))
+            {
+                _logger.LogInformation(
+                    "Data sync task {TaskId} exits without running: its attempt was cancelled or replaced",
+                    attempt.TaskId);
+                return;
+            }
 
-        using var _ = DataSyncTaskAttempts.Enter(attempt);
-        await using var scope = _scopes.CreateAsyncScope();
-        await body(scope.ServiceProvider);
+            using var _ = DataSyncTaskAttempts.Enter(attempt);
+            await using var scope = _scopes.CreateAsyncScope();
+            await body(scope.ServiceProvider);
+        }
+        finally
+        {
+            await NoteEndedAsync(_observer, attempt.TaskId, _logger);
+        }
+    }
+
+    /// <summary>
+    /// Tells the observer that a data sync task's body is over (<see cref="IDataSyncRuntimeObserver.TaskEndedAsync"/>).
+    /// A failure there is logged and never changes how the task ends.
+    /// </summary>
+    internal static async Task NoteEndedAsync(IDataSyncRuntimeObserver observer, string taskId, ILogger logger)
+    {
+        try
+        {
+            await observer.TaskEndedAsync(taskId, CancellationToken.None);
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "A data sync observer failed after {TaskId} ended", taskId);
+        }
     }
 }

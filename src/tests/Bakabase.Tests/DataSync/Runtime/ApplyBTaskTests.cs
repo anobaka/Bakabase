@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
@@ -7,6 +8,7 @@ using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Wire;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Tests.DataSync.Runtime;
 
@@ -212,6 +214,43 @@ public class ApplyBTaskTests
         Assert.IsNotNull(await h.Launcher.EnqueueUndoAsync(7), "an undo can be retried after an Error");
         await h.WaitForStatusAsync(undoId, BTaskStatus.Completed);
         CollectionAssert.AreEqual(new[] {7, 7}, h.Runner.Undos.ToArray());
+    }
+
+    /// <summary>
+    /// What a task pushes while it runs counts the task itself as syncing (its status is still Running), and nothing
+    /// else would say it is over: every task's end — a write task, whether it worked or failed, and the fetch cycle —
+    /// is heard, and the status said then leaves that task out, so the indicator does not stay on "Syncing…".
+    /// </summary>
+    [TestMethod]
+    public async Task Every_task_end_is_heard_and_the_status_then_leaves_that_task_out()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(daemon: true);
+        var seen = new ConcurrentQueue<(string TaskId, bool Counted, bool Syncing)>();
+        h.Observer.OnTaskEnded = taskId =>
+        {
+            using var scope = h.Provider.CreateScope();
+            seen.Enqueue((taskId, h.Launcher.IsWriteTaskActiveOrPending() ||
+                                  h.Btm.GetTaskViewModel(taskId)?.Status.IsActive() == true,
+                new DataSyncViews(scope.ServiceProvider).IsSyncing(taskId)));
+        };
+
+        Assert.IsNotNull(await h.Launcher.EnqueueUndoAsync(7));
+        await h.WaitForStatusAsync(DataSyncTaskIds.Undo(7), BTaskStatus.Completed);
+        h.Runner.UndoErrors.Enqueue(new InvalidOperationException("boom"));
+        Assert.IsNotNull(await h.Launcher.EnqueueUndoAsync(8));
+        await h.WaitForStatusAsync(DataSyncTaskIds.Undo(8), BTaskStatus.Error);
+        await h.Btm.Start(DataSyncTaskIds.Fetch);
+        await DataSyncRuntimeHarness.WaitUntilAsync(() => h.Observer.Events.Contains("ended:" + DataSyncTaskIds.Fetch),
+            "the fetch cycle's end was heard");
+
+        CollectionAssert.AreEqual(
+            new[]
+            {
+                (DataSyncTaskIds.Undo(7), true, false),
+                (DataSyncTaskIds.Undo(8), true, false),
+                (DataSyncTaskIds.Fetch, true, false),
+            },
+            seen.ToArray(), "heard while the task was still running, and left out of the status");
     }
 
     [TestMethod]

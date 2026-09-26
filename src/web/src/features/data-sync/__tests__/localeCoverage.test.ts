@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { dataSyncKinds, failureCodesWithWords } from "../viewModels";
 import { changeOps, scalarPaths } from "../components/ChangeList";
+import { wordedProblemDetails } from "../components/common";
 import { historyCountKeys, undoGroupOrder } from "../historyModels";
 import { actionKeyVariants, headlineVariants } from "../inboxModels";
 
@@ -120,6 +121,9 @@ const dynamicKeys = [
   ),
   ...labels(DataSyncProblemCode, DataSyncProblemCodeLabel).map(
     (code) => `dataSync.problem.${code}`,
+  ),
+  ...Object.entries(wordedProblemDetails).flatMap(([code, details]) =>
+    (details ?? []).map((detail) => `dataSync.problem.detail.${code}.${detail}`),
   ),
   ...[...labels(DataSyncPeerErrorCode, DataSyncPeerErrorCodeLabel), ...failureCodesWithWords].map(
     (code) => `dataSync.peerError.${code}`,

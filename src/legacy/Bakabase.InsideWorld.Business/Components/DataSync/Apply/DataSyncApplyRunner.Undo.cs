@@ -33,7 +33,10 @@ public sealed partial class DataSyncApplyRunner
     /// since are refused one by one, and so is a step whose entity, re-read, is not what it restored (the
     /// faithfulness check): that step is taken back. There is no redo.
     /// </summary>
-    /// <returns>The <c>Undo</c> history entry, or null when nothing could be undone.</returns>
+    /// <returns>The <c>Undo</c> history entry, or null when the attempt did not run (stopped, or replaced).</returns>
+    /// <exception cref="BTaskException">
+    /// <c>UndoNotAvailable</c>: the entry cannot be undone, or every step was refused and nothing was undone.
+    /// </exception>
     public async Task<int?> RunUndoAsync(int applyLogId, BTaskArgs args)
     {
         ArgumentNullException.ThrowIfNull(args);
@@ -108,6 +111,7 @@ public sealed partial class DataSyncApplyRunner
             // none: the moves are saved one by one, and one taken back halfway could leave a key that no entity owns,
             // so a peer's record carrying it would bind as new (§5.3; undo never frees a key, §8.11).
             var document = DataSyncPreImageDocument.Read(log.PreImageJson);
+            string? keysRefused = null;
             if (document.Identity is { KeyMoves.Count: > 0 } identity)
             {
                 const string savepoint = "undoKeyMoves";
@@ -127,13 +131,18 @@ public sealed partial class DataSyncApplyRunner
                     recorder.Item("keys/" + e.Kind + "/" + e.Key, e.Kind, e.Key, DataSyncItemOutcome.ChangedSinceReview,
                         DataSyncItemAction.None, null, DataSyncPlanItemType.Update);
                     _logger.LogInformation(e, "Data sync undo kept every key where it is: {Reason}", e.Message);
+                    keysRefused = e.Message;
                 }
             }
 
+            // Every step was refused — some only while writing, after the preview passed: the task fails and says so,
+            // rather than completing with the entry still undoable and nothing to show for it. The throw rolls back.
             if (applied == 0)
             {
-                await s.RollbackAsync();
-                return (int?) null;
+                var refused = results.Where(r => r.Blocked is not null).Select(r => $"{r.Name}: {r.Blocked}")
+                    .Concat(keysRefused is null ? [] : [$"keys: {keysRefused}"]);
+                throw new BTaskException(nameof(DataSyncProblemCode.UndoNotAvailable),
+                    $"Nothing was undone: every step was refused ({string.Join("; ", refused)}).");
             }
 
             var now = s.Now;

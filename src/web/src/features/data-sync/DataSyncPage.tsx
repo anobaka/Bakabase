@@ -13,6 +13,7 @@ import { AiOutlineLoading3Quarters, AiOutlineReload, AiOutlineSync } from "react
 
 import { dataSyncApi } from "./api";
 import { readDataSyncQuery } from "./routes";
+import { useDataSyncStore } from "./stores/dataSync";
 import { useCanManageDefinitionSharing } from "./hooks/useCanManageDefinitionSharing";
 import { useDataSyncActions } from "./hooks/useDataSyncActions";
 import { useDataSyncPageData } from "./hooks/useDataSyncPageData";
@@ -27,6 +28,7 @@ import {
 import AddLinkWizard from "./components/AddLinkWizard";
 import {
   buttonClass,
+  DataSyncConfirmDialog,
   DataSyncErrorNotice,
   panelClass,
   primaryClass,
@@ -47,7 +49,6 @@ import ReviewView from "./components/ReviewView";
 import SyncLinksDiagram from "./components/SyncLinksDiagram";
 import ThisDeviceSection from "./components/ThisDeviceSection";
 
-import ConfirmDialog from "@/features/federation/components/ConfirmDialog";
 import { DismissButton } from "@/features/federation/components/common";
 import { useDetailsFocus } from "@/features/federation/map/useDetailsFocus";
 import { useEscapeKey } from "@/features/federation/map/useEscapeKey";
@@ -114,6 +115,7 @@ function DataSync() {
   const onDemand = useMediaQuery(DATA_SYNC_ON_DEMAND_QUERY) || stacked;
   const reducedMotion = useReducedMotion();
   const { overview, peers } = data;
+  const liveStatus = useDataSyncStore((state) => state.status);
   const canManage = canManageHere && (overview?.canManageSharing ?? true);
 
   const [chosen, setChosen] = useState<string>();
@@ -297,11 +299,10 @@ function DataSync() {
 
   if (data.refused) return <NotAvailableNotice />;
 
-  const status = overallStatus(t, overview?.status);
-  const elsewhere = [
-    waitingElsewhereLine(t, overview?.status),
-    pendingRequestsLine(t, overview?.status, status),
-  ]
+  // The indicator's own status: the overview's, then every push from the hub in between.
+  const current = liveStatus ?? overview?.status;
+  const status = overallStatus(t, current);
+  const elsewhere = [waitingElsewhereLine(t, current), pendingRequestsLine(t, current, status)]
     .filter(Boolean)
     .join(" · ");
   const selfName: string = overview?.deviceName || t<string>("dataSync.thisDevice");
@@ -376,7 +377,12 @@ function DataSync() {
 
       {(overview?.restorePending || query.restore) && (
         <div ref={restoreSection}>
-          <RestorePanel actions={actions} asked={query.restore} version={data.version} />
+          <RestorePanel
+            actions={actions}
+            asked={query.restore}
+            version={data.version}
+            watch={[overview?.restorePending, overview?.activeTaskId, current?.level].join("|")}
+          />
         </div>
       )}
       <DataSyncErrorNotice error={data.overviewError} onRetry={() => void data.reload()} />
@@ -579,7 +585,7 @@ function DataSync() {
       )}
 
       {actions.confirmation && (
-        <ConfirmDialog
+        <DataSyncConfirmDialog
           busy={actions.busy}
           description={actions.confirmation.description}
           error={actions.confirmationError}

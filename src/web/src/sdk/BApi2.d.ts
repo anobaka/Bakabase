@@ -13174,6 +13174,7 @@ export interface components {
             linksToReview: number;
             /** Format: int32 */
             linksWaiting: number;
+            lastErrorDetail?: string;
         };
         "Bakabase.Modules.DataSync.Services.DataSyncTaskStart": {
             taskId?: string;

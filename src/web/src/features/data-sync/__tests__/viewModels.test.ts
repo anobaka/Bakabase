@@ -641,6 +641,36 @@ describe("the status of the whole device", () => {
     expect(overallStatus(keyT, status({ level }), NOW)?.code).toBe(code);
   });
 
+  it("says why a sync failed — for a failed read-back, what its detail says", () => {
+    expect(
+      overallStatus(
+        keyT,
+        status({ level: DataSyncStatusLevel.Failed, lastErrorCode: "ApplyFailed" }),
+        NOW,
+      ),
+    ).toMatchObject({
+      code: "Failed",
+      tone: "danger",
+      text: "dataSync.status.Failed dataSync.peerError.ApplyFailed",
+    });
+    // A failed read-back is a failure here as on the page and the map, never "waiting".
+    expect(
+      overallStatus(
+        keyT,
+        status({
+          level: DataSyncStatusLevel.Failed,
+          lastErrorCode: "ReadBackFailed",
+          lastErrorDetail: "Unreachable",
+        }),
+        NOW,
+      ),
+    ).toMatchObject({
+      code: "Failed",
+      tone: "danger",
+      text: "dataSync.status.Failed dataSync.peerError.Unreachable",
+    });
+  });
+
   it("never says in step before anything was synced", () => {
     expect(
       overallStatus(

@@ -38,10 +38,14 @@ public sealed class DataSyncViews
     /// </summary>
     private const string BusyCode = nameof(DataSyncPeerErrorCode.Busy);
 
-    /// <summary>Something went wrong that retrying alone may not fix: shown as "Sync failed" (§11.6).</summary>
+    /// <summary>
+    /// Something went wrong that retrying alone may not fix: shown as "Sync failed" (§11.6) — on the page, the map and
+    /// the indicator alike. A failed read-back is one too: the link waits for this device's own "Try again", not for
+    /// the other device (§7.2.4), and its reason is its detail.
+    /// </summary>
     private static readonly HashSet<string> FailureCodes =
     [
-        DataSyncLinkService.ApplyFailed, DataSyncLinkService.FetchFailed,
+        DataSyncLinkService.ApplyFailed, DataSyncLinkService.FetchFailed, DataSyncLinkService.ReadBackFailed,
         nameof(DataSyncPeerErrorCode.InvalidResponse), nameof(DataSyncPeerErrorCode.TooLarge),
     ];
 
@@ -155,8 +159,9 @@ public sealed class DataSyncViews
         var needThere = links.Count(l => l.GetPeerAttention() is { OpenDecisions: > 0 });
         var lastSynced = snapshot.Links.Select(l => l.LastSyncedAtUtc).Where(t => t is not null).Max();
         var toReview = links.Count(l => l.State == DataSyncLinkState.AwaitingReview);
+        // A failed read-back waits for this device's own "Try again", not for the other device: a failure, below.
         var waiting = links.Count(l =>
-            l.State is DataSyncLinkState.AwaitingAccess or DataSyncLinkState.WaitingForPeerReview);
+            (l.State is DataSyncLinkState.AwaitingAccess or DataSyncLinkState.WaitingForPeerReview) && !IsFailed(l));
 
         DataSyncStatusLevel level;
         if (links.Count == 0 && open == 0 && readers == 0 && pendingRequests == 0 &&
@@ -180,11 +185,10 @@ public sealed class DataSyncViews
             DataSyncStatusLevel.Offline => links.Where(IsAway),
             _ => links.Where(l => l.LastErrorCode is not null),
         };
-        var lastErrorCode = failing.OrderByDescending(l => l.LastAttemptAtUtc ?? DateTime.MinValue)
-            .FirstOrDefault()?.LastErrorCode;
+        var erring = failing.OrderByDescending(l => l.LastAttemptAtUtc ?? DateTime.MinValue).FirstOrDefault();
 
-        return new DataSyncStatusView(level, open, links.Count, inStep, needThere, Utc(lastSynced), lastErrorCode,
-            pendingRequests, readers, toReview, waiting);
+        return new DataSyncStatusView(level, open, links.Count, inStep, needThere, Utc(lastSynced),
+            erring?.LastErrorCode, pendingRequests, readers, toReview, waiting, erring?.LastErrorDetail);
     }
 
     /// <summary>Requests from other devices to read this one that still wait for an answer here.</summary>
@@ -207,17 +211,27 @@ public sealed class DataSyncViews
     private static bool IsBusy(DataSyncLinkDbModel link) =>
         string.Equals(link.LastErrorCode, BusyCode, StringComparison.Ordinal);
 
-    /// <summary>Whether a data sync task is running or waiting to write.</summary>
-    public bool IsSyncing()
+    /// <summary>
+    /// Whether a data sync task is running or waiting to write. <paramref name="endingTaskId"/>, a task whose body has
+    /// just returned (or thrown), is not counted: it leaves the active set right after, and the status is said as it
+    /// is once that task is over.
+    /// </summary>
+    public bool IsSyncing(string? endingTaskId = null)
     {
         var launcher = _services.GetService<DataSyncTaskLauncher>();
         var btm = _services.GetService<BTaskManager>();
-        var fetching = btm?.GetTaskViewModel(DataSyncTaskIds.Fetch)?.Status.IsActive() == true;
-        return fetching || launcher?.IsWriteTaskActiveOrPending() == true;
+        var fetching = !string.Equals(endingTaskId, DataSyncTaskIds.Fetch, StringComparison.Ordinal) &&
+                       btm?.GetTaskViewModel(DataSyncTaskIds.Fetch)?.Status.IsActive() == true;
+        return fetching || launcher?.IsWriteTaskActiveOrPending(endingTaskId) == true;
     }
 
-    public async Task<DataSyncStatusView> GetStatusAsync(CancellationToken ct) =>
-        GetStatus(await ReadAsync(ct), IsSyncing(), await CountPendingRequestsAsync(ct));
+    public Task<DataSyncStatusView> GetStatusAsync(CancellationToken ct) => GetStatusAsync(null, ct);
+
+    /// <summary>
+    /// The status, with <paramref name="endingTaskId"/> not counted as syncing (<see cref="IsSyncing"/>).
+    /// </summary>
+    public async Task<DataSyncStatusView> GetStatusAsync(string? endingTaskId, CancellationToken ct) =>
+        GetStatus(await ReadAsync(ct), IsSyncing(endingTaskId), await CountPendingRequestsAsync(ct));
 
     // ---- the map -----------------------------------------------------------------------------------------------
 

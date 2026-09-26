@@ -30,9 +30,15 @@ import DataSyncHelp from "./DataSyncHelp";
 import ElsewhereLines from "./ElsewhereLines";
 import InboxBulkBar from "./InboxBulkBar";
 import InboxCard, { cardValues } from "./InboxCard";
-import { DataSyncErrorNotice, fieldClass, panelClass, SectionHeading } from "./common";
+import {
+  DataSyncConfirmDialog,
+  DataSyncErrorNotice,
+  fieldClass,
+  panelClass,
+  SectionHeading,
+  taskFailureText,
+} from "./common";
 
-import ConfirmDialog from "@/features/federation/components/ConfirmDialog";
 import { BTaskStatus, DataSyncProblemCode } from "@/sdk/constants";
 import { useBTasksStore } from "@/stores/bTasks";
 
@@ -408,10 +414,7 @@ export default function InboxList({
 
       if (task?.status === BTaskStatus.Error || task?.status === BTaskStatus.Cancelled) {
         changes.set(key, { taskId: entry.taskId, change: "failed" });
-        failures.set(
-          key,
-          new Error(task.briefError || task.error || t("dataSync.inbox.card.failed")),
-        );
+        failures.set(key, new Error(taskFailureText(t, task, t("dataSync.inbox.card.failed"))));
       } else if (task?.status === BTaskStatus.Completed || (!task && entry.seen))
         changes.set(key, { taskId: entry.taskId, change: "finished" });
       else if (task && !entry.seen) changes.set(key, { taskId: entry.taskId, change: "seen" });
@@ -742,7 +745,7 @@ export default function InboxList({
       )}
 
       {actions.confirmation && (
-        <ConfirmDialog
+        <DataSyncConfirmDialog
           busy={actions.busy}
           description={actions.confirmation.description}
           error={actions.confirmationError}

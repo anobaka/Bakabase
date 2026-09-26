@@ -1,15 +1,18 @@
 import type { DataSyncRestoreView } from "../api";
 import type { DataSyncPanelActions } from "../hooks/useDataSyncActions";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 
 import { dataSyncApi, throwIfProblem } from "../api";
+import { isTaskOver, listedTasks, useDataSyncTask } from "../hooks/useDataSyncTask";
 import { localDateTime } from "../times";
 
-import { buttonClass, DataSyncErrorNotice, primaryClass } from "./common";
+import { buttonClass, DataSyncErrorNotice, primaryClass, taskFailureText } from "./common";
 import DataSyncHelp from "./DataSyncHelp";
 
+import { MessageError } from "@/features/federation/components/common";
 import { DataSyncPauseReason, DataSyncRestoreChoice } from "@/sdk/constants";
 
 /*
@@ -30,25 +33,49 @@ export const restoreEvidence = (view: DataSyncRestoreView): RestoreEvidence => {
   return view.evidenceFromName ? "both" : "own";
 };
 
+/** The restore task a choice started, and an earlier run the task list still showed then. */
+interface Started {
+  taskId: string;
+  /** When that earlier run under the same id was created (`listedTasks`). */
+  earlier?: string;
+}
+
 export default function RestorePanel({
   actions,
   version,
   /** `?restore=1`: shown even when nothing waits, to say so. */
   asked,
+  watch,
 }: {
   actions: DataSyncPanelActions;
   version: number;
   asked: boolean;
+  /**
+   * What the page reads on its own schedule about the restore — whether one waits, the task that
+   * runs, the level the hub pushes. Whenever it changes, the panel reads the restore again: the
+   * choice's task can end between two of the panel's own reads.
+   */
+  watch?: string;
 }) {
   const { t } = useTranslation();
   const [view, setView] = useState<DataSyncRestoreView>();
   const [error, setError] = useState<Error>();
   const [later, setLater] = useState(false);
+  const [started, setStarted] = useState<Started>();
+  const [failure, setFailure] = useState<string>();
+  const task = useDataSyncTask(started?.taskId, started?.earlier);
+  const phase = task?.phase;
+  // From the choice until its task is over: the choices wait, disabled.
+  const applying = !!started && !(phase && isTaskOver(phase));
 
   const load = useCallback(async () => {
     try {
-      setView((await dataSyncApi.restore()) ?? undefined);
+      const next = (await dataSyncApi.restore()) ?? undefined;
+
+      setView(next);
       setError(undefined);
+      // Nothing waits any more: whatever was applying is done with, however it was learnt.
+      if (!next?.pending) setStarted(undefined);
     } catch (cause) {
       setError(cause instanceof Error ? cause : new Error(String(cause)));
     }
@@ -57,6 +84,23 @@ export default function RestorePanel({
   useEffect(() => {
     void load();
   }, [load, version]);
+
+  const watched = useRef(watch);
+
+  useEffect(() => {
+    if (watched.current === watch) return;
+    watched.current = watch;
+    void load();
+  }, [watch, load]);
+
+  // The choice's task is over: what waits now is read again, and a failure is said.
+  useEffect(() => {
+    if (!started || !phase || !isTaskOver(phase)) return;
+    if (phase !== "completed")
+      setFailure(taskFailureText(t, task?.task, t("dataSync.restore.failed")));
+    setStarted(undefined);
+    void load();
+  }, [started, phase, load]);
 
   if (!view?.pending) {
     if (!asked) return null;
@@ -86,11 +130,19 @@ export default function RestorePanel({
           : "dataSync.restore.othersWin.description",
       ),
       action: async () => {
-        throwIfProblem(await dataSyncApi.chooseRestore(choice, view.linkId ?? undefined));
+        // Taken first: the hub may list the new task before the answer arrives.
+        const listed = listedTasks();
+        const start = throwIfProblem(
+          await dataSyncApi.chooseRestore(choice, view.linkId ?? undefined),
+        );
+
+        setFailure(undefined);
+        if (start?.taskId) setStarted({ taskId: start.taskId, earlier: listed.get(start.taskId) });
         await load();
       },
       refresh: ["dataSync"],
     });
+  const busy = actions.busy || applying;
 
   if (later)
     return (
@@ -138,24 +190,38 @@ export default function RestorePanel({
         </div>
       </div>
       <DataSyncErrorNotice error={error} onRetry={() => void load()} />
+      <DataSyncErrorNotice
+        error={failure ? new MessageError(failure) : undefined}
+        onDismiss={() => setFailure(undefined)}
+      />
+      {applying && (
+        <p
+          className="flex items-center gap-2 text-sm text-primary-700"
+          data-testid="data-sync-restore-applying"
+          role="status"
+        >
+          <AiOutlineLoading3Quarters aria-hidden className="animate-spin" />
+          {t("dataSync.restore.applying")}
+        </p>
+      )}
       <div className="grid gap-2 sm:grid-cols-3">
         <RestoreChoice
           primary
-          busy={actions.busy}
+          busy={busy}
           description={t("dataSync.restore.thisDeviceWins.short")}
           testId="data-sync-restore-this-device"
           title={t("dataSync.restore.thisDeviceWins.title")}
           onChoose={() => choose(DataSyncRestoreChoice.ThisDeviceWins)}
         />
         <RestoreChoice
-          busy={actions.busy}
+          busy={busy}
           description={t("dataSync.restore.othersWin.short")}
           testId="data-sync-restore-others"
           title={t("dataSync.restore.othersWin.title")}
           onChoose={() => choose(DataSyncRestoreChoice.OthersWin)}
         />
         <RestoreChoice
-          busy={actions.busy}
+          busy={busy}
           description={t("dataSync.restore.later.short")}
           testId="data-sync-restore-later"
           title={t("dataSync.restore.later.title")}

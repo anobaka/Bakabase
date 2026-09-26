@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 
@@ -33,9 +35,24 @@ public sealed class DataSyncFetchTask : AbstractPredefinedBTaskBuilder
 
     public override HashSet<string>? ConflictKeys => [DataSyncTaskIds.Fetch];
 
+    /// <remarks>
+    /// However the cycle ends, the observer hears it (<see cref="IDataSyncRuntimeObserver.TaskEndedAsync"/>): what the
+    /// cycle pushed counted the fetch as syncing, and nothing else says it is over.
+    /// </remarks>
     public override async Task RunAsync(BTaskArgs args)
     {
-        await args.YieldAsync();
-        await ServiceProvider.GetRequiredService<DataSyncFetcher>().RunCycleAsync(args);
+        try
+        {
+            await args.YieldAsync();
+            await ServiceProvider.GetRequiredService<DataSyncFetcher>().RunCycleAsync(args);
+        }
+        finally
+        {
+            if (ServiceProvider.GetService<IDataSyncRuntimeObserver>() is { } observer)
+            {
+                await DataSyncTaskLauncher.NoteEndedAsync(observer, Id,
+                    ServiceProvider.GetService<ILogger<DataSyncFetchTask>>() ?? NullLogger<DataSyncFetchTask>.Instance);
+            }
+        }
     }
 }

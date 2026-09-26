@@ -843,6 +843,15 @@ internal sealed class RecordingObserver : IDataSyncRuntimeObserver
     public Task AutoSyncAppliedAsync(DataSyncLinkDbModel link, DataSyncAutoSyncOutcome outcome, bool firstSync,
         CancellationToken ct) => Record($"applied:{link.Id}:{(firstSync ? "first" : "next")}");
 
+    /// <summary>Called as a task's end is heard, before it is recorded: what a test looks at then.</summary>
+    public Action<string>? OnTaskEnded { get; set; }
+
+    public Task TaskEndedAsync(string taskId, CancellationToken ct)
+    {
+        OnTaskEnded?.Invoke(taskId);
+        return Record($"ended:{taskId}");
+    }
+
     public int Count(string prefix) => Events.Count(e => e.StartsWith(prefix, StringComparison.Ordinal));
 
     private Task Record(string e)

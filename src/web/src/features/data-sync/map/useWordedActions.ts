@@ -1,18 +1,8 @@
-import type { TFunction } from "i18next";
 import type { DataSyncDialogActions } from "../hooks/useDataSyncActions";
 
 import { useTranslation } from "react-i18next";
 
-import { DataSyncProblemError, DataSyncRequestError } from "../api";
-import { errorText } from "../components/common";
-
-import { MessageError } from "@/features/federation/components/common";
-
-/** A failure of data sync's own, in data sync's words; anything else as it is. */
-const worded = (t: TFunction, cause: unknown) =>
-  cause instanceof DataSyncProblemError || cause instanceof DataSyncRequestError
-    ? new MessageError(errorText(t, cause))
-    : cause;
+import { wordedError } from "../components/common";
 
 /**
  * The host's actions, with data sync's failures said in data sync's words. The device map shows
@@ -29,7 +19,7 @@ export function useWordedActions(actions: DataSyncDialogActions): DataSyncDialog
       try {
         return await operation();
       } catch (cause) {
-        throw worded(t, cause);
+        throw wordedError(t, cause);
       }
     };
 

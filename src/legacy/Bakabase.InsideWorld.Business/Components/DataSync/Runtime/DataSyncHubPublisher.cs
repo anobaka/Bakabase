@@ -37,12 +37,18 @@ public sealed class DataSyncHubPublisher
         _scopes = scopes;
     }
 
-    public async Task PublishStatusAsync(CancellationToken ct)
+    public Task PublishStatusAsync(CancellationToken ct) => PublishStatusAsync(null, ct);
+
+    /// <summary>
+    /// The status, with <paramref name="endingTaskId"/> — a task whose body has just ended — not counted as syncing
+    /// (<see cref="DataSyncViews.IsSyncing"/>).
+    /// </summary>
+    public async Task PublishStatusAsync(string? endingTaskId, CancellationToken ct)
     {
         await using var scope = _scopes.CreateAsyncScope();
         var hub = scope.ServiceProvider.GetService<IHubContext<WebGuiHub, IWebGuiClient>>();
         if (hub is null) return;
-        var status = await new DataSyncViews(scope.ServiceProvider).GetStatusAsync(ct);
+        var status = await new DataSyncViews(scope.ServiceProvider).GetStatusAsync(endingTaskId, ct);
         await hub.Clients.All.GetIncrementalData(StatusKey, status);
     }
 

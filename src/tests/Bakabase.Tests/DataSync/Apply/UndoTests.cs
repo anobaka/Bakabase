@@ -36,6 +36,16 @@ public partial class UndoTests
 
     private DataSyncUndoPlanner Planner => _f.Services.GetRequiredService<DataSyncUndoPlanner>();
 
+    /// <summary>
+    /// An undo whose every step is refused undoes nothing, and its task fails saying so (<c>UndoNotAvailable</c>)
+    /// rather than completing with the entry still undoable.
+    /// </summary>
+    private static async Task NothingUndoneAsync(Func<Task<int?>> undo)
+    {
+        var e = await Assert.ThrowsExceptionAsync<BTaskException>(undo);
+        Assert.AreEqual(nameof(DataSyncProblemCode.UndoNotAvailable), e.BriefMessage);
+    }
+
     private async Task<(string Key, string LocalKey, DataSyncVersionVector Vv, int LogId, DataSyncStagedPullOf Pull)>
         CreatedByPeerAsync()
     {
@@ -141,7 +151,7 @@ public partial class UndoTests
         var preview = await Planner.PreviewAsync(logId, default);
         Assert.AreEqual((DataSyncUndoBlock?) DataSyncUndoBlock.InUse, preview.Items.Single().Blocked);
         Assert.AreEqual(5, preview.Items.Single().ValueCount);
-        Assert.IsNull(await _f.UndoAsync(logId), "nothing to undo");
+        await NothingUndoneAsync(() => _f.UndoAsync(logId));
         Assert.IsTrue(_f.Kind.Definitions.ContainsKey(localKey), "values are never deleted by an undo");
 
         _f.Kind.Values.Remove(localKey);
@@ -209,7 +219,7 @@ public partial class UndoTests
         await _f.RefreshAsync();
         Assert.AreEqual((DataSyncUndoBlock?) DataSyncUndoBlock.ChangedSinceImport,
             (await Planner.PreviewAsync(logId, default)).Items.Single().Blocked);
-        Assert.IsNull(await _f.UndoAsync(logId));
+        await NothingUndoneAsync(() => _f.UndoAsync(logId));
         Assert.AreEqual("Genres here", _f.Kind[localKey].Name);
     }
 

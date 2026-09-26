@@ -10,6 +10,7 @@ import { dataSyncApi, DataSyncRequestError } from "../api";
 import { useDataSyncStore } from "../stores/dataSync";
 
 import {
+  bTask,
   candidate,
   historyEntry,
   link,
@@ -25,6 +26,7 @@ import {
 } from "./dataSyncFixtures";
 
 import {
+  BTaskStatus,
   ClientMode,
   DataSyncHistoryKind,
   DataSyncLinkMode,
@@ -36,6 +38,7 @@ import {
   DataSyncStatusLevel,
   RemoteAccessMode,
 } from "@/sdk/constants";
+import { useBTasksStore } from "@/stores/bTasks";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
 
 vi.mock("react-i18next", () => ({
@@ -190,6 +193,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(NOW);
   useDataSyncStore.getState().clear();
+  useBTasksStore.setState({ tasks: [] });
   asWindow("local");
   homeOffice();
 });
@@ -496,6 +500,156 @@ describe("the page", () => {
       expect(screen.getByTestId("data-sync-restore-panel")).toHaveTextContent(
         "dataSync.restore.nothing",
       ),
+    );
+  });
+
+  /** A restore the server says waits until `done` is set, then does not. */
+  const restoreUntilDone = () => {
+    const server = { done: false };
+
+    vi.mocked(dataSyncApi.overview).mockResolvedValue(
+      overview({
+        restorePending: true,
+        status: status({ level: DataSyncStatusLevel.Paused }),
+      }),
+    );
+    vi.mocked(dataSyncApi.restore).mockImplementation(async () =>
+      server.done
+        ? { pending: false, pausedLinks: 0 }
+        : { pending: true, reason: DataSyncPauseReason.LocalRestoreDetected, pausedLinks: 2 },
+    );
+
+    return server;
+  };
+
+  const chooseThisDevice = async () => {
+    const panel = await screen.findByTestId("data-sync-restore-pending");
+
+    fireEvent.click(within(panel).getByTestId("data-sync-restore-this-device"));
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole("alertdialog")).getByText("federation.confirm"));
+    });
+    expect(dataSyncApi.chooseRestore).toHaveBeenCalledOnce();
+  };
+
+  it("waits for the choice's task, its choices disabled, then says nothing waits", async () => {
+    const server = restoreUntilDone();
+
+    // An earlier restore in this session, still listed under the same id: not this one.
+    useBTasksStore.setState({
+      tasks: [bTask("DataSyncRestore", BTaskStatus.Completed, "2026-09-01 07:00:00.000")],
+    });
+    renderPage("/data-sync?restore=1");
+    await loaded();
+    await chooseThisDevice();
+
+    const panel = screen.getByTestId("data-sync-restore-pending");
+
+    expect(within(panel).getByTestId("data-sync-restore-applying")).toHaveTextContent(
+      "dataSync.restore.applying",
+    );
+    for (const choice of ["this-device", "others", "later"])
+      expect(within(panel).getByTestId(`data-sync-restore-${choice}`)).toBeDisabled();
+
+    act(() =>
+      useBTasksStore.setState({
+        tasks: [bTask("DataSyncRestore", BTaskStatus.Running, "2026-09-01 08:00:00.000")],
+      }),
+    );
+    expect(screen.getByTestId("data-sync-restore-applying")).toBeInTheDocument();
+
+    server.done = true;
+    act(() =>
+      useBTasksStore.setState({
+        tasks: [bTask("DataSyncRestore", BTaskStatus.Completed, "2026-09-01 08:00:00.000")],
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("data-sync-restore-panel")).toHaveTextContent(
+        "dataSync.restore.nothing",
+      ),
+    );
+    expect(screen.queryByTestId("data-sync-restore-pending")).toBeNull();
+  });
+
+  it("reads the restore again when what the page reads of it changes, the task list silent", async () => {
+    const server = restoreUntilDone();
+
+    renderPage("/data-sync?restore=1");
+    await loaded();
+    await chooseThisDevice();
+    expect(screen.getByTestId("data-sync-restore-applying")).toBeInTheDocument();
+
+    // The hub says the device no longer waits; nothing ever said the task ended.
+    server.done = true;
+    act(() => useDataSyncStore.getState().setStatus(status()));
+    await waitFor(() =>
+      expect(screen.getByTestId("data-sync-restore-panel")).toHaveTextContent(
+        "dataSync.restore.nothing",
+      ),
+    );
+  });
+
+  it("says why the choice's task failed, and offers the choices again", async () => {
+    restoreUntilDone();
+    renderPage("/data-sync?restore=1");
+    await loaded();
+    await chooseThisDevice();
+
+    act(() =>
+      useBTasksStore.setState({
+        tasks: [
+          bTask("DataSyncRestore", BTaskStatus.Error, "2026-09-01 08:00:00.000", {
+            briefError: "BackupFailed",
+            error: "System.IO.IOException: disk full\n   at …",
+          }),
+        ],
+      }),
+    );
+    const panel = await screen.findByTestId("data-sync-restore-pending");
+
+    await waitFor(() =>
+      expect(within(panel).getByRole("alert")).toHaveTextContent("dataSync.problem.BackupFailed"),
+    );
+    expect(panel).not.toHaveTextContent("disk full");
+    expect(within(panel).queryByTestId("data-sync-restore-applying")).toBeNull();
+    expect(within(panel).getByTestId("data-sync-restore-this-device")).toBeEnabled();
+  });
+
+  it("says a failed choice in data sync's words in the confirmation", async () => {
+    restoreUntilDone();
+    vi.mocked(dataSyncApi.chooseRestore).mockResolvedValueOnce({
+      problem: { code: DataSyncProblemCode.DecisionsInvalid, detail: "noRestore" },
+    });
+    renderPage("/data-sync?restore=1");
+    await loaded();
+    const panel = await screen.findByTestId("data-sync-restore-pending");
+
+    fireEvent.click(within(panel).getByTestId("data-sync-restore-others"));
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole("alertdialog")).getByText("federation.confirm"));
+    });
+
+    const dialog = screen.getByRole("alertdialog");
+
+    expect(dialog).toHaveTextContent("dataSync.problem.detail.DecisionsInvalid.noRestore");
+    expect(dialog).not.toHaveTextContent("federation.error.network");
+  });
+
+  it("says the status the hub pushes in its header, as the indicator does", async () => {
+    renderPage();
+    await loaded();
+    expect(screen.getByTestId("data-sync-overall-status")).toHaveTextContent(
+      "dataSync.status.NeedsYou 9",
+    );
+
+    act(() =>
+      useDataSyncStore
+        .getState()
+        .setStatus(status({ level: DataSyncStatusLevel.Syncing, openItems: 0 })),
+    );
+    expect(screen.getByTestId("data-sync-overall-status")).toHaveTextContent(
+      "dataSync.status.Syncing",
     );
   });
 

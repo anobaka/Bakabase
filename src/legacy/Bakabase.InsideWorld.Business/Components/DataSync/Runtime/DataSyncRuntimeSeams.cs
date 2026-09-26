@@ -81,6 +81,13 @@ public interface IDataSyncRuntimeObserver
     /// that pull's apply (<see cref="AutoSyncAppliedAsync"/>) instead.
     /// </summary>
     Task LinkFetchEndedAsync(int linkId, bool applyFollows, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>
+    /// A data sync task's body returned or threw — the fetch cycle or a write task (§8.10.1) — and the task leaves the
+    /// active set right after. Whatever it pushed while it ran counted it as syncing: the status is said again, as it
+    /// is once <paramref name="taskId"/> is over.
+    /// </summary>
+    Task TaskEndedAsync(string taskId, CancellationToken ct) => Task.CompletedTask;
 }
 
 public sealed class NoOpDataSyncRuntimeObserver : IDataSyncRuntimeObserver

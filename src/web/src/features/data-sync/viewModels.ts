@@ -655,11 +655,15 @@ export const failureReason = (t: T, code?: string) =>
     : t("dataSync.peerError.other", { code: code || "?" });
 
 /**
- * The code that says why a link failed: a failed read-back carries it as its detail (spec
- * §7.2.4), every other failure as its own code.
+ * The code that says why a link — or, from its status, the whole device — failed: a failed
+ * read-back carries it as its detail (spec §7.2.4), every other failure as its own code.
  */
-export const failureCodeOf = (peer: SyncPeer) =>
-  peer.lastErrorCode === "ReadBackFailed" ? peer.lastErrorDetail : peer.lastErrorCode;
+export const failureCodeOf = (failed: {
+  lastErrorCode?: string | null;
+  lastErrorDetail?: string | null;
+}) =>
+  (failed.lastErrorCode === "ReadBackFailed" ? failed.lastErrorDetail : failed.lastErrorCode) ??
+  undefined;
 
 /** Counts a pause detail carries (`"deletions=182;kind=customProperty"`). */
 export const pauseDetail = (detail?: string) => {
@@ -993,9 +997,7 @@ export function overallStatus(
       return line(
         "Failed",
         "danger",
-        t("dataSync.status.Failed", {
-          reason: failureReason(t, status.lastErrorCode ?? undefined),
-        }),
+        t("dataSync.status.Failed", { reason: failureReason(t, failureCodeOf(status)) }),
       );
     case DataSyncStatusLevel.UpdateNeeded:
       return line("UpdateNeeded", "warning", t("dataSync.status.level.UpdateNeeded"));

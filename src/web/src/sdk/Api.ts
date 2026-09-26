@@ -5060,6 +5060,7 @@ export interface BakabaseModulesDataSyncServicesDataSyncStatusView {
   linksToReview: number;
   /** @format int32 */
   linksWaiting: number;
+  lastErrorDetail?: string;
 }
 
 export interface BakabaseModulesDataSyncServicesDataSyncTaskStart {

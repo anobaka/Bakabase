@@ -19,11 +19,14 @@ import type {
   DataSyncStatusView,
 } from "../api";
 import type { DataSyncPanelActions } from "../hooks/useDataSyncActions";
-import type { DataSyncHistoryKind } from "@/sdk/constants";
+import type { BTask } from "@/core/models/BTask";
+import type { BTaskStatus, DataSyncHistoryKind } from "@/sdk/constants";
 
 import { vi } from "vitest";
 
 import {
+  BTaskResourceType,
+  BTaskType,
   DataSyncFieldChangeKind,
   DataSyncFieldResolution,
   DataSyncInboxAction,
@@ -564,6 +567,23 @@ export const keyT = ((key: string, options?: Record<string, unknown>) =>
           .map(([, value]) => String(value)),
       ].join(" ")
     : key) as unknown as TFunction;
+
+/** A task as the task list pushes it: `createdAt` tells one run under an id from another. */
+export const bTask = (
+  id: string,
+  status: BTaskStatus,
+  createdAt: string,
+  patch: Partial<BTask> = {},
+): BTask => ({
+  id,
+  name: id,
+  status,
+  createdAt,
+  isPersistent: true,
+  type: BTaskType.Any,
+  resourceType: BTaskResourceType.Any,
+  ...patch,
+});
 
 /** A host's actions, recorded: `run` runs the operation, `confirm` only records. */
 export const recordingActions = (busy = false) => {

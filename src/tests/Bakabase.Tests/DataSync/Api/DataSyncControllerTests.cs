@@ -1029,7 +1029,9 @@ public class DataSyncControllerTests
 
     /// <summary>
     /// The indicator's reason names the error that set its level (§11.6), never a more recent one of another kind on
-    /// another link: "Sync failed" is never followed by "the other device could not be reached".
+    /// another link: "Sync failed" is never followed by "the other device could not be reached". A failed read-back
+    /// is a failure there as on the page and the map (§7.2.4) — never a link waiting for the other device — and its
+    /// reason is its detail.
     /// </summary>
     [TestMethod]
     public async Task The_status_names_the_error_that_set_its_level()
@@ -1048,13 +1050,13 @@ public class DataSyncControllerTests
             l.LastErrorCode = nameof(DataSyncPeerErrorCode.Unreachable);
             l.LastAttemptAtUtc = h.Clock.UtcNow.AddMinutes(-1);
         });
-        h.AddLink("node-approver", l =>
+        var readBack = h.AddLink("node-approver", l =>
         {
             l.State = DataSyncLinkState.AwaitingAccess;
             l.Initiator = DataSyncLinkInitiator.Peer;
             l.LastErrorCode = DataSyncLinkService.ReadBackFailed;
             l.LastErrorDetail = nameof(DataSyncPeerErrorCode.Unreachable);
-            l.LastAttemptAtUtc = h.Clock.UtcNow;
+            l.LastAttemptAtUtc = h.Clock.UtcNow.AddMinutes(-3);
         });
 
         async Task<DataSyncStatusView> StatusAsync() =>
@@ -1062,9 +1064,11 @@ public class DataSyncControllerTests
 
         var status = await StatusAsync();
         Assert.AreEqual(DataSyncStatusLevel.Failed, status.Level);
-        Assert.AreEqual(DataSyncLinkService.ApplyFailed, status.LastErrorCode);
+        Assert.AreEqual((DataSyncLinkService.ApplyFailed, "disk full"), (status.LastErrorCode, status.LastErrorDetail),
+            "the most recent failure");
+        Assert.AreEqual(0, status.LinksWaiting, "a failed read-back waits for nobody but this device");
 
-        // Without the failure, the device away sets the level, and names its own error.
+        // Without the apply failure, the failed read-back sets the level, with why it failed.
         h.Store.Edit(failed.Id, l =>
         {
             l.LastErrorCode = null;
@@ -1072,8 +1076,9 @@ public class DataSyncControllerTests
             l.ConsecutiveFailures = 0;
         });
         status = await StatusAsync();
-        Assert.AreEqual(DataSyncStatusLevel.Offline, status.Level);
-        Assert.AreEqual(nameof(DataSyncPeerErrorCode.Unreachable), status.LastErrorCode);
+        Assert.AreEqual(DataSyncStatusLevel.Failed, status.Level);
+        Assert.AreEqual((DataSyncLinkService.ReadBackFailed, nameof(DataSyncPeerErrorCode.Unreachable)),
+            (status.LastErrorCode, status.LastErrorDetail));
 
         // The map carries why reading the approver back failed, as the link view does.
         var map = (await h.CallAsync(Callers.Loopback, c => c.GetMap(default))).Data!;
@@ -1081,6 +1086,18 @@ public class DataSyncControllerTests
         Assert.AreEqual((DataSyncLinkService.ReadBackFailed, nameof(DataSyncPeerErrorCode.Unreachable)),
             (approver.LastErrorCode, approver.LastErrorDetail));
         Assert.IsNull(map.Peers.Single(p => p.NodeId == "node-nas").LastErrorDetail);
+
+        // Without any failure, the device away sets the level, and names its own error; the approver's link, once
+        // read back, only waits.
+        h.Store.Edit(readBack.Id, l =>
+        {
+            l.LastErrorCode = null;
+            l.LastErrorDetail = null;
+        });
+        status = await StatusAsync();
+        Assert.AreEqual(DataSyncStatusLevel.Offline, status.Level);
+        Assert.AreEqual(nameof(DataSyncPeerErrorCode.Unreachable), status.LastErrorCode);
+        Assert.AreEqual(1, status.LinksWaiting);
         Assert.IsFalse((await h.CallAsync(Callers.Loopback, c => c.GetLinks(default))).Data!
             .Single(l => l.Id == away.Id).PeerOnline, "a device away is not online");
     }

@@ -265,7 +265,9 @@ scopes").
   subtype change alone (which rebuilds children with fresh ids, F73); a change list removes a
   child only together with everything now under it that the same list removes (a child added or
   moved under it since is a conflict). The entity re-read after each step must have the canonical
-  content the step restored, or the step is refused as `ChangedSinceImport`.
+  content the step restored, or the step is refused as `ChangedSinceImport`. An undo whose every
+  step is refused undoes nothing and its task fails `UndoNotAvailable`, naming the refused steps —
+  never completes with its entry still undoable.
 - **Nothing a decision writes back removes a child in use.** "Put the synced change back"
   (`Reapply`) checks usage like a merge (§8.5.4 step 3) and undo (`AddedOptionsInUse`): while
   resources use a child it would remove, it writes nothing and the item names them
@@ -381,7 +383,26 @@ scopes").
   and `TooLarge` (a line of its own) are failures — on the page, the map and the indicator alike.
   A link's `peerOnline` is false after every restart until its first head and after every
   failure but `Busy`, so it never makes a device offline. The indicator's reason is the error
-  of a link that set its level; a failed read-back's reason is its `LastErrorDetail`.
+  of a link that set its level; a failed read-back's reason is its `LastErrorDetail`. A failed
+  read-back (`ReadBackFailed`) is a failure there too, never counted in `LinksWaiting`: it waits
+  for this device's own "Try again", and the status carries the detail (`LastErrorDetail`).
+- **A task's end is said.** What a task pushes while it runs counts it as syncing, so every data
+  sync task body — the fetch cycle and each write task — tells the observer when it is over
+  (`IDataSyncRuntimeObserver.TaskEndedAsync`), and the status pushed then leaves that task out
+  (`DataSyncViews.IsSyncing(endingTaskId)`); a waiting task a cancel removes is pushed from the
+  cancel. The page's header reads the status the hub pushes, as the indicator does.
+- **Following a task the page started.** Its id may be listed already — a restore chosen again,
+  an undo retried — so the page takes `listedTasks()` before starting it and never takes that
+  earlier run for the new one (`useDataSyncTask(id, earlier)`). The restore panel disables its
+  choices until its task is over and reads the restore again then, and also whenever the
+  overview or the hub says something new about it. An undo that completes with its entry still
+  undoable says nothing was undone.
+- **A problem's detail is not copy.** `DataSyncProblem.Detail` is a token, an id or an English
+  sentence. The UI words the details that change what a problem means
+  (`wordedProblemDetails`, `dataSync.problem.detail.{code}.{detail}`) and shows any other only
+  under a collapsed "Technical details". Confirmations go through `DataSyncConfirmDialog`, so a
+  problem is never read as a network failure; a failed task is worded from its brief error when
+  that names a problem code (`taskFailureText`), never from its full error.
 - **A reset peer reads as reset, not revoked.** A reset revokes the grant, so a request on a
   datasync session verified before it (the factory reuses one for a minute) is refused
   `GrantRevoked`; the peer client verifies the session again once (`PeerSessionFactory.Invalidate`),

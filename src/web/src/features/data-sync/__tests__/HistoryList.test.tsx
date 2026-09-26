@@ -8,9 +8,10 @@ import HistoryList from "../components/HistoryList";
 import { dataSyncApi } from "../api";
 import { forgetBackupFolder } from "../hooks/useBackupTarget";
 
-import { historyCountsOf, historyEntry, link, minutesAgo, NOW } from "./dataSyncFixtures";
+import { bTask, historyCountsOf, historyEntry, link, minutesAgo, NOW } from "./dataSyncFixtures";
 
 import {
+  BTaskStatus,
   DataSyncHistoryKind,
   DataSyncItemAction,
   DataSyncItemOutcome,
@@ -20,6 +21,7 @@ import {
   DataSyncUndoBlock,
   DataSyncUndoState,
 } from "@/sdk/constants";
+import { useBTasksStore } from "@/stores/bTasks";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -87,6 +89,7 @@ const renderList = (links = [link(1, "node-nas", "NAS", { mode: DataSyncLinkMode
 beforeEach(() => {
   vi.clearAllMocks();
   forgetBackupFolder();
+  useBTasksStore.setState({ tasks: [] });
   vi.mocked(dataSyncApi.history).mockResolvedValue(entries());
 });
 afterEach(cleanup);
@@ -239,6 +242,100 @@ describe("the history", () => {
     expect(dataSyncApi.undo).toHaveBeenCalledWith(3);
     expect(screen.queryByTestId("data-sync-undo")).toBeNull();
     expect(entry(3)).toHaveTextContent("dataSync.history.undoing");
+  });
+
+  /** Starts undoing entry 3, its preview allowing it; the undo's task is `DataSyncUndo:3`. */
+  const undoEntry3 = async () => {
+    vi.mocked(dataSyncApi.undoPreview).mockResolvedValue({
+      canUndo: true,
+      items: [
+        {
+          kind: "customProperty",
+          localKey: "15",
+          name: "Studio",
+          action: DataSyncUndoAction.Revert,
+          settingsMayReferenceIt: false,
+          recreatedGetsNewId: false,
+        },
+      ],
+    });
+    vi.mocked(dataSyncApi.undo).mockResolvedValue({ taskId: "DataSyncUndo:3" });
+    await waitFor(() => expect(entry(3)).toBeTruthy());
+    fireEvent.click(within(entry(3)).getByTestId("data-sync-history-undo"));
+    const dialog = await screen.findByTestId("data-sync-undo");
+
+    await waitFor(() => expect(within(dialog).getByTestId("data-sync-undo-confirm")).toBeEnabled());
+    await act(async () => {
+      fireEvent.click(within(dialog).getByTestId("data-sync-undo-confirm"));
+    });
+    expect(entry(3)).toHaveTextContent("dataSync.history.undoing");
+  };
+
+  it("says an undo that completed having undone nothing, and offers Undo again", async () => {
+    renderList();
+    await undoEntry3();
+
+    // Every step was refused as it wrote: the task completed, the entry can still be undone.
+    act(() =>
+      useBTasksStore.setState({
+        tasks: [bTask("DataSyncUndo:3", BTaskStatus.Completed, "2026-09-01 08:00:00.000")],
+      }),
+    );
+    await waitFor(() => expect(entry(3)).toHaveTextContent("dataSync.history.undoNothing"));
+    expect(entry(3)).not.toHaveTextContent("dataSync.history.undoing");
+    expect(within(entry(3)).getByTestId("data-sync-history-undo")).toBeInTheDocument();
+  });
+
+  it("ends an undo once its entry says it is undone", async () => {
+    renderList();
+    await undoEntry3();
+
+    vi.mocked(dataSyncApi.history).mockResolvedValue(
+      entries().map((one) =>
+        one.id === 3
+          ? { ...one, undoState: DataSyncUndoState.Undone, undoneAt: minutesAgo(0) }
+          : one,
+      ),
+    );
+    act(() =>
+      useBTasksStore.setState({
+        tasks: [bTask("DataSyncUndo:3", BTaskStatus.Completed, "2026-09-01 08:00:00.000")],
+      }),
+    );
+    await waitFor(() =>
+      expect(within(entry(3)).getByTestId("data-sync-history-undone")).toBeInTheDocument(),
+    );
+    expect(entry(3)).not.toHaveTextContent("dataSync.history.undoNothing");
+    expect(entry(3)).not.toHaveTextContent("dataSync.history.undoing");
+  });
+
+  it("says why an undo failed in its words, never the task's stack trace", async () => {
+    // An earlier failed run under the same id is still listed: the retry is not taken for it.
+    useBTasksStore.setState({
+      tasks: [
+        bTask("DataSyncUndo:3", BTaskStatus.Error, "2026-09-01 07:00:00.000", {
+          briefError: "Busy",
+        }),
+      ],
+    });
+    renderList();
+    await undoEntry3();
+    expect(entry(3)).not.toHaveTextContent("dataSync.problem.Busy");
+
+    act(() =>
+      useBTasksStore.setState({
+        tasks: [
+          bTask("DataSyncUndo:3", BTaskStatus.Error, "2026-09-01 08:00:00.000", {
+            briefError: "UndoNotAvailable",
+            error:
+              "Bakabase.Abstractions.Components.Tasks.BTaskException: Nothing was undone\n   at …",
+          }),
+        ],
+      }),
+    );
+    await waitFor(() => expect(entry(3)).toHaveTextContent("dataSync.problem.UndoNotAvailable"));
+    expect(entry(3)).not.toHaveTextContent("BTaskException");
+    expect(within(entry(3)).getByTestId("data-sync-history-undo")).toBeInTheDocument();
   });
 
   it("does not offer Undo where the preview says it cannot", async () => {

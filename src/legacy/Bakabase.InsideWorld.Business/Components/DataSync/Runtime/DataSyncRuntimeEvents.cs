@@ -119,6 +119,14 @@ public sealed class DataSyncRuntimeEvents : IDataSyncRuntimeObserver, IDataSyncA
 
     public Task StateChangedAsync(CancellationToken ct) => GuardAsync(() => _hub.PublishStatusAsync(ct));
 
+    /// <remarks>
+    /// The pushes of <see cref="ReviewReadyAsync"/>, <see cref="AutoSyncAppliedAsync"/> and
+    /// <see cref="WriteAppliedAsync"/> run inside the task and count it as syncing; this one does not count it, so the
+    /// indicator does not stay on "Syncing…" once it is over.
+    /// </remarks>
+    public Task TaskEndedAsync(string taskId, CancellationToken ct) =>
+        GuardAsync(() => _hub.PublishStatusAsync(taskId, ct));
+
     /// <summary>
     /// The apply runner committed an apply that changed definitions (§8.10.2 "after commit"): open pages refetch what
     /// changed, and notifications whose items the apply closed are marked read.

@@ -40,12 +40,31 @@ export const isTaskOver = (phase: DataSyncTaskPhase) =>
   phase === "completed" || phase === "failed" || phase === "cancelled";
 
 /**
- * One data sync task (an apply, a resolution, an undo, a restore), as the task list pushes it
- * over the UI hub (v3.1 `useDataSyncTask`). Undefined id: nothing to watch.
+ * When each task the task list shows now was created, by id. Taken just before starting a task
+ * whose id may be listed already — a restore chosen again, an undo retried: until the hub says
+ * otherwise, the list still shows the earlier run under that id, which is over.
  */
-export function useDataSyncTask(taskId?: string | null): DataSyncTaskView | undefined {
+export const listedTasks = (): ReadonlyMap<string, string> =>
+  new Map(useBTasksStore.getState().tasks.map((task) => [task.id, task.createdAt]));
+
+/**
+ * The task the list shows under `taskId`, unless it is the earlier run `earlier` names (its
+ * creation time, from {@link listedTasks}).
+ */
+export const findTask = (tasks: readonly BTask[], taskId: string, earlier?: string) =>
+  tasks.find((task) => task.id === taskId && (earlier === undefined || task.createdAt !== earlier));
+
+/**
+ * One data sync task (an apply, a resolution, an undo, a restore), as the task list pushes it
+ * over the UI hub (v3.1 `useDataSyncTask`). Undefined id: nothing to watch. `earlier`: the
+ * creation time of an earlier run under the same id, still listed when this one started.
+ */
+export function useDataSyncTask(
+  taskId?: string | null,
+  earlier?: string,
+): DataSyncTaskView | undefined {
   const task = useBTasksStore((state) =>
-    taskId ? state.tasks.find((item) => item.id === taskId) : undefined,
+    taskId ? findTask(state.tasks, taskId, earlier) : undefined,
   );
 
   if (!taskId) return undefined;

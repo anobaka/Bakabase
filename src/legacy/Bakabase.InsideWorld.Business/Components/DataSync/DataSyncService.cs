@@ -649,9 +649,12 @@ public sealed class DataSyncService : IDataSyncService
     public async Task<DataSyncProblem?> CancelTaskAsync(string taskId, CancellationToken ct)
     {
         if (!DataSyncTaskIds.IsDataSyncTask(taskId)) return new DataSyncProblem(DataSyncProblemCode.UnknownItem, "task");
-        return await Launcher.CancelAsync(taskId) == DataSyncTaskCancelOutcome.NotFound
-            ? new DataSyncProblem(DataSyncProblemCode.UnknownItem, "task")
-            : null;
+        var outcome = await Launcher.CancelAsync(taskId);
+        if (outcome == DataSyncTaskCancelOutcome.NotFound)
+            return new DataSyncProblem(DataSyncProblemCode.UnknownItem, "task");
+        // A waiting task removed never runs, so it never says it ended (IDataSyncRuntimeObserver.TaskEndedAsync).
+        if (outcome == DataSyncTaskCancelOutcome.Removed) await Observer.StateChangedAsync(ct);
+        return null;
     }
 
     // ---- helpers -----------------------------------------------------------------------------------------------

@@ -16,9 +16,14 @@ import { isTooLargeToSync, overallStatus } from "../viewModels";
 import DataSyncHelp from "./DataSyncHelp";
 import EntitySyncBadge from "./EntitySyncBadge";
 import EntitySyncMenu from "./EntitySyncMenu";
-import { DataSyncErrorNotice, linkButtonClass, smallButtonClass, toneDot } from "./common";
+import {
+  DataSyncConfirmDialog,
+  DataSyncErrorNotice,
+  linkButtonClass,
+  smallButtonClass,
+  toneDot,
+} from "./common";
 
-import ConfirmDialog from "@/features/federation/components/ConfirmDialog";
 import { useCanAdministerShownServer } from "@/stores/remoteAccess";
 
 /*
@@ -155,7 +160,7 @@ export function useDefinitionSync(kind: string, onApplied?: () => void): Definit
         <DataSyncErrorNotice error={actions.error} onDismiss={() => actions.setError(undefined)} />
       )}
       {actions.confirmation && (
-        <ConfirmDialog
+        <DataSyncConfirmDialog
           busy={actions.busy}
           description={actions.confirmation.description}
           error={actions.confirmationError}

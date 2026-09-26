@@ -217,7 +217,7 @@ public partial class UndoTests
         var preview = await f.Services.GetRequiredService<DataSyncUndoPlanner>().PreviewAsync(logId, default);
         Assert.IsFalse(preview.CanUndo);
         Assert.AreEqual((DataSyncUndoBlock?) DataSyncUndoBlock.ChangedSinceImport, preview.Items.Single().Blocked);
-        Assert.IsNull(await f.UndoAsync(logId));
+        await NothingUndoneAsync(() => f.UndoAsync(logId));
 
         CollectionAssert.AreEqual(tree, Tree((await PropertyContentAsync(f, KeyOf(id))).Nodes).ToArray(),
             "nothing removed");

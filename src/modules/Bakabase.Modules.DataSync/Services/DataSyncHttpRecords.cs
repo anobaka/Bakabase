@@ -25,12 +25,17 @@ public sealed record DataSyncOverview(string DeviceName, string NodeId, bool IsH
 /// <param name="LinksToReview">Links whose first sync waits for a review on this device (AwaitingReview).</param>
 /// <param name="LinksWaiting">
 /// Links that wait for the other device: to let this one read it (AwaitingAccess), or to review its first sync
-/// (WaitingForPeerReview).
+/// (WaitingForPeerReview). A link whose read-back failed waits for this device's own "Try again" instead: it is a
+/// failure, not counted here.
+/// </param>
+/// <param name="LastErrorCode">The error of the link that set the level.</param>
+/// <param name="LastErrorDetail">
+/// What that error says beyond its code: for <c>ReadBackFailed</c>, the peer error code that says why (§7.2.4).
 /// </param>
 public sealed record DataSyncStatusView(DataSyncStatusLevel Level, int OpenItems, int Links, int LinksInStep,
     int PeersNeedingDecisions /* sources whose attention shows open decisions, §7.5.1 */,
     DateTime? LastSyncedAt, string? LastErrorCode, int PendingRequests = 0, int Readers = 0, int LinksToReview = 0,
-    int LinksWaiting = 0);
+    int LinksWaiting = 0, string? LastErrorDetail = null);
 
 /// <param name="Enabled">
 /// Definitions sharing on or off; null leaves it as it is, so a change of <paramref name="NewDefinitionsStayLocal"/>
