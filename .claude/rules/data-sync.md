@@ -175,6 +175,11 @@ scopes").
   may reduce access, never widen it (`NotAllowedOnThisDevice`).
 - **A GET never writes** (`LoopbackCrossSiteGuard` lets cross-site GETs through). Reviews
   re-plan read-only.
+- **The inbox order is a contract.** `GET /data-sync/inbox` lists open items first, then closed
+  ones, newest first in each group: the page reads the closed ones from `skip = openTotal`. With
+  `kind` and `localKey` it answers one definition's items whole, so conflicts that must be
+  resolved together are never split across pages. Views count bases with
+  `IDataSyncStore.CountBasesAsync`, never by reading every base.
 - **`/data-sync` times are UTC**, read on the web through `parseServerTime`.
 - **Copy.** The feature is 数据同步 / Data sync; never 配置同步, 配置包 or 分享给他人. “Needs
   you” is 待你决定 (待处理 is taken). Device names are never quoted — no «», “ ” or 「」
@@ -222,4 +227,7 @@ install creates notifications (`IDataSyncHostKind.IsHeadless`: a headless one ne
 - `src/tests/Bakabase.Tests/DataSync/**` — persistence, apply, feed, guardrails
   (`DbSetClassificationTests`, `SecretCanaryTests`), `Api/**` endpoints, `TwoHost/**`.
 - `src/tests/Bakabase.Tests/Federation/**` — gate matrix, scopes, pairing.
+- Version-skew fixtures (§13.8), rewritten with `DATASYNC_WRITE_FIXTURES=<dir>`: pages and heads
+  in `Bakabase.Modules.DataSync.Tests/Fixtures/VersionSkew`, and the `state.json` an older build
+  must read in `Bakabase.Modules.Federation.Tests/Fixtures/VersionSkew`.
 - Frontend: `yarn vitest run src/features/data-sync src/components/HelpCenter`.
