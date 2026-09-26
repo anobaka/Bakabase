@@ -56,7 +56,7 @@ export default function DataSyncOutgoingCard({
     void actions.run(async () => {
       const id =
         requestId ??
-        (nodeId ? outgoingRequestIdOf(await dataSyncApi.requests(), nodeId) : undefined);
+        (nodeId ? outgoingRequestIdOf(await dataSyncApi.requests(), nodeId, now) : undefined);
 
       // Answered or withdrawn meanwhile: said so, and the listings read again show how it ended.
       if (!id) throw new DataSyncProblemError({ code: DataSyncProblemCode.RequestNotFound });

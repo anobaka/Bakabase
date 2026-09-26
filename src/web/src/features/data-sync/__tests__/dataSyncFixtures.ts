@@ -190,7 +190,7 @@ export const request = (
   nodeId,
   nodeName,
   intent: DataSyncRequestIntent.TwoWay,
-  status: "pending",
+  status: "awaitingApproval",
   expiresAt: minutesAhead(30),
   remoteAddress: "192.168.1.40",
   claimsKnownDevice: false,

@@ -16,6 +16,7 @@ import {
   mapPeer,
   mapView,
   nameConflict,
+  NOW,
   outgoing,
   overview,
   reader,
@@ -185,11 +186,15 @@ const narrowWindow = () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The fixtures' times are about NOW: a request that waits there waits here too.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
   useDataSyncStore.getState().clear();
   asWindow("local");
   homeOffice();
 });
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   restoreWindow?.();
   restoreWindow = undefined;
@@ -270,6 +275,25 @@ describe("the page", () => {
     expect(
       within(screen.getByTestId("data-sync-readers")).getByText("Reader PC"),
     ).toBeInTheDocument();
+  });
+
+  it("lists only requests that still wait: the server keeps the decided ones too", async () => {
+    vi.mocked(dataSyncApi.requests).mockResolvedValue([
+      request("req-in-1", "node-newpc", "New PC", { status: "granted" }),
+      request("req-in-2", "node-old", "Old PC", { status: "rejected" }),
+      request("req-in-3", "node-late", "Late PC", { expiresAt: "2026-09-01 07:00:00.000" }),
+      request("req-out-1", "node-pc2", "PC-2", {
+        direction: DataSyncRequestDirection.Outgoing,
+        status: "granted",
+      }),
+    ]);
+    vi.mocked(dataSyncApi.map).mockResolvedValue(mapView({ peers: [mapPeer("node-nas", "NAS")] }));
+    renderPage();
+    await loaded();
+
+    expect(screen.queryByTestId("data-sync-request-card")).toBeNull();
+    expect(screen.queryByTestId("data-sync-outgoing-card")).toBeNull();
+    expect(screen.queryByTestId("data-sync-requests")).toBeNull();
   });
 
   it("docks the details beside the diagram at 1536 px and wider", async () => {

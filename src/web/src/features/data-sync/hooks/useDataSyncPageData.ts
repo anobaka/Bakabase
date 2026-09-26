@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { dataSyncApi, isRefusedHere } from "../api";
 import { useDataSyncStore } from "../stores/dataSync";
-import { isLive, syncPeersOf, withCandidates } from "../viewModels";
+import { isLive, isPendingRequest, syncPeersOf, withCandidates } from "../viewModels";
 
 /** How often the page reads again while something waits on someone, and otherwise. */
 export const LIVE_POLL_MS = 5_000;
@@ -111,7 +111,10 @@ export function useDataSyncPageData() {
   );
   const live = isLive({
     peers,
-    pendingRequests: requests.value?.length ?? overview?.pendingRequests ?? 0,
+    pendingRequests:
+      requests.value?.filter((request) => isPendingRequest(request)).length ??
+      overview?.pendingRequests ??
+      0,
     activeTaskId: overview?.activeTaskId,
   });
 

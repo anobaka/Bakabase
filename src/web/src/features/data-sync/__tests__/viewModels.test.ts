@@ -1,4 +1,8 @@
-import type { DataSyncEntityStatusView, DataSyncPlanWarning } from "../api";
+import type {
+  DataSyncAccessRequestView,
+  DataSyncEntityStatusView,
+  DataSyncPlanWarning,
+} from "../api";
 
 import { describe, expect, it } from "vitest";
 
@@ -10,6 +14,7 @@ import {
   entityMenu,
   isLive,
   isMutualFollow,
+  isPendingRequest,
   lineMode,
   linkEditor,
   linkNotes,
@@ -298,9 +303,21 @@ describe("the rule editor", () => {
       request("out-2", "node-nas", "NAS", { direction: DataSyncRequestDirection.Outgoing }),
     ];
 
-    expect(outgoingRequestIdOf(requests, "node-nas")).toBe("out-2");
-    expect(outgoingRequestIdOf(requests, "node-other")).toBeUndefined();
-    expect(outgoingRequestIdOf(undefined, "node-nas")).toBeUndefined();
+    expect(outgoingRequestIdOf(requests, "node-nas", NOW)).toBe("out-2");
+    expect(outgoingRequestIdOf(requests, "node-other", NOW)).toBeUndefined();
+    expect(outgoingRequestIdOf(undefined, "node-nas", NOW)).toBeUndefined();
+  });
+
+  it("takes only a request that still waits: the listing keeps decided and expired ones too", () => {
+    const out = (patch: Partial<DataSyncAccessRequestView>) =>
+      request("out", "node-nas", "NAS", { direction: DataSyncRequestDirection.Outgoing, ...patch });
+
+    expect(isPendingRequest(out({}), NOW)).toBe(true);
+    expect(isPendingRequest(out({ status: "pending" }), NOW)).toBe(true);
+    expect(isPendingRequest(out({ status: "granted" }), NOW)).toBe(false);
+    expect(isPendingRequest(out({ status: "rejected" }), NOW)).toBe(false);
+    expect(isPendingRequest(out({ expiresAt: minutesAgo(1) }), NOW)).toBe(false);
+    expect(outgoingRequestIdOf([out({ status: "granted" })], "node-nas", NOW)).toBeUndefined();
   });
 });
 

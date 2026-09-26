@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 
 import DataSyncOutgoingCard from "../map/DataSyncOutgoingCard";
 import DataSyncRequestCard from "../map/DataSyncRequestCard";
+import { isPendingRequest } from "../viewModels";
 
 import { DataSyncErrorNotice, panelClass, SectionHeading } from "./common";
 
@@ -32,20 +33,25 @@ interface Outgoing {
 const asOutcome = (value?: string | null): SyncOutcome =>
   value === "rejected" || value === "expired" ? value : "awaitingApproval";
 
-/** This device's own requests: those the listing says wait, and those the map view says ended. */
+/**
+ * This device's own requests: those the listing says wait, and those the map view says ended.
+ * One the other device approved is no request any more: its link says how it goes.
+ */
 export const outgoingRequests = (
   requests: DataSyncAccessRequestView[],
   ended: DataSyncMapOutgoing[],
+  now: number = Date.now(),
 ): Outgoing[] => {
   const byNode = new Map<string, Outgoing>();
 
   for (const request of requests) {
-    if (request.direction !== DataSyncRequestDirection.Outgoing) continue;
+    if (request.direction !== DataSyncRequestDirection.Outgoing || !isPendingRequest(request, now))
+      continue;
     byNode.set(request.nodeId, {
       key: request.requestId,
       nodeName: request.nodeName,
       address: request.remoteAddress,
-      outcome: asOutcome(request.status === "pending" ? "awaitingApproval" : request.status),
+      outcome: "awaitingApproval",
       expiresAt: request.expiresAt,
       requestId: request.requestId,
     });
@@ -85,10 +91,12 @@ const RequestsList = forwardRef<
   ref,
 ) {
   const { t } = useTranslation();
+  // Only what still asks for an answer: the listing keeps requests already decided too.
   const incoming = requests.filter(
-    (request) => request.direction === DataSyncRequestDirection.Incoming,
+    (request) =>
+      request.direction === DataSyncRequestDirection.Incoming && isPendingRequest(request, now),
   );
-  const own = outgoingRequests(requests, outgoing);
+  const own = outgoingRequests(requests, outgoing, now);
 
   if (!incoming.length && !own.length && !error) return null;
 

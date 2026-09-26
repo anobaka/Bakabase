@@ -11,7 +11,7 @@ import type {
   DataSyncStatusView,
 } from "./api";
 
-import { serverTime, timeAgo } from "./times";
+import { hasPassed, serverTime, timeAgo } from "./times";
 
 import {
   DataSyncEntitySyncState,
@@ -940,16 +940,28 @@ export const elsewhereLines = (t: T, peers: SyncPeer[]) =>
     }));
 
 /**
+ * A request still waiting for its answer. `GET /data-sync/requests` also lists the ones already
+ * approved or rejected, and ones whose time ran out unanswered: none of them asks anything.
+ */
+export const isPendingRequest = (request: DataSyncAccessRequestView, now: number = Date.now()) =>
+  (request.status === "awaitingApproval" || request.status === "pending") &&
+  !hasPassed(request.expiresAt, now);
+
+/**
  * This device's own request to read a device's definitions, as `GET /data-sync/requests` lists
- * it: what [Cancel] withdraws. Never the link: cancelling a request keeps the link's state.
+ * it, while it waits: what [Cancel] withdraws. Never the link: cancelling a request keeps the
+ * link's state.
  */
 export const outgoingRequestIdOf = (
   requests: readonly DataSyncAccessRequestView[] | undefined,
   nodeId: string,
+  now: number = Date.now(),
 ) =>
   requests?.find(
     (request) =>
-      request.nodeId === nodeId && request.direction === DataSyncRequestDirection.Outgoing,
+      request.nodeId === nodeId &&
+      request.direction === DataSyncRequestDirection.Outgoing &&
+      isPendingRequest(request, now),
   )?.requestId;
 
 /** Whether anything data sync shows is waiting on someone right now: read again more often. */
