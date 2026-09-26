@@ -40,5 +40,10 @@ public class DataSyncCompositionTests
         Assert.AreSame(s.GetRequiredService<DataSyncApplyRunner>(), s.GetRequiredService<IDataSyncApplyRunner>());
         Assert.IsInstanceOfType<DataSyncService>(s.GetRequiredService<IDataSyncService>());
         Assert.IsInstanceOfType<DataSyncGrantEventsHandler>(s.GetRequiredService<IDataSyncGrantEvents>());
+
+        // The runner's apply events feed the notifier and the hub through the runtime's own observer (§8.10.2).
+        var events = s.GetRequiredService<DataSyncRuntimeEvents>();
+        Assert.AreSame(events, s.GetRequiredService<IDataSyncRuntimeObserver>());
+        Assert.AreSame(events, s.GetServices<IDataSyncApplyListener>().Single());
     }
 }

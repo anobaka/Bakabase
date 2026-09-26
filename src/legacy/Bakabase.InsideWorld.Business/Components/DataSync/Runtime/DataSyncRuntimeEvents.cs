@@ -1,9 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.DataSync.Apply;
+using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Runtime;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
@@ -12,19 +15,34 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 /// The runtime's observer (<see cref="IDataSyncRuntimeObserver"/>): each event goes to the notifier (§9.4) and then to
 /// the hub (§8.10.6). One failing never keeps the other from running, and neither ever fails the change it reports.
 /// </summary>
-public sealed class DataSyncRuntimeEvents : IDataSyncRuntimeObserver
+/// <remarks>
+/// It also hears the persistence layer directly:
+/// <list type="bullet">
+/// <item>the apply runner's <see cref="IDataSyncApplyListener"/> after every apply that changed definitions committed —
+/// the hub's <see cref="DataSyncHubPublisher.AppliedKey"/> (what changed, for open pages to refetch) and the notifier's
+/// sweep (items the apply closed, here or on other links, may settle their notifications);</item>
+/// <item>the actor guard's <see cref="DataSyncActorGuard.RestoreDetected"/>, whoever ran the check that detected it (a
+/// reader's head, an apply, the start): the restore is announced at once, one notification per detection however
+/// many links it paused, and an escalation from suspected to detected sends no second one (§8.7 B6).</item>
+/// </list>
+/// Both are raised by the persistence layer after its commit, so they are handled in the background, one at a time.
+/// </remarks>
+public sealed class DataSyncRuntimeEvents : IDataSyncRuntimeObserver, IDataSyncApplyListener
 {
     private readonly DataSyncNotifier _notifier;
     private readonly DataSyncHubPublisher _hub;
     private readonly ILogger<DataSyncRuntimeEvents> _logger;
+    private readonly SemaphoreSlim _background = new(1, 1);
     private string? _lastRestoreSeen;
 
-    public DataSyncRuntimeEvents(DataSyncNotifier notifier, DataSyncHubPublisher hub,
+    public DataSyncRuntimeEvents(DataSyncNotifier notifier, DataSyncHubPublisher hub, IServiceProvider services,
         ILogger<DataSyncRuntimeEvents> logger)
     {
         _notifier = notifier;
         _hub = hub;
         _logger = logger;
+        // The guard is the persistence layer's; a host that composes the runtime without it has no detections to hear.
+        if (services.GetService<DataSyncActorGuard>() is { } guard) guard.RestoreDetected += OnRestoreDetected;
     }
 
     public async Task LinkChangedAsync(DataSyncLinkDbModel link, CancellationToken ct)
@@ -59,19 +77,23 @@ public sealed class DataSyncRuntimeEvents : IDataSyncRuntimeObserver
         await GuardAsync(() => _hub.PublishStatusAsync(ct));
     }
 
+    /// <remarks>What the pull changed reached the hub from the runner already (<see cref="OnApplied"/>).</remarks>
     public async Task AutoSyncAppliedAsync(DataSyncLinkDbModel link, DataSyncAutoSyncOutcome outcome, bool firstSync,
         CancellationToken ct)
     {
         await GuardAsync(() => _notifier.AutoSyncAppliedAsync(link, outcome, firstSync, ct));
-        await GuardAsync(() => _hub.PublishAppliedAsync(outcome.ApplyLogId, ct));
         await GuardAsync(() => _hub.PublishStatusAsync(ct));
     }
 
+    /// <remarks>
+    /// Resolutions, undo, a restore and entity settings close items here and elsewhere (§9.3). The runner's writes
+    /// reached the hub from the runner already (<see cref="OnApplied"/>); an entity setting, which changes no
+    /// definition but how one syncs, is pushed from its history entry.
+    /// </remarks>
     public async Task WriteAppliedAsync(DataSyncHistoryKind kind, int? applyLogId, int? linkId, CancellationToken ct)
     {
-        // Resolutions, undo, a restore and entity settings close items here and elsewhere (§9.3).
         await GuardAsync(() => _notifier.SweepAsync(ct));
-        await GuardAsync(() => _hub.PublishAppliedAsync(applyLogId, ct));
+        if (kind == DataSyncHistoryKind.EntitySetting) await GuardAsync(() => _hub.PublishAppliedAsync(applyLogId, ct));
         await GuardAsync(() => _hub.PublishStatusAsync(ct));
     }
 
@@ -89,6 +111,43 @@ public sealed class DataSyncRuntimeEvents : IDataSyncRuntimeObserver
     }
 
     public Task StateChangedAsync(CancellationToken ct) => GuardAsync(() => _hub.PublishStatusAsync(ct));
+
+    /// <summary>
+    /// The apply runner committed an apply that changed definitions (§8.10.2 "after commit"): open pages refetch what
+    /// changed, and notifications whose items the apply closed are marked read.
+    /// </summary>
+    public void OnApplied(DataSyncAppliedEvent applied) => InBackground(async () =>
+    {
+        await GuardAsync(() => _hub.PublishAppliedAsync(applied, CancellationToken.None));
+        await GuardAsync(() => _notifier.SweepAsync(CancellationToken.None));
+    });
+
+    private void OnRestoreDetected(object? sender, DataSyncRestoreDetection detection) => InBackground(async () =>
+    {
+        if (!detection.Escalated) await GuardAsync(() => _notifier.RestoreDetectedAsync(CancellationToken.None));
+        await GuardAsync(() => _hub.PublishStatusAsync(CancellationToken.None));
+    });
+
+    /// <summary>
+    /// Runs <paramref name="work"/> after the caller returns, one piece at a time: the persistence layer raises these
+    /// after its commit, from inside a task body or a feed request that must not wait for notifications.
+    /// </summary>
+    private void InBackground(Func<Task> work) => _ = Task.Run(async () =>
+    {
+        await _background.WaitAsync();
+        try
+        {
+            await work();
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "A data sync notification or hub push failed");
+        }
+        finally
+        {
+            _background.Release();
+        }
+    });
 
     private async Task GuardAsync(Func<Task> call)
     {

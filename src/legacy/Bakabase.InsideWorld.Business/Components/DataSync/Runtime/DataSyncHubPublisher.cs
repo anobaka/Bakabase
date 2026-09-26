@@ -46,6 +46,18 @@ public sealed class DataSyncHubPublisher
         await hub.Clients.All.GetIncrementalData(StatusKey, status);
     }
 
+    /// <summary>What the apply runner reports it changed (<c>kind:localKey</c>), as the pages know them.</summary>
+    public async Task PublishAppliedAsync(Apply.DataSyncAppliedEvent applied, CancellationToken ct)
+    {
+        if (applied.LocalKeys.Count == 0) return;
+        await using var scope = _scopes.CreateAsyncScope();
+        var hub = scope.ServiceProvider.GetService<IHubContext<WebGuiHub, IWebGuiClient>>();
+        if (hub is null) return;
+        ct.ThrowIfCancellationRequested();
+        await hub.Clients.All.GetIncrementalData(AppliedKey, new DataSyncAppliedHubEvent(applied.Kinds,
+            applied.LocalKeys.Select(k => k[(k.IndexOf(':') + 1)..]).Distinct(StringComparer.Ordinal).ToList()));
+    }
+
     /// <summary>What a history entry applied: its applied items' kinds and local keys. Nothing when it applied none.</summary>
     public async Task PublishAppliedAsync(int? applyLogId, CancellationToken ct)
     {

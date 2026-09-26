@@ -232,6 +232,13 @@ public sealed class DataSyncNotifier
     }, ct);
 
     /// <summary>
+    /// The actor guard detected a restore (§5.6): announced at once from the local state row it wrote, rather than on
+    /// the scheduler's next tick. One per detection (the tick finds it announced).
+    /// </summary>
+    public Task RestoreDetectedAsync(CancellationToken ct) => RunAsync(async sp =>
+        await RestoreAsync(sp, await sp.GetRequiredService<IDataSyncStore>().GetLocalStateAsync(ct), ct), ct);
+
+    /// <summary>
     /// Marks read every notification whose announced items have all closed since the last sweep (§9.3, §9.4). The
     /// first sweep of a process looks at every closed item, so nothing a restart interrupted stays unread.
     /// </summary>

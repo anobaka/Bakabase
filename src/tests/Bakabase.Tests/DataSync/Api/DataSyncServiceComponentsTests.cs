@@ -64,8 +64,10 @@ public class DataSyncServiceComponentsTests
         services.AddDataSyncServiceComponents();
         Assert.AreEqual(typeof(InsideWorld.Business.Components.DataSync.DataSyncService),
             services.Single(d => d.ServiceType == typeof(IDataSyncService)).ImplementationType);
+        // The observer and the apply runner's listener are the one DataSyncRuntimeEvents (DataSyncCompositionTests).
         Assert.AreEqual(typeof(DataSyncRuntimeEvents),
-            services.Single(d => d.ServiceType == typeof(IDataSyncRuntimeObserver)).ImplementationType);
+            services.Single(d => d.ServiceType == typeof(DataSyncRuntimeEvents)).ImplementationType);
+        Assert.IsNotNull(services.Single(d => d.ServiceType == typeof(IDataSyncRuntimeObserver)).ImplementationFactory);
     }
 
     [TestMethod]

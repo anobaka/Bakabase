@@ -46,7 +46,10 @@ public static class DataSyncRuntimeServiceCollectionExtensions
         services.TryAddSingleton(DataSyncLimits.Default);
         services.TryAddSingleton<DataSyncNotifier>();
         services.TryAddSingleton<DataSyncHubPublisher>();
-        services.TryAddSingleton<IDataSyncRuntimeObserver, DataSyncRuntimeEvents>();
+        services.TryAddSingleton<DataSyncRuntimeEvents>();
+        services.TryAddSingleton<IDataSyncRuntimeObserver>(sp => sp.GetRequiredService<DataSyncRuntimeEvents>());
+        // The apply runner tells the hub and the notifier what an apply changed, after its commit (§8.10.2).
+        services.AddSingleton<IDataSyncApplyListener>(sp => sp.GetRequiredService<DataSyncRuntimeEvents>());
         services.TryAddScoped<IDataSyncKindPageReader, DataSyncKindPageReader>();
         services.TryAddScoped<IDataSyncService, DataSyncService>();
 
