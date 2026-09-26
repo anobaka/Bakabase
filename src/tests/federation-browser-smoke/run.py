@@ -162,7 +162,7 @@ def main():
     parser.add_argument("--no-build", action="store_true")
     parser.add_argument("--web-root", type=Path, default=ROOT / "src/web/dist")
     parser.add_argument("--results-directory", type=Path)
-    parser.add_argument("--timeout", type=int, default=300)
+    parser.add_argument("--timeout", type=int, default=480)
     parser.add_argument("--keep-fixtures", action="store_true", help="Keep temporary data for debugging after stopping all test processes")
     args = parser.parse_args()
     web_root = args.web_root.resolve()

@@ -27,6 +27,7 @@ field, a DbSet or an inbox item type.
 | Local UI API `~/data-sync`, identity bridge, host kind, CLI | `src/apps/Bakabase.Service/Controllers/DataSyncController.cs`, `Components/DataSync/` |
 | Node routes `~/federation/v1/{pair,export}/datasync/*`, grants, peer client | `src/apps/Bakabase.Service/Controllers/{DataSyncNodeController,FederationDataSyncPairingController}.cs`, `src/apps/Bakabase.Service/Components/Federation/{FederationDataSync*,DataSyncNodeInfoContributor}.cs`; scopes in `src/modules/Bakabase.Modules.Federation/Peers/FederationScopes.cs` |
 | Page, drawings, review, inbox, history, map adapter | `src/web/src/features/data-sync/` |
+| Hub pushes `DataSyncStatus`, `DataSyncApplied` (`DataSyncHubPublisher`) | `components/SignalR/UIHubConnection.ts` hands them to `applyDataSyncHubData` (`features/data-sync/stores/dataSync.ts`) first |
 | Help section | `src/web/src/components/HelpCenter/topics/multiDevice/dataSync/`, `locales/{en,cn}/components/helpDataSync.json` |
 
 The Federation module never references the DataSync module: the Service bridges them
@@ -237,3 +238,7 @@ install creates notifications (`IDataSyncHostKind.IsHeadless`: a headless one ne
   in `Bakabase.Modules.DataSync.Tests/Fixtures/VersionSkew`, and the `state.json` an older build
   must read in `Bakabase.Modules.Federation.Tests/Fixtures/VersionSkew`.
 - Frontend: `yarn vitest run src/features/data-sync src/components/HelpCenter`.
+- Browser: `src/tests/federation-browser-smoke/data-sync.cjs`, the last stage of that smoke's `run.py`
+  — started on the device map, approved in the window switched to the server, a conflict decided on
+  the page, the rule editor from the keyboard at 1440 and 1280 px, 375 px, and a LAN browser (the
+  test host's `BAKABASE_FEDERATION_TEST_LAN_PORT`) in and outside Unrestricted mode.

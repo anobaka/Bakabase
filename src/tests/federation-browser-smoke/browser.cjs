@@ -1,6 +1,7 @@
 // Drives production web assets and real Service listeners; no mocked API responses.
 const { chromium } = require('playwright');
 const serverSwitching = require('./switching.cjs');
+const dataSync = require('./data-sync.cjs');
 const firstLaunchImport = require('./first-launch.cjs');
 const legacyClientPairing = require('./legacy-client.cjs');
 const { LAUNCH_ARGS, confine, proveConfinement, assertStayedLocal, assertNoAnalytics } = require('./network.cjs');
@@ -177,6 +178,7 @@ async function federation(browser) {
     report.legacyClientPairing = await legacyClientPairing({ config });
     report.firstLaunchImport = await firstLaunchImport({ browser, config });
     report.serverSwitching = await serverSwitching({ browser, config, artifacts });
+    report.dataSync = await dataSync({ browser, config, artifacts });
     fs.writeFileSync(artifacts('result.json'), JSON.stringify(report, null, 2));
     console.log(JSON.stringify(report, null, 2));
   } finally {
