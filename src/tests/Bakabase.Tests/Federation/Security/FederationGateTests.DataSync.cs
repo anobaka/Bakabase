@@ -115,7 +115,7 @@ public sealed partial class FederationGateTests
         var context = Context("/federation/v1/pair/datasync/request", "POST", "192.168.20.30");
         var request = new NodeDataSyncPairRequest("asker-node", "Asker", "asker-transaction",
             NodeRequestSignature.RandomToken(), NodeDataSyncIntents.TwoWay);
-        await gate.RunAsync(context, http => Execute(http, () => gate.PairingController(http).PairRequest(request, default)));
+        await gate.RunAsync(context, Endpoint(http => gate.PairingController(http).PairRequest(request, default)));
 
         Assert.AreEqual(200, context.Response.StatusCode);
         Assert.AreEqual("awaitingApproval", Body<NodePairExchange>(context).Outcome);
@@ -171,7 +171,7 @@ public sealed partial class FederationGateTests
         var context = Context(Manifest, "GET");
         context.Request.QueryString = new QueryString("?mode=twoWay&since=customProperty:12,extensionGroup:0&state=ok");
         gate.Sign(context, gate.DataSync);
-        await gate.RunAsync(context, http => Execute(http, () => gate.FeedController(http)
+        await gate.RunAsync(context, Endpoint(http => gate.FeedController(http)
             .Manifest("twoWay", "customProperty:12,extensionGroup:0", null, "ok", http.RequestAborted)));
 
         Assert.AreEqual(200, context.Response.StatusCode);
@@ -266,7 +266,7 @@ public sealed partial class FederationGateTests
         var context = Context(Changes, "GET");
         context.Request.QueryString = new QueryString("?snapshot=snapshot-1&kind=customProperty&since=0");
         gate.Sign(context, gate.DataSync);
-        await gate.RunAsync(context, http => Execute(http, () => gate.FeedController(http)
+        await gate.RunAsync(context, Endpoint(http => gate.FeedController(http)
             .Changes("snapshot-1", "customProperty", "0", null, http.RequestAborted)));
 
         Assert.AreEqual(200, context.Response.StatusCode);
@@ -281,12 +281,12 @@ public sealed partial class FederationGateTests
         using var gate = await ScopeGate.CreateAsync();
         var context = Context("/federation/v1/export/queries/query-1/pages", "GET");
         gate.Sign(context, gate.Library);
-        await gate.RunAsync(context, async http =>
+        await gate.RunAsync(context, Endpoint(async http =>
         {
             await gate.Peers.SetDataSyncSharingAsync(false);
             http.RequestAborted.ThrowIfCancellationRequested();
-            await Execute(http, () => Task.FromResult<IActionResult>(new ContentResult { Content = "{\"page\":1}" }));
-        });
+            return new ContentResult { Content = "{\"page\":1}" };
+        }));
         Assert.AreEqual(200, context.Response.StatusCode);
         Assert.IsTrue(gate.Leases.GetCancellationToken(gate.DataSync.GrantId).IsCancellationRequested);
     }
@@ -635,6 +635,19 @@ public sealed partial class FederationGateTests
     private static async Task<string[]> LibraryGrantsAsync(ScopeGate gate) =>
         (await gate.Peers.GetStatusAsync()).Peers.Select(p => p.InboundGrant?.GrantId ?? "-").ToArray();
 
+    /// <summary>
+    /// The endpoint that runs <paramref name="action"/> and writes its result (<see cref="Execute"/>). A method group
+    /// rather than a lambda: ASP0016 takes the <c>Task&lt;IActionResult&gt;</c> a lambda's nested action returns for
+    /// the endpoint's own result.
+    /// </summary>
+    private static RequestDelegate Endpoint(Func<HttpContext, Task<IActionResult>> action) =>
+        new ActionEndpoint(action).InvokeAsync;
+
+    private sealed class ActionEndpoint(Func<HttpContext, Task<IActionResult>> action)
+    {
+        public Task InvokeAsync(HttpContext http) => Execute(http, () => action(http));
+    }
+
     /// <summary>Runs an action and writes its result the way MVC and the federation exception filter would.</summary>
     private static async Task Execute(HttpContext http, Func<Task<IActionResult>> action)
     {
@@ -783,14 +796,14 @@ public sealed partial class FederationGateTests
             var request = new NodeHandshakeRequest(NodeRequestSignature.RandomToken());
             context.Request.Body = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(request, FederationJson.Options));
             Sign(context, credentials);
-            await RunAsync(context, http => Execute(http, () => PeerController(http).Handshake(request, http.RequestAborted)));
+            await RunAsync(context, Endpoint(http => PeerController(http).Handshake(request, http.RequestAborted)));
             return context;
         }
 
         public async Task<HttpContext> PairCodeAsync(NodeDataSyncPairCodeRequest request)
         {
             var context = Context("/federation/v1/pair/datasync/code", "POST", "192.168.20.30");
-            await RunAsync(context, http => Execute(http, () => PairingController(http).PairCode(request, default)));
+            await RunAsync(context, Endpoint(http => PairingController(http).PairCode(request, default)));
             return context;
         }
 
