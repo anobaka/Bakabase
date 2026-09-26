@@ -100,6 +100,7 @@ public interface IDataSyncStore
         DataSyncEditorRef? by, int? applyLogId, CancellationToken ct);
 
     Task<DataSyncInboxItemDbModel?> GetItemAsync(long id, CancellationToken ct);
+
     /// <summary>
     /// A page of items, open ones first, then closed ones, newest (the highest id) first within each group; filtered by
     /// peer, kind and local key as given (§9, <see cref="DataSyncInboxQuery"/>). <c>OpenTotal</c> counts the open items
