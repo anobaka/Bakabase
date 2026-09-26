@@ -87,29 +87,35 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
         if (db.Database.CurrentTransaction is not null)
             return (await RefreshCoreAsync(kinds, collectPublished, options, ct)).Result;
 
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        try
+        DataSyncRefreshResult result;
+        DataSyncLocalStateDbModel state;
+        await using (var transaction = await db.Database.BeginTransactionAsync(ct))
         {
-            var (result, state) = await RefreshCoreAsync(kinds, collectPublished, options, ct);
-            if (!_guard.IsVerified)
+            try
             {
-                // Evidence of a restore arrived while this ran: nothing it issued may stand under that actor.
+                (result, state) = await RefreshCoreAsync(kinds, collectPublished, options, ct);
+                if (!_guard.IsVerified)
+                {
+                    // Evidence of a restore arrived while this ran: nothing it issued may stand under that actor.
+                    await transaction.RollbackAsync(CancellationToken.None);
+                    db.ChangeTracker.Clear();
+                    return await SkippedAsync(ct);
+                }
+
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
                 await transaction.RollbackAsync(CancellationToken.None);
                 db.ChangeTracker.Clear();
-                return await SkippedAsync(ct);
+                throw;
             }
+        }
 
-            await transaction.CommitAsync(ct);
-            // Committed counters must reach actor.json whatever a stop requested meanwhile (§5.6).
-            await _watermark.WriteAsync(state, CancellationToken.None);
-            return result;
-        }
-        catch
-        {
-            await transaction.RollbackAsync(CancellationToken.None);
-            db.ChangeTracker.Clear();
-            throw;
-        }
+        // Committed counters must reach actor.json whatever a stop requested meanwhile (§5.6). Outside the rollback
+        // above: the counters stand, so a failed write surfaces as itself, never as a rollback of a finished commit.
+        await _watermark.WriteAsync(state, CancellationToken.None);
+        return result;
     }
 
     private async Task<DataSyncRefreshResult> SkippedAsync(CancellationToken ct)

@@ -219,7 +219,7 @@ public sealed class DataSyncService : IDataSyncService
     public async Task<DataSyncProblem?> ResetLinkAsync(int linkId, CancellationToken ct)
     {
         await using var gate = await EnterGateAsync(ct);
-        return gate is null ? Busy : await Links.ResetAsync(linkId, ct);
+        return gate is null ? Busy : await Links.ResetAsync(linkId, ct, gate);
     }
 
     /// <summary>"Pause all" (§8.7), under the gate; on first use it makes the local state row that keeps it (§4.5).</summary>
@@ -391,27 +391,43 @@ public sealed class DataSyncService : IDataSyncService
 
     /// <summary>
     /// Withdraws a request this device filed. A link made for that request has nothing yet and goes with it; a link
-    /// that already had sync state (turned back on after a stop, or a copy once onto a stopped link) stops again with
-    /// its bases, pending records and last mode (§8.1), as when the peer's answer ends a request. Not gated: the link
-    /// service orders its writes itself.
+    /// that already had sync state (turned back on after a stop, a copy once onto a stopped link, or one asked again
+    /// after its access was revoked) stops again with its bases, pending records and last mode (§8.1), as when the
+    /// peer's answer ends a request. Not gated, except for that stop: it releases the link's holds, so it waits for
+    /// the gate like every other stop, and answers Busy before anything changed (§10.1).
     /// </summary>
     public async Task<DataSyncProblem?> CancelRequestAsync(string requestId, CancellationToken ct)
     {
         if (!await HasRequestAsync(requestId, DataSyncRequestDirection.Outgoing, ct))
             return new DataSyncProblem(DataSyncProblemCode.RequestNotFound, null);
-        try
-        {
-            await Grants.CancelOutgoingAsync(requestId, ct);
-        }
-        catch (DataSyncProblemException e)
-        {
-            return e.Problem;
-        }
-
         var waiting = (await Store.GetLinksAsync(ct)).FirstOrDefault(l =>
             l.State == DataSyncLinkState.AwaitingAccess &&
             string.Equals(l.PendingRequestId, requestId, StringComparison.Ordinal));
-        if (waiting is not null) await Links.OnRequestCancelledAsync(waiting.Id, ct);
+
+        DataSyncGateHold? gate = null;
+        try
+        {
+            if (waiting is not null && await Links.WithdrawingStopsAsync(waiting.Id, ct))
+            {
+                gate = await EnterGateAsync(ct);
+                if (gate is null) return Busy;
+            }
+
+            try
+            {
+                await Grants.CancelOutgoingAsync(requestId, ct);
+            }
+            catch (DataSyncProblemException e)
+            {
+                return e.Problem;
+            }
+
+            if (waiting is not null) await Links.OnRequestCancelledAsync(waiting.Id, ct, gate);
+        }
+        finally
+        {
+            if (gate is not null) await gate.DisposeAsync();
+        }
 
         await Observer.StateChangedAsync(ct);
         return null;

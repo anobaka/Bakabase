@@ -570,6 +570,17 @@ public class DataSyncControllerTests
             "node-nas", "NAS", DataSyncRequestIntent.Follow, "awaitingApproval", h.Clock.UtcNow.AddMinutes(5), null,
             false, null, false));
 
+        // That stop releases the link's holds, so it waits for the gate like every other stop, and answers Busy before
+        // anything changed.
+        using (h.Gate.Hold())
+        {
+            Assert.AreEqual(DataSyncProblemCode.Busy, (await h.CallAsync(Callers.Loopback,
+                c => c.CancelRequest("req-node-nas", default))).Data?.Code);
+        }
+
+        CollectionAssert.DoesNotContain(h.Grants.Changes.ToArray(), "cancel:req-node-nas", "the request still waits");
+        Assert.AreEqual(DataSyncLinkState.AwaitingAccess, h.Store.Get(nas.Id)!.State);
+
         Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.CancelRequest("req-node-nas", default))).Data);
 
         Assert.AreEqual(0, h.Store.Deleted.Count, "never reset: its bases and pending records stay");

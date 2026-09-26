@@ -187,8 +187,10 @@ public sealed partial class DataSyncApplyRunner
                 if (c < chunks.Count - 1)
                 {
                     // As an auto-sync apply's chunks (§8.10.2): a rotation in the gap stops the review here, and the
-                    // task's retry plans again from what the committed chunks left.
+                    // task's retry plans again from what the committed chunks left. The rows tracked so far are
+                    // forgotten, so the next chunk reads what other writers committed in the gap, never a stale copy.
                     await runner.CommitAsync(s, ct, recorder);
+                    await s.ForgetTrackedAsync(ct);
                     await runner.BetweenChunksAsync(null, null, ct);
                     await runner.ContinueAsync(s, ct);
                     if (link is not null) await EnsureLinkRunsAsync(s, link, _linkStartedAs, ct);

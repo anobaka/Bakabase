@@ -54,11 +54,19 @@ internal enum DataSyncLinkWrite
 /// puts an older row back over what it committed.
 /// </summary>
 /// <remarks>
+/// <para>
 /// <b>What this asks of the apply runner [C].</b> Most writers here take no DataSyncGate — the fetch half, grant
 /// events, withdrawing a request, and approving one (whose link row §10.1 gates; here it is not, so an approval never
 /// waits behind an apply) — so the gate an apply holds does not keep them from a link row. What orders them with the
 /// runner is the database alone, which holds only if the runner reads a link row inside the same write transaction
 /// that writes it back (<c>BEGIN IMMEDIATE</c>), and never writes back a row it read before that transaction began.
+/// </para>
+/// <para>
+/// <b>Stops and resets hold the gate.</b> Either releases the link's holds (§8.1, must-fix 28), which rewrites entity
+/// rows, and those only a holder of the gate writes (§2.9): an apply holds it across its chunks, each of which writes
+/// what its one merge decided. A caller that holds the gate passes its <see cref="DataSyncGateHold"/>; otherwise the
+/// write enters it itself (<see cref="WriteUnderGateAsync{T}"/>), before the lock and the transaction.
+/// </para>
 /// </remarks>
 public sealed class DataSyncLinkService
 {
@@ -79,12 +87,14 @@ public sealed class DataSyncLinkService
     private readonly IDataSyncRuntimeObserver _observer;
     private readonly DataSyncLimits _limits;
     private readonly IDataSyncRowTransactions _transactions;
+    private readonly IDataSyncGateEntry? _gate;
     private readonly ILogger<DataSyncLinkService> _logger;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
+    /// <param name="gate">The DataSyncGate; null only where nothing registers one (the runtime's own tests).</param>
     public DataSyncLinkService(IServiceScopeFactory scopes, IDataSyncClock clock, IDataSyncStagedPullStore stagedPulls,
         DataSyncRuntimeState state, IDataSyncRuntimeObserver observer, DataSyncLimits limits,
-        IDataSyncRowTransactions transactions, ILogger<DataSyncLinkService> logger)
+        IDataSyncRowTransactions transactions, ILogger<DataSyncLinkService> logger, IDataSyncGateEntry? gate = null)
     {
         _scopes = scopes;
         _clock = clock;
@@ -93,6 +103,7 @@ public sealed class DataSyncLinkService
         _observer = observer;
         _limits = limits;
         _transactions = transactions;
+        _gate = gate;
         _logger = logger;
     }
 
@@ -159,6 +170,50 @@ public sealed class DataSyncLinkService
         {
             _lock.Release();
         }
+    }
+
+    /// <summary>
+    /// <see cref="WriteAsync{T}"/> for a write that stops or resets a link (see the remarks): under the gate — the
+    /// caller's <paramref name="held"/>, else entered here, without a limit (the fetch half and grant events run in the
+    /// background), before the lock and the transaction.
+    /// </summary>
+    private Task<T> WriteUnderGateAsync<T>(DataSyncGateHold? held, Func<IDataSyncStore, Task<T>> write,
+        CancellationToken ct) =>
+        WriteUnderGateAsync(held, true, async (store, _) => (await write(store), false), ct);
+
+    /// <summary>
+    /// <see cref="WriteAsync{T}"/> for a write that may stop or reset a link, which it decides from the row it reads.
+    /// <paramref name="write"/> is told whether the gate is held; one that must stop or reset a link without it
+    /// answers <c>NeedsGate</c> having written nothing, and runs again once the gate is entered.
+    /// <paramref name="likely"/>: the caller's own read already says so, and the gate is entered first.
+    /// </summary>
+    private async Task<T> WriteUnderGateAsync<T>(DataSyncGateHold? held, bool likely,
+        Func<IDataSyncStore, bool, Task<(T Result, bool NeedsGate)>> write, CancellationToken ct)
+    {
+        DataSyncGateLease? lease = null;
+        try
+        {
+            if (likely) lease = await EnterGateAsync(held, ct);
+            while (true)
+            {
+                var gated = held is not null || lease is not null || _gate is null;
+                var (result, needsGate) = await WriteAsync(store => write(store, gated), ct);
+                if (!needsGate || gated) return result;
+                lease = await EnterGateAsync(held, ct);
+            }
+        }
+        finally
+        {
+            lease?.Dispose();
+        }
+    }
+
+    /// <summary>The gate, unless the caller holds it or none is registered.</summary>
+    private async Task<DataSyncGateLease?> EnterGateAsync(DataSyncGateHold? held, CancellationToken ct)
+    {
+        if (held is not null || _gate is null) return null;
+        return await _gate.TryEnterAsync(null, ct) ??
+               throw new InvalidOperationException("The data sync gate refused a wait without a limit.");
     }
 
     private async Task WriteRowAsync(IDataSyncStore store, DataSyncLinkDbModel row, DataSyncLinkWrite how,
@@ -341,7 +396,7 @@ public sealed class DataSyncLinkService
         {
             if (link.Mode == DataSyncLinkMode.Off && link.State == DataSyncLinkState.Stopped && newKinds is null)
                 return new DataSyncLinkChange(link, null, null);
-            return new DataSyncLinkChange(await StopAsync(link.Id, newKinds, ct), null, null);
+            return new DataSyncLinkChange(await StopAsync(link.Id, newKinds, gate, ct), null, null);
         }
 
         if (mode is not (null or DataSyncLinkMode.Follow or DataSyncLinkMode.TwoWay))
@@ -403,11 +458,12 @@ public sealed class DataSyncLinkService
 
     /// <summary>
     /// Off (§8.1): the store stops the link (its items close <c>LinkStopped</c>, its holds become local-only; bases and
-    /// pending records stay) and the row records it, in one write.
+    /// pending records stay) and the row records it, in one write under the gate.
     /// </summary>
-    private async Task<DataSyncLinkDbModel?> StopAsync(int linkId, IReadOnlyList<string>? kinds, CancellationToken ct)
+    private async Task<DataSyncLinkDbModel?> StopAsync(int linkId, IReadOnlyList<string>? kinds, DataSyncGateHold? gate,
+        CancellationToken ct)
     {
-        var stopped = await WriteAsync(async store =>
+        var stopped = await WriteUnderGateAsync(gate, async store =>
         {
             var row = await store.GetLinkAsync(linkId, ct);
             if (row is null) return null;
@@ -462,7 +518,7 @@ public sealed class DataSyncLinkService
         var outcome = sent.Outcome!;
         if (outcome.Outcome == "granted")
         {
-            await OnOutboundGrantedAsync(link.PeerNodeId, outcome.ReadBack, ct);
+            await OnOutboundGrantedAsync(link.PeerNodeId, outcome.ReadBack, gate, ct);
             return new DataSyncLinkChange(await GetAsync(linkId, ct), null, null);
         }
 
@@ -551,7 +607,7 @@ public sealed class DataSyncLinkService
         if (outcome.Outcome == "granted")
         {
             // Fresh credentials: the link's next head reads with them and brings it out of AccessRevoked.
-            await OnOutboundGrantedAsync(link.PeerNodeId, outcome.ReadBack, ct);
+            await OnOutboundGrantedAsync(link.PeerNodeId, outcome.ReadBack, gate, ct);
             return new DataSyncLinkChange(await GetAsync(link.Id, ct), null, null);
         }
 
@@ -851,7 +907,7 @@ public sealed class DataSyncLinkService
         if (asked is null) return DataSyncLinkChange.Refused(DataSyncProblemCode.LinkNotFound);
         if (!granted || !WaitsForResetGrant(asked)) return new DataSyncLinkChange(asked, requestId, null);
 
-        await OnOutboundGrantedAsync(link.PeerNodeId, outcome.ReadBack, ct);
+        await OnOutboundGrantedAsync(link.PeerNodeId, outcome.ReadBack, gate, ct);
         return new DataSyncLinkChange(await GetByPeerAsync(link.PeerNodeId, ct), null, null);
     }
 
@@ -896,12 +952,13 @@ public sealed class DataSyncLinkService
     /// Reset or Dismiss (§8.1): the link row, its bases and pending records are deleted, its items close
     /// <c>LinkRemoved</c> and its holds become local-only; definitions stay as they are.
     /// </summary>
-    public async Task<DataSyncProblem?> ResetAsync(int linkId, CancellationToken ct) =>
-        await RemoveAsync(linkId, ct) is null ? new DataSyncProblem(DataSyncProblemCode.LinkNotFound, null) : null;
+    /// <param name="gate">The caller's hold on the gate, if it holds it; otherwise the reset enters it.</param>
+    public async Task<DataSyncProblem?> ResetAsync(int linkId, CancellationToken ct, DataSyncGateHold? gate = null) =>
+        await RemoveAsync(linkId, gate, ct) is null ? new DataSyncProblem(DataSyncProblemCode.LinkNotFound, null) : null;
 
-    private async Task<DataSyncLinkDbModel?> RemoveAsync(int linkId, CancellationToken ct)
+    private async Task<DataSyncLinkDbModel?> RemoveAsync(int linkId, DataSyncGateHold? gate, CancellationToken ct)
     {
-        var removed = await WriteAsync(async store =>
+        var removed = await WriteUnderGateAsync(gate, async store =>
         {
             var row = await store.GetLinkAsync(linkId, ct);
             if (row is not null) await store.DeleteLinkAsync(linkId, ct);
@@ -1052,20 +1109,29 @@ public sealed class DataSyncLinkService
     /// (<c>declined</c>), a two-way link says "{name} does not read this device" (§7.2.4 step 7); <c>started</c> clears
     /// that; null says nothing.
     /// </param>
-    public async Task OnOutboundGrantedAsync(string peerNodeId, string? readBack, CancellationToken ct)
+    public Task OnOutboundGrantedAsync(string peerNodeId, string? readBack, CancellationToken ct) =>
+        OnOutboundGrantedAsync(peerNodeId, readBack, null, ct);
+
+    /// <param name="gate">
+    /// The caller's hold on the gate, if it holds it; otherwise a reset enters it (<see cref="WriteUnderGateAsync{T}"/>).
+    /// </param>
+    private async Task OnOutboundGrantedAsync(string peerNodeId, string? readBack, DataSyncGateHold? gate,
+        CancellationToken ct)
     {
         var link = await GetByPeerAsync(peerNodeId, ct);
         if (link is null) return;
         var now = _clock.UtcNow;
         DataSyncLinkDbModel? removed = null;
-        var (row, how) = await WriteAsync(async store =>
+        var (row, how) = await WriteUnderGateAsync(gate, WaitsForResetGrant(link), async (store, gated) =>
         {
             var current = await store.GetLinkAsync(link.Id, ct);
-            if (current is null) return ((DataSyncLinkDbModel?) null, DataSyncLinkWrite.None);
+            if (current is null) return (((DataSyncLinkDbModel?) null, DataSyncLinkWrite.None), false);
             if (WaitsForResetGrant(current))
             {
+                if (!gated) return ((null, DataSyncLinkWrite.None), true);
                 removed = current;
-                return (await ResetForNewEpochAsync(store, current, readBack, now, ct), DataSyncLinkWrite.Transition);
+                return ((await ResetForNewEpochAsync(store, current, readBack, now, ct), DataSyncLinkWrite.Transition),
+                    false);
             }
 
             current.NextAttemptAtUtc = now;
@@ -1079,7 +1145,7 @@ public sealed class DataSyncLinkService
             }
 
             await WriteRowAsync(store, current, write, ct);
-            return (current, write);
+            return ((current, write), false);
         }, ct);
 
         if (removed is not null) await AfterRemovedAsync(removed, ct);
@@ -1197,17 +1263,40 @@ public sealed class DataSyncLinkService
     }
 
     /// <summary>
-    /// This device's request for a link ended without access (§8.1): the link stops and stays on the map with Dismiss
-    /// (M5: nothing the user filed vanishes silently), with its last mode, bases and pending records. A link that
-    /// asked a reset peer again goes back to <c>Paused(PeerReset)</c> instead, with everything it had (§8.7 B1), so
-    /// the person can ask again or stop syncing; the error says why.
+    /// This device's request for a link ended without access (§8.1): the link stops as Off stops it — its items close
+    /// <c>LinkStopped</c> and its holds become local-only, under the gate — and stays on the map with Dismiss (M5:
+    /// nothing the user filed vanishes silently), with its last mode, bases and pending records. A link that asked a
+    /// reset peer again goes back to <c>Paused(PeerReset)</c> instead, with everything it had (§8.7 B1), so the person
+    /// can ask again or stop syncing; the error says why.
     /// </summary>
-    public Task<DataSyncLinkDbModel?> OnRequestEndedAsync(int linkId, string errorCode, CancellationToken ct) =>
-        MutateAsync(linkId, row => EndRequest(row, errorCode), ct);
-
-    private static DataSyncLinkWrite EndRequest(DataSyncLinkDbModel row, string errorCode)
+    public async Task<DataSyncLinkDbModel?> OnRequestEndedAsync(int linkId, string errorCode, CancellationToken ct)
     {
-        if (row.State != DataSyncLinkState.AwaitingAccess) return DataSyncLinkWrite.None;
+        var before = await GetAsync(linkId, ct);
+        if (before is null) return null;
+        var (link, how) = await WriteUnderGateAsync(null, EndingStops(before), async (store, gated) =>
+        {
+            var row = await store.GetLinkAsync(linkId, ct);
+            if (row is null) return (((DataSyncLinkDbModel?) null, DataSyncLinkWrite.None), false);
+            if (EndingStops(row) && !gated) return ((null, DataSyncLinkWrite.None), true);
+            return (await EndRequestAsync(store, row, errorCode, ct), false);
+        }, ct);
+
+        await AfterRequestEndedAsync(link, how, ct);
+        return link;
+    }
+
+    /// <summary>Ending the request this link waits for stops it (<see cref="EndRequestAsync"/>): under the gate.</summary>
+    private static bool EndingStops(DataSyncLinkDbModel row) =>
+        row.State == DataSyncLinkState.AwaitingAccess && !WaitsForResetGrant(row);
+
+    /// <summary>
+    /// The request a link waits for ended (<see cref="OnRequestEndedAsync"/>), in the caller's write. Returns the row
+    /// as it was written: the row read again after the store stopped it.
+    /// </summary>
+    private async Task<(DataSyncLinkDbModel? Row, DataSyncLinkWrite How)> EndRequestAsync(IDataSyncStore store,
+        DataSyncLinkDbModel row, string errorCode, CancellationToken ct)
+    {
+        if (row.State != DataSyncLinkState.AwaitingAccess) return (row, DataSyncLinkWrite.None);
         if (WaitsForResetGrant(row))
         {
             row.State = DataSyncLinkState.Paused;
@@ -1215,45 +1304,86 @@ public sealed class DataSyncLinkService
             row.LastErrorCode = errorCode;
             row.LastErrorDetail = null;
             row.NextAttemptAtUtc = null;
-            return DataSyncLinkWrite.Transition;
+            await WriteRowAsync(store, row, DataSyncLinkWrite.Transition, ct);
+            return (row, DataSyncLinkWrite.Transition);
         }
 
-        if (row.Mode != DataSyncLinkMode.Off) row.LastMode = row.Mode;
-        row.Mode = DataSyncLinkMode.Off;
-        row.State = DataSyncLinkState.Stopped;
-        row.LastErrorCode = errorCode;
-        row.LastErrorDetail = null;
-        row.NextAttemptAtUtc = null;
-        return DataSyncLinkWrite.Transition;
+        // As Off stops a link (StopAsync): the store closes its items and releases its holds, which nobody can decide
+        // any more (§8.1, must-fix 28), and the row records why.
+        var lastMode = row.Mode != DataSyncLinkMode.Off ? row.Mode : row.LastMode;
+        await store.StopLinkAsync(row.Id, ct);
+        var stopped = await store.GetLinkAsync(row.Id, ct);
+        if (stopped is null) return (null, DataSyncLinkWrite.None);
+        stopped.LastMode = lastMode;
+        stopped.Mode = DataSyncLinkMode.Off;
+        stopped.State = DataSyncLinkState.Stopped;
+        stopped.ReviewId = null;
+        stopped.LastErrorCode = errorCode;
+        stopped.LastErrorDetail = null;
+        stopped.NextAttemptAtUtc = null;
+        await WriteRowAsync(store, stopped, DataSyncLinkWrite.Transition, ct);
+        return (stopped, DataSyncLinkWrite.Transition);
+    }
+
+    /// <summary>
+    /// After <see cref="EndRequestAsync"/> committed: a stopped link's staged pull and review go, as when it is turned
+    /// Off, and the change is published.
+    /// </summary>
+    private async Task AfterRequestEndedAsync(DataSyncLinkDbModel? link, DataSyncLinkWrite how, CancellationToken ct)
+    {
+        if (link is null || how != DataSyncLinkWrite.Transition) return;
+        if (link.State == DataSyncLinkState.Stopped)
+        {
+            _stagedPulls.Take(link.Id);
+            DiscardReview(link.Id);
+        }
+
+        await ObserveAsync(o => o.LinkChangedAsync(link, ct));
     }
 
     /// <summary>
     /// The person withdrew the request a link waits for. A link made for that request has nothing yet — no first
-    /// contact, no cursor, no base — and goes with it. Any other link keeps its state: one turned back on after a stop,
-    /// or a copy once onto a stopped link, stops again as an ended request would (<see cref="AccessCancelled"/>), so its
-    /// bases, pending records and last mode are kept (§8.1); one that asked a reset peer again goes back to its pause.
+    /// contact, no cursor, no base, and so no hold — and goes with it. Any other link keeps its state: one turned back
+    /// on after a stop, or a copy once onto a stopped link, or one asked again after its access was revoked, stops again
+    /// as an ended request would (<see cref="AccessCancelled"/>), so its bases, pending records and last mode are kept
+    /// and its holds are released (§8.1); one that asked a reset peer again goes back to its pause.
     /// </summary>
-    public async Task OnRequestCancelledAsync(int linkId, CancellationToken ct)
+    /// <param name="gate">
+    /// The caller's hold on the gate, if it holds it (<see cref="WithdrawingStopsAsync"/>); otherwise a stop enters it.
+    /// </param>
+    public async Task OnRequestCancelledAsync(int linkId, CancellationToken ct, DataSyncGateHold? gate = null)
     {
-        DataSyncLinkDbModel? stopped = null;
-        var removed = await WriteAsync(async store =>
+        DataSyncLinkDbModel? ended = null;
+        var how = DataSyncLinkWrite.None;
+        var removed = await WriteUnderGateAsync(gate, false, async (store, gated) =>
         {
             var row = await store.GetLinkAsync(linkId, ct);
-            if (row is not { State: DataSyncLinkState.AwaitingAccess }) return null;
+            if (row is not { State: DataSyncLinkState.AwaitingAccess }) return ((DataSyncLinkDbModel?) null, false);
             if (!WaitsForResetGrant(row) && !await HasSyncStateAsync(store, row, ct))
             {
                 await store.DeleteLinkAsync(linkId, ct);
-                return row;
+                return (row, false);
             }
 
-            var how = EndRequest(row, AccessCancelled);
-            await WriteRowAsync(store, row, how, ct);
-            if (how == DataSyncLinkWrite.Transition) stopped = row;
-            return null;
+            if (EndingStops(row) && !gated) return (null, true);
+            (ended, how) = await EndRequestAsync(store, row, AccessCancelled, ct);
+            return (null, false);
         }, ct);
 
         if (removed is not null) await AfterRemovedAsync(removed, ct);
-        if (stopped is not null) await ObserveAsync(o => o.LinkChangedAsync(stopped, ct));
+        await AfterRequestEndedAsync(ended, how, ct);
+    }
+
+    /// <summary>
+    /// Whether withdrawing the request link <paramref name="linkId"/> waits for stops it
+    /// (<see cref="OnRequestCancelledAsync"/>): the stop releases its holds, so the caller enters the gate first.
+    /// </summary>
+    public async Task<bool> WithdrawingStopsAsync(int linkId, CancellationToken ct)
+    {
+        await using var scope = _scopes.CreateAsyncScope();
+        var store = Store(scope);
+        return await store.GetLinkAsync(linkId, ct) is { } row && EndingStops(row) &&
+               await HasSyncStateAsync(store, row, ct);
     }
 
     /// <summary>Whether a link holds anything a reset would delete: a first contact, a cursor or a base.</summary>

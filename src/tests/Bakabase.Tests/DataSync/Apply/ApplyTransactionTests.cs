@@ -796,6 +796,115 @@ public class ApplyTransactionTests
         Assert.AreEqual(DataSyncPendingReason.Retry,
             (await f.BasesAsync(link.Id)).Single(b => b.SyncKey == created[249].Key).PendingReason);
     }
+
+    /// <summary>
+    /// Two links; 250 entities of the first, each with children a and b. Entity P240 — in the second chunk of the
+    /// first link's next apply — has b240 held for the second link, and a240 in use. That pull deletes child a of
+    /// each, so P240 also holds a240 for the first link.
+    /// </summary>
+    private static async Task<(DataSyncApplyFixture F, DataSyncPeer Peer, DataSyncLinkDbModel Link,
+        DataSyncLinkDbModel Other, string P240, (string, Bakabase.Modules.DataSync.Wire.DataSyncWireRecord)[] Edits)>
+        TwoLinksWithAHoldInTheSecondChunkAsync()
+    {
+        var f = await CreateAsync();
+        var peer = new DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer, firstContactDone: false);
+        var other = await f.LinkAsync(new DataSyncPeer("PC-2"));
+        var order = OrderKeys(250);
+        var created = Enumerable.Range(0, 250).Select(_ => (Key: SyncKey.New().Value, Vv: peer.Next())).ToList();
+        await f.ApplyAsync(link, peer, created.Select((c, i) =>
+            (Item, peer.Record([c.Key], c.Vv, Content("P" + i, ("a" + i, "A"), ("b" + i, "B")), order[i]))).ToArray());
+        var p240 = f.Kind.KeyOf("P240");
+        f.Kind.Use(p240, "a240", 3);
+        var db = f.NewDb();
+        var row = await db.DataSyncEntities.SingleAsync(e => e.Kind == Item && e.LocalKey == p240 && e.DeletedAtUtc == null);
+        row.OverlayJson = DataSyncStoredJson.WriteOverlay(
+            new DataSyncOverlay([], [new DataSyncHeldChild("b240", other.Id)]));
+        await db.SaveChangesAsync();
+
+        await SkipLargeChangeAsync(f, link);
+        var edits = created.Select((c, i) =>
+                (Item, peer.Record([c.Key], peer.Next(c.Vv), Content("P" + i, ("b" + i, "B")), order[i])))
+            .ToArray();
+        return (f, peer, link, other, p240, edits);
+    }
+
+    /// <summary>
+    /// A chunk after a gap writes the rows it touches as they are stored now, never the copies the first transaction
+    /// tracked: the second link is reset while the apply leaves the lock free, which turns its hold local-only (§8.1,
+    /// must-fix 28), and the hold the later chunk adds joins that instead of putting the reset link's hold back.
+    /// </summary>
+    [TestMethod]
+    public async Task A_hold_another_link_released_in_the_gap_stays_released_after_the_later_chunk()
+    {
+        var (f, peer, link, other, p240, edits) = await TwoLinksWithAHoldInTheSecondChunkAsync();
+        var gaps = 0;
+        f.Runner.BetweenChunks = async () =>
+        {
+            gaps++;
+            // Written by another scope in its own transaction, as any writer of the gap would.
+            await using var scope = f.Services.CreateAsyncScope();
+            var store = scope.ServiceProvider.GetRequiredService<DataSyncStore>();
+            await using var transaction = await store.Db.Database.BeginTransactionAsync();
+            await store.DeleteLinkAsync(other.Id, default);
+            await transaction.CommitAsync();
+        };
+        try
+        {
+            Assert.AreEqual(DataSyncAutoSyncEnd.Committed, (await f.ApplyAsync(link, peer, edits)).End);
+        }
+        finally
+        {
+            f.Runner.BetweenChunks = null;
+        }
+
+        Assert.AreEqual(1, gaps);
+        var overlay = DataSyncStoredJson.ReadOverlay((await f.RowAsync(p240)).OverlayJson);
+        CollectionAssert.AreEqual(new[] { "b240" }, overlay.LocalOnlyChildren.ToArray(), "the reset's release stands");
+        Assert.AreEqual(new DataSyncHeldChild("a240", link.Id), overlay.HeldChildren.Single(),
+            "the later chunk's hold joins it, and no hold of the reset link comes back");
+        Assert.IsNull((await f.LinkRowAsync(link.Id)).LastErrorCode);
+    }
+
+    /// <summary>
+    /// A reset releases the link's holds, which only a gate holder writes (§2.9): the grant a link waited for after
+    /// its peer's reset (§8.7 B1) arrives outside the gate, while an apply holds it across its chunks, and the reset
+    /// waits for the apply to end.
+    /// </summary>
+    [TestMethod]
+    public async Task A_reset_a_grant_brings_during_a_chunked_apply_waits_for_the_gate()
+    {
+        var (f, peer, link, other, p240, edits) = await TwoLinksWithAHoldInTheSecondChunkAsync();
+        await f.SetLinkStateAsync(other.Id, DataSyncLinkState.AwaitingAccess, DataSyncPauseReason.PeerReset);
+        var links = f.Services.GetRequiredService<DataSyncLinkService>();
+        Task? reset = null;
+        var waitedInTheGap = false;
+        f.Runner.BetweenChunks = async () =>
+        {
+            reset ??= Task.Run(() => links.OnOutboundGrantedAsync(other.PeerNodeId, null, default));
+            await Task.Delay(500);
+            waitedInTheGap = !reset.IsCompleted;
+        };
+        try
+        {
+            Assert.AreEqual(DataSyncAutoSyncEnd.Committed, (await f.ApplyAsync(link, peer, edits)).End);
+        }
+        finally
+        {
+            f.Runner.BetweenChunks = null;
+        }
+
+        Assert.IsNotNull(reset);
+        await reset.WaitAsync(TimeSpan.FromSeconds(30));
+        Assert.IsTrue(waitedInTheGap, "the reset waits for the gate the apply holds");
+        var rows = await f.NewDb().DataSyncLinks.AsNoTracking().ToListAsync();
+        Assert.IsFalse(rows.Any(l => l.Id == other.Id), "the old row went with the reset");
+        Assert.AreEqual(DataSyncLinkInitiator.ThisDevice, rows.Single(l => l.PeerNodeId == other.PeerNodeId).Initiator,
+            "a new row runs a new first contact");
+        var overlay = DataSyncStoredJson.ReadOverlay((await f.RowAsync(p240)).OverlayJson);
+        CollectionAssert.AreEqual(new[] { "b240" }, overlay.LocalOnlyChildren.ToArray());
+        Assert.AreEqual(new DataSyncHeldChild("a240", link.Id), overlay.HeldChildren.Single());
+    }
 }
 
 /// <summary>An identity that answers another node from the n-th call after <see cref="FlipAfter"/>.</summary>

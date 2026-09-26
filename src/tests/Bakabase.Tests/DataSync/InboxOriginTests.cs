@@ -1,4 +1,5 @@
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
+using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Identity;
@@ -6,6 +7,7 @@ using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Bakabase.Tests.DataSync.DataSyncStoreFixture;
 
@@ -188,6 +190,94 @@ public class InboxOriginTests
         var items = await _f.ItemsAsync();
         Assert.IsTrue(items.Where(i => i.LinkId == link.Id).All(i => i.Closure == DataSyncInboxClosure.LinkStopped));
         Assert.IsNull(items.Single(i => i.Type == DataSyncInboxItemType.SuspectedLostUpdate).ClosedAtUtc);
+    }
+
+    /// <summary>
+    /// A link waiting for the access its request asked for, with a hold on an entity of its own, items, a base and a
+    /// pending record.
+    /// </summary>
+    private async Task<(DataSyncLinkDbModel Link, DataSyncEntityDbModel Entity)> AwaitingAccessWithAHoldAsync(
+        string peer, string localKey, DataSyncPauseReason? pausedReason = null)
+    {
+        var link = await _f.LinkAsync(peer, DataSyncLinkMode.Follow, DataSyncLinkState.AwaitingAccess);
+        link.PendingRequestId = "req-" + peer;
+        link.PausedReason = pausedReason;
+        await _f.Store.UpdateLinkAsync(link, default);
+        var e = await _f.LiveAsync(localKey);
+        await _f.Store.SetOverlayAsync(Kind, e.LocalKey,
+            new DataSyncOverlay([], [new DataSyncHeldChild("held", link.Id)]), default);
+        await SeedItemsAndBasesAsync(link, e);
+        return (link, e);
+    }
+
+    private Task<DataSyncLinkDbModel> LinkRowAsync(int id) =>
+        _f.Db.DataSyncLinks.AsNoTracking().SingleAsync(l => l.Id == id);
+
+    private async Task<DataSyncOverlay> OverlayAsync(DataSyncEntityDbModel e) =>
+        DataSyncStoredJson.ReadOverlay((await _f.ByPrimaryAsync(e.SyncKey))!.OverlayJson);
+
+    /// <summary>
+    /// A request this device filed that ends — rejected, expired, no longer listed, or withdrawn by the person — stops a
+    /// link with sync state as Off does (§8.1): nobody can decide its items and holds any more (must-fix 28), so the
+    /// holds become local-only and the items close <c>LinkStopped</c>; bases, pending records and the last mode stay.
+    /// </summary>
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_request_that_ends_stops_its_link_as_Off_does(bool withdrawn)
+    {
+        var (link, e) = await AwaitingAccessWithAHoldAsync("peer-1", "1");
+        var links = _f.Services.GetRequiredService<DataSyncLinkService>();
+
+        if (withdrawn) await links.OnRequestCancelledAsync(link.Id, default);
+        else await links.OnRequestEndedAsync(link.Id, DataSyncLinkService.AccessRejected, default);
+
+        var stopped = await LinkRowAsync(link.Id);
+        Assert.AreEqual((DataSyncLinkMode.Off, DataSyncLinkMode.Follow, DataSyncLinkState.Stopped),
+            (stopped.Mode, stopped.LastMode, stopped.State));
+        Assert.AreEqual(withdrawn ? DataSyncLinkService.AccessCancelled : DataSyncLinkService.AccessRejected,
+            stopped.LastErrorCode);
+        Assert.IsNotNull((await _f.Store.GetBasesAsync(link.Id, Kind, default)).Single().Pending,
+            "bases and pending records are kept");
+        var overlay = await OverlayAsync(e);
+        CollectionAssert.AreEqual(new[] {"held"}, overlay.LocalOnlyChildren.ToArray());
+        Assert.AreEqual(0, overlay.HeldChildren.Count);
+        var items = await _f.ItemsAsync();
+        Assert.IsTrue(items.Where(i => i.LinkId == link.Id).All(i => i.Closure == DataSyncInboxClosure.LinkStopped));
+        Assert.IsNull(items.Single(i => i.Type == DataSyncInboxItemType.SuspectedLostUpdate).ClosedAtUtc);
+    }
+
+    /// <summary>
+    /// That stop rewrites entity rows, which only a gate holder writes (§2.9): the fetch half, outside the gate, waits
+    /// for it and changes nothing meanwhile. A link that asked a reset peer again goes back to its pause with its holds
+    /// (§8.7 B1), which needs no gate.
+    /// </summary>
+    [TestMethod]
+    public async Task A_request_that_ends_stops_its_link_only_under_the_gate()
+    {
+        var (link, e) = await AwaitingAccessWithAHoldAsync("peer-1", "1");
+        var (reset, resetEntity) = await AwaitingAccessWithAHoldAsync("peer-2", "2", DataSyncPauseReason.PeerReset);
+        var links = _f.Services.GetRequiredService<DataSyncLinkService>();
+        var gate = _f.Services.GetRequiredService<DataSyncGate>();
+
+        Task ended;
+        using (await gate.EnterAsync(null, default))
+        {
+            await links.OnRequestEndedAsync(reset.Id, DataSyncLinkService.AccessExpired, default)
+                .WaitAsync(TimeSpan.FromSeconds(30));
+            Assert.AreEqual(DataSyncLinkState.Paused, (await LinkRowAsync(reset.Id)).State);
+            Assert.AreEqual(1, (await OverlayAsync(resetEntity)).HeldChildren.Count, "still held: the link goes on");
+
+            ended = links.OnRequestEndedAsync(link.Id, DataSyncLinkService.AccessExpired, default);
+            await Task.Delay(300);
+            Assert.IsFalse(ended.IsCompleted, "the stop waits for the gate");
+            Assert.AreEqual(DataSyncLinkState.AwaitingAccess, (await LinkRowAsync(link.Id)).State);
+            Assert.AreEqual(1, (await OverlayAsync(e)).HeldChildren.Count);
+        }
+
+        await ended.WaitAsync(TimeSpan.FromSeconds(30));
+        Assert.AreEqual(DataSyncLinkState.Stopped, (await LinkRowAsync(link.Id)).State);
+        CollectionAssert.AreEqual(new[] {"held"}, (await OverlayAsync(e)).LocalOnlyChildren.ToArray());
     }
 
     [TestMethod]

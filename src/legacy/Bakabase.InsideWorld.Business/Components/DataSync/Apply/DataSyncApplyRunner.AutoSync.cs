@@ -141,6 +141,10 @@ public sealed partial class DataSyncApplyRunner
                 // A rotation in the gap (the guard handles evidence outside the gate) stops the apply here: committed
                 // chunks stand, the cursor does not move, and the retry finds the link paused (§5.6).
                 await CommitAsync(s, c, recorder);
+                // Other writers have the lock in the gap: every row the first transaction tracked (Refresh tracks each
+                // entity row it read) is forgotten, so the next chunk reads what is stored instead of the copy it
+                // loaded before, and never writes that copy back over what they committed.
+                await s.ForgetTrackedAsync(c);
                 await BetweenChunksAsync(null, null, c);
                 await ContinueAsync(s, c);
                 await EnsureLinkRunsAsync(s, linkRow, startedAs, c);

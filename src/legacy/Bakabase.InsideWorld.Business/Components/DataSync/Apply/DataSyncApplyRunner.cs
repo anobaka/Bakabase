@@ -216,7 +216,9 @@ public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
 
     /// <summary>
     /// A chunked apply's link after <see cref="ContinueAsync"/>: read again (a later write must not overwrite what was
-    /// committed meanwhile), and still as the apply found it. A link that went away, or that stopped or paused since
+    /// committed meanwhile) and tracked again (the gap forgot every tracked row, <see
+    /// cref="DataSyncApplySession.ForgetTrackedAsync"/>), and still as the apply found it. A link that went away, or
+    /// that stopped or paused since
     /// <paramref name="startedAs"/> — the actor guard pauses a restore's links outside the gate — stops the apply like a
     /// changed actor.
     /// </summary>

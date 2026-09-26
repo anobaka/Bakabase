@@ -182,11 +182,20 @@ scopes").
   switch — while the gate is busy the switch still applies and the answer is `Busy` with the
   detail `newDefinitionsStayLocal`. Its `enabled` is optional: without it the switch is left as
   it is, which is how "share new definitions automatically" is sent, so it never sends back a
-  sharing value read before sharing changed elsewhere, and only `enabled: true` widens access. Withdrawing a request is not gated either. Link rows are
+  sharing value read before sharing changed elsewhere, and only `enabled: true` widens access. Withdrawing a request is not gated either, unless it
+  stops a link (below). Link rows are
   ordered by `DataSyncLinkService`'s lock plus one `BEGIN IMMEDIATE` transaction per write, not
   by the gate: the apply runner reads a link row inside the write transaction that writes it
   back, never writes back a row it read before that transaction began, and re-checks "Pause
   all" and the link once it holds the gate.
+- **Stops and resets hold the gate.** Every stop or reset of a link — Off, Reset/Dismiss, a
+  request that ends or is withdrawn, the reset a grant brings after B1 — releases the link's
+  holds (must-fix 28), which rewrites entity rows, and only a gate holder writes those: an apply
+  holds the gate across its chunks. A gated action passes its `DataSyncGateHold` down; the fetch
+  half and grant events enter the gate themselves, without a limit, before the link service's
+  lock and transaction (`WriteUnderGateAsync`). Withdrawing a request that stops a link waits for
+  the gate at most 30 s and answers `Busy` before anything changed; one that drops a link made
+  for the request (nothing merged, so nothing held) stays ungated.
 - **One fetch per peer.** `IDataSyncPeerClient.AcquireFetchAsync` holds the peer's fetch lock
   from the head to the last page; a second fetch waits up to 30 s, then gets `Busy`. The
   fetcher takes it for every fetch — the cycle, review staging, copy once and "Fetch again" —
@@ -213,6 +222,10 @@ scopes").
   state (a hold), and a later pull meets that state already agreed (row K4) and drafts nothing.
   So a chunked apply writes the state-derived items of a chunk's entities in that chunk's own
   transaction (`DataSyncMergeWriter`), never only at the end.
+- **A chunk after a gap forgets what it tracked.** A chunked apply, review or resolution clears
+  the change tracker after each commit (`DataSyncApplySession.ForgetTrackedAsync`): Refresh
+  tracks every entity row it read, and a later chunk's tracking query would otherwise hand back
+  that copy and write it back over what another writer committed in the gap.
 - **A chunk after a gap reads the usage again.** Other writers take SQLite's lock between two
   chunks, so what the merge decided from usage read before the first chunk — an automatic entity
   deletion (no values, §8.6), a child removal (unused, §8.5.4 step 3) — is checked again in each
@@ -275,8 +288,9 @@ scopes").
   exchange and the claim carries it to the requester's `OutboundGranted`. It is cleared only
   once the peer does read this device (any grant this device issues it, or a claim that says
   `started`), never when a request is merely filed.
-- **A request that ends.** Rejected or expired, the link stops (`Mode` Off, its last mode,
-  bases and pending records kept) and stays on the map with Dismiss. The listing never shows an
+- **A request that ends.** Rejected or expired, the link stops as Off stops it
+  (`StopLinkAsync`: `Mode` Off, its last mode, bases and pending records kept, its items closed
+  `LinkStopped`, its holds local-only) and stays on the map with Dismiss. The listing never shows an
   expired request — it is simply gone, as is one deleted with the peer's datasync state — so a
   request the link waits for that is no longer listed has ended as expired, once no grant has
   arrived. Withdrawn
