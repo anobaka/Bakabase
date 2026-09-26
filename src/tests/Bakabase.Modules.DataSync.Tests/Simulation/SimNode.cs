@@ -107,8 +107,10 @@ internal sealed partial class SimNode
 
     public SimRow Create(TestItemContent content) => Create(Kind, content);
 
+    /// <summary>A definition created through the service (<c>AddRange</c>, which normalizes as it does for anyone).</summary>
     public SimRow Create(string kind, object content)
     {
+        content = Written(kind, content, null);
         var row = new SimRow { Kind = kind, LocalKey = NewLocalKey(), Content = content };
         row.LocalHash = ContentHash.Of(SimKinds.Of(kind).Codec.Write(content));
         Rows.Add(row);
@@ -128,16 +130,27 @@ internal sealed partial class SimNode
     public SimRow? LiveRow(string kind, string localKey) =>
         Rows.FirstOrDefault(r => r.Kind == kind && !r.Deleted && r.LocalKey == localKey);
 
-    public void Edit(string name, Func<TestItemContent, TestItemContent> change)
-    {
-        var row = Row(name);
-        row.Content = change(row.Item!);
-    }
+    public void Edit(string name, Func<TestItemContent, TestItemContent> change) => EditRow(Row(name), change(Row(name).Item!));
 
+    public void Edit<T>(string name, string kind, Func<T, T> change) where T : class =>
+        EditRow(Row(name, kind), change((T)Row(name, kind).Content!));
+
+    /// <summary>A person's write through the service (<c>Put</c>, which normalizes with the stored content).</summary>
     public void EditRow(SimRow row, object content)
     {
         if (!row.IsLive) throw new InvalidOperationException("Only a live definition can be edited.");
-        row.Content = content;
+        row.Content = Written(row.Kind, content, row.Content);
+    }
+
+    /// <summary>What the service stores for a person's write; a write it folded is counted.</summary>
+    private object Written(string kind, object content, object? stored)
+    {
+        var simKind = SimKinds.Of(kind);
+        var written = simKind.Written(content, stored);
+        if (!ReferenceEquals(written, content) &&
+            simKind.Codec.ChildrenOf(written).Count < simKind.Codec.ChildrenOf(content).Count)
+            _world.Count("serviceFolded");
+        return written;
     }
 
     public void Delete(string name) => DeleteRow(Row(name));

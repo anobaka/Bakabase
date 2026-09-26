@@ -62,7 +62,7 @@ internal static class SimDigest
                     $"{(node.RestorePending ? " RESTORE PENDING" : "")}{(node.Verified ? "" : " unverified")}\n");
         foreach (var row in node.Rows.OrderBy(r => r.Kind, StringComparer.Ordinal).ThenBy(r => r.LocalKey, StringComparer.Ordinal))
         {
-            var what = row.Deleted ? $"† {row.TombstoneKind}{(row.Served ? "" : " unserved")}" : row.Content?.ToString();
+            var what = row.Deleted ? $"† {row.TombstoneKind}{(row.Served ? "" : " unserved")}" : row.Shown;
             var shared = row.Content is null
                 ? ""
                 : " form " + DataSyncPublication.Of(SimKinds.Of(row.Kind).Codec, row.Content, row.Overlay, row.ChildrenLocal,

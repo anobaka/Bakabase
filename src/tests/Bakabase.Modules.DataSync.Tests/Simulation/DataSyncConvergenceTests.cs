@@ -16,24 +16,42 @@ public class DataSyncConvergenceTests
 {
     private const int CiRuns = 500;
 
-    private static (int First, int Runs) Seeds()
+    /// <summary>
+    /// Custom property scenarios in CI: the merge of label classes is the costliest part of a run, so fewer seeds than
+    /// the test kind's. <c>DATASYNC_FUZZ_RUNS</c> raises both for a longer local run.
+    /// </summary>
+    private const int CiCustomPropertyRuns = 300;
+
+    private static (int First, int Runs) Seeds(int ciRuns)
     {
         var first = int.TryParse(Environment.GetEnvironmentVariable("DATASYNC_FUZZ_SEED"), NumberStyles.Integer,
             CultureInfo.InvariantCulture, out var seed) ? seed : 1;
         var runs = int.TryParse(Environment.GetEnvironmentVariable("DATASYNC_FUZZ_RUNS"), NumberStyles.Integer,
-            CultureInfo.InvariantCulture, out var count) && count > 0 ? count : CiRuns;
+            CultureInfo.InvariantCulture, out var count) && count > 0 ? count : ciRuns;
         return (first, runs);
     }
 
     [TestMethod]
-    public void SeededScenariosConverge()
+    public void SeededScenariosConverge() => Converge(customProperties: false, CiRuns, CoveredPaths);
+
+    /// <summary>
+    /// The same scenarios with custom properties (package B's codec): IgnoreCase toggled with duplicates present, tag
+    /// groups between <c>null</c>, <c>""</c> and a value, multilevel nodes moved and renamed, options recoloured,
+    /// "sync the definition only" turned on and off, and every person's write normalized by the service
+    /// (<see cref="CustomPropertySimKind.Written"/>).
+    /// </summary>
+    [TestMethod]
+    public void SeededCustomPropertyScenariosConverge() =>
+        Converge(customProperties: true, CiCustomPropertyRuns, CustomPropertyCoveredPaths);
+
+    private static void Converge(bool customProperties, int ciRuns, IReadOnlyList<string> coveredPaths)
     {
-        var (first, runs) = Seeds();
+        var (first, runs) = Seeds(ciRuns);
         var failures = new List<string>();
         var coverage = new SortedDictionary<string, int>(StringComparer.Ordinal);
         for (var seed = first; seed < first + runs && failures.Count < 3; seed++)
         {
-            var spec = SimScenarioSpec.Generate(seed);
+            var spec = SimScenarioSpec.Generate(seed, customProperties: customProperties);
             var scenario = SimScenario.Execute(spec);
             foreach (var (what, count) in scenario.World.Counters) coverage[what] = coverage.GetValueOrDefault(what) + count;
             if (scenario.Failures.Count == 0) continue;
@@ -41,15 +59,24 @@ public class DataSyncConvergenceTests
         }
 
         if (Environment.GetEnvironmentVariable("DATASYNC_FUZZ_COVERAGE") is { Length: > 0 } path)
-            File.WriteAllLines(path, coverage.Select(c => $"{c.Key} {c.Value}"));
+            File.WriteAllLines(path + (customProperties ? ".customProperty" : ""), coverage.Select(c => $"{c.Key} {c.Value}"));
         Assert.AreEqual(0, failures.Count, "\n" + string.Join("\n\n", failures));
 
         // The CI seeds keep reaching the paths the step list exists for; a generator change that stops reaching
         // one fails here rather than passing on easier scenarios. Other seeds (local runs) reach what they reach.
-        if (first != 1 || runs < CiRuns) return;
-        foreach (var covered in CoveredPaths)
+        if (first != 1 || runs < ciRuns) return;
+        foreach (var covered in coveredPaths)
             Assert.IsTrue(coverage.GetValueOrDefault(covered) > 0, $"no scenario reached {covered}");
     }
+
+    private static readonly string[] CustomPropertyCoveredPaths =
+    [
+        "edit:customProperty:toggleIgnoreCase", "edit:customProperty:editTagGroup", "edit:customProperty:moveNode",
+        "edit:customProperty:renameOption", "edit:customProperty:recolorOption", "edit:customProperty:clearOptionColor",
+        "edit:customProperty:changeType", "edit:customProperty:addUnpublishable", "serviceFolded",
+        "step:ChildrenLocal", "note:childrenLocalTurnedOff", "resolve:TypeChange:Convert", "revision:MergedWithConflicts",
+        "revision:FollowMerged", "hold", "wire:chunked", "wire:multiPage", "undo:updated",
+    ];
 
     private static readonly string[] CoveredPaths =
     [

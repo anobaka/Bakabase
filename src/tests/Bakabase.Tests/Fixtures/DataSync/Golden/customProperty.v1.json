@@ -1,0 +1,356 @@
+[
+  {
+    "keys": [
+      "key-1"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "aE",
+    "content": {
+      "name": "Computed",
+      "type": "Formula"
+    }
+  },
+  {
+    "keys": [
+      "key-2"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "aA",
+    "content": {
+      "name": "Gallery",
+      "settings": {
+        "layout": "Carousel"
+      },
+      "type": "Attachment"
+    }
+  },
+  {
+    "keys": [
+      "key-3"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "a3",
+    "content": {
+      "choices": [
+        {
+          "color": "#3e63dd",
+          "label": "Action",
+          "uuid": "00000000-0000-4000-8000-000000000101"
+        },
+        {
+          "label": "Drama",
+          "uuid": "00000000-0000-4000-8000-000000000102"
+        },
+        {
+          "label": "action",
+          "uuid": "00000000-0000-4000-8000-000000000103"
+        }
+      ],
+      "defaultValue": [
+        {
+          "label": "Drama",
+          "uuid": "00000000-0000-4000-8000-000000000102"
+        },
+        {
+          "label": "Action",
+          "uuid": "00000000-0000-4000-8000-000000000101"
+        }
+      ],
+      "ignoreCase": true,
+      "name": "Genre",
+      "type": "MultipleChoice"
+    }
+  },
+  {
+    "keys": [
+      "key-4"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "a9",
+    "content": {
+      "name": "Homepage",
+      "type": "Link"
+    }
+  },
+  {
+    "keys": [
+      "key-5"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "aC",
+    "content": {
+      "name": "Imported",
+      "type": "DateTime"
+    }
+  },
+  {
+    "keys": [
+      "key-6"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "aG",
+    "content": {
+      "ignoreCase": true,
+      "name": "Keywords",
+      "tags": [
+        {
+          "group": "Studio",
+          "name": "Kyoto",
+          "uuid": "00000000-0000-4000-8000-000000000305"
+        },
+        {
+          "name": "Short",
+          "uuid": "00000000-0000-4000-8000-000000000306"
+        },
+        {
+          "color": "#e5484d",
+          "group": "studio",
+          "name": "KYOTO",
+          "uuid": "00000000-0000-4000-8000-000000000303"
+        }
+      ],
+      "type": "Tags"
+    }
+  },
+  {
+    "keys": [
+      "key-7"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "aD",
+    "content": {
+      "name": "Length",
+      "type": "Time"
+    }
+  },
+  {
+    "keys": [
+      "key-8"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "a4",
+    "content": {
+      "choices": [
+        {
+          "color": "#30a46c",
+          "label": "Calm",
+          "uuid": "00000000-0000-4000-8000-000000000201"
+        },
+        {
+          "label": "Tense",
+          "uuid": "00000000-0000-4000-8000-000000000202"
+        }
+      ],
+      "ignoreCase": true,
+      "name": "Mood",
+      "type": "MultipleChoice"
+    }
+  },
+  {
+    "keys": [
+      "key-9"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "a7",
+    "content": {
+      "name": "My rating",
+      "settings": {
+        "maxValue": 10
+      },
+      "type": "Rating"
+    }
+  },
+  {
+    "keys": [
+      "key-10"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "a1",
+    "content": {
+      "name": "Notes",
+      "type": "MultilineText"
+    }
+  },
+  {
+    "keys": [
+      "key-11"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "a6",
+    "content": {
+      "name": "Progress",
+      "settings": {
+        "precision": 1,
+        "showProgressBar": true
+      },
+      "type": "Percentage"
+    }
+  },
+  {
+    "keys": [
+      "key-12"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "aH",
+    "content": {
+      "defaultValue": [
+        {
+          "path": [
+            "Asia",
+            "Japan",
+            "Kyoto"
+          ],
+          "uuid": "00000000-0000-4000-8000-000000000403"
+        }
+      ],
+      "ignoreCase": true,
+      "name": "Region",
+      "nodes": [
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "color": "#e5484d",
+                  "label": "Kyoto",
+                  "uuid": "00000000-0000-4000-8000-000000000403"
+                }
+              ],
+              "label": "Japan",
+              "uuid": "00000000-0000-4000-8000-000000000402"
+            }
+          ],
+          "color": "#30a46c",
+          "label": "Asia",
+          "uuid": "00000000-0000-4000-8000-000000000401"
+        },
+        {
+          "label": "Europe",
+          "uuid": "00000000-0000-4000-8000-000000000404"
+        },
+        {
+          "children": [
+            {
+              "label": "Korea",
+              "uuid": "00000000-0000-4000-8000-000000000406"
+            }
+          ],
+          "label": "ASIA",
+          "uuid": "00000000-0000-4000-8000-000000000405"
+        }
+      ],
+      "settings": {
+        "valueIsSingleton": true
+      },
+      "type": "Multilevel"
+    }
+  },
+  {
+    "keys": [
+      "key-13"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "aB",
+    "content": {
+      "name": "Released",
+      "type": "Date"
+    }
+  },
+  {
+    "keys": [
+      "key-14"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "a5",
+    "content": {
+      "name": "Score",
+      "settings": {
+        "precision": 2
+      },
+      "type": "Number"
+    }
+  },
+  {
+    "keys": [
+      "key-15"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "a2",
+    "content": {
+      "choices": [
+        {
+          "color": "#e5484d",
+          "label": "Main",
+          "uuid": "00000000-0000-4000-8000-000000000001"
+        },
+        {
+          "label": "Spin-off",
+          "uuid": "00000000-0000-4000-8000-000000000002"
+        },
+        {
+          "label": "Main",
+          "uuid": "00000000-0000-4000-8000-000000000003"
+        }
+      ],
+      "defaultValue": [
+        {
+          "label": "Spin-off",
+          "uuid": "00000000-0000-4000-8000-000000000002"
+        }
+      ],
+      "ignoreCase": false,
+      "name": "Series",
+      "type": "SingleChoice"
+    }
+  },
+  {
+    "keys": [
+      "key-16"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "aF",
+    "content": {
+      "ignoreCase": false,
+      "name": "Studio tags",
+      "tags": [
+        {
+          "color": "#3e63dd",
+          "group": "Studio",
+          "name": "Kyoto",
+          "uuid": "00000000-0000-4000-8000-000000000301"
+        },
+        {
+          "name": "Isekai",
+          "uuid": "00000000-0000-4000-8000-000000000302"
+        },
+        {
+          "name": "Mecha",
+          "uuid": "00000000-0000-4000-8000-000000000304"
+        }
+      ],
+      "type": "Tags"
+    }
+  },
+  {
+    "keys": [
+      "key-17"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "a0",
+    "content": {
+      "name": "Title",
+      "type": "SingleLineText"
+    }
+  },
+  {
+    "keys": [
+      "key-18"
+    ],
+    "schemaVersion": 1,
+    "orderKey": "a8",
+    "content": {
+      "name": "Watched",
+      "type": "Boolean"
+    }
+  }
+]

@@ -186,6 +186,9 @@ internal sealed class DecoratedCodec(IDataSyncKindCodec inner) : IDataSyncKindCo
 {
     public DataSyncKindDescriptor? DescriptorOverride { get; init; }
     public Func<EntityDiff, EntityDiff>? OnDiff { get; init; }
+
+    /// <summary>Rewrites what <c>Merge3</c> returns (a codec that breaks a property the engine must not rely on).</summary>
+    public Func<DataSyncMerge3Input, DataSyncMerge3Result, DataSyncMerge3Result>? OnMerge3 { get; init; }
     public List<IReadOnlySet<string>> Accepted { get; } = [];
 
     public DataSyncKindDescriptor Descriptor => DescriptorOverride ?? inner.Descriptor;
@@ -231,6 +234,10 @@ internal sealed class DecoratedCodec(IDataSyncKindCodec inner) : IDataSyncKindCo
     public IReadOnlyList<string> ChildDeletionCandidates(DataSyncChildCandidatesInput input) =>
         inner.ChildDeletionCandidates(input);
 
-    public DataSyncMerge3Result Merge3(DataSyncMerge3Input input) => inner.Merge3(input);
+    public DataSyncMerge3Result Merge3(DataSyncMerge3Input input)
+    {
+        var result = inner.Merge3(input);
+        return OnMerge3?.Invoke(input, result) ?? result;
+    }
     public IReadOnlyList<DataSyncChildInfo> ChildrenOf(object content) => inner.ChildrenOf(content);
 }

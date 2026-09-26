@@ -22,10 +22,22 @@ internal abstract class SimKind
     public abstract IReadOnlyList<string> Names { get; }
 
     /// <summary>
-    /// What the service stores when content is written (the adapter's <c>Put</c> for an update with the stored
+    /// What the service stores when data sync writes content (the adapter's <c>Put</c> for an update with the stored
     /// content, <c>AddRange</c> for a create with none). The simulator re-reads this after every apply (§6.4).
     /// </summary>
     public virtual object Store(object content, object? stored) => content;
+
+    /// <summary>
+    /// What the service stores when a person writes content through it (its own normalization: <c>Put</c> with the
+    /// stored content, <c>AddRange</c> for a create with none), which data sync's writes may bypass.
+    /// </summary>
+    public virtual object Written(object content, object? stored) => content;
+
+    /// <summary>Whether "Sync the definition only" (§3.6) can be turned on for this content.</summary>
+    public virtual bool OffersChildrenLocal(object content) => Codec.Descriptor.SupportsChildrenLocal;
+
+    /// <summary>The content in one line, for traces and failure messages.</summary>
+    public virtual string Describe(object content) => content.ToString() ?? "";
 
     public abstract object NewContent(Random random, string name, Func<string> freshChildId);
 
