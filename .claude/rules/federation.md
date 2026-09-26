@@ -203,7 +203,11 @@ request, and acts through the same endpoints and confirmations.
   fails otherwise.
 - **Directional grants.** A→B never implies B→A or A→C, and a node never queries on behalf of
   another. Two-way pairing is two grants orchestrated by one flow (a single-use reciprocal code
-  bound to the requester's NodeId), not one symmetric grant.
+  bound to the requester's NodeId), not one symmetric grant. A reciprocal datasync code is the
+  requester's consent to be read back, and goes when that consent does: revoking the device,
+  forgetting it ("Done — stop reading X"), removing the peer or an identity reset drop it, and
+  so does withdrawing the request unless another two-way request to that device stands — a
+  stale copy of the request approved later reads nothing back.
 - **Grants have scopes.** A grant is `library.read` (the whole library, read-only; every grant
   made before data sync) or `datasync.read` (the definitions data sync publishes); `*` is only
   ever an endpoint's declaration (the handshake), never a grant's. The two are **separate
@@ -246,12 +250,15 @@ after any DTO/endpoint change.
 
 `BAKABASE_FEDERATION_SHARING=true` turns sharing on at startup; `BAKABASE_NODE_NAME` names the
 node; `--federation-invite-on-start` prints a one-time code. The running instance is managed with
-`docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|invite|approve|reject|revoke>`,
-which only calls its loopback API.
+`docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|off|invite|approve|reject|revoke>`,
+which only calls its loopback API. Data sync's counterparts — `BAKABASE_DATASYNC_SHARING=true`
+(definitions sharing on at every start) and `federation datasync <command>` — are in
+`data-sync.md` ("Headless").
 
 ## Tests
 
 - `src/tests/Bakabase.Modules.Federation.Tests` — protocol, pairing, security, queries (fast).
 - `src/tests/Bakabase.Tests/Federation` — real middleware/controllers, media, gate matrix.
-- `src/tests/federation-smoke/run.py` + `Bakabase.Federation.TestHost` — three real processes.
+- `src/tests/federation-smoke/run.py` + `Bakabase.Federation.TestHost` — three real processes;
+  then `datasync.py`, data sync across three more (two desktops and a headless server).
 - Frontend: `yarn vitest run src/features/federation`.

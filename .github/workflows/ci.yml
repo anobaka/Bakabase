@@ -181,7 +181,7 @@ jobs:
           python src/scripts/check-release-contract.py --report "$RUNNER_TEMP/federation-results/product-identities.json"
           python src/tests/upgrade-tests/test_release_contract.py
           python src/tests/upgrade-tests/test_package_acceptance.py
-      - name: Three independent hosts
+      - name: Three independent hosts, then data sync across three more
         run: |
           dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj
           python src/tests/federation-smoke/run.py --timeout 300 --results-directory "$RUNNER_TEMP/federation-results/smoke"
@@ -252,7 +252,7 @@ jobs:
           dotnet run --project src/tests/Bakabase.Shell.NativeAbiProbe \
             --configuration Release -p:RuntimeMode=MACOS \
             -- --report "$RUNNER_TEMP/federation-results/native-abi.json"
-      - name: Three independent hosts
+      - name: Three independent hosts, then data sync across three more
         run: |
           dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj
           python src/tests/federation-smoke/run.py --timeout 300 --results-directory "$RUNNER_TEMP/federation-results/smoke"

@@ -5,7 +5,11 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components.DataSync.Feed;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
+using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Canonical;
+using Bakabase.Modules.DataSync.Wire;
 using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
@@ -20,6 +24,7 @@ using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 using Microsoft.Extensions.FileProviders;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 // Each process owns its static AppService, independent SQLite database, options, keys and HTTP port.
 // This executable is never packaged. It uses the production startup, routes, middleware and adapters.
@@ -77,11 +82,16 @@ if (Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_LAN_PORT") is {
         throw new ArgumentException("The LAN port must be another valid port.");
     lanPort = parsedLan;
 }
-var host = new FederationTestHost(port, dataDirectory, count, desktopWindow, requestLog, serverName, lanPort);
+// Optional: the host serves the custom property of this name to its data sync readers as a record of a newer schema.
+var futureSchema = Environment.GetEnvironmentVariable(FutureSchemaFeedPageWriter.Variable);
+if (futureSchema != null && string.IsNullOrWhiteSpace(futureSchema))
+    throw new ArgumentException("The future-schema property must be named.");
+var host = new FederationTestHost(port, dataDirectory, count, desktopWindow, requestLog, serverName, lanPort,
+    futureSchema);
 await host.Start([]);
 
 sealed class FederationTestHost(int port, string dataDirectory, int count, string? desktopWindow, string? requestLog,
-        string? serverName, int? lanPort)
+        string? serverName, int? lanPort, string? futureSchema)
     : BakabaseHost(new NullGuiAdapter(), new NullSystemService())
 {
     protected override string? SingleInstanceId => null;
@@ -118,6 +128,12 @@ sealed class FederationTestHost(int port, string dataDirectory, int count, strin
             services.AddSingleton<RemoteAccessService>();
             services.AddSingleton<IRemoteAccessService>(provider =>
                 new FixtureRemoteAccess(provider.GetRequiredService<RemoteAccessService>(), serverName, port));
+            if (futureSchema != null)
+            {
+                // Replaces the production writer the data sync feed composes with (registered with TryAdd).
+                services.RemoveAll<IDataSyncFeedPageWriter>();
+                services.AddSingleton<IDataSyncFeedPageWriter>(new FutureSchemaFeedPageWriter(futureSchema));
+            }
             services.AddSingleton<IStartupFilter, FederationTestStaticFiles>();
         }));
 
@@ -275,6 +291,34 @@ sealed class FixtureRemoteAccess(IRemoteAccessService production, string? name, 
     {
         var descriptor = await production.GetServerDescriptorAsync();
         return name == null ? descriptor : descriptor with { Name = name };
+    }
+}
+
+/// <summary>
+/// The data sync feed as a newer build would serve one custom property: every record of the property named
+/// <c>BAKABASE_DATASYNC_TEST_FUTURE_SCHEMA</c> goes out one schema version ahead, with a member this build does not
+/// know and the record hash that content has. Everything else is the production writer's, so the manifest's kind hash
+/// covers exactly what the pages carry. A reader must hold such a record (<c>Held(NewerSchema)</c>) and apply the rest
+/// of the pull (spec §13.9 step 7).
+/// </summary>
+sealed class FutureSchemaFeedPageWriter(string propertyName) : IDataSyncFeedPageWriter
+{
+    public const string Variable = "BAKABASE_DATASYNC_TEST_FUTURE_SCHEMA";
+
+    public DataSyncWrittenKind WriteKind(string snapshotId, string kind, long sinceSeq,
+        IReadOnlyList<DataSyncWireRecord> records, DataSyncLimits limits) =>
+        DataSyncWireWriter.WriteKind(snapshotId, kind, sinceSeq,
+            kind == DataSyncKindIds.CustomProperty ? records.Select(FromTheFuture).ToList() : records, limits);
+
+    private DataSyncWireRecord FromTheFuture(DataSyncWireRecord record)
+    {
+        if (record.Content is not { } content || record.Chunks > 0 ||
+            content["name"]?.GetValueKind() != JsonValueKind.String ||
+            content["name"]!.GetValue<string>() != propertyName)
+            return record;
+        var future = (JsonObject) content.DeepClone();
+        future["futureSetting"] = new JsonObject { ["addedIn"] = record.SchemaVersion + 1 };
+        return record with { SchemaVersion = record.SchemaVersion + 1, Content = future, Hash = ContentHash.Of(future) };
     }
 }
 
