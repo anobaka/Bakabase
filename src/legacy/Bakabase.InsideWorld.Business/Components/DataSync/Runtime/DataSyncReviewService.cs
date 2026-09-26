@@ -123,9 +123,10 @@ public sealed class DataSyncReviewService
         if (launcher.IsWriteTaskActiveOrPending())
             return Refused(DataSyncProblemCode.ApplyInProgress, launcher.GetActiveWriteTaskId());
 
-        var (plan, local, codecs) = await PlanWithInputsAsync(entry, ct);
+        var (plan, planInput) = await PlanWithInputsAsync(entry, ct);
         var decisions = input.Decisions ?? [];
-        var resolved = DataSyncPlanner.Resolve(plan, entry.Pull, local, codecs, decisions, strict: true);
+        // Strict, over the input the plan was built from, so the alias rule knows the rows kept out of sync (§5.3).
+        var resolved = DataSyncPlanner.Resolve(plan, planInput, decisions, strict: true);
         if (resolved.Errors.Count > 0)
             return new DataSyncApplyStart(null, new DataSyncProblem(DataSyncProblemCode.DecisionsInvalid, null),
                 resolved.Errors, DataSyncPlanView.Truncate(plan));
@@ -189,21 +190,102 @@ public sealed class DataSyncReviewService
     private async Task<DataSyncPlan> PlanAsync(DataSyncReviewEntry entry, CancellationToken ct) =>
         (await PlanWithInputsAsync(entry, ct)).Plan;
 
-    /// <summary>The full plan of a staged pull against the last committed local state (read-only, §8.3).</summary>
-    private async Task<(DataSyncPlan Plan, IReadOnlyDictionary<string, LocalKindSnapshot> Local,
-        IReadOnlyDictionary<string, IDataSyncKindCodec> Codecs)> PlanWithInputsAsync(DataSyncReviewEntry entry,
+    /// <summary>
+    /// The full plan of a staged pull against the last committed local state (read-only, §8.3), as the apply's
+    /// in-transaction re-plan builds it: with the mode the link will have (<c>Off</c> for copy once), so a two-way
+    /// link's separate names say they are used everywhere, and with the rename rows' reach filled in.
+    /// </summary>
+    private async Task<(DataSyncPlan Plan, DataSyncPlanInput Input)> PlanWithInputsAsync(DataSyncReviewEntry entry,
         CancellationToken ct)
     {
         var kinds = entry.Pull.Kinds.Select(k => k.Kind).Distinct(StringComparer.Ordinal).ToList();
         var state = await _services.GetRequiredService<IDataSyncLocalStateReader>().ReadAsync(kinds, ct);
-        var local = state.ToDictionary(s => s.Key, s => s.Value.ToPlannerSnapshot(), StringComparer.Ordinal);
-        var codecs = (_services.GetService<IEnumerable<IDataSyncKind>>() ?? [])
-            .GroupBy(k => k.Codec.Descriptor.Kind, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.First().Codec, StringComparer.Ordinal);
+        var adapters = Adapters();
+        var codecs = adapters.ToDictionary(p => p.Key, p => p.Value.Codec, StringComparer.Ordinal);
         var device = await _services.GetRequiredService<IDataSyncDeviceIdentity>().GetAsync(ct);
-        var plan = DataSyncPlanner.Plan(new DataSyncPlanInput(entry.Pull, local, state, codecs, device.NodeId));
+        var link = entry.LinkId is { } linkId ? await Store.GetLinkAsync(linkId, ct) : null;
+        var mode = entry.CopyOnce ? DataSyncLinkMode.Off : link?.Mode ?? DataSyncLinkMode.Off;
+        var input = DataSyncPlanInput.FromLocalState(entry.Pull, state, codecs, device.NodeId, mode);
+        var plan = await WithInUseCountsAsync(DataSyncPlanner.Plan(input), adapters, ct);
         _reviews.SetLastPlan(entry.ReviewId, plan);
-        return (plan, local, codecs);
+        return (plan, input);
+    }
+
+    private IReadOnlyDictionary<string, IDataSyncKind> Adapters() =>
+        (_services.GetService<IEnumerable<IDataSyncKind>>() ?? [])
+        .GroupBy(k => k.Codec.Descriptor.Kind, StringComparer.Ordinal)
+        .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+    /// <summary>Rename rows beyond this many for one entity keep <c>InUseCount</c> null (v3.1 §7.4, M9).</summary>
+    internal const int MaxRenameRowsWithReach = 500;
+
+    /// <summary>
+    /// After planning (v3.1 §7.4, M9): every rename row gets <c>InUseCount</c>, the resources whose value references
+    /// the local option, read from the adapter's usage — for entities with at most
+    /// <see cref="MaxRenameRowsWithReach"/> rename rows. A rename row names the option by the id both sides share
+    /// (<c>{prefix}:rename:{uuid}</c>: a child is renamed only when its uuid is found locally). Enrichment only: no token
+    /// and not the <see cref="DataSyncPlan.PlanId"/> depend on it, and it reads without writing.
+    /// </summary>
+    private static async Task<DataSyncPlan> WithInUseCountsAsync(DataSyncPlan plan,
+        IReadOnlyDictionary<string, IDataSyncKind> adapters, CancellationToken ct)
+    {
+        static bool IsRename(DataSyncFieldChange c) => c.Kind == DataSyncFieldChangeKind.RenameChild;
+        static string ChildIdOf(DataSyncFieldChange c) => c.ChangeId[(c.ChangeId.LastIndexOf(':') + 1)..];
+
+        var sections = new List<DataSyncPlanKindSection>(plan.Kinds.Count);
+        foreach (var section in plan.Kinds)
+        {
+            var queries = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+
+            void Collect(string? localKey, IReadOnlyList<DataSyncFieldChange> changes)
+            {
+                if (localKey is null) return;
+                var renames = changes.Where(IsRename).ToList();
+                if (renames.Count is 0 or > MaxRenameRowsWithReach) return;
+                if (!queries.TryGetValue(localKey, out var ids))
+                    queries[localKey] = ids = new HashSet<string>(StringComparer.Ordinal);
+                ids.UnionWith(renames.Select(ChildIdOf));
+            }
+
+            foreach (var item in section.Items)
+            {
+                Collect(item.Local?.LocalKey, item.Changes);
+                foreach (var candidate in item.Candidates) Collect(candidate.LocalKey, candidate.Changes);
+            }
+
+            if (queries.Count == 0 || !adapters.TryGetValue(section.Kind, out var adapter))
+            {
+                sections.Add(section);
+                continue;
+            }
+
+            var usage = await adapter.GetUsageAsync(
+                queries.ToDictionary(q => q.Key, q => (IReadOnlyCollection<string>) q.Value, StringComparer.Ordinal), ct);
+
+            IReadOnlyList<DataSyncFieldChange> Fill(string? localKey, IReadOnlyList<DataSyncFieldChange> changes) =>
+                localKey is null || !queries.ContainsKey(localKey)
+                    ? changes
+                    : changes.Select(c => IsRename(c)
+                        ? c with
+                        {
+                            InUseCount = usage.GetValueOrDefault(localKey)?.ResourceCountByChildId
+                                .GetValueOrDefault(ChildIdOf(c)) ?? 0,
+                        }
+                        : c).ToList();
+
+            sections.Add(section with
+            {
+                Items = section.Items.Select(item => item with
+                {
+                    Changes = Fill(item.Local?.LocalKey, item.Changes),
+                    Candidates = item.Candidates
+                        .Select(candidate => candidate with { Changes = Fill(candidate.LocalKey, candidate.Changes) })
+                        .ToList(),
+                }).ToList(),
+            });
+        }
+
+        return plan with { Kinds = sections };
     }
 
     // ---- results -----------------------------------------------------------------------------------------------
