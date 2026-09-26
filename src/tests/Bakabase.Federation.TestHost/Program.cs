@@ -69,15 +69,23 @@ if (requestLog != null && !Path.IsPathFullyQualified(requestLog))
 var serverName = Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_SERVER_NAME");
 if (serverName != null && !System.Text.RegularExpressions.Regex.IsMatch(serverName, "^[a-z][a-z0-9-]{0,31}$"))
     throw new ArgumentException("The server name must be a short lowercase label.");
-var host = new FederationTestHost(port, dataDirectory, count, desktopWindow, requestLog, serverName);
+// Optional: a second loopback port whose callers the server takes for a browser on another device.
+int? lanPort = null;
+if (Environment.GetEnvironmentVariable("BAKABASE_FEDERATION_TEST_LAN_PORT") is { } lan)
+{
+    if (!int.TryParse(lan, out var parsedLan) || parsedLan is < 1 or > 65535 || parsedLan == port)
+        throw new ArgumentException("The LAN port must be another valid port.");
+    lanPort = parsedLan;
+}
+var host = new FederationTestHost(port, dataDirectory, count, desktopWindow, requestLog, serverName, lanPort);
 await host.Start([]);
 
 sealed class FederationTestHost(int port, string dataDirectory, int count, string? desktopWindow, string? requestLog,
-        string? serverName)
+        string? serverName, int? lanPort)
     : BakabaseHost(new NullGuiAdapter(), new NullSystemService())
 {
     protected override string? SingleInstanceId => null;
-    protected override IReadOnlyList<int>? OverrideListeningPorts() => [port];
+    protected override IReadOnlyList<int>? OverrideListeningPorts() => lanPort is { } lan ? [port, lan] : [port];
     protected override string ListeningInterface => "127.0.0.1";
 
     protected override IHostBuilder CreateHostBuilder(params string[] args) => ComposeDesktop(base.CreateHostBuilder(args)
@@ -86,6 +94,9 @@ sealed class FederationTestHost(int port, string dataDirectory, int count, strin
             if (requestLog != null)
                 // First, so it is the outermost middleware and sees requests the server refuses too.
                 services.Insert(0, ServiceDescriptor.Singleton<IStartupFilter>(new RequestRecorder(requestLog)));
+            if (lanPort is { } lan)
+                // Outside even the recorder: the server, every gate included, sees a LAN caller.
+                services.Insert(0, ServiceDescriptor.Singleton<IStartupFilter>(new LanCallerPort(lan)));
             // The fixture exercises media serving, never dependency installation or external downloads.
             services.RemoveAll<IDependentComponentService>();
             // A benchmark must not vary every result row's label with the CI VM
@@ -100,15 +111,13 @@ sealed class FederationTestHost(int port, string dataDirectory, int count, strin
                 services.AddSingleton<INodeIdentityProvider>(provider => new BenchmarkNodeIdentityProvider(
                     new NodeIdentityProvider(provider.GetRequiredService<FederationStateStore>()), fixtureName));
             }
-            if (serverName != null)
-            {
-                // Every fixture on one machine would otherwise share its name, so nothing a
-                // test reads by name could tell one server from another.
-                services.RemoveAll<IRemoteAccessService>();
-                services.AddSingleton<RemoteAccessService>();
-                services.AddSingleton<IRemoteAccessService>(provider =>
-                    new FixtureNamedRemoteAccess(provider.GetRequiredService<RemoteAccessService>(), serverName));
-            }
+            // Every fixture on one machine would otherwise share its name, so nothing a test
+            // reads by name could tell one server from another; and it would hand other devices
+            // addresses it does not listen on.
+            services.RemoveAll<IRemoteAccessService>();
+            services.AddSingleton<RemoteAccessService>();
+            services.AddSingleton<IRemoteAccessService>(provider =>
+                new FixtureRemoteAccess(provider.GetRequiredService<RemoteAccessService>(), serverName, port));
             services.AddSingleton<IStartupFilter, FederationTestStaticFiles>();
         }));
 
@@ -231,24 +240,42 @@ sealed class BenchmarkNodeIdentityProvider(INodeIdentityProvider production, str
 }
 
 /// <summary>
-/// The production remote-access service under another name. The name — what
-/// <c>server-info</c> and discovery announce, and so what every pairing records and every
-/// switcher shows — is <see cref="Environment.MachineName"/> with no setting, which every
-/// fixture on one machine shares. Everything else is the production service's answer.
+/// The production remote-access service, as this fixture is: what it listens on, and optionally
+/// under another name.
 /// </summary>
-sealed class FixtureNamedRemoteAccess(IRemoteAccessService production, string name) : IRemoteAccessService
+/// <remarks>
+/// <para>
+/// The addresses it gives other devices to reach it — next to a code, in a two-way offer that
+/// another device reads this one back through — are the production service's machine addresses
+/// with every listening port, which a fixture bound to loopback does not answer on. The only one
+/// it answers other devices on is its own port on <c>127.0.0.1</c>; its LAN-caller port, if it has
+/// one, is for browsers.
+/// </para>
+/// <para>
+/// The name — what <c>server-info</c> and discovery announce, and so what every pairing records
+/// and every switcher shows — is <see cref="Environment.MachineName"/> with no setting, which every
+/// fixture on one machine shares. Everything else is the production service's answer.
+/// </para>
+/// </remarks>
+sealed class FixtureRemoteAccess(IRemoteAccessService production, string? name, int port) : IRemoteAccessService
 {
     public RemoteAccessMode GetEffectiveMode() => production.GetEffectiveMode();
     public Task SetModeAsync(RemoteAccessMode? mode) => production.SetModeAsync(mode);
-    public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses() => production.GetReachableAddresses();
+
+    public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses() =>
+        [new($"http://127.0.0.1:{port}", "loopback")];
+
     public Task<string> GetOrCreateServerIdAsync() => production.GetOrCreateServerIdAsync();
     public bool GetAllowLiveTranscode() => production.GetAllowLiveTranscode();
     public Task SetAllowLiveTranscodeAsync(bool allow) => production.SetAllowLiveTranscodeAsync(allow);
     public bool GetRequirePairing() => production.GetRequirePairing();
     public Task SetRequirePairingAsync(bool require) => production.SetRequirePairingAsync(require);
 
-    public async Task<RemoteAccessServerDescriptor> GetServerDescriptorAsync() =>
-        (await production.GetServerDescriptorAsync()) with { Name = name };
+    public async Task<RemoteAccessServerDescriptor> GetServerDescriptorAsync()
+    {
+        var descriptor = await production.GetServerDescriptorAsync();
+        return name == null ? descriptor : descriptor with { Name = name };
+    }
 }
 
 /// <summary>
@@ -359,6 +386,32 @@ public sealed class RequestRecorder(string file) : IStartupFilter
         lock (_gate)
             File.AppendAllText(file, line);
     }
+}
+
+/// <summary>
+/// A browser on another device, on one machine: every request that arrives on
+/// <paramref name="lanPort"/> — a second port this host listens on, on loopback like the first —
+/// comes from <see cref="Address"/> as far as the server can tell, before any of its middleware
+/// runs. So the remote-access gate, the loopback guards and every endpoint judge it as they judge
+/// a LAN browser's request, while nothing listens beyond this machine.
+/// </summary>
+/// <remarks>
+/// The address is from TEST-NET-1 (RFC 5737): no real device has it, and it is not loopback.
+/// </remarks>
+public sealed class LanCallerPort(int lanPort) : IStartupFilter
+{
+    public static readonly System.Net.IPAddress Address = System.Net.IPAddress.Parse("192.0.2.10");
+
+    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+    {
+        app.Use((context, following) =>
+        {
+            if (context.Connection.LocalPort == lanPort)
+                context.Connection.RemoteIpAddress = Address;
+            return following();
+        });
+        next(app);
+    };
 }
 
 /// <summary>

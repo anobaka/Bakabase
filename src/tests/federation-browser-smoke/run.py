@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run isolated federated browser, legacy-pairing import and server-switching flows.
+"""Run isolated federated browser, legacy-pairing import, server-switching and data sync flows.
 
 Requires the built web app and this directory's pinned Playwright/Chromium installation.
 Every listener (and the relays the unified host starts), database and credential is
@@ -106,18 +106,20 @@ def legacy_client_directory(fixture):
     return fixture / "client"
 
 
-def host_environment(role, port, fixture, web_root):
+def host_environment(role, port, fixture, web_root, lan_port=None):
     """The environment one fixture host starts with.
 
     "unified" and "first-launch" are composed as the desktop app, each with this browser as its
     window and an old thin client's data directory to import from. The two long-lived Services
     record what reaches them, and every Service has a name of its own, so a check by name can
-    tell them apart.
+    tell them apart. With `lan_port`, the host also listens there, on loopback, and takes every
+    caller on that port for a browser on another device.
     """
     env = {**os.environ, **ANALYTICS_OFF, "BAKABASE_FEDERATION_TEST_WEB_ROOT": str(web_root),
            "DOTNET_ENVIRONMENT": "Development"}
     for key in ("BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW", "BAKABASE_CLIENT_DATA_DIR",
-                "BAKABASE_FEDERATION_TEST_REQUEST_LOG", "BAKABASE_FEDERATION_TEST_SERVER_NAME"):
+                "BAKABASE_FEDERATION_TEST_REQUEST_LOG", "BAKABASE_FEDERATION_TEST_SERVER_NAME",
+                "BAKABASE_FEDERATION_TEST_LAN_PORT", "BAKABASE_NODE_NAME"):
         env.pop(key, None)
     if role in ("unified", "first-launch"):
         # The desktop app: its own server plus the relays that manage other servers. Its window
@@ -130,6 +132,11 @@ def host_environment(role, port, fixture, web_root):
         # relay, and this device's own answers to the managed server's page.
         env["BAKABASE_FEDERATION_TEST_REQUEST_LOG"] = str(fixture / (role + "-requests.jsonl"))
     env["BAKABASE_FEDERATION_TEST_SERVER_NAME"] = "fixture-" + role
+    # The same name as a node — what library sharing and data sync call it — as a headless
+    # server names itself.
+    env["BAKABASE_NODE_NAME"] = "fixture-" + role
+    if lan_port is not None:
+        env["BAKABASE_FEDERATION_TEST_LAN_PORT"] = str(lan_port)
     return env
 
 
@@ -196,10 +203,13 @@ def main():
 
         for role in ("unified", "source"):
             port = take_port()
+            # The managed server is also what a browser on another device opens: data sync's
+            # checks of what such a browser may do (data-sync.cjs).
+            lan_port = take_port() if role == "source" else None
             directory = fixture / role
             stream = (fixture / (role + ".log")).open("w")
             streams.append(stream)
-            env = host_environment(role, port, fixture, web_root)
+            env = host_environment(role, port, fixture, web_root, lan_port)
             command = [args.dotnet, str(dll_of("Bakabase.Federation.TestHost")), str(port), str(directory), "57"]
             process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=stream,
                                        stderr=subprocess.STDOUT, start_new_session=os.name == "posix")
@@ -209,6 +219,8 @@ def main():
                            "requestLog": env["BAKABASE_FEDERATION_TEST_REQUEST_LOG"]}
             if role == "unified":
                 hosts[role]["window"] = env["BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW"]
+            if lan_port is not None:
+                hosts[role]["lan"] = f"http://127.0.0.1:{lan_port}"
         # A fresh desktop install on a machine where an old thin client had paired. The browser
         # stage starts it once that pairing is on disk, and stops it again; it runs in the
         # browser's process group, so the cleanup below reaches it too.
@@ -246,7 +258,7 @@ def main():
             if code:
                 raise AssertionError(f"Browser checks failed (exit {code}); inspect {results / 'browser.log'}")
         passed = True
-        print(f"PASS: federated browser, legacy-pairing import and server-switching flows. Results: {results}")
+        print(f"PASS: federated browser, legacy-pairing import, server-switching and data sync flows. Results: {results}")
         return 0
     except Exception as error:
         (results / "result.json").write_text(json.dumps({"passed": False, "status": "failed", "reason": str(error)}, indent=2))

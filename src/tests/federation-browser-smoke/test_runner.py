@@ -62,7 +62,8 @@ class RunnerFailureEvidenceTests(unittest.TestCase):
 
 
 KEYS = ("BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW", "BAKABASE_CLIENT_DATA_DIR",
-        "BAKABASE_FEDERATION_TEST_REQUEST_LOG", "BAKABASE_FEDERATION_TEST_SERVER_NAME")
+        "BAKABASE_FEDERATION_TEST_REQUEST_LOG", "BAKABASE_FEDERATION_TEST_SERVER_NAME",
+        "BAKABASE_FEDERATION_TEST_LAN_PORT", "BAKABASE_NODE_NAME")
 
 
 def run_with_fake_processes(root, browser_exit=0, request_log_lines=()):
@@ -146,11 +147,26 @@ class RunnerCompositionTests(unittest.TestCase):
 
     def test_servers_have_names_of_their_own(self):
         """A check by name can tell the servers apart only if the fixtures do not all carry the
-        machine's name."""
+        machine's name — as servers, and as nodes (what library sharing and data sync call them)."""
         with tempfile.TemporaryDirectory() as temp:
             hosts, _, _ = run_with_fake_processes(Path(temp))
             names = [hosts[role]["env"]["BAKABASE_FEDERATION_TEST_SERVER_NAME"] for role in ("unified", "source")]
             self.assertEqual(len(set(names)), len(names))
+            self.assertEqual(names, [hosts[role]["env"]["BAKABASE_NODE_NAME"] for role in ("unified", "source")])
+
+    def test_only_the_managed_server_answers_a_browser_on_another_device(self):
+        """The source also listens on a loopback port of its own whose callers it takes for a LAN
+        browser; the browser stage is told where. Nothing else does."""
+        with tempfile.TemporaryDirectory() as temp:
+            hosts, configs, _ = run_with_fake_processes(Path(temp))
+            source = hosts["source"]
+            lan = source["env"]["BAKABASE_FEDERATION_TEST_LAN_PORT"]
+            self.assertNotEqual(source["port"], lan)
+            self.assertNotEqual(hosts["unified"]["port"], lan)
+            self.assertEqual(f"http://127.0.0.1:{lan}", configs[0]["hosts"]["source"]["lan"])
+            self.assertNotIn("BAKABASE_FEDERATION_TEST_LAN_PORT", hosts["unified"]["env"])
+            self.assertNotIn("lan", configs[0]["hosts"]["unified"])
+            self.assertNotIn("BAKABASE_FEDERATION_TEST_LAN_PORT", configs[0]["firstLaunch"]["env"])
 
     def test_no_host_reports_to_analytics(self):
         """Every analytics key the Service reads is blank, and tracking off, for every host the
