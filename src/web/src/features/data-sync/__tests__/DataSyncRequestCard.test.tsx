@@ -103,6 +103,56 @@ describe("a request to read this device's definitions", () => {
     fireEvent.click(screen.getByTestId("data-sync-request-approve"));
     // The confirmation says it too: it only has text.
     expect(confirmation().warning).toContain("dataSync.request.claim NAS");
+    expect(screen.queryByTestId("data-sync-request-replaces")).toBeNull();
+  });
+
+  it("warns that approving replaces the access of a device that already reads under its id", () => {
+    // No claim warning: a device known by a host name is never flagged as elsewhere.
+    card(
+      request("req-in-2", "node-nas", "NAS", {
+        intent: DataSyncRequestIntent.Follow,
+        replacesExistingAccess: true,
+      }),
+    );
+
+    expect(screen.queryByTestId("data-sync-request-claim")).toBeNull();
+    expect(screen.getByTestId("data-sync-request-replaces")).toHaveTextContent(
+      "dataSync.request.replacesExisting",
+    );
+    // A Follow request reads nothing back.
+    expect(screen.getByTestId("data-sync-request-replaces")).not.toHaveTextContent(
+      "replacesExistingReadBack",
+    );
+    fireEvent.click(screen.getByTestId("data-sync-request-approve"));
+    expect(confirmation().warning).toBe(
+      "dataSync.request.from 192.168.1.40 dataSync.request.replacesExisting",
+    );
+  });
+
+  it("says receiving back reads that id from the request's address, while it is ticked", () => {
+    card(request("req-in-2", "node-nas", "NAS", { replacesExistingAccess: true }));
+    const replaces = screen.getByTestId("data-sync-request-replaces");
+
+    expect(replaces).toHaveTextContent(
+      "dataSync.request.replacesExisting dataSync.request.replacesExistingReadBack",
+    );
+    fireEvent.click(screen.getByTestId("data-sync-request-approve"));
+    expect(confirmation().warning).toContain("dataSync.request.replacesExistingReadBack");
+
+    fireEvent.click(screen.getByTestId("data-sync-request-receive-back"));
+    expect(replaces).not.toHaveTextContent("replacesExistingReadBack");
+    fireEvent.click(screen.getByTestId("data-sync-request-approve"));
+    expect(confirmation().warning).toBe(
+      "dataSync.request.from 192.168.1.40 dataSync.request.replacesExisting",
+    );
+  });
+
+  it("says nothing of replacing where no device reads under its id", () => {
+    card();
+
+    expect(screen.queryByTestId("data-sync-request-replaces")).toBeNull();
+    fireEvent.click(screen.getByTestId("data-sync-request-approve"));
+    expect(confirmation().warning).not.toContain("replacesExisting");
   });
 
   it("offers receiving back and the kinds inline, before approving", async () => {

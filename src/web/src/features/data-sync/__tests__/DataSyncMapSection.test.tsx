@@ -140,6 +140,27 @@ describe("data sync in the device map's details", () => {
     expect(screen.queryByTestId("data-sync-start")).toBeNull();
   });
 
+  it("says, on a claim, that approving replaces the access of a device that reads under its id", () => {
+    section(
+      mapNode({
+        id: "sync-request:r1",
+        name: "NAS",
+        unverified: true,
+        keys: ["request:r1"],
+        sources: {
+          syncRequests: [mapRequest("r1", "nas", "NAS", { replacesExistingAccess: true })],
+          syncOutgoing: [],
+        },
+      }),
+    );
+
+    expect(screen.getByTestId("data-sync-request-replaces")).toHaveTextContent(
+      "dataSync.request.replacesExisting",
+    );
+    fireEvent.click(screen.getByTestId("data-sync-request-approve"));
+    expect(confirmation().warning).toContain("dataSync.request.replacesExisting");
+  });
+
   it("shows nothing for a claim that asks something else", () => {
     const { container } = section(mapNode({ unverified: true, keys: ["request:s1"] }));
 

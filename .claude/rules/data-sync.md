@@ -275,6 +275,13 @@ scopes").
   (`DataSyncOfferedAddresses`) for "Try again", used only when neither `DataSyncAddress` nor
   `Address` is known, always expecting the peer's NodeId, never shown as its address, and
   cleared once a datasync address is verified.
+- **A request under a reader's NodeId says what approving takes away.** Approving revokes the
+  live `datasync.read` grant held under the NodeId the request claims, and a two-way request
+  approved to receive back also replaces how this device reads that NodeId. The claim warning
+  (`ClaimsKnownDevice`) fires only where both addresses are IP literals, so
+  `ReplacesExistingAccess` is carried on its own — on the requests listing, the map's
+  `DataSyncMapRequest` and the CLI's `requests` — and every approval surface (the card, its
+  confirmation, the CLI) says it, whatever the address says.
 
 ## Invariants — do not weaken
 
@@ -368,7 +375,7 @@ request's — and says so in its heads (`Attention.Headless`).
   `API_LISTENING_PORTS`, `ASPNETCORE_HTTP_PORTS`, then 8080). Commands: `status` (sharing,
   remote access, links with what waits on each peer, readers, requests), `share on|off`,
   `invite [--two-way]` (a code and this device's addresses), `requests` (pending ones, with
-  the claim warning), `approve <requestId> [--no-receive-back]` (a two-way request is read
+  the claim warning and the warning that approving replaces a reader's access), `approve <requestId> [--no-receive-back]` (a two-way request is read
   back unless told not to), `reject <requestId>`, `revoke <nodeId>`, and
   `pause [<nodeId>]` / `resume [<nodeId>]` (every link, or the link with that device). There
   is no CLI inbox and the CLI cannot start a link: decisions waiting on a hub are made through

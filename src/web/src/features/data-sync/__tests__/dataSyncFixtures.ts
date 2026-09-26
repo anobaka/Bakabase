@@ -216,6 +216,7 @@ export const mapRequest = (
   intent: DataSyncRequestIntent.Follow,
   expiresAt: minutesAhead(30),
   claimsKnownDevice: false,
+  replacesExistingAccess: false,
   ...patch,
 });
 

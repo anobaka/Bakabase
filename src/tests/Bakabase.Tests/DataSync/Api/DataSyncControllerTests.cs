@@ -849,6 +849,26 @@ public class DataSyncControllerTests
         Assert.IsFalse(links.Any(l => l.FullReconciliationRunning), "nothing runs any more");
     }
 
+    /// <summary>
+    /// A request on the map says what the requests listing says of it: that it claims a device this one knows at
+    /// another address, and that approving replaces the access a device known under its NodeId already has — the map
+    /// approves it too.
+    /// </summary>
+    [TestMethod]
+    public async Task The_map_says_when_approving_a_request_replaces_a_devices_access()
+    {
+        await using var h = await WorldAsync();
+        h.Grants.Requests.Add(new DataSyncAccessRequestView("req-in-nas", DataSyncRequestDirection.Incoming, "node-nas",
+            "NAS", DataSyncRequestIntent.TwoWay, "awaitingApproval", h.Clock.UtcNow.AddMinutes(10), "192.168.1.66",
+            false, null, true));
+
+        var requests = (await h.CallAsync(Callers.Loopback, c => c.GetMap(default))).Data!.Requests
+            .ToDictionary(r => r.RequestId);
+        Assert.IsTrue(requests["req-in-nas"].ReplacesExistingAccess);
+        Assert.IsFalse(requests["req-in-1"].ReplacesExistingAccess);
+        Assert.IsFalse(requests.ContainsKey("req-in-old"), "an expired request no longer waits");
+    }
+
     [TestMethod]
     public async Task A_type_change_is_previewed_with_this_devices_values_and_nothing_else_is()
     {

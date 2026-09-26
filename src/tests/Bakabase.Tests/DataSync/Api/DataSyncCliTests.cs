@@ -73,6 +73,44 @@ public class DataSyncCliTests
         StringAssert.Contains(output, "Warning: it says it comes from PC-1, which this device knows at http://192.168.1.10:5000");
     }
 
+    /// <summary>
+    /// A request under the id of a device that already reads this one says approving replaces that access, even with
+    /// no claim warning (a device known by a host name is never flagged): approving cuts that device off.
+    /// </summary>
+    [TestMethod]
+    public async Task Requests_say_when_approving_replaces_a_devices_access()
+    {
+        var api = new StubApi();
+        api.Answers["GET requests"] = """
+            [{"requestId":"r1","direction":1,"nodeId":"node-nas","nodeName":"NAS","intent":2,"status":"awaitingApproval",
+              "expiresAt":"2026-09-01 08:10:00.000","remoteAddress":"192.168.1.66","claimsKnownDevice":false,
+              "replacesExistingAccess":true},
+             {"requestId":"r2","direction":1,"nodeId":"node-pc","nodeName":"PC","intent":1,"status":"awaitingApproval",
+              "expiresAt":"2026-09-01 08:10:00.000","remoteAddress":"192.168.1.67","claimsKnownDevice":false,
+              "replacesExistingAccess":true},
+             {"requestId":"r3","direction":1,"nodeId":"node-new","nodeName":"New","intent":1,"status":"awaitingApproval",
+              "expiresAt":"2026-09-01 08:10:00.000","remoteAddress":"192.168.1.68","claimsKnownDevice":false,
+              "replacesExistingAccess":false}]
+            """;
+
+        var (exit, output, _, _) = await RunAsync(api, null, "requests");
+
+        Assert.AreEqual(0, exit);
+        var lines = output.Split(Environment.NewLine);
+        string WarningAfter(string requestId) =>
+            lines.SkipWhile(l => !l.StartsWith($"  {requestId}:")).Skip(1).TakeWhile(l => l.StartsWith("    "))
+                .FirstOrDefault() ?? string.Empty;
+
+        StringAssert.Contains(WarningAfter("r1"),
+            "Warning: a device known under the id node-nas can already read this device's definitions. " +
+            "Approving replaces that access with this request's");
+        StringAssert.Contains(WarningAfter("r1"), "--no-receive-back", "a two-way request also re-points the read-back");
+        StringAssert.Contains(WarningAfter("r2"), "the id node-pc can already read");
+        Assert.IsFalse(WarningAfter("r2").Contains("--no-receive-back"), "a Follow request reads nothing back");
+        Assert.AreEqual(string.Empty, WarningAfter("r3"));
+        Assert.IsFalse(output.Contains("it says it comes from"), "no claim warning here");
+    }
+
     [TestMethod]
     public async Task Sharing_off_says_the_variable_turns_it_on_again()
     {

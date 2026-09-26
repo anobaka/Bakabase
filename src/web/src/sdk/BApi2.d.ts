@@ -13014,6 +13014,7 @@ export interface components {
             expiresAt: string;
             claimsKnownDevice: boolean;
             knownAddress?: string;
+            replacesExistingAccess: boolean;
         };
         "Bakabase.Modules.DataSync.Services.DataSyncMapView": {
             sharingEnabled: boolean;

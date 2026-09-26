@@ -4848,6 +4848,7 @@ export interface BakabaseModulesDataSyncServicesDataSyncMapRequest {
   expiresAt: string;
   claimsKnownDevice: boolean;
   knownAddress?: string;
+  replacesExistingAccess: boolean;
 }
 
 export interface BakabaseModulesDataSyncServicesDataSyncMapView {

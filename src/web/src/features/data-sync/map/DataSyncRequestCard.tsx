@@ -22,7 +22,10 @@ import { DataSyncRequestIntent } from "@/sdk/constants";
  * One device asking to read this device's definitions — on the data sync page's Requests, and
  * on the device map for a node known only by its own request. Everything it says about itself
  * is a claim: the card shows where the request really came from, and warns when it claims to
- * be a device this one knows at another address (spec §7.2.5). Its approval options are
+ * be a device this one knows at another address (spec §7.2.5), and when a device already reads
+ * this one under the id it gives — approving replaces that device's access, and receiving back
+ * reads that id from the address the request offers. The second is said whatever the address
+ * says: a device known by a host name is never flagged as a claim. Its approval options are
  * inline, before [Approve…], because a confirmation shows text only.
  */
 
@@ -36,6 +39,8 @@ export interface DataSyncRequestLike {
   expiresAt: string;
   claimsKnownDevice: boolean;
   knownAddress?: string | null;
+  /** A device known under this id can already read this device; approving replaces its access. */
+  replacesExistingAccess: boolean;
 }
 
 export interface DataSyncRequestCardProps {
@@ -76,6 +81,15 @@ export default function DataSyncRequestCard({
         from,
       })
     : undefined;
+  const readBack = twoWay && receiveBack;
+  const replaces = request.replacesExistingAccess
+    ? [
+        t("dataSync.request.replacesExisting"),
+        readBack ? t("dataSync.request.replacesExistingReadBack") : undefined,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : undefined;
   const own = { sharingEnabled, remoteAccessMode };
   const minutes = minutesLeft(request.expiresAt, now);
 
@@ -83,12 +97,11 @@ export default function DataSyncRequestCard({
     actions.confirm({
       title: t("dataSync.request.approveTitle", { name }),
       description: text,
-      warning: [claim ?? fromText, turnsOnWarning(t, own)].filter(Boolean).join(" "),
+      warning: [claim ?? fromText, replaces, turnsOnWarning(t, own)].filter(Boolean).join(" "),
       action: async () => {
         // Remote access changes only where it is off (spec §7.2.4).
         if (sharingNeeded(own))
           await dataSyncApi.setSharing({ enabled: true, enablePairedRemoteAccess: true });
-        const readBack = twoWay && receiveBack;
         const result = await dataSyncApi.approveRequest(request.requestId, {
           receiveBack: readBack,
           kinds: readBack ? orderKinds(kinds) : undefined,
@@ -133,6 +146,14 @@ export default function DataSyncRequestCard({
           data-testid="data-sync-request-claim"
         >
           {claim}
+        </p>
+      )}
+      {replaces && (
+        <p
+          className="rounded-md bg-warning/15 p-2 text-xs text-warning-700 dark:text-warning"
+          data-testid="data-sync-request-replaces"
+        >
+          {replaces}
         </p>
       )}
       <p className="text-xs text-default-500">

@@ -271,7 +271,7 @@ public sealed class DataSyncViews
         var incoming = requests
             .Where(r => r.Direction == DataSyncRequestDirection.Incoming && IsPending(r, now))
             .Select(r => new DataSyncMapRequest(r.RequestId, r.NodeId, r.NodeName, r.RemoteAddress, r.Intent,
-                Utc(r.ExpiresAt), r.ClaimsKnownDevice, r.KnownAddress))
+                Utc(r.ExpiresAt), r.ClaimsKnownDevice, r.KnownAddress, r.ReplacesExistingAccess))
             .ToList();
 
         return new DataSyncMapView(await _grants.IsSharingEnabledAsync(ct), await _grants.GetRemoteAccessModeAsync(ct),

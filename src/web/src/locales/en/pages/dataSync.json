@@ -76,6 +76,8 @@
   "dataSync.request.twoWay": "{{name}} asks to keep definitions in step with this device, both ways. Approving lets it read this device's definitions, and this device reads its definitions in return. Its renames, its new options and its removal of options nobody uses here then apply here by themselves; anything else waits for you.",
   "dataSync.request.from": "From {{address}}. Only approve your own devices.",
   "dataSync.request.claim": "This request says it comes from {{name}}, which this device knows at {{known}}. It came from {{from}}.",
+  "dataSync.request.replacesExisting": "A device this one knows under the same ID can already read this device's definitions. Approving replaces that access with this request's: if the request is not from that device, the device loses its access.",
+  "dataSync.request.replacesExistingReadBack": "Receiving back then also reads that ID's definitions from the address this request offers, instead of from that device.",
   "dataSync.request.unknownAddress": "an unknown address",
   "dataSync.request.expiresIn": "Expires in {{count}} min.",
   "dataSync.request.expired": "Expired.",

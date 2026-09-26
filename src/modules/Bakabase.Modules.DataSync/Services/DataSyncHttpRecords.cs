@@ -71,6 +71,15 @@ public sealed record DataSyncTaskStart(string? TaskId, DataSyncProblem? Problem)
 public sealed record DataSyncPeerCandidate(string NodeId, string Name, string? Address, bool Known, bool Discovered,
     int? ContractVersion, bool? SharesDefinitions, bool WeMayRead, bool TheyMayRead, int? LinkId, string? ConnectionState);
 
+/// <param name="ClaimsKnownDevice">
+/// The request names a device this one knows, and came from another address (both IP literals, see
+/// <c>FederationDataSyncGrants.IsElsewhere</c>).
+/// </param>
+/// <param name="ReplacesExistingAccess">
+/// Incoming and waiting: the NodeId it claims already holds a live grant to read this device's definitions, which
+/// approving replaces with the request's; a two-way request approved to receive back also replaces how this device
+/// reads that NodeId. Said wherever a request is approved, whatever its address says.
+/// </param>
 public sealed record DataSyncAccessRequestView(string RequestId, DataSyncRequestDirection Direction, string NodeId,
     string NodeName, DataSyncRequestIntent Intent, string Status, DateTime ExpiresAt, string? RemoteAddress,
     bool ClaimsKnownDevice, string? KnownAddress, bool ReplacesExistingAccess);
@@ -166,8 +175,13 @@ public sealed record DataSyncMapPeer(string NodeId, string Name, int? LinkId, Da
     bool FullReconciliationRunning = false, string? LastErrorDetail = null);
 
 /// <summary>An incoming datasync request: a claim, drawn on its own unverified node (M5).</summary>
+/// <param name="ReplacesExistingAccess">
+/// A device known under the NodeId the request claims can already read this device's definitions, and approving
+/// replaces that access with the request's (as on <see cref="DataSyncAccessRequestView"/>).
+/// </param>
 public sealed record DataSyncMapRequest(string RequestId, string NodeId, string NodeName, string? RemoteAddress,
-    DataSyncRequestIntent Intent, DateTime ExpiresAt, bool ClaimsKnownDevice, string? KnownAddress);
+    DataSyncRequestIntent Intent, DateTime ExpiresAt, bool ClaimsKnownDevice, string? KnownAddress,
+    bool ReplacesExistingAccess = false);
 
 /// <summary>This device's own link to a device it has no datasync access to yet, or whose request ended (M5: never vanishes).</summary>
 public sealed record DataSyncMapOutgoing(int LinkId, string NodeId, string NodeName, string? Address,

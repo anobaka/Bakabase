@@ -296,6 +296,40 @@ public sealed class DataSyncScopeServiceTests
         Assert.AreEqual((false, (string?)null), (requests["stranger"].ClaimsKnownDevice, requests["stranger"].KnownAddress));
     }
 
+    /// <summary>
+    /// A request under the NodeId of a device that already reads this one says approving replaces that access, even
+    /// where nothing about its address is flagged (a device known by a host name never is): approving revokes the
+    /// reader's grant. Once nothing reads under that id, there is nothing to replace.
+    /// </summary>
+    [TestMethod]
+    public async Task ARequestUnderTheIdOfAReaderSaysApprovingReplacesItsAccess()
+    {
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
+        await nas.Grants.SetSharingEnabledAsync(true, false, default);
+        var code = await nas.Grants.CreateInvitationAsync(new DataSyncInvitationInput(false), default);
+        await desk.Grants.RequestAccessAsync(new DataSyncAccessRequestInput(null, nas.Address, code.Code,
+            DataSyncRequestIntent.Follow), default);
+        Assert.IsTrue((await nas.Grants.GetGrantsAsync(default)).Any(g => g.NodeId == "node-desk"));
+
+        await nas.Peers.SubmitDataSyncRequestAsync(new NodeDataSyncPairRequest("node-desk", "Desk", "same-id",
+            NodeRequestSignature.RandomToken(), NodeDataSyncIntents.TwoWay), "127.0.0.1");
+        await nas.Peers.SubmitDataSyncRequestAsync(new NodeDataSyncPairRequest("node-new", "New", "stranger",
+            NodeRequestSignature.RandomToken(), NodeDataSyncIntents.Follow), "127.0.0.1");
+
+        async Task<Dictionary<string, DataSyncAccessRequestView>> IncomingAsync() =>
+            (await nas.Grants.GetRequestsAsync(default))
+            .Where(r => r.Direction == DataSyncRequestDirection.Incoming).ToDictionary(r => r.RequestId);
+
+        var requests = await IncomingAsync();
+        Assert.AreEqual((true, false), (requests["same-id"].ReplacesExistingAccess, requests["same-id"].ClaimsKnownDevice),
+            "Only this says approving cuts the reader off.");
+        Assert.IsFalse(requests["stranger"].ReplacesExistingAccess);
+
+        await nas.Grants.RevokeAsync("node-desk", default);
+        Assert.IsFalse((await IncomingAsync())["same-id"].ReplacesExistingAccess);
+    }
+
     [TestMethod]
     public void WhatAPeerAnsweredReadsAsDataSyncErrors()
     {

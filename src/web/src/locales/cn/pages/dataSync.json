@@ -72,6 +72,8 @@
   "dataSync.request.twoWay": "{{name}} 请求与本机双向保持定义一致。批准后，它可以读取本机的定义，本机也会读取它的定义。之后它的改名、新增的选项，以及删除本机没有用到的选项，都会在本机自动生效；其他更改会等你决定。",
   "dataSync.request.from": "来自 {{address}}。只批准你自己的设备。",
   "dataSync.request.claim": "此请求自称来自 {{name}}（本机所知的地址是 {{known}}），实际来自 {{from}}。",
+  "dataSync.request.replacesExisting": "本机已知的一台使用相同 ID 的设备已经可以读取本机的定义。批准后，其访问权限将被此请求替换；如果此请求并非来自那台设备，那台设备将失去访问权限。",
+  "dataSync.request.replacesExistingReadBack": "同时接收对方的定义时，本机还会改为从此请求提供的地址读取该 ID 的定义，而不再从那台设备读取。",
   "dataSync.request.unknownAddress": "未知地址",
   "dataSync.request.expiresIn": "{{count}} 分钟后过期。",
   "dataSync.request.expired": "已过期。",

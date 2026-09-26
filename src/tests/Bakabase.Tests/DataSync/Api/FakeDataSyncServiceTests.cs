@@ -73,6 +73,7 @@ public class FakeDataSyncServiceTests
         CollectionAssert.AreEquivalent(new[] {"awaitingApproval", "rejected", "expired"},
             map.Outgoing.Select(o => o.Outcome).ToArray());
         Assert.IsTrue(map.Requests.Any(r => r.ClaimsKnownDevice));
+        Assert.IsTrue(map.Requests.Any(r => r.ReplacesExistingAccess));
     }
 
     [TestMethod]

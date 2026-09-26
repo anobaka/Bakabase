@@ -1190,6 +1190,7 @@ describe("device map model: data sync", () => {
             intent: DataSyncRequestIntent.Follow,
             expiresAt: inTenMinutes(),
             claimsKnownDevice: true,
+            replacesExistingAccess: false,
           },
         ],
       }),

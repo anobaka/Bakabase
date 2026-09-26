@@ -28,8 +28,9 @@ public static class DataSyncCli
                                          with pairing required when it is off)
           invite [--two-way]             One-time code for another device (also prints this device's addresses)
           requests                       Pending requests: direction, device name, the address it came from, the claim warning
-                                         when it names a device this one knows at another address, and what it asks for
-                                         ("read this device's definitions" / "keep in step both ways")
+                                         when it names a device this one knows at another address, a warning when a device
+                                         already reads this one under its id (approving replaces that access), and what it
+                                         asks for ("read this device's definitions" / "keep in step both ways")
           approve <requestId> [--no-receive-back]   Approve; two-way requests also sync back unless --no-receive-back
           reject <requestId>             Reject a request
           revoke <nodeId>                Stop a device from reading this device's definitions
@@ -253,6 +254,19 @@ public static class DataSyncCli
                         $"    Warning: it says it comes from {Text(request, "nodeName")}, which this device knows at " +
                         $"{Text(request, "knownAddress")}. Only approve your own devices.");
                 }
+
+                // Said whatever the address says: a device known by a host name is never flagged as a claim above.
+                if (incoming && Flag(request, "replacesExistingAccess"))
+                {
+                    await output.WriteLineAsync(
+                        $"    Warning: a device known under the id {Text(request, "nodeId")} can already read this " +
+                        "device's definitions. Approving replaces that access with this request's: if the request is " +
+                        "not from that device, the device loses its access." +
+                        (twoWay
+                            ? " Unless approved with --no-receive-back, this device then also reads that id's " +
+                              "definitions from the address this request offers, instead of from that device."
+                            : string.Empty));
+                }
             }
 
             return 0;
@@ -329,6 +343,11 @@ public static class DataSyncCli
         value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
+
+    /// <summary>True only where the field is there and true.</summary>
+    private static bool Flag(JsonElement element, string name) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) &&
+        value.ValueKind == JsonValueKind.True;
 
     /// <summary>Server times are UTC even without a zone (F70).</summary>
     private static string Time(JsonElement element, string name) =>

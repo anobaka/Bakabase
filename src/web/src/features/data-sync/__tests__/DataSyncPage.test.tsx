@@ -296,6 +296,24 @@ describe("the page", () => {
     expect(screen.queryByTestId("data-sync-requests")).toBeNull();
   });
 
+  it("says on a request that approving replaces the access of a device already reading under its id", async () => {
+    vi.mocked(dataSyncApi.requests).mockResolvedValue([
+      request("req-in-1", "node-nas", "NAS", { replacesExistingAccess: true }),
+      request("req-in-2", "node-newpc", "New PC"),
+    ]);
+    renderPage();
+    await loaded();
+
+    const cards = screen.getAllByTestId("data-sync-request-card");
+
+    expect(cards.map((card) => card.getAttribute("data-request"))).toEqual([
+      "req-in-1",
+      "req-in-2",
+    ]);
+    expect(within(cards[0]).getByTestId("data-sync-request-replaces")).toBeInTheDocument();
+    expect(within(cards[1]).queryByTestId("data-sync-request-replaces")).toBeNull();
+  });
+
   it("docks the details beside the diagram at 1536 px and wider", async () => {
     renderPage();
     await loaded();

@@ -61,7 +61,7 @@ public sealed class FakeDataSyncService : IDataSyncService
             Links.Select(ToMapPeer).ToList(),
             Requests.Where(r => r.Direction == DataSyncRequestDirection.Incoming)
                 .Select(r => new DataSyncMapRequest(r.RequestId, r.NodeId, r.NodeName, r.RemoteAddress, r.Intent,
-                    r.ExpiresAt, r.ClaimsKnownDevice, r.KnownAddress))
+                    r.ExpiresAt, r.ClaimsKnownDevice, r.KnownAddress, r.ReplacesExistingAccess))
                 .ToList(),
             [
                 new DataSyncMapOutgoing(2, "node-pc2", "PC-2", "192.168.1.20:34567", DataSyncLinkState.AwaitingAccess,
