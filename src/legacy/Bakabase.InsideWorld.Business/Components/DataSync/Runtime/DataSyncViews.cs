@@ -140,8 +140,6 @@ public sealed class DataSyncViews
                                       l.LastErrorCode is null && snapshot.OpenItemsOf(l.Id) == 0);
         var needThere = links.Count(l => l.GetPeerAttention() is { OpenDecisions: > 0 });
         var lastSynced = snapshot.Links.Select(l => l.LastSyncedAtUtc).Where(t => t is not null).Max();
-        var failing = links.Where(l => l.LastErrorCode is not null)
-            .OrderByDescending(l => l.LastAttemptAtUtc ?? DateTime.MinValue).FirstOrDefault();
 
         DataSyncStatusLevel level;
         if (links.Count == 0 && open == 0 && snapshot.Local?.RestoreReason is null) level = DataSyncStatusLevel.Off;
@@ -150,18 +148,31 @@ public sealed class DataSyncViews
         else if (links.Any(l => l.State == DataSyncLinkState.ThisTooOld)) level = DataSyncStatusLevel.UpdateNeeded;
         else if (links.Any(IsFailed)) level = DataSyncStatusLevel.Failed;
         else if (links.Any(l => l.State == DataSyncLinkState.Paused)) level = DataSyncStatusLevel.Paused;
-        else if (links.Any(l => l.LastErrorCode is not null && OfflineCodes.Contains(l.LastErrorCode)))
-            level = DataSyncStatusLevel.Offline;
+        else if (links.Any(IsAway)) level = DataSyncStatusLevel.Offline;
         else if (syncing) level = DataSyncStatusLevel.Syncing;
         else level = DataSyncStatusLevel.InStep;
 
-        return new DataSyncStatusView(level, open, links.Count, inStep, needThere, Utc(lastSynced),
-            failing?.LastErrorCode);
+        // The reason names the error that set the level, never a more recent one of another kind on another link:
+        // "Sync failed: {reason}" is never "the other device could not be reached".
+        var failing = level switch
+        {
+            DataSyncStatusLevel.Failed => links.Where(IsFailed),
+            DataSyncStatusLevel.Offline => links.Where(IsAway),
+            _ => links.Where(l => l.LastErrorCode is not null),
+        };
+        var lastErrorCode = failing.OrderByDescending(l => l.LastAttemptAtUtc ?? DateTime.MinValue)
+            .FirstOrDefault()?.LastErrorCode;
+
+        return new DataSyncStatusView(level, open, links.Count, inStep, needThere, Utc(lastSynced), lastErrorCode);
     }
 
     /// <summary>A failure that is not the peer being away: an apply or a fetch that went wrong, or an unusable answer.</summary>
     private static bool IsFailed(DataSyncLinkDbModel link) =>
         link.LastErrorCode is { } code && FailureCodes.Contains(code);
+
+    /// <summary>The peer was away the last time: unreachable or busy (§8.2).</summary>
+    private static bool IsAway(DataSyncLinkDbModel link) =>
+        link.LastErrorCode is { } code && OfflineCodes.Contains(code);
 
     /// <summary>Whether a data sync task is running or waiting to write.</summary>
     public bool IsSyncing()
@@ -220,7 +231,7 @@ public sealed class DataSyncViews
                 Utc(link?.LastSyncedAtUtc), link is null ? 0 : snapshot.OpenItemsOf(link.Id), link?.GetPeerAttention(),
                 link?.ReadBackDeclined ?? false, link?.LastErrorCode, link?.GetKinds() ?? [], linkCounts.Excluded,
                 linkCounts.Held, linkCounts.MissingAtPeer, link?.Initiator, Utc(link?.GetStartAnywayAt()),
-                link is not null && IsFullReconciliationRunning(link.Id)));
+                link is not null && IsFullReconciliationRunning(link.Id), link?.LastErrorDetail));
         }
 
         var incoming = requests

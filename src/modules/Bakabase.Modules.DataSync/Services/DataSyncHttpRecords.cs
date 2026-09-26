@@ -24,7 +24,12 @@ public sealed record DataSyncStatusView(DataSyncStatusLevel Level, int OpenItems
     int PeersNeedingDecisions /* sources whose attention shows open decisions, §7.5.1 */,
     DateTime? LastSyncedAt, string? LastErrorCode);
 
-public sealed record DataSyncSharingInput(bool Enabled, bool EnablePairedRemoteAccess = false,
+/// <param name="Enabled">
+/// Definitions sharing on or off; null leaves it as it is, so a change of <paramref name="NewDefinitionsStayLocal"/>
+/// alone never sends back a sharing value read before sharing changed elsewhere.
+/// </param>
+/// <param name="EnablePairedRemoteAccess">With <c>Enabled: true</c> only: remote access, pairing required, if off.</param>
+public sealed record DataSyncSharingInput(bool? Enabled = null, bool EnablePairedRemoteAccess = false,
     bool? NewDefinitionsStayLocal = null);
 
 /// <param name="StartAnywayAt">WaitingForPeerReview only: from when [Start anyway] is offered (§8.3); UTC.</param>
@@ -141,8 +146,8 @@ public sealed record DataSyncMapView(bool SharingEnabled, RemoteAccessMode Remot
 /// <summary>
 /// One device on the map's sync lines (§11.1). The trailing members say what the link's details on the /data-sync
 /// page say, as <see cref="DataSyncLinkView"/> does: the definitions skipped, withheld and no longer offered by the
-/// peer, who started the link (null without one), when [Start anyway] is offered, and whether a full reconciliation
-/// runs.
+/// peer, who started the link (null without one), when [Start anyway] is offered, whether a full reconciliation
+/// runs, and the error's detail (for <c>ReadBackFailed</c>, the peer error code that says why).
 /// </summary>
 public sealed record DataSyncMapPeer(string NodeId, string Name, int? LinkId, DataSyncLinkMode Mode, DataSyncLinkMode LastMode,
     DataSyncLinkState? State, DataSyncPauseReason? PausedReason, bool Receiving, bool ReceivingPending,
@@ -150,7 +155,7 @@ public sealed record DataSyncMapPeer(string NodeId, string Name, int? LinkId, Da
     DateTime? LastSyncedAt, int OpenItems, DataSyncSourceAttention? Attention, bool ReadBackDeclined,
     string? LastErrorCode, IReadOnlyList<string> Kinds, int ExcludedCount = 0, int HeldCount = 0,
     int MissingAtPeerCount = 0, DataSyncLinkInitiator? Initiator = null, DateTime? StartAnywayAt = null,
-    bool FullReconciliationRunning = false);
+    bool FullReconciliationRunning = false, string? LastErrorDetail = null);
 
 /// <summary>An incoming datasync request: a claim, drawn on its own unverified node (M5).</summary>
 public sealed record DataSyncMapRequest(string RequestId, string NodeId, string NodeName, string? RemoteAddress,

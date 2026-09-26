@@ -8,6 +8,7 @@ import { dataSyncApi } from "../api";
 import { minutesLeft } from "../times";
 import {
   dataSyncKinds,
+  failureReason,
   orderKinds,
   sharingNeeded,
   toggleKind,
@@ -87,19 +88,24 @@ export default function DataSyncRequestCard({
         // Remote access changes only where it is off (spec §7.2.4).
         if (sharingNeeded(own))
           await dataSyncApi.setSharing({ enabled: true, enablePairedRemoteAccess: true });
+        const readBack = twoWay && receiveBack;
         const result = await dataSyncApi.approveRequest(request.requestId, {
-          receiveBack: twoWay && receiveBack,
-          kinds: twoWay && receiveBack ? orderKinds(kinds) : undefined,
+          receiveBack: readBack,
+          kinds: readBack ? orderKinds(kinds) : undefined,
         });
 
-        // The card goes with the request: what the approval said stays with the host.
+        // The card goes with the request: what the approval said stays with the host. Both ways
+        // only once this device reads the other back; a read-back that failed says why (the link
+        // made for it carries the reason, spec §7.2.4) and is tried again from its details.
         actions.setNotice(
-          t(
-            result.readBackGranted || (twoWay && receiveBack)
-              ? "dataSync.request.approvedBothWays"
-              : "dataSync.request.approved",
-            { name },
-          ),
+          result.readBackGranted
+            ? t("dataSync.request.approvedBothWays", { name })
+            : readBack
+              ? t("dataSync.request.approvedReadBackFailed", {
+                  name,
+                  reason: failureReason(t, result.createdLink?.lastErrorDetail ?? undefined),
+                })
+              : t("dataSync.request.approved", { name }),
         );
       },
       refresh: ["dataSync", "sharing"],

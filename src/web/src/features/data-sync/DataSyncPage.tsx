@@ -358,11 +358,6 @@ function DataSync() {
         </div>
       </header>
 
-      {overview?.status.lastErrorCode === "notAvailable" && (
-        <p className="rounded-lg bg-default-100 p-3 text-sm" data-testid="data-sync-not-in-build">
-          {t("dataSync.notAvailableYet")}
-        </p>
-      )}
       {(overview?.restorePending || query.restore) && (
         <div ref={restoreSection}>
           <RestorePanel actions={actions} asked={query.restore} version={data.version} />

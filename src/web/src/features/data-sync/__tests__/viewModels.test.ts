@@ -354,9 +354,17 @@ describe("the lines a link is drawn with", () => {
       DataSyncLinkState.PeerRemoteAccessOff,
     ])
       expect(syncIssueOf(peerOf({ state }))).toBe("syncAccessLost");
-    expect(syncIssueOf(peerOf({ lastErrorCode: "InvalidResponse" }))).toBe("syncFailed");
-    expect(syncIssueOf(peerOf({ lastErrorCode: "Unreachable" }))).toBeUndefined();
-    expect(syncIssueOf(peerOf({ peerOnline: false, lastErrorCode: "Busy" }))).toBeUndefined();
+    // As the server sends a failure: every failure counts, so the peer is never "online" with one.
+    for (const lastErrorCode of ["ApplyFailed", "FetchFailed", "InvalidResponse", "TooLarge"])
+      expect(syncIssueOf(peerOf({ peerOnline: false, lastErrorCode })), lastErrorCode).toBe(
+        "syncFailed",
+      );
+    for (const lastErrorCode of ["Unreachable", "Busy"])
+      expect(syncIssueOf(peerOf({ peerOnline: false, lastErrorCode })), lastErrorCode).toBe(
+        undefined,
+      );
+    // After a restart, until the first answer: nothing is wrong.
+    expect(syncIssueOf(peerOf({ peerOnline: false }))).toBeUndefined();
     expect(syncIssueOf(peerOf())).toBeUndefined();
   });
 });
@@ -378,14 +386,33 @@ describe("the status catalogue", () => {
   });
 
   it("says an offline device grey, never as a failure", () => {
-    expect(statusOf({ peerOnline: false, lastErrorCode: "Unreachable" })).toMatchObject({
-      code: "Offline",
-      tone: "default",
-    });
-    expect(statusOf({ lastErrorCode: "InvalidResponse" })).toMatchObject({
-      code: "Failed",
-      tone: "danger",
-      text: "dataSync.status.Failed dataSync.peerError.InvalidResponse",
+    for (const lastErrorCode of ["Unreachable", "Busy"])
+      expect(statusOf({ peerOnline: false, lastErrorCode }), lastErrorCode).toMatchObject({
+        code: "Offline",
+        tone: "default",
+        text: "dataSync.status.Offline NAS dataSync.time.minutes 5",
+      });
+  });
+
+  it("says a failure as one, with its reason, as the server sends it", () => {
+    for (const lastErrorCode of ["ApplyFailed", "FetchFailed", "InvalidResponse"])
+      expect(statusOf({ peerOnline: false, lastErrorCode }), lastErrorCode).toMatchObject({
+        code: "Failed",
+        tone: "danger",
+        text: `dataSync.status.Failed dataSync.peerError.${lastErrorCode}`,
+      });
+    // Words of its own, never the exception text the detail carries.
+    expect(
+      statusOf({ peerOnline: false, lastErrorCode: "ApplyFailed", lastErrorDetail: "disk full" })
+        .text,
+    ).toBe("dataSync.status.Failed dataSync.peerError.ApplyFailed");
+  });
+
+  it("says a link in step after a restart, before its first answer", () => {
+    // No head answered in this process yet: `peerOnline` is false with no error.
+    expect(statusOf({ peerOnline: false })).toMatchObject({
+      code: "InStep",
+      text: "dataSync.status.InStep dataSync.time.minutes 5",
     });
   });
 
@@ -440,11 +467,14 @@ describe("the status catalogue", () => {
   });
 
   it("says reading the other device back failed, and why — never that it waits for an approval", () => {
+    // As the server writes it: the code, and the peer error code that says why as its detail.
     const failed = {
       state: DataSyncLinkState.AwaitingAccess,
       mode: DataSyncLinkMode.TwoWay,
       initiator: DataSyncLinkInitiator.Peer,
-      lastErrorCode: "Unreachable",
+      lastErrorCode: "ReadBackFailed",
+      lastErrorDetail: "Unreachable",
+      peerOnline: false,
     };
 
     expect(statusOf(failed)).toMatchObject({
@@ -452,6 +482,13 @@ describe("the status catalogue", () => {
       tone: "danger",
       text: "dataSync.status.ReadBackFailed NAS dataSync.peerError.Unreachable",
     });
+    expect(statusOf({ ...failed, lastErrorDetail: "InvitationInvalid" }).text).toBe(
+      "dataSync.status.ReadBackFailed NAS dataSync.peerError.InvitationInvalid",
+    );
+    // A detail that says nothing known: the general words, never the code the link carries.
+    expect(statusOf({ ...failed, lastErrorDetail: undefined }).text).toBe(
+      "dataSync.status.ReadBackFailed NAS dataSync.peerError.other ?",
+    );
     expect(syncIssueOf(peerOf(failed))).toBe("syncFailed");
     expect(peerOf(failed).outcome).toBeUndefined();
     // Waiting for its own request: the ordinary line.
@@ -465,11 +502,15 @@ describe("the status catalogue", () => {
         state: DataSyncLinkState.AwaitingAccess,
         mode: DataSyncLinkMode.TwoWay,
         initiator: DataSyncLinkInitiator.Peer,
-        lastErrorCode: "Unreachable",
+        lastErrorCode: "ReadBackFailed",
+        lastErrorDetail: "Unreachable",
       }),
     )!;
 
-    expect(linkStatus(keyT, onMap, NOW).code).toBe("ReadBackFailed");
+    expect(linkStatus(keyT, onMap, NOW)).toMatchObject({
+      code: "ReadBackFailed",
+      text: "dataSync.status.ReadBackFailed NAS dataSync.peerError.Unreachable",
+    });
     const asked = syncPeerOfRecords(
       mapPeer("node-nas", "NAS", {
         state: DataSyncLinkState.AwaitingAccess,

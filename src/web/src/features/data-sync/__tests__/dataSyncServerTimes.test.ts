@@ -84,6 +84,7 @@ describe("data sync: times the server writes without a zone", () => {
     const peer = syncPeerFromLink(
       link(1, "node-nas", "NAS", {
         peerOnline: false,
+        lastErrorCode: "Unreachable",
         lastSyncedAt: naked(NOW - 2 * 60 * MINUTE),
       }),
     );

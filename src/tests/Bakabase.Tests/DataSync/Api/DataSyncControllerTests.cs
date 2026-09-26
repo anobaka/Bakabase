@@ -356,6 +356,12 @@ public class DataSyncControllerTests
         Assert.AreEqual(0, h.Grants.Changes.Count, "no access changed");
         Assert.AreEqual(linkCount, h.Store.All().Count, "no link row was made");
 
+        // "Share new definitions automatically" alone leaves sharing as it is, so it is open to it whatever sharing is.
+        Assert.IsNull((await h.CallAsync(browser, c => c.SetSharing(
+            new DataSyncSharingInput(NewDefinitionsStayLocal: true), default))).Data);
+        Assert.IsTrue(h.Store.LocalState!.NewDefinitionsStayLocal);
+        Assert.AreEqual(0, h.Grants.Changes.Count, "sharing was left as it is");
+
         // Shutting access off stays open to it.
         Assert.IsNull((await h.CallAsync(browser, c => c.SetSharing(new DataSyncSharingInput(false), default))).Data);
         Assert.IsNull((await h.CallAsync(browser, c => c.RevokeReader("node-nas", default))).Data);
@@ -889,6 +895,64 @@ public class DataSyncControllerTests
 
         var readers = (await h.CallAsync(Callers.Loopback, c => c.GetReaders(default))).Data!;
         Assert.AreEqual("NAS", readers.Single().Name);
+    }
+
+    /// <summary>
+    /// The indicator's reason names the error that set its level (§11.6), never a more recent one of another kind on
+    /// another link: "Sync failed" is never followed by "the other device could not be reached".
+    /// </summary>
+    [TestMethod]
+    public async Task The_status_names_the_error_that_set_its_level()
+    {
+        await using var h = await DataSyncApiHarness.CreateAsync();
+        var failed = h.AddLink("node-nas", l =>
+        {
+            l.ConsecutiveFailures = 1;
+            l.LastErrorCode = DataSyncLinkService.ApplyFailed;
+            l.LastErrorDetail = "disk full";
+            l.LastAttemptAtUtc = h.Clock.UtcNow.AddMinutes(-2);
+        });
+        var away = h.AddLink("node-pc", l =>
+        {
+            l.ConsecutiveFailures = 3;
+            l.LastErrorCode = nameof(DataSyncPeerErrorCode.Unreachable);
+            l.LastAttemptAtUtc = h.Clock.UtcNow.AddMinutes(-1);
+        });
+        h.AddLink("node-approver", l =>
+        {
+            l.State = DataSyncLinkState.AwaitingAccess;
+            l.Initiator = DataSyncLinkInitiator.Peer;
+            l.LastErrorCode = DataSyncLinkService.ReadBackFailed;
+            l.LastErrorDetail = nameof(DataSyncPeerErrorCode.Unreachable);
+            l.LastAttemptAtUtc = h.Clock.UtcNow;
+        });
+
+        async Task<DataSyncStatusView> StatusAsync() =>
+            (await h.CallAsync(Callers.Loopback, c => c.GetOverview(default))).Data!.Status;
+
+        var status = await StatusAsync();
+        Assert.AreEqual(DataSyncStatusLevel.Failed, status.Level);
+        Assert.AreEqual(DataSyncLinkService.ApplyFailed, status.LastErrorCode);
+
+        // Without the failure, the device away sets the level, and names its own error.
+        h.Store.Edit(failed.Id, l =>
+        {
+            l.LastErrorCode = null;
+            l.LastErrorDetail = null;
+            l.ConsecutiveFailures = 0;
+        });
+        status = await StatusAsync();
+        Assert.AreEqual(DataSyncStatusLevel.Offline, status.Level);
+        Assert.AreEqual(nameof(DataSyncPeerErrorCode.Unreachable), status.LastErrorCode);
+
+        // The map carries why reading the approver back failed, as the link view does.
+        var map = (await h.CallAsync(Callers.Loopback, c => c.GetMap(default))).Data!;
+        var approver = map.Peers.Single(p => p.NodeId == "node-approver");
+        Assert.AreEqual((DataSyncLinkService.ReadBackFailed, nameof(DataSyncPeerErrorCode.Unreachable)),
+            (approver.LastErrorCode, approver.LastErrorDetail));
+        Assert.IsNull(map.Peers.Single(p => p.NodeId == "node-nas").LastErrorDetail);
+        Assert.IsFalse((await h.CallAsync(Callers.Loopback, c => c.GetLinks(default))).Data!
+            .Single(l => l.Id == away.Id).PeerOnline, "a device away is not online");
     }
 
     [TestMethod]

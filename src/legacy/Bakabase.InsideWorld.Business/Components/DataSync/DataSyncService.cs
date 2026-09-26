@@ -89,8 +89,9 @@ public sealed class DataSyncService : IDataSyncService
     public Task<DataSyncMapView> GetMapAsync(CancellationToken ct) => Views.GetMapAsync(ct);
 
     /// <summary>
-    /// The switch (§7.1.3), never gated (it is federation state, §10.1), so turning sharing off always works, even
-    /// while an apply runs (§7.1.5). With <c>EnablePairedRemoteAccess</c>, remote access is turned on with pairing
+    /// The switch (§7.1.3), when <c>Enabled</c> is given (null leaves it as it is), never gated (it is federation
+    /// state, §10.1), so turning sharing off always works, even while an apply runs (§7.1.5). With
+    /// <c>EnablePairedRemoteAccess</c> and <c>Enabled: true</c>, remote access is turned on with pairing
     /// required only when it is Disabled. "Share new definitions automatically" is a local state write, so only that
     /// part takes the gate, after the switch (a departure from §10.1's "no", which cannot order it with Refresh): while
     /// the gate is busy the switch still applies and the answer is <c>Busy</c> with the detail
@@ -99,13 +100,16 @@ public sealed class DataSyncService : IDataSyncService
     /// </summary>
     public async Task<DataSyncProblem?> SetSharingAsync(DataSyncSharingInput input, CancellationToken ct)
     {
-        try
+        if (input.Enabled is { } enabled)
         {
-            await Grants.SetSharingEnabledAsync(input.Enabled, input.EnablePairedRemoteAccess, ct);
-        }
-        catch (DataSyncProblemException e)
-        {
-            return e.Problem;
+            try
+            {
+                await Grants.SetSharingEnabledAsync(enabled, input.EnablePairedRemoteAccess, ct);
+            }
+            catch (DataSyncProblemException e)
+            {
+                return e.Problem;
+            }
         }
 
         DataSyncProblem? problem = null;

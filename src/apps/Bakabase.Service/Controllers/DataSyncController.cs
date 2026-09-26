@@ -67,12 +67,15 @@ public class DataSyncController(IDataSyncService service) : Controller
     public async Task<SingletonResponse<DataSyncMapView>> GetMap(CancellationToken ct) =>
         new(await service.GetMapAsync(ct));
 
-    /// <summary>Turning sharing on creates access; turning it off never needs more than the gate.</summary>
+    /// <summary>
+    /// Turning sharing on creates access; turning it off, or leaving it as it is while "share new definitions
+    /// automatically" changes, never needs more than the gate.
+    /// </summary>
     [HttpPut("sharing")]
     [SwaggerOperation(OperationId = "SetDataSyncSharing")]
     public async Task<SingletonResponse<DataSyncProblem>> SetSharing([FromBody] DataSyncSharingInput input,
         CancellationToken ct) =>
-        new(input.Enabled && !MayCreateAccess ? NotAllowed : await service.SetSharingAsync(input, ct));
+        new(input.Enabled == true && !MayCreateAccess ? NotAllowed : await service.SetSharingAsync(input, ct));
 
     [HttpGet("peers")]
     [SwaggerOperation(OperationId = "GetDataSyncPeers")]

@@ -343,6 +343,27 @@ describe("the page", () => {
     expect(screen.getAllByText("dataSync.manageElsewhere").length).toBeGreaterThan(0);
   });
 
+  it("changes sharing new definitions alone, never sending back what it read of sharing", async () => {
+    vi.mocked(dataSyncApi.overview).mockResolvedValue(
+      overview({ canManageSharing: false, sharingEnabled: true, newDefinitionsStayLocal: false }),
+    );
+    renderPage();
+    await loaded();
+
+    const shareNew = screen.getByTestId("data-sync-new-definitions");
+
+    // Open to a window that may not create access: it neither turns sharing on nor widens it.
+    expect(shareNew).toBeEnabled();
+    await act(async () => {
+      fireEvent.click(shareNew);
+    });
+    expect(dataSyncApi.setSharing).toHaveBeenCalledWith({
+      enablePairedRemoteAccess: false,
+      newDefinitionsStayLocal: true,
+    });
+    expect(vi.mocked(dataSyncApi.setSharing).mock.calls[0][0]).not.toHaveProperty("enabled");
+  });
+
   it("hides them from an Unrestricted browser before the server says so", async () => {
     asWindow("unrestricted");
     renderPage();

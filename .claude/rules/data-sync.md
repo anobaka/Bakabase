@@ -172,7 +172,9 @@ scopes").
   approving a request takes **no** gate for its link row (so an approval never waits behind an
   apply), and `PUT /data-sync/sharing` takes it for `newDefinitionsStayLocal` only, after the
   switch — while the gate is busy the switch still applies and the answer is `Busy` with the
-  detail `newDefinitionsStayLocal`. Withdrawing a request is not gated either. Link rows are
+  detail `newDefinitionsStayLocal`. Its `enabled` is optional: without it the switch is left as
+  it is, which is how "share new definitions automatically" is sent, so it never sends back a
+  sharing value read before sharing changed elsewhere, and only `enabled: true` widens access. Withdrawing a request is not gated either. Link rows are
   ordered by `DataSyncLinkService`'s lock plus one `BEGIN IMMEDIATE` transaction per write, not
   by the gate: the apply runner reads a link row inside the write transaction that writes it
   back, never writes back a row it read before that transaction began, and re-checks "Pause
@@ -305,6 +307,12 @@ scopes").
   resolved together are never split across pages. Views count bases with
   `IDataSyncStore.CountBasesAsync`, never by reading every base.
 - **`/data-sync` times are UTC**, read on the web through `parseServerTime`.
+- **Offline is said by the error alone.** `Unreachable` and `Busy` are offline, grey
+  (`DataSyncViews.OfflineCodes`, the web's `offlineErrors`); `ApplyFailed`, `FetchFailed`,
+  `InvalidResponse` (with Retry) and `TooLarge` (a line of its own) are failures — on the page,
+  the map and the indicator alike. A link's `peerOnline` is false after every restart until its first head and
+  after every failure, so it never makes a device offline. The indicator's reason is the error
+  of a link that set its level; a failed read-back's reason is its `LastErrorDetail`.
 - **Copy.** The feature is 数据同步 / Data sync; never 配置同步, 配置包 or 分享给他人. “Needs
   you” is 待你决定 (待处理 is taken). Device names are never quoted — no «», “ ” or 「」
   around `{{name}}`. No copy (help, menu, page, notice, legend, rule text) describes a kind or

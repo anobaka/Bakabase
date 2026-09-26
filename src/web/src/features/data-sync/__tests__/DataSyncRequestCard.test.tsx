@@ -6,9 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DataSyncRequestCard from "../map/DataSyncRequestCard";
 import { dataSyncApi } from "../api";
 
-import { NOW, recordingActions, request } from "./dataSyncFixtures";
+import { link, NOW, recordingActions, request } from "./dataSyncFixtures";
 
-import { DataSyncRequestIntent, RemoteAccessMode } from "@/sdk/constants";
+import {
+  DataSyncLinkInitiator,
+  DataSyncLinkState,
+  DataSyncRequestIntent,
+  RemoteAccessMode,
+} from "@/sdk/constants";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -101,6 +106,13 @@ describe("a request to read this device's definitions", () => {
   });
 
   it("offers receiving back and the kinds inline, before approving", async () => {
+    vi.mocked(dataSyncApi.approveRequest).mockResolvedValueOnce({
+      readBackGranted: true,
+      createdLink: link(7, "node-newpc", "New PC", {
+        state: DataSyncLinkState.WaitingForPeerReview,
+        initiator: DataSyncLinkInitiator.Peer,
+      }),
+    });
     card();
     const options = screen.getByTestId("data-sync-request-options");
     const receiveBack = within(options).getByTestId("data-sync-request-receive-back");
@@ -130,6 +142,26 @@ describe("a request to read this device's definitions", () => {
     // The card goes with the request; what the approval said stays with the host.
     expect(recorded.actions.setNotice).toHaveBeenCalledWith(
       "dataSync.request.approvedBothWays New PC",
+    );
+  });
+
+  it("says why reading the other device back failed, never that it receives from it", async () => {
+    // What the server answers: the grant stands, the link waits for access, and its detail says why.
+    vi.mocked(dataSyncApi.approveRequest).mockResolvedValueOnce({
+      readBackGranted: false,
+      createdLink: link(7, "node-newpc", "New PC", {
+        state: DataSyncLinkState.AwaitingAccess,
+        initiator: DataSyncLinkInitiator.Peer,
+        lastErrorCode: "ReadBackFailed",
+        lastErrorDetail: "Unreachable",
+      }),
+    });
+    card();
+    fireEvent.click(screen.getByTestId("data-sync-request-approve"));
+    await act(() => confirmation().action() as Promise<void>);
+
+    expect(recorded.actions.setNotice).toHaveBeenCalledWith(
+      "dataSync.request.approvedReadBackFailed New PC dataSync.peerError.Unreachable",
     );
   });
 

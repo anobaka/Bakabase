@@ -77,11 +77,12 @@ export default function ThisDeviceSection({
     });
   };
 
+  // Leaves sharing as it is (no `enabled`): a value read before sharing changed elsewhere is
+  // never sent back, and the switch is open to every window, like turning sharing off.
   const setNewDefinitionsShared = (shared: boolean) =>
     void actions.run(
       () =>
         dataSyncApi.setSharing({
-          enabled: overview.sharingEnabled,
           enablePairedRemoteAccess: false,
           newDefinitionsStayLocal: !shared,
         }),
@@ -162,7 +163,7 @@ export default function ThisDeviceSection({
             checked={!overview.newDefinitionsStayLocal}
             className="accent-secondary"
             data-testid="data-sync-new-definitions"
-            disabled={actions.busy || (!canManage && overview.sharingEnabled)}
+            disabled={actions.busy}
             type="checkbox"
             onChange={(event) => setNewDefinitionsShared(event.target.checked)}
           />

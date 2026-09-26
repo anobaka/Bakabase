@@ -135,12 +135,11 @@ export interface SyncPeer {
   lastSyncedAt?: string;
   nextAttemptAt?: string;
   lastErrorCode?: string;
+  /** What the error says beyond its code: for `ReadBackFailed`, the peer error code that says why. */
   lastErrorDetail?: string;
   openItems: number;
   attention?: DataSyncSourceAttention;
   readBackDeclined: boolean;
-  /** Undefined where nothing said (the map view carries no presence). */
-  online?: boolean;
   receivingFlag?: boolean;
   receivingPendingFlag?: boolean;
   reviewId?: string;
@@ -192,7 +191,6 @@ export const syncPeerFromLink = (link: DataSyncLinkView): SyncPeer => ({
   openItems: link.openItems,
   attention: link.peerAttention ?? undefined,
   readBackDeclined: link.readBackDeclined,
-  online: link.peerOnline,
   reviewId: link.reviewId ?? undefined,
   pendingCount: link.pendingCount,
   heldCount: link.heldCount,
@@ -225,6 +223,7 @@ export const syncPeerFromMapPeer = (peer: DataSyncMapPeer): SyncPeer => ({
   peerLastReadAt: peer.peerLastReadAt ?? undefined,
   lastSyncedAt: peer.lastSyncedAt ?? undefined,
   lastErrorCode: peer.lastErrorCode ?? undefined,
+  lastErrorDetail: peer.lastErrorDetail ?? undefined,
   openItems: peer.openItems,
   attention: peer.attention ?? undefined,
   readBackDeclined: peer.readBackDeclined,
@@ -384,8 +383,14 @@ export const withCandidates = (
   );
 };
 
-/** Errors that say only that the other device could not be reached: shown grey, never as failures. */
-const offlineErrors = new Set([DataSyncPeerErrorCodeLabel[DataSyncPeerErrorCode.Unreachable]]);
+/**
+ * Errors that say only that the other device was away — not reachable, or busy: shown grey, never
+ * as failures. The same two the server counts as offline.
+ */
+const offlineErrors = new Set([
+  DataSyncPeerErrorCodeLabel[DataSyncPeerErrorCode.Unreachable],
+  DataSyncPeerErrorCodeLabel[DataSyncPeerErrorCode.Busy],
+]);
 
 /** Codes a link carries that have a line of their own rather than "Sync failed". */
 const ownLineErrors = new Set([
@@ -399,17 +404,20 @@ const ownLineErrors = new Set([
   "PeerRestorePending",
 ]);
 
-/** Whether the other device answered the last time; undefined where nothing said. */
+/**
+ * Whether the other device was away the last time it was asked — said by the link's error alone.
+ * The link view's `peerOnline` is no evidence either way: it is false after every restart until
+ * the first answer, and after every failure, which is said as a failure.
+ */
 export const isOffline = (peer: SyncPeer) =>
-  peer.online === false || (!!peer.lastErrorCode && offlineErrors.has(peer.lastErrorCode));
+  !!peer.lastErrorCode && offlineErrors.has(peer.lastErrorCode);
 
 /** An error on a working link that is neither "offline" nor a state of its own. */
 const failure = (peer: SyncPeer) =>
   peer.state === DataSyncLinkState.Active &&
   !!peer.lastErrorCode &&
   !offlineErrors.has(peer.lastErrorCode) &&
-  !ownLineErrors.has(peer.lastErrorCode) &&
-  peer.online !== false
+  !ownLineErrors.has(peer.lastErrorCode)
     ? peer.lastErrorCode
     : undefined;
 
@@ -600,13 +608,29 @@ export interface StatusLine {
 
 const line = (code: string, tone: Tone, text: string): StatusLine => ({ code, text, tone });
 
+/**
+ * Codes a link carries that are no peer error code but have words of their own: an apply or a
+ * fetch that failed here, and a read-back refused because the device no longer honours its code.
+ */
+export const failureCodesWithWords = ["ApplyFailed", "FetchFailed", "InvitationInvalid"] as const;
+
+const worded = new Set<string>([
+  ...Object.values(DataSyncPeerErrorCodeLabel),
+  ...failureCodesWithWords,
+]);
+
 /** The words for why a sync failed, from the peer error code the link carries. */
 export const failureReason = (t: T, code?: string) =>
-  code && Object.values(DataSyncPeerErrorCodeLabel).includes(code)
+  code && worded.has(code)
     ? t(`dataSync.peerError.${code}`)
-    : code
-      ? t("dataSync.peerError.other", { code })
-      : t("dataSync.peerError.other", { code: "?" });
+    : t("dataSync.peerError.other", { code: code || "?" });
+
+/**
+ * The code that says why a link failed: a failed read-back carries it as its detail (spec
+ * §7.2.4), every other failure as its own code.
+ */
+export const failureCodeOf = (peer: SyncPeer) =>
+  peer.lastErrorCode === "ReadBackFailed" ? peer.lastErrorDetail : peer.lastErrorCode;
 
 /** Counts a pause detail carries (`"deletions=182;kind=customProperty"`). */
 export const pauseDetail = (detail?: string) => {
@@ -692,7 +716,7 @@ export function linkStatus(t: T, peer: SyncPeer, now: number = Date.now()): Stat
             "danger",
             t("dataSync.status.ReadBackFailed", {
               name,
-              reason: failureReason(t, peer.lastErrorCode),
+              reason: failureReason(t, failureCodeOf(peer)),
             }),
           )
         : line("AwaitingAccess", "primary", t("dataSync.status.AwaitingAccess", { name }));
@@ -737,13 +761,11 @@ export function linkStatus(t: T, peer: SyncPeer, now: number = Date.now()): Stat
       "default",
       t("dataSync.status.Offline", { name, time: timeAgo(t, peer.lastSyncedAt, now) }),
     );
-  const failed = failure(peer);
-
-  if (failed)
+  if (failure(peer))
     return line(
       "Failed",
       "danger",
-      t("dataSync.status.Failed", { reason: failureReason(t, failed) }),
+      t("dataSync.status.Failed", { reason: failureReason(t, failureCodeOf(peer)) }),
     );
   if (peer.openItems > 0)
     return line("NeedsYou", "warning", t("dataSync.status.NeedsYou", { count: peer.openItems }));

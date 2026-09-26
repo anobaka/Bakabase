@@ -13002,6 +13002,7 @@ export interface components {
             /** Format: date-time */
             startAnywayAt?: string;
             fullReconciliationRunning: boolean;
+            lastErrorDetail?: string;
         };
         "Bakabase.Modules.DataSync.Services.DataSyncMapRequest": {
             requestId: string;
@@ -13147,7 +13148,7 @@ export interface components {
             kinds: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncKindCount"][];
         };
         "Bakabase.Modules.DataSync.Services.DataSyncSharingInput": {
-            enabled: boolean;
+            enabled?: boolean;
             enablePairedRemoteAccess: boolean;
             newDefinitionsStayLocal?: boolean;
         };

@@ -4834,6 +4834,7 @@ export interface BakabaseModulesDataSyncServicesDataSyncMapPeer {
   /** @format date-time */
   startAnywayAt?: string;
   fullReconciliationRunning: boolean;
+  lastErrorDetail?: string;
 }
 
 export interface BakabaseModulesDataSyncServicesDataSyncMapRequest {
@@ -5031,7 +5032,7 @@ export interface BakabaseModulesDataSyncServicesDataSyncReviewSource {
 }
 
 export interface BakabaseModulesDataSyncServicesDataSyncSharingInput {
-  enabled: boolean;
+  enabled?: boolean;
   enablePairedRemoteAccess: boolean;
   newDefinitionsStayLocal?: boolean;
 }
