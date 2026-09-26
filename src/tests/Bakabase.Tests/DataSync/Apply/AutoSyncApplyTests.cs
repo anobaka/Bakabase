@@ -7,6 +7,7 @@ using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Planning;
 using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Bakabase.Tests.DataSync.Apply.DataSyncApplyFixture;
@@ -53,6 +54,31 @@ public class AutoSyncApplyTests
         var after = await f.RowAsync(localKey);
         Assert.AreEqual((row.VvJson, seq, row.SharedHash), (after.VvJson, after.Seq, after.SharedHash),
             "echo prevention: hashes came from the re-read (§6.4)");
+    }
+
+    [TestMethod]
+    public async Task Pause_all_pressed_while_the_apply_waited_for_the_gate_applies_nothing()
+    {
+        var f = await CreateAsync();
+        var peer = new DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer);
+        var record = peer.Record([SyncKey.New().Value], peer.Next(), Content("Genre", ("a", "Rock")), "a0");
+        await f.RefreshAsync();
+        await using (var db = f.NewDb())
+        {
+            var state = await db.DataSyncLocalStates.SingleAsync();
+            state.AllPaused = true;
+            await db.SaveChangesAsync();
+        }
+
+        var outcome = await f.ApplyAsync(link, peer, (Item, record));
+
+        Assert.AreEqual((DataSyncPauseReason?) DataSyncPauseReason.AllPaused, outcome.Paused);
+        Assert.AreEqual(0, outcome.Applied);
+        Assert.IsFalse(f.Kind.Definitions.Values.Any(d => d.Name == "Genre"), "nothing is written");
+        Assert.AreEqual(0, (await f.HistoryAsync()).Count);
+        var row = await f.LinkRowAsync(link.Id);
+        Assert.AreEqual((DataSyncLinkState.Active, "{}"), (row.State, row.CursorsJson), "the link is not paused itself");
     }
 
     [TestMethod]

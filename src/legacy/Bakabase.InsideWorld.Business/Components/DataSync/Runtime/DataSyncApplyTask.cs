@@ -79,7 +79,11 @@ public sealed class DataSyncApplyTask
 
                 var pull = _stagedPulls.Take(linkId);
                 if (pull is null) done.Add(linkId);
-                await ApplyLinkAsync(linkId, pull, args);
+                if (!await ApplyLinkAsync(linkId, pull, args))
+                {
+                    _logger.LogInformation("Data sync applies nothing while it is paused");
+                    return;
+                }
             }
         }
     }
@@ -105,7 +109,8 @@ public sealed class DataSyncApplyTask
         return work;
     }
 
-    private async Task ApplyLinkAsync(int linkId, DataSyncStagedPull? pull, BTaskArgs args)
+    /// <returns>False when "Pause all" was found pressed once the runner held the gate: the task stops there.</returns>
+    private async Task<bool> ApplyLinkAsync(int linkId, DataSyncStagedPull? pull, BTaskArgs args)
     {
         var ct = args.CancellationToken;
         var link = await _links.GetAsync(linkId, ct);
@@ -113,7 +118,7 @@ public sealed class DataSyncApplyTask
         {
             // Paused, stopped, reset or back to a first contact since the fetch: the pull is dropped, and the next
             // fetch starts again from the cursor (§8.7).
-            return;
+            return true;
         }
 
         // Any apply of the link re-merges what its pending records wait for (§8.4), so it takes a requested re-merge.
@@ -122,7 +127,7 @@ public sealed class DataSyncApplyTask
         if (pull is null)
         {
             flags = flags.PullIndependent();
-            if (flags == DataSyncMergeFlags.None && !reMerge) return;
+            if (flags == DataSyncMergeFlags.None && !reMerge) return true;
         }
 
         await using var scope = _scopes.CreateAsyncScope();
@@ -145,10 +150,28 @@ public sealed class DataSyncApplyTask
         {
             _logger.LogError(e, "Data sync could not apply the pull from {Peer}", link.PeerNodeId);
             await _links.RecordFailureAsync(linkId, DataSyncLinkService.ApplyFailed, e.Message, null, ct);
-            return;
+            return true;
+        }
+
+        // The runner re-checks "Pause all" and the link once it holds the gate (§8.10.2). "Pause all" pressed while this
+        // apply waited for the gate applied nothing: the pull stays staged, as when this task finds it paused, unless a
+        // newer one arrived meanwhile, and a requested re-merge waits too.
+        if (outcome.Paused == DataSyncPauseReason.AllPaused)
+        {
+            if (pull is not null && _stagedPulls.Peek(linkId) is null) _stagedPulls.Put(linkId, pull);
+            if (reMerge) _state.RequestReMerge(linkId);
+            return false;
+        }
+
+        // A link stopped or reset while the apply waited applied nothing either: nothing is recorded on it.
+        if (outcome is { Paused: null, ApplyLogId: null, Applied: 0 } &&
+            await _links.GetAsync(linkId, ct) is null or { State: DataSyncLinkState.Stopped })
+        {
+            return true;
         }
 
         await _links.AfterAutoSyncAsync(context, pull, outcome, IsFullReconciliation(sp, link, context, pull), ct);
+        return true;
     }
 
     /// <summary>

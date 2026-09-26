@@ -99,6 +99,28 @@ public class ApplyBTaskTests
     }
 
     [TestMethod]
+    public async Task Pause_all_the_runner_finds_inside_the_gate_keeps_the_pull_and_records_nothing()
+    {
+        await using var h = await DataSyncRuntimeHarness.CreateAsync(daemon: true);
+        var link = h.AddLink("nas", l => l.SetCursors(new Dictionary<string, long>
+            {["extensionGroup"] = 3, ["customProperty"] = 2}));
+        var synced = h.Link(link.Id).LastSyncedAtUtc;
+        // Pressed after this task's own check, while the runner waited for the gate (§8.10.2).
+        h.Runner.AutoSyncOutcome = _ => new DataSyncAutoSyncOutcome(null, DataSyncPauseReason.AllPaused, 0, 0, 0, [], []);
+
+        await h.Scheduler.TickAsync(default);
+        h.Clock.Advance(DataSyncSchedule.StartupDelay);
+        await h.Scheduler.TickAsync(default);
+        await h.WaitForStatusAsync(DataSyncTaskIds.Fetch, BTaskStatus.Completed);
+        await h.WaitForStatusAsync(DataSyncTaskIds.Apply, BTaskStatus.Completed);
+
+        Assert.AreEqual(1, h.Runner.AutoSyncs.Count);
+        CollectionAssert.AreEqual(new[] {link.Id}, h.StagedPulls.LinksWaiting().ToArray(), "the pull still waits");
+        Assert.AreEqual(synced, h.Link(link.Id).LastSyncedAtUtc, "nothing is recorded as synced");
+        Assert.AreEqual(0, h.Observer.Count("paused:") + h.Observer.Count("applied:"));
+    }
+
+    [TestMethod]
     public async Task Two_consecutive_pulls_in_one_process_are_both_applied()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync(daemon: true);

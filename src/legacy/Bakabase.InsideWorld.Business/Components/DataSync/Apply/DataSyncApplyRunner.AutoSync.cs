@@ -30,7 +30,9 @@ public sealed partial class DataSyncApplyRunner
     /// regression rolls everything back and reports the evidence outside any transaction; the link then pauses, or —
     /// when only a retired actor's recorded counter rose — is merged once more. A failure is recorded on the link
     /// (<see cref="ApplyFailedCode"/>, a backoff) and the pull is dropped: committed chunks stand, the cursor did not
-    /// move, and re-sent records meet row K4.
+    /// move, and re-sent records meet row K4. Once it holds the gate it looks again at what the task looked at before:
+    /// "Pause all" applies nothing and answers <c>Paused = AllPaused</c>, and a link paused or stopped meanwhile applies
+    /// nothing either (the link row, read in the transaction).
     /// </summary>
     public async Task<DataSyncAutoSyncOutcome> RunAutoSyncAsync(DataSyncLinkContext link, DataSyncStagedPull? pull,
         BTaskArgs args)
@@ -44,6 +46,10 @@ public sealed partial class DataSyncApplyRunner
         if (!MayRun(args)) return Nothing;
         // A link the check paused stops here (the link row says so below).
         await _guard.CheckAsync(lease, ct);
+
+        // "Pause all" pressed while this apply waited for the gate (§8.7 "Other pauses"): nothing applies, and the
+        // outcome says why, so the task keeps the pull for after the unpause.
+        if (await IsAllPausedAsync(ct)) return Nothing with { Paused = DataSyncPauseReason.AllPaused };
 
         for (var attempt = 0; attempt < 2; attempt++)
         {
@@ -277,6 +283,12 @@ public sealed partial class DataSyncApplyRunner
         {
             _logger.LogError(inner, "Data sync could not record the failed apply of link {Link}.", linkId);
         }
+    }
+
+    private async Task<bool> IsAllPausedAsync(CancellationToken ct)
+    {
+        await using var s = await DataSyncApplySession.OpenAsync(_scopes, ct);
+        return await s.Db.DataSyncLocalStates.AsNoTracking().AnyAsync(l => l.AllPaused, ct);
     }
 
     private async Task<DataSyncPauseReason?> PausedReasonAsync(int linkId, CancellationToken ct)
