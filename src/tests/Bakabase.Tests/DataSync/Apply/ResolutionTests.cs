@@ -20,7 +20,7 @@ namespace Bakabase.Tests.DataSync.Apply;
 /// the table says, and logs one <c>Resolution</c> entry.
 /// </summary>
 [TestClass]
-public class ResolutionTests
+public partial class ResolutionTests
 {
     private DataSyncApplyFixture _f = null!;
     private DataSyncPeer _peer = null!;

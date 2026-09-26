@@ -189,6 +189,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     TombstoneFloorSeqsJson = table.Column<string>(type: "TEXT", nullable: false),
                     KindSchemaVersionsJson = table.Column<string>(type: "TEXT", nullable: false),
                     ComparisonFormVersionsJson = table.Column<string>(type: "TEXT", nullable: false),
+                    RefreshedAtJson = table.Column<string>(type: "TEXT", nullable: false),
                     NewDefinitionsStayLocal = table.Column<bool>(type: "INTEGER", nullable: false),
                     AllPaused = table.Column<bool>(type: "INTEGER", nullable: false),
                     RestoreReason = table.Column<int>(type: "INTEGER", nullable: true),

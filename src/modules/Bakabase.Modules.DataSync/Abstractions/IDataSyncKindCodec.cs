@@ -103,6 +103,17 @@ public interface IDataSyncKindCodec
     IReadOnlyList<DataSyncChildInfo> ChildrenOf(object content);
 
     /// <summary>
+    /// Where each child of <paramref name="from"/> that <paramref name="to"/> no longer has by id went: the first
+    /// child of <paramref name="to"/> in the same label class (§3.4), under <paramref name="from"/>'s folding. A
+    /// subtype change rebuilds the children with fresh ids (F73), and everything data sync keeps by local child id
+    /// (holds, local-only children, child maps) follows them through this map. A child with no class in
+    /// <paramref name="to"/> is absent from the map; so is one <paramref name="to"/> still has by id. The default
+    /// compares labels (group and path) ordinally.
+    /// </summary>
+    IReadOnlyDictionary<string, string> MapChildrenByClass(object from, object to) =>
+        DataSyncChildClassMap.Map(ChildrenOf(from), ChildrenOf(to), label => label);
+
+    /// <summary>
     /// §3.5 steps 5–6: a record's content, <c>Write(publishedContent)</c> with the preserved unknown top-level members
     /// (<c>UnknownJson</c>, §8.9) merged back verbatim. A member this codec knows is never overwritten.
     /// </summary>

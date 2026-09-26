@@ -34,6 +34,28 @@ public class CustomPropertyCodecTests
         Assert.AreEqual(1, Codec.ComparisonFormVersion);
     }
 
+    // ---- children through a rebuild (F73) ------------------------------------------------------
+
+    /// <summary>
+    /// A subtype change rebuilds the options with fresh ids: each old child maps to the first new child of its label
+    /// class, folded under the old content's IgnoreCase — across choices, tags without a group and root nodes alike. A
+    /// child the new content still has by id, or whose class did not survive, is not in the map.
+    /// </summary>
+    [TestMethod]
+    public void ChildrenMapToTheFirstChildOfTheirClassAfterARebuild()
+    {
+        var from = Single("Genre", true, C("r", "Rock"), C("p", "Pop"), C("k", "Kept"), C("j", "Jazz"));
+        var to = Tree("Genre", true, N("x1", "POP"), N("x2", "pop"), N("k", "Kept"), N("y", "Rock", N("z", "Jazz")));
+        var map = Untyped.MapChildrenByClass(from, to);
+        CollectionAssert.AreEquivalent(new[] { "p=x1", "r=y" }, map.Select(p => $"{p.Key}={p.Value}").ToArray(),
+            "Pop's class survives as POP (IgnoreCase), Rock as a root node, Kept keeps its id, Jazz moved under Rock");
+
+        var caseSensitive = Untyped.MapChildrenByClass(Choice("Genre", false, C("p", "Pop")), Tags("Genre", false,
+            T("t1", null, "POP"), T("t2", "", "Pop")));
+        CollectionAssert.AreEqual(new[] { "p=t2" }, caseSensitive.Select(p => $"{p.Key}={p.Value}").ToArray(),
+            "without IgnoreCase only the same label; a tag of the empty group is a tag without one");
+    }
+
     // ---- the 16 types -------------------------------------------------------------------------
 
     /// <summary>Minimal peer content per type: settings are filled with their defaults, IgnoreCase only where it exists.</summary>

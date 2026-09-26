@@ -2807,6 +2807,10 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("RefreshedAtJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("RestoreDetail")
                         .HasColumnType("TEXT");
 

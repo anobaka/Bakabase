@@ -29,6 +29,11 @@ public sealed class DataSyncRefreshCoordinator : IDataSyncLocalChangeRunner
     /// <summary>A head is answered from a Refresh at most this old (§6.6, §7.5.1).</summary>
     public static readonly TimeSpan HeadRefreshMaxAge = TimeSpan.FromSeconds(5);
 
+    /// <summary>How often <see cref="CloseLostUpdateWindowsAsync"/> looks whether a window has closed.</summary>
+    public static readonly TimeSpan WindowCheckInterval = TimeSpan.FromSeconds(10);
+
+    private DateTimeOffset _windowsCheckedAt = DateTimeOffset.MinValue;
+
     private readonly DataSyncGate _gate;
     private readonly IDataSyncActorGuard _guard;
     private readonly IServiceScopeFactory _scopes;
@@ -155,6 +160,49 @@ public sealed class DataSyncRefreshCoordinator : IDataSyncLocalChangeRunner
 
     /// <summary>A local change is tried at most this often when the actor changes under it (§5.6).</summary>
     private const int MaxLocalChangeAttempts = 3;
+
+    /// <summary>
+    /// Closes the lost-update guard's window (§6.5) once it has passed: when the most recent guarded apply is older
+    /// than <see cref="DataSyncLostUpdateGuard.Window"/> and a kind's last committed Refresh began before its window closed,
+    /// that kind is refreshed now. Refresh judges a change against every apply of the window before the kind's last
+    /// Refresh (the change came after it), so without this a person's deliberate revert long after a sync would be
+    /// asked about on a device whose content no Refresh looked at meanwhile — one without readers, say. A stale write
+    /// the window still covers is held by this Refresh like by any other. Run by the scheduler's tick; it never waits
+    /// for the gate (a busy gate is tried again on the next tick) and never runs while the actor is unverified.
+    /// </summary>
+    /// <returns>The Refresh it ran, or null when nothing was due or the gate was busy.</returns>
+    public async Task<DataSyncRefreshResult?> CloseLostUpdateWindowsAsync(CancellationToken ct)
+    {
+        if (!_guard.IsVerified) return null;
+        var now = _time.GetUtcNow();
+        lock (_refreshedAt)
+        {
+            // Looked at no more than every few seconds: the window closes to the minute, not to the tick.
+            if (now - _windowsCheckedAt < WindowCheckInterval) return null;
+            _windowsCheckedAt = now;
+        }
+
+        IReadOnlyList<string> kinds;
+        await using (var scope = _scopes.CreateAsyncScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<DataSyncStore>();
+            if (await store.GetLocalStateAsync(ct) is not { } state) return null;
+            var latest = await DataSyncLostUpdateGuard.LatestGuardedApplyAsync(store.Db, null, ct);
+            if (latest is not { } appliedAt) return null;
+            var closesAt = appliedAt + DataSyncLostUpdateGuard.Window;
+            if (now.UtcDateTime <= closesAt) return null;
+            kinds = DataSyncStoredJson.ReadCounters(state.RefreshedAtJson, "RefreshedAtJson")
+                .Where(k => store.Kinds.ContainsKey(k.Key) && DataSyncLostUpdateGuard.FromUnixMs(k.Value) <= closesAt)
+                .Select(k => k.Key).OrderBy(k => k, StringComparer.Ordinal).ToList();
+        }
+
+        if (kinds.Count == 0) return null;
+        using var lease = await _gate.TryEnterAsync(TimeSpan.Zero, ct);
+        if (lease is null) return null;
+        await _guard.CheckAsync(lease, ct);
+        return await RetryOnceAsync(lease, async (sp, _) =>
+            await sp.GetRequiredService<DataSyncRefresher>().RefreshAsync(lease, kinds, false, ct), kinds, ct);
+    }
 
     /// <summary>Another path (a snapshot, an apply) committed a Refresh of <paramref name="kinds"/> just now.</summary>
     public void NoteRefreshed(IEnumerable<string> kinds)

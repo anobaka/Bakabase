@@ -234,11 +234,58 @@ public partial class LostUpdateGuardTests
     {
         var f = await AppliedAsync();
         f.Clock.Advance(DataSyncLostUpdateGuard.Window + TimeSpan.FromSeconds(1));
+        // A Refresh looked at the content once the window had closed (the scheduler's, below): the revert came after.
+        await f.RefreshAsync();
 
         f.Kind.Definitions["1"].Children[0] = new MemoryChild("a", "Horror");
         var result = await f.RefreshAsync();
 
         Assert.AreEqual(1, result.Changed);
+        Assert.IsFalse((await f.RowAsync("1")).PublishHeld);
+        Assert.AreEqual(0, (await f.ItemsAsync()).Count);
+    }
+
+    /// <summary>
+    /// The window is measured to the write, not to the Refresh that meets it: nothing refreshes on a timer while this
+    /// device's readers are offline, and a stale write two minutes after the apply that a Refresh meets only half an
+    /// hour later is held all the same — the write came after the kind's last Refresh, inside the window.
+    /// </summary>
+    [TestMethod]
+    public async Task A_stale_write_a_Refresh_meets_only_after_the_window_is_held_all_the_same()
+    {
+        var f = await AppliedAsync();
+        f.Clock.Advance(TimeSpan.FromMinutes(2));
+        f.Kind.Definitions["1"].Children[0] = new MemoryChild("a", "Horror");
+        f.Clock.Advance(TimeSpan.FromMinutes(30));
+
+        var result = await f.RefreshAsync();
+
+        Assert.AreEqual(0, result.Changed, "not published as a newer local revision");
+        Assert.IsTrue((await f.RowAsync("1")).PublishHeld);
+        Assert.AreEqual(DataSyncInboxItemType.SuspectedLostUpdate, (await f.ItemsAsync()).Single().Type);
+    }
+
+    /// <summary>
+    /// The scheduler closes the window (§6.5): once the most recent apply is older than it, the coordinator refreshes
+    /// the kinds no Refresh looked at since — once — so a person's revert after that is an ordinary revision again. A
+    /// Refresh that finds nothing inside any window records nothing.
+    /// </summary>
+    [TestMethod]
+    public async Task Once_the_window_has_closed_the_coordinator_refreshes_once_and_a_later_revert_is_ordinary()
+    {
+        var f = await AppliedAsync();
+        Assert.IsNull(await f.Coordinator.CloseLostUpdateWindowsAsync(default), "the window is still open");
+
+        f.Clock.Advance(DataSyncLostUpdateGuard.Window + TimeSpan.FromSeconds(1));
+        Assert.IsNotNull(await f.Coordinator.CloseLostUpdateWindowsAsync(default));
+        var closed = (await f.StateAsync()).RefreshedAtJson;
+        f.Clock.Advance(DataSyncRefreshCoordinator.WindowCheckInterval);
+        Assert.IsNull(await f.Coordinator.CloseLostUpdateWindowsAsync(default), "closed once");
+        await f.RefreshAsync();
+        Assert.AreEqual(closed, (await f.StateAsync()).RefreshedAtJson, "no apply inside a window: nothing to record");
+
+        f.Kind.Definitions["1"].Children[0] = new MemoryChild("a", "Horror");
+        Assert.AreEqual(1, (await f.RefreshAsync()).Changed);
         Assert.IsFalse((await f.RowAsync("1")).PublishHeld);
         Assert.AreEqual(0, (await f.ItemsAsync()).Count);
     }

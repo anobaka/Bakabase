@@ -56,6 +56,13 @@ public abstract class DataSyncKindCodec<TContent> : IDataSyncKindCodec where TCo
     public abstract IReadOnlyList<DataSyncChildInfo> ChildrenOf(TContent content);
 
     /// <summary>
+    /// <see cref="IDataSyncKindCodec.MapChildrenByClass"/>: labels compared ordinally unless the kind folds them (a
+    /// property that ignores case).
+    /// </summary>
+    public virtual IReadOnlyDictionary<string, string> MapChildrenByClass(TContent from, TContent to) =>
+        DataSyncChildClassMap.Map(ChildrenOf(from), ChildrenOf(to), label => label);
+
+    /// <summary>
     /// v1: identity at the current version. A kind that bumps SchemaVersion overrides this and chains its steps;
     /// forgetting to is caught here (an older version is held, not misread).
     /// </summary>
@@ -148,6 +155,9 @@ public abstract class DataSyncKindCodec<TContent> : IDataSyncKindCodec where TCo
         ComparisonForm(Cast(publishedContent), orderKey, childrenLocal);
 
     IReadOnlyList<DataSyncChildInfo> IDataSyncKindCodec.ChildrenOf(object content) => ChildrenOf(Cast(content));
+
+    IReadOnlyDictionary<string, string> IDataSyncKindCodec.MapChildrenByClass(object from, object to) =>
+        MapChildrenByClass(Cast(from), Cast(to));
 
     // ---- unknown top-level members (§3.5 step 5, §3.4, §8.9) --------------------------------
 

@@ -20,8 +20,9 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Apply;
 /// operation through its adapter, the entity re-read and recorded, its base written — with a commit and a new
 /// <c>BEGIN IMMEDIATE</c> between chunks; then the revisions that wrote no content, holds, tombstones served again,
 /// the remaining bases and the shared order. An operation whose content changed since the merge read it (or whose
-/// key the pre-flight refused) is <c>ChangedDuringApply</c>: its record becomes a <c>Retry</c> pending record and
-/// nothing else of its entity is written (<see cref="DataSyncRecordApply.WithoutChangedDuringApply"/>).
+/// key the pre-flight refused, or — in a chunk after a gap — whose decision rested on usage that changed since, see
+/// <see cref="RecheckUsageAsync"/>) is <c>ChangedDuringApply</c>: its record becomes a <c>Retry</c> pending record
+/// and nothing else of its entity is written (<see cref="DataSyncRecordApply.WithoutChangedDuringApply"/>).
 /// </summary>
 /// <remarks>
 /// When chunks commit on their own, each chunk also writes the state-derived items (§9.1) of the entities it wrote —
@@ -100,6 +101,9 @@ internal sealed class DataSyncMergeWriter
         var chunks = ops.Chunk(MaxEntitiesPerTransaction).ToList();
         for (var i = 0; i < chunks.Count; i++)
         {
+            // Other writers had SQLite's lock in the gap before this chunk: the usage the merge decided on is read
+            // again in this chunk's transaction.
+            if (i > 0 && _commitChunk is not null) await RecheckUsageAsync(chunks[i], ct);
             await WriteChunkAsync(chunks[i], raw, ct);
             if (i < chunks.Count - 1 && _commitChunk is not null) await _commitChunk(ct);
         }
@@ -113,6 +117,79 @@ internal sealed class DataSyncMergeWriter
         _changed.UnionWith(itemIds);
         if (_changed.Count != before)
             Result = DataSyncRecordApply.WithoutChangedDuringApply(Result, _changed, _input.Bases);
+    }
+
+    /// <summary>
+    /// The usage the merge read before the first chunk (§2.7 phase 1), read again for a chunk that follows a gap: an
+    /// automatic deletion (§8.6) of an entity that has values now, and an update that removes a child (§8.5.4 step 3)
+    /// that resources use now — or a child below it — are <c>ChangedDuringApply</c>. Their records become
+    /// <c>Retry</c> pending records, merged again with the usage of that time, which asks instead.
+    /// </summary>
+    private async Task RecheckUsageAsync(IReadOnlyList<(string Kind, ApplyOperation Op)> chunk, CancellationToken ct)
+    {
+        var changed = new List<string>();
+        foreach (var byKind in chunk.Where(o => !_changed.Contains(o.Op.ItemId))
+                     .GroupBy(o => o.Kind, StringComparer.Ordinal))
+        {
+            var kind = byKind.Key;
+            if (!_s.Kinds.TryGetValue(kind, out var adapter)) continue;
+            var deletions = new List<DeleteEntityOperation>();
+            var removals = new List<(UpdateEntityOperation Op, IReadOnlyCollection<string> ChildIds)>();
+            var request = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal);
+            foreach (var (_, op) in byKind)
+            {
+                switch (op)
+                {
+                    case DeleteEntityOperation { RequireNoValues: true } delete:
+                        deletions.Add(delete);
+                        request.TryAdd(delete.LocalKey, []);
+                        break;
+                    case UpdateEntityOperation { RemovedChildIds.Count: > 0 } update:
+                    {
+                        var ids = WithDescendants(adapter.Codec, kind, update.LocalKey, update.RemovedChildIds);
+                        removals.Add((update, ids));
+                        request[update.LocalKey] = request.TryGetValue(update.LocalKey, out var asked)
+                            ? asked.Union(ids, StringComparer.Ordinal).ToList()
+                            : ids;
+                        break;
+                    }
+                }
+            }
+
+            if (request.Count == 0) continue;
+            var usage = await adapter.GetUsageAsync(request, ct);
+            changed.AddRange(deletions.Where(d => usage.GetValueOrDefault(d.LocalKey)?.ValueCount > 0)
+                .Select(d => d.ItemId));
+            changed.AddRange(removals.Where(r => usage.GetValueOrDefault(r.Op.LocalKey) is { } entity &&
+                                                 r.ChildIds.Any(id =>
+                                                     entity.ResourceCountByChildId.GetValueOrDefault(id) > 0))
+                .Select(r => r.Op.ItemId));
+        }
+
+        MarkChanged(changed);
+    }
+
+    /// <summary>
+    /// Children and every child below them in the entity's content as the merge read it (a multilevel subtree's
+    /// usage counts, §8.5.4 step 3).
+    /// </summary>
+    private IReadOnlyCollection<string> WithDescendants(IDataSyncKindCodec codec, string kind, string localKey,
+        IReadOnlyList<string> roots)
+    {
+        var result = new HashSet<string>(roots, StringComparer.Ordinal);
+        if (LocalOf(kind, localKey) is not { } local) return result;
+        var children = codec.ChildrenOf(local.Content);
+        bool grew;
+        do
+        {
+            grew = false;
+            foreach (var child in children)
+            {
+                if (child.ParentId is { } parent && result.Contains(parent) && result.Add(child.Id)) grew = true;
+            }
+        } while (grew);
+
+        return result;
     }
 
     /// <summary>The whole raw rows of what the merge deletes, before anything is written (§8.11).</summary>

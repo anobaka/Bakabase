@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bakabase.InsideWorld.Business.Migrations
 {
     [DbContext(typeof(BakabaseDbContext))]
-    [Migration("20260925185625_AddDataSync")]
+    [Migration("20260926133612_AddDataSync")]
     partial class AddDataSync
     {
         /// <inheritdoc />
@@ -2807,6 +2807,10 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RefreshedAtJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

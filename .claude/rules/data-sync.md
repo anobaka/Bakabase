@@ -213,6 +213,25 @@ scopes").
   state (a hold), and a later pull meets that state already agreed (row K4) and drafts nothing.
   So a chunked apply writes the state-derived items of a chunk's entities in that chunk's own
   transaction (`DataSyncMergeWriter`), never only at the end.
+- **A chunk after a gap reads the usage again.** Other writers take SQLite's lock between two
+  chunks, so what the merge decided from usage read before the first chunk — an automatic entity
+  deletion (no values, §8.6), a child removal (unused, §8.5.4 step 3) — is checked again in each
+  later chunk's transaction (`DataSyncMergeWriter.RecheckUsageAsync`); a decision the usage no
+  longer supports is `ChangedDuringApply` and its record waits as `Retry`. As defence in depth an
+  automatic deletion carries `DeleteEntityOperation.RequireNoValues`, which an adapter with values
+  checks before it deletes: a content hash never covers values.
+- **The lost-update window is measured to the change** (§6.5). Refresh cannot tell when a change
+  was made, only that it came after the kind's last committed Refresh began
+  (`DataSyncLocalStates.RefreshedAtJson`), so it judges a change against every guarded apply of the
+  window before that moment, however late it runs. The scheduler refreshes once each window has
+  closed (`DataSyncRefreshCoordinator.CloseLostUpdateWindowsAsync`), so a deliberate revert after it
+  is an ordinary revision again; `RefreshedAtJson` is written only while a guarded apply lies in
+  the window, so heads do not write the row for nothing.
+- **Local child ids follow a rebuild.** A subtype change rebuilds the children with fresh ids
+  (F73). Convert (and undo converting back) maps holds, local-only children and every link's child
+  map to the rebuilt children by label class (`IDataSyncKindCodec.MapChildrenByClass`,
+  `DataSyncChildIdRemap`) before anything is merged or published; a question about a held child
+  that no longer exists closes `Superseded` and releases the hold, never `ResolvedHere`.
 - **Undo is faithful, or the step is taken back** (§8.11). Each step runs under a savepoint. A
   deletion is re-created from its captured content verbatim (`CreateEntityOperation.FromPreImage`);
   a type change goes back through `IDataSyncKind.RestoreAsync` with the captured raw row, never a

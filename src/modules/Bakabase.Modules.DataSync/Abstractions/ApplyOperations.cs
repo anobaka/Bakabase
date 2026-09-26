@@ -36,8 +36,14 @@ public sealed record UpdateEntityOperation(string ItemId, string LocalKey, strin
 public sealed record BindOnlyOperation(string ItemId, string LocalKey, EntityKeys AliasKeysToAdd)
     : ApplyOperation(ItemId);
 
-public sealed record DeleteEntityOperation(string ItemId, string LocalKey, string ExpectedLocalHash)
-    : ApplyOperation(ItemId);
+/// <param name="RequireNoValues">
+/// A deletion the merger applies by itself (§8.6), decided because the entity had no values. The adapter skips it as
+/// ChangedDuringApply when the entity has values by the time it runs: <c>ExpectedLocalHash</c> covers the definition,
+/// never its values, and a chunked apply lets other writers in between its chunks. A person's decision ("Delete
+/// here") never sets it.
+/// </param>
+public sealed record DeleteEntityOperation(string ItemId, string LocalKey, string ExpectedLocalHash,
+    bool RequireNoValues = false) : ApplyOperation(ItemId);
 
 /// <summary>
 /// Phase one of Convert (§8.5.6). Always the only operation for its LocalKey in its batch; the merge with R is

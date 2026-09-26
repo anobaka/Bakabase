@@ -651,6 +651,9 @@ public sealed partial class DataSyncApplyRunner
             row.LocalHash = Bakabase.Modules.DataSync.Canonical.ContentHash.Of(converted.Content);
             row.RawHash = null;
             row.UpdatedAtUtc = s.Now;
+            // The conversion rebuilt the children with fresh ids (F73): holds, local-only children and the links'
+            // child maps follow them by class before phase two, which would otherwise publish a held child again.
+            await DataSyncChildIdRemap.ApplyAsync(s, row, before, codec.ReadLocal(converted.Content), ct);
 
             // Phase two: the waiting record meets an entity of its own type (Merge3 Convert), with no Refresh between.
             // A merge that would pause (or a regression already reported) takes phase one back: the item waits, open.
@@ -731,18 +734,35 @@ public sealed partial class DataSyncApplyRunner
             var overlay = DataSyncStoredJson.ReadOverlay(row.OverlayJson);
             var hold = new DataSyncHeldChild(child, linkId);
             var current = codec.ReadLocal((await writes.ReReadAsync(kind, row.LocalKey, ct)).Content);
-            await CloseAsync(item, DataSyncInboxClosure.ResolvedHere, input.Action, ct);
+            if (!codec.ChildrenOf(current).Any(c => c.Id == child))
+            {
+                // The held child is gone: a writer outside data sync removed it, or gave the children new ids (a type
+                // change made in the property's own editor). Nothing is left to withhold or to decide, so the hold is
+                // released and the question closes Superseded: a decision that would write nothing is never recorded
+                // as applied.
+                row.OverlayJson = DataSyncStoredJson.WriteOverlay(overlay with
+                {
+                    HeldChildren = overlay.HeldChildren.Where(h => h != hold).ToList(),
+                });
+                row.RawHash = null;
+                row.UpdatedAtUtc = s.Now;
+                await CloseAsync(item, DataSyncInboxClosure.Superseded, null, ct);
+                return;
+            }
+
             switch (input.Action)
             {
                 case DataSyncInboxAction.DeleteHere:
                 {
                     // The held class and its subtree are removed; they were never published, so no revision. The
-                    // values keep the id and show nothing (unified miss behaviour).
+                    // values keep the id and show nothing (unified miss behaviour). Closed only once written: an
+                    // entity that changed meanwhile keeps its question.
                     var json = codec.Write(current);
                     var nodes = DataSyncContentNodes.Index(json);
                     if (!nodes.TryGetValue(child, out var node)) return;
                     DataSyncContentNodes.Remove(node);
                     if (!await WriteContentAsync(kind, row, current, json, "deleteHeldChild", ct)) return;
+                    await CloseAsync(item, DataSyncInboxClosure.ResolvedHere, input.Action, ct);
                     var remaining = codec.ChildrenOf(codec.ReadLocal(json)).Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
                     var release = overlay.HeldChildren.Where(h => !remaining.Contains(h.ChildId)).ToList();
                     await writes.RecordLiveAsync(kind, row.LocalKey, current, null, null,
@@ -762,6 +782,7 @@ public sealed partial class DataSyncApplyRunner
                 case DataSyncInboxAction.KeepHereOnly:
                     // Held and local-only children are both withheld: what the entity publishes stays the same, so
                     // there is nothing for readers to fetch again (§6.2).
+                    await CloseAsync(item, DataSyncInboxClosure.ResolvedHere, input.Action, ct);
                     row.OverlayJson = DataSyncStoredJson.WriteOverlay(new DataSyncOverlay(
                         overlay.LocalOnlyChildren.Where(c => c != child).Append(child).ToList(),
                         overlay.HeldChildren.Where(h => h != hold).ToList()));
@@ -770,6 +791,7 @@ public sealed partial class DataSyncApplyRunner
                 default:
                 {
                     // RestoreEverywhere: released and published again; the peer receives it as an addition.
+                    await CloseAsync(item, DataSyncInboxClosure.ResolvedHere, input.Action, ct);
                     var peerBase = await s.BaseRowAsync(linkId, kind, row.SyncKey, ct);
                     await writes.RecordLiveAsync(kind, row.LocalKey, current,
                         Revision(row, await s.KeysOfAsync(row, ct), DataSyncRevisionKind.Resolution,

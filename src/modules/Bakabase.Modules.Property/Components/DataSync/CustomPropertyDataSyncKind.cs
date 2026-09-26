@@ -226,8 +226,9 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
     /// (<see cref="OptionFolding"/>, cross-checked against its normalizer), and a second normalization could only
     /// diverge — the service would take a local choice without an id for one the edit introduced and fold it away,
     /// which merges keep (§3.3). An update, delete or subtype change whose entity is gone, is unreadable or no longer
-    /// hashes to <c>ExpectedLocalHash</c> is skipped as ChangedDuringApply; nothing throws for it. An entity the batch
-    /// wrote is read again before a later operation of the batch is checked against it. Placement of creates is
+    /// hashes to <c>ExpectedLocalHash</c> is skipped as ChangedDuringApply, and so is an automatic deletion
+    /// (<see cref="DeleteEntityOperation.RequireNoValues"/>) of a property that has values; nothing throws for them.
+    /// An entity the batch wrote is read again before a later operation of the batch is checked against it. Placement of creates is
     /// <see cref="ApplyOrderAsync"/>'s, after every batch (§3.7).
     /// </summary>
     public async Task<ApplyBatchOutcome> ApplyAsync(ApplyBatch batch, CancellationToken ct)
@@ -293,7 +294,9 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
                     break;
                 case DeleteEntityOperation delete:
                 {
-                    if (await rows.CurrentAsync(delete.LocalKey, delete.ExpectedLocalHash) is not { } row)
+                    // The hash covers the row, not its values: a deletion decided on "no values" checks them again.
+                    if (await rows.CurrentAsync(delete.LocalKey, delete.ExpectedLocalHash) is not { } row ||
+                        (delete.RequireNoValues && await HasValuesAsync(row.Id)))
                     {
                         changed.Add(delete.ItemId);
                         break;
@@ -507,6 +510,9 @@ public sealed class CustomPropertyDataSyncKind<TDbContext> : IDataSyncKind where
 
     private async Task<int[]> ResourcesWithValuesAsync(int id) =>
         (await _values.GetAllDbModels(v => v.PropertyId == id, false)).Select(v => v.ResourceId).Distinct().ToArray();
+
+    private async Task<bool> HasValuesAsync(int id) =>
+        (await _values.GetAllDbModels(v => v.PropertyId == id, false)).Count > 0;
 
     private void Invalidate(IReadOnlyCollection<int> resourceIds)
     {

@@ -56,6 +56,18 @@ public sealed partial class CustomPropertyCodec : DataSyncKindCodec<CustomProper
 
     public override string? SubtypeOf(CustomPropertyContentV1 content) => CustomPropertyTypes.NameOf(content.Type);
 
+    /// <summary>
+    /// Label classes under <paramref name="from"/>'s IgnoreCase (<see cref="ChildClasses"/>,
+    /// <see cref="DataSyncLabelKey"/>): the conversion that rebuilt the options carried it over.
+    /// </summary>
+    public override IReadOnlyDictionary<string, string> MapChildrenByClass(CustomPropertyContentV1 from,
+        CustomPropertyContentV1 to)
+    {
+        var ignoreCase = from.IgnoreCase == true;
+        return DataSyncChildClassMap.Map(ChildrenOf(from), ChildrenOf(to),
+            label => DataSyncLabelKey.Fold(label, ignoreCase));
+    }
+
     /// <summary>Every option, multilevel descendants included.</summary>
     public override int ChildCountOf(CustomPropertyContentV1 content) =>
         content.Choices.Count + content.Tags.Count + CountNodes(content.Nodes);

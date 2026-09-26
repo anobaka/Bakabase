@@ -112,7 +112,8 @@ internal sealed class TestItemDataSyncKind : IDataSyncKind
                 case BindOnlyOperation:
                     break;
                 case DeleteEntityOperation delete:
-                    if (!HashHolds(delete.LocalKey, delete.ExpectedLocalHash))
+                    if (!HashHolds(delete.LocalKey, delete.ExpectedLocalHash) ||
+                        (delete.RequireNoValues && Values.GetValueOrDefault(delete.LocalKey) > 0))
                     {
                         changed.Add(delete.ItemId);
                         break;

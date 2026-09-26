@@ -122,6 +122,8 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
     private async Task<(DataSyncRefreshResult Result, DataSyncLocalStateDbModel State)> RefreshCoreAsync(
         IReadOnlyCollection<string> kinds, bool collectPublished, DataSyncRefreshOptions options, CancellationToken ct)
     {
+        // Before any content is read: a change a later Refresh meets was made after this moment (§6.5).
+        var startedAt = _store.UtcNow;
         var device = await _services.GetRequiredService<IDataSyncDeviceIdentity>().GetAsync(ct);
         var file = _watermark.Read().Watermark;
         var state = await _store.GetLocalStateAsync(ct);
@@ -150,8 +152,9 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
             entry.State = EntityState.Detached;
         }
 
-        var run = new Run(this, state, device, collectPublished, options);
-        foreach (var kind in Ordered(kinds))
+        var ordered = Ordered(kinds).ToList();
+        var run = new Run(this, state, device, collectPublished, options, ordered);
+        foreach (var kind in ordered)
         {
             ct.ThrowIfCancellationRequested();
             if (!_store.Kinds.TryGetValue(kind, out var adapter))
@@ -160,6 +163,13 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
         }
 
         await run.FlushItemsAsync(ct);
+        // Committed with this Refresh, or rolled back with it: the next one measures the lost-update window from here.
+        if (await DataSyncLostUpdateGuard.AfterRefreshAsync(_store.Db, state.RefreshedAtJson, ordered, startedAt, ct) is
+            { } refreshedAt)
+        {
+            state.RefreshedAtJson = refreshedAt;
+        }
+
         if (_store.Db.Entry(state).State == EntityState.Modified) state.UpdatedAtUtc = _store.UtcNow;
         await _store.Db.SaveChangesAsync(ct);
         return (new DataSyncRefreshResult(run.Changed, run.Tombstoned, new DataSyncActorId(state.ActorId), false,
@@ -180,9 +190,14 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
         DataSyncLocalStateDbModel state,
         DataSyncDevice device,
         bool collectPublished,
-        DataSyncRefreshOptions options)
+        DataSyncRefreshOptions options,
+        IReadOnlyList<string> kinds)
     {
         private readonly DataSyncActorId _self = new(state.ActorId);
+
+        /// <summary>When the last committed Refresh of each kind began, as this one found it (§6.5).</summary>
+        private readonly IReadOnlyDictionary<string, long> _refreshedAt =
+            DataSyncStoredJson.ReadCounters(state.RefreshedAtJson, "RefreshedAtJson");
         private readonly List<DataSyncInboxDraft> _drafts = [];
         private readonly HashSet<(string Kind, string LocalKey)> _release =
             (options.ReleaseHeld ?? []).ToHashSet();
@@ -484,16 +499,24 @@ public sealed class DataSyncRefresher : IDataSyncRefresher
         }
 
         /// <summary>
-        /// §6.5: the change undoes what a recent apply wrote. The entity is held: no revision, <c>PublishHeld</c>, a
+        /// §6.5: the change undoes what a recent apply wrote — an apply of the window before the change may have
+        /// been made, which is any time since the kind's last committed Refresh began, however long ago
+        /// (<see cref="DataSyncLostUpdateGuard.WindowStart"/>). The entity is held: no revision, <c>PublishHeld</c>, a
         /// Seq bump so readers receive it as <c>HeldAtSource = PendingDecision</c> and keep their version, and a
         /// state-derived <c>SuspectedLostUpdate</c> item of no link. Incoming merges of it freeze (row F).
         /// </summary>
         private async Task<bool> SuspectAsync(string kind, IDataSyncKindCodec codec, DataSyncEntityDbModel row,
             LocalEntity local, CancellationToken ct)
         {
-            _applied ??= await DataSyncAppliedChangesIndex.LoadRecentAsync(Db, Now, ct);
+            _applied ??= await DataSyncAppliedChangesIndex.LoadRecentAsync(Db,
+                kinds.Select(k => DataSyncLostUpdateGuard.WindowStart(_refreshedAt, k, Now)).Min(), ct);
             var applied = _applied.Get(kind, row.LocalKey);
-            if (applied is null || applied.Changes.IsEmpty) return false;
+            if (applied is null || applied.Changes.IsEmpty ||
+                applied.AppliedAtUtc < DataSyncLostUpdateGuard.WindowStart(_refreshedAt, kind, Now))
+            {
+                return false;
+            }
+
             var undone = DataSyncLostUpdateGuard.FindUndone(codec, local.Content, row.ChildrenLocal, applied.Changes);
             if (undone.Count == 0) return false;
 

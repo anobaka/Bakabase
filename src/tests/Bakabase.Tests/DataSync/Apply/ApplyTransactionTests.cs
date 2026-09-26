@@ -623,6 +623,179 @@ public class ApplyTransactionTests
         Assert.AreEqual(before, await SnapshotAsync(f), "the task ends Cancelled with nothing written (v3.1 M-f)");
         Assert.IsNull((await f.LinkRowAsync(link.Id)).LastErrorCode, "a stop is not a failure");
     }
+
+    /// <summary>The link's next apply lets a large change through (B5, §8.7), as its once flag does.</summary>
+    private static async Task SkipLargeChangeAsync(DataSyncApplyFixture f, DataSyncLinkDbModel link)
+    {
+        var db = f.NewDb();
+        (await db.DataSyncLinks.SingleAsync(l => l.Id == link.Id)).OnceFlagsJson =
+            DataSyncStoredJson.WriteFlags(new DataSyncMergeFlags(SkipLargeChange: true));
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// A chunk commits before the next begins and other writers take SQLite's lock in between (§8.10.2), so the usage
+    /// the merge read before the first chunk (§2.7) is read again for each later one: an entity the peer deleted is
+    /// deleted by itself only while it has no values (§8.6). One that gained values in the gap waits as a <c>Retry</c>
+    /// record, and the next merge asks about it.
+    /// </summary>
+    [TestMethod]
+    public async Task An_automatic_deletion_in_a_later_chunk_waits_when_the_entity_gained_values_in_the_gap()
+    {
+        var f = await CreateAsync();
+        var peer = new DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer, firstContactDone: false);
+        var order = OrderKeys(250);
+        var created = Enumerable.Range(0, 250).Select(_ => (Key: SyncKey.New().Value, Vv: peer.Next())).ToList();
+        await f.ApplyAsync(link, peer, created.Select((c, i) => (Item, peer.Record([c.Key], c.Vv, Content("P" + i), order[i])))
+            .ToArray());
+        var last = f.Kind.KeyOf("P249");
+
+        // The peer renames the first 249 and deletes the last: the deletion is in the second chunk.
+        await SkipLargeChangeAsync(f, link);
+        var records = created.Select((c, i) => i < 249
+                ? (Item, peer.Record([c.Key], peer.Next(c.Vv), Content("P" + i + "!"), order[i]))
+                : (Item, peer.Tombstone([c.Key], peer.Next(c.Vv))))
+            .ToArray();
+        var gaps = 0;
+        f.Runner.BetweenChunks = () =>
+        {
+            gaps++;
+            // A resource takes a value of the last definition while the apply leaves the lock free.
+            f.Kind.Values[last] = 1;
+            return Task.CompletedTask;
+        };
+        try
+        {
+            await f.ApplyAsync(link, peer, records);
+        }
+        finally
+        {
+            f.Runner.BetweenChunks = null;
+        }
+
+        Assert.AreEqual(1, gaps);
+        Assert.IsTrue(f.Kind.Definitions.ContainsKey(last), "a definition with values is never deleted without a person");
+        Assert.AreEqual(249, f.Kind.Definitions.Values.Count(d => d.Name.EndsWith('!')), "the rest of the chunk applied");
+        Assert.AreEqual(DataSyncPendingReason.Retry,
+            (await f.BasesAsync(link.Id)).Single(b => b.SyncKey == created[249].Key).PendingReason);
+        Assert.IsNull((await f.LinkRowAsync(link.Id)).LastErrorCode);
+
+        // The next merge reads the values and asks.
+        await f.ApplyAsync(link, peer);
+        var item = (await f.OpenItemsAsync()).Single(i => i.Type == DataSyncInboxItemType.DeletedThere);
+        Assert.AreEqual(created[249].Key, item.SyncKey);
+        Assert.IsTrue(f.Kind.Definitions.ContainsKey(last));
+    }
+
+    /// <summary>
+    /// §8.5.4 step 3 across chunks: a child the peer deleted is removed by itself only while nothing here uses it. One
+    /// resources took in the gap before its chunk stays, its entity's record waits as <c>Retry</c>, and the next merge
+    /// holds the child with its question.
+    /// </summary>
+    [TestMethod]
+    public async Task A_child_removal_in_a_later_chunk_waits_when_resources_took_the_child_in_the_gap()
+    {
+        var f = await CreateAsync();
+        var peer = new DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer, firstContactDone: false);
+        var order = OrderKeys(250);
+        var created = Enumerable.Range(0, 250).Select(_ => (Key: SyncKey.New().Value, Vv: peer.Next())).ToList();
+        await f.ApplyAsync(link, peer, created.Select((c, i) =>
+            (Item, peer.Record([c.Key], c.Vv, Content("P" + i, ("a" + i, "A"), ("b" + i, "B")), order[i]))).ToArray());
+        var last = f.Kind.KeyOf("P249");
+
+        // The peer deletes child b of each, unused here when the merge reads the usage.
+        await SkipLargeChangeAsync(f, link);
+        var edits = created.Select((c, i) =>
+            (Item, peer.Record([c.Key], peer.Next(c.Vv), Content("P" + i, ("a" + i, "A")), order[i]))).ToArray();
+        f.Runner.BetweenChunks = () =>
+        {
+            f.Kind.Use(last, "b249", 3);
+            return Task.CompletedTask;
+        };
+        try
+        {
+            await f.ApplyAsync(link, peer, edits);
+        }
+        finally
+        {
+            f.Runner.BetweenChunks = null;
+        }
+
+        CollectionAssert.AreEqual(new[] { "a249", "b249" }, f.Kind[last].Children.Select(c => c.Id).ToArray(),
+            "a child in use is never removed without a person");
+        Assert.AreEqual(249, f.Kind.Definitions.Values.Count(d => d.Children.Count == 1), "every other removal applied");
+        Assert.AreEqual(DataSyncPendingReason.Retry,
+            (await f.BasesAsync(link.Id)).Single(b => b.SyncKey == created[249].Key).PendingReason);
+
+        // The next merge holds it and asks.
+        await f.ApplyAsync(link, peer);
+        var item = (await f.OpenItemsAsync()).Single(i => i.Type == DataSyncInboxItemType.ChildDeletedInUse);
+        Assert.AreEqual(("child:b249", created[249].Key), (item.SubjectPath, item.SyncKey));
+        CollectionAssert.AreEqual(new[] { "b249" },
+            DataSyncStoredJson.ReadOverlay((await f.RowAsync(last)).OverlayJson).HeldChildren.Select(h => h.ChildId).ToArray());
+    }
+
+    /// <summary>
+    /// The reproduction over the real custom property kind: the value a resource took in the gap is not deleted with
+    /// its property. The adapter checks too (<see cref="DeleteEntityOperation.RequireNoValues"/>).
+    /// </summary>
+    [TestMethod]
+    public async Task A_custom_property_that_gained_a_value_in_the_gap_is_kept_with_its_value()
+    {
+        var f = await CreateAsync(customProperties: true);
+        var peer = new DataSyncPeer("PC-1");
+        var link = await f.LinkAsync(peer, DataSyncLinkMode.TwoWay, false, Properties);
+        var order = OrderKeys(250);
+        var created = Enumerable.Range(0, 250).Select(_ => (Key: SyncKey.New().Value, Vv: peer.Next())).ToList();
+        var codec = Bakabase.Modules.DataSync.Kinds.CustomProperties.CustomPropertyCodec.Instance;
+        System.Text.Json.Nodes.JsonObject Text(string name) => codec.Write(
+            new Bakabase.Modules.DataSync.Kinds.CustomProperties.CustomPropertyContentV1
+            {
+                Name = name, Type = Bakabase.Abstractions.Models.Domain.Constants.PropertyType.SingleLineText,
+            });
+        await f.ApplyAsync(link, peer,
+            created.Select((c, i) => (Properties, peer.Record([c.Key], c.Vv, Text("P" + i), order[i]))).ToArray());
+        var p249 = (await f.CustomProperties.GetAll()).Single(p => p.Name == "P249");
+
+        await SkipLargeChangeAsync(f, link);
+        var records = created.Select((c, i) => i < 249
+                ? (Properties, peer.Record([c.Key], peer.Next(c.Vv), Text("P" + i + "!"), order[i]))
+                : (Properties, peer.Tombstone([c.Key], peer.Next(c.Vv))))
+            .ToArray();
+        f.Runner.BetweenChunks = async () =>
+        {
+            await using var scope = f.Services.CreateAsyncScope();
+            await scope.ServiceProvider
+                .GetRequiredService<Bakabase.Modules.Property.Abstractions.Services.ICustomPropertyValueService>()
+                .AddDbModelRange([new Bakabase.Modules.Property.Abstractions.Models.Db.CustomPropertyValueDbModel
+                {
+                    ResourceId = 1, PropertyId = p249.Id,
+                    Scope = (int) Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope.Manual,
+                    Value = "Hello",
+                }]);
+        };
+        try
+        {
+            await f.ApplyAsync(link, peer, records);
+        }
+        finally
+        {
+            f.Runner.BetweenChunks = null;
+        }
+
+        var properties = await f.CustomProperties.GetAll();
+        Assert.AreEqual(249, properties.Count(p => p.Name.EndsWith('!')));
+        Assert.IsTrue(properties.Any(p => p.Id == p249.Id), "the property with a value stays");
+        await using var read = f.Services.CreateAsyncScope();
+        var values = await read.ServiceProvider
+            .GetRequiredService<Bakabase.Modules.Property.Abstractions.Services.ICustomPropertyValueService>()
+            .GetAllDbModels(v => v.PropertyId == p249.Id, false);
+        Assert.AreEqual(1, values.Count, "and so does its value");
+        Assert.AreEqual(DataSyncPendingReason.Retry,
+            (await f.BasesAsync(link.Id)).Single(b => b.SyncKey == created[249].Key).PendingReason);
+    }
 }
 
 /// <summary>An identity that answers another node from the n-th call after <see cref="FlipAfter"/>.</summary>

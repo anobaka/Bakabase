@@ -276,6 +276,9 @@ public sealed partial class DataSyncApplyRunner
                 if (!await FaithfulAsync(writes, codec, kind, row.LocalKey, p.Content, ct))
                     return DataSyncUndoBlock.ChangedSinceImport;
                 row.PublishHeld = false;
+                // The children are the captured ones again: holds, local-only children and the links' child maps
+                // follow them back by class, as the conversion took them along.
+                await DataSyncChildIdRemap.ApplyAsync(s, row, before, codec.ReadLocal(p.Content), ct);
                 await writes.RecordLiveAsync(kind, row.LocalKey, before, UndoDecision(row, keys), null, null,
                     EntityKeys.None, null, ct);
                 recorder.TypeChanged++;

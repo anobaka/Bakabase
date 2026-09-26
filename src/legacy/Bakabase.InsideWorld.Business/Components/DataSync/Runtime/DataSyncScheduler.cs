@@ -17,9 +17,13 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
 
 /// <summary>
 /// Once per second, decides what data sync runs (§8.2). It never does network work, and its only database work is
-/// reading link rows and the local state row (and, once at the start, making every link due):
+/// reading link rows and the local state row (and, once at the start, making every link due; once after each
+/// lost-update window, a Refresh):
 /// <list type="bullet">
 /// <item>once at the start, it runs the actor check (§5.6) and makes every link due five seconds later;</item>
+/// <item>once the lost-update guard's window after the most recent apply has passed, it refreshes the kinds no Refresh
+/// looked at since (<c>DataSyncRefreshCoordinator.CloseLostUpdateWindowsAsync</c>, §6.5), without waiting for the
+/// gate;</item>
 /// <item>it hands grant events to the link service, so a granted request reaches its review within seconds;</item>
 /// <item>it starts the <c>DataSync</c> fetch task when a link is due and the task is not active — also when a
 /// federation session to a link's peer came online since the last tick;</item>
@@ -127,12 +131,24 @@ public sealed class DataSyncScheduler : BackgroundService
             var links = await _links.GetLinksAsync(ct);
             DataSyncLocalStateDbModel? local;
             IDataSyncActorGuard? guard;
+            Persistence.DataSyncRefreshCoordinator? refresh;
             await using (var scope = _scopes.CreateAsyncScope())
             {
                 local = await scope.ServiceProvider.GetRequiredService<IDataSyncStore>().GetLocalStateAsync(ct);
                 guard = scope.ServiceProvider.GetService<IDataSyncActorGuard>();
                 if (guard is { IsVerified: false } && _state.CanVerify(links, now)) guard.MarkVerified();
                 WakeLinksWhosePeerCameOnline(scope.ServiceProvider.GetService<IDataSyncPeerSessions>(), links);
+                refresh = scope.ServiceProvider.GetService<Persistence.DataSyncRefreshCoordinator>();
+            }
+
+            // The lost-update guard's window after an apply closes with a Refresh once it has passed (§6.5).
+            try
+            {
+                if (refresh is not null) await refresh.CloseLostUpdateWindowsAsync(ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                _logger.LogWarning(e, "Data sync could not refresh after the lost-update window closed");
             }
 
             // A restore detection announces itself from here, whoever paused the links (§9.4).

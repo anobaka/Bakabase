@@ -249,7 +249,8 @@ internal sealed partial class DataSyncMergeEngine
 
         if (verdict.IsAutomatic)
         {
-            p.Operation = new DeleteEntityOperation(DataSyncMergeItemIds.Of(k.Kind, key), l.LocalKey, l.LocalHash);
+            p.Operation = new DeleteEntityOperation(DataSyncMergeItemIds.Of(k.Kind, key), l.LocalKey, l.LocalHash,
+                RequireNoValues: true);
             p.Revision = new DataSyncRevisionDecision(k.Kind, l.Keys, l.LocalKey, DataSyncRevisionKind.AcceptRemoteDelete,
                 c.Record.Vv, null, false, false, l.OrderKey, l.Unknown, l.ChildrenLocal, null);
             p.BaseUpdates.Add(Agree(k, key, c.Record, null));

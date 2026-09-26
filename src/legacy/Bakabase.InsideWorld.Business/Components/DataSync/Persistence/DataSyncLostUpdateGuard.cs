@@ -21,19 +21,97 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 /// The lost-update guard (§6.5). A whole-row writer that read a definition before a sync apply committed and wrote it
 /// back afterwards silently undoes what sync applied; Refresh would publish that stale overwrite as a newer local
 /// revision and revert the change on every device. When the current local content undoes at least one change of the
-/// entity's most recent apply of the last <see cref="Window"/>, Refresh holds the entity instead (no revision,
-/// <c>PublishHeld</c>, a <c>SuspectedLostUpdate</c> item) until a person decides.
+/// entity's most recent apply of the <see cref="Window"/> before the change may have been made, Refresh holds the
+/// entity instead (no revision, <c>PublishHeld</c>, a <c>SuspectedLostUpdate</c> item) until a person decides.
 /// </summary>
 /// <remarks>
+/// <para>
 /// A change counts as undone, by path and by local child id (engineering must-fix 14), when: a scalar is back at its
 /// before value (and before ≠ after); an added child's id is gone; a renamed child's id carries its old label; a
 /// moved node's id is back under its old parent; a removed child's id is back. Recolours and order are appearance and
 /// never held. Only apply logs of kind AutoSync, Resolution and FirstLink count; data sync's own undo is exempt (its
 /// logs are Undo, and an undone log no longer counts).
+/// </para>
+/// <para>
+/// The window is measured to the change, not to the Refresh that meets it: nothing runs Refresh on a timer, and one
+/// that comes long after a stale write (the device's readers offline, its only link a Follow) must still judge it.
+/// Refresh cannot tell when a change was made, only that it was made after the kind's last committed Refresh began
+/// (<see cref="WindowStart"/>, <c>RefreshedAtJson</c>), so every guarded apply of the window before that moment
+/// counts. The scheduler refreshes once each window has closed (<see cref="DataSyncRefreshCoordinator"/>), so a
+/// person's deliberate revert after it is an ordinary revision again.
+/// </para>
 /// </remarks>
 public static class DataSyncLostUpdateGuard
 {
     public static readonly TimeSpan Window = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// Where the window starts for a change Refresh meets now in <paramref name="kind"/>: <see cref="Window"/> before
+    /// the kind's last committed Refresh began (the change came after it), or before <paramref name="nowUtc"/> when no
+    /// Refresh of the kind was ever recorded.
+    /// </summary>
+    public static DateTime WindowStart(IReadOnlyDictionary<string, long> refreshedAt, string kind, DateTime nowUtc)
+    {
+        ArgumentNullException.ThrowIfNull(refreshedAt);
+        var lastLook = refreshedAt.TryGetValue(kind, out var ms) ? FromUnixMs(ms) : nowUtc;
+        return (lastLook < nowUtc ? lastLook : nowUtc) - Window;
+    }
+
+    /// <summary>
+    /// <c>RefreshedAtJson</c> after a Refresh of <paramref name="kinds"/> that began at
+    /// <paramref name="startedAtUtc"/>, or null when it need not change. A recorded time only moves while a guarded apply lies inside the window before
+    /// it: otherwise an older time widens the window over nothing but older applies, and heads, which refresh every
+    /// few seconds, would write the row each time for nothing.
+    /// </summary>
+    public static async Task<string?> AfterRefreshAsync(BakabaseDbContext db, string? refreshedAtJson,
+        IReadOnlyCollection<string> kinds, DateTime startedAtUtc, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(kinds);
+        var refreshedAt = new Dictionary<string, long>(
+            DataSyncStoredJson.ReadCounters(refreshedAtJson, "RefreshedAtJson"), StringComparer.Ordinal);
+        var started = ToUnixMs(startedAtUtc);
+        var recorded = kinds.Where(refreshedAt.ContainsKey).Select(k => refreshedAt[k]).ToList();
+        // Only the applies inside the oldest recorded time's window matter; a kind never recorded is written anyway.
+        var latest = recorded.Count == 0
+            ? null
+            : await LatestGuardedApplyAsync(db, FromUnixMs(recorded.Min()) - Window, ct);
+        var changed = false;
+        foreach (var kind in kinds)
+        {
+            if (refreshedAt.TryGetValue(kind, out var last) &&
+                (last >= started || latest is not { } at || at < FromUnixMs(last) - Window))
+            {
+                continue;
+            }
+
+            refreshedAt[kind] = started;
+            changed = true;
+        }
+
+        return changed ? DataSyncStoredJson.WriteCounters(refreshedAt) : null;
+    }
+
+    /// <summary>
+    /// The most recent guarded apply that was not undone (§6.5), applied at or after <paramref name="sinceUtc"/> when
+    /// given; null when there is none.
+    /// </summary>
+    public static async Task<DateTime?> LatestGuardedApplyAsync(BakabaseDbContext db, DateTime? sinceUtc,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+        var logs = db.DataSyncApplyLogs.AsNoTracking()
+            .Where(l => l.UndoneAtUtc == null && (l.Kind == DataSyncHistoryKind.AutoSync ||
+                                                  l.Kind == DataSyncHistoryKind.Resolution ||
+                                                  l.Kind == DataSyncHistoryKind.FirstLink));
+        if (sinceUtc is { } since) logs = logs.Where(l => l.AppliedAtUtc >= since);
+        var latest = await logs.MaxAsync(l => (DateTime?) l.AppliedAtUtc, ct);
+        return latest is { } at ? DateTime.SpecifyKind(at, DateTimeKind.Utc) : null;
+    }
+
+    public static long ToUnixMs(DateTime utc) =>
+        new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+
+    public static DateTime FromUnixMs(long ms) => DateTimeOffset.FromUnixTimeMilliseconds(ms).UtcDateTime;
 
     /// <summary>
     /// The item's <c>Detail</c> once Reapply cannot run: the apply's change list is gone (retention, or the apply was
@@ -216,11 +294,14 @@ public sealed class DataSyncAppliedChangesIndex
     private DataSyncAppliedChangesIndex(Dictionary<(string Kind, string LocalKey), DataSyncAppliedChanges> latest) =>
         _latest = latest;
 
-    /// <summary>Each entity's most recent guarded apply within the window ending at <paramref name="nowUtc"/>.</summary>
-    public static async Task<DataSyncAppliedChangesIndex> LoadRecentAsync(BakabaseDbContext db, DateTime nowUtc,
+    /// <summary>
+    /// Each entity's most recent guarded apply applied at or after <paramref name="sinceUtc"/> (the earliest
+    /// <see cref="DataSyncLostUpdateGuard.WindowStart"/> of the kinds a Refresh covers).
+    /// </summary>
+    public static async Task<DataSyncAppliedChangesIndex> LoadRecentAsync(BakabaseDbContext db, DateTime sinceUtc,
         CancellationToken ct)
     {
-        var since = nowUtc - DataSyncLostUpdateGuard.Window;
+        var since = sinceUtc;
         var latest = new Dictionary<(string Kind, string LocalKey), DataSyncAppliedChanges>();
         foreach (var log in await Guarded(db).Where(l => l.AppliedAtUtc >= since).ToListAsync(ct))
             AddEntities(latest, log, null);

@@ -175,6 +175,8 @@ public record DataSyncLocalStateDbModel
     public string TombstoneFloorSeqsJson { get; set; } = "{}"; // kind → highest Seq of an unserved tombstone of that kind
     public string KindSchemaVersionsJson { get; set; } = "{}";
     public string ComparisonFormVersionsJson { get; set; } = "{}";   // §3.4
+    public string RefreshedAtJson { get; set; } = "{}";    // kind → Unix ms the last committed Refresh of it began:
+                                                           //   a change a later Refresh meets came after it (§6.5)
     public bool NewDefinitionsStayLocal { get; set; }      // §3.6
     public bool AllPaused { get; set; }
     public DataSyncPauseReason? RestoreReason { get; set; }

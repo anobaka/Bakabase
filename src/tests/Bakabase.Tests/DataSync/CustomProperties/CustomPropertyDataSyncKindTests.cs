@@ -538,6 +538,29 @@ public class CustomPropertyDataSyncKindTests
         CollectionAssert.AreEquivalent(new[] { 101, 102 }, _index.Invalidated.ToArray());
     }
 
+    /// <summary>
+    /// An automatic deletion (§8.6) was decided on "no values"; its hash covers the row, not the values. A property that
+    /// has values by the time it runs is skipped as ChangedDuringApply, values and all; one without is deleted.
+    /// </summary>
+    [TestMethod]
+    public async Task AnAutomaticDelete_OfAPropertyThatHasValues_IsChangedDuringApply()
+    {
+        var id = await AddAsync("Genre", PropertyType.MultipleChoice, Choices(("a", "Action")));
+        var empty = await AddAsync("Empty", PropertyType.MultipleChoice, Choices(("x", "X")));
+        await AddValuesAsync(id, PropertyType.MultipleChoice, (101, new List<string> { "a" }));
+        var local = await ReadOneAsync(id);
+        var emptyLocal = await ReadOneAsync(empty);
+
+        var outcome = await ApplyAsync(
+            new DeleteEntityOperation("d", Key(id), ContentHash.Of(local.Content), RequireNoValues: true),
+            new DeleteEntityOperation("e", Key(empty), ContentHash.Of(emptyLocal.Content), RequireNoValues: true));
+
+        CollectionAssert.AreEquivalent(new[] { "d" }, outcome.ChangedDuringApplyItemIds.ToArray());
+        Assert.AreEqual(1, (await Properties.GetAllDbModels(r => r.Id == id)).Count, "kept");
+        Assert.AreEqual(1, (await Values.GetAllDbModels(v => v.PropertyId == id, false)).Count, "with its value");
+        Assert.AreEqual(0, (await Properties.GetAllDbModels(r => r.Id == empty)).Count, "deleted");
+    }
+
     [TestMethod]
     public async Task DeleteAsync_ForUndo_DeletesAndInvalidates()
     {
