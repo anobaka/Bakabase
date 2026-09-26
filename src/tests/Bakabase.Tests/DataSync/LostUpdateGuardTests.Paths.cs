@@ -12,6 +12,7 @@ using Bakabase.Modules.DataSync;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Canonical;
 using Bakabase.Modules.DataSync.Identity;
+using Bakabase.Modules.DataSync.Kinds.CustomProperties;
 using Bakabase.Modules.DataSync.Merging;
 using Bakabase.Modules.DataSync.Models.Db;
 using Bakabase.Modules.DataSync.Runtime;
@@ -20,6 +21,7 @@ using Bakabase.Modules.Enhancer.Components.Enhancers.Regex;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Components.DataSync;
 using Bakabase.Modules.Property.Components.Properties.Choice;
 using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.Property.Extensions;
@@ -48,18 +50,20 @@ public partial class LostUpdateGuardTests
     /// F74: <c>EnhancementController</c>'s enhance-with-options action calls <c>EnhancerService</c> directly, outside
     /// any BTask, and it writes the custom properties it read at its start back whole with <c>UpdateRange</c>. A sync
     /// apply that committed between that read and that write is undone; Refresh must hold the entity, not publish the
-    /// stale row as a newer revision.
+    /// stale row as a newer revision. The custom property kind is the real one (package B's adapter over the service
+    /// the enhancer writes through).
     /// </summary>
     [TestMethod]
     public async Task A_stale_write_through_the_controller_driven_enhancer_is_held()
     {
+        using var newtonsoft = CustomProperties.NewtonsoftDefaults.UseApp();
         var hook = new CustomPropertyWriteHook();
         var f = await DataSyncRefreshFixture.CreateAsync(kind: DataSyncKindIds.ExtensionGroup, configure: s =>
         {
             s.AddSingleton(hook);
             s.AddScoped<ICustomPropertyService>(sp => InterceptedCustomProperties.Wrap(
                 ActivatorUtilities.CreateInstance<CustomPropertyService<BakabaseDbContext>>(sp), hook));
-            s.AddScoped<IDataSyncKind>(sp => new CustomPropertyChoicesKind(sp.GetRequiredService<ICustomPropertyService>()));
+            s.AddScoped<IDataSyncKind, CustomPropertyDataSyncKind<BakabaseDbContext>>();
         });
         var root = Path.Combine(Path.GetTempPath(), $"LostUpdateGuardTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(root, "[Toei] My Show"));
@@ -123,6 +127,14 @@ public partial class LostUpdateGuardTests
             var item = (await f.ItemsAsync()).Single();
             Assert.AreEqual(DataSyncInboxItemType.SuspectedLostUpdate, item.Type);
             Assert.AreEqual("choice:pc", DataSyncStoredJson.Read<DataSyncInboxPayload>(item.PayloadJson, "").Fields.Single().Path);
+
+            // What Refresh read is the Property module's own adapter, not a stand-in.
+            await using (var scope = services.CreateAsyncScope())
+            {
+                var kind = scope.ServiceProvider.GetServices<IDataSyncKind>()
+                    .Single(k => k.Codec.Descriptor.Kind == DataSyncKindIds.CustomProperty);
+                Assert.IsInstanceOfType<CustomPropertyCodec>(kind.Codec, "the real custom property kind");
+            }
         }
         finally
         {
@@ -296,67 +308,4 @@ public class InterceptedCustomProperties : DispatchProxy
             throw;
         }
     }
-}
-
-/// <summary>
-/// A read-only data sync view of the real custom properties (the kind adapter itself is another package's): each
-/// property is <c>{"children":[{id: choice value, label}],"name"}</c> under the memory codec — all Refresh and the
-/// lost-update guard read.
-/// </summary>
-internal sealed class CustomPropertyChoicesKind(ICustomPropertyService properties) : IDataSyncKind
-{
-    public IDataSyncKindCodec Codec { get; } = new MemoryCodec(DataSyncKindIds.CustomProperty, false);
-
-    private async Task<List<(string LocalKey, JsonObject Content)>> AllAsync()
-    {
-        var result = new List<(string, JsonObject)>();
-        foreach (var property in (await properties.GetAll()).OrderBy(p => p.Id))
-        {
-            var choices = property.Options switch
-            {
-                MultipleChoicePropertyOptions m => m.Choices,
-                SingleChoicePropertyOptions s => s.Choices,
-                _ => null,
-            } ?? [];
-            result.Add((property.Id.ToString(), new MemoryDefinition(property.Name,
-                choices.Select(c => new MemoryChild(c.Value, c.Label)).ToList()).ToContent()));
-        }
-
-        return result;
-    }
-
-    public async Task<IReadOnlyList<LocalEntity>> ReadAsync(IReadOnlyCollection<string>? localKeys, CancellationToken ct) =>
-        (await AllAsync()).Select((e, i) => (e, i)).Where(x => localKeys is null || localKeys.Contains(x.e.LocalKey))
-        .Select(x => new LocalEntity(x.e.LocalKey, null, x.i, x.e.Content)).ToList();
-
-    public async Task<IReadOnlyDictionary<string, string>> ReadRawHashesAsync(CancellationToken ct) =>
-        (await AllAsync()).ToDictionary(e => e.LocalKey, e => ContentHash.Of(e.Content));
-
-    public Task<IReadOnlyList<string>> ReadOrderAsync(CancellationToken ct) => throw new NotSupportedException();
-
-    public Task<ApplyBatchOutcome> ApplyAsync(ApplyBatch batch, CancellationToken ct) => throw new NotSupportedException();
-
-    public Task<IReadOnlyDictionary<string, JsonObject>> CapturePreImageAsync(IReadOnlyCollection<string> localKeys,
-        CancellationToken ct) => throw new NotSupportedException();
-
-    public Task<IReadOnlyDictionary<string, EntityUsage>> GetUsageAsync(
-        IReadOnlyDictionary<string, IReadOnlyCollection<string>> childIdsByLocalKey, CancellationToken ct) =>
-        throw new NotSupportedException();
-
-    public Task RestoreAsync(string localKey, JsonObject preImage, CancellationToken ct) => throw new NotSupportedException();
-
-    public Task DeleteAsync(string localKey, CancellationToken ct) => throw new NotSupportedException();
-
-    public void ResetCaches()
-    {
-    }
-
-    public Task ApplyOrderAsync(IReadOnlyList<string> syncedLocalKeysInSharedOrder, CancellationToken ct) =>
-        throw new NotSupportedException();
-
-    public Task ChangeSubtypeAsync(string localKey, string subtype, CancellationToken ct) =>
-        throw new NotSupportedException();
-
-    public Task<DataSyncTypeChangePreview> PreviewSubtypeChangeAsync(string localKey, string subtype,
-        CancellationToken ct) => throw new NotSupportedException();
 }
