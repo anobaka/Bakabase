@@ -21,9 +21,10 @@ public class JavdbClient(
     string IAvClient.SourceId => AvSourceIds.Javdb;
 
     async Task<IAvDetail?> IAvClient.SearchAndParseVideo(string number, string? appointUrl, string? language) =>
-        await SearchAndParseVideo(number, appointUrl: appointUrl);
+        await SearchAndParseVideo(number, appointUrl: appointUrl, throwOnError: true);
 
-    public async Task<JavdbVideoDetail?> SearchAndParseVideo(string number, string? appointUrl = null, string? baseUrl = null)
+    public async Task<JavdbVideoDetail?> SearchAndParseVideo(string number, string? appointUrl = null, string? baseUrl = null,
+        bool throwOnError = false)
     {
         try
         {
@@ -61,6 +62,7 @@ public class JavdbClient(
             var detailHtml = await detailResponse.Content.ReadAsStringAsync();
             if (detailHtml.Contains("Cloudflare") || detailHtml.Contains("owner of this website has banned"))
             {
+                if (throwOnError) throw new InvalidOperationException("JavDB returned a Cloudflare challenge or blocked page");
                 return null;
             }
 
@@ -69,6 +71,7 @@ public class JavdbClient(
             var (title, originalTitle) = GetTitle(detailCq, "zh_cn");
             if (string.IsNullOrWhiteSpace(title))
             {
+                if (throwOnError) throw new InvalidOperationException("JavDB detail page did not contain a title");
                 return null;
             }
 
@@ -106,8 +109,10 @@ public class JavdbClient(
                 SearchUrl = searchUrl
             };
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.LogDebug(ex, "JavDB search or parsing failed for {Number}", number);
+            if (throwOnError) throw;
             return null;
         }
     }
@@ -244,5 +249,4 @@ public class JavdbClient(
         return string.Empty;
     }
 }
-
 
