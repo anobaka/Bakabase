@@ -1,6 +1,7 @@
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Federation.Transport;
+using Bakabase.Modules.RemoteAccess.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -29,7 +30,14 @@ public static class FederationPeerServiceCollectionExtensions
                 UseProxy = false,
                 AllowAutoRedirect = false,
                 UseCookies = false,
-                ConnectTimeout = TimeSpan.FromSeconds(2),
+                // Resolving the name and connecting, together. A name's IPv4 and IPv6
+                // addresses are raced rather than tried one after another, so what is left to
+                // wait for is the name lookup — a Windows computer name can take seconds over
+                // LLMNR/NetBIOS — and one round trip. Kept under the 8 s every exchange runs
+                // within (PublicAsync, the handshake, a query's steps), so an unreachable peer
+                // is still reported as such.
+                ConnectTimeout = TimeSpan.FromSeconds(5),
+                ConnectCallback = DualStackConnector.ConnectCallback,
                 PooledConnectionLifetime = TimeSpan.FromMinutes(5)
             });
         services.TryAddSingleton<PeerSessionFactory>();

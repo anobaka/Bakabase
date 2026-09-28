@@ -1,4 +1,5 @@
 using System.Net;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Remoting.Abstractions.Models;
 using Bakabase.Remoting.Components.Connection;
 using Microsoft.Extensions.Logging;
@@ -471,18 +472,6 @@ public static class UpstreamConnections
             throw new UpstreamIdentityRefusedException(check);
         }
 
-        var socket = new System.Net.Sockets.Socket(System.Net.Sockets.SocketType.Stream,
-            System.Net.Sockets.ProtocolType.Tcp) {NoDelay = true};
-
-        try
-        {
-            await socket.ConnectAsync(endpoint, ct);
-            return new System.Net.Sockets.NetworkStream(socket, true);
-        }
-        catch
-        {
-            socket.Dispose();
-            throw;
-        }
+        return await DualStackConnector.Default.ConnectAsync(endpoint, ct);
     }
 }

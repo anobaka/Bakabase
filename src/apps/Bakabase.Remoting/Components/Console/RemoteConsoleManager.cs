@@ -8,6 +8,7 @@ using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Modules.RemoteAccess.Components.Pairing;
 using Bakabase.Remoting.Abstractions.Models;
@@ -122,14 +123,16 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         _self = new ClientSelfAddress(OwnPorts);
 
         // Its own client rather than the app's: proxies are bypassed, as the relay's are —
-        // a system proxy has no route to a server on the LAN — and a redirect is an answer
-        // to report, not one to follow.
+        // a system proxy has no route to a server on the LAN — a redirect is an answer to
+        // report, not one to follow, and a name's IPv4 and IPv6 addresses are raced, as the
+        // relay's are.
         _http = new HttpClient(new SocketsHttpHandler
         {
             UseProxy = false,
             AllowAutoRedirect = false,
             UseCookies = false,
             ConnectTimeout = TimeSpan.FromSeconds(10),
+            ConnectCallback = DualStackConnector.ConnectCallback,
             PooledConnectionLifetime = TimeSpan.FromMinutes(5)
         })
         {

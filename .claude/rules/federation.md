@@ -178,6 +178,12 @@ endpoints and confirmations.
 - **No silent widening or truncation.** Unsupported filters are rejected, partial coverage is
   reported per node, budget overruns fail explicitly.
 - **Proxies are bypassed** (`UseProxy = false`), matching the desktop app's relays.
+- **Connections race IPv4 and IPv6.** Every outbound connection to another device — peer
+  requests, discovery, the desktop app's relays and probes — opens through
+  `DualStackConnector` (`Bakabase.Modules.RemoteAccess`): IPv4 first, the next address beside
+  it after 250 ms, first to connect wins. A server listens on IPv4 only, and Windows resolves a
+  computer name IPv6-first; tried one after another, a silently dropped IPv6 address spent the
+  whole connect budget. Never go back to a plain `Socket.ConnectAsync(DnsEndPoint)`.
 
 ## Changing the protocol
 
