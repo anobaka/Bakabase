@@ -9,7 +9,6 @@ using Bakabase.Infrastructures.Components.Configurations;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bootstrap.Components.Configuration;
 using Bootstrap.Extensions;
-using Humanizer;
 using Microsoft.AspNetCore.SignalR;
 using Bakabase.InsideWorld.Business.Components.Gui;
 
@@ -32,7 +31,8 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations
         private void OnChange<T>(T options) where T : class, new()
         {
             _logger.LogInformation($"Sending new options {SpecificTypeUtils<T>.Type.Name}");
-            _ = _hub.Clients.All.OptionsChanged(SpecificTypeUtils<T>.Type.Name.Camelize(), options);
+            // Not to every connection: see WebGuiOptionsAudience.
+            _ = WebGuiOptionsAudience.PublishAsync(_hub.Clients, SpecificTypeUtils<T>.Type, options);
         }
 
         public void Initialize()

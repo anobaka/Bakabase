@@ -150,14 +150,23 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "SetRemoteAccessMode")]
         public async Task<BaseResponse> SetMode([FromBody] RemoteAccessModeInputModel model)
         {
+            var before = remoteAccessService.GetEffectiveMode();
             await remoteAccessService.SetModeAsync(model.Mode);
+            var after = remoteAccessService.GetEffectiveMode();
 
             // Every other check is per-request and takes effect on the next call. A hub
             // connection is authorized once at its handshake, so switching remote access
             // off has to reach the ones already open or they keep receiving pushes.
-            if (remoteAccessService.GetEffectiveMode() == RemoteAccessMode.Disabled)
+            if (after == RemoteAccessMode.Disabled)
             {
                 connections.AbortAll();
+            }
+            else if (after != before)
+            {
+                // What an unpaired connection is sent was decided under the old mode —
+                // every options object while Unrestricted, only what browsing reads while
+                // Enabled. Hung up on, it reconnects and is judged by the new one.
+                connections.AbortUnpaired();
             }
 
             return BaseResponseBuilder.Ok;

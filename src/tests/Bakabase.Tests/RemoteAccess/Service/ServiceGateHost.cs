@@ -26,6 +26,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -176,8 +177,13 @@ internal sealed class ServiceGateHost : IAsyncDisposable
     /// build runs with — a development build, for the tests — so a test that needs a
     /// packaged build's answer passes one for that runtime instead.
     /// </param>
+    /// <param name="mapHubs">
+    /// Maps the hubs a test needs, in place of <see cref="StubHub"/> on every one of
+    /// <see cref="Hubs"/>.
+    /// </param>
     public static async Task<ServiceGateHost> StartAsync(IReadOnlyCollection<Type> controllers,
-        Action<IServiceCollection>? configure = null, ServiceCorsOrigins? origins = null)
+        Action<IServiceCollection>? configure = null, ServiceCorsOrigins? origins = null,
+        Action<IEndpointRouteBuilder>? mapHubs = null)
     {
         var trusted = origins ?? ServiceCorsOrigins.ForThisBuild;
         var root = Path.Combine(Path.GetTempPath(), "bakabase-service-gates", Guid.NewGuid().ToString("N"));
@@ -283,9 +289,16 @@ internal sealed class ServiceGateHost : IAsyncDisposable
                     {
                         // Every hub the Service maps: WebGuiHub (BakabaseStartup) and the
                         // progressor hub (AppStartup), at their production paths.
-                        foreach (var hub in Hubs)
+                        if (mapHubs != null)
                         {
-                            endpoints.MapHub<StubHub>(hub);
+                            mapHubs(endpoints);
+                        }
+                        else
+                        {
+                            foreach (var hub in Hubs)
+                            {
+                                endpoints.MapHub<StubHub>(hub);
+                            }
                         }
 
                         endpoints.MapControllers();
