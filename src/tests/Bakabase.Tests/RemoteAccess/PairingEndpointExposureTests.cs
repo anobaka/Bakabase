@@ -1,25 +1,45 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Reflection;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Modules.RemoteAccess.Components.Pairing;
+using Bakabase.Remoting.Components.Connection;
 using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Controllers;
+using Bakabase.Tests.RemoteAccess.Service;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Tests.RemoteAccess;
 
 /// <summary>
-/// Holds the pairing routes and the middleware's anonymous allowlist against each other.
+/// Holds the pairing routes and the middleware's anonymous allowlist against each other,
+/// and asks the real gates who may manage this server's devices.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The two have to agree, and neither direction of disagreement is visible by reading
 /// one file: a management route that slips under the allowlist lets an unpaired caller
 /// approve itself, and a pairing route that falls outside it locks out the very device
 /// that has no credentials yet. This is not hypothetical — writing the controller
 /// against a <c>/remote-access/pair</c> prefix (no trailing slash) produced the first of
 /// those, because it also matched <c>/remote-access/pairing/</c>.
+/// </para>
+/// <para>
+/// Nor is the allowlist the only way in. Marking the management routes
+/// <c>[RemoteAccessible]</c> so a phone could look after devices let any unpaired caller on
+/// the LAN of an Enabled server file a request, approve it and collect a key with full
+/// control (#1454). A paired device never needed the mark, so the tests at the end call
+/// every management route as each kind of caller, through the real gates.
+/// </para>
 /// </remarks>
 [TestClass]
 public class PairingEndpointExposureTests
@@ -34,19 +54,8 @@ public class PairingEndpointExposureTests
         "/remote-access/devices"
     ];
 
-    /// <summary>
-    /// The management routes a device other than the host may call. Written out rather
-    /// than derived, because each one is a decision.
-    /// </summary>
-    private static readonly string[] PairedDeviceRoutes =
-    [
-        "GET /remote-access/devices",
-        "DELETE /remote-access/devices/{id}",
-        "PUT /remote-access/devices/{id}/name",
-        "GET /remote-access/pairing/requests",
-        "POST /remote-access/pairing/requests/{id}/approve",
-        "POST /remote-access/pairing/requests/{id}/reject"
-    ];
+    /// <summary>A caller on the LAN, as the test host stands one in.</summary>
+    private const string LanAddress = "192.168.1.50";
 
     private sealed record Route(string Method, string Path, bool RemoteAccessible)
     {
@@ -70,6 +79,11 @@ public class PairingEndpointExposureTests
                 })))
             .ToArray();
     }
+
+    private static Route[] ManagementRoutes() =>
+        Routes()
+            .Where(r => ManagementPrefixes.Any(p => r.Path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
 
     private static bool IsAllowlisted(string path) =>
         RemoteAccessMiddleware.AnonymousPathPrefixes.Any(p =>
@@ -96,9 +110,7 @@ public class PairingEndpointExposureTests
     [TestMethod]
     public void No_management_route_is_reachable_without_credentials()
     {
-        var routes = Routes()
-            .Where(r => ManagementPrefixes.Any(p => r.Path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-            .ToArray();
+        var routes = ManagementRoutes();
 
         Assert.IsTrue(routes.Length >= 5, $"expected the management routes to exist, found {routes.Length}");
 
@@ -110,24 +122,17 @@ public class PairingEndpointExposureTests
     }
 
     [TestMethod]
-    public void Only_the_decided_management_routes_are_open_to_a_paired_device()
+    public void No_management_route_is_marked_for_other_devices()
     {
         // A paired device may look after devices — see them, name them, cut one off, and
-        // let a new one in. That was a deliberate decision: a headless server has nobody
-        // standing at it to click approve, and the alternative is reading a code out of a
-        // container's log every time somebody gets a new phone.
-        //
-        // It is a decision about six routes, not a direction to travel in, so the list is
-        // written out. Adding a seventh fails here, which is the moment to ask whether a
-        // phone should be able to do that at all.
-        var open = Routes()
-            .Where(r => ManagementPrefixes.Any(p => r.Path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-            .Where(r => r.RemoteAccessible)
-            .Select(r => r.ToString())
-            .ToArray();
+        // let a new one in: a headless server has nobody standing at it to click approve.
+        // It gets there without the mark: the authorization filter lets paired devices,
+        // and every caller of an Unrestricted server, through before it looks for one. So
+        // on a management route the mark adds exactly one kind of caller — one that has
+        // not paired — and an unpaired caller that may approve requests approves its own.
+        var marked = ManagementRoutes().Where(r => r.RemoteAccessible).Select(r => r.ToString()).ToArray();
 
-        CollectionAssert.AreEquivalent(PairedDeviceRoutes, open,
-            $"open to a paired device: {string.Join(", ", open)}");
+        Assert.AreEqual(0, marked.Length, $"marked [RemoteAccessible]: {string.Join(", ", marked)}");
     }
 
     [TestMethod]
@@ -185,5 +190,154 @@ public class PairingEndpointExposureTests
             .ToArray();
 
         Assert.AreEqual(0, swallowed.Length, string.Join(", ", swallowed));
+    }
+
+    // ---- through the real gates ----
+
+    /// <summary>
+    /// A request to <paramref name="route"/> with its <c>{id}</c> filled in: from the LAN,
+    /// or from this machine when <paramref name="remoteIp"/> is null.
+    /// </summary>
+    private static HttpRequestMessage Call(ServiceGateHost host, Route route, string? remoteIp,
+        string id = "someone")
+    {
+        var request = host.Request(new HttpMethod(route.Method), route.Path.Replace("{id}", id),
+            json: route.Method == "PUT" ? """{"name":"Renamed"}""" : null);
+        if (remoteIp != null)
+        {
+            request.Headers.Add(ServiceGateHost.RemoteIpHeader, remoteIp);
+        }
+
+        return request;
+    }
+
+    private static HttpRequestMessage FromTheLan(ServiceGateHost host, HttpMethod method, string path,
+        string? json = null)
+    {
+        var request = host.Request(method, path, json: json);
+        request.Headers.Add(ServiceGateHost.RemoteIpHeader, LanAddress);
+        return request;
+    }
+
+    private static async Task<PairingCredentials> PairAsync(ServiceGateHost host, string name)
+    {
+        var devices = host.Services.GetRequiredService<IRemoteDeviceService>();
+        var code = await devices.IssuePairingCodeAsync();
+        return (await devices.PairWithCodeAsync(code.Code, name, RemoteDevicePlatform.Android)).Credentials!;
+    }
+
+    /// <summary>Signed with the device's key, the way the phone and the desktop app's relay sign.</summary>
+    private static async Task<HttpResponseMessage> SendSignedAsync(ServiceGateHost host, HttpRequestMessage request,
+        PairingCredentials device)
+    {
+        await UpstreamRequestSigner.SignAsync(request, device.DeviceId,
+            RemoteRequestSignature.FromBase64Url(device.Key), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        return await host.SendAsync(request);
+    }
+
+    private static void AssertRefused(HttpResponseMessage response, string because)
+    {
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode, because);
+        Assert.IsTrue(response.Headers.TryGetValues("X-Bakabase-Remote-Access", out var reason), because);
+        Assert.AreEqual(nameof(RemoteAccessDenialReason.HostOnly), reason.Single(), because);
+    }
+
+    private static void AssertAdmitted(HttpResponseMessage response, string because)
+    {
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, because);
+        Assert.IsFalse(response.Headers.Contains("X-Bakabase-Remote-Access"), because);
+    }
+
+    private static async Task<JsonElement> DataOf(HttpResponseMessage response)
+    {
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.AreEqual(0, body.RootElement.GetProperty("code").GetInt32());
+        return body.RootElement.GetProperty("data").Clone();
+    }
+
+    [TestMethod]
+    public async Task An_unpaired_caller_on_an_Enabled_server_is_refused_every_management_route()
+    {
+        await using var host = await ServiceGateHost.StartAsync([typeof(RemoteAccessController)]);
+        host.Remote.Mode = RemoteAccessMode.Enabled;
+        host.Remote.RequirePairing = false;
+
+        foreach (var route in ManagementRoutes())
+        {
+            AssertRefused(await host.SendAsync(Call(host, route, LanAddress)), $"{route}, unpaired");
+        }
+    }
+
+    [TestMethod]
+    public async Task A_paired_device_the_host_and_callers_of_an_Unrestricted_server_manage_devices()
+    {
+        await using var host = await ServiceGateHost.StartAsync([typeof(RemoteAccessController)]);
+        var phone = await PairAsync(host, "Phone");
+
+        foreach (var route in ManagementRoutes())
+        {
+            host.Remote.Mode = RemoteAccessMode.Enabled;
+            AssertAdmitted(await SendSignedAsync(host, Call(host, route, LanAddress), phone), $"{route}, paired");
+            AssertAdmitted(await host.SendAsync(Call(host, route, null)), $"{route}, from this machine");
+
+            host.Remote.Mode = RemoteAccessMode.Unrestricted;
+            AssertAdmitted(await host.SendAsync(Call(host, route, LanAddress)), $"{route}, unpaired on Unrestricted");
+        }
+
+        // Admitted, and it does what it says: the phone lets a device in, which then has a key.
+        host.Remote.Mode = RemoteAccessMode.Enabled;
+        var devices = host.Services.GetRequiredService<IRemoteDeviceService>();
+        var request = await devices.RequestPairingAsync("Laptop", RemoteDevicePlatform.Windows, "192.168.1.9");
+        var approve = ManagementRoutes().Single(r => r.Path.EndsWith("/approve", StringComparison.Ordinal));
+
+        var approved = await DataOf(await SendSignedAsync(host, Call(host, approve, LanAddress, request.Id), phone));
+
+        var claim = await devices.ClaimApprovedAsync(request.Id);
+        Assert.IsTrue(claim.Succeeded);
+        Assert.AreEqual(approved.GetProperty("deviceId").GetString(), claim.Credentials!.DeviceId);
+        Assert.AreEqual(phone.DeviceId, devices.Find(claim.Credentials.DeviceId)!.ApprovedByDeviceId);
+    }
+
+    [TestMethod]
+    public async Task An_unpaired_caller_cannot_let_itself_in()
+    {
+        // #1454 as it was done: ask to pair, approve the request, collect the key.
+        await using var host = await ServiceGateHost.StartAsync([typeof(RemoteAccessController)]);
+        host.Remote.Mode = RemoteAccessMode.Enabled;
+        host.Remote.RequirePairing = false;
+        var devices = host.Services.GetRequiredService<IRemoteDeviceService>();
+        var phone = await PairAsync(host, "Phone");
+
+        // Asking is what pair/ is for.
+        var asked = await DataOf(await host.SendAsync(FromTheLan(host, HttpMethod.Post, "/remote-access/pair/request",
+            """{"deviceName":"Intruder","platform":1}""")));
+        var requestId = asked.GetProperty("requestId").GetString()!;
+
+        // Answering it is not.
+        AssertRefused(await host.SendAsync(FromTheLan(host, HttpMethod.Post,
+            $"/remote-access/pairing/requests/{requestId}/approve")), "approving its own request");
+
+        // So there is no key to collect, and the request still waits for someone who may answer it.
+        var claimed = await DataOf(await host.SendAsync(FromTheLan(host, HttpMethod.Post,
+            "/remote-access/pair/claim", $$"""{"requestId":"{{requestId}}"}""")));
+        Assert.AreEqual(JsonValueKind.Null, claimed.GetProperty("credentials").ValueKind);
+        Assert.AreEqual((int) PairingFailure.NotYetApproved, claimed.GetProperty("failure").GetInt32());
+        Assert.IsTrue(devices.GetPendingRequests().Any(r => r.Id == requestId));
+
+        // Nor may it see who is paired or waiting, cut a device off, rename it, or turn a request away.
+        AssertRefused(await host.SendAsync(FromTheLan(host, HttpMethod.Get, "/remote-access/devices")),
+            "listing devices");
+        AssertRefused(await host.SendAsync(FromTheLan(host, HttpMethod.Get, "/remote-access/pairing/requests")),
+            "listing requests");
+        AssertRefused(await host.SendAsync(FromTheLan(host, HttpMethod.Delete,
+            $"/remote-access/devices/{phone.DeviceId}")), "revoking a device");
+        AssertRefused(await host.SendAsync(FromTheLan(host, HttpMethod.Put,
+            $"/remote-access/devices/{phone.DeviceId}/name", """{"name":"Mine now"}""")), "renaming a device");
+        AssertRefused(await host.SendAsync(FromTheLan(host, HttpMethod.Post,
+            $"/remote-access/pairing/requests/{requestId}/reject")), "rejecting a request");
+
+        Assert.AreEqual("Phone", devices.Find(phone.DeviceId)?.Name);
+        Assert.AreEqual(1, devices.GetDevices().Count);
     }
 }
