@@ -425,6 +425,14 @@ export const routesMenuConfig: RouteMenuItem[] = [
         layout: "basic",
         menu: true,
       },
+      {
+        name: "menu.otherDevices",
+        path: "/other-devices",
+        component: OtherDevicesPage,
+        icon: AiOutlineMobile,
+        layout: "basic",
+        menu: true,
+      },
     ],
   },
   {
@@ -547,14 +555,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
     ],
-  },
-  {
-    name: "menu.otherDevices",
-    path: "/other-devices",
-    component: OtherDevicesPage,
-    icon: AiOutlineMobile,
-    layout: "basic",
-    menu: true,
   },
   {
     // The endpoints behind these pages exist only in the desktop app's relay for a server

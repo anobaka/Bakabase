@@ -70,6 +70,25 @@ afterEach(async () => {
 });
 
 describe("rename preview and execution", () => {
+  it("does not submit delete rules with a nonpositive count or negative start position", async () => {
+    const deleteRule = operation({ operation: OperationType.Delete, deleteCount: 0 });
+
+    await change([deleteRule]);
+    await tick();
+    expect(state.hasInvalidOperations).toBe(true);
+    expect(api.preview).not.toHaveBeenCalled();
+
+    await change([{ ...deleteRule, deleteCount: 1, deleteStartPosition: -1 }]);
+    await tick();
+    expect(state.hasInvalidOperations).toBe(true);
+    expect(api.preview).not.toHaveBeenCalled();
+
+    await change([{ ...deleteRule, deleteCount: 1, deleteStartPosition: 0 }]);
+    await tick();
+    expect(state.hasInvalidOperations).toBe(false);
+    expect(api.preview).toHaveBeenCalledOnce();
+  });
+
   it("invalidates the displayed preview immediately, before debounce elapses", async () => {
     await change([operation()]);
     await tick();

@@ -25,7 +25,7 @@ const newOperation = (): FileNameModifierOperationModel => ({
   positionIndex: 0,
   targetText: "",
   text: "",
-  deleteCount: 0,
+  deleteCount: 1,
   deleteStartPosition: 0,
   caseType: FileNameModifierCaseType.TitleCase,
   alphabetStartChar: "a",

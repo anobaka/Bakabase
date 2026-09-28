@@ -109,20 +109,29 @@ div[data-react-aria-top-layer][role="region"] [data-toast="true"]:not([data-toas
   pointer-events: auto !important;
 }
 
-/* HeroUI Toast: the base slot ships a fixed `sm:w-[356px]`, so long text never
- * widens the toast. `width: auto` is not enough because the toast base is a
- * normal-flow block — `auto` makes it fill its containing block instead of
- * shrinking to its content. `fit-content` makes it shrink-wrap the content and
- * grow with it, bounded by a comfortable min (so short toasts keep their size)
- * and a max (so it never gets unwieldy). */
+/* HeroUI fixes its toast width to 356px on larger screens. Let longer messages
+ * widen it until the viewport limit, then wrap inside the flex layout. */
 div[data-toast="true"] {
   width: fit-content !important;
   min-width: min(356px, 90vw);
   max-width: min(90vw, 560px) !important;
 }
 
-div[data-toast="true"] [data-slot="title"],
-div[data-toast="true"] [data-slot="description"] {
+.bakabase-toast-content,
+.bakabase-toast-wrapper,
+.bakabase-toast-text {
+  min-width: 0;
+}
+
+.bakabase-toast-wrapper {
+  flex: 1 1 auto;
+  max-height: min(70dvh, 30rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.bakabase-toast-text {
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 

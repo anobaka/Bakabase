@@ -34,6 +34,7 @@ import { Button, Textarea, Modal, Checkbox, Chip } from "../bakaui";
 
 import SortableOperationCard from "./SortableOperationCard";
 import PreviewList from "./PreviewList";
+import { getDroppedPaths } from "./droppedPaths";
 import { normalizeFilePaths, useFileNameModifier } from "./useFileNameModifier";
 import { detectCommonPrefix } from "./utils";
 
@@ -67,7 +68,7 @@ const createDefaultOperation = (): OperationWithId => ({
   positionIndex: 0,
   targetText: "",
   text: "",
-  deleteCount: 0,
+  deleteCount: 1,
   deleteStartPosition: 0,
   caseType: FileNameModifierCaseType.TitleCase,
   dateTimeFormat: "",
@@ -108,6 +109,8 @@ const FileNameModifier = ({ initialFilePaths = [] }: Props) => {
   const [pathDraft, setPathDraft] = useState<string>();
   const [showFullPaths, setShowFullPaths] = useState(false);
   const [onlyChanges, setOnlyChanges] = useState(false);
+  const [isDraggingPaths, setIsDraggingPaths] = useState(false);
+  const [dropError, setDropError] = useState(false);
   const editingPaths = pathDraft != null;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -139,23 +142,25 @@ const FileNameModifier = ({ initialFilePaths = [] }: Props) => {
             ...previous.slice(index + 1),
           ];
     });
+  const appendPaths = (paths: string[]) => {
+    const incoming = normalizeFilePaths(paths);
+
+    if (editingPaths)
+      setPathDraft((previous) =>
+        [...new Set([...normalizeFilePaths((previous ?? "").split("\n")), ...incoming])].join("\n"),
+      );
+    else setFilePaths((previous) => [...new Set([...previous, ...incoming])]);
+  };
   const addPaths = () =>
     createPortal(FileSystemSelectorModal, {
       multiple: true,
       onMultipleSelected: (entries) => {
-        const incoming = normalizeFilePaths(
-          entries.map((entry) => entry.path).filter((path): path is string => !!path),
-        );
-
-        if (editingPaths)
-          setPathDraft((previous) =>
-            [...new Set([...normalizeFilePaths((previous ?? "").split("\n")), ...incoming])].join(
-              "\n",
-            ),
-          );
-        else setFilePaths((previous) => [...new Set([...previous, ...incoming])]);
+        appendPaths(entries.map((entry) => entry.path).filter((path): path is string => !!path));
+        setDropError(false);
       },
     });
+  const acceptsPathDrop = (types: DataTransfer["types"]) =>
+    Array.from(types).some((type) => ["text/plain", "text/uri-list", "Files"].includes(type));
   const commonPrefix = useMemo(() => detectCommonPrefix(filePaths), [filePaths]);
   const visibleResults = onlyChanges
     ? previewResults.filter((item) => item.originalPath !== item.modifiedPath)
@@ -219,13 +224,57 @@ const FileNameModifier = ({ initialFilePaths = [] }: Props) => {
 
   return (
     <div className="flex h-full min-h-[34rem] min-w-0 flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-default-50 px-4 py-3">
+      <div
+        className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed px-4 py-3 transition-colors ${isDraggingPaths ? "border-primary bg-primary/10" : "border-transparent bg-default-50"}`}
+        data-testid="file-name-modifier-drop-zone"
+        onDragEnter={(event) => {
+          if (!modifying && acceptsPathDrop(event.dataTransfer.types)) setIsDraggingPaths(true);
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node)) setIsDraggingPaths(false);
+        }}
+        onDragOver={(event) => {
+          if (!acceptsPathDrop(event.dataTransfer.types)) return;
+          event.preventDefault();
+          if (modifying) {
+            event.dataTransfer.dropEffect = "none";
+
+            return;
+          }
+          event.dataTransfer.dropEffect =
+            event.dataTransfer.effectAllowed === "move" ? "move" : "copy";
+          setIsDraggingPaths(true);
+        }}
+        onDrop={(event) => {
+          setIsDraggingPaths(false);
+          if (!acceptsPathDrop(event.dataTransfer.types)) return;
+          event.preventDefault();
+          if (modifying) return;
+          const paths = getDroppedPaths(event.dataTransfer);
+
+          if (paths.length > 0) {
+            appendPaths(paths);
+            setDropError(false);
+          } else setDropError(true);
+        }}
+      >
         <div className="min-w-0">
           <p className="text-sm font-medium">
             {t<string>(k("files.count"), { count: filePaths.length })}
           </p>
-          <p className="mt-0.5 text-xs leading-relaxed text-default-500">
-            {t<string>(k("files.description"))}
+          <p
+            className={`mt-0.5 text-xs leading-relaxed ${dropError && !isDraggingPaths ? "text-danger" : "text-default-500"}`}
+            role={dropError && !isDraggingPaths ? "alert" : undefined}
+          >
+            {t<string>(
+              k(
+                isDraggingPaths
+                  ? "files.dropHint"
+                  : dropError
+                    ? "files.dropError"
+                    : "files.description",
+              ),
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -272,6 +321,7 @@ const FileNameModifier = ({ initialFilePaths = [] }: Props) => {
               onPress={() => {
                 setFilePaths(normalizeFilePaths(pathDraft.split("\n")));
                 setPathDraft(undefined);
+                setDropError(false);
               }}
             >
               {t<string>("FileNameModifier.ConfirmPaths")}
