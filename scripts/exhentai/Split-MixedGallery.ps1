@@ -117,27 +117,8 @@ foreach ($group in $groups) {
         continue
     }
 
-    $existingPages = @{}
-    foreach ($entry in (Get-ChildItem -LiteralPath $destinationDirectory -Force)) {
-        if ($entry -isnot [System.IO.FileInfo]) {
-            $conflicts.Add("Destination contains a directory: $($entry.FullName)")
-            continue
-        }
-        $existing = Get-PageMarker -File $entry -Pattern $markerRegex
-        if ($null -eq $existing -or $existing.Marker -ne $marker) {
-            $conflicts.Add("Destination contains an unknown or different file: $($entry.FullName)")
-            continue
-        }
-        if ($existingPages.ContainsKey($existing.Page)) {
-            $conflicts.Add("Destination has duplicate page p$($existing.Page): $($entry.FullName)")
-        }
-        $existingPages[$existing.Page] = $true
-    }
-
-    foreach ($item in $group.Group) {
-        if ($existingPages.ContainsKey($item.Page) -or [System.IO.File]::Exists($item.Destination)) {
-            $conflicts.Add("Destination already has page p$($item.Page): $($item.Destination)")
-        }
+    if (@(Get-ChildItem -LiteralPath $destinationDirectory -Force).Count -gt 0) {
+        $conflicts.Add("Destination is not empty and cannot be verified as this batch: $destinationDirectory")
     }
 }
 
@@ -162,13 +143,16 @@ if ($Apply -and $conflicts.Count -eq 0 -and $plan.Count -gt 0) {
 
 if ($execute) {
     # Create destinations before moving any file. A later I/O failure may still leave a partial
-    # move; rerunning the script continues when destination files all match their local marker.
+    # move; nonempty destinations require manual review before the script can be rerun.
     foreach ($group in $groups) {
         $directory = $group.Group[0].DestinationDirectory
         [void] [System.IO.Directory]::CreateDirectory($directory)
         $current = Get-Item -LiteralPath $directory
         if (($current.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
             throw "Destination became a symbolic link or junction: $directory"
+        }
+        if (@(Get-ChildItem -LiteralPath $directory -Force).Count -gt 0) {
+            throw "Destination became nonempty: $directory"
         }
     }
 
