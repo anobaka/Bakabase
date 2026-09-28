@@ -4,6 +4,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Javdb;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javdb.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using System.Net;
 
 namespace Bakabase.Modules.ThirdParty.Tests
 {
@@ -39,6 +40,42 @@ namespace Bakabase.Modules.ThirdParty.Tests
             var detail = await client.SearchAndParseVideo("ZZZ-99999");
 
             Assert.IsNull(detail);
+        }
+
+        [TestMethod]
+        public async Task SearchAndParseVideo_HttpFailure_ThrowsViaInterfaceButReturnsNullViaConcreteMethod()
+        {
+            var handler = new ServiceUnavailableHandler();
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddHttpClient(InternalOptions.HttpClientNames.Default)
+                .ConfigurePrimaryHttpMessageHandler(() => handler);
+            services.AddSingleton<IAvSourceOptionsProvider, DefaultAvSourceOptionsProvider>();
+            services.AddSingleton<JavdbClient>();
+            using var provider = services.BuildServiceProvider();
+            var client = provider.GetRequiredService<JavdbClient>();
+
+            var error = await Assert.ThrowsExactlyAsync<HttpRequestException>(async () =>
+            {
+                await ((IAvClient)client).SearchAndParseVideo("SSIS-001");
+            });
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, error.StatusCode.GetValueOrDefault());
+
+            var detail = await client.SearchAndParseVideo("SSIS-001");
+            Assert.IsNull(detail);
+            Assert.AreEqual(2, handler.RequestCount);
+        }
+
+        private sealed class ServiceUnavailableHandler : HttpMessageHandler
+        {
+            public int RequestCount { get; private set; }
+
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+                CancellationToken cancellationToken)
+            {
+                RequestCount++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            }
         }
 
         internal static void AssertParsedFieldsAreNotDuplicated(JavdbVideoDetail detail, string number)
