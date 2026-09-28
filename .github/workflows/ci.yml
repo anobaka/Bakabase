@@ -30,9 +30,9 @@ permissions:
   contents: read
 
 jobs:
-  backend-tests:
+  backend-main-tests:
     if: inputs.suite != 'platforms' && inputs.suite != 'packages'
-    name: Backend tests
+    name: Backend main tests
     runs-on: ubuntu-latest
     env:
       DOTNET_MULTILEVEL_LOOKUP: 0
@@ -57,18 +57,62 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-
 
+      - name: Run main test assembly with TRX timings
+        id: tests
+        run: |
+          dotnet test src/tests/Bakabase.Tests/Bakabase.Tests.csproj -- \
+            --report-trx --results-directory "$RUNNER_TEMP/backend-test-results"
+
+      - name: Summarize slowest tests
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        run: python3 .github/scripts/trx_timing_summary.py "$RUNNER_TEMP/backend-test-results" "$GITHUB_STEP_SUMMARY"
+
+      - name: Retain TRX results
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-main-trx
+          path: ${{ runner.temp }}/backend-test-results
+          if-no-files-found: warn
+          retention-days: 14
+
+  backend-module-tests:
+    if: inputs.suite != 'platforms' && inputs.suite != 'packages'
+    name: Backend module tests
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_MULTILEVEL_LOOKUP: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
       # The app's entry project is not referenced by any test project, so nothing
       # else here compiles it — a break would first show up during a deploy, which
       # is the worst place to find out. It is small; this is seconds, not minutes.
       - name: Build the app entry point
         run: dotnet build src/apps/Bakabase.App/Bakabase.App.csproj
 
-      - name: Run tests
+      - name: Run module tests
         run: |
           # One `dotnet test` per project so a single failure does not mask
           # the rest. Live-network ThirdParty tests are [Ignore]d and skipped.
           projects=(
-            "src/tests/Bakabase.Tests/Bakabase.Tests.csproj"
             "src/tests/Bakabase.Modules.Acquisition.Tests/Bakabase.Modules.Acquisition.Tests.csproj"
             "src/tests/Bakabase.Modules.Alias.Tests/Bakabase.Modules.Alias.Tests.csproj"
             "src/tests/Bakabase.Modules.Collection.Tests/Bakabase.Modules.Collection.Tests.csproj"
@@ -93,9 +137,27 @@ jobs:
             exit 1
           fi
 
-  frontend:
+  # Keep the existing required-check name while the two test groups run in
+  # parallel. A failure in either group must fail the required check.
+  backend-tests:
+    if: ${{ always() && inputs.suite != 'platforms' && inputs.suite != 'packages' }}
+    name: Backend tests
+    needs: [backend-main-tests, backend-module-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm both test groups passed
+        env:
+          MAIN_RESULT: ${{ needs.backend-main-tests.result }}
+          MODULE_RESULT: ${{ needs.backend-module-tests.result }}
+        run: |
+          if [[ "$MAIN_RESULT" != success || "$MODULE_RESULT" != success ]]; then
+            echo "::error::Backend main tests: $MAIN_RESULT; backend module tests: $MODULE_RESULT"
+            exit 1
+          fi
+
+  frontend-quality:
     if: inputs.suite != 'packages'
-    name: Frontend lint & tests
+    name: Frontend lint & unit tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -132,8 +194,39 @@ jobs:
         if: ${{ !cancelled() }}
         run: yarn vitest run
 
+  frontend-build:
+    if: inputs.suite != 'packages'
+    name: Frontend build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable corepack
+        run: corepack enable yarn
+
+      - name: Cache Yarn
+        uses: actions/cache@v4
+        with:
+          path: |
+            src/web/.yarn/cache
+            src/web/node_modules
+          key: yarn-${{ runner.os }}-${{ hashFiles('src/web/yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
       - name: Production build
-        if: ${{ !cancelled() }}
         run: yarn build
 
       - name: Frontend for integration and package checks
@@ -141,7 +234,26 @@ jobs:
         with:
           name: ci-web
           path: src/web/dist
+          if-no-files-found: error
           retention-days: 3
+
+  # Preserve the existing required-check name and make build failures block the
+  # PR while the federation job can start as soon as the web artifact is ready.
+  frontend:
+    if: ${{ always() && inputs.suite != 'packages' }}
+    name: Frontend lint & tests
+    needs: [frontend-quality, frontend-build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm frontend checks passed
+        env:
+          QUALITY_RESULT: ${{ needs.frontend-quality.result }}
+          BUILD_RESULT: ${{ needs.frontend-build.result }}
+        run: |
+          if [[ "$QUALITY_RESULT" != success || "$BUILD_RESULT" != success ]]; then
+            echo "::error::Frontend lint & unit tests: $QUALITY_RESULT; frontend build: $BUILD_RESULT"
+            exit 1
+          fi
 
   # Real processes on Linux: three production-startup hosts talking the node
   # protocol, the headless publish contents, and first launch, library sharing
@@ -150,7 +262,7 @@ jobs:
   federation:
     if: inputs.suite != 'platforms' && inputs.suite != 'packages'
     name: Multi-device federation (Linux)
-    needs: frontend
+    needs: frontend-build
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -207,7 +319,7 @@ jobs:
   federation-platforms:
     if: github.event_name == 'workflow_dispatch' && inputs.suite == 'platforms'
     name: Desktop platform contracts (${{ matrix.rid }})
-    needs: frontend
+    needs: frontend-build
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:

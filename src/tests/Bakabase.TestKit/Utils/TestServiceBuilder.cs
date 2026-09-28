@@ -1,7 +1,9 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
@@ -42,6 +44,7 @@ using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Logging.LogService.Extensions;
 using Bootstrap.Components.Logging.LogService.Services;
 using Bootstrap.Components.Orm.Extensions;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,6 +60,12 @@ namespace Bakabase.TestKit.Utils;
 /// </summary>
 public static class TestServiceBuilder
 {
+    private static readonly Lazy<Task<string>> MigratedDatabaseTemplate = new(
+        CreateMigratedDatabaseTemplate, LazyThreadSafetyMode.ExecutionAndPublication);
+
+    private static readonly bool LogInitializationTiming =
+        Environment.GetEnvironmentVariable("BAKABASE_TEST_SERVICE_TIMING") == "1";
+
     /// <summary>
     /// Build a fully wired test service provider against a fresh temp SQLite DB.
     /// </summary>
@@ -70,12 +79,18 @@ public static class TestServiceBuilder
     public static async Task<IServiceProvider> BuildServiceProvider(
         Action<IServiceCollection>? configure = null)
     {
+        var started = Stopwatch.GetTimestamp();
+
         // Use unique database file names to avoid conflicts between parallel tests
-        var uniqueId = Guid.NewGuid().ToString("N")[..8];
+        var uniqueId = Guid.NewGuid().ToString("N");
         var testDir = Path.Combine(Path.GetTempPath(), $"BakabaseTests_{uniqueId}");
         Directory.CreateDirectory(testDir);
 
         var dbFilePath = Path.Combine(testDir, "test.db");
+        var templatePath = await MigratedDatabaseTemplate.Value;
+        var templateReady = Stopwatch.GetTimestamp();
+        File.Copy(templatePath, dbFilePath);
+        var databaseReady = Stopwatch.GetTimestamp();
 
         var services = new ServiceCollection();
 
@@ -205,16 +220,70 @@ public static class TestServiceBuilder
         // Per-test overrides last so they win over both production and stubs.
         configure?.Invoke(services);
 
-        // Build provider and initialize database
+        // Build provider against its private copy of the fully migrated database.
         var sp = services.BuildServiceProvider();
         var scope = sp.CreateAsyncScope();
         var scopeSp = scope.ServiceProvider;
 
-        // Match production's database initialization, including WAL, so concurrent scheduler
-        // reads and writes use the host's journal mode instead of the rollback-journal default.
-        await scopeSp.MigrateSqliteDbContexts<BakabaseDbContext>();
+        if (LogInitializationTiming)
+        {
+            Console.WriteLine(
+                $"TestServiceBuilder: template wait {Stopwatch.GetElapsedTime(started, templateReady).TotalMilliseconds:F0} ms, " +
+                $"database copy {Stopwatch.GetElapsedTime(templateReady, databaseReady).TotalMilliseconds:F0} ms, " +
+                $"service setup {Stopwatch.GetElapsedTime(databaseReady).TotalMilliseconds:F0} ms");
+        }
 
         return scopeSp;
+    }
+
+    private static async Task<string> CreateMigratedDatabaseTemplate()
+    {
+        var started = Stopwatch.GetTimestamp();
+        var templateDir = Path.Combine(Path.GetTempPath(), $"BakabaseTests_Template_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(templateDir);
+        var templatePath = Path.Combine(templateDir, "template.db");
+
+        // The migration provider is short lived. Disabling connection pooling ensures that
+        // its last connection closes before we checkpoint and copy the database file.
+        var connectionString = new SqliteConnectionStringBuilder
+        {
+            DataSource = templatePath,
+            Pooling = false
+        }.ToString();
+        var services = new ServiceCollection();
+        services.AddBootstrapServices<BakabaseDbContext>(options =>
+        {
+            options.UseSqlite(connectionString, sqlite => sqlite.CommandTimeout(10));
+            options.EnableSensitiveDataLogging();
+        });
+
+        await using (var provider = services.BuildServiceProvider())
+        {
+            // Use the same migrations and database pragmas as production initialization.
+            await provider.MigrateSqliteDbContexts<BakabaseDbContext>();
+        }
+
+        // Migrations can leave committed pages in the WAL. Flush them into template.db
+        // before copying only that main file into isolated per-test directories.
+        using (var connection = new SqliteConnection(connectionString))
+        {
+            await connection.OpenAsync();
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
+            using var reader = await command.ExecuteReaderAsync();
+            if (!await reader.ReadAsync() || reader.GetInt32(0) != 0)
+            {
+                throw new InvalidOperationException("Could not checkpoint the test database template");
+            }
+        }
+
+        if (LogInitializationTiming)
+        {
+            Console.WriteLine(
+                $"TestServiceBuilder: one-time database migration {Stopwatch.GetElapsedTime(started).TotalMilliseconds:F0} ms");
+        }
+
+        return templatePath;
     }
 
     private static void RegisterAllOptionsTypes(IServiceCollection services)

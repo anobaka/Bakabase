@@ -34,6 +34,7 @@ namespace Bakabase.Tests.RemoteAccess.Console;
 /// </para>
 /// </remarks>
 [TestClass]
+[DoNotParallelize]
 public class ConsoleDiagnosticsExposureTests
 {
     private const string PairingCode = "482913";

@@ -13,6 +13,7 @@ namespace Bakabase.Tests;
 /// hold the two apart, and hold the existing one exactly where it has always been.
 /// </summary>
 [TestClass]
+[DoNotParallelize]
 public class AppDataProfileTests
 {
     private static Func<string, string?> Env(Dictionary<string, string?> map) =>

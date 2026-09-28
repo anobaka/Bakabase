@@ -121,6 +121,7 @@ public class ManagedServerRelayTests
     }
 
     [TestMethod]
+    [DoNotParallelize]
     public async Task Relay_ports_survive_a_restart()
     {
         await _console.AddManagedAsync(_desk);

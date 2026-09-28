@@ -256,6 +256,7 @@ public class RemoteConsolePairingTests
     }
 
     [TestMethod]
+    [DoNotParallelize]
     public async Task This_apps_own_ports_are_refused_before_anything_is_sent()
     {
         var desk = await Server("server-desk");

@@ -18,6 +18,7 @@ namespace Bakabase.Tests.RemoteAccess.Console;
 /// is using.
 /// </summary>
 [TestClass]
+[DoNotParallelize]
 public class RelayLifecycleTests
 {
     private ConsoleHarness _console = null!;
