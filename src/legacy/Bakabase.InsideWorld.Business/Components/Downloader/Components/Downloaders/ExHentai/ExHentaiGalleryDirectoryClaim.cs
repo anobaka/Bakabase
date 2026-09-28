@@ -41,8 +41,11 @@ public static class ExHentaiGalleryDirectoryClaim
         EnsureNoLinksBelowRoot(root, parent);
         var hintDirectory = Path.Combine(root, HintDirectoryName);
         Directory.CreateDirectory(hintDirectory);
+        // Different galleries can contend for the same pretty name. Lock the allocation for
+        // this root, not just one source's hint: a no-overwrite move alone is not a reliable
+        // cross-thread claim on every filesystem.
+        using var allocationLock = AcquireAllocationLock(Path.Combine(hintDirectory, ".allocation.lock"));
         var hintPath = Path.Combine(hintDirectory, HashIdentity(identity) + ".json");
-        using var sourceLock = AcquireSourceLock(hintPath + ".lock");
 
         // The hint is only a lookup aid when the title changed. The directory marker remains
         // authoritative: moved/deleted directories make their old names immediately reusable.
@@ -208,7 +211,7 @@ public static class ExHentaiGalleryDirectoryClaim
         _ = entries.MoveNext();
     }
 
-    private static FileStream AcquireSourceLock(string path)
+    private static FileStream AcquireAllocationLock(string path)
     {
         // Keep the lock file itself after closing it. Deleting it would let a new process lock a
         // different inode while an older process still holds the original file open.
@@ -224,7 +227,7 @@ public static class ExHentaiGalleryDirectoryClaim
             }
         }
 
-        throw new IOException($"Cannot acquire ExHentai gallery directory lock: {path}");
+        throw new IOException($"Cannot acquire ExHentai gallery allocation lock: {path}");
     }
 
     private static string? ReadValidHint(string root, string path, GalleryIdentity identity)

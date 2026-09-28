@@ -199,13 +199,17 @@ public sealed class ExHentaiDownloadResultTests
     [TestMethod]
     public async Task GalleryDirectoryClaims_ConcurrentSameNameClaimsAreUnique()
     {
-        var keys = Enumerable.Range(12345, 24).Select(id => $"{id}/abcd").ToArray();
-        var paths = await Task.WhenAll(keys.Select(key => Task.Run(() =>
-            ExHentaiGalleryDirectoryClaim.Claim(_root, "Same Gallery", key))));
+        for (var round = 0; round < 8; round++)
+        {
+            var keys = Enumerable.Range(12345 + round * 24, 24).Select(id => $"{id}/abcd").ToArray();
+            var title = $"Same Gallery {round}";
+            var paths = await Task.WhenAll(keys.Select(key => Task.Run(() =>
+                ExHentaiGalleryDirectoryClaim.Claim(_root, title, key))));
 
-        Assert.AreEqual(keys.Length, paths.Distinct(StringComparer.OrdinalIgnoreCase).Count());
-        for (var i = 0; i < keys.Length; i++)
-            ExHentaiGalleryDirectoryClaim.EnsureOwned(paths[i], keys[i]);
+            Assert.AreEqual(keys.Length, paths.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            for (var i = 0; i < keys.Length; i++)
+                ExHentaiGalleryDirectoryClaim.EnsureOwned(paths[i], keys[i]);
+        }
     }
 
     [TestMethod]
