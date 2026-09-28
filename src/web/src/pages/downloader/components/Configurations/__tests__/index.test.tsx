@@ -9,17 +9,21 @@ import ConfigurationsModal from "..";
 
 import { ThirdPartyId } from "@/sdk/constants";
 
-const { getDefinitions, patch } = vi.hoisted(() => ({
+const { getDefinitions, patchOptions, successToast } = vi.hoisted(() => ({
   getDefinitions: vi.fn(),
-  patch: vi.fn(),
+  patchOptions: vi.fn(),
+  successToast: vi.fn(),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
-  default: { downloadTask: { getAllDownloaderDefinitions: getDefinitions } },
+  default: {
+    downloadTask: { getAllDownloaderDefinitions: getDefinitions },
+    options: { patchDownloaderGlobalOptions: patchOptions },
+  },
 }));
 vi.mock("@/stores/options", () => ({
   useDownloaderGlobalOptionsStore: (selector: (state: unknown) => unknown) =>
-    selector({ data: { autoStartAfterCreation: false }, patch }),
+    selector({ data: { autoStartAfterCreation: false } }),
 }));
 vi.mock("@/components/ThirdPartyIcon", () => ({ default: () => <span /> }));
 vi.mock("@/components/Chips/DevelopingChip", () => ({ default: () => null }));
@@ -62,6 +66,7 @@ vi.mock("@/components/ThirdPartyConfig", () => ({
   BangumiConfigPanel: () => <div>Bangumi settings</div>,
 }));
 vi.mock("@/components/bakaui", () => ({
+  toast: { success: successToast },
   Modal: ({ children, title }: { children: ReactNode; title: string }) => (
     <div aria-label={title} role="dialog">
       {children}
@@ -137,6 +142,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("downloader settings navigation", () => {
@@ -176,14 +182,19 @@ describe("downloader settings navigation", () => {
     );
   });
 
-  it("retains the global auto-start setting and saves changes through the existing options store", async () => {
+  it("confirms the global auto-start setting after a successful save", async () => {
     getDefinitions.mockResolvedValue({ data: [] });
+    patchOptions.mockResolvedValue({ code: 0 });
     await act(async () => root.render(<ConfigurationsModal />));
+    vi.useFakeTimers();
     const checkbox = container.querySelector<HTMLInputElement>("input[type=checkbox]")!;
 
     expect(checkbox).not.toBeChecked();
     await act(async () => checkbox.click());
-    expect(patch).toHaveBeenCalledWith({ autoStartAfterCreation: true });
+    expect(patchOptions).toHaveBeenCalledWith({ autoStartAfterCreation: true });
+    expect(successToast).not.toHaveBeenCalled();
+    await act(async () => vi.advanceTimersByTime(600));
+    expect(successToast).toHaveBeenCalledWith("thirdPartyConfig.success.saved");
   });
 
   it("keeps general settings usable after a platform-load error and supports retry", async () => {
