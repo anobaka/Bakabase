@@ -148,15 +148,15 @@ public class DownloadTaskPrecheckTests
     }
 
     [TestMethod]
-    public async Task TorrentAlreadyOnDisk_IsSatisfiedWithoutStarting()
+    public async Task UnmarkedTorrentOnDisk_CannotProveGalleryOwnership()
     {
-        // Fallback for the backlog: tasks downloaded before the stamp existed carry no record.
+        // A torrent with this title could belong to another gallery.
         WriteTorrent("Some Gallery");
 
         var verdict = await Evaluate(BuildPrecheck(),
             NewTask(1, "Some Gallery", new ExHentaiTaskOptions { PreferTorrent = true }));
 
-        Assert.AreEqual(DownloadTaskPrecheckOutcome.AlreadySatisfied, verdict?.Outcome);
+        Assert.IsNull(verdict);
     }
 
     [TestMethod]
@@ -173,17 +173,15 @@ public class DownloadTaskPrecheckTests
     }
 
     [TestMethod]
-    public async Task TorrentFileNameIsSanitised_TheSameWayTheDownloaderWritesIt()
+    public async Task SanitizedLegacyTorrentName_StillCannotProveOwnership()
     {
-        // The downloader replaces characters a file name cannot hold with an underscore, so the
-        // pre-check has to match exactly or it silently never skips a gallery with a slash in its
-        // title. "/" is the one separator that is invalid on every platform this ships to.
+        // A matching legacy filename alone cannot identify its source gallery.
         WriteTorrent("A Gallery_part 1");
 
         var verdict = await Evaluate(BuildPrecheck(),
             NewTask(1, "A Gallery/part 1", new ExHentaiTaskOptions { PreferTorrent = true }));
 
-        Assert.AreEqual(DownloadTaskPrecheckOutcome.AlreadySatisfied, verdict?.Outcome);
+        Assert.IsNull(verdict);
     }
 
     [TestMethod]
@@ -278,10 +276,8 @@ public class DownloadTaskPrecheckTests
     }
 
     [TestMethod]
-    public async Task OneListingIsSharedAcrossTasksInTheSameFolder()
+    public async Task SameNamedLegacyTorrents_DoNotSatisfyOtherTasks()
     {
-        // The whole point of the batch pre-check: answering for a thousand tasks must not cost a
-        // thousand trips to the filesystem.
         WriteTorrent("A");
         WriteTorrent("B");
 
@@ -292,9 +288,7 @@ public class DownloadTaskPrecheckTests
 
         var verdicts = await BuildPrecheck().EvaluateAsync(tasks, CancellationToken.None);
 
-        Assert.AreEqual(DownloadTaskPrecheckOutcome.AlreadySatisfied, verdicts[1].Outcome);
-        Assert.AreEqual(DownloadTaskPrecheckOutcome.AlreadySatisfied, verdicts[2].Outcome);
-        Assert.IsFalse(verdicts.ContainsKey(3), "C has no torrent on disk and must still run.");
+        Assert.AreEqual(0, verdicts.Count, "Unstamped tasks must verify their gallery before completion.");
     }
 
     [TestMethod]

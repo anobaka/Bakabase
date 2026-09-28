@@ -15,6 +15,7 @@ using Microsoft.Extensions.Localization;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
@@ -71,6 +72,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 return;
             }
 
+            var configuredRoot = resultWorkflowId.HasValue
+                ? Path.GetDirectoryName(Path.GetFullPath(downloadPath))!
+                : downloadPath;
+            Directory.CreateDirectory(configuredRoot);
+
             // Only fetch torrent info when preferTorrent is true
             var detail = await Client.ParseDetail(url, preferTorrent, ct);
             if (detail == null)
@@ -82,6 +88,51 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             if (onNameAcquired != null)
             {
                 await onNameAcquired(betterName);
+            }
+
+            var sourceKeyParts = sourceKey.Split('/');
+            var baseNameSegmentsValues = new Dictionary<ExHentaiNamingFields, object?>
+            {
+                [ExHentaiNamingFields.GalleryId] = sourceKeyParts[0],
+                [ExHentaiNamingFields.GalleryToken] = sourceKeyParts[1],
+                [ExHentaiNamingFields.RawName] = detail.RawName,
+                [ExHentaiNamingFields.Name] = detail.Name,
+                [ExHentaiNamingFields.Category] = detail.Category,
+            };
+
+            // The template produces page paths, while ownership belongs to one stable gallery
+            // directory. A flat template (or one with page fields in a directory component) is
+            // wrapped in a gallery directory so that it cannot mix two galleries' files.
+            async Task<(string Directory, string? TemplateDirectory)> ClaimGalleryDirectoryAsync()
+            {
+                var namingConvention = GetEffectiveNamingConvention((await GetDownloaderOptionsAsync()).NamingConvention);
+                var templateDirectory = Path.GetDirectoryName(namingConvention);
+                var pageDependentDirectory = templateDirectory?.Contains("{PageTitle}", StringComparison.OrdinalIgnoreCase) == true ||
+                                             templateDirectory?.Contains("{Extension}", StringComparison.OrdinalIgnoreCase) == true;
+                var sampleValues = new Dictionary<ExHentaiNamingFields, object?>(baseNameSegmentsValues)
+                {
+                    [ExHentaiNamingFields.PageTitle] = "bakabase-sample-page",
+                    [ExHentaiNamingFields.Extension] = ".img"
+                };
+                var samplePath = await BuildDownloadFilename(sampleValues);
+                var renderedDirectory = Path.GetDirectoryName(samplePath);
+                var useTemplateDirectory = !pageDependentDirectory && !string.IsNullOrWhiteSpace(renderedDirectory);
+                var relativeDirectory = useTemplateDirectory
+                    ? renderedDirectory!
+                    : FileNameSanitizer.Sanitize($"[{detail.Category}] {betterName}");
+                if (string.IsNullOrWhiteSpace(relativeDirectory))
+                    relativeDirectory = $"gallery-{sourceKeyParts[0]}";
+                if (resultWorkflowId.HasValue && !Directory.Exists(downloadPath))
+                {
+                    // Automatic handoffs use a per-gallery work root beneath the configured
+                    // download root. Create only that child, and only when this work has output.
+                    var parent = Path.GetDirectoryName(Path.GetFullPath(downloadPath));
+                    if (parent == null || !Directory.Exists(parent))
+                        throw new DirectoryNotFoundException($"ExHentai download root is unavailable: {downloadPath}");
+                    Directory.CreateDirectory(downloadPath);
+                }
+                return (ExHentaiGalleryDirectoryClaim.Claim(downloadPath, relativeDirectory, sourceKey),
+                    useTemplateDirectory ? renderedDirectory : null);
             }
 
             // Check if torrents are available and download torrent instead of images
@@ -101,23 +152,27 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     .ThenByDescending(t => t.UpdatedAt)
                     .First();
 
-                var path = Path.Combine(downloadPath, $"{betterName.RemoveInvalidFileNameChars()}.torrent");
+                var (galleryDirectory, _) = await ClaimGalleryDirectoryAsync();
+                var torrentFileName = FileNameSanitizer.Sanitize($"{betterName.RemoveInvalidFileNameChars()}.torrent");
+                var path = Path.Combine(galleryDirectory, torrentFileName);
+                ExHentaiGalleryDirectoryClaim.EnsureOwnedOutputPath(configuredRoot, galleryDirectory, sourceKey, path);
 
                 if (onCurrentChanged != null)
                 {
                     await onCurrentChanged(Localizer["Downloader_ExHentai_DownloadingTorrent"]);
                 }
 
-                Directory.CreateDirectory(downloadPath);
                 var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
                 try
                 {
                     await Client.DownloadTorrent(bestTorrent.DownloadUrl, temporary, ct);
-                    // Recording validates and copies metadata to managed storage before any
-                    // completion checkpoint can make the source task disappear from the queue.
-                    await results.RecordTorrentAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
-                        temporary, resultWorkflowId, ct);
+                    ExHentaiGalleryDirectoryClaim.EnsureOwnedOutputPath(configuredRoot, galleryDirectory, sourceKey, path);
                     File.Move(temporary, path, true);
+                    // Persist the result only after the user's copy is in its owned directory.
+                    // A failed move must remain retryable rather than looking completed.
+                    ExHentaiGalleryDirectoryClaim.EnsureOwnedOutputPath(configuredRoot, galleryDirectory, sourceKey, path);
+                    await results.RecordTorrentAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
+                        path, resultWorkflowId, ct);
                 }
                 finally
                 {
@@ -161,14 +216,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 throw new DownloadDeferredException();
             }
 
-            var baseNameSegmentsValues = new Dictionary<ExHentaiNamingFields, object?>
-            {
-                {ExHentaiNamingFields.RawName, detail.RawName},
-                {ExHentaiNamingFields.Name, detail.Name},
-                {ExHentaiNamingFields.Category, detail.Category},
-            };
-
-            var wrappers = (await TextVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).ToPairMap();
+            var (ownedGalleryDirectory, stableTemplateDirectory) = await ClaimGalleryDirectoryAsync();
 
             //var limit = await _client.GetImageLimits();
             //if (limit.Rest <= imageTitleAndPageUrls.Length)
@@ -200,7 +248,18 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                         [ExHentaiNamingFields.Extension] = extension
                     };
                     var keyFilename = await BuildDownloadFilename(fullNameSegmentsValues);
-                    var keyFullname = Path.GetFullPath(Path.Combine(downloadPath, keyFilename));
+                    var relativeFile = stableTemplateDirectory == null
+                        ? keyFilename
+                        : string.Equals(Path.GetDirectoryName(keyFilename), stableTemplateDirectory,
+                            StringComparison.Ordinal)
+                            ? Path.GetFileName(keyFilename)
+                            : throw new IOException("The gallery directory changed while downloading. Retry with a stable naming convention.");
+                    var keyFullname = Path.GetFullPath(Path.Combine(ownedGalleryDirectory, relativeFile));
+                    var galleryRoot = Path.GetFullPath(ownedGalleryDirectory) + Path.DirectorySeparatorChar;
+                    if (!keyFullname.StartsWith(galleryRoot, StringComparison.Ordinal))
+                        throw new IOException("A gallery file path escaped its owned directory.");
+                    ExHentaiGalleryDirectoryClaim.EnsureOwnedOutputPath(configuredRoot, ownedGalleryDirectory,
+                        sourceKey, keyFullname);
                     if (File.Exists(keyFullname))
                     {
                         workFiles[keyFullname] = 0;
@@ -249,6 +308,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 foreach (var (fullname, pageUrl) in taskDataList)
                 {
                     var dir = Path.GetDirectoryName(fullname)!;
+                    ExHentaiGalleryDirectoryClaim.EnsureOwnedOutputPath(configuredRoot, ownedGalleryDirectory,
+                        sourceKey, fullname);
                     Directory.CreateDirectory(dir);
 
                     // Give up once a run of downloads has all genuinely failed — a banned IP or an
@@ -332,6 +393,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
                             if (actualExt.IsNullOrEmpty() || string.Equals(actualExt, targetExt, StringComparison.OrdinalIgnoreCase))
                             {
+                                ExHentaiGalleryDirectoryClaim.EnsureOwnedOutputPath(configuredRoot,
+                                    ownedGalleryDirectory, sourceKey, fullname);
                                 await File.WriteAllBytesAsync(fullname, data, ct);
                                 wrote = true;
                             }
@@ -341,6 +404,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 try
                                 {
                                     using var image = Image.Load(data);
+                                    ExHentaiGalleryDirectoryClaim.EnsureOwnedOutputPath(configuredRoot,
+                                        ownedGalleryDirectory, sourceKey, fullname);
                                     await image.SaveAsync(fullname, ct);
                                     wrote = true;
                                 }
@@ -355,6 +420,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                     var dirName = Path.GetDirectoryName(fullname)!;
                                     var fileNameWithoutExt = Path.GetFileNameWithoutExtension(fullname);
                                     var actualFullName = Path.Combine(dirName, fileNameWithoutExt + actualExt);
+                                    ExHentaiGalleryDirectoryClaim.EnsureOwnedOutputPath(configuredRoot,
+                                        ownedGalleryDirectory, sourceKey, actualFullName);
                                     await File.WriteAllBytesAsync(actualFullName, data, ct);
                                     wrote = true;
                                     wrotePath = actualFullName;
@@ -394,6 +461,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 }
             }
 
+            foreach (var file in workFiles.Keys)
+                ExHentaiGalleryDirectoryClaim.EnsureOwnedOutputPath(configuredRoot, ownedGalleryDirectory,
+                    sourceKey, file);
             await results.RecordFilesAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
                 downloadPath, workFiles.Keys.ToArray(), resultWorkflowId, ct);
             if (onCheckpointChanged != null)

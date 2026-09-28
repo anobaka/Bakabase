@@ -19,12 +19,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     ///
     /// Two of them, and both used to cost a full start/stop lifecycle per task:
     ///
-    /// 1. <em>Is this task already done?</em> A SingleWork task that has downloaded its torrent
-    ///    leaves the file on disk, and the downloader's own first act is to notice that and return.
-    ///    Reaching that point costs a downloader, a background task, a database write, a UI push and
-    ///    a detail-page request paced a second behind the last one — for a task with nothing to do.
-    ///    Across a re-run of a thousand mostly-finished tasks that is the entire run. Here it is one
-    ///    directory listing per download folder, shared by every task in it.
+    /// 1. <em>Is this task already done?</em> A persisted torrent-download stamp can answer this
+    ///    without starting the producer. A file with the same title cannot: another gallery may
+    ///    have written it, so an unstamped task must run and verify its source identity.
     ///
     /// 2. <em>Will this task download images rather than a torrent?</em> Those go last under
     ///    torrent-priority. Unchanged in meaning from the per-task check it replaces — it is the same
@@ -46,17 +43,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             var exOptions = options.Value;
             var verdicts = new Dictionary<int, DownloadTaskPrecheckVerdict>();
 
-            // One listing per distinct download folder, built lazily so a queue that needs no
-            // satisfied-check touches the disk not at all.
-            var torrentsByFolder = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-
             foreach (var task in candidates)
             {
                 ct.ThrowIfCancellationRequested();
 
                 var taskOptions = task.GetTypedOptions<ExHentaiTaskOptions>();
 
-                var satisfied = IsTorrentAlreadyDownloaded(task, taskOptions, torrentsByFolder);
+                var satisfied = IsTorrentAlreadyDownloaded(task, taskOptions);
 
                 if (satisfied != null)
                 {
@@ -83,16 +76,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         /// </summary>
         /// <remarks>
         /// The task's own <see cref="ExHentaiTaskOptions.TorrentDownloadedAt"/> answers this outright,
-        /// with no I/O — that is what the stamp exists for. The folder listing below is only for tasks
-        /// downloaded before that stamp existed: they carry no record at all, and they are exactly the
-        /// backlog this pre-check was added to spare.
+        /// with no I/O — that is what the stamp exists for. An old file without a source marker
+        /// cannot prove which same-named gallery it came from.
         ///
         /// Deliberately not <see cref="ExHentaiTaskOptions.TorrentFoundAt"/>, which is stamped when a
         /// torrent is *seen*, before a download that may still fail — reading it here would complete
         /// tasks that never got their file.
         /// </remarks>
-        private string? IsTorrentAlreadyDownloaded(DownloadTask task, ExHentaiTaskOptions taskOptions,
-            IDictionary<string, HashSet<string>> torrentsByFolder)
+        private static string? IsTorrentAlreadyDownloaded(DownloadTask task, ExHentaiTaskOptions taskOptions)
         {
             // A task that opted out of torrents downloads images; none of this says anything about it.
             // A configured handoff must pass through the producer, which durably records or
@@ -103,56 +94,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 return null;
             }
 
-            if (taskOptions.TorrentDownloadedAt.HasValue)
-            {
-                return "torrent already downloaded";
-            }
-
-            // Fallback, and only decidable once the task has run far enough to learn the gallery's
-            // name — that name *is* the file name (see AbstractExHentaiDownloader.DownloadSingleWork).
-            // A task that has never run has no name, so it is never skipped, which is the correct
-            // answer rather than a limitation.
-            if (task.Name.IsNullOrEmpty() || task.DownloadPath.IsNullOrEmpty())
-            {
-                return null;
-            }
-
-            var expected = $"{task.Name!.RemoveInvalidFileNameChars()}.torrent";
-
-            return ListTorrents(task.DownloadPath, torrentsByFolder).Contains(expected)
-                ? "torrent file found in the download folder"
-                : null;
-        }
-
-        private HashSet<string> ListTorrents(string folder, IDictionary<string, HashSet<string>> cache)
-        {
-            if (cache.TryGetValue(folder, out var names))
-            {
-                return names;
-            }
-
-            names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            try
-            {
-                if (Directory.Exists(folder))
-                {
-                    foreach (var file in Directory.EnumerateFiles(folder, "*.torrent", SearchOption.TopDirectoryOnly))
-                    {
-                        names.Add(Path.GetFileName(file));
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                // An unreadable folder just means nothing can be skipped from it. Downloading a
-                // torrent that already exists is cheap; wrongly skipping one is not.
-                logger.LogWarning(e, "Could not list torrents in {Folder}; not skipping its tasks", folder);
-            }
-
-            cache[folder] = names;
-
-            return names;
+            return taskOptions.TorrentDownloadedAt.HasValue ? "torrent already downloaded" : null;
         }
 
         /// <summary>
