@@ -137,82 +137,6 @@ public sealed class ExHentaiDownloadResultTests
     }
 
     [TestMethod]
-    public void GalleryDirectoryClaims_SameNameDifferentGalleriesReceiveSeparateDirectories()
-    {
-        var first = ExHentaiGalleryDirectoryClaim.Claim(_root, "Same Gallery", "12345/abcd");
-        var second = ExHentaiGalleryDirectoryClaim.Claim(_root, "Same Gallery", "12346/abcd");
-
-        Assert.AreEqual(Path.Combine(_root, "Same Gallery"), first);
-        Assert.AreNotEqual(first, second);
-        StringAssert.Contains(Path.GetFileName(second), "12346");
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(first, "12345/abcd");
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(second, "12346/abcd");
-        Assert.ThrowsException<IOException>(() =>
-            ExHentaiGalleryDirectoryClaim.EnsureOwned(first, "12346/abcd"));
-    }
-
-    [TestMethod]
-    public void GalleryDirectoryClaims_SameIdDifferentTokensStillRemainSeparate()
-    {
-        var first = ExHentaiGalleryDirectoryClaim.Claim(_root, "Same Gallery", "12345/abcd");
-        var second = ExHentaiGalleryDirectoryClaim.Claim(_root, "Same Gallery", "12345/ef01");
-
-        Assert.AreNotEqual(first, second);
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(first, "12345/abcd");
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(second, "12345/ef01");
-    }
-
-    [TestMethod]
-    public void GalleryDirectoryClaims_MovedDirectoryFreesPlainNameWithoutLosingExistingSuffix()
-    {
-        var first = ExHentaiGalleryDirectoryClaim.Claim(_root, "Same Gallery", "12345/abcd");
-        var second = ExHentaiGalleryDirectoryClaim.Claim(_root, "Same Gallery", "12346/abcd");
-        var archived = Path.Combine(_root, "archive", "Same Gallery");
-        Directory.CreateDirectory(Path.GetDirectoryName(archived)!);
-        Directory.Move(first, archived);
-
-        var resumedSecond = ExHentaiGalleryDirectoryClaim.Claim(_root, "Same Gallery", "12346/abcd");
-        var third = ExHentaiGalleryDirectoryClaim.Claim(_root, "Same Gallery", "12347/abcd");
-
-        Assert.AreEqual(second, resumedSecond, "An existing suffixed directory must stay stable on retry.");
-        Assert.AreEqual(first, third, "A moved-away directory must not reserve its former name forever.");
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(archived, "12345/abcd");
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(second, "12346/abcd");
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(third, "12347/abcd");
-    }
-
-    [TestMethod]
-    public async Task GalleryDirectoryClaims_LeaveUnmarkedExistingFilesUntouched()
-    {
-        var legacy = Path.Combine(_root, "Same Gallery");
-        Directory.CreateDirectory(legacy);
-        var legacyFile = Path.Combine(legacy, "001.jpg");
-        await File.WriteAllTextAsync(legacyFile, "Unknown gallery");
-
-        var claimed = ExHentaiGalleryDirectoryClaim.Claim(_root, "Same Gallery", "12345/abcd");
-
-        Assert.AreNotEqual(legacy, claimed);
-        Assert.AreEqual("Unknown gallery", await File.ReadAllTextAsync(legacyFile));
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(claimed, "12345/abcd");
-    }
-
-    [TestMethod]
-    public async Task GalleryDirectoryClaims_ConcurrentSameNameClaimsAreUnique()
-    {
-        for (var round = 0; round < 8; round++)
-        {
-            var keys = Enumerable.Range(12345 + round * 24, 24).Select(id => $"{id}/abcd").ToArray();
-            var title = $"Same Gallery {round}";
-            var paths = await Task.WhenAll(keys.Select(key => Task.Run(() =>
-                ExHentaiGalleryDirectoryClaim.Claim(_root, title, key))));
-
-            Assert.AreEqual(keys.Length, paths.Distinct(StringComparer.OrdinalIgnoreCase).Count());
-            for (var i = 0; i < keys.Length; i++)
-                ExHentaiGalleryDirectoryClaim.EnsureOwned(paths[i], keys[i]);
-        }
-    }
-
-    [TestMethod]
     public void TaskDefaults_AreFrozen_AndAnExplicitDisableIsPreserved()
     {
         var raw = ExHentaiDownloaderHelper.ApplyDefaultTaskOptions(null, true, 12);
@@ -250,7 +174,7 @@ public sealed class ExHentaiDownloadResultTests
     }
 
     [TestMethod]
-    public async Task SameNamedTorrentWithoutAResult_PreservesUnownedFileAndFetchesActualGallery()
+    public async Task SameNamedTorrentWithoutAResult_PreservesOldIdlessFileAndFetchesActualGallery()
     {
         var stale = Path.Combine(_root, "Gallery 12345.torrent");
         await File.WriteAllTextAsync(stale, "This is another work's stale torrent.");
@@ -267,8 +191,8 @@ public sealed class ExHentaiDownloadResultTests
         var downloaded = Directory.GetFiles(_root, "*.torrent", SearchOption.AllDirectories)
             .Single(path => !string.Equals(path, stale, StringComparison.Ordinal)
                             && !path.StartsWith(managedMetadata, StringComparison.Ordinal));
+        Assert.AreEqual(Path.Combine(_root, "[Misc] Gallery 12345 [g12345]", "Gallery 12345.torrent"), downloaded);
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(downloaded));
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(Path.GetDirectoryName(downloaded)!, "12345/abcd");
         Assert.AreEqual("12345/abcd", (await _results.GetByTaskAsync(10)).Single().SourceKey);
     }
 
@@ -283,7 +207,11 @@ public sealed class ExHentaiDownloadResultTests
 
         var copies = Directory.GetFiles(_root, "Same Gallery.torrent", SearchOption.AllDirectories);
         Assert.AreEqual(2, copies.Length);
-        Assert.AreNotEqual(Path.GetDirectoryName(copies[0]), Path.GetDirectoryName(copies[1]));
+        CollectionAssert.AreEquivalent(new[]
+        {
+            Path.Combine(_root, "[Misc] Same Gallery [g12345]", "Same Gallery.torrent"),
+            Path.Combine(_root, "[Misc] Same Gallery [g12346]", "Same Gallery.torrent")
+        }, copies);
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(copies[0]));
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(copies[1]));
         Assert.AreEqual(2, handler.TorrentRequests);
@@ -332,16 +260,18 @@ public sealed class ExHentaiDownloadResultTests
         var first = JsonSerializer.Deserialize<string[]>(results["12345/abcd"].FilesJson)!.Single();
         var second = JsonSerializer.Deserialize<string[]>(results["12346/abcd"].FilesJson)!.Single();
         Assert.AreNotEqual(first, second);
-        Assert.AreNotEqual(Path.GetDirectoryName(first), Path.GetDirectoryName(second));
+        Assert.AreEqual(Path.Combine(_root, "[Misc] Same Gallery [g12345]", "001.jpg"), first);
+        Assert.AreEqual(Path.Combine(_root, "[Misc] Same Gallery [g12346]", "001.jpg"), second);
         Assert.AreEqual("fixture image /image/12345", await File.ReadAllTextAsync(first));
         Assert.AreEqual("fixture image /image/12346", await File.ReadAllTextAsync(second));
         Assert.AreEqual(2, handler.ImageRequests);
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(Path.GetDirectoryName(first)!, "12345/abcd");
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(Path.GetDirectoryName(second)!, "12346/abcd");
+        Assert.IsFalse(File.Exists(Path.Combine(Path.GetDirectoryName(first)!, ".bakabase-exhentai-gallery.json")));
+        Assert.IsFalse(File.Exists(Path.Combine(Path.GetDirectoryName(second)!, ".bakabase-exhentai-gallery.json")));
+        Assert.IsFalse(Directory.Exists(Path.Combine(_root, ".bakabase-exhentai-gallery-index")));
     }
 
     [TestMethod]
-    public async Task NewDownloadRoot_IsCreatedBeforeClaimingGalleryDirectory()
+    public async Task NewDownloadRoot_IsCreatedBeforeWritingGalleryFiles()
     {
         var downloadRoot = Path.Combine(_root, "new-download-root");
         var handler = new GalleryHandler {GalleryName = "Gallery"};
@@ -353,12 +283,11 @@ public sealed class ExHentaiDownloadResultTests
         var result = (await _results.GetByTaskAsync(10)).Single();
         var file = JsonSerializer.Deserialize<string[]>(result.FilesJson)!.Single();
         Assert.IsTrue(File.Exists(file));
-        StringAssert.StartsWith(file, downloadRoot + Path.DirectorySeparatorChar);
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(Path.GetDirectoryName(file)!, "12345/abcd");
+        Assert.AreEqual(Path.Combine(downloadRoot, "[Misc] Gallery [g12345]", "001.jpg"), file);
     }
 
     [TestMethod]
-    public async Task FlatCustomNamingConvention_StillKeepsGalleriesSeparate()
+    public async Task CustomNamingConventionWithoutId_CanReuseTheSameOutputPath()
     {
         var handler = new GalleryHandler {GalleryName = "Same Gallery"};
         var producer = await BuildProducer(handler, "Images/{PageTitle}{Extension}");
@@ -372,15 +301,13 @@ public sealed class ExHentaiDownloadResultTests
         var first = JsonSerializer.Deserialize<string[]>(results["12345/abcd"].FilesJson)!.Single();
         var second = JsonSerializer.Deserialize<string[]>(results["12346/abcd"].FilesJson)!.Single();
         Assert.AreEqual(Path.Combine(_root, "Images", "001.jpg"), first);
-        Assert.AreNotEqual(first, second);
+        Assert.AreEqual(first, second, "An explicit template without GalleryId does not separate galleries.");
         Assert.AreEqual("fixture image /image/12345", await File.ReadAllTextAsync(first));
-        Assert.AreEqual("fixture image /image/12346", await File.ReadAllTextAsync(second));
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(Path.GetDirectoryName(first)!, "12345/abcd");
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(Path.GetDirectoryName(second)!, "12346/abcd");
+        Assert.AreEqual(1, handler.ImageRequests, "The second gallery encounters the custom template's existing file.");
     }
 
     [TestMethod]
-    public async Task PageOnlyNamingConvention_GetsAnOwnedGalleryDirectory()
+    public async Task PageOnlyNamingConvention_UsesTheLegacyWrapperWithoutId()
     {
         var handler = new GalleryHandler {GalleryName = "Same Gallery"};
         var producer = await BuildProducer(handler, "{PageTitle}{Extension}");
@@ -394,9 +321,8 @@ public sealed class ExHentaiDownloadResultTests
         var first = JsonSerializer.Deserialize<string[]>(results["12345/abcd"].FilesJson)!.Single();
         var second = JsonSerializer.Deserialize<string[]>(results["12346/abcd"].FilesJson)!.Single();
         Assert.AreEqual(Path.Combine(_root, "[Misc] Same Gallery", "001.jpg"), first);
-        Assert.AreNotEqual(first, second);
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(Path.GetDirectoryName(first)!, "12345/abcd");
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(Path.GetDirectoryName(second)!, "12346/abcd");
+        Assert.AreEqual(first, second);
+        Assert.AreEqual(1, handler.ImageRequests);
     }
 
     [TestMethod]
@@ -411,14 +337,14 @@ public sealed class ExHentaiDownloadResultTests
         var result = (await _results.GetByTaskAsync(10)).Single();
         var file = JsonSerializer.Deserialize<string[]>(result.FilesJson)!.Single();
         Assert.AreEqual(Path.Combine(_root, "Gallery [12345]", "abcd_001.jpg"), file);
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(Path.GetDirectoryName(file)!, "12345/abcd");
     }
 
     private const string TrailingDotsGallery = "[fantia] RENA_bootleg 2025_11 女の子の部屋に連れ込まれて...";
-    private const string SanitizedGalleryFile = "[Misc] [fantia] RENA_bootleg 2025_11 女の子の部屋に連れ込まれて/Page 1_ _1.webp";
+    private const string LegacySanitizedGalleryFile = "[Misc] [fantia] RENA_bootleg 2025_11 女の子の部屋に連れ込まれて/Page 1_ _1.webp";
+    private const string IdSanitizedGalleryFile = "[Misc] [fantia] RENA_bootleg 2025_11 女の子の部屋に連れ込まれて... [g12345]/Page 1_ _1.webp";
 
     [DataTestMethod]
-    [DataRow(TrailingDotsGallery, "Page 1_ _1.webp", null, SanitizedGalleryFile)]
+    [DataRow(TrailingDotsGallery, "Page 1_ _1.webp", null, IdSanitizedGalleryFile)]
     [DataRow("Gallery", "page.01.webp", "Downloads... /{RawName}... /{PageTitle}{Extension}",
         "Downloads/Gallery/page.01.webp")]
     [DataRow("CON", "NUL.webp", "{RawName}/{PageTitle}{Extension}", "_CON/_NUL.webp")]
@@ -444,9 +370,43 @@ public sealed class ExHentaiDownloadResultTests
     }
 
     [TestMethod]
-    public async Task ImageDownloads_DoNotReuseUnmarkedLegacyPath()
+    public async Task CustomTemplateParentSegments_CannotEscapeTheDownloadRoot()
     {
-        var legacy = Path.Combine(_root, SanitizedGalleryFile.Replace('/', Path.DirectorySeparatorChar));
+        var handler = new GalleryHandler {GalleryName = "Gallery"};
+        var producer = await BuildProducer(handler, "../../outside/{PageTitle}{Extension}");
+
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+            preferTorrent: false);
+
+        var expected = Path.Combine(_root, "_", "_", "outside", "001.jpg");
+        var result = (await _results.GetByTaskAsync(10)).Single();
+        CollectionAssert.AreEqual(new[] {expected}, JsonSerializer.Deserialize<string[]>(result.FilesJson));
+        Assert.AreEqual("fixture image /image/12345", await File.ReadAllTextAsync(expected));
+        Assert.IsFalse(File.Exists(Path.Combine(Path.GetDirectoryName(_root)!, "outside", "001.jpg")));
+    }
+
+    [TestMethod]
+    public async Task CustomTemplateLinkedDirectory_CannotRedirectDownloadedFiles()
+    {
+        if (OperatingSystem.IsWindows()) return;
+
+        var target = Path.Combine(_root, "target");
+        Directory.CreateDirectory(target);
+        Directory.CreateSymbolicLink(Path.Combine(_root, "linked"), target);
+        var handler = new GalleryHandler {GalleryName = "Gallery"};
+        var producer = await BuildProducer(handler, "linked/{PageTitle}{Extension}");
+
+        await Assert.ThrowsExceptionAsync<IOException>(() => RunProducer(producer,
+            "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask, preferTorrent: false));
+
+        Assert.IsFalse(File.Exists(Path.Combine(target, "001.jpg")));
+        Assert.AreEqual(0, await _db.DownloadResults.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task DefaultNaming_DoesNotReuseOldIdlessDirectory()
+    {
+        var legacy = Path.Combine(_root, LegacySanitizedGalleryFile.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(legacy)!);
         await File.WriteAllTextAsync(legacy, "Unknown gallery's image.");
         var handler = new GalleryHandler {GalleryName = TrailingDotsGallery, PageTitle = "Page 1_ _1.webp"};
@@ -459,19 +419,16 @@ public sealed class ExHentaiDownloadResultTests
         Assert.AreEqual("Unknown gallery's image.", await File.ReadAllTextAsync(legacy));
         var result = (await _results.GetByTaskAsync(10)).Single();
         var downloaded = JsonSerializer.Deserialize<string[]>(result.FilesJson)!.Single();
-        Assert.AreNotEqual(legacy, downloaded);
+        Assert.AreEqual(Path.Combine(_root, IdSanitizedGalleryFile.Replace('/', Path.DirectorySeparatorChar)), downloaded);
         Assert.AreEqual("fixture image /image/12345", await File.ReadAllTextAsync(downloaded));
-        ExHentaiGalleryDirectoryClaim.EnsureOwned(Path.GetDirectoryName(downloaded)!, "12345/abcd");
     }
 
     [TestMethod]
-    public async Task ImageDownloads_ReuseOwnedSanitizedPathWithoutRequestingExistingImage()
+    public async Task ImageDownloads_ReuseExistingIdNamedPathWithoutRequestingExistingImage()
     {
-        var expected = Path.Combine(_root, SanitizedGalleryFile.Replace('/', Path.DirectorySeparatorChar));
+        var expected = Path.Combine(_root, IdSanitizedGalleryFile.Replace('/', Path.DirectorySeparatorChar));
         var directory = Path.GetDirectoryName(expected)!;
-        var claimed = ExHentaiGalleryDirectoryClaim.Claim(_root,
-            Path.GetRelativePath(_root, directory), "12345/abcd");
-        Assert.AreEqual(directory, claimed);
+        Directory.CreateDirectory(directory);
         await File.WriteAllTextAsync(expected, "Previously downloaded image.");
         var handler = new GalleryHandler {GalleryName = TrailingDotsGallery, PageTitle = "Page 1_ _1.webp"};
         var producer = await BuildProducer(handler);

@@ -6,21 +6,21 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         [Downloader(ThirdPartyId.ExHentai,
             typeof(ExHentaiSingleWorkDownloader),
-            $"[{{{nameof(ExHentaiNamingFields.Category)}}}] {{{nameof(ExHentaiNamingFields.RawName)}}}/{{{nameof(ExHentaiNamingFields.PageTitle)}}}{{{nameof(ExHentaiNamingFields.Extension)}}}",
+            $"[{{{nameof(ExHentaiNamingFields.Category)}}}] {{{nameof(ExHentaiNamingFields.RawName)}}} [g{{{nameof(ExHentaiNamingFields.GalleryId)}}}]/{{{nameof(ExHentaiNamingFields.PageTitle)}}}{{{nameof(ExHentaiNamingFields.Extension)}}}",
             typeof(ExHentaiNamingFields),
             typeof(ExHentaiDownloaderHelper))]
         SingleWork = 1,
         
         [Downloader(ThirdPartyId.ExHentai,
             typeof(ExHentaiWatchedDownloader),
-            $"[{{{nameof(ExHentaiNamingFields.Category)}}}] {{{nameof(ExHentaiNamingFields.RawName)}}}/{{{nameof(ExHentaiNamingFields.PageTitle)}}}{{{nameof(ExHentaiNamingFields.Extension)}}}",
+            $"[{{{nameof(ExHentaiNamingFields.Category)}}}] {{{nameof(ExHentaiNamingFields.RawName)}}} [g{{{nameof(ExHentaiNamingFields.GalleryId)}}}]/{{{nameof(ExHentaiNamingFields.PageTitle)}}}{{{nameof(ExHentaiNamingFields.Extension)}}}",
             typeof(ExHentaiNamingFields),
             typeof(ExHentaiDownloaderHelper))]
         Watched = 2,
         
         [Downloader(ThirdPartyId.ExHentai,
             typeof(ExHentaiListDownloader),
-            $"[{{{nameof(ExHentaiNamingFields.Category)}}}] {{{nameof(ExHentaiNamingFields.RawName)}}}/{{{nameof(ExHentaiNamingFields.PageTitle)}}}{{{nameof(ExHentaiNamingFields.Extension)}}}",
+            $"[{{{nameof(ExHentaiNamingFields.Category)}}}] {{{nameof(ExHentaiNamingFields.RawName)}}} [g{{{nameof(ExHentaiNamingFields.GalleryId)}}}]/{{{nameof(ExHentaiNamingFields.PageTitle)}}}{{{nameof(ExHentaiNamingFields.Extension)}}}",
             typeof(ExHentaiNamingFields),
             typeof(ExHentaiDownloaderHelper))]
         List = 3
