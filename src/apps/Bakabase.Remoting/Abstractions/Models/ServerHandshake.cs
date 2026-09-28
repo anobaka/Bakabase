@@ -47,7 +47,13 @@ public enum ServerHandshakeOutcome
     /// is the opposite of what that one suggests: the address is not wrong about Bakabase,
     /// it is wrong about which computer.
     /// </summary>
-    SelfAddress = 6
+    SelfAddress = 6,
+
+    /// <summary>Not an http host and port at all; nothing was sent.</summary>
+    InvalidAddress = 7,
+
+    /// <summary>A host typed without its port; nothing was sent. See <c>RemoteAddressProblem.PortMissing</c>.</summary>
+    PortMissing = 8
 }
 
 public sealed record ServerHandshakeResult(ServerHandshakeOutcome Outcome, ServerInfo? Server, string? Detail)

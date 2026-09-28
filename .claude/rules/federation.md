@@ -175,6 +175,12 @@ endpoints and confirmations.
 - **Peer input is untrusted.** Wire DTOs are validated and budgeted (`QueryProtocol`,
   `FederationMediaSessions.Remember`, `MediaPathBoundary`). Removed enum values (e.g. old
   `ResourceSource` members) must be filtered before they reach the wire, or peers reject whole blocks.
+- **A typed address is read one way, for both features** (`RemoteAddressInput`, behind
+  `FederationHttpClient.NormalizeAddress` and `ServerConnector`): full-width `：．。` and digits
+  and a leading `\\` are forgiven; typed without a scheme it must name its port — none is
+  guessed, since the desktop app's port can change at launch and a Docker server's is its
+  own — while `http(s)://` keeps its scheme's port, for a reverse proxy. Anything that is not
+  an http(s) host and port is `InvalidAddress`; both are answered before anything is sent.
 - **No silent widening or truncation.** Unsupported filters are rejected, partial coverage is
   reported per node, budget overruns fail explicitly.
 - **Proxies are bypassed** (`UseProxy = false`), matching the desktop app's relays.

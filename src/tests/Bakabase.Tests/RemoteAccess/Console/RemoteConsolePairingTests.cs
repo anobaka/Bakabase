@@ -70,6 +70,33 @@ public class RemoteConsolePairingTests
     }
 
     [TestMethod]
+    public async Task An_address_typed_in_full_width_pairs_and_is_kept_as_meant()
+    {
+        var desk = await Server("server-desk");
+        desk.PairingCode = "123456";
+        var typed = $"１２７．０．０．１：{desk.Port}";
+
+        Assert.AreEqual(ManagedServerOutcome.Ok, (await _console.Manager.ProbeAsync(typed)).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.Ok, (await _console.Manager.PairAsync(typed, "123456")).Outcome);
+        Assert.AreEqual(desk.BaseAddress, _console.Store.Find("server-desk")!.BaseAddress);
+    }
+
+    [TestMethod]
+    public async Task A_mistyped_address_is_answered_for_what_it_is()
+    {
+        var desk = await Server("server-desk");
+        var host = new Uri(desk.BaseAddress).Host;
+
+        Assert.AreEqual(ManagedServerOutcome.PortMissing, (await _console.Manager.ProbeAsync(host)).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.PortMissing, (await _console.Manager.PairAsync(@"\\" + host, null)).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.InvalidAddress,
+            (await _console.Manager.PairAsync($"{desk.BaseAddress}/library", "123456")).Outcome);
+
+        Assert.AreEqual(0, desk.Requests.Count);
+        Assert.AreEqual(0, _console.Store.Read().Servers.Count);
+    }
+
+    [TestMethod]
     public async Task A_filed_request_is_collected_in_the_background_once_approved()
     {
         var desk = await Server("server-desk");

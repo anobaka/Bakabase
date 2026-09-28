@@ -263,7 +263,9 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
     public async Task<ManagedServerProbeView> ProbeAsync(string address, CancellationToken ct = default)
     {
-        var handshake = await HandshakeAsync(ServerConnector.Normalize(address), new ServerClock(), ct);
+        // As typed: the handshake reads it itself, and a missing port only shows before
+        // normalizing puts a scheme in front.
+        var handshake = await HandshakeAsync(address, new ServerClock(), ct);
         var outcome = await ClassifyAsync(handshake);
         var server = handshake.Server;
 
@@ -307,7 +309,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     {
         var normalized = ServerConnector.Normalize(address);
         var clock = new ServerClock();
-        var handshake = await HandshakeAsync(normalized, clock, ct);
+        var handshake = await HandshakeAsync(address, clock, ct);
         var outcome = await ClassifyAsync(handshake);
 
         if (outcome != ManagedServerOutcome.Ok)
@@ -593,6 +595,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             ServerHandshakeOutcome.ServerTooOld => ManagedServerOutcome.ServerTooOld,
             ServerHandshakeOutcome.RemoteAccessDisabled => ManagedServerOutcome.RemoteAccessDisabled,
             ServerHandshakeOutcome.SelfAddress => ManagedServerOutcome.ThisDevice,
+            ServerHandshakeOutcome.InvalidAddress => ManagedServerOutcome.InvalidAddress,
+            ServerHandshakeOutcome.PortMissing => ManagedServerOutcome.PortMissing,
             _ => ManagedServerOutcome.NotBakabase
         };
     }

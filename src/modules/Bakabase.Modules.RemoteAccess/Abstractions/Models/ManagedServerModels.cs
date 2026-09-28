@@ -44,7 +44,13 @@ public enum ManagedServerOutcome
     TooManyAttempts = 10,
 
     /// <summary>The server cannot pair at all (too old, or pairing disabled there).</summary>
-    PairingUnsupported = 11
+    PairingUnsupported = 11,
+
+    /// <summary>What was typed is not an http host and port; nothing was sent.</summary>
+    InvalidAddress = 12,
+
+    /// <summary>A host typed without its port; nothing was sent, since no port can be guessed.</summary>
+    PortMissing = 13
 }
 
 /// <summary>How a managed server looked the last time this device asked.</summary>

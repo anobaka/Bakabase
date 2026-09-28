@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Security;
+using Bakabase.Modules.RemoteAccess.Components;
 
 namespace Bakabase.Modules.Federation.Transport;
 
@@ -10,16 +11,20 @@ public sealed class FederationHttpClient(HttpClient http)
 {
     public const int MaxControlResponseBytes = 4 * 1024 * 1024;
 
-    public static string NormalizeAddress(string address)
-    {
-        var value = address?.Trim().TrimEnd('/') ?? "";
-        if (!value.Contains("://", StringComparison.Ordinal)) value = "http://" + value;
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
-            uri.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(uri.UserInfo) ||
-            uri.AbsolutePath != "/" || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
-            throw new FederationAccessException("InvalidAddress", 400, "Use the node's HTTP or HTTPS host and port, without a path or credentials.");
-        return uri.GetLeftPart(UriPartial.Authority);
-    }
+    /// <summary>
+    /// Read the way server switching reads a typed address (<see cref="RemoteAddressInput"/>):
+    /// full-width characters and a leading <c>\\</c> are forgiven, a host without a scheme
+    /// must name its port.
+    /// </summary>
+    public static string NormalizeAddress(string address) =>
+        RemoteAddressInput.Parse(address, out var uri) switch
+        {
+            RemoteAddressProblem.None => uri!.GetLeftPart(UriPartial.Authority),
+            RemoteAddressProblem.PortMissing => throw new FederationAccessException("PortMissing", 400,
+                "Add the port the other device shows with its address, such as 192.168.1.5:34567."),
+            _ => throw new FederationAccessException("InvalidAddress", 400,
+                "Use the node's HTTP or HTTPS host and port, without a path or credentials.")
+        };
 
     public async Task<T> PublicAsync<T>(string address, HttpMethod method, string path, object? body,
         CancellationToken ct)

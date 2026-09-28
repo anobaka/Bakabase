@@ -87,6 +87,9 @@ const dynamicKeys = [
   // …and those the console's `/client/switcher/{id}/open` refuses with, which
   // `openConsoleTarget` carries over as the same kind of error.
   "federation.error.UnknownServer",
+  // What a typed address is refused as by "Connect another device" (`NormalizeAddress`).
+  "federation.error.InvalidAddress",
+  "federation.error.PortMissing",
   // Paired devices and requests name their platform.
   ...Object.values(RemoteDevicePlatform)
     .filter((value): value is RemoteDevicePlatform => typeof value === "number")

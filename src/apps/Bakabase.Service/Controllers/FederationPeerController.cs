@@ -143,6 +143,8 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
     [ProducesResponseType(typeof(NodePairingOutcome), 200)]
     public async Task<IActionResult> Connect([FromBody] FederationConnectRequest request, CancellationToken ct)
     {
+        // A mistyped address is refused before sharing back switches anything on.
+        FederationHttpClient.NormalizeAddress(request.Address);
         IReadOnlyList<string>? shareBack = null;
         if (request.ShareBack)
         {

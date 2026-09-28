@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Remoting.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Modules.RemoteAccess.Components;
 
 namespace Bakabase.Remoting.Components.Connection;
 
@@ -34,12 +35,17 @@ public sealed class ServerConnector(HttpClient http, ServerClock clock, ClientSe
     /// </summary>
     public async Task<ServerHandshakeResult> HandshakeAsync(string baseAddress, CancellationToken ct = default)
     {
-        if (!Uri.TryCreate(Normalize(baseAddress), UriKind.Absolute, out var root) ||
-            (root.Scheme != Uri.UriSchemeHttp && root.Scheme != Uri.UriSchemeHttps))
+        switch (RemoteAddressInput.Parse(baseAddress, out var parsed))
         {
-            return ServerHandshakeResult.Failed(ServerHandshakeOutcome.NotBakabase,
-                $"'{baseAddress}' is not an http address.");
+            case RemoteAddressProblem.PortMissing:
+                return ServerHandshakeResult.Failed(ServerHandshakeOutcome.PortMissing,
+                    $"'{baseAddress}' names no port.");
+            case not RemoteAddressProblem.None:
+                return ServerHandshakeResult.Failed(ServerHandshakeOutcome.InvalidAddress,
+                    $"'{baseAddress}' is not an http host and port.");
         }
+
+        var root = parsed!;
 
         // Before the request rather than after it, because sending it is what makes this
         // unrecoverable: this address answers. A relay's forwarder relays the question
@@ -134,19 +140,10 @@ public sealed class ServerConnector(HttpClient http, ServerClock clock, ClientSe
 
     /// <summary>
     /// Fills in what a user typing an address by hand leaves out, and drops the trailing
-    /// slash so a stored address and a freshly typed one compare equal.
+    /// slash so a stored address and a freshly typed one compare equal. See
+    /// <see cref="RemoteAddressInput.Normalize"/>.
     /// </summary>
-    public static string Normalize(string baseAddress)
-    {
-        var trimmed = (baseAddress ?? string.Empty).Trim().TrimEnd('/');
-
-        if (trimmed.Length == 0)
-        {
-            return trimmed;
-        }
-
-        return trimmed.Contains("://", StringComparison.Ordinal) ? trimmed : $"http://{trimmed}";
-    }
+    public static string Normalize(string baseAddress) => RemoteAddressInput.Normalize(baseAddress);
 
     /// <summary>
     /// An optional fact a server may add about itself, read however it was written — a number,

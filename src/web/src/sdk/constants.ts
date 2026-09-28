@@ -4555,6 +4555,24 @@ export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
   [NullValueBehavior.Pass]: 'Pass'
 };
 
+export enum RemoteAddressProblem {
+  None = 0,
+  Invalid = 1,
+  PortMissing = 2
+}
+
+export const remoteAddressProblems = [
+  { label: 'None', value: RemoteAddressProblem.None },
+  { label: 'Invalid', value: RemoteAddressProblem.Invalid },
+  { label: 'PortMissing', value: RemoteAddressProblem.PortMissing }
+] as const;
+
+export const RemoteAddressProblemLabel: Record<RemoteAddressProblem, string> = {
+  [RemoteAddressProblem.None]: 'None',
+  [RemoteAddressProblem.Invalid]: 'Invalid',
+  [RemoteAddressProblem.PortMissing]: 'PortMissing'
+};
+
 export enum DeviceAuthOutcome {
   Anonymous = 0,
   Authenticated = 1,
@@ -4594,7 +4612,9 @@ export enum ManagedServerOutcome {
   CodeRejected = 8,
   RequestRejected = 9,
   TooManyAttempts = 10,
-  PairingUnsupported = 11
+  PairingUnsupported = 11,
+  InvalidAddress = 12,
+  PortMissing = 13
 }
 
 export const managedServerOutcomes = [
@@ -4609,7 +4629,9 @@ export const managedServerOutcomes = [
   { label: 'CodeRejected', value: ManagedServerOutcome.CodeRejected },
   { label: 'RequestRejected', value: ManagedServerOutcome.RequestRejected },
   { label: 'TooManyAttempts', value: ManagedServerOutcome.TooManyAttempts },
-  { label: 'PairingUnsupported', value: ManagedServerOutcome.PairingUnsupported }
+  { label: 'PairingUnsupported', value: ManagedServerOutcome.PairingUnsupported },
+  { label: 'InvalidAddress', value: ManagedServerOutcome.InvalidAddress },
+  { label: 'PortMissing', value: ManagedServerOutcome.PortMissing }
 ] as const;
 
 export const ManagedServerOutcomeLabel: Record<ManagedServerOutcome, string> = {
@@ -4624,7 +4646,9 @@ export const ManagedServerOutcomeLabel: Record<ManagedServerOutcome, string> = {
   [ManagedServerOutcome.CodeRejected]: 'CodeRejected',
   [ManagedServerOutcome.RequestRejected]: 'RequestRejected',
   [ManagedServerOutcome.TooManyAttempts]: 'TooManyAttempts',
-  [ManagedServerOutcome.PairingUnsupported]: 'PairingUnsupported'
+  [ManagedServerOutcome.PairingUnsupported]: 'PairingUnsupported',
+  [ManagedServerOutcome.InvalidAddress]: 'InvalidAddress',
+  [ManagedServerOutcome.PortMissing]: 'PortMissing'
 };
 
 export enum ManagedServerState {
