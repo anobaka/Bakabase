@@ -30,6 +30,7 @@ import {
   PatreonConfigPanel,
   BangumiConfigPanel,
 } from "@/components/ThirdPartyConfig";
+import { useAutoSaveToast } from "@/components/ThirdPartyConfig/base/useAutoSaveToast";
 
 type Props = {
   onSubmitted?: any;
@@ -83,14 +84,14 @@ const GENERAL_TAB_KEY = "general";
 const GeneralPanel = () => {
   const { t } = useTranslation();
   const options = useDownloaderGlobalOptionsStore((s) => s.data);
-  const patch = useDownloaderGlobalOptionsStore((s) => s.patch);
+  const saveOptions = useAutoSaveToast(BApi.options.patchDownloaderGlobalOptions);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-start gap-3">
         <Switch
           isSelected={options?.autoStartAfterCreation ?? false}
-          onValueChange={(v) => patch({ autoStartAfterCreation: v })}
+          onValueChange={(v) => saveOptions({ autoStartAfterCreation: v })}
         >
           <div className="flex flex-col">
             <span className="text-sm font-medium">

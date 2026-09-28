@@ -10,6 +10,7 @@ import { Textarea } from "@heroui/react";
 import AccountsPanel, { type AccountField } from "./AccountsPanel";
 import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "./ConfigurableThirdPartyPanel";
 import ProxyField from "./ProxyField";
+import { useAutoSaveToast } from "./useAutoSaveToast";
 
 import { Chip, NumberInput, toast } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
@@ -42,6 +43,7 @@ export default function CookieDownloaderConfigPanel({
   cookieCaptureTarget,
 }: CookieDownloaderConfigPanelProps) {
   const { t } = useTranslation();
+  const saveAuto = useAutoSaveToast(patchApi);
   const [namingDefinition, setNamingDefinition] = useState<
     | BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition
     | undefined
@@ -104,28 +106,28 @@ export default function CookieDownloaderConfigPanel({
               max={100}
               min={1}
               value={options?.maxConcurrency || 1}
-              onValueChange={(v) => patch({ maxConcurrency: v })}
+              onValueChange={(v) => saveAuto({ maxConcurrency: v })}
             />
             <NumberInput
               description={t<string>("thirdPartyConfig.field.requestInterval.description")}
               label={t<string>("thirdPartyConfig.label.requestInterval")}
               min={0}
               value={options?.requestInterval || 1000}
-              onValueChange={(v) => patch({ requestInterval: v })}
+              onValueChange={(v) => saveAuto({ requestInterval: v })}
             />
             <NumberInput
               description={t<string>("thirdPartyConfig.field.maxRetries.description")}
               label={t<string>("thirdPartyConfig.label.maxRetries")}
               min={0}
               value={options?.maxRetries || 0}
-              onValueChange={(v) => patch({ maxRetries: v })}
+              onValueChange={(v) => saveAuto({ maxRetries: v })}
             />
             <NumberInput
               description={t<string>("thirdPartyConfig.field.requestTimeout.description")}
               label={t<string>("thirdPartyConfig.label.requestTimeout")}
               min={0}
               value={options?.requestTimeout || 0}
-              onValueChange={(v) => patch({ requestTimeout: v })}
+              onValueChange={(v) => saveAuto({ requestTimeout: v })}
             />
           </div>
         ),
@@ -146,7 +148,7 @@ export default function CookieDownloaderConfigPanel({
                 <FileSystemSelectorButton
                   fileSystemSelectorProps={{
                     targetType: "folder",
-                    onSelected: (e) => patch({ defaultPath: e.path }),
+                    onSelected: (e) => saveAuto({ defaultPath: e.path }),
                     defaultSelectedPath: options?.defaultPath,
                   }}
                 />
@@ -168,7 +170,7 @@ export default function CookieDownloaderConfigPanel({
                           size="sm"
                           variant="flat"
                           onClick={() =>
-                            patch({
+                            saveAuto({
                               namingConvention:
                                 (options?.namingConvention || "") + `{${x.name || x.key}}`,
                             })
@@ -187,21 +189,13 @@ export default function CookieDownloaderConfigPanel({
               placeholder={namingDefinition?.defaultConvention}
               size="sm"
               value={options?.namingConvention || ""}
-              onValueChange={(v) => patch({ namingConvention: v })}
+              onValueChange={(v) => saveAuto({ namingConvention: v })}
             />
           </div>
         ),
       },
     ],
-    [
-      t,
-      options,
-      accountFields,
-      patchApi,
-      cookieValidatorTarget,
-      cookieCaptureTarget,
-      namingDefinition,
-    ],
+    [t, options, accountFields, saveAuto, patch, namingDefinition],
   );
 
   return <ConfigurableThirdPartyPanel fields={fields} tabs={tabs} />;

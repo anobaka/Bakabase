@@ -14,6 +14,7 @@ import AutoSyncPanel from "../base/AutoSyncPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 import ProxyField from "../base/ProxyField";
 import DownloadResultWorkflowField from "../base/DownloadResultWorkflowField";
+import useAutoSaveToast from "../base/useAutoSaveToast";
 
 import { Checkbox, Chip, NumberInput, toast } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
@@ -39,6 +40,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
   const { t } = useTranslation();
   const options = useExHentaiOptionsStore((s) => s.data);
   const patch = useExHentaiOptionsStore((s) => s.patch);
+  const patchWithToast = useAutoSaveToast(BApi.options.patchExHentaiOptions);
   const [namingDefinition, setNamingDefinition] = useState<any>();
 
   const showDownload =
@@ -117,28 +119,28 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               max={100}
               min={1}
               value={options?.maxConcurrency || 1}
-              onValueChange={(v) => patch({ maxConcurrency: v })}
+              onValueChange={(v) => patchWithToast({ maxConcurrency: v })}
             />
             <NumberInput
               description={t<string>("thirdPartyConfig.field.requestInterval.description")}
               label={t<string>("thirdPartyConfig.label.requestInterval")}
               min={0}
               value={options?.requestInterval || 1000}
-              onValueChange={(v) => patch({ requestInterval: v })}
+              onValueChange={(v) => patchWithToast({ requestInterval: v })}
             />
             <NumberInput
               description={t<string>("thirdPartyConfig.field.maxRetries.description")}
               label={t<string>("thirdPartyConfig.label.maxRetries")}
               min={0}
               value={options?.maxRetries || 0}
-              onValueChange={(v) => patch({ maxRetries: v })}
+              onValueChange={(v) => patchWithToast({ maxRetries: v })}
             />
             <NumberInput
               description={t<string>("thirdPartyConfig.field.requestTimeout.description")}
               label={t<string>("thirdPartyConfig.label.requestTimeout")}
               min={0}
               value={options?.requestTimeout || 0}
-              onValueChange={(v) => patch({ requestTimeout: v })}
+              onValueChange={(v) => patchWithToast({ requestTimeout: v })}
             />
           </div>
         ),
@@ -161,7 +163,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
                 <FileSystemSelectorButton
                   fileSystemSelectorProps={{
                     targetType: "folder",
-                    onSelected: (e) => patch({ defaultPath: e.path }),
+                    onSelected: (e) => patchWithToast({ defaultPath: e.path }),
                     defaultSelectedPath: options?.defaultPath,
                   }}
                 />
@@ -183,7 +185,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
                           size="sm"
                           variant="flat"
                           onClick={() =>
-                            patch({
+                            patchWithToast({
                               namingConvention:
                                 (options?.namingConvention || "") + `{${x.name || x.key}}`,
                             })
@@ -202,12 +204,12 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               placeholder={namingDefinition?.defaultConvention}
               size="sm"
               value={options?.namingConvention || ""}
-              onValueChange={(v) => patch({ namingConvention: v })}
+              onValueChange={(v) => patchWithToast({ namingConvention: v })}
             />
             <ProxyField thirdPartyId={ThirdPartyId.ExHentai} />
             <PreferTorrentField
               preferTorrent={options?.preferTorrent ?? true}
-              onChange={(v) => patch({ preferTorrent: v })}
+              onChange={(v) => patchWithToast({ preferTorrent: v })}
             />
             <CheckboxGroup
               description={t<string>("downloader.tip.prioritizeTasksWithTorrentDesc")}
@@ -216,7 +218,9 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               orientation="horizontal"
               size="sm"
               value={options?.prioritizeTasksWithTorrent ? ["yes"] : []}
-              onValueChange={(v) => patch({ prioritizeTasksWithTorrent: v.includes("yes") })}
+              onValueChange={(v) =>
+                patchWithToast({ prioritizeTasksWithTorrent: v.includes("yes") })
+              }
             >
               <Checkbox value="yes">{t("common.label.yes")}</Checkbox>
             </CheckboxGroup>
@@ -228,7 +232,9 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               // 0 is the documented "always re-check" value, matching the backend, so an empty
               // box does not need to mean something different from what the user can type.
               value={options?.torrentCheckValidityHours ?? 0}
-              onValueChange={(v) => patch({ torrentCheckValidityHours: Number.isNaN(v) ? 0 : v })}
+              onValueChange={(v) =>
+                patchWithToast({ torrentCheckValidityHours: Number.isNaN(v) ? 0 : v })
+              }
             />
           </div>
         ),
@@ -244,7 +250,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
         ),
       },
     ],
-    [options, accountFields, t, patch, namingDefinition],
+    [options, accountFields, t, patch, patchWithToast, namingDefinition],
   );
 
   return <ConfigurableThirdPartyPanel fields={fields} tabs={tabs} />;

@@ -13,9 +13,11 @@ import ConfigurableThirdPartyPanel, {
   type ConfigFieldTab,
 } from "../base/ConfigurableThirdPartyPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
+import useAutoSaveToast from "../base/useAutoSaveToast";
 
 import { NumberInput, toast, Modal as BakaModal } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
+import BApi from "@/sdk/BApi";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
@@ -47,6 +49,7 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
   const { createPortal } = useBakabaseContext();
   const options = useDLsiteOptionsStore((s) => s.data);
   const patch = useDLsiteOptionsStore((s) => s.patch);
+  const patchWithToast = useAutoSaveToast(BApi.options.patchDLsiteOptions);
   const [saving, setSaving] = useState(false);
   const pendingAccountsRef = useRef<any[] | null>(null);
 
@@ -68,18 +71,23 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
   );
 
   const handleSave = async () => {
+    const accounts = pendingAccountsRef.current;
+
+    if (accounts === null) {
+      onCancel?.();
+
+      return;
+    }
+
     setSaving(true);
     try {
-      const updates: any = {};
+      const response = await BApi.options.patchDLsiteOptions({ accounts });
 
-      if (pendingAccountsRef.current !== null) {
-        updates.accounts = pendingAccountsRef.current;
+      if (response.code === 0) {
+        pendingAccountsRef.current = null;
+        toast.success(t("thirdPartyConfig.success.saved"));
+        onCancel?.();
       }
-      if (Object.keys(updates).length > 0) {
-        await patch(updates);
-      }
-      toast.success(t("thirdPartyConfig.success.saved"));
-      onCancel?.();
     } finally {
       setSaving(false);
     }
@@ -102,12 +110,12 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
       targetType: "folder",
       defaultSelectedPath: downloadDir,
       startPath: downloadDir,
-      onSelected: async (e: any) => {
+      onSelected: (e: any) => {
         const selected = e.path as string;
         const recommended = getRecommendedPath(selected);
 
         if (!recommended) {
-          await patch({ defaultPath: selected });
+          patchWithToast({ defaultPath: selected });
 
           return;
         }
@@ -139,8 +147,8 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
             actions: ["ok", "cancel"],
             cancelProps: {
               children: t("thirdPartyConfig.recommendedDir.useSelected"),
-              onPress: async () => {
-                await patch({ defaultPath: selected });
+              onPress: () => {
+                patchWithToast({ defaultPath: selected });
               },
             },
           },
@@ -148,7 +156,11 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
             children: t("thirdPartyConfig.recommendedDir.useRecommended"),
           },
           onOk: async () => {
-            await patch({ defaultPath: recommended });
+            const response = await BApi.options.patchDLsiteOptions({ defaultPath: recommended });
+
+            if (response.code === 0) {
+              toast.success(t("thirdPartyConfig.success.saved"));
+            }
           },
         });
       },
@@ -158,18 +170,18 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
   const handleAddScanFolder = () => {
     createPortal(FileSystemSelectorModal, {
       targetType: "folder",
-      onSelected: async (e: any) => {
+      onSelected: (e: any) => {
         const updated = [...scanFolders, e.path];
 
-        await patch({ scanFolders: updated });
+        patchWithToast({ scanFolders: updated });
       },
     });
   };
 
-  const handleRemoveScanFolder = async (index: number) => {
+  const handleRemoveScanFolder = (index: number) => {
     const updated = scanFolders.filter((_: string, i: number) => i !== index);
 
-    await patch({ scanFolders: updated });
+    patchWithToast({ scanFolders: updated });
   };
 
   const tabs: ConfigFieldTab<DLsiteConfigField>[] = useMemo(
@@ -180,13 +192,26 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
         title: t("resourceSource.config.tab.accounts"),
         content: (
           <AccountsPanel
-            hideFooter
             accounts={options?.accounts || []}
             fields={accountFields}
-            onAccountsChange={(accs) => {
-              pendingAccountsRef.current = accs;
+            hideFooter={showFooter}
+            onAccountsChange={
+              showFooter
+                ? (accs) => {
+                    pendingAccountsRef.current =
+                      JSON.stringify(accs) === JSON.stringify(options?.accounts || [])
+                        ? null
+                        : accs;
+                  }
+                : undefined
+            }
+            onSave={async (accounts) => {
+              const response = await BApi.options.patchDLsiteOptions({ accounts });
+
+              if (response.code === 0) {
+                toast.success(t("thirdPartyConfig.success.saved"));
+              }
             }}
-            onSave={async () => {}}
           />
         ),
       },
@@ -202,28 +227,28 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
               max={100}
               min={1}
               value={options?.maxConcurrency || 1}
-              onValueChange={(v) => patch({ maxConcurrency: v })}
+              onValueChange={(v) => patchWithToast({ maxConcurrency: v })}
             />
             <NumberInput
               description={t<string>("thirdPartyConfig.field.requestInterval.description")}
               label={t<string>("thirdPartyConfig.label.requestInterval")}
               min={0}
               value={options?.requestInterval || 1000}
-              onValueChange={(v) => patch({ requestInterval: v })}
+              onValueChange={(v) => patchWithToast({ requestInterval: v })}
             />
             <NumberInput
               description={t<string>("thirdPartyConfig.field.maxRetries.description")}
               label={t<string>("thirdPartyConfig.label.maxRetries")}
               min={0}
               value={options?.maxRetries || 0}
-              onValueChange={(v) => patch({ maxRetries: v })}
+              onValueChange={(v) => patchWithToast({ maxRetries: v })}
             />
             <NumberInput
               description={t<string>("thirdPartyConfig.field.requestTimeout.description")}
               label={t<string>("thirdPartyConfig.label.requestTimeout")}
               min={0}
               value={options?.requestTimeout || 0}
-              onValueChange={(v) => patch({ requestTimeout: v })}
+              onValueChange={(v) => patchWithToast({ requestTimeout: v })}
             />
           </div>
         ),
@@ -243,7 +268,7 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
                 <FileSystemSelectorButton
                   fileSystemSelectorProps={{
                     targetType: "folder",
-                    onSelected: (e) => patch({ defaultPath: e.path }),
+                    onSelected: (e) => patchWithToast({ defaultPath: e.path }),
                     defaultSelectedPath: options?.defaultPath,
                   }}
                 />
@@ -282,7 +307,7 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
             <Switch
               isSelected={options?.deleteArchiveAfterExtraction ?? false}
               size="sm"
-              onValueChange={(v) => patch({ deleteArchiveAfterExtraction: v })}
+              onValueChange={(v) => patchWithToast({ deleteArchiveAfterExtraction: v })}
             >
               <span className="text-sm font-medium">
                 {t("resourceSource.dlsite.config.deleteArchiveAfterExtraction")}
@@ -372,7 +397,17 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
         ),
       },
     ],
-    [options, accountFields, scanFolders, downloadDir, t, patch, createPortal],
+    [
+      options,
+      accountFields,
+      scanFolders,
+      downloadDir,
+      t,
+      patch,
+      patchWithToast,
+      createPortal,
+      showFooter,
+    ],
   );
 
   return (
