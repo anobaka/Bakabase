@@ -138,6 +138,20 @@ async function choose(select: HTMLSelectElement, value: number) {
     select.dispatchEvent(new Event("change", { bubbles: true }));
   });
 }
+async function dropPaths(data: { plain?: string; files?: File[] }) {
+  const transfer = {
+    types: data.plain ? ["text/plain"] : ["Files"],
+    effectAllowed: "copyMove",
+    files: data.files ?? [],
+    getData: (type: string) => (type === "text/plain" ? (data.plain ?? "") : ""),
+  };
+  const event = new Event("drop", { bubbles: true, cancelable: true });
+
+  Object.defineProperty(event, "dataTransfer", { value: transfer });
+  await act(async () => {
+    container.querySelector('[data-testid="file-name-modifier-drop-zone"]')!.dispatchEvent(event);
+  });
+}
 const tick = async (ms = 300) => {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);
@@ -171,6 +185,20 @@ afterEach(async () => {
 });
 
 describe("rename workspace interactions", () => {
+  it("previews a newly selected delete rule with a valid default count", async () => {
+    await render(<FileNameModifier initialFilePaths={paths} />);
+    await click("FileNameModifier.AddFirstOperation");
+    await choose(container.querySelectorAll("select")[1], OperationType.Delete);
+    await tick();
+    expect(api.preview).toHaveBeenCalledOnce();
+    expect(api.preview.mock.calls[0][0].operations[0]).toMatchObject({
+      operation: OperationType.Delete,
+      deleteCount: 1,
+      deleteStartPosition: 0,
+    });
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
   it("keeps path edits as a draft until confirmed and cancels without changing the file list", async () => {
     await render(<FileNameModifier initialFilePaths={paths} />);
     await click("FileNameModifier.EditFileList");
@@ -205,6 +233,24 @@ describe("rename workspace interactions", () => {
     expect(container.querySelector("textarea")!.value).toContain("/library/c.jpg");
     await click("FileNameModifier.Cancel");
     expect(container.querySelectorAll("[data-original]")).toHaveLength(2);
+  });
+
+  it("adds dropped full paths to the list or draft and rejects a name-only system file", async () => {
+    await render(<FileNameModifier initialFilePaths={paths} />);
+    await dropPaths({ plain: JSON.stringify([paths[0], "/library/b.jpg"]) });
+    expect(container.querySelectorAll("[data-original]")).toHaveLength(2);
+
+    await click("FileNameModifier.EditFileList");
+    await dropPaths({ plain: "/library/c.jpg" });
+    expect(container.querySelector("textarea")!.value).toContain("/library/c.jpg");
+    expect(container.querySelectorAll("[data-original]")).toHaveLength(2);
+    await click("FileNameModifier.Cancel");
+
+    await dropPaths({ files: [new File(["content"], "name-only.jpg")] });
+    expect(container.querySelectorAll("[data-original]")).toHaveLength(2);
+    expect(container.querySelector('[role="alert"]')).toHaveTextContent(
+      "fileNameModifier.files.dropError",
+    );
   });
 
   it("preserves duplicated rule configuration in workflow seeds and removes local rule IDs", async () => {

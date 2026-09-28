@@ -716,7 +716,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
             }}
             onDragStart={(e) => {
               e.dataTransfer.setData("text/plain", JSON.stringify([entryRef.current.path]));
-              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.effectAllowed = "copyMove";
             }}
             onDrop={(e) => {
               e.preventDefault();

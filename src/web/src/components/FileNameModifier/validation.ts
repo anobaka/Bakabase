@@ -130,10 +130,10 @@ export function validateOperation(op: Operation): string {
   if (requirements.dateTimeFormat && !op.dateTimeFormat) {
     return "FileNameModifier.Error.DateTimeFormatRequired";
   }
-  if (requirements.deleteCount && op.deleteCount == null) {
+  if (requirements.deleteCount && !(op.deleteCount > 0)) {
     return "FileNameModifier.Error.DeleteCountRequired";
   }
-  if (requirements.deleteStartPosition && op.deleteStartPosition == null) {
+  if (requirements.deleteStartPosition && !(op.deleteStartPosition >= 0)) {
     return "FileNameModifier.Error.DeleteStartPositionRequired";
   }
   if (requirements.caseType && !op.caseType) {
