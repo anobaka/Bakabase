@@ -28,6 +28,7 @@ namespace Bakabase.Tests;
 /// and is not reversible — test coverage protects future maintenance, not current correctness.
 /// </summary>
 [TestClass]
+[DoNotParallelize]
 public class PathsRelocationMigratorTests
 {
     /// <summary>

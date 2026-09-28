@@ -35,6 +35,7 @@ namespace Bakabase.Tests.RemoteAccess.Console;
 /// </para>
 /// </remarks>
 [TestClass]
+[DoNotParallelize]
 public class RelayIdentityTests
 {
     /// <summary>How long a refusal stands before the address is asked again. Short, so a test can outwait it.</summary>
