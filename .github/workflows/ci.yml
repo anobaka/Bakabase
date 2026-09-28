@@ -30,9 +30,9 @@ permissions:
   contents: read
 
 jobs:
-  backend-tests:
+  backend-main-tests:
     if: inputs.suite != 'platforms' && inputs.suite != 'packages'
-    name: Backend tests
+    name: Backend main tests
     runs-on: ubuntu-latest
     env:
       DOTNET_MULTILEVEL_LOOKUP: 0
@@ -57,18 +57,62 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-
 
+      - name: Run main test assembly with TRX timings
+        id: tests
+        run: |
+          dotnet test src/tests/Bakabase.Tests/Bakabase.Tests.csproj -- \
+            --report-trx --results-directory "$RUNNER_TEMP/backend-test-results"
+
+      - name: Summarize slowest tests
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        run: python3 .github/scripts/trx_timing_summary.py "$RUNNER_TEMP/backend-test-results" "$GITHUB_STEP_SUMMARY"
+
+      - name: Retain TRX results
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-main-trx
+          path: ${{ runner.temp }}/backend-test-results
+          if-no-files-found: warn
+          retention-days: 14
+
+  backend-module-tests:
+    if: inputs.suite != 'platforms' && inputs.suite != 'packages'
+    name: Backend module tests
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_MULTILEVEL_LOOKUP: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
       # The app's entry project is not referenced by any test project, so nothing
       # else here compiles it — a break would first show up during a deploy, which
       # is the worst place to find out. It is small; this is seconds, not minutes.
       - name: Build the app entry point
         run: dotnet build src/apps/Bakabase.App/Bakabase.App.csproj
 
-      - name: Run tests
+      - name: Run module tests
         run: |
           # One `dotnet test` per project so a single failure does not mask
           # the rest. Live-network ThirdParty tests are [Ignore]d and skipped.
           projects=(
-            "src/tests/Bakabase.Tests/Bakabase.Tests.csproj"
             "src/tests/Bakabase.Modules.Acquisition.Tests/Bakabase.Modules.Acquisition.Tests.csproj"
             "src/tests/Bakabase.Modules.Alias.Tests/Bakabase.Modules.Alias.Tests.csproj"
             "src/tests/Bakabase.Modules.Collection.Tests/Bakabase.Modules.Collection.Tests.csproj"
@@ -90,6 +134,24 @@ jobs:
           done
           if [ ${#failed[@]} -gt 0 ]; then
             printf '::error::Test project failed: %s\n' "${failed[@]}"
+            exit 1
+          fi
+
+  # Keep the existing required-check name while the two test groups run in
+  # parallel. A failure in either group must fail the required check.
+  backend-tests:
+    if: ${{ always() && inputs.suite != 'platforms' && inputs.suite != 'packages' }}
+    name: Backend tests
+    needs: [backend-main-tests, backend-module-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm both test groups passed
+        env:
+          MAIN_RESULT: ${{ needs.backend-main-tests.result }}
+          MODULE_RESULT: ${{ needs.backend-module-tests.result }}
+        run: |
+          if [[ "$MAIN_RESULT" != success || "$MODULE_RESULT" != success ]]; then
+            echo "::error::Backend main tests: $MAIN_RESULT; backend module tests: $MODULE_RESULT"
             exit 1
           fi
 
