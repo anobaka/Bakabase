@@ -17,6 +17,7 @@ import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Modal } from "@/components/bakaui";
+import { UpdateRestartOverlay } from "@/components/UpdateRestart";
 
 const log = buildLogger("BasicLayout");
 
@@ -46,6 +47,7 @@ export default function BasicLayout({ children }: { children: React.ReactNode })
     <TourProvider steps={[]}>
       <ErrorBoundary>
         <div className={styles.insideWorld}>
+          <UpdateRestartOverlay />
           {/* Dialogs the app opens by itself. They take the screen one at a time, in the
               order startupQueue defines (the dashboard's welcome takes part too). */}
           <NoticesGate />

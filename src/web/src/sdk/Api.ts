@@ -1307,6 +1307,7 @@ export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo
   needRestart: boolean;
   mayHaveLegacyData: boolean;
   dataInInstallRoot: boolean;
+  dataInSystemPath: boolean;
 }
 
 /**

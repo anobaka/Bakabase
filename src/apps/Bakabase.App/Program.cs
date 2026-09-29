@@ -24,7 +24,7 @@ class Program
         // We auto-download upgrade packages but want the install itself to be a
         // deliberate user action, so we disable that implicit apply. A staged
         // update then stays as PendingRestart until the user clicks "restart to
-        // update", which explicitly calls UpdateManager.ApplyUpdatesAndRestart.
+        // update", which explicitly schedules Velopack after the shell's graceful exit.
         //
         // SetLogger: this logger is handed to the process-wide VelopackLocator, so every
         // later UpdateManager picks it up and its diagnostics (feed URL, channel, the

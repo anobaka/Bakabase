@@ -47,6 +47,12 @@
                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                     Text="Finishing background tasks…"
                     TextTrimming="CharacterEllipsis" />
+                <TextBlock
+                    Name="UpdateNotice"
+                    FontSize="12"
+                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                    IsVisible="False"
+                    TextWrapping="Wrap" />
             </StackPanel>
         </Grid>
 

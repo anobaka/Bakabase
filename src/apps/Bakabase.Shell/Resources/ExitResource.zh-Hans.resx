@@ -109,6 +109,27 @@
   <data name="Exit_ClosingDone" xml:space="preserve">
     <value>已完成</value>
   </data>
+  <data name="Exit_UpdateTitle" xml:space="preserve">
+    <value>正在更新 Bakabase</value>
+  </data>
+  <data name="Exit_UpdateHeading" xml:space="preserve">
+    <value>正在关闭 Bakabase 以安装更新…</value>
+  </data>
+  <data name="Exit_UpdateWaiting" xml:space="preserve">
+    <value>请稍候，更新完成后应用会自动重新打开，无需手动启动。</value>
+  </data>
+  <data name="Exit_UpdateForce" xml:space="preserve">
+    <value>立即继续更新</value>
+  </data>
+  <data name="Exit_UpdateForceHint" xml:space="preserve">
+    <value>等待时间比平常更久。现在继续可能导致未保存的改动丢失。</value>
+  </data>
+  <data name="Exit_UpdateFailedTitle" xml:space="preserve">
+    <value>无法启动更新</value>
+  </data>
+  <data name="Exit_UpdateFailedBody" xml:space="preserve">
+    <value>Bakabase 关闭后无法启动更新。请关闭此窗口并手动打开 Bakabase，然后重试。</value>
+  </data>
   <data name="Exit_ClosingRemaining" xml:space="preserve">
     <value>还有 {0} 项任务正在收尾</value>
   </data>

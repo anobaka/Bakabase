@@ -14,12 +14,14 @@ namespace Bakabase.Service.Controllers
     public class UpdaterController : Controller
     {
         private readonly AppUpdater _appUpdater;
-        private readonly ITrayIconController? _trayIconController;
+        private readonly IGuiAdapter _guiAdapter;
+        private readonly IHostApplicationLifetime _lifetime;
 
-        public UpdaterController(AppUpdater appUpdater, ITrayIconController? trayIconController = null)
+        public UpdaterController(AppUpdater appUpdater, IGuiAdapter guiAdapter, IHostApplicationLifetime lifetime)
         {
             _appUpdater = appUpdater;
-            _trayIconController = trayIconController;
+            _guiAdapter = guiAdapter;
+            _lifetime = lifetime;
         }
 
         [HttpGet("app/new-version")]
@@ -46,23 +48,44 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost("app/restart")]
         [SwaggerOperation(OperationId = "RestartAndUpdateApp")]
-        public async Task<BaseResponse> RestartAndUpdateApp()
+        public BaseResponse RestartAndUpdateApp()
         {
-            // ApplyUpdatesAndRestart hands over to Velopack and ends in Environment.Exit, so
-            // the GUI never gets an orderly shutdown. Drop the tray icon here, while the app
-            // is still healthy, or Windows keeps painting it next to the icon of the freshly
-            // restarted instance until the user hovers over it.
-            _trayIconController?.SetTrayIconVisible(false);
-            try
+            // Validate the downloaded package before acknowledging the request. The response
+            // must finish before stopping the web host; the shell then keeps a native progress
+            // window visible while it releases tasks, database connections and the host.
+            var launchUpdater = _appUpdater.PrepareUpdateRestart();
+            if (_guiAdapter is IUpdateRestartCoordinator coordinator)
             {
-                await _appUpdater.ApplyUpdatesAndRestart();
+                if (!coordinator.TryReserveUpdateRestart(launchUpdater))
+                {
+                    return BaseResponseBuilder.BuildBadRequest("Bakabase is already closing or updating.");
+                }
+
+                Response.OnCompleted(() =>
+                {
+                    coordinator.BeginReservedUpdateRestart();
+                    return Task.CompletedTask;
+                });
+                // OnCompleted is not guaranteed if the browser disconnects during the
+                // response. The user already requested the update, so start the same
+                // reserved path on abort too; the coordinator ignores a duplicate start.
+                HttpContext.RequestAborted.Register(coordinator.BeginReservedUpdateRestart);
             }
-            catch
+            else
             {
-                // The call never returns on success, so getting here means we are staying
-                // alive after all — put the icon back.
-                _trayIconController?.SetTrayIconVisible(true);
-                throw;
+                if (_lifetime.ApplicationStopping.IsCancellationRequested)
+                {
+                    return BaseResponseBuilder.BuildBadRequest("Bakabase is already closing.");
+                }
+
+                // Headless host: its services stop before ApplicationStopped starts Velopack.
+                _lifetime.ApplicationStopped.Register(launchUpdater);
+                Response.OnCompleted(() =>
+                {
+                    _lifetime.StopApplication();
+                    return Task.CompletedTask;
+                });
+                HttpContext.RequestAborted.Register(_lifetime.StopApplication);
             }
 
             return BaseResponseBuilder.Ok;

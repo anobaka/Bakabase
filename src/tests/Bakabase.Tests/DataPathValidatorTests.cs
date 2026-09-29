@@ -164,6 +164,19 @@ public class DataPathValidatorTests
         Assert.AreEqual(DataPathValidator.RefusalReason.SystemPath, result.Reason);
     }
 
+    [DataTestMethod]
+    [DataRow(@"H:\Program Files\Bakabase")]
+    [DataRow(@"D:\Program Files (x86)\Bakabase")]
+    [DataRow(@"E:\ProgramData\Bakabase")]
+    [DataRow(@"F:\Windows\Temp\Bakabase")]
+    public void Validate_SystemPath_WindowsAnyDrive_Refused(string target)
+    {
+        var input = MakeInput(target, @"C:\Users\example\AppData\Local\Bakabase.AppData", OSPlatform.Windows);
+        var result = DataPathValidator.Validate(input);
+        Assert.IsFalse(result.Valid);
+        Assert.AreEqual(DataPathValidator.RefusalReason.SystemPath, result.Reason);
+    }
+
     [TestMethod]
     public void Validate_SystemPath_Linux_Refused()
     {
@@ -309,6 +322,7 @@ public class DataPathValidatorTests
     {
         Assert.IsTrue(DataPathValidator.IsSystemPath(@"c:\windows\temp", OSPlatform.Windows));
         Assert.IsTrue(DataPathValidator.IsSystemPath(@"C:\WINDOWS\Temp", OSPlatform.Windows));
+        Assert.IsTrue(DataPathValidator.IsSystemPath(@"h:\PROGRAM FILES\Bakabase", OSPlatform.Windows));
     }
 
     [TestMethod]
@@ -316,5 +330,7 @@ public class DataPathValidatorTests
     {
         Assert.IsFalse(DataPathValidator.IsSystemPath("/usrFoo", OSPlatform.Linux));
         Assert.IsFalse(DataPathValidator.IsSystemPath("/var2", OSPlatform.Linux));
+        Assert.IsFalse(DataPathValidator.IsSystemPath(@"H:\Program Files Backup\Bakabase", OSPlatform.Windows));
+        Assert.IsFalse(DataPathValidator.IsSystemPath(@"H:\WindowsBackup\Bakabase", OSPlatform.Windows));
     }
 }

@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import {
   CloseOutlined,
   FileTextOutlined,
-  ReloadOutlined,
+  PoweroffOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
 
@@ -18,7 +18,8 @@ import { useChangelogModal } from "@/components/Changelog";
 import BApi from "@/sdk/BApi";
 import { UpdaterStatus } from "@/sdk/constants";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
-import { useIsPureClient } from "@/stores/remoteAccess";
+import { useIsPureClient, useIsRemoteClient } from "@/stores/remoteAccess";
+import { useRemoteServerUpdateRestart, useUpdateRestart } from "@/components/UpdateRestart";
 
 export type AppUpdateBannerViewState =
   | { kind: "checking" }
@@ -30,6 +31,9 @@ export type AppUpdateBannerViewState =
 interface ViewProps {
   collapsed: boolean;
   state: AppUpdateBannerViewState;
+  restarting?: boolean;
+  remoteRestarting?: boolean;
+  restartUnconfirmed?: boolean;
   onRestart: () => void;
   onRetry: () => void;
   onDismiss: () => void;
@@ -45,6 +49,9 @@ const buttonLikeBase =
 export const AppUpdateBannerView: React.FC<ViewProps> = ({
   collapsed,
   state,
+  restarting = false,
+  remoteRestarting = false,
+  restartUnconfirmed = false,
   onRestart,
   onRetry,
   onDismiss,
@@ -107,28 +114,33 @@ export const AppUpdateBannerView: React.FC<ViewProps> = ({
   }
 
   if (state.kind === "pendingRestart") {
+    const restartLabel = t<string>(
+      remoteRestarting ? "appUpdate.serverRestarting" : "appUpdate.restartToUpdate",
+    );
+
     return (
       <div className={wrapperClass}>
         {withChangelog(
-          <Tooltip
-            content={t<string>("appUpdate.restartToUpdate")}
-            isDisabled={!collapsed}
-            placement="right"
-          >
+          <Tooltip content={restartLabel} isDisabled={!collapsed} placement="right">
             <Button
+              aria-label={restartLabel}
               color="primary"
               fullWidth={!collapsed}
+              isDisabled={restarting}
               isIconOnly={collapsed}
               size="sm"
               variant="flat"
               onPress={onRestart}
             >
-              <ReloadOutlined />
-              {!collapsed && (
-                <span className={labelClass}>{t<string>("appUpdate.restartToUpdate")}</span>
-              )}
+              {remoteRestarting ? <Spinner size="sm" /> : <PoweroffOutlined />}
+              {!collapsed && <span className={labelClass}>{restartLabel}</span>}
             </Button>
           </Tooltip>,
+        )}
+        {restartUnconfirmed && !collapsed && (
+          <span className="text-xs text-warning-500">
+            {t<string>("appUpdate.serverRestartUnconfirmed")}
+          </span>
         )}
       </div>
     );
@@ -242,6 +254,11 @@ const AppUpdateBanner: React.FC<Props> = ({ collapsed }) => {
 const ServerUpdateBanner: React.FC<Props> = ({ collapsed }) => {
   const appUpdaterState = useAppUpdaterStateStore((s) => s);
   const showChangelog = useChangelogModal();
+  const isRemoteClient = useIsRemoteClient();
+  const localRestart = useUpdateRestart();
+  const remoteRestart = useRemoteServerUpdateRestart(appUpdaterState.status);
+  const restarting = isRemoteClient ? remoteRestart.restarting : localRestart.restarting;
+  const restart = isRemoteClient ? remoteRestart.restart : localRestart.restart;
 
   const [checking, setChecking] = useState(true);
   const [newVersion, setNewVersion] = useState<
@@ -304,9 +321,12 @@ const ServerUpdateBanner: React.FC<Props> = ({ collapsed }) => {
   return (
     <AppUpdateBannerView
       collapsed={collapsed}
+      remoteRestarting={isRemoteClient && remoteRestart.restarting}
+      restartUnconfirmed={isRemoteClient && remoteRestart.timedOut}
+      restarting={restarting}
       state={viewState}
       onDismiss={() => appUpdaterState.dismissFailure()}
-      onRestart={() => BApi.updater.restartAndUpdateApp()}
+      onRestart={restart}
       onRetry={() => BApi.updater.startUpdatingApp()}
       onShowChangelog={
         newVersion?.version
