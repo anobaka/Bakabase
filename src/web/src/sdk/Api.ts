@@ -2013,7 +2013,9 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   /** @format double */
   progress: number;
   /** @format int64 */
-  downloadedBytes?: number | null;
+  downloadedBytes?: number;
+  /** @format double */
+  downloadSpeedBytesPerSecond?: number;
   /** @format double */
   estimatedRemainingSeconds?: number;
   /** @format date-time */
@@ -2677,7 +2679,7 @@ export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   counts?: Record<string, number>;
-  /** @format int64; response-body bytes read by the client */
+  /** @format int64 */
   receivedBytes: number;
 }
 

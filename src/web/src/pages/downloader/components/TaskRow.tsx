@@ -93,9 +93,18 @@ const TaskRow = memo(function TaskRow({
   const Icon = DownloadTaskTypeIconMap[task.thirdPartyId!]?.[task.type];
   const progress = Number.isFinite(task.progress) ? Math.min(100, Math.max(0, task.progress)) : 0;
   const downloadedSize =
-    task.downloadedBytes != null && Number.isFinite(task.downloadedBytes)
+    task.downloadedBytes != null &&
+    Number.isFinite(task.downloadedBytes) &&
+    task.downloadedBytes >= 0
       ? humanFileSize(task.downloadedBytes, false, 1)
-      : "—";
+      : undefined;
+  const downloadSpeed =
+    task.status === DownloadTaskStatus.Downloading &&
+    task.downloadSpeedBytesPerSecond != null &&
+    Number.isFinite(task.downloadSpeedBytesPerSecond) &&
+    task.downloadSpeedBytesPerSecond > 0
+      ? `${humanFileSize(task.downloadSpeedBytesPerSecond, false, 1)}/s`
+      : undefined;
   const name = task.name || task.key;
   const createdAt = `${t<string>("downloader.label.createdAt")} ${formatDateTime(task.createdAt)}`;
   const nextStart = task.nextStartDt
@@ -207,9 +216,36 @@ const TaskRow = memo(function TaskRow({
                 {task.current || t<string>("common.label.progress")}
               </span>
             )}
-            {/* The estimate belongs to the progress readout, so it sits right beside the percentage
-                rather than among the row's dates. The percentage stays last so it keeps the same
-                column in every row whether or not an estimate is showing. */}
+            {/* Keep the percentage last so it aligns across rows. Each optional value owns the
+                separator before the next value, leaving no orphan when a value is unavailable. */}
+            {downloadedSize && (
+              <>
+                <span
+                  aria-label={`${t<string>("downloader.label.downloadedFileSize")}: ${downloadedSize}`}
+                  className="shrink-0 tabular-nums text-default-500"
+                  title={`${t<string>("downloader.label.downloadedFileSize")}: ${downloadedSize}`}
+                >
+                  {downloadedSize}
+                </span>
+                <span aria-hidden className="shrink-0 text-default-300">
+                  ·
+                </span>
+              </>
+            )}
+            {downloadSpeed && (
+              <>
+                <span
+                  aria-label={`${t<string>("downloader.label.downloadSpeed")}: ${downloadSpeed}`}
+                  className="shrink-0 tabular-nums text-default-500"
+                  title={`${t<string>("downloader.label.downloadSpeed")}: ${downloadSpeed}`}
+                >
+                  {downloadSpeed}
+                </span>
+                <span aria-hidden className="shrink-0 text-default-300">
+                  ·
+                </span>
+              </>
+            )}
             {estimatedRemaining && (
               <>
                 <span className="shrink-0 tabular-nums text-default-500" title={estimatedRemaining}>
@@ -220,17 +256,6 @@ const TaskRow = memo(function TaskRow({
                 </span>
               </>
             )}
-            <span
-              aria-label={`${t<string>("downloader.label.downloadedFileSize")}: ${downloadedSize}`}
-              className="shrink-0 tabular-nums text-default-500"
-              title={
-                task.downloadedBytes == null
-                  ? t<string>("downloader.tip.downloadedFileSizeUnavailable")
-                  : `${t<string>("downloader.label.downloadedFileSize")}: ${downloadedSize}`
-              }
-            >
-              {downloadedSize}
-            </span>
             <span className="shrink-0 tabular-nums text-default-500">{Math.round(progress)}%</span>
           </div>
           <Progress

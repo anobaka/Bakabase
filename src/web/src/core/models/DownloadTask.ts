@@ -8,6 +8,7 @@ export type DownloadTask = {
   type: number;
   progress: number;
   downloadedBytes?: number | null;
+  downloadSpeedBytesPerSecond?: number | null;
   estimatedRemainingSeconds?: number | null;
   downloadStatusUpdateDt: Date;
   interval?: number;

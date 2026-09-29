@@ -138,6 +138,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 () => WithScopedService<DownloadTaskService>(s => s.RecordDownloadedFile(taskId, path, size)),
                 "record a downloaded file"));
 
+        private Task HandleDownloadSpeedChanged(int taskId, IDownloader downloader) => WithTaskDataLock(downloader,
+            () => GuardAsync(
+                () => WithScopedService<DownloadTaskService>(s => s.OnDownloadSpeedChanged(taskId)),
+                "push download speed"));
+
         private async Task HandleCurrentChanged(int taskId, IDownloader downloader)
         {
             await WithTaskDataLock(downloader, async () =>
@@ -346,6 +351,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 downloader.OnStatusChanged += () => HandleStatusChanged(task.Id, downloader);
                 downloader.OnNameAcquired += name => HandleNameAcquired(task.Id, name);
                 downloader.OnProgress += progress => HandleProgress(task.Id, downloader, progress);
+                downloader.OnDownloadSpeedChanged += () => HandleDownloadSpeedChanged(task.Id, downloader);
                 downloader.OnFileDownloaded += (path, size) => HandleFileDownloaded(task.Id, downloader, path, size);
                 downloader.OnCurrentChanged += () => HandleCurrentChanged(task.Id, downloader);
                 downloader.OnCheckpointChanged += checkpoint => HandleCheckpointReached(task.Id, checkpoint);
