@@ -4923,14 +4923,6 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerDisco
   servers: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerCandidateView[];
 }
 
-export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerImportView {
-  found: boolean;
-  /** @format int32 */
-  imported: number;
-  /** @format int32 */
-  skipped: number;
-}
-
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOpenView {
   url: string;
 }
@@ -5017,7 +5009,6 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerView 
   /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
   mode?: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
   appVersion?: string;
-  importedFromLegacyClient: boolean;
   answeredBy?: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerAnswerView;
   /** [0: Unknown, 1: Desktop, 2: Headless] */
   kind?: BakabaseModulesRemoteAccessAbstractionsModelsServerKind;
@@ -5036,6 +5027,17 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView
  * @format int32
  */
 export type BakabaseModulesRemoteAccessAbstractionsModelsPairingFailure = 0 | 1 | 2 | 3 | 4;
+
+/**
+ * [0: Unknown, 1: Lan, 2: Vpn, 3: Virtual, 4: LinkLocal]
+ * @format int32
+ */
+export type BakabaseModulesRemoteAccessAbstractionsModelsRemoteAccessAddressKind =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4;
 
 /**
  * [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS]
@@ -6533,6 +6535,9 @@ export interface BakabaseServiceModelsViewProxyTestResultViewModel {
 export interface BakabaseServiceModelsViewRemoteAccessAddressViewModel {
   url: string;
   interfaceName: string;
+  /** [0: Unknown, 1: Lan, 2: Vpn, 3: Virtual, 4: LinkLocal] */
+  kind?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteAccessAddressKind;
+  recommended?: boolean;
 }
 
 export interface BakabaseServiceModelsViewRemoteAccessClientContextViewModel {
@@ -19014,32 +19019,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
-
-    /**
-     * No description
-     *
-     * @tags FederationServer
-     * @name ImportLegacyClientServers
-     * @request POST:/federation/local/servers/import-legacy-client
-     */
-    importLegacyClientServers: (params: RequestParams = {}) =>
-      this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerImportView, any>({
-        path: `/federation/local/servers/import-legacy-client`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for importLegacyClientServers
-     * @name importLegacyClientServersUrl
-     */
-    importLegacyClientServersUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/servers/import-legacy-client`;
-
-      return baseUrl + path;
-    },
   };
   file = {
     /**

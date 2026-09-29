@@ -62,6 +62,15 @@ namespace Bakabase.Service.Models.View
         public string Url { get; set; } = null!;
 
         public string InterfaceName { get; set; } = null!;
+
+        /// <summary>
+        /// What kind of network it is on. Optional: an older server leaves it out, and the
+        /// page then guesses from the address and the interface's name.
+        /// </summary>
+        public RemoteAccessAddressKind? Kind { get; set; }
+
+        /// <summary>The address to suggest; optional like <see cref="Kind"/>.</summary>
+        public bool? Recommended { get; set; }
     }
 
     public record RemoteAccessSettingsViewModel

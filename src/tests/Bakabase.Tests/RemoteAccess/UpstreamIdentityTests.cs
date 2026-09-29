@@ -285,9 +285,9 @@ public class UpstreamIdentityTests
 
     [TestMethod]
     [DataRow(UpstreamIdentityVerdict.WrongServer, "127.0.0.1:47000 now answers as another server (NAS), not Desk")]
-    [DataRow(UpstreamIdentityVerdict.ThisDevice, "127.0.0.1:47000 now reaches this computer itself, not Desk")]
+    [DataRow(UpstreamIdentityVerdict.ThisDevice, "127.0.0.1:47000 now reaches this device itself, not Desk")]
     [DataRow(UpstreamIdentityVerdict.SameIdentity,
-        "127.0.0.1:47000 now answers as another computer with this computer's own identity (NAS)")]
+        "127.0.0.1:47000 now answers as another computer with this device's own identity (NAS)")]
     [DataRow(UpstreamIdentityVerdict.Unconfirmed, "Desk is not answering at 127.0.0.1:47000 (nothing answers there)")]
     public void What_the_user_is_told_names_the_address_and_who_answers(UpstreamIdentityVerdict verdict,
         string expected)
@@ -308,7 +308,9 @@ public class UpstreamIdentityTests
         var message = check.Describe("Desk");
 
         StringAssert.StartsWith(message, "Remote access is turned off at 127.0.0.1:47000");
-        StringAssert.Contains(message, "under “Let other devices manage this device”");
+        // On either kind of server it may be: a NAS or Docker has no devices page.
+        StringAssert.Contains(message, "on a computer under Devices and sharing → Management → Who may manage this device");
+        StringAssert.Contains(message, "on a NAS or Docker under Configuration → Remote access");
         Assert.IsFalse(message.Contains("running", StringComparison.OrdinalIgnoreCase), message);
 
         // Carried with the answer when the relay stamps it as its own.

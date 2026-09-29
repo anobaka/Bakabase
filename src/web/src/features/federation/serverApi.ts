@@ -1,6 +1,5 @@
 import type {
   ManagedServerDiscovery,
-  ManagedServerImport,
   ManagedServerPairing,
   ManagedServerPathMapping,
   ManagedServerProbe,
@@ -65,7 +64,4 @@ export const managedServerApi = {
    */
   open: (serverId: string, path?: string) =>
     federationRequest<{ url: string }>(`${server(serverId)}/open`, jsonBody(path ? { path } : {})),
-  /** Brings over the removed thin client's pairings on this machine. Never overwrites. */
-  importLegacyClient: () =>
-    federationRequest<ManagedServerImport>(`${prefix}/import-legacy-client`, { method: "POST" }),
 };

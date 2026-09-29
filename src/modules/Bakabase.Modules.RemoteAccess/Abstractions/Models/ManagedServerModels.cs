@@ -114,7 +114,6 @@ public sealed record ManagedServerPathMapping(string ServerPath, string LocalPat
 /// means anybody on its network can manage it without pairing; the UI warns and changes nothing.
 /// </param>
 /// <param name="AppVersion">The server's version when last probed.</param>
-/// <param name="ImportedFromLegacyClient">Brought over from the removed thin client rather than paired here.</param>
 /// <param name="AnsweredBy">
 /// Set only while <paramref name="State"/> is <see cref="ManagedServerState.WrongServer"/>:
 /// who answers at <paramref name="Address"/> instead. Never used as this server's name, mode
@@ -135,7 +134,6 @@ public sealed record ManagedServerView(
     ManagedServerState State,
     RemoteAccessMode? Mode,
     string? AppVersion,
-    bool ImportedFromLegacyClient,
     ManagedServerAnswerView? AnsweredBy = null,
     ServerKind? Kind = null,
     RemoteDevicePlatform? Platform = null);
@@ -191,11 +189,6 @@ public sealed record ManagedServerPairingView(
 /// <summary>Where the window should go to show a server.</summary>
 /// <param name="Url">A loopback relay URL carrying a single-use navigation token, or this device's own origin.</param>
 public sealed record ManagedServerOpenView(string Url);
-
-/// <summary>What importing the removed thin client's pairings did.</summary>
-/// <param name="Found">Whether a thin-client installation with pairings exists on this machine.</param>
-/// <param name="Imported">Servers added; ones already managed here are left as they are.</param>
-public sealed record ManagedServerImportView(bool Found, int Imported, int Skipped);
 
 /// <summary>A server on this network that this device could manage.</summary>
 /// <remarks>

@@ -1,4 +1,4 @@
-import type { FreshInstallFact, NoticeAudience, NoticeDefinition } from "./registry";
+import type { NoticeAudience, NoticeDefinition } from "./registry";
 import type { RemoteAccessContextState } from "@/stores/remoteAccess";
 
 import { audienceOf } from "./registry";
@@ -52,28 +52,12 @@ export const noticeViewerOf = (facts: ViewerFacts): NoticeAudience | null | unde
   return null;
 };
 
-/** What a fresh install is known to have done when it records its baseline. */
-export type FreshInstallFacts = Partial<Record<FreshInstallFact, boolean>>;
-
-/** The facts the upgrade-only notices in `registry` ask about. */
-export const freshInstallFactsAsked = (registry: NoticeDefinition[]): FreshInstallFact[] => [
-  ...new Set(
-    registry
-      .filter((notice) => notice.upgradeOnly)
-      .flatMap((notice) => (notice.showOnFreshInstallWhen ? [notice.showOnFreshInstallWhen] : [])),
-  ),
-];
-
 /**
  * The fresh install's baseline: the upgrade-only notices it records as read before it ever
- * shows one — all of them, except those whose `showOnFreshInstallWhen` holds. A fact not in
- * `facts` does not hold: an unknown answer keeps the notice upgrade-only.
+ * shows one — all of them.
  */
-export const upgradeOnlyNoticeIds = (registry: NoticeDefinition[], facts: FreshInstallFacts = {}) =>
-  registry
-    .filter((notice) => notice.upgradeOnly)
-    .filter((notice) => !(notice.showOnFreshInstallWhen && facts[notice.showOnFreshInstallWhen]))
-    .map((notice) => notice.id);
+export const upgradeOnlyNoticeIds = (registry: NoticeDefinition[]) =>
+  registry.filter((notice) => notice.upgradeOnly).map((notice) => notice.id);
 
 /**
  * The notices to show this viewer now, in reading order: for their audience, not read, and —

@@ -49,12 +49,6 @@ public class ClientServerConnection
     /// wrote, which had exactly one listener of its own.
     /// </summary>
     public int? RelayPort { get; set; }
-
-    /// <summary>
-    /// Brought over from the removed thin client on this machine rather than paired here.
-    /// Informational: the UI says where a server came from, nothing behaves differently.
-    /// </summary>
-    public bool ImportedFromLegacyClient { get; set; }
 }
 
 /// <summary>
@@ -79,13 +73,6 @@ public class ClientConnectionData
     public string? DeviceName { get; set; }
 
     public RemoteDevicePlatform Platform { get; set; }
-
-    /// <summary>
-    /// When the desktop app last brought over the removed thin client's pairings. Set once
-    /// something was found, so the automatic import at startup runs only once: a server the
-    /// user has since stopped managing must not come back on the next launch.
-    /// </summary>
-    public DateTime? LegacyClientImportedAt { get; set; }
 
     /// <summary>
     /// The relay ports of servers the desktop app stopped managing, by server id. The browser

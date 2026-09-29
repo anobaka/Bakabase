@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import type * as Registry from "@/components/Notices/registry";
 
 import { act } from "@testing-library/react";
 import { Children, forwardRef, isValidElement } from "react";
@@ -21,9 +22,10 @@ import { useRemoteAccessStore } from "@/stores/remoteAccess";
  * it, with the startup dialogs that come after it. A reader who follows a link out of the
  * welcome has gone somewhere: nothing that waited behind the welcome may open over that page.
  *
- * The case that makes it matter: a fresh desktop install whose first start brought over an
- * old thin client's pairings is shown the thin client's notice (it is left out of the fresh
- * install's baseline), so something does wait behind the welcome.
+ * The case that makes it matter: an upgraded install opened in a browser that has never
+ * shown the welcome (the welcome is per browser, the notices per install), so its unread
+ * notices wait behind the welcome. The notices are the test registry (fixtureNotices): the
+ * real multi-device notice and one whose button goes to a page.
  */
 
 const api = vi.hoisted(() => ({
@@ -33,7 +35,6 @@ const api = vi.hoisted(() => ({
   getAppInfo: vi.fn(),
   getChangelog: vi.fn(),
   getDashboardOverview: vi.fn(),
-  listManagedServers: vi.fn(),
   navigate: vi.fn(),
 }));
 
@@ -49,9 +50,12 @@ vi.mock("@/sdk/BApi", () => ({
     dashboard: { getDashboardOverview: api.getDashboardOverview },
   },
 }));
-vi.mock("@/features/federation/serverApi", () => ({
-  managedServerApi: { list: api.listManagedServers },
-}));
+vi.mock("@/components/Notices/registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof Registry>();
+  const { fixtureRegistry } = await import("@/components/Notices/__tests__/fixtureNotices");
+
+  return { ...actual, notices: fixtureRegistry(actual.notices) };
+});
 vi.mock("react-router-dom", () => ({ useNavigate: () => api.navigate }));
 vi.mock("@/stores/pendingSearch", () => ({
   usePendingSearchStore: (selector: (store: unknown) => unknown) =>
@@ -206,10 +210,10 @@ beforeEach(() => {
     clientMode: ClientMode.AllInOne,
     mode: RemoteAccessMode.Enabled,
   });
-  // A fresh install, whose first start brought over an old thin client's pairing.
+  // An upgraded install that has read none of its notices yet.
   api.getUiOptions.mockResolvedValue({
     code: 0,
-    data: { notices: { readIds: [], baselinePending: true } },
+    data: { notices: { readIds: [], baselinePending: false } },
   });
   api.captureNoticeBaseline.mockImplementation(async (ids: string[]) => ({
     code: 0,
@@ -219,11 +223,6 @@ beforeEach(() => {
     code: 0,
     data: { readIds: ["multi-device", ...ids], baselinePending: false },
   }));
-  api.listManagedServers.mockResolvedValue({
-    available: true,
-    servers: [{ serverId: "nas", importedFromLegacyClient: true }],
-    requests: [],
-  });
   api.getAppInfo.mockResolvedValue({ code: 0, data: { coreVersion: "2.4.0" } });
   api.getChangelog.mockResolvedValue({ code: 0, data: { version: "2.4.0" } });
   api.getDashboardOverview.mockResolvedValue({ code: 500 });
@@ -242,8 +241,8 @@ describe("the dashboard's first-run welcome", () => {
   it("puts off the rest when the reader follows one of its links to a page", async () => {
     await renderDashboard();
     expect(dialogs()).toEqual(["helpCenter.title"]);
-    // The thin client's notice waits behind it: left out of the fresh install's baseline.
-    expect(api.captureNoticeBaseline).toHaveBeenCalledWith(["multi-device"], expect.anything());
+    // An upgraded install records no baseline: its unread notices wait behind the welcome.
+    expect(api.captureNoticeBaseline).not.toHaveBeenCalled();
 
     // The multi-device overview, and its link to the multi-device library.
     await click("helpCenter.topic.multiDevice");
@@ -253,7 +252,7 @@ describe("the dashboard's first-run welcome", () => {
     expect(dialogs()).toEqual([]);
     expect(noticeOnScreen()).toBeNull();
     expect(api.navigate).toHaveBeenCalledWith("/federation");
-    // The welcome is done; the notice is not read, so the next launch shows it.
+    // The welcome is done; the notices are not read, so the next launch shows them.
     expect(localStorage.getItem(GETTING_STARTED_FIRST_RUN_KEY)).toBe("true");
     expect(api.markNoticesRead).not.toHaveBeenCalled();
     // Went through the app's router, as the notices' own links do.
@@ -264,21 +263,21 @@ describe("the dashboard's first-run welcome", () => {
     await renderDashboard();
 
     await click("helpCenter.topic.notices");
-    await click("notices.item.thinClient.action");
+    await click("notices.item.fixture.action");
 
     expect(dialogs()).toEqual([]);
     expect(api.navigate).toHaveBeenCalledWith("/federation/devices?section=servers");
     expect(localStorage.getItem(GETTING_STARTED_FIRST_RUN_KEY)).toBe("true");
   });
 
-  it("hands on to the notice when the welcome is closed without going anywhere", async () => {
+  it("hands on to the notices when the welcome is closed without going anywhere", async () => {
     await renderDashboard();
 
     await click("helpCenter.action.getStarted");
 
     expect(api.navigate).not.toHaveBeenCalled();
     expect(dialogs()).toEqual(["notices.dialog.title"]);
-    expect(noticeOnScreen()).toBe("thin-client-discontinued");
+    expect(noticeOnScreen()).toBe("multi-device");
     expect(localStorage.getItem(GETTING_STARTED_FIRST_RUN_KEY)).toBe("true");
   });
 });

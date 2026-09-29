@@ -130,7 +130,10 @@ namespace Bakabase.Service.Controllers
             {
                 Mode = remoteAccessService.GetEffectiveMode(),
                 Addresses = remoteAccessService.GetReachableAddresses()
-                    .Select(a => new RemoteAccessAddressViewModel {Url = a.Url, InterfaceName = a.InterfaceName})
+                    .Select(a => new RemoteAccessAddressViewModel
+                    {
+                        Url = a.Url, InterfaceName = a.InterfaceName, Kind = a.Kind, Recommended = a.Recommended
+                    })
                     .ToList(),
                 AllowLiveTranscode = remoteAccessService.GetAllowLiveTranscode(),
                 RequirePairing = remoteAccessService.GetRequirePairing(),
@@ -374,8 +377,8 @@ namespace Bakabase.Service.Controllers
         #endregion
 
         /// <summary>
-        /// Where a management request is approved — the devices page, in the section that
-        /// lets other devices manage this one.
+        /// Where a management request is allowed — the devices page's Management tab, at
+        /// "Who may manage this device".
         /// </summary>
         internal const string ManagementRequestRoute = "/federation/devices?section=management";
 
@@ -403,10 +406,13 @@ namespace Bakabase.Service.Controllers
         /// which is stored.
         /// </para>
         /// <para>
-        /// The body names Configuration → Remote access, which lists waiting requests
-        /// with approve and reject for every viewer who can see the notification — this
-        /// machine, a paired device, the desktop app showing this server, a browser on an
-        /// Unrestricted server. The link still opens the devices page's management section.
+        /// The body sends the reader to the link, and names besides a place every server has —
+        /// Configuration → Remote access — never the devices page's own path, which a NAS or
+        /// Docker server does not have. Every viewer who can see the notification lands on the
+        /// right place through the link — this machine's own window on the Management tab; a
+        /// paired device, the desktop app showing this server or a browser on an Unrestricted
+        /// server on the "Who may manage" section, which the devices page shows on its own
+        /// wherever the rest of it is not available.
         /// </para>
         /// </remarks>
         private async Task AnnounceManagementRequestAsync(PendingPairingRequest request, IBakabaseLocalizer localizer)

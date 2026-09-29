@@ -4,12 +4,11 @@
 // "unified" (A) is composed like the desktop app (UnifiedHost: its server plus the relay
 // manager), with this browser as its window. "source" (B) is the managed server; every request
 // it receives is recorded before its own middleware, so the relay's traffic can be judged on B's
-// side. Runs once legacy-client.cjs has left an old thin client's pairing with B on this machine.
+// side. A starts managing nothing: step (a) pairs it with B from its own devices page.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { confine, assertStayedLocal } = require('./network.cjs');
-const { connectionFile } = require('./legacy-client.cjs');
 
 /** Where RemoteConsoleOptions puts relay ports by default; nothing else on loopback is allowed. */
 const RELAY_FIRST_PORT = 34650;
@@ -143,19 +142,13 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     assert.ok(bInfo.platform >= 1 && bInfo.platform === aInfo.platform, 'The fixtures do not say what they run on');
     // The UI names servers, never ids: a check by name proves B only if A is called something else.
     assert.notEqual(bInfo.name, aInfo.name, 'The fixtures share a server name, so no check by name can tell them apart');
-    const legacyFile = connectionFile(config.legacyClient.directory);
-    const legacyBytes = fs.readFileSync(legacyFile);
-    const legacyServer = field(JSON.parse(legacyBytes.toString()), 'Servers').find(server => field(server, 'ServerId') === bInfo.id);
-    assert.ok(legacyServer, 'The old thin client\'s pairing is not with the source server');
-    const legacyDevice = field(legacyServer, 'DeviceId');
-    const legacyKey = field(legacyServer, 'DeviceKey');
-    assert.ok(legacyDevice && legacyKey && legacyKey.length > 10);
-    assert.ok((await settingsOf(source)).devices.some(device => device.id === legacyDevice));
 
-    // (a) Import the thin client's pairing with B through A's devices page: no re-pairing.
+    // (a) Pair A with B by code through A's devices page, as a person would: B's own machine
+    // issues the code (a code is bearer access, so only B's loopback can ask for one), and A's
+    // window enters it with B's address.
     const initial = await managedServers();
     assert.equal(initial.available, true, 'The unified fixture did not compose the relay manager');
-    assert.deepEqual(initial.servers, [], 'Nothing was imported at startup: the old pairing was written afterwards');
+    assert.deepEqual(initial.servers, [], 'The unified fixture managed a server before it was paired with one');
     const win = await context.newPage();
     // The window's WebSockets — A's own UI's hub, then B's through the relay, then the probes.
     const winSockets = watchSockets(win, {
@@ -163,35 +156,40 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
       liveTranscodeOn: payload => payload.includes('"OptionsChanged"') && payload.includes('"remoteAccessOptions"') &&
         /"allowLiveTranscode"\s*:\s*true/.test(payload)
     });
-    await win.goto(home + '/#/federation/devices?section=servers');
+    // The add form, as the device tab's "Manage it from this device" leads to it.
+    await win.goto(home + '/#/federation/devices?section=add-server');
     const servers = win.locator('#managed-servers');
     await servers.getByRole('heading', { name: exactly('federation.servers.title') }).waitFor();
-    await servers.getByRole('button', { name: exactly('federation.servers.import.action') }).click();
-    await servers.getByRole('status').filter({ hasText: containing('federation.servers.import.done', { imported: 1, skipped: 0 }) }).waitFor();
+    const { code } = await envelope(source.base + '/remote-access/pairing/code', { method: 'POST' });
+    await servers.getByLabel(exactly('federation.servers.add.address')).fill(source.base);
+    await servers.getByLabel(exactly('federation.servers.add.code')).fill(code);
+    await servers.getByRole('button', { name: exactly('federation.servers.add.withCode') }).click();
+    await servers.getByRole('status').filter({ hasText: containing('federation.servers.paired', { name: bInfo.name }) }).waitFor();
     const card = servers.getByTestId('managed-server');
-    await card.getByText(exactly('federation.servers.imported')).waitFor();
+    await card.waitFor();
     assert.equal(await card.count(), 1);
-    await servers.getByRole('button', { name: exactly('federation.servers.refresh') }).click();
+    // The page's own Refresh also asks every managed server how it is.
+    await win.getByRole('button', { name: exactly('federation.refresh') }).click();
     await card.getByText(exactly('federation.servers.state.1')).waitFor();
-    const imported = await managedServers();
-    assert.equal(imported.servers.length, 1);
-    const importedServer = imported.servers[0];
-    assert.equal(importedServer.serverId, bInfo.id);
-    assert.equal(importedServer.address, source.base);
-    assert.equal(importedServer.importedFromLegacyClient, true);
-    assert.deepEqual(importedServer.pathMappings, [{ serverPath: '/legacy/media', localPath: '/legacy/local-media' }],
-      'The thin client\'s path mappings come with its pairing');
-    assert.ok(!JSON.stringify(imported).includes(legacyKey), 'A device key reached the listing');
+    const paired = await managedServers();
+    assert.equal(paired.servers.length, 1);
+    const pairedServer = paired.servers[0];
+    assert.equal(pairedServer.serverId, bInfo.id);
+    assert.equal(pairedServer.address, source.base);
+    assert.deepEqual(pairedServer.pathMappings, [], 'A new pairing starts without path mappings');
     const storeFile = findFile(unified.directory, path.join('remote-access', 'managed', 'connection.json'));
     assert.ok(storeFile, 'No managed-server store in the unified fixture');
     const readStore = () => field(JSON.parse(fs.readFileSync(storeFile, 'utf8')), 'Servers');
-    const storedImport = readStore().find(server => field(server, 'ServerId') === bInfo.id);
-    assert.equal(field(storedImport, 'DeviceId'), legacyDevice);
-    assert.equal(field(storedImport, 'DeviceKey'), legacyKey, 'The key was not imported with the pairing');
+    const storedPairing = readStore().find(server => field(server, 'ServerId') === bInfo.id);
+    const pairedDevice = field(storedPairing, 'DeviceId');
+    const pairedKey = field(storedPairing, 'DeviceKey');
+    assert.ok(pairedDevice && pairedKey && pairedKey.length > 10, 'The pairing kept no device key');
+    assert.ok(!JSON.stringify(paired).includes(pairedKey), 'A device key reached the listing');
+    assert.ok((await settingsOf(source)).devices.some(device => device.id === pairedDevice),
+      'B does not list the device A paired as');
     if (process.platform !== 'win32') assert.equal(fs.statSync(storeFile).mode & 0o777, 0o600);
-    assert.ok(fs.readFileSync(legacyFile).equals(legacyBytes), 'Importing changed the thin client\'s file');
     await servers.screenshot({ path: artifacts('switching-a-manages-b.png') });
-    report.legacyPairingImportedWithKeyAndMappings = true;
+    report.pairedByCodeFromDevicesPage = true;
 
     // This device's own window keeps its hub. A's UI negotiates and upgrades as the page on
     // A's window origin, which is the origin its handshake names: A answers 101, as the only
@@ -300,11 +298,11 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     // B's own UI greets a window origin it has never seen with its first-run guide.
     await win.getByRole('button', { name: exactly('helpCenter.action.getStarted') }).click();
     await win.getByRole('button', { name: exactly('helpCenter.action.getStarted') }).waitFor({ state: 'hidden' });
-    // B's own UI and API, through the relay, as the imported device.
+    // B's own UI and API, through the relay, as the paired device.
     const status = await fetchJson('/client/status');
     assert.equal(status.body.data.host, 'console');
-    assert.deepEqual(status.body.data.servers.map(server => [server.serverId, server.deviceId]), [[bInfo.id, legacyDevice]]);
-    assert.ok(!JSON.stringify(status.body).includes(legacyKey), '/client/status exposed a device key');
+    assert.deepEqual(status.body.data.servers.map(server => [server.serverId, server.deviceId]), [[bInfo.id, pairedDevice]]);
+    assert.ok(!JSON.stringify(status.body).includes(pairedKey), '/client/status exposed a device key');
     const listed = await fetchJson('/client/switcher');
     assert.equal(listed.body.data.currentId, bInfo.id);
     assert.deepEqual(listed.body.data.targets.map(target => [target.id === bInfo.id ? 'B' : target.isLocal ? 'local' : target.id, target.isCurrent]),
@@ -319,7 +317,7 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     assert.equal((await fetchJson('/remote-access/server-info')).status, 200);
     // Cookies ignore ports: left in place, this one would reach B directly from B's own pages.
     await inPage(() => { document.cookie = 'relay-cookie-probe=; Max-Age=0; path=/'; });
-    const firstForwarded = forwardedSince(firstMark, legacyDevice);
+    const firstForwarded = forwardedSince(firstMark, pairedDevice);
     assert.ok(firstForwarded.some(entry => entry.method === 'GET' && entry.path === '/' && entry.dest === 'document'),
       'B\'s own UI document was not loaded through the relay');
     assert.ok(firstForwarded.some(entry => entry.path === '/remote-access/server-info'));
@@ -360,7 +358,7 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     await row.getByRole('switch', { checked: false }).click();
     await row.getByRole('switch', { checked: true }).waitFor();
     await until(() => settingsOf(source), settings => settings.allowLiveTranscode === true, 'B to allow live transcoding');
-    const write = forwardedSince(controlMark, legacyDevice)
+    const write = forwardedSince(controlMark, pairedDevice)
       .find(entry => entry.method === 'PUT' && entry.path === '/remote-access/live-transcode');
     assert.ok(write, 'The setting was not written through the relay');
     assert.equal(write.status, 200);
@@ -378,7 +376,7 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     const hubAtB = receivedSince(routedMark).filter(entry => entry.websocket && entry.path === '/hub/ui');
     assert.ok(hubAtB.length >= 1, 'B\'s UI hub handshake did not reach B through the relay');
     assert.deepEqual(hubAtB.map(entry => [entry.origin, entry.signature, entry.device, entry.status]),
-      hubAtB.map(() => [source.base, 'Authenticated', legacyDevice, 101]),
+      hubAtB.map(() => [source.base, 'Authenticated', pairedDevice, 101]),
       'B\'s UI hub reached B unsigned, not as B\'s own UI, or was refused');
     report.relayPageHubLive = { relaySockets: liveHubs.length, handshakesAtB: hubAtB.length, forwardedOrigin: source.base };
 
@@ -396,7 +394,6 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     await mappings.locator('#managed-servers').getByRole('status')
       .filter({ hasText: containing('federation.servers.mappings.saved') }).waitFor();
     assert.deepEqual((await managedServers()).servers[0].pathMappings, [
-      { serverPath: '/legacy/media', localPath: '/legacy/local-media' },
       { serverPath: source.directory, localPath: mappedRoot }
     ]);
     await mappings.close();
@@ -411,7 +408,7 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     assert.equal(unmapped.status, 404);
     assert.equal(unmapped.headers['x-bakabase-client'], 'PathNotMapped');
     assert.equal(unmapped.body.serverPath, '/not-a-mapped-library/clip.mp4');
-    const intercepted = forwardedSince(interceptMark, legacyDevice);
+    const intercepted = forwardedSince(interceptMark, pairedDevice);
     assert.ok(intercepted.some(entry => entry.path === '/resource/keys' && !entry.site),
       'The relay did not ask B for the resource\'s path itself');
     assert.deepEqual(receivedSince(interceptMark).filter(entry => ['/resource/directory', '/tool/open-file'].includes(entry.path)), [],
@@ -437,11 +434,11 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     await win.getByRole('alertdialog').waitFor({ state: 'hidden' });
     await servers.getByText(exactly('federation.servers.empty')).waitFor();
     assert.deepEqual((await managedServers()).servers, []);
-    assert.ok(!(await settingsOf(source)).devices.some(device => device.id === legacyDevice),
-      'B still lets the imported device in after "Stop managing"');
-    const revoke = receivedSince(forgetMark).find(entry => entry.method === 'DELETE' && entry.path === `/remote-access/devices/${legacyDevice}`);
-    assert.ok(revoke && revoke.signature === 'Authenticated' && revoke.device === legacyDevice, 'The revocation was not signed as the device');
-    assert.ok(!fs.readFileSync(storeFile, 'utf8').includes(legacyKey), 'The key outlived "Stop managing"');
+    assert.ok(!(await settingsOf(source)).devices.some(device => device.id === pairedDevice),
+      'B still lets the paired device in after "Stop managing"');
+    const revoke = receivedSince(forgetMark).find(entry => entry.method === 'DELETE' && entry.path === `/remote-access/devices/${pairedDevice}`);
+    assert.ok(revoke && revoke.signature === 'Authenticated' && revoke.device === pairedDevice, 'The revocation was not signed as the device');
+    assert.ok(!fs.readFileSync(storeFile, 'utf8').includes(pairedKey), 'The key outlived "Stop managing"');
 
     await servers.getByLabel(exactly('federation.servers.add.address')).fill(source.base);
     await servers.getByRole('button', { name: exactly('federation.servers.add.request') }).click();
@@ -465,10 +462,9 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     const repaired = await managedServers();
     assert.equal(repaired.servers.length, 1);
     assert.equal(repaired.servers[0].serverId, bInfo.id);
-    assert.equal(repaired.servers[0].importedFromLegacyClient, false);
     assert.deepEqual(repaired.requests, []);
     const newDevice = field(readStore().find(server => field(server, 'ServerId') === bInfo.id), 'DeviceId');
-    assert.ok(newDevice && newDevice !== legacyDevice);
+    assert.ok(newDevice && newDevice !== pairedDevice);
     assert.ok((await settingsOf(source)).devices.some(device => device.id === newDevice));
     const secondMark = received().length;
     const secondRelay = await switchToB();
@@ -716,7 +712,7 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     // goes at once; the device it lets in is listed only once A has collected its key, in the
     // background — the details wait for it there and move to it, still with the keyboard.
     const asker = await context.newPage();
-    await asker.goto(home + '/#/federation/devices?section=servers');
+    await asker.goto(home + '/#/federation/devices?section=add-server');
     const askerServers = asker.locator('#managed-servers');
     await askerServers.getByLabel(exactly('federation.servers.add.address')).fill(source.base);
     await askerServers.getByRole('button', { name: exactly('federation.servers.add.request') }).click();

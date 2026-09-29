@@ -777,7 +777,7 @@ function SharingSection({ context, node }: { context: PanelContext; node: MapNod
               )}
             </>
           ) : (
-            <Link className="text-xs text-primary underline" to={devicesRoute()}>
+            <Link className="text-xs text-primary underline" to={devicesRoute("share")}>
               {t("federation.map.panel.shareMine.enableFirst")}
             </Link>
           )}
@@ -987,9 +987,6 @@ function ManagementSection({ context, node }: { context: PanelContext; node: Map
               >
                 {t(`federation.servers.state.${server.state}`)}
               </span>
-              {server.importedFromLegacyClient && (
-                <span className="text-xs text-default-400">{t("federation.servers.imported")}</span>
-              )}
             </div>
             <ManagedServerWarnings
               busy={busy}
@@ -1474,7 +1471,7 @@ function SelfDetails({ context }: { context: PanelContext }) {
         </dl>
       </section>
       <section className="flex flex-wrap gap-2 border-t border-default-200 pt-4">
-        <Link className={buttonClass} to={devicesRoute()}>
+        <Link className={buttonClass} to={devicesRoute("device")}>
           {t("federation.devices.title")}
         </Link>
         <Link className={buttonClass} to={devicesRoute("management")}>

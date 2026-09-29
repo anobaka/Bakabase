@@ -76,7 +76,6 @@ export const server = (
   state: ManagedServerState.Online,
   mode: RemoteAccessMode.Enabled,
   appVersion: "2.4.0",
-  importedFromLegacyClient: false,
   ...overrides,
 });
 

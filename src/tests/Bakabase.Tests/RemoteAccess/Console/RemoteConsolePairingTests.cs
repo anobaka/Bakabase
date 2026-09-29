@@ -518,7 +518,6 @@ public class RemoteConsolePairingTests
             await _console.Manager.GetAsync(false),
             await _console.Manager.GetAsync(true),
             await _console.Manager.OpenAsync("server-desk", "/"),
-            await _console.Manager.ImportFromLegacyClientAsync(),
             _console.Manager.ListTargets(),
             await _console.Manager.ResolveUrlAsync("server-other")
         };

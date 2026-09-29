@@ -61,8 +61,8 @@ class RunnerFailureEvidenceTests(unittest.TestCase):
             self.assertTrue((results / "Bakabase.Federation.TestHost-build.log").is_file())
 
 
-KEYS = ("BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW", "BAKABASE_CLIENT_DATA_DIR",
-        "BAKABASE_FEDERATION_TEST_REQUEST_LOG", "BAKABASE_FEDERATION_TEST_SERVER_NAME")
+KEYS = ("BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW", "BAKABASE_FEDERATION_TEST_REQUEST_LOG",
+        "BAKABASE_FEDERATION_TEST_SERVER_NAME")
 
 
 def run_with_fake_processes(root, browser_exit=0, request_log_lines=()):
@@ -118,9 +118,8 @@ def run_with_fake_processes(root, browser_exit=0, request_log_lines=()):
 
 class RunnerCompositionTests(unittest.TestCase):
     def test_only_the_unified_host_is_composed_as_the_desktop_app(self):
-        """The unified fixture manages servers and reads an old thin client's data; both servers
-        record what reaches them. No thin client is started: the removed program is only a
-        directory the browser stage fills. Checked without .NET or a browser."""
+        """The unified fixture manages servers; both servers record what reaches them. Checked
+        without .NET or a browser."""
         with tempfile.TemporaryDirectory() as temp:
             hosts, configs, outcome = run_with_fake_processes(Path(temp))
             self.assertEqual(0, outcome)
@@ -129,15 +128,10 @@ class RunnerCompositionTests(unittest.TestCase):
             window = f"http://localhost:{unified['port']}"
             self.assertEqual(window, unified["env"]["BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW"])
             [config] = configs
-            legacy = config["legacyClient"]["directory"]
-            self.assertEqual(legacy, unified["env"]["BAKABASE_CLIENT_DATA_DIR"])
-            self.assertTrue(Path(legacy).is_absolute())
-            self.assertFalse(Path(legacy).exists(), "The old thin client's pairing is the browser stage's to write")
-            self.assertNotIn(legacy, [host["directory"] for host in hosts.values()])
             logs = [host["env"]["BAKABASE_FEDERATION_TEST_REQUEST_LOG"] for host in (unified, source)]
             self.assertTrue(all(Path(log).is_absolute() for log in logs))
             self.assertNotEqual(*logs)
-            for key in KEYS[:2]:
+            for key in KEYS[:1]:
                 self.assertNotIn(key, source["env"])
             self.assertEqual(window, config["hosts"]["unified"]["window"])
             self.assertEqual(logs, [config["hosts"][role]["requestLog"] for role in ("unified", "source")])
@@ -167,10 +161,9 @@ class RunnerCompositionTests(unittest.TestCase):
                         "Analytics__PostHog__ApiKey"):
                 self.assertEqual("", runner.ANALYTICS_OFF[key])
 
-    def test_the_first_launch_fixture_is_a_fresh_desktop_install_beside_an_old_thin_client(self):
-        """Started by the browser stage once an old thin client's pairing is on disk: its own port
-        and data directory, that thin client's data to import from, no recorded requests, no
-        resources."""
+    def test_the_first_launch_fixture_is_a_fresh_desktop_install(self):
+        """Started by the browser stage when its turn comes: its own port and data directory, no
+        recorded requests, no resources."""
         with tempfile.TemporaryDirectory() as temp:
             hosts, configs, _ = run_with_fake_processes(Path(temp))
             self.assertNotIn("first-launch", hosts, "The runner must leave starting it to the browser stage")
@@ -182,7 +175,6 @@ class RunnerCompositionTests(unittest.TestCase):
             self.assertFalse(Path(spec["directory"]).exists(), "A first launch needs a new data directory")
             self.assertEqual(f"http://localhost:{port}", spec["env"]["BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW"])
             self.assertEqual(spec["window"], spec["env"]["BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW"])
-            self.assertEqual(configs[0]["legacyClient"]["directory"], spec["env"]["BAKABASE_CLIENT_DATA_DIR"])
             self.assertNotIn("BAKABASE_FEDERATION_TEST_REQUEST_LOG", spec["env"])
             self.assertNotEqual(spec["env"]["BAKABASE_FEDERATION_TEST_SERVER_NAME"],
                                 hosts["source"]["env"]["BAKABASE_FEDERATION_TEST_SERVER_NAME"])

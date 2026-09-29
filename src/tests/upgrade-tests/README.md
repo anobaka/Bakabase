@@ -119,7 +119,7 @@ never reused, because old installs still have them.
 |---|---|---|
 | [`../../scripts/check-release-contract.py`](../../scripts/check-release-contract.py) | every build (`_build.yml`) and PR CI | Package ID, bundle ID, AppData variable, single-instance name and feed stay what they are, and nothing ships under the removed thin client's; a publish directory carries exactly its role's assemblies (the server no relay/Shell, the desktop app no `Bakabase.Client*`). |
 | [`test_release_contract.py`](test_release_contract.py) | PR CI | The checker rejects each guarded mistake. |
-| [`run-compatibility.py`](run-compatibility.py) | `CI` dispatch `suite=platforms` | Identity, AppData, relocation, the relay and the import of an old thin client's pairings on each desktop OS. |
+| [`run-compatibility.py`](run-compatibility.py) | `CI` dispatch `suite=platforms` | Identity, AppData, relocation and the relay on each desktop OS. |
 | [`run-package-acceptance.py`](run-package-acceptance.py) | `CI` dispatch `suite=packages` | Installs the real candidate package and verifies its identity, data directory and library. |
 
 ```bash

@@ -224,7 +224,6 @@ public sealed class FederationGateTests
     [DataRow("GET", "/federation/local/servers/")]
     [DataRow("POST", "/federation/local/servers/probe")]
     [DataRow("POST", "/federation/local/servers/pair")]
-    [DataRow("POST", "/federation/local/servers/import-legacy-client")]
     [DataRow("GET", "/federation/local/servers/discover")]
     [DataRow("GET", "/federation/local/servers/discover/")]
     [DataRow("get", "/FEDERATION/LOCAL/SERVERS/DISCOVER")]
@@ -252,6 +251,8 @@ public sealed class FederationGateTests
     [DataRow("GET", "/federation/local/servers/probe")]
     [DataRow("PUT", "/federation/local/servers/pair")]
     [DataRow("GET", "/federation/local/servers/import-legacy-client")]
+    // Retired with the removed thin client's pairing import: no route answers it any more.
+    [DataRow("POST", "/federation/local/servers/import-legacy-client")]
     [DataRow("POST", "/federation/local/servers/discover")]
     [DataRow("PUT", "/federation/local/servers/discover")]
     [DataRow("HEAD", "/federation/local/servers/discover")]

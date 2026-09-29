@@ -212,8 +212,7 @@ sealed class FederationTestHost(int port, string dataDirectory, int count, strin
         await services.GetRequiredService<FederationPeerService>().SetSharingAsync(true);
         if (desktopWindow != null)
         {
-            // Ready means the startup import has run and "this device" has an origin.
-            await services.GetRequiredService<RemoteConsoleManager>().Startup;
+            // Ready means "this device" has an origin.
             if (services.GetRequiredService<RemoteConsoleLocalOrigin>().Origin !=
                 new Uri(desktopWindow).GetLeftPart(UriPartial.Authority))
                 throw new InvalidOperationException("The desktop fixture did not record its window's origin.");

@@ -16,11 +16,13 @@ import {
   buttonClass,
   DismissButton,
   ErrorNotice,
+  focusHeadingClass,
   MessageError,
   panelClass,
   primaryClass,
 } from "./common";
 import ConfirmDialog from "./ConfirmDialog";
+import InviteBlock from "./InviteBlock";
 
 import BApi from "@/sdk/BApi";
 import { ClientMode, RemoteAccessMode } from "@/sdk/constants";
@@ -36,6 +38,8 @@ const LIVE_POLL_MS = 5000;
  * the page (the sharing panel) or elsewhere (the settings page) may have just changed.
  */
 const IDLE_POLL_MS = 15_000;
+/** How often expiries are counted down on screen. */
+const CLOCK_MS = 5000;
 
 /**
  * Failures are shown in this section, next to what failed; a toast from the shared client
@@ -61,6 +65,14 @@ interface Confirmation {
   action: () => Promise<unknown>;
 }
 
+/** Where the remote-access settings come from: the page's own reads, or the section's. */
+export interface RemoteAccessSettingsSource {
+  settings?: RemoteAccessSettings;
+  error?: Error;
+  /** `quiet` keeps the last good settings when the read fails. */
+  load: (options?: { quiet?: boolean }) => Promise<void>;
+}
+
 export interface ManagementAccessProps {
   /** Called after anything that changes what the rest of the page shows (the mode). */
   onChanged?: () => void;
@@ -76,78 +88,31 @@ export interface ManagementAccessProps {
    * at once, instead of on the next poll.
    */
   reloadKey?: string;
+  /** The section's heading level: 2 on its own, 3 inside the devices page's tab. */
+  headingLevel?: 2 | 3;
 }
 
-/**
- * The other side of management: whether other devices may manage the server this window
- * shows — this device in its own window, or the server a paired window is showing.
- *
- * Built on the existing remote-access endpoints rather than new ones — being managed is
- * exactly legacy paired-device access, the same pairing the settings page configures.
- * This is the short path through it: on, pair, approve, revoke. The full settings (live
- * transcoding, renaming devices, turning it back off) stay on the settings page, linked.
- *
- * Nothing changes on its own. Turning management on sets the mode to Enabled *and*
- * requires pairing, in one confirmed click; an Unrestricted mode is explained with an
- * explicit button to require pairing, never corrected behind the user's back.
- *
- * Also rendered where the rest of the devices page is not — the desktop app showing a
- * managed server, a browser on an Unrestricted server — because that
- * is where a headless server's management requests are answered: nobody can walk over to
- * a container and click a button. The wording then names the server instead of saying
- * "this device", which there would mean the wrong one.
- */
-export default function ManagementAccessSection({
-  onChanged,
+/** The settings read by the section itself, where no page reads them for it. */
+function useOwnRemoteAccessSettings({
   onSettled,
-  sectionRef,
-  highlighted = false,
   reloadKey,
-}: ManagementAccessProps) {
-  const { t } = useTranslation();
+  failedText,
+}: {
+  onSettled?: () => void;
+  reloadKey?: string;
+  failedText: string;
+}): RemoteAccessSettingsSource {
   const [settings, setSettings] = useState<RemoteAccessSettings>();
-  const [loadError, setLoadError] = useState<Error>();
-  const [busy, setBusy] = useState(false);
-  const busyRef = useRef(false);
+  const [error, setError] = useState<Error>();
   const mounted = useRef(true);
   const generation = useRef(0);
   const inFlight = useRef(0);
   const settled = useRef(false);
   /** Whether a quiet read that fails has anything better to leave on screen. */
   const hasSettings = useRef(false);
-  const [error, setError] = useState<Error>();
-  const [notice, setNotice] = useState<string>();
-  const [confirmation, setConfirmation] = useState<Confirmation>();
-  const [confirmationError, setConfirmationError] = useState<Error>();
-  /** The digits, held only in this tab — the server keeps a digest and never returns them. */
-  const [issuedCode, setIssuedCode] = useState<{ code: string; expiresAt: string }>();
-  const [now, setNow] = useState(() => Date.now());
-  // Optional: a test double of the store may not carry it, and a stale mode elsewhere
-  // corrects itself on the next context read anyway.
-  const reloadContext = useRemoteAccessStore((state) => state.load) as
-    | (() => Promise<void>)
-    | undefined;
-  const isLocal = useRemoteAccessStore((state) => state.isLocal);
-  const clientMode = useRemoteAccessStore((state) => state.clientMode);
-  const serverName = useRemoteAccessStore((state) => state.serverName);
-  const ownDeviceId = useRemoteAccessStore((state) => state.ownDeviceId);
-  const latest = useRef({ onChanged, onSettled, reloadContext, failedText: "" });
+  const latest = useRef({ onSettled, failedText });
 
-  /** This device's own window, as opposed to a window showing the server from elsewhere. */
-  const ownWindow = isLocal !== false && clientMode !== ClientMode.PureClient;
-  /** A browser: nothing signs its requests, so requiring pairing locks it out as well. */
-  const unpairedViewer = !isLocal && clientMode !== ClientMode.PureClient;
-  const target = ownWindow
-    ? t<string>("federation.management.self")
-    : serverName || t<string>("federation.management.theServer");
-
-  latest.current = {
-    onChanged,
-    onSettled,
-    reloadContext,
-    // Read inside `load` without making it depend on the language.
-    failedText: t("federation.management.loadFailed", { target }),
-  };
+  latest.current = { onSettled, failedText };
 
   useEffect(() => {
     mounted.current = true;
@@ -157,13 +122,6 @@ export default function ManagementAccessSection({
       generation.current += 1;
     };
   }, []);
-
-  /** `BApi` answers a refusal in the body; it is a failure here like any other. */
-  const ensureOk = <T extends { code?: number; message?: string | null }>(rsp: T) => {
-    if (rsp?.code) throw new MessageError(rsp.message || t("federation.management.failed"));
-
-    return rsp;
-  };
 
   /**
    * `quiet` reads happen on their own rather than because somebody asked: a failure keeps
@@ -184,11 +142,11 @@ export default function ManagementAccessSection({
       if (rsp?.data) {
         hasSettings.current = true;
         setSettings(rsp.data);
-        setLoadError(undefined);
+        setError(undefined);
       }
     } catch (cause) {
       if (run === generation.current && (!options.quiet || !hasSettings.current))
-        setLoadError(toError(cause, latest.current.failedText));
+        setError(toError(cause, latest.current.failedText));
     } finally {
       inFlight.current -= 1;
       if (!settled.current && mounted.current) {
@@ -203,8 +161,8 @@ export default function ManagementAccessSection({
   }, [load]);
 
   // Something outside this section says the settings may have moved — e.g. the sharing
-  // panel above turned remote access on, or a notification led here again. The first
-  // value is the mount, which the read above already covers.
+  // panel turned remote access on, or a notification led here again. The first value is
+  // the mount, which the read above already covers.
   const lastReloadKey = useRef(reloadKey);
 
   useEffect(() => {
@@ -213,15 +171,11 @@ export default function ManagementAccessSection({
     void load({ quiet: true });
   }, [reloadKey, load]);
 
-  const mode = settings?.mode ?? RemoteAccessMode.Disabled;
-  const pending = settings?.pendingRequests ?? [];
-  const devices = settings?.devices ?? [];
-  const live = pending.length > 0 || !!settings?.pairingCode || !!issuedCode;
+  const live = (settings?.pendingRequests?.length ?? 0) > 0 || !!settings?.pairingCode;
 
   useEffect(() => {
     const timer = setInterval(
       () => {
-        setNow(Date.now());
         if (!document.hidden) void load({ quiet: true, ifIdle: true });
       },
       live ? LIVE_POLL_MS : IDLE_POLL_MS,
@@ -229,6 +183,126 @@ export default function ManagementAccessSection({
 
     return () => clearInterval(timer);
   }, [live, load]);
+
+  return { settings, error, load };
+}
+
+/** Whom the section speaks about: this device in its own window, or the server shown. */
+function useManagementTarget() {
+  const { t } = useTranslation();
+  const isLocal = useRemoteAccessStore((state) => state.isLocal);
+  const clientMode = useRemoteAccessStore((state) => state.clientMode);
+  const serverName = useRemoteAccessStore((state) => state.serverName);
+  /** This device's own window, as opposed to a window showing the server from elsewhere. */
+  const ownWindow = isLocal !== false && clientMode !== ClientMode.PureClient;
+
+  return ownWindow
+    ? t<string>("federation.management.self")
+    : serverName || t<string>("federation.management.theServer");
+}
+
+/**
+ * The other side of management: whether other devices may manage the server this window
+ * shows — this device in its own window, or the server a paired window is showing.
+ *
+ * Reads its own settings. Rendered where the rest of the devices page is not — the desktop
+ * app showing a managed server, a browser on an Unrestricted server — because that is where
+ * a headless server's management requests are answered: nobody can walk over to a
+ * container and click a button. The devices page itself passes the settings it reads for
+ * the whole page to {@link ManagementAccessPanel}.
+ */
+export default function ManagementAccessSection({
+  onSettled,
+  reloadKey,
+  ...props
+}: ManagementAccessProps) {
+  const { t } = useTranslation();
+  const target = useManagementTarget();
+  const source = useOwnRemoteAccessSettings({
+    onSettled,
+    reloadKey,
+    failedText: t("federation.management.loadFailed", { target }),
+  });
+
+  return <ManagementAccessPanel {...props} source={source} />;
+}
+
+/**
+ * Built on the existing remote-access endpoints rather than new ones — being managed is
+ * exactly legacy paired-device access, the same pairing the settings page configures.
+ * This is the short path through it: on, pair, approve, revoke. The full settings (live
+ * transcoding, renaming devices, turning it back off) stay on the settings page, linked.
+ *
+ * Nothing changes on its own. Turning management on sets the mode to Enabled *and*
+ * requires pairing, in one confirmed click; an Unrestricted mode is explained with an
+ * explicit button to require pairing, never corrected behind the user's back. The wording
+ * names the server when the window shows one, instead of saying "this device", which
+ * there would mean the wrong one.
+ */
+export function ManagementAccessPanel({
+  source,
+  onChanged,
+  sectionRef,
+  highlighted = false,
+  headingLevel = 2,
+}: Omit<ManagementAccessProps, "onSettled" | "reloadKey"> & {
+  source: RemoteAccessSettingsSource;
+}) {
+  const { t } = useTranslation();
+  const { settings, load } = source;
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const mounted = useRef(true);
+  const [error, setError] = useState<Error>();
+  const [notice, setNotice] = useState<string>();
+  const [confirmation, setConfirmation] = useState<Confirmation>();
+  const [confirmationError, setConfirmationError] = useState<Error>();
+  /** The digits, held only in this tab — the server keeps a digest and never returns them. */
+  const [issuedCode, setIssuedCode] = useState<{ code: string; expiresAt: string }>();
+  const [now, setNow] = useState(() => Date.now());
+  // Optional: a test double of the store may not carry it, and a stale mode elsewhere
+  // corrects itself on the next context read anyway.
+  const reloadContext = useRemoteAccessStore((state) => state.load) as
+    | (() => Promise<void>)
+    | undefined;
+  const isLocal = useRemoteAccessStore((state) => state.isLocal);
+  const clientMode = useRemoteAccessStore((state) => state.clientMode);
+  const ownDeviceId = useRemoteAccessStore((state) => state.ownDeviceId);
+  const latest = useRef({ onChanged, reloadContext });
+  const target = useManagementTarget();
+  const Heading = headingLevel === 3 ? "h3" : "h2";
+  const SubHeading = headingLevel === 3 ? "h4" : "h3";
+
+  /** A browser: nothing signs its requests, so requiring pairing locks it out as well. */
+  const unpairedViewer = !isLocal && clientMode !== ClientMode.PureClient;
+  // A refusal without words of its own is said as "could not read who may manage …".
+  const loadError =
+    source.error instanceof MessageError && !source.error.message
+      ? new MessageError(t("federation.management.loadFailed", { target }))
+      : source.error;
+
+  latest.current = { onChanged, reloadContext };
+
+  useEffect(() => {
+    mounted.current = true;
+    const timer = setInterval(() => setNow(Date.now()), CLOCK_MS);
+
+    return () => {
+      mounted.current = false;
+      clearInterval(timer);
+    };
+  }, []);
+
+  /** `BApi` answers a refusal in the body; it is a failure here like any other. */
+  const ensureOk = <T extends { code?: number; message?: string | null }>(rsp: T) => {
+    if (rsp?.code) throw new MessageError(rsp.message || t("federation.management.failed"));
+
+    return rsp;
+  };
+
+  const mode = settings?.mode ?? RemoteAccessMode.Disabled;
+  const pending = settings?.pendingRequests ?? [];
+  const devices = settings?.devices ?? [];
 
   // Drop the digits the moment they stop working, so nobody types a dead code.
   useEffect(() => {
@@ -354,6 +428,7 @@ export default function ManagementAccessSection({
   return (
     <section
       ref={sectionRef}
+      data-focus-section
       aria-busy={(!settings && !loadError) || undefined}
       aria-labelledby="management-access-title"
       className={`${panelClass} space-y-3 ${revealClass(highlighted)}`}
@@ -364,10 +439,14 @@ export default function ManagementAccessSection({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 font-semibold" id="management-access-title">
+          <Heading
+            className={`flex items-center gap-2 font-semibold ${focusHeadingClass}`}
+            id="management-access-title"
+            tabIndex={-1}
+          >
             <AiOutlineSafety aria-hidden />
             {t("federation.management.title", { target })}
-          </h2>
+          </Heading>
           <p className="mt-1 max-w-3xl text-sm text-default-500">
             {t("federation.management.description", { target })}
           </p>
@@ -433,79 +512,11 @@ export default function ManagementAccessSection({
           </button>
         </div>
       )}
-      {settings && mode !== RemoteAccessMode.Disabled && (
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2 rounded-lg border border-default-200 p-3">
-            <p className="text-xs text-default-500">
-              {t("federation.management.addresses", { target })}
-            </p>
-            {settings.addresses?.length ? (
-              <ul className="space-y-1">
-                {settings.addresses.map((address) => (
-                  <li key={address.url} className="break-all text-sm">
-                    <code>{address.url}</code>
-                    <span className="ml-2 text-xs text-default-400">{address.interfaceName}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-warning">
-                {t("federation.management.noAddress", { target })}
-              </p>
-            )}
-          </div>
-          <div className="space-y-2 rounded-lg border border-default-200 p-3">
-            <p className="text-xs text-default-500">
-              {t("federation.management.code.tip", { target })}
-            </p>
-            {issuedCode ? (
-              <>
-                <code className="block text-2xl tracking-[0.25em]">{issuedCode.code}</code>
-                <p className="text-xs text-default-500">
-                  {t("configuration.remoteAccess.pairingCode.shownOnce", {
-                    minutes: minutesUntil(issuedCode.expiresAt, now),
-                  })}
-                </p>
-              </>
-            ) : (
-              settings.pairingCode && (
-                <p className="text-xs text-default-500">
-                  {t("configuration.remoteAccess.pairingCode.outstanding", {
-                    minutes: minutesUntil(settings.pairingCode.expiresAt, now),
-                    attempts: settings.pairingCode.remainingAttempts,
-                  })}
-                </p>
-              )
-            )}
-            <button
-              className={buttonClass}
-              disabled={busy}
-              type="button"
-              onClick={() =>
-                void run(async () => {
-                  const rsp = ensureOk(
-                    await BApi.remoteAccess.issueRemoteAccessPairingCode(inline),
-                  );
-
-                  if (mounted.current && rsp.data) {
-                    setIssuedCode({ code: rsp.data.code, expiresAt: rsp.data.expiresAt });
-                    setNow(Date.now());
-                  }
-                })
-              }
-            >
-              {t(
-                issuedCode || settings.pairingCode
-                  ? "federation.management.code.reissue"
-                  : "federation.management.code.issue",
-              )}
-            </button>
-          </div>
-        </div>
-      )}
       {pending.length > 0 && (
         <div className="space-y-2" data-testid="management-requests">
-          <h3 className="text-sm font-medium">{t("federation.management.requests.title")}</h3>
+          <SubHeading className="text-sm font-medium">
+            {t("federation.management.requests.title", { target })}
+          </SubHeading>
           {pending.map((request) => (
             <div
               key={request.id}
@@ -552,11 +563,65 @@ export default function ManagementAccessSection({
           ))}
         </div>
       )}
+      {settings && mode !== RemoteAccessMode.Disabled && (
+        <InviteBlock
+          action={
+            <button
+              className={buttonClass}
+              disabled={busy}
+              type="button"
+              onClick={() =>
+                void run(async () => {
+                  const rsp = ensureOk(
+                    await BApi.remoteAccess.issueRemoteAccessPairingCode(inline),
+                  );
+
+                  if (mounted.current && rsp.data) {
+                    setIssuedCode({ code: rsp.data.code, expiresAt: rsp.data.expiresAt });
+                    setNow(Date.now());
+                  }
+                })
+              }
+            >
+              {t(
+                issuedCode || settings.pairingCode
+                  ? "federation.management.code.reissue"
+                  : "federation.management.code.issue",
+              )}
+            </button>
+          }
+          addresses={settings.addresses}
+          code={issuedCode?.code}
+          codeLabel={t("federation.management.code.label")}
+          context="manage"
+          // A countdown: shown, never said again every minute (the code itself is).
+          note={
+            issuedCode ? (
+              <p className="text-xs text-default-500">
+                {t("configuration.remoteAccess.pairingCode.shownOnce", {
+                  minutes: minutesUntil(issuedCode.expiresAt, now),
+                })}
+              </p>
+            ) : (
+              settings.pairingCode && (
+                <p className="text-xs text-default-500">
+                  {t("configuration.remoteAccess.pairingCode.outstanding", {
+                    minutes: minutesUntil(settings.pairingCode.expiresAt, now),
+                    attempts: settings.pairingCode.remainingAttempts,
+                  })}
+                </p>
+              )
+            )
+          }
+          target={target}
+          tip={t("federation.management.code.tip", { target })}
+        />
+      )}
       {devices.length > 0 && (
         <div className="space-y-2" data-testid="management-devices">
-          <h3 className="text-sm font-medium">
+          <SubHeading className="text-sm font-medium">
             {t("federation.management.devices.title", { target })}
-          </h3>
+          </SubHeading>
           {devices.map((device) => (
             <div
               key={device.id}

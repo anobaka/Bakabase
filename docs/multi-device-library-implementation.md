@@ -39,7 +39,7 @@ NAS/Docker 等无界面宿主：`BAKABASE_FEDERATION_SHARING=true` 在启动时�
 
 共享发现与本机播放器定位已下沉到 RemoteAccess/Player 模块；Service 不引用 `Bakabase.Remoting`。原协议和转发器由一体版管理其他服务端的中继（`Bakabase.Remoting`）继续使用。新增 Node 协议不需要搬动旧签名、JSON 兼容或活动服务器逻辑。
 
-纯客户端（`Bakabase.Client`）已在测试版期间移除，不提供停止维护的过渡版本。它的连接提示导出（`/client/migration-hints*`、原生保存对话框 `ILocalFileSaveDialog`）与设备页的“导入连接提示”随之删除：一体版改为直接读取本机旧纯客户端留下的 `connection.json`，连同密钥与路径映射导入配对（见[服务器切换](server-switching.md)）。
+纯客户端（`Bakabase.Client`）已在测试版期间移除，不提供停止维护的过渡版本。它的连接提示导出（`/client/migration-hints*`、原生保存对话框 `ILocalFileSaveDialog`）与设备页的“导入连接提示”随之删除，也不导入它留下的配对：它管理过的设备在一体版中重新配对即可（见[服务器切换](server-switching.md)）。
 
 新增数据统一存于 AppData 下 `federation/state.json`。身份、授权、配对状态使用一次原子替换，避免多文件部分提交；Unix 文件权限为 0600。普通配置导入不覆盖节点身份。损坏状态正常启动时拒绝使用；显式重置可恢复。还原本库使用新 LibraryEpoch，克隆成另一节点同时换 NodeId。直接从外部完整替换 AppData 无法自动识别，仍需按此操作重置。
 
@@ -103,7 +103,7 @@ cd src/web && corepack yarn vitest run src/features/federation
 
 开发者也可以直接运行两个无界面实例手动体验：发布 `Bakabase.Service`（`-p:RuntimeMode=DOCKER`），把 `src/web/dist` 复制为发布目录下的 `web`，分别以不同的 `BAKABASE_DATA_DIR` 和 `ASPNETCORE_HTTP_PORTS` 启动，再在各自的 `/#/federation/devices` 页面操作。
 
-PR CI 在 Linux 上运行全部单元/集成测试、三实例冒烟、无界面发布内容检查和浏览器冒烟（联合浏览、导入旧纯客户端配对、服务器切换）；Windows/macOS 发布内容、macOS 原生 ABI 探针与视频流故障注入在发布前以 `CI` 手动触发 `suite=platforms` 运行，安装包并存验收为 `suite=packages`。
+PR CI 在 Linux 上运行全部单元/集成测试、三实例冒烟、无界面发布内容检查和浏览器冒烟（联合浏览、全新安装首次启动、服务器切换）；Windows/macOS 发布内容、macOS 原生 ABI 探针与视频流故障注入在发布前以 `CI` 手动触发 `suite=platforms` 运行，安装包并存验收为 `suite=packages`。
 
 ## 剩余发布门槛
 

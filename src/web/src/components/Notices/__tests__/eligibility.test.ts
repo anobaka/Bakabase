@@ -4,7 +4,6 @@ import { AiOutlineCluster } from "react-icons/ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  freshInstallFactsAsked,
   noticeViewerOf,
   pendingNotices,
   toNoticeState,
@@ -120,32 +119,6 @@ describe("pendingNotices", () => {
 
   it("names the upgrade-only notices a fresh install records", () => {
     expect(upgradeOnlyNoticeIds(registry)).toEqual(["upgrade"]);
-  });
-});
-
-describe("a fresh install's baseline", () => {
-  const registry = [
-    notice("upgrade", { upgradeOnly: true }),
-    notice("thin", { upgradeOnly: true, showOnFreshInstallWhen: "thinClientPairingsImported" }),
-    // Not upgrade-only: nothing to leave out of a baseline, so nothing to ask.
-    notice("always", { showOnFreshInstallWhen: "thinClientPairingsImported" }),
-  ];
-
-  it("asks only what an upgrade-only notice depends on", () => {
-    expect(freshInstallFactsAsked(registry)).toEqual(["thinClientPairingsImported"]);
-    expect(freshInstallFactsAsked([registry[0]!, registry[2]!])).toEqual([]);
-  });
-
-  it("leaves out a notice whose fact holds, and only then", () => {
-    expect(upgradeOnlyNoticeIds(registry, { thinClientPairingsImported: true })).toEqual([
-      "upgrade",
-    ]);
-    expect(upgradeOnlyNoticeIds(registry, { thinClientPairingsImported: false })).toEqual([
-      "upgrade",
-      "thin",
-    ]);
-    // Unknown is not "holds".
-    expect(upgradeOnlyNoticeIds(registry, {})).toEqual(["upgrade", "thin"]);
   });
 });
 

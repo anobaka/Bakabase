@@ -96,7 +96,6 @@ export interface ManagedServer {
   /** When last probed. `Unrestricted` means anybody on its network can manage it. */
   mode?: RemoteAccessMode | null;
   appVersion?: string | null;
-  importedFromLegacyClient: boolean;
   /**
    * Set while {@link state} is `WrongServer`: who answers at {@link address} instead. This
    * computer sends it nothing, and nothing it says is shown as this server's.
@@ -190,13 +189,6 @@ export interface SharingCandidate {
 export interface ManagedServerDiscovery {
   /** Never this installation itself. */
   servers: ManagedServerCandidate[];
-}
-
-export interface ManagedServerImport {
-  /** Whether an old Bakabase Client installation with pairings exists on this machine. */
-  found: boolean;
-  imported: number;
-  skipped: number;
 }
 
 export const resourceKey = (ref: ResourceRef) =>

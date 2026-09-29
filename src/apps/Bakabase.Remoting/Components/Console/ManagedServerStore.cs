@@ -45,8 +45,7 @@ public sealed class ManagedServerDirectory(Func<string> resolve) : IClientDataDi
 /// <para>
 /// The same file format as the removed thin client's <c>connection.json</c> — it is
 /// <see cref="ClientConnectionStore"/> underneath, with its atomic writes and its
-/// owner-only file mode — so importing an old install's pairings
-/// (<see cref="LegacyClientConnectionSource"/>) is a copy rather than a translation.
+/// owner-only file mode.
 /// </para>
 /// <para>
 /// A distinct type on purpose, and never registered in the app's own container as an

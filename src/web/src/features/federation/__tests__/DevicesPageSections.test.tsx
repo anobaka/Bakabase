@@ -12,13 +12,14 @@ import { useFederationStatus } from "../hooks/useFederationStatus";
 import { REVEAL_HIGHLIGHT_MS } from "../hooks/useSectionReveal";
 
 import BApi from "@/sdk/BApi";
-import { ClientMode, RemoteAccessMode } from "@/sdk/constants";
+import { ClientMode, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
 
 /*
- * Landing on a section of the devices page (`?section=`), and what the page offers where
- * the rest of it is not available. The Service's "wants to manage this device"
- * notification links to `?section=management`; the window's switcher to `?section=servers`.
+ * The devices page's sections: its nav, landing on a tab or a place inside one
+ * (`?section=`), and what the page offers where the rest of it is not available. The
+ * Service's "wants to manage this device" notification links to `?section=management`; the
+ * window's switcher to `?section=servers`.
  *
  * The remote-access store is the real one, set directly: which window may administer the
  * server it shows is decided by its own selectors, and a copy of them here would keep
@@ -162,8 +163,12 @@ describe("landing on a section of this device's own devices page", () => {
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
     expect(scrollIntoView.mock.contexts[0]).toBe(accessSection());
     expect(accessSection()).toHaveAttribute("data-highlighted", "true");
-    expect(within(accessSection()).getByRole("heading", { level: 2 })).toHaveTextContent(
+    // A part of the Management tab, under the tab's own heading.
+    expect(within(accessSection()).getByRole("heading", { level: 3 })).toHaveTextContent(
       "federation.management.title federation.management.self",
+    );
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+      "federation.devices.tab.manage",
     );
   });
 
@@ -194,12 +199,192 @@ describe("landing on a section of this device's own devices page", () => {
     expect(accessSection()).not.toHaveAttribute("data-highlighted");
   });
 
-  it("moves nothing without a section", async () => {
+  it("shows this device's tab without a section, and moves nothing", async () => {
     renderPage("/federation/devices");
-    expect(await within(accessSection()).findByText("Laptop")).toBeInTheDocument();
+    // What waits here is listed, and decided in the Management tab.
+    const waiting = await screen.findByTestId("devices-waiting");
+
+    expect(waiting).toHaveTextContent("federation.devices.waiting.manage Laptop");
+    expect(within(waiting).getByRole("link")).toHaveAttribute(
+      "href",
+      "/federation/devices?section=management",
+    );
     await waitFor(() => expect(managedServerApi.list).toHaveBeenCalled());
+    expect(screen.queryByTestId("management-access")).not.toBeInTheDocument();
+    expect(screen.getByTestId("devices-panel")).toHaveAttribute("data-section", "device");
     expect(scrollIntoView).not.toHaveBeenCalled();
-    expect(accessSection()).not.toHaveFocus();
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("lands on a tab's heading for a tab's link, without marking anything", async () => {
+    renderPage("/federation/devices?section=manage");
+    const heading = screen.getByRole("heading", { level: 2 });
+
+    expect(heading).toHaveTextContent("federation.devices.tab.manage");
+    await waitFor(() => expect(heading).toHaveFocus());
+    expect(await within(accessSection()).findByText("Laptop")).toBeInTheDocument();
+    expect(accessSection()).not.toHaveAttribute("data-highlighted");
+  });
+
+  it("opens the form a link asks for: adding a device to manage", async () => {
+    vi.mocked(managedServerApi.list).mockResolvedValue({
+      available: true,
+      servers: [
+        {
+          serverId: "nas",
+          name: "NAS",
+          address: "http://192.168.1.5:34567",
+          pairedAt: "2026-09-01T00:00:00Z",
+          pathMappings: [],
+          state: 1,
+        },
+      ],
+      requests: [],
+    });
+    const { unmount } = renderPage("/federation/devices?section=servers");
+
+    // With a server listed, the form waits behind a button…
+    expect(await screen.findByTestId("managed-server")).toBeInTheDocument();
+    expect(screen.queryByLabelText("federation.servers.add.address")).not.toBeInTheDocument();
+    unmount();
+    // …which the `add-server` link opens, bringing it into view.
+    renderPage("/federation/devices?section=add-server");
+    const form = document.getElementById("managed-server-add")!;
+
+    await waitFor(() => expect(form).toHaveFocus());
+    expect(form).toHaveAttribute("data-highlighted", "true");
+    // What a screen reader lands on is named, not an anonymous box.
+    expect(form).toHaveAttribute("role", "group");
+    expect(form).toHaveAccessibleName("federation.servers.add.title");
+    expect(within(form).getByLabelText("federation.servers.add.address")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["connect", "library-connect", "federation.devices.add"],
+    ["browsing", "library-browsing", "federation.browsing.title"],
+    [
+      "addresses",
+      "device-addresses",
+      "federation.devices.addresses.title federation.management.self",
+    ],
+  ])("names the place the %s link lands on by its heading", async (section, id, name) => {
+    renderPage(`/federation/devices?section=${section}`);
+    const place = document.getElementById(id)!;
+
+    await waitFor(() => expect(place).toHaveFocus());
+    expect(place).toHaveAccessibleName(name);
+  });
+
+  it("falls back to the tab's heading when the place a link names is not there", async () => {
+    // The browse request the notification announced was decided elsewhere meanwhile.
+    renderPage("/federation/devices?section=sharing-requests");
+    const heading = screen.getByRole("heading", { level: 2 });
+
+    expect(heading).toHaveTextContent("federation.devices.tab.sharing");
+    await waitFor(() => expect(heading).toHaveFocus());
+    expect(scrollIntoView).not.toHaveBeenCalledWith({ block: "start" });
+  });
+});
+
+describe("the devices page's nav", () => {
+  const nav = () => screen.getByRole("navigation", { name: "federation.devices.nav.label" });
+  const navLink = (tab: string) => nav().querySelector<HTMLAnchorElement>(`a[data-tab="${tab}"]`)!;
+
+  it("lists the tabs in order as links, marks the current one, and moves focus to its heading", async () => {
+    renderPage("/federation/devices");
+    const links = within(nav()).getAllByRole("link");
+
+    expect(links.map((link) => link.getAttribute("data-tab"))).toEqual([
+      "device",
+      "manage",
+      "sharing",
+      "advanced",
+    ]);
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "/federation/devices?section=device",
+      "/federation/devices?section=manage",
+      "/federation/devices?section=sharing",
+      "/federation/devices?section=advanced",
+    ]);
+    expect(navLink("device")).toHaveAttribute("aria-current", "page");
+    fireEvent.click(navLink("sharing"));
+    expect(navLink("sharing")).toHaveAttribute("aria-current", "page");
+    expect(navLink("device")).not.toHaveAttribute("aria-current");
+    const heading = screen.getByRole("heading", { level: 2 });
+
+    expect(heading).toHaveTextContent("federation.devices.tab.sharing");
+    await waitFor(() => expect(heading).toHaveFocus());
+  });
+
+  it("counts the requests waiting in a tab, in words as well as the number", async () => {
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: {
+        ...status,
+        requests: [
+          {
+            requestId: "browse-1",
+            nodeId: "laptop",
+            nodeName: "Laptop",
+            direction: "incoming",
+            status: "awaitingApproval",
+            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+            replacesExistingAccess: false,
+            offersReciprocalAccess: false,
+          },
+        ],
+      },
+      loading: false,
+      error: undefined,
+      refresh: vi.fn().mockResolvedValue(undefined),
+    });
+    renderPage("/federation/devices");
+    await waitFor(() =>
+      expect(navLink("manage")).toHaveTextContent("federation.devices.nav.pendingManage 1"),
+    );
+    expect(navLink("sharing")).toHaveTextContent("federation.devices.nav.pendingShare 1");
+    // The number itself is hidden from screen readers, which hear the words instead.
+    expect(navLink("sharing").querySelector('[aria-hidden="true"]:not(svg)')).toHaveTextContent(
+      "1",
+    );
+    expect(navLink("device")).not.toHaveTextContent("pending");
+    // The device tab lists the same requests: the badge is never the only way to learn it.
+    expect(screen.getByTestId("devices-waiting")).toHaveTextContent(
+      "federation.devices.waiting.browse Laptop",
+    );
+  });
+
+  it("flags a tab that needs a look", async () => {
+    vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockResolvedValue(
+      settingsResponse(RemoteAccessMode.Unrestricted, []) as never,
+    );
+    renderPage("/federation/devices");
+    await waitFor(() =>
+      expect(navLink("manage")).toHaveTextContent("federation.devices.nav.attention"),
+    );
+    expect(screen.getByTestId("devices-waiting")).toHaveTextContent(
+      "federation.devices.waiting.unrestricted",
+    );
+  });
+
+  it("offers nothing to manage where this installation cannot manage anything", async () => {
+    vi.mocked(managedServerApi.list).mockResolvedValue({
+      available: false,
+      servers: [],
+      requests: [],
+    });
+    renderPage("/federation/devices");
+    const chooser = await screen.findByTestId("devices-chooser");
+
+    await waitFor(() =>
+      expect(
+        within(chooser)
+          .getAllByRole("link")
+          .map((link) => link.getAttribute("href")),
+      ).toEqual(["/federation/devices?section=connect"]),
+    );
+    fireEvent.click(navLink("manage"));
+    expect(await screen.findByTestId("management-access")).toBeInTheDocument();
+    expect(screen.queryByText("federation.servers.title")).not.toBeInTheDocument();
   });
 });
 
@@ -273,8 +458,9 @@ describe("the devices page where the rest of it is not available", () => {
 });
 
 /*
- * The access section reads its own settings. These are the two moments they change under
- * it while the page stays open, and both have to show at once — not on the next poll.
+ * The page reads the remote-access settings for all its tabs. These are the two moments
+ * they change under it while the page stays open, and both have to show at once — not on
+ * the next poll.
  */
 describe("the management section keeps up with the page around it", () => {
   it("reads its settings again when the sharing panel turns remote access on", async () => {
@@ -308,16 +494,20 @@ describe("the management section keeps up with the page around it", () => {
 
       return {};
     });
-    renderPage("/federation/devices");
-    expect(
-      await within(accessSection()).findByText("federation.management.status.off"),
-    ).toBeInTheDocument();
+    renderPage("/federation/devices?section=sharing");
+    await waitFor(() => expect(settingsReads()).toBeGreaterThan(0));
     const before = settingsReads();
 
     fireEvent.click(screen.getByRole("button", { name: "federation.sharing.start" }));
     fireEvent.click(within(screen.getByRole("alertdialog")).getByText("federation.confirm"));
     await waitFor(() => expect(federationPeerApi.sharing).toHaveBeenCalledWith(true, true));
-    // Within the default wait of a second — far short of the section's own idle poll.
+    await waitFor(() => expect(settingsReads()).toBeGreaterThan(before));
+    // Over in Management the new mode already shows — far short of the settings' idle poll.
+    fireEvent.click(
+      screen
+        .getByRole("navigation", { name: "federation.devices.nav.label" })
+        .querySelector<HTMLAnchorElement>('a[data-tab="manage"]')!,
+    );
     expect(
       await within(accessSection()).findByText("federation.management.status.paired"),
     ).toBeInTheDocument();
@@ -366,5 +556,146 @@ describe("the management section keeps up with the page around it", () => {
     fireEvent.click(screen.getByText("again"));
     expect(await within(accessSection()).findByText("Laptop")).toBeInTheDocument();
     expect(settingsReads()).toBe(before + 1);
+  });
+});
+
+describe("the devices page's forms", () => {
+  const listed = (state: ManagedServerState): ManagedServersView => ({
+    available: true,
+    servers: [
+      {
+        serverId: "nas",
+        name: "NAS",
+        address: "http://192.168.1.5:34567",
+        pairedAt: "2026-09-01T00:00:00Z",
+        pathMappings: [],
+        state,
+        answeredBy:
+          state === ManagedServerState.WrongServer
+            ? { serverId: "other", name: "Other", isThisDevice: false }
+            : null,
+      },
+    ],
+    requests: [],
+  });
+
+  it("keeps the add form open while a managed server has to be found again", async () => {
+    // The card's tip sends the reader to the search in the add form: it has to be there.
+    vi.mocked(managedServerApi.list).mockResolvedValue(listed(ManagedServerState.WrongServer));
+    renderPage("/federation/devices?section=servers");
+
+    expect(await screen.findByTestId("managed-server-wrong-server")).toHaveTextContent(
+      "federation.servers.wrongServerTip",
+    );
+    expect(
+      screen.getByRole("button", { name: "federation.servers.add.discover" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("federation.servers.add.address")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "federation.servers.add.title" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("moves the keyboard into the add form opened from its button, on Management", async () => {
+    vi.mocked(managedServerApi.list).mockResolvedValue(listed(ManagedServerState.Online));
+    renderPage("/federation/devices?section=manage");
+    const toggle = await screen.findByRole("button", { name: "federation.servers.add.title" });
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    toggle.focus();
+    fireEvent.click(toggle);
+    // Not the section's heading above the cards: the field the reader came to fill in.
+    const field = screen.getByLabelText("federation.servers.add.address");
+
+    await waitFor(() => expect(field).toHaveFocus());
+    await act(async () => new Promise((done) => setTimeout(done, 10)));
+    expect(field).toHaveFocus();
+  });
+
+  it("does the same on Library sharing", async () => {
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: {
+        ...status,
+        peers: [
+          {
+            nodeId: "nas",
+            label: "NAS",
+            address: "http://192.168.1.5:34567",
+            enabled: true,
+            connectionState: "Online",
+            outboundGrant: { grantId: "grant", revision: 1 },
+            pathMappings: [],
+          },
+        ],
+      },
+      loading: false,
+      error: undefined,
+      refresh: vi.fn().mockResolvedValue(undefined),
+    });
+    vi.mocked(federationPeerApi.mappingRoots).mockResolvedValue([]);
+    renderPage("/federation/devices?section=sharing");
+    const toggle = await screen.findByRole("button", { name: "federation.devices.add" });
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    toggle.focus();
+    fireEvent.click(toggle);
+    const field = screen.getByLabelText("federation.pair.address");
+
+    await waitFor(() => expect(field).toHaveFocus());
+    await act(async () => new Promise((done) => setTimeout(done, 10)));
+    expect(field).toHaveFocus();
+  });
+
+  describe("the address beside a share code", () => {
+    const sharing = () =>
+      vi.mocked(useFederationStatus).mockReturnValue({
+        status: { ...status, sharingEnabled: true, remoteAccessMode: RemoteAccessMode.Enabled },
+        loading: false,
+        error: undefined,
+        refresh: vi.fn().mockResolvedValue(undefined),
+      });
+
+    it("says it is loading while remote access's settings are on their way, never that none was found", async () => {
+      const settings = deferred<unknown>();
+
+      sharing();
+      vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockReturnValue(
+        settings.promise as never,
+      );
+      renderPage("/federation/devices?section=share");
+      const list = await screen.findByTestId("device-addresses");
+
+      expect(list).toHaveTextContent("federation.loading");
+      expect(list).not.toHaveTextContent("federation.devices.addresses.none");
+      const answer = settingsResponse(RemoteAccessMode.Enabled, []);
+
+      await act(async () =>
+        settings.resolve({
+          ...answer,
+          data: {
+            ...answer.data,
+            addresses: [{ url: "http://192.168.1.2:34567", interfaceName: "en0" }],
+          },
+        }),
+      );
+      expect(await within(list).findByText("http://192.168.1.2:34567")).toBeInTheDocument();
+    });
+
+    it("says why the settings could not be read, with a way to try again", async () => {
+      sharing();
+      vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockRejectedValue(new Error("down"));
+      renderPage("/federation/devices?section=share");
+      const list = await screen.findByTestId("device-addresses");
+
+      await waitFor(() => expect(within(list).getByRole("alert")).toBeInTheDocument());
+      expect(list).not.toHaveTextContent("federation.devices.addresses.none");
+      vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockResolvedValue(
+        settingsResponse() as never,
+      );
+      const before = settingsReads();
+
+      fireEvent.click(within(list).getByRole("button", { name: "federation.retry" }));
+      await waitFor(() => expect(settingsReads()).toBe(before + 1));
+    });
   });
 });

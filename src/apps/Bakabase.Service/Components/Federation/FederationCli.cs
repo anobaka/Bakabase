@@ -26,9 +26,9 @@ public static class FederationCli
           approve <requestId> Approve a pending request (lets that device read this library)
           reject <requestId>  Reject a pending request
           revoke <grantId>    Stop a device from reading this library
-          new-identity        For a copy of another installation's data: give this one a new
-                              device identity (paired devices, sharing grants and connections
-                              are dropped; library data is kept)
+          new-identity        For a copy of another installation's data: make this a new device
+                              (devices paired to manage it and library sharing are dropped;
+                              library data is kept)
         The port defaults to API_LISTENING_PORTS, ASPNETCORE_HTTP_PORTS, then 8080.
         """;
 
@@ -56,7 +56,7 @@ public static class FederationCli
                 ("approve", 2) => await http.PostAsync($"requests/{Uri.EscapeDataString(arguments[1])}/approve", null),
                 ("reject", 2) => await http.PostAsync($"requests/{Uri.EscapeDataString(arguments[1])}/reject", null),
                 ("revoke", 2) => await http.DeleteAsync($"grants/{Uri.EscapeDataString(arguments[1])}"),
-                // The devices page's "Create a new device identity", which a headless server's
+                // The devices page's "Make this a new device", which a headless server's
                 // own UI — only ever reached from another device — cannot offer.
                 ("new-identity", 1) => await http.PostAsJsonAsync("identity/reset",
                     new { asNewNode = true, replaceInstallIdentity = true }),

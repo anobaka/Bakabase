@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type * as Registry from "../registry";
 
 import { act } from "@testing-library/react";
 import { forwardRef } from "react";
@@ -26,8 +27,15 @@ const api = vi.hoisted(() => ({
   getAppInfo: vi.fn(),
   getChangelog: vi.fn(),
   navigate: vi.fn(),
-  listManagedServers: vi.fn(),
 }));
+
+// Two notices to page between, the second going to a page (see fixtureNotices).
+vi.mock("../registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof Registry>();
+  const { fixtureRegistry } = await import("./fixtureNotices");
+
+  return { ...actual, notices: fixtureRegistry(actual.notices) };
+});
 
 vi.mock("@/sdk/BApi", () => ({
   default: {
@@ -39,9 +47,6 @@ vi.mock("@/sdk/BApi", () => ({
     app: { getAppInfo: api.getAppInfo },
     changelog: { getChangelog: api.getChangelog },
   },
-}));
-vi.mock("@/features/federation/serverApi", () => ({
-  managedServerApi: { list: api.listManagedServers },
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => api.navigate }));
 vi.mock("@/components/bakaui", () => ({
@@ -219,8 +224,6 @@ beforeEach(() => {
   useUiOptionsStore.setState({ data: {} as never, initialized: false });
   viewer({});
   serverState();
-  // A desktop app that manages nothing: in particular, imported nothing from a thin client.
-  api.listManagedServers.mockResolvedValue({ available: true, servers: [], requests: [] });
   api.markNoticesRead.mockImplementation(async (ids: string[]) => {
     serverReadIds = [...new Set([...serverReadIds, ...ids])];
 
@@ -253,13 +256,13 @@ describe("startup notices", () => {
 
     await click("notices.action.gotIt");
     expect(api.markNoticesRead).toHaveBeenLastCalledWith(["multi-device"]);
-    expect(noticeOnScreen()).toBe("thin-client-discontinued");
+    expect(noticeOnScreen()).toBe("fixture-route-notice");
     // Nothing else opens while notices are left.
     expect(dialogs()).toEqual(["notices"]);
     expect(localStorage.getItem(LAST_SEEN_KEY)).toBe("2.3.0");
 
     await click("notices.action.gotIt");
-    expect(api.markNoticesRead).toHaveBeenLastCalledWith(["thin-client-discontinued"]);
+    expect(api.markNoticesRead).toHaveBeenLastCalledWith(["fixture-route-notice"]);
     expect(dialogs()).toEqual(["changelog:2.3.0->2.4.0"]);
     // Recorded once the notes are actually on screen.
     expect(localStorage.getItem(LAST_SEEN_KEY)).toBe("2.4.0");
@@ -269,7 +272,7 @@ describe("startup notices", () => {
     await renderStartup();
 
     await click("notices.dialog.next");
-    expect(noticeOnScreen()).toBe("thin-client-discontinued");
+    expect(noticeOnScreen()).toBe("fixture-route-notice");
     // "Next" turned itself off; focus must not fall out of the dialog with it.
     expect(document.activeElement?.textContent).toBe("notices.action.gotIt");
     await click("notices.dialog.previous");
@@ -283,7 +286,7 @@ describe("startup notices", () => {
     await click("notices.action.markAllRead");
 
     expect(api.markNoticesRead).toHaveBeenCalledOnce();
-    expect(api.markNoticesRead).toHaveBeenCalledWith(["multi-device", "thin-client-discontinued"]);
+    expect(api.markNoticesRead).toHaveBeenCalledWith(["multi-device", "fixture-route-notice"]);
     expect(dialogs()).toEqual(["changelog:2.3.0->2.4.0"]);
   });
 
@@ -291,7 +294,7 @@ describe("startup notices", () => {
     serverState({ readIds: ["multi-device"] });
     await renderStartup();
 
-    expect(noticeOnScreen()).toBe("thin-client-discontinued");
+    expect(noticeOnScreen()).toBe("fixture-route-notice");
     expect(host.textContent).not.toContain("notices.action.markAllRead");
     expect(host.textContent).not.toContain("notices.dialog.position");
   });
@@ -314,7 +317,7 @@ describe("startup notices", () => {
     await renderStartup();
 
     expect(api.captureNoticeBaseline).toHaveBeenCalledWith(
-      ["multi-device", "thin-client-discontinued"],
+      ["multi-device", "fixture-route-notice"],
       expect.anything(),
     );
     expect(api.markNoticesRead).not.toHaveBeenCalled();
@@ -391,16 +394,16 @@ describe("startup notices", () => {
 
     await click("close help");
     expect(dialogs()).toEqual(["notices"]);
-    expect(noticeOnScreen()).toBe("thin-client-discontinued");
+    expect(noticeOnScreen()).toBe("fixture-route-notice");
   });
 
   it("goes where a notice points, and leaves the rest for the next launch", async () => {
     await renderStartup();
 
     await click("notices.dialog.next");
-    await click("notices.item.thinClient.action");
+    await click("notices.item.fixture.action");
 
-    expect(api.markNoticesRead).toHaveBeenCalledWith(["thin-client-discontinued"]);
+    expect(api.markNoticesRead).toHaveBeenCalledWith(["fixture-route-notice"]);
     expect(api.navigate).toHaveBeenCalledWith("/federation/devices?section=servers");
     // Neither the other notice nor the release notes open over the page the user asked for.
     expect(dialogs()).toEqual([]);
@@ -417,7 +420,7 @@ describe("startup notices", () => {
         .getState()
         .update({ notices: { readIds: ["multi-device"], baselinePending: false } }),
     );
-    expect(noticeOnScreen()).toBe("thin-client-discontinued");
+    expect(noticeOnScreen()).toBe("fixture-route-notice");
   });
 
   it("shows nothing and holds nothing up when the state cannot be read", async () => {
@@ -503,7 +506,7 @@ describe("the startup dialog takes its turn once", () => {
     await renderStartup();
     await click("close changelog");
     // The help center's list loads the state after all.
-    await act(async () => useNoticeStore.getState().load("local"));
+    await act(async () => useNoticeStore.getState().load());
     expect(useNoticeStore.getState().status).toBe("loaded");
 
     // A page outside the app's layout and back: the gate is a new component, the page load
@@ -528,80 +531,5 @@ describe("who is looking, when it is not known", () => {
     expect(noticeOnScreen()).toBeNull();
     // Holds nothing up.
     expect(dialogs()).toEqual(["changelog:2.3.0->2.4.0"]);
-  });
-});
-
-describe("a fresh install that used the thin client", () => {
-  const imported = {
-    available: true,
-    servers: [{ serverId: "nas", importedFromLegacyClient: true }],
-    requests: [],
-  };
-
-  it("is shown the thin client's notice when its first start brought the pairings over", async () => {
-    serverState({ baselinePending: true });
-    api.listManagedServers.mockResolvedValue(imported);
-    await renderStartup();
-
-    // Only the multi-device notice goes into the baseline.
-    expect(api.captureNoticeBaseline).toHaveBeenCalledWith(["multi-device"], expect.anything());
-    expect(dialogs()).toEqual(["notices"]);
-    expect(noticeOnScreen()).toBe("thin-client-discontinued");
-    expect(host.textContent).not.toContain("notices.action.markAllRead");
-  });
-
-  it("is not, when it manages servers it paired itself", async () => {
-    serverState({ baselinePending: true });
-    api.listManagedServers.mockResolvedValue({
-      ...imported,
-      servers: [{ serverId: "nas", importedFromLegacyClient: false }],
-    });
-    await renderStartup();
-
-    expect(api.captureNoticeBaseline).toHaveBeenCalledWith(
-      ["multi-device", "thin-client-discontinued"],
-      expect.anything(),
-    );
-    expect(noticeOnScreen()).toBeNull();
-  });
-
-  it("keeps the notice upgrade-only when the pairings cannot be asked about", async () => {
-    serverState({ baselinePending: true });
-    api.listManagedServers.mockRejectedValue(new Error("ManagementUnavailable"));
-    await renderStartup();
-
-    expect(api.captureNoticeBaseline).toHaveBeenCalledWith(
-      ["multi-device", "thin-client-discontinued"],
-      expect.anything(),
-    );
-    expect(noticeOnScreen()).toBeNull();
-  });
-
-  it("asks nothing of a browser on another device, and keeps the notice upgrade-only", async () => {
-    viewer({
-      isLocal: false,
-      clientMode: ClientMode.RemoteBrowser,
-      mode: RemoteAccessMode.Unrestricted,
-    });
-    serverState({ baselinePending: true });
-    api.listManagedServers.mockResolvedValue(imported);
-    await renderStartup();
-
-    // Management is this install's own window's business (`/federation/local`).
-    expect(api.listManagedServers).not.toHaveBeenCalled();
-    expect(api.captureNoticeBaseline).toHaveBeenCalledWith(
-      ["multi-device", "thin-client-discontinued"],
-      expect.anything(),
-    );
-  });
-
-  it("changes nothing for an install that was upgraded", async () => {
-    api.listManagedServers.mockResolvedValue(imported);
-    await renderStartup();
-
-    // No baseline to record, so nothing to ask.
-    expect(api.listManagedServers).not.toHaveBeenCalled();
-    expect(api.captureNoticeBaseline).not.toHaveBeenCalled();
-    expect(noticeOnScreen()).toBe("multi-device");
   });
 });

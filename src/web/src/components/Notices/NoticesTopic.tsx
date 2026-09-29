@@ -35,7 +35,7 @@ const NoticesTopic = ({ onNavigate, onOpenTopic }: HelpTopicContentProps) => {
   // Also retries a load that failed at startup. That never reopens the startup dialog: the
   // gate had its turn (`startupDone`), so what is learned here only shows here.
   useEffect(() => {
-    if (viewer) void load(viewer);
+    if (viewer) void load();
   }, [viewer, load]);
 
   const act = (notice: NoticeDefinition) => {

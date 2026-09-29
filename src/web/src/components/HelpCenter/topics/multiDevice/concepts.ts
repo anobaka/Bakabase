@@ -5,5 +5,4 @@ export const multiDeviceConcepts: HelpConceptNavItem[] = [
   { id: "management", labelKey: "helpCenter.multiDevice.concept.management.name" },
   { id: "pathMapping", labelKey: "helpCenter.multiDevice.concept.pathMapping.name" },
   { id: "remoteAccess", labelKey: "helpCenter.multiDevice.concept.remoteAccess.name" },
-  { id: "thinClient", labelKey: "helpCenter.multiDevice.concept.thinClient.name" },
 ];

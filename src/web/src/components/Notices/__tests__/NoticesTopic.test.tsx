@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type * as Registry from "../registry";
 
 import { act } from "@testing-library/react";
 import { createRoot, type Root } from "react-dom/client";
@@ -18,6 +19,13 @@ const api = vi.hoisted(() => ({
 }));
 
 vi.mock("@/sdk/BApi", () => ({ default: { options: api } }));
+// Two notices, one of them going to a page (see fixtureNotices).
+vi.mock("../registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof Registry>();
+  const { fixtureRegistry } = await import("./fixtureNotices");
+
+  return { ...actual, notices: fixtureRegistry(actual.notices) };
+});
 vi.mock("@/components/bakaui", () => ({
   Button: ({ children, onPress }: { children?: ReactNode; onPress?: () => void }) => (
     <button type="button" onClick={onPress}>
@@ -85,7 +93,7 @@ describe("the help center's notices", () => {
   it("lists every notice, newest first, with what has been read", async () => {
     await render();
 
-    expect(listed()).toEqual(["thin-client-discontinued", "multi-device"]);
+    expect(listed()).toEqual(["fixture-route-notice", "multi-device"]);
     expect(chips()).toEqual(["notices.state.unread", "notices.state.read"]);
   });
 
@@ -94,7 +102,7 @@ describe("the help center's notices", () => {
 
     await click("notices.action.gotIt");
 
-    expect(api.markNoticesRead).toHaveBeenCalledWith(["thin-client-discontinued"]);
+    expect(api.markNoticesRead).toHaveBeenCalledWith(["fixture-route-notice"]);
     expect(chips()).toEqual(["notices.state.read", "notices.state.read"]);
   });
 
@@ -104,7 +112,7 @@ describe("the help center's notices", () => {
     await click("notices.item.multiDevice.action");
     expect(onOpenTopic).toHaveBeenCalledWith({ topic: "multiDevice", section: undefined });
 
-    await click("notices.item.thinClient.action");
+    await click("notices.item.fixture.action");
     expect(onNavigate).toHaveBeenCalledWith("/federation/devices?section=servers");
   });
 
@@ -112,10 +120,10 @@ describe("the help center's notices", () => {
     useRemoteAccessStore.setState({ clientMode: ClientMode.PureClient });
     await render();
 
-    expect(listed()).toEqual(["thin-client-discontinued", "multi-device"]);
+    expect(listed()).toEqual(["fixture-route-notice", "multi-device"]);
     expect(api.getUiOptions).not.toHaveBeenCalled();
     expect(chips()).toEqual([]);
     expect(host.textContent).toContain("notices.topic.readOnly");
-    expect(host.textContent).not.toContain("notices.item.thinClient.action");
+    expect(host.textContent).not.toContain("notices.item.fixture.action");
   });
 });

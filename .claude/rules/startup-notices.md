@@ -1,7 +1,7 @@
 # Startup Notices and the Startup Order
 
-Notices ship with the app: short notes about a release ("the thin client is discontinued")
-that the UI opens by itself at startup until they are read. Every dialog the app opens by
+Notices ship with the app: short notes about a release ("Multi-device: Bakabase across your
+devices") that the UI opens by itself at startup until they are read. Every dialog the app opens by
 itself takes the screen in one fixed order, one at a time.
 
 ## The startup order
@@ -31,10 +31,10 @@ off this way are not lost.
 
 The dashboard's welcome does the same: its `HelpCenterModal` gets an `onNavigate` that calls
 the `deferRest` `useFirstRunHelp` returns, completes the welcome and routes to the page, so a
-link out of it leaves the notices and release notes for the next launch. It matters on a
-fresh install too — one whose first start imported thin-client pairings has the thin-client
-notice waiting behind the welcome (see below). Closing the welcome without going anywhere
-hands on to them as usual. Any other first-run guide whose links lead to a page, and that
+link out of it leaves the notices and release notes for the next launch. It matters wherever
+notices wait behind the welcome: the welcome is per browser and the notices per install, so a
+browser opening an upgraded install for the first time has both. Closing the welcome without
+going anywhere hands on to them as usual. Any other first-run guide whose links lead to a page, and that
 has surfaces after it, does the same (`pageGuide` is last, so a page's own guide need not).
 `pages/dashboard/__tests__/DashboardWelcome.test.tsx` drives the real help center.
 
@@ -49,7 +49,7 @@ who is looking. What those learn shows in the help center only.
 
 | Concern | Where |
 |---|---|
-| Registry (id, version, order, texts, action, audience, upgrade-only, fresh-install exception) | `components/Notices/registry.ts` |
+| Registry (id, version, order, texts, action, audience, upgrade-only), retired ids | `components/Notices/registry.ts` |
 | Texts | `locales/{en,cn}/components/notices.json` |
 | Who may see / what is pending | `components/Notices/eligibility.ts` |
 | State, load, mark read | `components/Notices/noticeStore.ts` |
@@ -59,7 +59,10 @@ who is looking. What those learn shows in the help center only.
 
 Adding one: a new id (a slug, never renamed or reused — a renamed notice is shown again to
 everyone), an `order` above the rest, texts in both languages, an audience, and whether it is
-upgrade-only. `registry.test.ts` checks keys and placeholders.
+upgrade-only. `registry.test.ts` checks keys and placeholders. Removing one: move its id to
+`retiredNoticeIds`, never to be used again — installs recorded it as read, so a new notice
+under it would never reach them (`registry.test.ts` checks that too). The server keeps the id
+in `ReadIds` like any other it does not know.
 
 ### Read state is per install
 
@@ -106,18 +109,7 @@ server cannot know the UI's registry, and the frontend compares no versions, so:
    it updates. While the baseline is open — or failed to save — upgrade-only notices stay
    hidden. An install that predates notices never opened a baseline and sees them all.
 
-An upgrade-only notice can name a `showOnFreshInstallWhen` fact: a fresh install where it
-holds leaves the notice out of its baseline and so is shown it like an upgraded install.
-The facts are asked once, just before the baseline is recorded (`learnFreshInstallFacts`),
-and only where they can be answered; an unknown answer keeps the notice upgrade-only.
-
-- `thinClientPairingsImported` (the thin-client notice) — a managed server in
-  `/federation/local/servers` has `importedFromLegacyClient`: the desktop app's first start
-  brought over an old thin client's pairings, so whoever installed it used the thin client.
-  Asked only by this install's own window (the route is local-only; a LAN browser keeps the
-  notice upgrade-only). The import starts with the host, well before the window opens after
-  migrations; an import run later from the devices page comes after the baseline and changes
-  nothing. The smoke's first-launch stage opens that fixture's window and expects this notice
-  alone.
+The smoke's first-launch stage opens the fresh fixture's window and expects the baseline to
+hold every upgrade-only notice and no notice on screen.
 
 `introducedIn` is display only; nothing compares it.

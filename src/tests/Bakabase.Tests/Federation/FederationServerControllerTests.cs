@@ -73,7 +73,6 @@ public class FederationServerControllerTests
         Assert.AreEqual(FakeManagedServerService.KnownServerId, server.GetProperty("serverId").GetString());
         Assert.AreEqual((int) ManagedServerState.Online, server.GetProperty("state").GetInt32());
         Assert.AreEqual((int) RemoteAccessMode.Unrestricted, server.GetProperty("mode").GetInt32());
-        Assert.IsTrue(server.GetProperty("importedFromLegacyClient").GetBoolean());
         Assert.AreEqual("/volume1/media",
             server.GetProperty("pathMappings")[0].GetProperty("serverPath").GetString());
         Assert.IsFalse(server.TryGetProperty("key", out _), "a key never leaves the manager");
@@ -136,11 +135,6 @@ public class FederationServerControllerTests
         var root = await Json(await Local(HttpMethod.Post, $"/{id}/open", "{}"), HttpStatusCode.OK);
         StringAssert.StartsWith(root.GetProperty("url").GetString(), "http://127.0.0.1:34650/?");
 
-        var imported = await Json(await Local(HttpMethod.Post, "/import-legacy-client"), HttpStatusCode.OK);
-        Assert.IsTrue(imported.GetProperty("found").GetBoolean());
-        Assert.AreEqual(2, imported.GetProperty("imported").GetInt32());
-        Assert.AreEqual(1, imported.GetProperty("skipped").GetInt32());
-
         Assert.IsTrue((await Json(await Local(HttpMethod.Delete, $"/{id}"), HttpStatusCode.OK))
             .GetProperty("changed").GetBoolean());
 
@@ -148,7 +142,7 @@ public class FederationServerControllerTests
         {
             "Probe 192.168.1.9:34567", "Pair 192.168.1.9 code=123456", "Pair 192.168.1.9 code=<none>",
             "Cancel request-1", "Cancel request-9", $"Map {id} 2", $"Map {id} 0", $"Open {id} path=/resource",
-            $"Open {id} path=<root>", "Import", $"Forget {id}"
+            $"Open {id} path=<root>", $"Forget {id}"
         }, _managed.Calls.ToArray());
     }
 
@@ -231,8 +225,7 @@ public class FederationServerControllerTests
                      (HttpMethod.Delete, "/requests/request-1", null),
                      (HttpMethod.Delete, "/server-1", null),
                      (HttpMethod.Put, "/server-1/path-mappings", """{"mappings":[]}"""),
-                     (HttpMethod.Post, "/server-1/open", "{}"),
-                     (HttpMethod.Post, "/import-legacy-client", null)
+                     (HttpMethod.Post, "/server-1/open", "{}")
                  })
         {
             var error = await Json(await Local(method, path, json), HttpStatusCode.NotFound);
@@ -257,7 +250,7 @@ public class FederationServerControllerTests
         }
 
         // A name that only resolves here: DNS rebinding.
-        var rebound = _host.Request(HttpMethod.Post, "/federation/local/servers/import-legacy-client");
+        var rebound = _host.Request(HttpMethod.Post, "/federation/local/servers/probe");
         rebound.Headers.Host = $"attacker.example:{_host.Port}";
         Assert.AreEqual("LocalInterfaceOnly",
             Code(await Json(await _host.SendAsync(rebound), HttpStatusCode.Forbidden)));
@@ -265,7 +258,7 @@ public class FederationServerControllerTests
         // Another page on this machine: a relay, or yarn dev's port with the wrong number.
         foreach (var origin in new[] {ServiceGateHost.RelayOrigin, "http://localhost:3001", "https://attacker.example"})
         {
-            var response = await _host.SendAsync(HttpMethod.Post, "/federation/local/servers/import-legacy-client",
+            var response = await _host.SendAsync(HttpMethod.Post, "/federation/local/servers/probe",
                 "same-site", origin);
             Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode, origin);
         }

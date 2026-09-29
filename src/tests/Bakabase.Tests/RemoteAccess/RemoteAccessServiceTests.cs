@@ -6,6 +6,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Domain.Options;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Modules.RemoteAccess.Services;
 using Bakabase.TestKit.Implementations;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -108,6 +109,23 @@ public class RemoteAccessServiceTests
 
             CollectionAssert.AreEqual(new[] {34567, 34568}, ports);
         }
+
+        // At most one host is suggested, on every port, and only a LAN one.
+        var recommended = addresses.Where(a => a.Recommended).ToList();
+        Assert.IsTrue(recommended.Select(a => new Uri(a.Url).Host).Distinct().Count() <= 1);
+        Assert.IsTrue(recommended.All(a => a.Kind == RemoteAccessAddressKind.Lan));
+        Assert.IsTrue(recommended.Count is 0 or 2, string.Join(", ", recommended));
+
+        // Offered in the classifier's order, whatever order this host lists its interfaces in:
+        // the recommended host first, then the rest by what can reach them.
+        var hosts = addresses.Select(a => new Uri(a.Url).Host).Distinct().ToList();
+        var kindOf = hosts.Select(h => addresses.First(a => new Uri(a.Url).Host == h).Kind).ToList();
+        var recommendedHost = recommended.Select(a => new Uri(a.Url).Host).FirstOrDefault();
+        CollectionAssert.AreEqual(
+            RemoteAccessAddressClassifier.Order(kindOf, recommendedHost == null ? null : hosts.IndexOf(recommendedHost))
+                .ToArray(),
+            Enumerable.Range(0, hosts.Count).ToArray(),
+            string.Join(", ", addresses.Select(a => $"{a.Url} {a.Kind}")));
     }
 
     [TestMethod]

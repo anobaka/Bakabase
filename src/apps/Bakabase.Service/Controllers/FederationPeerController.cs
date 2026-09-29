@@ -331,6 +331,13 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
         return FederationResult(exchange);
     }
 
+    /// <summary>
+    /// Where a library request is allowed or rejected — the devices page's Library sharing tab,
+    /// at the requests waiting there. The anchor is part of the page's contract
+    /// (<c>DevicesAnchor</c> in the web's <c>switching.ts</c>); never rename it.
+    /// </summary>
+    internal const string SharingRequestRoute = "/federation/devices?section=sharing-requests";
+
     [HttpPost("~/federation/v1/pair/request")]
     [FederationEndpoint(FederationEndpointKind.Public)]
     [SwaggerOperation(OperationId = "RequestFederationPairing")]
@@ -351,7 +358,7 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
                     Source = "Federation",
                     Title = localizer["Federation_PairingRequest_Title", request.NodeName.Trim()],
                     Body = localizer["Federation_PairingRequest_Body", RemoteAddress ?? "?"],
-                    PayloadJson = JsonSerializer.Serialize(new { route = "/federation/devices" }),
+                    PayloadJson = JsonSerializer.Serialize(new { route = SharingRequestRoute }),
                     Severity = AppNotificationSeverity.Warning
                 });
             }

@@ -123,7 +123,6 @@ public class ConsoleKeySecrecyTests
             await _console.Manager.ProbeAsync(_desk.BaseAddress),
             await _console.Manager.PairAsync(_nas.BaseAddress, null),
             await _console.Manager.OpenAsync(_desk.ServerId, "/"),
-            await _console.Manager.ImportFromLegacyClientAsync(),
             _console.Manager.ListTargets(),
             await _console.Manager.ResolveUrlAsync(_nas.ServerId)
         };

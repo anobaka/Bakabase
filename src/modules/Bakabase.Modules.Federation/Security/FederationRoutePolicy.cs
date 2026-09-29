@@ -56,8 +56,7 @@ public static class FederationRoutePolicy
         {
             if (segments.Length == 3) return method == "GET";
             if (segments.Length == 4)
-                return (Equal(segments[3], "probe") || Equal(segments[3], "pair") ||
-                        Equal(segments[3], "import-legacy-client")) && method == "POST" ||
+                return (Equal(segments[3], "probe") || Equal(segments[3], "pair")) && method == "POST" ||
                        Equal(segments[3], "discover") && method == "GET" ||
                        NodeRequestSignature.IsIdentifier(segments[3]) && method == "DELETE";
             if (segments.Length != 5) return false;

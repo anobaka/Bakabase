@@ -17,11 +17,76 @@ current device merges results.
 | Endpoints | `src/apps/Bakabase.Service/Controllers/Federation*.cs` |
 | UI | `src/web/src/features/federation/` |
 | Device map (`/federation/map`) | `src/web/src/features/federation/map/`, `DeviceMapPage.tsx` |
+| Devices page (`/federation/devices`) | `DevicesPage.tsx`, `src/web/src/features/federation/devices/` |
+| Both pages' data (one hook) | `src/web/src/features/federation/hooks/useDevicesData.ts` |
 | Design history | `docs/multi-device-library-execution-plan.md` |
 
 The whole multi-server mode — sharing, management, and later data sync — is named
 「多设备互联」 / "Multi-device" in the UI (`federation.mode`, the menu group, the help topic
 `multiDevice`). Route and id names stay `federation`.
+
+## The devices page
+
+`/federation/devices` is split by capability into tabs, the same two kinds of trust the map
+draws: **本机 / This device** (name, the address to type, what waits here, "add another
+device"), **管理 / Management** (full control: devices this one manages, who may manage this
+one), **资源库分享 / Library sharing** (read-only: libraries this device browses, sharing its
+own) and **高级 / Advanced** (device ID, "after copying or restoring data"). The registry is
+`devices/sections.ts`; the nav is links, not a tablist (Back and copied links work).
+
+- **`?section=` is a contract.** A value is a tab id or a place inside a tab, and a place
+  implies its tab (`resolveSection`). Producers: the Service's notifications (`management`,
+  `sharing-requests`), the window's switcher (`servers`), the configuration page
+  (`identity`), the map (`device`, `management`, `share`, `sharing`), the library (`sharing`,
+  `connect`, `browsing`), the help (`management`, `add-server`, `sharing`). Never rename one;
+  `devicesSections.test.ts` pins them. A place is revealed (scrolled to, focused, marked
+  2.5 s) once what it waits for has loaded, again for every navigation; a place that is not
+  there (a request decided meanwhile) and a bare tab focus the tab's heading instead.
+- **One read for the page.** The page reads sharing, managed servers and remote access once
+  (`useDevicesData`, shared with the map) and mounts only the tab shown, so switching tabs
+  never waits and the nav's counts stay live. The management sections still read their own
+  data where the rest of the page is not available (a managed window, a LAN browser).
+- **Focus** follows the map's rules (`devices/useSectionFocusKeeper.ts`): when an action takes
+  away the control that had the keyboard, focus goes to the heading of the part it was in;
+  a pointer press or focus moved elsewhere is never pulled back — nor the focus a click gives
+  the very button it presses (only a key pressed afterwards hands focus back to the keeper),
+  so removing a row clicked with the mouse neither moves focus nor scrolls. Every heading
+  focus can go to shows a ring from the keyboard (`focusHeadingClass`), and every place a
+  link lands on is named by its heading (`aria-labelledby`). A form behind a button that
+  it replaces ("+ 添加要管理的设备", "+ 添加要浏览的设备") takes the keyboard into its first
+  field when opened from that button (`hooks/useFocusOnOpen.ts`). The Management add form
+  stays open while a managed server is WrongServer or Revoked: their tips name its search.
+- **Layout** is measured on the page's container (`@container`, `@3xl:`), never the window:
+  beside the app's sidebar a wide window can leave a narrow column. The action feedback is
+  sticky inside the content's column, so it never covers the sticky nav, and never what a
+  link, the nav or the focus keeper brings into view: the page keeps its height (plus a gap)
+  in `--devices-scroll-offset`, which every such place and heading uses as its scroll margin
+  (`scrollOffsetClass`). A notice (not an error) is left behind by the next navigation.
+- **Addresses.** Every host stays in the API (`ownHostsOf`/`sameMachine` need them all); the
+  UI shows one row per host on the main port and folds virtual and link-local adapters away,
+  labelled (`devices/addresses.ts`). The server says each address's `kind` and which one is
+  `recommended` (`RemoteAccessAddressClassifier`: the first LAN address whose interface has a
+  default gateway, which a VM host-only or overlay adapter lacks) and lists them in the
+  order they are offered in — recommended first, then LAN, VPN, unknown, virtual, link-local
+  (`RemoteAccessAddressClassifier.Order`) — which is also the order a device reading this one
+  back tries them in and keeps the first few of; the page guesses from the
+  address and interface name only for a server too old to say. Until remote access's settings
+  are read the list says it is loading, or why it could not read them — "no address found"
+  is only for a list that came back empty.
+- **Words.** 配对/配对码 only for management, 分享码 only for library sharing, 浏览 for what
+  sharing allows, 允许 (never 批准) for letting a device in, 添加 (never 连接) for putting a
+  device in a list, 多设备资源库 for the merged library. Never shown: 节点, 代际, 设备身份, 旧接口,
+  新分享协议, 联合浏览, 授权 as a noun. Server texts that send the reader to the page (the relay's
+  unavailable page and refusals, notifications, the CLI) name its current places:
+  设备与分享 → 管理 → 谁可以管理本机, → 资源库分享, → 高级 → 复制或恢复数据后 → 设为新设备.
+  A text that sends the reader to **another** device, or that another device shows, names
+  both places, since a NAS or Docker server has no devices page: a computer's page, and a
+  NAS or Docker's 配置 → 远程访问 (management: codes, requests, remote access) or
+  `BAKABASE_FEDERATION_SHARING` / the `federation` CLI (library sharing). A management
+  request's notification names only 配置 → 远程访问 besides its link. A requester's name is
+  its own claim wherever it is shown (一台自称 {{name}} 的设备…), and a decided incoming
+  request says what this device did (`federation.requests.incoming*`), never the
+  requester's `federation.pair.*` outcome.
 
 ## The device map
 
@@ -33,8 +98,8 @@ listings the devices page reads — `/federation/local/peers`, `/federation/loca
 endpoints and confirmations.
 
 - **Records are merged on evidence only** (`map/graph.ts`). The install id first and always:
-  a peer's NodeId is the install's remote-access ServerId (`FederationNodeIdSource`; "Create a
-  new device identity" replaces both together; only a node reset by an older build, or one
+  a peer's NodeId is the install's remote-access ServerId (`FederationNodeIdSource`; "Make this
+  a new device" replaces both together; only a node reset by an older build, or one
   that replaced an unreadable sharing state, differs),
   so a peer, a managed server and a beacon with one id are one device — even while the server's
   address answers as another. An address (never a
@@ -215,8 +280,8 @@ after any DTO/endpoint change.
 `BAKABASE_FEDERATION_SHARING=true` turns sharing on at startup; `BAKABASE_NODE_NAME` names the
 node; `--federation-invite-on-start` prints a one-time code. The running instance is managed with
 `docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|invite|approve|reject|revoke|new-identity>`,
-which only calls its loopback API. `new-identity` is the devices page's "Create a new device
-identity", for a copied data directory: a headless server's own UI is only ever reached from
+which only calls its loopback API. `new-identity` is the devices page's "Make this a new device"
+(Advanced → After copying or restoring data), for a copied data directory: a headless server's own UI is only ever reached from
 another device, and never reaches `/federation/local/*`.
 
 ## Tests

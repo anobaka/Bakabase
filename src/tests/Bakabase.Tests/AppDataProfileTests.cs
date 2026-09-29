@@ -9,8 +9,8 @@ namespace Bakabase.Tests;
 
 /// <summary>
 /// The all-in-one app and the removed thin client had AppData profiles of their own, and an
-/// old thin client's data is still where the app looks for pairings to import. These tests
-/// hold the two apart, and hold the existing one exactly where it has always been.
+/// old thin client's data is still on users' machines. These tests hold the two apart, and
+/// hold the existing one exactly where it has always been.
 /// </summary>
 [TestClass]
 [DoNotParallelize]

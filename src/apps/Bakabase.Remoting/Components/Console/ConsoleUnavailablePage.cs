@@ -93,9 +93,9 @@ public static class ConsoleUnavailablePage
         {
             return ("This server is not available",
                 "This device no longer manages it — it was removed here, or the server stopped accepting this " +
-                "device. Add it again from this device's Devices page.",
+                "device. Add it again on this device's Devices and sharing page, under Management.",
                 "该设备当前不可用",
-                "本机已不再管理这台设备：它已在本机被移除，或对方不再接受本机。可以在本机的“设备”页面重新添加。");
+                "本机已不再管理这台设备：它已在本机被移除，或对方不再接受本机。可以在本机的“设备与分享 → 管理”中重新添加。");
         }
 
         var name = E(string.IsNullOrWhiteSpace(serverName) ? check.ServerId : serverName);
@@ -107,39 +107,43 @@ public static class ConsoleUnavailablePage
             UpstreamIdentityVerdict.WrongServer => (
                 $"{name} is not at its address any more",
                 $"{address} now answers as another server ({other}), so this window sent it nothing. If {name} " +
-                "moved to another address, find it again on this device's Devices page; if it was reinstalled or " +
-                "its data was reset, pair with it again there.",
+                "moved to another address, find it again on this device's Devices and sharing page, under " +
+                "Management; if it was reinstalled or its data was reset, stop managing it there and add it again.",
                 $"{name} 已不在原来的地址",
-                $"{address} 现在是另一台设备（{other}），本窗口没有向它发送任何请求。如果 {name} 换了地址，请在本机的“设备”页面重新找到它；" +
-                "如果它重装过或数据被重置，请在那里重新配对。"),
+                $"{address} 现在是另一台设备（{other}），本窗口没有向它发送任何请求。如果 {name} 换了地址，请在本机的“设备与分享 → 管理”中重新找到它；" +
+                "如果它重装过或数据被重置，请在那里停止管理它，再重新添加。"),
             UpstreamIdentityVerdict.ThisDevice => (
                 $"{name} is not at its address any more",
                 $"{address} now reaches this device itself, so this window sent it nothing. If {name} moved to " +
-                "another address, find it again on this device's Devices page.",
+                "another address, find it again on this device's Devices and sharing page, under Management.",
                 $"{name} 已不在原来的地址",
-                $"{address} 现在指向本机自身，本窗口没有向它发送任何请求。如果 {name} 换了地址，请在本机的“设备”页面重新找到它。"),
+                $"{address} 现在指向本机自身，本窗口没有向它发送任何请求。如果 {name} 换了地址，请在本机的“设备与分享 → 管理”中重新找到它。"),
             // Another computer under this device's own identity: nothing to find in the address.
             UpstreamIdentityVerdict.SameIdentity => (
                 $"{name} is not at its address any more",
                 $"{address} now answers as another computer with this device's own identity ({other}) — a copy of " +
-                "its data folder, most likely — so this window sent it nothing. On the copy, choose “Create a new " +
-                "device identity” on its Devices page (on a server without a window, run “dotnet Bakabase.Service.dll " +
-                $"federation new-identity” in it). If {name} moved to another address, find it again on this " +
-                "device's Devices page.",
+                "its data folder, most likely — so this window sent it nothing. On the copy, open Devices and " +
+                "sharing → Advanced → After copying or restoring data and choose “Make this a new device” (on a " +
+                "server without a window, run “dotnet Bakabase.Service.dll federation new-identity” in it). If " +
+                $"{name} moved to another address, find it again on this device's Devices and sharing page, under " +
+                "Management.",
                 $"{name} 已不在原来的地址",
-                $"{address} 现在是另一台与本机设备身份相同的电脑（{other}），它的数据目录很可能是从本机复制的，本窗口没有向它发送任何请求。" +
-                "请在复制出的那台设备的“设备”页面选择“创建新的设备身份”（无界面的服务器上请在其中运行“dotnet Bakabase.Service.dll " +
-                $"federation new-identity”）。如果 {name} 换了地址，请在本机的“设备”页面重新找到它。"),
+                $"{address} 现在是另一台被识别成本机的电脑（{other}），它的数据目录很可能是从本机复制的，本窗口没有向它发送任何请求。" +
+                "请在复制出的那台设备上打开“设备与分享 → 高级 → 复制或恢复数据后”，选择“设为新设备”（无界面的服务器上请在其中运行“dotnet Bakabase.Service.dll " +
+                $"federation new-identity”）。如果 {name} 换了地址，请在本机的“设备与分享 → 管理”中重新找到它。"),
             // Something is running there and reachable: telling the user to check that would
             // send them the wrong way. Worded as the refusal a fetch gets (UpstreamIdentityCheck.Describe).
+            // Both places are named: a managed server is as often a NAS or Docker, which has no
+            // devices page, as another computer's desktop app.
             _ when check.RemoteAccessDisabled => (
                 $"Remote access is turned off at {address}",
                 $"The Bakabase at {address} has remote access turned off, so it cannot confirm that it is {name}, " +
-                "and this window sent it nothing. Turn it on in Bakabase on that device, under “Let other devices " +
-                "manage this device”, then reload this page.",
+                "and this window sent it nothing. Turn it on in Bakabase on that device — on a computer under " +
+                "Devices and sharing → Management → Who may manage this device, on a NAS or Docker under " +
+                "Configuration → Remote access — then reload this page.",
                 $"{address} 已关闭远程访问",
                 $"{address} 上的 Bakabase 已关闭远程访问，无法确认它就是 {name}，本窗口没有向它发送任何请求。请在那台设备的 Bakabase 中" +
-                "开启“允许其他设备管理本机”，然后刷新本页。"),
+                "开启远程访问（电脑：“设备与分享 → 管理 → 谁可以管理本机”；NAS 或 Docker：“配置 → 远程访问”），然后刷新本页。"),
             _ => (
                 $"{name} is not answering",
                 $"Nothing that could be identified as {name} answers at {address}. Check that Bakabase is running " +

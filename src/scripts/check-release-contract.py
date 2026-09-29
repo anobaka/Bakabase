@@ -21,9 +21,8 @@ PRODUCTS = {
 }
 
 # The removed thin client's identity. Nothing ships under it any more, and nothing may: its
-# feed, AppData folder and executable are still on users' machines (the desktop app imports
-# their pairings from there), so reusing any of them would hand an old install something
-# that is not its own.
+# feed, AppData folder and executable are still on users' machines, so reusing any of them
+# would hand an old install something that is not its own.
 RETIRED_CLIENT = {"assembly": "Bakabase.Client",
                   "feed": "https://cdn-public.anobaka.com/app/bakabase-client/releases/"}
 

@@ -9,6 +9,8 @@ import DevicesPage from "../DevicesPage";
 import { federationPeerApi } from "../peerApi";
 import { useFederationStatus } from "../hooks/useFederationStatus";
 
+import BApi from "@/sdk/BApi";
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     // Keys as text, plus the requester address so tests can see where it is surfaced.
@@ -104,7 +106,11 @@ beforeEach(() => {
   ]);
 });
 afterEach(cleanup);
-const renderPage = (entry = "/federation/devices") =>
+/** Library sharing is where most of this suite happens; the other tabs are named. */
+const SHARING = "/federation/devices?section=sharing";
+/** The add form, open even when devices are listed. */
+const CONNECT = "/federation/devices?section=connect";
+const renderPage = (entry = SHARING) =>
   render(
     <MemoryRouter initialEntries={[entry]}>
       <DevicesPage />
@@ -153,17 +159,34 @@ describe("device permission workflows", () => {
     vi.mocked(federationPeerApi.discover).mockResolvedValue([
       { nodeId: "candidate", name: "New PC", address: "http://candidate" },
     ]);
-    renderPage();
+    renderPage(CONNECT);
     fireEvent.click(screen.getByText("federation.discovery.scan"));
     fireEvent.click(await screen.findByText("federation.discovery.use"));
     expect(screen.getByDisplayValue("http://candidate")).toBeInTheDocument();
     expect(federationPeerApi.connect).not.toHaveBeenCalled();
   });
 
-  it("requires explicit confirmation before resetting a cloned installation identity", async () => {
-    renderPage();
+  it("offers no identity action before the reader says what happened", () => {
+    renderPage("/federation/devices?section=advanced");
+    expect(screen.getByText("federation.identity.question")).toBeInTheDocument();
+    expect(screen.queryByText("federation.identity.reset")).not.toBeInTheDocument();
+    expect(screen.queryByText("federation.identity.restore")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "federation.identity.copied.title" }));
+    expect(screen.getByText("federation.identity.copied.removes")).toBeInTheDocument();
+    expect(screen.getByText("federation.identity.copied.keeps")).toBeInTheDocument();
+    expect(screen.getByText("federation.identity.reset")).toBeInTheDocument();
+    expect(screen.queryByText("federation.identity.restore")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "federation.identity.restored.title" }));
+    expect(screen.getByText("federation.identity.restored.after")).toBeInTheDocument();
+    expect(screen.getByText("federation.identity.restore")).toBeInTheDocument();
+    expect(screen.queryByText("federation.identity.reset")).not.toBeInTheDocument();
+  });
+  it("requires explicit confirmation before making a copied installation a new device", async () => {
+    renderPage("/federation/devices?section=advanced");
+    fireEvent.click(screen.getByRole("radio", { name: "federation.identity.copied.title" }));
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("federation.identity.reset"));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("federation.identity.confirm");
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("federation.confirm"));
     // A copy: the install's own identity goes too.
@@ -172,12 +195,18 @@ describe("device permission workflows", () => {
   });
   it("opens recovery help from configuration without resetting and restores with the original node identity", async () => {
     renderPage("/federation/devices?section=identity");
-    expect(screen.getByText("federation.identity.title").closest("details")).toHaveAttribute(
-      "open",
-    );
+    const flow = screen.getByTestId("identity-recovery");
+
+    expect(flow).toBeVisible();
+    await waitFor(() => expect(flow).toHaveFocus());
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("radio", { name: "federation.identity.restored.title" }));
     fireEvent.click(screen.getByText("federation.identity.restore"));
-    expect(screen.getByRole("alertdialog")).toHaveTextContent("federation.identity.restoreConfirm");
+    const dialog = screen.getByRole("alertdialog");
+
+    expect(dialog).toHaveTextContent("federation.identity.restoreConfirm");
+    // A backup brings back who could manage this device too, and this leaves them alone.
+    expect(dialog).toHaveTextContent("federation.identity.restoreWarning");
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("federation.confirm"));
     await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(false));
@@ -187,7 +216,8 @@ describe("device permission workflows", () => {
     vi.mocked(federationPeerApi.resetIdentity).mockRejectedValueOnce(
       new Error("Storage unavailable"),
     );
-    renderPage();
+    renderPage("/federation/devices?section=advanced");
+    fireEvent.click(screen.getByRole("radio", { name: "federation.identity.restored.title" }));
     fireEvent.click(screen.getByText("federation.identity.restore"));
     fireEvent.click(screen.getByText("federation.confirm"));
     expect(await screen.findByText("Storage unavailable")).toBeInTheDocument();
@@ -197,9 +227,35 @@ describe("device permission workflows", () => {
       screen.getByRole("button", { name: "federation.identity.restore", hidden: true }),
     ).not.toBeDisabled();
   });
+  it("shows the device ID in Advanced, with a way to copy it", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    try {
+      renderPage("/federation/devices?section=advanced");
+      const block = within(screen.getByTestId("device-id"));
+
+      expect(block.getByText("local")).toBeInTheDocument();
+      // Named for what it copies — an ID, not an address — and says how it went.
+      fireEvent.click(block.getByRole("button", { name: "federation.devices.id.copy" }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith("local"));
+      expect(await block.findByRole("status")).toHaveTextContent("federation.copied");
+    } finally {
+      Reflect.deleteProperty(navigator, "clipboard");
+    }
+  });
 });
 
 describe("independent browsing and safe mapping edits", () => {
+  it("links to the Multi-device library by what the link does, apart from the panel's title", () => {
+    renderPage();
+    const panel = screen.getByTestId("browsing-switch").closest("#library-browsing")!;
+
+    expect(within(panel as HTMLElement).getByRole("link")).toHaveAccessibleName(
+      "federation.browsing.open",
+    );
+    expect(within(panel as HTMLElement).getByRole("link")).toHaveAttribute("href", "/federation");
+  });
   it("turns off browsing without changing sharing, pairings or mappings", async () => {
     renderPage();
     fireEvent.click(screen.getByText("federation.browsing.disable"));
@@ -208,7 +264,7 @@ describe("independent browsing and safe mapping edits", () => {
     expect(federationPeerApi.forget).not.toHaveBeenCalled();
     expect(federationPeerApi.revoke).not.toHaveBeenCalled();
     expect(federationPeerApi.mappings).not.toHaveBeenCalled();
-    expect(screen.getByText("federation.devices.known")).toBeInTheDocument();
+    expect(screen.getByTestId("sharing-outbound")).toBeInTheDocument();
   });
   it.each(["keep", "replace"])(
     "requires an explicit %s decision before changing an existing mapping",
@@ -366,8 +422,72 @@ describe("action feedback", () => {
 
     expect(feedback).toHaveClass("sticky", "top-0");
     expect(feedback).toHaveTextContent("Browsing failed");
+    // Stuck in the content's column, beside the nav rather than over it.
+    const column = feedback.parentElement!;
+
+    expect(column).toContainElement(screen.getByTestId("devices-panel"));
+    expect(column).not.toContainElement(screen.getByTestId("devices-nav"));
     fireEvent.click(within(feedback).getByLabelText("federation.dismiss"));
     expect(screen.queryByTestId("federation-feedback")).not.toBeInTheDocument();
+  });
+  it("keeps what a link brings into view below it, and leaves a notice behind on the next link", () => {
+    const FEEDBACK_HEIGHT = 48;
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const height = this.dataset.testid === "federation-feedback" ? FEEDBACK_HEIGHT : 0;
+
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: height,
+          width: 0,
+          height,
+        } as DOMRect;
+      });
+
+    try {
+      const request = pairingRequest({ requestId: "outgoing-request", direction: "outgoing" });
+      const page = () => (
+        <MemoryRouter initialEntries={[SHARING]}>
+          <DevicesPage />
+        </MemoryRouter>
+      );
+      const offset = () =>
+        screen.getByTestId("devices-page").style.getPropertyValue("--devices-scroll-offset");
+
+      withRequests([request]);
+      const { rerender } = render(page());
+
+      expect(offset()).toBe("16px");
+      // The server claimed it in the background: the page says so, stuck at the top.
+      withRequests([{ ...request, status: "granted" }]);
+      rerender(page());
+      expect(screen.getByTestId("federation-feedback")).toHaveTextContent(
+        "federation.pair.granted",
+      );
+      expect(offset()).toBe(`${FEEDBACK_HEIGHT + 16}px`);
+      // Every place a link or the nav brings into view keeps that much clear above it.
+      const clear = "scroll-mt-[var(--devices-scroll-offset,1rem)]";
+
+      expect(screen.getByRole("heading", { level: 2 })).toHaveClass(clear);
+      expect(document.getElementById("library-connect")).toHaveClass(clear);
+      expect(document.getElementById("library-share")).toHaveClass(clear);
+      // The notice said how something went, where it went: the next link leaves it behind.
+      fireEvent.click(
+        within(screen.getByTestId("devices-nav")).getByRole("link", {
+          name: /federation\.devices\.tab\.device/,
+        }),
+      );
+      expect(screen.getByTestId("devices-panel")).toHaveAttribute("data-section", "device");
+      expect(screen.queryByTestId("federation-feedback")).not.toBeInTheDocument();
+      expect(offset()).toBe("16px");
+    } finally {
+      rect.mockRestore();
+    }
   });
 });
 
@@ -375,6 +495,10 @@ describe("pairing requests", () => {
   it("asks this device to decide an incoming request and shows where it came from", async () => {
     withRequests([pairingRequest({ remoteAddress: "192.168.1.20", replacesExistingAccess: true })]);
     renderPage();
+    // The place the notification's link lands on is named by its heading.
+    expect(screen.getByTestId("sharing-requests")).toHaveAccessibleName(
+      "federation.requests.incomingTitle",
+    );
     expect(screen.getByText(/federation\.requests\.awaitingYourApproval/)).toBeInTheDocument();
     expect(screen.queryByText(/federation\.pair\.awaitingApproval/)).not.toBeInTheDocument();
     expect(screen.getByText("federation.requests.from 192.168.1.20")).toBeInTheDocument();
@@ -397,6 +521,26 @@ describe("pairing requests", () => {
     expect(screen.getByRole("alertdialog")).toHaveTextContent("federation.requests.approveConfirm");
     expect(screen.getByRole("alertdialog")).not.toHaveTextContent("replacesExisting");
   });
+  it("says what this device did with an incoming request it decided, never the requester's outcome", () => {
+    withRequests([
+      pairingRequest({ requestId: "allowed", nodeName: "Laptop", status: "granted" }),
+      pairingRequest({ requestId: "refused", nodeName: "Tablet", status: "rejected" }),
+      pairingRequest({ requestId: "mine", direction: "outgoing", status: "granted" }),
+    ]);
+    renderPage();
+    const incoming = screen.getByTestId("sharing-requests");
+
+    // Listed here until they expire: this device allowed one and rejected the other.
+    expect(within(incoming).getByText("federation.requests.incomingGranted")).toBeInTheDocument();
+    expect(within(incoming).getByText("federation.requests.incomingRejected")).toBeInTheDocument();
+    // "You can now browse it" and "the other side rejected" are the requester's words.
+    expect(within(incoming).queryByText(/federation\.pair\./)).not.toBeInTheDocument();
+    expect(within(incoming).queryByText("federation.requests.approve")).not.toBeInTheDocument();
+    // A request this device sent still says how the other side answered.
+    expect(
+      within(screen.getByTestId("sharing-outgoing-requests")).getByText("federation.pair.granted"),
+    ).toBeInTheDocument();
+  });
   it("cancels an outgoing pending request and keeps the manual approval check", async () => {
     const refresh = withRequests([pairingRequest({ direction: "outgoing", requestId: "mine" })]);
 
@@ -405,7 +549,7 @@ describe("pairing requests", () => {
     expect(screen.getByText("federation.requests.check")).toBeInTheDocument();
     fireEvent.click(screen.getByText("federation.requests.cancel"));
     await waitFor(() => expect(federationPeerApi.cancelRequest).toHaveBeenCalledWith("mine"));
-    await waitFor(() => expect(refresh).toHaveBeenCalledWith());
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(federationPeerApi.claim).not.toHaveBeenCalled();
     expect(federationPeerApi.decide).not.toHaveBeenCalled();
   });
@@ -442,14 +586,17 @@ describe("background polling", () => {
     expect(federationPeerApi.claim).toHaveBeenCalledWith("outgoing", expect.any(AbortSignal));
     expect(refresh).toHaveBeenCalledWith({ quiet: true });
     expect(screen.getByText("Browsing failed")).toBeInTheDocument();
-    expect(screen.queryByText("federation.pair.awaitingApproval")).not.toBeInTheDocument();
+    // Still waiting is not news: the request's own row says so, the feedback does not.
+    expect(screen.getByTestId("federation-feedback")).not.toHaveTextContent(
+      "federation.pair.awaitingApproval",
+    );
     expect(screen.getByText("federation.requests.approve")).not.toBeDisabled();
   });
   it("reports a decided request without touching what the user is typing", async () => {
     const refresh = withRequests([pairingRequest({ direction: "outgoing" })]);
 
     vi.mocked(federationPeerApi.claim).mockResolvedValue({ outcome: "granted" } as PairingResult);
-    renderPage();
+    renderPage(CONNECT);
     const code = screen.getByLabelText("federation.pair.code");
 
     fireEvent.change(code, { target: { value: "123456" } });
@@ -488,7 +635,8 @@ describe("background polling", () => {
     await advance(4000);
     expect(federationPeerApi.claim).not.toHaveBeenCalled();
     expect(refresh).not.toHaveBeenCalled();
-    await advance(11_000);
+    // A request waits for an answer here, so status is read again every five seconds.
+    await advance(1000);
     expect(refresh).toHaveBeenCalledOnce();
     expect(refresh).toHaveBeenCalledWith({ quiet: true });
     Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
@@ -510,7 +658,7 @@ describe("unreadable sharing state", () => {
     renderPage();
     expect(screen.getByText("federation.recovery.title")).toBeInTheDocument();
     expect(screen.queryByText("federation.browsing.title")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText("federation.identity.reset"));
+    fireEvent.click(screen.getByText("federation.recovery.reset"));
     expect(screen.getByRole("alertdialog")).toHaveTextContent("federation.recovery.confirm");
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("federation.confirm"));
@@ -527,7 +675,7 @@ describe("unreadable sharing state", () => {
     });
     renderPage();
     expect(screen.queryByText("federation.recovery.title")).not.toBeInTheDocument();
-    expect(screen.queryByText("federation.identity.reset")).not.toBeInTheDocument();
+    expect(screen.queryByText("federation.recovery.reset")).not.toBeInTheDocument();
     expect(screen.getByTestId("federation-feedback")).toHaveTextContent("Failed");
   });
 });
@@ -561,9 +709,10 @@ describe("enabling sharing", () => {
   it.each([1, 2])("leaves remote-access mode %s alone unless asked", async (mode) => {
     withStatus({ remoteAccessMode: mode as FederationStatus["remoteAccessMode"] });
     renderPage();
+    // Remote access is already on: there is nothing to turn on with sharing.
     expect(
-      screen.getByRole("checkbox", { name: "federation.sharing.configureRemote" }),
-    ).not.toBeChecked();
+      screen.queryByRole("checkbox", { name: "federation.sharing.configureRemote" }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("federation.sharing.start"));
     expect(screen.getByRole("alertdialog")).toHaveTextContent("federation.sharing.confirm");
     expect(screen.getByRole("alertdialog")).not.toHaveTextContent("confirmWithRemote");
@@ -573,8 +722,29 @@ describe("enabling sharing", () => {
 });
 
 describe("this device's address", () => {
-  const addresses = ["http://192.168.1.5:34567", "http://10.0.0.2:34567"];
   const writeText = vi.fn();
+  /** What the server lists: every port on every interface, in its own order. */
+  const listed = [
+    { url: "http://198.18.0.1:34567", interfaceName: "utun4" },
+    { url: "http://198.18.0.1:5000", interfaceName: "utun4" },
+    { url: "http://192.168.1.5:34567", interfaceName: "en0" },
+    { url: "http://192.168.1.5:5000", interfaceName: "en0" },
+    { url: "http://100.101.1.2:34567", interfaceName: "utun7" },
+    { url: "http://192.168.128.1:34567", interfaceName: "bridge100" },
+    { url: "http://169.254.3.4:34567", interfaceName: "en5" },
+  ];
+  const withSettings = (mode: number, addresses = listed) =>
+    vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockResolvedValue({
+      code: 0,
+      data: {
+        mode,
+        addresses,
+        allowLiveTranscode: false,
+        requirePairing: true,
+        devices: [],
+        pendingRequests: [],
+      },
+    } as never);
 
   beforeEach(() => {
     writeText.mockReset();
@@ -582,54 +752,137 @@ describe("this device's address", () => {
   });
   afterEach(() => Reflect.deleteProperty(navigator, "clipboard"));
 
-  it("lists every reachable address next to the code, each with a copy action", async () => {
-    writeText.mockResolvedValue(undefined);
+  it("recommends one address, lists one row per host, and folds away what cannot be reached", async () => {
+    withSettings(1);
+    renderPage("/federation/devices");
+    const list = await screen.findByTestId("device-addresses");
+
+    expect(list).toHaveAttribute("data-context", "device");
+    const recommended = within(list).getByTestId("device-address-recommended");
+
+    expect(recommended).toHaveTextContent("http://192.168.1.5:34567");
+    expect(recommended).toHaveTextContent("federation.devices.addresses.recommended");
+    // A VPN address is shown, and says what it is; other ports of the same host are not.
+    expect(within(list).getByText("http://100.101.1.2:34567")).toBeInTheDocument();
+    expect(within(list).getByText(/federation\.devices\.addresses\.vpn/)).toBeInTheDocument();
+    expect(within(list).queryByText(/:5000$/)).not.toBeInTheDocument();
+    // Adapters another device cannot reach wait behind a disclosure, labelled.
+    expect(within(list).queryByText("http://198.18.0.1:34567")).not.toBeInTheDocument();
+    const more = within(within(list).getByTestId("device-address-more")).getByRole("button", {
+      name: "federation.devices.addresses.more",
+    });
+
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(more);
+    expect(within(list).getByText("http://198.18.0.1:34567")).toBeInTheDocument();
+    expect(within(list).getByText("http://192.168.128.1:34567")).toBeInTheDocument();
+    expect(within(list).getByText("http://169.254.3.4:34567")).toBeInTheDocument();
+    expect(within(list).getAllByText(/federation\.devices\.addresses\.virtual/)).toHaveLength(2);
+    expect(within(list).getByText(/federation\.devices\.addresses\.linkLocal/)).toBeInTheDocument();
+  });
+  it("copies an address and says whether it could", async () => {
+    writeText.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("denied"));
+    withSettings(1);
+    renderPage("/federation/devices");
+    const recommended = await screen.findByTestId("device-address-recommended");
+
+    // Named by what it copies, beside the word it shows.
+    const button = within(recommended).getByRole("button", {
+      name: "federation.copy http://192.168.1.5:34567",
+    });
+    const list = screen.getByTestId("device-addresses");
+    const announced = within(list).getByRole("status");
+
+    expect(announced.textContent).toBe("");
+    fireEvent.click(button);
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("http://192.168.1.5:34567"));
+    expect(await within(recommended).findByText("federation.copied")).toBeInTheDocument();
+    // …and says how it went where a screen reader hears it.
+    expect(announced).toHaveTextContent("federation.copied");
+    fireEvent.click(within(recommended).getByText("federation.copied"));
+    expect(await within(recommended).findByText("federation.copyFailed")).toBeInTheDocument();
+    expect(announced).toHaveTextContent("federation.copyFailed");
+    // Named by its own title, once: by the place a link lands on, which holds the list.
+    expect(list).not.toHaveAttribute("aria-label");
+    expect(list).not.toHaveAttribute("role");
+    expect(
+      screen.getByRole("region", { name: "federation.devices.addresses.title" }),
+    ).toContainElement(list);
+  });
+  it("names the place a link lands on while the addresses are still on their way", () => {
+    vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockReturnValueOnce(
+      new Promise(() => {}) as never,
+    );
+    renderPage("/federation/devices");
+    const place = screen.getByRole("region", { name: "federation.devices.addresses.title" });
+
+    expect(place).toHaveAttribute("id", "device-addresses");
+    expect(place).toHaveTextContent("federation.loading");
+  });
+  it("greys the addresses out while remote access is off, and says where to turn it on", async () => {
+    withSettings(0);
+    renderPage("/federation/devices");
+    const list = await screen.findByTestId("device-addresses");
+
+    expect(list).toHaveTextContent("federation.devices.addresses.remoteOff");
+    const link = within(list).getByRole("link", {
+      name: "federation.devices.openManagementAccess",
+    });
+
+    expect(link).toHaveAttribute("href", "/federation/devices?section=management");
+    // Only the addresses are greyed out: the warning and its link keep their contrast.
+    expect(within(list).getByTestId("device-address-recommended")).toHaveClass("opacity-60");
+    for (let element: HTMLElement | null = link; element; element = element.parentElement)
+      expect(element).not.toHaveClass("opacity-60");
+  });
+  it("points at the network when no address was found", async () => {
+    withSettings(1, []);
+    renderPage("/federation/devices");
+    expect(await screen.findByText("federation.devices.addresses.none")).toBeInTheDocument();
+  });
+  it("puts the recommended address next to a new share code", async () => {
     vi.mocked(federationPeerApi.invite).mockResolvedValue({
       code: "482913",
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
     });
-    withStatus({ sharingEnabled: true, remoteAccessMode: 1, reachableAddresses: addresses });
+    withSettings(1);
+    withStatus({ sharingEnabled: true, remoteAccessMode: 1 });
     renderPage();
-    const group = screen.getByRole("group", { name: "federation.sharing.addresses" });
+    const list = await screen.findByTestId("device-addresses");
 
-    expect(within(group).getByText(addresses[0])).toBeInTheDocument();
-    expect(within(group).getByText(addresses[1])).toBeInTheDocument();
+    expect(list).toHaveAttribute("data-context", "sharing");
+    expect(within(list).getByTestId("device-address-recommended")).toHaveTextContent(
+      "http://192.168.1.5:34567",
+    );
+    // Where a new code will be said: there, and silent, before one is made.
+    const announced = screen.getByTestId("invite-code");
+
+    expect(announced).toHaveAttribute("role", "status");
+    expect(announced.textContent).toBe("");
     fireEvent.click(screen.getByText("federation.sharing.issueCode"));
     expect(await screen.findByText("482913")).toBeInTheDocument();
-    expect(group.parentElement).toContainElement(screen.getByText("482913"));
-    fireEvent.click(within(group).getAllByText("federation.copy")[1]);
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith(addresses[1]));
-    expect(await within(group).findByText("federation.copied")).toBeInTheDocument();
-  });
-  it("says so when the address could not be copied", async () => {
-    writeText.mockRejectedValue(new Error("denied"));
-    withStatus({ sharingEnabled: true, remoteAccessMode: 1, reachableAddresses: addresses });
-    renderPage();
-    fireEvent.click(screen.getAllByText("federation.copy")[0]);
-    expect(await screen.findByText("federation.copyFailed")).toBeInTheDocument();
-  });
-  it("explains that remote access must be enabled when no address is reachable", () => {
-    withStatus({ sharingEnabled: true, remoteAccessMode: 0, reachableAddresses: undefined });
-    renderPage();
-    const group = screen.getByRole("group", { name: "federation.sharing.addresses" });
-
-    expect(group).toHaveTextContent("federation.sharing.remoteDisabled");
-    fireEvent.click(within(group).getByText("federation.sharing.configureRemote"));
-    expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      "federation.sharing.confirmWithRemote",
+    expect(list.parentElement?.parentElement).toContainElement(screen.getByText("482913"));
+    // Said as it appears — what it is, the digits and until when — while the button that
+    // made it keeps focus and its own name.
+    expect(announced).toHaveTextContent(
+      /^federation\.sharing\.codeLabel\s*482913\s*federation\.expires$/,
     );
   });
-  it("points at the network when remote access is on but no address was found", () => {
-    withStatus({ sharingEnabled: true, remoteAccessMode: 1, reachableAddresses: [] });
+  it("explains that remote access must be turned on while sharing is on and it is off", () => {
+    withStatus({ sharingEnabled: true, remoteAccessMode: 0 });
     renderPage();
-    expect(screen.getByText("federation.sharing.noAddress")).toBeInTheDocument();
-    expect(screen.queryByText("federation.sharing.remoteDisabled")).not.toBeInTheDocument();
+    expect(screen.getByText("federation.sharing.remoteDisabled")).toBeInTheDocument();
+    expect(screen.queryByTestId("device-addresses")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("federation.sharing.enableRemote"));
+    // Sharing is on already: the question is about remote access, and what it lets back in.
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "federation.sharing.enableRemoteConfirm",
+    );
+    expect(screen.getByRole("alertdialog")).not.toHaveTextContent("confirmWithRemote");
   });
-  it("shows no address while sharing is off", () => {
+  it("offers no code while sharing is off", () => {
     renderPage();
-    expect(
-      screen.queryByRole("group", { name: "federation.sharing.addresses" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("federation.sharing.issueCode")).not.toBeInTheDocument();
   });
 });
 
@@ -639,7 +892,7 @@ describe("device name", () => {
   it("renames this device and refreshes status", async () => {
     const refresh = withStatus({});
 
-    renderPage();
+    renderPage("/federation/devices");
     fireEvent.click(screen.getByText("federation.name.edit"));
     fireEvent.change(screen.getByLabelText("federation.name.label"), {
       target: { value: "  Study PC " },
@@ -650,7 +903,7 @@ describe("device name", () => {
     expect(screen.queryByLabelText("federation.name.label")).not.toBeInTheDocument();
   });
   it("resets to the computer name", async () => {
-    renderPage();
+    renderPage("/federation/devices");
     fireEvent.click(screen.getByText("federation.name.edit"));
     fireEvent.click(screen.getByText("federation.name.reset"));
     await waitFor(() => expect(federationPeerApi.setName).toHaveBeenCalledWith(null));
@@ -659,7 +912,7 @@ describe("device name", () => {
     vi.mocked(federationPeerApi.setName).mockRejectedValueOnce(
       new FederationError("InvalidDeviceName", "Bad name", 400),
     );
-    renderPage();
+    renderPage("/federation/devices");
     fireEvent.click(screen.getByText("federation.name.edit"));
     fireEvent.click(nameForm().getByText("federation.save"));
     expect(await screen.findByText("Bad name")).toBeInTheDocument();
@@ -669,7 +922,8 @@ describe("device name", () => {
 
 describe("connecting with share-back", () => {
   const connectTo = (address: string) => {
-    fireEvent.change(screen.getByPlaceholderText("192.168.1.5:34567"), {
+    // Suggested in the same form as the management form's, as the address list shows it.
+    fireEvent.change(screen.getByPlaceholderText("http://192.168.1.5:34567"), {
       target: { value: address },
     });
     fireEvent.click(screen.getByText("federation.pair.request"));
@@ -680,7 +934,7 @@ describe("connecting with share-back", () => {
     vi.mocked(federationPeerApi.connect).mockResolvedValue({
       outcome: "awaitingApproval",
     } as PairingResult);
-    renderPage();
+    renderPage(CONNECT);
     expect(shareBack()).toBeChecked();
     expect(shareBack()).toHaveAccessibleName(/federation\.pair\.shareBackTipRemote/);
     expect(screen.queryByText("federation.pair.directionTip")).not.toBeInTheDocument();
@@ -694,7 +948,7 @@ describe("connecting with share-back", () => {
       outcome: "awaitingApproval",
     } as PairingResult);
     withStatus({ remoteAccessMode: 1 });
-    renderPage();
+    renderPage(CONNECT);
     expect(shareBack()).toHaveAccessibleName(/federation\.pair\.shareBackTip$/);
     fireEvent.click(shareBack());
     expect(screen.getByText("federation.pair.directionTip")).toBeInTheDocument();
@@ -732,7 +986,11 @@ describe("reciprocal requests", () => {
 describe("removing a device", () => {
   it("removes both directions only after confirmation, separately from the one-way actions", async () => {
     renderPage();
-    fireEvent.click(screen.getByText("federation.devices.remove"));
+    // A device holding both grants is in both lists, each with that direction's actions.
+    expect(screen.getAllByText("federation.devices.remove")).toHaveLength(2);
+    fireEvent.click(
+      within(screen.getByTestId("sharing-outbound")).getByText("federation.devices.remove"),
+    );
     expect(screen.getByRole("alertdialog")).toHaveTextContent("federation.devices.removeConfirm");
     expect(federationPeerApi.remove).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("federation.confirm"));
@@ -747,7 +1005,7 @@ describe("removing a device", () => {
 describe("discovery", () => {
   it("explains how to become discoverable when the scan finds nothing", async () => {
     vi.mocked(federationPeerApi.discover).mockResolvedValue([]);
-    renderPage();
+    renderPage(CONNECT);
     fireEvent.click(screen.getByText("federation.discovery.scan"));
     expect(await screen.findByText("federation.discovery.noneFound")).toBeInTheDocument();
     expect(screen.queryByText("federation.discovery.use")).not.toBeInTheDocument();
@@ -759,7 +1017,7 @@ describe("discovery", () => {
     vi.mocked(federationPeerApi.discover).mockResolvedValue([
       { nodeId: "local", name: "Other PC", address: "http://192.168.1.9:34567" },
     ]);
-    renderPage();
+    renderPage(CONNECT);
     fireEvent.click(screen.getByText("federation.discovery.scan"));
     fireEvent.click(await screen.findByText("federation.discovery.use"));
     expect(screen.getByDisplayValue("http://192.168.1.9:34567")).toBeInTheDocument();

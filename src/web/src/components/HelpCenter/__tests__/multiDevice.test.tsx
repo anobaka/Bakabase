@@ -117,7 +117,6 @@ describe("multi-device help topic: registration", () => {
       "management",
       "pathMapping",
       "remoteAccess",
-      "thinClient",
     ]);
   });
 });
@@ -145,7 +144,6 @@ describe("multi-device help topic: sections", () => {
     expect(document.querySelector('[data-track="browse"]')).not.toBeNull();
     expect(document.querySelector('[data-track="manage"]')).not.toBeNull();
     expect(screen.getByText(k("setup.unrestricted"))).toBeInTheDocument();
-    expect(screen.getByText(k("setup.thinClient"))).toBeInTheDocument();
   });
 
   it("opens at the requested section, and ignores other topics' sections", () => {
@@ -303,10 +301,14 @@ describe("multi-device help topic: links to the devices pages", () => {
     const onNavigate = vi.fn();
 
     render(<MultiDeviceTopic section="setup" onNavigate={onNavigate} />);
+    // Each track opens the tab of the devices page it describes: allowing management on the
+    // device to be managed, adding it on this one, and library sharing.
     fireEvent.click(screen.getByRole("button", { name: k("open.management") }));
     expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=management");
+    fireEvent.click(screen.getByRole("button", { name: k("open.addServer") }));
+    expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=add-server");
     fireEvent.click(screen.getByRole("button", { name: k("open.devices") }));
-    expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices");
+    expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=sharing");
 
     openTab("browse");
     fireEvent.click(screen.getByRole("button", { name: k("open.library") }));

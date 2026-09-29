@@ -52,8 +52,9 @@ manage anything; they are only ever managed.
   navigation gets the console's unavailable page with the same reason, at the URL asked for.
   Remote access off (the gate's 403 `Disabled` before any identity) is carried on the check
   (`UpstreamIdentityCheck.RemoteAccessDisabled`): the page and the JSON message both say to
-  turn it on at that device under "Let other devices manage this device", never to check that
-  it is running. The listing reports `ManagedServerState.WrongServer` with `answeredBy` (never the other
+  turn it on at that device — on a computer under Devices and sharing → Management → Who may
+  manage this device, on a NAS or Docker (no devices page) under Configuration → Remote
+  access — never to check that it is running. The listing reports `ManagedServerState.WrongServer` with `answeredBy` (never the other
   server's name, mode or version as the server's own), and nothing is renamed, re-keyed or
   paired from such an answer. **The verdict never waits on the store**: an answer from the
   right server also keeps its stored name and `LastConnectedAt` current, but that write runs in
@@ -186,8 +187,8 @@ manage anything; they are only ever managed.
   frame and drive it.
 - **Trust is explicit and pairwise.** Managing B is a decision taken on B (approve or show a
   code). Nothing joins a device to others automatically. One known gap: a copy of a data
-  directory keeps the servers the original manages, keys included — "Create a new device
-  identity" leaves them — so each such server sees the two as one paired device. Revoking that
+  directory keeps the servers the original manages, keys included — "Make this a new device"
+  leaves them — so each such server sees the two as one paired device. Revoking that
   device there, or "stop managing" on either install (which asks the server to revoke it),
   ends management from both.
 - **Warn, never reconfigure.** A target in `RemoteAccessMode.Unrestricted` is flagged in the UI;
@@ -199,7 +200,8 @@ manage anything; they are only ever managed.
   address that is not this machine's **and** under another name than this device's own server
   gives itself (`server-info`'s name is the machine's, which a copied data directory does not
   carry): refused as `SameIdentity` (a managed server's address: `WrongServer` with
-  `IsSameIdentity`), whose message points at "Create a new device identity" — which replaces
+  `IsSameIdentity`), whose message points at Devices and sharing → Advanced → After copying or
+  restoring data → "Make this a new device" — which replaces
   the `ServerId`, forgets the devices paired under the old one, and gives the node the new id
   (headless: `federation new-identity`). This device's own name from such an address is this
   device through another door — a reverse proxy or port forward on another host, the router's
@@ -216,9 +218,6 @@ manage anything; they are only ever managed.
   read and "stop managing"'s revoke all ask first; a mismatch gets the handshake question and
   nothing else. "Stop managing" forgets the server here first and asks it to revoke this device
   afterwards, so an open racing it never hands out a ticket to a relay being stopped.
-- **Legacy import is read-only.** The thin client's `connection.json` is read from its own AppData
-  (`AppDataPathProfile.Client`, following its redirect) once at startup and on request; its file
-  is never written, and servers already managed here are never overwritten.
 - **Layering is enforced** by `src/scripts/check-release-contract.py`: the Service image ships no
   `Bakabase.Remoting` or YARP; the desktop app ships YARP only through `Bakabase.Remoting` and no
   `Bakabase.Client*` assembly.
@@ -228,10 +227,9 @@ manage anything; they are only ever managed.
 `Bakabase.Client.App` and `Bakabase.Client.Remoting` were removed while the product was in
 beta, together with their build, update feed, download manifest and frontend (connect page,
 updater banner, migration export); there is no deprecation path. Do not reintroduce them.
-What stays is deliberate:
+Its pairings are not imported either: a server it managed is paired again from the desktop
+app. What stays is deliberate:
 
-- the one-time import of an old install's pairings (`LegacyClientConnectionSource`, reading
-  `AppDataPathProfile.Client` from the Infrastructures submodule) and its manual re-run;
 - the console's `/client` API keeps the thin client's shape where the two mean the same thing,
   and answers its connect and pairing routes 409 `ManagedByHost` and everything else it had
   404 — a managed server's older UI, written for the thin client, may still call them;
@@ -241,7 +239,7 @@ What stays is deliberate:
 ## Tests
 
 - `src/tests/Bakabase.Tests/RemoteAccess/Console` — relays, console endpoints, store view,
-  pairing edge cases and request liveness, discovery, legacy import, key secrecy,
+  pairing edge cases and request liveness, discovery, key secrecy,
   `ConsoleDiagnosticsExposureTests` (a real `AppService` and log behind a relay, answered 404),
   and `RelayIdentityTests`: two real servers swapping one port under a real relay — after a
   restart, while a page is open, found by a probe, answering as this device (through another
@@ -272,8 +270,8 @@ What stays is deliberate:
 - Frontend: `yarn vitest run src/features/federation src/layouts`.
 - End to end: `src/tests/federation-browser-smoke/switching.cjs` (run by `run.py`, in CI's
   federation job) — Chromium against real hosts, the unified fixture composed as `UnifiedHost`
-  is: import of an old thin client's pairing (a real device key from the managed server's own
-  pairing API, in the thin client's file format — `legacy-client.cjs`), switch and back, a write on the managed server (pushed live
+  is: pairing by code from this device's devices page (a code the managed server issues on its
+  own loopback), switch and back, a write on the managed server (pushed live
   to its UI over the relay's hub WebSocket), path mapping and interception, stop managing and
   re-pair by request, and the relay page's containment — the relay page's WebSockets to this
   device's hub refused 403, and other pages' to the relay refused 400 before the managed server

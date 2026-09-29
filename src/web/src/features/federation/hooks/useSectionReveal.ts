@@ -38,8 +38,15 @@ export function useSectionReveal<T extends HTMLElement>(requested: boolean, read
   return { ref, highlighted };
 }
 
+/**
+ * Keeps what a link or the keyboard brings into view clear of the devices page's sticky
+ * feedback (WCAG 2.4.11): the page keeps `--devices-scroll-offset` at the feedback's height
+ * plus a gap (`DevicesPage`). Where the variable is not set, a plain gap is left.
+ */
+export const scrollOffsetClass = "scroll-mt-[var(--devices-scroll-offset,1rem)]";
+
 /** The mark a revealed section wears; the focus ring is replaced by it, not doubled. */
 export const revealClass = (highlighted: boolean) =>
-  `scroll-mt-2 outline-none transition-shadow duration-500 ${
+  `${scrollOffsetClass} outline-none transition-shadow duration-500 ${
     highlighted ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
   }`;
