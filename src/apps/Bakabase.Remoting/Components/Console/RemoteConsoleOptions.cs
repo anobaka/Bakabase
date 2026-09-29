@@ -96,18 +96,9 @@ public sealed class RemoteConsoleOptions
     /// </summary>
     public DualStackConnector Connector { get; set; } = DualStackConnector.Default;
 
-    /// <summary>Whether starting up brings over the removed thin client's pairings, once.</summary>
-    public bool ImportLegacyClientOnStart { get; set; } = true;
-
     /// <summary>
     /// Where the managed-server store lives. Null for <c>{AppData}/remote-access/managed</c>,
     /// next to the server's own remote-access state.
     /// </summary>
     public string? ManagedDirectory { get; set; }
-
-    /// <summary>
-    /// The removed thin client's <c>connection.json</c>. Null to find it the way the thin
-    /// client itself did — see <see cref="LegacyClientConnectionSource.ResolveDefaultFile"/>.
-    /// </summary>
-    public Func<string?>? LegacyClientConnectionFile { get; set; }
 }

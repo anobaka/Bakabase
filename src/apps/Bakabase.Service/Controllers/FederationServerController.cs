@@ -117,12 +117,6 @@ public sealed class FederationServerController : FederationControllerBase
             "This device does not manage that server."));
     }
 
-    [HttpPost("import-legacy-client")]
-    [SwaggerOperation(OperationId = "ImportLegacyClientServers")]
-    [ProducesResponseType(typeof(ManagedServerImportView), 200)]
-    public async Task<IActionResult> ImportLegacyClient(CancellationToken ct) =>
-        FederationResult(await Required.ImportFromLegacyClientAsync(ct));
-
     /// <summary>
     /// Answers a body that does not bind in the federation error shape, like every other
     /// refusal on these routes, instead of MVC's validation or media-type problem.

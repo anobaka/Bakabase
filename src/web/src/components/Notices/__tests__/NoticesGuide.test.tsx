@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import type * as Registry from "../registry";
 
 import { act } from "@testing-library/react";
 import { Children, forwardRef, isValidElement } from "react";
@@ -42,6 +43,13 @@ vi.mock("@/sdk/BApi", () => ({
   },
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => api.navigate }));
+// Two notices, the second going to a page (see fixtureNotices).
+vi.mock("../registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof Registry>();
+  const { fixtureRegistry } = await import("./fixtureNotices");
+
+  return { ...actual, notices: fixtureRegistry(actual.notices) };
+});
 vi.mock("@/components/bakaui", () => ({
   Button: forwardRef<
     HTMLButtonElement,
@@ -217,13 +225,13 @@ describe("the guide a notice opens", () => {
     await renderStartup();
     await click("notices.item.multiDevice.action");
 
-    // The help center's own list of notices, and the thin client notice's action there.
+    // The help center's own list of notices, and the other notice's action there.
     await click("helpCenter.topic.notices");
-    await click("notices.item.thinClient.action");
+    await click("notices.item.fixture.action");
 
     expect(api.navigate).toHaveBeenCalledWith("/federation/devices?section=servers");
     expect(dialogs()).toEqual([]);
-    expect(serverReadIds).toEqual(["multi-device", "thin-client-discontinued"]);
+    expect(serverReadIds).toEqual(["multi-device", "fixture-route-notice"]);
     expect(localStorage.getItem(LAST_SEEN_KEY)).toBe("2.3.0");
   });
 
@@ -235,6 +243,6 @@ describe("the guide a notice opens", () => {
 
     expect(api.navigate).not.toHaveBeenCalled();
     expect(dialogs()).toEqual(["notices.dialog.title"]);
-    expect(noticeOnScreen()).toBe("thin-client-discontinued");
+    expect(noticeOnScreen()).toBe("fixture-route-notice");
   });
 });

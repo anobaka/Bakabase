@@ -987,9 +987,6 @@ function ManagementSection({ context, node }: { context: PanelContext; node: Map
               >
                 {t(`federation.servers.state.${server.state}`)}
               </span>
-              {server.importedFromLegacyClient && (
-                <span className="text-xs text-default-400">{t("federation.servers.imported")}</span>
-              )}
             </div>
             <ManagedServerWarnings
               busy={busy}

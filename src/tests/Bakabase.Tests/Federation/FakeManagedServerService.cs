@@ -20,7 +20,7 @@ internal sealed class FakeManagedServerService : IManagedServerService
     public static readonly ManagedServerView Server = new(KnownServerId, "Living room NAS",
         "http://192.168.1.5:34567", new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc), null,
         [new ManagedServerPathMapping("/volume1/media", @"Z:\media")], ManagedServerState.Online,
-        RemoteAccessMode.Unrestricted, "2.4.0", ImportedFromLegacyClient: true);
+        RemoteAccessMode.Unrestricted, "2.4.0");
 
     public Task<ManagedServersView> GetAsync(bool probe, CancellationToken ct = default)
     {
@@ -91,11 +91,5 @@ internal sealed class FakeManagedServerService : IManagedServerService
         return Task.FromResult(serverId == KnownServerId
             ? new ManagedServerOpenView($"http://127.0.0.1:34650{path ?? "/"}?__bakabase_switch=token")
             : null);
-    }
-
-    public Task<ManagedServerImportView> ImportFromLegacyClientAsync(CancellationToken ct = default)
-    {
-        Calls.Enqueue("Import");
-        return Task.FromResult(new ManagedServerImportView(true, 2, 1));
     }
 }

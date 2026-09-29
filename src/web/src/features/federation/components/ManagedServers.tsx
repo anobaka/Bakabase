@@ -352,30 +352,6 @@ export default function ManagedServersSection({
           >
             {t("federation.servers.refresh")}
           </button>
-          <button
-            className={buttonClass}
-            disabled={busy}
-            type="button"
-            onClick={() =>
-              void run(async () => {
-                const result = await managedServerApi.importLegacyClient();
-
-                if (!mounted.current) return;
-                setNotice(
-                  !result.found
-                    ? t("federation.servers.import.notFound")
-                    : result.imported > 0
-                      ? t("federation.servers.import.done", {
-                          imported: result.imported,
-                          skipped: result.skipped,
-                        })
-                      : t("federation.servers.import.nothingNew", { skipped: result.skipped }),
-                );
-              })
-            }
-          >
-            {t("federation.servers.import.action")}
-          </button>
         </div>
       </div>
       {(error || notice) && (
@@ -635,9 +611,6 @@ function ManagedServerCard({
             {server.address}
             {server.appVersion ? ` · v${server.appVersion}` : ""}
           </p>
-          {server.importedFromLegacyClient && (
-            <p className="mt-1 text-xs text-default-400">{t("federation.servers.imported")}</p>
-          )}
         </div>
         <span className={`rounded-md px-2 py-1 text-xs ${stateBadgeClass[server.state] ?? ""}`}>
           {t(`federation.servers.state.${server.state}`)}

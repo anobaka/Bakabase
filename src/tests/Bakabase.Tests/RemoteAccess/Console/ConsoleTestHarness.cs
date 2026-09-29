@@ -61,12 +61,10 @@ internal sealed class ConsoleHarness : IAsyncDisposable
     public string ManagedFile => Path.Combine(ManagedDirectory, "connection.json");
 
     /// <param name="root">Reuse a previous harness's directory, i.e. restart the app.</param>
-    /// <param name="legacyFile">Where the removed thin client's connection file is, if anywhere.</param>
     /// <param name="services">Anything else the app's container should hold, e.g. its GUI adapter.</param>
     /// <param name="options">Changes to the console's composition-time settings, after the harness's own.</param>
-    public static async Task<ConsoleHarness> StartAsync(string? root = null, string? legacyFile = null,
-        bool importOnStart = false, int? servicePort = null, Action<IServiceCollection>? services = null,
-        Action<RemoteConsoleOptions>? options = null)
+    public static async Task<ConsoleHarness> StartAsync(string? root = null, int? servicePort = null,
+        Action<IServiceCollection>? services = null, Action<RemoteConsoleOptions>? options = null)
     {
         var harness = new ConsoleHarness
         {
@@ -91,8 +89,6 @@ internal sealed class ConsoleHarness : IAsyncDisposable
         {
             o.ManagedDirectory = harness.ManagedDirectory;
             o.FirstRelayPort = FirstRelayPort;
-            o.LegacyClientConnectionFile = () => legacyFile;
-            o.ImportLegacyClientOnStart = importOnStart;
             o.ClaimPollInterval = TimeSpan.FromMilliseconds(50);
             options?.Invoke(o);
         });
@@ -106,8 +102,6 @@ internal sealed class ConsoleHarness : IAsyncDisposable
         {
             await hosted.StartAsync(CancellationToken.None);
         }
-
-        await harness.Manager.Startup;
 
         return harness;
     }

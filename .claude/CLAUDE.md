@@ -6,7 +6,7 @@ Local media manager for organizing files of any type.
 
 - **Bakabase/** - Main application
   - `src/web/` - React frontend (TypeScript)
-  - `src/apps/Bakabase.App/` - C# all-in-one desktop entry point (process entry + packaging inputs). Ships as `Bakabase.exe`. Every PC install is this app: it runs its own server and can switch its window to other servers it manages. The thin client (`Bakabase.Client.App`/`Bakabase.Client.Remoting`) was removed; the app still imports an old install's pairings once
+  - `src/apps/Bakabase.App/` - C# all-in-one desktop entry point (process entry + packaging inputs). Ships as `Bakabase.exe`. Every PC install is this app: it runs its own server and can switch its window to other servers it manages. The thin client (`Bakabase.Client.App`/`Bakabase.Client.Remoting`) was removed during the beta; there is no compatibility path for it
   - `src/apps/Bakabase.Shell/` - C# Avalonia shell (windows, tray, exit coordination, embedded browser). Talks to a host only through `IShellHost` (and optional abstractions such as `IMainViewSwitcher`); must not reference `Bakabase.Service` or `Bakabase.Remoting`
   - `src/apps/Bakabase.Remoting/` - C# relay to a server on **another machine**: signed loopback forwarding (YARP), pairing, path mapping, user-machine handlers, and the per-server relays the all-in-one uses to show and manage other servers. Must not reference `Bakabase.Service`, `Bakabase.Modules.Federation`, `Bakabase.Shell` or Avalonia
   - `src/apps/Bakabase.Service/` - C# HTTP API layer

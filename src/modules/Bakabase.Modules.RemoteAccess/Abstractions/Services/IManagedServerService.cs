@@ -64,11 +64,4 @@ public interface IManagedServerService
     /// <param name="path">A path on the server's UI to land on, e.g. <c>/resource</c>. Defaults to its root.</param>
     /// <returns>Null for a server this device does not manage.</returns>
     Task<ManagedServerOpenView?> OpenAsync(string serverId, string? path, CancellationToken ct = default);
-
-    /// <summary>
-    /// Brings over the servers the removed thin client on this machine was paired with,
-    /// keys included, so nothing has to be paired again. Runs once on its own at startup;
-    /// this re-runs it on request. Never overwrites a server already managed here.
-    /// </summary>
-    Task<ManagedServerImportView> ImportFromLegacyClientAsync(CancellationToken ct = default);
 }

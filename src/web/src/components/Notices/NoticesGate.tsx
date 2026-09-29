@@ -69,8 +69,8 @@ const NoticesGate = () => {
   const engaged = !!viewer && !dismissed && !startupDone;
 
   useEffect(() => {
-    if (engaged && viewer) void load(viewer);
-  }, [engaged, viewer, load]);
+    if (engaged) void load();
+  }, [engaged, load]);
 
   const pending = useMemo(
     () =>

@@ -1,8 +1,7 @@
 // Drives production web assets and real Service listeners; no mocked API responses.
 const { chromium } = require('playwright');
 const serverSwitching = require('./switching.cjs');
-const firstLaunchImport = require('./first-launch.cjs');
-const legacyClientPairing = require('./legacy-client.cjs');
+const firstLaunch = require('./first-launch.cjs');
 const { LAUNCH_ARGS, confine, proveConfinement, assertStayedLocal, assertNoAnalytics } = require('./network.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -183,10 +182,7 @@ async function federation(browser) {
     const refusedCanary = await proveConfinement(browser, unified.base);
     const report = await federation(browser);
     report.networkConfinementProven = refusedCanary;
-    // What an old thin client left on this machine: its pairing with the source. Both stages
-    // below import it; see legacy-client.cjs.
-    report.legacyClientPairing = await legacyClientPairing({ config });
-    report.firstLaunchImport = await firstLaunchImport({ browser, config });
+    report.firstLaunch = await firstLaunch({ browser, config });
     report.serverSwitching = await serverSwitching({ browser, config, artifacts });
     fs.writeFileSync(artifacts('result.json'), JSON.stringify(report, null, 2));
     console.log(JSON.stringify(report, null, 2));

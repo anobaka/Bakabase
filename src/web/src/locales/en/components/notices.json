@@ -16,11 +16,5 @@
   "notices.item.multiDevice.body": "Every computer running the desktop app is now a Bakabase server of its own, and the devices on your network can reach one another.",
   "notices.item.multiDevice.point.library": "Multi-device library searches this computer and the devices that share with it, and lists everything in one place.",
   "notices.item.multiDevice.point.switch": "Switch this window to a NAS or another computer you manage, and control it as if you were sitting in front of it.",
-  "notices.item.multiDevice.action": "Open the Multi-device guide",
-  "notices.item.thinClient.title": "Bakabase Client is discontinued",
-  "notices.item.thinClient.body": "The separate Bakabase Client app is no longer updated. The desktop app does its job now: switch this window to any server you manage and control it fully.",
-  "notices.item.thinClient.point.imported": "Servers Bakabase Client was paired with on this computer are brought over automatically, keys and path mappings included, so nothing has to be paired again.",
-  "notices.item.thinClient.point.otherComputers": "Using Bakabase Client on another computer? Install the desktop app there; it brings that client's servers over the same way.",
-  "notices.item.thinClient.point.uninstall": "Once the servers appear under Devices you manage, Bakabase Client can be uninstalled.",
-  "notices.item.thinClient.action": "Open Devices you manage"
+  "notices.item.multiDevice.action": "Open the Multi-device guide"
 }

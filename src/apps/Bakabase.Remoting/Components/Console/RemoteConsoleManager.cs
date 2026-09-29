@@ -65,7 +65,6 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     private readonly IRemoteAccessService _remoteAccess;
     private readonly RemoteConsoleLocalOrigin _localOrigin;
     private readonly RelayNavigationTokens _tokens;
-    private readonly LegacyClientConnectionSource _legacy;
     private readonly IServerDiscovery _discovery;
     private readonly IServiceProvider _services;
     private readonly ILoggerFactory _loggerFactory;
@@ -95,7 +94,6 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     private readonly Lock _answeredGate = new();
 
     private readonly CancellationTokenSource _lifetime = new();
-    private Task _startup = Task.CompletedTask;
     private int _stopped;
 
     public RemoteConsoleManager(
@@ -104,7 +102,6 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         IRemoteAccessService remoteAccess,
         RemoteConsoleLocalOrigin localOrigin,
         RelayNavigationTokens tokens,
-        LegacyClientConnectionSource legacy,
         RemoteConsoleSwitcher switcher,
         IServerDiscovery discovery,
         IServiceProvider services,
@@ -115,7 +112,6 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         _remoteAccess = remoteAccess;
         _localOrigin = localOrigin;
         _tokens = tokens;
-        _legacy = legacy;
         _discovery = discovery;
         _services = services;
         _loggerFactory = loggerFactory;
@@ -128,9 +124,6 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         // lists the managed servers too, answered from the snapshot the store already holds.
         switcher.Attach(this);
     }
-
-    /// <summary>The startup work — the one-time import — for a caller that has to wait for it.</summary>
-    public Task Startup => _startup;
 
     /// <summary>The port each running relay listens on, by server id.</summary>
     public IReadOnlyDictionary<string, int> RunningRelays =>
@@ -150,40 +143,11 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
     #region Hosting
 
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        _startup = Task.Run(RunStartupAsync, CancellationToken.None);
-        return Task.CompletedTask;
-    }
-
-    private async Task RunStartupAsync()
-    {
-        try
-        {
-            if (!_options.ImportLegacyClientOnStart || _store.Read().LegacyClientImportedAt != null)
-            {
-                return;
-            }
-
-            var result = await ImportFromLegacyClientAsync(_lifetime.Token);
-
-            if (result.Found)
-            {
-                _logger.LogInformation(
-                    "Brought over the removed thin client's pairings: {Imported} imported, {Skipped} already here or unusable",
-                    result.Imported, result.Skipped);
-            }
-        }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
-        {
-        }
-        catch (Exception e)
-        {
-            // Never worth failing the app's start over: the import can be re-run from the
-            // devices page, and pairing again is always possible.
-            _logger.LogWarning(e, "Could not bring over the removed thin client's pairings");
-        }
-    }
+    /// <remarks>
+    /// Nothing to start: relays start when a server is opened. The manager is hosted for
+    /// <see cref="StopAsync"/>, which stops every relay and filed request with the host.
+    /// </remarks>
+    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
@@ -435,74 +399,6 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         }
 
         return new ManagedServerOpenView(RelayUrls.BuildRelayUrl(relay.Port, path, _tokens.Mint(relay.Port)));
-    }
-
-    public async Task<ManagedServerImportView> ImportFromLegacyClientAsync(CancellationToken ct = default)
-    {
-        var legacy = _legacy.Read();
-
-        if (legacy == null || legacy.Servers.Count == 0)
-        {
-            return new ManagedServerImportView(false, 0, 0);
-        }
-
-        var ownId = await _remoteAccess.GetOrCreateServerIdAsync();
-        var now = DateTime.UtcNow;
-
-        var (imported, skipped) = await _store.MutateAsync(data =>
-        {
-            var added = 0;
-            var passed = 0;
-
-            foreach (var server in legacy.Servers)
-            {
-                if (string.IsNullOrWhiteSpace(server.ServerId) ||
-                    string.IsNullOrWhiteSpace(server.BaseAddress) ||
-                    string.IsNullOrWhiteSpace(server.DeviceId) ||
-                    string.IsNullOrWhiteSpace(server.DeviceKey) ||
-                    // The thin client pointed at this very install: managing yourself is
-                    // what the app does without a relay.
-                    string.Equals(server.ServerId, ownId, StringComparison.Ordinal) ||
-                    // Never over a pairing made here: it is at least as new, and it is the
-                    // one the user chose in this app.
-                    Find(data, server.ServerId) != null)
-                {
-                    passed++;
-                    continue;
-                }
-
-                data.Servers.Add(new ClientServerConnection
-                {
-                    ServerId = server.ServerId,
-                    ServerName = server.ServerName,
-                    BaseAddress = ServerConnector.Normalize(server.BaseAddress),
-                    DeviceId = server.DeviceId,
-                    DeviceKey = server.DeviceKey,
-                    PairedAt = server.PairedAt,
-                    LastConnectedAt = server.LastConnectedAt,
-                    PathMappings = (server.PathMappings ?? [])
-                        .Where(m => !string.IsNullOrWhiteSpace(m.ServerPath) && !string.IsNullOrWhiteSpace(m.LocalPath))
-                        .Select(m => new ClientPathMapping {ServerPath = m.ServerPath, LocalPath = m.LocalPath})
-                        .ToList(),
-                    ImportedFromLegacyClient = true
-                });
-
-                added++;
-            }
-
-            // The name this device paired under before, so the servers it is already
-            // known to keep seeing the same name when it pairs somewhere new.
-            if (string.IsNullOrWhiteSpace(data.DeviceName) && !string.IsNullOrWhiteSpace(legacy.DeviceName))
-            {
-                data.DeviceName = legacy.DeviceName;
-            }
-
-            data.LegacyClientImportedAt = now;
-
-            return (added, passed);
-        }, ct);
-
-        return new ManagedServerImportView(true, imported, skipped);
     }
 
     #endregion
@@ -1475,7 +1371,6 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             probe?.State ?? ManagedServerState.Unknown,
             probe?.Mode,
             probe?.AppVersion,
-            entry.ImportedFromLegacyClient,
             probe?.State == ManagedServerState.WrongServer ? probe.AnsweredBy : null,
             probe?.Kind,
             probe?.Platform);

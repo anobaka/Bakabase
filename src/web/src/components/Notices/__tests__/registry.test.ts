@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { audienceOf, notices } from "../registry";
+import { audienceOf, notices, retiredNoticeIds } from "../registry";
 
 import cnNotices from "@/locales/cn/components/notices.json";
 import enNotices from "@/locales/en/components/notices.json";
-import { devicesRoute } from "@/features/federation/switching";
 import { helpTopics } from "@/components/HelpCenter/topics";
 
 const en = enNotices as Record<string, string>;
@@ -31,6 +30,15 @@ describe("notice registry", () => {
       expect(id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
       expect(id.length).toBeLessThanOrEqual(128);
     }
+  });
+
+  it("never reuses the id of a notice that was removed", () => {
+    // Installs recorded a retired notice as read: a new notice under its id would never
+    // reach them.
+    const retired = new Set<string>(retiredNoticeIds);
+
+    expect(retired.size).toBe(retiredNoticeIds.length);
+    for (const notice of notices) expect(retired.has(notice.id), notice.id).toBe(false);
   });
 
   it("orders notices unambiguously", () => {
@@ -76,21 +84,6 @@ describe("notice registry", () => {
     expect(notice.action).toMatchObject({ kind: "help", topic: "multiDevice" });
     expect(audienceOf(notice)).toEqual(["local"]);
     expect(notice.upgradeOnly).toBe(true);
-    expect(notice.showOnFreshInstallWhen).toBeUndefined();
-  });
-
-  it("ships the thin client's retirement as an upgrade-only notice for this device's window", () => {
-    const notice = notices.find((item) => item.id === "thin-client-discontinued")!;
-
-    expect(notice.action).toEqual({
-      kind: "route",
-      labelKey: "notices.item.thinClient.action",
-      route: devicesRoute("servers"),
-    });
-    expect(audienceOf(notice)).toEqual(["local"]);
-    expect(notice.upgradeOnly).toBe(true);
-    // ...and for a fresh install whose first start brought the thin client's pairings over.
-    expect(notice.showOnFreshInstallWhen).toBe("thinClientPairingsImported");
   });
 
   it("defaults the audience to this install's own window", () => {

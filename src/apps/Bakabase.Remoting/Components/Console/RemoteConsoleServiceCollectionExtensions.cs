@@ -50,9 +50,6 @@ public static class RemoteConsoleServiceCollectionExtensions
             options.ManagedDirectory ??
             Path.Combine(sp.GetRequiredService<IRemoteAccessDataDirectory>().Path, ManagedServerDirectory.DirectoryName))));
 
-        services.TryAddSingleton(_ => new LegacyClientConnectionSource(
-            options.LegacyClientConnectionFile ?? LegacyClientConnectionSource.ResolveDefaultFile));
-
         // Finding servers to manage: the remote-access beacons, both halves. The server's own
         // registrations usually got here first (library sharing's search starts from the same
         // beacons), and TryAdd keeps theirs; either way nothing probes until somebody asks —

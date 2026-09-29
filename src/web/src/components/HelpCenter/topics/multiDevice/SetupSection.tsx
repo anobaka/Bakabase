@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  AiOutlineCloudServer,
-  AiOutlineImport,
-  AiOutlineKey,
-  AiOutlineWarning,
-} from "react-icons/ai";
+import { AiOutlineCloudServer, AiOutlineKey, AiOutlineWarning } from "react-icons/ai";
 
 import { TopicCallout, TopicHeadline, TopicSteps } from "../../components/TopicBlocks";
 
@@ -53,7 +48,6 @@ const SetupSection = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
     <TopicCallout icon={<AiOutlineWarning />} textKey={mdk("setup.unrestricted")} tone="warning" />
     <TopicCallout icon={<AiOutlineCloudServer />} textKey={mdk("setup.nas")} />
     <TopicCallout icon={<AiOutlineKey />} textKey={mdk("setup.codes")} />
-    <TopicCallout icon={<AiOutlineImport />} textKey={mdk("setup.thinClient")} tone="primary" />
   </div>
 );
 

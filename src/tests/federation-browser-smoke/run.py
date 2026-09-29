@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run isolated federated browser, legacy-pairing import and server-switching flows.
+"""Run isolated federated browser, first-launch and server-switching flows.
 
 Requires the built web app and this directory's pinned Playwright/Chromium installation.
 Every listener (and the relays the unified host starts), database and credential is
@@ -99,32 +99,22 @@ def retain_host_diagnostics(fixture, hosts, host_processes, results):
         (results / (role + "-host.log")).write_text(json.dumps(diagnostic, indent=2))
 
 
-def legacy_client_directory(fixture):
-    """Where an old thin client's AppData would be. The removed program is not run: the browser
-    stage writes the pairing it would have left there (legacy-client.cjs), for the desktop
-    fixtures to import."""
-    return fixture / "client"
-
-
 def host_environment(role, port, fixture, web_root):
     """The environment one fixture host starts with.
 
     "unified" and "first-launch" are composed as the desktop app, each with this browser as its
-    window and an old thin client's data directory to import from. The two long-lived Services
-    record what reaches them, and every Service has a name of its own, so a check by name can
-    tell them apart.
+    window. The two long-lived Services record what reaches them, and every Service has a name
+    of its own, so a check by name can tell them apart.
     """
     env = {**os.environ, **ANALYTICS_OFF, "BAKABASE_FEDERATION_TEST_WEB_ROOT": str(web_root),
            "DOTNET_ENVIRONMENT": "Development"}
-    for key in ("BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW", "BAKABASE_CLIENT_DATA_DIR",
-                "BAKABASE_FEDERATION_TEST_REQUEST_LOG", "BAKABASE_FEDERATION_TEST_SERVER_NAME"):
+    for key in ("BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW", "BAKABASE_FEDERATION_TEST_REQUEST_LOG",
+                "BAKABASE_FEDERATION_TEST_SERVER_NAME"):
         env.pop(key, None)
     if role in ("unified", "first-launch"):
         # The desktop app: its own server plus the relays that manage other servers. Its window
-        # is this browser, and it reads an old thin client's pairings from the fixture's client
-        # directory — the variable that thin client's own AppData profile answered to.
+        # is this browser.
         env["BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW"] = f"http://localhost:{port}"
-        env["BAKABASE_CLIENT_DATA_DIR"] = str(legacy_client_directory(fixture))
     if role in ("unified", "source"):
         # What reaches each server and how it answered: the managed server's side of the
         # relay, and this device's own answers to the managed server's page.
@@ -209,9 +199,8 @@ def main():
                            "requestLog": env["BAKABASE_FEDERATION_TEST_REQUEST_LOG"]}
             if role == "unified":
                 hosts[role]["window"] = env["BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW"]
-        # A fresh desktop install on a machine where an old thin client had paired. The browser
-        # stage starts it once that pairing is on disk, and stops it again; it runs in the
-        # browser's process group, so the cleanup below reaches it too.
+        # A fresh desktop install. The browser stage starts it when its turn comes, and stops it
+        # again; it runs in the browser's process group, so the cleanup below reaches it too.
         port = take_port()
         first_launch_env = host_environment("first-launch", port, fixture, web_root)
         first_launch = {
@@ -235,7 +224,6 @@ def main():
             time.sleep(0.2)
         config = fixture / "browser-config.json"
         config.write_text(json.dumps({"hosts": hosts, "firstLaunch": first_launch,
-                                      "legacyClient": {"directory": str(legacy_client_directory(fixture))},
                                       "results": str(results), "repo": str(ROOT)}))
         with (results / "browser.log").open("w") as output:
             browser = subprocess.Popen([args.node, str(HERE / "browser.cjs"), str(config)], cwd=ROOT,
@@ -246,7 +234,7 @@ def main():
             if code:
                 raise AssertionError(f"Browser checks failed (exit {code}); inspect {results / 'browser.log'}")
         passed = True
-        print(f"PASS: federated browser, legacy-pairing import and server-switching flows. Results: {results}")
+        print(f"PASS: federated browser, first-launch and server-switching flows. Results: {results}")
         return 0
     except Exception as error:
         (results / "result.json").write_text(json.dumps({"passed": False, "status": "failed", "reason": str(error)}, indent=2))

@@ -216,9 +216,6 @@ manage anything; they are only ever managed.
   read and "stop managing"'s revoke all ask first; a mismatch gets the handshake question and
   nothing else. "Stop managing" forgets the server here first and asks it to revoke this device
   afterwards, so an open racing it never hands out a ticket to a relay being stopped.
-- **Legacy import is read-only.** The thin client's `connection.json` is read from its own AppData
-  (`AppDataPathProfile.Client`, following its redirect) once at startup and on request; its file
-  is never written, and servers already managed here are never overwritten.
 - **Layering is enforced** by `src/scripts/check-release-contract.py`: the Service image ships no
   `Bakabase.Remoting` or YARP; the desktop app ships YARP only through `Bakabase.Remoting` and no
   `Bakabase.Client*` assembly.
@@ -228,10 +225,9 @@ manage anything; they are only ever managed.
 `Bakabase.Client.App` and `Bakabase.Client.Remoting` were removed while the product was in
 beta, together with their build, update feed, download manifest and frontend (connect page,
 updater banner, migration export); there is no deprecation path. Do not reintroduce them.
-What stays is deliberate:
+Its pairings are not imported either: a server it managed is paired again from the desktop
+app. What stays is deliberate:
 
-- the one-time import of an old install's pairings (`LegacyClientConnectionSource`, reading
-  `AppDataPathProfile.Client` from the Infrastructures submodule) and its manual re-run;
 - the console's `/client` API keeps the thin client's shape where the two mean the same thing,
   and answers its connect and pairing routes 409 `ManagedByHost` and everything else it had
   404 — a managed server's older UI, written for the thin client, may still call them;
@@ -241,7 +237,7 @@ What stays is deliberate:
 ## Tests
 
 - `src/tests/Bakabase.Tests/RemoteAccess/Console` — relays, console endpoints, store view,
-  pairing edge cases and request liveness, discovery, legacy import, key secrecy,
+  pairing edge cases and request liveness, discovery, key secrecy,
   `ConsoleDiagnosticsExposureTests` (a real `AppService` and log behind a relay, answered 404),
   and `RelayIdentityTests`: two real servers swapping one port under a real relay — after a
   restart, while a page is open, found by a probe, answering as this device (through another
@@ -272,8 +268,8 @@ What stays is deliberate:
 - Frontend: `yarn vitest run src/features/federation src/layouts`.
 - End to end: `src/tests/federation-browser-smoke/switching.cjs` (run by `run.py`, in CI's
   federation job) — Chromium against real hosts, the unified fixture composed as `UnifiedHost`
-  is: import of an old thin client's pairing (a real device key from the managed server's own
-  pairing API, in the thin client's file format — `legacy-client.cjs`), switch and back, a write on the managed server (pushed live
+  is: pairing by code from this device's devices page (a code the managed server issues on its
+  own loopback), switch and back, a write on the managed server (pushed live
   to its UI over the relay's hub WebSocket), path mapping and interception, stop managing and
   re-pair by request, and the relay page's containment — the relay page's WebSockets to this
   device's hub refused 403, and other pages' to the relay refused 400 before the managed server

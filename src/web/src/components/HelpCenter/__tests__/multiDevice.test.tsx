@@ -117,7 +117,6 @@ describe("multi-device help topic: registration", () => {
       "management",
       "pathMapping",
       "remoteAccess",
-      "thinClient",
     ]);
   });
 });
@@ -145,7 +144,6 @@ describe("multi-device help topic: sections", () => {
     expect(document.querySelector('[data-track="browse"]')).not.toBeNull();
     expect(document.querySelector('[data-track="manage"]')).not.toBeNull();
     expect(screen.getByText(k("setup.unrestricted"))).toBeInTheDocument();
-    expect(screen.getByText(k("setup.thinClient"))).toBeInTheDocument();
   });
 
   it("opens at the requested section, and ignores other topics' sections", () => {

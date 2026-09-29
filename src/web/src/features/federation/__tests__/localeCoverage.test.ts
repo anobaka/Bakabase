@@ -150,7 +150,7 @@ describe("locales for the multi-device management screens", () => {
         "federation.switcher.managingName",
         "federation.management.requirePairingConfirmUnrestricted",
         "federation.management.devices.revokeSelfWarning",
-        "federation.servers.import.nothingNew",
+        "federation.servers.waiting",
         "federation.servers.retrying",
         "federation.servers.add.discovering",
         "federation.servers.add.alreadyManaged",

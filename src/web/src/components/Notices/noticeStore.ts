@@ -1,18 +1,11 @@
-import type { FreshInstallFacts, NoticeState } from "./eligibility";
-import type { FreshInstallFact, NoticeAudience } from "./registry";
+import type { NoticeState } from "./eligibility";
 
 import { useMemo } from "react";
 import { create } from "zustand";
 
-import {
-  freshInstallFactsAsked,
-  noticeViewerOf,
-  toNoticeState,
-  upgradeOnlyNoticeIds,
-} from "./eligibility";
+import { noticeViewerOf, toNoticeState, upgradeOnlyNoticeIds } from "./eligibility";
 import { notices } from "./registry";
 
-import { managedServerApi } from "@/features/federation/serverApi";
 import BApi from "@/sdk/BApi";
 import { useUiOptionsStore } from "@/stores/options";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
@@ -41,44 +34,14 @@ interface NoticeStore {
   finishStartup: () => void;
   /**
    * Reads what this install has recorded. The first UI a fresh install shows also records
-   * its baseline here: every upgrade-only notice it ships with, as read — less those the
-   * install turns out to be for after all (`showOnFreshInstallWhen`), asked as `viewer`.
+   * its baseline here: every upgrade-only notice it ships with, as read.
    */
-  load: (viewer: NoticeAudience) => Promise<void>;
+  load: () => Promise<void>;
   markRead: (ids: string[]) => Promise<void>;
 }
 
 const succeeded = <T>(rsp: { code?: number; data?: T }): rsp is { code?: number; data: T } =>
   !rsp.code && rsp.data != undefined;
-
-/**
- * Asks this install about each fact in `asked`, where `viewer` can ask. Never throws: a fact
- * that cannot be learned is left out, which reads as not holding — the notice that asked
- * stays upgrade-only, the rule for every fresh install.
- */
-export const learnFreshInstallFacts = async (
-  asked: FreshInstallFact[],
-  viewer: NoticeAudience,
-): Promise<FreshInstallFacts> => {
-  const facts: FreshInstallFacts = {};
-
-  // The pairings live with the desktop app's relay manager, which only this install's own
-  // window may ask about (`/federation/local`). A headless server answers that it manages
-  // nothing. The import runs as the host starts, long before the window opens.
-  if (asked.includes("thinClientPairingsImported") && viewer === "local") {
-    try {
-      const listing = await managedServerApi.list();
-
-      facts.thinClientPairingsImported = (listing.servers ?? []).some(
-        (server) => server.importedFromLegacyClient,
-      );
-    } catch {
-      // Unknown: stays upgrade-only.
-    }
-  }
-
-  return facts;
-};
 
 /**
  * Notice state shared by the startup dialog and the help center's list, so reading a notice
@@ -92,7 +55,7 @@ export const useNoticeStore = create<NoticeStore>((set, get) => ({
   finishStartup: () => {
     if (!get().startupDone) set({ startupDone: true });
   },
-  load: async (viewer) => {
+  load: async () => {
     const { status } = get();
 
     if (status === "loading" || status === "loaded") return;
@@ -107,11 +70,9 @@ export const useNoticeStore = create<NoticeStore>((set, get) => ({
 
       if (state.baselinePending) {
         try {
-          const facts = await learnFreshInstallFacts(freshInstallFactsAsked(notices), viewer);
-          const captured = await BApi.options.captureNoticeBaseline(
-            upgradeOnlyNoticeIds(notices, facts),
-            { showErrorToast: false },
-          );
+          const captured = await BApi.options.captureNoticeBaseline(upgradeOnlyNoticeIds(notices), {
+            showErrorToast: false,
+          });
 
           if (succeeded(captured)) state = toNoticeState(captured.data);
         } catch {

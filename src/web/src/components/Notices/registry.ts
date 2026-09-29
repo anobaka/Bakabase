@@ -1,7 +1,7 @@
 import type { IconType } from "react-icons";
 import type { HelpSectionId, HelpTopicId } from "@/components/HelpCenter/types";
 
-import { AiOutlineCluster, AiOutlineSwap } from "react-icons/ai";
+import { AiOutlineCluster } from "react-icons/ai";
 
 /**
  * Where a notice may be shown, by who is looking at this install's UI.
@@ -35,15 +35,6 @@ export type NoticeAction =
       route: string;
     };
 
-/**
- * Something a fresh install can have done before its UI first loaded that makes an
- * upgrade-only notice its business after all (`showOnFreshInstallWhen`).
- *
- * - `thinClientPairingsImported` — the desktop app's first start brought over the pairings
- *   of the removed thin client on this machine: whoever installed it did use the thin client.
- */
-export type FreshInstallFact = "thinClientPairingsImported";
-
 export interface NoticeDefinition {
   /**
    * Stable forever: it is what an install records once the notice is read. Never rename or
@@ -76,20 +67,21 @@ export interface NoticeDefinition {
    * greeted with them, while notices added by later releases still reach it after it updates.
    */
   upgradeOnly?: boolean;
-  /**
-   * For an upgrade-only notice: a fresh install where this holds is shown it anyway, like an
-   * upgraded one. Asked once, when the fresh install records its baseline, and only where
-   * the answer can be had (`learnFreshInstallFacts`); anywhere else it stays upgrade-only.
-   */
-  showOnFreshInstallWhen?: FreshInstallFact;
 }
 
 const k = (key: string) => `notices.item.${key}`;
 
 /**
- * Every notice shipped with the app. Adding one: give it a new id and an `order` above
- * the rest, add its text to `locales/{en,cn}/components/notices.json`, and decide its
- * audience and whether it is upgrade-only. The registry test checks the rest.
+ * Ids of notices that shipped once and were removed. Never reuse one: installs recorded it
+ * as read, so a new notice under it would never be shown to them.
+ */
+export const retiredNoticeIds = ["thin-client-discontinued"] as const;
+
+/**
+ * Every notice shipped with the app. Adding one: give it a new id — never one of
+ * {@link retiredNoticeIds} — and an `order` above the rest, add its text to
+ * `locales/{en,cn}/components/notices.json`, and decide its audience and whether it is
+ * upgrade-only. The registry test checks the rest.
  */
 export const notices: NoticeDefinition[] = [
   {
@@ -111,33 +103,6 @@ export const notices: NoticeDefinition[] = [
     // News to someone who used an earlier version. A fresh install's welcome and help center
     // introduce these features as part of the app instead.
     upgradeOnly: true,
-  },
-  {
-    id: "thin-client-discontinued",
-    introducedIn: "2.4.0",
-    order: 20,
-    icon: AiOutlineSwap,
-    titleKey: k("thinClient.title"),
-    bodyKey: k("thinClient.body"),
-    pointKeys: [
-      k("thinClient.point.imported"),
-      k("thinClient.point.otherComputers"),
-      k("thinClient.point.uninstall"),
-    ],
-    action: {
-      kind: "route",
-      labelKey: k("thinClient.action"),
-      // devicesRoute("servers"), spelled out so the registry does not depend on the
-      // federation feature's modules (the registry test checks the two agree).
-      route: "/federation/devices?section=servers",
-    },
-    // About the desktop app replacing another desktop program: meaningless to a browser on
-    // another device, and to a headless server, which never manages anything.
-    audience: ["local"],
-    upgradeOnly: true,
-    // A fresh install of the desktop app that found the thin client's pairings on this
-    // machine and brought them over was installed by someone who used the thin client.
-    showOnFreshInstallWhen: "thinClientPairingsImported",
   },
 ];
 

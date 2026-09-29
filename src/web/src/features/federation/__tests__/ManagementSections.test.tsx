@@ -61,7 +61,6 @@ vi.mock("../serverApi", () => ({
     forget: vi.fn(),
     setPathMappings: vi.fn(),
     open: vi.fn(),
-    importLegacyClient: vi.fn(),
   },
 }));
 // Library sharing's discovery cannot see a server that does not share its library — the
@@ -96,7 +95,6 @@ const server = (overrides: Partial<ManagedServer> = {}): ManagedServer => ({
   pathMappings: [],
   state: ManagedServerState.Online,
   mode: RemoteAccessMode.Enabled,
-  importedFromLegacyClient: false,
   ...overrides,
 });
 const view = (overrides: Partial<ManagedServersView> = {}): ManagedServersView => ({
@@ -512,16 +510,13 @@ describe("devices this one manages", () => {
     expect(screen.getByText("federation.servers.empty")).toBeInTheDocument();
   });
 
-  it.each([
-    [{ found: true, imported: 2, skipped: 1 }, "federation.servers.import.done 2 1"],
-    [{ found: true, imported: 0, skipped: 3 }, "federation.servers.import.nothingNew 3"],
-    [{ found: false, imported: 0, skipped: 0 }, "federation.servers.import.notFound"],
-  ])("imports from Bakabase Client and says what happened (%o)", async (result, message) => {
-    vi.mocked(managedServerApi.importLegacyClient).mockResolvedValue(result);
+  it("offers no import from the removed Bakabase Client", async () => {
+    listing = view({ servers: [server()] });
     await renderServers();
-    fireEvent.click(screen.getByText("federation.servers.import.action"));
-    expect(await screen.findByText(message)).toBeInTheDocument();
-    expect(managedServerApi.importLegacyClient).toHaveBeenCalledOnce();
+    await screen.findByRole("article", { name: "NAS" });
+
+    expect(screen.queryByText("federation.servers.import.action")).not.toBeInTheDocument();
+    expect(screen.queryByText("federation.servers.imported")).not.toBeInTheDocument();
   });
 
   it("saves this computer's path mappings for a server, sent whole", async () => {

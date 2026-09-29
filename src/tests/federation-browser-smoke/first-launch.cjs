@@ -1,22 +1,18 @@
-// The desktop app's first launch on a machine where an old install of the removed thin client
-// had paired: it brings the thin client's pairings over by itself, before anyone opens the
-// devices page.
+// A fresh desktop install's first launch.
 //
-// A second desktop fixture, started only now — after legacy-client.cjs left the thin client's
-// pairing with the source server on disk — on a data directory of its own and the thin client's
-// data directory to read from, exactly as a fresh install finds an old one. The long-lived
-// unified fixture cannot show this: it started before there was anything to import.
+// A second desktop fixture, started only now on a data directory of its own, exactly as a
+// fresh install starts: the long-lived unified fixture cannot show this, since it has been
+// running since before the smoke began and has managed servers of its own by now.
 //
-// It is also the one fresh install started here through the app's own host start-up, so it is
-// where the startup notices' fresh-install rule is checked for real: the first start opens the
-// notice baseline, and its window, having brought the thin client's pairings over, is shown the
-// thin client's notice and no other upgrade-only one.
+// It is the one fresh install started here through the app's own host start-up, so it is where
+// the startup notices' fresh-install rule is checked for real: the first start opens the notice
+// baseline, and its window records every upgrade-only notice it ships with as read, and shows
+// none of them.
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { assertNoAnalytics, assertStayedLocal, confine } = require('./network.cjs');
-const { connectionFile } = require('./legacy-client.cjs');
 
 const field = (object, name) => object?.[name] ?? object?.[name[0].toLowerCase() + name.slice(1)];
 
@@ -94,58 +90,37 @@ async function freshInstallNotices(browser, spec) {
     const page = await context.newPage();
     // Not the dashboard, whose welcome would come first.
     await page.goto(spec.window + '/#/federation/devices?section=servers');
-    await page.locator('[role=dialog] [data-notice-id="thin-client-discontinued"]').waitFor();
-    // The window recorded the baseline: every upgrade-only notice but the thin client's, which
-    // this install is for after all — it brought the thin client's pairings over.
+    // The window records the baseline: every upgrade-only notice it ships with, as read.
     const recorded = await until(notices, state => field(state, 'BaselinePending') === false, 'the notice baseline');
-    assert.deepEqual(field(recorded, 'ReadIds'), ['multi-device'], 'The baseline did not leave the thin client\'s notice out');
-    assert.equal(await page.locator('[data-notice-id]').count(), 1);
+    assert.deepEqual(field(recorded, 'ReadIds'), ['multi-device'], 'The baseline did not record the upgrade-only notices');
+    // ...and so greets a fresh install with none of them.
+    await page.waitForLoadState('networkidle');
+    assert.equal(await page.locator('[role=dialog] [data-notice-id]').count(), 0,
+      'A fresh install was shown an upgrade-only notice');
     await assertStayedLocal(context, blocked, 'First launch');
   } finally {
     await context.close();
   }
 }
 
-module.exports = async function firstLaunchImport({ browser, config }) {
+module.exports = async function firstLaunch({ browser, config }) {
   const spec = config.firstLaunch;
-  const { source } = config.hosts;
-  const legacyFile = connectionFile(config.legacyClient.directory);
-  const legacyBytes = fs.readFileSync(legacyFile);
-  const legacy = JSON.parse(legacyBytes.toString());
-  const legacyServers = field(legacy, 'Servers');
-  assert.equal(legacyServers.length, 1, 'The thin client should have paired with the source server alone');
-  const [legacyServer] = legacyServers;
-  const legacyKey = field(legacyServer, 'DeviceKey');
-  assert.ok(legacyKey && legacyKey.length > 10);
 
   const stop = await start(spec);
   try {
-    // Ready waits for the manager's startup work, so this is what the first launch did.
     const response = await fetch(spec.base + '/federation/local/servers');
     assert.equal(response.status, 200);
     const listing = await response.json();
-    assert.equal(listing.available, true, 'The first-launch fixture did not compose the relay manager');
-    assert.deepEqual(listing.servers.map(server => [server.serverId, server.address, server.importedFromLegacyClient]),
-      [[field(legacyServer, 'ServerId'), source.base, true]], 'The first launch did not bring the thin client\'s pairing over');
-    assert.deepEqual(listing.servers[0].pathMappings,
-      field(legacyServer, 'PathMappings').map(mapping => ({ serverPath: field(mapping, 'ServerPath'), localPath: field(mapping, 'LocalPath') })));
-    assert.ok(!JSON.stringify(listing).includes(legacyKey), 'A device key reached the listing');
-
-    const storeFile = findFile(spec.directory, path.join('remote-access', 'managed', 'connection.json'));
-    assert.ok(storeFile, 'No managed-server store after the first launch');
-    const store = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
-    const [stored] = field(store, 'Servers');
-    assert.deepEqual([field(stored, 'DeviceId'), field(stored, 'DeviceKey')],
-      [field(legacyServer, 'DeviceId'), legacyKey], 'The first launch did not keep the thin client\'s device');
-    // Recorded, so later launches leave the thin client alone; the devices page can still import.
-    assert.ok(field(store, 'LegacyClientImportedAt'), 'The first launch did not record its import');
-    if (process.platform !== 'win32') assert.equal(fs.statSync(storeFile).mode & 0o777, 0o600);
-    assert.ok(fs.readFileSync(legacyFile).equals(legacyBytes), 'The first launch changed the thin client\'s file');
+    // A fresh desktop install manages nothing, and has nothing it could manage from before.
+    assert.deepEqual(listing, { available: true, servers: [], requests: [] },
+      'The first-launch fixture did not start as a fresh desktop install');
+    assert.equal(findFile(spec.directory, path.join('remote-access', 'managed', 'connection.json')), null,
+      'A fresh install wrote a managed-server store before managing anything');
     await assertNoAnalytics(spec.base);
     await freshInstallNotices(browser, spec);
     return {
-      importedAtFirstLaunch: true, withKeyAndMappings: true, recorded: true,
-      noticeBaselineOpenedAtFirstStart: true, thinClientNoticeShownAfterImport: true
+      freshDesktopInstall: true, managesNothing: true,
+      noticeBaselineOpenedAtFirstStart: true, noUpgradeOnlyNoticeShown: true
     };
   } finally {
     await stop();

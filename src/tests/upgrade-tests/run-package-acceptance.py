@@ -392,9 +392,7 @@ def execute(args, results, report):
         owned_executables.append(executable)
         log = (results / (label + "-app.log")).open("wb")
         child_logs.append(log)
-        # The client variable points the one-time import of an old thin client's pairings
-        # at this run's own fixture rather than the runner's default location.
-        env = dict(environment, BAKABASE_DATA_DIR=str(data), BAKABASE_CLIENT_DATA_DIR=str(data))
+        env = dict(environment, BAKABASE_DATA_DIR=str(data))
         children.append(subprocess.Popen([str(executable)], cwd=executable.parent, env=env,
                                          stdout=log, stderr=subprocess.STDOUT, start_new_session=os.name != "nt"))
 
@@ -443,7 +441,7 @@ def execute(args, results, report):
                                       "automaticLaunchServicesStartup": True, "target": str(installed_root)}
             report["installedContentAudit"] = validate_content(installed_exe.parent)
         else:
-            install_environment = dict(environment, BAKABASE_DATA_DIR=str(install_data), BAKABASE_CLIENT_DATA_DIR=str(install_data))
+            install_environment = dict(environment, BAKABASE_DATA_DIR=str(install_data))
             command([installer, "--silent", "--installto", installed_root, "--log", results / "setup-native.log"],
                     results / "installer.log", install_environment)
             require(updater.is_file(), "Original Setup did not install Update.exe")
@@ -497,8 +495,7 @@ def execute(args, results, report):
         def uninstall_windows():
             if not mac and updater.exists():
                 command([updater, "--silent", "--log", results / "uninstall-native.log", "uninstall"],
-                        results / "uninstaller.log", dict(environment, BAKABASE_DATA_DIR=str(install_data),
-                                                          BAKABASE_CLIENT_DATA_DIR=str(install_data)))
+                        results / "uninstaller.log", dict(environment, BAKABASE_DATA_DIR=str(install_data)))
                 # Velopack's self-delete helper holds work as its current directory
                 # until it removes the root after a delay. Observe completion.
                 wait_absent(installed_root, 30)

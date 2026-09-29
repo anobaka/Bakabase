@@ -3732,22 +3732,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/federation/local/servers/import-legacy-client": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ImportLegacyClientServers"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/file/decompression/detect": {
         parameters: {
             query?: never;
@@ -12373,13 +12357,6 @@ export interface components {
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerDiscoveryView": {
             servers: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerCandidateView"][];
         };
-        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerImportView": {
-            found: boolean;
-            /** Format: int32 */
-            imported: number;
-            /** Format: int32 */
-            skipped: number;
-        };
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView": {
             url: string;
         };
@@ -12440,7 +12417,6 @@ export interface components {
             state: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerState"];
             mode?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
             appVersion?: string;
-            importedFromLegacyClient: boolean;
             answeredBy?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerAnswerView"];
             kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
             platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
@@ -23495,28 +23471,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
                     "application/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
                     "text/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
-                };
-            };
-        };
-    };
-    ImportLegacyClientServers: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerImportView"];
-                    "application/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerImportView"];
-                    "text/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerImportView"];
                 };
             };
         };

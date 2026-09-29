@@ -60,7 +60,6 @@ const server = (overrides: Record<string, unknown> = {}) => ({
   pairedAt: "2026-09-01T00:00:00Z",
   pathMappings: [],
   state: ManagedServerState.Unknown,
-  importedFromLegacyClient: false,
   ...overrides,
 });
 

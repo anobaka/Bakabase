@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute real identity/AppData/relocation/legacy pairing-import contracts; no GUI/feed operations."""
+"""Execute real identity/AppData/relocation/relay contracts; no GUI/feed operations."""
 import argparse
 from pathlib import Path
 import subprocess
@@ -14,8 +14,6 @@ CLASSES = (
     "Bakabase.Tests.DataPathValidatorTests",
     "Bakabase.Tests.LegacyInstallDetectorTests",
     "Bakabase.Tests.Relocation.PendingRelocationRunnerTests",
-    "Bakabase.Tests.RemoteAccess.Console.LegacyClientLocationTests",
-    "Bakabase.Tests.RemoteAccess.Console.LegacyClientImportTests",
     "Bakabase.Tests.RemoteAccess.Console.RelayPipelineTests",
 )
 
