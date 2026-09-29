@@ -94,6 +94,7 @@
   "configuration.appInfo.tip.appDataPath": "这是存储核心数据文件的位置，如非必要请勿更改。[系统] - [日志] 中的日志保存在 bootstrap_log.* 文件中，可以安全删除。",
   "configuration.appInfo.tip.appDataPath.manualMerge": "导入旧 AppData 不会自动识别历史备份或克隆。全量覆盖前，先把备份准备到本机，断开网络并完全关闭 Bakabase；覆盖后保持断网，从本机启动并进入“设备与分享 → 克隆或恢复安装”，更换库代际或创建新的设备身份。复核旧版远程访问授权后再联网，随后重新开启分享并授权。仅搬迁同一份库且不回滚数据，无需重置身份。",
   "configuration.appInfo.tip.appDataPath.installRootRiskNotice": "若数据保存在程序安装目录内，通过卸载程序卸载 Bakabase 或在安装包中执行\"修复\"时，这些数据会被一并删除。如需保留数据，请先将路径改到安装目录之外。",
+  "configuration.appInfo.tip.appDataPath.systemPathRiskNotice": "当前数据目录位于 Windows 系统目录内，部分文件可能需要额外权限才能写入。建议将数据迁移到当前用户可写的目录。",
   "configuration.appInfo.tip.anchorPath": "应用数据路径的指针文件所在位置。当你自定义应用数据路径时，应用会在这里写一个指针文件，下次启动时根据它定位到你设置的路径。",
   "configuration.appInfo.tip.dataPath": "这是存储用户文件、封面等数据的目录。",
   "configuration.appInfo.tip.tempFilesPath": "这是存储临时文件的目录。",

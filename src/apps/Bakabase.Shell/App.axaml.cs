@@ -104,8 +104,8 @@ public partial class App : Application
             }
 
             // desktop.Exit below covers the graceful exits only. Anything that ends the
-            // process without unwinding Avalonia — Environment.Exit from Velopack's
-            // ApplyUpdatesAndRestart, a fatal-error bail-out, Ctrl+C on a console run —
+            // process without unwinding Avalonia — a fatal-error bail-out or Ctrl+C on a
+            // console run, for example —
             // would otherwise leave the icon registered with Explorer until the user
             // happens to hover it. ProcessExit fires for all of those.
             AppDomain.CurrentDomain.ProcessExit += (_, _) => SetTrayIconVisible(false);

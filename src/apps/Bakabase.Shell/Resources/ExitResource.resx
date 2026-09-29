@@ -109,6 +109,27 @@
   <data name="Exit_ClosingDone" xml:space="preserve">
     <value>Done</value>
   </data>
+  <data name="Exit_UpdateTitle" xml:space="preserve">
+    <value>Updating Bakabase</value>
+  </data>
+  <data name="Exit_UpdateHeading" xml:space="preserve">
+    <value>Closing Bakabase for the update…</value>
+  </data>
+  <data name="Exit_UpdateWaiting" xml:space="preserve">
+    <value>Please wait; the app will reopen automatically after the update.</value>
+  </data>
+  <data name="Exit_UpdateForce" xml:space="preserve">
+    <value>Continue update now</value>
+  </data>
+  <data name="Exit_UpdateForceHint" xml:space="preserve">
+    <value>This is taking longer than usual. Continuing now may lose unsaved changes.</value>
+  </data>
+  <data name="Exit_UpdateFailedTitle" xml:space="preserve">
+    <value>Update could not start</value>
+  </data>
+  <data name="Exit_UpdateFailedBody" xml:space="preserve">
+    <value>The update could not start after Bakabase closed. Close this window and open Bakabase manually to try again.</value>
+  </data>
   <data name="Exit_ClosingRemaining" xml:space="preserve">
     <value>{0} task(s) still finishing</value>
   </data>

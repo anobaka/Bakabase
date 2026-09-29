@@ -32,15 +32,17 @@ public partial class ExitProgressWindow : Window
     /// <summary>Raised when the user gives up waiting and asks to quit immediately.</summary>
     public event Action? ForceQuitRequested;
 
-    public ExitProgressWindow()
+    public ExitProgressWindow(bool forUpdate = false)
     {
         InitializeComponent();
 
-        Title = ExitStrings.ClosingTitle;
-        Heading.Text = ExitStrings.ClosingHeading;
+        Title = forUpdate ? ExitStrings.UpdateTitle : ExitStrings.ClosingTitle;
+        Heading.Text = forUpdate ? ExitStrings.UpdateHeading : ExitStrings.ClosingHeading;
         PhaseText.Text = ExitStrings.ClosingStoppingTasks;
-        ForceHint.Text = ExitStrings.ForceQuitHint;
-        ForceQuitBtn.Content = ExitStrings.ForceQuit;
+        UpdateNotice.IsVisible = forUpdate;
+        UpdateNotice.Text = forUpdate ? ExitStrings.UpdateWaiting : string.Empty;
+        ForceHint.Text = forUpdate ? ExitStrings.UpdateForceHint : ExitStrings.ForceQuitHint;
+        ForceQuitBtn.Content = forUpdate ? ExitStrings.UpdateForce : ExitStrings.ForceQuit;
 
         ForceQuitBtn.Click += (_, _) =>
         {

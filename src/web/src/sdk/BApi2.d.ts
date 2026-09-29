@@ -9385,6 +9385,7 @@ export interface components {
             needRestart: boolean;
             mayHaveLegacyData: boolean;
             dataInInstallRoot: boolean;
+            dataInSystemPath: boolean;
         };
         /**
          * Format: int32

@@ -13,23 +13,25 @@ import {
   CheckCircleOutlined,
   FolderOpenOutlined,
   InfoCircleOutlined,
+  PoweroffOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 
 import IdentityRecoveryLink from "./IdentityRecoveryLink";
 
-import { Popover, Divider, Icon, Progress, Snippet, Tooltip } from "@/components/bakaui";
+import { Popover, Divider, Icon, Progress, Snippet, Spinner, Tooltip } from "@/components/bakaui";
 import { UpdaterStatus, DataPathSource } from "@/sdk/constants";
 import ExternalLink from "@/components/ExternalLink";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
-import { useIsPureClient } from "@/stores/remoteAccess";
+import { useIsPureClient, useIsRemoteClient } from "@/stores/remoteAccess";
 import { useAppOptionsStore } from "@/stores/options";
 import { Button, Chip, Switch } from "@/components/bakaui";
 import { ChangelogButton } from "@/components/Changelog";
 import FilePathValue from "@/components/FilePathValue";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import BApi from "@/sdk/BApi";
+import { useRemoteServerUpdateRestart, useUpdateRestart } from "@/components/UpdateRestart";
 import {
   RelocationButton,
   RelocationRestartGate,
@@ -57,6 +59,9 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
   // manages it describes that server — including the update button, which updates that
   // machine. Saying whose information this is costs a word and prevents the mistake.
   const isPureClient = useIsPureClient();
+  const isRemoteClient = useIsRemoteClient();
+  const { restarting, restart } = useUpdateRestart();
+  const remoteRestart = useRemoteServerUpdateRestart(appUpdaterState.status);
 
   // The version an update moves the user off, so the changelog can show the whole span
   // rather than only the newest release. Velopack decides against the install manifest;
@@ -231,15 +236,33 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
       case UpdaterStatus.PendingRestart:
         return (
           <div className="flex items-center gap-2">
-            <Button
-              color="primary"
-              size="sm"
-              onClick={() => {
-                BApi.updater.restartAndUpdateApp();
-              }}
-            >
-              {t("configuration.appInfo.restartToUpdate")}
-            </Button>
+            {isRemoteClient && remoteRestart.restarting ? (
+              <span className="flex items-center gap-2 text-sm text-foreground-500">
+                <Spinner size="sm" />
+                {t("appUpdate.serverRestarting")}
+              </span>
+            ) : (
+              <Button
+                color="primary"
+                isDisabled={restarting}
+                size="sm"
+                onClick={() => {
+                  if (isRemoteClient) {
+                    remoteRestart.restart();
+                  } else {
+                    restart();
+                  }
+                }}
+              >
+                <PoweroffOutlined />
+                {t("configuration.appInfo.restartToUpdate")}
+              </Button>
+            )}
+            {isRemoteClient && remoteRestart.timedOut && (
+              <span className="text-xs text-warning-500">
+                {t("appUpdate.serverRestartUnconfirmed")}
+              </span>
+            )}
             <ChangelogButton from={updateFrom} version={newVersion?.version} />
           </div>
         );
@@ -327,8 +350,12 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
                 <FolderOpenOutlined className="text-base" />
               </Button>
               {renderDataPathSource()}
-              <Divider className="mx-1" orientation="vertical" />
-              {appInfo.appDataPath && <RelocationButton currentDataPath={appInfo.appDataPath} />}
+              {appInfo.appDataPath && !appInfo.dataInSystemPath && (
+                <>
+                  <Divider className="mx-1" orientation="vertical" />
+                  <RelocationButton currentDataPath={appInfo.appDataPath} />
+                </>
+              )}
             </div>
             <span className="text-xs text-foreground-400">
               {t("configuration.appInfo.tip.appDataPath")}
@@ -341,6 +368,15 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
               <span className="text-xs text-warning-500">
                 {t("configuration.appInfo.tip.appDataPath.installRootRiskNotice")}
               </span>
+            )}
+            {appInfo.dataInSystemPath && appInfo.appDataPath && (
+              <div className="flex items-center gap-2 flex-wrap text-warning-500">
+                <WarningOutlined className="text-sm" />
+                <span className="text-xs">
+                  {t("configuration.appInfo.tip.appDataPath.systemPathRiskNotice")}
+                </span>
+                <RelocationButton currentDataPath={appInfo.appDataPath} />
+              </div>
             )}
           </div>
         ),

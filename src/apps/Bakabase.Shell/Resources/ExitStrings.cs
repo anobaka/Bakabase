@@ -75,6 +75,23 @@ internal static class ExitStrings
 
     public static string ClosingDone => Get("Exit_ClosingDone", "Done");
 
+    public static string UpdateTitle => Get("Exit_UpdateTitle", "Updating Bakabase");
+
+    public static string UpdateHeading => Get("Exit_UpdateHeading", "Preparing to update Bakabase…");
+
+    public static string UpdateWaiting => Get("Exit_UpdateWaiting",
+        "Please wait; the app will reopen automatically after the update.");
+
+    public static string UpdateForce => Get("Exit_UpdateForce", "Continue update now");
+
+    public static string UpdateForceHint => Get("Exit_UpdateForceHint",
+        "This is taking longer than usual. Continuing now may lose unsaved changes.");
+
+    public static string UpdateFailedTitle => Get("Exit_UpdateFailedTitle", "Update could not start");
+
+    public static string UpdateFailedBody => Get("Exit_UpdateFailedBody",
+        "The update could not start after Bakabase closed. Close this window and open Bakabase manually to try again.");
+
     public static string ClosingRemaining(int count) =>
         string.Format(CultureInfo.CurrentUICulture,
             Get("Exit_ClosingRemaining", "{0} task(s) still finishing"), count);

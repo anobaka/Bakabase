@@ -7,6 +7,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.Shell.Controls;
@@ -15,7 +16,7 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.Shell.Components;
 
-public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
+public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController, IUpdateRestartCoordinator
 {
     private readonly App _app;
     private InitializationWindow? _initializationWindow;
@@ -119,6 +120,17 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     }
 
     public void SetTrayIconVisible(bool visible) => _app.SetTrayIconVisible(visible);
+
+    /// <summary>
+    /// Claim the exit before the HTTP response is sent, then move the actual shutdown
+    /// onto Avalonia's UI thread after the response completes.
+    /// </summary>
+    public bool TryReserveUpdateRestart(Action launchUpdater) =>
+        _app.ExitCoordinator.TryReserveUpdateRestart(launchUpdater);
+
+    public void BeginReservedUpdateRestart() =>
+        Dispatcher.UIThread.Post(() =>
+            _ = _app.ExitCoordinator.BeginReservedUpdateRestartAsync());
 
     [GuiContextInterceptor]
     public override void ShowFatalErrorWindow(string message, string title = "Fatal Error")

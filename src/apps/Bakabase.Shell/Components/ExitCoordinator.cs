@@ -93,6 +93,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     private volatile bool _shuttingDown;
+    private Action? _reservedUpdateLaunch;
 
     /// <summary>
     /// Entry point for every user-initiated exit. Safe to call re-entrantly: while a prompt is
@@ -107,7 +108,59 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
 
         try
         {
+            // A restart reservation can land between our first check and acquiring the
+            // gate. Let its post-response path own the shutdown in that case.
+            if (_reservedUpdateLaunch != null)
+            {
+                return;
+            }
+
             await RunAsync(trigger);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Updates are an explicit request to quit. Keep the progress window up while tasks and
+    /// the host stop, then start Velopack after the graceful wind-down.
+    /// </summary>
+    public bool TryReserveUpdateRestart(Action launchUpdater)
+    {
+        ArgumentNullException.ThrowIfNull(launchUpdater);
+
+        if (_shuttingDown || !_gate.Wait(0))
+        {
+            return false;
+        }
+
+        try
+        {
+            if (_shuttingDown || _reservedUpdateLaunch != null)
+            {
+                return false;
+            }
+
+            _reservedUpdateLaunch = launchUpdater;
+            return true;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task BeginReservedUpdateRestartAsync()
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            if (!_shuttingDown && _reservedUpdateLaunch is { } launchUpdater)
+            {
+                await ShutdownAsync(launchUpdater);
+            }
         }
         finally
         {
@@ -298,12 +351,13 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
         task.Percentage is > 0 and < 100 ? $"{task.Name} ({task.Percentage}%)" : task.Name;
 
     /// <summary>
-    /// Winds the app down for real. Everything here is best-effort: whatever happens, the
-    /// last statement must be the one that actually ends the process.
+    /// Winds the app down for real. Everything here is best-effort. If the updater cannot
+    /// launch after the host stops, a native error window remains so the user can relaunch.
     /// </summary>
-    private async Task ShutdownAsync()
+    private async Task ShutdownAsync(Action? launchUpdater = null)
     {
         _shuttingDown = true;
+        var updaterLaunchFailed = false;
 
         // From here on the submodule's ApplicationStopping -> IGuiAdapter.Shutdown callback
         // must not end the Avalonia lifetime out from under us: StopAsync triggers it, and
@@ -312,7 +366,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
 
         try
         {
-            await RunWindDownAsync();
+            await RunWindDownAsync(launchUpdater != null);
         }
         catch (Exception e)
         {
@@ -320,6 +374,33 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
         }
         finally
         {
+            if (launchUpdater != null)
+            {
+                try
+                {
+                    // The wind-down has completed or made its best effort. Velopack now waits
+                    // for our process to exit before replacing files and relaunching.
+                    launchUpdater();
+                }
+                catch (Exception e)
+                {
+                    updaterLaunchFailed = true;
+                    Serilog.Log.Error(e, "Could not launch Velopack after shutdown");
+                    try
+                    {
+                        gui.ShowFatalErrorWindow(
+                            $"{ExitStrings.UpdateFailedBody}\n\n{e}",
+                            ExitStrings.UpdateFailedTitle);
+                    }
+                    catch
+                    {
+                        // If even the error window cannot open, finish exiting rather than
+                        // leave an invisible process with a stopped host.
+                        updaterLaunchFailed = false;
+                    }
+                }
+            }
+
             try
             {
                 Serilog.Log.CloseAndFlush();
@@ -332,25 +413,28 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
             // Unconditional. The latch set by BeginDeferredShutdown suppresses every other
             // route out of the process, so failing to clear it here would leave the app
             // impossible to quit — a far worse outcome than whatever went wrong above.
-            gui.CompleteDeferredShutdown();
+            if (!updaterLaunchFailed)
+            {
+                gui.CompleteDeferredShutdown();
+            }
         }
     }
 
-    private async Task RunWindDownAsync()
+    private async Task RunWindDownAsync(bool forUpdate = false)
     {
         using var forceQuit = new CancellationTokenSource();
         var progress = new ExitProgress(() =>
         {
             // ReSharper disable once AccessToDisposedClosure
             try { forceQuit.Cancel(); } catch (ObjectDisposedException) { /* already gone */ }
-        });
+        }, forUpdate);
 
         // Whether anything is running decides how the window should be timed, and the answer is
         // already available here — waiting ProgressWindowDelay to find out only delays the one
         // case that needs the window.
         progress.SetTasks(TryCollectActiveTasks());
 
-        if (progress.HasWorkToReport)
+        if (forUpdate || progress.HasWorkToReport)
         {
             progress.TryShow();
         }
@@ -402,7 +486,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
     /// may only be created and closed on the UI thread, and either can come first — so what has
     /// been reported is kept here and replayed into the window if and when one appears.
     /// </summary>
-    private sealed class ExitProgress(Action onForceQuitRequested)
+    private sealed class ExitProgress(Action onForceQuitRequested, bool forUpdate)
     {
         private readonly object _lock = new();
         private ExitProgressWindow? _window;
@@ -456,7 +540,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
 
             try
             {
-                window = new ExitProgressWindow();
+                window = new ExitProgressWindow(forUpdate);
                 window.ForceQuitRequested += onForceQuitRequested;
                 window.Show();
             }

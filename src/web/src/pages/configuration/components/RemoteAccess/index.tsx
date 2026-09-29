@@ -230,7 +230,7 @@ const RemoteAccess: React.FC<RemoteAccessProps> = ({ query }) => {
       keywords: ["ip", "address", "url", "地址"],
       render: () =>
         settings?.addresses?.length ? (
-          <div className="flex flex-col gap-1 items-end">
+          <div className="flex flex-col gap-1 items-start">
             {settings.addresses.map((a) => (
               <div key={a.url} className="flex items-center gap-2">
                 <span className="text-sm font-mono">{a.url}</span>
@@ -304,7 +304,7 @@ const RemoteAccess: React.FC<RemoteAccessProps> = ({ query }) => {
       tip: t("configuration.remoteAccess.pairingCode.tip"),
       keywords: ["pair", "code", "配对", "验证码"],
       render: () => (
-        <div className="flex flex-col gap-1 items-end">
+        <div className="flex flex-col gap-1 items-start">
           {issuedCode ? (
             <>
               <Snippet
@@ -347,10 +347,10 @@ const RemoteAccess: React.FC<RemoteAccessProps> = ({ query }) => {
         tip: t("configuration.remoteAccess.pending.tip"),
         keywords: ["pair", "request", "approve", "配对", "请求", "批准"],
         render: () => (
-          <div className="flex flex-col gap-2 items-end">
+          <div className="flex flex-col gap-2 items-start">
             {pendingRequests.map((r) => (
               <div key={r.id} className="flex items-center gap-2">
-                <div className="flex flex-col items-end">
+                <div className="flex flex-col items-start">
                   <span className="text-sm">{r.deviceName}</span>
                   <span className="text-xs text-foreground-400">
                     {t(platformLabelKey(r.platform))}
@@ -380,10 +380,10 @@ const RemoteAccess: React.FC<RemoteAccessProps> = ({ query }) => {
       keywords: ["device", "paired", "revoke", "设备", "配对", "撤销"],
       render: () =>
         devices.length ? (
-          <div className="flex flex-col gap-2 items-end">
+          <div className="flex flex-col gap-2 items-start">
             {devices.map((d) => (
               <div key={d.id} className="flex items-center gap-2">
-                <div className="flex flex-col items-end">
+                <div className="flex flex-col items-start">
                   <span className="text-sm">{d.name}</span>
                   <span className="text-xs text-foreground-400">
                     {t(platformLabelKey(d.platform))} ·{" "}
