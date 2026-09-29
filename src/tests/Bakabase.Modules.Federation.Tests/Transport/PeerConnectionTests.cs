@@ -59,21 +59,91 @@ public sealed class PeerConnectionTests
         Assert.IsTrue(watch.Elapsed < TimeSpan.FromSeconds(4), $"took {watch.Elapsed}");
     }
 
+    [TestMethod]
+    public async Task A_peer_whose_name_a_proxy_on_this_computer_took_over_is_said_to_be_behind_one()
+    {
+        // Clash in fake-IP mode answers every name with an address of its own; connecting there
+        // reaches the proxy, never the peer — so it is not attempted, and the reason is said.
+        var dialled = 0;
+        using var provider = Compose(host => host == "mac.local" ? [ProxyAddress] : [],
+            () => Interlocked.Increment(ref dialled));
+        var http = provider.GetRequiredService<FederationHttpClient>();
+
+        foreach (var address in new[] {"http://mac.local:34567", $"http://{ProxyAddress}:34567"})
+        {
+            var refused = await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
+                http.PublicAsync<JsonElement>(address, HttpMethod.Get, "/federation/v1/info", null,
+                    CancellationToken.None));
+
+            Assert.AreEqual(FederationHttpClient.ProxyFakeAddressCode, refused.ErrorCode, address);
+            Assert.AreEqual(503, refused.StatusCode);
+        }
+
+        Assert.AreEqual(0, dialled);
+    }
+
+    [TestMethod]
+    public async Task A_peer_at_a_domain_a_proxy_on_this_computer_took_over_is_reached_through_the_proxy()
+    {
+        // A DDNS or public name: the proxy resolves it itself and connects on this computer's
+        // behalf, as for every other program.
+        using var peer = new InfoListener();
+        using var provider = Compose(host => host == "peer.example.com" ? [ProxyAddress] : [], proxyRoutes: true);
+        var http = provider.GetRequiredService<FederationHttpClient>();
+
+        var info = await http.PublicAsync<JsonElement>($"http://peer.example.com:{peer.Port}", HttpMethod.Get,
+            "/federation/v1/info", null, CancellationToken.None);
+
+        Assert.AreEqual("peer", info.GetProperty("nodeId").GetString());
+    }
+
+    [TestMethod]
+    public async Task A_peer_at_a_domain_the_proxy_cannot_reach_is_said_to_be_behind_it()
+    {
+        using var provider = Compose(host => host == "peer.example.com" ? [ProxyAddress] : []);
+        var http = provider.GetRequiredService<FederationHttpClient>();
+
+        var failed = await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
+            http.PublicAsync<JsonElement>("http://peer.example.com:34567", HttpMethod.Get, "/federation/v1/info",
+                null, CancellationToken.None));
+
+        Assert.AreEqual(FederationHttpClient.ProxyFakeAddressCode, failed.ErrorCode);
+        // The fix is that domain in the proxy, not .local names.
+        StringAssert.Contains(failed.Message, "Set peer.example.com to DIRECT");
+    }
+
+    private static readonly IPAddress ProxyAddress = IPAddress.Parse("198.18.0.29");
+
     /// <summary>
     /// The app's peer client over a network where <paramref name="resolve"/> says what a name is,
     /// <see cref="Dropped"/> and <see cref="SwitchedOff"/> drop every connection, and anything else
     /// is a real connection.
     /// </summary>
-    private static ServiceProvider Compose(Func<string, IPAddress[]> resolve)
+    /// <param name="proxyRoutes">
+    /// Whether the proxy's address leads anywhere: to this machine, as a proxy that resolves a
+    /// domain itself connects on the caller's behalf; otherwise nothing is there.
+    /// </param>
+    private static ServiceProvider Compose(Func<string, IPAddress[]> resolve, Action? dialling = null,
+        bool proxyRoutes = false)
     {
         var services = new ServiceCollection();
         services.AddSingleton(new DualStackConnector(
             (host, _) => Task.FromResult(resolve(host)),
             async (to, ct) =>
             {
+                dialling?.Invoke();
+
                 if (to.Address.Equals(Dropped) || to.Address.Equals(SwitchedOff))
                 {
                     await Task.Delay(Timeout.Infinite, ct);
+                }
+
+                if (to.Address.Equals(ProxyAddress))
+                {
+                    // Never a real socket there: this machine may run such a proxy itself.
+                    to = proxyRoutes
+                        ? new IPEndPoint(IPAddress.Loopback, to.Port)
+                        : throw new SocketException((int) SocketError.HostUnreachable);
                 }
 
                 var socket = new Socket(to.AddressFamily, SocketType.Stream, ProtocolType.Tcp);

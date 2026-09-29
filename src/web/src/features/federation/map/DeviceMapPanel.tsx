@@ -36,6 +36,8 @@ import { federationPeerApi } from "../peerApi";
 import { managedServerApi } from "../serverApi";
 import { devicesRoute, openManagedServer } from "../switching";
 import { FederationError } from "../transport";
+import { PROXY_FAKE_ADDRESS } from "../types";
+import { managedServerOutcomeCode, proxyFakeAddressKey } from "../proxy";
 
 import {
   SELF_ID,
@@ -52,12 +54,7 @@ import { usePanelActions } from "./usePanelActions";
 import { useEscapeKey } from "./useEscapeKey";
 
 import BApi from "@/sdk/BApi";
-import {
-  ManagedServerOutcome,
-  ManagedServerOutcomeLabel,
-  ManagedServerState,
-  RemoteAccessMode,
-} from "@/sdk/constants";
+import { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
 import { millisecondsUntil, minutesUntil, parseServerTime } from "@/core/serverTime";
 import { remoteDevicePlatformLabelKey } from "@/core/remoteDevicePlatform";
 
@@ -86,12 +83,11 @@ interface PanelContext {
 }
 
 /** A pairing outcome the server reported rather than threw. */
-const outcomeError = (outcome: ManagedServerOutcome, detail?: string | null) =>
-  new FederationError(
-    `ManagedServer${ManagedServerOutcomeLabel[outcome] ?? outcome}`,
-    detail ?? "",
-    0,
-  );
+const outcomeError = (
+  outcome: ManagedServerOutcome,
+  detail: string | null | undefined,
+  address: string,
+) => new FederationError(managedServerOutcomeCode(outcome, address), detail ?? "", 0);
 
 export interface DeviceMapPanelProps {
   graph: DeviceGraph;
@@ -572,12 +568,20 @@ function SharingSection({ context, node }: { context: PanelContext; node: MapNod
       <DirectionRow direction="in" edge={edge} kind="sharing" name={name} testId="sharing-in">
         {peer?.outboundGrant ? (
           <>
-            {peer.connectionState !== "Online" && peer.connectionState !== "Unknown" && (
-              <p className="text-xs text-default-500">
-                {t(`federation.connection.${peer.connectionState}`, {
-                  defaultValue: peer.connectionState,
-                })}
+            {peer.connectionState === PROXY_FAKE_ADDRESS ? (
+              // A proxy on this computer took over its name: said in full, with the fix.
+              <p className="text-xs text-warning-600 dark:text-warning" data-testid="peer-proxy">
+                {t(proxyFakeAddressKey(peer.address))}
               </p>
+            ) : (
+              peer.connectionState !== "Online" &&
+              peer.connectionState !== "Unknown" && (
+                <p className="text-xs text-default-500">
+                  {t(`federation.connection.${peer.connectionState}`, {
+                    defaultValue: peer.connectionState,
+                  })}
+                </p>
+              )
             )}
             <div className="flex flex-wrap items-center gap-2">
               <Link className={primaryClass} to={libraryRoute(peer.nodeId)}>
@@ -1097,9 +1101,7 @@ function ManagementSection({ context, node }: { context: PanelContext; node: Map
           data-testid="management-request-ended"
         >
           <p>
-            {t(
-              `federation.error.ManagedServer${ManagedServerOutcomeLabel[request.outcome] ?? request.outcome}`,
-            )}
+            {t(`federation.error.${managedServerOutcomeCode(request.outcome, request.address)}`)}
             {server && <span className="block break-all text-default-400">{request.address}</span>}
           </p>
           <button
@@ -1289,7 +1291,7 @@ function ManageForm({
       return t("federation.servers.paired", { name: label });
     if (result.outcome === ManagedServerOutcome.AwaitingApproval)
       return t("federation.servers.requested", { name: label });
-    throw outcomeError(result.outcome, result.detail);
+    throw outcomeError(result.outcome, result.detail, address);
   };
 
   return (

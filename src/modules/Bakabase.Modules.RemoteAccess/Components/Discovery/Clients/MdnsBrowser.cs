@@ -272,6 +272,11 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
         /// bridge's — beside its own LAN address, and is offered at the address that is not
         /// this machine's: the other would lead back here.
         /// </para>
+        /// <para>
+        /// A proxy's address (198.18.0.0/15, <see cref="ProxyFakeAddresses"/>) — its TUN
+        /// adapter's, advertised like any other — is offered last: connecting there is refused,
+        /// since it would only reach a proxy.
+        /// </para>
         /// </remarks>
         private static (IPAddress Address, bool IsThisMachine) Choose(List<IPAddress> addresses,
             ThisMachineAddresses own)
@@ -283,7 +288,8 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
                 return (addresses[0], true);
             }
 
-            var elsewhere = routed.FirstOrDefault(a => !own.Holds(a));
+            var elsewhere = routed.FirstOrDefault(a => !own.Holds(a) && !ProxyFakeAddresses.Contains(a)) ??
+                            routed.FirstOrDefault(a => !own.Holds(a));
 
             return elsewhere == null ? (routed[0], true) : (elsewhere, false);
         }

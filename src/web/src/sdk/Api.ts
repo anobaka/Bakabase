@@ -4928,7 +4928,7 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOpenV
 }
 
 /**
- * [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported, 12: InvalidAddress, 13: PortMissing, 14: SameIdentity]
+ * [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported, 12: InvalidAddress, 13: PortMissing, 14: SameIdentity, 15: ProxyFakeAddress]
  * @format int32
  */
 export type BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOutcome =
@@ -4946,10 +4946,11 @@ export type BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOutcome =
   | 11
   | 12
   | 13
-  | 14;
+  | 14
+  | 15;
 
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPairingView {
-  /** [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported, 12: InvalidAddress, 13: PortMissing, 14: SameIdentity] */
+  /** [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported, 12: InvalidAddress, 13: PortMissing, 14: SameIdentity, 15: ProxyFakeAddress] */
   outcome: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOutcome;
   serverId?: string;
   serverName?: string;
@@ -4970,14 +4971,14 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPendi
   serverName?: string;
   /** @format date-time */
   expiresAt: string;
-  /** [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported, 12: InvalidAddress, 13: PortMissing, 14: SameIdentity] */
+  /** [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported, 12: InvalidAddress, 13: PortMissing, 14: SameIdentity, 15: ProxyFakeAddress] */
   outcome: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOutcome;
   active: boolean;
   serverId?: string;
 }
 
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerProbeView {
-  /** [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported, 12: InvalidAddress, 13: PortMissing, 14: SameIdentity] */
+  /** [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported, 12: InvalidAddress, 13: PortMissing, 14: SameIdentity, 15: ProxyFakeAddress] */
   outcome: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOutcome;
   serverId?: string;
   name?: string;
@@ -5014,6 +5015,8 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerView 
   kind?: BakabaseModulesRemoteAccessAbstractionsModelsServerKind;
   /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
   platform?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform;
+  /** [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported, 12: InvalidAddress, 13: PortMissing, 14: SameIdentity, 15: ProxyFakeAddress] */
+  offlineReason?: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOutcome;
 }
 
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView {

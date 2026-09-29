@@ -68,7 +68,7 @@ public sealed class ServerConnector(HttpClient http, ServerClock clock, ClientSe
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
         {
-            return ServerHandshakeResult.Failed(ServerHandshakeOutcome.Unreachable, e.Message);
+            return ServerHandshakeResult.NotReached(e);
         }
 
         // The gate answers 403 with a reason header before anything else runs, so a

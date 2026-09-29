@@ -14,6 +14,8 @@ import type {
   SharingCandidate,
 } from "../types";
 
+import { PROXY_FAKE_ADDRESS } from "../types";
+
 import {
   ManagedServerState,
   RemoteAccessMode,
@@ -320,7 +322,12 @@ const kindOfPlatform = (platform?: RemoteDevicePlatform): MapNodeKind =>
         : "unknown";
 
 const peerPresence = (state: string): MapPresence =>
-  state === "Online" ? "online" : state === "Offline" ? "offline" : "unknown";
+  state === "Online"
+    ? "online"
+    : // Its address led into a proxy on this computer: nothing reached it, as for an offline one.
+      state === "Offline" || state === PROXY_FAKE_ADDRESS
+      ? "offline"
+      : "unknown";
 
 const peerIssue = (state: string): MapIssue | undefined =>
   state === "IdentityConflict"

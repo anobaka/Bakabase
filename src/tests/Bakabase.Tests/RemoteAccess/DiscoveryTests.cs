@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components.Discovery;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Tests.RemoteAccess;
@@ -370,4 +371,137 @@ public class MdnsAdvertisementTests
         Assert.IsFalse(advertisement.Answers([("_bakabase._tcp.local.", MdnsMessage.TypeA)]));
         Assert.IsFalse(advertisement.Answers([]));
     }
+}
+
+/// <summary>
+/// How Bakabase's own responder answers: by multicast to a full mDNS querier, at most once a
+/// second; straight back to a one-shot querier (RFC 6762 §6.7) — as another Bakabase resolving
+/// a <c>.local</c> name asks — on its own limit. No socket is opened.
+/// </summary>
+[TestClass]
+public class MdnsResponderTests
+{
+    private static readonly RemoteAccessServerDescriptor Descriptor =
+        new("abc123", "Mac-mini", 34567, "2.4.0-beta", 1);
+
+    private static readonly IPAddress Lan = IPAddress.Parse("192.168.1.20");
+    private static readonly IPEndPoint OneShot = new(IPAddress.Parse("192.168.1.30"), 50123);
+    private static readonly IPEndPoint FullQuerier = new(IPAddress.Parse("192.168.1.30"), 5353);
+
+    [TestMethod]
+    public void A_one_shot_query_is_answered_straight_back_as_a_conventional_unicast_response()
+    {
+        using var responder = Responder();
+        var query = MdnsMessage.BuildQuery("mac-mini-bakabase.local", MdnsMessage.TypeA, 0x1234, true);
+
+        var reply = responder.Respond(query, OneShot, 10_000)!;
+
+        Assert.AreEqual(OneShot, reply.To);
+        // Its id repeated, and its question: what a conventional resolver matches the answer by.
+        Assert.AreEqual(0x1234, (reply.Packet[0] << 8) | reply.Packet[1]);
+        Assert.AreEqual(1, (reply.Packet[4] << 8) | reply.Packet[5]);
+        Assert.AreEqual(0x84, reply.Packet[2]);
+        Assert.IsTrue(MdnsMessage.TryParseResponse(reply.Packet, out var records));
+
+        var a = records.Single();
+        Assert.AreEqual(MdnsMessage.TypeA, a.Type);
+        Assert.AreEqual(Lan, a.Address);
+        Assert.IsTrue(a.Ttl is > 0 and <= MdnsMessage.LegacyUnicastMaxTtl, $"TTL {a.Ttl}");
+
+        // No cache-flush bit on the record's class, as §6.7 requires.
+        var classOffset = reply.Packet.Length - 4 - 2 - 4 - 2;
+        Assert.AreEqual(0x0001, (reply.Packet[classOffset] << 8) | reply.Packet[classOffset + 1]);
+    }
+
+    [TestMethod]
+    public void One_shot_queries_are_not_held_back_by_the_multicast_limit_or_each_other()
+    {
+        using var responder = Responder();
+        var query = MdnsMessage.BuildQuery("mac-mini-bakabase.local", MdnsMessage.TypeA, 7, true);
+
+        Assert.IsNotNull(responder.Respond(MdnsMessage.BuildQuery("_bakabase._tcp.local", MdnsMessage.TypePtr),
+            FullQuerier, 10_000));
+        Assert.IsNotNull(responder.Respond(query, OneShot, 10_010));
+        Assert.IsNotNull(responder.Respond(query, OneShot, 10_020));
+        // The multicast limit itself still holds.
+        Assert.IsNull(responder.Respond(MdnsMessage.BuildQuery("_bakabase._tcp.local", MdnsMessage.TypePtr),
+            FullQuerier, 10_500));
+    }
+
+    [TestMethod]
+    public void A_full_querier_is_answered_by_multicast_at_most_once_a_second()
+    {
+        using var responder = Responder();
+        var query = MdnsMessage.BuildQuery("_bakabase._tcp.local", MdnsMessage.TypePtr);
+
+        var reply = responder.Respond(query, FullQuerier, 10_000)!;
+
+        Assert.AreEqual(new IPEndPoint(IPAddress.Parse("224.0.0.251"), 5353), reply.To);
+        Assert.IsNull(responder.Respond(query, FullQuerier, 10_900));
+        Assert.IsNotNull(responder.Respond(query, FullQuerier, 11_000));
+    }
+
+    [TestMethod]
+    public void A_one_shot_querier_off_this_machines_links_is_not_answered()
+    {
+        using var responder = Responder(onLink: false);
+
+        Assert.IsNull(responder.Respond(MdnsMessage.BuildQuery("mac-mini-bakabase.local", MdnsMessage.TypeA, 7, true),
+            OneShot, 10_000));
+    }
+
+    [TestMethod]
+    public void Answers_straight_back_are_limited_on_their_own()
+    {
+        using var responder = Responder();
+        var query = MdnsMessage.BuildQuery("mac-mini-bakabase.local", MdnsMessage.TypeA, 7, true);
+
+        for (var i = 0; i < MdnsResponder.MaxUnicastAnswersPerSecond; i++)
+        {
+            Assert.IsNotNull(responder.Respond(query, OneShot, 10_000 + i), $"answer {i}");
+        }
+
+        Assert.IsNull(responder.Respond(query, OneShot, 10_500));
+        Assert.IsNotNull(responder.Respond(query, OneShot, 11_000));
+    }
+
+    [TestMethod]
+    public void Only_questions_about_this_server_are_answered()
+    {
+        using var responder = Responder();
+
+        Assert.IsNull(responder.Respond(MdnsMessage.BuildQuery("Mac-mini.local", MdnsMessage.TypeA, 7, true), OneShot,
+            10_000));
+        Assert.IsNull(responder.Respond(MdnsMessage.BuildQuery("mac-mini-bakabase.local", MdnsMessage.TypeAaaa, 7, true),
+            OneShot, 10_000));
+    }
+
+    [TestMethod]
+    public void A_service_question_straight_back_brings_what_it_points_at_too()
+    {
+        using var responder = Responder();
+
+        var reply = responder.Respond(MdnsMessage.BuildQuery("_bakabase._tcp.local", MdnsMessage.TypePtr, 9, false),
+            OneShot, 10_000)!;
+
+        Assert.AreEqual(1, (reply.Packet[6] << 8) | reply.Packet[7]); // one answer: the PTR
+        Assert.IsTrue(MdnsMessage.TryParseResponse(reply.Packet, out var records));
+        CollectionAssert.IsSubsetOf(new[] {MdnsMessage.TypePtr, MdnsMessage.TypeSrv, MdnsMessage.TypeTxt, MdnsMessage.TypeA},
+            records.Select(r => r.Type).Distinct().ToArray());
+        Assert.IsTrue(records.All(r => r.Ttl <= MdnsMessage.LegacyUnicastMaxTtl));
+    }
+
+    [TestMethod]
+    public void A_query_is_read_with_its_id_and_its_questions_as_asked()
+    {
+        var query = MdnsMessage.BuildQuery("mac-mini-bakabase.local", MdnsMessage.TypeA, 0xBEEF, true);
+
+        Assert.IsTrue(MdnsMessage.TryParseQuery(query, out var id, out var questions));
+        Assert.AreEqual(0xBEEF, id);
+        Assert.AreEqual(new MdnsMessage.Question("mac-mini-bakabase.local.", MdnsMessage.TypeA, 0x8001),
+            questions.Single());
+    }
+
+    private static MdnsResponder Responder(bool onLink = true) =>
+        new(new MdnsAdvertisement(Descriptor), () => [Lan], NullLogger.Instance, _ => onLink);
 }

@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Modules.RemoteAccess.Components;
 
 namespace Bakabase.Remoting.Abstractions.Models;
 
@@ -53,7 +54,15 @@ public enum ServerHandshakeOutcome
     InvalidAddress = 7,
 
     /// <summary>A host typed without its port; nothing was sent. See <c>RemoteAddressProblem.PortMissing</c>.</summary>
-    PortMissing = 8
+    PortMissing = 8,
+
+    /// <summary>
+    /// The address leads into a proxy on this computer: the name resolved to, or the address
+    /// typed is, one of the addresses a proxy in fake-IP or TUN mode hands out (198.18.0.0/15).
+    /// Nothing was sent. Separate from <see cref="Unreachable"/> because the fix is on this
+    /// computer, in the proxy's settings, not on the other device.
+    /// </summary>
+    ProxyFakeAddress = 9
 }
 
 public sealed record ServerHandshakeResult(ServerHandshakeOutcome Outcome, ServerInfo? Server, string? Detail)
@@ -64,4 +73,13 @@ public sealed record ServerHandshakeResult(ServerHandshakeOutcome Outcome, Serve
 
     public static ServerHandshakeResult Failed(ServerHandshakeOutcome outcome, string? detail = null,
         ServerInfo? server = null) => new(outcome, server, detail);
+
+    /// <summary>
+    /// Asking failed before anything answered: <see cref="ServerHandshakeOutcome.ProxyFakeAddress"/>
+    /// when a proxy's address was in the way, <see cref="ServerHandshakeOutcome.Unreachable"/> otherwise.
+    /// </summary>
+    public static ServerHandshakeResult NotReached(Exception exception) =>
+        ProxyFakeAddresses.Find(exception) is { } proxy
+            ? Failed(ServerHandshakeOutcome.ProxyFakeAddress, proxy.Message)
+            : Failed(ServerHandshakeOutcome.Unreachable, exception.Message);
 }

@@ -73,7 +73,19 @@ manage anything; they are only ever managed.
   (`UpstreamConnections.ConnectAsync`), never the name raced again, and the console's signed
   calls after a question — the probe's context read, "stop managing"'s revoke — go over the
   question's own exchange. Every new connection needs an answer no older than two seconds, and
-  each question resolves the name again, so a name that moved on is followed within that.
+  each question resolves the name again, so a name that moved on is followed within that (a
+  `.local` name's mDNS answer is kept up to 10 s, see `federation.md`).
+  **An address that leads into a proxy on this computer** (a `.local` or single-label name a
+  fake-IP/TUN proxy answered with 198.18.0.0/15, or such an address typed —
+  `ProxyFakeAddresses`) is never dialled: a probe or pairing says
+  `ManagedServerOutcome.ProxyFakeAddress`, the listing's Offline carries `offlineReason`, and a
+  relay's check is Unconfirmed with `ProxyFakeAddress` — its page and JSON message say to set
+  `.local` names and LAN addresses to DIRECT or add the server again by its IP (Devices and
+  sharing → Management), never to check that the server runs (`X-Bakabase-Client` stays `ServerUnreachable`). A domain the proxy answered is
+  reached through the proxy as any other address: the question and the relay's connections go
+  to the proxy's address it reached (`DualStackConnector.ConnectAgainAsync`), the server's
+  identity is checked there like anywhere, and only a failure to connect there is
+  `ProxyFakeAddress`, worded with that domain as the fix.
 - **The switcher inside a relay says how each server was last seen.** `GET /client/switcher`
   answers `{currentId, targets: [{id, name, isLocal, isCurrent, state}]}`. `state` is
   `ManagedServerState` as a number — `0` Unknown, `1` Online, `2` Offline, `3` Revoked,
@@ -98,7 +110,12 @@ manage anything; they are only ever managed.
   last attempt said and `active` is whether the wait is still on: a claim that did not get
   through (`Unreachable`, `TooManyAttempts`) does not end it, so the page polls and offers
   "cancel" on `active`, never on `outcome`. `serverId` is the install the address answered as
-  when the request was filed — what the server joins the listing under once approved.
+  when the request was filed — what the server joins the listing under once approved. The
+  approved server is saved before its request is dropped, and the listing reads the requests
+  first, so a listing never has neither; it can have both. The page asks on the same five
+  seconds from the same moment, so its reads land on the collection: a request gone with its
+  `serverId` listed is approved, whenever that server appeared (`RemoteConsolePairingTests`,
+  `ManagementSections.test.tsx`).
 - **What a server says it is** (`kind`, `platform`, optional in `server-info`) is kept from its
   last answer as itself, like `mode` and `appVersion`: never from whoever answers at its
   address instead, and never a reason to refuse a handshake — a value this app does not know,

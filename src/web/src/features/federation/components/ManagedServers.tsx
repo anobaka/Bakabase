@@ -17,6 +17,7 @@ import { revealClass } from "../hooks/useSectionReveal";
 import { managedServerApi } from "../serverApi";
 import { CONFIGURATION_ROUTE, openManagedServer } from "../switching";
 import { FederationError, isAbort } from "../transport";
+import { managedServerOutcomeCode } from "../proxy";
 
 import {
   buttonClass,
@@ -31,12 +32,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import ManagedServerPathMappings from "./ManagedServerPathMappings";
 
 import { minutesUntil } from "@/core/serverTime";
-import {
-  ManagedServerOutcome,
-  ManagedServerOutcomeLabel,
-  ManagedServerState,
-  RemoteAccessMode,
-} from "@/sdk/constants";
+import { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
 
 /** While a filed request waits, the list is re-read this often to pick up the answer. */
 const REQUEST_POLL_MS = 5000;
@@ -53,12 +49,11 @@ interface Confirmation {
  * answered". Carried as a {@link FederationError} so it renders like every other failure
  * on this page, with its own explanation.
  */
-const outcomeError = (outcome: ManagedServerOutcome, detail?: string | null) =>
-  new FederationError(
-    `ManagedServer${ManagedServerOutcomeLabel[outcome] ?? outcome}`,
-    detail ?? "",
-    0,
-  );
+const outcomeError = (
+  outcome: ManagedServerOutcome,
+  detail: string | null | undefined,
+  address: string,
+) => new FederationError(managedServerOutcomeCode(outcome, address), detail ?? "", 0);
 
 export const stateBadgeClass: Record<ManagedServerState, string> = {
   [ManagedServerState.Unknown]: "bg-default-100 text-default-500",
@@ -226,9 +221,13 @@ export function ManagedServersPanel({
   const [confirmationError, setConfirmationError] = useState<Error>();
   /**
    * What the last listing held, so an answer arriving between two reads can be named.
-   * Only live requests: one that already shows how it ended is not news when it goes.
+   * Only live requests, with the install each was filed with: one that already shows how it
+   * ended is not news when it goes.
    */
-  const previous = useRef<{ servers: Set<string>; live: Map<string, string> }>();
+  const previous = useRef<{
+    servers: Set<string>;
+    live: Map<string, { label: string; serverId?: string | null }>;
+  }>();
   /** Requests this page withdrew itself; their disappearance is not news. */
   const withdrawn = useRef(new Set<string>());
   const latestT = useRef(t);
@@ -252,23 +251,31 @@ export function ManagedServersPanel({
     const before = previous.current;
 
     if (before) {
-      const added = view.servers.filter((server) => !before.servers.has(server.serverId));
       // Requests that were live and now are not listed at all. One that ended with an
       // answer stays listed for a while and says so in its own row; one that is gone was
-      // either approved — its server is new above — or ended somewhere this page cannot see.
+      // either approved — its server is listed — or ended somewhere this page cannot see.
       const gone = [...before.live.entries()].filter(
         ([requestId]) =>
           !withdrawn.current.has(requestId) &&
           !view.requests.some((request) => request.requestId === requestId),
       );
+      // Approved: listed under the install the request was filed with, or new since the last
+      // read. Not only new: the app saves the server before it drops the request, so a read
+      // between the two already had the server — beside the request, still waiting — and
+      // re-pairing a server managed already adds nothing either.
+      const approved = view.servers.filter(
+        (server) =>
+          !before.servers.has(server.serverId) ||
+          gone.some(([, request]) => request.serverId === server.serverId),
+      );
 
       if (gone.length) {
         setNotice(
-          added.length
+          approved.length
             ? latestT.current("federation.servers.approved", {
-                name: added.map(serverLabel).join(", "),
+                name: approved.map(serverLabel).join(", "),
               })
-            : latestT.current("federation.servers.requestClosed", { name: gone[0][1] }),
+            : latestT.current("federation.servers.requestClosed", { name: gone[0][1].label }),
         );
       }
     }
@@ -277,7 +284,10 @@ export function ManagedServersPanel({
       live: new Map(
         view.requests
           .filter((request) => request.active)
-          .map((request) => [request.requestId, requestLabel(request)]),
+          .map((request) => [
+            request.requestId,
+            { label: requestLabel(request), serverId: request.serverId },
+          ]),
       ),
     };
   }, [view]);
@@ -337,7 +347,7 @@ export function ManagedServersPanel({
 
         return false;
       default:
-        throw outcomeError(result.outcome, result.detail);
+        throw outcomeError(result.outcome, result.detail, target);
     }
   };
 
@@ -485,7 +495,7 @@ export function ManagedServersPanel({
                   >
                     {!request.active
                       ? t(
-                          `federation.error.ManagedServer${ManagedServerOutcomeLabel[request.outcome] ?? request.outcome}`,
+                          `federation.error.${managedServerOutcomeCode(request.outcome, request.address)}`,
                         )
                       : retrying
                         ? t("federation.servers.retrying", { name, minutes })
@@ -750,8 +760,9 @@ const tips = {
 
 /**
  * What the reader should know about a managed server before using it: it lets anyone on its
- * network manage it, it revoked this device, or its address now answers as another server.
- * Shown on its card here and in its panel on the device map.
+ * network manage it, it revoked this device, its address now answers as another server, or
+ * why it is offline when that is known. Shown on its card here and in its panel on the device
+ * map.
  */
 export function ManagedServerWarnings({
   server,
@@ -805,6 +816,15 @@ export function ManagedServerWarnings({
       )}
       {server.state === ManagedServerState.Revoked && (
         <p className="text-xs text-danger">{t("federation.servers.revokedTip", { name })}</p>
+      )}
+      {server.state === ManagedServerState.Offline && server.offlineReason != null && (
+        // Why nothing answered, when this computer knows: a proxy here took over its name.
+        <p
+          className="text-xs text-warning-600 dark:text-warning"
+          data-testid="managed-server-offline-reason"
+        >
+          {t(`federation.error.${managedServerOutcomeCode(server.offlineReason, server.address)}`)}
+        </p>
       )}
       {server.state === ManagedServerState.WrongServer && (
         // Never "pair again here": whoever answers at the address is not this server, and

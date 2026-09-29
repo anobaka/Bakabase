@@ -53,7 +53,10 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
             {
                 snapshot = await VerifyAsync(nodeId, peer.Address, credentials, cancellationToken);
             }
-            catch (FederationAccessException e) when (e.ErrorCode is "NodeUnreachable" or "IdentityConflict" &&
+            // A peer stored by a name a proxy here has taken over may still be found where it
+            // really is, and adopted there once it proves who it is.
+            catch (FederationAccessException e) when (e.ErrorCode is "NodeUnreachable" or "IdentityConflict" or
+                                                          FederationHttpClient.ProxyFakeAddressCode &&
                                                       TryStartRelocation(nodeId, now))
             {
                 snapshot = await RelocateAsync(nodeId, peer.Address, credentials, cancellationToken) ?? throw e;
@@ -85,6 +88,7 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
             {
                 "IdentityConflict" or "LibraryEpochChanged" => "IdentityConflict",
                 "ProtocolUnsupported" => "Incompatible",
+                FederationHttpClient.ProxyFakeAddressCode => FederationHttpClient.ProxyFakeAddressCode,
                 _ when e.StatusCode is 401 or 403 => "Unauthorized",
                 _ => "Offline"
             };

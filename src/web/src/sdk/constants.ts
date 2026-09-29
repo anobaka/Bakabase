@@ -4615,7 +4615,8 @@ export enum ManagedServerOutcome {
   PairingUnsupported = 11,
   InvalidAddress = 12,
   PortMissing = 13,
-  SameIdentity = 14
+  SameIdentity = 14,
+  ProxyFakeAddress = 15
 }
 
 export const managedServerOutcomes = [
@@ -4633,7 +4634,8 @@ export const managedServerOutcomes = [
   { label: 'PairingUnsupported', value: ManagedServerOutcome.PairingUnsupported },
   { label: 'InvalidAddress', value: ManagedServerOutcome.InvalidAddress },
   { label: 'PortMissing', value: ManagedServerOutcome.PortMissing },
-  { label: 'SameIdentity', value: ManagedServerOutcome.SameIdentity }
+  { label: 'SameIdentity', value: ManagedServerOutcome.SameIdentity },
+  { label: 'ProxyFakeAddress', value: ManagedServerOutcome.ProxyFakeAddress }
 ] as const;
 
 export const ManagedServerOutcomeLabel: Record<ManagedServerOutcome, string> = {
@@ -4651,7 +4653,8 @@ export const ManagedServerOutcomeLabel: Record<ManagedServerOutcome, string> = {
   [ManagedServerOutcome.PairingUnsupported]: 'PairingUnsupported',
   [ManagedServerOutcome.InvalidAddress]: 'InvalidAddress',
   [ManagedServerOutcome.PortMissing]: 'PortMissing',
-  [ManagedServerOutcome.SameIdentity]: 'SameIdentity'
+  [ManagedServerOutcome.SameIdentity]: 'SameIdentity',
+  [ManagedServerOutcome.ProxyFakeAddress]: 'ProxyFakeAddress'
 };
 
 export enum ManagedServerState {

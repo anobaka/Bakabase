@@ -110,6 +110,24 @@ public class MdnsAdvertisement
     }
 
     /// <summary>
+    /// For an answer sent straight back to a one-shot querier: the records of
+    /// <paramref name="records"/> that answer <paramref name="questions"/>, and — when those
+    /// point at others (PTR, SRV) — the rest of the set, which a querier then asks for next.
+    /// </summary>
+    public static (IReadOnlyList<MdnsMessage.Record> Answers, IReadOnlyList<MdnsMessage.Record> Additional) Select(
+        IReadOnlyList<MdnsMessage.Record> records, IReadOnlyCollection<(string Name, ushort Type)> questions)
+    {
+        var answers = records.Where(r => questions.Any(q =>
+            MdnsMessage.NamesEqual(q.Name, r.Name) && (q.Type == r.Type || q.Type == MdnsMessage.TypeAny))).ToList();
+
+        var additional = answers.Any(r => r.Type is MdnsMessage.TypePtr or MdnsMessage.TypeSrv)
+            ? records.Where(r => !answers.Contains(r)).ToList()
+            : [];
+
+        return (answers, additional);
+    }
+
+    /// <summary>
     /// A DNS label: no inner dots (they would split it), no control characters,
     /// at most 63 bytes. Falls back to a constant rather than an empty label.
     /// </summary>

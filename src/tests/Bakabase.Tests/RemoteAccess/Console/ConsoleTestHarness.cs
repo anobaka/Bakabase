@@ -319,6 +319,13 @@ internal sealed class TestNetwork
 
     public DualStackConnector Connector => new(ResolveAsync, ConnectAsync);
 
+    /// <summary>
+    /// A connector whose <c>.local</c> names are asked of <paramref name="mdns"/> as well, as the
+    /// app's are (<see cref="LanHostResolver"/>), with <see cref="Name"/> as the system resolver.
+    /// </summary>
+    public DualStackConnector ConnectorWith(MdnsHostResolver mdns) =>
+        new(new LanHostResolver(mdns, ResolveAsync), ConnectAsync);
+
     public void Name(string name, params IPAddress[] addresses) => _names[name] = addresses;
 
     /// <summary><paramref name="address"/>, whichever port is dialled there, is <paramref name="server"/>.</summary>
@@ -334,7 +341,8 @@ internal sealed class TestNetwork
     {
         var target = to;
 
-        if (to.Address.Equals(Dropped))
+        // On any interface: a link-local address mDNS gave carries the one it came in on.
+        if (new IPAddress(to.Address.GetAddressBytes()).Equals(Dropped))
         {
             await Task.Delay(Timeout.Infinite, ct);
         }

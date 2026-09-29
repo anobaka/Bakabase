@@ -261,6 +261,76 @@ describe("devices this one manages", () => {
     expect(managedServerApi.forget).not.toHaveBeenCalled();
   });
 
+  it("says when a proxy on this computer took over a server's address, and only then", async () => {
+    listing = view({
+      servers: [
+        server({
+          state: ManagedServerState.Offline,
+          address: "http://nas.local:34567",
+          offlineReason: ManagedServerOutcome.ProxyFakeAddress,
+        }),
+        server({ serverId: "desk", name: "Desk", state: ManagedServerState.Offline }),
+      ],
+    });
+    await renderServers();
+    const nas = await screen.findByRole("article", { name: "NAS" });
+
+    expect(
+      within(nas).getByText(`federation.servers.state.${ManagedServerState.Offline}`),
+    ).toBeInTheDocument();
+    expect(within(nas).getByTestId("managed-server-offline-reason")).toHaveTextContent(
+      "federation.error.ManagedServerProxyFakeAddress",
+    );
+    // Offline for no known reason: nothing more is claimed.
+    expect(
+      within(screen.getByRole("article", { name: "Desk" })).queryByTestId(
+        "managed-server-offline-reason",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says a typed name led into a proxy on this computer instead of that nothing answered", async () => {
+    vi.mocked(managedServerApi.pair).mockResolvedValue({
+      outcome: ManagedServerOutcome.ProxyFakeAddress,
+      detail: "nas.local resolved to 198.18.0.29",
+    });
+    await renderServers();
+    fireEvent.change(addForm().address, { target: { value: "nas.local:34567" } });
+    fireEvent.click(screen.getByText("federation.servers.add.request"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "federation.error.ManagedServerProxyFakeAddress",
+    );
+    expect(addForm().address).toHaveValue("nas.local:34567");
+  });
+
+  it("names a domain as the fix when the proxy could not get through to it", async () => {
+    listing = view({
+      servers: [
+        server({
+          state: ManagedServerState.Offline,
+          address: "http://nas.example.com:34567",
+          offlineReason: ManagedServerOutcome.ProxyFakeAddress,
+        }),
+      ],
+    });
+    vi.mocked(managedServerApi.pair).mockResolvedValue({
+      outcome: ManagedServerOutcome.ProxyFakeAddress,
+      detail: "nas.example.com resolved to 198.18.0.29, and could not be reached through the proxy",
+    });
+    await renderServers();
+    const nas = await screen.findByRole("article", { name: "NAS" });
+
+    expect(within(nas).getByTestId("managed-server-offline-reason").textContent).toBe(
+      "federation.error.ManagedServerProxyFakeAddressDomain",
+    );
+
+    fireEvent.change(addForm().address, { target: { value: "nas.example.com:34567" } });
+    fireEvent.click(screen.getByText("federation.servers.add.request"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "federation.error.ManagedServerProxyFakeAddressDomain",
+    );
+  });
+
   it("pairs with a code and shows the new server", async () => {
     vi.mocked(managedServerApi.pair).mockImplementation(async () => {
       listing = view({ servers: [server()] });
@@ -340,6 +410,60 @@ describe("devices this one manages", () => {
       await vi.advanceTimersByTimeAsync(20_000);
     });
     expect(vi.mocked(managedServerApi.list).mock.calls.length).toBe(settled);
+  });
+
+  it("names the device once approved when a read caught it saved beside its waiting request", async () => {
+    // The app saves the server, then drops the request it collected. It asks every five
+    // seconds and so does this page, both from the moment the request was filed, so a read
+    // can land between the two: the server is listed beside a request still waiting.
+    vi.useFakeTimers();
+    const filed = pendingRequest("request-1", { serverId: "nas" });
+
+    listing = view({ requests: [filed] });
+    render(
+      <MemoryRouter>
+        <ManagedServersSection />
+      </MemoryRouter>,
+    );
+    await elapse(0);
+
+    listing = view({ servers: [server()], requests: [filed] });
+    await elapse(5000);
+    expect(screen.getByRole("article", { name: "NAS" })).toBeInTheDocument();
+    expect(
+      screen.queryByText(/federation\.servers\.(approved|requestClosed)/),
+    ).not.toBeInTheDocument();
+
+    listing = view({ servers: [server()] });
+    await elapse(5000);
+    expect(screen.getByText("federation.servers.approved NAS")).toBeInTheDocument();
+    expect(screen.queryByText(/requestClosed/)).not.toBeInTheDocument();
+    // Nothing left to wait for: the polling stops.
+    const settled = listReads();
+
+    await elapse(20_000);
+    expect(listReads()).toBe(settled);
+  });
+
+  it("names a server managed already once a request to manage it again is approved", async () => {
+    // A server that moved is asked again at its new address; the approval saves it over
+    // itself, so nothing new appears in the list.
+    vi.useFakeTimers();
+    listing = view({
+      servers: [server()],
+      requests: [pendingRequest("request-1", { serverId: "nas" })],
+    });
+    render(
+      <MemoryRouter>
+        <ManagedServersSection />
+      </MemoryRouter>,
+    );
+    await elapse(0);
+
+    listing = view({ servers: [server({ pairedAt: "2026-09-29T00:00:00Z" })] });
+    await elapse(5000);
+    expect(screen.getByText("federation.servers.approved NAS")).toBeInTheDocument();
+    expect(screen.queryByText(/requestClosed/)).not.toBeInTheDocument();
   });
 
   it("says when a request ended without an approval", async () => {

@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Remoting.Abstractions.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Tests.RemoteAccess.Console;
@@ -124,6 +126,82 @@ public class RemoteConsolePairingTests
             "the approved request to leave the listing");
         Assert.AreEqual("server-desk", (await _console.Manager.GetAsync(false)).Servers.Single().ServerId);
     }
+
+    [TestMethod]
+    public async Task A_listing_taken_while_an_approval_is_collected_always_has_the_request_or_its_server()
+    {
+        // The page and the app both ask every five seconds from the moment the request was
+        // filed, so the page's read tends to land on the collection itself. A read with neither
+        // the request nor its server tells the page the request ended unapproved, and it stops
+        // watching. Many managed servers make each read of them long enough for a collection to
+        // finish in the middle of one, and each round is another chance for that.
+        await _console.Store.MutateAsync(data => data.Servers.AddRange(Enumerable.Range(0, 20_000)
+            .Select(i => new ClientServerConnection
+            {
+                ServerId = $"server-{i}",
+                ServerName = $"Server {i}",
+                BaseAddress = $"http://192.0.2.1:{10_000 + i}",
+                DeviceId = $"device-{i}",
+                DeviceKey = "key",
+                PairedAt = DateTime.UtcNow
+            })));
+
+        for (var round = 0; round < 6; round++)
+        {
+            var desk = await Server($"server-desk-{round}");
+            var filed = await _console.Manager.PairAsync(desk.BaseAddress, null);
+            Assert.AreEqual(ManagedServerOutcome.AwaitingApproval, filed.Outcome);
+
+            using var giveUp = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var reading = ReadUntilCollectedAsync(filed.RequestId!, desk.ServerId, giveUp.Token);
+
+            desk.Approved = true;
+            var (reads, lost) = await reading;
+
+            if (giveUp.IsCancellationRequested)
+            {
+                string logs;
+                lock (_console.Logs)
+                {
+                    logs = string.Join("\n", _console.Logs);
+                }
+
+                Assert.Fail($"round {round}: never collected\n{logs}");
+            }
+
+            Assert.AreEqual(0, lost, $"round {round}: {lost} of {reads} reads had neither the request nor the server");
+        }
+    }
+
+    /// <summary>Lists over and over until <paramref name="serverId"/> is managed and its request gone.</summary>
+    /// <returns>How many listings were read, and how many of them had neither.</returns>
+    private Task<(int Reads, int Lost)> ReadUntilCollectedAsync(string requestId, string serverId,
+        CancellationToken giveUp) =>
+        Task.Run(async () =>
+        {
+            var reads = 0;
+            var lost = 0;
+
+            while (!giveUp.IsCancellationRequested)
+            {
+                var view = await _console.Manager.GetAsync(false);
+                var waiting = view.Requests.Any(r => r.RequestId == requestId);
+                var managed = view.Servers.Any(s => s.ServerId == serverId);
+                reads++;
+
+                if (!waiting && !managed)
+                {
+                    lost++;
+                }
+
+                if (managed && !waiting)
+                {
+                    break;
+                }
+            }
+
+            return (reads, lost);
+        }, CancellationToken.None);
 
     [TestMethod]
     public async Task A_cancelled_request_stops_being_collected()
