@@ -129,6 +129,38 @@ public class ClientConnectionTests
         Assert.AreEqual("http://192.168.1.5:34567", ServerConnector.Normalize("http://192.168.1.5:34567/"));
         Assert.AreEqual("http://192.168.1.5:34567", ServerConnector.Normalize("  192.168.1.5:34567  "));
         Assert.AreEqual("https://bakabase.example.com", ServerConnector.Normalize("https://bakabase.example.com/"));
+        Assert.AreEqual("http://192.168.1.5:34567", ServerConnector.Normalize("１９２．１６８．１．５：３４５６７"));
+        Assert.AreEqual("http://PC1:34567", ServerConnector.Normalize(@"\\PC1:34567"));
+    }
+
+    [TestMethod]
+    public async Task An_address_typed_in_full_width_reaches_the_server()
+    {
+        // A full-width colon used to be taken for part of the host name, and the request
+        // failed before it was sent.
+        _handler.Respond = _ => Json(ServerInfo());
+
+        var result = await _connector.HandshakeAsync("192.168.1.5：34567");
+
+        Assert.AreEqual(ServerHandshakeOutcome.Ok, result.Outcome);
+        Assert.AreEqual("http://192.168.1.5:34567/remote-access/server-info",
+            _handler.Requests[0].RequestUri!.ToString());
+    }
+
+    [TestMethod]
+    public async Task An_address_that_cannot_be_used_is_said_to_be_so_without_asking_anyone()
+    {
+        // Neither "nothing answered" after a wait on port 80, nor "not Bakabase": the address
+        // itself is what is wrong, and the user is told which part.
+        Assert.AreEqual(ServerHandshakeOutcome.PortMissing, (await _connector.HandshakeAsync("192.168.1.5")).Outcome);
+        Assert.AreEqual(ServerHandshakeOutcome.PortMissing, (await _connector.HandshakeAsync(@"\\PC1")).Outcome);
+        Assert.AreEqual(ServerHandshakeOutcome.InvalidAddress,
+            (await _connector.HandshakeAsync("192.168.1.5:34567/library")).Outcome);
+        Assert.AreEqual(ServerHandshakeOutcome.InvalidAddress,
+            (await _connector.HandshakeAsync("192.168.1.5﹕34567")).Outcome);
+        Assert.AreEqual(ServerHandshakeOutcome.InvalidAddress, (await _connector.HandshakeAsync("ftp://nas:21")).Outcome);
+
+        Assert.AreEqual(0, _handler.Requests.Count);
     }
 
     // ---- handshake ----

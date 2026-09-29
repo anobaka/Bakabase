@@ -2,6 +2,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components.Discovery;
@@ -29,11 +30,12 @@ public class UdpProbeClientTests
         // A server with several interfaces cannot know which of its addresses this
         // machine can route to. The datagram that arrived came back over one that works,
         // so that is the only address worth keeping.
+        // A documentation address (TEST-NET-1): never the address of the machine running this.
         var server = UdpProbeClient.Interpret(
-            Reply(new RemoteAccessServerDescriptor("abc", "My-PC", 34567, "2.4.0", 1), "192.168.1.5"));
+            Reply(new RemoteAccessServerDescriptor("abc", "My-PC", 34567, "2.4.0", 1), "192.0.2.5"));
 
         Assert.IsNotNull(server);
-        Assert.AreEqual("http://192.168.1.5:34567", server!.BaseAddress);
+        Assert.AreEqual("http://192.0.2.5:34567", server!.BaseAddress);
         Assert.AreEqual("My-PC", server.ServerName);
         Assert.IsFalse(server.IsThisMachine);
     }
@@ -48,6 +50,39 @@ public class UdpProbeClientTests
             Reply(new RemoteAccessServerDescriptor("abc", "My-PC", 34567, "2.4.0", 1), "127.0.0.1"));
 
         Assert.IsTrue(server!.IsThisMachine);
+    }
+
+    [TestMethod]
+    public void A_reply_from_one_of_this_machines_own_addresses_is_marked_as_this_computer()
+    {
+        // This machine answers its own subnet broadcast too, from its LAN address. Only the
+        // address tells that answer apart from a copy of this install on another computer,
+        // which answers with the same id.
+        var own = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+            .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+            .Select(a => a.Address)
+            .FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(a));
+
+        if (own == null)
+        {
+            Assert.Inconclusive("This machine has no IPv4 address besides loopback.");
+        }
+
+        var server = UdpProbeClient.Interpret(
+            Reply(new RemoteAccessServerDescriptor("abc", "My-PC", 34567, "2.4.0", 1), own.ToString()));
+
+        Assert.IsTrue(server!.IsThisMachine);
+    }
+
+    [TestMethod]
+    public void A_reply_is_judged_against_the_addresses_the_window_read_once()
+    {
+        // One reading of this machine's addresses for the whole window, whatever replies it gets.
+        var own = new ThisMachineAddresses([IPAddress.Parse("192.0.2.5")]);
+        var descriptor = new RemoteAccessServerDescriptor("abc", "My-PC", 34567, "2.4.0", 1);
+
+        Assert.IsTrue(UdpProbeClient.Interpret(Reply(descriptor, "192.0.2.5"), own)!.IsThisMachine);
+        Assert.IsFalse(UdpProbeClient.Interpret(Reply(descriptor, "192.0.2.6"), own)!.IsThisMachine);
     }
 
     [TestMethod]

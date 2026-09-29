@@ -166,7 +166,7 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
     {
         private readonly Dictionary<string, RemoteAccessServerDescriptor> _facts = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, (string Host, ushort Port)> _hosts = new(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, IPAddress> _addresses = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<IPAddress>> _addresses = new(StringComparer.OrdinalIgnoreCase);
 
         public void Add(IEnumerable<MdnsMessage.ParsedRecord> records)
         {
@@ -203,17 +203,22 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
             }
         }
 
-        public IReadOnlyList<DiscoveredServer> Build()
+        public IReadOnlyList<DiscoveredServer> Build() => Build(ThisMachine.Snapshot());
+
+        /// <param name="own">This machine's addresses, which tell its own advertisements apart.</param>
+        public IReadOnlyList<DiscoveredServer> Build(ThisMachineAddresses own)
         {
-            var found = new Dictionary<string, DiscoveredServer>(StringComparer.Ordinal);
+            var found = new Dictionary<(string, bool), DiscoveredServer>();
 
             foreach (var (instance, descriptor) in _facts)
             {
                 if (!_hosts.TryGetValue(instance, out var host) ||
-                    !_addresses.TryGetValue(Key(host.Host), out var address))
+                    !_addresses.TryGetValue(Key(host.Host), out var addresses) || addresses.Count == 0)
                 {
                     continue;
                 }
+
+                var (address, isThisMachine) = Choose(addresses, own);
 
                 // The port comes from SRV rather than from the TXT facts. They agree
                 // today, but SRV is where DNS-SD says a port lives, and a browser that
@@ -224,43 +229,63 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
                     $"http://{address}:{host.Port}",
                     descriptor.AppVersion,
                     descriptor.ProtocolVersion,
-                    IPAddress.IsLoopback(address),
+                    isThisMachine,
                     descriptor.Kind,
                     descriptor.Platform);
 
-                if (!found.TryGetValue(server.ServerId, out var existing) ||
-                    (server.IsThisMachine && !existing.IsThisMachine))
-                {
-                    found[server.ServerId] = server;
-                }
+                ServerDiscovery.Keep(found, server);
             }
 
             return found.Values.ToList();
         }
 
+        /// <summary>Keeps every address a host advertises, once each, in the order they came.</summary>
+        private void Remember(string host, IPAddress address)
+        {
+            if (!_addresses.TryGetValue(host, out var known))
+            {
+                _addresses[host] = known = [];
+            }
+
+            if (!known.Contains(address))
+            {
+                known.Add(address);
+            }
+        }
+
         /// <summary>
-        /// Keeps one address per host, preferring one that means something here.
+        /// Which of a host's advertised addresses to offer, and whether the host is this machine.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// A multi-homed server publishes an A record per interface, and nothing in the
         /// packet says which of them this machine can route to — that is what the probe
         /// channel knows, and where both find the same server its answer is kept. What
         /// this can rule out is a loopback address, which read from another machine
         /// points at the reader. It is still taken when it is all that was offered:
         /// then the server really is on this computer.
+        /// </para>
+        /// <para>
+        /// Otherwise the host is this machine only when this machine holds every address it
+        /// advertised. Another computer can advertise one this machine holds too — a VPN or
+        /// proxy adapter's (198.18.0.1), a virtual machine host's (192.168.56.1), a container
+        /// bridge's — beside its own LAN address, and is offered at the address that is not
+        /// this machine's: the other would lead back here.
+        /// </para>
         /// </remarks>
-        private void Remember(string host, IPAddress address)
+        private static (IPAddress Address, bool IsThisMachine) Choose(List<IPAddress> addresses,
+            ThisMachineAddresses own)
         {
-            if (!_addresses.TryGetValue(host, out var existing))
+            var routed = addresses.Where(a => !IPAddress.IsLoopback(a)).ToList();
+
+            if (routed.Count == 0)
             {
-                _addresses[host] = address;
-                return;
+                return (addresses[0], true);
             }
 
-            if (IPAddress.IsLoopback(existing) && !IPAddress.IsLoopback(address))
-            {
-                _addresses[host] = address;
-            }
+            var elsewhere = routed.FirstOrDefault(a => !own.Holds(a));
+
+            return elsewhere == null ? (routed[0], true) : (elsewhere, false);
         }
 
         private void Forget(MdnsMessage.ParsedRecord record)
@@ -274,6 +299,16 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
                     break;
                 case MdnsMessage.TypeTxt:
                     _facts.Remove(key);
+                    break;
+                case MdnsMessage.TypeA when record.Address != null && _addresses.TryGetValue(key, out var known):
+                    // One address going away leaves the host's others.
+                    known.Remove(record.Address);
+
+                    if (known.Count == 0)
+                    {
+                        _addresses.Remove(key);
+                    }
+
                     break;
                 case MdnsMessage.TypeA:
                     _addresses.Remove(key);

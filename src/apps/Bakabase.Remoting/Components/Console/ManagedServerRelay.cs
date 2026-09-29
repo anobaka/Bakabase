@@ -1,6 +1,7 @@
 using System.Net;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Remoting.Components.Connection;
 using Bakabase.Remoting.Components.Forwarding;
 using Bakabase.Remoting.Components.Relay;
@@ -31,6 +32,7 @@ namespace Bakabase.Remoting.Components.Console;
 /// identity and ports and records what it hears for the listing.
 /// </param>
 /// <param name="IdentityPolicy">How often the relay asks, and how long it waits.</param>
+/// <param name="Connector">How the relay connects to its server: the console's, so tests can put a network under both.</param>
 public sealed record ManagedServerRelayDependencies(
     ManagedServerStore ManagedStore,
     RelayNavigationTokens Tokens,
@@ -41,7 +43,8 @@ public sealed record ManagedServerRelayDependencies(
     AppService? AppService,
     IGuiAdapter? GuiAdapter,
     IUpstreamIdentityVerifier IdentityVerifier,
-    UpstreamIdentityPolicy IdentityPolicy);
+    UpstreamIdentityPolicy IdentityPolicy,
+    DualStackConnector Connector);
 
 /// <summary>
 /// One managed server's relay: a loopback listener, with a container of its own, that
@@ -153,6 +156,7 @@ public sealed class ManagedServerRelay(string serverId, int port, ManagedServerR
         services.AddSingleton(dependencies.Context);
         services.AddSingleton(dependencies.IdentityVerifier);
         services.AddSingleton(dependencies.IdentityPolicy);
+        services.AddSingleton(dependencies.Connector);
         services.AddSingleton<IRelayUnavailablePage, ConsoleUnavailablePageWriter>();
 
         // Instances rather than factories over the app's container, so this container

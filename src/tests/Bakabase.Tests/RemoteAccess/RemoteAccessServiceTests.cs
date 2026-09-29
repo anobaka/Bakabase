@@ -144,6 +144,22 @@ public class RemoteAccessServiceTests
     }
 
     [TestMethod]
+    public async Task ServerId_IsReplacedOnlyWhenAsked_AndPersisted()
+    {
+        // A copied data directory brings its install's identity along; the copy takes a new one.
+        var (service, options) = Build();
+        options.ServerId = "copied-from-elsewhere";
+
+        var replaced = await service.RegenerateServerIdAsync();
+
+        Assert.AreNotEqual("copied-from-elsewhere", replaced);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(replaced));
+        Assert.AreEqual(replaced, options.ServerId);
+        Assert.AreEqual(replaced, await service.GetOrCreateServerIdAsync());
+        Assert.AreEqual(replaced, (await service.GetServerDescriptorAsync()).Id);
+    }
+
+    [TestMethod]
     public async Task ServerDescriptor_CarriesIdentityPortAndVersions()
     {
         var (service, _) = Build(RemoteAccessMode.Disabled, "http://0.0.0.0:34567", "http://0.0.0.0:34568");

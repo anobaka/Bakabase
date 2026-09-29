@@ -44,7 +44,20 @@ public enum ManagedServerOutcome
     TooManyAttempts = 10,
 
     /// <summary>The server cannot pair at all (too old, or pairing disabled there).</summary>
-    PairingUnsupported = 11
+    PairingUnsupported = 11,
+
+    /// <summary>What was typed is not an http host and port; nothing was sent.</summary>
+    InvalidAddress = 12,
+
+    /// <summary>A host typed without its port; nothing was sent, since no port can be guessed.</summary>
+    PortMissing = 13,
+
+    /// <summary>
+    /// Another machine answers there with this install's own identity: a copy of this data
+    /// directory, most likely. Refused like <see cref="ThisDevice"/>; one of the two has to take
+    /// a new identity before either can manage the other.
+    /// </summary>
+    SameIdentity = 14
 }
 
 /// <summary>How a managed server looked the last time this device asked.</summary>
@@ -75,7 +88,12 @@ public enum ManagedServerState
 /// <param name="ServerId">Its install identity, when it gave one.</param>
 /// <param name="Name">What it calls itself, when it said.</param>
 /// <param name="IsThisDevice">The address now reaches this device itself: its own server, or one of its relays.</param>
-public sealed record ManagedServerAnswerView(string? ServerId, string? Name, bool IsThisDevice);
+/// <param name="IsSameIdentity">
+/// The address now reaches another machine answering with this device's own identity: a copy of
+/// this data directory, most likely (<see cref="ManagedServerOutcome.SameIdentity"/>).
+/// </param>
+public sealed record ManagedServerAnswerView(string? ServerId, string? Name, bool IsThisDevice,
+    bool IsSameIdentity = false);
 
 /// <summary>Where one of a managed server's library paths is on this machine.</summary>
 public sealed record ManagedServerPathMapping(string ServerPath, string LocalPath);

@@ -433,6 +433,7 @@ public sealed class FakeRemoteAccessService : IRemoteAccessService
 
     public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses() => [];
     public Task<string> GetOrCreateServerIdAsync() => Task.FromResult("this-server");
+    public Task<string> RegenerateServerIdAsync() => throw new NotSupportedException();
     public bool GetAllowLiveTranscode() => false;
     public Task SetAllowLiveTranscodeAsync(bool allow) => Task.CompletedTask;
     public bool GetRequirePairing() => RequirePairing;

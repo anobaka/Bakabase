@@ -8,6 +8,7 @@ using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Modules.RemoteAccess.Components.Pairing;
 using Bakabase.Remoting.Abstractions.Models;
@@ -121,20 +122,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         _logger = loggerFactory.CreateLogger<RemoteConsoleManager>();
         _self = new ClientSelfAddress(OwnPorts);
 
-        // Its own client rather than the app's: proxies are bypassed, as the relay's are —
-        // a system proxy has no route to a server on the LAN — and a redirect is an answer
-        // to report, not one to follow.
-        _http = new HttpClient(new SocketsHttpHandler
-        {
-            UseProxy = false,
-            AllowAutoRedirect = false,
-            UseCookies = false,
-            ConnectTimeout = TimeSpan.FromSeconds(10),
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
-        })
-        {
-            Timeout = TimeSpan.FromSeconds(30)
-        };
+        _http = CreateHttpClient(_options.Connector.ConnectCallback);
 
         // Last, once everything ListTargets reads is in place: from here on the shell's tray
         // lists the managed servers too, answered from the snapshot the store already holds.
@@ -260,8 +248,10 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
     public async Task<ManagedServerProbeView> ProbeAsync(string address, CancellationToken ct = default)
     {
-        var handshake = await HandshakeAsync(ServerConnector.Normalize(address), new ServerClock(), ct);
-        var outcome = await ClassifyAsync(handshake);
+        // As typed: the handshake reads it itself, and a missing port only shows before
+        // normalizing puts a scheme in front.
+        var handshake = await HandshakeAsync(address, new ServerClock(), ct);
+        var outcome = await ClassifyAsync(address, handshake, ct);
         var server = handshake.Server;
 
         return new ManagedServerProbeView(
@@ -277,19 +267,16 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
     public async Task<ManagedServerDiscoveryView> DiscoverAsync(CancellationToken ct = default)
     {
-        var ownId = await _remoteAccess.GetOrCreateServerIdAsync();
         var found = await _discovery.DiscoverAsync(_options.DiscoveryTimeout, ct);
         var managed = _store.Read().Servers.Select(s => s.ServerId).ToHashSet(StringComparer.Ordinal);
 
-        // This device, however it answered: from loopback — its own server, right here — or
-        // under its own identity from one of its LAN addresses. An id that answered from
-        // loopback is this machine's on every other interface too. Managing yourself is what
-        // the app does without a relay, and pairing with yourself is refused anyway.
-        var local = found.Where(s => s.IsThisMachine).Select(s => s.ServerId).ToHashSet(StringComparer.Ordinal);
-        local.Add(ownId);
-
+        // Never this machine, however it answered — from loopback or from one of its own
+        // addresses: its own server, right here. Managing yourself is what the app does without
+        // a relay, and pairing with yourself is refused anyway. Another machine is listed even
+        // under this install's own id: that is a copy of this data directory, and adding it
+        // says so, which is the one way the user learns of it.
         var servers = found
-            .Where(s => !string.IsNullOrWhiteSpace(s.ServerId) && !local.Contains(s.ServerId))
+            .Where(s => !string.IsNullOrWhiteSpace(s.ServerId) && !s.IsThisMachine)
             // One row per install: a server answering on two interfaces, or on both the
             // probe and mDNS, is still one server to pair with.
             .DistinctBy(s => s.ServerId, StringComparer.Ordinal)
@@ -304,8 +291,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     {
         var normalized = ServerConnector.Normalize(address);
         var clock = new ServerClock();
-        var handshake = await HandshakeAsync(normalized, clock, ct);
-        var outcome = await ClassifyAsync(handshake);
+        var handshake = await HandshakeAsync(address, clock, ct);
+        var outcome = await ClassifyAsync(address, handshake, ct);
 
         if (outcome != ManagedServerOutcome.Ok)
         {
@@ -556,11 +543,15 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
     #region Pairing
 
-    private async Task<ServerHandshakeResult> HandshakeAsync(string address, ServerClock clock, CancellationToken ct)
+    private Task<ServerHandshakeResult> HandshakeAsync(string address, ServerClock clock, CancellationToken ct) =>
+        HandshakeAsync(_http, address, clock, ct);
+
+    private async Task<ServerHandshakeResult> HandshakeAsync(HttpClient http, string address, ServerClock clock,
+        CancellationToken ct)
     {
         try
         {
-            return await new ServerConnector(_http, clock, _self).HandshakeAsync(address, ct);
+            return await new ServerConnector(http, clock, _self).HandshakeAsync(address, ct);
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
         {
@@ -569,16 +560,86 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     }
 
     /// <summary>
+    /// A client of the console's own rather than the app's: proxies are bypassed, as the relay's
+    /// are — a system proxy has no route to a server on the LAN — a redirect is an answer to
+    /// report, not one to follow, and a name's IPv4 and IPv6 addresses are raced
+    /// (<see cref="DualStackConnector"/>), as the relay's are.
+    /// </summary>
+    private static HttpClient CreateHttpClient(
+        Func<SocketsHttpConnectionContext, CancellationToken, ValueTask<Stream>> connect) =>
+        new(new SocketsHttpHandler
+        {
+            UseProxy = false,
+            AllowAutoRedirect = false,
+            UseCookies = false,
+            ConnectTimeout = TimeSpan.FromSeconds(10),
+            ConnectCallback = connect,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+        })
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
+
+    /// <summary>
+    /// One exchange with a managed server's address: asking who answers there, then whatever is
+    /// signed for that server on the answer. Its first connection goes wherever the address
+    /// connects, and every later one to the IP address that one reached (<see cref="Reached"/>),
+    /// which is where a relay then connects too.
+    /// </summary>
+    /// <remarks>
+    /// A name can resolve to several addresses, and those to several installs. Each connection
+    /// racing them on its own, the one that said who it is and the one handed what is signed
+    /// could differ — the confirmed one only has to be slower to accept once — so the answer
+    /// holds for the IP address that gave it, not for the name.
+    /// </remarks>
+    private sealed class ServerExchange : IDisposable
+    {
+        private IPAddress? _reached;
+
+        public ServerExchange(DualStackConnector connector)
+        {
+            Http = CreateHttpClient(async (context, ct) =>
+            {
+                if (Reached is { } reached)
+                {
+                    return await connector.ConnectAsync(
+                        new DnsEndPoint(reached.ToString(), context.DnsEndPoint.Port), ct);
+                }
+
+                var (stream, to) = await connector.ConnectReachingAsync(context.DnsEndPoint, null, ct);
+                Volatile.Write(ref _reached, to.Address);
+                return stream;
+            });
+        }
+
+        public HttpClient Http { get; }
+
+        /// <summary>The IP address the exchange's first connection reached; null before one did.</summary>
+        public IPAddress? Reached => Volatile.Read(ref _reached);
+
+        public void Dispose() => Http.Dispose();
+    }
+
+    /// <summary>
     /// What a handshake means for managing, including the one case the handshake itself
     /// cannot see: an address that reached this device through a door other than its own
     /// ports — a LAN address of this machine, a name that resolves here.
     /// </summary>
-    private async Task<ManagedServerOutcome> ClassifyAsync(ServerHandshakeResult handshake)
+    /// <remarks>
+    /// This install's own id from another machine is another installation with the same
+    /// identity — a copied data directory — and is refused as well, but said apart: "that is
+    /// this computer" would send the user looking for a mistake in the address. See
+    /// <see cref="IsCopyAsync"/>.
+    /// </remarks>
+    private async Task<ManagedServerOutcome> ClassifyAsync(string address, ServerHandshakeResult handshake,
+        CancellationToken ct)
     {
         if (handshake.Server != null &&
             string.Equals(handshake.Server.Id, await _remoteAccess.GetOrCreateServerIdAsync(), StringComparison.Ordinal))
         {
-            return ManagedServerOutcome.ThisDevice;
+            return await IsCopyAsync(address, handshake.Server, ct)
+                ? ManagedServerOutcome.SameIdentity
+                : ManagedServerOutcome.ThisDevice;
         }
 
         return handshake.Outcome switch
@@ -590,8 +651,49 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             ServerHandshakeOutcome.ServerTooOld => ManagedServerOutcome.ServerTooOld,
             ServerHandshakeOutcome.RemoteAccessDisabled => ManagedServerOutcome.RemoteAccessDisabled,
             ServerHandshakeOutcome.SelfAddress => ManagedServerOutcome.ThisDevice,
+            ServerHandshakeOutcome.InvalidAddress => ManagedServerOutcome.InvalidAddress,
+            ServerHandshakeOutcome.PortMissing => ManagedServerOutcome.PortMissing,
             _ => ManagedServerOutcome.NotBakabase
         };
+    }
+
+    /// <summary>
+    /// Whether <paramref name="server"/>, which answered at <paramref name="address"/> with this
+    /// install's own id, is another machine — a copy of this data directory — rather than this
+    /// device.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Two things a copy does not share with this device, and it takes both. The name a server
+    /// gives itself is its machine's, which is not in the data directory: this device's own
+    /// name is this device, reached through a door its address does not show — a reverse
+    /// proxy or port forward on another host, the router's public address looping back. And
+    /// the address has to be another machine's: one this machine holds leads here.
+    /// </para>
+    /// <para>
+    /// Refused either way; this only chooses the words. So it never keeps a refusal from being
+    /// made: an address it cannot read, or a name whose lookup runs out of time — in whatever
+    /// budget the caller is spending — reads as this device, as every such answer did before
+    /// the two were told apart.
+    /// </para>
+    /// </remarks>
+    private async Task<bool> IsCopyAsync(string address, ServerInfo server, CancellationToken ct)
+    {
+        if (string.Equals(server.Name, (await _remoteAccess.GetServerDescriptorAsync()).Name,
+                StringComparison.OrdinalIgnoreCase) ||
+            RemoteAddressInput.Parse(address, out var root) != RemoteAddressProblem.None)
+        {
+            return false;
+        }
+
+        try
+        {
+            return !await _options.ReachesThisMachine(root!, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
     }
 
     private static ManagedServerOutcome Map(ClientPairingOutcome outcome) => outcome switch
@@ -739,9 +841,10 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             {
                 var confirm = await HandshakeAsync(request.Address, clock, budget.Token);
 
-                if (await ClassifyAsync(confirm) == ManagedServerOutcome.ThisDevice)
+                if (await ClassifyAsync(request.Address, confirm, budget.Token) is
+                    var outcome and (ManagedServerOutcome.ThisDevice or ManagedServerOutcome.SameIdentity))
                 {
-                    request.Finish(ManagedServerOutcome.ThisDevice);
+                    request.Finish(outcome);
                     return;
                 }
 
@@ -800,12 +903,14 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         var clock = ClockFor(entry.ServerId);
         var previous = _probes.GetValueOrDefault(entry.ServerId);
         var startedAt = DateTimeOffset.UtcNow;
+        using var exchange = new ServerExchange(_options.Connector);
         ProbeSnapshot snapshot;
 
         try
         {
-            var handshake = await HandshakeAsync(entry.BaseAddress, clock, budget.Token);
-            var identity = await IdentityOfAsync(entry.ServerId, entry.BaseAddress, handshake, startedAt);
+            var handshake = await HandshakeAsync(exchange.Http, entry.BaseAddress, clock, budget.Token);
+            var identity = await IdentityOfAsync(entry.ServerId, entry.BaseAddress, handshake, exchange.Reached,
+                startedAt, budget.Token);
             var server = handshake.Server;
 
             // A running relay acts on this at once — stops forwarding, or starts again —
@@ -835,8 +940,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             {
                 // What it says of itself now: a server that stopped saying (an older build)
                 // has nothing more to show.
-                snapshot = new ProbeSnapshot(await ReadContextAsync(entry, clock, budget.Token), server.Mode,
-                    server.AppVersion) { Kind = server.Kind, Platform = server.Platform };
+                snapshot = new ProbeSnapshot(await ReadContextAsync(exchange.Http, entry, clock, budget.Token),
+                    server.Mode, server.AppVersion) { Kind = server.Kind, Platform = server.Platform };
 
                 if (snapshot.State == ManagedServerState.Online)
                 {
@@ -895,10 +1000,11 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     }
 
     /// <summary>
-    /// Asks the server, signed as this device, what it makes of this device.
+    /// Asks the server, signed as this device, what it makes of this device — over
+    /// <paramref name="http"/>, the exchange in which it just said who it is.
     /// </summary>
-    private async Task<ManagedServerState> ReadContextAsync(ClientServerConnection entry, ServerClock clock,
-        CancellationToken ct)
+    private async Task<ManagedServerState> ReadContextAsync(HttpClient http, ClientServerConnection entry,
+        ServerClock clock, CancellationToken ct)
     {
         if (!Uri.TryCreate(entry.BaseAddress, UriKind.Absolute, out var root))
         {
@@ -914,7 +1020,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             return ManagedServerState.Revoked;
         }
 
-        using var response = await _http.SendAsync(request, ct);
+        using var response = await http.SendAsync(request, ct);
 
         if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {
@@ -1160,8 +1266,9 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     public async Task<UpstreamIdentityCheck> VerifyAsync(string serverId, string address, CancellationToken ct)
     {
         var startedAt = DateTimeOffset.UtcNow;
-        var handshake = await HandshakeAsync(address, ClockFor(serverId), ct);
-        var check = await IdentityOfAsync(serverId, address, handshake, startedAt);
+        using var exchange = new ServerExchange(_options.Connector);
+        var handshake = await HandshakeAsync(exchange.Http, address, ClockFor(serverId), ct);
+        var check = await IdentityOfAsync(serverId, address, handshake, exchange.Reached, startedAt, ct);
 
         var entry = _store.Find(serverId);
 
@@ -1210,8 +1317,9 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     /// still the server: what it then does with a request is its own answer to give, as it
     /// always was.
     /// </remarks>
+    /// <param name="reached">The IP address the handshake's connection reached, which the answer holds for.</param>
     private async Task<UpstreamIdentityCheck> IdentityOfAsync(string serverId, string address,
-        ServerHandshakeResult handshake, DateTimeOffset startedAt)
+        ServerHandshakeResult handshake, IPAddress? reached, DateTimeOffset startedAt, CancellationToken ct)
     {
         if (handshake.Outcome == ServerHandshakeOutcome.SelfAddress)
         {
@@ -1223,14 +1331,19 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
         if (handshake.Server is { } server)
         {
+            // This install's own id is this device unless another machine answers with it: a
+            // copy of this data directory (see IsCopyAsync).
             var verdict =
                 string.Equals(server.Id, await _remoteAccess.GetOrCreateServerIdAsync(), StringComparison.Ordinal)
-                    ? UpstreamIdentityVerdict.ThisDevice
+                    ? await IsCopyAsync(address, server, ct)
+                        ? UpstreamIdentityVerdict.SameIdentity
+                        : UpstreamIdentityVerdict.ThisDevice
                     : string.Equals(server.Id, serverId, StringComparison.Ordinal)
                         ? UpstreamIdentityVerdict.Confirmed
                         : UpstreamIdentityVerdict.WrongServer;
 
-            return new UpstreamIdentityCheck(serverId, address, verdict, server.Id, server.Name, null, startedAt);
+            return new UpstreamIdentityCheck(serverId, address, verdict, server.Id, server.Name, null, startedAt)
+                { ReachedAddress = reached };
         }
 
         return new UpstreamIdentityCheck(serverId, address, UpstreamIdentityVerdict.Unconfirmed, null, null,
@@ -1261,7 +1374,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         // whoever answered in its place.
         new(ManagedServerState.WrongServer, previous?.Mode, previous?.AppVersion,
             new ManagedServerAnswerView(check.AnsweredById, check.AnsweredByName,
-                check.Verdict == UpstreamIdentityVerdict.ThisDevice))
+                check.Verdict == UpstreamIdentityVerdict.ThisDevice,
+                check.Verdict == UpstreamIdentityVerdict.SameIdentity))
         {
             Kind = previous?.Kind,
             Platform = previous?.Platform
@@ -1284,15 +1398,17 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct, _lifetime.Token);
         budget.CancelAfter(_options.ProbeBudget);
+        using var exchange = new ServerExchange(_options.Connector);
 
         try
         {
             // Only to the server itself. Whoever else answers at its address now has no
             // business receiving a request signed as this device — and one that takes any
             // caller as local would carry it out.
-            var identity = await IdentityOfAsync(entry.ServerId, entry.BaseAddress,
-                await HandshakeAsync(entry.BaseAddress, ClockFor(entry.ServerId), budget.Token),
-                DateTimeOffset.UtcNow);
+            var handshake = await HandshakeAsync(exchange.Http, entry.BaseAddress, ClockFor(entry.ServerId),
+                budget.Token);
+            var identity = await IdentityOfAsync(entry.ServerId, entry.BaseAddress, handshake, exchange.Reached,
+                DateTimeOffset.UtcNow, budget.Token);
 
             if (!identity.IsConfirmed)
             {
@@ -1310,7 +1426,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
                 return;
             }
 
-            using var response = await _http.SendAsync(request, budget.Token);
+            using var response = await exchange.Http.SendAsync(request, budget.Token);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -1615,7 +1731,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         _services.GetService<IGuiAdapter>(),
         this,
         new UpstreamIdentityPolicy(_options.IdentityCheckInterval, _options.IdentityRetryInterval,
-            _options.IdentityCheckTimeout, _options.IdentityConnectionWindow));
+            _options.IdentityCheckTimeout, _options.IdentityConnectionWindow),
+        _options.Connector);
 
     /// <summary>This app's own server's ports, as it reports them.</summary>
     private IEnumerable<int> ServicePorts()

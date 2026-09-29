@@ -1,4 +1,5 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,7 @@ public class RemoteAccessDiscoveryService(
     private MdnsResponder? _mdns;
     private UdpProbeResponder? _probe;
     private int? _advertisedPort;
+    private string? _advertisedId;
     private bool _lastTickFailed;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -94,7 +96,7 @@ public class RemoteAccessDiscoveryService(
             return;
         }
 
-        if (_advertisedPort == descriptor.Port)
+        if (IsCurrent(_advertisedPort, _advertisedId, descriptor))
         {
             return;
         }
@@ -130,6 +132,7 @@ public class RemoteAccessDiscoveryService(
         }
 
         _advertisedPort = descriptor.Port;
+        _advertisedId = descriptor.Id;
         logger.LogInformation(
             "Discovery beacon up for {Instance} on port {Port} (mDNS: {Mdns}, UDP probe: {Probe})",
             advertisement.InstanceName, descriptor.Port, mdnsUp, probeUp);
@@ -139,6 +142,17 @@ public class RemoteAccessDiscoveryService(
             await _mdns.AnnounceAsync(ct);
         }
     }
+
+    /// <summary>
+    /// Whether a beacon up for <paramref name="advertisedPort"/> and <paramref name="advertisedId"/>
+    /// still answers for <paramref name="descriptor"/>, or has to start again.
+    /// </summary>
+    /// <remarks>
+    /// The id too: an install that takes a new identity ("Create a new device identity") keeps
+    /// its port, and must stop answering as the old one.
+    /// </remarks>
+    public static bool IsCurrent(int? advertisedPort, string? advertisedId, RemoteAccessServerDescriptor descriptor) =>
+        advertisedPort == descriptor.Port && advertisedId == descriptor.Id;
 
     private void StopResponders()
     {
@@ -156,5 +170,6 @@ public class RemoteAccessDiscoveryService(
         _probe?.Dispose();
         _probe = null;
         _advertisedPort = null;
+        _advertisedId = null;
     }
 }

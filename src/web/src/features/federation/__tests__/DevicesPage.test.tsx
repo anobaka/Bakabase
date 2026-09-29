@@ -166,7 +166,8 @@ describe("device permission workflows", () => {
     fireEvent.click(screen.getByText("federation.identity.reset"));
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("federation.confirm"));
-    await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(true));
+    // A copy: the install's own identity goes too.
+    await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(true, true));
     expect(federationPeerApi.sharing).not.toHaveBeenCalled();
   });
   it("opens recovery help from configuration without resetting and restores with the original node identity", async () => {
@@ -513,7 +514,8 @@ describe("unreadable sharing state", () => {
     expect(screen.getByRole("alertdialog")).toHaveTextContent("federation.recovery.confirm");
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("federation.confirm"));
-    await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(true));
+    // Only the sharing state was lost: the install keeps its identity and paired devices.
+    await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(true, false));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
   it("does not offer a reset for other load failures", () => {
@@ -743,15 +745,25 @@ describe("removing a device", () => {
 });
 
 describe("discovery", () => {
-  it.each([
-    ["nothing", []],
-    ["only this device", [{ nodeId: "local", name: "This PC", address: "http://self" }]],
-  ])("explains how to become discoverable when the scan finds %s", async (_, found) => {
-    vi.mocked(federationPeerApi.discover).mockResolvedValue(found);
+  it("explains how to become discoverable when the scan finds nothing", async () => {
+    vi.mocked(federationPeerApi.discover).mockResolvedValue([]);
     renderPage();
     fireEvent.click(screen.getByText("federation.discovery.scan"));
     expect(await screen.findByText("federation.discovery.noneFound")).toBeInTheDocument();
     expect(screen.queryByText("federation.discovery.use")).not.toBeInTheDocument();
+  });
+
+  it("lists another computer answering with this device's own identity", async () => {
+    // The server leaves this device itself out; what it lists under this id is a copy of its
+    // data folder, and connecting to it is where the user learns so.
+    vi.mocked(federationPeerApi.discover).mockResolvedValue([
+      { nodeId: "local", name: "Other PC", address: "http://192.168.1.9:34567" },
+    ]);
+    renderPage();
+    fireEvent.click(screen.getByText("federation.discovery.scan"));
+    fireEvent.click(await screen.findByText("federation.discovery.use"));
+    expect(screen.getByDisplayValue("http://192.168.1.9:34567")).toBeInTheDocument();
+    expect(screen.queryByText("federation.discovery.noneFound")).not.toBeInTheDocument();
   });
 });
 

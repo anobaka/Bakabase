@@ -6,6 +6,7 @@ using Bakabase.Modules.Player.Abstractions.Components;
 using Bakabase.Modules.Player.Abstractions.Models.Domain;
 using Bakabase.Modules.Player.Components;
 using Bakabase.Modules.Player.Extensions;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
 using Bakabase.Remoting.Components.BatchPlay;
 using Bakabase.Remoting.Components.Connection;
@@ -92,7 +93,8 @@ public static class RelayComposition
         services.TryAddSingleton<IUpstreamTarget>(sp => sp.GetRequiredService<ActiveConnection>());
         services.TryAddSingleton<IClientCredentialProvider>(sp => sp.GetRequiredService<ActiveConnection>());
         services.TryAddSingleton<UpstreamTransformer>();
-        services.TryAddSingleton(sp => CreateUpstreamInvoker(sp.GetRequiredService<UpstreamIdentity>()));
+        services.TryAddSingleton(sp => CreateUpstreamInvoker(sp.GetRequiredService<UpstreamIdentity>(),
+            ConnectorOf(sp)));
         services.TryAddSingleton<UpstreamStanding>();
 
         // Which server answers at the address, asked before anything is forwarded or signed
@@ -112,14 +114,16 @@ public static class RelayComposition
         // connects: to an address just confirmed, with no proxy in between.
         services.AddHttpClient<IUpstreamContextProbe, UpstreamContextProbe>()
             .ConfigurePrimaryHttpMessageHandler(sp =>
-                UpstreamConnections.CreateHandler(sp.GetRequiredService<UpstreamIdentity>(), TimeSpan.FromSeconds(10)))
+                UpstreamConnections.CreateHandler(sp.GetRequiredService<UpstreamIdentity>(), TimeSpan.FromSeconds(10),
+                    ConnectorOf(sp)))
             .AddHttpMessageHandler(sp => new UpstreamIdentityHandler(sp.GetRequiredService<UpstreamIdentity>()))
             .AddHttpMessageHandler(sp => new DeviceSigningHandler(
                 sp.GetRequiredService<IClientCredentialProvider>(), sp.GetRequiredService<ServerClock>()));
 
         services.AddHttpClient<IUpstreamApi, UpstreamApi>()
             .ConfigurePrimaryHttpMessageHandler(sp =>
-                UpstreamConnections.CreateHandler(sp.GetRequiredService<UpstreamIdentity>(), TimeSpan.FromSeconds(10)))
+                UpstreamConnections.CreateHandler(sp.GetRequiredService<UpstreamIdentity>(), TimeSpan.FromSeconds(10),
+                    ConnectorOf(sp)))
             .AddHttpMessageHandler(sp => new UpstreamIdentityHandler(sp.GetRequiredService<UpstreamIdentity>()))
             .AddHttpMessageHandler(sp => new DeviceSigningHandler(
                 sp.GetRequiredService<IClientCredentialProvider>(), sp.GetRequiredService<ServerClock>()));
@@ -359,12 +363,16 @@ public static class RelayComposition
     /// server's own answer. Every connection it opens is to an address just confirmed as
     /// the server's (<see cref="UpstreamConnections"/>).
     /// </summary>
-    private static HttpMessageInvoker CreateUpstreamInvoker(UpstreamIdentity identity)
+    private static HttpMessageInvoker CreateUpstreamInvoker(UpstreamIdentity identity, DualStackConnector connector)
     {
         // Long-lived by design: this carries the hub connection and video streams.
-        var handler = UpstreamConnections.CreateHandler(identity, TimeSpan.FromSeconds(15));
+        var handler = UpstreamConnections.CreateHandler(identity, TimeSpan.FromSeconds(15), connector);
         handler.ActivityHeadersPropagator = null;
 
         return new HttpMessageInvoker(handler);
     }
+
+    /// <summary>How the relay connects to its server: the composer's, when it registered one.</summary>
+    private static DualStackConnector ConnectorOf(IServiceProvider services) =>
+        services.GetService<DualStackConnector>() ?? DualStackConnector.Default;
 }

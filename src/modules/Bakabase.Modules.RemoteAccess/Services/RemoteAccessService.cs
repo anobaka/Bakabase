@@ -76,6 +76,23 @@ public class RemoteAccessService(
         }
     }
 
+    public async Task<string> RegenerateServerIdAsync()
+    {
+        await _serverIdLock.WaitAsync();
+        try
+        {
+            var previous = optionsManager.Value.ServerId;
+            var id = Guid.NewGuid().ToString("N");
+            await optionsManager.SaveAsync(o => o.ServerId = id);
+            logger.LogInformation("Replaced server id {Previous} with {ServerId}", previous, id);
+            return id;
+        }
+        finally
+        {
+            _serverIdLock.Release();
+        }
+    }
+
     public bool GetAllowLiveTranscode() => optionsManager.Value.AllowLiveTranscode;
 
     public async Task SetAllowLiveTranscodeAsync(bool allow)

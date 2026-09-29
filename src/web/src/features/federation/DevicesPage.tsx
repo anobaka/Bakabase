@@ -294,9 +294,9 @@ function Devices() {
   // one-click default opens it; a mode the operator already widened is left alone.
   const configureRemoteChecked = configureRemote ?? remoteDisabled;
   const reachableAddresses = status?.reachableAddresses ?? [];
-  const candidates = discovered?.filter(
-    (candidate) => candidate.nodeId !== status?.identity.nodeId,
-  );
+  // The server leaves this device out. One listed under this device's own id is another
+  // computer — a copy of its data folder — and connecting to it says so.
+  const candidates = discovered;
   // A corrupt sharing state never produces a status, so its recovery cannot live behind one.
   const sharingStateUnavailable =
     loadError instanceof FederationError && loadError.code === "SharingStateUnavailable";
@@ -319,9 +319,10 @@ function Devices() {
     clearTimeout(copyTimer.current);
     copyTimer.current = setTimeout(() => setCopied(undefined), 2000);
   };
-  const resetAsNewNode = (description: string) =>
+  /** `replaceInstallIdentity`: a copied installation, not an unreadable sharing state. */
+  const resetAsNewNode = (description: string, replaceInstallIdentity: boolean) =>
     confirm(t("federation.identity.reset"), description, async () => {
-      await federationPeerApi.resetIdentity(true);
+      await federationPeerApi.resetIdentity(true, replaceInstallIdentity);
       if (mounted.current) setInvite(undefined);
     });
 
@@ -395,7 +396,7 @@ function Devices() {
               className={`${buttonClass} text-danger`}
               disabled={busy}
               type="button"
-              onClick={() => resetAsNewNode(t("federation.recovery.confirm"))}
+              onClick={() => resetAsNewNode(t("federation.recovery.confirm"), false)}
             >
               {t("federation.identity.reset")}
             </button>
@@ -974,7 +975,7 @@ function Devices() {
               className={`${buttonClass} mt-3 text-danger`}
               disabled={busy}
               type="button"
-              onClick={() => resetAsNewNode(t("federation.identity.confirm"))}
+              onClick={() => resetAsNewNode(t("federation.identity.confirm"), true)}
             >
               {t("federation.identity.reset")}
             </button>

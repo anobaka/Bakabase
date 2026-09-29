@@ -33,9 +33,11 @@ listings the devices page reads — `/federation/local/peers`, `/federation/loca
 endpoints and confirmations.
 
 - **Records are merged on evidence only** (`map/graph.ts`). The install id first and always:
-  a peer's NodeId is the install's remote-access ServerId unless the node was reset
-  (`FederationNodeIdSource`), so a peer, a managed server and a beacon with one id are one
-  device — even while the server's address answers as another. An address (never a
+  a peer's NodeId is the install's remote-access ServerId (`FederationNodeIdSource`; "Create a
+  new device identity" replaces both together; only a node reset by an older build, or one
+  that replaced an unreadable sharing state, differs),
+  so a peer, a managed server and a beacon with one id are one device — even while the server's
+  address answers as another. An address (never a
   `WrongServer` address) only where one side carries no id at all (a device that manages this
   one, a request from a server that did not say who it is); two known ids that differ are two
   devices. **A name merges only where neither record carries an install id** (ServerId or
@@ -175,9 +177,31 @@ endpoints and confirmations.
 - **Peer input is untrusted.** Wire DTOs are validated and budgeted (`QueryProtocol`,
   `FederationMediaSessions.Remember`, `MediaPathBoundary`). Removed enum values (e.g. old
   `ResourceSource` members) must be filtered before they reach the wire, or peers reject whole blocks.
+- **A typed address is read one way, for both features** (`RemoteAddressInput`, behind
+  `FederationHttpClient.NormalizeAddress` and `ServerConnector`): full-width `：．。` and digits
+  and a leading `\\` are forgiven; typed without a scheme it must name its port — none is
+  guessed, since the desktop app's port can change at launch and a Docker server's is its
+  own — while `http(s)://` keeps its scheme's port, for a reverse proxy. Anything that is not
+  an http(s) host and port is `InvalidAddress`; both are answered before anything is sent.
 - **No silent widening or truncation.** Unsupported filters are rejected, partial coverage is
   reported per node, budget overruns fail explicitly.
 - **Proxies are bypassed** (`UseProxy = false`), matching the desktop app's relays.
+- **Connections race IPv4 and IPv6.** Every outbound connection to another device — peer
+  requests, discovery, the desktop app's relays and probes — opens through
+  `DualStackConnector` (`Bakabase.Modules.RemoteAccess`): IPv4 first, the next address beside
+  it after 250 ms, first to connect wins. A server listens on IPv4 only, and Windows resolves a
+  computer name IPv6-first; tried one after another, a silently dropped IPv6 address spent the
+  whole connect budget. Never go back to a plain `Socket.ConnectAsync(DnsEndPoint)`. A peer
+  connection gets 2 s once its name is resolved and 5 s in all, lookup included, so a
+  switched-off peer stored as an address is still reported after 2 s. Each call site takes its
+  connector from its composition — a `DualStackConnector` service for `AddFederationPeers` and
+  `FederationNodeDiscovery`, `RemoteConsoleOptions.Connector` for the desktop app's — and the
+  wiring is tested through the real handlers over a name that resolves IPv6-first to a dropped
+  address (`PeerConnectionTests`, `FederationNodeDiscoveryTests`, `ConsoleNetworkTests`).
+- **Discovery hides this node, not its copies.** "Find nearby devices" leaves out this node
+  answering from this machine's own addresses; another machine answering under this node's id
+  is listed — a copy of this data directory — and connecting to it is refused as
+  `SameIdentity`, which is how the user learns of it.
 
 ## Changing the protocol
 
@@ -190,8 +214,10 @@ after any DTO/endpoint change.
 
 `BAKABASE_FEDERATION_SHARING=true` turns sharing on at startup; `BAKABASE_NODE_NAME` names the
 node; `--federation-invite-on-start` prints a one-time code. The running instance is managed with
-`docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|invite|approve|reject|revoke>`,
-which only calls its loopback API.
+`docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|invite|approve|reject|revoke|new-identity>`,
+which only calls its loopback API. `new-identity` is the devices page's "Create a new device
+identity", for a copied data directory: a headless server's own UI is only ever reached from
+another device, and never reaches `/federation/local/*`.
 
 ## Tests
 

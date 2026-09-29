@@ -70,6 +70,33 @@ public class RemoteConsolePairingTests
     }
 
     [TestMethod]
+    public async Task An_address_typed_in_full_width_pairs_and_is_kept_as_meant()
+    {
+        var desk = await Server("server-desk");
+        desk.PairingCode = "123456";
+        var typed = $"１２７．０．０．１：{desk.Port}";
+
+        Assert.AreEqual(ManagedServerOutcome.Ok, (await _console.Manager.ProbeAsync(typed)).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.Ok, (await _console.Manager.PairAsync(typed, "123456")).Outcome);
+        Assert.AreEqual(desk.BaseAddress, _console.Store.Find("server-desk")!.BaseAddress);
+    }
+
+    [TestMethod]
+    public async Task A_mistyped_address_is_answered_for_what_it_is()
+    {
+        var desk = await Server("server-desk");
+        var host = new Uri(desk.BaseAddress).Host;
+
+        Assert.AreEqual(ManagedServerOutcome.PortMissing, (await _console.Manager.ProbeAsync(host)).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.PortMissing, (await _console.Manager.PairAsync(@"\\" + host, null)).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.InvalidAddress,
+            (await _console.Manager.PairAsync($"{desk.BaseAddress}/library", "123456")).Outcome);
+
+        Assert.AreEqual(0, desk.Requests.Count);
+        Assert.AreEqual(0, _console.Store.Read().Servers.Count);
+    }
+
+    [TestMethod]
     public async Task A_filed_request_is_collected_in_the_background_once_approved()
     {
         var desk = await Server("server-desk");
@@ -253,6 +280,91 @@ public class RemoteConsolePairingTests
         Assert.AreEqual(0, _console.Store.Read().Servers.Count);
         Assert.IsFalse(self.Requests.Any(r => r.Path.StartsWith("/remote-access/pair", StringComparison.Ordinal)),
             "pairing was attempted with this device itself");
+    }
+
+    [TestMethod]
+    public async Task Another_machine_with_this_devices_identity_is_refused_as_a_copy()
+    {
+        // A data directory copied to another computer takes this install's identity along. Told
+        // "that is this computer", the user looks for a mistake in an address that is right.
+        await using var console = await ConsoleHarness.StartAsync(
+            options: o => o.ReachesThisMachine = (_, _) => Task.FromResult(false));
+        var copy = await Server(ConsoleHarness.OwnServerId, "Copy");
+        copy.PairingCode = "123456";
+
+        var probe = await console.Manager.ProbeAsync(copy.BaseAddress);
+        Assert.AreEqual(ManagedServerOutcome.SameIdentity, probe.Outcome);
+        Assert.AreEqual(ManagedServerOutcome.SameIdentity, (await console.Manager.PairAsync(copy.BaseAddress, "123456")).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.SameIdentity, (await console.Manager.PairAsync(copy.BaseAddress, null)).Outcome);
+
+        Assert.AreEqual(0, console.Store.Read().Servers.Count);
+        Assert.IsFalse(copy.Requests.Any(r => r.Path.StartsWith("/remote-access/pair", StringComparison.Ordinal)),
+            "pairing was attempted with a copy of this device");
+
+        // A request filed with another server whose address a copy has taken by the time it is
+        // approved: the key is not filed under this device's own identity.
+        var desk = await Server("server-desk");
+        var filed = await console.Manager.PairAsync(desk.BaseAddress, null);
+        Assert.AreEqual(ManagedServerOutcome.AwaitingApproval, filed.Outcome);
+        var port = desk.Port;
+        await desk.DisposeAsync();
+        _servers.Remove(desk);
+        var taker = await FakeServer.TakeOverAsync(ConsoleHarness.OwnServerId, "Copy", port);
+        _servers.Add(taker);
+        taker.Approved = true;
+
+        await WaitUntilAsync(async () => !(await console.Manager.GetAsync(false)).Requests.Single().Active,
+            "the request to end");
+
+        Assert.AreEqual(ManagedServerOutcome.SameIdentity, (await console.Manager.GetAsync(false)).Requests.Single().Outcome);
+        Assert.AreEqual(0, console.Store.Read().Servers.Count);
+    }
+
+    [TestMethod]
+    public async Task This_device_reached_through_another_door_is_this_device_not_a_copy()
+    {
+        // A reverse proxy or port forward on another host, the router's public address looping
+        // back: the address is not this machine's, but what answers is this very install, under
+        // the name this device's own server gives itself — its machine's, which a copied data
+        // directory does not carry. Told it is a copy, the user would reset the only install.
+        await using var console = await ConsoleHarness.StartAsync(
+            options: o => o.ReachesThisMachine = (_, _) => Task.FromResult(false));
+        var forwarded = await Server(ConsoleHarness.OwnServerId, Environment.MachineName);
+        forwarded.PairingCode = "123456";
+
+        Assert.AreEqual(ManagedServerOutcome.ThisDevice, (await console.Manager.ProbeAsync(forwarded.BaseAddress)).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.ThisDevice,
+            (await console.Manager.PairAsync(forwarded.BaseAddress, "123456")).Outcome);
+        Assert.AreEqual(0, console.Store.Read().Servers.Count);
+    }
+
+    [TestMethod]
+    public async Task This_devices_own_identity_is_refused_even_when_telling_a_copy_apart_runs_out_of_time()
+    {
+        // Whether the address is this machine's only chooses the words: a name lookup that
+        // outlasts the claim's budget must not let the key through, filed under the server the
+        // request was made to.
+        await using var console = await ConsoleHarness.StartAsync(options: o =>
+            o.ReachesThisMachine = async (_, ct) =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(30), ct);
+                return false;
+            });
+        var desk = await Server("server-desk");
+        var filed = await console.Manager.PairAsync(desk.BaseAddress, null);
+        Assert.AreEqual(ManagedServerOutcome.AwaitingApproval, filed.Outcome);
+        var port = desk.Port;
+        await desk.DisposeAsync();
+        _servers.Remove(desk);
+        var taker = await FakeServer.TakeOverAsync(ConsoleHarness.OwnServerId, "Copy", port);
+        _servers.Add(taker);
+        taker.Approved = true;
+
+        await WaitUntilAsync(async () => !(await console.Manager.GetAsync(false)).Requests.Single().Active,
+            "the request to end");
+
+        Assert.AreEqual(ManagedServerOutcome.ThisDevice, (await console.Manager.GetAsync(false)).Requests.Single().Outcome);
+        Assert.AreEqual(0, console.Store.Read().Servers.Count);
     }
 
     [TestMethod]

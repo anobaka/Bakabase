@@ -51,12 +51,11 @@ public class RemoteConsoleDiscoveryTests
         _console.Discovery.Found =
         [
             // This device's own server, answering only over the LAN — the loopback answer does
-            // not always arrive — so only its identity gives it away.
-            Beacon(ConsoleHarness.OwnServerId, "Me", "http://192.168.1.2:34567"),
-            // Something else answering from loopback: this machine, whatever it calls itself,
-            // and so on its LAN address too.
+            // not always arrive — from an address discovery knows for this machine's own.
+            Beacon(ConsoleHarness.OwnServerId, "Me", "http://192.168.1.2:34567", local: true),
+            // Something else answering from this machine: whatever it calls itself, it is here.
             Beacon("server-loopback", "Also me", "http://127.0.0.1:5000", local: true),
-            Beacon("server-loopback", "Also me", "http://192.168.1.2:5000"),
+            Beacon("server-loopback", "Also me", "http://192.168.1.2:5000", local: true),
             // A NAS at its defaults, found by the probe and by mDNS.
             Beacon("server-nas", "NAS", "http://192.168.1.5:34567", version: "2.4.0"),
             Beacon("server-nas", "NAS", "http://nas.local:34567", version: "2.4.0"),
@@ -79,6 +78,26 @@ public class RemoteConsoleDiscoveryTests
         // A bounded search, the one the thin client used.
         Assert.AreEqual(1, _console.Discovery.Searches);
         Assert.AreEqual(TimeSpan.FromSeconds(3), _console.Discovery.LastTimeout);
+    }
+
+    [TestMethod]
+    public async Task Another_machine_answering_with_this_devices_identity_is_listed()
+    {
+        // A copy of this data directory on another computer answers with this install's own id.
+        // Hiding it behind this device's own answer left the user nowhere to see it; listed,
+        // adding it says what it is.
+        _console.Discovery.Found =
+        [
+            Beacon(ConsoleHarness.OwnServerId, "Me", "http://127.0.0.1:34567", local: true),
+            Beacon(ConsoleHarness.OwnServerId, "Copy", "http://192.168.1.8:34567")
+        ];
+
+        var found = (await _console.Manager.DiscoverAsync()).Servers.Single();
+
+        Assert.AreEqual(ConsoleHarness.OwnServerId, found.ServerId);
+        Assert.AreEqual("Copy", found.Name);
+        Assert.AreEqual("http://192.168.1.8:34567", found.Address);
+        Assert.IsFalse(found.AlreadyManaged);
     }
 
     [TestMethod]

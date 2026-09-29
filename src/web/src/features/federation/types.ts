@@ -77,6 +77,11 @@ export interface ManagedServerAnswer {
   name?: string | null;
   /** The address now reaches this computer itself. */
   isThisDevice: boolean;
+  /**
+   * The address now reaches another computer answering with this one's own identity: a copy
+   * of its data folder, most likely.
+   */
+  isSameIdentity?: boolean;
 }
 
 /** A server this device can switch its window to. Never carries the key. */

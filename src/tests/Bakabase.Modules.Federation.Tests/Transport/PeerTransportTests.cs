@@ -57,6 +57,32 @@ public sealed class PeerTransportTests
     }
 
     [TestMethod]
+    public async Task ThisNodesOwnIdentityIsThisDeviceOnThisMachineAndACopyAnywhereElse()
+    {
+        // A data directory copied to another computer answers with this node's id. That is not
+        // this device, and saying so would send the user looking for a mistake in the address.
+        using var local = new Node("twin", TimeSpan.Zero);
+        using var copy = new Node("twin", TimeSpan.Zero);
+        using var http = new HttpClient(new ProtocolHandler(new Dictionary<string, Node>
+            { ["127.0.0.1"] = local, ["192.0.2.10"] = copy }));
+        var pairing = new NodePairingClient(local.Store, local.Identity, new FederationHttpClient(http), local.Clock,
+            local.Leases);
+        var code = await copy.InviteAsync();
+
+        var self = await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
+            pairing.ConnectAsync("http://127.0.0.1:34567", code));
+        var twin = await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
+            pairing.ConnectAsync("http://192.0.2.10:34567", code));
+
+        Assert.AreEqual("SelfAddress", self.ErrorCode);
+        Assert.AreEqual("SameIdentity", twin.ErrorCode);
+        Assert.AreEqual(409, twin.StatusCode);
+        // Refused before anything was asked of either.
+        Assert.AreEqual(0, (await local.Peers.GetStatusAsync()).Requests.Count);
+        Assert.AreEqual(0, (await copy.Peers.GetStatusAsync()).Peers.Count);
+    }
+
+    [TestMethod]
     public async Task TwoOwnersKeepIndependentKeysClocksSessionsAndOutboundPermissionWhenLocalSharingIsOff()
     {
         using var local = new Node("local", TimeSpan.Zero);

@@ -300,6 +300,31 @@ public class RemoteDeviceServiceTests
     }
 
     [TestMethod]
+    public async Task Forgetting_everything_leaves_no_way_in_under_the_old_identity()
+    {
+        // What an install taking a new identity does: every device was paired with the old one.
+        var first = await PairFirstDevice();
+        var request = await _service.RequestPairingAsync("Tablet", RemoteDevicePlatform.Android, null);
+        await _service.ApproveRequestAsync(request.Id, first.DeviceId);
+        await _service.RequestPairingAsync("Laptop", RemoteDevicePlatform.Windows, null);
+        var code = await _service.IssuePairingCodeAsync();
+
+        CollectionAssert.AreEquivalent(new[] {first.DeviceId}, (await _service.ForgetAllAsync()).ToArray());
+
+        Assert.IsFalse(_service.HasAnyDevice);
+        Assert.AreEqual(0, _service.GetPendingRequests().Count);
+        Assert.IsNull(_service.GetPairingCodeStatus());
+        Assert.IsFalse((await _service.ClaimApprovedAsync(request.Id)).Succeeded, "an approval outlived the reset");
+        Assert.IsFalse((await _service.PairWithCodeAsync(code.Code, "Phone", RemoteDevicePlatform.Android)).Succeeded,
+            "a code outlived the reset");
+
+        // Written, not just dropped from memory.
+        var reread = new RemoteDeviceService(
+            new RemoteDeviceStore(new TempDirectory(Path.Combine(_root, "remote-access"))), () => _now);
+        Assert.IsFalse(reread.HasAnyDevice);
+    }
+
+    [TestMethod]
     public async Task Renaming_bounds_and_trims_the_name()
     {
         var credentials = await PairFirstDevice();

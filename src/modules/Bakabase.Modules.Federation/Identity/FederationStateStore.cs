@@ -92,14 +92,36 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
         MutateAsync(state => { state.BrowsingEnabled = enabled; return true; }, ct);
 
     /// <summary>Only the explicit local clone/reset command may replace unreadable node state.</summary>
-    internal async Task<NodeIdentity> ResetAsNewNodeAsync(CancellationToken ct)
+    /// <param name="inheritHostIdentity">
+    /// Whether the new node takes the host's identity again, as the first one did: for a copied
+    /// installation, whose host was given a new identity first, so a node and its install keep
+    /// answering under one id. A host still holding the id this node had gives it nothing. Without
+    /// it — recovering an unreadable state, where the host keeps its identity — the new node gets
+    /// an id of its own.
+    /// </param>
+    /// <param name="ct">Cancels the reset.</param>
+    internal async Task<NodeIdentity> ResetAsNewNodeAsync(bool inheritHostIdentity, CancellationToken ct)
     {
+        var inherited = inheritHostIdentity ? await identitySource.GetNodeIdAsync(ct) : null;
         await _gate.WaitAsync(ct);
         try
         {
+            string? previous;
+            try
+            {
+                previous = (await LoadAsync(ct)).NodeId;
+            }
+            catch (FederationAccessException)
+            {
+                // Unreadable: exactly what this may replace.
+                previous = null;
+            }
+
             var state = new FederationState
             {
-                NodeId = Guid.NewGuid().ToString("N"),
+                NodeId = NodeRequestSignature.IsIdentifier(inherited) && inherited != previous
+                    ? inherited
+                    : Guid.NewGuid().ToString("N"),
                 LibraryEpoch = Guid.NewGuid().ToString("N")
             };
             await WriteAsync(state, ct);

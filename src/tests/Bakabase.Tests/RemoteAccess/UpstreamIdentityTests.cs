@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Remoting.Abstractions.Models;
 using Bakabase.Remoting.Components.Connection;
 using Bakabase.Remoting.Components.Forwarding;
@@ -269,7 +270,8 @@ public class UpstreamIdentityTests
         _verifier.Answer = UpstreamIdentityVerdict.WrongServer;
 
         var refused = await Assert.ThrowsExceptionAsync<UpstreamIdentityRefusedException>(() =>
-            UpstreamConnections.ConnectAsync(_identity, new DnsEndPoint("127.0.0.1", 47000), default).AsTask());
+            UpstreamConnections.ConnectAsync(_identity, new DnsEndPoint("127.0.0.1", 47000),
+                DualStackConnector.Default, default).AsTask());
         Assert.AreEqual(UpstreamIdentityVerdict.WrongServer, refused.Check!.Verdict);
 
         // Confirmed, but for 47000: a dial to anywhere else is not covered by it.
@@ -277,12 +279,15 @@ public class UpstreamIdentityTests
         _verifier.Answer = UpstreamIdentityVerdict.Confirmed;
 
         await Assert.ThrowsExceptionAsync<UpstreamIdentityRefusedException>(() =>
-            UpstreamConnections.ConnectAsync(_identity, new DnsEndPoint("127.0.0.1", 47001), default).AsTask());
+            UpstreamConnections.ConnectAsync(_identity, new DnsEndPoint("127.0.0.1", 47001),
+                DualStackConnector.Default, default).AsTask());
     }
 
     [TestMethod]
     [DataRow(UpstreamIdentityVerdict.WrongServer, "127.0.0.1:47000 now answers as another server (NAS), not Desk")]
     [DataRow(UpstreamIdentityVerdict.ThisDevice, "127.0.0.1:47000 now reaches this computer itself, not Desk")]
+    [DataRow(UpstreamIdentityVerdict.SameIdentity,
+        "127.0.0.1:47000 now answers as another computer with this computer's own identity (NAS)")]
     [DataRow(UpstreamIdentityVerdict.Unconfirmed, "Desk is not answering at 127.0.0.1:47000 (nothing answers there)")]
     public void What_the_user_is_told_names_the_address_and_who_answers(UpstreamIdentityVerdict verdict,
         string expected)

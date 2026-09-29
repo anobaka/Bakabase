@@ -667,10 +667,12 @@ const tips = {
   devices: {
     other: "federation.servers.wrongServerTip",
     thisDevice: "federation.servers.wrongServerThisDeviceTip",
+    sameIdentity: "federation.servers.wrongServerSameIdentityTip",
   },
   map: {
     other: "federation.map.panel.wrongServerTip",
     thisDevice: "federation.map.panel.wrongServerThisDeviceTip",
+    sameIdentity: "federation.map.panel.wrongServerSameIdentityTip",
   },
 } as const;
 
@@ -745,7 +747,7 @@ export function ManagedServerWarnings({
                 address: server.address,
                 discover: t("federation.servers.add.discover"),
               })
-            : t(tips[where].other, {
+            : t(tips[where][server.answeredBy?.isSameIdentity ? "sameIdentity" : "other"], {
                 name,
                 address: server.address,
                 other: server.answeredBy?.name || server.answeredBy?.serverId || "?",
