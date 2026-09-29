@@ -23,6 +23,7 @@ import {
   DismissButton,
   ErrorNotice,
   fieldClass,
+  focusHeadingClass,
   panelClass,
   primaryClass,
 } from "./common";
@@ -404,7 +405,7 @@ export function ManagedServersPanel({
       tabIndex={-1}
     >
       <Heading
-        className="flex items-center gap-2 font-semibold outline-none"
+        className={`flex items-center gap-2 font-semibold ${focusHeadingClass}`}
         id="managed-servers-title"
         tabIndex={-1}
       >
@@ -513,10 +514,13 @@ export function ManagedServersPanel({
           })}
         </div>
       )}
+      {/* A place a link lands on (`add-server`), named by the form's heading once open. */}
       <div
+        aria-labelledby={addOpen ? "managed-server-add-title" : undefined}
         className={`border-t border-default-200 pt-4 ${revealClass(addHighlighted)}`}
         data-highlighted={addHighlighted || undefined}
         id="managed-server-add"
+        role={addOpen ? "group" : undefined}
         tabIndex={-1}
       >
         {!addOpen ? (
@@ -534,7 +538,9 @@ export function ManagedServersPanel({
           </button>
         ) : (
           <>
-            <SubHeading className="font-medium">{t("federation.servers.add.title")}</SubHeading>
+            <SubHeading className="font-medium" id="managed-server-add-title">
+              {t("federation.servers.add.title")}
+            </SubHeading>
             <p className="mt-1 text-sm text-default-500">
               {t("federation.servers.add.description")}
             </p>

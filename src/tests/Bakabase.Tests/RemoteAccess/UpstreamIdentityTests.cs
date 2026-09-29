@@ -308,7 +308,9 @@ public class UpstreamIdentityTests
         var message = check.Describe("Desk");
 
         StringAssert.StartsWith(message, "Remote access is turned off at 127.0.0.1:47000");
-        StringAssert.Contains(message, "under Devices and sharing → Management → Who may manage this device");
+        // On either kind of server it may be: a NAS or Docker has no devices page.
+        StringAssert.Contains(message, "on a computer under Devices and sharing → Management → Who may manage this device");
+        StringAssert.Contains(message, "on a NAS or Docker under Configuration → Remote access");
         Assert.IsFalse(message.Contains("running", StringComparison.OrdinalIgnoreCase), message);
 
         // Carried with the answer when the relay stamps it as its own.

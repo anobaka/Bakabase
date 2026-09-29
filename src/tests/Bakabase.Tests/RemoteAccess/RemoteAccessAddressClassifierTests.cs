@@ -70,4 +70,45 @@ public class RemoteAccessAddressClassifierTests
             (RemoteAccessAddressKind.Unknown, false)
         }));
     }
+
+    /// <summary>
+    /// The operating system lists a proxy's TUN adapter, a bridge or a VPN before the home
+    /// network as often as not. The list is offered recommended first, then by what can reach
+    /// it — a device reading this one back tries the addresses in this order and keeps only the
+    /// first few — and never loses a host.
+    /// </summary>
+    [TestMethod]
+    public void Hosts_are_offered_recommended_first_then_lan_vpn_unknown_virtual_and_link_local()
+    {
+        var kinds = new List<RemoteAccessAddressKind>
+        {
+            RemoteAccessAddressKind.Virtual, // 0: Clash's TUN, 198.18.0.1
+            RemoteAccessAddressKind.LinkLocal, // 1
+            RemoteAccessAddressKind.Vpn, // 2: Tailscale
+            RemoteAccessAddressKind.Lan, // 3: a second LAN without a gateway
+            RemoteAccessAddressKind.Unknown, // 4
+            RemoteAccessAddressKind.Virtual, // 5: a bridge
+            RemoteAccessAddressKind.Lan, // 6: the home network, recommended
+            RemoteAccessAddressKind.Vpn // 7: ZeroTier
+        };
+
+        CollectionAssert.AreEqual(new[] {6, 3, 2, 7, 4, 0, 5, 1},
+            RemoteAccessAddressClassifier.Order(kinds, recommended: 6).ToArray());
+    }
+
+    [TestMethod]
+    public void Without_a_recommendation_the_hosts_are_still_ordered_by_kind_and_none_is_dropped()
+    {
+        var kinds = new List<RemoteAccessAddressKind>
+        {
+            RemoteAccessAddressKind.LinkLocal,
+            RemoteAccessAddressKind.Virtual,
+            RemoteAccessAddressKind.Unknown,
+            RemoteAccessAddressKind.Vpn
+        };
+
+        CollectionAssert.AreEqual(new[] {3, 2, 1, 0},
+            RemoteAccessAddressClassifier.Order(kinds, recommended: null).ToArray());
+        Assert.AreEqual(0, RemoteAccessAddressClassifier.Order([], recommended: null).Count);
+    }
 }

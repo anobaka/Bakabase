@@ -103,11 +103,12 @@ public class ManagementRequestNotificationTests
         Assert.AreEqual("Laptop wants to manage this device", notification.Title);
         StringAssert.StartsWith(notification.Body, "Windows, from 192.168.1.9.");
         StringAssert.Contains(notification.Body, "full control");
-        // Named as the place the link opens: the Management tab in this machine's own window,
-        // the same section on its own for a paired device, the desktop app showing this server
-        // or a browser on an Unrestricted one.
+        // The link opens the place to decide it for every viewer who can see the notification;
+        // the place named besides is one every server has, a NAS or Docker included, which has
+        // no devices page.
         StringAssert.EndsWith(notification.Body,
-            "Allow or reject it under Devices and sharing → Management → Who may manage this device.");
+            "Open this notification to allow or reject it, or go to Configuration → Remote access.");
+        StringAssert.DoesNotMatch(notification.Body, new System.Text.RegularExpressions.Regex("Devices and sharing"));
 
         using var payload = JsonDocument.Parse(notification.PayloadJson!);
         Assert.AreEqual("/federation/devices?section=management", payload.RootElement.GetProperty("route").GetString());
@@ -124,7 +125,7 @@ public class ManagementRequestNotificationTests
         Assert.AreEqual("笔记本 请求管理此设备", notification.Title);
         StringAssert.StartsWith(notification.Body, "MacOS，来自 192.168.1.9。");
         StringAssert.Contains(notification.Body, "完全控制本机");
-        StringAssert.EndsWith(notification.Body, "请在“设备与分享 → 管理 → 谁可以管理本机”中允许或拒绝。");
+        StringAssert.EndsWith(notification.Body, "点此通知允许或拒绝，或在“配置 → 远程访问”中处理。");
     }
 
     [TestMethod]

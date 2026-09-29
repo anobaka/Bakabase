@@ -102,7 +102,10 @@ public sealed class FederationPairingNotificationTests
         Assert.AreEqual("Federation", notification.Source);
         Assert.AreEqual(AppNotificationSeverity.Warning, notification.Severity);
         Assert.AreEqual("Laptop asks to browse this device's library", notification.Title);
-        Assert.AreEqual("From 192.168.1.9. Allow or reject it under Devices and sharing → Library sharing.",
+        // A NAS or Docker has no devices page: it answers with the CLI.
+        Assert.AreEqual(
+            "From 192.168.1.9. Allow or reject it under Devices and sharing → Library sharing (on a NAS or " +
+            "Docker, run federation approve or federation reject inside the container).",
             notification.Body);
 
         // The requests themselves: the page alone opens on its first tab, where nothing can be allowed.
@@ -122,6 +125,8 @@ public sealed class FederationPairingNotificationTests
 
         var notification = _notifications.Created.Single();
         Assert.AreEqual("笔记本 请求浏览本机的资源库", notification.Title);
-        Assert.AreEqual("来自 192.168.1.9。请在“设备与分享 → 资源库分享”中允许或拒绝。", notification.Body);
+        Assert.AreEqual(
+            "来自 192.168.1.9。请在“设备与分享 → 资源库分享”中允许或拒绝（NAS 或 Docker：在容器内运行 federation approve 或 federation reject）。",
+            notification.Body);
     }
 }

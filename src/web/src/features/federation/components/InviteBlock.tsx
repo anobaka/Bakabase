@@ -8,6 +8,10 @@ import AddressList from "./AddressList";
  * the button that makes one. Management hands out pairing codes, library sharing share
  * codes; the block is the same, only the words and the code differ.
  *
+ * A new code is said as it appears ("Share code 123456, expires at …"): the button that
+ * made it keeps focus and its own name, so without a live region the digits would appear
+ * in silence. Only `status` is said with it, so it must not tick; a countdown goes in `note`.
+ *
  * Laid out against the page's container (`@3xl`), not the window: beside the app's sidebar a
  * window wide enough for two columns can leave the content too narrow for them.
  */
@@ -19,7 +23,9 @@ export default function InviteBlock({
   context,
   tip,
   code,
+  codeLabel,
   status,
+  note,
   action,
 }: {
   /** Undefined until remote access's settings are read; see `addressesError`. */
@@ -33,8 +39,12 @@ export default function InviteBlock({
   tip: string;
   /** The digits, while they still work. */
   code?: string;
-  /** How long the code lasts, that it expired, or that one is outstanding. */
+  /** What the code is called ("Share code", "Pairing code"), said before its digits. */
+  codeLabel: string;
+  /** Until when the code works, or that it expired: said with the code, so never a countdown. */
   status?: ReactNode;
+  /** Shown under it without being said: a countdown, a code outstanding from elsewhere. */
+  note?: ReactNode;
   /** The button that makes a code. */
   action: ReactNode;
 }) {
@@ -52,8 +62,17 @@ export default function InviteBlock({
       </div>
       <div className="space-y-2 rounded-lg border border-default-200 p-3">
         <p className="text-xs text-default-500">{tip}</p>
-        {code && <code className="block text-2xl tracking-[0.25em]">{code}</code>}
-        {status}
+        {/* Always there, even empty: a live region added with its content is not said. */}
+        <div aria-atomic="true" className="space-y-2" data-testid="invite-code" role="status">
+          {code && (
+            <p>
+              <span className="sr-only">{codeLabel} </span>
+              <code className="block text-2xl tracking-[0.25em]">{code}</code>
+            </p>
+          )}
+          {status}
+        </div>
+        {note}
         {action}
       </div>
     </div>

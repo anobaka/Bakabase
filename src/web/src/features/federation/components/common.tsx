@@ -6,6 +6,7 @@ import { useLocation } from "react-router-dom";
 
 import { FederationError } from "../transport";
 import { openLocalView } from "../switching";
+import { scrollOffsetClass } from "../hooks/useSectionReveal";
 
 import { useRemoteAccessStore, useIsPureClient } from "@/stores/remoteAccess";
 
@@ -15,6 +16,12 @@ export const buttonClass =
   "inline-flex items-center justify-center gap-2 rounded-lg border border-default-300 px-3 py-2 text-sm font-medium transition hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50";
 export const primaryClass = `${buttonClass} !border-primary bg-primary text-primary-foreground hover:!bg-primary/90`;
 export const panelClass = "rounded-xl border border-default-200 bg-content1 p-4";
+/**
+ * A heading focus is moved to (`tabIndex={-1}`) when what had the keyboard went away, or a
+ * link led to it: no ring from a click, a visible one when the keyboard is in use, and
+ * clear of the page's sticky feedback when brought into view.
+ */
+export const focusHeadingClass = `rounded outline-none focus-visible:ring-2 focus-visible:ring-primary ${scrollOffsetClass}`;
 
 /**
  * An error whose message is already written for the person reading it — a refusal the

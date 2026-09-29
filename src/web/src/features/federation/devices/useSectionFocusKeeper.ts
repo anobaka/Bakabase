@@ -26,8 +26,11 @@ const headingOf = (section: Element | null) =>
  * else to the tab's own heading.
  *
  * Taken from the device map's details (`map/useDetailsFocus.ts`), and just as careful: only
- * focus the reader left in the tab is kept. A pointer pressed anywhere, or focus moved
- * outside the tab, lets go, and focus is never pulled back from where the reader put it.
+ * focus the keyboard has in the tab is kept. A pointer pressed anywhere — the click that
+ * focuses the very button it presses included — or focus moved outside the tab lets go, and
+ * focus is never pulled back from where the reader put it: after a click, a removed row
+ * leaves focus where the browser leaves it, and the page does not scroll. A key pressed
+ * afterwards hands what has focus in the tab back to the keeper.
  */
 export function useSectionFocusKeeper(
   panel: RefObject<HTMLElement>,
@@ -38,11 +41,22 @@ export function useSectionFocusKeeper(
   const section = useRef<Element | null>(null);
   /** The holder was disabled while its action ran, which is what dropped focus. */
   const disabledWhileHeld = useRef(false);
+  /**
+   * The reader's last input was a pointer: focus it gave is theirs. A mouse click on a
+   * button fires `pointerdown` and then focuses that button, so letting go on the press is
+   * not enough — the focus that follows it must not be taken either.
+   */
+  const pointing = useRef(false);
 
   useEffect(() => {
     const release = () => {
       holder.current = null;
       section.current = null;
+      disabledWhileHeld.current = false;
+    };
+    const hold = (target: Element) => {
+      holder.current = target;
+      section.current = target.closest("[data-focus-section]");
       disabledWhileHeld.current = false;
     };
     const check = () => {
@@ -72,9 +86,9 @@ export function useSectionFocusKeeper(
       const target = event.target instanceof Element ? event.target : null;
 
       if (target && panel.current?.contains(target)) {
-        holder.current = target;
-        section.current = target.closest("[data-focus-section]");
-        disabledWhileHeld.current = false;
+        // Where a pointer put focus is the reader's, not the keeper's.
+        if (pointing.current) release();
+        else hold(target);
 
         return;
       }
@@ -83,7 +97,17 @@ export function useSectionFocusKeeper(
       release();
     };
     // The reader points somewhere: where focus goes next is theirs to decide.
-    const onPointerDown = release;
+    const onPointerDown = () => {
+      pointing.current = true;
+      release();
+    };
+    // The keyboard again: what has focus in the tab is kept from now on.
+    const onKeyDown = () => {
+      pointing.current = false;
+      const active = document.activeElement;
+
+      if (active && active !== holder.current && panel.current?.contains(active)) hold(active);
+    };
     // A confirmation closing gives focus back to what opened it, or to nothing when that
     // control went with the action: then the part of the tab it was in takes it.
     const onFocusOut = () => setTimeout(check, 0);
@@ -91,6 +115,7 @@ export function useSectionFocusKeeper(
     document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("focusout", onFocusOut, true);
     document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown, true);
     const observer =
       typeof MutationObserver === "function" && panel.current ? new MutationObserver(check) : null;
 
@@ -105,6 +130,7 @@ export function useSectionFocusKeeper(
       document.removeEventListener("focusin", onFocusIn, true);
       document.removeEventListener("focusout", onFocusOut, true);
       document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown, true);
       observer?.disconnect();
     };
   }, [panel, heading]);

@@ -406,11 +406,13 @@ namespace Bakabase.Service.Controllers
         /// which is stored.
         /// </para>
         /// <para>
-        /// The body names the place the link opens: Devices and sharing → Management → Who
-        /// may manage this device. Every viewer who can see the notification lands there —
-        /// this machine's own window on the Management tab; a paired device, the desktop app
-        /// showing this server or a browser on an Unrestricted server on the same section,
-        /// which the devices page shows on its own wherever the rest of it is not available.
+        /// The body sends the reader to the link, and names besides a place every server has —
+        /// Configuration → Remote access — never the devices page's own path, which a NAS or
+        /// Docker server does not have. Every viewer who can see the notification lands on the
+        /// right place through the link — this machine's own window on the Management tab; a
+        /// paired device, the desktop app showing this server or a browser on an Unrestricted
+        /// server on the "Who may manage" section, which the devices page shows on its own
+        /// wherever the rest of it is not available.
         /// </para>
         /// </remarks>
         private async Task AnnounceManagementRequestAsync(PendingPairingRequest request, IBakabaseLocalizer localizer)

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
-import { buttonClass, panelClass } from "../components/common";
+import { buttonClass, focusHeadingClass, panelClass } from "../components/common";
 import { revealClass } from "../hooks/useSectionReveal";
 import { federationPeerApi } from "../peerApi";
 
@@ -96,7 +96,11 @@ export default function AdvancedTab() {
         id="federation-identity"
         tabIndex={-1}
       >
-        <h3 className="font-semibold outline-none" id="federation-identity-title" tabIndex={-1}>
+        <h3
+          className={`font-semibold ${focusHeadingClass}`}
+          id="federation-identity-title"
+          tabIndex={-1}
+        >
           {t("federation.identity.title")}
         </h3>
         <p className="text-sm text-default-500">{t("federation.identity.tip")}</p>

@@ -375,7 +375,7 @@ public class RelayIdentityTests
             .ReadAsStringAsync();
         StringAssert.Contains(html, "with this device's own identity (Copy)");
         StringAssert.Contains(html, "run “dotnet Bakabase.Service.dll federation new-identity” in it");
-        StringAssert.Contains(html, "与本机设备身份相同的电脑（Copy）");
+        StringAssert.Contains(html, "另一台被识别成本机的电脑（Copy）");
         StringAssert.Contains(html, "请在其中运行“dotnet Bakabase.Service.dll federation new-identity”");
         // The labels the devices page shows today, in both languages.
         StringAssert.Contains(html, "Devices and sharing → Advanced → After copying or restoring data");
@@ -628,9 +628,11 @@ public class RelayIdentityTests
         Assert.AreEqual(HttpStatusCode.ServiceUnavailable, page.StatusCode);
         Assert.AreEqual("text/html; charset=utf-8", page.Content.Headers.ContentType!.ToString());
         StringAssert.Contains(html, $"Remote access is turned off at 127.0.0.1:{_deskPort}");
-        StringAssert.Contains(html, "under Devices and sharing → Management → Who may manage this device");
+        // Where to turn it on, on either kind of server it may be: a NAS or Docker has no devices page.
+        StringAssert.Contains(html, "on a computer under Devices and sharing → Management → Who may manage this device");
+        StringAssert.Contains(html, "on a NAS or Docker under Configuration → Remote access");
         StringAssert.Contains(html, $"127.0.0.1:{_deskPort} 已关闭远程访问");
-        StringAssert.Contains(html, "“设备与分享 → 管理 → 谁可以管理本机”，开启远程访问");
+        StringAssert.Contains(html, "开启远程访问（电脑：“设备与分享 → 管理 → 谁可以管理本机”；NAS 或 Docker：“配置 → 远程访问”）");
         Assert.IsFalse(html.Contains("is running", StringComparison.Ordinal), html);
         Assert.IsFalse(html.Contains("正在运行", StringComparison.Ordinal), html);
 
@@ -642,7 +644,8 @@ public class RelayIdentityTests
         Assert.AreEqual(HttpStatusCode.ServiceUnavailable, fetch.StatusCode);
         Assert.AreEqual(nameof(ClientForwardingFailure.ServerUnreachable), FailureOf(fetch));
         StringAssert.Contains(message, $"Remote access is turned off at 127.0.0.1:{_deskPort}");
-        StringAssert.Contains(message, "under Devices and sharing → Management → Who may manage this device");
+        StringAssert.Contains(message, "on a computer under Devices and sharing → Management → Who may manage this device");
+        StringAssert.Contains(message, "on a NAS or Docker under Configuration → Remote access");
         Assert.IsFalse(message.Contains("is running", StringComparison.Ordinal), message);
 
         // Asked who it is, and nothing else.

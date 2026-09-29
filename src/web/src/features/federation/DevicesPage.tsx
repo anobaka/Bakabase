@@ -2,7 +2,7 @@ import type { PairingRequest, SharingCandidate } from "./types";
 import type { DevicesPageContextValue } from "./devices/context";
 import type { DevicesAnchor } from "./switching";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { AiOutlineLaptop, AiOutlineReload } from "react-icons/ai";
@@ -31,6 +31,11 @@ import { useCanAdministerShownServer } from "@/stores/remoteAccess";
 const CLAIM_POLL_MS = 4000;
 /** A request whose claim failed (e.g. its device is unreachable) is left alone this long. */
 const CLAIM_BACKOFF_MS = 30_000;
+/**
+ * What a place brought into view keeps between itself and the sticky feedback above it
+ * (`scrollOffsetClass`), in pixels.
+ */
+const SCROLL_GAP_PX = 16;
 
 interface Confirmation {
   title: string;
@@ -108,7 +113,18 @@ function Devices() {
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const mounted = useRef(true);
-  const [notice, setNotice] = useState<string>();
+  // A notice says how something just went, where it went: a link or a tab followed
+  // afterwards leaves it behind. Errors stay until they are dismissed or retried.
+  const [noticeAt, setNoticeAt] = useState<{ text: string; locationKey: string }>();
+  const locationKeyRef = useRef(locationKey);
+
+  locationKeyRef.current = locationKey;
+  const setNotice = useCallback(
+    (text?: string) =>
+      setNoticeAt(text === undefined ? undefined : { text, locationKey: locationKeyRef.current }),
+    [],
+  );
+  const notice = noticeAt?.locationKey === locationKey ? noticeAt.text : undefined;
   const [address, setAddress] = useState("");
   const [code, setCode] = useState("");
   const [shareBack, setShareBack] = useState(true);
@@ -120,6 +136,8 @@ function Devices() {
   const [now, setNow] = useState(Date.now());
   const [revealed, setRevealed] = useState<DevicesAnchor | null>(null);
   const claimBackoff = useRef(new Map<string, number>());
+  const pageRef = useRef<HTMLDivElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const latest = useRef({ status, refreshSharing, t });
@@ -137,6 +155,36 @@ function Devices() {
   }, []);
 
   useSectionFocusKeeper(panelRef, headingRef);
+
+  // A corrupt sharing state never produces a status, so its recovery cannot live behind one.
+  const sharingStateUnavailable =
+    loadError instanceof FederationError && loadError.code === "SharingStateUnavailable";
+  const pageLoadError = sharingStateUnavailable ? undefined : loadError;
+  const feedbackShown = !!(pageLoadError || error || notice);
+
+  // The sticky feedback can stand where a link or the nav brings a place (a sharing load
+  // error survives tab changes): every such place keeps its height clear through
+  // `--devices-scroll-offset` (`scrollOffsetClass`). Set before the effects below bring
+  // anything into view, and kept as its text wraps.
+  useLayoutEffect(() => {
+    const page = pageRef.current;
+    const feedback = feedbackRef.current;
+
+    if (!page) return undefined;
+    const update = () =>
+      page.style.setProperty(
+        "--devices-scroll-offset",
+        `${Math.ceil(feedback?.getBoundingClientRect().height ?? 0) + SCROLL_GAP_PX}px`,
+      );
+
+    update();
+    if (!feedback || typeof ResizeObserver !== "function") return undefined;
+    const observer = new ResizeObserver(update);
+
+    observer.observe(feedback);
+
+    return () => observer.disconnect();
+  }, [feedbackShown]);
 
   // A link arriving: a place inside a tab is brought into view, focused and marked for a
   // moment once what it waits for has loaded; a tab alone gets its heading focused. Again
@@ -289,11 +337,6 @@ function Devices() {
     setConfirmation(undefined);
     setConfirmationError(undefined);
   };
-  // A corrupt sharing state never produces a status, so its recovery cannot live behind one.
-  const sharingStateUnavailable =
-    loadError instanceof FederationError && loadError.code === "SharingStateUnavailable";
-  const pageLoadError = sharingStateUnavailable ? undefined : loadError;
-
   const context: DevicesPageContextValue = {
     data,
     busy,
@@ -330,7 +373,11 @@ function Devices() {
   );
 
   return (
-    <div className="@container mx-auto flex max-w-[1200px] flex-col gap-5 p-4 sm:p-6">
+    <div
+      ref={pageRef}
+      className="@container mx-auto flex max-w-[1200px] flex-col gap-5 p-4 sm:p-6"
+      data-testid="devices-page"
+    >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
@@ -401,10 +448,11 @@ function Devices() {
         <div className="grid gap-5 @3xl:grid-cols-[12rem_1fr]">
           <DevicesNav active={tab} data={data} tabs={devicesTabs} />
           <div className="flex min-w-0 flex-col gap-5">
-            {(pageLoadError || error || notice) && (
+            {feedbackShown && (
               // Actions are spread over the tabs; keep their outcome in view wherever the user
               // is. Stuck in the content's column, so it never covers the nav beside it.
               <div
+                ref={feedbackRef}
                 className="sticky top-0 z-10 -mx-1 space-y-2 bg-background/95 px-1 py-1 backdrop-blur"
                 data-testid="federation-feedback"
               >

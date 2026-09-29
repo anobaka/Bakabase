@@ -868,12 +868,12 @@
     <value>{0} 请求浏览本机的资源库</value>
   </data>
   <data name="Federation_PairingRequest_Body" xml:space="preserve">
-    <value>来自 {0}。请在“设备与分享 → 资源库分享”中允许或拒绝。</value>
+    <value>来自 {0}。请在“设备与分享 → 资源库分享”中允许或拒绝（NAS 或 Docker：在容器内运行 federation approve 或 federation reject）。</value>
   </data>
   <data name="RemoteAccess_ManagementRequest_Title" xml:space="preserve">
     <value>{0} 请求管理此设备</value>
   </data>
   <data name="RemoteAccess_ManagementRequest_Body" xml:space="preserve">
-    <value>{0}，来自 {1}。允许后，那台设备将完全控制本机的 Bakabase。请在“设备与分享 → 管理 → 谁可以管理本机”中允许或拒绝。</value>
+    <value>{0}，来自 {1}。允许后，那台设备将完全控制本机的 Bakabase。点此通知允许或拒绝，或在“配置 → 远程访问”中处理。</value>
   </data>
 </root>

@@ -126,7 +126,7 @@
   "helpCenter.multiDevice.setup.manage.map.title": "映射它的文件夹",
   "helpCenter.multiDevice.setup.manage.map.desc": "在本机为它添加路径映射，以便在本机播放它的文件、打开它的文件夹。",
   "helpCenter.multiDevice.setup.unrestricted": "NAS 或 Docker 服务器默认处于“无限制”模式：同一网络中的任何人无需配对即可管理它。Bakabase 会为这类设备显示警告，但绝不会替你修改设置。请切换过去，在它的“配置”页面中修改“远程访问”下的“其他设备访问”。",
-  "helpCenter.multiDevice.setup.nas": "NAS 或 Docker 服务器没有窗口，也没有“设备与分享”页面。用环境变量 BAKABASE_FEDERATION_SHARING=true 或容器内的 federation 命令开启分享；它的配对码和待批准请求在它自己界面的“配置 → 远程访问”中，用浏览器打开它的地址即可。",
+  "helpCenter.multiDevice.setup.nas": "NAS 或 Docker 服务器没有窗口，也没有“设备与分享”页面。用环境变量 BAKABASE_FEDERATION_SHARING=true 或容器内的 federation 命令开启分享；它的配对码和等待允许的请求在它自己界面的“配置 → 远程访问”中，用浏览器打开它的地址即可。",
   "helpCenter.multiDevice.setup.codes": "分享码和配对码不一样：分享码只让对方浏览你的资源库；配对码让对方完全控制这台设备。分享码在“资源库分享”里用，配对码在“管理”里用。",
   "helpCenter.multiDevice.concept.sharing.name": "资源库分享",
   "helpCenter.multiDevice.concept.sharing.short": "让其他设备浏览你的资源库——只能看，不能改。",

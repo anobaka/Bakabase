@@ -185,6 +185,13 @@ describe("locales for the multi-device management screens", () => {
         "federation.sharing.enableRemoteConfirm",
         "federation.browsing.open",
         "federation.devices.id.copy",
+        // A decided incoming request says what this device did; a new code is said by name.
+        "federation.requests.incomingGranted",
+        "federation.requests.incomingRejected",
+        "federation.sharing.codeLabel",
+        "federation.management.code.label",
+        "federation.devices.status.on",
+        "federation.devices.status.off",
       ]),
     );
   });

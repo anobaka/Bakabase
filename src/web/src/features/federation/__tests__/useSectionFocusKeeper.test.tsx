@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useSectionFocusKeeper } from "../devices/useSectionFocusKeeper";
 
@@ -83,5 +83,48 @@ describe("keeping the keyboard in a devices tab", () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
     expect(screen.getByText("Part")).not.toHaveFocus();
+  });
+
+  it("keeps nothing a mouse click focused, so the page never scrolls away from it", async () => {
+    render(<Tab />);
+    const remove = screen.getByText("remove a");
+    const part = screen.getByText("Part");
+    const focus = vi.spyOn(part, "focus");
+
+    // A click on a button: the press, then the browser focuses the button it pressed.
+    fireEvent.pointerDown(remove);
+    act(() => remove.focus());
+    fireEvent.click(remove);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(part).not.toHaveFocus();
+    expect(focus).not.toHaveBeenCalled();
+  });
+
+  it("keeps what has focus again once a key is pressed after a click", async () => {
+    render(<Tab />);
+    const remove = screen.getByText("remove a");
+
+    fireEvent.pointerDown(remove);
+    act(() => remove.focus());
+    // Enter on the button the mouse focused: the keyboard is in use from here on.
+    fireEvent.keyDown(remove, { key: "Enter" });
+    fireEvent.click(remove);
+    await waitFor(() => expect(screen.getByText("Part")).toHaveFocus());
+  });
+
+  it("keeps focus the keyboard moves after a click", async () => {
+    render(<Tab />);
+
+    fireEvent.pointerDown(screen.getByText("remove a"));
+    act(() => screen.getByText("remove a").focus());
+    // Tab to the next control: its focus is the keyboard's.
+    fireEvent.keyDown(screen.getByText("remove a"), { key: "Tab" });
+    const next = screen.getByText("remove b");
+
+    act(() => next.focus());
+    fireEvent.click(next);
+    await waitFor(() => expect(screen.getByText("Part")).toHaveFocus());
   });
 });

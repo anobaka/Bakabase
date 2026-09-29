@@ -108,8 +108,9 @@ public sealed record UpstreamIdentityCheck(
             // Worded as the relay's page words it (ConsoleUnavailablePage).
             _ when RemoteAccessDisabled =>
                 $"Remote access is turned off at {Authority}, so it cannot confirm that it is {expected}, and " +
-                "nothing was sent to it. Turn it on in Bakabase on that device, under Devices and sharing → " +
-                "Management → Who may manage this device, then try again.",
+                "nothing was sent to it. Turn it on in Bakabase on that device — on a computer under Devices and " +
+                "sharing → Management → Who may manage this device, on a NAS or Docker under Configuration → " +
+                "Remote access — then try again.",
             _ =>
                 $"{expected} is not answering at {Authority}{(Detail == null ? "" : $" ({Detail})")}. Check " +
                 "that it is running and reachable."

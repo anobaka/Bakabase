@@ -430,12 +430,75 @@ describe("action feedback", () => {
     fireEvent.click(within(feedback).getByLabelText("federation.dismiss"));
     expect(screen.queryByTestId("federation-feedback")).not.toBeInTheDocument();
   });
+  it("keeps what a link brings into view below it, and leaves a notice behind on the next link", () => {
+    const FEEDBACK_HEIGHT = 48;
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const height = this.dataset.testid === "federation-feedback" ? FEEDBACK_HEIGHT : 0;
+
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: height,
+          width: 0,
+          height,
+        } as DOMRect;
+      });
+
+    try {
+      const request = pairingRequest({ requestId: "outgoing-request", direction: "outgoing" });
+      const page = () => (
+        <MemoryRouter initialEntries={[SHARING]}>
+          <DevicesPage />
+        </MemoryRouter>
+      );
+      const offset = () =>
+        screen.getByTestId("devices-page").style.getPropertyValue("--devices-scroll-offset");
+
+      withRequests([request]);
+      const { rerender } = render(page());
+
+      expect(offset()).toBe("16px");
+      // The server claimed it in the background: the page says so, stuck at the top.
+      withRequests([{ ...request, status: "granted" }]);
+      rerender(page());
+      expect(screen.getByTestId("federation-feedback")).toHaveTextContent(
+        "federation.pair.granted",
+      );
+      expect(offset()).toBe(`${FEEDBACK_HEIGHT + 16}px`);
+      // Every place a link or the nav brings into view keeps that much clear above it.
+      const clear = "scroll-mt-[var(--devices-scroll-offset,1rem)]";
+
+      expect(screen.getByRole("heading", { level: 2 })).toHaveClass(clear);
+      expect(document.getElementById("library-connect")).toHaveClass(clear);
+      expect(document.getElementById("library-share")).toHaveClass(clear);
+      // The notice said how something went, where it went: the next link leaves it behind.
+      fireEvent.click(
+        within(screen.getByTestId("devices-nav")).getByRole("link", {
+          name: /federation\.devices\.tab\.device/,
+        }),
+      );
+      expect(screen.getByTestId("devices-panel")).toHaveAttribute("data-section", "device");
+      expect(screen.queryByTestId("federation-feedback")).not.toBeInTheDocument();
+      expect(offset()).toBe("16px");
+    } finally {
+      rect.mockRestore();
+    }
+  });
 });
 
 describe("pairing requests", () => {
   it("asks this device to decide an incoming request and shows where it came from", async () => {
     withRequests([pairingRequest({ remoteAddress: "192.168.1.20", replacesExistingAccess: true })]);
     renderPage();
+    // The place the notification's link lands on is named by its heading.
+    expect(screen.getByTestId("sharing-requests")).toHaveAccessibleName(
+      "federation.requests.incomingTitle",
+    );
     expect(screen.getByText(/federation\.requests\.awaitingYourApproval/)).toBeInTheDocument();
     expect(screen.queryByText(/federation\.pair\.awaitingApproval/)).not.toBeInTheDocument();
     expect(screen.getByText("federation.requests.from 192.168.1.20")).toBeInTheDocument();
@@ -457,6 +520,26 @@ describe("pairing requests", () => {
     fireEvent.click(screen.getByText("federation.requests.approve"));
     expect(screen.getByRole("alertdialog")).toHaveTextContent("federation.requests.approveConfirm");
     expect(screen.getByRole("alertdialog")).not.toHaveTextContent("replacesExisting");
+  });
+  it("says what this device did with an incoming request it decided, never the requester's outcome", () => {
+    withRequests([
+      pairingRequest({ requestId: "allowed", nodeName: "Laptop", status: "granted" }),
+      pairingRequest({ requestId: "refused", nodeName: "Tablet", status: "rejected" }),
+      pairingRequest({ requestId: "mine", direction: "outgoing", status: "granted" }),
+    ]);
+    renderPage();
+    const incoming = screen.getByTestId("sharing-requests");
+
+    // Listed here until they expire: this device allowed one and rejected the other.
+    expect(within(incoming).getByText("federation.requests.incomingGranted")).toBeInTheDocument();
+    expect(within(incoming).getByText("federation.requests.incomingRejected")).toBeInTheDocument();
+    // "You can now browse it" and "the other side rejected" are the requester's words.
+    expect(within(incoming).queryByText(/federation\.pair\./)).not.toBeInTheDocument();
+    expect(within(incoming).queryByText("federation.requests.approve")).not.toBeInTheDocument();
+    // A request this device sent still says how the other side answered.
+    expect(
+      within(screen.getByTestId("sharing-outgoing-requests")).getByText("federation.pair.granted"),
+    ).toBeInTheDocument();
   });
   it("cancels an outgoing pending request and keeps the manual approval check", async () => {
     const refresh = withRequests([pairingRequest({ direction: "outgoing", requestId: "mine" })]);
@@ -719,9 +802,22 @@ describe("this device's address", () => {
     fireEvent.click(within(recommended).getByText("federation.copied"));
     expect(await within(recommended).findByText("federation.copyFailed")).toBeInTheDocument();
     expect(announced).toHaveTextContent("federation.copyFailed");
-    // The list is named by its own title, once.
+    // Named by its own title, once: by the place a link lands on, which holds the list.
     expect(list).not.toHaveAttribute("aria-label");
-    expect(list).toHaveAccessibleName("federation.devices.addresses.title");
+    expect(list).not.toHaveAttribute("role");
+    expect(
+      screen.getByRole("region", { name: "federation.devices.addresses.title" }),
+    ).toContainElement(list);
+  });
+  it("names the place a link lands on while the addresses are still on their way", () => {
+    vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockReturnValueOnce(
+      new Promise(() => {}) as never,
+    );
+    renderPage("/federation/devices");
+    const place = screen.getByRole("region", { name: "federation.devices.addresses.title" });
+
+    expect(place).toHaveAttribute("id", "device-addresses");
+    expect(place).toHaveTextContent("federation.loading");
   });
   it("greys the addresses out while remote access is off, and says where to turn it on", async () => {
     withSettings(0);
@@ -729,9 +825,15 @@ describe("this device's address", () => {
     const list = await screen.findByTestId("device-addresses");
 
     expect(list).toHaveTextContent("federation.devices.addresses.remoteOff");
-    expect(
-      within(list).getByRole("link", { name: "federation.devices.openManagementAccess" }),
-    ).toHaveAttribute("href", "/federation/devices?section=management");
+    const link = within(list).getByRole("link", {
+      name: "federation.devices.openManagementAccess",
+    });
+
+    expect(link).toHaveAttribute("href", "/federation/devices?section=management");
+    // Only the addresses are greyed out: the warning and its link keep their contrast.
+    expect(within(list).getByTestId("device-address-recommended")).toHaveClass("opacity-60");
+    for (let element: HTMLElement | null = link; element; element = element.parentElement)
+      expect(element).not.toHaveClass("opacity-60");
   });
   it("points at the network when no address was found", async () => {
     withSettings(1, []);
@@ -752,9 +854,19 @@ describe("this device's address", () => {
     expect(within(list).getByTestId("device-address-recommended")).toHaveTextContent(
       "http://192.168.1.5:34567",
     );
+    // Where a new code will be said: there, and silent, before one is made.
+    const announced = screen.getByTestId("invite-code");
+
+    expect(announced).toHaveAttribute("role", "status");
+    expect(announced.textContent).toBe("");
     fireEvent.click(screen.getByText("federation.sharing.issueCode"));
     expect(await screen.findByText("482913")).toBeInTheDocument();
     expect(list.parentElement?.parentElement).toContainElement(screen.getByText("482913"));
+    // Said as it appears — what it is, the digits and until when — while the button that
+    // made it keeps focus and its own name.
+    expect(announced).toHaveTextContent(
+      /^federation\.sharing\.codeLabel\s*482913\s*federation\.expires$/,
+    );
   });
   it("explains that remote access must be turned on while sharing is on and it is off", () => {
     withStatus({ sharingEnabled: true, remoteAccessMode: 0 });
@@ -810,7 +922,8 @@ describe("device name", () => {
 
 describe("connecting with share-back", () => {
   const connectTo = (address: string) => {
-    fireEvent.change(screen.getByPlaceholderText("192.168.1.5:34567"), {
+    // Suggested in the same form as the management form's, as the address list shows it.
+    fireEvent.change(screen.getByPlaceholderText("http://192.168.1.5:34567"), {
       target: { value: address },
     });
     fireEvent.click(screen.getByText("federation.pair.request"));

@@ -10,6 +10,7 @@ import {
   buttonClass,
   ErrorNotice,
   fieldClass,
+  focusHeadingClass,
   panelClass,
   primaryClass,
 } from "../components/common";
@@ -23,6 +24,8 @@ import TabHeading from "./TabHeading";
 import { troubledServers, waitingSharingRequests } from "./selectors";
 
 import { RemoteAccessMode } from "@/sdk/constants";
+
+const ADDRESSES_TITLE_ID = "device-addresses-title";
 
 /** One line of "Waiting for you" or "Status": what it says, and the place it is decided. */
 function RowLink({ to, children }: { to: DevicesSection; children: ReactNode }) {
@@ -81,11 +84,11 @@ export default function ThisDeviceTab() {
     <>
       <TabHeading />
       {status && (
+        // The tab's heading already says whose name this is.
         <section data-focus-section className={`${panelClass} space-y-2`}>
-          <p className="text-xs text-default-500">{t("federation.thisDevice")}</p>
           {editingName === undefined ? (
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-lg font-semibold outline-none" tabIndex={-1}>
+              <h3 className={`text-lg font-semibold ${focusHeadingClass}`} tabIndex={-1}>
                 {status.identity.name}
               </h3>
               <button
@@ -142,7 +145,9 @@ export default function ThisDeviceTab() {
           )}
         </section>
       )}
+      {/* A place a link lands on (`addresses`), named by the list's title in every state. */}
       <section
+        aria-labelledby={ADDRESSES_TITLE_ID}
         className={`${panelClass} ${revealClass(revealed === "addresses")}`}
         data-highlighted={revealed === "addresses" || undefined}
         id="device-addresses"
@@ -154,11 +159,19 @@ export default function ThisDeviceTab() {
             context="device"
             remoteOff={mode === RemoteAccessMode.Disabled}
             target={target}
+            titleId={ADDRESSES_TITLE_ID}
           />
-        ) : data.accessError ? (
-          <ErrorNotice error={data.accessError} onRetry={() => void data.reload(["access"])} />
         ) : (
-          <p className="text-sm">{t("federation.loading")}</p>
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium" id={ADDRESSES_TITLE_ID}>
+              {t("federation.devices.addresses.title", { target })}
+            </h3>
+            {data.accessError ? (
+              <ErrorNotice error={data.accessError} onRetry={() => void data.reload(["access"])} />
+            ) : (
+              <p className="text-sm">{t("federation.loading")}</p>
+            )}
+          </div>
         )}
       </section>
       {waiting && (
@@ -243,9 +256,14 @@ export default function ThisDeviceTab() {
           {status && (
             <RowLink to="share">
               <span className="text-default-500">{t("federation.devices.status.sharing")}</span>
+              {/* The row's label names the switch; its value is only on or off. */}
               <span className="ml-auto">
-                {t(status.sharingEnabled ? "federation.sharing.on" : "federation.sharing.off")} ·{" "}
-                {t("federation.map.panel.self.sharesWith")} {inbound}
+                {t(
+                  status.sharingEnabled
+                    ? "federation.devices.status.on"
+                    : "federation.devices.status.off",
+                )}{" "}
+                · {t("federation.map.panel.self.sharesWith")} {inbound}
               </span>
             </RowLink>
           )}
@@ -253,8 +271,12 @@ export default function ThisDeviceTab() {
             <RowLink to="browsing">
               <span className="text-default-500">{t("federation.devices.status.browsing")}</span>
               <span className="ml-auto">
-                {t(status.browsingEnabled ? "federation.browsing.on" : "federation.browsing.off")} ·{" "}
-                {t("federation.map.panel.self.browses")} {outbound}
+                {t(
+                  status.browsingEnabled
+                    ? "federation.devices.status.on"
+                    : "federation.devices.status.off",
+                )}{" "}
+                · {t("federation.map.panel.self.browses")} {outbound}
               </span>
             </RowLink>
           )}

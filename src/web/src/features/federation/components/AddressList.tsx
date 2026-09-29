@@ -63,6 +63,7 @@ export default function AddressList({
   remoteOff = false,
   error,
   onRetry,
+  titleId: givenTitleId,
 }: {
   /** Undefined while remote access's settings are not read (loading, or `error`). */
   addresses: readonly RemoteAccessAddress[] | undefined;
@@ -75,9 +76,20 @@ export default function AddressList({
   /** Why the settings holding the addresses could not be read. */
   error?: Error;
   onRetry?: () => void;
+  /**
+   * The id of the `full` list's title, for a container around it that is named by it (the
+   * device tab's place a link lands on). The container is then what the title names, and
+   * the list is not a group of its own: one name, said once.
+   */
+  titleId?: string;
 }) {
   const { t } = useTranslation();
-  const titleId = useId();
+  const ownTitleId = useId();
+  const titleId = givenTitleId ?? ownTitleId;
+  const named = variant === "full" && !givenTitleId;
+  // Off, nobody can reach them: only the addresses are greyed out. The words saying so and
+  // the way to turn it on keep their contrast (WCAG 1.4.3).
+  const rowsClass = remoteOff ? "opacity-60" : "";
   const [expanded, setExpanded] = useState(false);
   const { copied, copy } = useCopy();
   const rows = useMemo(() => deviceAddresses(addresses ?? []), [addresses]);
@@ -133,11 +145,11 @@ export default function AddressList({
       aria-label={
         variant === "full" ? undefined : t("federation.devices.addresses.title", { target })
       }
-      aria-labelledby={variant === "full" ? titleId : undefined}
-      className={`space-y-2 ${remoteOff ? "opacity-60" : ""}`}
+      aria-labelledby={named ? titleId : undefined}
+      className="space-y-2"
       data-context={context}
       data-testid="device-addresses"
-      role="group"
+      role={variant === "full" && !named ? undefined : "group"}
     >
       {variant === "full" && (
         <h3 className="text-sm font-medium" id={titleId}>
@@ -173,7 +185,7 @@ export default function AddressList({
       ) : (
         <>
           <div
-            className="flex flex-wrap items-center gap-2 rounded-lg bg-default-50 p-2"
+            className={`flex flex-wrap items-center gap-2 rounded-lg bg-default-50 p-2 ${rowsClass}`}
             data-testid="device-address-recommended"
           >
             <code
@@ -190,7 +202,7 @@ export default function AddressList({
             {note(recommended)}
             {copyButton(recommended)}
           </div>
-          {shown.length > 0 && <ul className="space-y-1">{shown.map(row)}</ul>}
+          {shown.length > 0 && <ul className={`space-y-1 ${rowsClass}`}>{shown.map(row)}</ul>}
           {folded.length > 0 && (
             <div data-testid="device-address-more">
               <button
@@ -203,7 +215,7 @@ export default function AddressList({
                   ? t("federation.devices.addresses.fewer")
                   : t("federation.devices.addresses.more", { count: folded.length })}
               </button>
-              {expanded && <ul className="mt-2 space-y-1">{folded.map(row)}</ul>}
+              {expanded && <ul className={`mt-2 space-y-1 ${rowsClass}`}>{folded.map(row)}</ul>}
             </div>
           )}
           {variant === "full" && (

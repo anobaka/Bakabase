@@ -43,7 +43,9 @@ public class RemoteAccessService(
         var recommended = RemoteAccessAddressClassifier.Recommend(hosts.Select(h => (h.Kind, h.HasGateway)).ToList());
         var addresses = new List<RemoteAccessAddress>();
 
-        for (var i = 0; i < hosts.Count; i++)
+        // Recommended first, then by what can reach it: every host and every port, in the
+        // order the page shows them and a device reading this one back tries them.
+        foreach (var i in RemoteAccessAddressClassifier.Order(hosts.Select(h => h.Kind).ToList(), recommended))
         {
             var (ip, interfaceName, kind, _) = hosts[i];
             foreach (var port in ports)

@@ -85,6 +85,34 @@ public static class RemoteAccessAddressClassifier
         return fallback;
     }
 
+    /// <summary>
+    /// The order hosts are offered in, as indexes into <paramref name="kinds"/>: the
+    /// recommended one first, then LAN, VPN, unknown, virtual and link-local addresses, each
+    /// group in the order it was listed. Nothing is left out.
+    /// </summary>
+    /// <remarks>
+    /// Every consumer of the list reads it in this order: the devices page, and the addresses
+    /// a device offers to be read back at (<c>FederationPairingFlow.GetShareBackAddresses</c>),
+    /// which the other device tries one after another and keeps only the first few of — so a
+    /// bridge or a proxy's adapter listed first by the operating system is never tried, or
+    /// kept, before the network a router serves.
+    /// </remarks>
+    public static IReadOnlyList<int> Order(IReadOnlyList<RemoteAccessAddressKind> kinds, int? recommended) =>
+        Enumerable.Range(0, kinds.Count)
+            .OrderBy(i => i == recommended ? 0 : 1)
+            .ThenBy(i => Rank(kinds[i]))
+            .ToArray();
+
+    private static int Rank(RemoteAccessAddressKind kind) => kind switch
+    {
+        RemoteAccessAddressKind.Lan => 0,
+        RemoteAccessAddressKind.Vpn => 1,
+        RemoteAccessAddressKind.Unknown => 2,
+        RemoteAccessAddressKind.Virtual => 3,
+        RemoteAccessAddressKind.LinkLocal => 4,
+        _ => 2
+    };
+
     private static bool Matches(Regex pattern, string interfaceName, string? description)
     {
         try

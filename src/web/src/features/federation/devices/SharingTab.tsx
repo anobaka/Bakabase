@@ -6,7 +6,13 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { AiOutlinePlus } from "react-icons/ai";
 
-import { buttonClass, fieldClass, panelClass, primaryClass } from "../components/common";
+import {
+  buttonClass,
+  fieldClass,
+  focusHeadingClass,
+  panelClass,
+  primaryClass,
+} from "../components/common";
 import InviteBlock from "../components/InviteBlock";
 import PeerPathMappings from "../components/PeerPathMappings";
 import { useFocusOnOpen } from "../hooks/useFocusOnOpen";
@@ -124,21 +130,26 @@ export default function SharingTab() {
         id="library-browse"
       >
         <h3
-          className="text-base font-semibold outline-none"
+          className={`text-base font-semibold ${focusHeadingClass}`}
           id="library-browse-title"
           tabIndex={-1}
         >
           {t("federation.sharing.browseTitle")}
         </h3>
 
+        {/* A place a link lands on (`browsing`): named by its heading, like every such place. */}
         <div
+          aria-labelledby="library-browsing-title"
           className={`${panelClass} space-y-3 ${revealClass(revealed === "browsing")}`}
           data-highlighted={revealed === "browsing" || undefined}
           id="library-browsing"
+          role="group"
           tabIndex={-1}
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h4 className="font-medium">{t("federation.browsing.title")}</h4>
+            <h4 className="font-medium" id="library-browsing-title">
+              {t("federation.browsing.title")}
+            </h4>
             <span className={chip(status.browsingEnabled === true)}>
               {t(
                 status.browsingEnabled === true
@@ -274,9 +285,11 @@ export default function SharingTab() {
         )}
 
         <div
+          aria-labelledby={connectOpen ? "library-connect-title" : undefined}
           className={`${panelClass} ${revealClass(revealed === "connect")}`}
           data-highlighted={revealed === "connect" || undefined}
           id="library-connect"
+          role={connectOpen ? "group" : undefined}
           tabIndex={-1}
         >
           {!connectOpen ? (
@@ -294,7 +307,9 @@ export default function SharingTab() {
             </button>
           ) : (
             <>
-              <h4 className="font-medium">{t("federation.devices.add")}</h4>
+              <h4 className="font-medium" id="library-connect-title">
+                {t("federation.devices.add")}
+              </h4>
               <p className="mt-1 text-sm text-default-500">{t("federation.pair.description")}</p>
               <form
                 className="mt-4 grid items-end gap-3 @3xl:grid-cols-[1fr_200px_auto]"
@@ -318,7 +333,7 @@ export default function SharingTab() {
                     ref={connectFocus.target}
                     required
                     className={fieldClass}
-                    placeholder="192.168.1.5:34567"
+                    placeholder="http://192.168.1.5:34567"
                     value={address}
                     onChange={(event) => setAddress(event.target.value)}
                   />
@@ -418,7 +433,11 @@ export default function SharingTab() {
         id="library-share"
         tabIndex={-1}
       >
-        <h3 className="text-base font-semibold outline-none" id="library-share-title" tabIndex={-1}>
+        <h3
+          className={`text-base font-semibold ${focusHeadingClass}`}
+          id="library-share-title"
+          tabIndex={-1}
+        >
           {t("federation.sharing.title")}
         </h3>
 
@@ -493,13 +512,17 @@ export default function SharingTab() {
 
         {incoming.length > 0 && (
           <div
+            aria-labelledby="sharing-requests-title"
             className={`space-y-2 ${revealClass(revealed === "sharing-requests")}`}
             data-highlighted={revealed === "sharing-requests" || undefined}
             data-testid="sharing-requests"
             id="sharing-requests"
+            role="group"
             tabIndex={-1}
           >
-            <h4 className="text-sm font-medium">{t("federation.requests.incomingTitle")}</h4>
+            <h4 className="text-sm font-medium" id="sharing-requests-title">
+              {t("federation.requests.incomingTitle")}
+            </h4>
             {incoming.map((request) => {
               const expired = Date.parse(request.expiresAt) <= now;
               const pending = request.status === "awaitingApproval";
@@ -576,6 +599,7 @@ export default function SharingTab() {
             addresses={access?.addresses}
             addressesError={access ? undefined : data.accessError}
             code={inviteValid ? invite.code : undefined}
+            codeLabel={t("federation.sharing.codeLabel")}
             context="sharing"
             status={
               invite &&
@@ -652,6 +676,18 @@ export default function SharingTab() {
 }
 
 /**
+ * What a request that is no longer waiting says. `federation.pair.*` is the requester's side
+ * ("you can now browse it", "the other side rejected"); an incoming request is listed on the
+ * side that decided it, and says what this device did.
+ */
+const decidedKey = (request: PairingRequest) =>
+  request.direction === "incoming"
+    ? request.status === "granted"
+      ? "federation.requests.incomingGranted"
+      : "federation.requests.incomingRejected"
+    : `federation.pair.${request.status}`;
+
+/**
  * One library request. An incoming one is a claim: its name and id are the requester's own
  * words, so it is marked as not verified, and says the address it came from.
  */
@@ -687,9 +723,11 @@ function RequestRow({
           {t(
             expired && pending
               ? "federation.requests.expired"
-              : pending && incoming
-                ? "federation.requests.awaitingYourApproval"
-                : `federation.pair.${request.status}`,
+              : pending
+                ? incoming
+                  ? "federation.requests.awaitingYourApproval"
+                  : "federation.pair.awaitingApproval"
+                : decidedKey(request),
           )}
         </p>
         {incoming && request.remoteAddress && (

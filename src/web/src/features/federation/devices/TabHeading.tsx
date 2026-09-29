@@ -1,10 +1,13 @@
 import { useTranslation } from "react-i18next";
 
+import { focusHeadingClass } from "../components/common";
+
 import { useDevicesPage } from "./context";
 
 /**
  * The shown tab's heading. A link to the tab (the nav, the help, the map) moves focus
- * here; it takes focus without a ring unless the keyboard put it there.
+ * here; it takes focus without a ring unless the keyboard put it there, and is brought into
+ * view below the page's sticky feedback.
  */
 export default function TabHeading({ introKey }: { introKey?: string }) {
   const { t } = useTranslation();
@@ -15,7 +18,7 @@ export default function TabHeading({ introKey }: { introKey?: string }) {
     <div>
       <h2
         ref={headingRef}
-        className="scroll-mt-4 rounded text-lg font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className={`text-lg font-semibold ${focusHeadingClass}`}
         id="devices-panel-title"
         tabIndex={-1}
       >

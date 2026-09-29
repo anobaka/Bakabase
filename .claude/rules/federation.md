@@ -48,18 +48,28 @@ own) and **高级 / Advanced** (device ID, "after copying or restoring data"). T
   data where the rest of the page is not available (a managed window, a LAN browser).
 - **Focus** follows the map's rules (`devices/useSectionFocusKeeper.ts`): when an action takes
   away the control that had the keyboard, focus goes to the heading of the part it was in;
-  a pointer press or focus moved elsewhere is never pulled back. A form behind a button that
+  a pointer press or focus moved elsewhere is never pulled back — nor the focus a click gives
+  the very button it presses (only a key pressed afterwards hands focus back to the keeper),
+  so removing a row clicked with the mouse neither moves focus nor scrolls. Every heading
+  focus can go to shows a ring from the keyboard (`focusHeadingClass`), and every place a
+  link lands on is named by its heading (`aria-labelledby`). A form behind a button that
   it replaces ("+ 添加要管理的设备", "+ 添加要浏览的设备") takes the keyboard into its first
   field when opened from that button (`hooks/useFocusOnOpen.ts`). The Management add form
   stays open while a managed server is WrongServer or Revoked: their tips name its search.
 - **Layout** is measured on the page's container (`@container`, `@3xl:`), never the window:
   beside the app's sidebar a wide window can leave a narrow column. The action feedback is
-  sticky inside the content's column, so it never covers the sticky nav.
+  sticky inside the content's column, so it never covers the sticky nav, and never what a
+  link, the nav or the focus keeper brings into view: the page keeps its height (plus a gap)
+  in `--devices-scroll-offset`, which every such place and heading uses as its scroll margin
+  (`scrollOffsetClass`). A notice (not an error) is left behind by the next navigation.
 - **Addresses.** Every host stays in the API (`ownHostsOf`/`sameMachine` need them all); the
   UI shows one row per host on the main port and folds virtual and link-local adapters away,
   labelled (`devices/addresses.ts`). The server says each address's `kind` and which one is
   `recommended` (`RemoteAccessAddressClassifier`: the first LAN address whose interface has a
-  default gateway, which a VM host-only or overlay adapter lacks); the page guesses from the
+  default gateway, which a VM host-only or overlay adapter lacks) and lists them in the
+  order they are offered in — recommended first, then LAN, VPN, unknown, virtual, link-local
+  (`RemoteAccessAddressClassifier.Order`) — which is also the order a device reading this one
+  back tries them in and keeps the first few of; the page guesses from the
   address and interface name only for a server too old to say. Until remote access's settings
   are read the list says it is loading, or why it could not read them — "no address found"
   is only for a list that came back empty.
@@ -69,6 +79,14 @@ own) and **高级 / Advanced** (device ID, "after copying or restoring data"). T
   新分享协议, 联合浏览, 授权 as a noun. Server texts that send the reader to the page (the relay's
   unavailable page and refusals, notifications, the CLI) name its current places:
   设备与分享 → 管理 → 谁可以管理本机, → 资源库分享, → 高级 → 复制或恢复数据后 → 设为新设备.
+  A text that sends the reader to **another** device, or that another device shows, names
+  both places, since a NAS or Docker server has no devices page: a computer's page, and a
+  NAS or Docker's 配置 → 远程访问 (management: codes, requests, remote access) or
+  `BAKABASE_FEDERATION_SHARING` / the `federation` CLI (library sharing). A management
+  request's notification names only 配置 → 远程访问 besides its link. A requester's name is
+  its own claim wherever it is shown (一台自称 {{name}} 的设备…), and a decided incoming
+  request says what this device did (`federation.requests.incoming*`), never the
+  requester's `federation.pair.*` outcome.
 
 ## The device map
 

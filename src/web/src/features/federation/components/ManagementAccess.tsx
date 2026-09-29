@@ -16,6 +16,7 @@ import {
   buttonClass,
   DismissButton,
   ErrorNotice,
+  focusHeadingClass,
   MessageError,
   panelClass,
   primaryClass,
@@ -439,7 +440,7 @@ export function ManagementAccessPanel({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <Heading
-            className="flex items-center gap-2 font-semibold outline-none"
+            className={`flex items-center gap-2 font-semibold ${focusHeadingClass}`}
             id="management-access-title"
             tabIndex={-1}
           >
@@ -591,8 +592,10 @@ export function ManagementAccessPanel({
           }
           addresses={settings.addresses}
           code={issuedCode?.code}
+          codeLabel={t("federation.management.code.label")}
           context="manage"
-          status={
+          // A countdown: shown, never said again every minute (the code itself is).
+          note={
             issuedCode ? (
               <p className="text-xs text-default-500">
                 {t("configuration.remoteAccess.pairingCode.shownOnce", {

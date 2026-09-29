@@ -128,19 +128,22 @@ public static class ConsoleUnavailablePage
                 $"{name} moved to another address, find it again on this device's Devices and sharing page, under " +
                 "Management.",
                 $"{name} 已不在原来的地址",
-                $"{address} 现在是另一台与本机设备身份相同的电脑（{other}），它的数据目录很可能是从本机复制的，本窗口没有向它发送任何请求。" +
+                $"{address} 现在是另一台被识别成本机的电脑（{other}），它的数据目录很可能是从本机复制的，本窗口没有向它发送任何请求。" +
                 "请在复制出的那台设备上打开“设备与分享 → 高级 → 复制或恢复数据后”，选择“设为新设备”（无界面的服务器上请在其中运行“dotnet Bakabase.Service.dll " +
                 $"federation new-identity”）。如果 {name} 换了地址，请在本机的“设备与分享 → 管理”中重新找到它。"),
             // Something is running there and reachable: telling the user to check that would
             // send them the wrong way. Worded as the refusal a fetch gets (UpstreamIdentityCheck.Describe).
+            // Both places are named: a managed server is as often a NAS or Docker, which has no
+            // devices page, as another computer's desktop app.
             _ when check.RemoteAccessDisabled => (
                 $"Remote access is turned off at {address}",
                 $"The Bakabase at {address} has remote access turned off, so it cannot confirm that it is {name}, " +
-                "and this window sent it nothing. Turn it on in Bakabase on that device, under Devices and sharing " +
-                "→ Management → Who may manage this device, then reload this page.",
+                "and this window sent it nothing. Turn it on in Bakabase on that device — on a computer under " +
+                "Devices and sharing → Management → Who may manage this device, on a NAS or Docker under " +
+                "Configuration → Remote access — then reload this page.",
                 $"{address} 已关闭远程访问",
                 $"{address} 上的 Bakabase 已关闭远程访问，无法确认它就是 {name}，本窗口没有向它发送任何请求。请在那台设备的 Bakabase 中" +
-                "打开“设备与分享 → 管理 → 谁可以管理本机”，开启远程访问，然后刷新本页。"),
+                "开启远程访问（电脑：“设备与分享 → 管理 → 谁可以管理本机”；NAS 或 Docker：“配置 → 远程访问”），然后刷新本页。"),
             _ => (
                 $"{name} is not answering",
                 $"Nothing that could be identified as {name} answers at {address}. Check that Bakabase is running " +

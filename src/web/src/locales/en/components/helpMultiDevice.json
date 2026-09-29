@@ -126,7 +126,7 @@
   "helpCenter.multiDevice.setup.manage.map.title": "Map its folders",
   "helpCenter.multiDevice.setup.manage.map.desc": "Add path mappings for it on this computer so its files play and its folders open here.",
   "helpCenter.multiDevice.setup.unrestricted": "A NAS or Docker server starts in Unrestricted mode: anyone on its network can manage it without pairing. Bakabase marks such a device with a warning but never changes its setting for you. Switch to it and, on its Configuration page, change “Access from other devices” under Remote access.",
-  "helpCenter.multiDevice.setup.nas": "A NAS or Docker server has no window, and no Devices and sharing page. Turn its sharing on with BAKABASE_FEDERATION_SHARING=true or the federation command inside the container. Its pairing codes and approvals are under Configuration → Remote access in its own interface: open its address in a browser.",
+  "helpCenter.multiDevice.setup.nas": "A NAS or Docker server has no window, and no Devices and sharing page. Turn its sharing on with BAKABASE_FEDERATION_SHARING=true or the federation command inside the container. Its pairing codes and the requests waiting to be allowed are under Configuration → Remote access in its own interface: open its address in a browser.",
   "helpCenter.multiDevice.setup.codes": "Share codes and pairing codes are different: a share code only lets a device browse your library; a pairing code gives it full control. Share codes belong to Library sharing, pairing codes to Management.",
   "helpCenter.multiDevice.concept.sharing.name": "Library sharing",
   "helpCenter.multiDevice.concept.sharing.short": "Letting other devices browse your library — view only, never change.",

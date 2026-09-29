@@ -253,7 +253,26 @@ describe("landing on a section of this device's own devices page", () => {
 
     await waitFor(() => expect(form).toHaveFocus());
     expect(form).toHaveAttribute("data-highlighted", "true");
+    // What a screen reader lands on is named, not an anonymous box.
+    expect(form).toHaveAttribute("role", "group");
+    expect(form).toHaveAccessibleName("federation.servers.add.title");
     expect(within(form).getByLabelText("federation.servers.add.address")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["connect", "library-connect", "federation.devices.add"],
+    ["browsing", "library-browsing", "federation.browsing.title"],
+    [
+      "addresses",
+      "device-addresses",
+      "federation.devices.addresses.title federation.management.self",
+    ],
+  ])("names the place the %s link lands on by its heading", async (section, id, name) => {
+    renderPage(`/federation/devices?section=${section}`);
+    const place = document.getElementById(id)!;
+
+    await waitFor(() => expect(place).toHaveFocus());
+    expect(place).toHaveAccessibleName(name);
   });
 
   it("falls back to the tab's heading when the place a link names is not there", async () => {
