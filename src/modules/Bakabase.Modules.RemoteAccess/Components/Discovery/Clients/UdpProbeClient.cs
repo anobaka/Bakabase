@@ -15,9 +15,10 @@ namespace Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 /// route to — but the datagram that arrived came back over one that works.
 /// </param>
 /// <param name="IsThisMachine">
-/// True when the server answered from a loopback address, i.e. the all-in-one is
-/// running right here. Worth showing, because "connect to my own computer" is a
-/// normal thing to want and an odd thing to have to type an address for.
+/// True when the server answered from this machine — a loopback address, or one of its
+/// own interfaces' — i.e. the all-in-one is running right here. Worth showing, because
+/// "connect to my own computer" is a normal thing to want and an odd thing to have to type
+/// an address for. An answer from anywhere else is another machine, whatever id it carries.
 /// </param>
 /// <param name="Kind">What kind of install it says it is, when it says: for showing only.</param>
 /// <param name="Platform">What it says it runs on, when it says: for showing only.</param>
@@ -77,9 +78,9 @@ public sealed class UdpProbeClient(ILogger<UdpProbeClient> logger) : IServerDisc
             }
         }
 
-        // Keyed by server id, so a machine that answers on several interfaces — or
+        // Keyed by server id and side, so a machine that answers on several interfaces — or
         // answers the loopback and the subnet probe both — appears once.
-        var found = new Dictionary<string, DiscoveredServer>(StringComparer.Ordinal);
+        var found = new Dictionary<(string, bool), DiscoveredServer>();
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(timeout);
@@ -93,14 +94,7 @@ public sealed class UdpProbeClient(ILogger<UdpProbeClient> logger) : IServerDisc
 
                 if (server != null)
                 {
-                    // First answer wins, except that a loopback answer replaces a
-                    // routed one for the same server: both reach it, and only one of
-                    // them can say "this is your own computer".
-                    if (!found.TryGetValue(server.ServerId, out var existing) ||
-                        (server.IsThisMachine && !existing.IsThisMachine))
-                    {
-                        found[server.ServerId] = server;
-                    }
+                    ServerDiscovery.Keep(found, server);
                 }
             }
         }
@@ -139,7 +133,7 @@ public sealed class UdpProbeClient(ILogger<UdpProbeClient> logger) : IServerDisc
             $"http://{FormatHost(host)}:{port}",
             descriptor.AppVersion,
             descriptor.ProtocolVersion,
-            IPAddress.IsLoopback(host),
+            ThisMachine.Holds(host),
             descriptor.Kind,
             descriptor.Platform);
     }

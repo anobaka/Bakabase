@@ -205,7 +205,7 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
 
         public IReadOnlyList<DiscoveredServer> Build()
         {
-            var found = new Dictionary<string, DiscoveredServer>(StringComparer.Ordinal);
+            var found = new Dictionary<(string, bool), DiscoveredServer>();
 
             foreach (var (instance, descriptor) in _facts)
             {
@@ -224,15 +224,11 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
                     $"http://{address}:{host.Port}",
                     descriptor.AppVersion,
                     descriptor.ProtocolVersion,
-                    IPAddress.IsLoopback(address),
+                    ThisMachine.Holds(address),
                     descriptor.Kind,
                     descriptor.Platform);
 
-                if (!found.TryGetValue(server.ServerId, out var existing) ||
-                    (server.IsThisMachine && !existing.IsThisMachine))
-                {
-                    found[server.ServerId] = server;
-                }
+                ServerDiscovery.Keep(found, server);
             }
 
             return found.Values.ToList();

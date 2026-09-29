@@ -266,7 +266,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         // As typed: the handshake reads it itself, and a missing port only shows before
         // normalizing puts a scheme in front.
         var handshake = await HandshakeAsync(address, new ServerClock(), ct);
-        var outcome = await ClassifyAsync(handshake);
+        var outcome = await ClassifyAsync(address, handshake, ct);
         var server = handshake.Server;
 
         return new ManagedServerProbeView(
@@ -282,19 +282,16 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
     public async Task<ManagedServerDiscoveryView> DiscoverAsync(CancellationToken ct = default)
     {
-        var ownId = await _remoteAccess.GetOrCreateServerIdAsync();
         var found = await _discovery.DiscoverAsync(_options.DiscoveryTimeout, ct);
         var managed = _store.Read().Servers.Select(s => s.ServerId).ToHashSet(StringComparer.Ordinal);
 
-        // This device, however it answered: from loopback — its own server, right here — or
-        // under its own identity from one of its LAN addresses. An id that answered from
-        // loopback is this machine's on every other interface too. Managing yourself is what
-        // the app does without a relay, and pairing with yourself is refused anyway.
-        var local = found.Where(s => s.IsThisMachine).Select(s => s.ServerId).ToHashSet(StringComparer.Ordinal);
-        local.Add(ownId);
-
+        // Never this machine, however it answered — from loopback or from one of its own
+        // addresses: its own server, right here. Managing yourself is what the app does without
+        // a relay, and pairing with yourself is refused anyway. Another machine is listed even
+        // under this install's own id: that is a copy of this data directory, and adding it
+        // says so, which is the one way the user learns of it.
         var servers = found
-            .Where(s => !string.IsNullOrWhiteSpace(s.ServerId) && !local.Contains(s.ServerId))
+            .Where(s => !string.IsNullOrWhiteSpace(s.ServerId) && !s.IsThisMachine)
             // One row per install: a server answering on two interfaces, or on both the
             // probe and mDNS, is still one server to pair with.
             .DistinctBy(s => s.ServerId, StringComparer.Ordinal)
@@ -310,7 +307,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         var normalized = ServerConnector.Normalize(address);
         var clock = new ServerClock();
         var handshake = await HandshakeAsync(address, clock, ct);
-        var outcome = await ClassifyAsync(handshake);
+        var outcome = await ClassifyAsync(address, handshake, ct);
 
         if (outcome != ManagedServerOutcome.Ok)
         {
@@ -578,12 +575,21 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     /// cannot see: an address that reached this device through a door other than its own
     /// ports — a LAN address of this machine, a name that resolves here.
     /// </summary>
-    private async Task<ManagedServerOutcome> ClassifyAsync(ServerHandshakeResult handshake)
+    /// <remarks>
+    /// This install's own id from an address that is not this machine's is another machine
+    /// with the same identity — a copied data directory — and is refused as well, but said
+    /// apart: "that is this computer" would send the user looking for a mistake in the address.
+    /// </remarks>
+    private async Task<ManagedServerOutcome> ClassifyAsync(string address, ServerHandshakeResult handshake,
+        CancellationToken ct)
     {
         if (handshake.Server != null &&
             string.Equals(handshake.Server.Id, await _remoteAccess.GetOrCreateServerIdAsync(), StringComparison.Ordinal))
         {
-            return ManagedServerOutcome.ThisDevice;
+            return RemoteAddressInput.Parse(address, out var root) == RemoteAddressProblem.None &&
+                   !await _options.ReachesThisMachine(root!, ct)
+                ? ManagedServerOutcome.SameIdentity
+                : ManagedServerOutcome.ThisDevice;
         }
 
         return handshake.Outcome switch
@@ -746,9 +752,10 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             {
                 var confirm = await HandshakeAsync(request.Address, clock, budget.Token);
 
-                if (await ClassifyAsync(confirm) == ManagedServerOutcome.ThisDevice)
+                if (await ClassifyAsync(request.Address, confirm, budget.Token) is
+                    var outcome and (ManagedServerOutcome.ThisDevice or ManagedServerOutcome.SameIdentity))
                 {
-                    request.Finish(ManagedServerOutcome.ThisDevice);
+                    request.Finish(outcome);
                     return;
                 }
 

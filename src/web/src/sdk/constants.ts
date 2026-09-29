@@ -4614,7 +4614,8 @@ export enum ManagedServerOutcome {
   TooManyAttempts = 10,
   PairingUnsupported = 11,
   InvalidAddress = 12,
-  PortMissing = 13
+  PortMissing = 13,
+  SameIdentity = 14
 }
 
 export const managedServerOutcomes = [
@@ -4631,7 +4632,8 @@ export const managedServerOutcomes = [
   { label: 'TooManyAttempts', value: ManagedServerOutcome.TooManyAttempts },
   { label: 'PairingUnsupported', value: ManagedServerOutcome.PairingUnsupported },
   { label: 'InvalidAddress', value: ManagedServerOutcome.InvalidAddress },
-  { label: 'PortMissing', value: ManagedServerOutcome.PortMissing }
+  { label: 'PortMissing', value: ManagedServerOutcome.PortMissing },
+  { label: 'SameIdentity', value: ManagedServerOutcome.SameIdentity }
 ] as const;
 
 export const ManagedServerOutcomeLabel: Record<ManagedServerOutcome, string> = {
@@ -4648,7 +4650,8 @@ export const ManagedServerOutcomeLabel: Record<ManagedServerOutcome, string> = {
   [ManagedServerOutcome.TooManyAttempts]: 'TooManyAttempts',
   [ManagedServerOutcome.PairingUnsupported]: 'PairingUnsupported',
   [ManagedServerOutcome.InvalidAddress]: 'InvalidAddress',
-  [ManagedServerOutcome.PortMissing]: 'PortMissing'
+  [ManagedServerOutcome.PortMissing]: 'PortMissing',
+  [ManagedServerOutcome.SameIdentity]: 'SameIdentity'
 };
 
 export enum ManagedServerState {

@@ -56,6 +56,13 @@ public interface IRemoteDeviceService
 
     Task<bool> RevokeAsync(string deviceId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Forgets every paired device, every pending request and the outstanding code — for an
+    /// install that takes a new identity, whose devices were paired with the old one. Returns
+    /// the ids of the devices forgotten.
+    /// </summary>
+    Task<IReadOnlyList<string>> ForgetAllAsync(CancellationToken ct = default);
+
     Task<bool> RenameAsync(string deviceId, string name, CancellationToken ct = default);
 
     /// <summary>
@@ -263,6 +270,16 @@ public sealed class RemoteDeviceService(IRemoteDeviceStore store, Func<DateTime>
     public async Task<bool> RevokeAsync(string deviceId, CancellationToken ct = default) =>
         await store.MutateAsync(data =>
             data.Devices.RemoveAll(d => string.Equals(d.Id, deviceId, StringComparison.Ordinal)) > 0, ct);
+
+    public async Task<IReadOnlyList<string>> ForgetAllAsync(CancellationToken ct = default) =>
+        await store.MutateAsync<IReadOnlyList<string>>(data =>
+        {
+            var forgotten = data.Devices.Select(d => d.Id).ToArray();
+            data.Devices.Clear();
+            data.PendingRequests.Clear();
+            data.PairingCode = null;
+            return forgotten;
+        }, ct);
 
     public async Task<bool> RenameAsync(string deviceId, string name, CancellationToken ct = default) =>
         await store.MutateAsync(data =>

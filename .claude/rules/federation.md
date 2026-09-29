@@ -33,9 +33,10 @@ listings the devices page reads — `/federation/local/peers`, `/federation/loca
 endpoints and confirmations.
 
 - **Records are merged on evidence only** (`map/graph.ts`). The install id first and always:
-  a peer's NodeId is the install's remote-access ServerId unless the node was reset
-  (`FederationNodeIdSource`), so a peer, a managed server and a beacon with one id are one
-  device — even while the server's address answers as another. An address (never a
+  a peer's NodeId is the install's remote-access ServerId (`FederationNodeIdSource`; "Create a
+  new device identity" replaces both together, and only a node reset by an older build differs),
+  so a peer, a managed server and a beacon with one id are one device — even while the server's
+  address answers as another. An address (never a
   `WrongServer` address) only where one side carries no id at all (a device that manages this
   one, a request from a server that did not say who it is); two known ids that differ are two
   devices. **A name merges only where neither record carries an install id** (ServerId or

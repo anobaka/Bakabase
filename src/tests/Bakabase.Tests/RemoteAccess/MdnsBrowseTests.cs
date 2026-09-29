@@ -115,6 +115,27 @@ public class MdnsBrowseTests
     }
 
     [TestMethod]
+    public void A_copy_of_this_install_on_another_machine_is_read_beside_this_machine()
+    {
+        // Two computers advertising one id: this one, and one its data directory was copied to.
+        Assert.IsTrue(MdnsMessage.TryParseResponse(
+            Announcement(Descriptor, addresses: [IPAddress.Loopback]), out var own));
+        Assert.IsTrue(MdnsMessage.TryParseResponse(
+            Announcement(Descriptor with {Name = "Other PC"}), out var copy));
+
+        var collector = new MdnsBrowser.InstanceCollector();
+        collector.Add(own);
+        collector.Add(copy);
+
+        var found = collector.Build().OrderByDescending(s => s.IsThisMachine).ToArray();
+
+        Assert.AreEqual(2, found.Length);
+        Assert.IsTrue(found[0].IsThisMachine);
+        Assert.AreEqual("Other PC", found[1].ServerName);
+        Assert.AreEqual("http://192.168.1.5:34567", found[1].BaseAddress);
+    }
+
+    [TestMethod]
     public void A_loopback_address_loses_to_one_that_means_something_here()
     {
         // Read from another machine, 127.0.0.1 points at the reader. A server that
@@ -196,13 +217,40 @@ public class MdnsBrowseTests
     }
 
     [TestMethod]
-    public void A_server_on_this_machine_outranks_the_same_server_found_over_the_network()
+    public void This_machine_answering_over_loopback_and_its_own_address_is_one_server()
     {
-        var routed = new DiscoveredServer("abc123", "Desk PC", "http://192.168.1.5:34567", "2.4.0", 1, false);
-        var local = new DiscoveredServer("abc123", "Desk PC", "http://127.0.0.1:34567", "2.4.0", 1, true);
+        var own = new DiscoveredServer("abc123", "Desk PC", "http://192.168.1.2:34567", "2.4.0", 1, true);
+        var loopback = new DiscoveredServer("abc123", "Desk PC", "http://127.0.0.1:34567", "2.4.0", 1, true);
 
-        // Both reach it, and only one of them can tell the user it is their own computer.
-        Assert.IsTrue(ServerDiscovery.Merge([routed], [local]).Single().IsThisMachine);
-        Assert.IsTrue(ServerDiscovery.Merge([local], [routed]).Single().IsThisMachine);
+        Assert.IsTrue(ServerDiscovery.Merge([own], [loopback]).Single().IsThisMachine);
+        Assert.IsTrue(ServerDiscovery.Merge([loopback], [own]).Single().IsThisMachine);
+    }
+
+    [TestMethod]
+    public void This_machines_own_answer_never_hides_another_machine_answering_with_the_same_id()
+    {
+        // A data directory copied to another computer takes this install's identity along. That
+        // copy's answer is the only place it shows, and this machine's own answer — loopback
+        // above all — used to replace it.
+        var copy = new DiscoveredServer("abc123", "Other PC", "http://192.168.1.5:34567", "2.4.0", 1, false);
+        var loopback = new DiscoveredServer("abc123", "Desk PC", "http://127.0.0.1:34567", "2.4.0", 1, true);
+        var copyOverMdns = new DiscoveredServer("abc123", "Other PC", "http://10.0.0.2:34567", "2.4.0", 1, false);
+
+        foreach (var merged in new[]
+                 {
+                     ServerDiscovery.Merge([copy], [loopback, copyOverMdns]),
+                     ServerDiscovery.Merge([loopback], [copyOverMdns, copy]),
+                     ServerDiscovery.Merge([loopback, copy], [])
+                 })
+        {
+            Assert.AreEqual(2, merged.Count);
+            Assert.IsTrue(merged[0].IsThisMachine, "this machine is listed first");
+            Assert.IsFalse(merged[1].IsThisMachine);
+            Assert.AreEqual("Other PC", merged[1].ServerName);
+        }
+
+        // Still once per side: the probe's address wins, as for any server.
+        Assert.AreEqual("http://192.168.1.5:34567",
+            ServerDiscovery.Merge([copy], [copyOverMdns]).Single().BaseAddress);
     }
 }

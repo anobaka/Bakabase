@@ -29,6 +29,23 @@ public sealed class NodeSecurityTests
     }
 
     [TestMethod]
+    public async Task ANewNodeTakesItsHostsNewIdentitySoBothKeepAnsweringUnderOneId()
+    {
+        // Creating a new device identity replaces the install's identity first; the node follows it,
+        // as the first node did, so a peer, a managed server and a beacon of one install stay one id.
+        using var node = new TestNode();
+        var first = await node.Identity.GetAsync();
+        Assert.AreEqual(node.Source.Id, first.NodeId);
+
+        node.Source.Id = "replaced-server-id";
+        var clone = await node.Peers.ResetAsNewNodeAsync();
+
+        Assert.AreEqual("replaced-server-id", clone.NodeId);
+        Assert.AreNotEqual(first.LibraryEpoch, clone.LibraryEpoch);
+        Assert.AreEqual(clone, await new NodeIdentityProvider(new FederationStateStore(node.Directory, node.Source)).GetAsync());
+    }
+
+    [TestMethod]
     public async Task FailedAtomicWriteDoesNotPublishNewStateOrAlterExistingFile()
     {
         using var node = new TestNode();

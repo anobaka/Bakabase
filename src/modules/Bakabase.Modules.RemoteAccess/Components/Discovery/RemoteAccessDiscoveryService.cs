@@ -24,6 +24,7 @@ public class RemoteAccessDiscoveryService(
     private MdnsResponder? _mdns;
     private UdpProbeResponder? _probe;
     private int? _advertisedPort;
+    private string? _advertisedId;
     private bool _lastTickFailed;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -94,7 +95,8 @@ public class RemoteAccessDiscoveryService(
             return;
         }
 
-        if (_advertisedPort == descriptor.Port)
+        // The id too: an install that takes a new identity must stop answering as the old one.
+        if (_advertisedPort == descriptor.Port && _advertisedId == descriptor.Id)
         {
             return;
         }
@@ -130,6 +132,7 @@ public class RemoteAccessDiscoveryService(
         }
 
         _advertisedPort = descriptor.Port;
+        _advertisedId = descriptor.Id;
         logger.LogInformation(
             "Discovery beacon up for {Instance} on port {Port} (mDNS: {Mdns}, UDP probe: {Probe})",
             advertisement.InstanceName, descriptor.Port, mdnsUp, probeUp);
@@ -156,5 +159,6 @@ public class RemoteAccessDiscoveryService(
         _probe?.Dispose();
         _probe = null;
         _advertisedPort = null;
+        _advertisedId = null;
     }
 }

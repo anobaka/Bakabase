@@ -51,6 +51,28 @@ public class UdpProbeClientTests
     }
 
     [TestMethod]
+    public void A_reply_from_one_of_this_machines_own_addresses_is_marked_as_this_computer()
+    {
+        // This machine answers its own subnet broadcast too, from its LAN address. Only the
+        // address tells that answer apart from a copy of this install on another computer,
+        // which answers with the same id.
+        var own = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+            .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+            .Select(a => a.Address)
+            .FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(a));
+
+        if (own == null)
+        {
+            Assert.Inconclusive("This machine has no IPv4 address besides loopback.");
+        }
+
+        var server = UdpProbeClient.Interpret(
+            Reply(new RemoteAccessServerDescriptor("abc", "My-PC", 34567, "2.4.0", 1), own.ToString()));
+
+        Assert.IsTrue(server!.IsThisMachine);
+    }
+
+    [TestMethod]
     public void An_ipv6_sender_is_bracketed_so_the_address_is_a_usable_url()
     {
         var server = UdpProbeClient.Interpret(

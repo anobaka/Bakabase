@@ -92,14 +92,33 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
         MutateAsync(state => { state.BrowsingEnabled = enabled; return true; }, ct);
 
     /// <summary>Only the explicit local clone/reset command may replace unreadable node state.</summary>
+    /// <remarks>
+    /// The new node takes the host's identity again, as the first one did — the command gives
+    /// the host a new identity first — so a node and its install keep answering under one id.
+    /// A host still holding the id this node had gives it nothing: the new node gets its own.
+    /// </remarks>
     internal async Task<NodeIdentity> ResetAsNewNodeAsync(CancellationToken ct)
     {
+        var inherited = await identitySource.GetNodeIdAsync(ct);
         await _gate.WaitAsync(ct);
         try
         {
+            string? previous;
+            try
+            {
+                previous = (await LoadAsync(ct)).NodeId;
+            }
+            catch (FederationAccessException)
+            {
+                // Unreadable: exactly what this may replace.
+                previous = null;
+            }
+
             var state = new FederationState
             {
-                NodeId = Guid.NewGuid().ToString("N"),
+                NodeId = NodeRequestSignature.IsIdentifier(inherited) && inherited != previous
+                    ? inherited
+                    : Guid.NewGuid().ToString("N"),
                 LibraryEpoch = Guid.NewGuid().ToString("N")
             };
             await WriteAsync(state, ct);

@@ -85,6 +85,7 @@ public sealed class FederationSharingWizardTests
     {
         public int Calls { get; private set; }
         public Task<string> GetOrCreateServerIdAsync() { Calls++; return Task.FromResult(serverId); }
+        public Task<string> RegenerateServerIdAsync() => throw new NotSupportedException();
         public RemoteAccessMode GetEffectiveMode() => throw new NotSupportedException();
         public Task SetModeAsync(RemoteAccessMode? mode) => throw new NotSupportedException();
         public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses() => throw new NotSupportedException();

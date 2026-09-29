@@ -283,6 +283,44 @@ public class RemoteConsolePairingTests
     }
 
     [TestMethod]
+    public async Task Another_machine_with_this_devices_identity_is_refused_as_a_copy()
+    {
+        // A data directory copied to another computer takes this install's identity along. Told
+        // "that is this computer", the user looks for a mistake in an address that is right.
+        await using var console = await ConsoleHarness.StartAsync(
+            options: o => o.ReachesThisMachine = (_, _) => Task.FromResult(false));
+        var copy = await Server(ConsoleHarness.OwnServerId, "Copy");
+        copy.PairingCode = "123456";
+
+        var probe = await console.Manager.ProbeAsync(copy.BaseAddress);
+        Assert.AreEqual(ManagedServerOutcome.SameIdentity, probe.Outcome);
+        Assert.AreEqual(ManagedServerOutcome.SameIdentity, (await console.Manager.PairAsync(copy.BaseAddress, "123456")).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.SameIdentity, (await console.Manager.PairAsync(copy.BaseAddress, null)).Outcome);
+
+        Assert.AreEqual(0, console.Store.Read().Servers.Count);
+        Assert.IsFalse(copy.Requests.Any(r => r.Path.StartsWith("/remote-access/pair", StringComparison.Ordinal)),
+            "pairing was attempted with a copy of this device");
+
+        // A request filed with another server whose address a copy has taken by the time it is
+        // approved: the key is not filed under this device's own identity.
+        var desk = await Server("server-desk");
+        var filed = await console.Manager.PairAsync(desk.BaseAddress, null);
+        Assert.AreEqual(ManagedServerOutcome.AwaitingApproval, filed.Outcome);
+        var port = desk.Port;
+        await desk.DisposeAsync();
+        _servers.Remove(desk);
+        var taker = await FakeServer.TakeOverAsync(ConsoleHarness.OwnServerId, "Copy", port);
+        _servers.Add(taker);
+        taker.Approved = true;
+
+        await WaitUntilAsync(async () => !(await console.Manager.GetAsync(false)).Requests.Single().Active,
+            "the request to end");
+
+        Assert.AreEqual(ManagedServerOutcome.SameIdentity, (await console.Manager.GetAsync(false)).Requests.Single().Outcome);
+        Assert.AreEqual(0, console.Store.Read().Servers.Count);
+    }
+
+    [TestMethod]
     [DoNotParallelize]
     public async Task This_apps_own_ports_are_refused_before_anything_is_sent()
     {

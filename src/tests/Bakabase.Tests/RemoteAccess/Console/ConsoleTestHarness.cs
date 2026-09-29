@@ -265,6 +265,7 @@ internal sealed class ConsoleHarness : IAsyncDisposable
         public Task SetModeAsync(RemoteAccessMode? mode) => throw new NotSupportedException("never changed by the console");
         public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses() => [];
         public Task<string> GetOrCreateServerIdAsync() => Task.FromResult(OwnServerId);
+        public Task<string> RegenerateServerIdAsync() => throw new NotSupportedException("never changed by the console");
         public bool GetAllowLiveTranscode() => false;
         public Task SetAllowLiveTranscodeAsync(bool allow) => throw new NotSupportedException();
         public bool GetRequirePairing() => true;

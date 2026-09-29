@@ -393,6 +393,7 @@ public sealed class FederationGateTests
         public Task SetModeAsync(RemoteAccessMode? mode) { Mode = mode ?? RemoteAccessMode.Enabled; return Task.CompletedTask; }
         public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses() => [];
         public Task<string> GetOrCreateServerIdAsync() => Task.FromResult("owner-node");
+        public Task<string> RegenerateServerIdAsync() => throw new NotSupportedException();
         public bool GetAllowLiveTranscode() => false;
         public Task SetAllowLiveTranscodeAsync(bool allow) => Task.CompletedTask;
         public bool GetRequirePairing() => true;

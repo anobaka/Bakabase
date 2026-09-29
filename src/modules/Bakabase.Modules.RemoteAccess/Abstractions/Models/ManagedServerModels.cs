@@ -50,7 +50,14 @@ public enum ManagedServerOutcome
     InvalidAddress = 12,
 
     /// <summary>A host typed without its port; nothing was sent, since no port can be guessed.</summary>
-    PortMissing = 13
+    PortMissing = 13,
+
+    /// <summary>
+    /// Another machine answers there with this install's own identity: a copy of this data
+    /// directory, most likely. Refused like <see cref="ThisDevice"/>; one of the two has to take
+    /// a new identity before either can manage the other.
+    /// </summary>
+    SameIdentity = 14
 }
 
 /// <summary>How a managed server looked the last time this device asked.</summary>

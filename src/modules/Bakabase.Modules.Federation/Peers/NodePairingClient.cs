@@ -1,6 +1,7 @@
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Federation.Transport;
+using Bakabase.Modules.RemoteAccess.Components;
 
 namespace Bakabase.Modules.Federation.Peers;
 
@@ -21,8 +22,12 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
         var local = await identity.GetAsync(ct);
         var info = await http.PublicAsync<NodeInfo>(normalized, HttpMethod.Get, "/federation/v1/info", null, ct);
         PeerSessionFactory.ValidateInfo(info, expectedNodeId);
+        // This node's own id from another machine is a copy of this data directory, not this device.
         if (info.NodeId == local.NodeId)
-            throw new FederationAccessException("SelfAddress", 400, "This address belongs to this node.");
+            throw await ThisMachine.ReachedByAsync(new Uri(normalized), ct)
+                ? new FederationAccessException("SelfAddress", 400, "This address belongs to this node.")
+                : new FederationAccessException("SameIdentity", 409,
+                    "The node at this address has this node's identity; its data directory was probably copied from here.");
         NodeReciprocalOffer? offer = null;
         if (shareBackAddresses is { Count: > 0 })
         {

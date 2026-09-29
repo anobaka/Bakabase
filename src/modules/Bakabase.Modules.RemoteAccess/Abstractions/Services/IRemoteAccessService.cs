@@ -28,6 +28,12 @@ public interface IRemoteAccessService
     Task<string> GetOrCreateServerIdAsync();
 
     /// <summary>
+    /// Replaces this install's identity with a new one, for a copy of another install's data
+    /// directory that must stop answering as that install. Returns the new identity.
+    /// </summary>
+    Task<string> RegenerateServerIdAsync();
+
+    /// <summary>
     /// Whether remote callers may start a live ffmpeg transcode. Loopback callers
     /// are never subject to this.
     /// </summary>

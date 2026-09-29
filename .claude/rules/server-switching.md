@@ -94,7 +94,10 @@ manage anything; they are only ever managed.
   as a number or a name, reads as nothing.
 - **Finding servers to manage uses the remote-access beacons**, not library sharing:
   `GET /federation/local/servers/discover` (UDP probe + mDNS, ~3 s, on request only) lists
-  every server answering them, minus this install and marked when already managed. Library
+  every server answering them, minus this machine's own answers (loopback or any address of its
+  interfaces, `ThisMachine`) and marked when already managed. Another machine answering with
+  this install's own id is listed, never hidden behind this machine's answer: it is a copy of
+  this data directory, and adding it says so (`SameIdentity`). Library
   sharing's discovery only lists servers that opted into sharing, which says nothing about
   whether a server can be managed.
 
@@ -175,7 +178,11 @@ manage anything; they are only ever managed.
   the app never changes another server's mode on its own.
 - **Never pair with yourself, never talk to yourself.** Refuse an address whose handshake
   returns this install's `ServerId`, and loopback addresses at this app's own server or relay
-  ports — when pairing, and when a managed server's stored address comes to point here.
+  ports — when pairing, and when a managed server's stored address comes to point here. An
+  address that is not this machine's answering with this install's `ServerId` is a copy of its
+  data directory: refused as `SameIdentity` (library sharing: `SameIdentity` too), whose message
+  points at "Create a new device identity" — which replaces the `ServerId`, forgets the devices
+  paired under the old one, and gives the node the new id.
 - **Nothing signed goes to an address that does not answer as the server.** Forwarding, the
   relay's own calls (context, play/open lookups, played-at history), probing's signed context
   read and "stop managing"'s revoke all ask first; a mismatch gets the handshake question and

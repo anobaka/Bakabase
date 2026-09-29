@@ -17,7 +17,9 @@ using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Federation.Transport;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
+using Bakabase.Modules.RemoteAccess.Components.Pairing;
 using Bakabase.Service.Components.Federation;
+using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -103,8 +105,8 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
             await identity.GetAsync(ct);
             await remoteOptions.SaveAsync(new RemoteAccessOptions
             {
-                // A cloned federation node intentionally has a different NodeId;
-                // never replace the existing legacy server identity with that value.
+                // A node reset before its install's identity was replaced with it has a
+                // different NodeId; never replace the existing legacy server identity with it.
                 ServerId = legacyServerId,
                 AllowLiveTranscode = allowLiveTranscode,
                 RequirePairing = true,
@@ -263,9 +265,24 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
     [SwaggerOperation(OperationId = "ResetFederationIdentity")]
     [ProducesResponseType(typeof(NodeIdentity), 200)]
     public async Task<IActionResult> Reset([FromBody] FederationIdentityResetRequest request,
-        [FromServices] FederationBrowsingControl browsing, CancellationToken ct)
+        [FromServices] FederationBrowsingControl browsing, [FromServices] IRemoteDeviceService remoteDevices,
+        [FromServices] RemoteConnectionRegistry connections, CancellationToken ct)
     {
-        var node = request.AsNewNode ? await peers.ResetAsNewNodeAsync(ct) : await peers.RotateLibraryEpochAsync(ct);
+        NodeIdentity node;
+        if (request.AsNewNode)
+        {
+            // A copied data directory carries its install's remote-access identity too, and
+            // answering under it makes each copy take the other for itself. A new device takes a
+            // new one — the node then inherits it, as the first node did — and lets go of the
+            // devices paired under the old one: they expect that identity, and their keys were
+            // issued to whichever install it was. Servers this device manages are kept: they know
+            // it by the key each issued it, not by this identity.
+            await remoteAccess.RegenerateServerIdAsync();
+            foreach (var device in await remoteDevices.ForgetAllAsync(ct))
+                connections.AbortDevice(device);
+            node = await peers.ResetAsNewNodeAsync(ct);
+        }
+        else node = await peers.RotateLibraryEpochAsync(ct);
         // Old local tickets and reads must not survive changing this library's identity either.
         await browsing.SetEnabledAsync(false, CancellationToken.None);
         return FederationResult(node);

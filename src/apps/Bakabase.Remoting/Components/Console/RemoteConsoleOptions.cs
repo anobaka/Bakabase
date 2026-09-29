@@ -1,3 +1,4 @@
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Remoting.Components.Forwarding;
 
 namespace Bakabase.Remoting.Components.Console;
@@ -80,6 +81,13 @@ public sealed class RemoteConsoleOptions
     /// a file a scanner holds. Nothing waits on that write; it is tried again until it lands.
     /// </summary>
     public TimeSpan StoreRetryInterval { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Whether an address reaches this machine. What tells an address that answers with this
+    /// install's own id apart: this device, or another machine with the same identity — a copy
+    /// of this data directory. Tests put a server on "another machine" through it.
+    /// </summary>
+    public Func<Uri, CancellationToken, Task<bool>> ReachesThisMachine { get; set; } = ThisMachine.ReachedByAsync;
 
     /// <summary>Whether starting up brings over the removed thin client's pairings, once.</summary>
     public bool ImportLegacyClientOnStart { get; set; } = true;

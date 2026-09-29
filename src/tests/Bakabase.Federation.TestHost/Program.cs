@@ -242,6 +242,7 @@ sealed class FixtureNamedRemoteAccess(IRemoteAccessService production, string na
     public Task SetModeAsync(RemoteAccessMode? mode) => production.SetModeAsync(mode);
     public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses() => production.GetReachableAddresses();
     public Task<string> GetOrCreateServerIdAsync() => production.GetOrCreateServerIdAsync();
+    public Task<string> RegenerateServerIdAsync() => production.RegenerateServerIdAsync();
     public bool GetAllowLiveTranscode() => production.GetAllowLiveTranscode();
     public Task SetAllowLiveTranscodeAsync(bool allow) => production.SetAllowLiveTranscodeAsync(allow);
     public bool GetRequirePairing() => production.GetRequirePairing();
