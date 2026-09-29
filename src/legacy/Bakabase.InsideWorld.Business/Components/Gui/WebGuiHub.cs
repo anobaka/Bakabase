@@ -31,10 +31,8 @@ using Bakabase.Modules.Notification.Abstractions.Models.View;
 using Bakabase.Modules.ThirdParty.Services;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
-using Humanizer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using AppContext = Bakabase.Infrastructures.Components.App.AppContext;
 
 namespace Bakabase.InsideWorld.Business.Components.Gui
@@ -109,14 +107,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         {
             await Clients.Caller.GetData(nameof(DownloadTask), await _downloadTaskService.GetAllDto());
 
-            foreach (var (optionsType, optionsManagerObj) in _optionsManagerPool.AllOptionsManagers)
-            {
-                var genericType = typeof(IOptions<>).MakeGenericType(optionsType);
-                var valueGetter = genericType.GetProperties()
-                    .FirstOrDefault(a => a.Name == nameof(IOptions<AppOptions>.Value));
-                var options = valueGetter!.GetMethod!.Invoke(optionsManagerObj, null)!;
-                await Clients.Caller.OptionsChanged(optionsType.Name.Camelize(), options);
-            }
+            // Not every caller reads every options object: see WebGuiOptionsAudience.
+            await WebGuiOptionsAudience.SendAllAsync(_optionsManagerPool, Context, Clients.Caller);
 
             var componentContexts = _dependentComponentServices.Select(a => a.BuildContextDto()).ToList();
             await Clients.Caller.GetData(nameof(DependentComponentContext), componentContexts);

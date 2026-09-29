@@ -141,6 +141,7 @@ namespace Bakabase.Service.Components
             services.AddSingleton<RemoteConnectionRegistry>();
             services.AddSingleton<RemoteAccessHubFilter>();
             services.Configure<HubOptions>(o => o.AddFilter<RemoteAccessHubFilter>());
+            services.AddHostedService<RemoteAccessConnectionMonitor>();
 
             // Prints a pairing code when a server with no screen is locked out of itself.
             // The desktop app never prints one: its own window shows and issues codes

@@ -32,6 +32,14 @@ namespace Bakabase.Service.Controllers
     /// the body rather than the URL. Everything under <c>pairing/</c> and
     /// <c>devices/</c> is management, so it is left unmarked and only the host or an
     /// already-paired device reaches it.
+    /// <para>
+    /// Unmarked is what lets a paired device in, not what keeps it out: the
+    /// authorization filter admits paired devices (and every caller of an Unrestricted
+    /// server) before it looks for <see cref="RemoteAccessibleAttribute"/>. Marking a
+    /// management route would therefore add exactly one kind of caller — one that has not
+    /// paired — and an unpaired caller that can approve requests approves its own, then
+    /// collects a key with full control.
+    /// </para>
     /// </remarks>
     [Route("~/remote-access")]
     public class RemoteAccessController(
@@ -142,16 +150,10 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "SetRemoteAccessMode")]
         public async Task<BaseResponse> SetMode([FromBody] RemoteAccessModeInputModel model)
         {
+            // Every other check is per-request and takes effect on the next call. The hub
+            // connections already open are judged again by RemoteAccessConnectionMonitor,
+            // which watches the setting itself: this is not the only route that changes it.
             await remoteAccessService.SetModeAsync(model.Mode);
-
-            // Every other check is per-request and takes effect on the next call. A hub
-            // connection is authorized once at its handshake, so switching remote access
-            // off has to reach the ones already open or they keep receiving pushes.
-            if (remoteAccessService.GetEffectiveMode() == RemoteAccessMode.Disabled)
-            {
-                connections.AbortAll();
-            }
-
             return BaseResponseBuilder.Ok;
         }
 
@@ -167,15 +169,10 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "SetRemoteAccessRequirePairing")]
         public async Task<BaseResponse> SetRequirePairing([FromBody] RemoteAccessRequirePairingInputModel model)
         {
+            // The unpaired hub connections already open are hung up on by
+            // RemoteAccessConnectionMonitor when pairing becomes a requirement: left open,
+            // they would keep serving exactly the callers this switch shuts out.
             await remoteAccessService.SetRequirePairingAsync(model.Require);
-
-            // Leaving unpaired hub connections open would keep serving exactly the
-            // callers this switch was flipped to shut out.
-            if (model.Require)
-            {
-                connections.AbortUnpaired();
-            }
-
             return BaseResponseBuilder.Ok;
         }
 
@@ -286,7 +283,6 @@ namespace Bakabase.Service.Controllers
         /// </remarks>
         [HttpPost("pairing/requests/{id}/approve")]
         [SwaggerOperation(OperationId = "ApproveRemoteDevicePairingRequest")]
-        [RemoteAccessible]
         public async Task<SingletonResponse<RemoteAccessPairingApprovalViewModel>> ApprovePairingRequest(string id)
         {
             var approver = HttpContext.GetRemoteAccessContext()?.Device?.Id ?? HostApproverId;
@@ -301,7 +297,6 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost("pairing/requests/{id}/reject")]
         [SwaggerOperation(OperationId = "RejectRemoteDevicePairingRequest")]
-        [RemoteAccessible]
         public async Task<BaseResponse> RejectPairingRequest(string id)
         {
             await deviceService.RejectRequestAsync(id, HttpContext.RequestAborted);
@@ -320,7 +315,6 @@ namespace Bakabase.Service.Controllers
         /// </remarks>
         [HttpGet("devices")]
         [SwaggerOperation(OperationId = "GetRemoteAccessDevices")]
-        [RemoteAccessible]
         public ListResponse<RemoteAccessDeviceViewModel> GetDevices()
         {
             return new ListResponse<RemoteAccessDeviceViewModel>(
@@ -337,7 +331,6 @@ namespace Bakabase.Service.Controllers
         /// </remarks>
         [HttpGet("pairing/requests")]
         [SwaggerOperation(OperationId = "GetRemoteAccessPairingRequests")]
-        [RemoteAccessible]
         public ListResponse<RemoteAccessPendingRequestViewModel> GetPendingRequests()
         {
             return new ListResponse<RemoteAccessPendingRequestViewModel>(
@@ -355,7 +348,6 @@ namespace Bakabase.Service.Controllers
         /// </remarks>
         [HttpDelete("devices/{id}")]
         [SwaggerOperation(OperationId = "RevokeRemoteAccessDevice")]
-        [RemoteAccessible]
         public async Task<BaseResponse> RevokeDevice(string id)
         {
             await deviceService.RevokeAsync(id, HttpContext.RequestAborted);
@@ -370,7 +362,6 @@ namespace Bakabase.Service.Controllers
 
         [HttpPut("devices/{id}/name")]
         [SwaggerOperation(OperationId = "RenameRemoteAccessDevice")]
-        [RemoteAccessible]
         public async Task<BaseResponse> RenameDevice(string id, [FromBody] RemoteAccessDeviceNameInputModel model)
         {
             var renamed = await deviceService.RenameAsync(id, model.Name ?? string.Empty, HttpContext.RequestAborted);

@@ -47,9 +47,9 @@ public sealed class RemoteConnectionRegistry
         Abort(e => string.Equals(e.DeviceId, deviceId, StringComparison.Ordinal));
 
     /// <summary>
-    /// Hangs up on everyone who has not paired, for when the operator turns pairing into
-    /// a requirement. Leaving them connected would keep serving the exact callers the
-    /// switch was flipped to shut out.
+    /// Hangs up on everyone who has not paired, for when pairing becomes a requirement or the
+    /// mode changes (<see cref="RemoteAccessConnectionMonitor"/>). Leaving them connected
+    /// would keep serving them as they were admitted under the old settings.
     /// </summary>
     public int AbortUnpaired() => Abort(e => e.DeviceId == null);
 

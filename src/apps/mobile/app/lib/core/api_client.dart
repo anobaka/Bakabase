@@ -39,9 +39,11 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-/// Thin typed client over the handful of `[RemoteAccessible]` endpoints the
-/// app uses. One instance per connected server; the base URL is the address
-/// discovery (or the user) produced.
+/// Thin typed client over the endpoints the app uses: the `[RemoteAccessible]`
+/// ones any device on the LAN may call, and the device-management routes that
+/// only a paired device (signed by [DeviceSigningInterceptor]) reaches. One
+/// instance per connected server; the base URL is the address discovery (or
+/// the user) produced.
 class BakabaseApiClient {
   BakabaseApiClient(
     this.baseUrl, {
