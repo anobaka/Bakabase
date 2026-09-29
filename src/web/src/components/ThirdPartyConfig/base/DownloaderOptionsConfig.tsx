@@ -118,8 +118,10 @@ export default function DownloaderOptionsConfig({
             label={t<string>("thirdPartyConfig.label.requestInterval")}
             size="sm"
             type="number"
-            value={String(options.requestInterval || 1000)}
-            onValueChange={(v) => setOptions({ ...options, requestInterval: Number(v) || 1000 })}
+            value={String(options.requestInterval ?? 1000)}
+            onValueChange={(v) =>
+              setOptions({ ...options, requestInterval: v === "" ? 1000 : Number(v) })
+            }
           />
         </div>
         <div className="grid grid-cols-2 gap-4">

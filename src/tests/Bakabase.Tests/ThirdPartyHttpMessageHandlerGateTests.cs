@@ -13,14 +13,13 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests;
 
 /// <summary>
-/// The request gate in <see cref="AbstractThirdPartyHttpMessageHandler{TOptions}"/> is a single
-/// permit held for the whole of every request, on a handler that lives as long as the app. Leaking
-/// it does not fail a request — it hangs every future request to that source, forever, with no
-/// error anywhere. That is what made downloads freeze mid-step ("downloading torrent file") with
-/// nothing but an app restart to recover.
+/// A leaked request slot in <see cref="AbstractThirdPartyHttpMessageHandler{TOptions}"/>
+/// permanently reduces concurrency on a handler that lives as long as the app. With one slot,
+/// that hangs every future request to that source with no error. This previously made downloads
+/// freeze mid-step ("downloading torrent file") until the app restarted.
 ///
-/// The acquisitions used to sit outside the try/finally that releases them, so any throw in between
-/// leaked. These tests pin that down: after a request fails, the next one must still get through.
+/// Acquisitions used to sit outside the try/finally that released them, so a preparation failure
+/// leaked. These tests preserve recovery: after a request fails, the next one must still get through.
 /// </summary>
 [TestClass]
 public class ThirdPartyHttpMessageHandlerGateTests

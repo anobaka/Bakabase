@@ -69,8 +69,8 @@ export const TmdbConfigPanel: FC<TmdbConfigPanelProps> = ({
           label={t<string>("thirdPartyConfig.label.requestInterval")}
           size="sm"
           type="number"
-          value={String(tmp.requestInterval || 1000)}
-          onValueChange={(v) => setTmp({ ...tmp, requestInterval: Number(v) || 1000 })}
+          value={String(tmp.requestInterval ?? 1000)}
+          onValueChange={(v) => setTmp({ ...tmp, requestInterval: v === "" ? 1000 : Number(v) })}
         />
       </div>
       <Input

@@ -32,8 +32,11 @@ public class ThirdPartyCookieContainer : IThirdPartyCookieContainer
     public string? GetCookieHeader(string key, string? staticCookie, Uri uri)
     {
         var container = GetOrCreate(key, staticCookie, uri);
-        var header = container.GetCookieHeader(uri);
-        return string.IsNullOrEmpty(header) ? null : header;
+        lock (container)
+        {
+            var header = container.GetCookieHeader(uri);
+            return string.IsNullOrEmpty(header) ? null : header;
+        }
     }
 
     public void ProcessResponse(string key, string? staticCookie, Uri requestUri, HttpResponseMessage response)
@@ -43,24 +46,29 @@ public class ThirdPartyCookieContainer : IThirdPartyCookieContainer
         var container = GetOrCreate(key, staticCookie, requestUri);
         var baseDomain = GetBaseDomain(requestUri);
 
-        foreach (var setCookie in setCookieHeaders)
+        // Expiring the old value and applying Set-Cookie are one update. Concurrent
+        // requests must not observe the temporary gap or interleave two replacements.
+        lock (container)
         {
-            try
+            foreach (var setCookie in setCookieHeaders)
             {
-                // Parse the cookie name from the Set-Cookie header
-                var cookieName = ExtractCookieName(setCookie);
-                if (cookieName != null)
+                try
                 {
-                    // Remove any existing cookies with the same name from domains that have
-                    // a containment relationship with the request domain.
-                    RemoveCookiesByNameFromRelatedDomains(container, cookieName, requestUri, baseDomain);
-                }
+                    // Parse the cookie name from the Set-Cookie header
+                    var cookieName = ExtractCookieName(setCookie);
+                    if (cookieName != null)
+                    {
+                        // Remove any existing cookies with the same name from domains that have
+                        // a containment relationship with the request domain.
+                        RemoveCookiesByNameFromRelatedDomains(container, cookieName, requestUri, baseDomain);
+                    }
 
-                container.SetCookies(requestUri, setCookie);
-            }
-            catch
-            {
-                // Skip malformed Set-Cookie headers
+                    container.SetCookies(requestUri, setCookie);
+                }
+                catch
+                {
+                    // Skip malformed Set-Cookie headers
+                }
             }
         }
     }

@@ -190,11 +190,11 @@ const ThirdParty = ({
           label="Request Interval (ms)"
           size="sm"
           type="number"
-          value={String(options.requestInterval || 1000)}
+          value={String(options.requestInterval ?? 1000)}
           onValueChange={(v) => {
             setOptions({
               ...options,
-              requestInterval: Number(v) || 1000,
+              requestInterval: v === "" ? 1000 : Number(v),
             });
           }}
         />
@@ -479,11 +479,11 @@ const ThirdParty = ({
               label="Request Interval (ms)"
               size="sm"
               type="number"
-              value={String(tmpBangumiOptions.requestInterval || 1000)}
+              value={String(tmpBangumiOptions.requestInterval ?? 1000)}
               onValueChange={(v) => {
                 setTmpBangumiOptions({
                   ...tmpBangumiOptions,
-                  requestInterval: Number(v) || 1000,
+                  requestInterval: v === "" ? 1000 : Number(v),
                 });
               }}
             />
@@ -638,11 +638,11 @@ const ThirdParty = ({
               label="Request Interval (ms)"
               size="sm"
               type="number"
-              value={String(tmpTmdbOptions.requestInterval || 1000)}
+              value={String(tmpTmdbOptions.requestInterval ?? 1000)}
               onValueChange={(v) => {
                 setTmpTmdbOptions({
                   ...tmpTmdbOptions,
-                  requestInterval: Number(v) || 1000,
+                  requestInterval: v === "" ? 1000 : Number(v),
                 });
               }}
             />

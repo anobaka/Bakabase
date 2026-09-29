@@ -233,7 +233,7 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
               description={t<string>("thirdPartyConfig.field.requestInterval.description")}
               label={t<string>("thirdPartyConfig.label.requestInterval")}
               min={0}
-              value={options?.requestInterval || 1000}
+              value={options?.requestInterval ?? 1000}
               onValueChange={(v) => patchWithToast({ requestInterval: v })}
             />
             <NumberInput

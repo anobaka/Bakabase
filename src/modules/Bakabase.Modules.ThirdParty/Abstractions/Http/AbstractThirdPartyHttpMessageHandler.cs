@@ -1,7 +1,7 @@
 ﻿using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Extensions;
-using Microsoft.Extensions.Options;
+using System.Diagnostics;
 
 namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 {
@@ -27,10 +27,10 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         private readonly ThirdPartyHttpRequestLogger _logger;
         private readonly IThirdPartyCookieContainer? _cookieContainer;
         private ThirdPartyId ThirdPartyId { get; }
-        private int _threadDebts;
-        private DateTime _prevRequestDt;
-        private readonly SemaphoreSlim _lock = new(1, 1);
-        private readonly SemaphoreSlim _threadsSemaphore;
+        private readonly object _requestGate = new();
+        private int _activeRequests;
+        private long? _lastRequestTimestamp;
+        private TaskCompletionSource _stateChanged = NewStateChangedSignal();
 
         private TOptions _options;
 
@@ -50,9 +50,6 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             Proxy = webProxy.ForThirdParty(thirdPartyId);
             // Disable automatic cookie handling since we manage cookies manually via headers
             UseCookies = false;
-            // A zero or negative MaxConcurrency would create a semaphore that can never be entered,
-            // wedging every request through this handler forever. Treat it as "one at a time".
-            _threadsSemaphore = new SemaphoreSlim(NormalizeConcurrency(options.MaxConcurrency), int.MaxValue);
             ConfigureHandler();
         }
 
@@ -64,43 +61,19 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         {
         }
 
-        /// <summary>
-        /// A concurrency of zero (or a negative value slipping in from a saved configuration) would
-        /// make <see cref="_threadsSemaphore"/> permanently unenterable, so every request through
-        /// this handler would hang forever with no error. Clamp instead.
-        /// </summary>
-        private static int NormalizeConcurrency(int maxConcurrency) => maxConcurrency < 1 ? 1 : maxConcurrency;
+        // Invalid saved values must not make the request queue permanently unenterable.
+        private static int NormalizeConcurrency(int maxConcurrency) => Math.Max(1, maxConcurrency);
 
         protected TOptions Options
         {
-            get => _options;
+            get => Volatile.Read(ref _options);
             set
             {
-                var prevMaxThreads = NormalizeConcurrency(_options.MaxConcurrency);
-                var nextMaxThreads = NormalizeConcurrency(value.MaxConcurrency);
-                if (nextMaxThreads != prevMaxThreads)
+                lock (_requestGate)
                 {
-                    // Not the request gate: this only guards the debt bookkeeping below, which is why
-                    // it is taken and released in one place rather than around a whole request.
-                    _lock.Wait();
-
-                    try
-                    {
-                        if (prevMaxThreads > nextMaxThreads)
-                        {
-                            _threadDebts += prevMaxThreads - nextMaxThreads;
-                        }
-                        else
-                        {
-                            _threadsSemaphore.Release(nextMaxThreads - prevMaxThreads);
-                        }
-                    }
-                    finally
-                    {
-                        _lock.Release();
-                    }
+                    Volatile.Write(ref _options, value);
+                    NotifyStateChanged();
                 }
-                _options = value;
             }
         }
 
@@ -173,56 +146,89 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             }
         }
 
-        private void WaitForInterval()
+        private static TaskCompletionSource NewStateChangedSignal() =>
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Call only under _requestGate. A changed limit or a completed request makes every
+        // waiter recheck the current capacity and pacing; no stale semaphore debt is retained.
+        private void NotifyStateChanged()
         {
-            while (DateTime.Now < _prevRequestDt.AddMilliseconds(Options.RequestInterval))
+            var previous = _stateChanged;
+            _stateChanged = NewStateChangedSignal();
+            previous.TrySetResult();
+        }
+
+        private async Task EnterRequestAsync(CancellationToken ct)
+        {
+            while (true)
             {
-                Thread.Sleep(1);
+                Task changed;
+                lock (_requestGate)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (_activeRequests < NormalizeConcurrency(_options.MaxConcurrency))
+                    {
+                        _activeRequests++;
+                        return;
+                    }
+
+                    changed = _stateChanged.Task;
+                }
+
+                await changed.WaitAsync(ct).ConfigureAwait(false);
             }
         }
 
-        private async Task WaitForIntervalAsync(CancellationToken ct)
+        private async Task WaitForRequestStartAsync(CancellationToken ct)
         {
-            while (DateTime.Now < _prevRequestDt.AddMilliseconds(Options.RequestInterval))
+            while (true)
             {
-                await Task.Delay(1, ct);
+                Task changed;
+                TimeSpan delay;
+                lock (_requestGate)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    delay = _lastRequestTimestamp is { } previous
+                        ? TimeSpan.FromMilliseconds(Math.Max(0, _options.RequestInterval)) -
+                          Stopwatch.GetElapsedTime(previous)
+                        : TimeSpan.Zero;
+                    if (delay <= TimeSpan.Zero)
+                    {
+                        _lastRequestTimestamp = Stopwatch.GetTimestamp();
+                        return;
+                    }
+
+                    changed = _stateChanged.Task;
+                }
+
+                try
+                {
+                    await changed.WaitAsync(delay, ct).ConfigureAwait(false);
+                }
+                catch (TimeoutException)
+                {
+                    // The interval elapsed. Recheck against the most recent request start.
+                }
             }
         }
 
-        // Both request paths below acquire two semaphores and then run the request. The acquisitions
-        // used to sit *outside* the try/finally that releases them, so anything throwing in between
-        // — a cancellation landing after the gate was taken, or a malformed cookie/header making
-        // BeforeRequesting throw — leaked the permit permanently. Because these handlers are
-        // singletons and _lock is a 1-permit gate held for the whole request, one leak wedged every
-        // later request to that source forever: downloads froze mid-step with no error and no way
-        // back short of restarting the app. Track what was actually acquired and release exactly
-        // that, whatever happens.
+        private void ExitRequest()
+        {
+            lock (_requestGate)
+            {
+                _activeRequests--;
+                NotifyStateChanged();
+            }
+        }
 
         protected sealed override HttpResponseMessage Send(HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            WaitForInterval();
-
-            var lockTaken = false;
-            var threadTaken = false;
-
+            EnterRequestAsync(cancellationToken).GetAwaiter().GetResult();
             try
             {
-                _lock.Wait(cancellationToken);
-                lockTaken = true;
-
-                while (_threadDebts > 0)
-                {
-                    _threadsSemaphore.Wait(cancellationToken);
-                    Interlocked.Decrement(ref _threadDebts);
-                }
-
-                _threadsSemaphore.Wait(cancellationToken);
-                threadTaken = true;
-
                 BeforeRequesting(request, cancellationToken);
-
-                _prevRequestDt = DateTime.Now;
+                WaitForRequestStartAsync(cancellationToken).GetAwaiter().GetResult();
                 var response = _logger.Capture(ThirdPartyId, () => base.Send(request, cancellationToken),
                     request.RequestUri?.ToString(), ct: cancellationToken);
                 _processResponse(request, response);
@@ -230,60 +236,30 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             }
             finally
             {
-                if (threadTaken)
-                {
-                    _threadsSemaphore.Release();
-                }
-
-                if (lockTaken)
-                {
-                    _lock.Release();
-                }
+                ExitRequest();
             }
         }
 
         protected sealed override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            await WaitForIntervalAsync(cancellationToken);
-
-            var lockTaken = false;
-            var threadTaken = false;
-
+            await EnterRequestAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                await _lock.WaitAsync(cancellationToken);
-                lockTaken = true;
-
-                while (_threadDebts > 0)
-                {
-                    await _threadsSemaphore.WaitAsync(cancellationToken);
-                    Interlocked.Decrement(ref _threadDebts);
-                }
-
-                await _threadsSemaphore.WaitAsync(cancellationToken);
-                threadTaken = true;
-
-                await BeforeRequestingAsync(request, cancellationToken);
-
-                _prevRequestDt = DateTime.Now;
+                await BeforeRequestingAsync(request, cancellationToken).ConfigureAwait(false);
+                await WaitForRequestStartAsync(cancellationToken).ConfigureAwait(false);
+                // Capacity covers the existing SendAsync boundary (response headers), not body reads.
+                // Never hold the scheduling lock while the network is pending: slow headers must not
+                // serialize every request regardless of MaxConcurrency.
                 var response = await _logger.CaptureAsync(ThirdPartyId,
-                    async () => await base.SendAsync(request, cancellationToken), request.RequestUri?.ToString(),
-                    ct: cancellationToken);
+                    () => base.SendAsync(request, cancellationToken), request.RequestUri?.ToString(),
+                    ct: cancellationToken).ConfigureAwait(false);
                 _processResponse(request, response);
                 return response;
             }
             finally
             {
-                if (threadTaken)
-                {
-                    _threadsSemaphore.Release();
-                }
-
-                if (lockTaken)
-                {
-                    _lock.Release();
-                }
+                ExitRequest();
             }
         }
     }
