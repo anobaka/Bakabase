@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Remoting.Abstractions.Models;
 using Bakabase.Remoting.Components.Connection;
 using Bakabase.Remoting.Components.Forwarding;
@@ -269,7 +270,8 @@ public class UpstreamIdentityTests
         _verifier.Answer = UpstreamIdentityVerdict.WrongServer;
 
         var refused = await Assert.ThrowsExceptionAsync<UpstreamIdentityRefusedException>(() =>
-            UpstreamConnections.ConnectAsync(_identity, new DnsEndPoint("127.0.0.1", 47000), default).AsTask());
+            UpstreamConnections.ConnectAsync(_identity, new DnsEndPoint("127.0.0.1", 47000),
+                DualStackConnector.Default, default).AsTask());
         Assert.AreEqual(UpstreamIdentityVerdict.WrongServer, refused.Check!.Verdict);
 
         // Confirmed, but for 47000: a dial to anywhere else is not covered by it.
@@ -277,7 +279,8 @@ public class UpstreamIdentityTests
         _verifier.Answer = UpstreamIdentityVerdict.Confirmed;
 
         await Assert.ThrowsExceptionAsync<UpstreamIdentityRefusedException>(() =>
-            UpstreamConnections.ConnectAsync(_identity, new DnsEndPoint("127.0.0.1", 47001), default).AsTask());
+            UpstreamConnections.ConnectAsync(_identity, new DnsEndPoint("127.0.0.1", 47001),
+                DualStackConnector.Default, default).AsTask());
     }
 
     [TestMethod]

@@ -94,6 +94,25 @@ public sealed class FederationIdentityResetTests
         Assert.IsNotNull(install.Devices.Find(paired));
     }
 
+    [TestMethod]
+    public async Task A_new_install_identity_without_a_new_node_is_refused_rather_than_left_out()
+    {
+        // Answered 200 with a new library generation only, the caller would take the install's
+        // identity for replaced while it still answers as the one it was copied from.
+        using var install = new Install("copied-server-id");
+        var before = await install.Identity.GetAsync();
+        var paired = await install.PairDeviceAsync();
+
+        var refused = await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
+            install.ResetAsync(asNewNode: false, replaceInstallIdentity: true));
+
+        Assert.AreEqual("InvalidIdentityReset", refused.ErrorCode);
+        Assert.AreEqual(400, refused.StatusCode);
+        Assert.AreEqual("copied-server-id", await install.RemoteAccess.GetOrCreateServerIdAsync());
+        Assert.AreEqual(before, await install.Identity.GetAsync());
+        Assert.IsNotNull(install.Devices.Find(paired));
+    }
+
     private sealed class Install : IFederationDataDirectory, IRemoteAccessDataDirectory, IListeningAddressProvider,
         IDisposable
     {

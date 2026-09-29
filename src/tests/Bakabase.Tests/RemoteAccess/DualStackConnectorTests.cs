@@ -89,6 +89,27 @@ public class DualStackConnectorTests
     }
 
     [TestMethod]
+    public async Task The_address_that_won_is_said_so_a_caller_can_go_back_to_it()
+    {
+        // What a relay connects to after its question: the address that answered, never the name
+        // raced again.
+        var network = new FakeNetwork
+        {
+            [Lan] = FakeNetwork.BlackHole,
+            [LinkLocal] = FakeNetwork.AnswersAfter(TimeSpan.Zero)
+        };
+        var connector = network.Connector([Lan, LinkLocal], TimeSpan.FromMilliseconds(50));
+
+        using var budget = new CancellationTokenSource(Budget);
+        var (stream, reached) = await connector.ConnectReachingAsync(new DnsEndPoint("nas.local", 8080), null,
+            budget.Token);
+        await using var _ = stream;
+
+        Assert.AreEqual(new IPEndPoint(LinkLocal, 8080), reached);
+        Assert.AreEqual(reached, ((FakeConnection) stream).To);
+    }
+
+    [TestMethod]
     public async Task A_refused_address_hands_over_without_waiting_out_the_delay()
     {
         var network = new FakeNetwork

@@ -274,6 +274,11 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
         [FromServices] FederationBrowsingControl browsing, [FromServices] IRemoteDeviceService remoteDevices,
         [FromServices] RemoteConnectionRegistry connections, CancellationToken ct)
     {
+        // A new install identity comes only with a new node: asked for alone, it would be
+        // quietly left out, and the install would keep answering as the one it was copied from.
+        if (request.ReplaceInstallIdentity && !request.AsNewNode)
+            throw new FederationAccessException("InvalidIdentityReset", 400,
+                "A new install identity is only given together with a new node (asNewNode).");
         NodeIdentity node;
         if (request.AsNewNode && request.ReplaceInstallIdentity)
         {

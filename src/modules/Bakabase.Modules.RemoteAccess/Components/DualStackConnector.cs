@@ -26,7 +26,11 @@ namespace Bakabase.Modules.RemoteAccess.Components;
 /// </para>
 /// <para>
 /// Every outbound connection to another device goes through here: the desktop app's relays and
-/// its probes of the servers it manages, and multi-device sharing's peer requests.
+/// its probes of the servers it manages, and multi-device sharing's peer requests and
+/// discovery. Each takes the instance it uses from its composition —
+/// <c>RemoteConsoleOptions.Connector</c>, or a <see cref="DualStackConnector"/> service for
+/// library sharing, <see cref="Default"/> without one — so tests can put a network under the
+/// real handlers.
 /// </para>
 /// </remarks>
 public sealed class DualStackConnector
@@ -52,8 +56,8 @@ public sealed class DualStackConnector
     }
 
     /// <summary>For <see cref="SocketsHttpHandler.ConnectCallback"/>, which still bounds it with its <c>ConnectTimeout</c>.</summary>
-    public static ValueTask<Stream> ConnectCallback(SocketsHttpConnectionContext context, CancellationToken ct) =>
-        Default.ConnectAsync(context.DnsEndPoint, ct);
+    public ValueTask<Stream> ConnectCallback(SocketsHttpConnectionContext context, CancellationToken ct) =>
+        ConnectAsync(context.DnsEndPoint, ct);
 
     public ValueTask<Stream> ConnectAsync(DnsEndPoint endpoint, CancellationToken ct) =>
         ConnectAsync(endpoint, null, ct);
@@ -66,7 +70,15 @@ public sealed class DualStackConnector
     /// computer name over LLMNR or NetBIOS — then still gets the whole of it to connect.
     /// </param>
     /// <param name="ct">The caller's budget, lookup included.</param>
-    public async ValueTask<Stream> ConnectAsync(DnsEndPoint endpoint, TimeSpan? connectTimeout, CancellationToken ct)
+    public async ValueTask<Stream> ConnectAsync(DnsEndPoint endpoint, TimeSpan? connectTimeout, CancellationToken ct) =>
+        (await ConnectReachingAsync(endpoint, connectTimeout, ct)).Stream;
+
+    /// <summary>
+    /// Connects as <see cref="ConnectAsync(DnsEndPoint, TimeSpan?, CancellationToken)"/> does, and says which of
+    /// the addresses answered: for a caller that has to go back to that very one.
+    /// </summary>
+    public async ValueTask<(Stream Stream, IPEndPoint Reached)> ConnectReachingAsync(DnsEndPoint endpoint,
+        TimeSpan? connectTimeout, CancellationToken ct)
     {
         var addresses = IPAddress.TryParse(endpoint.Host, out var literal)
             ? [literal]
@@ -94,18 +106,22 @@ public sealed class DualStackConnector
         }
     }
 
-    private async ValueTask<Stream> RaceAsync(IReadOnlyList<IPAddress> addresses, int port, CancellationToken ct)
+    private async ValueTask<(Stream Stream, IPEndPoint Reached)> RaceAsync(IReadOnlyList<IPAddress> addresses,
+        int port, CancellationToken ct)
     {
         if (addresses.Count == 1)
         {
-            return await _connect(new IPEndPoint(addresses[0], port), ct);
+            var only = new IPEndPoint(addresses[0], port);
+            return (await _connect(only, ct), only);
         }
 
         using var race = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var attempts = new List<Task<Stream>>();
+        var attempts = new List<Task<(Stream Stream, IPEndPoint Reached)>>();
         var next = 0;
 
-        Task<Stream> Start() => _connect(new IPEndPoint(addresses[next++], port), race.Token).AsTask();
+        async Task<(Stream Stream, IPEndPoint Reached)> Attempt(IPEndPoint to) => (await _connect(to, race.Token), to);
+
+        Task<(Stream Stream, IPEndPoint Reached)> Start() => Attempt(new IPEndPoint(addresses[next++], port));
 
         try
         {
@@ -124,7 +140,7 @@ public sealed class DualStackConnector
 
                 ct.ThrowIfCancellationRequested();
 
-                if (done is not Task<Stream> attempt)
+                if (done is not Task<(Stream Stream, IPEndPoint Reached)> attempt)
                 {
                     // The delay ran out with nothing answered yet: the next address joins in.
                     attempts.Add(Start());
@@ -165,7 +181,7 @@ public sealed class DualStackConnector
                 {
                     if (t.IsCompletedSuccessfully)
                     {
-                        t.Result.Dispose();
+                        t.Result.Stream.Dispose();
                     }
                     else
                     {

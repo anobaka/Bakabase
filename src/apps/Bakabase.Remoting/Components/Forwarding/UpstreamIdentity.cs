@@ -56,6 +56,14 @@ public sealed record UpstreamIdentityCheck(
     /// </summary>
     public bool RemoteAccessDisabled { get; init; }
 
+    /// <summary>
+    /// The IP address the question's connection reached, when it connected: what the answer
+    /// holds for, and where a relay then connects — never the address's name again, which can
+    /// resolve to others as well. Null for an answer from anywhere else, which leaves the relay
+    /// dialling the address as stored.
+    /// </summary>
+    public IPAddress? ReachedAddress { get; init; }
+
     public bool IsConfirmed => Verdict == UpstreamIdentityVerdict.Confirmed;
 
     /// <summary>Somebody answered, and it is not the server this relay is for.</summary>
@@ -92,7 +100,8 @@ public sealed record UpstreamIdentityCheck(
                 $"{Authority} now answers as another computer with this computer's own identity " +
                 $"({AnsweredByName ?? "unnamed"}) — a copy of its data folder, most likely — not {expected}. Nothing " +
                 "was sent to it. On the copy, choose Devices and sharing → Cloned or restored installation → Create " +
-                $"a new device identity. If {expected} moved to another address, find it again on this computer's " +
+                "a new device identity (on a server without a window, run “dotnet Bakabase.Service.dll federation " +
+                $"new-identity” in it). If {expected} moved to another address, find it again on this computer's " +
                 "Devices and sharing page.",
             UpstreamIdentityVerdict.Confirmed => $"{Authority} answers as {expected}.",
             // Worded as the relay's page words it (ConsoleUnavailablePage).
@@ -466,7 +475,11 @@ public static class UpstreamConnections
     /// a server on the LAN), redirects, cookies and decompression left to the caller — whose
     /// every new connection is checked first.
     /// </summary>
-    public static SocketsHttpHandler CreateHandler(UpstreamIdentity identity, TimeSpan connectTimeout) =>
+    /// <param name="identity">Who answers at the server's address.</param>
+    /// <param name="connectTimeout">How long a connection may take to open.</param>
+    /// <param name="connector">The network: <see cref="DualStackConnector.Default"/> unless a test says otherwise.</param>
+    public static SocketsHttpHandler CreateHandler(UpstreamIdentity identity, TimeSpan connectTimeout,
+        DualStackConnector connector) =>
         new()
         {
             UseProxy = false,
@@ -475,19 +488,22 @@ public static class UpstreamConnections
             UseCookies = false,
             ConnectTimeout = connectTimeout,
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-            ConnectCallback = (context, ct) => ConnectAsync(identity, context.DnsEndPoint, ct)
+            ConnectCallback = (context, ct) => ConnectAsync(identity, context.DnsEndPoint, connector, ct)
         };
 
-    /// <summary>Opens a connection to <paramref name="endpoint"/> once the address is confirmed as the server's.</summary>
+    /// <summary>
+    /// Opens a connection to <paramref name="endpoint"/> once the address is confirmed as the
+    /// server's — to the IP address that confirmed it.
+    /// </summary>
     /// <remarks>
-    /// Confirmed per address as stored, not per IP: a stored name that resolves to several
-    /// addresses is raced here as the question was, and the two can land on different ones —
-    /// a confirmed address slower than <see cref="DualStackConnector.DefaultAttemptDelay"/> can
-    /// lose this connection to another the name also resolves to. Discovered servers are stored
-    /// as IP addresses, which have one; see server-switching.md.
+    /// Not to the stored name again: it can resolve to several addresses, and those to several
+    /// installs, and raced afresh a connection could reach another than the one that said who it
+    /// is — the confirmed one only has to be slower to accept this time. The confirmation it
+    /// goes by is at most <see cref="UpstreamIdentityPolicy.ConnectionWindow"/> old, and each
+    /// question resolves the name again, so a name that has moved on is followed within that.
     /// </remarks>
     public static async ValueTask<Stream> ConnectAsync(UpstreamIdentity identity, DnsEndPoint endpoint,
-        CancellationToken ct)
+        DualStackConnector connector, CancellationToken ct)
     {
         var check = await identity.EnsureForConnectionAsync(ct);
 
@@ -498,6 +514,8 @@ public static class UpstreamConnections
             throw new UpstreamIdentityRefusedException(check);
         }
 
-        return await DualStackConnector.Default.ConnectAsync(endpoint, ct);
+        return await connector.ConnectAsync(check.ReachedAddress is { } reached
+            ? new DnsEndPoint(reached.ToString(), endpoint.Port)
+            : endpoint, ct);
     }
 }

@@ -41,6 +41,28 @@ public class ThisMachineTests
     }
 
     [TestMethod]
+    public void A_snapshot_judges_every_address_against_the_addresses_read_once()
+    {
+        // Discovery judges every reply of its window against one reading: enumerating the
+        // interfaces again for each would spend the window on it.
+        var own = new ThisMachineAddresses([IPAddress.Parse("192.168.1.20"), IPAddress.Parse("fe80::1%4")]);
+
+        Assert.IsTrue(own.Holds(IPAddress.Parse("192.168.1.20")));
+        Assert.IsTrue(own.Holds(IPAddress.Parse("192.168.1.20").MapToIPv6()));
+        Assert.IsTrue(own.Holds(IPAddress.Parse("fe80::1%9")), "a link-local address is compared without its zone");
+        Assert.IsTrue(own.Holds(IPAddress.Loopback));
+        Assert.IsTrue(own.Holds(IPAddress.Any));
+        Assert.IsFalse(own.Holds(IPAddress.Parse("192.168.1.21")));
+        Assert.IsFalse(own.Holds(IPAddress.Parse(Elsewhere)));
+
+        var now = ThisMachine.Snapshot();
+        foreach (var address in OwnAddresses())
+        {
+            Assert.IsTrue(now.Holds(address), address.ToString());
+        }
+    }
+
+    [TestMethod]
     public void An_address_no_interface_here_holds_is_another_machine()
     {
         Assert.IsFalse(ThisMachine.Holds(IPAddress.Parse(Elsewhere)));

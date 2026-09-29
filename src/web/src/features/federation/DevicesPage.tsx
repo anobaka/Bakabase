@@ -294,9 +294,9 @@ function Devices() {
   // one-click default opens it; a mode the operator already widened is left alone.
   const configureRemoteChecked = configureRemote ?? remoteDisabled;
   const reachableAddresses = status?.reachableAddresses ?? [];
-  const candidates = discovered?.filter(
-    (candidate) => candidate.nodeId !== status?.identity.nodeId,
-  );
+  // The server leaves this device out. One listed under this device's own id is another
+  // computer — a copy of its data folder — and connecting to it says so.
+  const candidates = discovered;
   // A corrupt sharing state never produces a status, so its recovery cannot live behind one.
   const sharingStateUnavailable =
     loadError instanceof FederationError && loadError.code === "SharingStateUnavailable";

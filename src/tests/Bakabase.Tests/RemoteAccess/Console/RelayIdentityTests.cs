@@ -352,6 +352,8 @@ public class RelayIdentityTests
         Assert.AreEqual(nameof(ClientForwardingFailure.WrongServer), FailureOf(response));
         StringAssert.Contains(message, "with this computer's own identity (Copy)");
         StringAssert.Contains(message, "not Desk");
+        // A copy can be a server without a window, whose own page never offers the reset.
+        StringAssert.Contains(message, "run “dotnet Bakabase.Service.dll federation new-identity” in it");
         Assert.IsFalse(message.Contains("reaches this computer itself", StringComparison.Ordinal), message);
         CollectionAssert.AreEqual(Array.Empty<string>(), BeyondTheQuestion(copy), string.Join("\n", copy.Requests));
 
@@ -370,10 +372,47 @@ public class RelayIdentityTests
         var html = await (await ConsoleHarness.NavigateAsync($"http://127.0.0.1:{port}/", "same-origin")).Content
             .ReadAsStringAsync();
         StringAssert.Contains(html, "with this device's own identity (Copy)");
+        StringAssert.Contains(html, "run “dotnet Bakabase.Service.dll federation new-identity” in it");
         StringAssert.Contains(html, "与本机设备身份相同的电脑（Copy）");
+        StringAssert.Contains(html, "请在其中运行“dotnet Bakabase.Service.dll federation new-identity”");
 
         CollectionAssert.AreEqual(Array.Empty<string>(), BeyondTheQuestion(copy), string.Join("\n", copy.Requests));
         Assert.AreEqual(_deskAddress, _console.Store.Find("server-desk")!.BaseAddress);
+    }
+
+    [TestMethod]
+    public async Task An_address_that_now_leads_back_to_this_device_through_another_door_is_this_device()
+    {
+        // This install's own id and its own name from an address that is not this machine's: a
+        // reverse proxy or port forward that now points here. Called a copy, the user would be
+        // sent to reset the only install there is.
+        var root = _console.Root;
+        await _console.StopAsync();
+        _console = await ConsoleHarness.StartAsync(root, options: o =>
+        {
+            Options(o);
+            o.ReachesThisMachine = (_, _) => Task.FromResult(false);
+        });
+
+        var port = await OpenAsync();
+        var here = await ReplaceDeskAsync(ConsoleHarness.OwnServerId, Environment.MachineName,
+            s => s.TrustsLoopback = true);
+
+        await PastTheConnectionWindow();
+
+        var response = await ConsoleHarness.SendToRelayAsync(port, "/resource/search");
+        var message = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement
+            .GetProperty("message").GetString()!;
+
+        Assert.AreEqual(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        StringAssert.Contains(message, "reaches this computer itself, not Desk");
+        Assert.IsFalse(message.Contains("own identity", StringComparison.Ordinal), message);
+
+        var listed = (await _console.Manager.GetAsync(true)).Servers.Single();
+        Assert.AreEqual(ManagedServerState.WrongServer, listed.State);
+        Assert.IsTrue(listed.AnsweredBy!.IsThisDevice);
+        Assert.IsFalse(listed.AnsweredBy.IsSameIdentity);
+        CollectionAssert.AreEqual(Array.Empty<string>(), BeyondTheQuestion(here), string.Join("\n", here.Requests));
     }
 
     [TestMethod]

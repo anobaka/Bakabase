@@ -205,7 +205,7 @@
   "federation.error.PairingRateLimited": "Too many pairing attempts. Wait a minute and try again.",
   "federation.error.InvalidAddress": "Enter a valid HTTP or HTTPS device address.",
   "federation.error.SelfAddress": "This address belongs to this device. Choose another computer.",
-  "federation.error.SameIdentity": "The device at this address has the same identity as this one — was its data folder copied from this computer, or this one's from it? On the copy, open “Devices and sharing” → “Cloned or restored installation” and choose “Create a new device identity” (on a server without a window, such as Docker or a NAS, run “dotnet Bakabase.Service.dll federation new-identity” in it), then try again.",
+  "federation.error.SameIdentity": "The device at this address answers with this device's own identity. If the address leads back to this computer — through a reverse proxy, a port forward or your router's public address — use the other device's own address instead. Otherwise its data folder was copied from this computer, or this one's from it: on the copy, open “Devices and sharing” → “Cloned or restored installation” and choose “Create a new device identity” (on a server without a window, such as Docker or a NAS, run “dotnet Bakabase.Service.dll federation new-identity” in it), then try again.",
   "federation.error.PortMissing": "Add the port to the address, as the other device shows it, for example 192.168.1.5:34567.",
   "federation.error.InvalidNodeResponse": "The device returned an invalid response. Check that its Bakabase version is compatible.",
   "federation.error.NodeSessionChanged": "The device authorization changed. Start a new search.",

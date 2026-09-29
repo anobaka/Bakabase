@@ -122,13 +122,17 @@ async function federation(browser) {
     await devices.goto(uiBase + '/#/federation/devices?section=identity');
     await devices.locator('#federation-identity[open]').waitFor();
     const beforeRestore = await status();
+    // The install's own identity, which managing it from another device goes by.
+    const installId = async () => (await api(unified.base, '/remote-access/server-info')).data.id;
+    const installBeforeRestore = await installId();
     const resetThroughUi = async (key, asNewNode) => {
       await devices.getByRole('button', { name: name(key), exact: true }).click();
       const responsePromise = devices.waitForResponse(response => response.url() === uiBase + '/federation/local/peers/identity/reset');
       await devices.getByRole('alertdialog').getByRole('button', { name: name('federation.confirm'), exact: true }).click();
       const response = await responsePromise;
       assert.equal(response.status(), 200);
-      assert.deepEqual(response.request().postDataJSON(), { asNewNode });
+      // Restoring keeps the install's identity; a new device identity replaces it with the node's.
+      assert.deepEqual(response.request().postDataJSON(), { asNewNode, replaceInstallIdentity: asNewNode });
       await devices.getByRole('alertdialog').waitFor({ state: 'hidden' });
       return status();
     };
@@ -138,9 +142,15 @@ async function federation(browser) {
     assert.deepEqual(recovered.peers, beforeRestore.peers);
     assert.equal(recovered.sharingEnabled, false);
     assert.equal(recovered.browsingEnabled, false);
+    assert.equal(await installId(), installBeforeRestore, 'Restoring a library replaced the install identity');
     const cloned = await resetThroughUi('federation.identity.reset', true);
     assert.notEqual(cloned.identity.nodeId, recovered.identity.nodeId);
     assert.notEqual(cloned.identity.libraryEpoch, recovered.identity.libraryEpoch);
+    // A copy must stop answering as the install it was copied from, for being managed too, and
+    // its node answers under the new identity with it.
+    const installAfterClone = await installId();
+    assert.notEqual(installAfterClone, installBeforeRestore, 'A new device identity kept the install identity');
+    assert.equal(cloned.identity.nodeId, installAfterClone);
     assert.deepEqual(cloned.peers, []);
     assert.deepEqual(cloned.requests, []);
     assert.equal(cloned.sharingEnabled, false);
@@ -153,7 +163,8 @@ async function federation(browser) {
       browsingOnAfterPairing: true, participants: query.participants.length, total: query.totalWithinParticipants,
       unmappedDirectoryDisabled: true, localhostAudioMetadataReady: true,
       crossTabDisableClearsResultsAndMedia: true, peersAndSharingPreserved: true,
-      explicitRestorePreservesNodeAndOutbound: true, explicitCloneCreatesFreshNode: true, pageErrors: errors,
+      explicitRestorePreservesNodeAndOutbound: true, explicitCloneCreatesFreshNode: true,
+      explicitCloneReplacesInstallIdentity: true, pageErrors: errors,
       blockedRequests: blocked
     };
     return report;

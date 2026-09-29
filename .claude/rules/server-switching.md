@@ -63,12 +63,16 @@ manage anything; they are only ever managed.
   meanwhile. Relocation is left to the user: pairing again at the new address
   keeps path mappings and the relay port. Limit: the check compares a claimed identity —
   remote access has no server-side proof, unlike federation's handshake — so it catches an
-  address that moved, not a server lying about who it is. And it holds per address as stored,
-  not per IP: for a stored **name** that resolves to several addresses, the question and a
-  connection each race them (`DualStackConnector`) and may land on different ones — a slow
-  confirmed address can lose a connection to another the name also resolves to, one this
-  machine may hold too (a VPN or virtual adapter's). Discovered servers are stored as IP
-  addresses, which have one.
+  address that moved, not a server lying about who it is.
+  **An answer holds for the IP address that gave it**, not for a stored name, which can
+  resolve to several addresses and those to several installs (one this machine may hold too, a
+  VPN or virtual adapter's). Each question runs over an exchange of its own
+  (`RemoteConsoleManager.ServerExchange`) that records the address its connection reached
+  (`UpstreamIdentityCheck.ReachedAddress`); a relay's new connections dial exactly that address
+  (`UpstreamConnections.ConnectAsync`), never the name raced again, and the console's signed
+  calls after a question — the probe's context read, "stop managing"'s revoke — go over the
+  question's own exchange. Every new connection needs an answer no older than two seconds, and
+  each question resolves the name again, so a name that moved on is followed within that.
 - **The switcher inside a relay says how each server was last seen.** `GET /client/switcher`
   answers `{currentId, targets: [{id, name, isLocal, isCurrent, state}]}`. `state` is
   `ManagedServerState` as a number — `0` Unknown, `1` Online, `2` Offline, `3` Revoked,
@@ -191,15 +195,22 @@ manage anything; they are only ever managed.
 - **Never pair with yourself, never talk to yourself.** Refuse an address whose handshake
   returns this install's `ServerId`, and loopback addresses at this app's own server or relay
   ports — when pairing, and when a managed server's stored address comes to point here. An
-  address that is not this machine's answering with this install's `ServerId` is a copy of its
-  data directory: refused as `SameIdentity` (library sharing: `SameIdentity` too; a managed
-  server's address: `WrongServer` with `IsSameIdentity`), whose message points at "Create a new
-  device identity" — which replaces the `ServerId`, forgets the devices paired under the old
-  one, and gives the node the new id (headless: `federation new-identity`). Only that action
-  replaces the `ServerId`: the recovery of an unreadable federation state replaces the node
-  alone, with an id of its own. Whether an address is this machine's is judged by its host —
-  an address its interfaces hold, or a name resolving only to such addresses — and, where a
-  lookup runs out of time, reads as this device: refused either way.
+  answer with this install's `ServerId` is a copy of its data directory when it comes from an
+  address that is not this machine's **and** under another name than this device's own server
+  gives itself (`server-info`'s name is the machine's, which a copied data directory does not
+  carry): refused as `SameIdentity` (a managed server's address: `WrongServer` with
+  `IsSameIdentity`), whose message points at "Create a new device identity" — which replaces
+  the `ServerId`, forgets the devices paired under the old one, and gives the node the new id
+  (headless: `federation new-identity`). This device's own name from such an address is this
+  device through another door — a reverse proxy or port forward on another host, the router's
+  public address looping back — and stays `ThisDevice`: the reset would unpair every device
+  for nothing (a copy on a machine of the same name reads as this device too, refused all the
+  same). Library sharing cannot tell those two apart (a node's name is in its data
+  directory), so its `SameIdentity` names both. Only that action replaces the `ServerId`: the
+  recovery of an unreadable federation state replaces the node alone, with an id of its own.
+  Whether an address is this machine's is judged by its host — an address its interfaces hold,
+  or a name resolving only to such addresses — and, where a lookup runs out of time, reads as
+  this device: refused either way.
 - **Nothing signed goes to an address that does not answer as the server.** Forwarding, the
   relay's own calls (context, play/open lookups, played-at history), probing's signed context
   read and "stop managing"'s revoke all ask first; a mismatch gets the handshake question and
@@ -233,12 +244,16 @@ What stays is deliberate:
   pairing edge cases and request liveness, discovery, legacy import, key secrecy,
   `ConsoleDiagnosticsExposureTests` (a real `AppService` and log behind a relay, answered 404),
   and `RelayIdentityTests`: two real servers swapping one port under a real relay — after a
-  restart, while a page is open, found by a probe, answering as this device or as a copy of it
-  on another machine, at one of this app's own ports, the server coming back — with a
-  loopback-trusting and an unrestricted server
+  restart, while a page is open, found by a probe, answering as this device (through another
+  door too) or as a copy of it on another machine, at one of this app's own ports, the server
+  coming back — with a loopback-trusting and an unrestricted server
   taking the address, asserting the newcomer is only ever asked who it is; plus the right
   server behind a store that cannot be written (still forwarded to and probed Online, the
   write retried on its own) and one with remote access off (the page and the fetch say so).
+  `ConsoleNetworkTests` put a network under the real handlers (`RemoteConsoleOptions.Connector`,
+  `TestNetwork`): a server stored by a name that resolves IPv6-first to a dropped address is
+  probed, paired and relayed to at once, and a relay whose name leads to two installs connects
+  only to the one that answered its question.
 - `src/tests/Bakabase.Tests/RemoteAccess/UpstreamIdentityTests` — when the relay asks, and what
   an answer stands for (lifetime, refresh ahead, the new-connection window, suspicion, shared
   questions, a moved address, failures), with the clock under the test's control.

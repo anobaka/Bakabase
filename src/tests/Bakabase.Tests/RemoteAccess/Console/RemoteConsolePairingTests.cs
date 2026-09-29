@@ -321,6 +321,24 @@ public class RemoteConsolePairingTests
     }
 
     [TestMethod]
+    public async Task This_device_reached_through_another_door_is_this_device_not_a_copy()
+    {
+        // A reverse proxy or port forward on another host, the router's public address looping
+        // back: the address is not this machine's, but what answers is this very install, under
+        // the name this device's own server gives itself — its machine's, which a copied data
+        // directory does not carry. Told it is a copy, the user would reset the only install.
+        await using var console = await ConsoleHarness.StartAsync(
+            options: o => o.ReachesThisMachine = (_, _) => Task.FromResult(false));
+        var forwarded = await Server(ConsoleHarness.OwnServerId, Environment.MachineName);
+        forwarded.PairingCode = "123456";
+
+        Assert.AreEqual(ManagedServerOutcome.ThisDevice, (await console.Manager.ProbeAsync(forwarded.BaseAddress)).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.ThisDevice,
+            (await console.Manager.PairAsync(forwarded.BaseAddress, "123456")).Outcome);
+        Assert.AreEqual(0, console.Store.Read().Servers.Count);
+    }
+
+    [TestMethod]
     public async Task This_devices_own_identity_is_refused_even_when_telling_a_copy_apart_runs_out_of_time()
     {
         // Whether the address is this machine's only chooses the words: a name lookup that

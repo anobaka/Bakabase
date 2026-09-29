@@ -203,7 +203,10 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
             }
         }
 
-        public IReadOnlyList<DiscoveredServer> Build()
+        public IReadOnlyList<DiscoveredServer> Build() => Build(ThisMachine.Snapshot());
+
+        /// <param name="own">This machine's addresses, which tell its own advertisements apart.</param>
+        public IReadOnlyList<DiscoveredServer> Build(ThisMachineAddresses own)
         {
             var found = new Dictionary<(string, bool), DiscoveredServer>();
 
@@ -215,7 +218,7 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
                     continue;
                 }
 
-                var (address, isThisMachine) = Choose(addresses);
+                var (address, isThisMachine) = Choose(addresses, own);
 
                 // The port comes from SRV rather than from the TXT facts. They agree
                 // today, but SRV is where DNS-SD says a port lives, and a browser that
@@ -270,7 +273,8 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
         /// this machine's: the other would lead back here.
         /// </para>
         /// </remarks>
-        private static (IPAddress Address, bool IsThisMachine) Choose(List<IPAddress> addresses)
+        private static (IPAddress Address, bool IsThisMachine) Choose(List<IPAddress> addresses,
+            ThisMachineAddresses own)
         {
             var routed = addresses.Where(a => !IPAddress.IsLoopback(a)).ToList();
 
@@ -279,7 +283,7 @@ public sealed class MdnsBrowser(ILogger<MdnsBrowser> logger) : IServerDiscovery
                 return (addresses[0], true);
             }
 
-            var elsewhere = routed.FirstOrDefault(a => !ThisMachine.Holds(a));
+            var elsewhere = routed.FirstOrDefault(a => !own.Holds(a));
 
             return elsewhere == null ? (routed[0], true) : (elsewhere, false);
         }

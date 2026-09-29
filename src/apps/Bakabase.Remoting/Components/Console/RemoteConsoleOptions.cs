@@ -89,6 +89,13 @@ public sealed class RemoteConsoleOptions
     /// </summary>
     public Func<Uri, CancellationToken, Task<bool>> ReachesThisMachine { get; set; } = ThisMachine.ReachedByAsync;
 
+    /// <summary>
+    /// How every connection to a managed server is opened — the console's questions, pairing and
+    /// probes, and every relay's. Tests put a network of their own under the real handlers
+    /// through it: a name that resolves where they say.
+    /// </summary>
+    public DualStackConnector Connector { get; set; } = DualStackConnector.Default;
+
     /// <summary>Whether starting up brings over the removed thin client's pairings, once.</summary>
     public bool ImportLegacyClientOnStart { get; set; } = true;
 

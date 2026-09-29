@@ -82,6 +82,9 @@ public sealed class UdpProbeClient(ILogger<UdpProbeClient> logger) : IServerDisc
         // answers the loopback and the subnet probe both — appears once.
         var found = new Dictionary<(string, bool), DiscoveredServer>();
 
+        // Read once for the whole window, not once per reply: see ThisMachine.Snapshot.
+        var own = ThisMachine.Snapshot();
+
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(timeout);
 
@@ -90,7 +93,7 @@ public sealed class UdpProbeClient(ILogger<UdpProbeClient> logger) : IServerDisc
             while (!deadline.IsCancellationRequested)
             {
                 var reply = await socket.ReceiveAsync(deadline.Token);
-                var server = Interpret(reply);
+                var server = Interpret(reply, own);
 
                 if (server != null)
                 {
@@ -116,7 +119,12 @@ public sealed class UdpProbeClient(ILogger<UdpProbeClient> logger) : IServerDisc
     /// <summary>
     /// Turns one datagram into a server, or null if it was not one of ours.
     /// </summary>
-    public static DiscoveredServer? Interpret(UdpReceiveResult reply)
+    public static DiscoveredServer? Interpret(UdpReceiveResult reply) => Interpret(reply, ThisMachine.Snapshot());
+
+    /// <inheritdoc cref="Interpret(UdpReceiveResult)"/>
+    /// <param name="reply">The datagram.</param>
+    /// <param name="own">This machine's addresses, which tell its own answers apart.</param>
+    public static DiscoveredServer? Interpret(UdpReceiveResult reply, ThisMachineAddresses own)
     {
         var descriptor = DiscoveryProtocol.TryParseProbeResponse(reply.Buffer);
 
@@ -133,7 +141,7 @@ public sealed class UdpProbeClient(ILogger<UdpProbeClient> logger) : IServerDisc
             $"http://{FormatHost(host)}:{port}",
             descriptor.AppVersion,
             descriptor.ProtocolVersion,
-            ThisMachine.Holds(host),
+            own.Holds(host),
             descriptor.Kind,
             descriptor.Platform);
     }

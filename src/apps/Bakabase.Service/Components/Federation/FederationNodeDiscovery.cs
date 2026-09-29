@@ -14,7 +14,9 @@ using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 
 namespace Bakabase.Service.Components.Federation;
 
-public sealed class FederationNodeDiscovery(IServerDiscovery discovery, INodeIdentityProvider identity)
+/// <param name="connector">How to connect to what answered; a registered one is a test's network.</param>
+public sealed class FederationNodeDiscovery(IServerDiscovery discovery, INodeIdentityProvider identity,
+    DualStackConnector? connector = null)
     : INodePeerDiscovery
 {
     public async Task<IReadOnlyList<NodeDiscoveryCandidate>> DiscoverAsync(CancellationToken ct)
@@ -23,7 +25,8 @@ public sealed class FederationNodeDiscovery(IServerDiscovery discovery, INodeIde
         var servers = await discovery.DiscoverAsync(TimeSpan.FromSeconds(2), ct);
         using var client = new HttpClient(new SocketsHttpHandler
             {
-                AllowAutoRedirect = false, UseProxy = false, ConnectCallback = DualStackConnector.ConnectCallback
+                AllowAutoRedirect = false, UseProxy = false,
+                ConnectCallback = (connector ?? DualStackConnector.Default).ConnectCallback
             })
             { Timeout = TimeSpan.FromSeconds(2), MaxResponseContentBufferSize = 64 * 1024 };
         using var concurrency = new SemaphoreSlim(4);
@@ -36,7 +39,10 @@ public sealed class FederationNodeDiscovery(IServerDiscovery discovery, INodeIde
                 using var response = await client.GetAsync(server.BaseAddress.TrimEnd('/') + "/federation/v1/info", ct);
                 if (!response.IsSuccessStatusCode) return null;
                 var info = JsonSerializer.Deserialize<NodeInfo>(await response.Content.ReadAsStringAsync(ct), FederationJson.Options);
-                return info is { ProtocolVersion: 1 } && info.NodeId != local.NodeId
+                // Never this node, answering from one of this machine's own addresses. Another
+                // machine under this node's id is listed: a copy of this data directory, which
+                // connecting to then says (SameIdentity) — the one way the user learns of it.
+                return info is { ProtocolVersion: 1 } && (info.NodeId != local.NodeId || !server.IsThisMachine)
                     ? new NodeDiscoveryCandidate(info.NodeId, info.Name, server.BaseAddress,
                         ServerSelfDescriptionWords.KindOf(info.Kind) ?? server.Kind,
                         ServerSelfDescriptionWords.PlatformOf(info.Platform) ?? server.Platform)

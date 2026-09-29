@@ -2,6 +2,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components.Discovery;
@@ -71,6 +72,17 @@ public class UdpProbeClientTests
             Reply(new RemoteAccessServerDescriptor("abc", "My-PC", 34567, "2.4.0", 1), own.ToString()));
 
         Assert.IsTrue(server!.IsThisMachine);
+    }
+
+    [TestMethod]
+    public void A_reply_is_judged_against_the_addresses_the_window_read_once()
+    {
+        // One reading of this machine's addresses for the whole window, whatever replies it gets.
+        var own = new ThisMachineAddresses([IPAddress.Parse("192.0.2.5")]);
+        var descriptor = new RemoteAccessServerDescriptor("abc", "My-PC", 34567, "2.4.0", 1);
+
+        Assert.IsTrue(UdpProbeClient.Interpret(Reply(descriptor, "192.0.2.5"), own)!.IsThisMachine);
+        Assert.IsFalse(UdpProbeClient.Interpret(Reply(descriptor, "192.0.2.6"), own)!.IsThisMachine);
     }
 
     [TestMethod]

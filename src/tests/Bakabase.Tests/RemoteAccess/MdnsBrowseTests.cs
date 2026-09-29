@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components.Discovery;
@@ -181,6 +182,24 @@ public class MdnsBrowseTests
         var ownCollector = new MdnsBrowser.InstanceCollector();
         ownCollector.Add(ownRecords);
         Assert.IsTrue(ownCollector.Build().Single().IsThisMachine);
+    }
+
+    [TestMethod]
+    public void Every_advertised_address_is_judged_against_the_addresses_read_once()
+    {
+        // One reading of this machine's addresses for everything the window collected.
+        var shared = IPAddress.Parse("192.0.2.7");
+        var theirs = IPAddress.Parse("192.0.2.8");
+        Assert.IsTrue(MdnsMessage.TryParseResponse(
+            Announcement(Descriptor with {Id = "other-pc"}, addresses: [shared, theirs]), out var records));
+        var collector = new MdnsBrowser.InstanceCollector();
+        collector.Add(records);
+
+        var another = collector.Build(new ThisMachineAddresses([shared])).Single();
+        Assert.IsFalse(another.IsThisMachine);
+        Assert.AreEqual("http://192.0.2.8:34567", another.BaseAddress);
+
+        Assert.IsTrue(collector.Build(new ThisMachineAddresses([shared, theirs])).Single().IsThisMachine);
     }
 
     [TestMethod]

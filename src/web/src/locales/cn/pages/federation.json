@@ -205,7 +205,7 @@
   "federation.error.PairingRateLimited": "配对尝试过于频繁，请稍候一分钟再试。",
   "federation.error.InvalidAddress": "请输入有效的 HTTP 或 HTTPS 设备地址。",
   "federation.error.SelfAddress": "此地址属于本机，请选择另一台电脑。",
-  "federation.error.SameIdentity": "该地址上的设备与本机的设备身份相同——它的数据目录是否从本机复制而来，或本机的从它复制而来？请在复制出的那台设备上打开“设备与分享”→“克隆或恢复安装”，选择“创建新的设备身份”（Docker、NAS 等无界面的服务器上请在其中运行“dotnet Bakabase.Service.dll federation new-identity”），然后重试。",
+  "federation.error.SameIdentity": "该地址上的设备使用的是本机的设备身份。如果这个地址经反向代理、端口转发或路由器的公网地址绕回了本机，请改用另一台设备自己的地址。否则说明它的数据目录是从本机复制而来，或本机的从它复制而来：请在复制出的那台设备上打开“设备与分享”→“克隆或恢复安装”，选择“创建新的设备身份”（Docker、NAS 等无界面的服务器上请在其中运行“dotnet Bakabase.Service.dll federation new-identity”），然后重试。",
   "federation.error.PortMissing": "请在地址中加上端口，与对方设备上显示的一致，例如 192.168.1.5:34567。",
   "federation.error.InvalidNodeResponse": "设备返回的响应无效，请确认 Bakabase 版本兼容。",
   "federation.error.NodeSessionChanged": "设备授权已改变，请重新查询。",

@@ -22,12 +22,16 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
         var local = await identity.GetAsync(ct);
         var info = await http.PublicAsync<NodeInfo>(normalized, HttpMethod.Get, "/federation/v1/info", null, ct);
         PeerSessionFactory.ValidateInfo(info, expectedNodeId);
-        // This node's own id from another machine is a copy of this data directory, not this device.
+        // This node's own id from an address that is not this machine's: a copy of this data
+        // directory, or this node reached through another door — a reverse proxy, a port forward,
+        // the router's public address — which nothing here tells apart (the name a node gives is
+        // its data directory's, copied with it), so the words cover both.
         if (info.NodeId == local.NodeId)
             throw await ThisMachine.ReachedByAsync(new Uri(normalized), ct)
                 ? new FederationAccessException("SelfAddress", 400, "This address belongs to this node.")
                 : new FederationAccessException("SameIdentity", 409,
-                    "The node at this address has this node's identity; its data directory was probably copied from here.");
+                    "The node at this address has this node's identity: the address leads back to this node, or " +
+                    "that node's data directory was copied from here.");
         NodeReciprocalOffer? offer = null;
         if (shareBackAddresses is { Count: > 0 })
         {

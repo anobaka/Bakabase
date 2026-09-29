@@ -193,7 +193,15 @@ endpoints and confirmations.
   computer name IPv6-first; tried one after another, a silently dropped IPv6 address spent the
   whole connect budget. Never go back to a plain `Socket.ConnectAsync(DnsEndPoint)`. A peer
   connection gets 2 s once its name is resolved and 5 s in all, lookup included, so a
-  switched-off peer stored as an address is still reported after 2 s.
+  switched-off peer stored as an address is still reported after 2 s. Each call site takes its
+  connector from its composition — a `DualStackConnector` service for `AddFederationPeers` and
+  `FederationNodeDiscovery`, `RemoteConsoleOptions.Connector` for the desktop app's — and the
+  wiring is tested through the real handlers over a name that resolves IPv6-first to a dropped
+  address (`PeerConnectionTests`, `FederationNodeDiscoveryTests`, `ConsoleNetworkTests`).
+- **Discovery hides this node, not its copies.** "Find nearby devices" leaves out this node
+  answering from this machine's own addresses; another machine answering under this node's id
+  is listed — a copy of this data directory — and connecting to it is refused as
+  `SameIdentity`, which is how the user learns of it.
 
 ## Changing the protocol
 

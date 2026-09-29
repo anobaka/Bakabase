@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Modules.RemoteAccess.Components.Pairing;
 using Bakabase.Remoting.Abstractions.Models;
@@ -114,7 +115,9 @@ internal sealed class ConsoleHarness : IAsyncDisposable
     public T Get<T>() where T : notnull => _provider.GetRequiredService<T>();
 
     /// <summary>Adds a server as if it had been paired here, with a fresh key.</summary>
-    public async Task<(string DeviceId, string Key)> AddManagedAsync(FakeServer server, string? deviceId = null)
+    /// <param name="baseAddress">Where it is stored, when not at its own loopback address: a name, say.</param>
+    public async Task<(string DeviceId, string Key)> AddManagedAsync(FakeServer server, string? deviceId = null,
+        string? baseAddress = null)
     {
         deviceId ??= $"device-for-{server.ServerId}";
         var key = RemoteRequestSignature.ToBase64Url(RandomNumberGenerator.GetBytes(32));
@@ -125,7 +128,7 @@ internal sealed class ConsoleHarness : IAsyncDisposable
         {
             ServerId = server.ServerId,
             ServerName = server.Name,
-            BaseAddress = server.BaseAddress,
+            BaseAddress = baseAddress ?? server.BaseAddress,
             DeviceId = deviceId,
             DeviceKey = key,
             PairedAt = DateTime.UtcNow
@@ -298,6 +301,91 @@ internal sealed class ConsoleHarness : IAsyncDisposable
                 }
             }
         }
+    }
+}
+
+/// <summary>
+/// A network under the real handlers (<c>RemoteConsoleOptions.Connector</c>, or a
+/// <see cref="DualStackConnector"/> service): names that resolve where a test says, an address
+/// that drops every connection, and addresses that stand for a server listening on loopback,
+/// accepting as slowly as a test says. A loopback address connects for real; anything else is
+/// unreachable.
+/// </summary>
+/// <remarks>
+/// A Windows computer name that resolves IPv6-first to an address whose packets are dropped,
+/// or one name leading to two machines, cannot be staged on a test machine's own resolver.
+/// </remarks>
+internal sealed class TestNetwork
+{
+    /// <summary>Nobody answers here: every connection is dropped without a word.</summary>
+    public static readonly IPAddress Dropped = IPAddress.Parse("fe80::1");
+
+    private readonly ConcurrentDictionary<string, IPAddress[]> _names = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<IPAddress, Route> _routes = new();
+
+    public DualStackConnector Connector => new(ResolveAsync, ConnectAsync);
+
+    public void Name(string name, params IPAddress[] addresses) => _names[name] = addresses;
+
+    /// <summary><paramref name="address"/>, whichever port is dialled there, is <paramref name="server"/>.</summary>
+    public Route RouteTo(IPAddress address, FakeServer server) => _routes[address] = new Route(server.Port);
+
+    private Task<IPAddress[]> ResolveAsync(string host, CancellationToken ct) =>
+        _names.TryGetValue(host, out var addresses)
+            ? Task.FromResult(addresses)
+            : Task.FromException<IPAddress[]>(new System.Net.Sockets.SocketException(
+                (int) System.Net.Sockets.SocketError.HostNotFound));
+
+    private async ValueTask<Stream> ConnectAsync(IPEndPoint to, CancellationToken ct)
+    {
+        var target = to;
+
+        if (to.Address.Equals(Dropped))
+        {
+            await Task.Delay(Timeout.Infinite, ct);
+        }
+
+        if (_routes.TryGetValue(to.Address, out var route))
+        {
+            await Task.Delay(route.NextDelay(), ct);
+            target = new IPEndPoint(IPAddress.Loopback, route.Port);
+        }
+        else if (!IPAddress.IsLoopback(to.Address))
+        {
+            throw new System.Net.Sockets.SocketException((int) System.Net.Sockets.SocketError.HostUnreachable);
+        }
+
+        var socket = new System.Net.Sockets.Socket(target.AddressFamily, System.Net.Sockets.SocketType.Stream,
+            System.Net.Sockets.ProtocolType.Tcp);
+
+        try
+        {
+            await socket.ConnectAsync(target, ct);
+            return new System.Net.Sockets.NetworkStream(socket, true);
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Where an address leads, and how long it takes to accept there.</summary>
+    internal sealed class Route(int port)
+    {
+        private int _prompt = int.MaxValue;
+        private TimeSpan _delay;
+
+        public int Port => port;
+
+        /// <summary>The next <paramref name="prompt"/> connections are accepted at once, every later one after <paramref name="delay"/>.</summary>
+        public void SlowAfter(int prompt, TimeSpan delay)
+        {
+            _delay = delay;
+            Volatile.Write(ref _prompt, prompt);
+        }
+
+        internal TimeSpan NextDelay() => Interlocked.Decrement(ref _prompt) >= 0 ? TimeSpan.Zero : _delay;
     }
 }
 
