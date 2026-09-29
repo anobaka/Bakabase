@@ -39,6 +39,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Compo
         event Func<Task>? OnStatusChanged;
         event Func<string, Task>? OnNameAcquired;
         event Func<decimal, Task>? OnProgress;
+        event Func<string, long, Task>? OnFileDownloaded;
         event Func<Task>? OnCurrentChanged;
         event Func<string, Task>? OnCheckpointChanged;
     }

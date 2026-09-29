@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Network;
@@ -12,6 +13,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
@@ -64,6 +66,28 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             {
                 // The source work has already been durably handed off. A workflow retry must not
                 // scrape the gallery again, even after the workflow moved its actual files.
+                if (previous.Kind == DownloadResultKind.LocalFiles)
+                {
+                    try
+                    {
+                        foreach (var file in JsonSerializer.Deserialize<string[]>(previous.FilesJson) ?? [])
+                        {
+                            await OnFileDownloadedInternal(file);
+                        }
+                    }
+                    catch (JsonException e)
+                    {
+                        Logger.LogWarning(e, "Could not read recorded files for download result {Id}", previous.Id);
+                    }
+                }
+                else if (previous.Kind == DownloadResultKind.TorrentMetadata)
+                {
+                    // The result's FilesJson points to the managed metadata cache. Recover the
+                    // user's original copy from the directory and filename used when it was saved.
+                    var torrentFileName = FileNameSanitizer.Sanitize(
+                        $"{previous.Name.RemoveInvalidFileNameChars()}.torrent");
+                    await OnFileDownloadedInternal(Path.Combine(previous.DownloadDirectory, torrentFileName));
+                }
                 if (onNameAcquired != null) await onNameAcquired(previous.Name);
                 if (previous.Kind == DownloadResultKind.TorrentMetadata && onTorrentDownloaded != null)
                     await onTorrentDownloaded();
@@ -168,6 +192,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     await Client.DownloadTorrent(bestTorrent.DownloadUrl, temporary, ct);
                     ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectory, path);
                     File.Move(temporary, path, true);
+                    await OnFileDownloadedInternal(path);
                     // Persist the result only after the user's copy is in the selected directory.
                     // A failed move must remain retryable rather than looking completed.
                     ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectory, path);
@@ -260,6 +285,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     if (File.Exists(keyFullname))
                     {
                         workFiles[keyFullname] = 0;
+                        await OnFileDownloadedInternal(keyFullname);
                         doneCount++;
                     }
                     else
@@ -426,6 +452,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                             }
 
                             workFiles[Path.GetFullPath(wrotePath)] = 0;
+                            await OnFileDownloadedInternal(wrotePath);
                             doneStates[wrotePath] = true;
                             if (onProgress != null)
                             {

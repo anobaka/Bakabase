@@ -14,5 +14,8 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
         /// Result type - count
         /// </summary>
         public Dictionary<int, int>? Counts { get; set; }
+
+        /// <summary>Response-body bytes actually read from this third party since the last reset.</summary>
+        public long ReceivedBytes { get; set; }
     }
 }

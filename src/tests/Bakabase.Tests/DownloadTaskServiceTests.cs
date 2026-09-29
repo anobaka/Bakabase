@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
@@ -12,6 +13,7 @@ using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.TestKit.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Tests;
 
@@ -25,6 +27,7 @@ namespace Bakabase.Tests;
 public sealed class DownloadTaskServiceTests
 {
     private DownloadTaskService _service = null!;
+    private BakabaseDbContext _db = null!;
 
     [TestInitialize]
     public async Task Setup()
@@ -37,6 +40,7 @@ public sealed class DownloadTaskServiceTests
         // The downloader publishes a workflow.completed event on Complete. These tests
         // don't exercise workflow plumbing, so a no-op bus is enough.
         _service = new DownloadTaskService(sp, localizer, new NoopWorkflowEventBus());
+        _db = sp.GetRequiredService<BakabaseDbContext>();
     }
 
     private sealed class NoopWorkflowEventBus : IWorkflowEventBus
@@ -102,6 +106,32 @@ public sealed class DownloadTaskServiceTests
         var id = await AddOne("k1");
         await _service.OnProgress(id, 0.5m);
         Assert.AreEqual(0.5m, (await _service.GetDto(id)).Progress);
+    }
+
+    [TestMethod]
+    public async Task RecordDownloadedFile_SumsOnlyTaskFilesAndUpdatesOverwrites()
+    {
+        var first = await AddOne("first");
+        var second = await AddOne("second");
+        var sharedPath = System.IO.Path.GetFullPath("/downloads/shared.bin");
+
+        Assert.IsNull((await _service.GetDto(first)).DownloadedBytes);
+        await _service.RecordDownloadedFile(first, sharedPath, 1024);
+        await _service.RecordDownloadedFile(first, sharedPath, 1024);
+        await _service.RecordDownloadedFile(first, sharedPath, 2048);
+        await _service.RecordDownloadedFile(first, "/downloads/other.bin", 512);
+        await _service.RecordDownloadedFile(second, sharedPath, 128);
+
+        var tasks = (await _service.GetAllDto()).ToDictionary(x => x.Id);
+        Assert.AreEqual(2560L, tasks[first].DownloadedBytes);
+        Assert.AreEqual(128L, tasks[second].DownloadedBytes);
+
+        await _service.OnProgress(first, 50m);
+        Assert.AreEqual(2560L, (await _service.GetDto(first)).DownloadedBytes);
+
+        await _service.Delete(new DownloadTaskDeleteInputModel([first]));
+        Assert.AreEqual(0, await _db.DownloadTaskFiles.CountAsync(x => x.DownloadTaskId == first));
+        Assert.AreEqual(1, await _db.DownloadTaskFiles.CountAsync(x => x.DownloadTaskId == second));
     }
 
     [TestMethod]

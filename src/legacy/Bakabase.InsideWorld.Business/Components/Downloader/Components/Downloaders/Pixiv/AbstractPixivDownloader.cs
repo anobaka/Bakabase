@@ -47,13 +47,26 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             var lastFileNameValues = nameContext.ToLastFileNameValues();
             if (lastFileNameValues != null)
             {
-                var lastKeyFilename = await BuildKeyFilename(lastFileNameValues);
+                var allFilesExist = true;
+                for (var page = 0; page < nameContext.PageCount; page++)
                 {
-                    var fullname = Path.Combine(downloadPath, lastKeyFilename);
-                    if (File.Exists(fullname))
+                    var pageNameValues = new Dictionary<PixivNamingFields, object>(lastFileNameValues)
                     {
-                        return;
+                        [PixivNamingFields.PageNo] = page
+                    };
+                    var fullname = Path.Combine(downloadPath, await BuildKeyFilename(pageNameValues));
+                    if (!File.Exists(fullname))
+                    {
+                        allFilesExist = false;
+                        break;
                     }
+
+                    await OnFileDownloadedInternal(fullname);
+                }
+
+                if (allFilesExist)
+                {
+                    return;
                 }
             }
 
@@ -73,7 +86,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
                 var keyFilename = await BuildKeyFilename(nameValues);
                 var fullname = Path.Combine(downloadPath, keyFilename);
-                if (!filePathAndUrls.ContainsKey(fullname) && !File.Exists(fullname))
+                if (File.Exists(fullname))
+                {
+                    await OnFileDownloadedInternal(fullname);
+                }
+                else if (!filePathAndUrls.ContainsKey(fullname))
                 {
                     filePathAndUrls[fullname] = pageUrl;
                 }
@@ -126,6 +143,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                         }
 
                         await File.WriteAllBytesAsync(fullname, data, ct);
+                        await OnFileDownloadedInternal(fullname);
                     }
                     finally
                     {

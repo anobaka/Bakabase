@@ -21,6 +21,7 @@ import { TbMagnet, TbMagnetOff } from "react-icons/tb";
 
 import { DownloadTaskTypeIconMap } from "./TaskDetailModal/models";
 import { useEstimatedRemainingLabel } from "./EstimatedRemainingTime";
+import { humanFileSize } from "@/components/utils";
 
 import { DownloadTaskAction, DownloadTaskStatus } from "@/sdk/constants";
 import {
@@ -91,6 +92,10 @@ const TaskRow = memo(function TaskRow({
   const noticeSummary = task.message?.split("\n", 1)[0];
   const Icon = DownloadTaskTypeIconMap[task.thirdPartyId!]?.[task.type];
   const progress = Number.isFinite(task.progress) ? Math.min(100, Math.max(0, task.progress)) : 0;
+  const downloadedSize =
+    task.downloadedBytes != null && Number.isFinite(task.downloadedBytes)
+      ? humanFileSize(task.downloadedBytes, false, 1)
+      : "—";
   const name = task.name || task.key;
   const createdAt = `${t<string>("downloader.label.createdAt")} ${formatDateTime(task.createdAt)}`;
   const nextStart = task.nextStartDt
@@ -215,6 +220,17 @@ const TaskRow = memo(function TaskRow({
                 </span>
               </>
             )}
+            <span
+              aria-label={`${t<string>("downloader.label.downloadedFileSize")}: ${downloadedSize}`}
+              className="shrink-0 tabular-nums text-default-500"
+              title={
+                task.downloadedBytes == null
+                  ? t<string>("downloader.tip.downloadedFileSizeUnavailable")
+                  : `${t<string>("downloader.label.downloadedFileSize")}: ${downloadedSize}`
+              }
+            >
+              {downloadedSize}
+            </span>
             <span className="shrink-0 tabular-nums text-default-500">{Math.round(progress)}%</span>
           </div>
           <Progress
