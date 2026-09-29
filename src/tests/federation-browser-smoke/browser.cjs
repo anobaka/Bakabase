@@ -40,7 +40,8 @@ async function federation(browser) {
     context.on('page', page => page.on('pageerror', error => errors.push(error.message)));
 
     const devices = await context.newPage();
-    await devices.goto(uiBase + '/#/federation/devices');
+    // Library sharing's add form, which the `connect` link opens.
+    await devices.goto(uiBase + '/#/federation/devices?section=connect');
     await devices.getByRole('heading', { name: name('federation.devices.title'), exact: true }).waitFor();
     const mutationRequests = [];
     devices.on('request', request => {
@@ -48,11 +49,11 @@ async function federation(browser) {
     });
 
     // Entering an address starts nothing. New node access needs an independent approval from its owner.
-    // The sharing form's own field: the desktop app's devices page also has "Device address"
-    // for adding a server to manage, which this form must leave alone.
+    // The sharing form's own field: adding a server to manage is another form, in the Management
+    // tab, and never on the page beside this one.
     const sharingForm = devices.locator('form').filter({ has: devices.getByRole('checkbox', { name: namePrefix('federation.pair.shareBack') }) });
     await sharingForm.getByLabel(name('federation.pair.address'), { exact: true }).fill(source.base);
-    assert.equal(await devices.locator('#managed-servers').getByLabel(name('federation.servers.add.address'), { exact: true }).inputValue(), '');
+    assert.equal(await devices.locator('#managed-servers').count(), 0, 'The management form shares a tab with library sharing');
     assert.equal(await devices.getByLabel(name('federation.pair.code'), { exact: true }).inputValue(), '');
     assert.deepEqual(mutationRequests, [], 'Entering an address must not pair or bind paths');
     assert.equal((await status()).peers.length, 0);
@@ -63,10 +64,12 @@ async function federation(browser) {
     assert.equal((await (await connectResponse).json()).outcome, 'awaitingApproval');
     assert.ok(!(await status()).peers.some(peer => peer.outboundGrant));
     const owner = await context.newPage();
-    await owner.goto(source.base + '/#/federation/devices');
+    // Where the "wants to browse this device" notification leads.
+    await owner.goto(source.base + '/#/federation/devices?section=sharing-requests');
     await owner.getByRole('button', { name: name('federation.requests.approve'), exact: true }).click();
     await owner.getByRole('alertdialog').getByRole('button', { name: name('federation.confirm'), exact: true }).click();
-    await devices.getByText(name('federation.pair.granted'), { exact: true }).waitFor({ timeout: 20000 });
+    // Said in the page's feedback; the request's own row says it too.
+    await devices.getByTestId('federation-feedback').getByText(name('federation.pair.granted'), { exact: true }).waitFor({ timeout: 20000 });
     const paired = await status();
     const peer = paired.peers.find(peer => peer.nodeId === sourceStatus.identity.nodeId);
     assert.ok(peer.outboundGrant);
@@ -119,12 +122,14 @@ async function federation(browser) {
     await devices.getByRole('heading', { name: name('federation.devices.title'), exact: true }).waitFor();
     // Recovery is explicit: restoring keeps this node, while cloning replaces it.
     await devices.goto(uiBase + '/#/federation/devices?section=identity');
-    await devices.locator('#federation-identity[open]').waitFor();
+    await devices.locator('#federation-identity').waitFor();
     const beforeRestore = await status();
     // The install's own identity, which managing it from another device goes by.
     const installId = async () => (await api(unified.base, '/remote-access/server-info')).data.id;
     const installBeforeRestore = await installId();
-    const resetThroughUi = async (key, asNewNode) => {
+    // What happened is said first; only then is the action for that case offered.
+    const resetThroughUi = async (caseKey, key, asNewNode) => {
+      await devices.getByRole('radio', { name: name(caseKey), exact: true }).check();
       await devices.getByRole('button', { name: name(key), exact: true }).click();
       const responsePromise = devices.waitForResponse(response => response.url() === uiBase + '/federation/local/peers/identity/reset');
       await devices.getByRole('alertdialog').getByRole('button', { name: name('federation.confirm'), exact: true }).click();
@@ -135,14 +140,14 @@ async function federation(browser) {
       await devices.getByRole('alertdialog').waitFor({ state: 'hidden' });
       return status();
     };
-    const recovered = await resetThroughUi('federation.identity.restore', false);
+    const recovered = await resetThroughUi('federation.identity.restored.title', 'federation.identity.restore', false);
     assert.equal(recovered.identity.nodeId, beforeRestore.identity.nodeId);
     assert.notEqual(recovered.identity.libraryEpoch, beforeRestore.identity.libraryEpoch);
     assert.deepEqual(recovered.peers, beforeRestore.peers);
     assert.equal(recovered.sharingEnabled, false);
     assert.equal(recovered.browsingEnabled, false);
     assert.equal(await installId(), installBeforeRestore, 'Restoring a library replaced the install identity');
-    const cloned = await resetThroughUi('federation.identity.reset', true);
+    const cloned = await resetThroughUi('federation.identity.copied.title', 'federation.identity.reset', true);
     assert.notEqual(cloned.identity.nodeId, recovered.identity.nodeId);
     assert.notEqual(cloned.identity.libraryEpoch, recovered.identity.libraryEpoch);
     // A copy must stop answering as the install it was copied from, for being managed too, and

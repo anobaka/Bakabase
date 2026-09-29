@@ -5,7 +5,11 @@ import { AiOutlineCloudServer, AiOutlineKey, AiOutlineWarning } from "react-icon
 import { TopicCallout, TopicHeadline, TopicSteps } from "../../components/TopicBlocks";
 
 import { mdk } from "./devices";
-import OpenPageButton, { DEVICES_ROUTE, MANAGEMENT_ROUTE } from "./OpenPageButton";
+import OpenPageButton, {
+  ADD_SERVER_ROUTE,
+  MANAGEMENT_ROUTE,
+  SHARING_ROUTE,
+} from "./OpenPageButton";
 
 const steps = (track: string, ids: string[]) =>
   ids.map((id) => ({
@@ -18,14 +22,16 @@ const tracks = [
   {
     id: "browse",
     steps: steps("browse", ["share", "connect", "both", "enable"]),
-    route: DEVICES_ROUTE,
-    openKey: mdk("open.devices"),
+    links: [{ route: SHARING_ROUTE, openKey: mdk("open.devices") }],
   },
   {
     id: "manage",
     steps: steps("manage", ["allow", "add", "switch", "map"]),
-    route: MANAGEMENT_ROUTE,
-    openKey: mdk("open.management"),
+    // The first step is taken on the device to be managed, the second on this one.
+    links: [
+      { route: MANAGEMENT_ROUTE, openKey: mdk("open.management") },
+      { route: ADD_SERVER_ROUTE, openKey: mdk("open.addServer") },
+    ],
   },
 ];
 
@@ -38,8 +44,15 @@ const SetupSection = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
       {tracks.map((track) => (
         <section key={track.id} className="flex flex-col gap-2" data-track={track.id}>
           <TopicSteps steps={track.steps} titleKey={mdk(`setup.${track.id}.title`)} />
-          <div>
-            <OpenPageButton labelKey={track.openKey} route={track.route} onNavigate={onNavigate} />
+          <div className="flex flex-wrap gap-2">
+            {track.links.map((link) => (
+              <OpenPageButton
+                key={link.route}
+                labelKey={link.openKey}
+                route={link.route}
+                onNavigate={onNavigate}
+              />
+            ))}
           </div>
         </section>
       ))}

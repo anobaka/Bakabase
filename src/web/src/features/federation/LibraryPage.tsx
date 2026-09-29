@@ -21,6 +21,7 @@ import { readResourceRef, withResourceRef } from "./navigation";
 import { resourceKey } from "./types";
 import { FederationError } from "./transport";
 import { federationPeerApi } from "./peerApi";
+import { devicesRoute } from "./switching";
 
 import { resourceSources } from "@/sdk/constants";
 
@@ -243,7 +244,11 @@ function Library() {
           <Link className={buttonClass} to="/resource">
             {t("federation.localLibrary")}
           </Link>
-          <Link className={buttonClass} to="/federation/devices">
+          {/* While the Multi-device library is off, straight to where it is turned on. */}
+          <Link
+            className={buttonClass}
+            to={devicesRoute(status && status.browsingEnabled !== true ? "browsing" : "sharing")}
+          >
             {t("federation.devices.title")}
           </Link>
         </div>
@@ -533,7 +538,7 @@ function Library() {
                             : "federation.results.partialTip",
                         )}
                       </p>
-                      <Link className={`${buttonClass} mt-4`} to="/federation/devices">
+                      <Link className={`${buttonClass} mt-4`} to={devicesRoute("connect")}>
                         {t("federation.devices.add")}
                       </Link>
                     </div>

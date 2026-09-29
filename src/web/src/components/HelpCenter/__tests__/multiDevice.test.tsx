@@ -301,10 +301,14 @@ describe("multi-device help topic: links to the devices pages", () => {
     const onNavigate = vi.fn();
 
     render(<MultiDeviceTopic section="setup" onNavigate={onNavigate} />);
+    // Each track opens the tab of the devices page it describes: allowing management on the
+    // device to be managed, adding it on this one, and library sharing.
     fireEvent.click(screen.getByRole("button", { name: k("open.management") }));
     expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=management");
+    fireEvent.click(screen.getByRole("button", { name: k("open.addServer") }));
+    expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=add-server");
     fireEvent.click(screen.getByRole("button", { name: k("open.devices") }));
-    expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices");
+    expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=sharing");
 
     openTab("browse");
     fireEvent.click(screen.getByRole("button", { name: k("open.library") }));

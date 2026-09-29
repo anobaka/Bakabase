@@ -156,7 +156,8 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
       liveTranscodeOn: payload => payload.includes('"OptionsChanged"') && payload.includes('"remoteAccessOptions"') &&
         /"allowLiveTranscode"\s*:\s*true/.test(payload)
     });
-    await win.goto(home + '/#/federation/devices?section=servers');
+    // The add form, as the device tab's "Manage it from this device" leads to it.
+    await win.goto(home + '/#/federation/devices?section=add-server');
     const servers = win.locator('#managed-servers');
     await servers.getByRole('heading', { name: exactly('federation.servers.title') }).waitFor();
     const { code } = await envelope(source.base + '/remote-access/pairing/code', { method: 'POST' });
@@ -167,7 +168,8 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     const card = servers.getByTestId('managed-server');
     await card.waitFor();
     assert.equal(await card.count(), 1);
-    await servers.getByRole('button', { name: exactly('federation.servers.refresh') }).click();
+    // The page's own Refresh also asks every managed server how it is.
+    await win.getByRole('button', { name: exactly('federation.refresh') }).click();
     await card.getByText(exactly('federation.servers.state.1')).waitFor();
     const paired = await managedServers();
     assert.equal(paired.servers.length, 1);
@@ -710,7 +712,7 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     // goes at once; the device it lets in is listed only once A has collected its key, in the
     // background — the details wait for it there and move to it, still with the keyboard.
     const asker = await context.newPage();
-    await asker.goto(home + '/#/federation/devices?section=servers');
+    await asker.goto(home + '/#/federation/devices?section=add-server');
     const askerServers = asker.locator('#managed-servers');
     await askerServers.getByLabel(exactly('federation.servers.add.address')).fill(source.base);
     await askerServers.getByRole('button', { name: exactly('federation.servers.add.request') }).click();

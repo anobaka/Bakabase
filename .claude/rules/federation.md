@@ -17,11 +17,44 @@ current device merges results.
 | Endpoints | `src/apps/Bakabase.Service/Controllers/Federation*.cs` |
 | UI | `src/web/src/features/federation/` |
 | Device map (`/federation/map`) | `src/web/src/features/federation/map/`, `DeviceMapPage.tsx` |
+| Devices page (`/federation/devices`) | `DevicesPage.tsx`, `src/web/src/features/federation/devices/` |
+| Both pages' data (one hook) | `src/web/src/features/federation/hooks/useDevicesData.ts` |
 | Design history | `docs/multi-device-library-execution-plan.md` |
 
 The whole multi-server mode — sharing, management, and later data sync — is named
 「多设备互联」 / "Multi-device" in the UI (`federation.mode`, the menu group, the help topic
 `multiDevice`). Route and id names stay `federation`.
+
+## The devices page
+
+`/federation/devices` is split by capability into tabs, the same two kinds of trust the map
+draws: **本机 / This device** (name, the address to type, what waits here, "add another
+device"), **管理 / Management** (full control: devices this one manages, who may manage this
+one), **资源库分享 / Library sharing** (read-only: libraries this device browses, sharing its
+own) and **高级 / Advanced** (device ID, "after copying or restoring data"). The registry is
+`devices/sections.ts`; the nav is links, not a tablist (Back and copied links work).
+
+- **`?section=` is a contract.** A value is a tab id or a place inside a tab, and a place
+  implies its tab (`resolveSection`). Producers: the Service's notifications (`management`,
+  `sharing-requests`), the window's switcher (`servers`), the configuration page
+  (`identity`), the map (`device`, `management`, `share`, `sharing`), the library (`sharing`,
+  `connect`, `browsing`), the help (`management`, `add-server`, `sharing`). Never rename one;
+  `devicesSections.test.ts` pins them. A place is revealed (scrolled to, focused, marked
+  2.5 s) once what it waits for has loaded, again for every navigation; a place that is not
+  there (a request decided meanwhile) and a bare tab focus the tab's heading instead.
+- **One read for the page.** The page reads sharing, managed servers and remote access once
+  (`useDevicesData`, shared with the map) and mounts only the tab shown, so switching tabs
+  never waits and the nav's counts stay live. The management sections still read their own
+  data where the rest of the page is not available (a managed window, a LAN browser).
+- **Focus** follows the map's rules (`devices/useSectionFocusKeeper.ts`): when an action takes
+  away the control that had the keyboard, focus goes to the heading of the part it was in;
+  a pointer press or focus moved elsewhere is never pulled back.
+- **Addresses.** Every host stays in the API (`ownHostsOf`/`sameMachine` need them all); the
+  UI shows one row per host on the main port, recommends the first LAN address, and folds
+  virtual and link-local adapters away, labelled (`devices/addresses.ts`).
+- **Words.** 配对/配对码 only for management, 分享码 only for library sharing, 浏览 for what
+  sharing allows, 添加 (never 连接) for putting a device in a list, 多设备资源库 for the merged
+  library. Never shown: 节点, 代际, 设备身份, 旧接口, 新分享协议, 联合浏览, 授权 as a noun.
 
 ## The device map
 

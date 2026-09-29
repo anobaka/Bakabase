@@ -11,8 +11,8 @@ import {
 } from "@/sdk/constants";
 
 /*
- * Every key the multi-device management screens — server switching, the devices page's
- * management sections and the device map — can show exists in both languages, with the same
+ * Every key the multi-device management screens — server switching, the devices page and
+ * its tabs, and the device map — can show exists in both languages, with the same
  * placeholders.
  *
  * The keys are read out of the components' own source rather than listed by hand, so a
@@ -37,6 +37,13 @@ const cn = merge(
 const sources = import.meta.glob<string>(
   [
     "../DevicesPage.tsx",
+    "../devices/sections.ts",
+    "../devices/DevicesNav.tsx",
+    "../devices/ThisDeviceTab.tsx",
+    "../devices/ManageTab.tsx",
+    "../devices/SharingTab.tsx",
+    "../devices/AdvancedTab.tsx",
+    "../components/AddressList.tsx",
     "../components/common.tsx",
     "../components/ConfirmDialog.tsx",
     "../components/ManagedServers.tsx",
@@ -122,6 +129,12 @@ const dynamicKeys = [
   ...["sharesWith", "browses", "manages", "managedBy"].map(
     (key) => `federation.map.panel.self.${key}`,
   ),
+  // "After copying or restoring data": each case says what it clears, keeps and needs after.
+  ...(["copied", "restored"] as const).flatMap((identityCase) =>
+    ["title", "removes", "keeps", "after"].map(
+      (part) => `federation.identity.${identityCase}.${part}`,
+    ),
+  ),
   // `federation.pair.${outcome}` after a sharing request, and `federation.connection.${state}`.
   ...["awaitingApproval", "granted", "rejected"].map((outcome) => `federation.pair.${outcome}`),
   ...["Online", "Offline", "Unknown", "IdentityConflict", "Unauthorized", "Incompatible"].map(
@@ -129,8 +142,9 @@ const dynamicKeys = [
   ),
 ];
 
+/** The placeholders a text uses; one language may name the same one twice, the other once. */
 const placeholders = (text: string) =>
-  Array.from(text.matchAll(/{{\s*([\w.]+)\s*}}/g), (match) => match[1]).sort();
+  Array.from(new Set(Array.from(text.matchAll(/{{\s*([\w.]+)\s*}}/g), (match) => match[1]))).sort();
 
 describe("locales for the multi-device management screens", () => {
   const keys = Array.from(
@@ -138,7 +152,7 @@ describe("locales for the multi-device management screens", () => {
   ).sort();
 
   it("reads keys out of every listed component", () => {
-    expect(Object.keys(sources)).toHaveLength(15);
+    expect(Object.keys(sources)).toHaveLength(22);
     for (const [path, source] of Object.entries(sources)) {
       expect(staticKeys(source).length, path).toBeGreaterThan(0);
     }
@@ -162,6 +176,12 @@ describe("locales for the multi-device management screens", () => {
         "federation.map.empty.body",
         "federation.mappings.changedDuringReview",
         "federation.servers.mappings.save",
+        "federation.devices.nav.pendingManage",
+        "federation.devices.addresses.more",
+        "federation.devices.chooser.browse.desc",
+        "federation.identity.restoreWarning",
+        "federation.recovery.reset",
+        "federation.sharing.enableRemote",
       ]),
     );
   });
@@ -172,6 +192,16 @@ describe("locales for the multi-device management screens", () => {
     expect(en[key].trim(), `en: ${key}`).not.toBe("");
     expect(cn[key].trim(), `cn: ${key}`).not.toBe("");
     expect(placeholders(cn[key]), key).toEqual(placeholders(en[key]));
+  });
+
+  it.each([
+    "federation.devices.nav.pendingManage",
+    "federation.devices.nav.pendingShare",
+    "federation.devices.addresses.more",
+  ])("%s has an English form for one", (key) => {
+    // i18next picks `_one` for a count of one in English; Chinese has no such form.
+    expect(en[`${key}_one`], key).toEqual(expect.any(String));
+    expect(placeholders(en[`${key}_one`])).toEqual(placeholders(en[key]));
   });
 
   it.each([

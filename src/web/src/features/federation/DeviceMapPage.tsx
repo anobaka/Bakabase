@@ -362,7 +362,7 @@ function DeviceMap() {
                 onRetry={() => void data.reload(["sharing"])}
               />
               {sharingUnavailable && (
-                <Link className="text-xs text-primary underline" to={devicesRoute()}>
+                <Link className="text-xs text-primary underline" to={devicesRoute("sharing")}>
                   {t("federation.devices.title")}
                 </Link>
               )}

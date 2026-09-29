@@ -777,7 +777,7 @@ function SharingSection({ context, node }: { context: PanelContext; node: MapNod
               )}
             </>
           ) : (
-            <Link className="text-xs text-primary underline" to={devicesRoute()}>
+            <Link className="text-xs text-primary underline" to={devicesRoute("share")}>
               {t("federation.map.panel.shareMine.enableFirst")}
             </Link>
           )}
@@ -1471,7 +1471,7 @@ function SelfDetails({ context }: { context: PanelContext }) {
         </dl>
       </section>
       <section className="flex flex-wrap gap-2 border-t border-default-200 pt-4">
-        <Link className={buttonClass} to={devicesRoute()}>
+        <Link className={buttonClass} to={devicesRoute("device")}>
           {t("federation.devices.title")}
         </Link>
         <Link className={buttonClass} to={devicesRoute("management")}>

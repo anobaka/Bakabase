@@ -72,57 +72,29 @@ const serverLabel = (server: Pick<ManagedServer, "name" | "address">) =>
 const requestLabel = (request: Pick<ManagedServerPendingRequest, "serverName" | "address">) =>
   request.serverName || request.address;
 
+/** Where the list of managed servers comes from: the page's own reads, or the section's. */
+export interface ManagedServersSource {
+  view?: ManagedServersView;
+  error?: Error;
+  loading: boolean;
+  /** `probe` also asks each server how it is; `quiet` keeps the last listing on a failure. */
+  load: (options?: { probe?: boolean; quiet?: boolean }) => Promise<void>;
+}
+
 /**
- * Other devices this one manages in full — the removed thin client's job, now done by
- * switching this window to the other device's own UI.
- *
- * Kept apart from the read-only library sharing below it on purpose: this is the other
- * device's administrator access, with its own pairing, and nothing here grants or uses a
- * sharing permission.
+ * The listing read by the section itself, where no page reads it for it: a plain listing
+ * first so it fills at once, then a probed one for states, and re-read while a request
+ * waits for its answer.
  */
-export default function ManagedServersSection({
-  onSettled,
-  sectionRef,
-  highlighted = false,
-}: {
-  /** Called once, when the first listing has finished — either way. */
-  onSettled?: () => void;
-  /** The section element, for a page that brings it into view. */
-  sectionRef?: Ref<HTMLElement>;
-  /** Marks the section for a moment after a link led here. */
-  highlighted?: boolean;
-}) {
-  const { t } = useTranslation();
+function useOwnManagedServers(onSettled?: () => void): ManagedServersSource {
   const [view, setView] = useState<ManagedServersView>();
-  const [loadError, setLoadError] = useState<Error>();
-  const [loading, setLoading] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const busyRef = useRef(false);
-  const mounted = useRef(true);
   const [error, setError] = useState<Error>();
-  const [notice, setNotice] = useState<string>();
-  const [address, setAddress] = useState("");
-  const [code, setCode] = useState("");
-  const [discovered, setDiscovered] = useState<ManagedServerCandidate[]>();
-  const [discovering, setDiscovering] = useState(false);
-  const [discoverError, setDiscoverError] = useState<Error>();
-  /** The search under way, so leaving the page can stop listening for its answer. */
-  const discovery = useRef<AbortController>();
-  const [confirmation, setConfirmation] = useState<Confirmation>();
-  const [confirmationError, setConfirmationError] = useState<Error>();
+  const [loading, setLoading] = useState(false);
+  const mounted = useRef(true);
   const generation = useRef(0);
-  /**
-   * What the last listing held, so an answer arriving between two reads can be named.
-   * Only live requests: one that already shows how it ended is not news when it goes.
-   */
-  const previous = useRef<{ servers: Set<string>; live: Map<string, string> }>();
-  /** Requests this page withdrew itself; their disappearance is not news. */
-  const withdrawn = useRef(new Set<string>());
-  const latestT = useRef(t);
   const latestSettled = useRef(onSettled);
   const settled = useRef(false);
 
-  latestT.current = t;
   latestSettled.current = onSettled;
 
   useEffect(() => {
@@ -131,76 +103,36 @@ export default function ManagedServersSection({
     return () => {
       mounted.current = false;
       generation.current += 1;
-      discovery.current?.abort();
     };
-  }, []);
-
-  const accept = useCallback((fresh: ManagedServersView) => {
-    const before = previous.current;
-
-    if (before) {
-      const added = fresh.servers.filter((server) => !before.servers.has(server.serverId));
-      // Requests that were live and now are not listed at all. One that ended with an
-      // answer stays listed for a while and says so in its own row; one that is gone was
-      // either approved — its server is new above — or ended somewhere this page cannot see.
-      const gone = [...before.live.entries()].filter(
-        ([requestId]) =>
-          !withdrawn.current.has(requestId) &&
-          !fresh.requests.some((request) => request.requestId === requestId),
-      );
-
-      if (gone.length) {
-        setNotice(
-          added.length
-            ? latestT.current("federation.servers.approved", {
-                name: added.map(serverLabel).join(", "),
-              })
-            : latestT.current("federation.servers.requestClosed", { name: gone[0][1] }),
-        );
-      }
-    }
-    previous.current = {
-      servers: new Set(fresh.servers.map((server) => server.serverId)),
-      live: new Map(
-        fresh.requests
-          .filter((request) => request.active)
-          .map((request) => [request.requestId, requestLabel(request)]),
-      ),
-    };
-    setView(fresh);
   }, []);
 
   /**
    * `quiet` is for polling and the follow-up probe: no loading state, and a failure keeps
    * the last good listing instead of replacing it with an error.
    */
-  const load = useCallback(
-    async (options: { probe?: boolean; quiet?: boolean } = {}) => {
-      const run = ++generation.current;
+  const load = useCallback(async (options: { probe?: boolean; quiet?: boolean } = {}) => {
+    const run = ++generation.current;
 
-      if (!options.quiet) setLoading(true);
-      try {
-        const fresh = await managedServerApi.list(options.probe === true);
+    if (!options.quiet) setLoading(true);
+    try {
+      const fresh = await managedServerApi.list(options.probe === true);
 
-        if (run !== generation.current) return;
-        accept(fresh);
-        setLoadError(undefined);
-      } catch (cause) {
-        if (run === generation.current && !options.quiet)
-          setLoadError(cause instanceof Error ? cause : new Error(String(cause)));
-      } finally {
-        if (run === generation.current && !options.quiet) setLoading(false);
-        if (!settled.current && mounted.current) {
-          settled.current = true;
-          latestSettled.current?.();
-        }
+      if (run !== generation.current) return;
+      setView(fresh);
+      setError(undefined);
+    } catch (cause) {
+      if (run === generation.current && !options.quiet)
+        setError(cause instanceof Error ? cause : new Error(String(cause)));
+    } finally {
+      if (run === generation.current && !options.quiet) setLoading(false);
+      if (!settled.current && mounted.current) {
+        settled.current = true;
+        latestSettled.current?.();
       }
-    },
-    [accept],
-  );
+    }
+  }, []);
 
   useEffect(() => {
-    // A plain listing first so the page fills at once, then the probed one for states.
     void load().then(() => {
       if (mounted.current) void load({ probe: true, quiet: true });
     });
@@ -214,11 +146,137 @@ export default function ManagedServersSection({
   useEffect(() => {
     if (!waiting) return;
     const timer = setInterval(() => {
-      if (!document.hidden && !busyRef.current) void load({ quiet: true });
+      if (!document.hidden) void load({ quiet: true });
     }, REQUEST_POLL_MS);
 
     return () => clearInterval(timer);
   }, [waiting, load]);
+
+  return { view, error, loading, load };
+}
+
+export interface ManagedServersProps {
+  /** The section element, for a page that brings it into view. */
+  sectionRef?: Ref<HTMLElement>;
+  /** Marks the section for a moment after a link led here. */
+  highlighted?: boolean;
+  /** The section's heading level: 2 on its own, 3 inside the devices page's tab. */
+  headingLevel?: 2 | 3;
+  /**
+   * With servers listed, the add form waits behind a button; `addRequested` (a link that
+   * asked for it) opens it. Without this the form is always open.
+   */
+  collapseAdd?: boolean;
+  addRequested?: boolean;
+  /** Marks the add form for a moment after a link led to it. */
+  addHighlighted?: boolean;
+}
+
+/**
+ * Other devices this one manages in full — the removed thin client's job, now done by
+ * switching this window to the other device's own UI. Reads its own listing; the devices
+ * page passes the one it reads for the whole page to {@link ManagedServersPanel} instead.
+ */
+export default function ManagedServersSection({
+  onSettled,
+  ...props
+}: ManagedServersProps & {
+  /** Called once, when the first listing has finished — either way. */
+  onSettled?: () => void;
+}) {
+  const source = useOwnManagedServers(onSettled);
+
+  return <ManagedServersPanel {...props} source={source} />;
+}
+
+/**
+ * Kept apart from the read-only library sharing on purpose: this is the other device's
+ * administrator access, with its own pairing, and nothing here grants or uses a sharing
+ * permission.
+ */
+export function ManagedServersPanel({
+  source,
+  sectionRef,
+  highlighted = false,
+  headingLevel = 2,
+  collapseAdd = false,
+  addRequested = false,
+  addHighlighted = false,
+}: ManagedServersProps & { source: ManagedServersSource }) {
+  const { t } = useTranslation();
+  const { view, error: loadError, loading, load } = source;
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const mounted = useRef(true);
+  const [error, setError] = useState<Error>();
+  const [notice, setNotice] = useState<string>();
+  const [address, setAddress] = useState("");
+  const [code, setCode] = useState("");
+  const [addOpened, setAddOpened] = useState(false);
+  const [discovered, setDiscovered] = useState<ManagedServerCandidate[]>();
+  const [discovering, setDiscovering] = useState(false);
+  const [discoverError, setDiscoverError] = useState<Error>();
+  /** The search under way, so leaving the page can stop listening for its answer. */
+  const discovery = useRef<AbortController>();
+  const [confirmation, setConfirmation] = useState<Confirmation>();
+  const [confirmationError, setConfirmationError] = useState<Error>();
+  /**
+   * What the last listing held, so an answer arriving between two reads can be named.
+   * Only live requests: one that already shows how it ended is not news when it goes.
+   */
+  const previous = useRef<{ servers: Set<string>; live: Map<string, string> }>();
+  /** Requests this page withdrew itself; their disappearance is not news. */
+  const withdrawn = useRef(new Set<string>());
+  const latestT = useRef(t);
+  const Heading = headingLevel === 3 ? "h3" : "h2";
+  const SubHeading = headingLevel === 3 ? "h4" : "h3";
+
+  latestT.current = t;
+
+  useEffect(() => {
+    mounted.current = true;
+
+    return () => {
+      mounted.current = false;
+      discovery.current?.abort();
+    };
+  }, []);
+
+  // Only a new listing is news.
+  useEffect(() => {
+    if (!view) return;
+    const before = previous.current;
+
+    if (before) {
+      const added = view.servers.filter((server) => !before.servers.has(server.serverId));
+      // Requests that were live and now are not listed at all. One that ended with an
+      // answer stays listed for a while and says so in its own row; one that is gone was
+      // either approved — its server is new above — or ended somewhere this page cannot see.
+      const gone = [...before.live.entries()].filter(
+        ([requestId]) =>
+          !withdrawn.current.has(requestId) &&
+          !view.requests.some((request) => request.requestId === requestId),
+      );
+
+      if (gone.length) {
+        setNotice(
+          added.length
+            ? latestT.current("federation.servers.approved", {
+                name: added.map(serverLabel).join(", "),
+              })
+            : latestT.current("federation.servers.requestClosed", { name: gone[0][1] }),
+        );
+      }
+    }
+    previous.current = {
+      servers: new Set(view.servers.map((server) => server.serverId)),
+      live: new Map(
+        view.requests
+          .filter((request) => request.active)
+          .map((request) => [request.requestId, requestLabel(request)]),
+      ),
+    };
+  }, [view]);
 
   /** User actions: one at a time, the list re-read afterwards, failures shown by `onError`. */
   const run = async (
@@ -322,10 +380,12 @@ export default function ManagedServersSection({
   // The server marks what it already manages; a server paired since the search is too.
   const managedHere = (candidate: ManagedServerCandidate) =>
     candidate.alreadyManaged || servers.some((server) => server.serverId === candidate.serverId);
+  const addOpen = !collapseAdd || !servers.length || addOpened || addRequested;
 
   return (
     <section
       ref={sectionRef}
+      data-focus-section
       aria-busy={loading || undefined}
       aria-labelledby="managed-servers-title"
       className={`${panelClass} space-y-4 ${revealClass(highlighted)}`}
@@ -333,27 +393,14 @@ export default function ManagedServersSection({
       id="managed-servers"
       tabIndex={-1}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-2 font-semibold" id="managed-servers-title">
-            <AiOutlineCloudServer aria-hidden />
-            {t("federation.servers.title")}
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm text-default-500">
-            {t("federation.servers.description")}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            className={buttonClass}
-            disabled={busy || loading}
-            type="button"
-            onClick={() => void run(() => load({ probe: true }), setError, false)}
-          >
-            {t("federation.servers.refresh")}
-          </button>
-        </div>
-      </div>
+      <Heading
+        className="flex items-center gap-2 font-semibold outline-none"
+        id="managed-servers-title"
+        tabIndex={-1}
+      >
+        <AiOutlineCloudServer aria-hidden />
+        {t("federation.servers.title")}
+      </Heading>
       {(error || notice) && (
         <div className="space-y-2">
           <ErrorNotice error={error} onDismiss={() => setError(undefined)} />
@@ -381,6 +428,7 @@ export default function ManagedServersSection({
             <ManagedServerCard
               key={server.serverId}
               busy={busy}
+              headingLevel={SubHeading}
               server={server}
               onForget={() =>
                 confirm(
@@ -455,105 +503,129 @@ export default function ManagedServersSection({
           })}
         </div>
       )}
-      <div className="border-t border-default-200 pt-4">
-        <h3 className="font-medium">{t("federation.servers.add.title")}</h3>
-        <p className="mt-1 text-sm text-default-500">{t("federation.servers.add.description")}</p>
-        <form
-          className="mt-3 grid items-end gap-3 md:grid-cols-[1fr_200px_auto]"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const target = address.trim();
-
-            if (target) void pair(target, code.trim() || undefined);
-          }}
-        >
-          <label className="space-y-1 text-sm">
-            <span>{t("federation.servers.add.address")}</span>
-            <input
-              required
-              className={fieldClass}
-              placeholder="http://192.168.1.5:34567"
-              value={address}
-              onChange={(event) => setAddress(event.target.value)}
-            />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span>{t("federation.servers.add.code")}</span>
-            <input
-              autoComplete="off"
-              className={fieldClass}
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-            />
-          </label>
-          <button className={primaryClass} disabled={busy || !address.trim()} type="submit">
+      <div
+        className={`border-t border-default-200 pt-4 ${revealClass(addHighlighted)}`}
+        data-highlighted={addHighlighted || undefined}
+        id="managed-server-add"
+        tabIndex={-1}
+      >
+        {!addOpen ? (
+          <button className={buttonClass} type="button" onClick={() => setAddOpened(true)}>
             <AiOutlinePlus aria-hidden />
-            {t(code.trim() ? "federation.servers.add.withCode" : "federation.servers.add.request")}
+            {t("federation.servers.add.title")}
           </button>
-        </form>
-        <p className="mt-2 text-xs text-default-500">{t("federation.servers.add.tip")}</p>
-        <button
-          aria-busy={discovering || undefined}
-          className={`${buttonClass} mt-3`}
-          disabled={discovering}
-          type="button"
-          onClick={() => void discover()}
-        >
-          {discovering && <AiOutlineLoading3Quarters aria-hidden className="animate-spin" />}
-          {t(
-            discovering ? "federation.servers.add.discovering" : "federation.servers.add.discover",
-          )}
-        </button>
-        {discoverError && (
-          <div className="mt-3">
-            <ErrorNotice error={discoverError} onRetry={() => void discover()} />
-          </div>
-        )}
-        {discovered && !discovering && (
-          <div className="mt-3 space-y-2" data-testid="managed-server-candidates">
-            {!discovered.length && (
-              <p className="text-sm text-default-500">{t("federation.servers.add.noneFound")}</p>
-            )}
-            {discovered.map((candidate) => {
-              const managed = managedHere(candidate);
+        ) : (
+          <>
+            <SubHeading className="font-medium">{t("federation.servers.add.title")}</SubHeading>
+            <p className="mt-1 text-sm text-default-500">
+              {t("federation.servers.add.description")}
+            </p>
+            <form
+              className="mt-3 grid items-end gap-3 md:grid-cols-[1fr_200px_auto]"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const target = address.trim();
 
-              return (
-                <div
-                  key={candidate.serverId}
-                  aria-label={candidate.name || candidate.address}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-default-50 p-3 text-sm"
-                  role="group"
-                >
-                  <span className="min-w-0 break-all">
-                    {candidate.name || candidate.address}{" "}
-                    <span className="text-default-500">
-                      {candidate.address}
-                      {candidate.appVersion ? ` · v${candidate.appVersion}` : ""}
-                    </span>
-                  </span>
-                  {managed ? (
-                    // Found, and said so — a search that silently left it out would read as
-                    // "not on this network" — but not offered again: it is in the list above.
-                    <span className="text-xs text-default-500">
-                      {t("federation.servers.add.alreadyManaged")}
-                    </span>
-                  ) : (
-                    <button
-                      className={buttonClass}
-                      disabled={busy}
-                      type="button"
-                      onClick={() => {
-                        setAddress(candidate.address);
-                        setCode("");
-                      }}
+                if (target) void pair(target, code.trim() || undefined);
+              }}
+            >
+              <label className="space-y-1 text-sm">
+                <span>{t("federation.servers.add.address")}</span>
+                <input
+                  required
+                  className={fieldClass}
+                  placeholder="http://192.168.1.5:34567"
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span>{t("federation.servers.add.code")}</span>
+                <input
+                  autoComplete="off"
+                  className={fieldClass}
+                  value={code}
+                  onChange={(event) => setCode(event.target.value)}
+                />
+              </label>
+              <button className={primaryClass} disabled={busy || !address.trim()} type="submit">
+                <AiOutlinePlus aria-hidden />
+                {t(
+                  code.trim()
+                    ? "federation.servers.add.withCode"
+                    : "federation.servers.add.request",
+                )}
+              </button>
+            </form>
+            <p className="mt-2 text-xs text-default-500">{t("federation.servers.add.tip")}</p>
+            <button
+              aria-busy={discovering || undefined}
+              className={`${buttonClass} mt-3`}
+              disabled={discovering}
+              type="button"
+              onClick={() => void discover()}
+            >
+              {discovering && <AiOutlineLoading3Quarters aria-hidden className="animate-spin" />}
+              {t(
+                discovering
+                  ? "federation.servers.add.discovering"
+                  : "federation.servers.add.discover",
+              )}
+            </button>
+            {discoverError && (
+              <div className="mt-3">
+                <ErrorNotice error={discoverError} onRetry={() => void discover()} />
+              </div>
+            )}
+            {discovered && !discovering && (
+              <div className="mt-3 space-y-2" data-testid="managed-server-candidates">
+                {!discovered.length && (
+                  <p className="text-sm text-default-500">
+                    {t("federation.servers.add.noneFound")}
+                  </p>
+                )}
+                {discovered.map((candidate) => {
+                  const managed = managedHere(candidate);
+
+                  return (
+                    <div
+                      key={candidate.serverId}
+                      aria-label={candidate.name || candidate.address}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-default-50 p-3 text-sm"
+                      role="group"
                     >
-                      {t("federation.servers.add.useAddress")}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                      <span className="min-w-0 break-all">
+                        {candidate.name || candidate.address}{" "}
+                        <span className="text-default-500">
+                          {candidate.address}
+                          {candidate.appVersion ? ` · v${candidate.appVersion}` : ""}
+                        </span>
+                      </span>
+                      {managed ? (
+                        // Found, and said so — a search that silently left it out would read
+                        // as "not on this network" — but not offered again: it is listed above.
+                        <span className="text-xs text-default-500">
+                          {t("federation.servers.add.alreadyManaged")}
+                        </span>
+                      ) : (
+                        <button
+                          className={buttonClass}
+                          disabled={busy}
+                          type="button"
+                          onClick={() => {
+                            setAddress(candidate.address);
+                            setCode("");
+                          }}
+                        >
+                          {t("federation.servers.add.useAddress")}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
       {confirmation && (
@@ -584,12 +656,14 @@ export default function ManagedServersSection({
 function ManagedServerCard({
   server,
   busy,
+  headingLevel: Title = "h3",
   onOpen,
   onForget,
   onSaveMappings,
 }: {
   server: ManagedServer;
   busy: boolean;
+  headingLevel?: "h3" | "h4";
   /** Shows the server in this window, on one of its own routes when given one. */
   onOpen: (route?: string) => void;
   onForget: () => void;
@@ -606,7 +680,7 @@ function ManagedServerCard({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-semibold">{name}</h3>
+          <Title className="font-semibold">{name}</Title>
           <p className="mt-1 break-all text-xs text-default-500">
             {server.address}
             {server.appVersion ? ` · v${server.appVersion}` : ""}
@@ -651,7 +725,7 @@ const tips = {
 
 /**
  * What the reader should know about a managed server before using it: it lets anyone on its
- * network manage it, it revoked this computer, or its address now answers as another server.
+ * network manage it, it revoked this device, or its address now answers as another server.
  * Shown on its card here and in its panel on the device map.
  */
 export function ManagedServerWarnings({
