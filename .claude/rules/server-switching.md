@@ -80,8 +80,8 @@ manage anything; they are only ever managed.
   `ProxyFakeAddresses`) is never dialled: a probe or pairing says
   `ManagedServerOutcome.ProxyFakeAddress`, the listing's Offline carries `offlineReason`, and a
   relay's check is Unconfirmed with `ProxyFakeAddress` — its page and JSON message say to set
-  `.local` names and LAN addresses to DIRECT or pair again at the IP, never to check that the
-  server runs (`X-Bakabase-Client` stays `ServerUnreachable`). A domain the proxy answered is
+  `.local` names and LAN addresses to DIRECT or add the server again by its IP (Devices and
+  sharing → Management), never to check that the server runs (`X-Bakabase-Client` stays `ServerUnreachable`). A domain the proxy answered is
   reached through the proxy as any other address: the question and the relay's connections go
   to the proxy's address it reached (`DualStackConnector.ConnectAgainAsync`), the server's
   identity is checked there like anywhere, and only a failure to connect there is

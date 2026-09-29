@@ -76,11 +76,11 @@ public sealed class FederationHttpClient(HttpClient http)
             // The name resolved to — or the address is — one a proxy on this computer hands out,
             // and nothing was sent: the fix is in the proxy here, not on the other device.
             throw new FederationAccessException(ProxyFakeAddressCode, 503, proxy.ProxyResolvesItself
-                ? $"The node's name {proxy.Host} resolved to an address a proxy on this computer hands out " +
+                ? $"The device's name {proxy.Host} resolved to an address a proxy on this computer hands out " +
                   $"(198.18.0.0/15), and could not be reached through the proxy. Set {proxy.Host} to DIRECT in " +
-                  "the proxy, or use the node's IP address."
-                : "The node's address leads into a proxy on this computer (198.18.0.0/15). Set .local names and " +
-                  "LAN addresses to DIRECT in the proxy, or use the node's IP address.");
+                  "the proxy, or use the device's IP address."
+                : "The device's address leads into a proxy on this computer (198.18.0.0/15). Set .local names " +
+                  "and LAN addresses to DIRECT in the proxy, or use the device's IP address.");
         }
         catch (HttpRequestException)
         {

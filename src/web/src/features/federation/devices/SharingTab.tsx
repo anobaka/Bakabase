@@ -217,7 +217,10 @@ export default function SharingTab() {
                 </div>
                 {peer.outboundGrant && peer.connectionState === PROXY_FAKE_ADDRESS && (
                   // A proxy on this computer took over its name: the fix is here, not over there.
-                  <p className="text-xs text-warning-600 dark:text-warning" data-testid="peer-proxy">
+                  <p
+                    className="text-xs text-warning-600 dark:text-warning"
+                    data-testid="peer-proxy"
+                  >
                     {t(proxyFakeAddressKey(peer.address))}
                   </p>
                 )}
