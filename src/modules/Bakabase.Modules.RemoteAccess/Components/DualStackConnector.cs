@@ -55,7 +55,18 @@ public sealed class DualStackConnector
     public static ValueTask<Stream> ConnectCallback(SocketsHttpConnectionContext context, CancellationToken ct) =>
         Default.ConnectAsync(context.DnsEndPoint, ct);
 
-    public async ValueTask<Stream> ConnectAsync(DnsEndPoint endpoint, CancellationToken ct)
+    public ValueTask<Stream> ConnectAsync(DnsEndPoint endpoint, CancellationToken ct) =>
+        ConnectAsync(endpoint, null, ct);
+
+    /// <param name="endpoint">Where to connect.</param>
+    /// <param name="connectTimeout">
+    /// How long connecting may take once the name is resolved, after which it fails as timed out
+    /// (<see cref="SocketError.TimedOut"/>); null leaves it to <paramref name="ct"/>. The lookup
+    /// is not counted: an address needs none, and a name that is slow to resolve — a Windows
+    /// computer name over LLMNR or NetBIOS — then still gets the whole of it to connect.
+    /// </param>
+    /// <param name="ct">The caller's budget, lookup included.</param>
+    public async ValueTask<Stream> ConnectAsync(DnsEndPoint endpoint, TimeSpan? connectTimeout, CancellationToken ct)
     {
         var addresses = IPAddress.TryParse(endpoint.Host, out var literal)
             ? [literal]
@@ -66,16 +77,35 @@ public sealed class DualStackConnector
             throw new SocketException((int) SocketError.HostNotFound);
         }
 
+        using var clock = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+        if (connectTimeout is { } limit)
+        {
+            clock.CancelAfter(limit);
+        }
+
+        try
+        {
+            return await RaceAsync(addresses, endpoint.Port, clock.Token);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested && clock.IsCancellationRequested)
+        {
+            throw new SocketException((int) SocketError.TimedOut);
+        }
+    }
+
+    private async ValueTask<Stream> RaceAsync(IReadOnlyList<IPAddress> addresses, int port, CancellationToken ct)
+    {
         if (addresses.Count == 1)
         {
-            return await _connect(new IPEndPoint(addresses[0], endpoint.Port), ct);
+            return await _connect(new IPEndPoint(addresses[0], port), ct);
         }
 
         using var race = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var attempts = new List<Task<Stream>>();
         var next = 0;
 
-        Task<Stream> Start() => _connect(new IPEndPoint(addresses[next++], endpoint.Port), race.Token).AsTask();
+        Task<Stream> Start() => _connect(new IPEndPoint(addresses[next++], port), race.Token).AsTask();
 
         try
         {

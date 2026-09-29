@@ -146,6 +146,41 @@ public class DualStackConnectorTests
     }
 
     [TestMethod]
+    public async Task A_connect_timeout_ends_an_address_nobody_answers_at_as_timed_out()
+    {
+        // Library sharing's peers are mostly stored as addresses: one that is switched off is
+        // reported once the connect timeout passes, not when the caller's longer budget does.
+        var network = new FakeNetwork {[Lan] = FakeNetwork.BlackHole};
+        var connector = network.Connector([]);
+
+        using var budget = new CancellationTokenSource(Budget);
+        var watch = Stopwatch.StartNew();
+        var timedOut = await Assert.ThrowsExceptionAsync<SocketException>(() => connector
+            .ConnectAsync(new DnsEndPoint("192.168.1.5", 34567), TimeSpan.FromMilliseconds(300), budget.Token)
+            .AsTask());
+
+        Assert.AreEqual(SocketError.TimedOut, timedOut.SocketErrorCode);
+        Assert.IsTrue(watch.Elapsed < TimeSpan.FromSeconds(3), $"took {watch.Elapsed}");
+        await network.AllSettledAsync();
+        Assert.IsTrue(network.Cancelled.SetEquals(network.Tried));
+    }
+
+    [TestMethod]
+    public async Task A_slow_name_lookup_is_not_counted_against_the_connect_timeout()
+    {
+        // A Windows computer name can take seconds to resolve over LLMNR or NetBIOS; the
+        // connection itself still gets the whole of its time once it has.
+        var network = new FakeNetwork {[Lan] = FakeNetwork.AnswersAfter(TimeSpan.FromMilliseconds(200))};
+        var connector = network.Connector([Lan], lookupTakes: TimeSpan.FromMilliseconds(500));
+
+        using var budget = new CancellationTokenSource(Budget);
+        await using var stream = await connector.ConnectAsync(new DnsEndPoint("PC1", 34567),
+            TimeSpan.FromMilliseconds(400), budget.Token);
+
+        Assert.AreEqual(new IPEndPoint(Lan, 34567), ((FakeConnection) stream).To);
+    }
+
+    [TestMethod]
     public async Task A_connection_made_after_losing_the_race_is_closed()
     {
         // An attempt that does not heed its cancellation — a connect already past the point of
@@ -259,11 +294,13 @@ public class DualStackConnectorTests
         public HashSet<IPEndPoint> Cancelled => _cancelled.Keys.ToHashSet();
         public int Lookups => _lookups;
 
-        public DualStackConnector Connector(IPAddress[] resolvesTo, TimeSpan? attemptDelay = null) =>
-            new((_, _) =>
+        public DualStackConnector Connector(IPAddress[] resolvesTo, TimeSpan? attemptDelay = null,
+            TimeSpan? lookupTakes = null) =>
+            new(async (_, ct) =>
             {
                 Interlocked.Increment(ref _lookups);
-                return Task.FromResult(resolvesTo);
+                await Task.Delay(lookupTakes ?? TimeSpan.Zero, ct);
+                return resolvesTo;
             }, Connect, attemptDelay);
 
         /// <summary>Every attempt has finished, one way or the other.</summary>

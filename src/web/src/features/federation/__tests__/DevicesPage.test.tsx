@@ -166,7 +166,8 @@ describe("device permission workflows", () => {
     fireEvent.click(screen.getByText("federation.identity.reset"));
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("federation.confirm"));
-    await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(true));
+    // A copy: the install's own identity goes too.
+    await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(true, true));
     expect(federationPeerApi.sharing).not.toHaveBeenCalled();
   });
   it("opens recovery help from configuration without resetting and restores with the original node identity", async () => {
@@ -513,7 +514,8 @@ describe("unreadable sharing state", () => {
     expect(screen.getByRole("alertdialog")).toHaveTextContent("federation.recovery.confirm");
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("federation.confirm"));
-    await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(true));
+    // Only the sharing state was lost: the install keeps its identity and paired devices.
+    await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(true, false));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
   it("does not offer a reset for other load failures", () => {

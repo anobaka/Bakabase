@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components.Discovery;
@@ -24,7 +26,11 @@ public class MdnsBrowseTests
     private static readonly RemoteAccessServerDescriptor Descriptor =
         new("abc123", "Desk PC", 34567, "2.4.0-beta", 1);
 
-    private static readonly IPAddress[] Addresses = [IPAddress.Parse("192.168.1.5")];
+    /// <summary>
+    /// Another machine's address: a documentation one (TEST-NET-1), which no machine running
+    /// these tests holds — whether an address is this machine's is read from its interfaces.
+    /// </summary>
+    private static readonly IPAddress[] Addresses = [IPAddress.Parse("192.0.2.5")];
 
     private static byte[] Announcement(RemoteAccessServerDescriptor descriptor, bool goodbye = false,
         IPAddress[]? addresses = null) =>
@@ -49,7 +55,7 @@ public class MdnsBrowseTests
         // The port comes from the SRV record and the host from the A record it points
         // at — the two have to be joined through the advertisement's own hostname, and
         // getting that wrong produces an address nothing answers on.
-        Assert.AreEqual("http://192.168.1.5:34567", server.BaseAddress);
+        Assert.AreEqual("http://192.0.2.5:34567", server.BaseAddress);
         Assert.IsFalse(server.IsThisMachine);
     }
 
@@ -132,7 +138,49 @@ public class MdnsBrowseTests
         Assert.AreEqual(2, found.Length);
         Assert.IsTrue(found[0].IsThisMachine);
         Assert.AreEqual("Other PC", found[1].ServerName);
-        Assert.AreEqual("http://192.168.1.5:34567", found[1].BaseAddress);
+        Assert.AreEqual("http://192.0.2.5:34567", found[1].BaseAddress);
+    }
+
+    [TestMethod]
+    public void Another_machine_advertising_an_address_this_one_holds_too_is_still_another_machine()
+    {
+        // A VPN or proxy adapter (198.18.0.1), a virtual machine host (192.168.56.1): addresses
+        // many machines hold alike, advertised beside a machine's own. Whichever comes first,
+        // it is not this machine, and is offered at the address that does not lead back here.
+        var own = NetworkInterface.GetAllNetworkInterfaces()
+            .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+            .Select(a => a.Address)
+            .FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(a));
+
+        if (own == null)
+        {
+            Assert.Inconclusive("This machine has no IPv4 address besides loopback.");
+        }
+
+        foreach (var addresses in new[]
+                 {
+                     new[] {own, IPAddress.Parse("192.0.2.7")},
+                     [IPAddress.Parse("192.0.2.7"), own]
+                 })
+        {
+            Assert.IsTrue(MdnsMessage.TryParseResponse(
+                Announcement(Descriptor with {Id = "other-pc", Name = "Other PC"}, addresses: addresses),
+                out var records));
+
+            var collector = new MdnsBrowser.InstanceCollector();
+            collector.Add(records);
+
+            var server = collector.Build().Single();
+
+            Assert.IsFalse(server.IsThisMachine);
+            Assert.AreEqual("http://192.0.2.7:34567", server.BaseAddress);
+        }
+
+        // Only what this machine holds, every address of it: this machine.
+        Assert.IsTrue(MdnsMessage.TryParseResponse(Announcement(Descriptor, addresses: [own]), out var ownRecords));
+        var ownCollector = new MdnsBrowser.InstanceCollector();
+        ownCollector.Add(ownRecords);
+        Assert.IsTrue(ownCollector.Build().Single().IsThisMachine);
     }
 
     [TestMethod]
@@ -143,8 +191,8 @@ public class MdnsBrowseTests
         // the order the records happen to arrive in is not a reason to pick either.
         foreach (var addresses in new[]
                  {
-                     new[] {IPAddress.Loopback, IPAddress.Parse("192.168.1.5")},
-                     [IPAddress.Parse("192.168.1.5"), IPAddress.Loopback]
+                     new[] {IPAddress.Loopback, IPAddress.Parse("192.0.2.5")},
+                     [IPAddress.Parse("192.0.2.5"), IPAddress.Loopback]
                  })
         {
             Assert.IsTrue(MdnsMessage.TryParseResponse(Announcement(Descriptor, addresses: addresses),
@@ -153,7 +201,7 @@ public class MdnsBrowseTests
             var collector = new MdnsBrowser.InstanceCollector();
             collector.Add(records);
 
-            Assert.AreEqual("http://192.168.1.5:34567", collector.Build().Single().BaseAddress);
+            Assert.AreEqual("http://192.0.2.5:34567", collector.Build().Single().BaseAddress);
         }
     }
 

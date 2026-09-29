@@ -40,7 +40,13 @@ public sealed record FederationDeviceNameRequest(string? Name);
 public sealed record FederationClaimRequest(string RequestId);
 public sealed record FederationPeerEnabledRequest(bool Enabled);
 public sealed record FederationPathMappingsRequest(NodePathMapping[] Mappings, NodePathMapping[]? ExpectedMappings = null);
-public sealed record FederationIdentityResetRequest(bool AsNewNode = false);
+/// <param name="AsNewNode">A new node rather than a new library generation of this one.</param>
+/// <param name="ReplaceInstallIdentity">
+/// With <paramref name="AsNewNode"/>: a copied installation, which also takes a new install
+/// identity and lets go of the devices paired under the old one. Recovering an unreadable
+/// sharing state leaves it out, and keeps both.
+/// </param>
+public sealed record FederationIdentityResetRequest(bool AsNewNode = false, bool ReplaceInstallIdentity = false);
 public sealed record FederationPeerChange(bool Changed = true);
 
 [ApiController]
@@ -269,19 +275,26 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
         [FromServices] RemoteConnectionRegistry connections, CancellationToken ct)
     {
         NodeIdentity node;
-        if (request.AsNewNode)
+        if (request.AsNewNode && request.ReplaceInstallIdentity)
         {
             // A copied data directory carries its install's remote-access identity too, and
             // answering under it makes each copy take the other for itself. A new device takes a
             // new one — the node then inherits it, as the first node did — and lets go of the
             // devices paired under the old one: they expect that identity, and their keys were
             // issued to whichever install it was. Servers this device manages are kept: they know
-            // it by the key each issued it, not by this identity.
+            // it by the key each issued it, not by this identity — the original's key, which the
+            // two now share (see server-switching.md, "Trust is explicit and pairwise").
             await remoteAccess.RegenerateServerIdAsync();
-            foreach (var device in await remoteDevices.ForgetAllAsync(ct))
+            // Past this point the new identity is saved: the rest must follow it, whether or not
+            // whoever asked is still waiting, or the install answers under the new id with the
+            // old node and the old paired devices.
+            foreach (var device in await remoteDevices.ForgetAllAsync(CancellationToken.None))
                 connections.AbortDevice(device);
-            node = await peers.ResetAsNewNodeAsync(ct);
+            node = await peers.ResetAsNewNodeAsync(inheritHostIdentity: true, CancellationToken.None);
         }
+        // Recovering an unreadable sharing state: a new node, of its own id. The install keeps
+        // its identity and its paired devices — nothing about them was lost.
+        else if (request.AsNewNode) node = await peers.ResetAsNewNodeAsync(ct: ct);
         else node = await peers.RotateLibraryEpochAsync(ct);
         // Old local tickets and reads must not survive changing this library's identity either.
         await browsing.SetEnabledAsync(false, CancellationToken.None);

@@ -340,9 +340,14 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
     }
 
     /// <summary>Explicit clone operation, never called by startup or ordinary options import.</summary>
-    public async Task<NodeIdentity> ResetAsNewNodeAsync(CancellationToken ct = default)
+    /// <param name="inheritHostIdentity">
+    /// The new node takes the host's identity, which the caller has just replaced: a copied
+    /// installation. Otherwise it gets an id of its own.
+    /// </param>
+    /// <param name="ct">Cancels the reset.</param>
+    public async Task<NodeIdentity> ResetAsNewNodeAsync(bool inheritHostIdentity = false, CancellationToken ct = default)
     {
-        var result = await store.ResetAsNewNodeAsync(ct);
+        var result = await store.ResetAsNewNodeAsync(inheritHostIdentity, ct);
         leases.CancelAll();
         return result;
     }

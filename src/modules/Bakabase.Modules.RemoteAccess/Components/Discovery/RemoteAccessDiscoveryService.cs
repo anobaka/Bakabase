@@ -1,4 +1,5 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -95,8 +96,7 @@ public class RemoteAccessDiscoveryService(
             return;
         }
 
-        // The id too: an install that takes a new identity must stop answering as the old one.
-        if (_advertisedPort == descriptor.Port && _advertisedId == descriptor.Id)
+        if (IsCurrent(_advertisedPort, _advertisedId, descriptor))
         {
             return;
         }
@@ -142,6 +142,17 @@ public class RemoteAccessDiscoveryService(
             await _mdns.AnnounceAsync(ct);
         }
     }
+
+    /// <summary>
+    /// Whether a beacon up for <paramref name="advertisedPort"/> and <paramref name="advertisedId"/>
+    /// still answers for <paramref name="descriptor"/>, or has to start again.
+    /// </summary>
+    /// <remarks>
+    /// The id too: an install that takes a new identity ("Create a new device identity") keeps
+    /// its port, and must stop answering as the old one.
+    /// </remarks>
+    public static bool IsCurrent(int? advertisedPort, string? advertisedId, RemoteAccessServerDescriptor descriptor) =>
+        advertisedPort == descriptor.Port && advertisedId == descriptor.Id;
 
     private void StopResponders()
     {

@@ -88,7 +88,12 @@ public enum ManagedServerState
 /// <param name="ServerId">Its install identity, when it gave one.</param>
 /// <param name="Name">What it calls itself, when it said.</param>
 /// <param name="IsThisDevice">The address now reaches this device itself: its own server, or one of its relays.</param>
-public sealed record ManagedServerAnswerView(string? ServerId, string? Name, bool IsThisDevice);
+/// <param name="IsSameIdentity">
+/// The address now reaches another machine answering with this device's own identity: a copy of
+/// this data directory, most likely (<see cref="ManagedServerOutcome.SameIdentity"/>).
+/// </param>
+public sealed record ManagedServerAnswerView(string? ServerId, string? Name, bool IsThisDevice,
+    bool IsSameIdentity = false);
 
 /// <summary>Where one of a managed server's library paths is on this machine.</summary>
 public sealed record ManagedServerPathMapping(string ServerPath, string LocalPath);

@@ -118,6 +118,16 @@ public static class ConsoleUnavailablePage
                 "another address, find it again on this device's Devices page.",
                 $"{name} 已不在原来的地址",
                 $"{address} 现在指向本机自身，本窗口没有向它发送任何请求。如果 {name} 换了地址，请在本机的“设备”页面重新找到它。"),
+            // Another computer under this device's own identity: nothing to find in the address.
+            UpstreamIdentityVerdict.SameIdentity => (
+                $"{name} is not at its address any more",
+                $"{address} now answers as another computer with this device's own identity ({other}) — a copy of " +
+                "its data folder, most likely — so this window sent it nothing. On the copy, choose “Create a new " +
+                $"device identity” on its Devices page. If {name} moved to another address, find it again on this " +
+                "device's Devices page.",
+                $"{name} 已不在原来的地址",
+                $"{address} 现在是另一台与本机设备身份相同的电脑（{other}），它的数据目录很可能是从本机复制的，本窗口没有向它发送任何请求。" +
+                $"请在复制出的那台设备的“设备”页面选择“创建新的设备身份”。如果 {name} 换了地址，请在本机的“设备”页面重新找到它。"),
             // Something is running there and reachable: telling the user to check that would
             // send them the wrong way. Worded as the refusal a fetch gets (UpstreamIdentityCheck.Describe).
             _ when check.RemoteAccessDisabled => (

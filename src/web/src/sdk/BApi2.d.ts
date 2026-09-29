@@ -12358,6 +12358,7 @@ export interface components {
             serverId?: string;
             name?: string;
             isThisDevice: boolean;
+            isSameIdentity: boolean;
         };
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerCandidateView": {
             serverId: string;
@@ -12907,6 +12908,7 @@ export interface components {
         };
         "Bakabase.Service.Controllers.FederationIdentityResetRequest": {
             asNewNode: boolean;
+            replaceInstallIdentity: boolean;
         };
         "Bakabase.Service.Controllers.FederationPathMappingsRequest": {
             mappings: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePathMapping"][];

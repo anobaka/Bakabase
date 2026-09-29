@@ -44,7 +44,8 @@ manage anything; they are only ever managed.
     first), and opening a server (`OpenAsync`, the tray, the switcher) and every probe ask too;
     a probe's answer is handed to the running relay at once.
   All waiting callers share one question; a failed or mismatched answer stands three seconds.
-  An address answering as someone else is `WrongServer` (another install, or `IsThisDevice`);
+  An address answering as someone else is `WrongServer` (another install, `IsThisDevice`, or
+  `IsSameIdentity`: this install's own id from an address that is not this machine's);
   one where nobody can be identified (nothing answers, not Bakabase, remote access off with no
   identity) is refused as unreachable. Refused requests get 503 with `X-Bakabase-Client:
   WrongServer` (or `ServerUnreachable`) and a message naming the address and who answers; a
@@ -62,7 +63,12 @@ manage anything; they are only ever managed.
   meanwhile. Relocation is left to the user: pairing again at the new address
   keeps path mappings and the relay port. Limit: the check compares a claimed identity —
   remote access has no server-side proof, unlike federation's handshake — so it catches an
-  address that moved, not a server lying about who it is.
+  address that moved, not a server lying about who it is. And it holds per address as stored,
+  not per IP: for a stored **name** that resolves to several addresses, the question and a
+  connection each race them (`DualStackConnector`) and may land on different ones — a slow
+  confirmed address can lose a connection to another the name also resolves to, one this
+  machine may hold too (a VPN or virtual adapter's). Discovered servers are stored as IP
+  addresses, which have one.
 - **The switcher inside a relay says how each server was last seen.** `GET /client/switcher`
   answers `{currentId, targets: [{id, name, isLocal, isCurrent, state}]}`. `state` is
   `ManagedServerState` as a number — `0` Unknown, `1` Online, `2` Offline, `3` Revoked,
@@ -95,7 +101,9 @@ manage anything; they are only ever managed.
 - **Finding servers to manage uses the remote-access beacons**, not library sharing:
   `GET /federation/local/servers/discover` (UDP probe + mDNS, ~3 s, on request only) lists
   every server answering them, minus this machine's own answers (loopback or any address of its
-  interfaces, `ThisMachine`) and marked when already managed. Another machine answering with
+  interfaces, `ThisMachine`; over mDNS, only a host whose every advertised address is — another
+  machine can advertise a VPN or virtual adapter's address this one holds too, and is offered
+  at one it does not) and marked when already managed. Another machine answering with
   this install's own id is listed, never hidden behind this machine's answer: it is a copy of
   this data directory, and adding it says so (`SameIdentity`). Library
   sharing's discovery only lists servers that opted into sharing, which says nothing about
@@ -173,16 +181,25 @@ manage anything; they are only ever managed.
   and sends `frame-ancestors 'self'`, so a relay page cannot load this device's own UI in a
   frame and drive it.
 - **Trust is explicit and pairwise.** Managing B is a decision taken on B (approve or show a
-  code). Nothing joins a device to others automatically.
+  code). Nothing joins a device to others automatically. One known gap: a copy of a data
+  directory keeps the servers the original manages, keys included — "Create a new device
+  identity" leaves them — so each such server sees the two as one paired device. Revoking that
+  device there, or "stop managing" on either install (which asks the server to revoke it),
+  ends management from both.
 - **Warn, never reconfigure.** A target in `RemoteAccessMode.Unrestricted` is flagged in the UI;
   the app never changes another server's mode on its own.
 - **Never pair with yourself, never talk to yourself.** Refuse an address whose handshake
   returns this install's `ServerId`, and loopback addresses at this app's own server or relay
   ports — when pairing, and when a managed server's stored address comes to point here. An
   address that is not this machine's answering with this install's `ServerId` is a copy of its
-  data directory: refused as `SameIdentity` (library sharing: `SameIdentity` too), whose message
-  points at "Create a new device identity" — which replaces the `ServerId`, forgets the devices
-  paired under the old one, and gives the node the new id.
+  data directory: refused as `SameIdentity` (library sharing: `SameIdentity` too; a managed
+  server's address: `WrongServer` with `IsSameIdentity`), whose message points at "Create a new
+  device identity" — which replaces the `ServerId`, forgets the devices paired under the old
+  one, and gives the node the new id (headless: `federation new-identity`). Only that action
+  replaces the `ServerId`: the recovery of an unreadable federation state replaces the node
+  alone, with an id of its own. Whether an address is this machine's is judged by its host —
+  an address its interfaces hold, or a name resolving only to such addresses — and, where a
+  lookup runs out of time, reads as this device: refused either way.
 - **Nothing signed goes to an address that does not answer as the server.** Forwarding, the
   relay's own calls (context, play/open lookups, played-at history), probing's signed context
   read and "stop managing"'s revoke all ask first; a mismatch gets the handshake question and
@@ -216,8 +233,9 @@ What stays is deliberate:
   pairing edge cases and request liveness, discovery, legacy import, key secrecy,
   `ConsoleDiagnosticsExposureTests` (a real `AppService` and log behind a relay, answered 404),
   and `RelayIdentityTests`: two real servers swapping one port under a real relay — after a
-  restart, while a page is open, found by a probe, answering as this device, at one of this
-  app's own ports, the server coming back — with a loopback-trusting and an unrestricted server
+  restart, while a page is open, found by a probe, answering as this device or as a copy of it
+  on another machine, at one of this app's own ports, the server coming back — with a
+  loopback-trusting and an unrestricted server
   taking the address, asserting the newcomer is only ever asked who it is; plus the right
   server behind a store that cannot be written (still forwarded to and probed Online, the
   write retried on its own) and one with remote access off (the page and the fetch say so).

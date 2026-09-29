@@ -321,6 +321,35 @@ public class RemoteConsolePairingTests
     }
 
     [TestMethod]
+    public async Task This_devices_own_identity_is_refused_even_when_telling_a_copy_apart_runs_out_of_time()
+    {
+        // Whether the address is this machine's only chooses the words: a name lookup that
+        // outlasts the claim's budget must not let the key through, filed under the server the
+        // request was made to.
+        await using var console = await ConsoleHarness.StartAsync(options: o =>
+            o.ReachesThisMachine = async (_, ct) =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(30), ct);
+                return false;
+            });
+        var desk = await Server("server-desk");
+        var filed = await console.Manager.PairAsync(desk.BaseAddress, null);
+        Assert.AreEqual(ManagedServerOutcome.AwaitingApproval, filed.Outcome);
+        var port = desk.Port;
+        await desk.DisposeAsync();
+        _servers.Remove(desk);
+        var taker = await FakeServer.TakeOverAsync(ConsoleHarness.OwnServerId, "Copy", port);
+        _servers.Add(taker);
+        taker.Approved = true;
+
+        await WaitUntilAsync(async () => !(await console.Manager.GetAsync(false)).Requests.Single().Active,
+            "the request to end");
+
+        Assert.AreEqual(ManagedServerOutcome.ThisDevice, (await console.Manager.GetAsync(false)).Requests.Single().Outcome);
+        Assert.AreEqual(0, console.Store.Read().Servers.Count);
+    }
+
+    [TestMethod]
     [DoNotParallelize]
     public async Task This_apps_own_ports_are_refused_before_anything_is_sent()
     {

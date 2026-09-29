@@ -29,11 +29,12 @@ public class UdpProbeClientTests
         // A server with several interfaces cannot know which of its addresses this
         // machine can route to. The datagram that arrived came back over one that works,
         // so that is the only address worth keeping.
+        // A documentation address (TEST-NET-1): never the address of the machine running this.
         var server = UdpProbeClient.Interpret(
-            Reply(new RemoteAccessServerDescriptor("abc", "My-PC", 34567, "2.4.0", 1), "192.168.1.5"));
+            Reply(new RemoteAccessServerDescriptor("abc", "My-PC", 34567, "2.4.0", 1), "192.0.2.5"));
 
         Assert.IsNotNull(server);
-        Assert.AreEqual("http://192.168.1.5:34567", server!.BaseAddress);
+        Assert.AreEqual("http://192.0.2.5:34567", server!.BaseAddress);
         Assert.AreEqual("My-PC", server.ServerName);
         Assert.IsFalse(server.IsThisMachine);
     }

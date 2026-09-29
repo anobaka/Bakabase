@@ -219,6 +219,18 @@ describe("devices this one manages", () => {
           state: ManagedServerState.WrongServer,
           answeredBy: { serverId: "this-device", name: "This Mac", isThisDevice: true },
         }),
+        server({
+          serverId: "studio-pc",
+          name: "Studio PC",
+          address: "http://192.168.1.8:34567",
+          state: ManagedServerState.WrongServer,
+          answeredBy: {
+            serverId: "this-device",
+            name: "Copy",
+            isThisDevice: false,
+            isSameIdentity: true,
+          },
+        }),
       ],
     });
     await renderServers();
@@ -238,6 +250,14 @@ describe("devices this one manages", () => {
 
     expect(within(desk).getByTestId("managed-server-wrong-server")).toHaveTextContent(
       "federation.servers.wrongServerThisDeviceTip Desk http://127.0.0.1:34570 federation.servers.add.discover",
+    );
+
+    // Another computer under this one's own identity: a copy of its data folder, not this
+    // computer, and not a mistake in the address.
+    const studio = screen.getByRole("article", { name: "Studio PC" });
+
+    expect(within(studio).getByTestId("managed-server-wrong-server")).toHaveTextContent(
+      "federation.servers.wrongServerSameIdentityTip Studio PC http://192.168.1.8:34567 Copy federation.servers.add.discover",
     );
     expect(managedServerApi.pair).not.toHaveBeenCalled();
     expect(managedServerApi.forget).not.toHaveBeenCalled();

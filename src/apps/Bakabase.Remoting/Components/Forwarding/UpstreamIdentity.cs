@@ -23,7 +23,14 @@ public enum UpstreamIdentityVerdict
     /// Nobody could be identified: nothing answered, what answered is not Bakabase, or it
     /// refused to say who it is.
     /// </summary>
-    Unconfirmed = 4
+    Unconfirmed = 4,
+
+    /// <summary>
+    /// Another machine answering with this device's own identity: a copy of this data
+    /// directory, most likely. Told "this device", the user would look for a mistake in the
+    /// address.
+    /// </summary>
+    SameIdentity = 5
 }
 
 /// <summary>What asking an address "who are you" found, for one managed server.</summary>
@@ -52,7 +59,8 @@ public sealed record UpstreamIdentityCheck(
     public bool IsConfirmed => Verdict == UpstreamIdentityVerdict.Confirmed;
 
     /// <summary>Somebody answered, and it is not the server this relay is for.</summary>
-    public bool IsMismatch => Verdict is UpstreamIdentityVerdict.WrongServer or UpstreamIdentityVerdict.ThisDevice;
+    public bool IsMismatch => Verdict is UpstreamIdentityVerdict.WrongServer or UpstreamIdentityVerdict.ThisDevice
+        or UpstreamIdentityVerdict.SameIdentity;
 
     /// <summary>The address as a person would read it: host and port.</summary>
     public string Authority =>
@@ -80,6 +88,12 @@ public sealed record UpstreamIdentityCheck(
             UpstreamIdentityVerdict.ThisDevice =>
                 $"{Authority} now reaches this computer itself, not {expected}. Nothing was sent to it. If " +
                 $"{expected} moved to another address, find it again on this computer's Devices and sharing page.",
+            UpstreamIdentityVerdict.SameIdentity =>
+                $"{Authority} now answers as another computer with this computer's own identity " +
+                $"({AnsweredByName ?? "unnamed"}) — a copy of its data folder, most likely — not {expected}. Nothing " +
+                "was sent to it. On the copy, choose Devices and sharing → Cloned or restored installation → Create " +
+                $"a new device identity. If {expected} moved to another address, find it again on this computer's " +
+                "Devices and sharing page.",
             UpstreamIdentityVerdict.Confirmed => $"{Authority} answers as {expected}.",
             // Worded as the relay's page words it (ConsoleUnavailablePage).
             _ when RemoteAccessDisabled =>
@@ -264,7 +278,12 @@ public sealed class UpstreamIdentity : IDisposable
             _logger.LogWarning(
                 "{Address} answers as {AnsweredByName} ({AnsweredById}{Self}), not {ServerId}: nothing is forwarded to it",
                 check.Address, check.AnsweredByName, check.AnsweredById,
-                check.Verdict == UpstreamIdentityVerdict.ThisDevice ? ", this device" : "", check.ServerId);
+                check.Verdict switch
+                {
+                    UpstreamIdentityVerdict.ThisDevice => ", this device",
+                    UpstreamIdentityVerdict.SameIdentity => ", a copy of this device",
+                    _ => ""
+                }, check.ServerId);
         }
         else if (check.IsConfirmed && before is {IsConfirmed: false})
         {
@@ -460,6 +479,13 @@ public static class UpstreamConnections
         };
 
     /// <summary>Opens a connection to <paramref name="endpoint"/> once the address is confirmed as the server's.</summary>
+    /// <remarks>
+    /// Confirmed per address as stored, not per IP: a stored name that resolves to several
+    /// addresses is raced here as the question was, and the two can land on different ones —
+    /// a confirmed address slower than <see cref="DualStackConnector.DefaultAttemptDelay"/> can
+    /// lose this connection to another the name also resolves to. Discovered servers are stored
+    /// as IP addresses, which have one; see server-switching.md.
+    /// </remarks>
     public static async ValueTask<Stream> ConnectAsync(UpstreamIdentity identity, DnsEndPoint endpoint,
         CancellationToken ct)
     {

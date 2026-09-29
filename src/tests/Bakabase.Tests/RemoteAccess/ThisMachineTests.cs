@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Modules.RemoteAccess.Components;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -67,5 +68,22 @@ public class ThisMachineTests
     public async Task A_name_that_does_not_resolve_is_not_known_to_be_this_machine()
     {
         Assert.IsFalse(await ThisMachine.ReachedByAsync(new Uri("http://no-such-device.invalid:34567")));
+        Assert.IsFalse(await ThisMachine.ReachedByAsync(new Uri("http://pc2.local:34567"),
+            (_, _) => Task.FromResult(Array.Empty<IPAddress>())));
+    }
+
+    [TestMethod]
+    public async Task A_name_is_this_machine_only_when_every_address_it_resolves_to_is()
+    {
+        // Another computer's name can resolve to an address this machine holds too — a VPN or
+        // proxy adapter's, a virtual machine host's — beside its own.
+        static Func<string, CancellationToken, Task<IPAddress[]>> To(params string[] addresses) =>
+            (_, _) => Task.FromResult(addresses.Select(IPAddress.Parse).ToArray());
+
+        var name = new Uri("http://pc2.local:34567");
+
+        Assert.IsTrue(await ThisMachine.ReachedByAsync(name, To("127.0.0.1", "::1")));
+        Assert.IsFalse(await ThisMachine.ReachedByAsync(name, To("127.0.0.1", Elsewhere)));
+        Assert.IsFalse(await ThisMachine.ReachedByAsync(name, To(Elsewhere, "127.0.0.1")));
     }
 }

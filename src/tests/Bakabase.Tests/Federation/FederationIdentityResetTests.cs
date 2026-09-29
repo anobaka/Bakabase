@@ -37,7 +37,7 @@ public sealed class FederationIdentityResetTests
         install.Connections.Track(paired, "hub-connection", () => hungUp = true);
         await install.Devices.RequestPairingAsync("Tablet", RemoteDevicePlatform.Android, null);
 
-        await install.ResetAsync(asNewNode: true);
+        await install.ResetAsync(asNewNode: true, replaceInstallIdentity: true);
 
         var serverId = await install.RemoteAccess.GetOrCreateServerIdAsync();
         Assert.AreNotEqual("copied-server-id", serverId);
@@ -54,6 +54,30 @@ public sealed class FederationIdentityResetTests
         // Nothing else about remote access changes.
         Assert.AreEqual(RemoteAccessMode.Enabled, install.RemoteAccess.GetEffectiveMode());
         Assert.IsTrue(install.RemoteAccess.GetRequirePairing());
+    }
+
+    [TestMethod]
+    public async Task Recovering_an_unreadable_sharing_state_keeps_the_installs_identity_and_its_paired_devices()
+    {
+        // Only the sharing state was lost. The devices that manage this one still expect this
+        // install's identity, and a new one would leave every one of them facing a stranger.
+        using var install = new Install("this-server-id");
+        var paired = await install.PairDeviceAsync();
+        var hungUp = false;
+        install.Connections.Track(paired, "hub-connection", () => hungUp = true);
+        await File.WriteAllTextAsync(install.FederationStateFile, "{broken");
+        var unreadable = await Assert.ThrowsExactlyAsync<FederationAccessException>(() => install.Identity.GetAsync());
+        Assert.AreEqual("SharingStateUnavailable", unreadable.ErrorCode);
+
+        await install.ResetAsync(asNewNode: true);
+
+        Assert.AreEqual("this-server-id", await install.RemoteAccess.GetOrCreateServerIdAsync());
+        Assert.AreEqual("this-server-id", install.Options.ServerId);
+        Assert.IsNotNull(install.Devices.Find(paired));
+        Assert.IsFalse(hungUp, "a paired device was hung up");
+
+        // A new node, of its own id, as before the install's identity could be replaced with it.
+        Assert.AreNotEqual("this-server-id", (await install.Identity.GetAsync()).NodeId);
     }
 
     [TestMethod]
@@ -125,8 +149,12 @@ public sealed class FederationIdentityResetTests
                 .DeviceId;
         }
 
-        public Task ResetAsync(bool asNewNode) =>
-            _controller.Reset(new FederationIdentityResetRequest(asNewNode), _browsing, Devices, Connections, default);
+        public string FederationStateFile =>
+            System.IO.Path.Combine(((IFederationDataDirectory) this).Ensure(), FederationStateStore.FileName);
+
+        public Task ResetAsync(bool asNewNode, bool replaceInstallIdentity = false) =>
+            _controller.Reset(new FederationIdentityResetRequest(asNewNode, replaceInstallIdentity), _browsing,
+                Devices, Connections, default);
 
         public void Dispose()
         {

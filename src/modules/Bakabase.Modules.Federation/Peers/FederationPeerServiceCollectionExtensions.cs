@@ -30,14 +30,18 @@ public static class FederationPeerServiceCollectionExtensions
                 UseProxy = false,
                 AllowAutoRedirect = false,
                 UseCookies = false,
-                // Resolving the name and connecting, together. A name's IPv4 and IPv6
-                // addresses are raced rather than tried one after another, so what is left to
-                // wait for is the name lookup — a Windows computer name can take seconds over
-                // LLMNR/NetBIOS — and one round trip. Kept under the 8 s every exchange runs
+                // Resolving the name and connecting, together: a Windows computer name can take
+                // seconds to resolve over LLMNR/NetBIOS. Kept under the 8 s every exchange runs
                 // within (PublicAsync, the handshake, a query's steps), so an unreachable peer
                 // is still reported as such.
                 ConnectTimeout = TimeSpan.FromSeconds(5),
-                ConnectCallback = DualStackConnector.ConnectCallback,
+                // Connecting alone, once resolved: a name's IPv4 and IPv6 addresses are raced
+                // rather than tried one after another, so one round trip is what is left to wait
+                // for. An address — what most peers and discovered devices are stored as — needs
+                // no lookup, so a peer that is switched off there is reported after these 2 s,
+                // not after the lookup's allowance too, on every verification that finds it off.
+                ConnectCallback = (context, ct) =>
+                    DualStackConnector.Default.ConnectAsync(context.DnsEndPoint, TimeSpan.FromSeconds(2), ct),
                 PooledConnectionLifetime = TimeSpan.FromMinutes(5)
             });
         services.TryAddSingleton<PeerSessionFactory>();

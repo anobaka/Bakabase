@@ -4903,6 +4903,7 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerAnswe
   serverId?: string;
   name?: string;
   isThisDevice: boolean;
+  isSameIdentity: boolean;
 }
 
 export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServerCandidateView {
@@ -5610,6 +5611,7 @@ export interface BakabaseServiceControllersFederationDeviceNameRequest {
 
 export interface BakabaseServiceControllersFederationIdentityResetRequest {
   asNewNode: boolean;
+  replaceInstallIdentity: boolean;
 }
 
 export interface BakabaseServiceControllersFederationPathMappingsRequest {

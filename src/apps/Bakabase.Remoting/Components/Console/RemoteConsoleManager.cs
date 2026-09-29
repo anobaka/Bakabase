@@ -586,10 +586,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         if (handshake.Server != null &&
             string.Equals(handshake.Server.Id, await _remoteAccess.GetOrCreateServerIdAsync(), StringComparison.Ordinal))
         {
-            return RemoteAddressInput.Parse(address, out var root) == RemoteAddressProblem.None &&
-                   !await _options.ReachesThisMachine(root!, ct)
-                ? ManagedServerOutcome.SameIdentity
-                : ManagedServerOutcome.ThisDevice;
+            return await IsCopyAtAsync(address, ct) ? ManagedServerOutcome.SameIdentity : ManagedServerOutcome.ThisDevice;
         }
 
         return handshake.Outcome switch
@@ -605,6 +602,33 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             ServerHandshakeOutcome.PortMissing => ManagedServerOutcome.PortMissing,
             _ => ManagedServerOutcome.NotBakabase
         };
+    }
+
+    /// <summary>
+    /// Whether <paramref name="address"/>, which answered with this install's own id, is on
+    /// another machine — a copy of this data directory — rather than this device.
+    /// </summary>
+    /// <remarks>
+    /// Refused either way; this only chooses the words. So it never keeps a refusal from being
+    /// made: an address it cannot read, or a name whose lookup runs out of time — in whatever
+    /// budget the caller is spending — reads as this device, as every such answer did before
+    /// the two were told apart.
+    /// </remarks>
+    private async Task<bool> IsCopyAtAsync(string address, CancellationToken ct)
+    {
+        if (RemoteAddressInput.Parse(address, out var root) != RemoteAddressProblem.None)
+        {
+            return false;
+        }
+
+        try
+        {
+            return !await _options.ReachesThisMachine(root!, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
     }
 
     private static ManagedServerOutcome Map(ClientPairingOutcome outcome) => outcome switch
@@ -819,7 +843,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         try
         {
             var handshake = await HandshakeAsync(entry.BaseAddress, clock, budget.Token);
-            var identity = await IdentityOfAsync(entry.ServerId, entry.BaseAddress, handshake, startedAt);
+            var identity = await IdentityOfAsync(entry.ServerId, entry.BaseAddress, handshake, startedAt,
+                budget.Token);
             var server = handshake.Server;
 
             // A running relay acts on this at once — stops forwarding, or starts again —
@@ -1175,7 +1200,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     {
         var startedAt = DateTimeOffset.UtcNow;
         var handshake = await HandshakeAsync(address, ClockFor(serverId), ct);
-        var check = await IdentityOfAsync(serverId, address, handshake, startedAt);
+        var check = await IdentityOfAsync(serverId, address, handshake, startedAt, ct);
 
         var entry = _store.Find(serverId);
 
@@ -1225,7 +1250,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     /// always was.
     /// </remarks>
     private async Task<UpstreamIdentityCheck> IdentityOfAsync(string serverId, string address,
-        ServerHandshakeResult handshake, DateTimeOffset startedAt)
+        ServerHandshakeResult handshake, DateTimeOffset startedAt, CancellationToken ct)
     {
         if (handshake.Outcome == ServerHandshakeOutcome.SelfAddress)
         {
@@ -1237,9 +1262,13 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
         if (handshake.Server is { } server)
         {
+            // This install's own id is this device only at an address of this machine;
+            // anywhere else it is a copy of this data directory (see ClassifyAsync).
             var verdict =
                 string.Equals(server.Id, await _remoteAccess.GetOrCreateServerIdAsync(), StringComparison.Ordinal)
-                    ? UpstreamIdentityVerdict.ThisDevice
+                    ? await IsCopyAtAsync(address, ct)
+                        ? UpstreamIdentityVerdict.SameIdentity
+                        : UpstreamIdentityVerdict.ThisDevice
                     : string.Equals(server.Id, serverId, StringComparison.Ordinal)
                         ? UpstreamIdentityVerdict.Confirmed
                         : UpstreamIdentityVerdict.WrongServer;
@@ -1275,7 +1304,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         // whoever answered in its place.
         new(ManagedServerState.WrongServer, previous?.Mode, previous?.AppVersion,
             new ManagedServerAnswerView(check.AnsweredById, check.AnsweredByName,
-                check.Verdict == UpstreamIdentityVerdict.ThisDevice))
+                check.Verdict == UpstreamIdentityVerdict.ThisDevice,
+                check.Verdict == UpstreamIdentityVerdict.SameIdentity))
         {
             Kind = previous?.Kind,
             Platform = previous?.Platform
@@ -1306,7 +1336,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             // caller as local would carry it out.
             var identity = await IdentityOfAsync(entry.ServerId, entry.BaseAddress,
                 await HandshakeAsync(entry.BaseAddress, ClockFor(entry.ServerId), budget.Token),
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UtcNow, budget.Token);
 
             if (!identity.IsConfirmed)
             {

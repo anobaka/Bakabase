@@ -17,10 +17,15 @@ export const federationPeerApi = {
 
     return result;
   },
-  resetIdentity: async (asNewNode: boolean) => {
+  /**
+   * `replaceInstallIdentity` (with `asNewNode`) is for a copied installation: it also replaces
+   * the install's own identity and forgets the devices paired under the old one. Recovering an
+   * unreadable sharing state leaves it off and keeps both.
+   */
+  resetIdentity: async (asNewNode: boolean, replaceInstallIdentity = false) => {
     const result = await federationRequest<unknown>(
       `${prefix}/identity/reset`,
-      jsonBody({ asNewNode }),
+      jsonBody({ asNewNode, replaceInstallIdentity }),
     );
 
     notifyBrowsingChanged(false);

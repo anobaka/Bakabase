@@ -34,7 +34,8 @@ endpoints and confirmations.
 
 - **Records are merged on evidence only** (`map/graph.ts`). The install id first and always:
   a peer's NodeId is the install's remote-access ServerId (`FederationNodeIdSource`; "Create a
-  new device identity" replaces both together, and only a node reset by an older build differs),
+  new device identity" replaces both together; only a node reset by an older build, or one
+  that replaced an unreadable sharing state, differs),
   so a peer, a managed server and a beacon with one id are one device — even while the server's
   address answers as another. An address (never a
   `WrongServer` address) only where one side carries no id at all (a device that manages this
@@ -190,7 +191,9 @@ endpoints and confirmations.
   `DualStackConnector` (`Bakabase.Modules.RemoteAccess`): IPv4 first, the next address beside
   it after 250 ms, first to connect wins. A server listens on IPv4 only, and Windows resolves a
   computer name IPv6-first; tried one after another, a silently dropped IPv6 address spent the
-  whole connect budget. Never go back to a plain `Socket.ConnectAsync(DnsEndPoint)`.
+  whole connect budget. Never go back to a plain `Socket.ConnectAsync(DnsEndPoint)`. A peer
+  connection gets 2 s once its name is resolved and 5 s in all, lookup included, so a
+  switched-off peer stored as an address is still reported after 2 s.
 
 ## Changing the protocol
 
@@ -203,8 +206,10 @@ after any DTO/endpoint change.
 
 `BAKABASE_FEDERATION_SHARING=true` turns sharing on at startup; `BAKABASE_NODE_NAME` names the
 node; `--federation-invite-on-start` prints a one-time code. The running instance is managed with
-`docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|invite|approve|reject|revoke>`,
-which only calls its loopback API.
+`docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|invite|approve|reject|revoke|new-identity>`,
+which only calls its loopback API. `new-identity` is the devices page's "Create a new device
+identity", for a copied data directory: a headless server's own UI is only ever reached from
+another device, and never reaches `/federation/local/*`.
 
 ## Tests
 

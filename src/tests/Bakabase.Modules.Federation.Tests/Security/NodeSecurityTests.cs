@@ -38,11 +38,16 @@ public sealed class NodeSecurityTests
         Assert.AreEqual(node.Source.Id, first.NodeId);
 
         node.Source.Id = "replaced-server-id";
-        var clone = await node.Peers.ResetAsNewNodeAsync();
+        var clone = await node.Peers.ResetAsNewNodeAsync(inheritHostIdentity: true);
 
         Assert.AreEqual("replaced-server-id", clone.NodeId);
         Assert.AreNotEqual(first.LibraryEpoch, clone.LibraryEpoch);
         Assert.AreEqual(clone, await new NodeIdentityProvider(new FederationStateStore(node.Directory, node.Source)).GetAsync());
+
+        // A host that kept its identity — an unreadable state recovered — gives the node nothing.
+        var recovered = await node.Peers.ResetAsNewNodeAsync();
+        Assert.AreNotEqual("replaced-server-id", recovered.NodeId);
+        Assert.AreNotEqual(clone.LibraryEpoch, recovered.LibraryEpoch);
     }
 
     [TestMethod]

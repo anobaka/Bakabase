@@ -324,6 +324,59 @@ public class RelayIdentityTests
     }
 
     [TestMethod]
+    public async Task An_address_where_a_copy_of_this_device_now_answers_is_refused_as_a_copy()
+    {
+        // This device's own identity from an address that is not this machine's: its data
+        // directory copied to another computer — which then took the desk's address, say, after
+        // this device already managed the desk. "This computer itself" would send the user
+        // looking for a mistake in an address that is right.
+        var root = _console.Root;
+        await _console.StopAsync();
+        _console = await ConsoleHarness.StartAsync(root, options: o =>
+        {
+            Options(o);
+            o.ReachesThisMachine = (_, _) => Task.FromResult(false);
+        });
+
+        var port = await OpenAsync();
+        var copy = await ReplaceDeskAsync(ConsoleHarness.OwnServerId, "Copy", s => s.TrustsLoopback = true);
+
+        await PastTheConnectionWindow();
+
+        // The relay refuses it, and says what it is.
+        var response = await ConsoleHarness.SendToRelayAsync(port, "/resource/search");
+        var message = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement
+            .GetProperty("message").GetString()!;
+
+        Assert.AreEqual(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.AreEqual(nameof(ClientForwardingFailure.WrongServer), FailureOf(response));
+        StringAssert.Contains(message, "with this computer's own identity (Copy)");
+        StringAssert.Contains(message, "not Desk");
+        Assert.IsFalse(message.Contains("reaches this computer itself", StringComparison.Ordinal), message);
+        CollectionAssert.AreEqual(Array.Empty<string>(), BeyondTheQuestion(copy), string.Join("\n", copy.Requests));
+
+        // So does the listing, and a probe of it.
+        var expected = new ManagedServerAnswerView(ConsoleHarness.OwnServerId, "Copy", false, true);
+        var listed = (await _console.Manager.GetAsync(false)).Servers.Single();
+        Assert.AreEqual(ManagedServerState.WrongServer, listed.State);
+        Assert.AreEqual(expected, listed.AnsweredBy);
+
+        listed = (await _console.Manager.GetAsync(true)).Servers.Single();
+        Assert.AreEqual(ManagedServerState.WrongServer, listed.State);
+        Assert.AreEqual(expected, listed.AnsweredBy);
+        Assert.AreEqual((int) ManagedServerState.WrongServer, await SwitcherStateAsync(port));
+
+        // And the page a navigation there gets.
+        var html = await (await ConsoleHarness.NavigateAsync($"http://127.0.0.1:{port}/", "same-origin")).Content
+            .ReadAsStringAsync();
+        StringAssert.Contains(html, "with this device's own identity (Copy)");
+        StringAssert.Contains(html, "与本机设备身份相同的电脑（Copy）");
+
+        CollectionAssert.AreEqual(Array.Empty<string>(), BeyondTheQuestion(copy), string.Join("\n", copy.Requests));
+        Assert.AreEqual(_deskAddress, _console.Store.Find("server-desk")!.BaseAddress);
+    }
+
+    [TestMethod]
     public async Task An_address_that_is_one_of_this_apps_own_ports_is_refused_without_a_request()
     {
         // The stored address is this app's own server port now — the case where the desk's
