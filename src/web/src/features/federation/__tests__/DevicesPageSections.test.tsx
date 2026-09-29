@@ -12,7 +12,7 @@ import { useFederationStatus } from "../hooks/useFederationStatus";
 import { REVEAL_HIGHLIGHT_MS } from "../hooks/useSectionReveal";
 
 import BApi from "@/sdk/BApi";
-import { ClientMode, RemoteAccessMode } from "@/sdk/constants";
+import { ClientMode, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
 
 /*
@@ -537,5 +537,146 @@ describe("the management section keeps up with the page around it", () => {
     fireEvent.click(screen.getByText("again"));
     expect(await within(accessSection()).findByText("Laptop")).toBeInTheDocument();
     expect(settingsReads()).toBe(before + 1);
+  });
+});
+
+describe("the devices page's forms", () => {
+  const listed = (state: ManagedServerState): ManagedServersView => ({
+    available: true,
+    servers: [
+      {
+        serverId: "nas",
+        name: "NAS",
+        address: "http://192.168.1.5:34567",
+        pairedAt: "2026-09-01T00:00:00Z",
+        pathMappings: [],
+        state,
+        answeredBy:
+          state === ManagedServerState.WrongServer
+            ? { serverId: "other", name: "Other", isThisDevice: false }
+            : null,
+      },
+    ],
+    requests: [],
+  });
+
+  it("keeps the add form open while a managed server has to be found again", async () => {
+    // The card's tip sends the reader to the search in the add form: it has to be there.
+    vi.mocked(managedServerApi.list).mockResolvedValue(listed(ManagedServerState.WrongServer));
+    renderPage("/federation/devices?section=servers");
+
+    expect(await screen.findByTestId("managed-server-wrong-server")).toHaveTextContent(
+      "federation.servers.wrongServerTip",
+    );
+    expect(
+      screen.getByRole("button", { name: "federation.servers.add.discover" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("federation.servers.add.address")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "federation.servers.add.title" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("moves the keyboard into the add form opened from its button, on Management", async () => {
+    vi.mocked(managedServerApi.list).mockResolvedValue(listed(ManagedServerState.Online));
+    renderPage("/federation/devices?section=manage");
+    const toggle = await screen.findByRole("button", { name: "federation.servers.add.title" });
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    toggle.focus();
+    fireEvent.click(toggle);
+    // Not the section's heading above the cards: the field the reader came to fill in.
+    const field = screen.getByLabelText("federation.servers.add.address");
+
+    await waitFor(() => expect(field).toHaveFocus());
+    await act(async () => new Promise((done) => setTimeout(done, 10)));
+    expect(field).toHaveFocus();
+  });
+
+  it("does the same on Library sharing", async () => {
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: {
+        ...status,
+        peers: [
+          {
+            nodeId: "nas",
+            label: "NAS",
+            address: "http://192.168.1.5:34567",
+            enabled: true,
+            connectionState: "Online",
+            outboundGrant: { grantId: "grant", revision: 1 },
+            pathMappings: [],
+          },
+        ],
+      },
+      loading: false,
+      error: undefined,
+      refresh: vi.fn().mockResolvedValue(undefined),
+    });
+    vi.mocked(federationPeerApi.mappingRoots).mockResolvedValue([]);
+    renderPage("/federation/devices?section=sharing");
+    const toggle = await screen.findByRole("button", { name: "federation.devices.add" });
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    toggle.focus();
+    fireEvent.click(toggle);
+    const field = screen.getByLabelText("federation.pair.address");
+
+    await waitFor(() => expect(field).toHaveFocus());
+    await act(async () => new Promise((done) => setTimeout(done, 10)));
+    expect(field).toHaveFocus();
+  });
+
+  describe("the address beside a share code", () => {
+    const sharing = () =>
+      vi.mocked(useFederationStatus).mockReturnValue({
+        status: { ...status, sharingEnabled: true, remoteAccessMode: RemoteAccessMode.Enabled },
+        loading: false,
+        error: undefined,
+        refresh: vi.fn().mockResolvedValue(undefined),
+      });
+
+    it("says it is loading while remote access's settings are on their way, never that none was found", async () => {
+      const settings = deferred<unknown>();
+
+      sharing();
+      vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockReturnValue(
+        settings.promise as never,
+      );
+      renderPage("/federation/devices?section=share");
+      const list = await screen.findByTestId("device-addresses");
+
+      expect(list).toHaveTextContent("federation.loading");
+      expect(list).not.toHaveTextContent("federation.devices.addresses.none");
+      const answer = settingsResponse(RemoteAccessMode.Enabled, []);
+
+      await act(async () =>
+        settings.resolve({
+          ...answer,
+          data: {
+            ...answer.data,
+            addresses: [{ url: "http://192.168.1.2:34567", interfaceName: "en0" }],
+          },
+        }),
+      );
+      expect(await within(list).findByText("http://192.168.1.2:34567")).toBeInTheDocument();
+    });
+
+    it("says why the settings could not be read, with a way to try again", async () => {
+      sharing();
+      vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockRejectedValue(new Error("down"));
+      renderPage("/federation/devices?section=share");
+      const list = await screen.findByTestId("device-addresses");
+
+      await waitFor(() => expect(within(list).getByRole("alert")).toBeInTheDocument());
+      expect(list).not.toHaveTextContent("federation.devices.addresses.none");
+      vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockResolvedValue(
+        settingsResponse() as never,
+      );
+      const before = settingsReads();
+
+      fireEvent.click(within(list).getByRole("button", { name: "federation.retry" }));
+      await waitFor(() => expect(settingsReads()).toBe(before + 1));
+    });
   });
 });

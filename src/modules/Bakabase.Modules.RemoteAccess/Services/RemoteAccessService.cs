@@ -35,13 +35,20 @@ public class RemoteAccessService(
             return [];
         }
 
+        var hosts = LocalNetworkAddresses.EnumerateIPv4Details(logger)
+            .Select(a => (a.Address, a.InterfaceName,
+                Kind: RemoteAccessAddressClassifier.Classify(a.Address, a.InterfaceName, a.Description,
+                    a.HasGateway), a.HasGateway))
+            .ToList();
+        var recommended = RemoteAccessAddressClassifier.Recommend(hosts.Select(h => (h.Kind, h.HasGateway)).ToList());
         var addresses = new List<RemoteAccessAddress>();
 
-        foreach (var (ip, interfaceName) in LocalNetworkAddresses.EnumerateIPv4(logger))
+        for (var i = 0; i < hosts.Count; i++)
         {
+            var (ip, interfaceName, kind, _) = hosts[i];
             foreach (var port in ports)
             {
-                addresses.Add(new RemoteAccessAddress($"http://{ip}:{port}", interfaceName));
+                addresses.Add(new RemoteAccessAddress($"http://{ip}:{port}", interfaceName, kind, i == recommended));
             }
         }
 

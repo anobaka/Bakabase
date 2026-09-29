@@ -92,23 +92,24 @@ public sealed record UpstreamIdentityCheck(
             UpstreamIdentityVerdict.WrongServer =>
                 $"{Authority} now answers as another server ({AnsweredByName ?? AnsweredById ?? "unnamed"}), " +
                 $"not {expected}. Nothing was sent to it. If {expected} moved to another address, find it " +
-                "again on this computer's Devices and sharing page.",
+                "again on this device's Devices and sharing page, under Management.",
             UpstreamIdentityVerdict.ThisDevice =>
-                $"{Authority} now reaches this computer itself, not {expected}. Nothing was sent to it. If " +
-                $"{expected} moved to another address, find it again on this computer's Devices and sharing page.",
+                $"{Authority} now reaches this device itself, not {expected}. Nothing was sent to it. If " +
+                $"{expected} moved to another address, find it again on this device's Devices and sharing page, " +
+                "under Management.",
             UpstreamIdentityVerdict.SameIdentity =>
-                $"{Authority} now answers as another computer with this computer's own identity " +
+                $"{Authority} now answers as another computer with this device's own identity " +
                 $"({AnsweredByName ?? "unnamed"}) — a copy of its data folder, most likely — not {expected}. Nothing " +
-                "was sent to it. On the copy, choose Devices and sharing → Cloned or restored installation → Create " +
-                "a new device identity (on a server without a window, run “dotnet Bakabase.Service.dll federation " +
-                $"new-identity” in it). If {expected} moved to another address, find it again on this computer's " +
-                "Devices and sharing page.",
+                "was sent to it. On the copy, open Devices and sharing → Advanced → After copying or restoring data " +
+                "and choose Make this a new device (on a server without a window, run “dotnet Bakabase.Service.dll " +
+                $"federation new-identity” in it). If {expected} moved to another address, find it again on this " +
+                "device's Devices and sharing page, under Management.",
             UpstreamIdentityVerdict.Confirmed => $"{Authority} answers as {expected}.",
             // Worded as the relay's page words it (ConsoleUnavailablePage).
             _ when RemoteAccessDisabled =>
                 $"Remote access is turned off at {Authority}, so it cannot confirm that it is {expected}, and " +
-                "nothing was sent to it. Turn it on in Bakabase on that device, under “Let other devices manage " +
-                "this device”, then try again.",
+                "nothing was sent to it. Turn it on in Bakabase on that device, under Devices and sharing → " +
+                "Management → Who may manage this device, then try again.",
             _ =>
                 $"{expected} is not answering at {Authority}{(Detail == null ? "" : $" ({Detail})")}. Check " +
                 "that it is running and reachable."

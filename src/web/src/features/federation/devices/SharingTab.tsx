@@ -9,6 +9,7 @@ import { AiOutlinePlus } from "react-icons/ai";
 import { buttonClass, fieldClass, panelClass, primaryClass } from "../components/common";
 import InviteBlock from "../components/InviteBlock";
 import PeerPathMappings from "../components/PeerPathMappings";
+import { useFocusOnOpen } from "../hooks/useFocusOnOpen";
 import { revealClass } from "../hooks/useSectionReveal";
 import { federationPeerApi } from "../peerApi";
 import { devicesRoute } from "../switching";
@@ -44,6 +45,7 @@ export default function SharingTab() {
   } = useDevicesPage();
   const { status, access } = data;
   const [connectOpened, setConnectOpened] = useState(false);
+  const connectFocus = useFocusOnOpen<HTMLInputElement>(connectOpened);
 
   if (!status) {
     return (
@@ -166,7 +168,7 @@ export default function SharingTab() {
               )}
             </button>
             <Link className="text-xs text-primary underline" to="/federation">
-              {t("federation.title")}
+              {t("federation.browsing.open")}
             </Link>
           </div>
         </div>
@@ -278,7 +280,15 @@ export default function SharingTab() {
           tabIndex={-1}
         >
           {!connectOpen ? (
-            <button className={buttonClass} type="button" onClick={() => setConnectOpened(true)}>
+            <button
+              aria-expanded={false}
+              className={buttonClass}
+              type="button"
+              onClick={() => {
+                connectFocus.request();
+                setConnectOpened(true);
+              }}
+            >
               <AiOutlinePlus aria-hidden />
               {t("federation.devices.add")}
             </button>
@@ -305,6 +315,7 @@ export default function SharingTab() {
                 <label className="space-y-1 text-sm">
                   <span>{t("federation.pair.address")}</span>
                   <input
+                    ref={connectFocus.target}
                     required
                     className={fieldClass}
                     placeholder="192.168.1.5:34567"
@@ -465,9 +476,11 @@ export default function SharingTab() {
                 disabled={busy}
                 type="button"
                 onClick={() =>
+                  // Sharing is already on: this only opens remote access, which also lets the
+                  // devices already paired to manage this one back in, and says so.
                   confirm(
                     t("federation.sharing.enableRemote"),
-                    t("federation.sharing.confirmWithRemote"),
+                    t("federation.sharing.enableRemoteConfirm"),
                     () => federationPeerApi.sharing(true, true),
                   )
                 }
@@ -558,7 +571,10 @@ export default function SharingTab() {
                 {t("federation.sharing.issueCode")}
               </button>
             }
+            // Read with remote access's settings, which may still be on their way or have
+            // failed: never "no address found" for either.
             addresses={access?.addresses}
+            addressesError={access ? undefined : data.accessError}
             code={inviteValid ? invite.code : undefined}
             context="sharing"
             status={
@@ -575,6 +591,7 @@ export default function SharingTab() {
             }
             target={target}
             tip={t("federation.sharing.codeTip")}
+            onRetryAddresses={() => void data.reload(["access"])}
           />
         )}
 

@@ -4,6 +4,8 @@ import { classifyAddress, deviceAddresses } from "../devices/addresses";
 import { devicesAnchors, devicesTabs, resolveSection } from "../devices/sections";
 import { devicesRoute } from "../switching";
 
+import { RemoteAccessAddressKind } from "@/sdk/constants";
+
 /*
  * `?section=` is a contract with things outside the page — the Service's notifications,
  * the window's switcher, the configuration page, the map, the library and the help — so
@@ -72,6 +74,8 @@ describe("which of this device's addresses to type", () => {
     ["172.17.0.1", "docker0", "virtual"],
     ["172.28.16.1", "vEthernet (WSL)", "virtual"],
     ["192.168.56.1", "VirtualBox Host-Only Network", "virtual"],
+    ["10.211.55.2", "vnic0", "virtual"],
+    ["10.147.17.3", "ZeroTier One [8056c2e21c000001]", "vpn"],
     ["8.8.8.8", "en0", "unknown"],
   ] as const)("%s on %s is %s", (host, interfaceName, kind) => {
     expect(classifyAddress(host, interfaceName)).toBe(kind);
@@ -95,6 +99,56 @@ describe("which of this device's addresses to type", () => {
       ["http://198.18.0.1:34567", "virtual", false],
       ["http://169.254.3.4:34567", "linkLocal", false],
     ]);
+  });
+
+  it("takes the server's kinds and recommendation over its own guess", () => {
+    // Only the server sees the gateway: an unnamed host-only adapter listed first is not the
+    // network a router serves, and the server says which one is.
+    const rows = deviceAddresses([
+      {
+        url: "http://10.37.129.2:34567",
+        interfaceName: "en8",
+        kind: RemoteAccessAddressKind.Unknown,
+        recommended: false,
+      },
+      {
+        url: "http://192.168.1.5:34567",
+        interfaceName: "en0",
+        kind: RemoteAccessAddressKind.Lan,
+        recommended: true,
+      },
+      {
+        url: "http://192.168.1.5:5000",
+        interfaceName: "en0",
+        kind: RemoteAccessAddressKind.Lan,
+        recommended: true,
+      },
+      {
+        url: "http://10.0.0.9:34567",
+        interfaceName: "en1",
+        kind: RemoteAccessAddressKind.Virtual,
+        recommended: false,
+      },
+    ]);
+
+    expect(rows.map((row) => [row.url, row.kind, row.recommended])).toEqual([
+      ["http://192.168.1.5:34567", "lan", true],
+      ["http://10.37.129.2:34567", "unknown", false],
+      ["http://10.0.0.9:34567", "virtual", false],
+    ]);
+  });
+
+  it("recommends nothing the server did not, even a LAN address", () => {
+    const rows = deviceAddresses([
+      {
+        url: "http://192.168.1.5:34567",
+        interfaceName: "en0",
+        kind: RemoteAccessAddressKind.Lan,
+        recommended: false,
+      },
+    ]);
+
+    expect(rows.map((row) => row.recommended)).toEqual([false]);
   });
 
   it("recommends nothing when no address is on a local network", () => {

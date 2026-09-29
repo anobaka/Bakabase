@@ -90,11 +90,39 @@ public record RemoteAccessContext
 }
 
 /// <summary>
+/// What kind of network an address of this machine is on, as far as this machine can tell
+/// (<c>RemoteAccessAddressClassifier</c>).
+/// </summary>
+public enum RemoteAccessAddressKind
+{
+    /// <summary>Nothing says: a public address, or a private one with no way out.</summary>
+    Unknown = 0,
+
+    /// <summary>A private network a router serves: what another device at home types.</summary>
+    Lan = 1,
+
+    /// <summary>A VPN or overlay network: reachable from the devices on it.</summary>
+    Vpn = 2,
+
+    /// <summary>A bridge, container network, hypervisor or proxy adapter: no other device.</summary>
+    Virtual = 3,
+
+    /// <summary>An address the interface gave itself for want of one: no other device.</summary>
+    LinkLocal = 4
+}
+
+/// <summary>
 /// One address a phone or another PC can type to reach this Bakabase.
 /// </summary>
 /// <param name="Url">e.g. <c>http://192.168.1.5:34567</c>.</param>
 /// <param name="InterfaceName">The network interface it belongs to, to help pick.</param>
-public record RemoteAccessAddress(string Url, string InterfaceName);
+/// <param name="Kind">What kind of network it is on.</param>
+/// <param name="Recommended">
+/// The one to suggest: every port of the first LAN address whose interface has a default
+/// gateway (else of the first LAN address).
+/// </param>
+public record RemoteAccessAddress(string Url, string InterfaceName,
+    RemoteAccessAddressKind Kind = RemoteAccessAddressKind.Unknown, bool Recommended = false);
 
 /// <summary>
 /// What this install tells other devices about itself — the payload behind the

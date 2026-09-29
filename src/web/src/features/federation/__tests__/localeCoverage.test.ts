@@ -182,6 +182,9 @@ describe("locales for the multi-device management screens", () => {
         "federation.identity.restoreWarning",
         "federation.recovery.reset",
         "federation.sharing.enableRemote",
+        "federation.sharing.enableRemoteConfirm",
+        "federation.browsing.open",
+        "federation.devices.id.copy",
       ]),
     );
   });

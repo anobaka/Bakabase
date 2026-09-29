@@ -315,7 +315,7 @@ public class RelayIdentityTests
 
         Assert.AreEqual(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.AreEqual(nameof(ClientForwardingFailure.WrongServer), FailureOf(response));
-        StringAssert.Contains(message, "now reaches this computer itself, not Desk");
+        StringAssert.Contains(message, "now reaches this device itself, not Desk");
         CollectionAssert.AreEqual(Array.Empty<string>(), BeyondTheQuestion(self), string.Join("\n", self.Requests));
 
         var listed = (await _console.Manager.GetAsync(false)).Servers.Single();
@@ -350,11 +350,13 @@ public class RelayIdentityTests
 
         Assert.AreEqual(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.AreEqual(nameof(ClientForwardingFailure.WrongServer), FailureOf(response));
-        StringAssert.Contains(message, "with this computer's own identity (Copy)");
+        StringAssert.Contains(message, "with this device's own identity (Copy)");
+        StringAssert.Contains(message, "Devices and sharing → Advanced → After copying or restoring data");
+        StringAssert.Contains(message, "Make this a new device");
         StringAssert.Contains(message, "not Desk");
         // A copy can be a server without a window, whose own page never offers the reset.
         StringAssert.Contains(message, "run “dotnet Bakabase.Service.dll federation new-identity” in it");
-        Assert.IsFalse(message.Contains("reaches this computer itself", StringComparison.Ordinal), message);
+        Assert.IsFalse(message.Contains("reaches this device itself", StringComparison.Ordinal), message);
         CollectionAssert.AreEqual(Array.Empty<string>(), BeyondTheQuestion(copy), string.Join("\n", copy.Requests));
 
         // So does the listing, and a probe of it.
@@ -375,6 +377,9 @@ public class RelayIdentityTests
         StringAssert.Contains(html, "run “dotnet Bakabase.Service.dll federation new-identity” in it");
         StringAssert.Contains(html, "与本机设备身份相同的电脑（Copy）");
         StringAssert.Contains(html, "请在其中运行“dotnet Bakabase.Service.dll federation new-identity”");
+        // The labels the devices page shows today, in both languages.
+        StringAssert.Contains(html, "Devices and sharing → Advanced → After copying or restoring data");
+        StringAssert.Contains(html, "“设备与分享 → 高级 → 复制或恢复数据后”，选择“设为新设备”");
 
         CollectionAssert.AreEqual(Array.Empty<string>(), BeyondTheQuestion(copy), string.Join("\n", copy.Requests));
         Assert.AreEqual(_deskAddress, _console.Store.Find("server-desk")!.BaseAddress);
@@ -405,7 +410,7 @@ public class RelayIdentityTests
             .GetProperty("message").GetString()!;
 
         Assert.AreEqual(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        StringAssert.Contains(message, "reaches this computer itself, not Desk");
+        StringAssert.Contains(message, "reaches this device itself, not Desk");
         Assert.IsFalse(message.Contains("own identity", StringComparison.Ordinal), message);
 
         var listed = (await _console.Manager.GetAsync(true)).Servers.Single();
@@ -623,9 +628,9 @@ public class RelayIdentityTests
         Assert.AreEqual(HttpStatusCode.ServiceUnavailable, page.StatusCode);
         Assert.AreEqual("text/html; charset=utf-8", page.Content.Headers.ContentType!.ToString());
         StringAssert.Contains(html, $"Remote access is turned off at 127.0.0.1:{_deskPort}");
-        StringAssert.Contains(html, "under “Let other devices manage this device”");
+        StringAssert.Contains(html, "under Devices and sharing → Management → Who may manage this device");
         StringAssert.Contains(html, $"127.0.0.1:{_deskPort} 已关闭远程访问");
-        StringAssert.Contains(html, "开启“允许其他设备管理本机”");
+        StringAssert.Contains(html, "“设备与分享 → 管理 → 谁可以管理本机”，开启远程访问");
         Assert.IsFalse(html.Contains("is running", StringComparison.Ordinal), html);
         Assert.IsFalse(html.Contains("正在运行", StringComparison.Ordinal), html);
 
@@ -637,7 +642,7 @@ public class RelayIdentityTests
         Assert.AreEqual(HttpStatusCode.ServiceUnavailable, fetch.StatusCode);
         Assert.AreEqual(nameof(ClientForwardingFailure.ServerUnreachable), FailureOf(fetch));
         StringAssert.Contains(message, $"Remote access is turned off at 127.0.0.1:{_deskPort}");
-        StringAssert.Contains(message, "under “Let other devices manage this device”");
+        StringAssert.Contains(message, "under Devices and sharing → Management → Who may manage this device");
         Assert.IsFalse(message.Contains("is running", StringComparison.Ordinal), message);
 
         // Asked who it is, and nothing else.

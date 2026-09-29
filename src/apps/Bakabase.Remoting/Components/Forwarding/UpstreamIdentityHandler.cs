@@ -89,7 +89,7 @@ public sealed class UpstreamIdentityHandler(UpstreamIdentity identity) : Delegat
             Content = new StringContent(JsonSerializer.Serialize(new
             {
                 code = (int) HttpStatusCode.ServiceUnavailable,
-                message = check?.Describe(null) ?? "This computer no longer manages this server."
+                message = check?.Describe(null) ?? "This device no longer manages this server."
             }), Encoding.UTF8, "application/json")
         };
 

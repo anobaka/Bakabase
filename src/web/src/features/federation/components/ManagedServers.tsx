@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineCloudServer, AiOutlineLoading3Quarters, AiOutlinePlus } from "react-icons/ai";
 
+import { useFocusOnOpen } from "../hooks/useFocusOnOpen";
 import { revealClass } from "../hooks/useSectionReveal";
 import { managedServerApi } from "../serverApi";
 import { CONFIGURATION_ROUTE, openManagedServer } from "../switching";
@@ -164,7 +165,8 @@ export interface ManagedServersProps {
   headingLevel?: 2 | 3;
   /**
    * With servers listed, the add form waits behind a button; `addRequested` (a link that
-   * asked for it) opens it. Without this the form is always open.
+   * asked for it) opens it, and so does a server that has to be found or added again (its
+   * card's tip points at the search in the form). Without this the form is always open.
    */
   collapseAdd?: boolean;
   addRequested?: boolean;
@@ -213,6 +215,7 @@ export function ManagedServersPanel({
   const [address, setAddress] = useState("");
   const [code, setCode] = useState("");
   const [addOpened, setAddOpened] = useState(false);
+  const addFocus = useFocusOnOpen<HTMLInputElement>(addOpened);
   const [discovered, setDiscovered] = useState<ManagedServerCandidate[]>();
   const [discovering, setDiscovering] = useState(false);
   const [discoverError, setDiscoverError] = useState<Error>();
@@ -380,7 +383,14 @@ export function ManagedServersPanel({
   // The server marks what it already manages; a server paired since the search is too.
   const managedHere = (candidate: ManagedServerCandidate) =>
     candidate.alreadyManaged || servers.some((server) => server.serverId === candidate.serverId);
-  const addOpen = !collapseAdd || !servers.length || addOpened || addRequested;
+  // A server whose address answers as another, or that revoked this device, is found and
+  // added again with the form: its tip names the search in it.
+  const needsAdding = servers.some(
+    (server) =>
+      server.state === ManagedServerState.WrongServer ||
+      server.state === ManagedServerState.Revoked,
+  );
+  const addOpen = !collapseAdd || !servers.length || addOpened || addRequested || needsAdding;
 
   return (
     <section
@@ -510,7 +520,15 @@ export function ManagedServersPanel({
         tabIndex={-1}
       >
         {!addOpen ? (
-          <button className={buttonClass} type="button" onClick={() => setAddOpened(true)}>
+          <button
+            aria-expanded={false}
+            className={buttonClass}
+            type="button"
+            onClick={() => {
+              addFocus.request();
+              setAddOpened(true);
+            }}
+          >
             <AiOutlinePlus aria-hidden />
             {t("federation.servers.add.title")}
           </button>
@@ -521,7 +539,7 @@ export function ManagedServersPanel({
               {t("federation.servers.add.description")}
             </p>
             <form
-              className="mt-3 grid items-end gap-3 md:grid-cols-[1fr_200px_auto]"
+              className="mt-3 grid items-end gap-3 @3xl:grid-cols-[1fr_200px_auto]"
               onSubmit={(event) => {
                 event.preventDefault();
                 const target = address.trim();
@@ -532,6 +550,7 @@ export function ManagedServersPanel({
               <label className="space-y-1 text-sm">
                 <span>{t("federation.servers.add.address")}</span>
                 <input
+                  ref={addFocus.target}
                   required
                   className={fieldClass}
                   placeholder="http://192.168.1.5:34567"

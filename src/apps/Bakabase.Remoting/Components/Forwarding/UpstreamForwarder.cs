@@ -157,8 +157,8 @@ public sealed class UpstreamForwarder(
         // In the desktop app a relay has no server only once that server was removed here:
         // the store view behind it is empty from then on.
         await WriteUnavailable(context, ClientForwardingFailure.NotConnected,
-            "This computer no longer manages this server. Add it again from this computer's " +
-            "Devices and sharing page.");
+            "This device no longer manages this server. Add it again on this device's Devices and " +
+            "sharing page, under Management.");
     }
 
     /// <summary>

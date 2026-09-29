@@ -48,13 +48,27 @@ own) and **高级 / Advanced** (device ID, "after copying or restoring data"). T
   data where the rest of the page is not available (a managed window, a LAN browser).
 - **Focus** follows the map's rules (`devices/useSectionFocusKeeper.ts`): when an action takes
   away the control that had the keyboard, focus goes to the heading of the part it was in;
-  a pointer press or focus moved elsewhere is never pulled back.
+  a pointer press or focus moved elsewhere is never pulled back. A form behind a button that
+  it replaces ("+ 添加要管理的设备", "+ 添加要浏览的设备") takes the keyboard into its first
+  field when opened from that button (`hooks/useFocusOnOpen.ts`). The Management add form
+  stays open while a managed server is WrongServer or Revoked: their tips name its search.
+- **Layout** is measured on the page's container (`@container`, `@3xl:`), never the window:
+  beside the app's sidebar a wide window can leave a narrow column. The action feedback is
+  sticky inside the content's column, so it never covers the sticky nav.
 - **Addresses.** Every host stays in the API (`ownHostsOf`/`sameMachine` need them all); the
-  UI shows one row per host on the main port, recommends the first LAN address, and folds
-  virtual and link-local adapters away, labelled (`devices/addresses.ts`).
+  UI shows one row per host on the main port and folds virtual and link-local adapters away,
+  labelled (`devices/addresses.ts`). The server says each address's `kind` and which one is
+  `recommended` (`RemoteAccessAddressClassifier`: the first LAN address whose interface has a
+  default gateway, which a VM host-only or overlay adapter lacks); the page guesses from the
+  address and interface name only for a server too old to say. Until remote access's settings
+  are read the list says it is loading, or why it could not read them — "no address found"
+  is only for a list that came back empty.
 - **Words.** 配对/配对码 only for management, 分享码 only for library sharing, 浏览 for what
-  sharing allows, 添加 (never 连接) for putting a device in a list, 多设备资源库 for the merged
-  library. Never shown: 节点, 代际, 设备身份, 旧接口, 新分享协议, 联合浏览, 授权 as a noun.
+  sharing allows, 允许 (never 批准) for letting a device in, 添加 (never 连接) for putting a
+  device in a list, 多设备资源库 for the merged library. Never shown: 节点, 代际, 设备身份, 旧接口,
+  新分享协议, 联合浏览, 授权 as a noun. Server texts that send the reader to the page (the relay's
+  unavailable page and refusals, notifications, the CLI) name its current places:
+  设备与分享 → 管理 → 谁可以管理本机, → 资源库分享, → 高级 → 复制或恢复数据后 → 设为新设备.
 
 ## The device map
 
@@ -66,8 +80,8 @@ listings the devices page reads — `/federation/local/peers`, `/federation/loca
 endpoints and confirmations.
 
 - **Records are merged on evidence only** (`map/graph.ts`). The install id first and always:
-  a peer's NodeId is the install's remote-access ServerId (`FederationNodeIdSource`; "Create a
-  new device identity" replaces both together; only a node reset by an older build, or one
+  a peer's NodeId is the install's remote-access ServerId (`FederationNodeIdSource`; "Make this
+  a new device" replaces both together; only a node reset by an older build, or one
   that replaced an unreadable sharing state, differs),
   so a peer, a managed server and a beacon with one id are one device — even while the server's
   address answers as another. An address (never a
@@ -248,8 +262,8 @@ after any DTO/endpoint change.
 `BAKABASE_FEDERATION_SHARING=true` turns sharing on at startup; `BAKABASE_NODE_NAME` names the
 node; `--federation-invite-on-start` prints a one-time code. The running instance is managed with
 `docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|invite|approve|reject|revoke|new-identity>`,
-which only calls its loopback API. `new-identity` is the devices page's "Create a new device
-identity", for a copied data directory: a headless server's own UI is only ever reached from
+which only calls its loopback API. `new-identity` is the devices page's "Make this a new device"
+(Advanced → After copying or restoring data), for a copied data directory: a headless server's own UI is only ever reached from
 another device, and never reaches `/federation/local/*`.
 
 ## Tests

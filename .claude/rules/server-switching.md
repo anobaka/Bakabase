@@ -52,7 +52,8 @@ manage anything; they are only ever managed.
   navigation gets the console's unavailable page with the same reason, at the URL asked for.
   Remote access off (the gate's 403 `Disabled` before any identity) is carried on the check
   (`UpstreamIdentityCheck.RemoteAccessDisabled`): the page and the JSON message both say to
-  turn it on at that device under "Let other devices manage this device", never to check that
+  turn it on at that device under Devices and sharing → Management → Who may manage this
+  device, never to check that
   it is running. The listing reports `ManagedServerState.WrongServer` with `answeredBy` (never the other
   server's name, mode or version as the server's own), and nothing is renamed, re-keyed or
   paired from such an answer. **The verdict never waits on the store**: an answer from the
@@ -186,8 +187,8 @@ manage anything; they are only ever managed.
   frame and drive it.
 - **Trust is explicit and pairwise.** Managing B is a decision taken on B (approve or show a
   code). Nothing joins a device to others automatically. One known gap: a copy of a data
-  directory keeps the servers the original manages, keys included — "Create a new device
-  identity" leaves them — so each such server sees the two as one paired device. Revoking that
+  directory keeps the servers the original manages, keys included — "Make this a new device"
+  leaves them — so each such server sees the two as one paired device. Revoking that
   device there, or "stop managing" on either install (which asks the server to revoke it),
   ends management from both.
 - **Warn, never reconfigure.** A target in `RemoteAccessMode.Unrestricted` is flagged in the UI;
@@ -199,7 +200,8 @@ manage anything; they are only ever managed.
   address that is not this machine's **and** under another name than this device's own server
   gives itself (`server-info`'s name is the machine's, which a copied data directory does not
   carry): refused as `SameIdentity` (a managed server's address: `WrongServer` with
-  `IsSameIdentity`), whose message points at "Create a new device identity" — which replaces
+  `IsSameIdentity`), whose message points at Devices and sharing → Advanced → After copying or
+  restoring data → "Make this a new device" — which replaces
   the `ServerId`, forgets the devices paired under the old one, and gives the node the new id
   (headless: `federation new-identity`). This device's own name from such an address is this
   device through another door — a reverse proxy or port forward on another host, the router's

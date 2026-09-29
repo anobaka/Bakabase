@@ -67,7 +67,7 @@ export default function AdvancedTab() {
         <div className="flex flex-wrap items-center gap-2">
           <code className="break-all font-mono text-sm">{nodeId}</code>
           <button
-            aria-label={t("federation.copyAddress", { address: nodeId })}
+            aria-label={t("federation.devices.id.copy")}
             className={`${buttonClass} !px-2 !py-1 text-xs`}
             type="button"
             onClick={() => void copyId()}
@@ -80,6 +80,10 @@ export default function AdvancedTab() {
                   : "federation.copyFailed",
             )}
           </button>
+          {/* The button keeps its name; how the copy went is said here. */}
+          <span className="sr-only" role="status">
+            {copied === undefined ? "" : t(copied ? "federation.copied" : "federation.copyFailed")}
+          </span>
         </div>
         <p className="text-xs text-default-500">{t("federation.devices.id.tip")}</p>
       </section>

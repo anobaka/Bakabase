@@ -79,12 +79,15 @@ function ShownServerManagement() {
   if (!allowed) return null;
 
   return (
-    <ManagementAccessSection
-      highlighted={highlighted}
-      reloadKey={managementLinkKey(section, locationKey)}
-      sectionRef={ref}
-      onSettled={() => setSettled(true)}
-    />
+    // Its forms are laid out against their container, as on the devices page.
+    <div className="@container">
+      <ManagementAccessSection
+        highlighted={highlighted}
+        reloadKey={managementLinkKey(section, locationKey)}
+        sectionRef={ref}
+        onSettled={() => setSettled(true)}
+      />
+    </div>
   );
 }
 
@@ -354,25 +357,6 @@ function Devices() {
           </Link>
         </div>
       </header>
-      {(pageLoadError || error || notice) && (
-        // Actions are spread over the tabs; keep their outcome in view wherever the user is.
-        <div
-          className="sticky top-0 z-10 -mx-1 space-y-2 bg-background/95 px-1 py-1 backdrop-blur"
-          data-testid="federation-feedback"
-        >
-          <ErrorNotice error={pageLoadError} onRetry={() => void data.reload(["sharing"])} />
-          <ErrorNotice error={error} onDismiss={() => setError(undefined)} />
-          {notice && (
-            <div
-              className="flex items-start justify-between gap-3 rounded-lg bg-primary/10 p-3 text-sm"
-              role="status"
-            >
-              <p>{notice}</p>
-              <DismissButton onClick={() => setNotice(undefined)} />
-            </div>
-          )}
-        </div>
-      )}
       {sharingStateUnavailable && (
         <section
           aria-labelledby="federation-recovery-title"
@@ -416,15 +400,37 @@ function Devices() {
       <DevicesPageContext.Provider value={context}>
         <div className="grid gap-5 @3xl:grid-cols-[12rem_1fr]">
           <DevicesNav active={tab} data={data} tabs={devicesTabs} />
-          <div
-            ref={panelRef}
-            aria-labelledby="devices-panel-title"
-            className="flex min-w-0 flex-col gap-5"
-            data-section={tab}
-            data-testid="devices-panel"
-            role="region"
-          >
-            <Panel />
+          <div className="flex min-w-0 flex-col gap-5">
+            {(pageLoadError || error || notice) && (
+              // Actions are spread over the tabs; keep their outcome in view wherever the user
+              // is. Stuck in the content's column, so it never covers the nav beside it.
+              <div
+                className="sticky top-0 z-10 -mx-1 space-y-2 bg-background/95 px-1 py-1 backdrop-blur"
+                data-testid="federation-feedback"
+              >
+                <ErrorNotice error={pageLoadError} onRetry={() => void data.reload(["sharing"])} />
+                <ErrorNotice error={error} onDismiss={() => setError(undefined)} />
+                {notice && (
+                  <div
+                    className="flex items-start justify-between gap-3 rounded-lg bg-primary/10 p-3 text-sm"
+                    role="status"
+                  >
+                    <p>{notice}</p>
+                    <DismissButton onClick={() => setNotice(undefined)} />
+                  </div>
+                )}
+              </div>
+            )}
+            <div
+              ref={panelRef}
+              aria-labelledby="devices-panel-title"
+              className="flex min-w-0 flex-col gap-5"
+              data-section={tab}
+              data-testid="devices-panel"
+              role="region"
+            >
+              <Panel />
+            </div>
           </div>
         </div>
       </DevicesPageContext.Provider>

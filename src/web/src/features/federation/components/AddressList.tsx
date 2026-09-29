@@ -1,14 +1,14 @@
 import type { BakabaseServiceModelsViewRemoteAccessAddressViewModel as RemoteAccessAddress } from "@/sdk/Api";
 import type { DeviceAddress } from "../devices/addresses";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { deviceAddresses, isReachableKind } from "../devices/addresses";
 import { devicesRoute } from "../switching";
 
-import { buttonClass } from "./common";
+import { buttonClass, ErrorNotice } from "./common";
 
 /** What a row says about where it leads, beside the interface's own name. */
 const kindLabel: Partial<Record<DeviceAddress["kind"], string>> = {
@@ -47,6 +47,13 @@ function useCopy() {
  *
  * `full` is the device tab's own list, with a title; `compact` sits beside a code, showing
  * the recommended address and everything else behind one disclosure.
+ *
+ * `addresses` is undefined until remote access's settings are read: the list says it is
+ * loading, or why it could not read them (`error`, with `onRetry`) — never that no address
+ * was found, which is about the network, and only true of a list that came back empty.
+ *
+ * A copy button is named by what it copies and says how it went in a status line, so a
+ * screen reader hears "Copied" or "Could not copy" as well as seeing it.
  */
 export default function AddressList({
   addresses,
@@ -54,7 +61,10 @@ export default function AddressList({
   context,
   variant = "full",
   remoteOff = false,
+  error,
+  onRetry,
 }: {
+  /** Undefined while remote access's settings are not read (loading, or `error`). */
   addresses: readonly RemoteAccessAddress[] | undefined;
   /** Whom the addresses reach, as the sentences name it: "this device" or a server's name. */
   target: string;
@@ -62,8 +72,12 @@ export default function AddressList({
   variant?: "full" | "compact";
   /** Remote access is off: nobody can reach any of them, and the list says so. */
   remoteOff?: boolean;
+  /** Why the settings holding the addresses could not be read. */
+  error?: Error;
+  onRetry?: () => void;
 }) {
   const { t } = useTranslation();
+  const titleId = useId();
   const [expanded, setExpanded] = useState(false);
   const { copied, copy } = useCopy();
   const rows = useMemo(() => deviceAddresses(addresses ?? []), [addresses]);
@@ -72,20 +86,25 @@ export default function AddressList({
   const shown = variant === "full" ? rest.filter((row) => isReachableKind(row.kind)) : [];
   const folded = rest.filter((row) => !shown.includes(row));
 
+  /** Ids for a row's parts: the button is named by its word and the address it copies. */
+  const idOf = (row: DeviceAddress, part: "url" | "action") =>
+    `${titleId}-${rows.indexOf(row)}-${part}`;
   const copyButton = (row: DeviceAddress) => (
     <button
-      aria-label={t("federation.copyAddress", { address: row.url })}
+      aria-labelledby={`${idOf(row, "action")} ${idOf(row, "url")}`}
       className={`${buttonClass} !px-2 !py-1 text-xs`}
       type="button"
       onClick={() => void copy(row.url)}
     >
-      {t(
-        copied?.value !== row.url
-          ? "federation.copy"
-          : copied.ok
-            ? "federation.copied"
-            : "federation.copyFailed",
-      )}
+      <span id={idOf(row, "action")}>
+        {t(
+          copied?.value !== row.url
+            ? "federation.copy"
+            : copied.ok
+              ? "federation.copied"
+              : "federation.copyFailed",
+        )}
+      </span>
     </button>
   );
   const note = (row: DeviceAddress) => {
@@ -100,7 +119,9 @@ export default function AddressList({
   };
   const row = (item: DeviceAddress) => (
     <li key={item.url} className="flex flex-wrap items-center gap-2">
-      <code className="break-all text-sm">{item.url}</code>
+      <code className="break-all text-sm" id={idOf(item, "url")}>
+        {item.url}
+      </code>
       {note(item)}
       {copyButton(item)}
     </li>
@@ -108,17 +129,24 @@ export default function AddressList({
 
   return (
     <div
-      aria-label={t("federation.devices.addresses.title", { target })}
+      // Beside a code there is no title to point at.
+      aria-label={
+        variant === "full" ? undefined : t("federation.devices.addresses.title", { target })
+      }
+      aria-labelledby={variant === "full" ? titleId : undefined}
       className={`space-y-2 ${remoteOff ? "opacity-60" : ""}`}
       data-context={context}
       data-testid="device-addresses"
       role="group"
     >
       {variant === "full" && (
-        <h3 className="text-sm font-medium">
+        <h3 className="text-sm font-medium" id={titleId}>
           {t("federation.devices.addresses.title", { target })}
         </h3>
       )}
+      <p className="sr-only" role="status">
+        {copied ? t(copied.ok ? "federation.copied" : "federation.copyFailed") : ""}
+      </p>
       {remoteOff && (
         <p className="text-sm text-warning-600 dark:text-warning">
           {t("federation.devices.addresses.remoteOff", { target })}
@@ -132,7 +160,13 @@ export default function AddressList({
           )}
         </p>
       )}
-      {!recommended ? (
+      {!addresses ? (
+        error ? (
+          <ErrorNotice error={error} onRetry={onRetry} />
+        ) : (
+          <p className="text-sm text-default-500">{t("federation.loading")}</p>
+        )
+      ) : !recommended ? (
         <p className="text-sm text-warning-600 dark:text-warning">
           {t("federation.devices.addresses.none", { target })}
         </p>
@@ -142,7 +176,10 @@ export default function AddressList({
             className="flex flex-wrap items-center gap-2 rounded-lg bg-default-50 p-2"
             data-testid="device-address-recommended"
           >
-            <code className={`break-all ${variant === "full" ? "text-lg" : "text-base"}`}>
+            <code
+              className={`break-all ${variant === "full" ? "text-lg" : "text-base"}`}
+              id={idOf(recommended, "url")}
+            >
               {recommended.url}
             </code>
             {recommended.recommended && (

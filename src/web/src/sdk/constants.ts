@@ -4738,6 +4738,30 @@ export const RemoteAccessDenialReasonLabel: Record<RemoteAccessDenialReason, str
   [RemoteAccessDenialReason.DeviceRevoked]: 'DeviceRevoked'
 };
 
+export enum RemoteAccessAddressKind {
+  Unknown = 0,
+  Lan = 1,
+  Vpn = 2,
+  Virtual = 3,
+  LinkLocal = 4
+}
+
+export const remoteAccessAddressKinds = [
+  { label: 'Unknown', value: RemoteAccessAddressKind.Unknown },
+  { label: 'Lan', value: RemoteAccessAddressKind.Lan },
+  { label: 'Vpn', value: RemoteAccessAddressKind.Vpn },
+  { label: 'Virtual', value: RemoteAccessAddressKind.Virtual },
+  { label: 'LinkLocal', value: RemoteAccessAddressKind.LinkLocal }
+] as const;
+
+export const RemoteAccessAddressKindLabel: Record<RemoteAccessAddressKind, string> = {
+  [RemoteAccessAddressKind.Unknown]: 'Unknown',
+  [RemoteAccessAddressKind.Lan]: 'Lan',
+  [RemoteAccessAddressKind.Vpn]: 'Vpn',
+  [RemoteAccessAddressKind.Virtual]: 'Virtual',
+  [RemoteAccessAddressKind.LinkLocal]: 'LinkLocal'
+};
+
 export enum RemoteDevicePlatform {
   Unknown = 0,
   Windows = 1,

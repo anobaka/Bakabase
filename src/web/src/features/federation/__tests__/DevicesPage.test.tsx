@@ -227,13 +227,35 @@ describe("device permission workflows", () => {
       screen.getByRole("button", { name: "federation.identity.restore", hidden: true }),
     ).not.toBeDisabled();
   });
-  it("shows the device ID in Advanced, with a way to copy it", () => {
-    renderPage("/federation/devices?section=advanced");
-    expect(within(screen.getByTestId("device-id")).getByText("local")).toBeInTheDocument();
+  it("shows the device ID in Advanced, with a way to copy it", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    try {
+      renderPage("/federation/devices?section=advanced");
+      const block = within(screen.getByTestId("device-id"));
+
+      expect(block.getByText("local")).toBeInTheDocument();
+      // Named for what it copies — an ID, not an address — and says how it went.
+      fireEvent.click(block.getByRole("button", { name: "federation.devices.id.copy" }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith("local"));
+      expect(await block.findByRole("status")).toHaveTextContent("federation.copied");
+    } finally {
+      Reflect.deleteProperty(navigator, "clipboard");
+    }
   });
 });
 
 describe("independent browsing and safe mapping edits", () => {
+  it("links to the Multi-device library by what the link does, apart from the panel's title", () => {
+    renderPage();
+    const panel = screen.getByTestId("browsing-switch").closest("#library-browsing")!;
+
+    expect(within(panel as HTMLElement).getByRole("link")).toHaveAccessibleName(
+      "federation.browsing.open",
+    );
+    expect(within(panel as HTMLElement).getByRole("link")).toHaveAttribute("href", "/federation");
+  });
   it("turns off browsing without changing sharing, pairings or mappings", async () => {
     renderPage();
     fireEvent.click(screen.getByText("federation.browsing.disable"));
@@ -400,6 +422,11 @@ describe("action feedback", () => {
 
     expect(feedback).toHaveClass("sticky", "top-0");
     expect(feedback).toHaveTextContent("Browsing failed");
+    // Stuck in the content's column, beside the nav rather than over it.
+    const column = feedback.parentElement!;
+
+    expect(column).toContainElement(screen.getByTestId("devices-panel"));
+    expect(column).not.toContainElement(screen.getByTestId("devices-nav"));
     fireEvent.click(within(feedback).getByLabelText("federation.dismiss"));
     expect(screen.queryByTestId("federation-feedback")).not.toBeInTheDocument();
   });
@@ -676,11 +703,25 @@ describe("this device's address", () => {
     renderPage("/federation/devices");
     const recommended = await screen.findByTestId("device-address-recommended");
 
-    fireEvent.click(within(recommended).getByText("federation.copy"));
+    // Named by what it copies, beside the word it shows.
+    const button = within(recommended).getByRole("button", {
+      name: "federation.copy http://192.168.1.5:34567",
+    });
+    const list = screen.getByTestId("device-addresses");
+    const announced = within(list).getByRole("status");
+
+    expect(announced.textContent).toBe("");
+    fireEvent.click(button);
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("http://192.168.1.5:34567"));
     expect(await within(recommended).findByText("federation.copied")).toBeInTheDocument();
+    // …and says how it went where a screen reader hears it.
+    expect(announced).toHaveTextContent("federation.copied");
     fireEvent.click(within(recommended).getByText("federation.copied"));
     expect(await within(recommended).findByText("federation.copyFailed")).toBeInTheDocument();
+    expect(announced).toHaveTextContent("federation.copyFailed");
+    // The list is named by its own title, once.
+    expect(list).not.toHaveAttribute("aria-label");
+    expect(list).toHaveAccessibleName("federation.devices.addresses.title");
   });
   it("greys the addresses out while remote access is off, and says where to turn it on", async () => {
     withSettings(0);
@@ -721,9 +762,11 @@ describe("this device's address", () => {
     expect(screen.getByText("federation.sharing.remoteDisabled")).toBeInTheDocument();
     expect(screen.queryByTestId("device-addresses")).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("federation.sharing.enableRemote"));
+    // Sharing is on already: the question is about remote access, and what it lets back in.
     expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      "federation.sharing.confirmWithRemote",
+      "federation.sharing.enableRemoteConfirm",
     );
+    expect(screen.getByRole("alertdialog")).not.toHaveTextContent("confirmWithRemote");
   });
   it("offers no code while sharing is off", () => {
     renderPage();

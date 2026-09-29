@@ -12434,6 +12434,12 @@ export interface components {
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.PairingFailure": 0 | 1 | 2 | 3 | 4;
         /**
          * Format: int32
+         * @description [0: Unknown, 1: Lan, 2: Vpn, 3: Virtual, 4: LinkLocal]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteAccessAddressKind": 0 | 1 | 2 | 3 | 4;
+        /**
+         * Format: int32
          * @description [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS]
          * @enum {integer}
          */
@@ -13646,6 +13652,8 @@ export interface components {
         "Bakabase.Service.Models.View.RemoteAccessAddressViewModel": {
             url: string;
             interfaceName: string;
+            kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteAccessAddressKind"];
+            recommended?: boolean;
         };
         "Bakabase.Service.Models.View.RemoteAccessClientContextViewModel": {
             isLocal: boolean;

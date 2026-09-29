@@ -5029,6 +5029,17 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView
 export type BakabaseModulesRemoteAccessAbstractionsModelsPairingFailure = 0 | 1 | 2 | 3 | 4;
 
 /**
+ * [0: Unknown, 1: Lan, 2: Vpn, 3: Virtual, 4: LinkLocal]
+ * @format int32
+ */
+export type BakabaseModulesRemoteAccessAbstractionsModelsRemoteAccessAddressKind =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4;
+
+/**
  * [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS]
  * @format int32
  */
@@ -6524,6 +6535,9 @@ export interface BakabaseServiceModelsViewProxyTestResultViewModel {
 export interface BakabaseServiceModelsViewRemoteAccessAddressViewModel {
   url: string;
   interfaceName: string;
+  /** [0: Unknown, 1: Lan, 2: Vpn, 3: Virtual, 4: LinkLocal] */
+  kind?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteAccessAddressKind;
+  recommended?: boolean;
 }
 
 export interface BakabaseServiceModelsViewRemoteAccessClientContextViewModel {

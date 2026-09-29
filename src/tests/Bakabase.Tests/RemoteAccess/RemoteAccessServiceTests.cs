@@ -108,6 +108,12 @@ public class RemoteAccessServiceTests
 
             CollectionAssert.AreEqual(new[] {34567, 34568}, ports);
         }
+
+        // At most one host is suggested, on every port, and only a LAN one.
+        var recommended = addresses.Where(a => a.Recommended).ToList();
+        Assert.IsTrue(recommended.Select(a => new Uri(a.Url).Host).Distinct().Count() <= 1);
+        Assert.IsTrue(recommended.All(a => a.Kind == RemoteAccessAddressKind.Lan));
+        Assert.IsTrue(recommended.Count is 0 or 2, string.Join(", ", recommended));
     }
 
     [TestMethod]
