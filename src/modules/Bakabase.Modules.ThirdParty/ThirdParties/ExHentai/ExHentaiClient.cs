@@ -301,7 +301,8 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
             var pageCq = new CQ(pageHtml);
             var img = pageCq["#img"];
             var imgUrl = img.Attr("src");
-            var rsp = await HttpClient.GetAsync(imgUrl, ct);
+            using var rsp = await HttpClient.GetAsync(imgUrl, ct);
+            rsp.EnsureSuccessStatusCode();
             var contentType = rsp.Content.Headers.ContentType?.MediaType;
             var bytes = await rsp.Content.ReadAsByteArrayAsync(ct);
             return (bytes, contentType);
@@ -314,7 +315,7 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
         /// </summary>
         public async Task<(byte[] Data, string? ContentType)> DownloadImageByUrl(string imageUrl)
         {
-            var rsp = await HttpClient.GetAsync(imageUrl);
+            using var rsp = await HttpClient.GetAsync(imageUrl);
             rsp.EnsureSuccessStatusCode();
             var contentType = rsp.Content.Headers.ContentType?.MediaType;
             var bytes = await rsp.Content.ReadAsByteArrayAsync();

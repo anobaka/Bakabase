@@ -99,9 +99,9 @@ export const BangumiConfigPanel: FC<BangumiConfigPanelProps> = ({ fields = "all"
                 label={t<string>("thirdPartyConfig.label.requestInterval")}
                 size="sm"
                 type="number"
-                value={String(tmpHttp.requestInterval || 1000)}
+                value={String(tmpHttp.requestInterval ?? 1000)}
                 onValueChange={(v) =>
-                  setTmpHttp({ ...tmpHttp, requestInterval: Number(v) || 1000 })
+                  setTmpHttp({ ...tmpHttp, requestInterval: v === "" ? 1000 : Number(v) })
                 }
               />
             </div>
