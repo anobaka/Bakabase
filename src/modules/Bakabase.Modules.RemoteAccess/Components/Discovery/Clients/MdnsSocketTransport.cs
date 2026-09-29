@@ -16,7 +16,8 @@ namespace Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 /// would send it: with a proxy's TUN adapter holding the default route, a multicast packet
 /// left to routing goes into the proxy and dies there. Interfaces that are down, loopback,
 /// tunnels, or hold nothing but a proxy's address (<see cref="ProxyFakeAddresses"/>) are
-/// skipped.
+/// skipped. Each batch the resolver hands over — every question, later those still unanswered
+/// — goes out as it comes, on the sockets the first one went out on.
 /// </para>
 /// <para>
 /// The questions go from ports of their own, over IPv4 (224.0.0.251) and IPv6 (ff02::fb on the
@@ -34,7 +35,7 @@ public sealed class MdnsSocketTransport : IMdnsQueryTransport
     private static readonly IPAddress GroupV6 = IPAddress.Parse("ff02::fb");
     private const int MdnsPort = 5353;
 
-    public async IAsyncEnumerable<MdnsDatagram> ExchangeAsync(IReadOnlyList<byte[]> queries,
+    public async IAsyncEnumerable<MdnsDatagram> ExchangeAsync(IAsyncEnumerable<IReadOnlyList<byte[]>> questions,
         [EnumeratorCancellation] CancellationToken ct)
     {
         var lan = LanInterfaces();
@@ -54,37 +55,18 @@ public sealed class MdnsSocketTransport : IMdnsQueryTransport
                 sockets.Add(listener);
             }
 
-            if (Open(AddressFamily.InterNetwork) is { } v4)
-            {
-                sockets.Add(v4);
+            var v4 = Open(AddressFamily.InterNetwork);
+            var v6 = lan.Any(n => n.V6Index > 0) ? Open(AddressFamily.InterNetworkV6) : null;
 
-                foreach (var nic in lan)
-                {
-                    foreach (var address in nic.V4)
-                    {
-                        Send(v4, queries, new IPEndPoint(GroupV4, MdnsPort),
-                            s => s.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface,
-                                BitConverter.ToInt32(address.GetAddressBytes())));
-                    }
-                }
-            }
+            sockets.AddRange(new[] {v4, v6}.OfType<Socket>());
 
-            if (lan.Any(n => n.V6Index > 0) && Open(AddressFamily.InterNetworkV6) is { } v6)
-            {
-                sockets.Add(v6);
-
-                foreach (var nic in lan.Where(n => n.V6Index > 0))
-                {
-                    Send(v6, queries, new IPEndPoint(new IPAddress(GroupV6.GetAddressBytes(), nic.V6Index), MdnsPort),
-                        s => s.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastInterface,
-                            nic.V6Index));
-                }
-            }
-
+            // Listening before the first question goes out, so no answer comes before an ear.
             foreach (var socket in sockets)
             {
                 _ = Task.Run(() => ListenAsync(socket, heard.Writer, ct), CancellationToken.None);
             }
+
+            _ = Task.Run(() => SendAllAsync(questions, lan, v4, v6, ct), CancellationToken.None);
 
             await foreach (var datagram in heard.Reader.ReadAllAsync(ct))
             {
@@ -93,11 +75,47 @@ public sealed class MdnsSocketTransport : IMdnsQueryTransport
         }
         finally
         {
-            // Ends every listening loop too.
+            // Ends every listening loop too, and whatever the sending still had to send.
             foreach (var socket in sockets)
             {
                 socket.Dispose();
             }
+        }
+    }
+
+    /// <summary>Sends each batch of <paramref name="questions"/> as it comes, out of every LAN interface.</summary>
+    private static async Task SendAllAsync(IAsyncEnumerable<IReadOnlyList<byte[]>> questions,
+        IReadOnlyList<LanInterface> lan, Socket? v4, Socket? v6, CancellationToken ct)
+    {
+        try
+        {
+            await foreach (var queries in questions.WithCancellation(ct))
+            {
+                if (v4 != null)
+                {
+                    foreach (var address in lan.SelectMany(n => n.V4))
+                    {
+                        Send(v4, queries, new IPEndPoint(GroupV4, MdnsPort),
+                            s => s.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface,
+                                BitConverter.ToInt32(address.GetAddressBytes())));
+                    }
+                }
+
+                if (v6 != null)
+                {
+                    foreach (var nic in lan.Where(n => n.V6Index > 0))
+                    {
+                        Send(v6, queries,
+                            new IPEndPoint(new IPAddress(GroupV6.GetAddressBytes(), nic.V6Index), MdnsPort),
+                            s => s.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastInterface,
+                                nic.V6Index));
+                    }
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // The exchange is over (cancelled, its sockets closed): nothing is left to send.
         }
     }
 

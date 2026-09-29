@@ -91,23 +91,36 @@ public static class ProxyFakeAddresses
 /// <summary>
 /// Thrown instead of connecting when the address is a proxy's own (see
 /// <see cref="ProxyFakeAddresses"/>): a name a proxy on this computer took over, or such an
-/// address typed as it is. Nothing was sent.
+/// address typed as it is. Nothing was sent there.
 /// </summary>
 /// <remarks>
+/// <para>
 /// A <see cref="SocketException"/> (host unreachable), so whatever reads socket failures as
 /// "could not connect" still does; the callers that tell the user why look for this one.
+/// </para>
+/// <para>
+/// Also thrown once the addresses the LAN gave for a <c>.local</c> name all failed where the
+/// system resolver, which is what a proxy answers for, gave a proxy's address first
+/// (<see cref="LanHostResolution.ProxyAddress"/>): with a proxy taking over the name, the proxy is
+/// still what stands in the way. <see cref="ConnectError"/> is then how the last of those
+/// attempts failed — a <see cref="SocketException"/> takes no inner exception.
+/// </para>
 /// </remarks>
-public sealed class ProxyFakeAddressException(string host, IPAddress address)
+public sealed class ProxyFakeAddressException(string host, IPAddress address, Exception? connectError = null)
     : SocketException((int) SocketError.HostUnreachable,
-        IPAddress.TryParse(host, out _)
+        (IPAddress.TryParse(host, out _)
             ? $"{address} is an address a proxy on this computer hands out (198.18.0.0/15), not a device's; " +
               "nothing was sent to it"
             : $"{host} resolved to {address}, an address a proxy on this computer hands out (198.18.0.0/15); " +
-              "nothing was sent to it")
+              "nothing was sent to it") +
+        (connectError == null ? "" : $". The addresses the LAN gave for it did not answer either: {connectError.Message}"))
 {
     /// <summary>The name or address that was to be connected to.</summary>
     public string Host { get; } = host;
 
     /// <summary>The proxy's address it led to.</summary>
     public IPAddress Address { get; } = address;
+
+    /// <summary>How connecting at the addresses the LAN gave instead failed, when it was tried.</summary>
+    public Exception? ConnectError { get; } = connectError;
 }

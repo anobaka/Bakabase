@@ -40,21 +40,47 @@ public sealed class DualStackConnector
 
     public static DualStackConnector Default { get; } = new();
 
-    private readonly Func<string, CancellationToken, Task<IPAddress[]>> _resolve;
+    private readonly Func<string, CancellationToken, Task<LanHostResolution>> _resolve;
     private readonly Func<IPEndPoint, CancellationToken, ValueTask<Stream>> _connect;
     private readonly TimeSpan _attemptDelay;
 
     /// <param name="resolve">
     /// Injected for tests; defaults to <see cref="LanHostResolver.Default"/> — a <c>.local</c> name
-    /// over mDNS first, the system resolver otherwise. What it returns is screened for a proxy's
-    /// addresses either way (<see cref="ProxyFakeAddresses"/>).
+    /// over mDNS and the system resolver, every other name the system's. What it returns is
+    /// screened for a proxy's addresses either way (<see cref="ProxyFakeAddresses"/>).
     /// </param>
     /// <param name="connect">Injected for tests; defaults to a plain TCP socket with Nagle off.</param>
     /// <param name="attemptDelay">Defaults to <see cref="DefaultAttemptDelay"/>.</param>
     public DualStackConnector(Func<string, CancellationToken, Task<IPAddress[]>>? resolve = null,
         Func<IPEndPoint, CancellationToken, ValueTask<Stream>>? connect = null, TimeSpan? attemptDelay = null)
+        : this(Detailed(resolve), connect, attemptDelay)
     {
-        _resolve = resolve ?? LanHostResolver.Default.ResolveAsync;
+    }
+
+    /// <param name="resolver">Where names resolve, a test's <see cref="LanHostResolver"/> over a fake network.</param>
+    /// <param name="connect">Injected for tests; defaults to a plain TCP socket with Nagle off.</param>
+    /// <param name="attemptDelay">Defaults to <see cref="DefaultAttemptDelay"/>.</param>
+    public DualStackConnector(LanHostResolver resolver,
+        Func<IPEndPoint, CancellationToken, ValueTask<Stream>>? connect = null, TimeSpan? attemptDelay = null)
+        : this(resolver.ResolveDetailedAsync, connect, attemptDelay)
+    {
+    }
+
+    private static Func<string, CancellationToken, Task<LanHostResolution>> Detailed(
+        Func<string, CancellationToken, Task<IPAddress[]>>? resolve)
+    {
+        if (resolve == null)
+        {
+            return LanHostResolver.Default.ResolveDetailedAsync;
+        }
+
+        return async (host, ct) => new LanHostResolution(await resolve(host, ct));
+    }
+
+    private DualStackConnector(Func<string, CancellationToken, Task<LanHostResolution>> resolve,
+        Func<IPEndPoint, CancellationToken, ValueTask<Stream>>? connect, TimeSpan? attemptDelay)
+    {
+        _resolve = resolve;
         _connect = connect ?? ConnectSocketAsync;
         _attemptDelay = attemptDelay ?? DefaultAttemptDelay;
     }
@@ -87,13 +113,26 @@ public sealed class DualStackConnector
         // A proxy's own address (198.18.0.0/15) is never dialled: typed, or what a proxy on this
         // computer answered the name with first, it is refused as that; behind a real answer
         // it is only left out.
-        var addresses = IPAddress.TryParse(endpoint.Host, out var literal)
-            ? ProxyFakeAddresses.Screen(endpoint.Host, [literal])
-            : Order(ProxyFakeAddresses.Screen(endpoint.Host, await _resolve(endpoint.Host, ct)));
+        IReadOnlyList<IPAddress> addresses;
+        IPAddress? proxy = null;
+
+        if (IPAddress.TryParse(endpoint.Host, out var literal))
+        {
+            addresses = ProxyFakeAddresses.Screen(endpoint.Host, [literal]);
+        }
+        else
+        {
+            var resolved = await _resolve(endpoint.Host, ct);
+
+            addresses = Order(ProxyFakeAddresses.Screen(endpoint.Host, resolved.Addresses));
+            proxy = resolved.ProxyAddress;
+        }
 
         if (addresses.Count == 0)
         {
-            throw new SocketException((int) SocketError.HostNotFound);
+            throw proxy != null
+                ? new ProxyFakeAddressException(endpoint.Host, proxy)
+                : new SocketException((int) SocketError.HostNotFound);
         }
 
         using var clock = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -109,7 +148,15 @@ public sealed class DualStackConnector
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested && clock.IsCancellationRequested)
         {
-            throw new SocketException((int) SocketError.TimedOut);
+            var timedOut = new SocketException((int) SocketError.TimedOut);
+
+            throw proxy != null ? new ProxyFakeAddressException(endpoint.Host, proxy, timedOut) : timedOut;
+        }
+        catch (Exception e) when (proxy != null && e is not OperationCanceledException)
+        {
+            // The LAN's addresses for a name the system resolver hands to a proxy: none of them
+            // answered, and the proxy is what stands in the way of the rest.
+            throw new ProxyFakeAddressException(endpoint.Host, proxy, e);
         }
     }
 
