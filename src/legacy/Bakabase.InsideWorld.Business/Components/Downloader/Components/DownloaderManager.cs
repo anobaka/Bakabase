@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
@@ -26,6 +28,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ConcurrentDictionary<int, IDownloader> _downloaders = new();
+        // The gate has the downloader's lifetime, so deleted tasks do not leave lock entries behind.
+        private readonly ConditionalWeakTable<IDownloader, SemaphoreSlim> _taskDataLocks = new();
         private readonly ConcurrentDictionary<int, TaskCompletionSource> _downloadBTaskCompletionSources = new();
 
         /// <summary>
@@ -119,18 +123,43 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             () => WithScopedService<DownloadTaskService>(s => s.OnNameAcquired(taskId, name)),
             "persist the acquired name");
 
-        private async Task HandleProgress(int taskId, decimal progress)
+        private async Task HandleProgress(int taskId, IDownloader downloader, decimal progress)
         {
-            await GuardAsync(() => WithScopedService<DownloadTaskService>(s => s.OnProgress(taskId, progress)),
-                "persist progress");
-            await GuardAsync(() => UpdateBTaskProgress(taskId, progress), "update background task progress");
+            await WithTaskDataLock(downloader, async () =>
+            {
+                await GuardAsync(() => WithScopedService<DownloadTaskService>(s => s.OnProgress(taskId, progress)),
+                    "persist progress");
+                await GuardAsync(() => UpdateBTaskProgress(taskId, progress), "update background task progress");
+            });
         }
 
-        private async Task HandleCurrentChanged(int taskId)
+        private Task HandleFileDownloaded(int taskId, IDownloader downloader, string path, long size) => WithTaskDataLock(downloader,
+            () => GuardAsync(
+                () => WithScopedService<DownloadTaskService>(s => s.RecordDownloadedFile(taskId, path, size)),
+                "record a downloaded file"));
+
+        private async Task HandleCurrentChanged(int taskId, IDownloader downloader)
         {
-            await GuardAsync(() => WithScopedService<DownloadTaskService>(s => s.OnCurrentChanged(taskId)),
-                "push the current step");
-            await GuardAsync(() => UpdateBTaskProcess(taskId), "update background task process");
+            await WithTaskDataLock(downloader, async () =>
+            {
+                await GuardAsync(() => WithScopedService<DownloadTaskService>(s => s.OnCurrentChanged(taskId)),
+                    "push the current step");
+                await GuardAsync(() => UpdateBTaskProcess(taskId), "update background task process");
+            });
+        }
+
+        private async Task WithTaskDataLock(IDownloader downloader, Func<Task> action)
+        {
+            var gate = _taskDataLocks.GetValue(downloader, _ => new SemaphoreSlim(1, 1));
+            await gate.WaitAsync();
+            try
+            {
+                await action();
+            }
+            finally
+            {
+                gate.Release();
+            }
         }
 
         private Task HandleCheckpointReached(int taskId, string checkpoint) => GuardAsync(
@@ -316,8 +345,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 downloader = _downloaderFactory.GetDownloader(task.ThirdPartyId, task.Type);
                 downloader.OnStatusChanged += () => HandleStatusChanged(task.Id, downloader);
                 downloader.OnNameAcquired += name => HandleNameAcquired(task.Id, name);
-                downloader.OnProgress += progress => HandleProgress(task.Id, progress);
-                downloader.OnCurrentChanged += () => HandleCurrentChanged(task.Id);
+                downloader.OnProgress += progress => HandleProgress(task.Id, downloader, progress);
+                downloader.OnFileDownloaded += (path, size) => HandleFileDownloaded(task.Id, downloader, path, size);
+                downloader.OnCurrentChanged += () => HandleCurrentChanged(task.Id, downloader);
                 downloader.OnCheckpointChanged += checkpoint => HandleCheckpointReached(task.Id, checkpoint);
 
                 _downloaders[task.Id] = downloader;

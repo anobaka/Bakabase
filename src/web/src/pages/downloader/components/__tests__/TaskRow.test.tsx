@@ -104,6 +104,19 @@ afterEach(async () => {
 });
 
 describe("download task row interaction", () => {
+  it("shows the attributed file size beside the progress percent", async () => {
+    await show({ downloadedBytes: 1572864 });
+
+    expect(element("downloader.label.downloadedFileSize: 1.5 MiB")).toHaveTextContent("1.5 MiB");
+    expect(container).toHaveTextContent("42%");
+  });
+
+  it("marks file size as unavailable until a file is attributed", async () => {
+    await show();
+
+    expect(element("downloader.label.downloadedFileSize: —")).toHaveTextContent("—");
+  });
+
   it("shows the server estimate beside the progress percentage, not among the dates", async () => {
     const estimate =
       "downloader.label.estimatedRemaining 1datetime.duration.minute 5datetime.duration.second";

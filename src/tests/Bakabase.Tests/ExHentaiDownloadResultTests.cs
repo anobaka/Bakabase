@@ -159,6 +159,12 @@ public sealed class ExHentaiDownloadResultTests
         await _results.RecordTorrentAsync(10, ThirdParty, "12345/abcd", "Existing work", original, 7);
         var handler = new GalleryHandler {RejectRequests = true};
         var producer = await BuildProducer(handler);
+        var accountedFiles = new System.Collections.Generic.List<(string Path, long Size)>();
+        producer.OnFileDownloaded += (path, size) =>
+        {
+            accountedFiles.Add((path, size));
+            return Task.CompletedTask;
+        };
         var checkpoints = 0;
         await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", async _ =>
         {
@@ -167,10 +173,13 @@ public sealed class ExHentaiDownloadResultTests
         });
         Assert.AreEqual(1, checkpoints);
         Assert.AreEqual(0, handler.Requests);
+        CollectionAssert.AreEqual(new[] {(Path.GetFullPath(original), (long) _metadata.Length)},
+            accountedFiles);
         File.Delete(original);
         await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask);
         Assert.AreEqual(0, handler.Requests, "The managed result must survive removal of the user's torrent copy.");
         Assert.AreEqual(1, (await _results.GetByTaskAsync(10)).Count);
+        Assert.AreEqual(1, accountedFiles.Count, "The managed metadata copy is not a user download.");
     }
 
     [TestMethod]

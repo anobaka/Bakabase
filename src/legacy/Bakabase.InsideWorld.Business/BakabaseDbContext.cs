@@ -32,6 +32,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<PlayListDbModel> Playlists { get; set; }
 
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
+        public DbSet<DownloadTaskFileDbModel> DownloadTaskFiles { get; set; }
 
         public DbSet<DownloadRecordDbModel> DownloadRecords { get; set; }
         public DbSet<DownloadResultDbModel> DownloadResults { get; set; }
@@ -168,6 +169,13 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => a.ThirdPartyId);
                 t.HasIndex(a => new {a.ThirdPartyId, a.Type});
                 t.HasIndex(a => a.Status);
+            });
+
+            modelBuilder.Entity<DownloadTaskFileDbModel>(t =>
+            {
+                t.HasKey(a => new {a.DownloadTaskId, a.Path});
+                t.HasOne<DownloadTaskDbModel>().WithMany().HasForeignKey(a => a.DownloadTaskId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<DownloadResultDbModel>(t =>

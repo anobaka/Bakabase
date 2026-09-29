@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.IO;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
@@ -27,6 +29,7 @@ using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using DownloadTask = Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
@@ -57,12 +60,34 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         public async Task<DownloadTask> GetDto(int id)
         {
             var task = await GetByKey(id);
-            return ToDto(new[] {task})[0];
+            return (await ToDto(new[] {task}))[0];
         }
 
-        private DownloadTask[] ToDto(IEnumerable<DownloadTaskDbModel> tasks)
+        private async Task<DownloadTask[]> ToDto(IEnumerable<DownloadTaskDbModel> tasks)
         {
-            return tasks.Select(task => task.ToDomainModel(DownloaderManager)!).ToArray();
+            var dtos = tasks.Select(task => task.ToDomainModel(DownloaderManager)!).ToArray();
+            if (dtos.Length == 0)
+            {
+                return dtos;
+            }
+
+            // Multiple tasks may share one output directory. Query only files explicitly
+            // attributed to each task, with one grouped query for the whole list.
+            var ids = dtos.Select(x => x.Id).ToArray();
+            var sizes = await GetRequiredService<BakabaseDbContext>().DownloadTaskFiles.AsNoTracking()
+                .Where(x => ids.Contains(x.DownloadTaskId))
+                .GroupBy(x => x.DownloadTaskId)
+                .Select(g => new {TaskId = g.Key, Size = g.Sum(x => x.Size)})
+                .ToDictionaryAsync(x => x.TaskId, x => x.Size);
+            foreach (var dto in dtos)
+            {
+                if (sizes.TryGetValue(dto.Id, out var bytes))
+                {
+                    dto.DownloadedBytes = bytes;
+                }
+            }
+
+            return dtos;
         }
 
         protected async Task OnChange(int taskId, object value, Func<DownloadTask, object> getter,
@@ -82,7 +107,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     //     $"Use new value: {value} to update download task to: {JsonConvert.SerializeObject(task)}");
                     var dbModel = task.ToDbModel()!;
                     await Update(dbModel);
-                    await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask), task);
+                    await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
+                        (await ToDto(new[] {dbModel}))[0]);
                 }
             }
             catch (Exception ex)
@@ -253,7 +279,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             }
 
             await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
-                ToDto(new[] {task}).FirstOrDefault()!);
+                (await ToDto(new[] {task})).FirstOrDefault()!);
         }
 
         /// <summary>
@@ -542,7 +568,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 
             await Update(task);
             await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
-                ToDto(new[] {task}).FirstOrDefault()!);
+                (await ToDto(new[] {task})).FirstOrDefault()!);
         }
 
         public async Task OnNameAcquired(int taskId, string name) =>
@@ -557,6 +583,43 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         public async Task OnCurrentChanged(int taskId) =>
             await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask), await GetDto(taskId));
 
+        /// <summary>
+        /// Upsert the size of one task-owned output file. A retry, resumed download, or overwrite
+        /// updates that path instead of counting its bytes twice.
+        /// </summary>
+        public async Task RecordDownloadedFile(int taskId, string path, long size)
+        {
+            var fullPath = Path.GetFullPath(path);
+            // Windows paths are case-insensitive, while SQLite's composite key is not.
+            // The key is only used for accounting; no filesystem access uses its casing.
+            if (OperatingSystem.IsWindows())
+            {
+                fullPath = fullPath.ToUpperInvariant();
+            }
+
+            var db = GetRequiredService<BakabaseDbContext>();
+            var existing = await db.DownloadTaskFiles.FindAsync(taskId, fullPath);
+            if (existing?.Size == size)
+            {
+                return;
+            }
+
+            if (existing == null)
+            {
+                db.DownloadTaskFiles.Add(new DownloadTaskFileDbModel
+                {
+                    DownloadTaskId = taskId, Path = fullPath, Size = size
+                });
+            }
+            else
+            {
+                existing.Size = size;
+            }
+
+            await db.SaveChangesAsync();
+            await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask), await GetDto(taskId));
+        }
+
         public async Task OnCheckpointChanged(int taskId, string checkpoint) => await OnChange(taskId, checkpoint,
             t => t.Checkpoint,
             (t, s) => { t.Checkpoint = s?.ToString(); });
@@ -564,7 +627,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         public async Task<DownloadTask[]> GetAllDto()
         {
             var tasks = await GetAll();
-            return ToDto(tasks);
+            return await ToDto(tasks);
         }
 
         /// <summary>

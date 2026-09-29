@@ -376,6 +376,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     CoverUrl: archive.CoverUrl);
 
                 var outcome = await videoService.DownloadPageAsync(job, ct);
+                if (outcome.VideoPath is { } videoPath)
+                {
+                    await AccountForPageOutputsAsync(videoPath, archive.CoverUrl);
+                }
                 if (outcome is {Status: BilibiliPageStatus.Skipped, Skip: { } skip})
                 {
                     Notice(item, archive.Pages.Count > 1 ? page : null, skip);
@@ -390,6 +394,37 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             }
 
             return unavailablePages > 0 && settledPages == 0 ? ItemOutcome.UnavailableOnly : ItemOutcome.Settled;
+        }
+
+        /// <summary>
+        /// The video service writes all sidecars before the key video file and returns its final path.
+        /// Count only that page's video, cover, danmaku and subtitles, including files found on a retry.
+        /// </summary>
+        private async Task AccountForPageOutputsAsync(string videoPath, string? coverUrl)
+        {
+            await OnFileDownloadedInternal(videoPath);
+            var directory = Path.GetDirectoryName(videoPath);
+            if (directory == null || !Directory.Exists(directory))
+            {
+                return;
+            }
+
+            var stem = Path.GetFileNameWithoutExtension(videoPath);
+            await OnFileDownloadedInternal(Path.Combine(directory,
+                stem + BilibiliVideoDownloadService.CoverExtension(coverUrl)));
+            await OnFileDownloadedInternal(Path.Combine(directory, stem + ".xml"));
+            await OnFileDownloadedInternal(Path.Combine(directory, stem + ".srt"));
+            try
+            {
+                foreach (var subtitle in Directory.EnumerateFiles(directory, stem + ".*.srt"))
+                {
+                    await OnFileDownloadedInternal(subtitle);
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning(e, "Could not inspect Bilibili subtitles beside {Path}", videoPath);
+            }
         }
 
         private void Notice(FavoriteItem item, BilibiliArchivePage? page, BilibiliSkip skip)

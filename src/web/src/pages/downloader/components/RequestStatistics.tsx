@@ -1,6 +1,7 @@
 "use client";
 
 import type { components } from "@/sdk/BApi2";
+import type { TooltipItem } from "chart.js";
 
 import { useTranslation } from "react-i18next";
 import React from "react";
@@ -18,9 +19,10 @@ import { Bar } from "react-chartjs-2";
 
 import { ThirdPartyId, ThirdPartyRequestResultType } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Button, Chip, Modal, Tooltip as BakauiTooltip } from "@/components/bakaui";
+import { Button, Chip, Modal, Tab, Tabs, Tooltip as BakauiTooltip } from "@/components/bakaui";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import { useThirdPartyRequestStatisticsStore } from "@/stores/thirdPartyRequestStatistics";
+import { humanFileSize } from "@/components/utils";
 
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -42,25 +44,10 @@ const RequestStatistics = ({ compact = false }: { compact?: boolean }) => {
         title={t("downloader.label.requestsOverview")}
         variant={"light"}
         onPress={() => {
-          const thirdPartyRequestCounts = (requestStatistics || []).reduce<any[]>((s, t) => {
-            Object.keys(t.counts || {}).forEach((r) => {
-              const resultTypeValue = parseInt(r, 10) as ThirdPartyRequestResultType;
-
-              s.push({
-                id: t.id.toString(),
-                name: ThirdPartyId[t.id],
-                result: resultTypeValue, // Use numeric value directly
-                count: t.counts?.[r],
-              });
-            });
-
-            return s;
-          }, []);
-
           createPortal(Modal, {
             size: "xl",
             defaultVisible: true,
-            children: <BizChartsChart data={thirdPartyRequestCounts} />,
+            children: <StatisticsModalContents />,
             footer: {
               actions: ["ok"],
             },
@@ -105,6 +92,11 @@ const RequestStatistics = ({ compact = false }: { compact?: boolean }) => {
                       {failureCount}
                     </Chip>
                   </BakauiTooltip>
+                  <BakauiTooltip content={t<string>("downloader.label.responseTraffic")}>
+                    <Chip className={"p-0"} size={"sm"} variant={"light"}>
+                      {humanFileSize(rs.receivedBytes ?? 0)}
+                    </Chip>
+                  </BakauiTooltip>
                 </div>
               );
             })}
@@ -116,8 +108,97 @@ const RequestStatistics = ({ compact = false }: { compact?: boolean }) => {
 
 RequestStatistics.displayName = "RequestStatistics";
 
+const StatisticsModalContents = () => {
+  const { t } = useTranslation();
+  const statistics = useThirdPartyRequestStatisticsStore((state) => state.statistics);
+  const countData = statistics.flatMap((source) =>
+    Object.entries(source.counts || {}).map(([result, count]) => ({
+      id: source.id.toString(),
+      result: Number(result) as ThirdPartyRequestResultType,
+      count,
+    })),
+  );
+
+  return (
+    <Tabs aria-label={t<string>("downloader.label.requestsOverview")} defaultSelectedKey="requests">
+      <Tab key="requests" title={t<string>("downloader.label.requestCounts")}>
+        <BizChartsChart data={countData} />
+      </Tab>
+      <Tab key="traffic" title={t<string>("downloader.label.responseTraffic")}>
+        <p className="mb-2 text-xs text-foreground-500">{t("downloader.tip.responseTraffic")}</p>
+        <TrafficChart data={statistics} />
+      </Tab>
+    </Tabs>
+  );
+};
+
+const TrafficChart = ({ data }: { data: RequestStatistics[] }) => {
+  const { t } = useTranslation();
+  const { isDarkMode } = useBakabaseContext();
+  const sources = [...data].sort((a, b) => (b.receivedBytes ?? 0) - (a.receivedBytes ?? 0));
+
+  if (data.length === 0) {
+    return <div className="flex justify-center py-4 text-gray-500">{t("common.state.noData")}</div>;
+  }
+
+  const cssColor = (variable: string, fallback: string) =>
+    typeof document === "undefined"
+      ? fallback
+      : getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+  const textColor = cssColor("--theme-text", isDarkMode ? "#e6e6e6" : "#000");
+  const subtleColor = cssColor("--theme-text-subtle", isDarkMode ? "#c0c0c0" : "#666");
+  const barColor = cssColor("--theme-color-primary", "#3388ff");
+
+  return (
+    <div style={{ height: Math.max(300, sources.length * 38) }}>
+      <Bar
+        data={{
+          labels: sources.map((source) => ThirdPartyId[source.id]),
+          datasets: [
+            {
+              label: t<string>("downloader.label.responseTraffic"),
+              data: sources.map((source) => source.receivedBytes ?? 0),
+              backgroundColor: barColor,
+            },
+          ],
+        }}
+        options={{
+          indexAxis: "y" as const,
+          maintainAspectRatio: false,
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context: TooltipItem<"bar">) =>
+                  `${t<string>("downloader.label.responseTraffic")}: ${humanFileSize(context.parsed.x, false, 2)}`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                color: subtleColor,
+                callback: (value: string | number) => humanFileSize(Number(value)),
+              },
+            },
+            y: { ticks: { color: textColor } },
+          },
+        }}
+      />
+    </div>
+  );
+};
+
 // Chart component using Chart.js
-const BizChartsChart = ({ data, height = 300 }: { data: any[]; height?: number }) => {
+const BizChartsChart = ({
+  data,
+  height = 300,
+}: {
+  data: { id: string; result: ThirdPartyRequestResultType; count: number }[];
+  height?: number;
+}) => {
   const { t } = useTranslation();
   const { isDarkMode } = useBakabaseContext();
 

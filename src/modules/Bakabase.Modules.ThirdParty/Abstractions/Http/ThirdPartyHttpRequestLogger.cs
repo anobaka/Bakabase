@@ -14,6 +14,7 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         private ILogger<ThirdPartyHttpRequestLogger> _logger;
         
         public event EventHandler<ThirdPartyRequestCompletedEventArgs>? OnRequestCompleted;
+        public event EventHandler? OnTrafficChanged;
 
         public ThirdPartyHttpRequestLogger(ILogger<ThirdPartyHttpRequestLogger> logger)
         {
@@ -66,17 +67,7 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                 var message = buildCustomMessage?.Invoke(rsp, e) ?? e?.BuildFullInformationText();
                 var resultType = getResultType?.Invoke(rsp, e) ?? DefaultGetResultType(rsp, e, ct);
 
-                _logs.GetOrAdd(tp, _ => new ConcurrentBag<ThirdPartyRequestLog>()).Add(new ThirdPartyRequestLog
-                {
-                    ThirdPartyId = tp,
-                    Result = resultType,
-                    RequestTime = requestTime,
-                    ElapsedMs = elapsedMs,
-                    Message = message,
-                    Key = key
-                });
-                
-                _onRequestCompleted(tp, resultType);
+                RecordCompletedRequest(tp, rsp, resultType, requestTime, elapsedMs, message, key);
             }
 
             return rsp;
@@ -114,17 +105,7 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                 var message = buildCustomMessage?.Invoke(rsp, e) ?? e?.BuildFullInformationText();
                 var resultType = getResultType?.Invoke(rsp, e) ?? DefaultGetResultType(rsp, e, ct);
 
-                _logs.GetOrAdd(tp, _ => new ConcurrentBag<ThirdPartyRequestLog>()).Add(new ThirdPartyRequestLog
-                {
-                    ThirdPartyId = tp,
-                    Result = resultType,
-                    RequestTime = requestTime,
-                    ElapsedMs = elapsedMs,
-                    Message = message,
-                    Key = key
-                });
-                
-                _onRequestCompleted(tp, resultType);
+                RecordCompletedRequest(tp, rsp, resultType, requestTime, elapsedMs, message, key);
             }
 
             return rsp;
@@ -137,6 +118,59 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         public void Reset()
         {
             _logs.Clear();
+        }
+
+        private void RecordCompletedRequest(ThirdPartyId tp, HttpResponseMessage? response,
+            ThirdPartyRequestResultType resultType, DateTime requestTime, long elapsedMs, string? message,
+            string? key)
+        {
+            var log = new ThirdPartyRequestLog
+            {
+                ThirdPartyId = tp,
+                Result = resultType,
+                RequestTime = requestTime,
+                ElapsedMs = elapsedMs,
+                Message = message,
+                Key = key
+            };
+            _logs.GetOrAdd(tp, _ => new ConcurrentBag<ThirdPartyRequestLog>()).Add(log);
+
+            if (response?.Content is { } content)
+            {
+                // Send/SendAsync can return before any response body is read. Count reads rather
+                // than Content-Length so partial and chunked responses report the actual payload.
+                var notificationGate = new object();
+                long bytesSinceNotification = 0;
+                var lastNotification = Stopwatch.GetTimestamp();
+
+                response.Content = new ResponseTrafficTrackingContent(content, (bytes, finished) =>
+                {
+                    var notify = false;
+                    lock (notificationGate)
+                    {
+                        if (bytes > 0)
+                        {
+                            log.AddReceivedBytes(bytes);
+                            bytesSinceNotification += bytes;
+                        }
+
+                        if (bytesSinceNotification > 0 &&
+                            (finished || Stopwatch.GetElapsedTime(lastNotification) >= TimeSpan.FromSeconds(1)))
+                        {
+                            bytesSinceNotification = 0;
+                            lastNotification = Stopwatch.GetTimestamp();
+                            notify = true;
+                        }
+                    }
+
+                    if (notify)
+                    {
+                        OnTrafficChanged?.Invoke(this, EventArgs.Empty);
+                    }
+                });
+            }
+
+            _onRequestCompleted(tp, resultType);
         }
         
         private void _onRequestCompleted(ThirdPartyId thirdPartyId, ThirdPartyRequestResultType resultType)

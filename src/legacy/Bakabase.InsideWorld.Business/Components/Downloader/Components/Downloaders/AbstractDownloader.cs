@@ -43,6 +43,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         public event Func<Task>? OnStatusChanged;
         public event Func<string, Task>? OnNameAcquired;
         public event Func<decimal, Task>? OnProgress;
+        public event Func<string, long, Task>? OnFileDownloaded;
         public event Func<Task>? OnCurrentChanged;
         public event Func<string, Task>? OnCheckpointChanged;
 
@@ -175,6 +176,24 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             if (OnProgress != null)
             {
                 await OnProgress(progress);
+            }
+        }
+
+        /// <summary>Records a file only after it exists at its final output path.</summary>
+        protected async Task OnFileDownloadedInternal(string path)
+        {
+            try
+            {
+                var file = new FileInfo(path);
+                if (file.Exists && OnFileDownloaded != null)
+                {
+                    await OnFileDownloaded(file.FullName, file.Length);
+                }
+            }
+            catch (Exception e)
+            {
+                // Display accounting is best-effort and must never fail the actual download.
+                Logger.LogWarning(e, "Could not account for downloaded file {Path}", path);
             }
         }
 

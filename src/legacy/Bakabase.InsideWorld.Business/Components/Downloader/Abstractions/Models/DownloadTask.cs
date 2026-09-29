@@ -20,6 +20,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         public ThirdPartyId ThirdPartyId { get; set; }
         public int Type { get; set; }
         public decimal Progress { get; set; }
+        /// <summary>Total bytes in files attributed to this task; null until a file is observed.</summary>
+        public long? DownloadedBytes { get; set; }
         /// <summary>
         /// Estimated seconds remaining in the current run; null when not downloading or when
         /// there is not enough recent progress to estimate. Transient, never persisted.

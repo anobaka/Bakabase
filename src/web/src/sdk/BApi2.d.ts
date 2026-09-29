@@ -10038,6 +10038,8 @@ export interface components {
             type: number;
             /** Format: double */
             progress: number;
+            /** Format: int64 */
+            downloadedBytes?: number | null;
             /** Format: double */
             estimatedRemainingSeconds?: number;
             /** Format: date-time */
@@ -10569,6 +10571,8 @@ export interface components {
             counts?: {
                 [key: string]: number;
             };
+            /** Format: int64; response-body bytes read by the client */
+            receivedBytes: number;
         };
         "Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics": {
             /** Format: int32 */
