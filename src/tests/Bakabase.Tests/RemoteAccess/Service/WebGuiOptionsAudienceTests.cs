@@ -141,7 +141,8 @@ public class WebGuiOptionsAudienceTests
         }
     }
 
-    private async Task<ServiceGateHost> StartAsync(RemoteAccessMode mode, bool withProgressor = false)
+    private async Task<ServiceGateHost> StartAsync(RemoteAccessMode mode, bool withProgressor = false,
+        bool requirePairing = false)
     {
         var host = await ServiceGateHost.StartAsync([typeof(RemoteAccessController), typeof(FederationPeerController)],
             services =>
@@ -155,7 +156,8 @@ public class WebGuiOptionsAudienceTests
                     new UiHubContext(sp.GetRequiredService<IHubContext<OptionsHub, IWebGuiClient>>()));
 
                 // Remote access as the Service reads it: from its options.
-                AddSettings(services, new RemoteAccessOptions {Mode = mode, ServerId = "this-server"});
+                AddSettings(services,
+                    new RemoteAccessOptions {Mode = mode, RequirePairing = requirePairing, ServerId = "this-server"});
                 services.AddSingleton(new RemoteAccessDefaults(RemoteAccessMode.Disabled));
                 services.AddSingleton<IRemoteAccessService>(sp => new RemoteAccessService(
                     sp.GetRequiredService<IBOptionsManager<RemoteAccessOptions>>(),
@@ -397,6 +399,33 @@ public class WebGuiOptionsAudienceTests
             await using var paired = await HubClient.ConnectAsync(host, LanAddress, laptop, beforeHandshake: Change);
             CollectionAssert.AreEquivalent(AllOptions, (await paired.GetInitialDataAsync()).Keys.ToArray());
         }
+    }
+
+    /// <summary>
+    /// A device revoked in the same gap: the revocation hangs up on the device's connections
+    /// already open, which this one is not yet. Whoever holds a stolen key could otherwise keep a
+    /// socket waiting there and, once cut off, still hold a connection that is sent every options
+    /// object and every change.
+    /// </summary>
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_connection_the_hub_opens_after_its_device_is_revoked_is_refused(bool requirePairing)
+    {
+        await using var host = await StartAsync(RemoteAccessMode.Enabled, requirePairing: requirePairing);
+        var laptop = await PairAsync(host);
+
+        async Task Revoke()
+        {
+            var revoked = await host.SendAsync(HttpMethod.Delete, $"/remote-access/devices/{laptop.DeviceId}");
+            Assert.AreEqual(HttpStatusCode.OK, revoked.StatusCode, await revoked.Content.ReadAsStringAsync());
+        }
+
+        await using var paired = await HubClient.ConnectAsync(host, LanAddress, laptop, beforeHandshake: Revoke);
+        await paired.AssertClosedAsync();
+
+        AssertNoSecret(paired.Records, "after the revocation");
+        Assert.AreEqual(0, host.Services.GetRequiredService<RemoteConnectionRegistry>().Count);
     }
 
     [TestMethod]

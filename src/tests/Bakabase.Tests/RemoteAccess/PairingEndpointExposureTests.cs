@@ -277,11 +277,20 @@ public class PairingEndpointExposureTests
 
         foreach (var route in ManagementRoutes())
         {
-            host.Remote.Mode = RemoteAccessMode.Enabled;
-            AssertAdmitted(await SendSignedAsync(host, Call(host, route, LanAddress), phone), $"{route}, paired");
-            AssertAdmitted(await host.SendAsync(Call(host, route, null)), $"{route}, from this machine");
+            // Also on a server that serves paired devices only: what the devices page's
+            // management switch and the sharing wizard turn on, and how a headless server
+            // managed from a phone is usually set up.
+            foreach (var requirePairing in new[] {false, true})
+            {
+                host.Remote.Mode = RemoteAccessMode.Enabled;
+                host.Remote.RequirePairing = requirePairing;
+                var because = requirePairing ? $"{route}, pairing required" : route.ToString();
+                AssertAdmitted(await SendSignedAsync(host, Call(host, route, LanAddress), phone), $"{because}, paired");
+                AssertAdmitted(await host.SendAsync(Call(host, route, null)), $"{because}, from this machine");
+            }
 
             host.Remote.Mode = RemoteAccessMode.Unrestricted;
+            host.Remote.RequirePairing = false;
             AssertAdmitted(await host.SendAsync(Call(host, route, LanAddress)), $"{route}, unpaired on Unrestricted");
         }
 

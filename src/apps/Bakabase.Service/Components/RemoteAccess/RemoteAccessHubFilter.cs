@@ -4,6 +4,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
+using Bakabase.Modules.RemoteAccess.Components.Pairing;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Bakabase.Service.Components.RemoteAccess;
@@ -19,8 +20,10 @@ namespace Bakabase.Service.Components.RemoteAccess;
 /// decided by the middleware that ran during the handshake — this only reads what it
 /// left behind.
 /// </remarks>
-public sealed class RemoteAccessHubFilter(RemoteConnectionRegistry registry, IRemoteAccessService remoteAccess)
-    : IHubFilter
+public sealed class RemoteAccessHubFilter(
+    RemoteConnectionRegistry registry,
+    IRemoteAccessService remoteAccess,
+    IRemoteDeviceService devices) : IHubFilter
 {
     public async Task OnConnectedAsync(HubLifetimeContext context, Func<HubLifetimeContext, Task> next)
     {
@@ -34,10 +37,10 @@ public sealed class RemoteAccessHubFilter(RemoteConnectionRegistry registry, IRe
             registry.Track(remote.Device?.Id, connection.ConnectionId, connection.Abort);
 
             // The gate let in the request that opened this connection, possibly before a change
-            // of the settings: a change hangs up on the connections in the registry
-            // (RemoteAccessConnectionMonitor), and this one was not in it until now. So it is
-            // judged again here, after tracking — a change made after this check finds it in
-            // the registry.
+            // of the settings or the device's revocation: either hangs up on the connections in
+            // the registry (RemoteAccessConnectionMonitor, RemoteAccessController.RevokeDevice),
+            // and this one was not in it until now. So it is judged again here, after tracking —
+            // a change or a revocation made after this check finds it in the registry.
             if (IsRefusedNow(remote))
             {
                 registry.Forget(connection.ConnectionId);
@@ -72,13 +75,15 @@ public sealed class RemoteAccessHubFilter(RemoteConnectionRegistry registry, IRe
 
     /// <summary>
     /// Whether <see cref="RemoteAccessMiddleware"/> would refuse, under the settings as they are
-    /// now, the remote caller it admitted as <paramref name="remote"/>: remote access is off, or
-    /// the caller has not paired and pairing is required.
+    /// now, the remote caller it admitted as <paramref name="remote"/>: remote access is off, the
+    /// device that signed the request has been revoked since, or the caller has not paired and
+    /// pairing is required.
     /// </summary>
     private bool IsRefusedNow(RemoteAccessContext remote)
     {
         var mode = remoteAccess.GetEffectiveMode();
         return mode == RemoteAccessMode.Disabled ||
+               remote.Device is { } device && devices.Find(device.Id) == null ||
                mode != RemoteAccessMode.Unrestricted && remoteAccess.GetRequirePairing() && !remote.IsPaired;
     }
 }
