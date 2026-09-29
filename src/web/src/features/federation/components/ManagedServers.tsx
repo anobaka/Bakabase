@@ -17,6 +17,7 @@ import { revealClass } from "../hooks/useSectionReveal";
 import { managedServerApi } from "../serverApi";
 import { CONFIGURATION_ROUTE, openManagedServer } from "../switching";
 import { FederationError, isAbort } from "../transport";
+import { managedServerOutcomeCode } from "../proxy";
 
 import {
   buttonClass,
@@ -31,12 +32,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import ManagedServerPathMappings from "./ManagedServerPathMappings";
 
 import { minutesUntil } from "@/core/serverTime";
-import {
-  ManagedServerOutcome,
-  ManagedServerOutcomeLabel,
-  ManagedServerState,
-  RemoteAccessMode,
-} from "@/sdk/constants";
+import { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
 
 /** While a filed request waits, the list is re-read this often to pick up the answer. */
 const REQUEST_POLL_MS = 5000;
@@ -53,12 +49,11 @@ interface Confirmation {
  * answered". Carried as a {@link FederationError} so it renders like every other failure
  * on this page, with its own explanation.
  */
-const outcomeError = (outcome: ManagedServerOutcome, detail?: string | null) =>
-  new FederationError(
-    `ManagedServer${ManagedServerOutcomeLabel[outcome] ?? outcome}`,
-    detail ?? "",
-    0,
-  );
+const outcomeError = (
+  outcome: ManagedServerOutcome,
+  detail: string | null | undefined,
+  address: string,
+) => new FederationError(managedServerOutcomeCode(outcome, address), detail ?? "", 0);
 
 export const stateBadgeClass: Record<ManagedServerState, string> = {
   [ManagedServerState.Unknown]: "bg-default-100 text-default-500",
@@ -337,7 +332,7 @@ export function ManagedServersPanel({
 
         return false;
       default:
-        throw outcomeError(result.outcome, result.detail);
+        throw outcomeError(result.outcome, result.detail, target);
     }
   };
 
@@ -485,7 +480,7 @@ export function ManagedServersPanel({
                   >
                     {!request.active
                       ? t(
-                          `federation.error.ManagedServer${ManagedServerOutcomeLabel[request.outcome] ?? request.outcome}`,
+                          `federation.error.${managedServerOutcomeCode(request.outcome, request.address)}`,
                         )
                       : retrying
                         ? t("federation.servers.retrying", { name, minutes })
@@ -813,9 +808,7 @@ export function ManagedServerWarnings({
           className="text-xs text-warning-600 dark:text-warning"
           data-testid="managed-server-offline-reason"
         >
-          {t(
-            `federation.error.ManagedServer${ManagedServerOutcomeLabel[server.offlineReason] ?? server.offlineReason}`,
-          )}
+          {t(`federation.error.${managedServerOutcomeCode(server.offlineReason, server.address)}`)}
         </p>
       )}
       {server.state === ManagedServerState.WrongServer && (

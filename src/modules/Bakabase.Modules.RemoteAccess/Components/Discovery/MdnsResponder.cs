@@ -13,6 +13,15 @@ namespace Bakabase.Modules.RemoteAccess.Components.Discovery;
 /// here fails soft: discovery is a convenience, and a socket error must never
 /// take the application down with it.
 /// </para>
+/// <para>
+/// A full mDNS querier — one asking from port 5353, as every browser does — is answered by
+/// multicast, at most once a second. A one-shot querier — one asking from a port of its own, as
+/// another Bakabase resolving a <c>.local</c> name does (<c>MdnsHostResolver</c>) — is answered
+/// straight back, as RFC 6762 §6.7 requires: it may not hear the group at all, and a single
+/// multicast answer lost on Wi-Fi would otherwise leave it with nothing for a second or more.
+/// Those answers go only to senders on this machine's links and are limited on their own, apart
+/// from the multicast ones.
+/// </para>
 /// </summary>
 public sealed class MdnsResponder : IDisposable
 {
@@ -22,20 +31,35 @@ public sealed class MdnsResponder : IDisposable
     /// <summary>mDNS forbids multicasting the same records more often than this.</summary>
     private static readonly TimeSpan MinResponseInterval = TimeSpan.FromSeconds(1);
 
+    /// <summary>How many answers go straight back to one-shot queriers in a second, all of them together.</summary>
+    public const int MaxUnicastAnswersPerSecond = 20;
+
     private readonly MdnsAdvertisement _advertisement;
     private readonly Func<IReadOnlyList<IPAddress>> _addressProvider;
+    private readonly Func<IPAddress, bool> _isOnLink;
     private readonly ILogger _logger;
     private readonly CancellationTokenSource _cts = new();
+    private readonly Lock _gate = new();
 
     private Socket? _socket;
-    private long _lastResponseTicks;
+    private long? _lastMulticastAt;
+    private long _unicastWindowStart;
+    private int _unicastInWindow;
 
+    /// <param name="advertisement">What this server advertises.</param>
+    /// <param name="addressProvider">This machine's IPv4 addresses to publish, read at every answer.</param>
+    /// <param name="logger">Where failures go, quietly.</param>
+    /// <param name="isOnLink">
+    /// Whether a sender is on one of this machine's links, which an answer straight back needs;
+    /// defaults to <see cref="LocalNetworkAddresses.IsOnLink"/>.
+    /// </param>
     public MdnsResponder(MdnsAdvertisement advertisement, Func<IReadOnlyList<IPAddress>> addressProvider,
-        ILogger logger)
+        ILogger logger, Func<IPAddress, bool>? isOnLink = null)
     {
         _advertisement = advertisement;
         _addressProvider = addressProvider;
         _logger = logger;
+        _isOnLink = isOnLink ?? LocalNetworkAddresses.IsOnLink;
     }
 
     /// <summary>False when the socket could not be set up (port in use, no multicast).</summary>
@@ -94,6 +118,81 @@ public sealed class MdnsResponder : IDisposable
 
     public void SayGoodbye() => Send(goodbye: true);
 
+    /// <summary>
+    /// What to send for one datagram <paramref name="from"/> received: the answer and where it
+    /// goes, or null when nothing is to be sent — not a query about this server's records, a
+    /// multicast answer sent less than a second ago, a one-shot querier off this machine's links
+    /// or past <see cref="MaxUnicastAnswersPerSecond"/>, or no address to publish.
+    /// </summary>
+    /// <param name="data">The datagram.</param>
+    /// <param name="from">Where it came from.</param>
+    /// <param name="nowMilliseconds">A monotonic clock's reading, in milliseconds.</param>
+    public MdnsReply? Respond(ReadOnlySpan<byte> data, IPEndPoint from, long nowMilliseconds)
+    {
+        if (!MdnsMessage.TryParseQuery(data, out var id, out var questions))
+        {
+            return null;
+        }
+
+        var asked = questions.Select(q => (q.Name, q.Type)).ToList();
+
+        if (!_advertisement.Answers(asked))
+        {
+            return null;
+        }
+
+        if (from.Port != MdnsPort)
+        {
+            // A one-shot querier (RFC 6762 §6.7): answered straight back, repeating its id and
+            // questions — never by multicast, which it may not hear.
+            if (!_isOnLink(from.Address) || !TakeUnicastTurn(nowMilliseconds))
+            {
+                return null;
+            }
+
+            var addresses = _addressProvider();
+
+            if (addresses.Count == 0)
+            {
+                return null;
+            }
+
+            var (answers, additional) = MdnsAdvertisement.Select(_advertisement.BuildRecords(addresses), asked);
+
+            return answers.Count == 0
+                ? null
+                : new MdnsReply(MdnsMessage.BuildLegacyUnicastResponse(id, questions, answers, additional), from);
+        }
+
+        lock (_gate)
+        {
+            if (_lastMulticastAt is { } last && nowMilliseconds - last < MinResponseInterval.TotalMilliseconds)
+            {
+                return null;
+            }
+
+            _lastMulticastAt = nowMilliseconds;
+        }
+
+        return BuildAnnouncement(goodbye: false) is { } packet
+            ? new MdnsReply(packet, new IPEndPoint(MulticastAddress, MdnsPort))
+            : null;
+    }
+
+    private bool TakeUnicastTurn(long now)
+    {
+        lock (_gate)
+        {
+            if (now - _unicastWindowStart >= 1000 || now < _unicastWindowStart)
+            {
+                _unicastWindowStart = now;
+                _unicastInWindow = 0;
+            }
+
+            return ++_unicastInWindow <= MaxUnicastAnswersPerSecond;
+        }
+    }
+
     private async Task ReceiveLoopAsync(CancellationToken ct)
     {
         var buffer = new byte[9000];
@@ -105,20 +204,13 @@ public sealed class MdnsResponder : IDisposable
             {
                 var result = await socket.ReceiveFromAsync(buffer, SocketFlags.None, remote, ct);
 
-                if (!MdnsMessage.TryParseQuestions(buffer.AsSpan(0, result.ReceivedBytes), out var questions) ||
-                    !_advertisement.Answers(questions))
+                if (result.RemoteEndPoint is not IPEndPoint from ||
+                    Respond(buffer.AsSpan(0, result.ReceivedBytes), from, Environment.TickCount64) is not { } reply)
                 {
                     continue;
                 }
 
-                var now = Environment.TickCount64;
-                if (now - Interlocked.Read(ref _lastResponseTicks) < MinResponseInterval.TotalMilliseconds)
-                {
-                    continue;
-                }
-
-                Interlocked.Exchange(ref _lastResponseTicks, now);
-                Send(goodbye: false);
+                socket.SendTo(reply.Packet, reply.To);
             }
             catch (OperationCanceledException)
             {
@@ -145,17 +237,25 @@ public sealed class MdnsResponder : IDisposable
         }
     }
 
+    /// <summary>The whole record set as one multicast response, or null with no address to publish.</summary>
+    private byte[]? BuildAnnouncement(bool goodbye)
+    {
+        var addresses = _addressProvider();
+
+        return addresses.Count == 0
+            ? null
+            : MdnsMessage.BuildResponse(_advertisement.BuildRecords(addresses, goodbye));
+    }
+
     private void Send(bool goodbye)
     {
         try
         {
-            var addresses = _addressProvider();
-            if (addresses.Count == 0 || _socket is not { } socket)
+            if (_socket is not { } socket || BuildAnnouncement(goodbye) is not { } packet)
             {
                 return;
             }
 
-            var packet = MdnsMessage.BuildResponse(_advertisement.BuildRecords(addresses, goodbye));
             socket.SendTo(packet, new IPEndPoint(MulticastAddress, MdnsPort));
         }
         catch (Exception e)
@@ -172,3 +272,8 @@ public sealed class MdnsResponder : IDisposable
         _cts.Dispose();
     }
 }
+
+/// <summary>What <see cref="MdnsResponder"/> sends in answer to a query, and where.</summary>
+/// <param name="Packet">The response.</param>
+/// <param name="To">The multicast group, or the one-shot querier it goes straight back to.</param>
+public sealed record MdnsReply(byte[] Packet, IPEndPoint To);

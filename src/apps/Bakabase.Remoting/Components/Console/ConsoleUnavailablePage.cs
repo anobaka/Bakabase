@@ -1,4 +1,5 @@
 using System.Net;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Remoting.Components.Forwarding;
 using Microsoft.AspNetCore.Http;
 
@@ -132,6 +133,20 @@ public static class ConsoleUnavailablePage
                 $"{address} 现在是另一台被识别成本机的电脑（{other}），它的数据目录很可能是从本机复制的，本窗口没有向它发送任何请求。" +
                 "请在复制出的那台设备上打开“设备与分享 → 高级 → 复制或恢复数据后”，选择“设为新设备”（无界面的服务器上请在其中运行“dotnet Bakabase.Service.dll " +
                 $"federation new-identity”）。如果 {name} 换了地址，请在本机的“设备与分享 → 管理”中重新找到它。"),
+            // A domain the proxy resolves itself was tried through it, and did not get through:
+            // the fix is that domain in the proxy. Worded as the refusal a fetch gets
+            // (UpstreamIdentityCheck.Describe).
+            _ when check.ProxyFakeAddress && ProxyFakeAddresses.ProxyResolvesItself(check.Host) => (
+                $"A proxy on this device is in the way of {name}",
+                $"{address} could not be reached through a proxy on this device: a proxy such as Clash in fake-IP or " +
+                "TUN mode answered its name with an address of its own (198.18.x.x), and connecting through it " +
+                $"failed, so this window sent it nothing. In the proxy, set {E(check.Host)} to DIRECT (for Clash, add " +
+                $"it to fake-ip-filter), then reload this page — or add {name} again by its IP address on this " +
+                "device's Devices and sharing page, under Management.",
+                $"本机的代理软件拦住了 {name}",
+                $"{address} 无法经本机的代理软件连接：Clash 等代理软件在 fake-ip 或 TUN 模式下把这个名字解析成了它自己的地址（198.18.x.x），" +
+                $"而经它连接失败，本窗口没有向它发送任何请求。请在代理软件中把 {E(check.Host)} 设为直连（DIRECT，Clash 可将它加入 " +
+                $"fake-ip-filter），然后刷新本页；或者在本机的“设备与分享 → 管理”中用 {name} 的 IP 地址重新添加它。"),
             // Nothing was even tried over there: the proxy on this computer is in the way, and
             // that is where the fix is. Worded as the refusal a fetch gets (UpstreamIdentityCheck.Describe).
             _ when check.ProxyFakeAddress => (

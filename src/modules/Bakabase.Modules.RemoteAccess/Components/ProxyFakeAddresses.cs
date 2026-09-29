@@ -16,9 +16,25 @@ namespace Bakabase.Modules.RemoteAccess.Components;
 /// </para>
 /// <para>
 /// The range is reserved for benchmarking (RFC 2544) and never a real LAN address, so meeting
-/// it is proof enough, and the one thing worth telling the user is that the proxy is in the
-/// way. Nothing is sent there: it would go to the proxy, and from there possibly to a server
-/// on the internet. No other range is treated this way.
+/// it is proof enough that a proxy took the name over. What that means depends on the name
+/// (<see cref="ProxyResolvesItself"/>):
+/// </para>
+/// <list type="bullet">
+/// <item>
+/// A name only the LAN knows — a <c>.local</c> name, a computer's single-label name — or such an
+/// address typed as it is: the proxy has no way to the device, so nothing is sent there (it
+/// would go to the proxy, and from there possibly to a server on the internet), and the one
+/// thing worth telling the user is that the proxy is in the way.
+/// </item>
+/// <item>
+/// Any other name — a domain, a DDNS name, a reverse proxy's: the proxy resolves it with its own
+/// DNS and connects on the user's behalf, as it does for every other program, so its address is
+/// dialled as the resolver gave it. Only when that fails is the proxy named as what stood in
+/// the way.
+/// </item>
+/// </list>
+/// <para>
+/// No other range is treated this way.
 /// </para>
 /// </remarks>
 public static class ProxyFakeAddresses
@@ -42,16 +58,56 @@ public static class ProxyFakeAddresses
     }
 
     /// <summary>
-    /// What <paramref name="host"/> resolved to, in the resolver's order, without the fake
-    /// addresses — or, when the resolver's first answer is one, a
-    /// <see cref="ProxyFakeAddressException"/>: the proxy answered the name before anything
-    /// real did, which is how it answers every name it takes over.
+    /// Whether a proxy that took <paramref name="host"/> over can still reach it on the user's
+    /// behalf: a domain name, which the proxy resolves with its own DNS. Not an IP address, a
+    /// <c>.local</c> name (only the LAN's mDNS responders answer it) or a single label (a
+    /// computer's name, which only the LAN's resolvers know).
     /// </summary>
-    public static IReadOnlyList<IPAddress> Screen(string host, IReadOnlyList<IPAddress> resolved)
+    public static bool ProxyResolvesItself(string host)
     {
+        var name = host.Trim('[', ']').TrimEnd('.');
+
+        return name.Length > 0 && !IPAddress.TryParse(name, out _) && name.Contains('.') &&
+               !name.EndsWith(".local", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <inheritdoc cref="Screen(string, IReadOnlyList{IPAddress}, out IPAddress?)"/>
+    public static IReadOnlyList<IPAddress> Screen(string host, IReadOnlyList<IPAddress> resolved) =>
+        Screen(host, resolved, out _);
+
+    /// <summary>Where to connect for <paramref name="host"/>, given what it resolved to.</summary>
+    /// <remarks>
+    /// <para>
+    /// When the resolver's first answer is a proxy's — how a proxy answers every name it takes
+    /// over — the name is the proxy's now: a <see cref="ProxyFakeAddressException"/>, nothing
+    /// dialled, where the proxy cannot reach it (<see cref="ProxyResolvesItself"/>); the
+    /// resolver's answer as it is, the proxy's address included, where it can.
+    /// </para>
+    /// <para>
+    /// Otherwise the resolver's answer in its order, without a proxy's addresses behind the real
+    /// ones: they would only lead into the proxy.
+    /// </para>
+    /// </remarks>
+    /// <param name="host">The name resolved, or an address typed as it is.</param>
+    /// <param name="resolved">What it resolved to, in the resolver's order.</param>
+    /// <param name="throughProxy">
+    /// The proxy's address, when what is returned goes through the proxy: a failure to connect
+    /// there is then reported as the proxy's (<see cref="ProxyFakeAddressException"/>). Null otherwise.
+    /// </param>
+    public static IReadOnlyList<IPAddress> Screen(string host, IReadOnlyList<IPAddress> resolved,
+        out IPAddress? throughProxy)
+    {
+        throughProxy = null;
+
         if (resolved.Count > 0 && Contains(resolved[0]))
         {
-            throw new ProxyFakeAddressException(host, resolved[0]);
+            if (!ProxyResolvesItself(host))
+            {
+                throw new ProxyFakeAddressException(host, resolved[0]);
+            }
+
+            throughProxy = resolved[0];
+            return resolved;
         }
 
         return resolved.Any(Contains) ? resolved.Where(a => !Contains(a)).ToList() : resolved;
@@ -89,9 +145,10 @@ public static class ProxyFakeAddresses
 }
 
 /// <summary>
-/// Thrown instead of connecting when the address is a proxy's own (see
-/// <see cref="ProxyFakeAddresses"/>): a name a proxy on this computer took over, or such an
-/// address typed as it is. Nothing was sent there.
+/// Thrown when the address is a proxy's own (see <see cref="ProxyFakeAddresses"/>): instead of
+/// connecting, for a name only the LAN knows that a proxy on this computer took over, or such an
+/// address typed as it is — nothing was sent there; and once connecting through the proxy
+/// failed, for a domain it took over (<see cref="ProxyResolvesItself"/>).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -107,13 +164,7 @@ public static class ProxyFakeAddresses
 /// </para>
 /// </remarks>
 public sealed class ProxyFakeAddressException(string host, IPAddress address, Exception? connectError = null)
-    : SocketException((int) SocketError.HostUnreachable,
-        (IPAddress.TryParse(host, out _)
-            ? $"{address} is an address a proxy on this computer hands out (198.18.0.0/15), not a device's; " +
-              "nothing was sent to it"
-            : $"{host} resolved to {address}, an address a proxy on this computer hands out (198.18.0.0/15); " +
-              "nothing was sent to it") +
-        (connectError == null ? "" : $". The addresses the LAN gave for it did not answer either: {connectError.Message}"))
+    : SocketException((int) SocketError.HostUnreachable, Describe(host, address, connectError))
 {
     /// <summary>The name or address that was to be connected to.</summary>
     public string Host { get; } = host;
@@ -121,6 +172,40 @@ public sealed class ProxyFakeAddressException(string host, IPAddress address, Ex
     /// <summary>The proxy's address it led to.</summary>
     public IPAddress Address { get; } = address;
 
-    /// <summary>How connecting at the addresses the LAN gave instead failed, when it was tried.</summary>
+    /// <summary>
+    /// How connecting failed, when it was tried: through the proxy for a domain, at the addresses
+    /// the LAN gave instead for a <c>.local</c> name.
+    /// </summary>
     public Exception? ConnectError { get; } = connectError;
+
+    /// <summary>
+    /// Whether the proxy could have reached <see cref="Host"/> itself — a domain
+    /// (<see cref="ProxyFakeAddresses.ProxyResolvesItself"/>), where the fix is that domain set to
+    /// bypass the proxy — rather than a name only the LAN knows, or an address.
+    /// </summary>
+    public bool ProxyResolvesItself => ProxyFakeAddresses.ProxyResolvesItself(Host);
+
+    private static string Describe(string host, IPAddress address, Exception? connectError)
+    {
+        var tried = connectError == null ? "" : $": {connectError.Message}";
+
+        if (IPAddress.TryParse(host.Trim('[', ']'), out _))
+        {
+            return connectError == null
+                ? $"{address} is an address a proxy on this computer hands out (198.18.0.0/15), not a device's; " +
+                  "nothing was sent to it"
+                : $"{address}, an address a proxy on this computer hands out (198.18.0.0/15), could not be " +
+                  $"reached through the proxy{tried}";
+        }
+
+        if (ProxyFakeAddresses.ProxyResolvesItself(host))
+        {
+            return $"{host} resolved to {address}, an address a proxy on this computer hands out (198.18.0.0/15), " +
+                   $"and could not be reached through the proxy{tried}";
+        }
+
+        return $"{host} resolved to {address}, an address a proxy on this computer hands out (198.18.0.0/15); " +
+               "nothing was sent to it" +
+               (connectError == null ? "" : $". The addresses the LAN gave for it did not answer either{tried}");
+    }
 }

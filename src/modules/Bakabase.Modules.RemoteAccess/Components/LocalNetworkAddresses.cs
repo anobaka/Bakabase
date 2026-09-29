@@ -98,4 +98,85 @@ internal static class LocalNetworkAddresses
             return null;
         }
     }
+
+    /// <summary>
+    /// Whether <paramref name="address"/> is on a link this machine is on: this machine itself,
+    /// IPv4 link-local (169.254.0.0/16), or in the subnet of one of its interfaces' IPv4
+    /// addresses. False when the interfaces cannot be read.
+    /// </summary>
+    public static bool IsOnLink(IPAddress address)
+    {
+        if (address.IsIPv4MappedToIPv6)
+        {
+            address = address.MapToIPv4();
+        }
+
+        if (address.AddressFamily != AddressFamily.InterNetwork)
+        {
+            return false;
+        }
+
+        var bytes = address.GetAddressBytes();
+
+        if (IPAddress.IsLoopback(address) || (bytes[0] == 169 && bytes[1] == 254))
+        {
+            return true;
+        }
+
+        try
+        {
+            foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (ni.OperationalStatus != OperationalStatus.Up)
+                {
+                    continue;
+                }
+
+                foreach (var info in ni.GetIPProperties().UnicastAddresses)
+                {
+                    // A prefix of 0 would be the whole internet, not a link.
+                    if (info.Address.AddressFamily == AddressFamily.InterNetwork &&
+                        PrefixLengthOf(info) is > 0 and var prefix &&
+                        InSubnet(bytes, info.Address.GetAddressBytes(), prefix))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        catch (Exception e) when (e is NetworkInformationException or PlatformNotSupportedException)
+        {
+        }
+
+        return false;
+    }
+
+    /// <summary>Whether <paramref name="address"/> is in <paramref name="network"/>/<paramref name="prefixLength"/>.</summary>
+    internal static bool InSubnet(byte[] address, byte[] network, int prefixLength)
+    {
+        for (var i = 0; i < address.Length && prefixLength > 0; i++, prefixLength -= 8)
+        {
+            var mask = prefixLength >= 8 ? 0xFF : (byte) (0xFF << (8 - prefixLength));
+
+            if ((address[i] & mask) != (network[i] & mask))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static int PrefixLengthOf(UnicastIPAddressInformation info)
+    {
+        try
+        {
+            return info.PrefixLength;
+        }
+        catch (PlatformNotSupportedException)
+        {
+            // Without a prefix, the address alone: a sender holding it is this machine.
+            return 32;
+        }
+    }
 }

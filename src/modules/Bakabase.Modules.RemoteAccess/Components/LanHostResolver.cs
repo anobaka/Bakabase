@@ -37,8 +37,9 @@ namespace Bakabase.Modules.RemoteAccess.Components;
 /// </item>
 /// </list>
 /// <para>
-/// What comes back is screened by the caller either way (<see cref="ProxyFakeAddresses.Screen"/>):
-/// a system answer can still be a proxy's.
+/// What comes back is screened by the caller either way
+/// (<see cref="ProxyFakeAddresses.Screen(string, IReadOnlyList{IPAddress}, out IPAddress?)"/>): a
+/// system answer can still be a proxy's.
 /// </para>
 /// <para>
 /// The default resolver of <see cref="DualStackConnector"/>, and so of every connection the
@@ -161,7 +162,10 @@ public sealed class LanHostResolver
 }
 
 /// <summary>What <see cref="LanHostResolver"/> found for a name.</summary>
-/// <param name="Addresses">Where to connect, in the resolver's order; still to be screened (<see cref="ProxyFakeAddresses.Screen"/>).</param>
+/// <param name="Addresses">
+/// Where to connect, in the resolver's order; still to be screened
+/// (<see cref="ProxyFakeAddresses.Screen(string, IReadOnlyList{IPAddress}, out IPAddress?)"/>).
+/// </param>
 /// <param name="ProxyAddress">
 /// The proxy's address the system resolver answered the name with first, when the LAN gave
 /// <paramref name="Addresses"/> instead but none a Bakabase server listens on (IPv6 alone): once

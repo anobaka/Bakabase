@@ -75,12 +75,17 @@ manage anything; they are only ever managed.
   question's own exchange. Every new connection needs an answer no older than two seconds, and
   each question resolves the name again, so a name that moved on is followed within that (a
   `.local` name's mDNS answer is kept up to 10 s, see `federation.md`).
-  **An address that leads into a proxy on this computer** (a name a fake-IP/TUN proxy answered
-  with 198.18.0.0/15, or such an address typed — `ProxyFakeAddresses`) is never dialled: a
-  probe or pairing says `ManagedServerOutcome.ProxyFakeAddress`, the listing's Offline carries
-  `offlineReason`, and a relay's check is Unconfirmed with `ProxyFakeAddress` — its page and
-  JSON message say to set `.local` names and LAN addresses to DIRECT or pair again at the IP,
-  never to check that the server runs (`X-Bakabase-Client` stays `ServerUnreachable`).
+  **An address that leads into a proxy on this computer** (a `.local` or single-label name a
+  fake-IP/TUN proxy answered with 198.18.0.0/15, or such an address typed —
+  `ProxyFakeAddresses`) is never dialled: a probe or pairing says
+  `ManagedServerOutcome.ProxyFakeAddress`, the listing's Offline carries `offlineReason`, and a
+  relay's check is Unconfirmed with `ProxyFakeAddress` — its page and JSON message say to set
+  `.local` names and LAN addresses to DIRECT or pair again at the IP, never to check that the
+  server runs (`X-Bakabase-Client` stays `ServerUnreachable`). A domain the proxy answered is
+  reached through the proxy as any other address: the question and the relay's connections go
+  to the proxy's address it reached (`DualStackConnector.ConnectAgainAsync`), the server's
+  identity is checked there like anywhere, and only a failure to connect there is
+  `ProxyFakeAddress`, worded with that domain as the fix.
 - **The switcher inside a relay says how each server was last seen.** `GET /client/switcher`
   answers `{currentId, targets: [{id, name, isLocal, isCurrent, state}]}`. `state` is
   `ManagedServerState` as a number — `0` Unknown, `1` Online, `2` Offline, `3` Revoked,

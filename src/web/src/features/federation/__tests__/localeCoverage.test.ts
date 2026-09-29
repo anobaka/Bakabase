@@ -80,6 +80,11 @@ const dynamicKeys = [
         typeof value === "number" && value !== ManagedServerOutcome.Ok,
     )
     .map((outcome) => `federation.error.ManagedServer${ManagedServerOutcomeLabel[outcome]}`),
+  // A proxy in the way, by what the address names (proxy.ts): a peer's and a managed server's,
+  // with their wording for a domain the proxy resolves itself.
+  "federation.error.ProxyFakeAddress",
+  "federation.error.ProxyFakeAddressDomain",
+  "federation.error.ManagedServerProxyFakeAddressDomain",
   // `federation.management.status.${key}` in ManagementAccess.
   ...["off", "paired", "open", "unrestricted"].map(
     (status) => `federation.management.status.${status}`,

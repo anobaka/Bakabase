@@ -11,9 +11,11 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Modules.RemoteAccess.Components.Discovery;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Tests.RemoteAccess;
@@ -374,6 +376,95 @@ public class MdnsHostResolverTests
     }
 
     [TestMethod]
+    public async Task An_answer_still_without_the_IPv4_address_it_asked_bakabases_name_for_is_kept_as_briefly_as_silence()
+    {
+        // Bakabase's answer lost on the way: kept for the answer's own lifetime, a proxy on this
+        // computer would be said to be in the way for that long, though asking again would get it.
+        var clock = new RelayNavigationTokensTests.ManualClock();
+        var network = new FakeMdns {Answers = [Answer("mac.local", LinkLocal, MdnsMessage.TypeAaaa, ttl: 120, on: 4)]};
+        var resolver = Resolver(network, clock);
+
+        await resolver.ResolveAsync("mac.local", CancellationToken.None);
+        clock.Advance(MdnsHostResolver.SilenceLifetime - TimeSpan.FromSeconds(1));
+        await resolver.ResolveAsync("mac.local", CancellationToken.None);
+
+        Assert.AreEqual(1, network.Exchanges.Count);
+
+        clock.Advance(TimeSpan.FromSeconds(2));
+        await resolver.ResolveAsync("mac.local", CancellationToken.None);
+
+        Assert.AreEqual(2, network.Exchanges.Count);
+    }
+
+    [TestMethod]
+    public async Task An_IPv6_answer_with_nothing_more_to_ask_is_kept_as_long_as_any_answer()
+    {
+        // Not a machine name, so there is no Bakabase name to wait for.
+        var clock = new RelayNavigationTokensTests.ManualClock();
+        var network = new FakeMdns {Answers = [Answer("a.b.local", LinkLocal, MdnsMessage.TypeAaaa, on: 4)]};
+        var resolver = Resolver(network, clock);
+
+        await resolver.ResolveAsync("a.b.local", CancellationToken.None);
+        clock.Advance(MdnsHostResolver.AnswerLifetime - TimeSpan.FromSeconds(1));
+        await resolver.ResolveAsync("a.b.local", CancellationToken.None);
+
+        Assert.AreEqual(1, network.Exchanges.Count);
+    }
+
+    [TestMethod]
+    public async Task Bakabases_answer_heard_again_replaces_its_own_stale_one()
+    {
+        // Its responder multicasts at most once a second: asked by that name right after, only
+        // what the machine's question heard can answer — every time, not only the first.
+        var clock = new RelayNavigationTokensTests.ManualClock();
+        var network = new FakeMdns
+        {
+            Answers =
+            [
+                Answer("jaxs-Mac-mini.local", LinkLocal, MdnsMessage.TypeAaaa, ttl: 10, on: 4),
+                Answer("jaxs-mac-mini-bakabase.local", Lan, ttl: 10, on: 4)
+            ]
+        };
+        var resolver = Resolver(network, clock);
+
+        await resolver.ResolveAsync("jaxs-Mac-mini.local", CancellationToken.None);
+        clock.Advance(TimeSpan.FromSeconds(11));
+        await resolver.ResolveAsync("jaxs-Mac-mini.local", CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] {Lan},
+            (await resolver.ResolveAsync("jaxs-mac-mini-bakabase.local", CancellationToken.None)).ToArray());
+        Assert.AreEqual(2, network.Exchanges.Count);
+    }
+
+    [TestMethod]
+    public async Task Bakabases_own_responder_answers_the_question_straight_back()
+    {
+        // Every question goes through a real responder: the IPv4 answer does not wait for, or
+        // depend on, a multicast one — which the responder sends at most once a second, and
+        // which Wi-Fi may lose.
+        using var responder = new MdnsResponder(
+            new MdnsAdvertisement(new RemoteAccessServerDescriptor("abc123", "jaxs-Mac-mini", 34567, "2.4.0", 1)),
+            () => [Lan], NullLogger.Instance, _ => true);
+        var network = new ResponderNetwork(responder,
+            Answer("jaxs-Mac-mini.local", LinkLocal, MdnsMessage.TypeAaaa).Datagram with {InterfaceIndex = 4});
+        var resolver = Resolver(network, timeout: TimeSpan.FromSeconds(5), settle: TimeSpan.FromMilliseconds(20));
+
+        for (var i = 0; i < 3; i++)
+        {
+            var watch = Stopwatch.StartNew();
+            var addresses = await resolver.ResolveAsync($"jaxs-Mac-mini.local", CancellationToken.None);
+
+            Assert.AreEqual(Lan, addresses[0], $"lookup {i}");
+            Assert.IsTrue(watch.Elapsed < TimeSpan.FromSeconds(2), $"lookup {i} took {watch.Elapsed}");
+
+            // Asked afresh each time, well within the second the multicast answers are limited to.
+            resolver = Resolver(network, timeout: TimeSpan.FromSeconds(5), settle: TimeSpan.FromMilliseconds(20));
+        }
+
+        Assert.IsTrue(network.Unicast >= 3, $"{network.Unicast} answers straight back");
+    }
+
+    [TestMethod]
     public async Task Lookups_of_one_name_at_once_share_one_question()
     {
         var network = new FakeMdns
@@ -544,6 +635,43 @@ public class MdnsHostResolverTests
     }
 
     [TestMethod]
+    public async Task A_proxy_taking_over_a_name_whose_LAN_addresses_hang_is_said_once_they_have_had_their_time()
+    {
+        // A firewall in stealth mode drops the link-local attempt without a word. Left to the
+        // caller — server switching gives no connect timeout of its own — its budget would end
+        // it first, and the proxy would never be named: the connector bounds it itself.
+        var mdns = Resolver(new FakeMdns {Answers = [Answer("mac.local", LinkLocal, MdnsMessage.TypeAaaa, on: 4)]},
+            timeout: TimeSpan.FromMilliseconds(100));
+        var resolver = new LanHostResolver(mdns, new FakeSystemResolver(ProxyAddress).ResolveAsync);
+        var connector = new DualStackConnector(resolver, async (_, ct) =>
+        {
+            await Task.Delay(Timeout.Infinite, ct);
+            return new MemoryStream();
+        });
+
+        var watch = Stopwatch.StartNew();
+        var refused = await Assert.ThrowsExactlyAsync<ProxyFakeAddressException>(() =>
+            connector.ConnectAsync(new DnsEndPoint("mac.local", 34567), CancellationToken.None).AsTask());
+
+        Assert.AreEqual(SocketError.TimedOut, ((SocketException) refused.ConnectError!).SocketErrorCode);
+        Assert.IsTrue(watch.Elapsed < DualStackConnector.ProxiedLanConnectLimit + TimeSpan.FromSeconds(1),
+            $"took {watch.Elapsed}");
+
+        // Through an HTTP client as the console composes one: ten seconds to connect.
+        using var http = new HttpClient(new SocketsHttpHandler
+        {
+            UseProxy = false, ConnectTimeout = TimeSpan.FromSeconds(10), ConnectCallback = connector.ConnectCallback
+        });
+
+        watch.Restart();
+        var failed = await Assert.ThrowsExactlyAsync<HttpRequestException>(() =>
+            http.GetAsync("http://mac.local:34567/remote-access/server-info"));
+
+        Assert.AreEqual(ProxyAddress, ProxyFakeAddresses.Find(failed)?.Address);
+        Assert.IsTrue(watch.Elapsed < TimeSpan.FromSeconds(3), $"took {watch.Elapsed}");
+    }
+
+    [TestMethod]
     public async Task A_proxy_taking_over_a_name_that_answers_IPv6_alone_still_connects_there_when_that_answers()
     {
         var mdns = Resolver(new FakeMdns {Answers = [Answer("mac.local", LinkLocal, MdnsMessage.TypeAaaa, on: 4)]},
@@ -581,7 +709,7 @@ public class MdnsHostResolverTests
     #endregion
 
     /// <summary>A resolver over <paramref name="network"/> on a machine holding <paramref name="held"/> and nothing else.</summary>
-    private static MdnsHostResolver Resolver(FakeMdns network, TimeProvider? clock = null, TimeSpan? timeout = null,
+    private static MdnsHostResolver Resolver(IMdnsQueryTransport network, TimeProvider? clock = null, TimeSpan? timeout = null,
         TimeSpan? settle = null, IPAddress[]? held = null) =>
         new(network, clock, timeout, settle, () => new ThisMachineAddresses(held ?? []));
 
@@ -608,6 +736,51 @@ public class MdnsHostResolverTests
         ]), 0), on, TimeSpan.FromMilliseconds(after), toSend);
 
     private sealed record Reply(MdnsDatagram Datagram, int Interface, TimeSpan After, int ToSend);
+
+    /// <summary>
+    /// A LAN where every question reaches <paramref name="responder"/> from a one-shot port, and
+    /// only what it sends straight back to that port comes back; <paramref name="others"/> are
+    /// what the other responders answer the first question with.
+    /// </summary>
+    private sealed class ResponderNetwork(MdnsResponder responder, params MdnsDatagram[] others) : IMdnsQueryTransport
+    {
+        private static readonly IPEndPoint Querier = new(IPAddress.Parse("192.168.1.30"), 50000);
+        private int _unicast;
+
+        /// <summary>How many answers came straight back.</summary>
+        public int Unicast => Volatile.Read(ref _unicast);
+
+        public async IAsyncEnumerable<MdnsDatagram> ExchangeAsync(IAsyncEnumerable<IReadOnlyList<byte[]>> questions,
+            [EnumeratorCancellation] CancellationToken ct)
+        {
+            var first = true;
+
+            await foreach (var batch in questions.WithCancellation(ct))
+            {
+                if (first)
+                {
+                    first = false;
+
+                    foreach (var other in others)
+                    {
+                        yield return other;
+                    }
+                }
+
+                foreach (var query in batch)
+                {
+                    if (responder.Respond(query, Querier, Environment.TickCount64) is { } reply &&
+                        reply.To.Equals(Querier))
+                    {
+                        Interlocked.Increment(ref _unicast);
+                        yield return new MdnsDatagram(reply.Packet, 4);
+                    }
+                }
+            }
+
+            await Task.Delay(Timeout.Infinite, ct).ContinueWith(_ => { }, TaskScheduler.Default);
+        }
+    }
 
     private sealed class FakeSystemResolver(params IPAddress[] answer)
     {

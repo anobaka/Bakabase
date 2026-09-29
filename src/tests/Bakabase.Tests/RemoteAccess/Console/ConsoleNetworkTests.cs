@@ -1,10 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Modules.RemoteAccess.Components;
+using Bakabase.Modules.RemoteAccess.Components.Discovery;
+using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Bakabase.Remoting.Components.Forwarding;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -167,5 +173,132 @@ public class ConsoleNetworkTests
         listed = (await console.Manager.GetAsync(true)).Servers.Single();
         Assert.AreEqual(ManagedServerState.Online, listed.State);
         Assert.IsNull(listed.OfflineReason);
+    }
+
+    [TestMethod]
+    public async Task A_domain_a_proxy_on_this_computer_took_over_is_reached_through_the_proxy_as_before()
+    {
+        // A DDNS or public name under Clash in TUN and fake-IP mode: the proxy resolves the name
+        // itself and connects on this computer's behalf, as it does for every other program.
+        var network = new TestNetwork();
+        await using var console = await ConsoleHarness.StartAsync(options: o => o.Connector = network.Connector);
+        await using var nas = await FakeServer.StartAsync("server-nas", "NAS", 47100);
+        nas.PairingCode = "123456";
+        network.RouteTo(ProxyAddress, nas);
+        network.Name("nas.example.com", ProxyAddress);
+        var address = $"http://nas.example.com:{nas.Port}";
+
+        Assert.AreEqual(ManagedServerOutcome.Ok, (await console.Manager.ProbeAsync(address)).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.Ok, (await console.Manager.PairAsync(address, "123456")).Outcome);
+        Assert.AreEqual(ManagedServerState.Online, (await console.Manager.GetAsync(true)).Servers.Single().State);
+
+        // The relay connects where its question went — the proxy's address, which leads there.
+        var port = ConsoleHarness.PortOf((await console.Manager.OpenAsync("server-nas", null))!.Url);
+        var response = await ConsoleHarness.SendToRelayAsync(port, "/resource/search");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.IsTrue(nas.Requests.Any(r => r.Path == "/resource/search" && r.SignatureValid == true),
+            string.Join("\n", nas.Requests));
+    }
+
+    [TestMethod]
+    public async Task A_domain_the_proxy_cannot_reach_is_said_to_be_behind_it_with_that_domain_as_the_fix()
+    {
+        // The proxy's address for the name leads nowhere: the proxy was turned off while the
+        // system still has its answer, say.
+        var network = new TestNetwork();
+        await using var console = await ConsoleHarness.StartAsync(options: o =>
+        {
+            o.Connector = network.Connector;
+            o.IdentityRetryInterval = TimeSpan.FromMilliseconds(100);
+        });
+        await using var nas = await FakeServer.StartAsync("server-nas", "NAS", 47100);
+        network.Name("nas.example.com", ProxyAddress);
+        var address = $"http://nas.example.com:{nas.Port}";
+
+        var probe = await console.Manager.ProbeAsync(address);
+
+        Assert.AreEqual(ManagedServerOutcome.ProxyFakeAddress, probe.Outcome);
+        StringAssert.Contains(probe.Detail, "could not be reached through the proxy");
+
+        await console.AddManagedAsync(nas, baseAddress: address);
+        var listed = (await console.Manager.GetAsync(true)).Servers.Single();
+
+        Assert.AreEqual(ManagedServerState.Offline, listed.State);
+        Assert.AreEqual(ManagedServerOutcome.ProxyFakeAddress, listed.OfflineReason);
+
+        var port = ConsoleHarness.PortOf((await console.Manager.OpenAsync("server-nas", null))!.Url);
+        var html = await (await ConsoleHarness.NavigateAsync($"http://127.0.0.1:{port}/", "same-origin")).Content
+            .ReadAsStringAsync();
+
+        // The fix is that domain in the proxy, not .local names.
+        StringAssert.Contains(html, "set nas.example.com to DIRECT");
+        StringAssert.Contains(html, "请在代理软件中把 nas.example.com 设为直连");
+        Assert.IsFalse(html.Contains("+.local", StringComparison.Ordinal), html);
+
+        var fetch = await ConsoleHarness.SendToRelayAsync(port, "/resource/search");
+        var message = JsonDocument.Parse(await fetch.Content.ReadAsStringAsync()).RootElement
+            .GetProperty("message").GetString()!;
+
+        StringAssert.Contains(message, "set nas.example.com to DIRECT");
+        CollectionAssert.AreEqual(Array.Empty<string>(), nas.Requests.Select(r => $"{r.Method} {r.Path}").ToArray());
+    }
+
+    [TestMethod]
+    public async Task A_local_name_whose_LAN_addresses_hang_past_a_proxy_is_said_to_be_behind_it_within_a_probe()
+    {
+        // mDNS gives the name's link-local address alone, where nothing answers (a firewall in
+        // stealth mode), and the system resolver the proxy's. Were those attempts left to the
+        // caller, the probe's budget would end them first and say nothing about the proxy.
+        var network = new TestNetwork();
+        var mdns = new MdnsHostResolver(
+            new AnsweringMdns(Aaaa("nas.local", TestNetwork.Dropped, onInterface: 4)),
+            timeout: TimeSpan.FromMilliseconds(300), thisMachine: () => new ThisMachineAddresses([]));
+        await using var console = await ConsoleHarness.StartAsync(options: o => o.Connector = network.ConnectorWith(mdns));
+        await using var nas = await FakeServer.StartAsync("server-nas", "NAS", 47100);
+        // Were the proxy's address dialled, it would reach the server: nothing may.
+        network.RouteTo(ProxyAddress, nas);
+        network.Name("nas.local", ProxyAddress);
+        var address = $"http://nas.local:{nas.Port}";
+
+        var watch = Stopwatch.StartNew();
+
+        Assert.AreEqual(ManagedServerOutcome.ProxyFakeAddress, (await console.Manager.ProbeAsync(address)).Outcome);
+        Assert.IsTrue(watch.Elapsed < TimeSpan.FromSeconds(5), $"took {watch.Elapsed}");
+
+        await console.AddManagedAsync(nas, baseAddress: address);
+        var listed = (await console.Manager.GetAsync(true)).Servers.Single();
+
+        Assert.AreEqual(ManagedServerState.Offline, listed.State);
+        Assert.AreEqual(ManagedServerOutcome.ProxyFakeAddress, listed.OfflineReason);
+        CollectionAssert.AreEqual(Array.Empty<string>(), nas.Requests.Select(r => $"{r.Method} {r.Path}").ToArray());
+    }
+
+    /// <summary>A responder's answer giving <paramref name="name"/> the IPv6 address <paramref name="address"/>.</summary>
+    private static MdnsDatagram Aaaa(string name, IPAddress address, int onInterface) =>
+        new(MdnsMessage.BuildResponse([
+            new MdnsMessage.Record(name, MdnsMessage.TypeAaaa, true, 120, MdnsMessage.ARdata(address))
+        ]), onInterface);
+
+    /// <summary>The LAN's mDNS responders: <paramref name="answers"/> once the first question is out, then silence.</summary>
+    private sealed class AnsweringMdns(params MdnsDatagram[] answers) : IMdnsQueryTransport
+    {
+        public async IAsyncEnumerable<MdnsDatagram> ExchangeAsync(IAsyncEnumerable<IReadOnlyList<byte[]>> questions,
+            [EnumeratorCancellation] CancellationToken ct)
+        {
+            await using var asked = questions.GetAsyncEnumerator(ct);
+
+            if (!await asked.MoveNextAsync())
+            {
+                yield break;
+            }
+
+            foreach (var answer in answers)
+            {
+                yield return answer;
+            }
+
+            await Task.Delay(Timeout.Infinite, ct).ContinueWith(_ => { }, TaskScheduler.Default);
+        }
     }
 }

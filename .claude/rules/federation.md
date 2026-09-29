@@ -263,17 +263,25 @@ endpoints and confirmations.
   `FederationNodeDiscovery`, `RemoteConsoleOptions.Connector` for the desktop app's — and the
   wiring is tested through the real handlers over a name that resolves IPv6-first to a dropped
   address (`PeerConnectionTests`, `FederationNodeDiscoveryTests`, `ConsoleNetworkTests`).
-- **A proxy's addresses are never dialled.** `DualStackConnector` refuses 198.18.0.0/15
-  (`ProxyFakeAddresses`: what Clash/Mihomo, Surge, sing-box and Shadowrocket answer names with
-  in fake-IP or TUN mode; reserved, never a LAN address) when it is typed or is the resolver's
-  first answer — behind a real answer it is only left out — with `ProxyFakeAddressException`,
-  and nothing is sent. The same exception reports a `.local` name whose LAN (IPv6-only)
+- **A proxy's addresses are dialled only for a domain.** 198.18.0.0/15 (`ProxyFakeAddresses`:
+  what Clash/Mihomo, Surge, sing-box and Shadowrocket answer names with in fake-IP or TUN mode;
+  reserved, never a LAN address) typed, or the resolver's first answer for a name only the LAN
+  knows — a `.local` name or a single label, where the proxy has no way to the device — is
+  refused by `DualStackConnector` with `ProxyFakeAddressException`, and nothing is sent. Any
+  other name (a DDNS or public domain, a reverse proxy's: `ProxyResolvesItself`) is dialled at
+  the proxy's address as the resolver gave it, as before — the proxy resolves it and connects
+  for us — and only a failure there becomes `ProxyFakeAddressException`; a later connection to
+  the address a question reached goes there again (`ConnectAgainAsync`). Behind a real answer a
+  proxy's address is left out. The same exception reports a `.local` name whose LAN (IPv6-only)
   addresses all failed while the system resolver gave a proxy's address
-  (`LanHostResolution.ProxyAddress`). Library sharing says `ProxyFakeAddress` (503; also the peer's connection
-  state, and it starts relocation like `NodeUnreachable`), server switching
+  (`LanHostResolution.ProxyAddress`); those attempts get at most `ProxiedLanConnectLimit`
+  (750 ms) of the connector's own, so a hang is still said to be the proxy's within a caller's
+  budget (the probe's 2 s). Library sharing says `ProxyFakeAddress` (503; also the peer's
+  connection state, and it starts relocation like `NodeUnreachable`), server switching
   `ManagedServerOutcome.ProxyFakeAddress`; both tell the user to set `.local` names and LAN
-  addresses to DIRECT or use the IP. Discovery offers an advertised proxy address last. No
-  other range is special-cased (`ProxyFakeAddressTests`).
+  addresses to DIRECT or use the IP — for a domain, to set that domain to DIRECT
+  (`proxy.ts` picks the wording on the web). Discovery offers an advertised proxy address last.
+  No other range is special-cased (`ProxyFakeAddressTests`).
 - **`.local` names are asked on the LAN.** The connector's default resolver
   (`LanHostResolver`) asks a `.local` name over Bakabase's own mDNS and the system resolver at
   once. A direct system answer (first address not a proxy's, an IPv4 address among them: the
@@ -284,8 +292,13 @@ endpoints and confirmations.
   `MdnsSocketTransport`: one-shot A/AAAA queries with the QU bit, out of every LAN interface by
   name, heard on their own ports and on 5353; the still unanswered ones sent again at 250 and
   500 ms; a question ends 150 ms after an answer with an IPv4 address, else at ~1 s (an IPv6
-  answer alone never ends it: Bakabase's own multicast IPv4 answer often comes later); answers
-  kept up to 10 s, silence 5 s, one question per name at a time. Answers drop proxy, loopback and
+  answer alone never ends it: the IPv4 one may come later); answers kept up to 10 s, silence —
+  and an answer still without the IPv4 address it asked Bakabase's name for — 5 s, one question
+  per name at a time; what Bakabase's name answered is kept for that name too, replacing a stale
+  entry. Bakabase's own responder (`MdnsResponder`) answers a one-shot query (source port not
+  5353) straight back to its sender, id and question repeated, TTL ≤ 10 s, from this machine's
+  links only and apart from the once-a-second multicast limit (RFC 6762 §6.7), so the IPv4
+  answer depends on neither the 5353 listener nor one multicast packet over Wi-Fi. Answers drop proxy, loopback and
   unscoped link-local addresses (a link-local one takes the interface it came in on as its
   scope) and addresses this machine holds too, unless those are all there is (`ThisMachine`);
   a name with no IPv4 answer is also reached at `{name}-bakabase.local`, Bakabase's own

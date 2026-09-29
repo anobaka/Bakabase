@@ -498,8 +498,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             {
                 if (Reached is { } reached)
                 {
-                    return await connector.ConnectAsync(
-                        new DnsEndPoint(reached.ToString(), context.DnsEndPoint.Port), ct);
+                    return await connector.ConnectAgainAsync(context.DnsEndPoint, reached, ct);
                 }
 
                 var (stream, to) = await connector.ConnectReachingAsync(context.DnsEndPoint, null, ct);

@@ -25,6 +25,13 @@ namespace Bakabase.Modules.RemoteAccess.Components;
 /// attempt that loses the race is cancelled, and a connection it made anyway is closed.
 /// </para>
 /// <para>
+/// A proxy on this computer that took a name over (fake-IP or TUN mode) answers it with an
+/// address of its own (<see cref="ProxyFakeAddresses"/>). For a name only the LAN knows that
+/// address is never dialled — a <see cref="ProxyFakeAddressException"/> says the proxy is in the
+/// way — while a domain is connected to through the proxy as before, and only a failure there is
+/// said to be the proxy's.
+/// </para>
+/// <para>
 /// Every outbound connection to another device goes through here: the desktop app's relays and
 /// its probes of the servers it manages, and multi-device sharing's peer requests and
 /// discovery. Each takes the instance it uses from its composition —
@@ -47,7 +54,7 @@ public sealed class DualStackConnector
     /// <param name="resolve">
     /// Injected for tests; defaults to <see cref="LanHostResolver.Default"/> — a <c>.local</c> name
     /// over mDNS and the system resolver, every other name the system's. What it returns is
-    /// screened for a proxy's addresses either way (<see cref="ProxyFakeAddresses"/>).
+    /// screened for a proxy's addresses either way (<see cref="ProxyFakeAddresses.Screen(string, IReadOnlyList{IPAddress}, out IPAddress?)"/>).
     /// </param>
     /// <param name="connect">Injected for tests; defaults to a plain TCP socket with Nagle off.</param>
     /// <param name="attemptDelay">Defaults to <see cref="DefaultAttemptDelay"/>.</param>
@@ -110,11 +117,13 @@ public sealed class DualStackConnector
     public async ValueTask<(Stream Stream, IPEndPoint Reached)> ConnectReachingAsync(DnsEndPoint endpoint,
         TimeSpan? connectTimeout, CancellationToken ct)
     {
-        // A proxy's own address (198.18.0.0/15) is never dialled: typed, or what a proxy on this
-        // computer answered the name with first, it is refused as that; behind a real answer
-        // it is only left out.
+        // A proxy's own address (198.18.0.0/15, ProxyFakeAddresses): typed, or what a proxy on
+        // this computer answered a name only the LAN knows with first, it is refused as that and
+        // never dialled; what it answered a domain with is dialled — the proxy resolves that
+        // itself — and a failure there is the proxy's; behind a real answer it is left out.
         IReadOnlyList<IPAddress> addresses;
         IPAddress? proxy = null;
+        var pastProxy = false;
 
         if (IPAddress.TryParse(endpoint.Host, out var literal))
         {
@@ -124,8 +133,10 @@ public sealed class DualStackConnector
         {
             var resolved = await _resolve(endpoint.Host, ct);
 
-            addresses = Order(ProxyFakeAddresses.Screen(endpoint.Host, resolved.Addresses));
-            proxy = resolved.ProxyAddress;
+            addresses = Order(ProxyFakeAddresses.Screen(endpoint.Host, resolved.Addresses, out var through));
+            proxy = through ?? resolved.ProxyAddress;
+            // The LAN's addresses for a name the system resolver hands to a proxy.
+            pastProxy = through == null && proxy != null;
         }
 
         if (addresses.Count == 0)
@@ -135,6 +146,57 @@ public sealed class DualStackConnector
                 : new SocketException((int) SocketError.HostNotFound);
         }
 
+        return await RaceClassifiedAsync(endpoint.Host, addresses, endpoint.Port, proxy,
+            pastProxy ? Shorter(connectTimeout, ProxiedLanConnectLimit) : connectTimeout, ct);
+    }
+
+    /// <summary>
+    /// Connects to <paramref name="reached"/>, the IP address an earlier connection to
+    /// <paramref name="endpoint"/> reached (<see cref="ConnectReachingAsync"/>): the same place
+    /// again, never the name raced afresh.
+    /// </summary>
+    /// <remarks>
+    /// A proxy's address is reached only for a domain the proxy resolves itself, and connecting
+    /// there again fails as the proxy's doing, as the first connection would have. For any other
+    /// name, it is refused as <see cref="ConnectReachingAsync"/> refuses it.
+    /// </remarks>
+    public async ValueTask<Stream> ConnectAgainAsync(DnsEndPoint endpoint, IPAddress reached, CancellationToken ct)
+    {
+        if (!ProxyFakeAddresses.Contains(reached))
+        {
+            return (await RaceAsync([reached], endpoint.Port, ct)).Stream;
+        }
+
+        if (!ProxyFakeAddresses.ProxyResolvesItself(endpoint.Host))
+        {
+            throw new ProxyFakeAddressException(endpoint.Host, reached);
+        }
+
+        return (await RaceClassifiedAsync(endpoint.Host, [reached], endpoint.Port, reached, null, ct)).Stream;
+    }
+
+    /// <summary>
+    /// How long connecting to the LAN's addresses for a <c>.local</c> name may take once a proxy
+    /// on this computer has taken the name over (<see cref="LanHostResolution.ProxyAddress"/>),
+    /// before the proxy is said to be in the way.
+    /// </summary>
+    /// <remarks>
+    /// Those are IPv6 addresses alone — which a Bakabase server does not listen on — mostly
+    /// link-local, where an answer takes milliseconds: waiting longer only lets the caller's own
+    /// budget run out first, which would say nothing about the proxy. Short enough to fit, after
+    /// the mDNS question's <see cref="Discovery.Clients.MdnsHostResolver.DefaultTimeout"/>, within
+    /// the desktop app's two-second probe of a managed server.
+    /// </remarks>
+    public static readonly TimeSpan ProxiedLanConnectLimit = TimeSpan.FromMilliseconds(750);
+
+    private static TimeSpan Shorter(TimeSpan? a, TimeSpan b) => a is { } limit && limit < b ? limit : b;
+
+    /// <param name="proxy">The proxy's address that stands in the way, when one does: a failure is then its to report.</param>
+    /// <param name="connectTimeout">How long connecting may take; null leaves it to <paramref name="ct"/>.</param>
+    private async ValueTask<(Stream Stream, IPEndPoint Reached)> RaceClassifiedAsync(string host,
+        IReadOnlyList<IPAddress> addresses, int port, IPAddress? proxy, TimeSpan? connectTimeout,
+        CancellationToken ct)
+    {
         using var clock = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
         if (connectTimeout is { } limit)
@@ -144,19 +206,19 @@ public sealed class DualStackConnector
 
         try
         {
-            return await RaceAsync(addresses, endpoint.Port, clock.Token);
+            return await RaceAsync(addresses, port, clock.Token);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested && clock.IsCancellationRequested)
         {
             var timedOut = new SocketException((int) SocketError.TimedOut);
 
-            throw proxy != null ? new ProxyFakeAddressException(endpoint.Host, proxy, timedOut) : timedOut;
+            throw proxy != null ? new ProxyFakeAddressException(host, proxy, timedOut) : timedOut;
         }
         catch (Exception e) when (proxy != null && e is not OperationCanceledException)
         {
-            // The LAN's addresses for a name the system resolver hands to a proxy: none of them
-            // answered, and the proxy is what stands in the way of the rest.
-            throw new ProxyFakeAddressException(endpoint.Host, proxy, e);
+            // Through the proxy, or past it at the LAN's addresses for a name it took over:
+            // either way nothing answered, and the proxy is what stands in the way.
+            throw new ProxyFakeAddressException(host, proxy, e);
         }
     }
 

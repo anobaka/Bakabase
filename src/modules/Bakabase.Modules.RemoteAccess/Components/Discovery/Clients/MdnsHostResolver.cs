@@ -41,15 +41,18 @@ namespace Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 /// <para>
 /// A question ends <see cref="DefaultSettle"/> after the answer has an IPv4 address, else at
 /// <see cref="DefaultTimeout"/>: an IPv6 answer alone does not end it, since the IPv4 one it
-/// waits for can come later — Bakabase's own responder only multicasts, which a Wi-Fi access
-/// point holds back until its next beacon, while a system responder answers straight back at
-/// once. Multicast is not retried by the link either, so the questions still unanswered are
-/// sent again at each of <see cref="ResendAt"/>.
+/// waits for can come later — an older Bakabase's responder only multicasts, which a Wi-Fi
+/// access point holds back until its next beacon, while a system responder answers straight
+/// back at once (as Bakabase's own now does too, <see cref="MdnsResponder"/>). Neither is
+/// retried by the link, so the questions still unanswered are sent again at each of
+/// <see cref="ResendAt"/>.
 /// </para>
 /// <para>
-/// Answers stand for <see cref="AnswerLifetime"/> (or their own TTL, if shorter), silence for
-/// <see cref="SilenceLifetime"/>, so a relay asking before every burst of new connections does
-/// not multicast each time; lookups of one name at the same moment share one question. Nothing
+/// Answers stand for <see cref="AnswerLifetime"/> (or their own TTL, if shorter), so a relay
+/// asking before every burst of new connections does not multicast each time. Silence stands
+/// for <see cref="SilenceLifetime"/>, and so does an answer still without the IPv4 address it
+/// asked Bakabase's name for, which asking again soon is likely to get. Lookups of one name at
+/// the same moment share one question. Nothing
 /// here throws for the network: no interface, no answer, a socket refused — the answer is an
 /// empty list, and the caller falls back to the system resolver.
 /// </para>
@@ -201,11 +204,14 @@ public sealed class MdnsHostResolver
         }
 
         var addresses = answers.Build();
+        var ttl = answers.Ttl is { } shortest && shortest < AnswerLifetime ? shortest : AnswerLifetime;
         var lifetime = addresses.Count == 0
             ? SilenceLifetime
-            : answers.Ttl is { } ttl && ttl < AnswerLifetime
-                ? ttl
-                : AnswerLifetime;
+            : answers.BakabaseName != null && !addresses.Any(IsIPv4)
+                // Still waiting for the IPv4 answer it asked Bakabase's name for: that one may
+                // only have been lost on the way, and asking again soon is likely to get it.
+                ? ttl < SilenceLifetime ? ttl : SilenceLifetime
+                : ttl;
 
         lock (_gate)
         {
@@ -213,17 +219,19 @@ public sealed class MdnsHostResolver
 
             if (lifetime > TimeSpan.Zero)
             {
-                var until = _time.GetUtcNow() + lifetime;
+                var now = _time.GetUtcNow();
+                var until = now + lifetime;
 
                 _answers[name] = (addresses, until);
 
                 // What Bakabase's name on that machine answered holds for that name too: its
-                // responder answers at most once a second, and a lookup of it by name right
-                // after this one would go unanswered.
+                // responder multicasts at most once a second, and a lookup of it by name right
+                // after this one could go unanswered. An answer of its own still standing is
+                // kept; one gone stale is not.
                 if (answers.BakabaseName is { } bakabase && answers.BuildBakabase() is {Count: > 0} alias &&
-                    !_answers.ContainsKey(bakabase))
+                    (!_answers.TryGetValue(bakabase, out var existing) || existing.Until <= now))
                 {
-                    _answers[bakabase] = (alias, until);
+                    _answers[bakabase] = (alias, now + ttl);
                 }
             }
         }
@@ -481,9 +489,9 @@ public sealed class MdnsHostResolver
         /// </summary>
         private Func<IPAddress, bool> Elsewhere() =>
             _own.Concat(_bakabase).All(here.Holds) ? _ => true : a => !here.Holds(a);
-
-        private static bool IsIPv4(IPAddress address) => address.AddressFamily == AddressFamily.InterNetwork;
     }
+
+    private static bool IsIPv4(IPAddress address) => address.AddressFamily == AddressFamily.InterNetwork;
 }
 
 /// <summary>One datagram a question brought back.</summary>

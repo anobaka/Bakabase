@@ -303,6 +303,34 @@ describe("devices this one manages", () => {
     expect(addForm().address).toHaveValue("nas.local:34567");
   });
 
+  it("names a domain as the fix when the proxy could not get through to it", async () => {
+    listing = view({
+      servers: [
+        server({
+          state: ManagedServerState.Offline,
+          address: "http://nas.example.com:34567",
+          offlineReason: ManagedServerOutcome.ProxyFakeAddress,
+        }),
+      ],
+    });
+    vi.mocked(managedServerApi.pair).mockResolvedValue({
+      outcome: ManagedServerOutcome.ProxyFakeAddress,
+      detail: "nas.example.com resolved to 198.18.0.29, and could not be reached through the proxy",
+    });
+    await renderServers();
+    const nas = await screen.findByRole("article", { name: "NAS" });
+
+    expect(within(nas).getByTestId("managed-server-offline-reason").textContent).toBe(
+      "federation.error.ManagedServerProxyFakeAddressDomain",
+    );
+
+    fireEvent.change(addForm().address, { target: { value: "nas.example.com:34567" } });
+    fireEvent.click(screen.getByText("federation.servers.add.request"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "federation.error.ManagedServerProxyFakeAddressDomain",
+    );
+  });
+
   it("pairs with a code and shows the new server", async () => {
     vi.mocked(managedServerApi.pair).mockImplementation(async () => {
       listing = view({ servers: [server()] });

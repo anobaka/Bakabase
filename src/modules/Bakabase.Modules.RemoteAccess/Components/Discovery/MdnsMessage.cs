@@ -31,29 +31,67 @@ public static class MdnsMessage
     /// </summary>
     private const ushort CacheFlush = 0x8000;
 
+    /// <summary>
+    /// The longest TTL an answer sent straight back to a one-shot querier may carry
+    /// (RFC 6762 §6.7): such a querier is not listening for the updates and goodbyes that keep a
+    /// longer one right.
+    /// </summary>
+    public const uint LegacyUnicastMaxTtl = 10;
+
     public record Record(string Name, ushort Type, bool CacheFlush, uint Ttl, byte[] Rdata);
 
+    /// <summary>One question as a query asked it, its class whole — the "QU" bit included.</summary>
+    public readonly record struct Question(string Name, ushort Type, ushort Class);
+
     /// <summary>Builds an authoritative mDNS response carrying the given answers.</summary>
-    public static byte[] BuildResponse(IReadOnlyList<Record> answers)
+    public static byte[] BuildResponse(IReadOnlyList<Record> answers) => Build(0, [], answers, [], r => r);
+
+    /// <summary>
+    /// The answer to a one-shot query — one sent from a port other than 5353 — which goes
+    /// straight back to its sender as a conventional unicast DNS response (RFC 6762 §6.7): the
+    /// query's id and questions repeated, no cache-flush bits, TTLs at most
+    /// <see cref="LegacyUnicastMaxTtl"/>.
+    /// </summary>
+    /// <param name="id">The query's transaction id.</param>
+    /// <param name="questions">The query's questions, as asked.</param>
+    /// <param name="answers">The records answering them.</param>
+    /// <param name="additional">Records that go with them: those an answer points at.</param>
+    public static byte[] BuildLegacyUnicastResponse(ushort id, IReadOnlyList<Question> questions,
+        IReadOnlyList<Record> answers, IReadOnlyList<Record> additional) =>
+        Build(id, questions, answers, additional, r => r with
+        {
+            CacheFlush = false,
+            Ttl = Math.Min(r.Ttl, LegacyUnicastMaxTtl)
+        });
+
+    private static byte[] Build(ushort id, IReadOnlyList<Question> questions, IReadOnlyList<Record> answers,
+        IReadOnlyList<Record> additional, Func<Record, Record> adjust)
     {
         var bytes = new List<byte>(256)
         {
-            0, 0, // ID is always 0 in multicast responses
+            (byte) (id >> 8), (byte) id, // ID: 0 in multicast responses, the query's in a unicast one
             0x84, 0, // QR=1 (response), AA=1
-            0, 0, // QDCOUNT
+            (byte) (questions.Count >> 8), (byte) questions.Count, // QDCOUNT
             (byte) (answers.Count >> 8), (byte) answers.Count, // ANCOUNT
             0, 0, // NSCOUNT
-            0, 0, // ARCOUNT
+            (byte) (additional.Count >> 8), (byte) additional.Count, // ARCOUNT
         };
 
-        foreach (var answer in answers)
+        foreach (var question in questions)
         {
-            WriteName(bytes, answer.Name);
-            WriteUInt16(bytes, answer.Type);
-            WriteUInt16(bytes, (ushort) (ClassIn | (answer.CacheFlush ? CacheFlush : 0)));
-            WriteUInt32(bytes, answer.Ttl);
-            WriteUInt16(bytes, (ushort) answer.Rdata.Length);
-            bytes.AddRange(answer.Rdata);
+            WriteName(bytes, question.Name);
+            WriteUInt16(bytes, question.Type);
+            WriteUInt16(bytes, question.Class);
+        }
+
+        foreach (var record in answers.Concat(additional).Select(adjust))
+        {
+            WriteName(bytes, record.Name);
+            WriteUInt16(bytes, record.Type);
+            WriteUInt16(bytes, (ushort) (ClassIn | (record.CacheFlush ? CacheFlush : 0)));
+            WriteUInt32(bytes, record.Ttl);
+            WriteUInt16(bytes, (ushort) record.Rdata.Length);
+            bytes.AddRange(record.Rdata);
         }
 
         return bytes.ToArray();
@@ -104,7 +142,20 @@ public static class MdnsMessage
     /// </summary>
     public static bool TryParseQuestions(ReadOnlySpan<byte> data, out List<(string Name, ushort Type)> questions)
     {
+        var parsed = TryParseQuery(data, out _, out var asked);
+
+        questions = asked.Select(q => (q.Name, q.Type)).ToList();
+        return parsed;
+    }
+
+    /// <summary>
+    /// A query's transaction id and its questions, as asked. False for anything that is not a
+    /// well-formed query — including responses, which arrive on the same socket.
+    /// </summary>
+    public static bool TryParseQuery(ReadOnlySpan<byte> data, out ushort id, out List<Question> questions)
+    {
         questions = [];
+        id = 0;
 
         if (data.Length < 12)
         {
@@ -116,6 +167,8 @@ public static class MdnsMessage
         {
             return false;
         }
+
+        id = (ushort) ((data[0] << 8) | data[1]);
 
         var questionCount = (data[4] << 8) | data[5];
         var offset = 12;
@@ -133,9 +186,10 @@ public static class MdnsMessage
             }
 
             var type = (ushort) ((data[offset] << 8) | data[offset + 1]);
+            var @class = (ushort) ((data[offset + 2] << 8) | data[offset + 3]);
             offset += 4; // type + class
 
-            questions.Add((name, type));
+            questions.Add(new Question(name, type, @class));
         }
 
         return questions.Count > 0;
