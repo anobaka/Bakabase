@@ -272,6 +272,16 @@ endpoints and confirmations.
   `ManagedServerOutcome.ProxyFakeAddress`; both tell the user to set `.local` names and LAN
   addresses to DIRECT or use the IP. Discovery offers an advertised proxy address last. No
   other range is special-cased (`ProxyFakeAddressTests`).
+- **`.local` names are asked on the LAN.** The connector's default resolver
+  (`LanHostResolver`) asks a `.local` name over Bakabase's own mDNS first — past a proxy that
+  answers the system's lookups — and the system resolver alongside as the fallback
+  (`MdnsHostResolver` over `MdnsSocketTransport`: one-shot A/AAAA queries with the QU bit, out of
+  every LAN interface by name, heard on their own ports and on 5353; ~1 s, answers kept up to
+  10 s, silence 5 s, one question per name at a time). Answers drop proxy, loopback and
+  unscoped link-local addresses (a link-local one takes the interface it came in on as its
+  scope), and a name with no IPv4 answer is also reached at `{name}-bakabase.local`, Bakabase's
+  own advertisement on that machine. It is only where to connect: identity checks are
+  unchanged. Tests use a fake transport (`MdnsHostResolverTests`); none sends real multicast.
 - **Discovery hides this node, not its copies.** "Find nearby devices" leaves out this node
   answering from this machine's own addresses; another machine answering under this node's id
   is listed — a copy of this data directory — and connecting to it is refused as

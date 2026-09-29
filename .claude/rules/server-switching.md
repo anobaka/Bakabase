@@ -73,7 +73,8 @@ manage anything; they are only ever managed.
   (`UpstreamConnections.ConnectAsync`), never the name raced again, and the console's signed
   calls after a question — the probe's context read, "stop managing"'s revoke — go over the
   question's own exchange. Every new connection needs an answer no older than two seconds, and
-  each question resolves the name again, so a name that moved on is followed within that.
+  each question resolves the name again, so a name that moved on is followed within that (a
+  `.local` name's mDNS answer is kept up to 10 s, see `federation.md`).
   **An address that leads into a proxy on this computer** (a name a fake-IP/TUN proxy answered
   with 198.18.0.0/15, or such an address typed — `ProxyFakeAddresses`) is never dialled: a
   probe or pairing says `ManagedServerOutcome.ProxyFakeAddress`, the listing's Offline carries

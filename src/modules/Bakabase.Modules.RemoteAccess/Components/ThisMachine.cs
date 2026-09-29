@@ -36,13 +36,19 @@ public static class ThisMachine
     /// or a name that resolves only to such addresses.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// A name that no longer resolves is not known to be this machine. Nor is one that also
     /// resolves elsewhere: another computer can advertise an address this machine holds too —
     /// a VPN or proxy adapter's (198.18.0.1), a virtual machine host's (192.168.56.1) — beside its
     /// own, and which of them answered is not known here.
+    /// </para>
+    /// <para>
+    /// A name is resolved as a connection to it resolves it (<see cref="LanHostResolver"/>), so
+    /// the answer is about the machine that connection reached.
+    /// </para>
     /// </remarks>
     public static Task<bool> ReachedByAsync(Uri address, CancellationToken ct = default) =>
-        ReachedByAsync(address, Dns.GetHostAddressesAsync, ct);
+        ReachedByAsync(address, LanHostResolver.Default.ResolveAsync, ct);
 
     /// <inheritdoc cref="ReachedByAsync(Uri, CancellationToken)"/>
     /// <param name="resolve">What a name resolves to; injected for tests.</param>

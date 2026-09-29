@@ -45,15 +45,16 @@ public sealed class DualStackConnector
     private readonly TimeSpan _attemptDelay;
 
     /// <param name="resolve">
-    /// Injected for tests; defaults to <see cref="Dns.GetHostAddressesAsync(string, CancellationToken)"/>.
-    /// What it returns is screened for a proxy's addresses either way (<see cref="ProxyFakeAddresses"/>).
+    /// Injected for tests; defaults to <see cref="LanHostResolver.Default"/> — a <c>.local</c> name
+    /// over mDNS first, the system resolver otherwise. What it returns is screened for a proxy's
+    /// addresses either way (<see cref="ProxyFakeAddresses"/>).
     /// </param>
     /// <param name="connect">Injected for tests; defaults to a plain TCP socket with Nagle off.</param>
     /// <param name="attemptDelay">Defaults to <see cref="DefaultAttemptDelay"/>.</param>
     public DualStackConnector(Func<string, CancellationToken, Task<IPAddress[]>>? resolve = null,
         Func<IPEndPoint, CancellationToken, ValueTask<Stream>>? connect = null, TimeSpan? attemptDelay = null)
     {
-        _resolve = resolve ?? Dns.GetHostAddressesAsync;
+        _resolve = resolve ?? LanHostResolver.Default.ResolveAsync;
         _connect = connect ?? ConnectSocketAsync;
         _attemptDelay = attemptDelay ?? DefaultAttemptDelay;
     }
