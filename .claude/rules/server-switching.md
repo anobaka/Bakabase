@@ -110,7 +110,12 @@ manage anything; they are only ever managed.
   last attempt said and `active` is whether the wait is still on: a claim that did not get
   through (`Unreachable`, `TooManyAttempts`) does not end it, so the page polls and offers
   "cancel" on `active`, never on `outcome`. `serverId` is the install the address answered as
-  when the request was filed — what the server joins the listing under once approved.
+  when the request was filed — what the server joins the listing under once approved. The
+  approved server is saved before its request is dropped, and the listing reads the requests
+  first, so a listing never has neither; it can have both. The page asks on the same five
+  seconds from the same moment, so its reads land on the collection: a request gone with its
+  `serverId` listed is approved, whenever that server appeared (`RemoteConsolePairingTests`,
+  `ManagementSections.test.tsx`).
 - **What a server says it is** (`kind`, `platform`, optional in `server-info`) is kept from its
   last answer as itself, like `mode` and `appVersion`: never from whoever answers at its
   address instead, and never a reason to refuse a handshake — a value this app does not know,

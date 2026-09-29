@@ -412,6 +412,60 @@ describe("devices this one manages", () => {
     expect(vi.mocked(managedServerApi.list).mock.calls.length).toBe(settled);
   });
 
+  it("names the device once approved when a read caught it saved beside its waiting request", async () => {
+    // The app saves the server, then drops the request it collected. It asks every five
+    // seconds and so does this page, both from the moment the request was filed, so a read
+    // can land between the two: the server is listed beside a request still waiting.
+    vi.useFakeTimers();
+    const filed = pendingRequest("request-1", { serverId: "nas" });
+
+    listing = view({ requests: [filed] });
+    render(
+      <MemoryRouter>
+        <ManagedServersSection />
+      </MemoryRouter>,
+    );
+    await elapse(0);
+
+    listing = view({ servers: [server()], requests: [filed] });
+    await elapse(5000);
+    expect(screen.getByRole("article", { name: "NAS" })).toBeInTheDocument();
+    expect(
+      screen.queryByText(/federation\.servers\.(approved|requestClosed)/),
+    ).not.toBeInTheDocument();
+
+    listing = view({ servers: [server()] });
+    await elapse(5000);
+    expect(screen.getByText("federation.servers.approved NAS")).toBeInTheDocument();
+    expect(screen.queryByText(/requestClosed/)).not.toBeInTheDocument();
+    // Nothing left to wait for: the polling stops.
+    const settled = listReads();
+
+    await elapse(20_000);
+    expect(listReads()).toBe(settled);
+  });
+
+  it("names a server managed already once a request to manage it again is approved", async () => {
+    // A server that moved is asked again at its new address; the approval saves it over
+    // itself, so nothing new appears in the list.
+    vi.useFakeTimers();
+    listing = view({
+      servers: [server()],
+      requests: [pendingRequest("request-1", { serverId: "nas" })],
+    });
+    render(
+      <MemoryRouter>
+        <ManagedServersSection />
+      </MemoryRouter>,
+    );
+    await elapse(0);
+
+    listing = view({ servers: [server({ pairedAt: "2026-09-29T00:00:00Z" })] });
+    await elapse(5000);
+    expect(screen.getByText("federation.servers.approved NAS")).toBeInTheDocument();
+    expect(screen.queryByText(/requestClosed/)).not.toBeInTheDocument();
+  });
+
   it("says when a request ended without an approval", async () => {
     vi.useFakeTimers();
     listing = view({ requests: [pendingRequest()] });

@@ -221,9 +221,13 @@ export function ManagedServersPanel({
   const [confirmationError, setConfirmationError] = useState<Error>();
   /**
    * What the last listing held, so an answer arriving between two reads can be named.
-   * Only live requests: one that already shows how it ended is not news when it goes.
+   * Only live requests, with the install each was filed with: one that already shows how it
+   * ended is not news when it goes.
    */
-  const previous = useRef<{ servers: Set<string>; live: Map<string, string> }>();
+  const previous = useRef<{
+    servers: Set<string>;
+    live: Map<string, { label: string; serverId?: string | null }>;
+  }>();
   /** Requests this page withdrew itself; their disappearance is not news. */
   const withdrawn = useRef(new Set<string>());
   const latestT = useRef(t);
@@ -247,23 +251,31 @@ export function ManagedServersPanel({
     const before = previous.current;
 
     if (before) {
-      const added = view.servers.filter((server) => !before.servers.has(server.serverId));
       // Requests that were live and now are not listed at all. One that ended with an
       // answer stays listed for a while and says so in its own row; one that is gone was
-      // either approved — its server is new above — or ended somewhere this page cannot see.
+      // either approved — its server is listed — or ended somewhere this page cannot see.
       const gone = [...before.live.entries()].filter(
         ([requestId]) =>
           !withdrawn.current.has(requestId) &&
           !view.requests.some((request) => request.requestId === requestId),
       );
+      // Approved: listed under the install the request was filed with, or new since the last
+      // read. Not only new: the app saves the server before it drops the request, so a read
+      // between the two already had the server — beside the request, still waiting — and
+      // re-pairing a server managed already adds nothing either.
+      const approved = view.servers.filter(
+        (server) =>
+          !before.servers.has(server.serverId) ||
+          gone.some(([, request]) => request.serverId === server.serverId),
+      );
 
       if (gone.length) {
         setNotice(
-          added.length
+          approved.length
             ? latestT.current("federation.servers.approved", {
-                name: added.map(serverLabel).join(", "),
+                name: approved.map(serverLabel).join(", "),
               })
-            : latestT.current("federation.servers.requestClosed", { name: gone[0][1] }),
+            : latestT.current("federation.servers.requestClosed", { name: gone[0][1].label }),
         );
       }
     }
@@ -272,7 +284,10 @@ export function ManagedServersPanel({
       live: new Map(
         view.requests
           .filter((request) => request.active)
-          .map((request) => [request.requestId, requestLabel(request)]),
+          .map((request) => [
+            request.requestId,
+            { label: requestLabel(request), serverId: request.serverId },
+          ]),
       ),
     };
   }, [view]);

@@ -207,7 +207,13 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             await Task.WhenAll(_store.Read().Servers.Select(s => ProbeServerAsync(s, ct)));
         }
 
-        return new ManagedServersView(true, _store.Read().Servers.Select(ToView).ToList(), RequestViews());
+        // The requests before the servers. A collected request is dropped only once its server
+        // is saved (CompleteClaimAsync), so a listing that no longer has the request has the
+        // server. Read the other way round, a listing taken while the claim finished could have
+        // neither: the page would take the request for rejected and stop watching.
+        var requests = RequestViews();
+
+        return new ManagedServersView(true, _store.Read().Servers.Select(ToView).ToList(), requests);
     }
 
     public async Task<ManagedServerProbeView> ProbeAsync(string address, CancellationToken ct = default)
@@ -759,8 +765,10 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         await SaveAsync(identity, request.Address, credentials, clock, ct);
 
         // In this order: a listing taken between the save and the removal shows the server
-        // next to a request still active, which only means one more read; one that showed the
-        // request ended before the server was saved would stop the page watching for it.
+        // next to a request still active, which only means one more read — the page knows the
+        // request was collected when it is gone and its server is listed, whenever the server
+        // appeared; one that showed the request ended before the server was saved would stop
+        // the page watching for it. GetAsync reads the requests first for the same reason.
         _requests.TryRemove(request.RequestId, out _);
         request.Finish(ManagedServerOutcome.Ok);
     }
