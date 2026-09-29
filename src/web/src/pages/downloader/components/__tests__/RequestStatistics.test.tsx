@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import RequestStatistics from "../RequestStatistics";
@@ -21,17 +21,12 @@ vi.mock("@/components/bakaui", () => ({
   ),
   Chip: ({ children }: { children: ReactNode }) => <span>{children}</span>,
   Modal: () => null,
-  Tab: ({ children, title }: { children: ReactNode; title: ReactNode }) => (
-    <section>
-      <h2>{title}</h2>
-      {children}
-    </section>
-  ),
-  Tabs: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 vi.mock("react-chartjs-2", () => ({
-  Bar: ({ data }: { data: unknown }) => <pre data-testid="chart-data">{JSON.stringify(data)}</pre>,
+  Doughnut: ({ data }: { data: unknown }) => (
+    <pre data-testid="traffic-chart-data">{JSON.stringify(data)}</pre>
+  ),
 }));
 
 beforeEach(() => {
@@ -56,15 +51,27 @@ afterEach(() => {
 });
 
 describe("request statistics", () => {
-  it("shows per-site read traffic and keeps an open overview current", () => {
+  it("shows request counts and response traffic together without tabs or hover", () => {
     render(<RequestStatistics compact />);
     fireEvent.click(screen.getByRole("button"));
 
     const modal = createPortal.mock.calls[0][1];
     render(modal.children);
 
-    expect(screen.getByText("downloader.label.responseTraffic")).toBeInTheDocument();
-    const trafficData = () => JSON.parse(screen.getAllByTestId("chart-data")[1].textContent!);
+    expect(
+      screen.getByRole("heading", { name: "downloader.label.requestCounts" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "downloader.label.responseTraffic" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId(`request-source-${ThirdPartyId.ExHentai}`)).getByText("1"),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId(`traffic-source-${ThirdPartyId.ExHentai}`)).getByText("1.50 KiB"),
+    ).toBeInTheDocument();
+    const trafficData = () => JSON.parse(screen.getByTestId("traffic-chart-data").textContent!);
     expect(trafficData().labels).toEqual(["Pixiv", "ExHentai"]);
     expect(trafficData().datasets[0].data).toEqual([4096, 1536]);
 
@@ -72,17 +79,34 @@ describe("request statistics", () => {
       useThirdPartyRequestStatisticsStore.getState().updateStatistics([
         {
           id: ThirdPartyId.ExHentai,
-          counts: { [ThirdPartyRequestResultType.Succeed]: 1 },
+          counts: {
+            [ThirdPartyRequestResultType.Succeed]: 2,
+            [ThirdPartyRequestResultType.Failed]: 1,
+          },
           receivedBytes: 8192,
         },
         {
           id: ThirdPartyId.Pixiv,
-          counts: { [ThirdPartyRequestResultType.Succeed]: 1 },
-          receivedBytes: 4096,
+          counts: {},
+          receivedBytes: 0,
         },
       ]),
     );
+    const exHentaiCounts = within(screen.getByTestId(`request-source-${ThirdPartyId.ExHentai}`));
+
+    expect(exHentaiCounts.getByText("3")).toBeInTheDocument();
+    expect(exHentaiCounts.getByText("Succeed: 2")).toBeInTheDocument();
+    expect(exHentaiCounts.getByText("Failed: 1")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId(`request-source-${ThirdPartyId.Pixiv}`)).getByText("0"),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId(`traffic-source-${ThirdPartyId.ExHentai}`)).getByText("8.00 KiB"),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId(`traffic-source-${ThirdPartyId.Pixiv}`)).getByText("0 B"),
+    ).toBeInTheDocument();
     expect(trafficData().labels).toEqual(["ExHentai", "Pixiv"]);
-    expect(trafficData().datasets[0].data).toEqual([8192, 4096]);
+    expect(trafficData().datasets[0].data).toEqual([8192, 0]);
   });
 });
