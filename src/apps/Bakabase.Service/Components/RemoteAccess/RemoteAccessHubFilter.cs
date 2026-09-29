@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Gui;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Microsoft.AspNetCore.SignalR;
 
@@ -9,8 +10,8 @@ namespace Bakabase.Service.Components.RemoteAccess;
 
 /// <summary>
 /// Records which hub connections came from outside this machine, so
-/// <see cref="RemoteConnectionRegistry"/> can hang up on them later, and which of them may
-/// read every options object (<see cref="WebGuiOptionsAudience"/>).
+/// <see cref="RemoteConnectionRegistry"/> can hang up on them later, and which of the UI hub's
+/// connections may read every options object (<see cref="WebGuiOptionsAudience"/>).
 /// </summary>
 /// <remarks>
 /// A filter rather than an override on the hub itself: the hub lives in the legacy
@@ -31,17 +32,33 @@ public sealed class RemoteAccessHubFilter(RemoteConnectionRegistry registry, IRe
         {
             var connection = context.Context;
             registry.Track(remote.Device?.Id, connection.ConnectionId, connection.Abort);
+
+            // The gate let in the request that opened this connection, possibly before a change
+            // of the settings: a change hangs up on the connections in the registry
+            // (RemoteAccessConnectionMonitor), and this one was not in it until now. So it is
+            // judged again here, after tracking — a change made after this check finds it in
+            // the registry.
+            if (IsRefusedNow(remote))
+            {
+                registry.Forget(connection.ConnectionId);
+                connection.Abort();
+                return;
+            }
         }
 
-        // Every options object for this machine's window and a paired device, as the
-        // authorization filter lets them call anything; and for anyone while the server is
-        // Unrestricted. Read after tracking, and from the mode as it is now: a mode change
-        // hangs up on the unpaired connections tracked before it, so one tracked after it
-        // must be judged by the new mode. No context means the middleware did not run, which
-        // is not trusted.
-        var readsAllOptions = remote is {IsLoopback: true} or {IsPaired: true} ||
-                              remote != null && remoteAccess.GetEffectiveMode() == RemoteAccessMode.Unrestricted;
-        await WebGuiOptionsAudience.AdmitAsync(context.Context, context.Hub.Groups, readsAllOptions);
+        // Only the UI hub sends options; the progressor hub's connections join no group.
+        if (context.Hub is Hub<IWebGuiClient>)
+        {
+            // Every options object for this machine's window and a paired device, as the
+            // authorization filter lets them call anything; and for anyone while the server is
+            // Unrestricted. Read after tracking, and from the mode as it is now: a mode change
+            // hangs up on the unpaired connections tracked before it, so one tracked after it
+            // must be judged by the new mode. No context means the middleware did not run,
+            // which is not trusted.
+            var readsAllOptions = remote is {IsLoopback: true} or {IsPaired: true} ||
+                                  remote != null && remoteAccess.GetEffectiveMode() == RemoteAccessMode.Unrestricted;
+            await WebGuiOptionsAudience.AdmitAsync(context.Context, context.Hub.Groups, readsAllOptions);
+        }
 
         await next(context);
     }
@@ -51,5 +68,17 @@ public sealed class RemoteAccessHubFilter(RemoteConnectionRegistry registry, IRe
     {
         registry.Forget(context.Context.ConnectionId);
         await next(context, exception);
+    }
+
+    /// <summary>
+    /// Whether <see cref="RemoteAccessMiddleware"/> would refuse, under the settings as they are
+    /// now, the remote caller it admitted as <paramref name="remote"/>: remote access is off, or
+    /// the caller has not paired and pairing is required.
+    /// </summary>
+    private bool IsRefusedNow(RemoteAccessContext remote)
+    {
+        var mode = remoteAccess.GetEffectiveMode();
+        return mode == RemoteAccessMode.Disabled ||
+               mode != RemoteAccessMode.Unrestricted && remoteAccess.GetRequirePairing() && !remote.IsPaired;
     }
 }

@@ -150,25 +150,10 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "SetRemoteAccessMode")]
         public async Task<BaseResponse> SetMode([FromBody] RemoteAccessModeInputModel model)
         {
-            var before = remoteAccessService.GetEffectiveMode();
+            // Every other check is per-request and takes effect on the next call. The hub
+            // connections already open are judged again by RemoteAccessConnectionMonitor,
+            // which watches the setting itself: this is not the only route that changes it.
             await remoteAccessService.SetModeAsync(model.Mode);
-            var after = remoteAccessService.GetEffectiveMode();
-
-            // Every other check is per-request and takes effect on the next call. A hub
-            // connection is authorized once at its handshake, so switching remote access
-            // off has to reach the ones already open or they keep receiving pushes.
-            if (after == RemoteAccessMode.Disabled)
-            {
-                connections.AbortAll();
-            }
-            else if (after != before)
-            {
-                // What an unpaired connection is sent was decided under the old mode —
-                // every options object while Unrestricted, only what browsing reads while
-                // Enabled. Hung up on, it reconnects and is judged by the new one.
-                connections.AbortUnpaired();
-            }
-
             return BaseResponseBuilder.Ok;
         }
 
@@ -184,15 +169,10 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "SetRemoteAccessRequirePairing")]
         public async Task<BaseResponse> SetRequirePairing([FromBody] RemoteAccessRequirePairingInputModel model)
         {
+            // The unpaired hub connections already open are hung up on by
+            // RemoteAccessConnectionMonitor when pairing becomes a requirement: left open,
+            // they would keep serving exactly the callers this switch shuts out.
             await remoteAccessService.SetRequirePairingAsync(model.Require);
-
-            // Leaving unpaired hub connections open would keep serving exactly the
-            // callers this switch was flipped to shut out.
-            if (model.Require)
-            {
-                connections.AbortUnpaired();
-            }
-
             return BaseResponseBuilder.Ok;
         }
 
