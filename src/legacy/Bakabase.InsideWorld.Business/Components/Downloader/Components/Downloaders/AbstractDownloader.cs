@@ -43,6 +43,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         public event Func<Task>? OnStatusChanged;
         public event Func<string, Task>? OnNameAcquired;
         public event Func<decimal, Task>? OnProgress;
+        public event Func<Task>? OnDownloadSpeedChanged;
         public event Func<string, long, Task>? OnFileDownloaded;
         public event Func<Task>? OnCurrentChanged;
         public event Func<string, Task>? OnCheckpointChanged;
@@ -52,8 +53,17 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         public abstract TEnumTaskType EnumTaskType { get; }
         public string? Current { get; protected set; }
         private readonly DownloadTimeEstimator _timeEstimator = new();
+        private readonly DownloadSpeedEstimator _speedEstimator = new();
+        private readonly object _speedLoopGate = new();
+        private readonly SemaphoreSlim _speedPushGate = new(1, 1);
+        private CancellationTokenSource? _speedLoopCancellation;
+        private double? _lastPushedSpeed;
+        private bool _speedDisposed;
         public double? EstimatedRemainingSeconds => Status == DownloaderStatus.Downloading
             ? _timeEstimator.EstimateRemainingSeconds()
+            : null;
+        public double? DownloadSpeedBytesPerSecond => Status == DownloaderStatus.Downloading
+            ? _speedEstimator.EstimateBytesPerSecond()
             : null;
         public string? Message { get; protected set; }
         private DownloaderStatus _status = DownloaderStatus.JustCreated;
@@ -179,6 +189,116 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             }
         }
 
+        /// <summary>
+        /// A CDN transfer reports its current .part length, which may already contain bytes from
+        /// an earlier run or move backwards after a retry. The reporter counts only positive
+        /// changes after its own first sample. Separate reporters allow DASH streams to add up.
+        /// </summary>
+        protected Action<long, long?> CreateMediaTransferSpeedReporter()
+        {
+            var report = _speedEstimator.CreateTransferReporter();
+            return (done, _) =>
+            {
+                try
+                {
+                    if (Status == DownloaderStatus.Downloading && report(done))
+                    {
+                        Touch();
+                        EnsureSpeedLoop();
+                    }
+                }
+                catch (Exception e)
+                {
+                    // Display metrics must not fail the media download callback.
+                    Logger.LogWarning(e, "Could not update download speed");
+                }
+            };
+        }
+
+        /// <summary>End of a media transfer phase (before merging), or an interrupted run.</summary>
+        protected void ClearMediaDownloadSpeed()
+        {
+            _speedEstimator.Reset();
+            _ = PushDownloadSpeedAsync();
+        }
+
+        private void EnsureSpeedLoop()
+        {
+            lock (_speedLoopGate)
+            {
+                if (_speedDisposed || _speedLoopCancellation != null) return;
+                var cancellation = new CancellationTokenSource();
+                _speedLoopCancellation = cancellation;
+                _ = RunSpeedLoopAsync(cancellation);
+            }
+        }
+
+        private async Task RunSpeedLoopAsync(CancellationTokenSource cancellation)
+        {
+            try
+            {
+                while (!cancellation.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellation.Token);
+                    await PushDownloadSpeedAsync();
+                    // Keep ticking without another CDN callback: a blocked read must cause the
+                    // last displayed speed to expire after the observation window.
+                    if (Status != DownloaderStatus.Downloading || !_speedEstimator.HasRecentBytes) break;
+                }
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning(e, "Could not refresh download speed");
+            }
+            finally
+            {
+                lock (_speedLoopGate)
+                {
+                    if (ReferenceEquals(_speedLoopCancellation, cancellation))
+                    {
+                        _speedLoopCancellation = null;
+                    }
+
+                    cancellation.Dispose();
+                    // A report may have arrived between the last HasRecentBytes check and this
+                    // lock; restart the ticker so that report still reaches the UI.
+                    if (!_speedDisposed && _speedLoopCancellation == null &&
+                        Status == DownloaderStatus.Downloading && _speedEstimator.HasRecentBytes)
+                    {
+                        EnsureSpeedLoop();
+                    }
+                }
+            }
+        }
+
+        private async Task PushDownloadSpeedAsync()
+        {
+            await _speedPushGate.WaitAsync();
+            try
+            {
+                var speed = DownloadSpeedBytesPerSecond;
+                if (speed == _lastPushedSpeed) return;
+
+                if (OnDownloadSpeedChanged is { } changed)
+                {
+                    await changed();
+                }
+
+                _lastPushedSpeed = speed;
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning(e, "Could not push download speed");
+            }
+            finally
+            {
+                _speedPushGate.Release();
+            }
+        }
+
         /// <summary>Records a file only after it exists at its final output path.</summary>
         protected async Task OnFileDownloadedInternal(string path)
         {
@@ -228,6 +348,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 if (_status != value)
                 {
                     _timeEstimator.Reset();
+                    ClearMediaDownloadSpeed();
                 }
                 _status = value;
                 LastActivityAt = DateTime.Now;
@@ -633,6 +754,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
                 // The estimate would only grow while nothing moves, then start from a stale baseline.
                 _timeEstimator.Reset();
+                ClearMediaDownloadSpeed();
                 // Also a sign of life for the queue watchdog, which would otherwise read a long wait
                 // as a stalled download.
                 // Only reached through the catch above, which set both.
@@ -725,7 +847,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
         public virtual void Dispose()
         {
-
+            lock (_speedLoopGate)
+            {
+                _speedDisposed = true;
+                _speedLoopCancellation?.Cancel();
+            }
         }
     }
 

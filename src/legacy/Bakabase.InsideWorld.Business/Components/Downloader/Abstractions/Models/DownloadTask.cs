@@ -23,6 +23,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         /// <summary>Total bytes in files attributed to this task; null until a file is observed.</summary>
         public long? DownloadedBytes { get; set; }
         /// <summary>
+        /// Recent bytes per second received for this task's active media transfer; null when
+        /// no reliable live byte source is available. Transient, never persisted.
+        /// </summary>
+        public double? DownloadSpeedBytesPerSecond { get; set; }
+        /// <summary>
         /// Estimated seconds remaining in the current run; null when not downloading or when
         /// there is not enough recent progress to estimate. Transient, never persisted.
         /// </summary>

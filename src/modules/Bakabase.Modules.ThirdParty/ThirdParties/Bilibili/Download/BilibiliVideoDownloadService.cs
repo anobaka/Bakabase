@@ -44,6 +44,8 @@ public sealed record BilibiliPageTarget(string VideoPath, bool AlreadyExists);
 /// <param name="DownloadCaptions">Whether to save danmaku (<c>.xml</c>) and subtitles (<c>.srt</c>).</param>
 /// <param name="CoverUrl">The cover's URL, for the cover file's extension (and as the source when
 /// <paramref name="GetCover"/> is null).</param>
+/// <param name="CreateTransferSpeedReporter">Creates a separate byte-position observer for each CDN stream.</param>
+/// <param name="OnMediaDownloadFinished">Called before merge or remux starts, when transfer speed is no longer live.</param>
 public sealed record BilibiliPageJob(
     long Aid,
     long Cid,
@@ -54,7 +56,9 @@ public sealed record BilibiliPageJob(
     Func<decimal, Task>? OnProgress = null,
     Func<CancellationToken, Task<byte[]?>>? GetCover = null,
     bool DownloadCaptions = true,
-    string? CoverUrl = null);
+    string? CoverUrl = null,
+    Func<Action<long, long?>>? CreateTransferSpeedReporter = null,
+    Action? OnMediaDownloadFinished = null);
 
 public enum BilibiliPageStatus
 {
@@ -403,7 +407,7 @@ public sealed class BilibiliVideoDownloadService
             c => TransferDashAsync(job, video, false, work, refresh, videoSlot, c),
             audio == null ? null : c => TransferDashAsync(job, audio, true, work, refresh, audioSlot!, c));
 
-        var failure = await TryMuxAsync(work, video, audio, IsExperimental(audioKind), durationMs, progress, ct);
+        var failure = await TryMuxAsync(job, work, video, audio, IsExperimental(audioKind), durationMs, progress, ct);
         if (failure == null)
         {
             return null;
@@ -421,7 +425,7 @@ public sealed class BilibiliVideoDownloadService
             audioKind = BilibiliAudioKind.Aac;
             var aacSlot = progress.AddStream(EstimateBytes(aac.Bandwidth, durationMs));
             await TransferDashAsync(job, aac, true, work, refresh, aacSlot, ct);
-            failure = await TryMuxAsync(work, video, audio, false, durationMs, progress, ct);
+            failure = await TryMuxAsync(job, work, video, audio, false, durationMs, progress, ct);
             if (failure == null)
             {
                 return null;
@@ -447,7 +451,7 @@ public sealed class BilibiliVideoDownloadService
                 job.Aid, job.Cid, failed.Id, failed.CodecId, exitCode, next.Id, next.CodecId);
             var slot = progress.AddStream(EstimateBytes(next.Bandwidth, durationMs));
             await TransferDashAsync(job, next, false, work, refresh, slot, ct);
-            failure = await TryMuxAsync(work, next, audio, IsExperimental(audioKind), durationMs, progress, ct);
+            failure = await TryMuxAsync(job, work, next, audio, IsExperimental(audioKind), durationMs, progress, ct);
             if (failure == null)
             {
                 return null;
@@ -470,6 +474,7 @@ public sealed class BilibiliVideoDownloadService
     {
         var path = work.DashStreamPath(candidate, isAudio);
         var ticket = new SharedPlayUrlRefresh.Ticket();
+        var speedReporter = job.CreateTransferSpeedReporter?.Invoke();
         await _cdn.DownloadAsync(new BilibiliCdnTransfer(path, candidate.IdentityKey, candidate.Urls, async rct =>
         {
             var r = await refresh.GetAsync(ticket, rct);
@@ -480,14 +485,19 @@ public sealed class BilibiliVideoDownloadService
             }
 
             return BilibiliStreamSelector.FindSame(job.Cid, fresh, candidate, isAudio)?.Urls;
-        }), slot.Report, ct);
+        }), (done, total) =>
+        {
+            slot.Report(done, total);
+            speedReporter?.Invoke(done, total);
+        }, ct);
         slot.Complete(FileLength(path));
     }
 
-    private async Task<MediaMergeException?> TryMuxAsync(WorkFiles work, BilibiliStreamCandidate video,
+    private async Task<MediaMergeException?> TryMuxAsync(BilibiliPageJob job, WorkFiles work, BilibiliStreamCandidate video,
         BilibiliStreamCandidate? audio, bool experimental, long durationMs, BilibiliPageProgress progress,
         CancellationToken ct)
     {
+        job.OnMediaDownloadFinished?.Invoke();
         var request = new MediaMuxRequest(work.DashStreamPath(video, false),
             audio == null ? null : work.DashStreamPath(audio, true), work.MergedPath)
         {
@@ -527,6 +537,8 @@ public sealed class BilibiliVideoDownloadService
             var segment = segments[i];
             var path = work.SegmentPath(segment);
             var ticket = new SharedPlayUrlRefresh.Ticket();
+            var slot = slots[i];
+            var speedReporter = job.CreateTransferSpeedReporter?.Invoke();
             await _cdn.DownloadAsync(new BilibiliCdnTransfer(path, segment.IdentityKey, segment.Urls, async rct =>
             {
                 var r = await refresh.GetAsync(ticket, rct);
@@ -535,11 +547,16 @@ public sealed class BilibiliVideoDownloadService
                 return BilibiliPlayUrlRules.Decide(r, job.IsPgcRedirect).Kind == BilibiliPlayUrlOutcomeKind.Durl
                     ? BilibiliStreamSelector.FindSame(job.Cid, r.Data?.Durl, segment)?.Urls
                     : null;
-            }), slots[i].Report, ct);
-            slots[i].Complete(FileLength(path));
+            }), (done, total) =>
+            {
+                slot.Report(done, total);
+                speedReporter?.Invoke(done, total);
+            }, ct);
+            slot.Complete(FileLength(path));
             paths.Add(path);
         }
 
+        job.OnMediaDownloadFinished?.Invoke();
         var mergeProgress = MergeProgress(progress, durationMs);
         try
         {

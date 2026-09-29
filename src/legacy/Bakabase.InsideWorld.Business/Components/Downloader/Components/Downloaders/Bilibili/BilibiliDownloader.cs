@@ -373,9 +373,19 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
                         return cover;
                     },
-                    CoverUrl: archive.CoverUrl);
+                    CoverUrl: archive.CoverUrl,
+                    CreateTransferSpeedReporter: CreateMediaTransferSpeedReporter,
+                    OnMediaDownloadFinished: ClearMediaDownloadSpeed);
 
-                var outcome = await videoService.DownloadPageAsync(job, ct);
+                BilibiliPageOutcome outcome;
+                try
+                {
+                    outcome = await videoService.DownloadPageAsync(job, ct);
+                }
+                finally
+                {
+                    ClearMediaDownloadSpeed();
+                }
                 if (outcome.VideoPath is { } videoPath)
                 {
                     await AccountForPageOutputsAsync(videoPath, archive.CoverUrl);

@@ -104,17 +104,67 @@ afterEach(async () => {
 });
 
 describe("download task row interaction", () => {
-  it("shows the attributed file size beside the progress percent", async () => {
+  it("shows the attributed file size before the progress percent", async () => {
     await show({ downloadedBytes: 1572864 });
 
     expect(element("downloader.label.downloadedFileSize: 1.5 MiB")).toHaveTextContent("1.5 MiB");
     expect(container).toHaveTextContent("42%");
   });
 
-  it("marks file size as unavailable until a file is attributed", async () => {
+  it("omits file size until a file is attributed", async () => {
     await show();
 
-    expect(element("downloader.label.downloadedFileSize: —")).toHaveTextContent("—");
+    expect(
+      document.querySelector('[aria-label^="downloader.label.downloadedFileSize:"]'),
+    ).toBeNull();
+  });
+
+  it("orders size, speed, remaining time, and percent while downloading", async () => {
+    const estimate =
+      "downloader.label.estimatedRemaining 1datetime.duration.minute 5datetime.duration.second";
+
+    await show({
+      status: DownloadTaskStatus.Downloading,
+      downloadedBytes: 1572864,
+      downloadSpeedBytesPerSecond: 1536,
+      estimatedRemainingSeconds: 65,
+    });
+
+    const size = element("downloader.label.downloadedFileSize: 1.5 MiB");
+    const speed = element("downloader.label.downloadSpeed: 1.5 KiB/s");
+    const remaining = document.querySelector<HTMLElement>(`[title="${estimate}"]`)!;
+    const percent = remaining.parentElement!.lastElementChild!;
+
+    expect([size, speed, remaining, percent].map((node) => node.textContent)).toEqual([
+      "1.5 MiB",
+      "1.5 KiB/s",
+      estimate,
+      "42%",
+    ]);
+    expect(size.compareDocumentPosition(speed) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      speed.compareDocumentPosition(remaining) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      remaining.compareDocumentPosition(percent) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      Array.from(size.parentElement!.children).filter((node) => node.textContent === "·"),
+    ).toHaveLength(3);
+  });
+
+  it.each([
+    [DownloadTaskStatus.Idle, 1536],
+    [DownloadTaskStatus.Complete, 1536],
+    [DownloadTaskStatus.Downloading, null],
+    [DownloadTaskStatus.Downloading, 0],
+    [DownloadTaskStatus.Downloading, -1],
+    [DownloadTaskStatus.Downloading, Number.NaN],
+  ])("omits unavailable speed for status %s and value %s", async (status, speed) => {
+    await show({ status, downloadSpeedBytesPerSecond: speed });
+
+    expect(document.querySelector('[aria-label^="downloader.label.downloadSpeed:"]')).toBeNull();
+    expect(container).not.toHaveTextContent("·");
   });
 
   it("shows the server estimate beside the progress percentage, not among the dates", async () => {

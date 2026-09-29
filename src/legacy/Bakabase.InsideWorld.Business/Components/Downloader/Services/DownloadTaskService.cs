@@ -583,6 +583,17 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         public async Task OnCurrentChanged(int taskId) =>
             await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask), await GetDto(taskId));
 
+        /// <summary>Push transient speed without persisting a progress value every second.</summary>
+        public async Task OnDownloadSpeedChanged(int taskId)
+        {
+            var task = await GetByKey(taskId);
+            if (task != null)
+            {
+                await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
+                    (await ToDto(new[] {task}))[0]);
+            }
+        }
+
         /// <summary>
         /// Upsert the size of one task-owned output file. A retry, resumed download, or overwrite
         /// updates that path instead of counting its bytes twice.

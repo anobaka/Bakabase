@@ -14,6 +14,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Compo
         DownloaderStatus Status { get; }
         string? Current { get; }
         double? EstimatedRemainingSeconds { get; }
+        double? DownloadSpeedBytesPerSecond { get; }
         Task Stop(DownloaderStopBy stopBy);
         DownloaderStopBy? StoppedBy { get; set; }
 
@@ -39,6 +40,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Compo
         event Func<Task>? OnStatusChanged;
         event Func<string, Task>? OnNameAcquired;
         event Func<decimal, Task>? OnProgress;
+        event Func<Task>? OnDownloadSpeedChanged;
         event Func<string, long, Task>? OnFileDownloaded;
         event Func<Task>? OnCurrentChanged;
         event Func<string, Task>? OnCheckpointChanged;

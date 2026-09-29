@@ -35,7 +35,7 @@
   "downloader.label.createdAt": "Created at",
   "downloader.label.estimatedRemaining": "Estimated remaining",
   "downloader.label.downloadedFileSize": "Total downloaded file size",
-  "downloader.tip.downloadedFileSizeUnavailable": "No files have been attributed to this task yet.",
+  "downloader.label.downloadSpeed": "Download speed",
   "downloader.confirm.deleteTask": "Are you sure to delete it?",
   "downloader.modal.configurations": "Configurations",
   "downloader.modal.creatingTask": "Creating download task",

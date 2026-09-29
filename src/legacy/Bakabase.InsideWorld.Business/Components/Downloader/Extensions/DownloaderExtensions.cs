@@ -177,6 +177,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 EstimatedRemainingSeconds = status == DownloadTaskStatus.Downloading
                     ? downloader?.EstimatedRemainingSeconds
                     : null,
+                DownloadSpeedBytesPerSecond = status == DownloadTaskStatus.Downloading
+                    ? downloader?.DownloadSpeedBytesPerSecond
+                    : null,
                 ThirdPartyId = task.ThirdPartyId,
                 Type = task.Type,
                 Status = status,

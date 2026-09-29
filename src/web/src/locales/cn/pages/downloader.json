@@ -35,7 +35,7 @@
   "downloader.label.createdAt": "创建于",
   "downloader.label.estimatedRemaining": "预计剩余",
   "downloader.label.downloadedFileSize": "已下载文件总大小",
-  "downloader.tip.downloadedFileSizeUnavailable": "暂无可归属到该任务的文件记录。",
+  "downloader.label.downloadSpeed": "下载速度",
   "downloader.confirm.deleteTask": "确定要删除吗？",
   "downloader.modal.configurations": "配置",
   "downloader.modal.creatingTask": "创建下载任务",
