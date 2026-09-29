@@ -137,9 +137,15 @@ const dynamicKeys = [
   ),
   // `federation.pair.${outcome}` after a sharing request, and `federation.connection.${state}`.
   ...["awaitingApproval", "granted", "rejected"].map((outcome) => `federation.pair.${outcome}`),
-  ...["Online", "Offline", "Unknown", "IdentityConflict", "Unauthorized", "Incompatible"].map(
-    (state) => `federation.connection.${state}`,
-  ),
+  ...[
+    "Online",
+    "Offline",
+    "Unknown",
+    "IdentityConflict",
+    "Unauthorized",
+    "Incompatible",
+    "ProxyFakeAddress",
+  ].map((state) => `federation.connection.${state}`),
 ];
 
 /** The placeholders a text uses; one language may name the same one twice, the other once. */

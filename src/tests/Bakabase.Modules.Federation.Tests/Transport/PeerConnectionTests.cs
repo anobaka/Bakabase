@@ -59,18 +59,45 @@ public sealed class PeerConnectionTests
         Assert.IsTrue(watch.Elapsed < TimeSpan.FromSeconds(4), $"took {watch.Elapsed}");
     }
 
+    [TestMethod]
+    public async Task A_peer_whose_name_a_proxy_on_this_computer_took_over_is_said_to_be_behind_one()
+    {
+        // Clash in fake-IP mode answers every name with an address of its own; connecting there
+        // reaches the proxy, never the peer — so it is not attempted, and the reason is said.
+        var dialled = 0;
+        using var provider = Compose(host => host == "mac.local" ? [ProxyAddress] : [],
+            () => Interlocked.Increment(ref dialled));
+        var http = provider.GetRequiredService<FederationHttpClient>();
+
+        foreach (var address in new[] {"http://mac.local:34567", $"http://{ProxyAddress}:34567"})
+        {
+            var refused = await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
+                http.PublicAsync<JsonElement>(address, HttpMethod.Get, "/federation/v1/info", null,
+                    CancellationToken.None));
+
+            Assert.AreEqual(FederationHttpClient.ProxyFakeAddressCode, refused.ErrorCode, address);
+            Assert.AreEqual(503, refused.StatusCode);
+        }
+
+        Assert.AreEqual(0, dialled);
+    }
+
+    private static readonly IPAddress ProxyAddress = IPAddress.Parse("198.18.0.29");
+
     /// <summary>
     /// The app's peer client over a network where <paramref name="resolve"/> says what a name is,
     /// <see cref="Dropped"/> and <see cref="SwitchedOff"/> drop every connection, and anything else
     /// is a real connection.
     /// </summary>
-    private static ServiceProvider Compose(Func<string, IPAddress[]> resolve)
+    private static ServiceProvider Compose(Func<string, IPAddress[]> resolve, Action? dialling = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(new DualStackConnector(
             (host, _) => Task.FromResult(resolve(host)),
             async (to, ct) =>
             {
+                dialling?.Invoke();
+
                 if (to.Address.Equals(Dropped) || to.Address.Equals(SwitchedOff))
                 {
                     await Task.Delay(Timeout.Infinite, ct);

@@ -57,7 +57,15 @@ public enum ManagedServerOutcome
     /// directory, most likely. Refused like <see cref="ThisDevice"/>; one of the two has to take
     /// a new identity before either can manage the other.
     /// </summary>
-    SameIdentity = 14
+    SameIdentity = 14,
+
+    /// <summary>
+    /// The address leads into a proxy on this computer — Clash or the like in fake-IP or TUN
+    /// mode answered the name with an address of its own (198.18.0.0/15), or one was typed —
+    /// so nothing was sent. The fix is on this computer: let LAN names and addresses bypass
+    /// the proxy, or use the device's IP address.
+    /// </summary>
+    ProxyFakeAddress = 15
 }
 
 /// <summary>How a managed server looked the last time this device asked.</summary>
@@ -124,6 +132,11 @@ public sealed record ManagedServerPathMapping(string ServerPath, string LocalPat
 /// and <paramref name="AppVersion"/>, never taken from whoever answers in its place.
 /// </param>
 /// <param name="Platform">What it said it runs on when last probed, if it said.</param>
+/// <param name="OfflineReason">
+/// Set only while <paramref name="State"/> is <see cref="ManagedServerState.Offline"/> and more is
+/// known than that nothing answered: <see cref="ManagedServerOutcome.ProxyFakeAddress"/> when its
+/// address led into a proxy on this computer.
+/// </param>
 public sealed record ManagedServerView(
     string ServerId,
     string? Name,
@@ -136,7 +149,8 @@ public sealed record ManagedServerView(
     string? AppVersion,
     ManagedServerAnswerView? AnsweredBy = null,
     ServerKind? Kind = null,
-    RemoteDevicePlatform? Platform = null);
+    RemoteDevicePlatform? Platform = null,
+    ManagedServerOutcome? OfflineReason = null);
 
 /// <summary>A management request this device filed, and where waiting on it has got to.</summary>
 /// <param name="Outcome">

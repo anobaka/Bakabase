@@ -261,6 +261,48 @@ describe("devices this one manages", () => {
     expect(managedServerApi.forget).not.toHaveBeenCalled();
   });
 
+  it("says when a proxy on this computer took over a server's address, and only then", async () => {
+    listing = view({
+      servers: [
+        server({
+          state: ManagedServerState.Offline,
+          address: "http://nas.local:34567",
+          offlineReason: ManagedServerOutcome.ProxyFakeAddress,
+        }),
+        server({ serverId: "desk", name: "Desk", state: ManagedServerState.Offline }),
+      ],
+    });
+    await renderServers();
+    const nas = await screen.findByRole("article", { name: "NAS" });
+
+    expect(
+      within(nas).getByText(`federation.servers.state.${ManagedServerState.Offline}`),
+    ).toBeInTheDocument();
+    expect(within(nas).getByTestId("managed-server-offline-reason")).toHaveTextContent(
+      "federation.error.ManagedServerProxyFakeAddress",
+    );
+    // Offline for no known reason: nothing more is claimed.
+    expect(
+      within(screen.getByRole("article", { name: "Desk" })).queryByTestId(
+        "managed-server-offline-reason",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says a typed name led into a proxy on this computer instead of that nothing answered", async () => {
+    vi.mocked(managedServerApi.pair).mockResolvedValue({
+      outcome: ManagedServerOutcome.ProxyFakeAddress,
+      detail: "nas.local resolved to 198.18.0.29",
+    });
+    await renderServers();
+    fireEvent.change(addForm().address, { target: { value: "nas.local:34567" } });
+    fireEvent.click(screen.getByText("federation.servers.add.request"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "federation.error.ManagedServerProxyFakeAddress",
+    );
+    expect(addForm().address).toHaveValue("nas.local:34567");
+  });
+
   it("pairs with a code and shows the new server", async () => {
     vi.mocked(managedServerApi.pair).mockImplementation(async () => {
       listing = view({ servers: [server()] });

@@ -263,6 +263,15 @@ endpoints and confirmations.
   `FederationNodeDiscovery`, `RemoteConsoleOptions.Connector` for the desktop app's — and the
   wiring is tested through the real handlers over a name that resolves IPv6-first to a dropped
   address (`PeerConnectionTests`, `FederationNodeDiscoveryTests`, `ConsoleNetworkTests`).
+- **A proxy's addresses are never dialled.** `DualStackConnector` refuses 198.18.0.0/15
+  (`ProxyFakeAddresses`: what Clash/Mihomo, Surge, sing-box and Shadowrocket answer names with
+  in fake-IP or TUN mode; reserved, never a LAN address) when it is typed or is the resolver's
+  first answer — behind a real answer it is only left out — with `ProxyFakeAddressException`,
+  and nothing is sent. Library sharing says `ProxyFakeAddress` (503; also the peer's connection
+  state, and it starts relocation like `NodeUnreachable`), server switching
+  `ManagedServerOutcome.ProxyFakeAddress`; both tell the user to set `.local` names and LAN
+  addresses to DIRECT or use the IP. Discovery offers an advertised proxy address last. No
+  other range is special-cased (`ProxyFakeAddressTests`).
 - **Discovery hides this node, not its copies.** "Find nearby devices" leaves out this node
   answering from this machine's own addresses; another machine answering under this node's id
   is listed — a copy of this data directory — and connecting to it is refused as

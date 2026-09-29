@@ -12362,10 +12362,10 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported, 12: InvalidAddress, 13: PortMissing, 14: SameIdentity]
+         * @description [0: Ok, 1: AwaitingApproval, 2: Unreachable, 3: NotBakabase, 4: ThisAppTooOld, 5: ServerTooOld, 6: RemoteAccessDisabled, 7: ThisDevice, 8: CodeRejected, 9: RequestRejected, 10: TooManyAttempts, 11: PairingUnsupported, 12: InvalidAddress, 13: PortMissing, 14: SameIdentity, 15: ProxyFakeAddress]
          * @enum {integer}
          */
-        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOutcome": 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
+        "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOutcome": 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPairingView": {
             outcome: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOutcome"];
             serverId?: string;
@@ -12420,6 +12420,7 @@ export interface components {
             answeredBy?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerAnswerView"];
             kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
             platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
+            offlineReason?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOutcome"];
         };
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServersView": {
             available: boolean;

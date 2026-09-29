@@ -165,12 +165,15 @@ describe("device map model: library sharing", () => {
           peer("down", { outboundGrant: grant("g2"), connectionState: "Offline" }),
           peer("odd", { outboundGrant: grant("g3"), connectionState: "IdentityConflict" }),
           peer("quiet", { inboundGrant: grant("g4"), connectionState: "Unknown" }),
+          // Its name led into a proxy on this computer: nothing reached it.
+          peer("proxied", { outboundGrant: grant("g5"), connectionState: "ProxyFakeAddress" }),
         ],
       }),
     });
 
     expect(node(graph, "peer:up")?.presence).toBe("online");
     expect(node(graph, "peer:down")?.presence).toBe("offline");
+    expect(node(graph, "peer:proxied")?.presence).toBe("offline");
     expect(node(graph, "peer:odd")).toMatchObject({
       presence: "unknown",
       issues: ["identityConflict"],

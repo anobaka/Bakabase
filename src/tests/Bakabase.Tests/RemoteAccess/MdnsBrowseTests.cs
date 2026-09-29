@@ -185,6 +185,23 @@ public class MdnsBrowseTests
     }
 
     [TestMethod]
+    public void A_proxys_address_advertised_first_is_not_the_one_offered()
+    {
+        // A machine running Clash in TUN mode holds 198.18.0.1 and advertises it beside its LAN
+        // addresses; connecting there would only reach a proxy.
+        Assert.IsTrue(MdnsMessage.TryParseResponse(
+            Announcement(Descriptor with {Id = "other-pc"},
+                addresses: [IPAddress.Parse("198.18.0.1"), IPAddress.Parse("192.0.2.8")]), out var records));
+        var collector = new MdnsBrowser.InstanceCollector();
+        collector.Add(records);
+
+        var server = collector.Build(new ThisMachineAddresses([])).Single();
+
+        Assert.IsFalse(server.IsThisMachine);
+        Assert.AreEqual("http://192.0.2.8:34567", server.BaseAddress);
+    }
+
+    [TestMethod]
     public void Every_advertised_address_is_judged_against_the_addresses_read_once()
     {
         // One reading of this machine's addresses for everything the window collected.

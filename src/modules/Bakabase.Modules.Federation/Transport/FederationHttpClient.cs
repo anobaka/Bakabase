@@ -12,6 +12,12 @@ public sealed class FederationHttpClient(HttpClient http)
     public const int MaxControlResponseBytes = 4 * 1024 * 1024;
 
     /// <summary>
+    /// The node's address leads into a proxy on this computer (<see cref="ProxyFakeAddresses"/>):
+    /// told apart from <c>NodeUnreachable</c>, whose fix is on the other device.
+    /// </summary>
+    public const string ProxyFakeAddressCode = "ProxyFakeAddress";
+
+    /// <summary>
     /// Read the way server switching reads a typed address (<see cref="RemoteAddressInput"/>):
     /// full-width characters and a leading <c>\\</c> are forgiven, a host without a scheme
     /// must name its port.
@@ -64,6 +70,14 @@ public sealed class FederationHttpClient(HttpClient http)
         try
         {
             return await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        }
+        catch (HttpRequestException e) when (ProxyFakeAddresses.Find(e) != null)
+        {
+            // The name resolved to — or the address is — one a proxy on this computer hands out,
+            // and nothing was sent: the fix is in the proxy here, not on the other device.
+            throw new FederationAccessException(ProxyFakeAddressCode, 503,
+                "The node's address leads into a proxy on this computer (198.18.0.0/15). Set .local names and " +
+                "LAN addresses to DIRECT in the proxy, or use the node's IP address.");
         }
         catch (HttpRequestException)
         {

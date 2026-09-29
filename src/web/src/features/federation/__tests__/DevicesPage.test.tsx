@@ -1002,6 +1002,35 @@ describe("removing a device", () => {
   });
 });
 
+describe("a peer this device cannot reach", () => {
+  it("says when a proxy on this computer took over the peer's name, and nothing more otherwise", () => {
+    vi.mocked(useFederationStatus).mockReturnValue({
+      status: {
+        ...status,
+        peers: [
+          { ...status.peers[0], connectionState: "ProxyFakeAddress" },
+          {
+            ...status.peers[0],
+            nodeId: "switched-off",
+            label: "Switched off",
+            connectionState: "Offline",
+          },
+        ],
+      },
+      loading: false,
+      error: undefined,
+      refresh: vi.fn().mockResolvedValue(undefined),
+    });
+    renderPage();
+
+    expect(screen.getByText("federation.connection.ProxyFakeAddress")).toBeInTheDocument();
+    // The fix is on this computer, so it is said in full, once, next to that peer.
+    expect(screen.getByTestId("peer-proxy")).toHaveTextContent("federation.error.ProxyFakeAddress");
+    expect(screen.getAllByTestId("peer-proxy")).toHaveLength(1);
+    expect(screen.getByText("federation.connection.Offline")).toBeInTheDocument();
+  });
+});
+
 describe("discovery", () => {
   it("explains how to become discoverable when the scan finds nothing", async () => {
     vi.mocked(federationPeerApi.discover).mockResolvedValue([]);

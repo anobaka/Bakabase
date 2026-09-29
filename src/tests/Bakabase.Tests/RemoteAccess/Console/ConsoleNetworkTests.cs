@@ -2,8 +2,10 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Remoting.Components.Forwarding;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Tests.RemoteAccess.Console;
@@ -80,5 +82,90 @@ public class ConsoleNetworkTests
         Assert.IsTrue(desk.Requests.Any(r => r.Path == "/resource/search" && r.SignatureValid == true),
             string.Join("\n", desk.Requests));
         CollectionAssert.AreEqual(Array.Empty<string>(), other.Requests.Select(r => $"{r.Method} {r.Path}").ToArray());
+    }
+
+    /// <summary>What a proxy on this computer in fake-IP mode answers a name with (198.18.0.0/15).</summary>
+    private static readonly IPAddress ProxyAddress = IPAddress.Parse("198.18.0.29");
+
+    [TestMethod]
+    public async Task A_name_a_proxy_on_this_computer_took_over_is_said_to_be_one_and_nothing_goes_there()
+    {
+        // As Clash in fake-IP mode answered jaxs-Mac-mini.local on the Windows PC in the field.
+        var network = new TestNetwork();
+        await using var console = await ConsoleHarness.StartAsync(options: o => o.Connector = network.Connector);
+        await using var nas = await FakeServer.StartAsync("server-nas", "NAS", 47100);
+        nas.PairingCode = "123456";
+        // Were the proxy's address dialled, it would reach the server: nothing may.
+        network.RouteTo(ProxyAddress, nas);
+        network.Name("nas.local", ProxyAddress);
+        var address = $"http://nas.local:{nas.Port}";
+
+        var probe = await console.Manager.ProbeAsync(address);
+
+        Assert.AreEqual(ManagedServerOutcome.ProxyFakeAddress, probe.Outcome);
+        StringAssert.Contains(probe.Detail, "198.18.0.29");
+        Assert.AreEqual(ManagedServerOutcome.ProxyFakeAddress, (await console.Manager.PairAsync(address, "123456")).Outcome);
+        Assert.AreEqual(ManagedServerOutcome.ProxyFakeAddress, (await console.Manager.PairAsync(address, null)).Outcome);
+        // Typed as it is, the proxy's address is refused the same way.
+        Assert.AreEqual(ManagedServerOutcome.ProxyFakeAddress,
+            (await console.Manager.ProbeAsync($"{ProxyAddress}:{nas.Port}")).Outcome);
+
+        CollectionAssert.AreEqual(Array.Empty<string>(), nas.Requests.Select(r => $"{r.Method} {r.Path}").ToArray());
+        Assert.AreEqual(0, console.Store.Read().Servers.Count);
+    }
+
+    [TestMethod]
+    public async Task A_managed_server_whose_name_a_proxy_took_over_is_offline_for_that_and_its_relay_says_so()
+    {
+        var network = new TestNetwork();
+        await using var console = await ConsoleHarness.StartAsync(options: o =>
+        {
+            o.Connector = network.Connector;
+            o.IdentityRetryInterval = TimeSpan.FromMilliseconds(100);
+        });
+        await using var nas = await FakeServer.StartAsync("server-nas", "NAS", 47100);
+        network.RouteTo(ProxyAddress, nas);
+        network.Name("nas.local", ProxyAddress);
+        await console.AddManagedAsync(nas, baseAddress: $"http://nas.local:{nas.Port}");
+
+        var listed = (await console.Manager.GetAsync(true)).Servers.Single();
+
+        Assert.AreEqual(ManagedServerState.Offline, listed.State);
+        Assert.AreEqual(ManagedServerOutcome.ProxyFakeAddress, listed.OfflineReason);
+
+        var port = ConsoleHarness.PortOf((await console.Manager.OpenAsync("server-nas", null))!.Url);
+
+        // A navigation is shown the proxy, and the way out of it, in both languages.
+        var page = await ConsoleHarness.NavigateAsync($"http://127.0.0.1:{port}/", "same-origin");
+        var html = await page.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.ServiceUnavailable, page.StatusCode);
+        StringAssert.Contains(html, "A proxy on this device is in the way of NAS");
+        StringAssert.Contains(html, "fake-ip-filter");
+        StringAssert.Contains(html, "本机的代理软件拦住了 NAS");
+        Assert.IsFalse(html.Contains("is running", StringComparison.Ordinal), html);
+
+        // A fetch is told the same, in the refusal the frontend reads.
+        var fetch = await ConsoleHarness.SendToRelayAsync(port, "/resource/search");
+        var message = JsonDocument.Parse(await fetch.Content.ReadAsStringAsync()).RootElement
+            .GetProperty("message").GetString()!;
+
+        Assert.AreEqual(HttpStatusCode.ServiceUnavailable, fetch.StatusCode);
+        Assert.AreEqual(nameof(ClientForwardingFailure.ServerUnreachable),
+            fetch.Headers.GetValues(UpstreamForwarder.FailureHeader).Single());
+        StringAssert.Contains(message, $"nas.local:{nas.Port} leads into a proxy on this computer");
+        StringAssert.Contains(message, "“+.local”");
+        CollectionAssert.AreEqual(Array.Empty<string>(), nas.Requests.Select(r => $"{r.Method} {r.Path}").ToArray());
+
+        // The name set to DIRECT in the proxy: it resolves to the server again, and the relay
+        // goes back to forwarding once it has asked who answers there.
+        network.Name("nas.local", IPAddress.Loopback);
+        await Task.Delay(TimeSpan.FromMilliseconds(300));
+
+        Assert.AreEqual(HttpStatusCode.OK, (await ConsoleHarness.SendToRelayAsync(port, "/resource/search")).StatusCode);
+
+        listed = (await console.Manager.GetAsync(true)).Servers.Single();
+        Assert.AreEqual(ManagedServerState.Online, listed.State);
+        Assert.IsNull(listed.OfflineReason);
     }
 }

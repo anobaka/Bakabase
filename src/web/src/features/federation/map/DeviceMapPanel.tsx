@@ -36,6 +36,7 @@ import { federationPeerApi } from "../peerApi";
 import { managedServerApi } from "../serverApi";
 import { devicesRoute, openManagedServer } from "../switching";
 import { FederationError } from "../transport";
+import { PROXY_FAKE_ADDRESS } from "../types";
 
 import {
   SELF_ID,
@@ -572,12 +573,20 @@ function SharingSection({ context, node }: { context: PanelContext; node: MapNod
       <DirectionRow direction="in" edge={edge} kind="sharing" name={name} testId="sharing-in">
         {peer?.outboundGrant ? (
           <>
-            {peer.connectionState !== "Online" && peer.connectionState !== "Unknown" && (
-              <p className="text-xs text-default-500">
-                {t(`federation.connection.${peer.connectionState}`, {
-                  defaultValue: peer.connectionState,
-                })}
+            {peer.connectionState === PROXY_FAKE_ADDRESS ? (
+              // A proxy on this computer took over its name: said in full, with the fix.
+              <p className="text-xs text-warning-600 dark:text-warning" data-testid="peer-proxy">
+                {t("federation.error.ProxyFakeAddress")}
               </p>
+            ) : (
+              peer.connectionState !== "Online" &&
+              peer.connectionState !== "Unknown" && (
+                <p className="text-xs text-default-500">
+                  {t(`federation.connection.${peer.connectionState}`, {
+                    defaultValue: peer.connectionState,
+                  })}
+                </p>
+              )
             )}
             <div className="flex flex-wrap items-center gap-2">
               <Link className={primaryClass} to={libraryRoute(peer.nodeId)}>

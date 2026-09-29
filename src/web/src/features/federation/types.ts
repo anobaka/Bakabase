@@ -56,6 +56,13 @@ export type FederatedResourceDetail = Omit<
 };
 export type PlaybackSession = BakabaseModulesFederationMediaPlaybackSessionResponse;
 
+/**
+ * A peer's {@link Peer.connectionState} — and the error code library sharing refuses with — when
+ * its address led into a proxy on this computer: a name the proxy took over in fake-IP or TUN
+ * mode, or one of the proxy's own addresses. Nothing was sent; the fix is on this computer.
+ */
+export const PROXY_FAKE_ADDRESS = "ProxyFakeAddress";
+
 /*
  * Servers this device manages in full (`/federation/local/servers`).
  *
@@ -104,6 +111,11 @@ export interface ManagedServer {
   /** What it said it is when last probed, if it said; older servers do not. */
   kind?: ServerKind | null;
   platform?: RemoteDevicePlatform | null;
+  /**
+   * Set while {@link state} is `Offline` and more is known than that nothing answered:
+   * `ProxyFakeAddress` when its address led into a proxy on this computer.
+   */
+  offlineReason?: ManagedServerOutcome | null;
 }
 
 /**

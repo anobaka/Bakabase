@@ -44,7 +44,10 @@ public sealed class DualStackConnector
     private readonly Func<IPEndPoint, CancellationToken, ValueTask<Stream>> _connect;
     private readonly TimeSpan _attemptDelay;
 
-    /// <param name="resolve">Injected for tests; defaults to <see cref="Dns.GetHostAddressesAsync(string, CancellationToken)"/>.</param>
+    /// <param name="resolve">
+    /// Injected for tests; defaults to <see cref="Dns.GetHostAddressesAsync(string, CancellationToken)"/>.
+    /// What it returns is screened for a proxy's addresses either way (<see cref="ProxyFakeAddresses"/>).
+    /// </param>
     /// <param name="connect">Injected for tests; defaults to a plain TCP socket with Nagle off.</param>
     /// <param name="attemptDelay">Defaults to <see cref="DefaultAttemptDelay"/>.</param>
     public DualStackConnector(Func<string, CancellationToken, Task<IPAddress[]>>? resolve = null,
@@ -80,9 +83,12 @@ public sealed class DualStackConnector
     public async ValueTask<(Stream Stream, IPEndPoint Reached)> ConnectReachingAsync(DnsEndPoint endpoint,
         TimeSpan? connectTimeout, CancellationToken ct)
     {
+        // A proxy's own address (198.18.0.0/15) is never dialled: typed, or what a proxy on this
+        // computer answered the name with first, it is refused as that; behind a real answer
+        // it is only left out.
         var addresses = IPAddress.TryParse(endpoint.Host, out var literal)
-            ? [literal]
-            : Order(await _resolve(endpoint.Host, ct));
+            ? ProxyFakeAddresses.Screen(endpoint.Host, [literal])
+            : Order(ProxyFakeAddresses.Screen(endpoint.Host, await _resolve(endpoint.Host, ct)));
 
         if (addresses.Count == 0)
         {

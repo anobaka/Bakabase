@@ -750,8 +750,9 @@ const tips = {
 
 /**
  * What the reader should know about a managed server before using it: it lets anyone on its
- * network manage it, it revoked this device, or its address now answers as another server.
- * Shown on its card here and in its panel on the device map.
+ * network manage it, it revoked this device, its address now answers as another server, or
+ * why it is offline when that is known. Shown on its card here and in its panel on the device
+ * map.
  */
 export function ManagedServerWarnings({
   server,
@@ -805,6 +806,17 @@ export function ManagedServerWarnings({
       )}
       {server.state === ManagedServerState.Revoked && (
         <p className="text-xs text-danger">{t("federation.servers.revokedTip", { name })}</p>
+      )}
+      {server.state === ManagedServerState.Offline && server.offlineReason != null && (
+        // Why nothing answered, when this computer knows: a proxy here took over its name.
+        <p
+          className="text-xs text-warning-600 dark:text-warning"
+          data-testid="managed-server-offline-reason"
+        >
+          {t(
+            `federation.error.ManagedServer${ManagedServerOutcomeLabel[server.offlineReason] ?? server.offlineReason}`,
+          )}
+        </p>
       )}
       {server.state === ManagedServerState.WrongServer && (
         // Never "pair again here": whoever answers at the address is not this server, and

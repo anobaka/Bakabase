@@ -6,6 +6,7 @@ using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Federation.Transport;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Modules.RemoteAccess.Components;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Modules.Federation.Tests.Transport;
@@ -219,6 +220,36 @@ public sealed class PeerTransportTests
     }
 
     [TestMethod]
+    public async Task APeerWhoseNameAProxyTookOverIsSaidToBeBehindOneAndFoundWhereItReallyIs()
+    {
+        using var local = new Node("local", TimeSpan.Zero);
+        using var remote = new Node("remote", TimeSpan.Zero);
+        var routes = new Dictionary<string, Node> { ["mac.local"] = remote };
+        var handler = new ProtocolHandler(routes);
+        using var http = new HttpClient(handler);
+        var wire = new FederationHttpClient(http);
+        var pairing = new NodePairingClient(local.Store, local.Identity, wire, local.Clock, local.Leases);
+        await pairing.ConnectAsync("http://mac.local", await remote.InviteAsync());
+
+        // A proxy on this computer now answers the name with an address of its own.
+        handler.Proxied.Add("mac.local");
+        var sessions = new PeerSessionFactory(local.Store, local.Identity, wire, local.Clock);
+
+        Assert.AreEqual(FederationHttpClient.ProxyFakeAddressCode,
+            (await Assert.ThrowsExactlyAsync<FederationAccessException>(() => sessions.GetAsync("remote"))).ErrorCode);
+        Assert.AreEqual("ProxyFakeAddress", sessions.GetConnectionState("remote"));
+
+        // Where discovery finds it at its own address, it proves who it is there and is kept there.
+        routes["192.168.1.20"] = remote;
+        var relocating = new PeerSessionFactory(local.Store, local.Identity, wire, local.Clock,
+            new FixedDiscovery(new NodeDiscoveryCandidate("remote", "Remote", "http://192.168.1.20")));
+
+        Assert.AreEqual("http://192.168.1.20", (await relocating.GetAsync("remote")).BaseAddress);
+        Assert.AreEqual("Online", relocating.GetConnectionState("remote"));
+        Assert.AreEqual("http://192.168.1.20", (await local.Peers.GetStatusAsync()).Peers.Single().Address);
+    }
+
+    [TestMethod]
     public async Task OneApprovalPairsBothWaysWithASingleUseOfferBoundToTheRequester()
     {
         using var reader = new Node("reader", TimeSpan.Zero);
@@ -385,8 +416,13 @@ public sealed class PeerTransportTests
         public Func<NodeInfo, NodeInfo>? DescribeInfo { get; set; }
         public TaskCompletionSource QueryStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource BodyStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        /// <summary>Hosts a proxy on this computer answers with its own address, as the connector then refuses them.</summary>
+        public HashSet<string> Proxied { get; } = new(StringComparer.OrdinalIgnoreCase);
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
+            if (Proxied.Contains(request.RequestUri!.Host))
+                throw new HttpRequestException("Connect failed.",
+                    new ProxyFakeAddressException(request.RequestUri.Host, IPAddress.Parse("198.18.0.29")));
             if (!nodes.TryGetValue(request.RequestUri!.Host, out var node))
                 throw new HttpRequestException("No route to host.");
             var path = request.RequestUri.AbsolutePath;

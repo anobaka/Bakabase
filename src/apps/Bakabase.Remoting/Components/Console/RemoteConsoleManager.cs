@@ -451,7 +451,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
         {
-            return ServerHandshakeResult.Failed(ServerHandshakeOutcome.Unreachable, e.Message);
+            return ServerHandshakeResult.NotReached(e);
         }
     }
 
@@ -549,6 +549,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             ServerHandshakeOutcome.SelfAddress => ManagedServerOutcome.ThisDevice,
             ServerHandshakeOutcome.InvalidAddress => ManagedServerOutcome.InvalidAddress,
             ServerHandshakeOutcome.PortMissing => ManagedServerOutcome.PortMissing,
+            ServerHandshakeOutcome.ProxyFakeAddress => ManagedServerOutcome.ProxyFakeAddress,
             _ => ManagedServerOutcome.NotBakabase
         };
     }
@@ -829,7 +830,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
                         : server?.Mode ?? previous?.Mode, server?.AppVersion ?? previous?.AppVersion)
                 {
                     Kind = server?.Kind ?? previous?.Kind,
-                    Platform = server?.Platform ?? previous?.Platform
+                    Platform = server?.Platform ?? previous?.Platform,
+                    OfflineReason = OfflineReasonOf(handshake)
                 };
             }
             else
@@ -1199,7 +1201,7 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
                     handshake.Outcome == ServerHandshakeOutcome.RemoteAccessDisabled
                         ? RemoteAccessMode.Disabled
                         : previous?.Mode, previous?.AppVersion)
-                    { Kind = previous?.Kind, Platform = previous?.Platform };
+                    { Kind = previous?.Kind, Platform = previous?.Platform, OfflineReason = OfflineReasonOf(handshake) };
             }
         }
 
@@ -1247,14 +1249,24 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             {
                 ServerHandshakeOutcome.Unreachable => "nothing answers there",
                 ServerHandshakeOutcome.RemoteAccessDisabled => "remote access is turned off there",
+                ServerHandshakeOutcome.ProxyFakeAddress => "it leads into a proxy on this computer",
                 _ => "what answers there is not a Bakabase server"
             }, startedAt)
         {
             // Its gate refused before saying who it is. What the user is told to do differs:
             // turn remote access on there, not check that something is running.
-            RemoteAccessDisabled = handshake.Outcome == ServerHandshakeOutcome.RemoteAccessDisabled
+            RemoteAccessDisabled = handshake.Outcome == ServerHandshakeOutcome.RemoteAccessDisabled,
+            // Nothing was asked at all: the fix is in this computer's proxy, not over there.
+            ProxyFakeAddress = handshake.Outcome == ServerHandshakeOutcome.ProxyFakeAddress
         };
     }
+
+    /// <summary>
+    /// What a failed handshake says about why a server is offline, beyond that nothing answered:
+    /// its address led into a proxy on this computer.
+    /// </summary>
+    private static ManagedServerOutcome? OfflineReasonOf(ServerHandshakeResult handshake) =>
+        handshake.Outcome == ServerHandshakeOutcome.ProxyFakeAddress ? ManagedServerOutcome.ProxyFakeAddress : null;
 
     /// <summary>Hands a relay an answer the console got itself, so it acts on it without asking again.</summary>
     private void Share(UpstreamIdentityCheck check)
@@ -1373,7 +1385,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
             probe?.AppVersion,
             probe?.State == ManagedServerState.WrongServer ? probe.AnsweredBy : null,
             probe?.Kind,
-            probe?.Platform);
+            probe?.Platform,
+            probe?.State == ManagedServerState.Offline ? probe.OfflineReason : null);
     }
 
     #endregion
@@ -1686,6 +1699,9 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
 
         /// <summary>What it said it runs on, the last time it answered as itself.</summary>
         public RemoteDevicePlatform? Platform { get; init; }
+
+        /// <summary>Why it is offline, when more is known than that nothing answered.</summary>
+        public ManagedServerOutcome? OfflineReason { get; init; }
     }
 
     private sealed record Envelope<T>(int Code, string? Message, T? Data);

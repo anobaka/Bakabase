@@ -57,6 +57,14 @@ public sealed record UpstreamIdentityCheck(
     public bool RemoteAccessDisabled { get; init; }
 
     /// <summary>
+    /// For <see cref="UpstreamIdentityVerdict.Unconfirmed"/>: the address leads into a proxy on
+    /// this computer — its name resolved to, or it is, an address a proxy in fake-IP or TUN mode
+    /// hands out (<see cref="ProxyFakeAddresses"/>) — so nothing was asked there at all. The fix
+    /// is in the proxy's settings here, and the user is told that instead.
+    /// </summary>
+    public bool ProxyFakeAddress { get; init; }
+
+    /// <summary>
     /// The IP address the question's connection reached, when it connected: what the answer
     /// holds for, and where a relay then connects — never the address's name again, which can
     /// resolve to others as well. Null for an answer from anywhere else, which leaves the relay
@@ -106,6 +114,12 @@ public sealed record UpstreamIdentityCheck(
                 "device's Devices and sharing page, under Management.",
             UpstreamIdentityVerdict.Confirmed => $"{Authority} answers as {expected}.",
             // Worded as the relay's page words it (ConsoleUnavailablePage).
+            _ when ProxyFakeAddress =>
+                $"{Authority} leads into a proxy on this computer, not to {expected}: a proxy such as Clash in " +
+                "fake-IP or TUN mode answered its name with an address of its own (198.18.x.x), and nothing was " +
+                "sent to it. In the proxy, set .local names and LAN addresses to DIRECT (for Clash, add “+.local” " +
+                $"to fake-ip-filter), or add {expected} again by its IP address on this device's Devices and " +
+                "sharing page, under Management.",
             _ when RemoteAccessDisabled =>
                 $"Remote access is turned off at {Authority}, so it cannot confirm that it is {expected}, and " +
                 "nothing was sent to it. Turn it on in Bakabase on that device — on a computer under Devices and " +
