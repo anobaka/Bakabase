@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Net;
-using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -81,6 +81,9 @@ public partial class ExHentaiClient
                 gidlist = keys.Select(k => new object[] { k.Id, k.Token }).ToArray(),
                 @namespace = 1
             };
+            // The API rejects HTTP/1.1 chunked bodies with "Empty JSON Request".
+            // Buffer the JSON so each attempt sends an exact Content-Length.
+            var requestJson = JsonSerializer.Serialize(request);
             for (var attempt = 1; ; attempt++)
             {
                 // Keep this budget shared across all callers and count retries as requests too.
@@ -96,7 +99,7 @@ public partial class ExHentaiClient
                 {
                     using var message = new HttpRequestMessage(HttpMethod.Post, ApiUrl)
                     {
-                        Content = JsonContent.Create(request)
+                        Content = new StringContent(requestJson, Encoding.UTF8, "application/json")
                     };
                     // The public endpoint needs no login. Its first request must not seed the
                     // ExHentai page cookie container with the unrelated e-hentai.org domain.
