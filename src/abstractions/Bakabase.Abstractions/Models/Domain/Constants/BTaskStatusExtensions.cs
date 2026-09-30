@@ -24,7 +24,7 @@ public static class BTaskStatusExtensions
     /// pending). Used to detect "would re-enqueueing this be redundant?".
     /// </summary>
     public static bool IsActiveOrPending(this BTaskStatus s) =>
-        s == BTaskStatus.NotStarted || s.IsActive();
+        s is BTaskStatus.NotStarted or BTaskStatus.WaitingForInput || s.IsActive();
 
     /// <summary>
     /// <c>Stop()</c> is meaningful — the body is still attached and can

@@ -33,6 +33,7 @@ import {
   PlayCircleOutlined,
   PushpinOutlined,
   QuestionCircleOutlined,
+  StopOutlined,
 } from "@ant-design/icons";
 import { ControlledMenu } from "@szhsin/react-menu";
 import { AiOutlineCloudDownload, AiOutlineFolderOpen, AiOutlinePlayCircle } from "react-icons/ai";
@@ -51,10 +52,17 @@ import HealthScoreBadge from "@/components/HealthScoreBadge";
 import BApi from "@/sdk/BApi";
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import Operations from "@/components/Resource/components/Operations";
+import { getKnownMoveBlockReason } from "@/components/Resource/resourceMoveEligibility";
+import { useMoveReasonText } from "@/components/ResourceMovePanel/messages";
 import AcquisitionModal from "@/components/Resource/components/AcquisitionModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, Chip, Link, Spinner, Tooltip } from "@/components/bakaui";
 import { selectResourceMovingTask, useBTasksStore } from "@/stores/bTasks";
+import {
+  openMovePanel,
+  selectPanelResourceReservation,
+  useResourceMovePanelStore,
+} from "@/stores/resourceMovePanel";
 import { BTaskStopButton } from "@/components/BTask";
 import {
   DataOrigin,
@@ -66,6 +74,7 @@ import {
   ResourceSource,
   ResourceStatus,
   ResourceTag,
+  BTaskStatus,
   StandardValueType,
 } from "@/sdk/constants";
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
@@ -136,6 +145,7 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
   triggerFsDiscovery,
 }) => {
   const { t } = useTranslation();
+
   const fsTriggeredRef = React.useRef(false);
 
   const iconClass = "text-2xl";
@@ -303,6 +313,8 @@ type TooltipPlacement =
 
 type Props = {
   resource: ResourceModel;
+  sourceTabId?: string;
+  sourceTabName?: string;
   biggerCoverPlacement?: TooltipPlacement;
   searchEngines?: SimpleSearchEngine[] | null;
   ct?: AbortSignal;
@@ -332,6 +344,8 @@ type Props = {
 const Resource = React.forwardRef((props: Props, ref) => {
   const {
     resource,
+    sourceTabId,
+    sourceTabName,
     onTagClick = (propertyId: number, value: TagValue) => {},
     ct = new AbortController().signal,
     biggerCoverPlacement,
@@ -356,7 +370,24 @@ const Resource = React.forwardRef((props: Props, ref) => {
   // Active MoveResources task covering this resource — while present, every interaction on
   // the card is disabled and a busy overlay is shown. Stable undefined for uncovered cards,
   // so the virtualized grid doesn't re-render them on task pushes.
+  const moveReasonText = useMoveReasonText();
+  const moveBlockReason = getKnownMoveBlockReason(resource);
+  const movePanelEnabled = useResourceMovePanelStore((state) => state.panelEnabled);
   const movingTask = useBTasksStore(selectResourceMovingTask(resource.id));
+  const moveReservation = useResourceMovePanelStore(
+    selectPanelResourceReservation(resource.id, resource.path),
+  );
+  const moveLocked = !!movingTask || !!moveReservation;
+  const moveStatus =
+    moveReservation?.phase === "preview"
+      ? t<string>("resourceMove.panel.preparing", "Preparing move")
+      : movingTask?.status === BTaskStatus.WaitingForInput
+        ? t<string>("resourceMove.panel.waitingForInput", "Needs attention")
+        : movingTask?.status === BTaskStatus.Cancelling
+          ? t<string>("resourceMove.panel.stopping", "Finishing current resource before stopping")
+          : movingTask?.status === BTaskStatus.NotStarted
+            ? t<string>("resourceMove.panel.queued", "Queued")
+            : t<string>("resourceMove.status.moving");
 
   // Narrow selectors: any change to the *full* options object would otherwise
   // re-render every visible ResourceCard. Subscribing to specific fields
@@ -499,6 +530,17 @@ const Resource = React.forwardRef((props: Props, ref) => {
         </div>
         {/* lef-top */}
         <div className={"absolute top-1 left-1 right-1 flex gap-1 items-center flex-wrap"}>
+          {movePanelEnabled && moveBlockReason && (
+            <Tooltip content={moveReasonText(moveBlockReason)}>
+              <span
+                className="inline-flex items-center justify-center w-6 h-6 rounded bg-default-100/90 text-warning"
+                title={moveReasonText(moveBlockReason)}
+                aria-label={moveReasonText(moveBlockReason)}
+              >
+                <StopOutlined />
+              </span>
+            </Tooltip>
+          )}
           {!resource.hasLocalPath && (
             <Tooltip content={t<string>("resource.tip.notMaterialized")}>
               <Chip color="primary" radius={"sm"} size={"sm"} variant={"flat"}>
@@ -921,7 +963,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
       data-id={resource.id}
       style={style}
       onClickCapture={(e) => {
-        if (movingTask) {
+        if (moveLocked) {
           // The overlay's own controls (the stop button) must stay clickable.
           if ((e.target as HTMLElement).closest?.("[data-moving-overlay]")) {
             return;
@@ -943,15 +985,17 @@ const Resource = React.forwardRef((props: Props, ref) => {
           <CheckCircleFilled className="text-primary text-xl drop-shadow-md" />
         </div>
       )}
-      {!movingTask && (
+      {!moveLocked && (
         <Operations
           coverRef={coverRef.current}
           reload={reload}
           resource={resource}
+          sourceTabId={sourceTabId}
+          sourceTabName={sourceTabName}
           onResourcesDeleted={onResourcesDeleted}
         />
       )}
-      {movingTask && (
+      {moveLocked && (
         <div
           data-moving-overlay
           className="absolute inset-0 z-30 rounded bg-white/30 backdrop-blur-[2px] cursor-not-allowed group/moving"
@@ -963,7 +1007,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
           <div
             className="absolute left-0 top-0 h-full transition-[width] duration-300 ease-out"
             style={{
-              width: `${movingTask.percentage ?? 0}%`,
+              width: `${movingTask?.percentage ?? 0}%`,
               background:
                 "linear-gradient(90deg, rgba(105, 226, 248, 0.15), rgba(105, 226, 248, 0.3))",
             }}
@@ -971,12 +1015,22 @@ const Resource = React.forwardRef((props: Props, ref) => {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
             <div className="flex items-center gap-1 bg-[var(--theme-body-background)] px-3 py-1 rounded-md text-xs font-medium shadow-md">
               <Spinner size="sm" />
-              {t<string>("resourceMove.status.moving")}
+              {moveStatus}
               &nbsp;
-              {`${movingTask.percentage ?? 0}%`}
+              {movingTask?.percentage != null && `${movingTask.percentage}%`}
             </div>
             <div className="opacity-0 group-hover/moving:opacity-100 transition-opacity">
-              <BTaskStopButton color={"warning"} id={movingTask.id} size={"small"} />
+              {movingTask && movingTask.status !== BTaskStatus.Cancelling && (
+                <BTaskStopButton color={"warning"} id={movingTask.id} size={"small"} />
+              )}
+              {!movingTask && moveReservation?.phase === "task" && (
+                <Button
+                  size="sm"
+                  onPress={() => openMovePanel({ resources: [], sourceTabId, sourceTabName })}
+                >
+                  {t<string>("resourceMove.panel.open", "Move panel")}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -1010,6 +1064,13 @@ const Resource = React.forwardRef((props: Props, ref) => {
               contextResource={resource}
               selectedResourceIds={selectedResourceIds}
               selectedResources={selectedResources}
+              moveResourceIds={
+                resolvedSelectedResourceIds.includes(resource.id)
+                  ? resolvedSelectedResourceIds
+                  : [resource.id]
+              }
+              sourceTabId={sourceTabId}
+              sourceTabName={sourceTabName}
               onResourcesDeleted={onResourcesDeleted}
               onSelectedResourcesChanged={onSelectedResourcesChanged}
             />

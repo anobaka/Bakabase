@@ -28,7 +28,10 @@ import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
 import CollectionMultiSelector from "@/components/CollectionMultiSelector";
 import { EnhancementAdditionalItem, PropertyPool, ResourceAdditionalItem } from "@/sdk/constants";
 import ResourceTransferModal from "@/components/ResourceTransferModal";
-import ResourceMoveModal from "@/components/ResourceMoveModal";
+import { openMovePanel } from "@/stores/resourceMovePanel";
+import { getSelectionMoveBlockReasons } from "@/components/Resource/resourceMoveEligibility";
+import { useMoveReasonText } from "@/components/ResourceMovePanel/messages";
+import { snapshotMoveSelection } from "@/pages/resource/components/Resources/resourceMoveSelection";
 import ResourceEnhancementsModal from "@/components/Resource/components/ResourceEnhancementsModal";
 import { PlaylistCollection } from "@/components/Playlist";
 import { Modal, Tooltip, toast } from "@/components/bakaui";
@@ -44,6 +47,9 @@ const log = buildLogger("ResourceContextMenuItems");
 type Props = {
   selectedResourceIds: number[];
   selectedResources?: any[];
+  moveResourceIds?: number[];
+  sourceTabId?: string;
+  sourceTabName?: string;
   /** The resource whose context menu was triggered (may not be in selectedResources). */
   contextResource?: any;
   onSelectedResourcesChanged?: (ids: number[]) => any;
@@ -134,10 +140,21 @@ const ContextMenuItems = ({
   selectedResourceIds,
   selectedResources,
   contextResource,
+  moveResourceIds = selectedResourceIds,
+  sourceTabId,
+  sourceTabName,
   onSelectedResourcesChanged,
   onResourcesDeleted,
 }: Props) => {
   const { t } = useTranslation();
+  const moveReasonText = useMoveReasonText();
+  const moveResources = [
+    ...(selectedResources ?? []),
+    ...(contextResource ? [contextResource] : []),
+  ];
+  const moveDisabledReason = getSelectionMoveBlockReasons(moveResourceIds, moveResources)
+    .map(moveReasonText)
+    .join(" ");
   const { createPortal } = useBakabaseContext();
   const uiOptionsStore = useUiOptionsStore();
   const customContextMenuItems = uiOptionsStore.data?.resource?.customContextMenuItems ?? [];
@@ -401,30 +418,31 @@ const ContextMenuItems = ({
         </div>
       </MenuItem>
       <MenuItem
+        disabled={!!moveDisabledReason}
         onClick={() => {
-          const openModal = (resources: { id: number; path?: string | null }[]) =>
-            createPortal(ResourceMoveModal, {
-              resources,
-              onMoved: () => onSelectedResourcesChanged?.(selectedResourceIds),
-            });
-
-          if (selectedResources && selectedResources.length >= selectedResourceIds.length) {
-            openModal(selectedResources);
-          } else {
-            BApi.resource
-              .getResourcesByKeys({ ids: selectedResourceIds })
-              .then((r) => openModal(r.data || []));
-          }
+          if (moveDisabledReason) return;
+          openMovePanel({
+            resources: snapshotMoveSelection(moveResourceIds, moveResources),
+            sourceTabId,
+            sourceTabName,
+          });
         }}
       >
-        <div className={"flex items-center gap-2"}>
-          <ExportOutlined className={"text-base"} />
-          {selectedResourceIds.length > 1
-            ? t<string>("resource.contextMenu.moveCountResources", {
-                count: selectedResourceIds.length,
-              })
-            : t<string>("resource.contextMenu.moveResource")}
-        </div>
+        <Tooltip content={moveDisabledReason} isDisabled={!moveDisabledReason}>
+          <div className="flex flex-col gap-1 max-w-72" title={moveDisabledReason || undefined}>
+            <div className={"flex items-center gap-2"}>
+              <ExportOutlined className={"text-base"} />
+              {moveResourceIds.length > 1
+                ? t<string>("resource.contextMenu.moveCountResources", {
+                    count: moveResourceIds.length,
+                  })
+                : t<string>("resource.contextMenu.moveResource")}
+            </div>
+            {moveDisabledReason && (
+              <span className="text-xs whitespace-normal">{moveDisabledReason}</span>
+            )}
+          </div>
+        </Tooltip>
       </MenuItem>
       <MenuItem
         onClick={() => {

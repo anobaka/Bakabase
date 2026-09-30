@@ -22,7 +22,9 @@ import { AiOutlinePicture } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import ResourceEnhancementsModal from "@/components/Resource/components/ResourceEnhancementsModal.tsx";
-import ResourceMoveModal from "@/components/ResourceMoveModal";
+import { openMovePanel } from "@/stores/resourceMovePanel";
+import { getKnownMoveBlockReason } from "@/components/Resource/resourceMoveEligibility";
+import { useMoveReasonText } from "@/components/ResourceMovePanel/messages";
 import DeleteResourceConfirmContent from "@/components/Resource/components/DeleteResourceConfirmContent";
 import { EnhancementAdditionalItem, IwFsType } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
@@ -34,6 +36,7 @@ import {
   DropdownMenu,
   DropdownItem,
   Modal,
+  Tooltip,
   toast,
 } from "@/components/bakaui";
 import { useUiOptionsStore } from "@/stores/options";
@@ -41,13 +44,25 @@ import MediaPlayer from "@/components/MediaPlayer";
 
 interface IProps {
   resource: Resource;
+  sourceTabId?: string;
+  sourceTabName?: string;
   coverRef?: IResourceCoverRef;
   reload?: (ct?: AbortSignal) => Promise<any>;
   onResourcesDeleted?: (ids: number[]) => any;
 }
 
-const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) => {
+const Operations = ({
+  resource,
+  coverRef,
+  reload,
+  onResourcesDeleted,
+  sourceTabId,
+  sourceTabName,
+}: IProps) => {
   const { t } = useTranslation();
+  const moveReasonText = useMoveReasonText();
+  const moveBlockReason = getKnownMoveBlockReason(resource);
+  const moveDisabledReason = moveBlockReason ? moveReasonText(moveBlockReason) : undefined;
   const { createPortal, createWindow } = useBakabaseContext();
   const uiOptions = useUiOptionsStore((state) => state.data);
   const [refreshingCache, setRefreshingCache] = useState(false);
@@ -165,9 +180,11 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
   };
 
   const handleMove = () => {
-    createPortal(ResourceMoveModal, {
-      resources: [{ id: resource.id, path: resource.path }],
-      onMoved: () => reload?.(),
+    if (moveBlockReason) return;
+    openMovePanel({
+      resources: [{ id: resource.id, path: resource.path, displayName: resource.displayName }],
+      sourceTabId,
+      sourceTabName,
     });
   };
 
@@ -180,7 +197,7 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
   // Previewing means opening the resource's files; a resource with none has nothing to show.
   const showPreview = displayOperations.includes("preview") && !!resource.path;
   const showAddToPlaylist = displayOperations.includes("addToPlaylist");
-  const showMove = displayOperations.includes("move") && !!resource.path;
+  const showMove = displayOperations.includes("move");
   const showDelete = displayOperations.includes("delete");
 
   const openFolder = () => {
@@ -194,6 +211,7 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
       icon: React.ReactNode;
       label: string;
       className?: string;
+      disabledReason?: string;
       onAction: () => void;
     };
 
@@ -270,6 +288,7 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
         key: "move",
         icon: <ExportOutlined />,
         label: t<string>("resource.operation.move"),
+        disabledReason: moveDisabledReason,
         onAction: handleMove,
       });
     }
@@ -334,21 +353,20 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
         },
       ];
       if (resource.path) {
-        // Both of these act on the resource's files; a resource with none has nothing to show or
-        // move, the same reason the explicit-selection path gates them.
         items.push({
           key: "preview",
           icon: <AiOutlinePicture />,
           label: t<string>("resource.operation.preview"),
           onAction: showResourceMediaPlayer,
         });
-        items.push({
-          key: "move",
-          icon: <ExportOutlined />,
-          label: t<string>("resource.operation.move"),
-          onAction: handleMove,
-        });
       }
+      items.push({
+        key: "move",
+        icon: <ExportOutlined />,
+        label: t<string>("resource.operation.move"),
+        disabledReason: moveDisabledReason,
+        onAction: handleMove,
+      });
     }
 
     // Always add refreshCache if applicable
@@ -379,7 +397,17 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
           onAction={(key) => actionMap[key as string]?.()}
         >
           {items.map((item) => (
-            <DropdownItem key={item.key} className={item.className} startContent={item.icon}>
+            <DropdownItem
+              key={item.key}
+              className={item.className}
+              startContent={item.icon}
+              isDisabled={!!item.disabledReason}
+              description={item.disabledReason}
+              title={item.disabledReason}
+              classNames={
+                item.disabledReason ? { description: "max-w-64 whitespace-normal" } : undefined
+              }
+            >
               {item.label}
             </DropdownItem>
           ))}
@@ -492,15 +520,19 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
   }
   if (showMove) {
     individualButtons.push(
-      <Button
-        key="move"
-        isIconOnly
-        className={buttonClassName}
-        title={t<string>("resource.operation.move")}
-        onPress={handleMove}
-      >
-        <ExportOutlined className={iconClassName} />
-      </Button>,
+      <Tooltip key="move" content={moveDisabledReason ?? t<string>("resource.operation.move")}>
+        <span className="inline-flex" title={moveDisabledReason}>
+          <Button
+            isIconOnly
+            isDisabled={!!moveBlockReason}
+            className={buttonClassName}
+            aria-label={t<string>("resource.operation.move")}
+            onPress={handleMove}
+          >
+            <ExportOutlined className={iconClassName} />
+          </Button>
+        </span>
+      </Tooltip>,
     );
   }
   if (showDelete) {

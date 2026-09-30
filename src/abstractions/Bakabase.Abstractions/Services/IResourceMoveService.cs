@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.View;
 using Bootstrap.Models.ResponseModels;
 
@@ -16,7 +17,16 @@ public interface IResourceMoveService
     /// Validate the request, persist one Pending record per top-level resource and enqueue the
     /// batch's executor task. Returns the batch id.
     /// </summary>
-    Task<SingletonResponse<ResourceMoveBatchViewModel>> CreateBatch(int[] resourceIds, string destDir);
+    Task<SingletonResponse<ResourceMoveBatchViewModel>> CreateBatch(int[] resourceIds, string destDir,
+        ResourceMoveRequestOptions? options = null);
+
+    Task<List<ResourceMoveBatchDetailViewModel>> GetBatches(string? origin = null, string? sourceTabId = null,
+        bool activeOnly = false, int skip = 0, int take = 100);
+    Task<ResourceMoveBatchDetailViewModel?> GetBatch(string batchId);
+    Task<BaseResponse> CancelBatch(string batchId);
+    Task<BaseResponse> RetryBatch(string batchId);
+    Task<BaseResponse> ResolveConflict(int recordId, ResourceMoveConflictResolution resolution);
+    Task ApplyPanelPolicy();
 
     /// <summary>
     /// Dry-run of a move: effective top-level resources with destination paths, per-resource

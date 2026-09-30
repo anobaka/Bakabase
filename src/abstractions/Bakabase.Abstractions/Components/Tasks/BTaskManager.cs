@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.ResourceMove;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
@@ -26,6 +27,7 @@ public class BTaskManager : IAsyncDisposable
     private readonly ILogger<BTaskManager> _logger;
     private readonly CancellationTokenSource _daemonCts = new();
     private Task? _daemonTask;
+    private readonly SemaphoreSlim _schedulingGate = new(1, 1);
 
     public BTaskManager(IBakabaseLocalizer localizer, AspNetCoreOptionsManager<TaskOptions> options,
         IServiceProvider serviceProvider,
@@ -135,7 +137,7 @@ public class BTaskManager : IAsyncDisposable
             builder.OnStatusChange,
             builder.OnPercentageChanged,
             async () => await OnTaskChange(builder.Id),
-            builder.CancellationToken);
+            builder.CancellationToken, builder.StopAction);
     }
 
     private async Task OnTaskChange(string id)
@@ -177,37 +179,44 @@ public class BTaskManager : IAsyncDisposable
             throw new Exception(_localizer.BTask_FailedToRunTaskDueToUnknownTaskId(id));
         }
 
-        switch (d.Task.Status)
+        await _schedulingGate.WaitAsync();
+        try
         {
-            case BTaskStatus.Running:
-            case BTaskStatus.Cancelling:
-            case BTaskStatus.Pausing:
-            case BTaskStatus.Resuming:
+            if (_shuttingDown) return;
+            switch (d.Task.Status)
             {
-                // Already running, pausing, resuming or cancelling — Start is a no-op.
-                break;
-            }
-            case BTaskStatus.Paused:
-            {
-                await d.Resume();
-                break;
-            }
-            case BTaskStatus.NotStarted:
-            case BTaskStatus.Error:
-            case BTaskStatus.Completed:
-            case BTaskStatus.Cancelled:
-            {
-                var (blockers, _) = GetDependencyStatus(d);
-                if (!_getConflictTasks(d).Any() && blockers.Length == 0)
+                case BTaskStatus.Running:
+                case BTaskStatus.Cancelling:
+                case BTaskStatus.Pausing:
+                case BTaskStatus.Resuming:
+                case BTaskStatus.WaitingForInput:
                 {
-                    await d.Start();
+                    // Already running, pausing, resuming or cancelling — Start is a no-op.
+                    break;
                 }
+                case BTaskStatus.Paused:
+                {
+                    await d.Resume();
+                    break;
+                }
+                case BTaskStatus.NotStarted:
+                case BTaskStatus.Error:
+                case BTaskStatus.Completed:
+                case BTaskStatus.Cancelled:
+                {
+                    var (blockers, _) = GetDependencyStatus(d);
+                    if (!_getConflictTasks(d).Any() && blockers.Length == 0 && !BlockedByMoveReservation(d))
+                    {
+                        await d.Start();
+                    }
 
-                break;
+                    break;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
-            default:
-                throw new ArgumentOutOfRangeException();
         }
+        finally { _schedulingGate.Release(); }
     }
 
     public async Task Stop(string id)
@@ -217,6 +226,20 @@ public class BTaskManager : IAsyncDisposable
             await task.Stop();
         }
     }
+
+    public Task MarkCancelled(string id) => _taskMap.TryGetValue(id, out var task)
+        ? task.MarkCancelled() : Task.CompletedTask;
+
+    public Task MarkCancelling(string id) => _taskMap.TryGetValue(id, out var task)
+        ? task.MarkCancelling() : Task.CompletedTask;
+
+    public Task Requeue(string id) => _taskMap.TryGetValue(id, out var task)
+        ? task.Requeue() : Task.CompletedTask;
+
+    private bool BlockedByMoveReservation(BTaskHandler task) =>
+        task.Task.Type != BTaskType.MoveResources &&
+        task.Task.ConflictKeys?.Overlaps(["SyncResources", "SyncPathMarks", "MoveFiles"]) == true &&
+        _serviceProvider.GetService<ResourceMoveGuard>()?.HasRetainedReservations == true;
 
     private BTaskHandler[] _getConflictTasks(BTaskHandler d)
     {
@@ -305,23 +328,29 @@ public class BTaskManager : IAsyncDisposable
 
                     foreach (var at in activeTasks)
                     {
-                        var (blockers, shouldFail) = GetDependencyStatus(at);
-
-                        if (shouldFail)
+                        await _schedulingGate.WaitAsync(_daemonCts.Token);
+                        try
                         {
-                            // Mark task as failed due to dependency failure
-                            await at.UpdateTask(t =>
+                            if (_shuttingDown) break;
+                            var (blockers, shouldFail) = GetDependencyStatus(at);
+
+                            if (shouldFail)
                             {
-                                t.SetError("Dependency failed", "One or more dependency tasks have failed");
-                                t.Status = BTaskStatus.Error;
-                            });
-                            continue;
-                        }
+                                // Mark task as failed due to dependency failure
+                                await at.UpdateTask(t =>
+                                {
+                                    t.SetError("Dependency failed", "One or more dependency tasks have failed");
+                                    t.Status = BTaskStatus.Error;
+                                });
+                                continue;
+                            }
 
-                        if (!_getConflictTasks(at).Any() && blockers.Length == 0)
-                        {
-                            await at.TryStartAutomatically();
+                            if (!_getConflictTasks(at).Any() && blockers.Length == 0 && !BlockedByMoveReservation(at))
+                            {
+                                await at.TryStartAutomatically();
+                            }
                         }
+                        finally { _schedulingGate.Release(); }
                     }
                 }
                 catch (Exception e)
@@ -404,6 +433,11 @@ public class BTaskManager : IAsyncDisposable
                 reasonForUnableToStart =
                     _localizer.BTask_FailedToRunTaskDueToConflict(handler.Task.Name,
                         conflictTasks.Select(c => c.Task.Name).ToArray());
+            }
+            else if (BlockedByMoveReservation(handler))
+            {
+                reasonForUnableToStart = _localizer.BTask_FailedToRunTaskDueToConflict(
+                    handler.Task.Name, [_localizer.MoveResource()]);
             }
             else if (dependencyBlockers.Any())
             {

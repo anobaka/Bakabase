@@ -29,5 +29,12 @@
   "resourceMove.records.empty": "No move records",
   "resourceMove.records.retry": "Retry",
   "resourceMove.records.retryScheduled": "Retry scheduled",
-  "resourceMove.records.clearInactive": "Clear inactive records"
+  "resourceMove.records.clearInactive": "Clear inactive records",
+  "resourceMove.panel.preparing": "Preparing move",
+  "resourceMove.panel.queued": "Queued for move",
+  "resourceMove.panel.stopping": "Stopping move",
+  "resourceMove.panel.stopAtBoundary": "Finish the current resource, then stop remaining moves",
+  "resourceMove.panel.waitingForInput": "Move needs attention",
+  "resourceMove.panel.open": "Move panel",
+  "resourceMove.panel.dragCount": "Move {{count}} resources"
 }

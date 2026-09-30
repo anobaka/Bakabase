@@ -1732,7 +1732,8 @@ export enum BTaskStatus {
   Cancelled = 6,
   Cancelling = 7,
   Pausing = 8,
-  Resuming = 9
+  Resuming = 9,
+  WaitingForInput = 10
 }
 
 export const bTaskStatuses = [
@@ -1744,7 +1745,8 @@ export const bTaskStatuses = [
   { label: 'Cancelled', value: BTaskStatus.Cancelled },
   { label: 'Cancelling', value: BTaskStatus.Cancelling },
   { label: 'Pausing', value: BTaskStatus.Pausing },
-  { label: 'Resuming', value: BTaskStatus.Resuming }
+  { label: 'Resuming', value: BTaskStatus.Resuming },
+  { label: 'WaitingForInput', value: BTaskStatus.WaitingForInput }
 ] as const;
 
 export const BTaskStatusLabel: Record<BTaskStatus, string> = {
@@ -1756,7 +1758,8 @@ export const BTaskStatusLabel: Record<BTaskStatus, string> = {
   [BTaskStatus.Cancelled]: 'Cancelled',
   [BTaskStatus.Cancelling]: 'Cancelling',
   [BTaskStatus.Pausing]: 'Pausing',
-  [BTaskStatus.Resuming]: 'Resuming'
+  [BTaskStatus.Resuming]: 'Resuming',
+  [BTaskStatus.WaitingForInput]: 'WaitingForInput'
 };
 
 export enum ClientMode {
@@ -2392,7 +2395,10 @@ export enum ResourceMoveRecordStatus {
   Succeeded = 3,
   Failed = 4,
   Cancelled = 5,
-  Interrupted = 6
+  Interrupted = 6,
+  WaitingForConflict = 7,
+  NeedsRecovery = 8,
+  Skipped = 9
 }
 
 export const resourceMoveRecordStatuses = [
@@ -2401,7 +2407,10 @@ export const resourceMoveRecordStatuses = [
   { label: 'Succeeded', value: ResourceMoveRecordStatus.Succeeded },
   { label: 'Failed', value: ResourceMoveRecordStatus.Failed },
   { label: 'Cancelled', value: ResourceMoveRecordStatus.Cancelled },
-  { label: 'Interrupted', value: ResourceMoveRecordStatus.Interrupted }
+  { label: 'Interrupted', value: ResourceMoveRecordStatus.Interrupted },
+  { label: 'WaitingForConflict', value: ResourceMoveRecordStatus.WaitingForConflict },
+  { label: 'NeedsRecovery', value: ResourceMoveRecordStatus.NeedsRecovery },
+  { label: 'Skipped', value: ResourceMoveRecordStatus.Skipped }
 ] as const;
 
 export const ResourceMoveRecordStatusLabel: Record<ResourceMoveRecordStatus, string> = {
@@ -2410,7 +2419,10 @@ export const ResourceMoveRecordStatusLabel: Record<ResourceMoveRecordStatus, str
   [ResourceMoveRecordStatus.Succeeded]: 'Succeeded',
   [ResourceMoveRecordStatus.Failed]: 'Failed',
   [ResourceMoveRecordStatus.Cancelled]: 'Cancelled',
-  [ResourceMoveRecordStatus.Interrupted]: 'Interrupted'
+  [ResourceMoveRecordStatus.Interrupted]: 'Interrupted',
+  [ResourceMoveRecordStatus.WaitingForConflict]: 'WaitingForConflict',
+  [ResourceMoveRecordStatus.NeedsRecovery]: 'NeedsRecovery',
+  [ResourceMoveRecordStatus.Skipped]: 'Skipped'
 };
 
 export enum ResourceSource {
@@ -4810,6 +4822,45 @@ export const ServerKindLabel: Record<ServerKind, string> = {
   [ServerKind.Headless]: 'Headless'
 };
 
+export enum FederationEndpointKind {
+  Local = 0,
+  Public = 1,
+  Export = 2
+}
+
+export const federationEndpointKinds = [
+  { label: 'Local', value: FederationEndpointKind.Local },
+  { label: 'Public', value: FederationEndpointKind.Public },
+  { label: 'Export', value: FederationEndpointKind.Export }
+] as const;
+
+export const FederationEndpointKindLabel: Record<FederationEndpointKind, string> = {
+  [FederationEndpointKind.Local]: 'Local',
+  [FederationEndpointKind.Public]: 'Public',
+  [FederationEndpointKind.Export]: 'Export'
+};
+
+export enum FederationSharingRequirement {
+  Library = 0,
+  DataSync = 1,
+  Either = 2,
+  GrantScope = 3
+}
+
+export const federationSharingRequirements = [
+  { label: 'Library', value: FederationSharingRequirement.Library },
+  { label: 'DataSync', value: FederationSharingRequirement.DataSync },
+  { label: 'Either', value: FederationSharingRequirement.Either },
+  { label: 'GrantScope', value: FederationSharingRequirement.GrantScope }
+] as const;
+
+export const FederationSharingRequirementLabel: Record<FederationSharingRequirement, string> = {
+  [FederationSharingRequirement.Library]: 'Library',
+  [FederationSharingRequirement.DataSync]: 'DataSync',
+  [FederationSharingRequirement.Either]: 'Either',
+  [FederationSharingRequirement.GrantScope]: 'GrantScope'
+};
+
 export enum DataSyncVvRelation {
   Equal = 1,
   Dominates = 2,
@@ -6623,45 +6674,6 @@ export const dataCardMatchModes = [
 export const DataCardMatchModeLabel: Record<DataCardMatchMode, string> = {
   [DataCardMatchMode.Any]: 'Any',
   [DataCardMatchMode.All]: 'All'
-};
-
-export enum FederationEndpointKind {
-  Local = 0,
-  Public = 1,
-  Export = 2
-}
-
-export const federationEndpointKinds = [
-  { label: 'Local', value: FederationEndpointKind.Local },
-  { label: 'Public', value: FederationEndpointKind.Public },
-  { label: 'Export', value: FederationEndpointKind.Export }
-] as const;
-
-export const FederationEndpointKindLabel: Record<FederationEndpointKind, string> = {
-  [FederationEndpointKind.Local]: 'Local',
-  [FederationEndpointKind.Public]: 'Public',
-  [FederationEndpointKind.Export]: 'Export'
-};
-
-export enum FederationSharingRequirement {
-  Library = 0,
-  DataSync = 1,
-  Either = 2,
-  GrantScope = 3
-}
-
-export const federationSharingRequirements = [
-  { label: 'Library', value: FederationSharingRequirement.Library },
-  { label: 'DataSync', value: FederationSharingRequirement.DataSync },
-  { label: 'Either', value: FederationSharingRequirement.Either },
-  { label: 'GrantScope', value: FederationSharingRequirement.GrantScope }
-] as const;
-
-export const FederationSharingRequirementLabel: Record<FederationSharingRequirement, string> = {
-  [FederationSharingRequirement.Library]: 'Library',
-  [FederationSharingRequirement.DataSync]: 'DataSync',
-  [FederationSharingRequirement.Either]: 'Either',
-  [FederationSharingRequirement.GrantScope]: 'GrantScope'
 };
 
 export enum ResourceMatcherLeafKind {

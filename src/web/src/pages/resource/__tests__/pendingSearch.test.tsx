@@ -45,6 +45,10 @@ vi.mock("../components/ResourceTabContent", () => ({
 }));
 vi.mock("../components/RecentlyPlayedDrawer", () => ({ default: () => null }));
 vi.mock("../components/SearchSummary", () => ({ default: () => null }));
+vi.mock("@/components/ResourceMovePanel", () => ({
+  default: () => null,
+  ResourceMovePanelDock: () => null,
+}));
 vi.mock("../utils/buildAutoTabName", () => ({ buildAutoTabName: () => "" }));
 
 let host: HTMLDivElement;

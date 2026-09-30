@@ -75,7 +75,8 @@ internal sealed class FakeResourceService : IResourceService
         => throw new NotImplementedException();
     public Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId,
         Dictionary<int, string>? newPaths = null) => throw new NotImplementedException();
-    public Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths)
+    public Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths, bool publishChange = true,
+        Dictionary<int, string>? expectedPaths = null)
         => throw new NotImplementedException();
     public Task Pin(int id, bool pin) => throw new NotImplementedException();
     public Task Transfer(ResourceTransferInputModel model) => throw new NotImplementedException();

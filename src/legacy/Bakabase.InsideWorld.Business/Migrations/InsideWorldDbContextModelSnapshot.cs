@@ -775,8 +775,35 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("CanOverwrite")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("CancelRequested")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("ConflictDecisionsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConflictFingerprint")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConflictKind")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConflictPath")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConflictPolicy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("inherit");
+
+                    b.Property<int>("ConflictVersion")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
@@ -785,17 +812,56 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DestinationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DestinationName")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Error")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorCode")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExecutionPlanJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MoveJournalJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Origin")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("PhysicalMoveStarted")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("PolicyAuditJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestFingerprint")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReservedResourceIdsJson")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("ResourceId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("SourcePath")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceResourcePathsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceTabId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceTabName")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("StartedAt")
@@ -807,6 +873,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BatchId");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
 
                     b.HasIndex("ResourceId");
 

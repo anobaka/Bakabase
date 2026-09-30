@@ -88,6 +88,8 @@ type Options = RectSelectionGeometry & {
    *  handlers have to opt out of it themselves — this hook cannot outrun a listener
    *  that was registered before it. */
   onSuppressClick?: () => void;
+  /** Allows another gesture (resource dragging) to own a selected card's press. */
+  shouldStart?: (event: MouseEvent) => boolean;
 };
 
 /** Pointer travel before a press becomes a drag. Small enough to feel instant, large
@@ -425,6 +427,9 @@ export const useRectSelection = (options: Options) => {
       const target = e.target as HTMLElement | null;
 
       if (!target || !container.contains(target) || target.closest(DragExcludedSelector)) {
+        return;
+      }
+      if (optionsRef.current.shouldStart?.(e) === false) {
         return;
       }
       const scroller = container.querySelector<HTMLElement>(".ReactVirtualized__Grid");

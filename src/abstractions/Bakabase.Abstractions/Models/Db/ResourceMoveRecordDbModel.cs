@@ -41,4 +41,31 @@ public record ResourceMoveRecordDbModel
     public DateTime CreatedAt { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+
+    public string? Origin { get; set; }
+    public string? SourceTabId { get; set; }
+    public string? SourceTabName { get; set; }
+    public string? DestinationId { get; set; }
+    public string? DestinationName { get; set; }
+    /// <summary>Only the first record in a batch carries the unique request key.</summary>
+    public string? IdempotencyKey { get; set; }
+    public string? RequestFingerprint { get; set; }
+    public string ConflictPolicy { get; set; } = "inherit";
+    public bool CancelRequested { get; set; }
+    public string? ErrorCode { get; set; }
+    public string? ConflictKind { get; set; }
+    public string? ConflictPath { get; set; }
+    public int ConflictVersion { get; set; }
+    public bool CanOverwrite { get; set; }
+    public string? ConflictFingerprint { get; set; }
+    /// <summary>Durable, exact-path authorizations; not a blanket overwrite flag.</summary>
+    public string? ConflictDecisionsJson { get; set; }
+    /// <summary>Own staging files and commit phases, retained until metadata has been repaired.</summary>
+    public string? MoveJournalJson { get; set; }
+    public string? ReservedResourceIdsJson { get; set; }
+    /// <summary>Immutable IDs and old paths of the resource tree carried by this record.</summary>
+    public string? SourceResourcePathsJson { get; set; }
+    /// <summary>Frozen physical executor and source-participant plans, with repair checkpoints.</summary>
+    public string? ExecutionPlanJson { get; set; }
+    public string? PolicyAuditJson { get; set; }
 }

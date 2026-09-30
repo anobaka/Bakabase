@@ -11,6 +11,7 @@ import {
   QuestionCircleOutlined,
   RedoOutlined,
   ReloadOutlined,
+  StopOutlined,
 } from "@ant-design/icons";
 import moment from "moment";
 
@@ -18,8 +19,17 @@ import { Button, Chip, Spinner, Tooltip, toast } from "@/components/bakaui";
 import { BTaskType, ResourceMoveRecordStatus } from "@/sdk/constants";
 import { useBTasksStore } from "@/stores/bTasks";
 import BApi from "@/sdk/BApi";
+import { cancelResourceMoveBatch } from "@/components/ResourceMovePanel/api";
+import {
+  openMovePanel,
+  refreshMovePanel,
+  RESOURCE_MOVE_UPDATED_EVENT,
+} from "@/stores/resourceMovePanel";
 
-type MoveRecord = BakabaseAbstractionsModelsDbResourceMoveRecordDbModel;
+// The hand-maintained enum includes new move states before the generated SDK is rebuilt.
+type MoveRecord = Omit<BakabaseAbstractionsModelsDbResourceMoveRecordDbModel, "status"> & {
+  status: ResourceMoveRecordStatus;
+};
 
 const StatusChipColors: Record<
   ResourceMoveRecordStatus,
@@ -31,15 +41,24 @@ const StatusChipColors: Record<
   [ResourceMoveRecordStatus.Failed]: "danger",
   [ResourceMoveRecordStatus.Cancelled]: "warning",
   [ResourceMoveRecordStatus.Interrupted]: "warning",
+  [ResourceMoveRecordStatus.WaitingForConflict]: "warning",
+  [ResourceMoveRecordStatus.NeedsRecovery]: "danger",
+  [ResourceMoveRecordStatus.Skipped]: "default",
 };
 
 const retryableStatuses = new Set([
   ResourceMoveRecordStatus.Failed,
   ResourceMoveRecordStatus.Cancelled,
   ResourceMoveRecordStatus.Interrupted,
+  ResourceMoveRecordStatus.NeedsRecovery,
 ]);
 
-const activeStatuses = new Set([ResourceMoveRecordStatus.Pending, ResourceMoveRecordStatus.Moving]);
+const activeStatuses = new Set([
+  ResourceMoveRecordStatus.Pending,
+  ResourceMoveRecordStatus.Moving,
+  ResourceMoveRecordStatus.WaitingForConflict,
+  ResourceMoveRecordStatus.NeedsRecovery,
+]);
 
 /**
  * Durable move records with per-record retry. The list re-fetches when any MoveResources
@@ -68,6 +87,28 @@ const MoveRecordsTab = () => {
   useEffect(() => {
     load();
   }, [load, moveTasksFingerprint]);
+
+  useEffect(() => {
+    const updated = () => {
+      void load();
+    };
+    window.addEventListener(RESOURCE_MOVE_UPDATED_EVENT, updated);
+    return () => window.removeEventListener(RESOURCE_MOVE_UPDATED_EVENT, updated);
+  }, [load]);
+
+  const cancel = async (record: MoveRecord) => {
+    if (working || !record.batchId) return;
+    setWorking(true);
+    try {
+      await cancelResourceMoveBatch(record.batchId);
+      await refreshMovePanel();
+      await load();
+    } catch (error) {
+      toast.danger(error instanceof Error ? error.message : t<string>("common.error.unknownError"));
+    } finally {
+      setWorking(false);
+    }
+  };
 
   const retry = async (record: MoveRecord) => {
     if (working) return;
@@ -142,6 +183,31 @@ const MoveRecordsTab = () => {
                   {moment(record.createdAt).format("YYYY-MM-DD HH:mm")}
                 </span>
                 <div className="grow" />
+                {record.status === ResourceMoveRecordStatus.WaitingForConflict && (
+                  <Button size="sm" variant="flat" onPress={() => openMovePanel()}>
+                    {t<string>("resourceMove.panel.waitingForInput", "Needs attention")}
+                  </Button>
+                )}
+                {activeStatuses.has(record.status) &&
+                  record.status !== ResourceMoveRecordStatus.NeedsRecovery && (
+                    <Tooltip
+                      content={t<string>(
+                        "resourceMove.panel.stopAtBoundary",
+                        "Finish the current resource, then stop",
+                      )}
+                    >
+                      <Button
+                        isIconOnly
+                        className="min-w-6 w-6 h-6"
+                        isDisabled={working}
+                        size="sm"
+                        variant="light"
+                        onPress={() => cancel(record)}
+                      >
+                        <StopOutlined />
+                      </Button>
+                    </Tooltip>
+                  )}
                 {retryableStatuses.has(record.status) && (
                   <Tooltip content={t<string>("resourceMove.records.retry")}>
                     <Button

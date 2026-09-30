@@ -12,6 +12,7 @@ import { InitializationContentType } from "@/sdk/constants";
 import WhatsNewGate from "@/components/Changelog/WhatsNewGate";
 import NoticesGate from "@/components/Notices/NoticesGate";
 import FloatingAssistantV2 from "@/components/FloatingAssistantV2";
+import ResourceMovePanel from "@/components/ResourceMovePanel";
 import { ErrorBoundary } from "@/components/Error";
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
@@ -53,6 +54,7 @@ export default function BasicLayout({ children }: { children: React.ReactNode })
           <NoticesGate />
           <WhatsNewGate />
           <FloatingAssistantV2 />
+          <ResourceMovePanel />
           <PageNav />
           <div className={`${styles.main} pt-2 pb-2 pr-2`}>{children}</div>
         </div>

@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useRectSelection } from "../useRectSelection";
+import { shouldStartResourceMove } from "../resourceMoveSelection";
 
 /** React 18.3 exports `act`, but this project pins @types/react to 18.0, which predates it. */
 const act = (React as unknown as { act: (scope: () => void) => void }).act;
@@ -72,7 +73,7 @@ type Harness = {
   unmount: () => void;
 };
 
-const setup = (): Harness => {
+const setup = (shouldStart?: (event: MouseEvent) => boolean): Harness => {
   const container = document.createElement("div");
   const scroller = document.createElement("div");
   const overlay = document.createElement("div");
@@ -109,6 +110,7 @@ const setup = (): Harness => {
       onEnd,
       onActiveChange,
       onSuppressClick,
+      shouldStart,
     });
 
     overlayRef.current = overlay;
@@ -188,6 +190,29 @@ describe("useRectSelection", () => {
     h.scroller.dispatchEvent(click);
     expect(click.defaultPrevented).toBe(false);
 
+    h.unmount();
+  });
+
+  it("leaves an unmodified selected-card press and native drag to resource moving", () => {
+    const h = setup((event) => !shouldStartResourceMove(true, true, event));
+    beginDrag(h);
+    const drag = new Event("dragstart", { bubbles: true, cancelable: true });
+    h.scroller.dispatchEvent(drag);
+
+    expect(h.onStart).not.toHaveBeenCalled();
+    expect(h.onChange).not.toHaveBeenCalled();
+    expect(drag.defaultPrevented).toBe(false);
+    h.unmount();
+  });
+
+  it("preserves rectangle addition on selected cards while a move panel is enabled", () => {
+    const h = setup((event) => !shouldStartResourceMove(true, true, event));
+    beginDrag(h, h.scroller, { ctrlKey: true });
+    const drag = new Event("dragstart", { bubbles: true, cancelable: true });
+    h.scroller.dispatchEvent(drag);
+
+    expect(h.onChange).toHaveBeenLastCalledWith([0], "append");
+    expect(drag.defaultPrevented).toBe(true);
     h.unmount();
   });
 

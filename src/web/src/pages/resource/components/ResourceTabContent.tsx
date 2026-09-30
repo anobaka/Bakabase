@@ -9,6 +9,7 @@ import React, {
   useDeferredValue,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -20,18 +21,35 @@ import { AiOutlineControl } from "react-icons/ai";
 
 import Resources from "./Resources";
 import FilterPanel from "./FilterPanel";
+import {
+  removeSubmittedSelection,
+  shouldStartResourceMove,
+  snapshotMoveSelection,
+} from "./Resources/resourceMoveSelection";
 
 import BApi from "@/sdk/BApi";
 import ResizablePanelDivider from "@/components/ResizablePanelDivider";
 import ResourceCard from "@/components/Resource";
+import { getSelectionMoveBlockReasons } from "@/components/Resource/resourceMoveEligibility";
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
 import BusinessConstants from "@/components/BusinessConstants";
 import { Button, Card, CardBody, Link, Pagination, Spinner } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useResourceSearch } from "@/hooks/useResourceSearch";
 import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
-import { useBTasksStore } from "@/stores/bTasks";
+import { selectResourceMovingTask, useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus, BTaskType } from "@/sdk/constants";
+import {
+  bindMovePayload,
+  clearMovePanelContext,
+  RESOURCE_MOVE_MIME,
+  RESOURCE_MOVE_SUBMITTED_EVENT,
+  RESOURCE_MOVE_UPDATED_EVENT,
+  selectPanelResourceReservation,
+  setMovePanelContext,
+  setMovePanelDragging,
+  useResourceMovePanelStore,
+} from "@/stores/resourceMovePanel";
 
 const BasePageSize = 50;
 const getPageSize = (cols: number) =>
@@ -45,6 +63,7 @@ interface IPageable {
 
 type Props = {
   searchId: string;
+  searchName?: string;
   searchInNewTab?: (form: SearchForm) => any;
   activated: boolean;
   onOpenRecentlyPlayed?: () => void;
@@ -93,6 +112,13 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   const searchingRef = useRef(false);
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const allSelectedMovesKnownBlocked = useMemo(
+    () => getSelectionMoveBlockReasons(selectedIds, resources).length > 0,
+    [selectedIds, resources],
+  );
+  const movePanelEnabled = useResourceMovePanelStore(
+    (state) => state.panelEnabled && !!state.sourceContext && !state.sourceContextInvalidated,
+  );
   const selectedIdsRef = useRef(selectedIds);
   const selectedIdSetRef = useRef<Set<number>>(new Set());
   // Mirror of selectedIds as a stable RefObject<Resource[]> so we can pass
@@ -179,6 +205,12 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   const onWindowBlurRef = useRef<() => void>(() => {});
 
   onKeyDownRef.current = (e: KeyboardEvent) => {
+    if (
+      (e.target as HTMLElement)?.closest?.(
+        "input, textarea, [contenteditable='true'], [data-resource-move-panel], [role='dialog']",
+      )
+    )
+      return;
     // Ctrl+A / Cmd+A: Select all loaded resources
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
       e.preventDefault();
@@ -218,7 +250,11 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       // Don't clear selection if clicking on menu items, modals, or other overlay elements
       const target = e.target as HTMLElement;
 
-      if (target.closest(".szh-menu, [role='dialog'], [role='menu'], .bakaui-modal")) {
+      if (
+        target.closest(
+          ".szh-menu, [role='dialog'], [role='menu'], .bakaui-modal, [data-resource-move-panel]",
+        )
+      ) {
         return;
       }
 
@@ -342,6 +378,31 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
     selectedResourcesRef.current = resources.filter((r) => set.has(r.id));
   }, [resources, selectedIds]);
+
+  useEffect(() => {
+    if (!props.activated) return;
+    setMovePanelContext({
+      tabId: props.searchId,
+      tabName: props.searchName,
+      resources: resources.map(({ id, path, displayName }) => ({ id, path, displayName })),
+      selectedResources: snapshotMoveSelection(selectedIds, resources),
+    });
+  }, [props.activated, props.searchId, props.searchName, resources, selectedIds]);
+
+  useEffect(() => () => clearMovePanelContext(props.searchId), [props.searchId]);
+
+  useEffect(() => {
+    const onSubmitted = (event: Event) => {
+      const detail = (event as CustomEvent<{ resourceIds: number[]; sourceTabId?: string }>).detail;
+
+      if (!detail) return;
+      setSelectedIds((current) => removeSubmittedSelection(current, props.searchId, detail));
+    };
+
+    window.addEventListener(RESOURCE_MOVE_SUBMITTED_EVENT, onSubmitted);
+
+    return () => window.removeEventListener(RESOURCE_MOVE_SUBMITTED_EVENT, onSubmitted);
+  }, [props.searchId]);
 
   // When Phase 2 finishes (loadingDetails transitions true → false), the new
   // displayName / properties / mediaLibrary chips have just been committed to
@@ -569,6 +630,79 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     }, 0);
   }, []);
 
+  const shouldStartRectSelection = useCallback((event: MouseEvent) => {
+    const card = (event.target as HTMLElement)?.closest<HTMLElement>("[data-resource-move-card]");
+    const state = useResourceMovePanelStore.getState();
+
+    return !shouldStartResourceMove(
+      state.panelEnabled && !!state.sourceContext && !state.sourceContextInvalidated,
+      !!card && selectedIdSetRef.current.has(Number(card.dataset.resourceMoveCard)),
+      event,
+      getSelectionMoveBlockReasons(selectedIdsRef.current, resourcesRef.current).length > 0,
+    );
+  }, []);
+
+  const startResourceDrag = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      const cardId = Number(event.currentTarget.dataset.resourceMoveCard);
+      const selected = selectedIdSetRef.current.has(cardId);
+      const state = useResourceMovePanelStore.getState();
+      const taskState = useBTasksStore.getState();
+      const snapshot = snapshotMoveSelection(selectedIdsRef.current, resourcesRef.current);
+
+      if (
+        !state.sourceContext ||
+        state.sourceContextInvalidated ||
+        !shouldStartResourceMove(
+          state.panelEnabled,
+          selected,
+          event,
+          getSelectionMoveBlockReasons(selectedIdsRef.current, resourcesRef.current).length > 0,
+        ) ||
+        snapshot.some(
+          (resource) =>
+            selectPanelResourceReservation(resource.id, resource.path)(state) ||
+            selectResourceMovingTask(resource.id)(taskState),
+        )
+      ) {
+        event.preventDefault();
+
+        return;
+      }
+      event.stopPropagation();
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData(
+        RESOURCE_MOVE_MIME,
+        JSON.stringify(
+          bindMovePayload({
+            resources: snapshot,
+            sourceTabId: props.searchId,
+            sourceTabName: props.searchName,
+            requestId: crypto.randomUUID(),
+          }),
+        ),
+      );
+      const preview = document.createElement("div");
+
+      preview.textContent = t<string>("resourceMove.panel.dragCount", {
+        count: snapshot.length,
+        defaultValue: "Move {{count}} resources",
+      });
+      preview.className =
+        "fixed top-0 left-0 rounded-lg px-4 py-2 bg-primary text-primary-foreground shadow-lg";
+      document.body.append(preview);
+      event.dataTransfer.setDragImage?.(preview, 24, 20);
+      setTimeout(() => preview.remove(), 0);
+      setMovePanelDragging(true);
+    },
+    [props.searchId, props.searchName, t],
+  );
+
+  const endResourceDrag = useCallback(() => {
+    setMovePanelDragging(false);
+    onRectSelectionSuppressClick();
+  }, [onRectSelectionSuppressClick]);
+
   // Reload resources when the backend announces they changed (e.g. cache rebuilt by a
   // single or batch refresh). Only the ids currently shown in this tab are reloaded;
   // forceRefresh makes cover and playable UI re-resolve even when their paths are
@@ -601,92 +735,117 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     [removeResources],
   );
 
-  // After a move batch finishes, ask the server which of the moved resources still match
-  // the current search and prune the rest — a resource moved out of the searched scope
-  // should leave this list. Keyed by finished task ids so percentage pushes don't retrigger.
+  // Reconcile all affected ids, including a cancelled batch that already moved some
+  // resources. The index is asynchronous, so bounded follow-up reads converge after
+  // both record updates and terminal BTask updates instead of assuming one delay suffices.
   const processedMoveTaskIdsRef = useRef(new Set<string>());
-  const finishedMoveTasksFingerprint = useBTasksStore((s) =>
-    s.tasks
+  const pendingMoveIdsRef = useRef(new Set<number>());
+  const pruneTimersRef = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const reconcileMovedResources = useCallback(
+    (ids: number[]) => {
+      ids.forEach((id) => pendingMoveIdsRef.current.add(id));
+      if (pruneTimersRef.current.size > 0) return;
+
+      for (const delay of [200, 1500, 4000]) {
+        const timer = setTimeout(async () => {
+          pruneTimersRef.current.delete(timer);
+          const shownIds = resourcesRef.current
+            .map((resource) => resource.id)
+            .filter((id) => pendingMoveIdsRef.current.has(id));
+          const form = searchFormRef.current;
+
+          if (!shownIds.length) {
+            if (!pruneTimersRef.current.size) pendingMoveIdsRef.current.clear();
+
+            return;
+          }
+          try {
+            const rsp = await BApi.resource.searchAllResourceIds(
+              form ?? { page: 1, pageSize: 100000000 },
+            );
+
+            // A tab search changed while the query was in flight; never prune its new results
+            // using the previous search's matches.
+            if (rsp.code || !rsp.data || form !== searchFormRef.current) return;
+            const stillMatched = new Set(rsp.data);
+            const currentIds = new Set(resourcesRef.current.map((resource) => resource.id));
+            const toRemove = shownIds.filter((id) => currentIds.has(id) && !stillMatched.has(id));
+            const toReload = shownIds.filter((id) => currentIds.has(id) && stillMatched.has(id));
+
+            if (toRemove.length) onResourcesDeleted(toRemove);
+            if (toReload.length) await reloadResources(toReload, { forceRefresh: true });
+          } catch {
+            // A later bounded read retries transient failures; the current selection stays intact.
+          } finally {
+            if (!pruneTimersRef.current.size) pendingMoveIdsRef.current.clear();
+          }
+        }, delay);
+
+        pruneTimersRef.current.add(timer);
+      }
+    },
+    [onResourcesDeleted, reloadResources],
+  );
+
+  useEffect(() => {
+    const updated = (event: Event) => {
+      const detail = (event as CustomEvent<{ resourceIds: number[] }>).detail;
+
+      if (detail?.resourceIds) reconcileMovedResources(detail.resourceIds);
+    };
+
+    window.addEventListener(RESOURCE_MOVE_UPDATED_EVENT, updated);
+
+    return () => {
+      window.removeEventListener(RESOURCE_MOVE_UPDATED_EVENT, updated);
+      pruneTimersRef.current.forEach(clearTimeout);
+      pruneTimersRef.current.clear();
+    };
+  }, [reconcileMovedResources]);
+
+  const finishedMoveTasksFingerprint = useBTasksStore((state) =>
+    state.tasks
       .filter(
-        (x) =>
-          x.type === BTaskType.MoveResources &&
-          // Error included: a partially failed batch still moved some records' files.
-          (x.status === BTaskStatus.Completed || x.status === BTaskStatus.Error),
+        (task) =>
+          task.type === BTaskType.MoveResources &&
+          [
+            BTaskStatus.Completed,
+            BTaskStatus.Error,
+            BTaskStatus.Cancelled,
+            BTaskStatus.WaitingForInput,
+          ].includes(task.status),
       )
-      .map((x) => x.id)
+      .map((task) => `${task.id}:${task.status}`)
       .sort()
       .join("|"),
   );
 
-  // Timers survive fingerprint changes (a second batch finishing must not cancel the first
-  // batch's pending prune); they are cleared only on unmount.
-  const pruneTimersRef = useRef(new Set<ReturnType<typeof setTimeout>>());
-
-  useEffect(
-    () => () => {
-      pruneTimersRef.current.forEach(clearTimeout);
-    },
-    [],
-  );
-
   useEffect(() => {
-    const allFinished = useBTasksStore
+    const finished = useBTasksStore
       .getState()
       .tasks.filter(
-        (x) =>
-          x.type === BTaskType.MoveResources &&
-          (x.status === BTaskStatus.Completed || x.status === BTaskStatus.Error),
+        (task) =>
+          task.type === BTaskType.MoveResources &&
+          [
+            BTaskStatus.Completed,
+            BTaskStatus.Error,
+            BTaskStatus.Cancelled,
+            BTaskStatus.WaitingForInput,
+          ].includes(task.status),
       );
+    const keys = new Set(finished.map((task) => `${task.id}:${task.status}`));
 
-    // A retried batch reuses its task id (leaving the finished set while it re-runs);
-    // forgetting it here re-arms pruning for its next completion.
-    const finishedIds = new Set(allFinished.map((x) => x.id));
-
-    for (const id of [...processedMoveTaskIdsRef.current]) {
-      if (!finishedIds.has(id)) {
-        processedMoveTaskIdsRef.current.delete(id);
-      }
+    for (const key of processedMoveTaskIdsRef.current) {
+      if (!keys.has(key)) processedMoveTaskIdsRef.current.delete(key);
     }
+    const changed = finished.filter(
+      (task) => !processedMoveTaskIdsRef.current.has(`${task.id}:${task.status}`),
+    );
 
-    const finished = allFinished.filter((x) => !processedMoveTaskIdsRef.current.has(x.id));
-
-    if (finished.length === 0) {
-      return;
-    }
-    finished.forEach((x) => processedMoveTaskIdsRef.current.add(x.id));
-
-    const movedIds = new Set(finished.flatMap((x) => (x.resourceKeys ?? []).map(Number)));
-    const shownMovedIds = resourcesRef.current.map((r) => r.id).filter((id) => movedIds.has(id));
-
-    if (shownMovedIds.length === 0) {
-      return;
-    }
-
-    // The search index updates asynchronously (sub-second) after path changes — give it a
-    // moment before asking.
-    const timer = setTimeout(async () => {
-      pruneTimersRef.current.delete(timer);
-      const rsp = await BApi.resource.searchAllResourceIds(
-        searchFormRef.current ?? { page: 1, pageSize: 100000000 },
-      );
-
-      if (rsp.code || !rsp.data) {
-        return;
-      }
-      const stillMatched = new Set(rsp.data);
-      const toRemove = shownMovedIds.filter((id) => !stillMatched.has(id));
-      const toReload = shownMovedIds.filter((id) => stillMatched.has(id));
-
-      if (toRemove.length > 0) {
-        onResourcesDeleted(toRemove);
-      }
-      if (toReload.length > 0) {
-        reloadResources(toReload, { forceRefresh: true });
-      }
-    }, 1500);
-
-    pruneTimersRef.current.add(timer);
-  }, [finishedMoveTasksFingerprint, onResourcesDeleted, reloadResources]);
+    changed.forEach((task) => processedMoveTaskIdsRef.current.add(`${task.id}:${task.status}`));
+    if (changed.length)
+      reconcileMovedResources(changed.flatMap((task) => (task.resourceKeys ?? []).map(Number)));
+  }, [finishedMoveTasksFingerprint, reconcileMovedResources]);
 
   type GridCellRenderArgs = {
     columnIndex: number;
@@ -718,8 +877,25 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         <div
           key={resource.id}
           className={"relative p-0.5"}
+          data-resource-move-card={resource.id}
+          draggable={movePanelEnabled && selected && !allSelectedMovesKnownBlocked}
           style={{
             ...style,
+          }}
+          onDragEnd={endResourceDrag}
+          onDragStart={startResourceDrag}
+          onMouseDownCapture={(event) => {
+            event.currentTarget.draggable =
+              shouldStartResourceMove(
+                movePanelEnabled,
+                selected,
+                event,
+                getSelectionMoveBlockReasons(selectedIdsRef.current, resourcesRef.current).length >
+                  0,
+              ) &&
+              !(event.target as HTMLElement).closest(
+                "button, a, input, textarea, select, .select-text, [data-moving-overlay]",
+              );
           }}
         >
           <ResourceCard
@@ -729,6 +905,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
             selectedResourceIdsRef={selectedIdsRef}
             selectedResourcesRef={selectedResourcesRef}
             selectionModeRef={multiSelectionRef}
+            sourceTabId={props.searchId}
+            sourceTabName={props.searchName}
             onResourcesDeleted={onResourcesDeleted}
             onSelected={onSelect}
             onSelectedResourcesChanged={onSelectedResourcesChanged}
@@ -736,7 +914,19 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         </div>
       );
     },
-    [displayResources, columnCount, onSelect, onSelectedResourcesChanged, onResourcesDeleted],
+    [
+      displayResources,
+      columnCount,
+      onSelect,
+      onSelectedResourcesChanged,
+      onResourcesDeleted,
+      movePanelEnabled,
+      allSelectedMovesKnownBlocked,
+      startResourceDrag,
+      endResourceDrag,
+      props.searchId,
+      props.searchName,
+    ],
   );
 
   useImperativeHandle(ref, () => ({
@@ -793,11 +983,9 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
             ref={(r) => {
               resourcesComponentRef.current = r;
             }}
-            cellCount={displayResources.length}
-            // Matches the `p-0.5` wrapper renderCell puts around every card.
-            cellInset={2}
             columnCount={columnCount}
             renderCell={renderCell}
+            shouldStartRectSelection={shouldStartRectSelection}
             onRectSelectionChange={onRectSelectionChange}
             onRectSelectionEnd={onRectSelectionEnd}
             onRectSelectionStart={onRectSelectionStart}
@@ -886,6 +1074,9 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
               }
             }}
             onScrollToTop={() => {}}
+            cellCount={displayResources.length}
+            // Matches the `p-0.5` wrapper renderCell puts around every card.
+            cellInset={2}
           />
         </>
       )}

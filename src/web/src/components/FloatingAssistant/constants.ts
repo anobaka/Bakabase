@@ -1,6 +1,6 @@
 import type { BTask } from "@/core/models/BTask";
 
-import { BTaskStatus } from "@/sdk/constants";
+import { BTaskStatus, BTaskType } from "@/sdk/constants";
 
 export const AssistantStatus = {
   Idle: 0,
@@ -33,6 +33,8 @@ export const ActionsFilter: Record<TaskAction, (task: BTask) => boolean> = {
   [TaskAction.Pause]: (task) => task.status === BTaskStatus.Running,
   [TaskAction.Resume]: (task) => task.status === BTaskStatus.Paused,
   [TaskAction.Stop]: (task) =>
+    (task.type === BTaskType.MoveResources &&
+      (task.status === BTaskStatus.NotStarted || task.status === BTaskStatus.WaitingForInput)) ||
     task.status === BTaskStatus.Running ||
     task.status === BTaskStatus.Paused ||
     task.status === BTaskStatus.Pausing ||

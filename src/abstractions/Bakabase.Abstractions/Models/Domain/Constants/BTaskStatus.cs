@@ -17,4 +17,6 @@ public enum BTaskStatus
     // Transitional state set the moment Resume() is called. Flipped to Running
     // once the task body's WaitWhilePausedAsync returns (OnResume fires).
     Resuming = 9,
+    // The executor has yielded its slot; a domain decision is required before it can requeue.
+    WaitingForInput = 10,
 }
