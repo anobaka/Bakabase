@@ -280,8 +280,9 @@ scopes").
 - **An auto-sync apply is one transaction**, a first sync's Start included. Refresh, the merge, every write, the
   inbox, the history entry and the cursor commit together, or nothing does: every committed apply
   has its history entry, so it can be undone and the lost-update guard sees it. There is no
-  per-transaction time bound; `ApplyTransactionTests` holds a first sync of 500 properties, one
-  with 10,000 options, to 5 s. After Refresh the session forgets the rows it tracked
+  per-transaction time bound; `ApplyTransactionTests` runs a first sync of 500 properties, one
+  with 10,000 options, on its own and holds it to 15 s — a guard against a pathological regression
+  (the target is 5 s; a quiet machine takes about 1–2 s, a shared CI runner more). After Refresh the session forgets the rows it tracked
   (`DataSyncApplySession.ForgetTrackedAsync`) and reads the link row again. A resolution batch
   runs in parts of about 2 s, each a complete attempt — the gate, the actor check, Refresh, its
   own `Resolution` entry — with the gate and the write lock free between them, where a pause
