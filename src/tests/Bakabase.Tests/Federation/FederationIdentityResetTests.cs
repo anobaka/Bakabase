@@ -7,21 +7,27 @@ using Bakabase.Modules.Federation.Queries;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Modules.RemoteAccess.Components.Pairing;
 using Bakabase.Modules.RemoteAccess.Services;
 using Bakabase.Service.Components.Federation;
 using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Controllers;
 using Bakabase.TestKit.Implementations;
+using Bakabase.Tests.RemoteAccess.Console;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Tests.Federation;
 
 /// <summary>
-/// "Create a new device identity" on an installation whose data directory was copied from
+/// "Make this a new device" on an installation whose data directory was copied from
 /// another computer: the copy must stop answering as that computer — for library sharing and
-/// for remote access alike — or each takes the other for itself.
+/// for remote access alike — or each takes the other for itself. It stops managing the servers
+/// the original manages too, here only: their keys are the original's as well.
 /// </summary>
 [TestClass]
 public sealed class FederationIdentityResetTests
@@ -68,13 +74,15 @@ public sealed class FederationIdentityResetTests
         await File.WriteAllTextAsync(install.FederationStateFile, "{broken");
         var unreadable = await Assert.ThrowsExactlyAsync<FederationAccessException>(() => install.Identity.GetAsync());
         Assert.AreEqual("SharingStateUnavailable", unreadable.ErrorCode);
+        var managed = new FakeManagedServerService();
 
-        await install.ResetAsync(asNewNode: true);
+        await install.ResetAsync(asNewNode: true, services: Desktop(managed));
 
         Assert.AreEqual("this-server-id", await install.RemoteAccess.GetOrCreateServerIdAsync());
         Assert.AreEqual("this-server-id", install.Options.ServerId);
         Assert.IsNotNull(install.Devices.Find(paired));
         Assert.IsFalse(hungUp, "a paired device was hung up");
+        Assert.IsTrue(managed.Calls.IsEmpty, "the servers this device manages were touched");
 
         // A new node, of its own id, as before the install's identity could be replaced with it.
         Assert.AreNotEqual("this-server-id", (await install.Identity.GetAsync()).NodeId);
@@ -86,12 +94,14 @@ public sealed class FederationIdentityResetTests
         using var install = new Install("this-server-id");
         var before = await install.Identity.GetAsync();
         var paired = await install.PairDeviceAsync();
+        var managed = new FakeManagedServerService();
 
-        await install.ResetAsync(asNewNode: false);
+        await install.ResetAsync(asNewNode: false, services: Desktop(managed));
 
         Assert.AreEqual("this-server-id", await install.RemoteAccess.GetOrCreateServerIdAsync());
         Assert.AreEqual(before.NodeId, (await install.Identity.GetAsync()).NodeId);
         Assert.IsNotNull(install.Devices.Find(paired));
+        Assert.IsTrue(managed.Calls.IsEmpty, "the servers this device manages were touched");
     }
 
     [TestMethod]
@@ -112,6 +122,92 @@ public sealed class FederationIdentityResetTests
         Assert.AreEqual(before, await install.Identity.GetAsync());
         Assert.IsNotNull(install.Devices.Find(paired));
     }
+
+    [TestMethod]
+    public async Task A_new_device_identity_stops_managing_every_server_here_without_telling_any_of_them()
+    {
+        // The copy's keys are the original install's: the servers know the two as one paired
+        // device, and a revoke from the copy would cut the original off as well.
+        await using var console = await ConsoleHarness.StartAsync();
+        await using var desk = await FakeServer.StartAsync("server-desk", "Desk", 46900);
+        await using var study = await FakeServer.StartAsync("server-study", "Study", 46900);
+        var (original, _) = await console.AddManagedAsync(desk);
+        Assert.IsNotNull(await console.Manager.OpenAsync(desk.ServerId, null));
+        Assert.AreEqual(ManagedServerOutcome.AwaitingApproval,
+            (await console.Manager.PairAsync(study.BaseAddress, null)).Outcome);
+        var deskSeen = desk.Requests.Count;
+        using var install = new Install("copied-server-id");
+
+        await install.ResetAsync(asNewNode: true, replaceInstallIdentity: true,
+            services: Desktop(console.Manager));
+
+        Assert.AreNotEqual("copied-server-id", await install.RemoteAccess.GetOrCreateServerIdAsync());
+        Assert.AreEqual(0, console.Store.Read().Servers.Count, "a managed server and its key were kept");
+        Assert.AreEqual(0, console.Manager.RunningRelays.Count, "a relay outlived its key");
+        var listing = await console.Manager.GetAsync(false);
+        Assert.AreEqual(0, listing.Servers.Count);
+        Assert.AreEqual(0, listing.Requests.Count, "a request this copy filed is still waited on");
+
+        // An approval that comes now is for nobody.
+        study.Approved = true;
+        await Task.Delay(300);
+        var studySeen = study.Requests.Count;
+        await Task.Delay(500);
+        Assert.AreEqual(studySeen, study.Requests.Count, "the filed request was still being claimed");
+        Assert.AreEqual(0, console.Store.Read().Servers.Count);
+
+        // Nothing reached the server, and it still lets the original in.
+        Assert.AreEqual(deskSeen, desk.Requests.Count, "the reset talked to a managed server");
+        Assert.IsTrue(desk.KnownDevices.ContainsKey(original), "the original install was cut off");
+
+        // Paired again from the copy, with a key of its own.
+        desk.PairingCode = "123456";
+        Assert.AreEqual(ManagedServerOutcome.Ok, (await console.Manager.PairAsync(desk.BaseAddress, "123456")).Outcome);
+        Assert.AreNotEqual(original, console.Store.Find(desk.ServerId)!.DeviceId);
+        Assert.IsNotNull(await console.Manager.OpenAsync(desk.ServerId, null));
+    }
+
+    [TestMethod]
+    public async Task A_headless_server_which_manages_nothing_still_becomes_a_new_device()
+    {
+        using var install = new Install("copied-server-id");
+        var paired = await install.PairDeviceAsync();
+        // Composed as a NAS or Docker server is: no IManagedServerService.
+        var headless = new ServiceCollection().AddLogging().BuildServiceProvider();
+
+        await install.ResetAsync(asNewNode: true, replaceInstallIdentity: true, services: headless);
+
+        var serverId = await install.RemoteAccess.GetOrCreateServerIdAsync();
+        Assert.AreNotEqual("copied-server-id", serverId);
+        Assert.AreEqual(serverId, (await install.Identity.GetAsync()).NodeId);
+        Assert.IsNull(install.Devices.Find(paired));
+    }
+
+    [TestMethod]
+    public async Task Servers_that_cannot_be_forgotten_leave_the_install_as_it_was()
+    {
+        // Forgotten first, while nothing else has changed: a new identity with the old managed
+        // servers — or the old identity without its paired devices — would be half a reset.
+        using var install = new Install("copied-server-id");
+        var before = await install.Identity.GetAsync();
+        var paired = await install.PairDeviceAsync();
+        var managed = new FakeManagedServerService { ForgetAllFailure = new IOException("The disk is full.") };
+
+        var refused = await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
+            install.ResetAsync(asNewNode: true, replaceInstallIdentity: true, services: Desktop(managed)));
+
+        Assert.AreEqual("ManagedServersNotForgotten", refused.ErrorCode);
+        Assert.AreEqual(500, refused.StatusCode);
+        CollectionAssert.AreEqual(new[] { "ForgetAllLocally" }, managed.Calls.ToArray());
+        Assert.AreEqual("copied-server-id", await install.RemoteAccess.GetOrCreateServerIdAsync());
+        Assert.AreEqual("copied-server-id", install.Options.ServerId);
+        Assert.AreEqual(before, await install.Identity.GetAsync());
+        Assert.IsNotNull(install.Devices.Find(paired));
+    }
+
+    /// <summary>The desktop app's request services: the relays it composes, and nothing else this reads.</summary>
+    private static IServiceProvider Desktop(IManagedServerService managed) =>
+        new ServiceCollection().AddLogging().AddSingleton(managed).BuildServiceProvider();
 
     private sealed class Install : IFederationDataDirectory, IRemoteAccessDataDirectory, IListeningAddressProvider,
         IDisposable
@@ -171,9 +267,19 @@ public sealed class FederationIdentityResetTests
         public string FederationStateFile =>
             System.IO.Path.Combine(((IFederationDataDirectory) this).Ensure(), FederationStateStore.FileName);
 
-        public Task ResetAsync(bool asNewNode, bool replaceInstallIdentity = false) =>
-            _controller.Reset(new FederationIdentityResetRequest(asNewNode, replaceInstallIdentity), _browsing,
+        /// <param name="services">
+        /// The request's services, where the controller finds what the host composed; none at all
+        /// when left out.
+        /// </param>
+        public Task ResetAsync(bool asNewNode, bool replaceInstallIdentity = false, IServiceProvider? services = null)
+        {
+            _controller.ControllerContext = services == null
+                ? new ControllerContext()
+                : new ControllerContext { HttpContext = new DefaultHttpContext { RequestServices = services } };
+
+            return _controller.Reset(new FederationIdentityResetRequest(asNewNode, replaceInstallIdentity), _browsing,
                 Devices, Connections, default);
+        }
 
         public void Dispose()
         {

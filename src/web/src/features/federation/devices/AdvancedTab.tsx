@@ -45,9 +45,14 @@ export default function AdvancedTab() {
   const reset = (identityCase: IdentityCase) =>
     identityCase === "copied"
       ? confirm(t("federation.identity.reset"), t("federation.identity.confirm"), async () => {
-          // A copy: the install's own identity goes too, so nothing takes it for the original.
+          // A copy: the install's own identity goes too, so nothing takes it for the original,
+          // and so do the servers it manages (forgotten here only). Their listing is read again
+          // here: the page's own re-read after an action leaves it out.
           await federationPeerApi.resetIdentity(true, true);
-          if (mounted.current) sharingForm.setInvite(undefined);
+          if (mounted.current) {
+            sharingForm.setInvite(undefined);
+            await data.reload(["servers"]);
+          }
         })
       : confirm(
           t("federation.identity.restore"),

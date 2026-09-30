@@ -55,6 +55,25 @@ public interface IManagedServerService
     /// </summary>
     Task<bool> ForgetAsync(string serverId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Stops managing every server, here only: drops every management request this device filed,
+    /// deletes every key and stops every relay. No server is told anything — nothing is sent to
+    /// any of them.
+    /// </summary>
+    /// <remarks>
+    /// For "Make this a new device" on an install whose data directory was copied from another:
+    /// each key came with the copy and is the original install's too, and the original still
+    /// manages those servers with it. Asking a server to revoke it, as <see cref="ForgetAsync"/>
+    /// does, would cut the original off as well. The servers go on listing that one device;
+    /// the copy pairs again with the ones it should manage.
+    /// <para>
+    /// Throws when the store cannot be written. No server is forgotten then, though the filed
+    /// requests are already dropped.
+    /// </para>
+    /// </remarks>
+    /// <returns>How many servers were forgotten.</returns>
+    Task<int> ForgetAllLocallyAsync(CancellationToken ct = default);
+
     Task<bool> SetPathMappingsAsync(string serverId, IReadOnlyList<ManagedServerPathMapping> mappings,
         CancellationToken ct = default);
 

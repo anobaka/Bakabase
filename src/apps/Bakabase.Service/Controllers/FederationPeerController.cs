@@ -313,9 +313,28 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
             // answering under it makes each copy take the other for itself. A new device takes a
             // new one — the node then inherits it, as the first node did — and lets go of the
             // devices paired under the old one: they expect that identity, and their keys were
-            // issued to whichever install it was. Servers this device manages are kept: they know
-            // it by the key each issued it, not by this identity — the original's key, which the
-            // two now share (see server-switching.md, "Trust is explicit and pairwise").
+            // issued to whichever install it was.
+            //
+            // It lets go of the servers it manages too, and first, while nothing else has changed:
+            // a failure then leaves its identity, paired devices and node as they were, to be
+            // tried again. Here only — each
+            // key came with the copy and is the original's as well, so asking a server to revoke
+            // it would cut the original off too (see server-switching.md, "Trust is explicit and
+            // pairwise"). Only the desktop app manages servers; a headless one has nothing to forget.
+            if (HttpContext?.RequestServices.GetService<IManagedServerService>() is { } managedServers)
+            {
+                try
+                {
+                    await managedServers.ForgetAllLocallyAsync(ct);
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    HttpContext.RequestServices.GetService<ILogger<FederationPeerController>>()?.LogWarning(e,
+                        "Could not forget the servers this device manages; it was not made a new device");
+                    throw new FederationAccessException("ManagedServersNotForgotten", 500,
+                        "The devices this one manages could not be removed here, so it was not made a new device. Try again.");
+                }
+            }
             await remoteAccess.RegenerateServerIdAsync();
             // Past this point the new identity is saved: the rest must follow it, whether or not
             // whoever asked is still waiting, or the install answers under the new id with the

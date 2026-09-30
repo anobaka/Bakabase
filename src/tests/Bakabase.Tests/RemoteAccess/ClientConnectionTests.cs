@@ -547,4 +547,45 @@ public class ClientConnectionTests
 
         Assert.AreEqual(0, Directory.GetFiles(_root, "*.tmp").Length);
     }
+
+    [TestMethod]
+    public async Task A_write_that_does_not_land_changes_nothing_the_next_write_could_save()
+    {
+        // The change a failed write made must not stay behind in memory: the next write, of
+        // anything at all, would save it — a key deleted, a whole list emptied — although the
+        // caller was told it failed.
+        await _store.MutateAsync(d => d.Servers.Add(new ClientServerConnection
+        {
+            ServerId = "server-1",
+            BaseAddress = "http://192.168.1.5:34567",
+            DeviceId = "d1",
+            DeviceKey = "k1",
+            PairedAt = _now
+        }));
+
+        // The caller gives up halfway: its change made, the file not yet written.
+        using var abandoned = new CancellationTokenSource();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _store.MutateAsync(d =>
+        {
+            d.Servers.Clear();
+            abandoned.Cancel();
+        }, abandoned.Token));
+        Assert.AreEqual(1, _store.Read().Servers.Count);
+
+        // The file cannot be replaced: a directory where it was, which the final rename fails on.
+        var file = Path.Combine(_root, ClientConnectionStore.FileName);
+        File.Delete(file);
+        Directory.CreateDirectory(Path.Combine(file, "held"));
+        await Assert.ThrowsAsync<Exception>(() => _store.MutateAsync(d => d.Servers.Clear()));
+        Assert.AreEqual(1, _store.Read().Servers.Count);
+        Directory.Delete(file, true);
+
+        await _store.MutateAsync(d => d.ActiveServerId = "server-1");
+
+        Assert.AreEqual("k1", _store.Read().Servers[0].DeviceKey);
+        var reloaded = new ClientConnectionStore(new TempDirectory(_root)).Read();
+        Assert.AreEqual(1, reloaded.Servers.Count);
+        Assert.AreEqual("k1", reloaded.Servers[0].DeviceKey);
+        Assert.AreEqual("server-1", reloaded.ActiveServerId);
+    }
 }

@@ -352,6 +352,91 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         return true;
     }
 
+    /// <remarks>
+    /// <see cref="ForgetAsync"/> without its last step, for every server at once: nothing is
+    /// sent anywhere — no revoke, no handshake, no withdrawn request — because every key here is
+    /// also the original install's, which still manages with it.
+    /// </remarks>
+    public async Task<int> ForgetAllLocallyAsync(CancellationToken ct = default)
+    {
+        // The filed requests first. One collected after the store is emptied would bring its
+        // server back with a key filed by this copy; cancelled, a claim still waiting cannot
+        // save (the store's write gate takes its token), and one already saving is ahead of
+        // the write below, which then removes what it saved. A server simply sees its request
+        // lapse, as when it is withdrawn from the page.
+        var dropped = false;
+
+        foreach (var requestId in _requests.Keys)
+        {
+            if (_requests.TryRemove(requestId, out var request))
+            {
+                request.Cancel();
+                dropped = true;
+            }
+        }
+
+        // A device that manages nothing, with no claim that could be saving a server, is left
+        // with no store at all.
+        List<ClientServerConnection> forgotten = !dropped && _store.Read().Servers.Count == 0
+            ? []
+            : await _store.MutateAsync(data =>
+            {
+                var servers = data.Servers.ToList();
+
+                foreach (var server in servers)
+                {
+                    // As ForgetAsync keeps it: the browser still holds each server's storage
+                    // under its origin, and a server paired again gets its origin back.
+                    if (server.RelayPort is { } port)
+                    {
+                        (data.RetiredRelayPorts ??= new Dictionary<string, int>(StringComparer.Ordinal))
+                            [server.ServerId] = port;
+                    }
+                }
+
+                data.Servers.Clear();
+
+                return servers;
+            }, ct);
+
+        // Whatever happens to the caller now: the keys are gone, and a relay left running would
+        // sign with one it no longer has on record.
+        await _relayGate.WaitAsync(CancellationToken.None);
+        try
+        {
+            var relays = new List<ManagedServerRelay>();
+
+            foreach (var serverId in _relays.Keys)
+            {
+                if (_relays.TryRemove(serverId, out var relay))
+                {
+                    relays.Add(relay);
+                }
+            }
+
+            // All at once, as the app's own stop does: each may hold a stream open for its
+            // whole stop timeout.
+            await Task.WhenAll(relays.Select(relay => relay.DisposeAsync().AsTask()));
+        }
+        finally
+        {
+            _relayGate.Release();
+        }
+
+        foreach (var server in forgotten)
+        {
+            _probes.TryRemove(server.ServerId, out _);
+            _clocks.TryRemove(server.ServerId, out _);
+            _identityAskedAt.TryRemove(server.ServerId, out _);
+        }
+
+        _logger.LogInformation(
+            "Stopped managing {Count} servers here without telling them, for a new device identity: {ServerIds}",
+            forgotten.Count, string.Join(", ", forgotten.Select(s => s.ServerId)));
+
+        return forgotten.Count;
+    }
+
     public async Task<bool> SetPathMappingsAsync(string serverId, IReadOnlyList<ManagedServerPathMapping> mappings,
         CancellationToken ct = default) =>
         await _store.MutateAsync(data =>
