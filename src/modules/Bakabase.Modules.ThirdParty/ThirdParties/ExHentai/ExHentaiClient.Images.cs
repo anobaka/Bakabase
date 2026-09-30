@@ -3,9 +3,11 @@ using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models;
 using CsQuery;
+using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 
@@ -25,15 +27,9 @@ public partial class ExHentaiClient
         if (!IsAccountHost(pageUri) || IsOriginalEndpoint(pageUri))
             throw new InvalidDataException("An E-Hentai image-viewing page is required.");
 
-        using var pageResponse = await SendImageRequestAsync(pageUri, options.RequestContext, ct,
-            pageOnly: true);
-        pageResponse.EnsureSuccessStatusCode();
-        var html = await pageResponse.Content.ReadAsStringAsync(ct);
-        var pageCompletedAt = Stopwatch.GetTimestamp();
-        var serverDate = pageResponse.Headers.Date?.UtcDateTime;
+        var (html, serverDate, pageCompletedAt) = await GetExHentaiPageAsync(pageUri, options.RequestContext, ct);
         if (serverDate.HasValue && Math.Abs((serverDate.Value - DateTime.UtcNow).TotalSeconds) > 60)
             serverDate = null;
-        ThrowIfBanned(html);
         var page = new CQ(html);
         var imageSource = page["#img"].Attr("src");
         if (string.IsNullOrWhiteSpace(imageSource))
@@ -87,10 +83,7 @@ public partial class ExHentaiClient
         CancellationToken ct = default)
     {
         RequireAccount(context);
-        using var response = await SendImageRequestAsync(new Uri(AccountBalanceUrl), context, ct, pageOnly: true);
-        response.EnsureSuccessStatusCode();
-        var html = await response.Content.ReadAsStringAsync(ct);
-        ThrowIfBanned(html);
+        var (html, _, _) = await GetExHentaiPageAsync(new Uri(AccountBalanceUrl), context, ct);
         var page = new CQ(html);
         if (page["input[type=password]"].Any() ||
             Regex.IsMatch(page.Text(), @"(?:you (?:must|need to) (?:log|sign) in|not logged in)", RegexOptions.IgnoreCase))
@@ -170,8 +163,40 @@ public partial class ExHentaiClient
         return upper is > 0 and <= long.MaxValue ? (long) upper : null;
     }
 
-    private Task<HttpResponseMessage> SendExHentaiRequestAsync(string url, CancellationToken ct) =>
-        SendImageRequestAsync(ValidateImageRequestUri(url), null, ct, pageOnly: true);
+    private async Task<(string Html, DateTime? ServerDateUtc, long CompletedAt)> GetExHentaiPageAsync(Uri uri,
+        ExHentaiRequestContext? context, CancellationToken ct)
+    {
+        for (var attempt = 1;; attempt++)
+        {
+            // One permit per attempt, including body reads. Cancellation also interrupts a
+            // page waiting behind another caller; a retry must reacquire its own permit.
+            await _lock.WaitAsync(ct);
+            try
+            {
+                using var response = await SendImageRequestAsync(uri, context, ct, pageOnly: true);
+                response.EnsureSuccessStatusCode();
+                var html = await response.Content.ReadAsStringAsync(ct);
+                var completedAt = Stopwatch.GetTimestamp();
+                ThrowIfBanned(html);
+                return (html, response.Headers.Date?.UtcDateTime, completedAt);
+            }
+            catch (Exception e) when (attempt < MaxHtmlAttempts && TransientNetworkError.IsTransient(e, ct))
+            {
+                Logger.LogWarning(e, "Transient network error requesting {Url}, retrying ({Attempt}/{MaxAttempts})",
+                    uri.AbsoluteUri, attempt + 1, MaxHtmlAttempts);
+            }
+            finally
+            {
+                _lock.Release();
+            }
+
+            // Back off outside the page gate. Only safe page loads retry here; fullimg and
+            // image-byte requests stay single-attempt so a retry cannot bypass GP preflight.
+            await Task.Delay(
+                TransientNetworkError.GetBackoffDelay(attempt - 1, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10)),
+                ct);
+        }
+    }
 
     private async Task<HttpResponseMessage> SendImageRequestAsync(Uri uri, ExHentaiRequestContext? context,
         CancellationToken ct, bool pageOnly = false, Func<Uri, Task>? beforeOriginal = null,
