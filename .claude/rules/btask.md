@@ -434,6 +434,12 @@ its body cooperates — see the yield-point rules above, and keep long
 synchronous stretches (recursive directory walks especially) cancellable, or
 step 2 just burns its grace period and gives up.
 
+A component that starts or enqueues tasks on its own (a scheduler, a hosted
+service) must check `BTaskManager.IsShuttingDown` first: `Start` and `Enqueue`
+have no shutdown check, and `PrepareForShutdown` runs seconds before
+`ApplicationStopping` fires, so a task started in between would run into the
+teardown of step 3.
+
 ### Levels in practice
 
 `BTaskLevel.Critical` currently has **no members** — every task in the app is
