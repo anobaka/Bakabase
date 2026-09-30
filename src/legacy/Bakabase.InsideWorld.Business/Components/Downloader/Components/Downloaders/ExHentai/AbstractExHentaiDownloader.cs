@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -191,11 +193,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     throw new Exception($"Gallery reports torrents but no download links were available: {url}");
                 }
 
-                // Select the best torrent (largest size, most recent)
-                var bestTorrent = detail.Torrents
-                    .OrderByDescending(t => t.Size)
+                // Prefer a swarm with complete sources, then one with other active peers.
+                // Within each group choose larger content; preserve window order for exact ties.
+                var candidates = detail.Torrents
+                    .OrderByDescending(t => t.Seeds > 0 ? 2 : t.Peers > 0 ? 1 : 0)
+                    .ThenByDescending(t => t.Size)
+                    .ThenByDescending(t => t.Seeds)
+                    .ThenByDescending(t => t.Peers)
                     .ThenByDescending(t => t.UpdatedAt)
-                    .First();
+                    .ThenByDescending(t => t.Downloaded)
+                    .ToList();
 
                 var (galleryDirectory, _) = await ResolveGalleryDirectoryAsync();
                 var torrentFileName = FileNameSanitizer.Sanitize($"{betterName.RemoveInvalidFileNameChars()}.torrent");
@@ -207,18 +214,58 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     await onCurrentChanged(Localizer["Downloader_ExHentai_DownloadingTorrent"]);
                 }
 
-                var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                string? temporary = null;
+                var candidateErrors = new List<Exception>();
+                for (var index = 0; index < candidates.Count; index++)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var candidateTemporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                    var selected = false;
+                    var validatingMetadata = false;
+                    try
+                    {
+                        await Client.DownloadTorrent(candidates[index].DownloadUrl, candidateTemporary, ct);
+                        // A candidate must also be usable by the torrent engine before it can
+                        // replace the user's copy or create a durable download result.
+                        await using (var metadataStream = File.OpenRead(candidateTemporary))
+                        {
+                            validatingMetadata = true;
+                            var metadata = await Bakabase.Modules.Downloader.Components.TorrentMetadata
+                                .ReadBoundedAsync(metadataStream, ct);
+                            Bakabase.Modules.Downloader.Components.TorrentMetadata.Validate(metadata);
+                        }
+                        ct.ThrowIfCancellationRequested();
+                        temporary = candidateTemporary;
+                        selected = true;
+                        break;
+                    }
+                    catch (Exception error) when (error is HttpRequestException or HttpIOException or
+                                                   InvalidDataException or OperationCanceledException ||
+                                                   error is ArgumentException && validatingMetadata)
+                    {
+                        // A caller's cancellation wins; a request timeout may try another link.
+                        ct.ThrowIfCancellationRequested();
+                        candidateErrors.Add(error);
+                        if (index + 1 < candidates.Count)
+                            Logger.LogWarning("Could not acquire ExHentai torrent candidate {Candidate} of {Total}; trying the next candidate.",
+                                index + 1, candidates.Count);
+                    }
+                    finally
+                    {
+                        if (!selected && File.Exists(candidateTemporary)) File.Delete(candidateTemporary);
+                    }
+                }
+
+                if (temporary == null)
+                {
+                    // Preserve every network failure for the existing transient-retry classifier.
+                    // A single candidate retains its original exception type.
+                    if (candidateErrors.Count == 1) ExceptionDispatchInfo.Capture(candidateErrors[0]).Throw();
+                    throw new AggregateException("All ExHentai torrent candidates failed to download or validate.", candidateErrors);
+                }
+
                 try
                 {
-                    await Client.DownloadTorrent(bestTorrent.DownloadUrl, temporary, ct);
-                    // Verify before replacing the user's copy. An HTTP-200 error page or metadata
-                    // rejected by the engine must never become a cached .torrent on disk.
-                    await using (var metadataStream = File.OpenRead(temporary))
-                    {
-                        var metadata = await Bakabase.Modules.Downloader.Components.TorrentMetadata
-                            .ReadBoundedAsync(metadataStream, ct);
-                        Bakabase.Modules.Downloader.Components.TorrentMetadata.Validate(metadata);
-                    }
                     ct.ThrowIfCancellationRequested();
                     ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectory, path);
                     File.Move(temporary, path, true);

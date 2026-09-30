@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models;
 
@@ -8,6 +9,41 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 public partial class ExHentaiClient
 {
     private const int MaxTorrentResponseBytes = 4 * 1024 * 1024;
+    private const string PersonalizedTorrentPathPattern =
+        "^/torrent/(?<tracker>[0-9]+)/[0-9]+-[a-zA-Z0-9]+/(?<hash>[a-fA-F0-9]{40})\\.torrent$";
+
+    private static string ResolveTorrentDownloadLink(string torrentPageUrl, string href, string? onclick)
+    {
+        var page = new Uri(torrentPageUrl);
+        var fallback = new Uri(page, WebUtility.HtmlDecode(href));
+        if (string.IsNullOrWhiteSpace(onclick)) return fallback.AbsoluteUri;
+
+        // The site displays a public href but clicks navigate to a personalized torrent.
+        // Read only this literal assignment; never evaluate scripts or accept other routes.
+        var assignment = Regex.Match(WebUtility.HtmlDecode(onclick),
+            "^\\s*document\\.location\\s*=\\s*(?<quote>['\"])(?<url>[^'\"\\r\\n]+)\\k<quote>\\s*;\\s*return\\s+false\\s*;?\\s*$",
+            RegexOptions.CultureInvariant);
+        if (!assignment.Success ||
+            !Uri.TryCreate(assignment.Groups["url"].Value, UriKind.Absolute, out var personalized) ||
+            personalized.Scheme != Uri.UriSchemeHttps ||
+            !string.Equals(personalized.Authority, page.Authority, StringComparison.OrdinalIgnoreCase) ||
+            !string.IsNullOrEmpty(personalized.UserInfo) ||
+            !string.IsNullOrEmpty(personalized.Query) || !string.IsNullOrEmpty(personalized.Fragment))
+            return fallback.AbsoluteUri;
+
+        var publicPath = Regex.Match(fallback.AbsolutePath,
+            "^/torrent/(?<tracker>[0-9]+)/(?<hash>[a-fA-F0-9]{40})\\.torrent$", RegexOptions.CultureInvariant);
+        var accountPath = Regex.Match(personalized.AbsolutePath, PersonalizedTorrentPathPattern,
+            RegexOptions.CultureInvariant);
+        return publicPath.Success && accountPath.Success &&
+               string.Equals(fallback.Authority, page.Authority, StringComparison.OrdinalIgnoreCase) &&
+               fallback.Scheme == Uri.UriSchemeHttps && string.IsNullOrEmpty(fallback.UserInfo) &&
+               publicPath.Groups["tracker"].Value == accountPath.Groups["tracker"].Value &&
+               string.Equals(publicPath.Groups["hash"].Value, accountPath.Groups["hash"].Value,
+                   StringComparison.OrdinalIgnoreCase)
+            ? personalized.AbsoluteUri
+            : fallback.AbsoluteUri;
+    }
 
     public async Task DownloadTorrent(string torrentUrl, string downloadPath, CancellationToken ct = default,
         ExHentaiRequestContext? context = null)
@@ -23,12 +59,22 @@ public partial class ExHentaiClient
             if (uri.LocalPath.StartsWith("/fullimg", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("A torrent link points to an original-image download. It was blocked to avoid account charges.");
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-            request.Options.Set(ThirdPartyRequestOptions.SkipConfiguredHeaders, true);
             var trusted = uri.Host is "exhentai.org" or "e-hentai.org" or "www.exhentai.org" or "www.e-hentai.org";
             if (trusted && uri.Scheme != Uri.UriSchemeHttps)
                 throw new InvalidDataException("Account requests require HTTPS.");
+            var personalizedPath = Regex.Match(uri.AbsolutePath, PersonalizedTorrentPathPattern,
+                RegexOptions.CultureInvariant);
+            if (!trusted && personalizedPath.Success)
+                throw new InvalidDataException("A personalized torrent link cannot be sent to another site.");
+            if (personalizedPath.Success)
+                request.Options.Set(ThirdPartyRequestOptions.RequestLogKey,
+                    $"{uri.Scheme}://{uri.Authority}/torrent/{personalizedPath.Groups["tracker"].Value}/[redacted]/{personalizedPath.Groups["hash"].Value}.torrent");
+            // A normal torrent download continues the authenticated gallery/window session,
+            // including cookies refreshed by Set-Cookie. A new "torrent:host" container lost
+            // that state. Only explicit account snapshots bypass configured account headers.
+            request.Options.Set(ThirdPartyRequestOptions.SkipConfiguredHeaders, !trusted || context != null);
             request.Options.Set(ThirdPartyRequestOptions.AccountKey,
-                $"{context?.AccountKey ?? "torrent"}:{uri.Host}");
+                trusted && context == null ? "default" : $"{context?.AccountKey ?? "torrent"}:{uri.Host}");
             if (trusted && context != null)
             {
                 request.Options.Set(ThirdPartyRequestOptions.Cookie, context.Cookie);

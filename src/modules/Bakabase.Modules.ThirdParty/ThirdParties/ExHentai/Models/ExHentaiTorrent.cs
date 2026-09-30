@@ -4,6 +4,8 @@ public record ExHentaiTorrent
 {
     public string DownloadUrl { get; set; } = null!;
     public int Downloaded { get; set; }
+    public int? Seeds { get; set; }
+    public int? Peers { get; set; }
     public DateTime UpdatedAt { get; set; }
     public long Size { get; set; }
 }
