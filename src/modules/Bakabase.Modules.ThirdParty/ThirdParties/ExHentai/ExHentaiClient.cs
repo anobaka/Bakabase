@@ -323,9 +323,17 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
                         DownloadUrl = downloadLink,
                         Size = ConvertToBytes(size),
                         Downloaded = int.Parse(downloaded),
+                        Seeds = ParseSourceCount("Seeds"),
+                        Peers = ParseSourceCount("Peers"),
                         UpdatedAt = DateTime.Parse(posted)
                     };
                     torrents.Add(torrent);
+
+                    int? ParseSourceCount(string field) => meta.TryGetValue(field, out var raw) &&
+                        int.TryParse(raw, NumberStyles.Integer | NumberStyles.AllowThousands,
+                            CultureInfo.InvariantCulture, out var count) && count >= 0
+                            ? count
+                            : null;
                 }
             }
 
