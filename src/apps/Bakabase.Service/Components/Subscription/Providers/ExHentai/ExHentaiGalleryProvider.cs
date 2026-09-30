@@ -69,7 +69,7 @@ public class ExHentaiGalleryProvider : ISubscriptionProvider
         var target = TryParse(subscription.TargetJson)
                      ?? throw new InvalidOperationException("Invalid target payload");
 
-        var detail = await _client.ParseDetail(target.Url, includeTorrents: false);
+        var detail = await _client.GetGalleryMetadata(target.Url, ct);
 
         return
         [

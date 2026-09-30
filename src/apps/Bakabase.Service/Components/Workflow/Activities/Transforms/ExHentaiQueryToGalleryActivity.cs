@@ -43,13 +43,16 @@ public class ExHentaiQueryToGalleryActivity : IWorkflowActivity
             return WorkflowItemOutcome.DropItem;
         }
 
-        var list = await _client.Search(new ExHentaiSearchRequestModel { Keyword = q.Query });
+        var list = await _client.Search(new ExHentaiSearchRequestModel { Keyword = q.Query }, ct,
+            includeMetadata: false);
         var first = list.Resources?.FirstOrDefault();
         if (first is null)
         {
             ctx.Logger.LogInformation("No ExHentai result for query \"{Query}\"", q.Query);
             return WorkflowItemOutcome.DropItem;
         }
+
+        first = await _client.GetGalleryMetadata(first.Url, ct);
 
         return WorkflowItemOutcome.ReplaceWith(new SubscriptionItem(
             first.Id.ToString(),

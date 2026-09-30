@@ -293,4 +293,82 @@ public sealed class DownloaderTransientRetryTests
         Assert.AreEqual(1, downloader.Runs);
         Assert.IsNull(downloader.Current, "A stopped task must not keep promising a retry.");
     }
+
+    [TestMethod]
+    public async Task StopAndWait_DrainsTheOldRunBeforeStartingWithNewOptions()
+    {
+        var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cancelling = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseOld = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var newStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseNew = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var seenOptions = new List<string?>();
+        using var downloader = Build(async (self, task, ct, run) =>
+        {
+            seenOptions.Add(task.Options);
+            if (run == 1)
+            {
+                firstStarted.SetResult();
+                try { await Task.Delay(Timeout.Infinite, ct); }
+                catch (OperationCanceledException)
+                {
+                    cancelling.SetResult();
+                    await releaseOld.Task;
+                    self.WriteLateStep("old torrent request");
+                    throw;
+                }
+            }
+            else
+            {
+                self.WriteLateStep("new image request");
+                newStarted.SetResult();
+                await releaseNew.Task;
+            }
+        });
+        var oldTask = NewTask();
+        oldTask.Options = "{\"preferTorrent\":true}";
+        await downloader.Start(oldTask);
+        await firstStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var drain = downloader.StopAndWait(DownloaderStopBy.ManuallyStop);
+        await cancelling.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var newTask = NewTask();
+        newTask.Options = "{\"preferTorrent\":false}";
+        var restart = downloader.Start(newTask);
+        Assert.IsFalse(drain.IsCompleted);
+        Assert.IsFalse(restart.IsCompleted, "A restart must wait for the cancelled runner to finish.");
+        releaseOld.SetResult();
+        await drain.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.IsTrue(await restart.WaitAsync(TimeSpan.FromSeconds(5)));
+        await newStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.AreEqual(DownloaderStatus.Downloading, downloader.Status);
+        Assert.AreEqual("new image request", downloader.Current);
+        CollectionAssert.AreEqual(new[] {oldTask.Options, newTask.Options}, seenOptions);
+        releaseNew.SetResult();
+        await WaitUntilSettled(downloader);
+    }
+
+    [TestMethod]
+    public async Task StopAndWait_AlsoDrainsAStartWhoseInitialProgressCallbackIsPending()
+    {
+        var starting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseStart = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var downloader = Build(async (_, _, ct, _) => await Task.Delay(Timeout.Infinite, ct));
+        downloader.OnProgress += async progress =>
+        {
+            if (progress != 0) return;
+            starting.SetResult();
+            await releaseStart.Task;
+        };
+        var start = downloader.Start(NewTask());
+        await starting.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.AreEqual(DownloaderStatus.Starting, downloader.Status);
+        var drain = downloader.StopAndWait(DownloaderStopBy.ManuallyStop);
+        Assert.IsFalse(drain.IsCompleted);
+        releaseStart.SetResult();
+        Assert.IsTrue(await start.WaitAsync(TimeSpan.FromSeconds(5)));
+        await drain.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.AreEqual(DownloaderStatus.Stopped, downloader.Status);
+        Assert.AreEqual(DownloaderStopBy.ManuallyStop, downloader.StoppedBy);
+        Assert.IsNull(downloader.Current);
+    }
 }

@@ -30,7 +30,7 @@ public class ExHentaiMetadataProvider : IMetadataProvider
     public async Task<SourceDetailedMetadata?> FetchMetadataAsync(string sourceKey, CancellationToken ct)
     {
         var url = $"https://exhentai.org/g/{sourceKey}/";
-        var detail = await _exHentaiClient.ParseDetail(url, false);
+        var detail = await _exHentaiClient.GetGalleryMetadata(url, ct);
         if (detail == null) return null;
 
         var result = new SourceDetailedMetadata
@@ -46,7 +46,7 @@ public class ExHentaiMetadataProvider : IMetadataProvider
                 [nameof(ExHentaiMetadataField.Category)] = detail.Category.ToString(),
                 [nameof(ExHentaiMetadataField.CoverUrl)] = detail.CoverUrl,
                 [nameof(ExHentaiMetadataField.FileCount)] = (decimal)detail.FileCount,
-                [nameof(ExHentaiMetadataField.PageCount)] = (decimal)detail.PageCount,
+                [nameof(ExHentaiMetadataField.PageCount)] = detail.PageCount > 0 ? (decimal)detail.PageCount : null,
             }
         };
 

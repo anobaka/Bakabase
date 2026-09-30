@@ -19,6 +19,15 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         /// Per-request cookie string. When set, the handler uses this instead of Options.Cookie.
         /// </summary>
         public static readonly HttpRequestOptionsKey<string> Cookie = new("ThirdParty.Cookie");
+
+        /// <summary>Do not add configured Referer or extra headers to this request.</summary>
+        public static readonly HttpRequestOptionsKey<bool> SkipConfiguredHeaders = new("ThirdParty.SkipConfiguredHeaders");
+
+        /// <summary>Strip credentials and Referer after HttpClient defaults and source headers are merged.</summary>
+        public static readonly HttpRequestOptionsKey<bool> SuppressSensitiveHeaders = new("ThirdParty.SuppressSensitiveHeaders");
+
+        /// <summary>Final local check after source pacing, immediately before sending. Must not make HTTP requests.</summary>
+        public static readonly HttpRequestOptionsKey<Func<CancellationToken, Task>> BeforeSend = new("ThirdParty.BeforeSend");
     }
 
     public abstract class AbstractThirdPartyHttpMessageHandler<TOptions> : HttpClientHandler
@@ -122,17 +131,26 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                 }
             }
 
-            if (Options.Referer.IsNotEmpty())
+            request.Options.TryGetValue(ThirdPartyRequestOptions.SkipConfiguredHeaders, out var skipConfiguredHeaders);
+            if (!skipConfiguredHeaders && Options.Referer.IsNotEmpty())
             {
                 request.Headers.Add("Referer", Options.Referer);
             }
 
-            if (Options.Headers != null)
+            if (!skipConfiguredHeaders && Options.Headers != null)
             {
                 foreach (var (k, v) in Options.Headers)
                 {
                     request.Headers.Add(k, v);
                 }
+            }
+
+            if (request.Options.TryGetValue(ThirdPartyRequestOptions.SuppressSensitiveHeaders, out var suppress) && suppress)
+            {
+                request.Headers.Remove("Cookie");
+                request.Headers.Remove("Authorization");
+                request.Headers.Remove("Proxy-Authorization");
+                request.Headers.Remove("Referer");
             }
         }
 
@@ -229,6 +247,8 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             {
                 BeforeRequesting(request, cancellationToken);
                 WaitForRequestStartAsync(cancellationToken).GetAwaiter().GetResult();
+                if (request.Options.TryGetValue(ThirdPartyRequestOptions.BeforeSend, out var beforeSend))
+                    beforeSend(cancellationToken).GetAwaiter().GetResult();
                 var response = _logger.Capture(ThirdPartyId, () => base.Send(request, cancellationToken),
                     request.RequestUri?.ToString(), ct: cancellationToken);
                 _processResponse(request, response);
@@ -248,6 +268,8 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             {
                 await BeforeRequestingAsync(request, cancellationToken).ConfigureAwait(false);
                 await WaitForRequestStartAsync(cancellationToken).ConfigureAwait(false);
+                if (request.Options.TryGetValue(ThirdPartyRequestOptions.BeforeSend, out var beforeSend))
+                    await beforeSend(cancellationToken).ConfigureAwait(false);
                 // Capacity covers the existing SendAsync boundary (response headers), not body reads.
                 // Never hold the scheduling lock while the network is pending: slow headers must not
                 // serialize every request regardless of MaxConcurrency.

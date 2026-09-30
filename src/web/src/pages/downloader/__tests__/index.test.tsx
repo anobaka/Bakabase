@@ -17,13 +17,17 @@ import {
   ThirdPartyId,
 } from "@/sdk/constants";
 
-const { getDefinitions, startTasks, stopTasks, createPortal } = vi.hoisted(() => ({
-  getDefinitions: vi.fn(),
-  startTasks: vi.fn(),
-  stopTasks: vi.fn(),
-  createPortal: vi.fn(),
-}));
+const { getDefinitions, startTasks, stopTasks, createPortal, directDownload, directResults } =
+  vi.hoisted(() => ({
+    getDefinitions: vi.fn(),
+    startTasks: vi.fn(),
+    stopTasks: vi.fn(),
+    createPortal: vi.fn(),
+    directDownload: vi.fn(),
+    directResults: new Map<number, Promise<void>>(),
+  }));
 
+vi.mock("../directDownload", () => ({ downloadTaskDirectly: directDownload }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
     downloadTask: {
@@ -55,16 +59,27 @@ vi.mock("../components/TaskRow", () => ({
     task,
     onClick,
     onShowError,
+    onDownloadDirectly,
   }: {
     task: DownloadTask;
     onClick: (id: number, event: unknown) => void;
     onShowError: (task: DownloadTask) => void;
+    onDownloadDirectly: (id: number) => Promise<void>;
   }) => (
     <>
       <button data-row-id={task.id} onClick={(event) => onClick(task.id, event)}>
         {task.name}
       </button>
       <button onClick={() => onShowError(task)}>{`message-${task.id}`}</button>
+      <button
+        onClick={() => {
+          const result = onDownloadDirectly(task.id);
+
+          directResults.set(task.id, result);
+          // The real row reports this rejection as a visible error; tests inspect it below.
+          void result.catch(() => undefined);
+        }}
+      >{`direct-${task.id}`}</button>
     </>
   ),
 }));
@@ -176,6 +191,7 @@ const rowIds = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  directResults.clear();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal(
     "ResizeObserver",
@@ -191,6 +207,7 @@ beforeEach(() => {
   });
   startTasks.mockResolvedValue({ code: ResponseCode.Success });
   stopTasks.mockResolvedValue({ code: ResponseCode.Success });
+  directDownload.mockResolvedValue({ code: ResponseCode.Success });
   useDownloadTasksStore
     .getState()
     .setTasks([
@@ -211,6 +228,60 @@ afterEach(async () => {
 });
 
 describe("downloader page task selection", () => {
+  it("starts a direct download with one atomic task action and no extra normal start", async () => {
+    await act(async () => root.render(<DownloaderPage />));
+    await choose("direct-22");
+    await directResults.get(22);
+
+    expect(directDownload).toHaveBeenCalledExactlyOnceWith(22);
+    expect(startTasks).not.toHaveBeenCalled();
+    expect(stopTasks).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["first", DownloadTaskActionOnConflict.StopOthers],
+    ["queue", DownloadTaskActionOnConflict.Ignore],
+  ])(
+    "retries direct download after choosing %s in the normal conflict prompt",
+    async (choice, action) => {
+      directDownload
+        .mockResolvedValueOnce({ code: ResponseCode.Conflict, message: "Another task is running" })
+        .mockResolvedValueOnce({ code: ResponseCode.Success });
+      await act(async () => root.render(<DownloaderPage />));
+      await choose("direct-22");
+      const modal = createPortal.mock.calls.at(-1)![1];
+
+      expect(modal.title).toBe("downloader.confirm.conflictedTasks");
+      expect(modal.children).toBe("Another task is running");
+      expect(directDownload).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        if (choice === "first") modal.onOk();
+        // Real Modal closes after OK too; that must not choose Ignore a second time.
+        modal.onClose();
+        await directResults.get(22);
+      });
+
+      expect(directDownload.mock.calls).toEqual([[22], [22, action]]);
+      expect(startTasks).not.toHaveBeenCalled();
+    },
+  );
+
+  it("propagates a refused direct download so the row can display the failure", async () => {
+    directDownload.mockResolvedValueOnce({
+      code: ResponseCode.InvalidPayloadOrOperation,
+      message: "Cookie expired",
+    });
+    await act(async () => root.render(<DownloaderPage />));
+    await choose("direct-22");
+
+    await expect(directResults.get(22)).rejects.toThrow("Cookie expired");
+    expect(startTasks).not.toHaveBeenCalled();
+    expect(useDownloadTasksStore.getState().tasks.find((item) => item.id === 22)!.status).toBe(
+      DownloadTaskStatus.Idle,
+    );
+  });
+
   it("starts and stops only the selected task from the toolbar", async () => {
     await act(async () => root.render(<DownloaderPage />));
     await choose("Bravo");

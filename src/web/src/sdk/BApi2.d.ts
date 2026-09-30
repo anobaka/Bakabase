@@ -10362,6 +10362,10 @@ export interface components {
             defaultPath?: string;
             namingConvention?: string;
             preferTorrent: boolean;
+            preferOriginalImages: boolean;
+            allowOriginalImageGpSpending: boolean;
+            originalImageMinimumGpBalance?: number;
+            originalImageMaximumGpCostPerTask?: number;
             /** Format: int32 */
             downloadResultWorkflowId?: number;
             prioritizeTasksWithTorrent: boolean;
@@ -10610,6 +10614,10 @@ export interface components {
             defaultPath?: string;
             namingConvention?: string;
             preferTorrent?: boolean;
+            preferOriginalImages?: boolean;
+            allowOriginalImageGpSpending?: boolean;
+            originalImageMinimumGpBalance?: number;
+            originalImageMaximumGpCostPerTask?: number;
             /** Format: int32 */
             downloadResultWorkflowId?: number;
             prioritizeTasksWithTorrent?: boolean;

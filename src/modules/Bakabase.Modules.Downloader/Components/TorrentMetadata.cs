@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MonoTorrent;
@@ -18,8 +19,28 @@ public static class TorrentMetadata
 
     internal static Torrent Parse(byte[] metadata)
     {
-        if (metadata.Length is 0 or > MaxMetadataBytes || !Torrent.TryLoad(metadata, out var torrent))
-            throw new ArgumentException("Choose a valid torrent file no larger than 4 MiB.", nameof(metadata));
+        ArgumentNullException.ThrowIfNull(metadata);
+        if (metadata.Length == 0)
+            throw new ArgumentException("The torrent metadata is empty.", nameof(metadata));
+        if (metadata.Length > MaxMetadataBytes)
+            throw new ArgumentException("Torrent metadata must be no larger than 4 MiB.", nameof(metadata));
+        if (Encoding.UTF8.GetString(metadata.AsSpan(0, Math.Min(metadata.Length, 256)))
+                .TrimStart('\uFEFF', ' ', '\t', '\r', '\n').StartsWith('<'))
+            throw new ArgumentException("The download returned an HTML or XML page instead of a torrent file. " +
+                                        "Check that the torrent link is available and your login is valid.", nameof(metadata));
+
+        Torrent torrent;
+        try
+        {
+            // TryLoad suppresses the parsing exception, hiding the distinction between a bad
+            // response and metadata unsupported by the torrent engine.
+            torrent = Torrent.Load(metadata);
+        }
+        catch (Exception e)
+        {
+            throw new ArgumentException($"The downloaded data is not valid BitTorrent metadata ({metadata.Length} bytes).",
+                nameof(metadata), e);
+        }
         ValidatePaths(torrent);
         return torrent;
     }

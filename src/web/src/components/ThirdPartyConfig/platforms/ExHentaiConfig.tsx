@@ -236,6 +236,82 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
                 patchWithToast({ torrentCheckValidityHours: Number.isNaN(v) ? 0 : v })
               }
             />
+            <div className="space-y-3 rounded-lg border border-default-200 p-3">
+              <Checkbox
+                isSelected={options?.preferOriginalImages ?? false}
+                onValueChange={(v) => patchWithToast({ preferOriginalImages: v })}
+              >
+                {t("thirdPartyConfig.exHentai.originalImages.prefer")}
+              </Checkbox>
+              <div
+                className="rounded-lg border border-warning-300 bg-warning-50 p-3 text-sm text-warning-700"
+                role="note"
+              >
+                {t("thirdPartyConfig.exHentai.originalImages.warning")}
+              </div>
+              <p className="text-xs text-default-500">
+                {t("thirdPartyConfig.exHentai.originalImages.scope")}
+              </p>
+              {options?.preferOriginalImages && (
+                <>
+                  <p className="text-sm text-default-500">
+                    {t("thirdPartyConfig.exHentai.originalImages.freeOnly")}
+                  </p>
+                  <p className="text-sm text-default-500">
+                    {t("thirdPartyConfig.exHentai.originalImages.unavailable")}
+                  </p>
+                  <Checkbox
+                    isSelected={options?.allowOriginalImageGpSpending ?? false}
+                    onValueChange={(v) => patchWithToast({ allowOriginalImageGpSpending: v })}
+                  >
+                    {t("thirdPartyConfig.exHentai.originalImages.allowGp")}
+                  </Checkbox>
+                  {options?.allowOriginalImageGpSpending && (
+                    <div className="space-y-3">
+                      <NumberInput
+                        description={t<string>(
+                          "thirdPartyConfig.exHentai.originalImages.minimumGpDescription",
+                        )}
+                        formatOptions={{ maximumFractionDigits: 0 }}
+                        label={t<string>("thirdPartyConfig.exHentai.originalImages.minimumGp")}
+                        maxValue={Number.MAX_SAFE_INTEGER}
+                        minValue={0}
+                        step={1}
+                        value={options?.originalImageMinimumGpBalance ?? 10000}
+                        onValueChange={(v) => {
+                          const value = Number.isNaN(v) ? 10000 : v;
+
+                          if (Number.isSafeInteger(value) && value >= 0) {
+                            patchWithToast({ originalImageMinimumGpBalance: value });
+                          }
+                        }}
+                      />
+                      <NumberInput
+                        description={t<string>(
+                          "thirdPartyConfig.exHentai.originalImages.maximumGpDescription",
+                        )}
+                        formatOptions={{ maximumFractionDigits: 0 }}
+                        label={t<string>("thirdPartyConfig.exHentai.originalImages.maximumGp")}
+                        maxValue={Number.MAX_SAFE_INTEGER}
+                        minValue={0}
+                        step={1}
+                        value={options?.originalImageMaximumGpCostPerTask ?? 100000}
+                        onValueChange={(v) => {
+                          const value = Number.isNaN(v) ? 100000 : v;
+
+                          if (Number.isSafeInteger(value) && value >= 0) {
+                            patchWithToast({ originalImageMaximumGpCostPerTask: value });
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-default-500">
+                        {t("thirdPartyConfig.exHentai.originalImages.gpPolicy")}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         ),
       },

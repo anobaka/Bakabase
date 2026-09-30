@@ -82,7 +82,8 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
                 new { Url = searchUrl, Keyword = name });
 
             var searchRsp = await _exHentaiClient.Search(
-                new ExHentaiSearchRequestModel {Keyword = name, PageIndex = 1, PageSize = 1});
+                new ExHentaiSearchRequestModel {Keyword = name, PageIndex = 1, PageSize = 1}, ct,
+                includeMetadata: false);
 
             logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
                 $"Search returned {searchRsp?.Resources?.Count ?? 0} results",
@@ -98,10 +99,10 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
             if (targetUrl != null)
             {
                 logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
-                    $"Fetching detail page",
+                    $"Fetching gallery metadata",
                     new { Url = targetUrl });
 
-                var detail = await _exHentaiClient.ParseDetail(targetUrl, false);
+                var detail = await _exHentaiClient.GetGalleryMetadata(targetUrl, ct);
 
                 logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
                     detail != null ? $"Got detail with {detail.Tags?.Count ?? 0} tag groups" : "Failed to parse detail",
@@ -112,6 +113,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
 
                     var ctx = new ExHentaiEnhancerContext
                     {
+                        Name = detail.Name,
                         Introduction = detail.Introduction,
                         Rating = detail.Rate > 0 ? detail.Rate : null
                     };

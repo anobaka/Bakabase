@@ -12,6 +12,10 @@ public class ExHentaiOptionsPatchInputModel
     public string? DefaultPath { get; set; }
     public string? NamingConvention { get; set; }
     public bool? PreferTorrent { get; set; }
+    public bool? PreferOriginalImages { get; set; }
+    public bool? AllowOriginalImageGpSpending { get; set; }
+    public long? OriginalImageMinimumGpBalance { get; set; }
+    public long? OriginalImageMaximumGpCostPerTask { get; set; }
     /// <summary>Positive definition ID, or 0 to disable post-processing.</summary>
     public int? DownloadResultWorkflowId { get; set; }
     public bool? PrioritizeTasksWithTorrent { get; set; }

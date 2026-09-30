@@ -76,7 +76,7 @@ public class ExHentaiIdentityLookup(ExHentaiClient client) : IExternalIdentityLo
             return null;
         }
 
-        var gallery = await client.ParseDetail($"https://exhentai.org/g/{parts[0]}/{parts[1]}/", false);
+        var gallery = await client.GetGalleryMetadata($"https://exhentai.org/g/{parts[0]}/{parts[1]}/", ct);
         return gallery == null
             ? null
             : new ExternalIdentityDetail(sourceKey, gallery.Name,

@@ -30,6 +30,7 @@ import BatchEditModal from "./components/BatchEditModal";
 import TaskErrorMessage from "./components/TaskErrorMessage";
 import TaskRow, { DOWNLOAD_TASK_ITEM_HEIGHT } from "./components/TaskRow";
 import DownloadTaskFilters, { type DownloadTaskFilter } from "./components/DownloadTaskFilters";
+import { downloadTaskDirectly } from "./directDownload";
 
 import { ThirdPartyId } from "@/sdk/constants";
 import {
@@ -518,6 +519,45 @@ const DownloaderPage = () => {
     rowEnvRef.current.startTasksManually([id]);
   }, []);
 
+  const handleRowDownloadDirectly = useCallback(async (id: number) => {
+    let response = await downloadTaskDirectly(id);
+
+    if (response.code === ResponseCode.Conflict) {
+      const { createPortal: portal, t: translate } = rowEnvRef.current;
+      const action = await new Promise<DownloadTaskActionOnConflict>((resolve) => {
+        let decided = false;
+
+        portal(Modal, {
+          defaultVisible: true,
+          size: "lg",
+          title: translate<string>("downloader.confirm.conflictedTasks"),
+          children: response.message,
+          footer: {
+            actions: ["ok", "cancel"],
+            okProps: { children: translate<string>("downloader.action.downloadSelectedFirst") },
+            cancelProps: { children: translate<string>("downloader.action.addToQueue") },
+          },
+          onOk: () => {
+            decided = true;
+            resolve(DownloadTaskActionOnConflict.StopOthers);
+          },
+          onClose: () => {
+            // Modal also closes after OK; that must not dispatch a second queue request.
+            if (!decided) resolve(DownloadTaskActionOnConflict.Ignore);
+          },
+        });
+      });
+
+      response = await downloadTaskDirectly(id, action);
+    }
+
+    if (response.code !== ResponseCode.Success) {
+      throw new Error(
+        response.message || rowEnvRef.current.t<string>("downloader.toast.directDownloadFailed"),
+      );
+    }
+  }, []);
+
   const handleRowStop = useCallback((id: number) => {
     rowEnvRef.current.withOptimisticStatus([id], DownloadTaskStatus.Stopping, () =>
       BApi.downloadTask.stopDownloadTasks([id]),
@@ -949,6 +989,7 @@ const DownloaderPage = () => {
                       onClick={handleRowClick}
                       onContextMenu={handleRowContextMenu}
                       onDelete={handleRowDelete}
+                      onDownloadDirectly={handleRowDownloadDirectly}
                       onEdit={handleRowEdit}
                       onOpenFolder={handleRowOpenFolder}
                       onShowError={handleRowShowError}

@@ -15,8 +15,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Png;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bootstrap.Components.Configuration.Abstractions;
+using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Extensions;
@@ -31,6 +32,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         protected readonly ExHentaiClient Client;
         protected readonly ITextVocabularyService TextVocabularyService;
         protected readonly IHostEnvironment Env;
+        // Serialize fullimg preflight + request across tasks; a balance read must not race
+        // another in-app original request against the same account.
+        private static readonly SemaphoreSlim OriginalImageGate = new(1, 1);
         
         protected AbstractExHentaiDownloader(IServiceProvider serviceProvider,
             IStringLocalizer<SharedResource> localizer,
@@ -61,8 +65,20 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         {
             var results = GetRequiredService<DownloadResultService>();
             var sourceKey = ExHentaiDownloadResultHelper.NormalizeSourceKey(url);
+            var exOptionsManager = GetRequiredService<IBOptionsManager<ExHentaiOptions>>();
+            var originalOptions = exOptionsManager.Value;
+            var preferOriginal = originalOptions.PreferOriginalImages;
+            var ledger = results.ExHentaiLedger;
             var previous = await results.GetLatestBySourceAsync(downloadTaskId, sourceKey, ct);
-            if (previous != null)
+            var canReusePrevious = previous != null && (preferTorrent || previous.Kind != DownloadResultKind.TorrentMetadata);
+            if (canReusePrevious && preferOriginal && previous!.Kind == DownloadResultKind.LocalFiles)
+            {
+                // Enabling originals must upgrade a completed resampled result too. Preserve
+                // the old result's history, and reuse only outputs from an original-preference pass.
+                var previousFiles = JsonSerializer.Deserialize<string[]>(previous.FilesJson) ?? [];
+                canReusePrevious = await ledger.HasPreferredImageResultAsync(downloadTaskId, sourceKey, previousFiles, ct);
+            }
+            if (canReusePrevious && previous != null)
             {
                 // The source work has already been durably handed off. A workflow retry must not
                 // scrape the gallery again, even after the workflow moved its actual files.
@@ -101,7 +117,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 : downloadPath;
             Directory.CreateDirectory(configuredRoot);
 
-            // Only fetch torrent info when preferTorrent is true
+            // Gallery metadata comes from the API; only fetch torrent download links when requested.
             var detail = await Client.ParseDetail(url, preferTorrent, ct);
             if (detail == null)
             {
@@ -159,8 +175,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     useTemplateDirectory ? renderedDirectory : null);
             }
 
-            // Check if torrents are available and download torrent instead of images
-            if (detail.Torrents?.Any() == true)
+            // Use the API count: an empty torrent window must not become a cached negative verdict.
+            if (preferTorrent && detail.TorrentCount > 0)
             {
                 // Write the positive verdict down as soon as it is known, before the download that
                 // may still fail: "this gallery has a torrent" is true either way, and it is what the
@@ -168,6 +184,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 if (onTorrentDetected != null)
                 {
                     await onTorrentDetected();
+                }
+
+                if (detail.Torrents?.Any() != true)
+                {
+                    throw new Exception($"Gallery reports torrents but no download links were available: {url}");
                 }
 
                 // Select the best torrent (largest size, most recent)
@@ -190,6 +211,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 try
                 {
                     await Client.DownloadTorrent(bestTorrent.DownloadUrl, temporary, ct);
+                    // Verify before replacing the user's copy. An HTTP-200 error page or metadata
+                    // rejected by the engine must never become a cached .torrent on disk.
+                    await using (var metadataStream = File.OpenRead(temporary))
+                    {
+                        var metadata = await Bakabase.Modules.Downloader.Components.TorrentMetadata
+                            .ReadBoundedAsync(metadataStream, ct);
+                        Bakabase.Modules.Downloader.Components.TorrentMetadata.Validate(metadata);
+                    }
+                    ct.ThrowIfCancellationRequested();
                     ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectory, path);
                     File.Move(temporary, path, true);
                     await OnFileDownloadedInternal(path);
@@ -253,12 +283,92 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             var checkpointContext = new RangeCheckpointContext(checkpoint);
             var workFiles = new ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
             var doneCount = 0;
+            var cookieSnapshot = originalOptions.Cookie;
+            var requestContext = preferOriginal ? new ExHentaiRequestContext(cookieSnapshot) : null;
+            var preflightWasFree = false;
+            long preflightMinimum = 0, preflightMaximum = 0;
+
+            bool CanConfirmFree(ExHentaiOriginalImageInfo info)
+            {
+                // A local clock alone cannot establish the site's free age/UTC window. The
+                // client supplies a validated server Date advanced using monotonic elapsed time.
+                return info.ServerTimeUtc is {Kind: DateTimeKind.Utc} serverNow &&
+                       (DateTime.UtcNow - serverNow).Duration() <= TimeSpan.FromMinutes(2) &&
+                       ExHentaiOriginalImagePolicy.IsPubliclyFree(detail.UpdateDt, serverNow);
+            }
+
+            async Task BeforeOriginalDownload(ExHentaiOriginalImageInfo info, CancellationToken token)
+            {
+                var current = exOptionsManager.Value;
+                if (!current.PreferOriginalImages || !string.Equals(current.Cookie, cookieSnapshot, StringComparison.Ordinal))
+                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the account or original-image preference changed. Retry to apply the new settings.");
+                preflightWasFree = CanConfirmFree(info);
+                if (preflightWasFree) return;
+                if (!current.AllowOriginalImageGpSpending)
+                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: this request could consume GP/Credits and spending is disabled. Previously downloaded files are retained. No paid original-image request was sent.");
+                var reservation = ExHentaiOriginalImagePolicy.EstimateGpReservation(info.OriginalSizeBytes);
+                var minimum = current.OriginalImageMinimumGpBalance ?? ExHentaiOriginalImagePolicy.DefaultMinimumGpBalance;
+                var maximum = current.OriginalImageMaximumGpCostPerTask ?? ExHentaiOriginalImagePolicy.DefaultMaximumGpCostPerTask;
+                if (minimum < 0 || maximum < 0)
+                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: GP limits must be non-negative.");
+                try
+                {
+                    var balance = await Client.GetAccountBalance(requestContext!, token);
+                    ExHentaiOriginalImagePolicy.CheckBalance(balance.GpBalance, reservation, minimum);
+                    await ledger.ReserveGpAsync(downloadTaskId, reservation, maximum, token);
+                    preflightMinimum = minimum;
+                    preflightMaximum = maximum;
+                }
+                catch (Exception e) when (e is not ExHentaiOriginalImageSafetyException && e is not OperationCanceledException)
+                {
+                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the account balance or durable GP budget could not be verified. No paid original-image request was sent. " + e.Message);
+                }
+            }
+
+            Task BeforeOriginalSend(ExHentaiOriginalImageInfo info, CancellationToken token)
+            {
+                token.ThrowIfCancellationRequested();
+                var current = exOptionsManager.Value;
+                if (!current.PreferOriginalImages || !string.Equals(current.Cookie, cookieSnapshot, StringComparison.Ordinal))
+                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the account or original-image preference changed while the request was queued.");
+                if (preflightWasFree)
+                {
+                    if (!CanConfirmFree(info))
+                        throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the free-download window ended while the request was queued. Retry to apply the current spending policy. No paid original-image request was sent.");
+                }
+                else if (!current.AllowOriginalImageGpSpending ||
+                         (current.OriginalImageMinimumGpBalance ?? ExHentaiOriginalImagePolicy.DefaultMinimumGpBalance) > preflightMinimum ||
+                         (current.OriginalImageMaximumGpCostPerTask ?? ExHentaiOriginalImagePolicy.DefaultMaximumGpCostPerTask) < preflightMaximum)
+                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: GP permission or limits changed while the request was queued. Retry to apply the new limits.");
+                return Task.CompletedTask;
+            }
+
+            async Task<string> ResolvePagePath(string title, string extension)
+            {
+                var values = new Dictionary<ExHentaiNamingFields, object?>(baseNameSegmentsValues)
+                {
+                    [ExHentaiNamingFields.PageTitle] = Path.GetFileNameWithoutExtension(title),
+                    [ExHentaiNamingFields.Extension] = extension
+                };
+                var filename = await BuildDownloadFilename(values);
+                var relative = stableTemplateDirectory == null ? filename :
+                    string.Equals(Path.GetDirectoryName(filename), stableTemplateDirectory, StringComparison.Ordinal)
+                        ? Path.GetFileName(filename)
+                        : throw new IOException("The gallery directory changed while downloading. Retry with a stable naming convention.");
+                var path = Path.GetFullPath(Path.Combine(galleryDirectoryForImages, relative));
+                ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages, path);
+                return path;
+            }
+
+            // API filecount counts images, while this count depends on the user's thumbnail
+            // layout. Read it only when downloading images, after a torrent-only pass can yield.
+            detail.PageCount = await Client.GetGalleryPageCount(detail.Url, ct);
 
             for (var page = 0; page < detail.PageCount; page++)
             {
                 var imageTitleAndPageUrls = await Client.GetImageTitleAndPageUrlsFromDetailUrl(detail.Url, page, ct);
 
-                var taskDataList = new List<(string filename, string pageUrl)>();
+                var taskDataList = new List<(string filename, string pageUrl, string title)>();
                 var options = await GetDownloaderOptionsAsync();
 
                 foreach (var (title, pageUrl) in imageTitleAndPageUrls)
@@ -266,31 +376,24 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     // Inspect only this work's expected files. Reconstructing ownership from
                     // page titles also recovers downloads interrupted after writing a checkpoint.
                     checkpointContext.Analyze(title);
-                    var extension = Path.GetExtension(title);
-                    var fullNameSegmentsValues = new Dictionary<ExHentaiNamingFields, object?>(baseNameSegmentsValues)
+                    var keyFullname = await ResolvePagePath(title, Path.GetExtension(title));
+                    var recordedImage = await ledger.GetImageAsync(downloadTaskId, sourceKey, pageUrl, ct);
+                    string? existing = null;
+                    if (recordedImage != null && (!preferOriginal || recordedImage.IsOriginal || recordedImage.OriginalUnavailable) && File.Exists(recordedImage.Path))
                     {
-                        [ExHentaiNamingFields.PageTitle] = Path.GetFileNameWithoutExtension(title),
-                        [ExHentaiNamingFields.Extension] = extension
-                    };
-                    var keyFilename = await BuildDownloadFilename(fullNameSegmentsValues);
-                    var relativeFile = stableTemplateDirectory == null
-                        ? keyFilename
-                        : string.Equals(Path.GetDirectoryName(keyFilename), stableTemplateDirectory,
-                            StringComparison.Ordinal)
-                            ? Path.GetFileName(keyFilename)
-                            : throw new IOException("The gallery directory changed while downloading. Retry with a stable naming convention.");
-                    var keyFullname = Path.GetFullPath(Path.Combine(galleryDirectoryForImages, relativeFile));
-                    ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages,
-                        keyFullname);
-                    if (File.Exists(keyFullname))
+                        ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages, recordedImage.Path);
+                        existing = recordedImage.Path;
+                    }
+                    else if (!preferOriginal && File.Exists(keyFullname)) existing = keyFullname;
+                    if (existing != null)
                     {
-                        workFiles[keyFullname] = 0;
-                        await OnFileDownloadedInternal(keyFullname);
+                        workFiles[existing] = 0;
+                        await OnFileDownloadedInternal(existing);
                         doneCount++;
                     }
                     else
                     {
-                        taskDataList.Add((keyFullname, pageUrl));
+                        taskDataList.Add((keyFullname, pageUrl, title));
                     }
                 }
 
@@ -305,7 +408,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 }
 
                 // Avoid large mount of tasks being created.
-                var threads = options.MaxConcurrency;
+                // Original downloads stop on the first financial preflight failure. Keep their
+                // requests sequential so later pages cannot spend while a failed page unwinds.
+                var threads = preferOriginal ? 1 : Math.Max(1, options.MaxConcurrency);
                 var sm = new SemaphoreSlim(threads, threads);
                 var tasks = new ConcurrentBag<Task>();
 
@@ -328,7 +433,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     }
                 }
 
-                foreach (var (fullname, pageUrl) in taskDataList)
+                foreach (var (fullname, pageUrl, title) in taskDataList)
                 {
                     var dir = Path.GetDirectoryName(fullname)!;
                     ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages,
@@ -351,7 +456,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     }
 
                     await sm.WaitAsync(ct);
-                    tasks.Add(Task.Run(async () =>
+                    async Task DownloadPage()
                     {
                         try
                         {
@@ -360,17 +465,36 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                             const int maxTryTimes = 10;
                             var tryTimes = 0;
                             byte[] data;
-                            string? contentType = null;
+                            var isOriginal = false;
+                            var originalUnavailable = false;
                             while (true)
                             {
                                 try
                                 {
-                                    var r = await Client.DownloadImage(pageUrl, ct);
+                                    ExHentaiDownloadedImage r;
+                                    if (preferOriginal)
+                                    {
+                                        await OriginalImageGate.WaitAsync(ct);
+                                        try
+                                        {
+                                            r = await Client.DownloadImage(pageUrl, new ExHentaiImageDownloadOptions
+                                            {
+                                                PreferOriginal = true,
+                                                RequestContext = requestContext,
+                                                BeforeOriginalDownload = BeforeOriginalDownload,
+                                                BeforeOriginalSend = BeforeOriginalSend
+                                            }, ct);
+                                        }
+                                        finally { OriginalImageGate.Release(); }
+                                    }
+                                    else r = await Client.DownloadImage(pageUrl, new ExHentaiImageDownloadOptions(), ct);
                                     data = r.Data;
-                                    contentType = r.ContentType;
+                                    isOriginal = r.IsOriginal;
+                                    originalUnavailable = r.OriginalUnavailable;
                                     break;
                                 }
-                                catch (Exception e) when (!ct.IsCancellationRequested)
+                                catch (Exception e) when (!ct.IsCancellationRequested && e is not ExHentaiOriginalImageSafetyException &&
+                                                          (!preferOriginal || TransientNetworkError.IsTransient(e, ct)))
                                 {
                                     // A cancelled download must fall straight through instead of
                                     // burning ten more attempts that are all guaranteed to fail.
@@ -380,6 +504,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                         throw;
                                     }
 
+                                    // A known access/quota/format error must not repeat a potentially
+                                    // paid original request. Only transient failures retry originals.
                                     // A dropped connection or a TLS handshake cut short by a flaky image
                                     // server usually needs a moment, not an instant re-dial: back to back,
                                     // the ten attempts were all spent within the first seconds of a brief
@@ -393,63 +519,22 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 }
                             }
 
-                            string MapContentTypeToExtension(string? ict)
+                            // Identify the container without decoding/re-encoding pixels. The
+                            // thumbnail title may say .jpg while the server sends WebP or PNG.
+                            var format = Image.DetectFormat(data);
+                            var actualExtension = "." + format.FileExtensions.First();
+                            var wrotePath = await ResolvePagePath(title, actualExtension);
+                            Directory.CreateDirectory(Path.GetDirectoryName(wrotePath)!);
+                            var temporary = wrotePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                            try
                             {
-                                return ict?.ToLowerInvariant() switch
-                                {
-                                    "image/jpeg" => ".jpg",
-                                    "image/jpg" => ".jpg",
-                                    "image/png" => ".png",
-                                    "image/webp" => ".webp",
-                                    "image/gif" => ".gif",
-                                    "image/bmp" => ".bmp",
-                                    "image/tiff" => ".tiff",
-                                    _ => string.Empty
-                                };
+                                ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages, wrotePath);
+                                await File.WriteAllBytesAsync(temporary, data, ct);
+                                ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages, wrotePath);
+                                File.Move(temporary, wrotePath, true);
                             }
-
-                            var targetExt = Path.GetExtension(fullname);
-                            var actualExt = MapContentTypeToExtension(contentType);
-
-                            var wrotePath = fullname;
-                            var wrote = false;
-
-                            if (actualExt.IsNullOrEmpty() || string.Equals(actualExt, targetExt, StringComparison.OrdinalIgnoreCase))
-                            {
-                                ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot,
-                                    galleryDirectoryForImages, fullname);
-                                await File.WriteAllBytesAsync(fullname, data, ct);
-                                wrote = true;
-                            }
-                            else
-                            {
-                                // Try convert to target format indicated by title
-                                try
-                                {
-                                    using var image = Image.Load(data);
-                                    ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot,
-                                        galleryDirectoryForImages, fullname);
-                                    await image.SaveAsync(fullname, ct);
-                                    wrote = true;
-                                }
-                                catch
-                                {
-                                    // ignore conversion failure
-                                }
-
-                                if (!wrote)
-                                {
-                                    // Fallback: save using actual format extension
-                                    var dirName = Path.GetDirectoryName(fullname)!;
-                                    var fileNameWithoutExt = Path.GetFileNameWithoutExtension(fullname);
-                                    var actualFullName = Path.Combine(dirName, fileNameWithoutExt + actualExt);
-                                    ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot,
-                                        galleryDirectoryForImages, actualFullName);
-                                    await File.WriteAllBytesAsync(actualFullName, data, ct);
-                                    wrote = true;
-                                    wrotePath = actualFullName;
-                                }
-                            }
+                            finally { if (File.Exists(temporary)) File.Delete(temporary); }
+                            await ledger.RecordImageAsync(downloadTaskId, sourceKey, pageUrl, wrotePath, isOriginal, ct, originalUnavailable);
 
                             workFiles[Path.GetFullPath(wrotePath)] = 0;
                             await OnFileDownloadedInternal(wrotePath);
@@ -465,7 +550,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                         {
                             sm.Release();
                         }
-                    }, ct));
+                    }
+                    if (preferOriginal) await DownloadPage();
+                    else tasks.Add(Task.Run(DownloadPage));
                 }
 
                 await Task.WhenAll(tasks);
