@@ -1,0 +1,21 @@
+{
+  "solution": {
+    "path": "Bakabase.sln",
+    "projects": [
+      "apps\\Bakabase.App\\Bakabase.App.csproj",
+      "tests\\Bakabase.Modules.Acquisition.Tests\\Bakabase.Modules.Acquisition.Tests.csproj",
+      "tests\\Bakabase.Modules.Alias.Tests\\Bakabase.Modules.Alias.Tests.csproj",
+      "tests\\Bakabase.Modules.Collection.Tests\\Bakabase.Modules.Collection.Tests.csproj",
+      "tests\\Bakabase.Modules.BulkModification.Tests\\Bakabase.Modules.BulkModification.Tests.csproj",
+      "tests\\Bakabase.Modules.Comparison.Tests\\Bakabase.Modules.Comparison.Tests.csproj",
+      "tests\\Bakabase.Modules.DataSync.Tests\\Bakabase.Modules.DataSync.Tests.csproj",
+      "tests\\Bakabase.Modules.Enhancer.Tests\\Bakabase.Modules.Enhancer.Tests.csproj",
+      "tests\\Bakabase.Modules.Federation.Tests\\Bakabase.Modules.Federation.Tests.csproj",
+      "tests\\Bakabase.Modules.HealthScore.Tests\\Bakabase.Modules.HealthScore.Tests.csproj",
+      "tests\\Bakabase.Modules.Player.Tests\\Bakabase.Modules.Player.Tests.csproj",
+      "tests\\Bakabase.Modules.Property.Tests\\Bakabase.Modules.Property.Tests.csproj",
+      "tests\\Bakabase.Modules.StandardValue.Tests\\Bakabase.Modules.StandardValue.Tests.csproj",
+      "tests\\Bakabase.Modules.ThirdParty.Tests\\Bakabase.Modules.ThirdParty.Tests.csproj"
+    ]
+  }
+}
