@@ -83,7 +83,12 @@ export default function SharingTab() {
   // one-click default opens it; a mode the operator already widened is left alone.
   const configureRemoteChecked = remoteDisabled && (configureRemote ?? true);
   const inviteValid = !!invite && Date.parse(invite.expiresAt) > now;
-  const outbound = status.peers.filter((peer) => peer.outboundGrant || !peer.inboundGrant);
+  // A device this one knows only through data sync — no library access either way — is not a
+  // library to browse: its place is data sync's own page.
+  const syncOnly = new Set((data.dataSync?.peers ?? []).map((peer) => peer.nodeId));
+  const outbound = status.peers.filter(
+    (peer) => peer.outboundGrant || (!peer.inboundGrant && !syncOnly.has(peer.nodeId)),
+  );
   const inbound = status.peers.filter((peer) => peer.inboundGrant);
   const incoming = status.requests.filter((request) => request.direction === "incoming");
   const outgoing = status.requests.filter((request) => request.direction === "outgoing");

@@ -43,7 +43,7 @@ export const edgeStyles: Record<
     text: "text-warning-600 dark:text-warning",
     width: 2.5,
   },
-  // Reserved for data sync. Nothing draws it yet.
+  // Data sync of definitions (features/data-sync/map).
   sync: {
     stroke: "stroke-secondary",
     fill: "fill-secondary",

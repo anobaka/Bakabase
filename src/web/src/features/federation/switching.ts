@@ -6,8 +6,12 @@ import { ClientApiError, clientApi, LOCAL_SWITCHER_TARGET } from "@/core/clientA
 /** Where "Manage devices…" lands, on the device the window belongs to. */
 export const DEVICES_ROUTE = "/federation/devices";
 
-/** The devices page's tabs, each one kind of trust — the same two kinds the device map draws. */
-export type DevicesTabId = "device" | "manage" | "sharing" | "advanced";
+/**
+ * The devices page's tabs, each one kind of trust — the same kinds the device map draws:
+ * management, library sharing and data sync (whose tab only sums it up; `/data-sync` is its
+ * page).
+ */
+export type DevicesTabId = "device" | "manage" | "sharing" | "sync" | "advanced";
 
 /**
  * Places inside the tabs a link can land on; each one implies its tab. Named on the wire:

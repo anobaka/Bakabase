@@ -27,6 +27,7 @@ import { usePathMarksStore } from "@/stores/pathMarks";
 import { useCollectionsStore } from "@/stores/collections";
 import { useNotificationsStore, type NotificationViewModel } from "@/stores/notifications";
 import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
+import { applyDataSyncHubData } from "@/features/data-sync/stores/dataSync";
 
 const hubEndpoint = `${envConfig.apiEndpoint}/hub/ui`;
 
@@ -123,6 +124,8 @@ export const UIHubConnection = () => {
 
     conn.on("GetIncrementalData", (key, data) => {
       log("GetIncrementalData", key, data);
+      // Data sync's status and applies (DataSyncStatus, DataSyncApplied) go to its own store.
+      if (applyDataSyncHubData(key, data)) return;
       switch (key) {
         case "DownloadTask":
           queueDownloadTaskUpdate(data);

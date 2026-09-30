@@ -14,6 +14,7 @@ import type { DeviceGraph, MapEdge, MapEdgeKind, MapNode } from "./graph";
 import type { MapSelection } from "./DeviceMapCanvas";
 import type { MapSource } from "./useDeviceMapData";
 import type { NoticeState, PanelActions } from "./usePanelActions";
+import type { DataSyncMapView } from "@/features/data-sync/api";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -57,6 +58,9 @@ import BApi from "@/sdk/BApi";
 import { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
 import { millisecondsUntil, minutesUntil, parseServerTime } from "@/core/serverTime";
 import { remoteDevicePlatformLabelKey } from "@/core/remoteDevicePlatform";
+import DataSyncGhostAction from "@/features/data-sync/map/DataSyncGhostAction";
+import DataSyncMapSection from "@/features/data-sync/map/DataSyncMapSection";
+import DataSyncSelfSection from "@/features/data-sync/map/DataSyncSelfSection";
 
 /** Failures show in the panel; a toast from the shared client would say it twice. */
 const inline = { showErrorToast: false } as const;
@@ -71,6 +75,8 @@ interface PanelContext {
   graph: DeviceGraph;
   status?: FederationStatus;
   access?: RemoteAccessSettings;
+  /** Data sync as the map read it. */
+  dataSync?: DataSyncMapView;
   actions: PanelActions;
   /**
    * Names the record an action just turned this device into, so the panel stays with it —
@@ -94,6 +100,7 @@ export interface DeviceMapPanelProps {
   selection: MapSelection;
   status?: FederationStatus;
   access?: RemoteAccessSettings;
+  dataSync?: DataSyncMapView;
   headingRef?: Ref<HTMLHeadingElement>;
   onSelect: (selection: MapSelection) => void;
   onClose: () => void;
@@ -129,6 +136,7 @@ export default function DeviceMapPanel({
   selection,
   status,
   access,
+  dataSync,
   headingRef,
   onSelect,
   onClose,
@@ -151,7 +159,16 @@ export default function DeviceMapPanel({
       wait,
     );
   const ownHosts = useMemo(() => ownHostsOf(status, access), [status, access]);
-  const context: PanelContext = { graph, status, access, actions, follow, ownHosts, onSelect };
+  const context: PanelContext = {
+    graph,
+    status,
+    access,
+    dataSync,
+    actions,
+    follow,
+    ownHosts,
+    onSelect,
+  };
   const node =
     selection.type === "node"
       ? selection.id === SELF_ID
@@ -314,6 +331,14 @@ export default function DeviceMapPanel({
           {(!edge || edge.kind === "management") && (
             <ManagementSection context={context} node={node} />
           )}
+          {(!edge || edge.kind === "sync") && (
+            <DataSyncMapSection
+              actions={actions}
+              node={node}
+              selfName={nodeName(t, graph.self)}
+              view={dataSync}
+            />
+          )}
         </>
       )}
 
@@ -349,6 +374,7 @@ function UnverifiedNote({
   const from =
     node.sources.sharingRequests.find((request) => request.remoteAddress)?.remoteAddress ??
     node.sources.managementRequestsIn.find((request) => request.remoteAddress)?.remoteAddress ??
+    node.sources.syncRequests.find((request) => request.remoteAddress)?.remoteAddress ??
     t("federation.map.panel.claim.unknownFrom");
 
   return (
@@ -798,7 +824,8 @@ function SharingSection({ context, node }: { context: PanelContext; node: MapNod
               title: t("federation.devices.remove"),
               description: t("federation.devices.removeConfirm", { name: peer.label }),
               action: () => federationPeerApi.remove(peer.nodeId),
-              refresh: ["sharing"],
+              // Removing it also forgets this device's data sync link to it.
+              refresh: ["sharing", "dataSync"],
             })
           }
         >
@@ -1472,6 +1499,7 @@ function SelfDetails({ context }: { context: PanelContext }) {
           ))}
         </dl>
       </section>
+      <DataSyncSelfSection actions={actions} view={context.dataSync} />
       <section className="flex flex-wrap gap-2 border-t border-default-200 pt-4">
         <Link className={buttonClass} to={devicesRoute("device")}>
           {t("federation.devices.title")}
@@ -1517,6 +1545,12 @@ function GhostDetails({ context, node }: { context: PanelContext; node: MapNode 
       {!sharingCandidate && !manageable && (
         <p className="text-sm text-default-500">{t("federation.map.panel.ghost.nothing")}</p>
       )}
+      <DataSyncGhostAction
+        actions={actions}
+        node={node}
+        selfName={nodeName(t, graph.self)}
+        view={context.dataSync}
+      />
     </div>
   );
 }

@@ -21,7 +21,7 @@ import { devicesRoute } from "../switching";
 
 import { useDevicesPage } from "./context";
 import TabHeading from "./TabHeading";
-import { troubledServers, waitingSharingRequests } from "./selectors";
+import { dataSyncWaiting, troubledServers, waitingSharingRequests } from "./selectors";
 
 import { RemoteAccessMode } from "@/sdk/constants";
 
@@ -63,8 +63,10 @@ export default function ThisDeviceTab() {
   const waitingManage = access?.pendingRequests ?? [];
   const waitingBrowse = waitingSharingRequests(data);
   const troubled = troubledServers(data);
+  const waitingSync = dataSyncWaiting(data);
   const unrestricted = mode === RemoteAccessMode.Unrestricted;
-  const waiting = waitingManage.length + waitingBrowse.length + troubled.length > 0 || unrestricted;
+  const waiting =
+    waitingManage.length + waitingBrowse.length + troubled.length + waitingSync > 0 || unrestricted;
   const choosers = tabs.flatMap((tab) =>
     tab.chooser && !tab.chooser.hidden?.(data) ? [tab.chooser] : [],
   );
@@ -198,6 +200,11 @@ export default function ThisDeviceTab() {
                 </span>
               </RowLink>
             ))}
+            {waitingSync > 0 && (
+              <RowLink to="sync">
+                <span>{t("federation.devices.waiting.sync", { count: waitingSync })}</span>
+              </RowLink>
+            )}
             {unrestricted && (
               <RowLink to="management">
                 <span className="text-warning-600 dark:text-warning">

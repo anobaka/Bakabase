@@ -18,6 +18,8 @@
   "customProperty.empty.title": "添加第一项自定义属性",
   "customProperty.empty.tryAgain": "试试其他名称，或清除类型筛选。",
   "customProperty.empty.description": "从作者、作品类型或标签开始，补充你关心的资源信息。",
+  "customProperty.empty.syncHint": "在其他设备上已经有属性了？",
+  "customProperty.action.syncWithDevice": "与设备同步",
   "customProperty.action.clearFilters": "清除筛选",
   "customProperty.column.property": "属性名称 / 类型",
   "customProperty.column.configuration": "配置概览",

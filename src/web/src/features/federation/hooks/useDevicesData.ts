@@ -13,6 +13,8 @@ import { useFederationStatus } from "./useFederationStatus";
 
 import BApi from "@/sdk/BApi";
 import { millisecondsUntil } from "@/core/serverTime";
+import { useDataSyncMap } from "@/features/data-sync/map/useDataSyncMap";
+import { useDataSyncStore } from "@/features/data-sync/stores/dataSync";
 
 /*
  * Everything the device map draws and the devices page shows, read once for the whole page
@@ -32,7 +34,7 @@ const SERVERS_IDLE_POLL_MS = 30_000;
 /** Failures show beside the map; a toast from the shared client would say it twice. */
 const inline = { showErrorToast: false } as const;
 
-export type MapSource = "sharing" | "servers" | "access";
+export type MapSource = "sharing" | "servers" | "access" | "dataSync";
 
 export interface DiscoveryState {
   running: boolean;
@@ -179,6 +181,10 @@ export function useDevicesData() {
   const sharing = useSharing();
   const servers = useManagedServers();
   const access = useManagementAccess();
+  // Data sync's own reader, on the same schedule (features/data-sync/map).
+  const dataSync = useDataSyncMap();
+  // Its status line, which the hub keeps current between reads (the app's indicator reads it too).
+  const dataSyncStatus = useDataSyncStore((state) => state.status);
   const [discovery, setDiscovery] = useState<DiscoveryState>({ running: false });
   const search = useRef<AbortController>();
 
@@ -188,23 +194,30 @@ export function useDevicesData() {
   const refreshSharing = sharing.refresh;
   const loadServers = servers.load;
   const loadAccess = access.load;
+  const loadDataSync = dataSync.load;
 
   /** Re-reads what an action may have changed, without a loading state. */
   const reload = useCallback(
-    async (sources: MapSource[] = ["sharing", "servers", "access"]) => {
+    async (sources: MapSource[] = ["sharing", "servers", "access", "dataSync"]) => {
       await Promise.all([
         sources.includes("sharing") ? refreshSharing({ quiet: false }) : undefined,
         sources.includes("servers") ? loadServers({ quiet: true }) : undefined,
         sources.includes("access") ? loadAccess({ quiet: true }) : undefined,
+        sources.includes("dataSync") ? loadDataSync({ withOverview: true }) : undefined,
       ]);
     },
-    [refreshSharing, loadServers, loadAccess],
+    [refreshSharing, loadServers, loadAccess, loadDataSync],
   );
 
   /** "Check status": everything again, managed servers asked how they are. */
   const refreshAll = useCallback(async () => {
-    await Promise.all([refreshSharing(), loadServers({ probe: true }), loadAccess()]);
-  }, [refreshSharing, loadServers, loadAccess]);
+    await Promise.all([
+      refreshSharing(),
+      loadServers({ probe: true }),
+      loadAccess(),
+      loadDataSync({ withOverview: true }),
+    ]);
+  }, [refreshSharing, loadServers, loadAccess, loadDataSync]);
 
   /**
    * Both kinds of looking around — sharing discovery lists devices that share their library,
@@ -256,6 +269,9 @@ export function useDevicesData() {
     accessError: access.error,
     /** Reads the remote-access settings again. */
     loadAccess: access.load,
+    dataSync: dataSync.view,
+    dataSyncError: dataSync.error,
+    dataSyncStatus,
     discovery,
     discover,
     reload,
