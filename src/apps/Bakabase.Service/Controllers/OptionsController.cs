@@ -391,6 +391,8 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> PatchExHentaiOptions([FromBody] ExHentaiOptionsPatchInputModel model,
             [FromServices] Bakabase.Modules.Workflow.Abstractions.Services.IWorkflowDefinitionService workflows)
         {
+            if (model.OriginalImageMinimumGpBalance is < 0 || model.OriginalImageMaximumGpCostPerTask is < 0)
+                return BaseResponseBuilder.BuildBadRequest("Original-image GP limits must be non-negative.");
             if (model.DownloadResultWorkflowId is < 0)
                 return BaseResponseBuilder.BuildBadRequest("Choose a valid download result workflow.");
             if (model.DownloadResultWorkflowId is > 0)
@@ -452,6 +454,15 @@ namespace Bakabase.Service.Controllers
                 {
                     options.PreferTorrent = model.PreferTorrent.Value;
                 }
+
+                if (model.PreferOriginalImages.HasValue)
+                    options.PreferOriginalImages = model.PreferOriginalImages.Value;
+                if (model.AllowOriginalImageGpSpending.HasValue)
+                    options.AllowOriginalImageGpSpending = model.AllowOriginalImageGpSpending.Value;
+                if (model.OriginalImageMinimumGpBalance.HasValue)
+                    options.OriginalImageMinimumGpBalance = model.OriginalImageMinimumGpBalance.Value;
+                if (model.OriginalImageMaximumGpCostPerTask.HasValue)
+                    options.OriginalImageMaximumGpCostPerTask = model.OriginalImageMaximumGpCostPerTask.Value;
 
                 if (model.PrioritizeTasksWithTorrent.HasValue)
                 {

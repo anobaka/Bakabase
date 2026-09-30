@@ -115,7 +115,10 @@ public class DataSyncFirstContactTests
         h.Clock.Advance(DataSyncSchedule.PollInterval);
         await h.FetchOnceAsync();
         await h.Btm.Start(DataSyncTaskIds.Apply);
-        await DataSyncRuntimeHarness.WaitUntilAsync(() => h.Runner.AutoSyncs.Count == 2, "the second pull is applied");
+        // The runner records entry before committing the link and notifying the observer.
+        await DataSyncRuntimeHarness.WaitUntilAsync(
+            () => h.Runner.AutoSyncs.Count == 2 && h.Status(DataSyncTaskIds.Apply) == BTaskStatus.Completed,
+            "the second pull and its observer notification are completed");
         Assert.AreEqual(1, h.Observer.Count($"applied:{link.Id}:next"));
     }
 

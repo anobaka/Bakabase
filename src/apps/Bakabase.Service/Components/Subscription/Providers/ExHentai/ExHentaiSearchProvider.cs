@@ -76,7 +76,7 @@ public class ExHentaiSearchProvider : ISubscriptionProvider
         {
             ct.ThrowIfCancellationRequested();
 
-            var list = await _client.ParseList(url);
+            var list = await _client.ParseList(url, ct);
 
             foreach (var r in list.Resources)
             {

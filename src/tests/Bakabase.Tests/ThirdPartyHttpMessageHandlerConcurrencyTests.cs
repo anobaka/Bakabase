@@ -198,6 +198,72 @@ public class ThirdPartyHttpMessageHandlerConcurrencyTests
         (await subsequent).Dispose();
     }
 
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task FinalSendHookRunsAfterPacingAndBeforeTheRequestReachesTheServer(bool synchronous)
+    {
+        const int intervalMs = 180;
+        await using var server = new DelayedHeadersServer();
+        using var handler = new TestHandler(new TestOptions {MaxConcurrency = 1, RequestInterval = intervalMs});
+        using var client = new HttpClient(handler) {Timeout = Timeout};
+        var first = client.GetAsync(server.Url);
+        var pendingFirst = await server.NextAsync();
+        pendingFirst.Respond();
+        (await first).Dispose();
+        long checkedAt = 0;
+        using var request = new HttpRequestMessage(HttpMethod.Get, server.Url);
+        request.Options.Set(ThirdPartyRequestOptions.BeforeSend, _ =>
+        {
+            checkedAt = Stopwatch.GetTimestamp();
+            Assert.AreEqual(1, server.ReceivedRequests, "The final check must precede network transmission.");
+            return Task.CompletedTask;
+        });
+        var second = synchronous ? Task.Run(() => client.Send(request)) : client.SendAsync(request);
+        var pendingSecond = await server.NextAsync();
+        Assert.IsTrue(Stopwatch.GetElapsedTime(pendingFirst.ArrivedAt, checkedAt).TotalMilliseconds >= intervalMs - 25,
+            "The final check ran before the configured request interval elapsed.");
+        Assert.IsTrue(pendingSecond.ArrivedAt >= checkedAt);
+        pendingSecond.Respond();
+        (await second).Dispose();
+    }
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task AFailingOrCanceledFinalHookDoesNotSendOrLeakTheOnlyRequestSlot(bool synchronous, bool cancel)
+    {
+        await using var server = new DelayedHeadersServer();
+        using var handler = new TestHandler(new TestOptions {MaxConcurrency = 1});
+        using var client = new HttpClient(handler) {Timeout = Timeout};
+        using var cancellation = new CancellationTokenSource();
+        var checking = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var request = new HttpRequestMessage(HttpMethod.Get, server.Url);
+        request.Options.Set(ThirdPartyRequestOptions.BeforeSend, async token =>
+        {
+            checking.SetResult();
+            if (cancel) await Task.Delay(System.Threading.Timeout.Infinite, token);
+            throw new InvalidOperationException("The spending check rejected this request.");
+        });
+        var refused = synchronous
+            ? Task.Run(() => client.Send(request, cancellation.Token))
+            : client.SendAsync(request, cancellation.Token);
+        await checking.Task.WaitAsync(Timeout);
+        if (cancel)
+        {
+            await cancellation.CancelAsync();
+            await Assert.ThrowsAsync<OperationCanceledException>(() => refused.WaitAsync(Timeout));
+        }
+        else await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => refused.WaitAsync(Timeout));
+        Assert.AreEqual(0, server.ReceivedRequests, "A rejected final check must never transmit the request.");
+        var next = client.GetAsync(server.Url);
+        (await server.NextAsync()).Respond();
+        (await next.WaitAsync(Timeout)).Dispose();
+        Assert.AreEqual(1, server.ReceivedRequests, "The only request slot must remain usable after rejection.");
+    }
+
     private sealed class TestOptions : IThirdPartyHttpClientOptions
     {
         public string? Cookie { get; set; }
@@ -253,6 +319,7 @@ public class ThirdPartyHttpMessageHandlerConcurrencyTests
         }
 
         public string Url { get; }
+        public int ReceivedRequests;
         public async Task<PendingRequest> NextAsync() =>
             await _requests.Reader.ReadAsync(_stop.Token).AsTask().WaitAsync(Timeout);
 
@@ -280,6 +347,7 @@ public class ThirdPartyHttpMessageHandlerConcurrencyTests
                 }
 
                 var pending = new PendingRequest();
+                Interlocked.Increment(ref ReceivedRequests);
                 await _requests.Writer.WriteAsync(pending, _stop.Token);
                 await pending.Ready.Task.WaitAsync(_stop.Token);
                 await stream.WriteAsync(Encoding.ASCII.GetBytes(

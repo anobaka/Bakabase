@@ -1,4 +1,5 @@
-﻿using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models.Constants;
+﻿using System.Text.Json.Serialization;
+using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models.Constants;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models
 {
@@ -15,8 +16,10 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models
         /// <summary>
         /// It's different for different row count
         /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public int PageCount { get; set; }
 
+        public int TorrentCount { get; set; }
         public string TorrentPageUrl { get; set; }
         public List<ExHentaiTorrent>? Torrents { get; set; }
         public DateTime UpdateDt { get; set; }

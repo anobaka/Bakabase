@@ -78,6 +78,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         protected T GetRequiredService<T>() => ServiceProvider.GetRequiredService<T>();
         protected DownloaderManager DownloaderManager => GetRequiredService<DownloaderManager>();
         protected CancellationTokenSource? Cts;
+        private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
+        private Task _runnerTask = Task.CompletedTask;
+        private readonly object _statusNotificationGate = new();
+        private Task _statusNotifications = Task.CompletedTask;
 
         protected IDownloaderHelper Helper => _downloaderFactory.GetHelper(ThirdPartyId, TaskType);
         protected readonly DownloaderDefinition Definition;
@@ -361,7 +365,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 var raised = OnStatusChanged?.Invoke();
                 if (raised is { IsCompletedSuccessfully: false })
                 {
-                    _ = ObserveStatusChangedAsync(raised, value);
+                    var observed = ObserveStatusChangedAsync(raised, value);
+                    lock (_statusNotificationGate)
+                    {
+                        _statusNotifications = _statusNotifications.IsCompleted
+                            ? observed
+                            : Task.WhenAll(_statusNotifications, observed);
+                    }
                 }
             }
         }
@@ -400,12 +410,49 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
         public DownloaderStopBy? StoppedBy { get; set; }
 
+        public async Task StopAndWait(DownloaderStopBy stopBy)
+        {
+            // Start holds this gate until its runner is installed, including its asynchronous
+            // Starting callbacks. Stop itself remains callable from inside the runner.
+            await _lifecycleGate.WaitAsync();
+            try
+            {
+                if (Status != DownloaderStatus.JustCreated || !_runnerTask.IsCompleted)
+                {
+                    await Stop(stopBy);
+                }
+
+                await _runnerTask;
+                Current = null;
+                Task notifications;
+                lock (_statusNotificationGate) notifications = _statusNotifications;
+                await notifications;
+            }
+            finally
+            {
+                _lifecycleGate.Release();
+            }
+        }
+
         protected virtual Task StopCore()
         {
             return Task.CompletedTask;
         }
 
         public async Task<bool> Start(DownloadTask task)
+        {
+            await _lifecycleGate.WaitAsync();
+            try
+            {
+                return await StartRun(task);
+            }
+            finally
+            {
+                _lifecycleGate.Release();
+            }
+        }
+
+        private async Task<bool> StartRun(DownloadTask task)
         {
             if (Status is not (DownloaderStatus.Stopped or DownloaderStatus.JustCreated or DownloaderStatus.Failed
                 or DownloaderStatus.Complete))
@@ -449,7 +496,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             // the delegate never run, so nothing would ever move the downloader out of Downloading and
             // the whole source's queue would be blocked by a task that never even began. The body
             // observes the token itself.
-            _ = Task.Run(async () =>
+            _runnerTask = Task.Run(async () =>
             {
                 try
                 {

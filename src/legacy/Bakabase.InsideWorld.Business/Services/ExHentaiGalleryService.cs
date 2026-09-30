@@ -140,7 +140,7 @@ public class ExHentaiGalleryService(
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    var list = await exHentaiClient.ParseList(pageUrl);
+                    var list = await exHentaiClient.ParseList(pageUrl, ct);
 
                     foreach (var resource in list.Resources)
                     {

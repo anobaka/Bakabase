@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.IO;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Infrastructures.Components.Gui;
@@ -126,18 +128,31 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         public async Task<BaseResponse> Start(Expression<Func<DownloadTaskDbModel, bool>>? exp = null,
             DownloadTaskActionOnConflict actionOnConflict = DownloadTaskActionOnConflict.Ignore,
             bool targeted = false)
+            => await StartCore(exp, actionOnConflict, targeted, taskActionLockHeld: false);
+
+        private async Task<BaseResponse> StartCore(Expression<Func<DownloadTaskDbModel, bool>>? exp,
+            DownloadTaskActionOnConflict actionOnConflict, bool targeted, bool taskActionLockHeld)
         {
             var tasks = await GetAll(exp);
             var badStatusTasks = tasks.Where(a => a.Status is DownloadTaskDbModelStatus.Disabled or DownloadTaskDbModelStatus.Failed)
                 .ToArray();
             foreach (var badStatusTask in badStatusTasks)
             {
-                badStatusTask.Status = DownloadTaskDbModelStatus.InProgress;
+                async Task<bool> EnableTask()
+                {
+                    await base.UpdateByKey(badStatusTask.Id, current =>
+                    {
+                        if (current.Status is DownloadTaskDbModelStatus.Disabled or DownloadTaskDbModelStatus.Failed)
+                            current.Status = DownloadTaskDbModelStatus.InProgress;
+                    });
+                    return true;
+                }
+                if (taskActionLockHeld) await EnableTask();
+                else await DownloaderManager.WithTaskActionLock(badStatusTask.Id, EnableTask);
             }
 
-            await UpdateRange(badStatusTasks);
-            var rsp = await TryStartAllTasks(DownloadTaskStartMode.ManualStart, tasks.Select(a => a.Id).ToArray(),
-                actionOnConflict, skipSatisfiedTasks: !targeted);
+            var rsp = await TryStartAllTasksCore(DownloadTaskStartMode.ManualStart, tasks.Select(a => a.Id).ToArray(),
+                actionOnConflict, skipSatisfiedTasks: !targeted, taskActionLockHeld);
 
             PushAllDataToUi();
 
@@ -373,6 +388,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         /// </param>
         public async Task<BaseResponse> TryStartAllTasks(DownloadTaskStartMode mode, int[]? ids,
             DownloadTaskActionOnConflict actionOnConflict, bool skipSatisfiedTasks = true)
+            => await TryStartAllTasksCore(mode, ids, actionOnConflict, skipSatisfiedTasks, taskActionLockHeld: false);
+
+        private async Task<BaseResponse> TryStartAllTasksCore(DownloadTaskStartMode mode, int[]? ids,
+            DownloadTaskActionOnConflict actionOnConflict, bool skipSatisfiedTasks, bool taskActionLockHeld)
         {
             var tasks = (await (ids == null ? GetAll() : GetByKeys(ids))).ToDictionary(a => a.ToDomainModel(DownloaderManager),
                 a => a);
@@ -403,8 +422,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 
             if (satisfied.Length > 0)
             {
-                await CompleteWithoutDownloading(satisfied, tasks);
-                targetTasks = targetTasks.Except(satisfied).ToArray();
+                var completed = await CompleteWithoutDownloading(satisfied);
+                targetTasks = targetTasks.Except(completed).ToArray();
             }
 
             var filteredTasks = targetTasks.GroupBy(a => a.ThirdPartyId)
@@ -424,8 +443,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 
             foreach (var tt in filteredTasks)
             {
-                var rsp = await DownloaderManager.Start(tt,
-                    actionOnConflict == DownloadTaskActionOnConflict.StopOthers);
+                var rsp = taskActionLockHeld
+                    ? await DownloaderManager.StartUnderTaskActionLock(tt,
+                        actionOnConflict == DownloadTaskActionOnConflict.StopOthers)
+                    : await DownloaderManager.Start(tt,
+                        actionOnConflict == DownloadTaskActionOnConflict.StopOthers,
+                        startAutomatically: mode == DownloadTaskStartMode.AutoStart);
 
                 if (rsp.Code != (int) ResponseCode.Success)
                 {
@@ -447,7 +470,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     // visible and the queue is seen moving to the next task.
                     if (tasks.TryGetValue(tt, out var dbModel))
                     {
-                        await MarkAsFailedToStart(dbModel, rsp.Message);
+                        await MarkAsFailedToStart(dbModel, rsp.Message, taskActionLockHeld);
                     }
 
                     firstFailure ??= rsp;
@@ -461,8 +484,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             var pendingTasks = targetTasks.Except(startedTasks).ToList();
             foreach (var ot in pendingTasks)
             {
-                var dd = DownloaderManager[ot.Id];
-                dd?.ResetStatus();
+                Task<bool> ResetIdleDownloader()
+                {
+                    var dd = DownloaderManager[ot.Id];
+                    if (dd?.IsOccupyingDownloadTaskSource() == false) dd.ResetStatus();
+                    return Task.FromResult(true);
+                }
+                if (taskActionLockHeld) await ResetIdleDownloader();
+                else await DownloaderManager.WithTaskActionLock(ot.Id, ResetIdleDownloader);
             }
 
             // Surfaced so a manual start still reports why it could not run; an automatic
@@ -480,44 +509,50 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         /// background task, a status round-trip and a rate-limited network request per task. That is
         /// what made re-running a large finished queue take hours.
         ///
-        /// Written and pushed in bulk: one database round-trip and one UI refresh for the batch,
-        /// instead of the per-task write-and-push storm the normal path produces.
+        /// Rechecked under each task's action gate so a queued pre-check cannot complete a task
+        /// whose download mode was just changed. The UI is refreshed once for the batch.
         /// </summary>
-        private async Task CompleteWithoutDownloading(IReadOnlyList<DownloadTask> satisfied,
-            IReadOnlyDictionary<DownloadTask, DownloadTaskDbModel> dbModels)
+        private async Task<DownloadTask[]> CompleteWithoutDownloading(IReadOnlyList<DownloadTask> satisfied)
         {
             var now = DateTime.Now;
             var updated = new List<DownloadTaskDbModel>(satisfied.Count);
 
             foreach (var task in satisfied)
             {
-                if (!dbModels.TryGetValue(task, out var dbModel))
+                await DownloaderManager.WithTaskActionLock(task.Id, async () =>
                 {
-                    continue;
-                }
-
-                dbModel.Status = DownloadTaskDbModelStatus.Complete;
-                dbModel.DownloadStatusUpdateDt = now;
-                dbModel.Progress = 100;
-                dbModel.Message = null;
-                updated.Add(dbModel);
-
-                // A downloader left over from an earlier run would otherwise keep speaking for this
-                // task — its status is what the list shows whenever one exists — and the row would
-                // report that run's outcome instead of the completion just recorded.
-                DownloaderManager.Forget(dbModel.Id);
+                    var current = await GetRequiredService<BakabaseDbContext>().DownloadTasks.AsNoTracking()
+                        .SingleOrDefaultAsync(t => t.Id == task.Id);
+                    if (current == null || current.Options != task.Options || current.Checkpoint != task.Checkpoint ||
+                        current.Key != task.Key || current.Type != task.Type ||
+                        DownloaderManager[current.Id]?.IsOccupyingDownloadTaskSource() == true)
+                        return false;
+                    var currentDto = current.ToDomainModel(DownloaderManager)!;
+                    var verdicts = await GetRequiredService<DownloadTaskPrecheckRunner>().EvaluateAsync([currentDto]);
+                    if (!verdicts.TryGetValue(task.Id, out var verdict) ||
+                        verdict.Outcome != DownloadTaskPrecheckOutcome.AlreadySatisfied)
+                        return false;
+                    var saved = await base.UpdateByKey(task.Id, t =>
+                    {
+                        t.Status = DownloadTaskDbModelStatus.Complete;
+                        t.DownloadStatusUpdateDt = now;
+                        t.Progress = 100;
+                        t.Message = null;
+                    });
+                    if (saved.Data != null) updated.Add(saved.Data);
+                    DownloaderManager.Forget(task.Id);
+                    return true;
+                });
             }
 
             if (updated.Count == 0)
             {
-                return;
+                return [];
             }
 
             Logger.LogInformation(
                 "Completing {Count} download task(s) without starting them: a pre-check found nothing left to download",
                 updated.Count);
-
-            await UpdateRange(updated);
 
             foreach (var dbModel in updated)
             {
@@ -554,21 +589,35 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             }
 
             PushAllDataToUi();
+            var completedIds = updated.Select(t => t.Id).ToHashSet();
+            return satisfied.Where(t => completedIds.Contains(t.Id)).ToArray();
         }
 
         /// <summary>
         /// Persists a start-time rejection (invalid cookie, bad configuration, ...) onto the task
         /// and pushes it, so the reason reaches the UI even when no downloader was ever created.
         /// </summary>
-        private async Task MarkAsFailedToStart(DownloadTaskDbModel task, string? message)
+        private async Task MarkAsFailedToStart(DownloadTaskDbModel task, string? message, bool taskActionLockHeld)
         {
-            task.Status = DownloadTaskDbModelStatus.Failed;
-            task.Message = message;
-            task.DownloadStatusUpdateDt = DateTime.Now;
-
-            await Update(task);
-            await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
-                (await ToDto(new[] {task})).FirstOrDefault()!);
+            async Task<bool> PersistFailure()
+            {
+                var current = await GetByKey(task.Id);
+                if (current == null || current.Options != task.Options ||
+                    DownloaderManager[task.Id]?.IsOccupyingDownloadTaskSource() == true) return false;
+                var saved = await base.UpdateByKey(task.Id, t =>
+                {
+                    t.Status = DownloadTaskDbModelStatus.Failed;
+                    t.Message = message;
+                    t.DownloadStatusUpdateDt = DateTime.Now;
+                });
+                DownloaderManager.Forget(task.Id);
+                if (saved.Data != null)
+                    await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
+                        (await ToDto(new[] {saved.Data})).FirstOrDefault()!);
+                return true;
+            }
+            if (taskActionLockHeld) await PersistFailure();
+            else await DownloaderManager.WithTaskActionLock(task.Id, PersistFailure);
         }
 
         public async Task OnNameAcquired(int taskId, string name) =>
@@ -762,6 +811,61 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             PushAllDataToUi();
             return rsp;
         }
+
+        /// <summary>
+        /// Switches one ExHentai task to images and starts it explicitly. List/watched range
+        /// checkpoints are reset so galleries previously completed through torrents are revisited;
+        /// their existing image results and files remain available for reuse.
+        /// </summary>
+        public Task<BaseResponse> DirectDownload(int id,
+            DownloadTaskActionOnConflict actionOnConflict = DownloadTaskActionOnConflict.NotSet) =>
+            DownloaderManager.WithTaskActionLock(id, async () =>
+            {
+                var task = await GetByKey(id);
+                if (task == null)
+                    return BaseResponseBuilder.Build(ResponseCode.NotFound, $"Download task {id} was not found.");
+                if (task.ThirdPartyId != ThirdPartyId.ExHentai ||
+                    !Enum.IsDefined(typeof(ExHentaiDownloadTaskType), task.Type))
+                    return BaseResponseBuilder.BuildBadRequest("Direct image download requires an ExHentai task.");
+
+                JsonObject options;
+                try
+                {
+                    options = string.IsNullOrWhiteSpace(task.Options)
+                        ? new JsonObject()
+                        : JsonNode.Parse(task.Options) as JsonObject
+                          ?? throw new JsonException("Task options must be a JSON object.");
+                }
+                catch (JsonException e)
+                {
+                    return BaseResponseBuilder.BuildBadRequest($"Could not read task options: {e.Message}");
+                }
+
+                // Keep it out of the automatic queue while the old run drains and its last
+                // checkpoint/status callbacks persist. No new run may reuse its cached options.
+                await base.UpdateByKey(id, t => t.Status = DownloadTaskDbModelStatus.Disabled);
+                await DownloaderManager.StopAndWait(id, DownloaderStopBy.ManuallyStop);
+
+                // Re-read after draining, so the old run's final metadata is retained as well.
+                task = await GetByKey(id);
+                if (task == null)
+                    return BaseResponseBuilder.Build(ResponseCode.NotFound, $"Download task {id} was not found.");
+                options = string.IsNullOrWhiteSpace(task.Options)
+                    ? new JsonObject()
+                    : JsonNode.Parse(task.Options) as JsonObject ?? options;
+                foreach (var key in options.Select(x => x.Key)
+                             .Where(x => string.Equals(x, "preferTorrent", StringComparison.OrdinalIgnoreCase)).ToArray())
+                    options.Remove(key);
+                options["preferTorrent"] = false;
+                await base.UpdateByKey(id, t =>
+                {
+                    t.Options = options.ToJsonString();
+                    if (t.Type != (int) ExHentaiDownloadTaskType.SingleWork) t.Checkpoint = null;
+                });
+                DownloaderManager.ClearNoTorrent(id);
+                InvalidatePrecheck();
+                return await StartCore(t => t.Id == id, actionOnConflict, targeted: true, taskActionLockHeld: true);
+            });
 
         /// <summary>
         /// Asks for another look at the queue, without waiting for it. Never call

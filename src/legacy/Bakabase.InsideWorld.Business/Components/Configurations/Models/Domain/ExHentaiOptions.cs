@@ -52,6 +52,18 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         /// </summary>
         public bool PreferTorrent { get; set; } = true;
 
+        /// <summary>Use the original-image entry when available. Applied at download time.</summary>
+        public bool PreferOriginalImages { get; set; }
+
+        /// <summary>Explicit consent for potentially paid original-image requests.</summary>
+        public bool AllowOriginalImageGpSpending { get; set; }
+
+        /// <summary>GP to retain after reserving a request's conservative replenishment cost.</summary>
+        public long? OriginalImageMinimumGpBalance { get; set; } = 10_000;
+
+        /// <summary>Persistent conservative GP reservation limit across every gallery and retry of a task.</summary>
+        public long? OriginalImageMaximumGpCostPerTask { get; set; } = 100_000;
+
         /// <summary>Post-processing workflow for each new task's per-work result. Null only saves the result.</summary>
         public int? DownloadResultWorkflowId { get; set; }
 

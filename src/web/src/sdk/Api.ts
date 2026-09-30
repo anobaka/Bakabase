@@ -1639,6 +1639,10 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   defaultPath?: string;
   namingConvention?: string;
   preferTorrent: boolean;
+  preferOriginalImages: boolean;
+  allowOriginalImageGpSpending: boolean;
+  originalImageMinimumGpBalance?: number;
+  originalImageMaximumGpCostPerTask?: number;
   /** @format int32 */
   downloadResultWorkflowId?: number;
   prioritizeTasksWithTorrent: boolean;
@@ -1900,6 +1904,10 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
   defaultPath?: string;
   namingConvention?: string;
   preferTorrent?: boolean;
+  preferOriginalImages?: boolean;
+  allowOriginalImageGpSpending?: boolean;
+  originalImageMinimumGpBalance?: number;
+  originalImageMaximumGpCostPerTask?: number;
   /** @format int32 */
   downloadResultWorkflowId?: number;
   prioritizeTasksWithTorrent?: boolean;

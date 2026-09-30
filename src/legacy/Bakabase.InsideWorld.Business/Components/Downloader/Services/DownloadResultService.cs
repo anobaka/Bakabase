@@ -22,6 +22,8 @@ public sealed class DownloadResultService
     private readonly BakabaseDbContext _db;
     private readonly Func<string> _appData;
 
+    public ExHentaiDownloadLedger ExHentaiLedger => new(_appData);
+
     public DownloadResultService(BakabaseDbContext db, AppService appService)
         : this(db, () => appService.AppDataDirectory) { }
 

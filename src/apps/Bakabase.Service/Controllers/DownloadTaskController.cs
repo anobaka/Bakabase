@@ -163,6 +163,11 @@ public class DownloadTaskController : Controller
             targeted: model.Ids.Any());
     }
 
+    [HttpPost("{id}/direct-download")]
+    [SwaggerOperation(OperationId = "DirectDownloadTask")]
+    public Task<BaseResponse> DirectDownload(int id, [FromBody] DownloadTaskDirectDownloadRequestModel model) =>
+        _service.DirectDownload(id, model.ActionOnConflict);
+
     [HttpDelete("download")]
     [SwaggerOperation(OperationId = "StopDownloadTasks")]
     public async Task<BaseResponse> StopAll([FromBody] int[] ids)

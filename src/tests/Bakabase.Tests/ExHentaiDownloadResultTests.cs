@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
+using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
@@ -27,7 +28,7 @@ using MonoTorrent;
 namespace Bakabase.Tests;
 
 [TestClass]
-public sealed class ExHentaiDownloadResultTests
+public sealed partial class ExHentaiDownloadResultTests
 {
     private string _root = null!;
     private BakabaseDbContext _db = null!;
@@ -121,19 +122,19 @@ public sealed class ExHentaiDownloadResultTests
     }
 
     [DataTestMethod]
-    [DataRow("https://exhentai.org/g/12345/AbCd/?p=1", "12345/abcd")]
-    [DataRow("https://e-hentai.org/g/12345/abcd", "12345/abcd")]
+    [DataRow("https://exhentai.org/g/12345/AbCdEf0123/?p=1", "12345/abcdef0123")]
+    [DataRow("https://e-hentai.org/g/12345/abcdef0123", "12345/abcdef0123")]
     public void GalleryIdentity_DoesNotDependOnHostOrPage(string url, string expected) =>
         Assert.AreEqual(expected, ExHentaiDownloadResultHelper.NormalizeSourceKey(url));
 
     [TestMethod]
     public void AutomaticHandoffs_IsolateEachWork_EvenWithFlatOrIdenticalNames()
     {
-        var first = ExHentaiDownloadResultHelper.GetWorkDirectory(_root, "https://exhentai.org/g/12345/abcd/", 7);
-        var second = ExHentaiDownloadResultHelper.GetWorkDirectory(_root, "https://exhentai.org/g/12346/abcd/", 7);
+        var first = ExHentaiDownloadResultHelper.GetWorkDirectory(_root, "https://exhentai.org/g/12345/abcdef0123/", 7);
+        var second = ExHentaiDownloadResultHelper.GetWorkDirectory(_root, "https://exhentai.org/g/12346/abcdef0123/", 7);
         Assert.AreNotEqual(first, second);
         Assert.AreEqual(_root, ExHentaiDownloadResultHelper.GetWorkDirectory(_root,
-            "https://exhentai.org/g/12345/abcd/", null), "Existing save-only task paths must stay unchanged.");
+            "https://exhentai.org/g/12345/abcdef0123/", null), "Existing save-only task paths must stay unchanged.");
     }
 
     [TestMethod]
@@ -156,7 +157,7 @@ public sealed class ExHentaiDownloadResultTests
     {
         var original = Path.Combine(_root, "Existing work.torrent");
         await File.WriteAllBytesAsync(original, _metadata);
-        await _results.RecordTorrentAsync(10, ThirdParty, "12345/abcd", "Existing work", original, 7);
+        await _results.RecordTorrentAsync(10, ThirdParty, "12345/abcdef0123", "Existing work", original, 7);
         var handler = new GalleryHandler {RejectRequests = true};
         var producer = await BuildProducer(handler);
         var accountedFiles = new System.Collections.Generic.List<(string Path, long Size)>();
@@ -166,7 +167,7 @@ public sealed class ExHentaiDownloadResultTests
             return Task.CompletedTask;
         };
         var checkpoints = 0;
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", async _ =>
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", async _ =>
         {
             Assert.AreEqual(1, (await _results.GetByTaskAsync(10)).Count);
             checkpoints++;
@@ -176,7 +177,7 @@ public sealed class ExHentaiDownloadResultTests
         CollectionAssert.AreEqual(new[] {(Path.GetFullPath(original), (long) _metadata.Length)},
             accountedFiles);
         File.Delete(original);
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask);
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask);
         Assert.AreEqual(0, handler.Requests, "The managed result must survive removal of the user's torrent copy.");
         Assert.AreEqual(1, (await _results.GetByTaskAsync(10)).Count);
         Assert.AreEqual(1, accountedFiles.Count, "The managed metadata copy is not a user download.");
@@ -189,11 +190,13 @@ public sealed class ExHentaiDownloadResultTests
         await File.WriteAllTextAsync(stale, "This is another work's stale torrent.");
         var handler = new GalleryHandler {TorrentBytes = _metadata};
         var producer = await BuildProducer(handler);
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", async _ =>
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", async _ =>
         {
             Assert.AreEqual(1, (await _results.GetByTaskAsync(10)).Count);
         });
         Assert.AreEqual(1, handler.TorrentRequests);
+        Assert.AreEqual(1, handler.ApiRequests);
+        Assert.AreEqual(0, handler.GalleryRequests, "Torrent downloads must not fetch gallery thumbnail pages.");
         Assert.AreEqual("This is another work's stale torrent.", await File.ReadAllTextAsync(stale));
         var managedMetadata = Path.Combine(_root, "appdata", "downloader", "torrent-metadata")
             + Path.DirectorySeparatorChar;
@@ -202,7 +205,7 @@ public sealed class ExHentaiDownloadResultTests
                             && !path.StartsWith(managedMetadata, StringComparison.Ordinal));
         Assert.AreEqual(Path.Combine(_root, "[Misc] Gallery 12345 [g12345]", "Gallery 12345.torrent"), downloaded);
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(downloaded));
-        Assert.AreEqual("12345/abcd", (await _results.GetByTaskAsync(10)).Single().SourceKey);
+        Assert.AreEqual("12345/abcdef0123", (await _results.GetByTaskAsync(10)).Single().SourceKey);
     }
 
     [TestMethod]
@@ -211,8 +214,8 @@ public sealed class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {GalleryName = "Same Gallery", TorrentBytes = _metadata};
         var producer = await BuildProducer(handler);
 
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask);
-        await RunProducer(producer, "https://exhentai.org/g/12346/abcd/", _ => Task.CompletedTask);
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask);
+        await RunProducer(producer, "https://exhentai.org/g/12346/abcdef0123/", _ => Task.CompletedTask);
 
         var copies = Directory.GetFiles(_root, "Same Gallery.torrent", SearchOption.AllDirectories);
         Assert.AreEqual(2, copies.Length);
@@ -225,7 +228,7 @@ public sealed class ExHentaiDownloadResultTests
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(copies[1]));
         Assert.AreEqual(2, handler.TorrentRequests);
         var sourceKeys = (await _results.GetByTaskAsync(10)).Select(result => result.SourceKey).ToArray();
-        CollectionAssert.AreEquivalent(new[] {"12345/abcd", "12346/abcd"}, sourceKeys);
+        CollectionAssert.AreEquivalent(new[] {"12345/abcdef0123", "12346/abcdef0123"}, sourceKeys);
     }
 
     [TestMethod]
@@ -238,7 +241,7 @@ public sealed class ExHentaiDownloadResultTests
         for (var work = 0; work < 2; work++)
         {
             var expected = work + 1;
-            await RunProducer(producer, $"https://exhentai.org/g/{12345 + work}/abcd/", async _ =>
+            await RunProducer(producer, $"https://exhentai.org/g/{12345 + work}/abcdef0123/", async _ =>
             {
                 Assert.AreEqual(expected, (await _results.GetByTaskAsync(10)).Count);
             }, preferTorrent: false);
@@ -260,19 +263,19 @@ public sealed class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {GalleryName = "Same Gallery"};
         var producer = await BuildProducer(handler);
 
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false);
-        await RunProducer(producer, "https://exhentai.org/g/12346/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12346/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false);
 
         var results = (await _results.GetByTaskAsync(10)).ToDictionary(x => x.SourceKey);
-        var first = JsonSerializer.Deserialize<string[]>(results["12345/abcd"].FilesJson)!.Single();
-        var second = JsonSerializer.Deserialize<string[]>(results["12346/abcd"].FilesJson)!.Single();
+        var first = JsonSerializer.Deserialize<string[]>(results["12345/abcdef0123"].FilesJson)!.Single();
+        var second = JsonSerializer.Deserialize<string[]>(results["12346/abcdef0123"].FilesJson)!.Single();
         Assert.AreNotEqual(first, second);
         Assert.AreEqual(Path.Combine(_root, "[Misc] Same Gallery [g12345]", "001.jpg"), first);
         Assert.AreEqual(Path.Combine(_root, "[Misc] Same Gallery [g12346]", "001.jpg"), second);
-        Assert.AreEqual("fixture image /image/12345", await File.ReadAllTextAsync(first));
-        Assert.AreEqual("fixture image /image/12346", await File.ReadAllTextAsync(second));
+        CollectionAssert.AreEqual(handler.GetImageBytes(), await File.ReadAllBytesAsync(first));
+        CollectionAssert.AreEqual(handler.GetImageBytes(), await File.ReadAllBytesAsync(second));
         Assert.AreEqual(2, handler.ImageRequests);
         Assert.IsFalse(File.Exists(Path.Combine(Path.GetDirectoryName(first)!, ".bakabase-exhentai-gallery.json")));
         Assert.IsFalse(File.Exists(Path.Combine(Path.GetDirectoryName(second)!, ".bakabase-exhentai-gallery.json")));
@@ -286,7 +289,7 @@ public sealed class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {GalleryName = "Gallery"};
         var producer = await BuildProducer(handler);
 
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false, downloadPath: downloadRoot, resultWorkflowId: null);
 
         var result = (await _results.GetByTaskAsync(10)).Single();
@@ -301,17 +304,17 @@ public sealed class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {GalleryName = "Same Gallery"};
         var producer = await BuildProducer(handler, "Images/{PageTitle}{Extension}");
 
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false);
-        await RunProducer(producer, "https://exhentai.org/g/12346/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12346/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false);
 
         var results = (await _results.GetByTaskAsync(10)).ToDictionary(x => x.SourceKey);
-        var first = JsonSerializer.Deserialize<string[]>(results["12345/abcd"].FilesJson)!.Single();
-        var second = JsonSerializer.Deserialize<string[]>(results["12346/abcd"].FilesJson)!.Single();
+        var first = JsonSerializer.Deserialize<string[]>(results["12345/abcdef0123"].FilesJson)!.Single();
+        var second = JsonSerializer.Deserialize<string[]>(results["12346/abcdef0123"].FilesJson)!.Single();
         Assert.AreEqual(Path.Combine(_root, "Images", "001.jpg"), first);
         Assert.AreEqual(first, second, "An explicit template without GalleryId does not separate galleries.");
-        Assert.AreEqual("fixture image /image/12345", await File.ReadAllTextAsync(first));
+        CollectionAssert.AreEqual(handler.GetImageBytes(), await File.ReadAllBytesAsync(first));
         Assert.AreEqual(1, handler.ImageRequests, "The second gallery encounters the custom template's existing file.");
     }
 
@@ -321,14 +324,14 @@ public sealed class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {GalleryName = "Same Gallery"};
         var producer = await BuildProducer(handler, "{PageTitle}{Extension}");
 
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false);
-        await RunProducer(producer, "https://exhentai.org/g/12346/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12346/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false);
 
         var results = (await _results.GetByTaskAsync(10)).ToDictionary(x => x.SourceKey);
-        var first = JsonSerializer.Deserialize<string[]>(results["12345/abcd"].FilesJson)!.Single();
-        var second = JsonSerializer.Deserialize<string[]>(results["12346/abcd"].FilesJson)!.Single();
+        var first = JsonSerializer.Deserialize<string[]>(results["12345/abcdef0123"].FilesJson)!.Single();
+        var second = JsonSerializer.Deserialize<string[]>(results["12346/abcdef0123"].FilesJson)!.Single();
         Assert.AreEqual(Path.Combine(_root, "[Misc] Same Gallery", "001.jpg"), first);
         Assert.AreEqual(first, second);
         Assert.AreEqual(1, handler.ImageRequests);
@@ -340,12 +343,12 @@ public sealed class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {GalleryName = "Gallery"};
         var producer = await BuildProducer(handler, "{RawName} [{GalleryId}]/{GalleryToken}_{PageTitle}{Extension}");
 
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false);
 
         var result = (await _results.GetByTaskAsync(10)).Single();
         var file = JsonSerializer.Deserialize<string[]>(result.FilesJson)!.Single();
-        Assert.AreEqual(Path.Combine(_root, "Gallery [12345]", "abcd_001.jpg"), file);
+        Assert.AreEqual(Path.Combine(_root, "Gallery [12345]", "abcdef0123_001.jpg"), file);
     }
 
     private const string TrailingDotsGallery = "[fantia] RENA_bootleg 2025_11 女の子の部屋に連れ込まれて...";
@@ -368,13 +371,13 @@ public sealed class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {GalleryName = galleryName, PageTitle = pageTitle};
         var producer = await BuildProducer(handler, namingConvention);
 
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false);
 
         var expected = Path.Combine(_root, expectedRelativePath.Replace('/', Path.DirectorySeparatorChar));
         var result = (await _results.GetByTaskAsync(10)).Single();
         CollectionAssert.AreEqual(new[] {expected}, JsonSerializer.Deserialize<string[]>(result.FilesJson));
-        Assert.AreEqual("fixture image /image/12345", await File.ReadAllTextAsync(expected));
+        CollectionAssert.AreEqual(handler.GetImageBytes(), await File.ReadAllBytesAsync(expected));
         Assert.AreEqual(1, handler.ImageRequests);
     }
 
@@ -384,13 +387,13 @@ public sealed class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {GalleryName = "Gallery"};
         var producer = await BuildProducer(handler, "../../outside/{PageTitle}{Extension}");
 
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false);
 
         var expected = Path.Combine(_root, "_", "_", "outside", "001.jpg");
         var result = (await _results.GetByTaskAsync(10)).Single();
         CollectionAssert.AreEqual(new[] {expected}, JsonSerializer.Deserialize<string[]>(result.FilesJson));
-        Assert.AreEqual("fixture image /image/12345", await File.ReadAllTextAsync(expected));
+        CollectionAssert.AreEqual(handler.GetImageBytes(), await File.ReadAllBytesAsync(expected));
         Assert.IsFalse(File.Exists(Path.Combine(Path.GetDirectoryName(_root)!, "outside", "001.jpg")));
     }
 
@@ -406,7 +409,7 @@ public sealed class ExHentaiDownloadResultTests
         var producer = await BuildProducer(handler, "linked/{PageTitle}{Extension}");
 
         await Assert.ThrowsExceptionAsync<IOException>(() => RunProducer(producer,
-            "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask, preferTorrent: false));
+            "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask, preferTorrent: false));
 
         Assert.IsFalse(File.Exists(Path.Combine(target, "001.jpg")));
         Assert.AreEqual(0, await _db.DownloadResults.CountAsync());
@@ -421,7 +424,7 @@ public sealed class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {GalleryName = TrailingDotsGallery, PageTitle = "Page 1_ _1.webp"};
         var producer = await BuildProducer(handler);
 
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false);
 
         Assert.AreEqual(1, handler.ImageRequests);
@@ -429,7 +432,7 @@ public sealed class ExHentaiDownloadResultTests
         var result = (await _results.GetByTaskAsync(10)).Single();
         var downloaded = JsonSerializer.Deserialize<string[]>(result.FilesJson)!.Single();
         Assert.AreEqual(Path.Combine(_root, IdSanitizedGalleryFile.Replace('/', Path.DirectorySeparatorChar)), downloaded);
-        Assert.AreEqual("fixture image /image/12345", await File.ReadAllTextAsync(downloaded));
+        CollectionAssert.AreEqual(handler.GetImageBytes(), await File.ReadAllBytesAsync(downloaded));
     }
 
     [TestMethod]
@@ -442,7 +445,7 @@ public sealed class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {GalleryName = TrailingDotsGallery, PageTitle = "Page 1_ _1.webp"};
         var producer = await BuildProducer(handler);
 
-        await RunProducer(producer, "https://exhentai.org/g/12345/abcd/", _ => Task.CompletedTask,
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: false);
 
         Assert.AreEqual(0, handler.ImageRequests);
@@ -452,12 +455,76 @@ public sealed class ExHentaiDownloadResultTests
         CollectionAssert.AreEqual(new[] {expected}, JsonSerializer.Deserialize<string[]>(result.FilesJson));
     }
 
+    [TestMethod]
+    public async Task NoTorrentProbe_DefersUsingApi_WithoutFetchingThumbnailPages()
+    {
+        var handler = new GalleryHandler();
+        var producer = await BuildProducer(handler);
+        var noTorrentDetected = 0;
+
+        await Assert.ThrowsExceptionAsync<DownloadDeferredException>(() => RunProducer(producer,
+            "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
+            deferIfNoTorrent: true, onNoTorrentDetected: () =>
+            {
+                noTorrentDetected++;
+                return Task.CompletedTask;
+            }));
+
+        Assert.AreEqual(1, handler.ApiRequests);
+        Assert.AreEqual(0, handler.GalleryRequests);
+        Assert.AreEqual(0, handler.TorrentListRequests);
+        Assert.AreEqual(1, noTorrentDetected);
+        Assert.AreEqual(0, (await _results.GetByTaskAsync(10)).Count);
+    }
+
+    [TestMethod]
+    public async Task MissingTorrentLinks_DoesNotCacheANegativeVerdictOrDownloadImages()
+    {
+        var handler = new GalleryHandler {TorrentBytes = _metadata, EmptyTorrentList = true};
+        var producer = await BuildProducer(handler);
+        var noTorrentDetected = 0;
+
+        await Assert.ThrowsExceptionAsync<Exception>(() => RunProducer(producer,
+            "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
+            onNoTorrentDetected: () =>
+            {
+                noTorrentDetected++;
+                return Task.CompletedTask;
+            }));
+
+        Assert.AreEqual(0, noTorrentDetected);
+        Assert.AreEqual(0, handler.GalleryRequests);
+        Assert.AreEqual(0, handler.TorrentRequests);
+        Assert.AreEqual(0, (await _results.GetByTaskAsync(10)).Count);
+    }
+
+    [TestMethod]
+    public async Task ImageDownload_ReadsThumbnailPagination_AndRecordsEveryImage()
+    {
+        var handler = new GalleryHandler {GalleryPageCount = 2, ImagesPerPage = 2};
+        var producer = await BuildProducer(handler);
+
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
+            preferTorrent: false);
+
+        var result = (await _results.GetByTaskAsync(10)).Single();
+        var files = JsonSerializer.Deserialize<string[]>(result.FilesJson)!;
+        Assert.AreEqual(DownloadResultKind.LocalFiles, result.Kind);
+        Assert.AreEqual(4, files.Length);
+        Assert.IsTrue(files.All(File.Exists));
+        Assert.AreEqual(1, handler.ApiRequests);
+        Assert.AreEqual(4, handler.ImageRequests);
+        Assert.IsTrue(handler.GalleryRequests <= 3, "Image count from the API must not become thumbnail page count.");
+        Assert.AreEqual(0, handler.TorrentListRequests);
+    }
+
     private async Task<ExHentaiSingleWorkDownloader> BuildProducer(GalleryHandler handler,
-        string? namingConvention = null)
+        string? namingConvention = null, Action<ExHentaiOptions>? configure = null)
     {
         var provider = await TestServiceBuilder.BuildServiceProvider(services =>
             services.AddSingleton(_results));
         provider.GetRequiredService<IBOptionsManager<ExHentaiOptions>>().Value.NamingConvention = namingConvention;
+        configure?.Invoke(provider.GetRequiredService<IBOptionsManager<ExHentaiOptions>>().Value);
         var client = new ExHentaiClient(new Factory(new HttpClient(handler)), NullLoggerFactory.Instance);
         return new ExHentaiSingleWorkDownloader(provider,
             provider.GetRequiredService<IStringLocalizer<SharedResource>>(), client,
@@ -465,15 +532,41 @@ public sealed class ExHentaiDownloadResultTests
             provider.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>());
     }
 
+    [TestMethod]
+    public async Task DirectImages_AfterATorrentResultDownloadsImagesAndRetainsTheTorrent()
+    {
+        var original = Path.Combine(_root, "Existing work.torrent");
+        await File.WriteAllBytesAsync(original, _metadata);
+        var oldResult = await _results.RecordTorrentAsync(10, ThirdParty, "12345/abcdef0123",
+            "Existing work", original, 7);
+        var handler = new GalleryHandler {TorrentBytes = _metadata};
+        using var producer = await BuildProducer(handler);
+
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
+            preferTorrent: false);
+
+        var results = await _results.GetByTaskAsync(10);
+        Assert.AreEqual(2, results.Count);
+        var images = results.Single(x => x.Kind == DownloadResultKind.LocalFiles);
+        Assert.IsTrue(JsonSerializer.Deserialize<string[]>(images.FilesJson)!.All(File.Exists));
+        Assert.AreEqual(1, handler.ImageRequests);
+        Assert.AreEqual(0, handler.TorrentListRequests);
+        Assert.AreEqual(0, handler.TorrentRequests);
+        Assert.IsTrue(results.Any(x => x.Id == oldResult.Id && x.Kind == DownloadResultKind.TorrentMetadata));
+        CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(original));
+        CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(oldResult.Path));
+    }
+
     private Task RunProducer(ExHentaiSingleWorkDownloader producer, string url,
         Func<string, Task> checkpoint, bool preferTorrent = true, string? downloadPath = null,
-        int? resultWorkflowId = 7)
+        int? resultWorkflowId = 7, bool deferIfNoTorrent = false,
+        Func<Task>? onNoTorrentDetected = null)
     {
         var method = typeof(AbstractExHentaiDownloader).GetMethod("DownloadSingleWork", BindingFlags.Instance | BindingFlags.NonPublic)!;
         return (Task) method.Invoke(producer, [10, url, null, downloadPath ?? _root,
             (Func<string, Task>)(_ => Task.CompletedTask), (Func<string, Task>)(_ => Task.CompletedTask),
             (Func<decimal, Task>)(_ => Task.CompletedTask), checkpoint, CancellationToken.None,
-            preferTorrent, false, null, null, null, resultWorkflowId])!;
+            preferTorrent, deferIfNoTorrent, onNoTorrentDetected, null, null, resultWorkflowId])!;
     }
 
     private const Bakabase.InsideWorld.Models.Constants.ThirdPartyId ThirdParty =
@@ -487,50 +580,138 @@ public sealed class ExHentaiDownloadResultTests
     private sealed class GalleryHandler : HttpMessageHandler
     {
         public bool RejectRequests;
+        public bool EmptyTorrentList;
         public byte[]? TorrentBytes;
         public int TorrentRequests;
         public int Requests;
+        public int ApiRequests;
+        public int GalleryRequests;
+        public int TorrentListRequests;
         public string? GalleryName;
         public string PageTitle = "001.jpg";
-        public int ImageRequests;
         public int ImagePageRequests;
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        public int ImageRequests;
+        public int GalleryPageCount = 1;
+        public int ImagesPerPage = 1;
+        public string? OriginalLinkSize;
+        public int OriginalRequests;
+        public bool OriginalReturnsHtml;
+        public int BalanceRequests;
+        public string BalanceHtml = "<div class='stuffbox'>Available: 50,000 Credits Available: 200 kGP</div>";
+        public long Posted = 1770000000;
+        public Action? BeforeOriginalSending;
+        public bool IncludeServerDate = true;
+        public byte[]? ImageBytes;
+        public byte[] GetImageBytes()
         {
+            if (ImageBytes != null) return ImageBytes;
+            using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(1, 1);
+            using var stream = new MemoryStream();
+            image.Save(stream, PageTitle.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)
+                ? new SixLabors.ImageSharp.Formats.Webp.WebpEncoder()
+                : (SixLabors.ImageSharp.Formats.IImageEncoder)new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder());
+            return stream.ToArray();
+        }
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var response = await HandleAsync(request, ct);
+            response.Headers.Date = IncludeServerDate ? DateTimeOffset.UtcNow : null;
+            return response;
+        }
+
+        private async Task<HttpResponseMessage> HandleAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            if (request.RequestUri!.AbsolutePath == "/fullimg.php") BeforeOriginalSending?.Invoke();
+            if (request.Options.TryGetValue(Bakabase.Modules.ThirdParty.Abstractions.Http.ThirdPartyRequestOptions.BeforeSend,
+                    out var beforeSend)) await beforeSend(ct);
             Requests++;
             if (RejectRequests) throw new InvalidOperationException("This completed work must not revisit the gallery.");
             var uri = request.RequestUri!;
+            if (uri.AbsolutePath == "/api.php")
+            {
+                ApiRequests++;
+                using var json = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
+                var galleries = json.RootElement.GetProperty("gidlist").EnumerateArray().Select(entry =>
+                {
+                    var id = entry[0].GetInt64();
+                    return new
+                    {
+                        gid = id, token = entry[1].GetString(), title = GalleryName ?? $"Gallery {id}",
+                        title_jpn = GalleryName ?? $"Gallery {id}", category = "Misc", thumb = "https://exhentai.org/cover.jpg",
+                        posted = Posted.ToString(), filecount = (GalleryPageCount * ImagesPerPage).ToString(), filesize = 1024,
+                        rating = "4.5", torrentcount = TorrentBytes == null ? "0" : "1", tags = new[] {"artist:test"},
+                        torrents = TorrentBytes == null ? Array.Empty<object>() : new object[]
+                        {
+                            new {hash = "1234567890123456789012345678901234567890", added = "1770000000",
+                                name = $"Gallery {id}.zip", tsize = "100", fsize = "1024"}
+                        }
+                    };
+                }).ToArray();
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                    {Content = new StringContent(JsonSerializer.Serialize(new {gmetadata = galleries}), Encoding.UTF8, "application/json")};
+            }
             if (uri.AbsolutePath == "/metadata.torrent")
             {
                 TorrentRequests++;
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                    {Content = new ByteArrayContent(TorrentBytes!)});
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                    {Content = new ByteArrayContent(TorrentBytes!)};
             }
-            if (uri.AbsolutePath == "/torrents")
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {Content = new StringContent("<form><table><tr><td>Size: 1 KiB</td><td>Downloads: 1</td><td>Posted: 2026-09-14</td></tr><tr><td></td></tr><tr><td><a href='https://exhentai.org/metadata.torrent'>Download</a></td></tr></table></form>")});
+            if (uri.AbsolutePath == "/torrents" || uri.AbsolutePath == "/gallerytorrents.php")
+            {
+                TorrentListRequests++;
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {Content = new StringContent(EmptyTorrentList ? "" : "<form><table><tr><td>Size: 1 KiB</td><td>Downloads: 1</td><td>Posted: 2026-09-14</td></tr><tr><td></td></tr><tr><td><a href='https://exhentai.org/metadata.torrent'>Download</a></td></tr></table></form>")};
+            }
             if (uri.AbsolutePath.StartsWith("/image/"))
             {
                 ImageRequests++;
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {Content = new ByteArrayContent(Encoding.UTF8.GetBytes("fixture image " + uri.AbsolutePath))});
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {Content = new ByteArrayContent(GetImageBytes())};
+            }
+            if (uri.AbsolutePath == "/exchange.php")
+            {
+                BalanceRequests++;
+                return new HttpResponseMessage(HttpStatusCode.OK) {Content = new StringContent(BalanceHtml)};
+            }
+            if (uri.AbsolutePath == "/fullimg.php")
+            {
+                OriginalRequests++;
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = OriginalReturnsHtml ? new StringContent("<html>Original download is unavailable.</html>") :
+                        new ByteArrayContent(GetImageBytes())
+                };
             }
             if (uri.AbsolutePath.StartsWith("/s/"))
             {
                 ImagePageRequests++;
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {Content = new StringContent($"<img id='img' src='https://exhentai.org/image/{uri.Segments.Last()}' />")});
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {Content = new StringContent($"<img id='img' src='https://exhentai.org/image/{uri.Segments.Last()}' />" +
+                    (OriginalLinkSize == null ? "" : $"<div id='i7'><a href='https://exhentai.org/fullimg.php?gid=12345&amp;page=1&amp;key=abcdef'>Download original 1000 x 1000 {OriginalLinkSize}</a></div>"))};
             }
+            GalleryRequests++;
             var id = uri.Segments[2].Trim('/');
-            var galleryName = WebUtility.HtmlEncode(GalleryName ?? $"Gallery {id}");
             var torrentLink = TorrentBytes == null ? "" : "<div id='gd5'><a onclick=\"popUp('https://exhentai.org/torrents')\">Torrent (1)</a></div>";
+            var page = uri.Query.Contains("p=1") ? 2 : 1;
+            var pagination = GalleryPageCount == 1 ? "" :
+                $"<table class='ptt'><tr><td>Previous</td><td><a href='/g/{id}/abcdef0123/?p=0'>1</a></td><td><a href='/g/{id}/abcdef0123/?p=1'>2</a></td><td>Next</td></tr></table>";
+            var images = string.Concat(Enumerable.Range(1, ImagesPerPage).Select(index =>
+            {
+                var image = (page - 1) * ImagesPerPage + index;
+                var imageKey = GalleryPageCount * ImagesPerPage == 1 ? id : $"{id}-{image}";
+                var title = GalleryPageCount * ImagesPerPage == 1 ? PageTitle : $"{image:D3}.jpg";
+                return $"<a href='https://exhentai.org/s/{imageKey}'><div title='{WebUtility.HtmlEncode(title)}'></div></a>";
+            }));
+            var galleryName = WebUtility.HtmlEncode(GalleryName ?? $"Gallery {id}");
             var html = $"""
                 {torrentLink}
+                {pagination}
                 <div id='gn'>{galleryName}</div><div id='gj'>{galleryName}</div>
                 <div id='gdc'><div class='cs ct1'>Doujinshi</div></div>
-                <div id='gdd'><table><tr><td>Length:</td><td>1 pages</td></tr></table></div>
-                <div id='gdt'><a href='https://exhentai.org/s/{id}'><div title='{WebUtility.HtmlEncode(PageTitle)}'></div></a></div>
+                <div id='gdd'><table><tr><td>Length:</td><td>{GalleryPageCount * ImagesPerPage} pages</td></tr></table></div>
+                <div id='gdt'>{images}</div>
                 """;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {Content = new StringContent(html)});
+            return new HttpResponseMessage(HttpStatusCode.OK) {Content = new StringContent(html)};
         }
     }
 }

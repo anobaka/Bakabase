@@ -4,10 +4,12 @@ import type { SyntheticEvent } from "react";
 import type { ChipProps, CircularProgressProps } from "@/components/bakaui";
 import type { DownloadTask } from "@/core/models/DownloadTask";
 
-import { memo } from "react";
+import { memo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AiOutlineDelete,
+  AiOutlineDownload,
+  AiOutlineDown,
   AiOutlineEdit,
   AiOutlineEllipsis,
   AiOutlineFolderOpen,
@@ -21,9 +23,9 @@ import { TbMagnet, TbMagnetOff } from "react-icons/tb";
 
 import { DownloadTaskTypeIconMap } from "./TaskDetailModal/models";
 import { useEstimatedRemainingLabel } from "./EstimatedRemainingTime";
-import { humanFileSize } from "@/components/utils";
 
-import { DownloadTaskAction, DownloadTaskStatus } from "@/sdk/constants";
+import { humanFileSize } from "@/components/utils";
+import { DownloadTaskAction, DownloadTaskStatus, ThirdPartyId } from "@/sdk/constants";
 import {
   Button,
   Chip,
@@ -33,6 +35,7 @@ import {
   DropdownTrigger,
   Progress,
   Tooltip,
+  toast,
 } from "@/components/bakaui";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 
@@ -52,6 +55,7 @@ export type TaskRowProps = {
   progressColor: CircularProgressProps["color"];
   formatDateTime: (value?: string | Date | null) => string;
   onStart: (id: number) => void;
+  onDownloadDirectly: (id: number) => Promise<void>;
   onStop: (id: number) => void;
   onEdit: (id: number) => void;
   onOpenFolder: (path: string) => void;
@@ -76,6 +80,7 @@ const TaskRow = memo(function TaskRow({
   progressColor,
   formatDateTime,
   onStart,
+  onDownloadDirectly,
   onStop,
   onEdit,
   onOpenFolder,
@@ -154,7 +159,11 @@ const TaskRow = memo(function TaskRow({
             <div className="truncate text-sm font-semibold leading-5 text-foreground" title={name}>
               {name}
             </div>
-            <TorrentIndicator formatDateTime={formatDateTime} task={task} />
+            <TorrentIndicator
+              formatDateTime={formatDateTime}
+              task={task}
+              onDownloadDirectly={onDownloadDirectly}
+            />
           </div>
           <div className="truncate text-xs leading-4 text-default-400" title={task.key}>
             {task.name ? task.key : `#${task.id}`}
@@ -401,20 +410,24 @@ const TaskRow = memo(function TaskRow({
  * few hundred images. These used to be text chips at the end of the row; most galleries have no
  * torrent, so a column of "No torrent" chips became the loudest thing in the list. An icon next to
  * the name keeps the fact visible where the eye already is, and the tooltip still carries the
- * detail. Absent when there is nothing to say (a source without torrents, or a task that has never
- * run).
+ * detail. Every ExHentai task also offers its direct-image download action from this icon.
  */
 const TorrentIndicator = ({
   task,
   formatDateTime,
+  onDownloadDirectly,
 }: {
   task: DownloadTask;
   formatDateTime: (value?: string | Date | null) => string;
+  onDownloadDirectly: (id: number) => Promise<void>;
 }) => {
   const { t } = useTranslation();
-  const metadata = task.metadata;
+  const [pending, setPending] = useState(false);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const pendingRef = useRef(false);
+  const metadata = task.metadata ?? {};
 
-  if (!metadata) {
+  if (task.thirdPartyId !== ThirdPartyId.ExHentai) {
     return null;
   }
 
@@ -439,9 +452,7 @@ const TorrentIndicator = ({
       }),
     };
   } else if (metadata.preferTorrent === false) {
-    // Only worth saying when it is a deliberate opt-out; "prefers torrents but has never been
-    // probed" is the default and adds nothing to the row. Muted, unlike the probed "no torrent",
-    // because nothing was found out — the user asked for images.
+    // A deliberate opt-out is muted; no availability verdict was learned from this choice.
     indicator = {
       Icon: TbMagnetOff,
       className: "text-default-400",
@@ -449,21 +460,88 @@ const TorrentIndicator = ({
       tip: t<string>("downloader.tip.torrentDisabled"),
     };
   } else {
-    return null;
+    indicator = {
+      Icon: TbMagnet,
+      className: "text-default-400",
+      label: t<string>("downloader.label.torrentUnknown"),
+      tip: t<string>("downloader.tip.torrentUnknown"),
+    };
   }
 
   const { Icon, className, label, tip } = indicator;
+  const downloadDirectly = async () => {
+    if (pendingRef.current) return;
+
+    pendingRef.current = true;
+    setPending(true);
+    try {
+      await onDownloadDirectly(task.id);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : error !== null &&
+              typeof error === "object" &&
+              "message" in error &&
+              typeof error.message === "string"
+            ? error.message
+            : undefined;
+
+      toast.danger(message || t<string>("downloader.toast.directDownloadFailed"));
+    } finally {
+      pendingRef.current = false;
+      setPending(false);
+    }
+  };
 
   return (
-    <Tooltip content={tip}>
-      <span
-        aria-label={label}
-        className={`inline-flex shrink-0 items-center ${className}`}
-        role="img"
-      >
-        <Icon aria-hidden className="text-base" />
-      </span>
-    </Tooltip>
+    <span
+      data-task-action
+      className="inline-flex shrink-0"
+      role="presentation"
+      onClick={stopPropagation}
+      onContextMenu={stopPropagation}
+      onKeyDown={stopPropagation}
+    >
+      <Tooltip content={tip} isOpen={tooltipOpen} onOpenChange={setTooltipOpen}>
+        <span className="inline-flex" tabIndex={-1}>
+          <Dropdown isDisabled={pending}>
+            <DropdownTrigger>
+              <Button
+                isIconOnly
+                aria-description={tip}
+                aria-label={label}
+                className={`h-5 min-h-0 w-7 min-w-0 gap-0 rounded-sm p-0 ${className}`}
+                isDisabled={pending}
+                isLoading={pending}
+                size="sm"
+                variant="light"
+                onBlur={() => setTooltipOpen(false)}
+                onFocus={() => setTooltipOpen(true)}
+              >
+                <Icon aria-hidden className="text-base" />
+                <AiOutlineDown aria-hidden className="text-[8px]" />
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+              aria-label={t<string>("downloader.action.torrentActions")}
+              disabledKeys={pending ? ["direct-download"] : []}
+              onAction={(key) => {
+                if (key === "direct-download") void downloadDirectly();
+              }}
+            >
+              <DropdownItem
+                key="direct-download"
+                description={t<string>("downloader.tip.directDownload")}
+                startContent={<AiOutlineDownload aria-hidden className="text-lg" />}
+              >
+                {t<string>("downloader.action.directDownload")}
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
+        </span>
+      </Tooltip>
+    </span>
   );
 };
 

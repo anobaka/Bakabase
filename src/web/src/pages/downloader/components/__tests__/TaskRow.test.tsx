@@ -10,10 +10,13 @@ import TaskRow from "../TaskRow";
 
 import { DownloadTaskAction, DownloadTaskStatus, ThirdPartyId } from "@/sdk/constants";
 
+const { dangerToast } = vi.hoisted(() => ({ dangerToast: vi.fn() }));
+
 // Keep real HeroUI press handling and portalled menus: bubbling keyboard events were the bug.
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@heroui/react")),
   Button: (await import("@/components/bakaui/components/Button")).Button,
+  toast: { danger: dangerToast },
 }));
 vi.mock("@/components/ThirdPartyIcon", () => ({ default: () => <span>ExHentai</span> }));
 
@@ -64,13 +67,17 @@ async function key(target: HTMLElement, value: string) {
   });
 }
 
-async function show(overrides: Partial<DownloadTask> = {}) {
+async function show(
+  overrides: Partial<DownloadTask> = {},
+  onDownloadDirectly = vi.fn().mockResolvedValue(undefined),
+) {
   const props: TaskRowProps = {
     task: { ...task, ...overrides },
     statusColor: "default",
     progressColor: "primary",
     formatDateTime: (value) => String(value),
     onStart: vi.fn(),
+    onDownloadDirectly,
     onStop: vi.fn(),
     onEdit: vi.fn(),
     onOpenFolder: vi.fn(),
@@ -92,6 +99,7 @@ async function show(overrides: Partial<DownloadTask> = {}) {
 }
 
 beforeEach(() => {
+  dangerToast.mockClear();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -414,7 +422,7 @@ describe("download task row interaction", () => {
       metadata: { torrentFoundAt: "2026-09-14T01:01:00Z" },
     });
     expect(document.querySelector('[role="progressbar"]')).toHaveAttribute("aria-valuenow", "100");
-    expect(element("downloader.label.torrentAvailable")).toHaveAttribute("role", "img");
+    expect(element("downloader.label.torrentAvailable")).toHaveAttribute("aria-haspopup", "true");
     expect(container).not.toHaveTextContent("downloader.results.contentsReady");
     const schedule = document.querySelector('[aria-label^="downloader.label.createdAt"]')!;
 
@@ -440,12 +448,16 @@ describe("download task row interaction", () => {
       await show({ metadata });
       const indicator = element(label);
 
-      expect(indicator).toHaveAttribute("role", "img");
+      expect(indicator.tagName).toBe("BUTTON");
+      expect(indicator).toHaveAttribute("aria-haspopup", "true");
       expect(indicator).toHaveClass(color);
       expect(indicator.querySelector("svg")).toBeInTheDocument();
       // An icon, not a chip: the label is for assistive technology, not rendered text.
       expect(container).not.toHaveTextContent(label);
-      expect(indicator.previousElementSibling).toHaveAttribute("title", task.name);
+      expect(indicator.closest("[data-task-action]")!.previousElementSibling).toHaveAttribute(
+        "title",
+        task.name,
+      );
     },
   );
 
@@ -462,9 +474,80 @@ describe("download task row interaction", () => {
     );
   });
 
-  it("shows nothing about torrents when the task has never learned anything", async () => {
-    await show({ metadata: { preferTorrent: true } });
+  it.each([undefined, { preferTorrent: true }])(
+    "offers direct download before an ExHentai task has been probed (%o)",
+    async (metadata) => {
+      await show({ metadata });
 
-    expect(document.querySelector('[role="img"]')).not.toBeInTheDocument();
+      expect(element("downloader.label.torrentUnknown")).toHaveAttribute("aria-haspopup", "true");
+      await click(element("downloader.label.torrentUnknown"));
+      expect(document.querySelector('[role="menuitem"]')).toHaveTextContent(
+        "downloader.action.directDownload",
+      );
+    },
+  );
+
+  it("does not offer ExHentai download actions for another source", async () => {
+    await show({ thirdPartyId: ThirdPartyId.Steam, metadata: { preferTorrent: false } });
+
+    expect(element("downloader.label.torrentDisabled")).not.toBeInTheDocument();
+    expect(element("downloader.label.torrentUnknown")).not.toBeInTheDocument();
   });
+
+  it.each(["pointer", "keyboard"])(
+    "downloads directly from the torrent menu using %s without selecting or normally starting the row",
+    async (method) => {
+      const props = await show({ metadata: { torrentFoundAt: "2026-09-14T01:01:00Z" } });
+      const trigger = element("downloader.label.torrentAvailable");
+
+      if (method === "pointer") {
+        await click(trigger);
+        await click(document.querySelector<HTMLElement>('[role="menuitem"]')!);
+      } else {
+        await key(trigger, "Enter");
+        await key(document.querySelector<HTMLElement>('[role="menuitem"]')!, "Enter");
+      }
+
+      expect(props.onDownloadDirectly).toHaveBeenCalledExactlyOnceWith(task.id);
+      expect(props.onStart).not.toHaveBeenCalled();
+      expect(props.onClick).not.toHaveBeenCalled();
+      expect(props.onContextMenu).not.toHaveBeenCalled();
+    },
+  );
+
+  it("blocks repeated direct downloads while the request or conflict choice is pending", async () => {
+    let finish!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const download = vi.fn(() => pending);
+
+    await show({}, download);
+    const trigger = element("downloader.label.torrentUnknown");
+
+    await click(trigger);
+    await click(document.querySelector<HTMLElement>('[role="menuitem"]')!);
+    expect(trigger).toBeDisabled();
+    await click(trigger);
+    expect(download).toHaveBeenCalledTimes(1);
+
+    await act(async () => finish());
+    expect(trigger).not.toBeDisabled();
+  });
+
+  it.each([new Error("Cookie expired"), { code: 400, message: "Cookie expired" }])(
+    "surfaces a failed direct download and permits retry (%o)",
+    async (error) => {
+      const download = vi.fn().mockRejectedValue(error);
+
+      await show({}, download);
+      const trigger = element("downloader.label.torrentUnknown");
+
+      await click(trigger);
+      await click(document.querySelector<HTMLElement>('[role="menuitem"]')!);
+
+      expect(dangerToast).toHaveBeenCalledExactlyOnceWith("Cookie expired");
+      expect(trigger).not.toBeDisabled();
+    },
+  );
 });

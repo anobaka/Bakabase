@@ -14,7 +14,10 @@ namespace Bakabase.Tests;
 public sealed class ExHentaiImageDownloadTests
 {
     private const string PageUrl = "https://exhentai.org/s/abc/12345-1";
-    private const string ImageUrl = "https://images.example/1.jpg";
+    private const string ImageUrl = "https://images.example/1.png";
+    // A complete 1x1 RGB PNG, including valid chunk CRCs and compressed pixel data.
+    private static readonly byte[] ImageBytes = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC");
 
     [TestMethod]
     [DataRow(HttpStatusCode.NotFound)]
@@ -35,14 +38,14 @@ public sealed class ExHentaiImageDownloadTests
     [TestMethod]
     public async Task DownloadedImageBytesRemainUsableAfterTheResponseIsDisposed()
     {
-        var content = new TrackingContent("image bytes", "image/jpeg");
+        var content = new TrackingContent(ImageBytes, "image/png");
         using var http = new HttpClient(new ImageHandler(HttpStatusCode.OK, content));
         var client = new ExHentaiClient(new Factory(http), NullLoggerFactory.Instance);
 
         var image = await client.DownloadImage(PageUrl);
 
-        Assert.AreEqual("image bytes", Encoding.UTF8.GetString(image.Data));
-        Assert.AreEqual("image/jpeg", image.ContentType);
+        CollectionAssert.AreEqual(ImageBytes, image.Data);
+        Assert.AreEqual("image/png", image.ContentType);
         Assert.IsTrue(content.Disposed);
     }
 
@@ -51,14 +54,15 @@ public sealed class ExHentaiImageDownloadTests
     [DataRow(HttpStatusCode.ServiceUnavailable)]
     public async Task DirectImageDownloadsAlsoDisposeTheResponse(HttpStatusCode status)
     {
-        var content = new TrackingContent("image bytes", "image/jpeg");
+        var content = new TrackingContent(ImageBytes, "image/png");
         using var http = new HttpClient(new ImageHandler(status, content));
         var client = new ExHentaiClient(new Factory(http), NullLoggerFactory.Instance);
 
         if (status == HttpStatusCode.OK)
         {
             var image = await client.DownloadImageByUrl(ImageUrl);
-            Assert.AreEqual("image bytes", Encoding.UTF8.GetString(image.Data));
+            CollectionAssert.AreEqual(ImageBytes, image.Data);
+            Assert.AreEqual("image/png", image.ContentType);
         }
         else
         {
@@ -90,7 +94,11 @@ public sealed class ExHentaiImageDownloadTests
     {
         public bool Disposed { get; private set; }
 
-        public TrackingContent(string value, string mediaType) : base(Encoding.UTF8.GetBytes(value))
+        public TrackingContent(string value, string mediaType) : this(Encoding.UTF8.GetBytes(value), mediaType)
+        {
+        }
+
+        public TrackingContent(byte[] value, string mediaType) : base(value)
         {
             Headers.ContentType = new MediaTypeHeaderValue(mediaType);
         }

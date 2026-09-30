@@ -21,6 +21,7 @@ using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 {
@@ -28,6 +29,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ConcurrentDictionary<int, IDownloader> _downloaders = new();
+        private readonly ConcurrentDictionary<int, SemaphoreSlim> _taskActionLocks = new();
         // The gate has the downloader's lifetime, so deleted tasks do not leave lock entries behind.
         private readonly ConditionalWeakTable<IDownloader, SemaphoreSlim> _taskDataLocks = new();
         private readonly ConcurrentDictionary<int, TaskCompletionSource> _downloadBTaskCompletionSources = new();
@@ -310,8 +312,38 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             }
         }
 
-        private async Task<BaseResponse> _tryStart(DownloadTask task, bool stopConflicts)
+        public async Task StopAndWait(int taskId, DownloaderStopBy stopBy)
         {
+            if (_downloaders.TryGetValue(taskId, out var downloader))
+            {
+                await downloader.StopAndWait(stopBy);
+            }
+        }
+
+        /// <summary>Serializes explicit per-task actions across scoped task services.</summary>
+        public async Task<T> WithTaskActionLock<T>(int taskId, Func<Task<T>> action)
+        {
+            var gate = _taskActionLocks.GetOrAdd(taskId, _ => new SemaphoreSlim(1, 1));
+            await gate.WaitAsync();
+            try { return await action(); }
+            finally { gate.Release(); }
+        }
+
+        private async Task<BaseResponse> _tryStart(DownloadTask task, bool stopConflicts, bool startAutomatically)
+        {
+            // A scheduler may have prepared this DTO before an explicit task action changed
+            // its options. The per-task action gate makes this fresh snapshot authoritative.
+            await using (var scope = _serviceProvider.CreateAsyncScope())
+            {
+                var current = await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>()
+                    .DownloadTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == task.Id);
+                if (current != null)
+                {
+                    task = current.ToDomainModel(this)!;
+                    if (startAutomatically && !task.AvailableActions.Contains(DownloadTaskAction.StartAutomatically))
+                        return BaseResponseBuilder.Build(ResponseCode.Conflict, "This task is no longer eligible for automatic start.");
+                }
+            }
             var helper = _downloaderFactory.GetHelper(task.ThirdPartyId, task.Type);
             var validation = await helper.ValidateOptionsAsync();
             if (!validation.IsSuccess())
@@ -381,10 +413,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<BaseResponse> Start(DownloadTask task, bool stopConflicts)
+        public async Task<BaseResponse> Start(DownloadTask task, bool stopConflicts, bool startAutomatically = false)
         {
-            return await _tryStart(task, stopConflicts);
+            return await WithTaskActionLock(task.Id, () => _tryStart(task, stopConflicts, startAutomatically));
         }
+
+        internal Task<BaseResponse> StartUnderTaskActionLock(DownloadTask task, bool stopConflicts) =>
+            _tryStart(task, stopConflicts, startAutomatically: false);
 
         /// <summary>
         /// Force-releases downloaders that claim to be busy but have shown no sign of life for
