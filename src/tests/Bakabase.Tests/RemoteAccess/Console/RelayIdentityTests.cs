@@ -577,8 +577,7 @@ public class RelayIdentityTests
         // unwritable: a directory where it was, which every write's final rename fails on.
         var longAgo = DateTime.UtcNow.AddHours(-1);
         await _console.Store.MutateAsync(data => data.Servers.Single().LastConnectedAt = longAgo);
-        File.Delete(_console.ManagedFile);
-        Directory.CreateDirectory(Path.Combine(_console.ManagedFile, "held"));
+        await _console.BlockManagedStoreWritesAsync();
 
         for (var i = 0; i < 3; i++)
         {
