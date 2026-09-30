@@ -236,38 +236,47 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
                 patchWithToast({ torrentCheckValidityHours: Number.isNaN(v) ? 0 : v })
               }
             />
-            <div className="space-y-3 rounded-lg border border-default-200 p-3">
-              <Checkbox
-                isSelected={options?.preferOriginalImages ?? false}
-                onValueChange={(v) => patchWithToast({ preferOriginalImages: v })}
-              >
-                {t("thirdPartyConfig.exHentai.originalImages.prefer")}
-              </Checkbox>
-              <div
-                className="rounded-lg border border-warning-300 bg-warning-50 p-3 text-sm text-warning-700"
-                role="note"
-              >
-                {t("thirdPartyConfig.exHentai.originalImages.warning")}
+            <div className="flex flex-col gap-4 rounded-lg border border-default-200 p-3">
+              <div className="flex flex-col gap-3">
+                <Checkbox
+                  className="m-0"
+                  isSelected={options?.preferOriginalImages ?? false}
+                  onValueChange={(v) => patchWithToast({ preferOriginalImages: v })}
+                >
+                  {t("thirdPartyConfig.exHentai.originalImages.prefer")}
+                </Checkbox>
+                <div
+                  className="rounded-lg border border-warning-300 bg-warning-50 p-3 text-sm text-warning-700"
+                  role="note"
+                >
+                  {t("thirdPartyConfig.exHentai.originalImages.warning")}
+                </div>
+                <p className="text-xs text-default-500">
+                  {t("thirdPartyConfig.exHentai.originalImages.scope")}
+                </p>
               </div>
-              <p className="text-xs text-default-500">
-                {t("thirdPartyConfig.exHentai.originalImages.scope")}
-              </p>
               {options?.preferOriginalImages && (
-                <>
-                  <p className="text-sm text-default-500">
-                    {t("thirdPartyConfig.exHentai.originalImages.freeOnly")}
-                  </p>
-                  <p className="text-sm text-default-500">
-                    {t("thirdPartyConfig.exHentai.originalImages.unavailable")}
-                  </p>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm text-default-500">
+                      {t("thirdPartyConfig.exHentai.originalImages.freeOnly")}
+                    </p>
+                    <p className="text-xs leading-relaxed text-default-500">
+                      {t("thirdPartyConfig.exHentai.originalImages.freeConfirmation")}
+                    </p>
+                    <p className="text-sm text-default-500">
+                      {t("thirdPartyConfig.exHentai.originalImages.unavailable")}
+                    </p>
+                  </div>
                   <Checkbox
+                    className="m-0"
                     isSelected={options?.allowOriginalImageGpSpending ?? false}
                     onValueChange={(v) => patchWithToast({ allowOriginalImageGpSpending: v })}
                   >
                     {t("thirdPartyConfig.exHentai.originalImages.allowGp")}
                   </Checkbox>
                   {options?.allowOriginalImageGpSpending && (
-                    <div className="space-y-3">
+                    <div className="flex flex-col gap-3">
                       <NumberInput
                         description={t<string>(
                           "thirdPartyConfig.exHentai.originalImages.minimumGpDescription",
@@ -309,7 +318,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
                       </p>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
           </div>
