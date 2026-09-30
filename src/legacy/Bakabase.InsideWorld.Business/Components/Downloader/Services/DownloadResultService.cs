@@ -66,7 +66,8 @@ public sealed class DownloadResultService
             if (File.Exists(temporary)) File.Delete(temporary);
         }
         return await RecordAsync(downloadTaskId, thirdPartyId, sourceKey, name,
-            DownloadResultKind.TorrentMetadata, target, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(torrentPath))!, [target], fingerprint, workflowDefinitionId, ct);
+            DownloadResultKind.TorrentMetadata, target, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(torrentPath))!,
+            [target, System.IO.Path.GetFullPath(torrentPath)], fingerprint, workflowDefinitionId, ct);
     }
 
     public async Task<DownloadResultDbModel> RecordFilesAsync(int downloadTaskId, ThirdPartyId thirdPartyId,

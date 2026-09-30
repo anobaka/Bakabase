@@ -162,7 +162,10 @@ public sealed class ExHentaiClientRetryTests
         };
         var client = BuildClient(handler);
 
-        await Assert.ThrowsExactlyAsync<Exception>(() => client.DownloadImage(PageUrl));
+        var error = await Assert.ThrowsExactlyAsync<InvalidDataException>(() => client.DownloadImage(PageUrl));
+        StringAssert.Contains(error.Message, "access banned or rate limited");
+        Assert.IsFalse(error.Message.Contains(handler.PageHtml, StringComparison.Ordinal),
+            "Safe diagnostics must not return the response body.");
         Assert.AreEqual(1, handler.PageRequests);
     }
 

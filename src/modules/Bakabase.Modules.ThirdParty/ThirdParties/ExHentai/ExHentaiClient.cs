@@ -219,7 +219,8 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
         public async Task<(byte[] Data, string? ContentType)> DownloadImageByUrl(string imageUrl,
             CancellationToken ct = default)
         {
-            using var response = await SendImageRequestAsync(ValidateImageRequestUri(imageUrl), null, ct);
+            var imageUri = ValidateImageRequestUri(imageUrl);
+            using var response = await SendImageRequestAsync(imageUri, null, ct);
             return await ReadImageBytesAsync(response, ct);
         }
 

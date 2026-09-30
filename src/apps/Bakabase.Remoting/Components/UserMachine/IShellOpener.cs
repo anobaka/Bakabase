@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Bakabase.Abstractions.Helpers;
 using Bakabase.Infrastructures.Components.App;
 
 namespace Bakabase.Remoting.Components.UserMachine;
@@ -48,7 +49,11 @@ public interface IShellOpener
 
 public sealed class OsShellOpener : IShellOpener
 {
-    public void Reveal(string path, bool inParentDirectory) => OsShell.Open(path, inParentDirectory);
+    public void Reveal(string path, bool inParentDirectory)
+    {
+        if (OperatingSystem.IsLinux() && inParentDirectory) LinuxFileManager.RevealInParentDirectory(path);
+        else OsShell.Open(path, inParentDirectory);
+    }
 
     public void Launch(string target) => Process.Start(new ProcessStartInfo(target) {UseShellExecute = true});
 

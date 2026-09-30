@@ -1,4 +1,3 @@
-import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
 ("use client");
 
 import type { ChipProps, CircularProgressProps } from "@/components/bakaui";
@@ -31,7 +30,9 @@ import TaskErrorMessage from "./components/TaskErrorMessage";
 import TaskRow, { DOWNLOAD_TASK_ITEM_HEIGHT } from "./components/TaskRow";
 import DownloadTaskFilters, { type DownloadTaskFilter } from "./components/DownloadTaskFilters";
 import { downloadTaskDirectly } from "./directDownload";
+import { openDownloadTaskFolder } from "./openDownloadTaskFolder";
 
+import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
 import { ThirdPartyId } from "@/sdk/constants";
 import {
   Button,
@@ -568,8 +569,9 @@ const DownloaderPage = () => {
     rowEnvRef.current.createPortal(DownloadTaskDetailModal, { id });
   }, []);
 
-  const handleRowOpenFolder = useCallback((path: string) => {
-    BApi.tool.openFileOrDirectory({ path });
+  const handleRowOpenFolder = useCallback((task: Parameters<typeof openDownloadTaskFolder>[0]) => {
+    // BApi reports server and transport failures; avoid an unhandled event promise.
+    void openDownloadTaskFolder(task).catch(() => {});
   }, []);
 
   const handleRowDelete = useCallback((id: number) => {

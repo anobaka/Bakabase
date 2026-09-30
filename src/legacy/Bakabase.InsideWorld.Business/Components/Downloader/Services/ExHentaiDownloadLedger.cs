@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -79,6 +80,18 @@ public sealed class ExHentaiDownloadLedger(Func<string> appData)
         {
             var state = await ReadAsync(GetPath(taskId), ct);
             return state.Images.GetValueOrDefault(ImageKey(sourceKey, pageUrl));
+        }
+        finally { Gate.Release(); }
+    }
+
+    /// <summary>Actual task-owned images, including partial batches without a completed result.</summary>
+    public async Task<IReadOnlyCollection<string>> GetImagePathsAsync(int taskId, CancellationToken ct = default)
+    {
+        await Gate.WaitAsync(ct);
+        try
+        {
+            var state = await ReadAsync(GetPath(taskId), ct);
+            return new HashSet<string>(state.Images.Values.Select(x => x.Path), StringComparer.Ordinal);
         }
         finally { Gate.Release(); }
     }

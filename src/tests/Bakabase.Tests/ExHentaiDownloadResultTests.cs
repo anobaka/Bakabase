@@ -68,6 +68,8 @@ public sealed partial class ExHentaiDownloadResultTests
         Assert.AreEqual(first.Id, second.Id);
         Assert.AreEqual(3, second.WorkflowDefinitionId, "A retry must not retarget an existing result.");
         Assert.AreEqual(_root, first.DownloadDirectory);
+        Assert.AreEqual(Path.GetFullPath(original),
+            ExHentaiDownloadResultHelper.GetTorrentDownloadPath(first));
         File.Delete(original);
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(first.Path));
         Assert.AreEqual(1, await _db.DownloadResults.CountAsync());
@@ -203,7 +205,7 @@ public sealed partial class ExHentaiDownloadResultTests
         var downloaded = Directory.GetFiles(_root, "*.torrent", SearchOption.AllDirectories)
             .Single(path => !string.Equals(path, stale, StringComparison.Ordinal)
                             && !path.StartsWith(managedMetadata, StringComparison.Ordinal));
-        Assert.AreEqual(Path.Combine(_root, "[Misc] Gallery 12345 [g12345]", "Gallery 12345.torrent"), downloaded);
+        Assert.AreEqual(Path.Combine(_root, "[Misc] Gallery 12345 [g12345].torrent"), downloaded);
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(downloaded));
         Assert.AreEqual("12345/abcdef0123", (await _results.GetByTaskAsync(10)).Single().SourceKey);
     }
@@ -217,12 +219,12 @@ public sealed partial class ExHentaiDownloadResultTests
         await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask);
         await RunProducer(producer, "https://exhentai.org/g/12346/abcdef0123/", _ => Task.CompletedTask);
 
-        var copies = Directory.GetFiles(_root, "Same Gallery.torrent", SearchOption.AllDirectories);
+        var copies = Directory.GetFiles(_root, "[Misc] Same Gallery [g*].torrent", SearchOption.TopDirectoryOnly);
         Assert.AreEqual(2, copies.Length);
         CollectionAssert.AreEquivalent(new[]
         {
-            Path.Combine(_root, "[Misc] Same Gallery [g12345]", "Same Gallery.torrent"),
-            Path.Combine(_root, "[Misc] Same Gallery [g12346]", "Same Gallery.torrent")
+            Path.Combine(_root, "[Misc] Same Gallery [g12345].torrent"),
+            Path.Combine(_root, "[Misc] Same Gallery [g12346].torrent")
         }, copies);
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(copies[0]));
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(copies[1]));

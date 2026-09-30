@@ -24,6 +24,8 @@ public sealed class ExHentaiImageDownloadOptions
     [JsonIgnore] public Func<ExHentaiOriginalImageInfo, CancellationToken, Task>? BeforeOriginalDownload { get; init; }
     /// <summary>Rechecks spending immediately after HTTP pacing, without performing another request.</summary>
     [JsonIgnore] public Func<ExHentaiOriginalImageInfo, CancellationToken, Task>? BeforeOriginalSend { get; init; }
+    /// <summary>Allows one original-node replacement only while its requests remain provably free. No HTTP work.</summary>
+    [JsonIgnore] public Func<ExHentaiOriginalImageInfo, bool>? CanRecoverOriginalWithoutGp { get; init; }
 }
 
 public sealed class ExHentaiOriginalImageInfo

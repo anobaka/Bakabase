@@ -51,6 +51,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.ExHentai;
 
+        protected override TransientRetry? GetTransientRetry(Exception e, int attempt) =>
+            e is InvalidDataException or ExHentaiOriginalImageSafetyException || ExHentaiClient.IsImageNodeRecoveryExhausted(e)
+                ? null : base.GetTransientRetry(e, attempt);
+
 
         protected async Task DownloadSingleWork(int downloadTaskId, string url, string checkpoint, string downloadPath,
             Func<string, Task> onNameAcquired,
@@ -100,11 +104,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 }
                 else if (previous.Kind == DownloadResultKind.TorrentMetadata)
                 {
-                    // The result's FilesJson points to the managed metadata cache. Recover the
-                    // user's original copy from the directory and filename used when it was saved.
-                    var torrentFileName = FileNameSanitizer.Sanitize(
-                        $"{previous.Name.RemoveInvalidFileNameChars()}.torrent");
-                    await OnFileDownloadedInternal(Path.Combine(previous.DownloadDirectory, torrentFileName));
+                    var torrentPath = ExHentaiDownloadResultHelper.GetTorrentDownloadPath(previous);
+                    if (torrentPath != null) await OnFileDownloadedInternal(torrentPath);
                 }
                 if (onNameAcquired != null) await onNameAcquired(previous.Name);
                 if (previous.Kind == DownloadResultKind.TorrentMetadata && onTorrentDownloaded != null)
@@ -177,6 +178,46 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     useTemplateDirectory ? renderedDirectory : null);
             }
 
+            async Task<string> ResolveTorrentFileNameAsync()
+            {
+                var convention = GetEffectiveNamingConvention((await GetDownloaderOptionsAsync()).NamingConvention);
+                var values = new Dictionary<ExHentaiNamingFields, object?>(baseNameSegmentsValues)
+                {
+                    [ExHentaiNamingFields.PageTitle] = betterName,
+                    [ExHentaiNamingFields.Extension] = ".torrent"
+                };
+                var rendered = await BuildDownloadFilename(values);
+                var templateParts = convention.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var renderedParts = rendered.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var galleryFields = new[] {"{RawName}", "{Name}", "{GalleryId}", "{GalleryToken}"};
+                var fileTemplate = templateParts.Last();
+                var fileNamesGallery = galleryFields.Any(field => fileTemplate.Contains(field, StringComparison.OrdinalIgnoreCase));
+                // A page-oriented template puts the gallery's name in a directory. For a
+                // torrent that component becomes the filename rather than another folder.
+                var galleryNameParts = new List<string>();
+                for (var index = 0; index < templateParts.Length - 1; index++)
+                {
+                    var part = templateParts[index];
+                    if (fileNamesGallery &&
+                        ((part.Equals("{RawName}", StringComparison.OrdinalIgnoreCase) &&
+                          (fileTemplate.Contains("{RawName}", StringComparison.OrdinalIgnoreCase) ||
+                           fileTemplate.Contains("{PageTitle}", StringComparison.OrdinalIgnoreCase))) ||
+                         (part.Equals("{Name}", StringComparison.OrdinalIgnoreCase) &&
+                          fileTemplate.Contains("{Name}", StringComparison.OrdinalIgnoreCase)))) continue;
+                    if (galleryFields
+                        .Any(field => part.Contains(field, StringComparison.OrdinalIgnoreCase)))
+                        galleryNameParts.Add(renderedParts[index]);
+                }
+                var filename = Path.GetFileName(rendered);
+                if (fileNamesGallery)
+                    galleryNameParts.Add(filename.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase)
+                        ? filename[..^".torrent".Length] : filename);
+                if (galleryNameParts.Count > 0)
+                    return FileNameSanitizer.Sanitize(string.Join(" ", galleryNameParts) + ".torrent");
+                return FileNameSanitizer.Sanitize(filename.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase)
+                    ? filename : filename + ".torrent");
+            }
+
             // Use the API count: an empty torrent window must not become a cached negative verdict.
             if (preferTorrent && detail.TorrentCount > 0)
             {
@@ -204,10 +245,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     .ThenByDescending(t => t.Downloaded)
                     .ToList();
 
-                var (galleryDirectory, _) = await ResolveGalleryDirectoryAsync();
-                var torrentFileName = FileNameSanitizer.Sanitize($"{betterName.RemoveInvalidFileNameChars()}.torrent");
-                var path = Path.Combine(galleryDirectory, torrentFileName);
-                ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectory, path);
+                // Automatic workflows already receive a dedicated work root; save-only
+                // tasks write straight into the user's selected download directory.
+                var path = Path.Combine(downloadPath, await ResolveTorrentFileNameAsync());
+                if (resultWorkflowId.HasValue)
+                    ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, downloadPath, path);
+                if (resultWorkflowId.HasValue && !Directory.Exists(downloadPath))
+                    Directory.CreateDirectory(downloadPath);
+                ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, path);
 
                 if (onCurrentChanged != null)
                 {
@@ -267,12 +312,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 try
                 {
                     ct.ThrowIfCancellationRequested();
-                    ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectory, path);
+                    if (resultWorkflowId.HasValue)
+                        ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, downloadPath, path);
+                    ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, path);
                     File.Move(temporary, path, true);
                     await OnFileDownloadedInternal(path);
                     // Persist the result only after the user's copy is in the selected directory.
                     // A failed move must remain retryable rather than looking completed.
-                    ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectory, path);
+                    if (resultWorkflowId.HasValue)
+                        ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, downloadPath, path);
+                    ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, path);
                     await results.RecordTorrentAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
                         path, resultWorkflowId, ct);
                 }
@@ -413,18 +462,22 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
             for (var page = 0; page < detail.PageCount; page++)
             {
-                var imageTitleAndPageUrls = await Client.GetImageTitleAndPageUrlsFromDetailUrl(detail.Url, page, ct);
+                using var batchCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                var batchToken = batchCts.Token;
+                var imageTitleAndPageUrls = await Client.GetImageTitleAndPageUrlsFromDetailUrl(detail.Url, page, batchToken);
 
                 var taskDataList = new List<(string filename, string pageUrl, string title)>();
                 var options = await GetDownloaderOptionsAsync();
 
                 foreach (var (title, pageUrl) in imageTitleAndPageUrls)
                 {
+                    batchToken.ThrowIfCancellationRequested();
                     // Inspect only this work's expected files. Reconstructing ownership from
                     // page titles also recovers downloads interrupted after writing a checkpoint.
                     checkpointContext.Analyze(title);
                     var keyFullname = await ResolvePagePath(title, Path.GetExtension(title));
-                    var recordedImage = await ledger.GetImageAsync(downloadTaskId, sourceKey, pageUrl, ct);
+                    batchToken.ThrowIfCancellationRequested();
+                    var recordedImage = await ledger.GetImageAsync(downloadTaskId, sourceKey, pageUrl, batchToken);
                     string? existing = null;
                     if (recordedImage != null && (!preferOriginal || recordedImage.IsOriginal || recordedImage.OriginalUnavailable) && File.Exists(recordedImage.Path))
                     {
@@ -434,6 +487,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     else if (!preferOriginal && File.Exists(keyFullname)) existing = keyFullname;
                     if (existing != null)
                     {
+                        batchToken.ThrowIfCancellationRequested();
                         workFiles[existing] = 0;
                         await OnFileDownloadedInternal(existing);
                         doneCount++;
@@ -446,11 +500,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
                 if (onProgress != null)
                 {
+                    batchToken.ThrowIfCancellationRequested();
                     await onProgress(doneCount * 100m / detail.FileCount);
                 }
 
                 if (onCurrentChanged != null)
                 {
+                    batchToken.ThrowIfCancellationRequested();
                     await onCurrentChanged($"{doneCount}/{detail.FileCount}");
                 }
 
@@ -458,8 +514,23 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 // Original downloads stop on the first financial preflight failure. Keep their
                 // requests sequential so later pages cannot spend while a failed page unwinds.
                 var threads = preferOriginal ? 1 : Math.Max(1, options.MaxConcurrency);
-                var sm = new SemaphoreSlim(threads, threads);
-                var tasks = new ConcurrentBag<Task>();
+                using var sm = new SemaphoreSlim(threads, threads);
+                var tasks = new ConcurrentQueue<Task>();
+                ExceptionDispatchInfo? batchFailure = null;
+                var batchCompleted = false;
+
+                void RecordFailure(Exception error)
+                {
+                    // Cancellation of siblings is cleanup, not the cause of the failure.
+                    if (error is OperationCanceledException && batchToken.IsCancellationRequested) return;
+                    Interlocked.CompareExchange(ref batchFailure, ExceptionDispatchInfo.Capture(error), null);
+                }
+
+                async Task CancelBatch()
+                {
+                    try { await batchCts.CancelAsync(); }
+                    catch (Exception error) { RecordFailure(error); }
+                }
 
                 // There is no need to save checkpoint during downloading files, because no extra request will be sent.
                 // Although, the progress and current should be changed.
@@ -472,6 +543,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 {
                     if (onCurrentChanged != null)
                     {
+                        batchToken.ThrowIfCancellationRequested();
                         var d = tmpCount + doneStates.Count(a => a.Value);
                         var s = Math.Min(maxDoneCount, d + 1);
                         var e = Math.Min(maxDoneCount, d + tasks.Count(a => !a.IsCompleted));
@@ -480,134 +552,142 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     }
                 }
 
-                foreach (var (fullname, pageUrl, title) in taskDataList)
+                try
                 {
-                    var dir = Path.GetDirectoryName(fullname)!;
-                    ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages,
-                        fullname);
-                    Directory.CreateDirectory(dir);
-
-                    // Give up once a run of downloads has all genuinely failed — a banned IP or an
-                    // expired cookie fails every image, and grinding through the whole gallery to
-                    // learn that wastes the request budget it takes to find out.
-                    const int continuousFailedTaskSampleCount = 10;
-                    var recent = tasks.TakeLast(continuousFailedTaskSampleCount).ToArray();
-
-                    if (recent.Length == continuousFailedTaskSampleCount && recent.All(x => x.IsFaulted))
+                    foreach (var (fullname, pageUrl, title) in taskDataList)
                     {
-                        // Was "!IsCompletedSuccessfully", which is also true of a task that is merely
-                        // still running — so a slow batch tripped the check and then threw a
-                        // NullReferenceException off the null Exception of an unfinished task,
-                        // reporting a crash instead of the download error that never happened.
-                        throw recent.Last().Exception!;
-                    }
-
-                    await sm.WaitAsync(ct);
-                    async Task DownloadPage()
-                    {
-                        try
+                        await sm.WaitAsync(batchToken);
+                        async Task DownloadPage()
                         {
-                            await CurrentChanged();
-
-                            const int maxTryTimes = 10;
-                            var tryTimes = 0;
-                            byte[] data;
-                            var isOriginal = false;
-                            var originalUnavailable = false;
-                            while (true)
-                            {
-                                try
-                                {
-                                    ExHentaiDownloadedImage r;
-                                    if (preferOriginal)
-                                    {
-                                        await OriginalImageGate.WaitAsync(ct);
-                                        try
-                                        {
-                                            r = await Client.DownloadImage(pageUrl, new ExHentaiImageDownloadOptions
-                                            {
-                                                PreferOriginal = true,
-                                                RequestContext = requestContext,
-                                                BeforeOriginalDownload = BeforeOriginalDownload,
-                                                BeforeOriginalSend = BeforeOriginalSend
-                                            }, ct);
-                                        }
-                                        finally { OriginalImageGate.Release(); }
-                                    }
-                                    else r = await Client.DownloadImage(pageUrl, new ExHentaiImageDownloadOptions(), ct);
-                                    data = r.Data;
-                                    isOriginal = r.IsOriginal;
-                                    originalUnavailable = r.OriginalUnavailable;
-                                    break;
-                                }
-                                catch (Exception e) when (!ct.IsCancellationRequested && e is not ExHentaiOriginalImageSafetyException &&
-                                                          (!preferOriginal || TransientNetworkError.IsTransient(e, ct)))
-                                {
-                                    // A cancelled download must fall straight through instead of
-                                    // burning ten more attempts that are all guaranteed to fail.
-                                    tryTimes++;
-                                    if (tryTimes >= maxTryTimes)
-                                    {
-                                        throw;
-                                    }
-
-                                    // A known access/quota/format error must not repeat a potentially
-                                    // paid original request. Only transient failures retry originals.
-                                    // A dropped connection or a TLS handshake cut short by a flaky image
-                                    // server usually needs a moment, not an instant re-dial: back to back,
-                                    // the ten attempts were all spent within the first seconds of a brief
-                                    // outage. Other failures keep retrying at the request pace as before.
-                                    if (TransientNetworkError.IsTransient(e, ct))
-                                    {
-                                        await Task.Delay(
-                                            TransientNetworkError.GetBackoffDelay(tryTimes - 1,
-                                                TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5)), ct);
-                                    }
-                                }
-                            }
-
-                            // Identify the container without decoding/re-encoding pixels. The
-                            // thumbnail title may say .jpg while the server sends WebP or PNG.
-                            var format = Image.DetectFormat(data);
-                            var actualExtension = "." + format.FileExtensions.First();
-                            var wrotePath = await ResolvePagePath(title, actualExtension);
-                            Directory.CreateDirectory(Path.GetDirectoryName(wrotePath)!);
-                            var temporary = wrotePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
                             try
                             {
-                                ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages, wrotePath);
-                                await File.WriteAllBytesAsync(temporary, data, ct);
-                                ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages, wrotePath);
-                                File.Move(temporary, wrotePath, true);
-                            }
-                            finally { if (File.Exists(temporary)) File.Delete(temporary); }
-                            await ledger.RecordImageAsync(downloadTaskId, sourceKey, pageUrl, wrotePath, isOriginal, ct, originalUnavailable);
+                                batchToken.ThrowIfCancellationRequested();
+                                ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages, fullname);
+                                Directory.CreateDirectory(Path.GetDirectoryName(fullname)!);
+                                await CurrentChanged();
 
-                            workFiles[Path.GetFullPath(wrotePath)] = 0;
-                            await OnFileDownloadedInternal(wrotePath);
-                            doneStates[wrotePath] = true;
-                            if (onProgress != null)
+                                const int maxTryTimes = 10;
+                                var tryTimes = 0;
+                                byte[] data;
+                                var isOriginal = false;
+                                var originalUnavailable = false;
+                                while (true)
+                                {
+                                    try
+                                    {
+                                        ExHentaiDownloadedImage r;
+                                        if (preferOriginal)
+                                        {
+                                            await OriginalImageGate.WaitAsync(batchToken);
+                                            try
+                                            {
+                                                r = await Client.DownloadImage(pageUrl, new ExHentaiImageDownloadOptions
+                                                {
+                                                    PreferOriginal = true,
+                                                    RequestContext = requestContext,
+                                                    BeforeOriginalDownload = BeforeOriginalDownload,
+                                                    BeforeOriginalSend = BeforeOriginalSend,
+                                                    CanRecoverOriginalWithoutGp = CanConfirmFree
+                                                }, batchToken);
+                                            }
+                                            finally { OriginalImageGate.Release(); }
+                                        }
+                                        else r = await Client.DownloadImage(pageUrl, new ExHentaiImageDownloadOptions(), batchToken);
+                                        data = r.Data;
+                                        isOriginal = r.IsOriginal;
+                                        originalUnavailable = r.OriginalUnavailable;
+                                        break;
+                                    }
+                                    catch (Exception e) when (e is not InvalidDataException &&
+                                                              e is not ExHentaiOriginalImageSafetyException &&
+                                                              !ExHentaiClient.IsImageNodeRecoveryExhausted(e) &&
+                                                              TransientNetworkError.IsTransient(e, batchToken))
+                                    {
+                                        // A cancelled download must fall straight through instead of
+                                        // burning ten more attempts that are all guaranteed to fail.
+                                        tryTimes++;
+                                        if (tryTimes >= maxTryTimes)
+                                        {
+                                            throw;
+                                        }
+
+                                        // Access, quota and invalid image responses fail once. A transient
+                                        // original retry still repeats both financial checks in the client.
+                                        await Task.Delay(
+                                            TransientNetworkError.GetBackoffDelay(tryTimes - 1,
+                                                TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5)), batchToken);
+                                    }
+                                }
+
+                                // Identify the container without decoding/re-encoding pixels. The
+                                // thumbnail title may say .jpg while the server sends WebP or PNG.
+                                batchToken.ThrowIfCancellationRequested();
+                                var format = Image.DetectFormat(data);
+                                var actualExtension = "." + format.FileExtensions.First();
+                                var wrotePath = await ResolvePagePath(title, actualExtension);
+                                batchToken.ThrowIfCancellationRequested();
+                                Directory.CreateDirectory(Path.GetDirectoryName(wrotePath)!);
+                                var temporary = wrotePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                                try
+                                {
+                                    ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages, wrotePath);
+                                    await File.WriteAllBytesAsync(temporary, data, batchToken);
+                                    batchToken.ThrowIfCancellationRequested();
+                                    ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages, wrotePath);
+                                    File.Move(temporary, wrotePath, true);
+                                }
+                                finally { if (File.Exists(temporary)) File.Delete(temporary); }
+                                await ledger.RecordImageAsync(downloadTaskId, sourceKey, pageUrl, wrotePath, isOriginal, batchToken, originalUnavailable);
+
+                                batchToken.ThrowIfCancellationRequested();
+                                workFiles[Path.GetFullPath(wrotePath)] = 0;
+                                await OnFileDownloadedInternal(wrotePath);
+                                batchToken.ThrowIfCancellationRequested();
+                                doneStates[wrotePath] = true;
+                                if (onProgress != null)
+                                {
+                                    await onProgress((tmpCount + doneStates.Count(a => a.Value)) * 100m / detail.FileCount);
+                                }
+
+                                await CurrentChanged();
+                            }
+                            catch (Exception error)
                             {
-                                await onProgress((tmpCount + doneStates.Count(a => a.Value)) * 100m / detail.FileCount);
+                                RecordFailure(error);
+                                await CancelBatch();
+                                throw;
                             }
-
-                            await CurrentChanged();
+                            finally
+                            {
+                                sm.Release();
+                            }
                         }
-                        finally
-                        {
-                            sm.Release();
-                        }
+                        // Do not pass the token to Task.Run: even a cancelled scheduled task must
+                        // enter DownloadPage's finally to return the semaphore permit.
+                        if (preferOriginal) await DownloadPage();
+                        else tasks.Enqueue(Task.Run(DownloadPage));
                     }
-                    if (preferOriginal) await DownloadPage();
-                    else tasks.Add(Task.Run(DownloadPage));
-                }
 
-                await Task.WhenAll(tasks);
+                    await Task.WhenAll(tasks);
+                    batchCompleted = true;
+                }
+                catch (Exception error) { RecordFailure(error); }
+                finally
+                {
+                    if (!batchCompleted) await CancelBatch();
+                    // Scheduling errors and cancellation must also await every started worker.
+                    // No worker may write a file or publish progress after this batch returns.
+                    try { await Task.WhenAll(tasks); }
+                    catch (Exception error) { RecordFailure(error); }
+                }
+                ct.ThrowIfCancellationRequested();
+                batchFailure?.Throw();
 
                 doneCount += taskDataList.Count;
 
                 if (onProgress != null)
                 {
+                    batchToken.ThrowIfCancellationRequested();
                     await onProgress(doneCount * 100m / detail.FileCount);
                 }
 
@@ -615,16 +695,25 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 {
                     // The final checkpoint follows result persistence below.
                     if (page < detail.PageCount - 1 && imageTitleAndPageUrls.Length > 0)
+                    {
+                        batchToken.ThrowIfCancellationRequested();
                         await onCheckpointChanged(checkpointContext.BuildCheckpoint(imageTitleAndPageUrls.Last().Title));
+                    }
                 }
             }
 
             foreach (var file in workFiles.Keys)
+            {
+                ct.ThrowIfCancellationRequested();
                 ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages, file);
+            }
             await results.RecordFilesAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
                 downloadPath, workFiles.Keys.ToArray(), resultWorkflowId, ct);
             if (onCheckpointChanged != null)
+            {
+                ct.ThrowIfCancellationRequested();
                 await onCheckpointChanged(checkpointContext.BuildCheckpointOnComplete());
+            }
         }
     }
 }

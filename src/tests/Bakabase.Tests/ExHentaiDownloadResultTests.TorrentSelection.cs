@@ -204,25 +204,27 @@ public sealed partial class ExHentaiDownloadResultTests
     public async Task ALocalTorrentWriteFailureDoesNotTryAnotherRemoteCandidate()
     {
         var candidates = new[] {new TorrentCandidate(1, 2000, 1, 0), new TorrentCandidate(2, 1000, 1, 0)};
-        var galleryDirectory = Path.Combine(_root, "12345");
+        var downloadDirectory = Path.Combine(_root, "downloads");
+        Directory.CreateDirectory(downloadDirectory);
         using var handler = new TorrentSelectionHandler(candidates, _metadata)
         {
             Respond = async (_, _) =>
             {
                 // After the directory has been resolved but before the downloaded bytes are
                 // written, replace that directory with a file to provoke real filesystem I/O.
-                Directory.Delete(galleryDirectory);
-                await File.WriteAllTextAsync(galleryDirectory, "The output directory became unavailable.");
+                Directory.Delete(downloadDirectory);
+                await File.WriteAllTextAsync(downloadDirectory, "The output directory became unavailable.");
                 return new HttpResponseMessage(HttpStatusCode.OK) {Content = new ByteArrayContent(_metadata)};
             }
         };
         using var producer = await BuildTorrentSelectionProducer(handler);
 
-        await Assert.ThrowsAsync<IOException>(() => RunTorrentSelectionProducer(producer));
+        await Assert.ThrowsAsync<IOException>(() => RunTorrentSelectionProducer(producer,
+            downloadPath: downloadDirectory));
 
         CollectionAssert.AreEqual(new[] {1}, handler.Attempts.ToArray());
         Assert.AreEqual(0, (await _results.GetByTaskAsync(10)).Count);
-        Assert.IsTrue(File.Exists(galleryDirectory));
+        Assert.IsTrue(File.Exists(downloadDirectory));
     }
 
     [TestMethod]
@@ -265,10 +267,10 @@ public sealed partial class ExHentaiDownloadResultTests
 
     private Task RunTorrentSelectionProducer(ExHentaiSingleWorkDownloader producer,
         Func<string, Task>? checkpoint = null, Func<Task>? torrentCompleted = null,
-        Func<decimal, Task>? progress = null, CancellationToken ct = default)
+        Func<decimal, Task>? progress = null, CancellationToken ct = default, string? downloadPath = null)
     {
         var method = typeof(AbstractExHentaiDownloader).GetMethod("DownloadSingleWork", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        return (Task) method.Invoke(producer, [10, "https://exhentai.org/g/12345/abcdef0123/", null, _root,
+        return (Task) method.Invoke(producer, [10, "https://exhentai.org/g/12345/abcdef0123/", null, downloadPath ?? _root,
             (Func<string, Task>)(_ => Task.CompletedTask), (Func<string, Task>)(_ => Task.CompletedTask),
             progress ?? (_ => Task.CompletedTask), checkpoint ?? (_ => Task.CompletedTask), ct,
             true, false, null, null, torrentCompleted, null])!;

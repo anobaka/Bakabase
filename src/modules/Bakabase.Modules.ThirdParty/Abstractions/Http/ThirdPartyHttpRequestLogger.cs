@@ -39,7 +39,8 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         public async Task<HttpResponseMessage> CaptureAsync(ThirdPartyId tp, Func<Task<HttpResponseMessage>> request,
             string? key = null,
             Func<HttpResponseMessage, Exception, ThirdPartyRequestResultType>? getResultType = null,
-            CancellationToken? ct = null, Func<HttpResponseMessage, Exception, string>? buildCustomMessage = null)
+            CancellationToken? ct = null, Func<HttpResponseMessage, Exception, string>? buildCustomMessage = null,
+            bool redactExceptionDetails = false)
         {
             var id = Guid.NewGuid().ToString("N")[..6];
             _logger.LogInformation($"[{(int) tp}:{tp}][{id}]Sending request to {key}.");
@@ -56,7 +57,7 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"[{(int) tp}:{tp}][{id}]An error occurred: {ex.Message}.");
+                LogRequestFailure(tp, id, ex, redactExceptionDetails);
                 e = ex;
                 throw;
             }
@@ -64,7 +65,8 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             {
                 sw.Stop();
                 var elapsedMs = sw.ElapsedMilliseconds;
-                var message = buildCustomMessage?.Invoke(rsp, e) ?? e?.BuildFullInformationText();
+                var message = redactExceptionDetails ? RedactedExceptionDetails(e) :
+                    buildCustomMessage?.Invoke(rsp, e) ?? e?.BuildFullInformationText();
                 var resultType = getResultType?.Invoke(rsp, e) ?? DefaultGetResultType(rsp, e, ct);
 
                 RecordCompletedRequest(tp, rsp, resultType, requestTime, elapsedMs, message, key);
@@ -76,7 +78,8 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         public HttpResponseMessage Capture(ThirdPartyId tp, Func<HttpResponseMessage> request,
             string? key = null,
             Func<HttpResponseMessage, Exception, ThirdPartyRequestResultType>? getResultType = null,
-            CancellationToken? ct = null, Func<HttpResponseMessage, Exception, string>? buildCustomMessage = null)
+            CancellationToken? ct = null, Func<HttpResponseMessage, Exception, string>? buildCustomMessage = null,
+            bool redactExceptionDetails = false)
         {
             var id = Guid.NewGuid().ToString("N")[..6];
             _logger.LogInformation($"[{(int) tp}:{tp}][{id}]Sending request to {key}.");
@@ -93,7 +96,7 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"[{(int) tp}:{tp}][{id}]An error occurred: {ex.Message}.");
+                LogRequestFailure(tp, id, ex, redactExceptionDetails);
                 e = ex;
                 throw;
             }
@@ -102,7 +105,8 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                 sw.Stop();
 
                 var elapsedMs = sw.ElapsedMilliseconds;
-                var message = buildCustomMessage?.Invoke(rsp, e) ?? e?.BuildFullInformationText();
+                var message = redactExceptionDetails ? RedactedExceptionDetails(e) :
+                    buildCustomMessage?.Invoke(rsp, e) ?? e?.BuildFullInformationText();
                 var resultType = getResultType?.Invoke(rsp, e) ?? DefaultGetResultType(rsp, e, ct);
 
                 RecordCompletedRequest(tp, rsp, resultType, requestTime, elapsedMs, message, key);
@@ -110,6 +114,29 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 
             return rsp;
         }
+
+        private void LogRequestFailure(ThirdPartyId tp, string id, Exception error, bool redactDetails)
+        {
+            if (redactDetails)
+            {
+                // Transport exceptions can contain the real URI or a response echoing its token.
+                // Do not pass the original exception to logging providers, including its inner errors.
+                _logger.LogError($"[{(int) tp}:{tp}][{id}]An error occurred: {RedactedExceptionDetails(error)}.");
+            }
+            else
+            {
+                _logger.LogError(error, $"[{(int) tp}:{tp}][{id}]An error occurred: {error.Message}.");
+            }
+        }
+
+        private static string? RedactedExceptionDetails(Exception? error) => error switch
+        {
+            HttpRequestException requestError => $"HttpRequestException ({requestError.HttpRequestError}" +
+                (requestError.StatusCode is { } status ? $", HTTP {(int) status})" : ")"),
+            HttpIOException ioError => $"HttpIOException ({ioError.HttpRequestError})",
+            null => null,
+            _ => error.GetType().Name
+        };
 
 
         public IDictionary<ThirdPartyId, ThirdPartyRequestLog[]> Logs =>
