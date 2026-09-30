@@ -12,6 +12,12 @@ public sealed class FederationHttpClient(HttpClient http)
     public const int MaxControlResponseBytes = 4 * 1024 * 1024;
 
     /// <summary>
+    /// How long one unsigned exchange (<see cref="PublicAsync{T}"/>) and a session's handshake may take in all. A
+    /// device that accepts the connection and never answers is given up on at this deadline. Tests shorten it.
+    /// </summary>
+    public TimeSpan PublicDeadline { get; init; } = TimeSpan.FromSeconds(8);
+
+    /// <summary>
     /// The node's address leads into a proxy on this computer (<see cref="ProxyFakeAddresses"/>):
     /// told apart from <c>NodeUnreachable</c>, whose fix is on the other device.
     /// </summary>
@@ -37,7 +43,7 @@ public sealed class FederationHttpClient(HttpClient http)
     {
         using var request = CreateRequest(address, method, path, body);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        deadline.CancelAfter(TimeSpan.FromSeconds(8));
+        deadline.CancelAfter(PublicDeadline);
         using var response = await SendAsync(request, deadline.Token);
         return await ReadEnvelopeAsync<T>(response, deadline.Token);
     }

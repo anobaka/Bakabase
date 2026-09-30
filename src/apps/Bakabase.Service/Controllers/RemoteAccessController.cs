@@ -38,7 +38,9 @@ namespace Bakabase.Service.Controllers
     /// server) before it looks for <see cref="RemoteAccessibleAttribute"/>. Marking a
     /// management route would therefore add exactly one kind of caller — one that has not
     /// paired — and an unpaired caller that can approve requests approves its own, then
-    /// collects a key with full control.
+    /// collects a key with full control. In Unrestricted mode every caller reaches them:
+    /// there the LAN browser is the operator, and it is where a headless server's
+    /// requests are answered and its codes issued.
     /// </para>
     /// </remarks>
     [Route("~/remote-access")]
@@ -252,17 +254,14 @@ namespace Bakabase.Service.Controllers
         #region Pairing: management, for the host and already-paired devices
 
         /// <summary>
-        /// Issues a fresh code and returns it in plain text. This is the only response
-        /// that ever carries one; the settings page can afterwards see that a code
-        /// exists and when it lapses, but not what it is.
-        /// </summary>
-        /// <summary>
-        /// Issues a code that pairs whoever types it.
+        /// Issues a code that pairs whoever types it, and returns it in plain text. This
+        /// is the only response that ever carries one; the settings page can afterwards
+        /// see that a code exists and when it lapses, but not what it is.
         /// </summary>
         /// <remarks>
-        /// Host-only, unlike approving a request. A code lets in a device nobody has
-        /// looked at — it is bearer access, and a phone that could mint one could pair
-        /// anything without the approval step ever happening.
+        /// Never for an unpaired caller of an Enabled server. A code lets in a device
+        /// nobody has looked at — it is bearer access, and a phone that could mint one
+        /// could pair anything without the approval step ever happening.
         /// </remarks>
         [HttpPost("pairing/code")]
         [SwaggerOperation(OperationId = "IssueRemoteAccessPairingCode")]
@@ -281,6 +280,9 @@ namespace Bakabase.Service.Controllers
         /// the server's log — is a worse thing to ask of somebody every time.
         /// </summary>
         /// <remarks>
+        /// Not <see cref="RemoteAccessibleAttribute"/>: an unpaired caller of an Enabled
+        /// server that does not require pairing would otherwise approve the request it
+        /// filed itself and collect a key with full control (see the class remarks).
         /// Answers the id the device will be listed under once it has collected its key, so
         /// whoever approved it can find it there. The key itself only ever goes to the device.
         /// </remarks>

@@ -8,6 +8,7 @@ using System.Text.Json;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Domain.Options;
+using Bakabase.Modules.DataSync.Services;
 using Bakabase.Modules.Notification.Abstractions.Models.Input;
 using Bakabase.Modules.Notification.Abstractions.Services;
 using Bakabase.Modules.Federation.Identity;
@@ -23,6 +24,7 @@ using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers;
@@ -223,7 +225,32 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
     public async Task<IActionResult> Remove(string nodeId, CancellationToken ct)
     {
         await peers.RemovePeerAsync(nodeId, ct);
+        await ForgetDataSyncLinksAsync(nodeId, ct);
         return FederationResult(new FederationPeerChange());
+    }
+
+    /// <summary>
+    /// Removing a device ends definitions sync with it in both directions, as its confirmation says: the grants went
+    /// with the peer, and this device's own links to it are reset as <c>DELETE /data-sync/links/{id}</c> resets one —
+    /// every definition kept, the link, its bases and what waited on it forgotten. Left alone, a link would find its
+    /// access gone on its next pull and blame the removed device for no longer sharing, and the map would draw that
+    /// device again. Resolved per request: a host without data sync has no links to reset.
+    /// </summary>
+    private async Task ForgetDataSyncLinksAsync(string nodeId, CancellationToken ct)
+    {
+        if (HttpContext?.RequestServices.GetService<IDataSyncService>() is not { } dataSync) return;
+        foreach (var link in (await dataSync.GetLinksAsync(ct))
+                 .Where(l => string.Equals(l.PeerNodeId, nodeId, StringComparison.Ordinal)))
+        {
+            // Busy only when an apply held the gate for longer than a request waits; the link then shows that its
+            // access is gone, and resetting it by hand ("Stop") still works.
+            if (await dataSync.ResetLinkAsync(link.Id, ct) is { Code: not DataSyncProblemCode.LinkNotFound } problem)
+            {
+                HttpContext.RequestServices.GetService<ILogger<FederationPeerController>>()?.LogWarning(
+                    "The data sync link {LinkId} to the removed device {NodeId} stays: {Problem}", link.Id, nodeId,
+                    problem.Code);
+            }
+        }
     }
 
     [HttpDelete("{nodeId}/outbound")]
@@ -315,8 +342,12 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
         var local = await identity.GetAsync(ct);
         // What this install says it is, where the host can tell: optional on the wire.
         var self = HttpContext.RequestServices.GetService<IServerSelfDescription>();
-        return FederationResult(new NodeInfo(local.NodeId, local.LibraryEpoch, local.Name, 1, timeProvider.GetUtcNow())
-            .DescribedBy(self));
+        var info = new NodeInfo(local.NodeId, local.LibraryEpoch, local.Name, 1, timeProvider.GetUtcNow())
+            .DescribedBy(self);
+        // The data sync capability members, where the host has data sync: optional on the wire too.
+        if (HttpContext.RequestServices.GetService<INodeInfoContributor>() is { } contributor)
+            info = await contributor.ContributeAsync(info, ct);
+        return FederationResult(info);
     }
 
     [HttpPost("~/federation/v1/pair/code")]
@@ -378,7 +409,7 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
         FederationResult(await peers.ClaimPairingAsync(request, ct));
 
     [HttpPost("~/federation/v1/export/handshake")]
-    [FederationEndpoint(FederationEndpointKind.Export)]
+    [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.Any)]
     [SwaggerOperation(OperationId = "VerifyFederationNode")]
     [ProducesResponseType(typeof(NodeHandshakeResponse), 200)]
     public async Task<IActionResult> Handshake([FromBody] NodeHandshakeRequest request, CancellationToken ct)

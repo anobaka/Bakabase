@@ -44,6 +44,7 @@ using Bakabase.Modules.RemoteAccess.Extensions;
 using Bakabase.Service.Components;
 using Bakabase.Service.Components.ModelBinding;
 using Bakabase.Service.Components.RemoteAccess;
+using Bakabase.Service.Components.DataSync;
 using Bakabase.Service.Components.Federation;
 using Bakabase.Service.Components.Tasks;
 using Bakabase.Service.Extensions;
@@ -121,6 +122,7 @@ namespace Bakabase.Service.Components
             services.AddSingleton<IListeningAddressProvider, AppContextListeningAddressProvider>();
             services.AddSingleton<IRemoteAccessDataDirectory, AppServiceRemoteAccessDataDirectory>();
             services.AddFederatedLibrary();
+            services.AddDataSyncServiceComponents();
 
             // Which pages CORS, the cross-site guard and the framing headers trust, for the
             // runtime this build is for.
