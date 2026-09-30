@@ -214,7 +214,10 @@ manage anything; they are only ever managed.
   back on its old relay origin (`RetiredRelayPorts`, as after "stop managing"). The reset
   forgets them first, before the `ServerId` is replaced: a store that cannot be written
   refuses the reset (`ManagedServersNotForgotten`) with the install's identity, paired devices
-  and node as they were. A headless server manages nothing and composes no
+  and node as they were, and every server still managed, key and relay. The store edits a copy
+  and holds it only once the file is in place (`ClientConnectionStore.MutateAsync`), so no later
+  write — a path mapping, a relay noting an answer — saves a reset that was refused (only the
+  filed requests are already dropped). A headless server manages nothing and composes no
   `IManagedServerService`, so `federation new-identity` has nothing to forget there. Until
   the copy is made a new device, revoking that device on a server, or "stop managing" on
   either install (which asks the server to revoke it), ends management from both.
@@ -280,7 +283,8 @@ app. What stays is deliberate:
   probed, paired and relayed to at once, and a relay whose name leads to two installs connects
   only to the one that answered its question. `ForgetAllLocallyTests`: forgetting every server
   here drops every key, relay and filed request (an approval afterwards is never collected)
-  and sends no server a single request, and a server paired again gets its origin back.
+  and sends no server a single request, and a server paired again gets its origin back; a
+  store that cannot be written forgets nothing, then or on a later unrelated write.
 - `src/tests/Bakabase.Tests/Federation/FederationIdentityResetTests` — "Make this a new device"
   through its controller: the console's servers forgotten without a word to them (fake
   servers behind a real console) and paired again; a headless composition resetting all the

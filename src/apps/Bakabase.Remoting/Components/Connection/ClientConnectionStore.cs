@@ -26,7 +26,8 @@ public interface IClientConnectionStore
 /// The same shape as the server's device store, for the same reasons — held in memory
 /// after the first read because every outgoing request needs the key, written back
 /// atomically so a crash mid-write leaves the previous contents rather than a truncated
-/// file that would strand the client with no way back to its server.
+/// file that would strand the client with no way back to its server. What is held in memory
+/// changes only once the file has: a write that fails leaves both as they were.
 /// </remarks>
 public sealed class ClientConnectionStore(IClientDataDirectory directory) : IClientConnectionStore
 {
@@ -97,7 +98,11 @@ public sealed class ClientConnectionStore(IClientDataDirectory directory) : ICli
         await _writeGate.WaitAsync(ct);
         try
         {
-            var data = Read();
+            // A copy, which takes the place of what is held here only once the file is in
+            // place. A write that fails — a full disk, a file that cannot be replaced, the
+            // caller giving up halfway — then leaves this as the file still has it; edited in
+            // place, the change it refused would be saved by the next write, of anything.
+            var data = Copy(Read());
             var result = mutate(data);
 
             var dir = directory.Ensure();
@@ -119,6 +124,15 @@ public sealed class ClientConnectionStore(IClientDataDirectory directory) : ICli
             _writeGate.Release();
         }
     }
+
+    /// <summary>
+    /// A deep copy by round trip through the file's own format: exactly what reading the file
+    /// back would give, and a field added to the model later is carried without anyone having
+    /// to remember this method exists.
+    /// </summary>
+    private static ClientConnectionData Copy(ClientConnectionData data) =>
+        JsonSerializer.Deserialize<ClientConnectionData>(JsonSerializer.Serialize(data, SerializerOptions),
+            SerializerOptions)!;
 
     /// <summary>
     /// Owner read/write only on Unix, where a file is otherwise created world-readable

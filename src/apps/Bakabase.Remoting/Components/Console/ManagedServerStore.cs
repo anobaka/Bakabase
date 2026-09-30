@@ -55,11 +55,13 @@ public sealed class ManagedServerDirectory(Func<string> resolve) : IClientDataDi
 /// view of its own server (<see cref="SingleServerConnectionStore"/>).
 /// </para>
 /// <para>
-/// Reads come from an immutable snapshot rather than the underlying store's live object.
-/// That store mutates its cached copy in place under its write gate; with one reader that
-/// was fine, but here every relay reads on every request while the console adds, forgets
-/// and re-pairs servers — and enumerating a list that another thread is inserting into
-/// throws. A snapshot is published after each successful write and never changes again.
+/// Reads come from an immutable snapshot of our own rather than the underlying store's
+/// cached object. Every relay reads on every request while the console adds, forgets and
+/// re-pairs servers, so what they read must never change under them — enumerating a list
+/// that another thread is inserting into throws — and nothing a caller does with what it
+/// read can reach the store. A snapshot is published after each successful write and never
+/// changes again; a write that fails publishes nothing, and the underlying store keeps what
+/// the file has.
 /// </para>
 /// </remarks>
 public sealed class ManagedServerStore : IClientConnectionStore

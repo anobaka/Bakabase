@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Remoting.Components.Console;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Tests.RemoteAccess.Console;
@@ -145,6 +146,51 @@ public class ForgetAllLocallyTests
         var forwarded = desk.Requests.Last(r => r.Path == "/resource");
         Assert.AreEqual(entry.DeviceId, forwarded.DeviceId);
         Assert.IsTrue(forwarded.SignatureValid);
+    }
+
+    [TestMethod]
+    public async Task A_store_that_cannot_be_written_forgets_nothing_now_or_on_a_later_write()
+    {
+        // The reset is refused then, and the install must be as it was: its servers, their keys
+        // and relays — not listed still while the next write of anything, the relay's own
+        // record of an answer included, saves them away without a reset ever happening.
+        var desk = await Server("server-desk", "Desk");
+        var nas = await Server("server-nas", "NAS");
+        var (deskDevice, deskKey) = await _console.AddManagedAsync(desk);
+        await _console.AddManagedAsync(nas);
+        var deskPort = ConsoleHarness.PortOf((await _console.Manager.OpenAsync(desk.ServerId, null))!.Url);
+
+        // A directory where the file was, which every write's final rename fails on.
+        File.Delete(_console.ManagedFile);
+        Directory.CreateDirectory(Path.Combine(_console.ManagedFile, "held"));
+
+        await Assert.ThrowsAsync<Exception>(() => _console.Manager.ForgetAllLocallyAsync());
+
+        Assert.AreEqual(2, _console.Store.Read().Servers.Count);
+        Assert.AreEqual(2, (await _console.Manager.GetAsync(false)).Servers.Count);
+        Assert.AreEqual(1, _console.Manager.RunningRelays.Count);
+        Assert.IsTrue(Listening(deskPort), "the desk's relay was stopped although its key was kept");
+
+        // Writable again: an unrelated write saves both servers as they were.
+        Directory.Delete(_console.ManagedFile, true);
+        Assert.IsTrue(await _console.Manager.SetPathMappingsAsync(desk.ServerId,
+            [new ManagedServerPathMapping("/data/media", "/Volumes/media")]));
+
+        var saved = new ManagedServerStore(_console.Store.Directory).Read();
+        CollectionAssert.AreEquivalent(new[] { desk.ServerId, nas.ServerId },
+            saved.Servers.Select(s => s.ServerId).ToArray(), await File.ReadAllTextAsync(_console.ManagedFile));
+        Assert.AreEqual(deskKey, saved.Servers.Single(s => s.ServerId == desk.ServerId).DeviceKey);
+        Assert.IsNull(saved.RetiredRelayPorts, "a relay origin was retired by the reset that failed");
+        Assert.AreEqual(2, (await _console.Manager.GetAsync(false)).Servers.Count);
+
+        // Still managed: the desk's relay forwards, signed with the key it had.
+        using var response = await ConsoleHarness.SendToRelayAsync(deskPort, "/resource");
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual(deskDevice, desk.Requests.Last(r => r.Path == "/resource").DeviceId);
+
+        // And tried again, the reset forgets both.
+        Assert.AreEqual(2, await _console.Manager.ForgetAllLocallyAsync());
+        Assert.AreEqual(0, new ManagedServerStore(_console.Store.Directory).Read().Servers.Count);
     }
 
     [TestMethod]
