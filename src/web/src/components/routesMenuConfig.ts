@@ -143,41 +143,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
     menu: true,
   },
   {
-    // The multi-device mode (「多设备互联」, "Multi-device"): every page of it belongs to this device's own
-    // window, so the group is filtered out wherever that window is not (`localNodeOnly`). The
-    // routes stay where they were, so links and bookmarks keep working.
-    name: "federation.mode",
-    icon: AiOutlineCluster,
-    menu: true,
-    localNodeOnly: true,
-    children: [
-      {
-        name: "federation.title",
-        path: "/federation",
-        component: FederationLibraryPage,
-        icon: AiOutlineCloudServer,
-        layout: "basic",
-        localNodeOnly: true,
-      },
-      {
-        name: "federation.devices.title",
-        path: "/federation/devices",
-        component: FederationDevicesPage,
-        icon: AiOutlineLaptop,
-        layout: "basic",
-        localNodeOnly: true,
-      },
-      {
-        name: "federation.map.title",
-        path: "/federation/map",
-        component: FederationDeviceMapPage,
-        icon: AiOutlineApartment,
-        layout: "basic",
-        localNodeOnly: true,
-      },
-    ],
-  },
-  {
     name: "menu.mediaLibrary",
     icon: MdVideoLibrary,
     menu: true,
@@ -345,6 +310,41 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: ExHentaiIcon,
         layout: "basic",
         menu: true,
+      },
+    ],
+  },
+  {
+    // The multi-device mode (「多设备互联」, "Multi-device"): every page of it belongs to this device's own
+    // window, so the group is filtered out wherever that window is not (`localNodeOnly`). The
+    // routes stay where they were, so links and bookmarks keep working.
+    name: "federation.mode",
+    icon: AiOutlineCluster,
+    menu: true,
+    localNodeOnly: true,
+    children: [
+      {
+        name: "federation.title",
+        path: "/federation",
+        component: FederationLibraryPage,
+        icon: AiOutlineCloudServer,
+        layout: "basic",
+        localNodeOnly: true,
+      },
+      {
+        name: "federation.devices.title",
+        path: "/federation/devices",
+        component: FederationDevicesPage,
+        icon: AiOutlineLaptop,
+        layout: "basic",
+        localNodeOnly: true,
+      },
+      {
+        name: "federation.map.title",
+        path: "/federation/map",
+        component: FederationDeviceMapPage,
+        icon: AiOutlineApartment,
+        layout: "basic",
+        localNodeOnly: true,
       },
     ],
   },
