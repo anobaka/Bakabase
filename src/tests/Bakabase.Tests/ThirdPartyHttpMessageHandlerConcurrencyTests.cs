@@ -15,6 +15,7 @@ using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bootstrap.Components.Configuration.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -264,6 +265,60 @@ public class ThirdPartyHttpMessageHandlerConcurrencyTests
         Assert.AreEqual(1, server.ReceivedRequests, "The only request slot must remain usable after rejection.");
     }
 
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task RequestLogKeyChangesOnlyTheCapturedLogAndLeavesTheWireUriIntact(bool synchronous,
+        bool overrideKey)
+    {
+        const string syntheticSecret = "123-synthetic-account-token";
+        const string hash = "0123456789abcdef0123456789abcdef01234567";
+        await using var server = new DelayedHeadersServer();
+        var messages = new LogCollector();
+        var logger = new ThirdPartyHttpRequestLogger(messages);
+        var completed = 0;
+        logger.OnRequestCompleted += (_, _) => Interlocked.Increment(ref completed);
+        using var handler = new TestHandler(new TestOptions(), logger: logger);
+        using var client = new HttpClient(handler) {Timeout = Timeout};
+        var path = $"torrent/42/{syntheticSecret}/{hash}.torrent?download=1";
+        using var request = new HttpRequestMessage(HttpMethod.Get, server.Url + path)
+        {
+            Version = HttpVersion.Version11,
+            VersionPolicy = HttpVersionPolicy.RequestVersionExact
+        };
+        var originalUri = request.RequestUri!;
+        var redactedKey = $"{server.Url}torrent/42/[redacted]/{hash}.torrent?download=1";
+        if (overrideKey) request.Options.Set(ThirdPartyRequestOptions.RequestLogKey, redactedKey);
+
+        var sending = synchronous ? Task.Run(() => client.Send(request)) : client.SendAsync(request);
+        var received = await server.NextAsync();
+        received.Respond();
+        using var response = await sending.WaitAsync(Timeout);
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual($"GET /{path} HTTP/1.1", received.RequestLine,
+            "A log-key override must never redact the token sent to the HTTP server.");
+        Assert.AreEqual(originalUri, request.RequestUri);
+        var captured = logger.Logs[ThirdPartyId.ExHentai].Single();
+        var expectedKey = overrideKey ? redactedKey : originalUri.ToString();
+        Assert.AreEqual(expectedKey, captured.Key);
+        Assert.AreEqual(Bakabase.Modules.ThirdParty.Abstractions.Logging.ThirdPartyRequestResultType.Succeed,
+            captured.Result);
+        Assert.AreEqual(1, completed);
+        Assert.AreEqual(1, server.ReceivedRequests);
+        var sendingLog = messages.Messages.Single(message => message.Contains("Sending request to ",
+            StringComparison.Ordinal));
+        StringAssert.Contains(sendingLog, expectedKey);
+        if (overrideKey)
+        {
+            Assert.IsFalse(captured.Key.Contains(syntheticSecret, StringComparison.Ordinal));
+            Assert.IsFalse(messages.Messages.Any(message => message.Contains(syntheticSecret,
+                StringComparison.Ordinal)), "The token must not enter the underlying request logger.");
+        }
+    }
+
     private sealed class TestOptions : IThirdPartyHttpClientOptions
     {
         public string? Cookie { get; set; }
@@ -274,9 +329,10 @@ public class ThirdPartyHttpMessageHandlerConcurrencyTests
         public int RequestInterval { get; set; }
     }
 
-    private sealed class TestHandler(TestOptions options, Func<HttpRequestMessage, Task>? beforeRequesting = null)
+    private sealed class TestHandler(TestOptions options, Func<HttpRequestMessage, Task>? beforeRequesting = null,
+        ThirdPartyHttpRequestLogger? logger = null)
         : AbstractThirdPartyHttpMessageHandler<TestOptions>(
-            new ThirdPartyHttpRequestLogger(NullLogger<ThirdPartyHttpRequestLogger>.Instance),
+            logger ?? new ThirdPartyHttpRequestLogger(NullLogger<ThirdPartyHttpRequestLogger>.Instance),
             ThirdPartyId.ExHentai, new BakabaseWebProxy(new StubOptions()), options)
     {
         public void Update(TestOptions options) => Options = options;
@@ -295,8 +351,19 @@ public class ThirdPartyHttpMessageHandlerConcurrencyTests
         }
     }
 
-    private sealed class PendingRequest
+    private sealed class LogCollector : ILogger<ThirdPartyHttpRequestLogger>
     {
+        public ConcurrentQueue<string> Messages { get; } = new();
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter) => Messages.Enqueue(formatter(state, exception));
+    }
+
+    private sealed class PendingRequest(string requestLine)
+    {
+        public string RequestLine { get; } = requestLine;
         public long ArrivedAt { get; } = Stopwatch.GetTimestamp();
         public TaskCompletionSource Ready { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public void Respond() => Ready.TrySetResult();
@@ -346,7 +413,7 @@ public class ThirdPartyHttpMessageHandlerConcurrencyTests
                     headers.Append(Encoding.ASCII.GetString(buffer, 0, read));
                 }
 
-                var pending = new PendingRequest();
+                var pending = new PendingRequest(headers.ToString().Split("\r\n", 2, StringSplitOptions.None)[0]);
                 Interlocked.Increment(ref ReceivedRequests);
                 await _requests.Writer.WriteAsync(pending, _stop.Token);
                 await pending.Ready.Task.WaitAsync(_stop.Token);

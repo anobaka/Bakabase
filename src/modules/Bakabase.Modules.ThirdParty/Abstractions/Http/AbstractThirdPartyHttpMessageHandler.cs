@@ -28,6 +28,9 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 
         /// <summary>Final local check after source pacing, immediately before sending. Must not make HTTP requests.</summary>
         public static readonly HttpRequestOptionsKey<Func<CancellationToken, Task>> BeforeSend = new("ThirdParty.BeforeSend");
+
+        /// <summary>Optional redacted display key; never changes the actual request URI.</summary>
+        public static readonly HttpRequestOptionsKey<string> RequestLogKey = new("ThirdParty.RequestLogKey");
     }
 
     public abstract class AbstractThirdPartyHttpMessageHandler<TOptions> : HttpClientHandler
@@ -250,7 +253,8 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                 if (request.Options.TryGetValue(ThirdPartyRequestOptions.BeforeSend, out var beforeSend))
                     beforeSend(cancellationToken).GetAwaiter().GetResult();
                 var response = _logger.Capture(ThirdPartyId, () => base.Send(request, cancellationToken),
-                    request.RequestUri?.ToString(), ct: cancellationToken);
+                    request.Options.TryGetValue(ThirdPartyRequestOptions.RequestLogKey, out var requestLogKey)
+                        ? requestLogKey : request.RequestUri?.ToString(), ct: cancellationToken);
                 _processResponse(request, response);
                 return response;
             }
@@ -274,7 +278,9 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                 // Never hold the scheduling lock while the network is pending: slow headers must not
                 // serialize every request regardless of MaxConcurrency.
                 var response = await _logger.CaptureAsync(ThirdPartyId,
-                    () => base.SendAsync(request, cancellationToken), request.RequestUri?.ToString(),
+                    () => base.SendAsync(request, cancellationToken),
+                    request.Options.TryGetValue(ThirdPartyRequestOptions.RequestLogKey, out var requestLogKey)
+                        ? requestLogKey : request.RequestUri?.ToString(),
                     ct: cancellationToken).ConfigureAwait(false);
                 _processResponse(request, response);
                 return response;

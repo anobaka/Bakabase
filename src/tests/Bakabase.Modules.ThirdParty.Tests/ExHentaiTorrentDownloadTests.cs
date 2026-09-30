@@ -69,10 +69,10 @@ public sealed class ExHentaiTorrentDownloadTests
         using var fixture = new Fixture(request =>
         {
             requests++;
-            Assert.IsTrue(request.Options.TryGetValue(ThirdPartyRequestOptions.SkipConfiguredHeaders, out var skip) && skip);
             if (requests == 1)
                 return new HttpResponseMessage(HttpStatusCode.Redirect)
                     {Headers = {Location = new Uri("https://ehtracker.org/get/public.torrent")}};
+            Assert.IsTrue(request.Options.TryGetValue(ThirdPartyRequestOptions.SkipConfiguredHeaders, out var skip) && skip);
             Assert.IsTrue(request.Options.TryGetValue(ThirdPartyRequestOptions.SuppressSensitiveHeaders, out var suppress) && suppress);
             Assert.IsTrue(request.Options.TryGetValue(ThirdPartyRequestOptions.Cookie, out var cookie) && cookie == "");
             return Response(Metadata);

@@ -302,22 +302,28 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
             var torrents = new List<ExHentaiTorrent>();
             foreach (var form in forms)
             {
-                var trs = form.Cq()["table tr"];
+                // CQ's selector indexer searches the document; Find stays inside this form.
+                var trs = form.Cq().Find("table tr");
                 if (trs?.Length >= 3)
                 {
                     
                     var meta = trs.FirstOrDefault()!.Cq().Find("td").Select(x => x.TextContent.Split(':', 2))
                         .Where(x => x.Length == 2)
                         .ToDictionary(d => d[0].Trim(), d => d[1].Trim());
-                    var downloadLink = trs![2]!.Cq().Find("a").Attr<string>("href");
-                    if (string.IsNullOrWhiteSpace(downloadLink)) continue;
-                    downloadLink = new Uri(new Uri(torrentPageUrl), downloadLink).AbsoluteUri;
+                    if (!meta.TryGetValue("Size", out var size) ||
+                        !meta.TryGetValue("Downloads", out var downloaded) ||
+                        !meta.TryGetValue("Posted", out var posted)) continue;
+                    var downloadAnchor = trs![2]!.Cq().Find("a").First();
+                    var href = downloadAnchor.Attr<string>("href");
+                    if (string.IsNullOrWhiteSpace(href)) continue;
+                    var downloadLink = ResolveTorrentDownloadLink(torrentPageUrl, href,
+                        downloadAnchor.Attr<string>("onclick"));
                     var torrent = new ExHentaiTorrent
                     {
                         DownloadUrl = downloadLink,
-                        Size = ConvertToBytes(meta["Size"]),
-                        Downloaded = int.Parse(meta["Downloads"]),
-                        UpdatedAt = DateTime.Parse(meta["Posted"])
+                        Size = ConvertToBytes(size),
+                        Downloaded = int.Parse(downloaded),
+                        UpdatedAt = DateTime.Parse(posted)
                     };
                     torrents.Add(torrent);
                 }
