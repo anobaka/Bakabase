@@ -55,9 +55,10 @@ def read_results(path):
 
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: trx_timing_summary.py RESULTS_DIRECTORY GITHUB_STEP_SUMMARY", file=sys.stderr)
+    if len(sys.argv) not in (3, 4):
+        print("Usage: trx_timing_summary.py RESULTS_DIRECTORY GITHUB_STEP_SUMMARY [TITLE]", file=sys.stderr)
         return 2
+    title = sys.argv[3] if len(sys.argv) == 4 else "Backend main test timings"
 
     files = sorted(Path(sys.argv[1]).rglob("*.trx"))
     if not files:
@@ -72,7 +73,7 @@ def main():
     counts = Counter(outcome for _, outcome, _ in results)
     count_text = ", ".join(f"{outcome}: {count}" for outcome, count in sorted(counts.items()))
     lines = [
-        "## Backend main test timings",
+        f"## {markdown(title)}",
         "",
         f"{len(results)} test cases ({count_text}). Sum of test durations: "
         f"{sum(duration for duration, _, _ in results):.1f} s.",

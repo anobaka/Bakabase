@@ -30,12 +30,23 @@ permissions:
   contents: read
 
 jobs:
-  backend-main-tests:
+  backend-main-shards:
     if: inputs.suite != 'platforms' && inputs.suite != 'packages'
-    name: Backend main tests
+    name: Backend main tests (${{ matrix.group }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Complementary filters keep every test in exactly one group, including
+          # new tests. Keep all convergence seeds and their coverage assertions.
+          - group: data-sync
+            filter: FullyQualifiedName~Bakabase.Tests.DataSync.
+          - group: other
+            filter: FullyQualifiedName!~Bakabase.Tests.DataSync.
     env:
       DOTNET_MULTILEVEL_LOOKUP: 0
+      TEST_FILTER: ${{ matrix.filter }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,20 +72,38 @@ jobs:
         id: tests
         run: |
           dotnet test src/tests/Bakabase.Tests/Bakabase.Tests.csproj -- \
+            --filter "$TEST_FILTER" \
+            --minimum-expected-tests 1 \
             --report-trx --results-directory "$RUNNER_TEMP/backend-test-results"
 
       - name: Summarize slowest tests
         if: ${{ always() && steps.tests.outcome != 'skipped' }}
-        run: python3 .github/scripts/trx_timing_summary.py "$RUNNER_TEMP/backend-test-results" "$GITHUB_STEP_SUMMARY"
+        run: python3 .github/scripts/trx_timing_summary.py "$RUNNER_TEMP/backend-test-results" "$GITHUB_STEP_SUMMARY" "Backend main test timings (${{ matrix.group }})"
 
       - name: Retain TRX results
         if: ${{ always() && steps.tests.outcome != 'skipped' }}
         uses: actions/upload-artifact@v4
         with:
-          name: backend-main-trx
+          name: backend-main-trx-${{ matrix.group }}
           path: ${{ runner.temp }}/backend-test-results
           if-no-files-found: warn
           retention-days: 14
+
+  # Preserve the existing check name and fail if any shard fails or is cancelled.
+  backend-main-tests:
+    if: ${{ always() && inputs.suite != 'platforms' && inputs.suite != 'packages' }}
+    name: Backend main tests
+    needs: backend-main-shards
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm all main test groups passed
+        env:
+          RESULT: ${{ needs.backend-main-shards.result }}
+        run: |
+          if [[ "$RESULT" != success ]]; then
+            echo "::error::Backend main test groups: $RESULT"
+            exit 1
+          fi
 
   backend-module-tests:
     if: inputs.suite != 'platforms' && inputs.suite != 'packages'
@@ -102,41 +131,27 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-
 
-      # The app's entry project is not referenced by any test project, so nothing
-      # else here compiles it — a break would first show up during a deploy, which
-      # is the worst place to find out. It is small; this is seconds, not minutes.
-      - name: Build the app entry point
-        run: dotnet build src/apps/Bakabase.App/Bakabase.App.csproj
+      - name: Verify CI test runner
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
 
-      - name: Run module tests
-        run: |
-          # One `dotnet test` per project so a single failure does not mask
-          # the rest. Live-network ThirdParty tests are [Ignore]d and skipped.
-          projects=(
-            "src/tests/Bakabase.Modules.Acquisition.Tests/Bakabase.Modules.Acquisition.Tests.csproj"
-            "src/tests/Bakabase.Modules.Alias.Tests/Bakabase.Modules.Alias.Tests.csproj"
-            "src/tests/Bakabase.Modules.Collection.Tests/Bakabase.Modules.Collection.Tests.csproj"
-            "src/tests/Bakabase.Modules.BulkModification.Tests/Bakabase.Modules.BulkModification.Tests.csproj"
-            "src/tests/Bakabase.Modules.Comparison.Tests/Bakabase.Modules.Comparison.Tests.csproj"
-            "src/tests/Bakabase.Modules.DataSync.Tests/Bakabase.Modules.DataSync.Tests.csproj"
-            "src/tests/Bakabase.Modules.Enhancer.Tests/Bakabase.Modules.Enhancer.Tests.csproj"
-            "src/tests/Bakabase.Modules.Federation.Tests/Bakabase.Modules.Federation.Tests.csproj"
-            "src/tests/Bakabase.Modules.HealthScore.Tests/Bakabase.Modules.HealthScore.Tests.csproj"
-            "src/tests/Bakabase.Modules.Player.Tests/Bakabase.Modules.Player.Tests.csproj"
-            "src/tests/Bakabase.Modules.Property.Tests/Bakabase.Modules.Property.Tests.csproj"
-            "src/tests/Bakabase.Modules.StandardValue.Tests/Bakabase.Modules.StandardValue.Tests.csproj"
-            "src/tests/Bakabase.Modules.ThirdParty.Tests/Bakabase.Modules.ThirdParty.Tests.csproj"
-          )
-          failed=()
-          for proj in "${projects[@]}"; do
-            echo "::group::dotnet test ${proj}"
-            dotnet test "${proj}" || failed+=("${proj}")
-            echo "::endgroup::"
-          done
-          if [ ${#failed[@]} -gt 0 ]; then
-            printf '::error::Test project failed: %s\n' "${failed[@]}"
-            exit 1
-          fi
+      # Build the app entry point and every module test in one graph before
+      # running two assemblies at a time. Tests never race to write shared obj/bin.
+      - name: Build once and run module tests
+        id: tests
+        run: python3 .github/scripts/run_module_tests.py --results-directory "$RUNNER_TEMP/backend-module-results" --workers 2
+
+      - name: Summarize slowest module tests
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        run: python3 .github/scripts/trx_timing_summary.py "$RUNNER_TEMP/backend-module-results" "$GITHUB_STEP_SUMMARY" "Backend module test timings"
+
+      - name: Retain module test results and logs
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-module-trx
+          path: ${{ runner.temp }}/backend-module-results
+          if-no-files-found: warn
+          retention-days: 14
 
   # Keep the existing required-check name while the two test groups run in
   # parallel. A failure in either group must fail the required check.
@@ -175,15 +190,20 @@ jobs:
       - name: Enable corepack
         run: corepack enable yarn
 
+      - name: Locate Yarn cache
+        id: yarn-cache
+        run: echo "path=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
       - name: Cache Yarn
         uses: actions/cache@v4
         with:
           path: |
-            src/web/.yarn/cache
+            ${{ steps.yarn-cache.outputs.path }}
             src/web/node_modules
-          key: yarn-${{ runner.os }}-${{ hashFiles('src/web/yarn.lock') }}
+            src/web/.yarn/install-state.gz
+          key: yarn-v2-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('src/web/yarn.lock', 'src/web/package.json', 'src/web/.yarnrc.yml', 'src/web/.yarn/patches/**') }}
           restore-keys: |
-            yarn-${{ runner.os }}-
+            yarn-v2-${{ runner.os }}-${{ runner.arch }}-node22-
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -214,15 +234,20 @@ jobs:
       - name: Enable corepack
         run: corepack enable yarn
 
+      - name: Locate Yarn cache
+        id: yarn-cache
+        run: echo "path=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
       - name: Cache Yarn
         uses: actions/cache@v4
         with:
           path: |
-            src/web/.yarn/cache
+            ${{ steps.yarn-cache.outputs.path }}
             src/web/node_modules
-          key: yarn-${{ runner.os }}-${{ hashFiles('src/web/yarn.lock') }}
+            src/web/.yarn/install-state.gz
+          key: yarn-v2-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('src/web/yarn.lock', 'src/web/package.json', 'src/web/.yarnrc.yml', 'src/web/.yarn/patches/**') }}
           restore-keys: |
-            yarn-${{ runner.os }}-
+            yarn-v2-${{ runner.os }}-${{ runner.arch }}-node22-
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -256,13 +281,154 @@ jobs:
             exit 1
           fi
 
-  # Real processes on Linux: three production-startup hosts talking the node
-  # protocol, the headless publish contents, and first launch, library sharing
-  # and server switching in a browser. The unit/integration tests already run
-  # in backend-tests.
-  federation:
+  # Compile the fixture once, alongside the frontend. Both smoke suites consume
+  # this exact output; only the browser suite needs the production web assets.
+  federation-build:
     if: inputs.suite != 'platforms' && inputs.suite != 'packages'
-    name: Multi-device federation (Linux)
+    name: Federation host build (Linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      DOTNET_MULTILEVEL_LOOKUP: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Build the federation host
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/federation-results"
+          dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj \
+            2>&1 | tee "$RUNNER_TEMP/federation-results/build.log"
+      - name: Archive the complete fixture output
+        run: |
+          # Data sync also runs Bakabase.Service.dll as a CLI. Keep every dependency,
+          # runtime/config file and native asset, with permissions and symlinks intact.
+          test -f src/tests/Bakabase.Federation.TestHost/bin/Debug/net9.0/Bakabase.Federation.TestHost.dll
+          test -f src/tests/Bakabase.Federation.TestHost/bin/Debug/net9.0/Bakabase.Service.dll
+          tar -cf "$RUNNER_TEMP/federation-testhost.tar" \
+            -C src/tests/Bakabase.Federation.TestHost/bin/Debug/net9.0 .
+      - name: Share the fixture build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-federation-testhost
+          path: ${{ runner.temp }}/federation-testhost.tar
+          compression-level: 1
+          if-no-files-found: error
+          retention-days: 3
+      - name: Retain build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: federation-build-evidence
+          path: ${{ runner.temp }}/federation-results
+          if-no-files-found: warn
+          retention-days: 14
+
+  federation-protocol:
+    if: inputs.suite != 'platforms' && inputs.suite != 'packages'
+    name: Federation protocol smoke (Linux)
+    needs: federation-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      DOTNET_MULTILEVEL_LOOKUP: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-federation-testhost
+          path: ${{ runner.temp }}/federation-build
+      - name: Restore the fixture build
+        run: |
+          mkdir -p src/tests/Bakabase.Federation.TestHost/bin/Debug/net9.0
+          tar -xpf "$RUNNER_TEMP/federation-build/federation-testhost.tar" \
+            -C src/tests/Bakabase.Federation.TestHost/bin/Debug/net9.0
+      - name: Three independent hosts, then data sync across three more
+        run: python src/tests/federation-smoke/run.py --timeout 300 --results-directory "$RUNNER_TEMP/federation-results/smoke"
+      - name: Retain protocol evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: federation-protocol-evidence
+          path: ${{ runner.temp }}/federation-results
+          if-no-files-found: warn
+          retention-days: 14
+
+  federation-browser:
+    if: inputs.suite != 'platforms' && inputs.suite != 'packages'
+    name: Federation browser smoke (Linux)
+    needs: [federation-build, frontend-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      DOTNET_MULTILEVEL_LOOKUP: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/tests/federation-browser-smoke/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-federation-testhost
+          path: ${{ runner.temp }}/federation-build
+      - name: Restore the fixture build
+        run: |
+          mkdir -p src/tests/Bakabase.Federation.TestHost/bin/Debug/net9.0
+          tar -xpf "$RUNNER_TEMP/federation-build/federation-testhost.tar" \
+            -C src/tests/Bakabase.Federation.TestHost/bin/Debug/net9.0
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-web
+          path: src/web/dist
+      - name: Install the headless browser
+        working-directory: src/tests/federation-browser-smoke
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps --only-shell chromium
+      - name: Browser runner unit tests
+        run: python3 -m unittest discover -s src/tests/federation-browser-smoke -p 'test*.py'
+      - name: First launch, pairing, media and server switching in a browser
+        run: python3 src/tests/federation-browser-smoke/run.py --no-build --results-directory "$RUNNER_TEMP/federation-results/browser"
+      - name: Retain browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: federation-browser-evidence
+          path: ${{ runner.temp }}/federation-results
+          if-no-files-found: warn
+          retention-days: 14
+
+  # Publishing has its own Release/RID build. Run the complete release contract
+  # and its guard cases alongside the smoke suites.
+  federation-publish:
+    if: inputs.suite != 'platforms' && inputs.suite != 'packages'
+    name: Headless publish contracts (Linux)
     needs: frontend-build
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -279,11 +445,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
         with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: src/tests/federation-browser-smoke/package-lock.json
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
       - uses: actions/download-artifact@v4
         with:
           name: ci-web
@@ -293,28 +461,39 @@ jobs:
           python src/scripts/check-release-contract.py --report "$RUNNER_TEMP/federation-results/product-identities.json"
           python src/tests/upgrade-tests/test_release_contract.py
           python src/tests/upgrade-tests/test_package_acceptance.py
-      - name: Three independent hosts, then data sync across three more
-        run: |
-          dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj
-          python src/tests/federation-smoke/run.py --timeout 300 --results-directory "$RUNNER_TEMP/federation-results/smoke"
       - name: Headless publish contents
         run: |
           dotnet publish src/apps/Bakabase.Service/Bakabase.Service.csproj -p:RuntimeMode=DOCKER --self-contained false -r linux-x64 -o "$RUNNER_TEMP/publish-server"
           cp -R src/web/dist "$RUNNER_TEMP/publish-server/web"
           python src/scripts/check-release-contract.py --role server --publish-dir "$RUNNER_TEMP/publish-server" --require-web --report "$RUNNER_TEMP/federation-results/server-package.json"
-      - name: First launch, pairing, media and server switching in a browser
-        run: |
-          (cd src/tests/federation-browser-smoke && npm ci --ignore-scripts && npx playwright install --with-deps chromium)
-          python3 -m unittest discover -s src/tests/federation-browser-smoke -p 'test*.py'
-          python3 src/tests/federation-browser-smoke/run.py --results-directory "$RUNNER_TEMP/federation-results/browser"
-      - name: Retain evidence
+      - name: Retain publish evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: federation-evidence
+          name: federation-publish-evidence
           path: ${{ runner.temp }}/federation-results
           if-no-files-found: warn
           retention-days: 14
+
+  # Preserve the required-check name. A failed or skipped prerequisite must fail
+  # the gate, even if GitHub skipped the smoke jobs after an earlier build failure.
+  federation:
+    if: ${{ always() && inputs.suite != 'platforms' && inputs.suite != 'packages' }}
+    name: Multi-device federation (Linux)
+    needs: [federation-build, federation-protocol, federation-browser, federation-publish]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Confirm all federation checks passed
+        env:
+          BUILD_RESULT: ${{ needs.federation-build.result }}
+          PROTOCOL_RESULT: ${{ needs.federation-protocol.result }}
+          BROWSER_RESULT: ${{ needs.federation-browser.result }}
+          PUBLISH_RESULT: ${{ needs.federation-publish.result }}
+        run: |
+          if [[ "$BUILD_RESULT" != success || "$PROTOCOL_RESULT" != success || "$BROWSER_RESULT" != success || "$PUBLISH_RESULT" != success ]]; then
+            echo "::error::Federation build: $BUILD_RESULT; protocol: $PROTOCOL_RESULT; browser: $BROWSER_RESULT; publish: $PUBLISH_RESULT"
+            exit 1
+          fi
 
   # On demand before a release: what only a real desktop OS can show.
   federation-platforms:
