@@ -49,7 +49,8 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "OpenFileOrDirectory")]
         public BaseResponse Open(string path, bool openInDirectory)
         {
-            OsShell.Open(path, openInDirectory);
+            if (OperatingSystem.IsLinux() && openInDirectory) LinuxFileManager.RevealInParentDirectory(path);
+            else OsShell.Open(path, openInDirectory);
             return BaseResponseBuilder.Ok;
         }
 

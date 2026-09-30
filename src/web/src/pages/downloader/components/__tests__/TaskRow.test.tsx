@@ -247,7 +247,7 @@ describe("download task row interaction", () => {
 
   it.each([
     ["downloader.action.edit", "onEdit", task.id],
-    ["common.action.openFolder", "onOpenFolder", task.downloadPath],
+    ["common.action.openFolder", "onOpenFolder", task],
   ] as const)(
     "isolates %s from row selection and context menus",
     async (label, callback, argument) => {
@@ -403,12 +403,22 @@ describe("download task row interaction", () => {
   );
 
   it("does not open an undefined download folder", async () => {
-    const props = await show({ downloadPath: undefined });
+    const props = await show({ thirdPartyId: ThirdPartyId.Bilibili, downloadPath: undefined });
     const button = element("common.action.openFolder");
 
     expect(button).toBeDisabled();
     await click(button);
     expect(props.onOpenFolder).not.toHaveBeenCalled();
+    expect(props.onClick).not.toHaveBeenCalled();
+  });
+
+  it("lets ExHentai locate persisted output without a configured folder", async () => {
+    const props = await show({ downloadPath: undefined });
+    const button = element("common.action.openFolder");
+
+    expect(button).not.toBeDisabled();
+    await click(button);
+    expect(props.onOpenFolder).toHaveBeenCalledExactlyOnceWith(props.task);
     expect(props.onClick).not.toHaveBeenCalled();
   });
 

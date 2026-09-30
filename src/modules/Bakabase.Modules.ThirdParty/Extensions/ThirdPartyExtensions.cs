@@ -74,6 +74,9 @@ public static class ThirdPartyExtensions
         services.AddBakabaseHttpClient<ExHentaiHttpMessageHandler<TExHentaiOptions>>(
             InternalOptions.HttpClientNames
                 .ExHentai);
+        // ExHentai URLs can contain account/reload tokens. The source handler supplies redacted
+        // request keys; HttpClientFactory's URI logging does not understand those keys.
+        services.AddHttpClient(InternalOptions.HttpClientNames.ExHentai).RemoveAllLoggers();
         services.TryAddSingleton<ExHentaiClient>();
 
         services.TryAddSingleton<SteamClient>();

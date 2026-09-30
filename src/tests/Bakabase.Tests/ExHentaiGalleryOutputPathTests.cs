@@ -114,5 +114,21 @@ public sealed class ExHentaiGalleryOutputPathTests
         var linkedRoot = _root + "-linked";
         Directory.CreateSymbolicLink(linkedRoot, _root);
         Assert.ThrowsException<IOException>(() => ExHentaiGalleryOutputPath.Resolve(linkedRoot, "another gallery"));
+        Assert.ThrowsException<IOException>(() => ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(
+            linkedRoot, Path.Combine(linkedRoot, "Gallery.torrent")));
+        var torrentLink = Path.Combine(_root, "Gallery.torrent");
+        File.CreateSymbolicLink(torrentLink, outsideFile);
+        Assert.ThrowsException<IOException>(() => ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(_root, torrentLink));
+    }
+
+    [TestMethod]
+    public void FlatTorrentPathsAllowOnlyDirectChildrenOfTheExistingRoot()
+    {
+        var file = Path.Combine(_root, "Gallery [g12345].torrent");
+        ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(_root + Path.DirectorySeparatorChar, file);
+        Assert.ThrowsException<IOException>(() => ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(
+            _root, Path.Combine(_root, "extra", "Gallery.torrent")));
+        Assert.ThrowsException<IOException>(() => ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(
+            _root, Path.Combine(_root, "..", "Gallery.torrent")));
     }
 }

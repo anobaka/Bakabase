@@ -27,49 +27,113 @@ public partial class ExHentaiClient
         if (!IsAccountHost(pageUri) || IsOriginalEndpoint(pageUri))
             throw new InvalidDataException("An E-Hentai image-viewing page is required.");
 
-        var (html, serverDate, pageCompletedAt) = await GetExHentaiPageAsync(pageUri, options.RequestContext, ct);
-        if (serverDate.HasValue && Math.Abs((serverDate.Value - DateTime.UtcNow).TotalSeconds) > 60)
-            serverDate = null;
-        var page = new CQ(html);
-        var imageSource = page["#img"].Attr("src");
-        if (string.IsNullOrWhiteSpace(imageSource))
-            throw new InvalidDataException("The image-viewing page did not contain an image.");
-        var imageUrl = new Uri(pageUri, WebUtility.HtmlDecode(imageSource));
-        RejectErrorImageUrl(imageUrl);
-
-        Uri? originalUrl = null;
-        long? originalSize = null;
-        foreach (var anchor in page["a[href]"])
-        {
-            if (!Uri.TryCreate(pageUri, WebUtility.HtmlDecode(anchor.GetAttribute("href")), out var candidate) ||
-                !IsOriginalEndpoint(candidate)) continue;
-            if (!IsAccountHost(candidate))
-                throw new InvalidDataException("The original-image link pointed outside E-Hentai.");
-            originalUrl = candidate;
-            originalSize = ParseOriginalSizeUpperBound(anchor.Cq().Text());
-            break;
-        }
-        var target = options.PreferOriginal && originalUrl != null ? originalUrl : imageUrl;
+        Uri? reloadUri = null;
+        string? reloadToken = null;
+        Uri? originalEntry = null;
+        Uri? originalRecoveryTarget = null;
+        var recoveringOriginal = false;
         var originalRequested = false;
-        ExHentaiOriginalImageInfo BuildOriginalInfo(Uri uri) => new()
+        var regularFallback = !options.PreferOriginal;
+        Func<Uri, ExHentaiOriginalImageInfo>? originalInfo = null;
+        (string Html, DateTime? ServerDateUtc, long CompletedAt, ImageResponseDetails Details)? originalPage = null;
+        for (var attempt = 0; ; attempt++)
         {
-            OriginalUrl = uri.AbsoluteUri, OriginalSizeBytes = originalSize, PageUrl = pageUrl,
-            ServerTimeUtc = serverDate?.Add(Stopwatch.GetElapsedTime(pageCompletedAt))
-        };
-        using var imageResponse = await SendImageRequestAsync(target, options.RequestContext, ct,
-            beforeOriginal: options.PreferOriginal ? async uri =>
+            try
             {
-                await options.BeforeOriginalDownload!(BuildOriginalInfo(uri), ct);
-                originalRequested = true;
-            } : null, beforeOriginalSend: options.PreferOriginal ? (uri, token) =>
-                options.BeforeOriginalSend!(BuildOriginalInfo(uri), token) : null);
-        var result = await ReadImageBytesAsync(imageResponse, ct);
-        return new ExHentaiDownloadedImage
-        {
-            Data = result.Data, ContentType = result.ContentType,
-            IsOriginal = options.PreferOriginal && originalRequested,
-            OriginalUnavailable = options.PreferOriginal && !originalRequested
-        };
+                originalRequested = false;
+                var requestedPage = recoveringOriginal || attempt == 0 ? pageUri : reloadUri!;
+                var (html, serverDate, pageCompletedAt, pageDetails) =
+                    recoveringOriginal && attempt > 0 ? originalPage!.Value :
+                        await GetExHentaiPageAsync(requestedPage, options.RequestContext, ct, pageUri,
+                            retryTransient: attempt == 0);
+                if (!recoveringOriginal && serverDate.HasValue && Math.Abs((serverDate.Value - DateTime.UtcNow).TotalSeconds) > 60)
+                    serverDate = null;
+                if (options.PreferOriginal && attempt == 0)
+                    originalPage = (html, serverDate, pageCompletedAt, pageDetails);
+                var page = new CQ(html);
+                if (attempt == 0)
+                {
+                    reloadToken = ReadNodeReloadToken(page, pageUri);
+                    reloadUri = reloadToken == null ? null : WithNodeReloadToken(pageUri, reloadToken);
+                }
+                var imageSource = page["#img"].Attr("src");
+                if (string.IsNullOrWhiteSpace(imageSource))
+                    throw ImageDataError(pageUri, pageDetails, "the image-viewing page did not contain an image");
+                if (!Uri.TryCreate(requestedPage, WebUtility.HtmlDecode(imageSource), out var imageUrl))
+                    throw ImageDataError(pageUri, pageDetails, "the image-viewing page contained an invalid image URL");
+                Uri? originalUrl = null;
+                long? originalSize = null;
+                foreach (var anchor in page["a[href]"])
+                {
+                    if (!Uri.TryCreate(requestedPage, WebUtility.HtmlDecode(anchor.GetAttribute("href")), out var candidate) ||
+                        !IsOriginalEndpoint(candidate)) continue;
+                    if (!IsAccountHost(candidate))
+                        throw ImageDataError(pageUri, pageDetails, "the original-image link pointed outside E-Hentai");
+                    originalUrl = candidate;
+                    originalSize = ParseOriginalSizeUpperBound(anchor.Cq().Text());
+                    break;
+                }
+                originalEntry = originalUrl;
+                var useOriginal = options.PreferOriginal && (attempt == 0 || recoveringOriginal);
+                regularFallback = !useOriginal || originalUrl == null && !IsOriginalEndpoint(imageUrl);
+                RejectErrorImageUrl(imageUrl, pageUri);
+                var target = recoveringOriginal ? originalRecoveryTarget! :
+                    useOriginal && originalUrl != null ? originalUrl : imageUrl;
+                ExHentaiOriginalImageInfo BuildOriginalInfo(Uri uri) => new()
+                {
+                    OriginalUrl = uri.AbsoluteUri, OriginalSizeBytes = originalSize, PageUrl = pageUrl,
+                    ServerTimeUtc = serverDate?.Add(Stopwatch.GetElapsedTime(pageCompletedAt))
+                };
+                originalInfo = BuildOriginalInfo;
+                void CheckFreeRecovery(ExHentaiOriginalImageInfo info)
+                {
+                    if (attempt > 0 && options.CanRecoverOriginalWithoutGp?.Invoke(info) != true)
+                        throw new InvalidOperationException("Original-image node recovery requires a confirmed free request.");
+                }
+                using var imageResponse = await SendImageRequestAsync(target, options.RequestContext, ct,
+                    beforeOriginal: useOriginal ? async uri =>
+                    {
+                        var info = BuildOriginalInfo(uri);
+                        CheckFreeRecovery(info);
+                        await options.BeforeOriginalDownload!(info, ct);
+                        originalRequested = true;
+                    } : null, beforeOriginalSend: useOriginal ? (uri, token) =>
+                    {
+                        var info = BuildOriginalInfo(uri);
+                        CheckFreeRecovery(info);
+                        return options.BeforeOriginalSend!(info, token);
+                    } : null, diagnosticPage: pageUri);
+                var result = await ReadImageBytesAsync(imageResponse, ct, pageUri);
+                return new ExHentaiDownloadedImage
+                {
+                    Data = result.Data, ContentType = result.ContentType,
+                    IsOriginal = options.PreferOriginal && originalRequested,
+                    OriginalUnavailable = options.PreferOriginal && !originalRequested
+                };
+            }
+            catch (Exception error) when (regularFallback && !originalRequested && attempt == 0 && reloadUri != null &&
+                                          error.Data[RecoverableImageNodeKey] is true && !ct.IsCancellationRequested)
+            {
+                // One page-provided reload costs viewing quota. Do not keep retrying the same
+                // signed image URL, invent nl=1, or switch normal downloads to fullimg.
+                recoveringOriginal = false;
+            }
+            catch (Exception error) when (originalRequested && options.PreferOriginal && attempt == 0 && originalEntry != null &&
+                reloadToken != null && options.CanRecoverOriginalWithoutGp != null &&
+                error.Data[RecoverableImageNodeKey] is true && !ct.IsCancellationRequested)
+            {
+                if (!options.CanRecoverOriginalWithoutGp(originalInfo!(originalEntry))) throw;
+                // This changes only the original node. Both spending callbacks and the pure free
+                // check run again, including immediately after request pacing before transmission.
+                originalRecoveryTarget = WithNodeReloadToken(originalEntry, reloadToken);
+                recoveringOriginal = true;
+            }
+            catch (Exception error) when (attempt == 1 && !ct.IsCancellationRequested)
+            {
+                error.Data[ImageNodeRecoveryExhaustedKey] = true;
+                throw;
+            }
+        }
     }
 
     public Task<ExHentaiAccountBalance> GetAccountBalance(CancellationToken ct = default)
@@ -83,7 +147,7 @@ public partial class ExHentaiClient
         CancellationToken ct = default)
     {
         RequireAccount(context);
-        var (html, _, _) = await GetExHentaiPageAsync(new Uri(AccountBalanceUrl), context, ct);
+        var (html, _, _, _) = await GetExHentaiPageAsync(new Uri(AccountBalanceUrl), context, ct);
         var page = new CQ(html);
         if (page["input[type=password]"].Any() ||
             Regex.IsMatch(page.Text(), @"(?:you (?:must|need to) (?:log|sign) in|not logged in)", RegexOptions.IgnoreCase))
@@ -163,8 +227,8 @@ public partial class ExHentaiClient
         return upper is > 0 and <= long.MaxValue ? (long) upper : null;
     }
 
-    private async Task<(string Html, DateTime? ServerDateUtc, long CompletedAt)> GetExHentaiPageAsync(Uri uri,
-        ExHentaiRequestContext? context, CancellationToken ct)
+    private async Task<(string Html, DateTime? ServerDateUtc, long CompletedAt, ImageResponseDetails Details)> GetExHentaiPageAsync(Uri uri,
+        ExHentaiRequestContext? context, CancellationToken ct, Uri? diagnosticPage = null, bool retryTransient = true)
     {
         for (var attempt = 1;; attempt++)
         {
@@ -173,17 +237,39 @@ public partial class ExHentaiClient
             await _lock.WaitAsync(ct);
             try
             {
-                using var response = await SendImageRequestAsync(uri, context, ct, pageOnly: true);
-                response.EnsureSuccessStatusCode();
-                var html = await response.Content.ReadAsStringAsync(ct);
+                using var response = await SendImageRequestAsync(uri, context, ct, pageOnly: true, diagnosticPage: diagnosticPage);
+                var details = new ImageResponseDetails(response.RequestMessage?.RequestUri ?? uri,
+                    response.StatusCode, response.Content.Headers.ContentType?.MediaType,
+                    response.Content.Headers.ContentLength);
+                string html;
+                using var bodyCancellation = CreateImageBodyCancellation(ct);
+                try { html = await response.Content.ReadAsStringAsync(bodyCancellation.Token); }
+                catch (HttpRequestException error)
+                {
+                    throw ImageHttpError(diagnosticPage, details, "page body transport failed", SafeImageRequestError(error),
+                        bodyTransport: true, rejectedAuthentication: error.InnerException is System.Security.Authentication.AuthenticationException);
+                }
+                catch (HttpIOException error)
+                {
+                    throw ImageHttpError(diagnosticPage, details, "page body transport failed", error.HttpRequestError, bodyTransport: true);
+                }
+                catch (OperationCanceledException error) when (!ct.IsCancellationRequested &&
+                    (bodyCancellation.IsCancellationRequested || error.InnerException is TimeoutException))
+                {
+                    throw ImageTimeoutError(diagnosticPage, details, "page request timed out", bodyCancellation.Token);
+                }
                 var completedAt = Stopwatch.GetTimestamp();
-                ThrowIfBanned(html);
-                return (html, response.Headers.Date?.UtcDateTime, completedAt);
+                details = details with {Length = Encoding.UTF8.GetByteCount(html)};
+                if (diagnosticPage != null && KnownImageContentError(html) is { } reason)
+                    throw ImageDataError(diagnosticPage, details, reason);
+                if (!response.IsSuccessStatusCode) throw ImageHttpError(diagnosticPage, details, "HTTP request failed");
+                if (IsBanned(html)) throw ImageDataError(diagnosticPage, details, "access banned or rate limited");
+                return (html, response.Headers.Date?.UtcDateTime, completedAt, details);
             }
-            catch (Exception e) when (attempt < MaxHtmlAttempts && TransientNetworkError.IsTransient(e, ct))
+            catch (Exception e) when (retryTransient && attempt < MaxHtmlAttempts && TransientNetworkError.IsTransient(e, ct))
             {
-                Logger.LogWarning(e, "Transient network error requesting {Url}, retrying ({Attempt}/{MaxAttempts})",
-                    uri.AbsoluteUri, attempt + 1, MaxHtmlAttempts);
+                Logger.LogWarning("Transient network error requesting {Url}, retrying ({Attempt}/{MaxAttempts})",
+                    PublicImagePage(uri), attempt + 1, MaxHtmlAttempts);
             }
             finally
             {
@@ -191,7 +277,7 @@ public partial class ExHentaiClient
             }
 
             // Back off outside the page gate. Only safe page loads retry here; fullimg and
-            // image-byte requests stay single-attempt so a retry cannot bypass GP preflight.
+            // image-byte requests and quota-consuming nl page loads stay single-attempt.
             await Task.Delay(
                 TransientNetworkError.GetBackoffDelay(attempt - 1, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10)),
                 ct);
@@ -200,7 +286,7 @@ public partial class ExHentaiClient
 
     private async Task<HttpResponseMessage> SendImageRequestAsync(Uri uri, ExHentaiRequestContext? context,
         CancellationToken ct, bool pageOnly = false, Func<Uri, Task>? beforeOriginal = null,
-        Func<Uri, CancellationToken, Task>? beforeOriginalSend = null)
+        Func<Uri, CancellationToken, Task>? beforeOriginalSend = null, Uri? diagnosticPage = null)
     {
         var visited = new HashSet<string>(StringComparer.Ordinal);
         for (var redirects = 0; redirects <= 5; redirects++)
@@ -211,7 +297,7 @@ public partial class ExHentaiClient
             var accountHost = IsAccountHost(uri);
             if (pageOnly && (!accountHost || IsOriginalEndpoint(uri)))
                 throw new InvalidDataException("A gallery or account page redirected to an unexpected destination.");
-            RejectErrorImageUrl(uri);
+            RejectErrorImageUrl(uri, diagnosticPage);
             if (IsOriginalEndpoint(uri))
             {
                 if (!accountHost || beforeOriginal == null)
@@ -220,6 +306,8 @@ public partial class ExHentaiClient
                 ct.ThrowIfCancellationRequested();
             }
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            request.Options.Set(ThirdPartyRequestOptions.RequestLogKey,
+                pageOnly ? PublicImagePage(uri) : $"E-Hentai image download ({uri.Host})");
             if (context != null || !pageOnly || !accountHost)
                 request.Options.Set(ThirdPartyRequestOptions.SkipConfiguredHeaders, true);
             if (IsOriginalEndpoint(uri))
@@ -237,10 +325,33 @@ public partial class ExHentaiClient
             }
             else if (!accountHost)
             {
+                request.Options.Set(ThirdPartyRequestOptions.AccountKey, "image-external:" + uri.Host);
                 request.Options.Set(ThirdPartyRequestOptions.Cookie, string.Empty);
                 request.Options.Set(ThirdPartyRequestOptions.SuppressSensitiveHeaders, true);
             }
-            var response = await HttpClient.SendAsync(request, ct);
+            HttpResponseMessage response;
+            try
+            {
+                response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+            }
+            catch (HttpRequestException error)
+            {
+                throw ImageHttpError(diagnosticPage, new ImageResponseDetails(uri, error.StatusCode),
+                    "image transport failed", SafeImageRequestError(error), recoverable: !pageOnly && !accountHost &&
+                        (TransientNetworkError.IsTransient(error, ct) || RecoverableNodeStatus(error.StatusCode)),
+                    rejectedAuthentication: error.InnerException is System.Security.Authentication.AuthenticationException);
+            }
+            catch (HttpIOException error)
+            {
+                throw ImageHttpError(diagnosticPage, new ImageResponseDetails(uri), "image transport failed",
+                    error.HttpRequestError, recoverable: !pageOnly && !accountHost);
+            }
+            catch (OperationCanceledException error) when (!ct.IsCancellationRequested && error.InnerException is TimeoutException)
+            {
+                throw ImageTimeoutError(diagnosticPage, new ImageResponseDetails(uri), "image request timed out",
+                    error.CancellationToken, recoverable: !pageOnly && !accountHost);
+            }
+            response.RequestMessage ??= request;
             if (response.StatusCode is not (HttpStatusCode.MovedPermanently or HttpStatusCode.Redirect or
                 HttpStatusCode.SeeOther or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect))
                 return response;
@@ -268,30 +379,60 @@ public partial class ExHentaiClient
         uri.LocalPath.Equals("/fullimg", StringComparison.OrdinalIgnoreCase) ||
         uri.LocalPath.StartsWith("/fullimg/", StringComparison.OrdinalIgnoreCase);
 
-    private static void RejectErrorImageUrl(Uri uri)
+    private static void RejectErrorImageUrl(Uri uri, Uri? diagnosticPage = null)
     {
-        if ((IsAccountHost(uri) || uri.Host.Equals("ehgt.org", StringComparison.OrdinalIgnoreCase)) &&
-            (uri.AbsolutePath.EndsWith("/509.gif", StringComparison.OrdinalIgnoreCase) ||
-             uri.AbsolutePath.Contains("sadpanda", StringComparison.OrdinalIgnoreCase)))
-            throw new InvalidDataException("E-Hentai returned an image-limit or access-error image.");
+        if (KnownImageUrlError(uri) is { } reason)
+            throw ImageDataError(diagnosticPage, new ImageResponseDetails(uri), reason,
+                recoverable: reason == "blank image placeholder");
     }
 
-    private static async Task<(byte[] Data, string? ContentType)> ReadImageBytesAsync(HttpResponseMessage response,
-        CancellationToken ct)
+    private CancellationTokenSource CreateImageBodyCancellation(CancellationToken ct)
     {
-        response.EnsureSuccessStatusCode();
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        if (HttpClient.Timeout != Timeout.InfiniteTimeSpan) cancellation.CancelAfter(HttpClient.Timeout);
+        return cancellation;
+    }
+
+    private async Task<(byte[] Data, string? ContentType)> ReadImageBytesAsync(HttpResponseMessage response,
+        CancellationToken ct, Uri? diagnosticPage = null)
+    {
         var contentType = response.Content.Headers.ContentType?.MediaType;
-        var bytes = await response.Content.ReadAsByteArrayAsync(ct);
-        if (contentType is "text/html" or "application/xhtml+xml" || !HasImageSignature(bytes))
-            throw new InvalidDataException("The image request returned an error page or invalid image data.");
+        var finalUri = response.RequestMessage?.RequestUri ?? diagnosticPage ?? new Uri(Domain);
+        var details = new ImageResponseDetails(finalUri, response.StatusCode, contentType,
+            response.Content.Headers.ContentLength);
+        byte[] bytes;
+        using var bodyCancellation = CreateImageBodyCancellation(ct);
+        try { bytes = await response.Content.ReadAsByteArrayAsync(bodyCancellation.Token); }
+        catch (HttpRequestException error)
+        {
+            throw ImageHttpError(diagnosticPage, details, "image body transport failed", SafeImageRequestError(error),
+                recoverable: !IsAccountHost(finalUri), bodyTransport: true,
+                rejectedAuthentication: error.InnerException is System.Security.Authentication.AuthenticationException);
+        }
+        catch (HttpIOException error)
+        {
+            throw ImageHttpError(diagnosticPage, details, "image body transport failed", error.HttpRequestError,
+                recoverable: !IsAccountHost(finalUri), bodyTransport: true);
+        }
+        catch (OperationCanceledException error) when (!ct.IsCancellationRequested &&
+            (bodyCancellation.IsCancellationRequested || error.InnerException is TimeoutException))
+        {
+            throw ImageTimeoutError(diagnosticPage, details, "image body request timed out", bodyCancellation.Token,
+                recoverable: !IsAccountHost(finalUri));
+        }
+        details = details with {Length = bytes.Length, Format = ImageFormat(bytes)};
+        if ((int)response.StatusCode == 509) throw ImageDataError(diagnosticPage, details, "image viewing quota exceeded");
+        if ((details.Format == null || contentType is "text/html" or "application/xhtml+xml") && ImageErrorText(bytes) is { } knownReason)
+            throw ImageDataError(diagnosticPage, details, knownReason);
+        if (!response.IsSuccessStatusCode)
+            throw ImageHttpError(diagnosticPage, details, "HTTP request failed", recoverable:
+                !IsAccountHost(finalUri) && RecoverableNodeStatus(response.StatusCode));
+        if (contentType is "text/html" or "application/xhtml+xml" || details.Format == null)
+            throw ImageDataError(diagnosticPage, details, bytes.Length == 0 ? "empty image response" :
+                bytes.Length >= 16 && bytes.Take(Math.Min(bytes.Length, 64)).All(value => value == 0)
+                    ? "image data begins with zero bytes" :
+                contentType is "text/html" or "application/xhtml+xml" ? "HTML response instead of image data" : "unrecognized image data",
+                recoverable: !IsAccountHost(finalUri));
         return (bytes, contentType);
     }
-
-    private static bool HasImageSignature(byte[] data) =>
-        data.Length >= 3 && data[0] == 0xff && data[1] == 0xd8 && data[2] == 0xff ||
-        data.Length >= 8 && data.AsSpan(0, 8).SequenceEqual(new byte[] {137, 80, 78, 71, 13, 10, 26, 10}) ||
-        data.Length >= 6 && (data.AsSpan(0, 6).SequenceEqual("GIF87a"u8) || data.AsSpan(0, 6).SequenceEqual("GIF89a"u8)) ||
-        data.Length >= 12 && data.AsSpan(0, 4).SequenceEqual("RIFF"u8) && data.AsSpan(8, 4).SequenceEqual("WEBP"u8) ||
-        data.Length >= 12 && data.AsSpan(4, 4).SequenceEqual("ftyp"u8) &&
-        (data.AsSpan(8, 4).SequenceEqual("avif"u8) || data.AsSpan(8, 4).SequenceEqual("avis"u8));
 }

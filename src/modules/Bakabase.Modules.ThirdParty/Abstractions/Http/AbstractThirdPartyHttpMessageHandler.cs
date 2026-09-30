@@ -252,9 +252,11 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                 WaitForRequestStartAsync(cancellationToken).GetAwaiter().GetResult();
                 if (request.Options.TryGetValue(ThirdPartyRequestOptions.BeforeSend, out var beforeSend))
                     beforeSend(cancellationToken).GetAwaiter().GetResult();
+                var redactExceptionDetails = request.Options.TryGetValue(ThirdPartyRequestOptions.RequestLogKey,
+                    out var requestLogKey);
                 var response = _logger.Capture(ThirdPartyId, () => base.Send(request, cancellationToken),
-                    request.Options.TryGetValue(ThirdPartyRequestOptions.RequestLogKey, out var requestLogKey)
-                        ? requestLogKey : request.RequestUri?.ToString(), ct: cancellationToken);
+                    redactExceptionDetails ? requestLogKey : request.RequestUri?.ToString(),
+                    ct: cancellationToken, redactExceptionDetails: redactExceptionDetails);
                 _processResponse(request, response);
                 return response;
             }
@@ -277,11 +279,12 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                 // Capacity covers the existing SendAsync boundary (response headers), not body reads.
                 // Never hold the scheduling lock while the network is pending: slow headers must not
                 // serialize every request regardless of MaxConcurrency.
+                var redactExceptionDetails = request.Options.TryGetValue(ThirdPartyRequestOptions.RequestLogKey,
+                    out var requestLogKey);
                 var response = await _logger.CaptureAsync(ThirdPartyId,
                     () => base.SendAsync(request, cancellationToken),
-                    request.Options.TryGetValue(ThirdPartyRequestOptions.RequestLogKey, out var requestLogKey)
-                        ? requestLogKey : request.RequestUri?.ToString(),
-                    ct: cancellationToken).ConfigureAwait(false);
+                    redactExceptionDetails ? requestLogKey : request.RequestUri?.ToString(),
+                    ct: cancellationToken, redactExceptionDetails: redactExceptionDetails).ConfigureAwait(false);
                 _processResponse(request, response);
                 return response;
             }

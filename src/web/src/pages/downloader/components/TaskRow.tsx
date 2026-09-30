@@ -58,7 +58,7 @@ export type TaskRowProps = {
   onDownloadDirectly: (id: number) => Promise<void>;
   onStop: (id: number) => void;
   onEdit: (id: number) => void;
-  onOpenFolder: (path: string) => void;
+  onOpenFolder: (task: DownloadTask) => void;
   onDelete: (id: number) => void;
   onShowError: (task: DownloadTask) => void;
   onClick: (id: number, e: any) => void;
@@ -349,10 +349,10 @@ const TaskRow = memo(function TaskRow({
             <Button
               isIconOnly
               aria-label={t<string>("common.action.openFolder")}
-              isDisabled={!task.downloadPath}
+              isDisabled={task.thirdPartyId !== ThirdPartyId.ExHentai && !task.downloadPath}
               size="sm"
               variant="light"
-              onPress={() => task.downloadPath && onOpenFolder(task.downloadPath)}
+              onPress={() => onOpenFolder(task)}
             >
               <AiOutlineFolderOpen aria-hidden className="text-lg" />
             </Button>

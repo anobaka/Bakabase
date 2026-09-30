@@ -18,6 +18,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Service.Models.Input;
+using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
@@ -70,6 +71,20 @@ public class DownloadTaskController : Controller
     public async Task<SingletonResponse<DownloadTask>> Get(int id)
     {
         return new SingletonResponse<DownloadTask>(await _service.GetDto(id));
+    }
+
+    [HttpGet("{id}/open-target")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "GetDownloadTaskOpenTarget")]
+    public async Task<SingletonResponse<DownloadTaskOpenTarget>> GetOpenTarget(int id,
+        [FromServices] BakabaseDbContext db, [FromServices] DownloadResultService results)
+    {
+        var target = await new DownloadTaskOutputLocator(db, results.ExHentaiLedger)
+            .GetAsync(id, HttpContext.RequestAborted);
+        return target == null
+            ? SingletonResponseBuilder<DownloadTaskOpenTarget>.Build(ResponseCode.NotFound,
+                "No downloaded file or output directory is available for this task.")
+            : new SingletonResponse<DownloadTaskOpenTarget>(target);
     }
 
     [HttpPost("records/query")]
