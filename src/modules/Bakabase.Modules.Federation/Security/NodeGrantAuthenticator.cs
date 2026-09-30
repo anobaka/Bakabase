@@ -11,7 +11,8 @@ public sealed class NodeGrantAuthenticator(NodeGrantService grants, NodeNonceCac
         catch (ArgumentOutOfRangeException) { throw Denied(); }
         if ((timeProvider.GetUtcNow() - timestamp).Duration() > NodeRequestSignature.MaxClockSkew)
             throw new FederationAccessException("SignatureExpired", 401, "The node signature timestamp is outside the accepted window.");
-        var credentials = await grants.GetCredentialsAsync(header.GrantId, ct);
+        // A grant of either scope authenticates; which routes it reaches is the gate's decision, by its scope.
+        var (credentials, scope) = await grants.GetCredentialsAsync(header.GrantId, ct);
         if (credentials.SubjectNodeId != header.SubjectNodeId || credentials.AudienceNodeId != header.AudienceNodeId)
             throw Denied();
         string expected;
@@ -25,7 +26,7 @@ public sealed class NodeGrantAuthenticator(NodeGrantService grants, NodeNonceCac
         if (!nonces.TryConsume(header.GrantId, header.Nonce))
             throw new FederationAccessException("SignatureReplayed", 401, "This signature was already used or its replay budget is exhausted.");
         return new NodePrincipal(credentials.GrantId, credentials.SubjectNodeId, credentials.AudienceNodeId,
-            credentials.LibraryEpoch, credentials.Revision);
+            credentials.LibraryEpoch, credentials.Revision, scope);
     }
 
     private static FederationAccessException Denied() =>

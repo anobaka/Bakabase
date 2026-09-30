@@ -12,6 +12,10 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
+using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Canonical;
+using Bakabase.Modules.DataSync.Identity;
+using Bakabase.Modules.DataSync.Kinds.CustomProperties;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Regex;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
@@ -187,6 +191,62 @@ public sealed class CustomPropertyWritePathTests
 
         await AssertCreatedAtAndOrderKept(id, expectedOrder: 2);
     }
+
+    [TestMethod]
+    public async Task SetOrders_ChangesOrderAsAskedButNotCreatedAt()
+    {
+        var id = await AddSubject("Title", PropertyType.SingleLineText);
+
+        await Properties.SetOrders(new Dictionary<int, int> { [id] = 2 });
+
+        (await AssertCreatedAtAndOrderKept(id, expectedOrder: 2)).Name.Should().Be("Title");
+    }
+
+    /// <summary>The data sync row: an update through the custom property adapter (<c>Put</c> by id).</summary>
+    [TestMethod]
+    public async Task DataSyncUpdate_KeepsCreatedAtAndOrder()
+    {
+        var id = await AddSubject("Genre", PropertyType.MultipleChoice, new MultipleChoicePropertyOptions
+        {
+            Choices = [new() { Label = "Action", Value = "uuid-action" }]
+        });
+        var kind = DataSyncKind();
+        var local = (await kind.ReadAsync([id.ToString()], CancellationToken.None)).Single();
+        var content = (CustomPropertyContentV1) kind.Codec.ReadLocal(local.Content);
+        var merged = content with
+        {
+            Name = "Genres", Choices = [..content.Choices, new CustomPropertyChoiceV1("uuid-drama", "Drama", null)]
+        };
+
+        var outcome = await kind.ApplyAsync(new ApplyBatch(DataSyncKindIds.CustomProperty,
+        [
+            new UpdateEntityOperation("u", id.ToString(), ContentHash.Of(local.Content), kind.Codec.Write(merged),
+                EntityKeys.None, ["uuid-drama"], [])
+        ]), CancellationToken.None);
+
+        outcome.ChangedDuringApplyItemIds.Should().BeEmpty();
+        (await AssertCreatedAtAndOrderKept(id)).Name.Should().Be("Genres");
+        ChoiceLabels((await Properties.GetByKey(id)).Options).Should().Equal("Action", "Drama");
+    }
+
+    /// <summary>The data sync row: a subtype change through the custom property adapter (<c>ChangeType</c>).</summary>
+    [TestMethod]
+    public async Task DataSyncSubtypeChange_KeepsCreatedAtOrderAndName()
+    {
+        var id = await AddSubject("Title", PropertyType.SingleLineText);
+        var resourceId = await AddResource("r1");
+        await AddManualValue(resourceId, id, PropertyType.SingleLineText, "Hello");
+
+        await DataSyncKind().ChangeSubtypeAsync(id.ToString(), nameof(PropertyType.MultilineText), CancellationToken.None);
+
+        var stored = await AssertCreatedAtAndOrderKept(id);
+        stored.Name.Should().Be("Title");
+        stored.Type.Should().Be(PropertyType.MultilineText);
+        (await BizValueOf(resourceId, id)).Should().Be("Hello");
+    }
+
+    private IDataSyncKind DataSyncKind() => _sp.GetServices<IDataSyncKind>()
+        .Single(k => k.Codec.Descriptor.Kind == DataSyncKindIds.CustomProperty);
 
     [TestMethod]
     public async Task ChangeType_Lossless_KeepsCreatedAtOrderAndName()

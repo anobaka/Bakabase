@@ -1165,23 +1165,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("DownloadResultProcessing");
                 });
 
-            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskFileDbModel", b =>
-                {
-                    b.Property<int>("DownloadTaskId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Path")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<long>("Size")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("DownloadTaskId", "Path");
-
-                    b.ToTable("DownloadTaskFiles");
-                });
-
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel", b =>
                 {
                     b.Property<int>("Id")
@@ -1247,6 +1230,22 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("ThirdPartyId", "Type");
 
                     b.ToTable("DownloadTasks");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskFileDbModel", b =>
+                {
+                    b.Property<int>("DownloadTaskId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Path")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("DownloadTaskId", "Path");
+
+                    b.ToTable("DownloadTaskFiles");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.PlayList.Models.Db.PlayListDbModel", b =>
@@ -2365,6 +2364,575 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("DataCardTypes");
                 });
 
+            modelBuilder.Entity("Bakabase.Modules.DataSync.Models.Db.DataSyncApplyLogDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AppliedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("LinkId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PeerName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PeerNodeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PreImageBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PreImageJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SummaryJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TaskId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("UndoOfLogId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UndoResultJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UndoneAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppliedAtUtc");
+
+                    b.HasIndex("LinkId");
+
+                    b.ToTable("DataSyncApplyLogs");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.DataSync.Models.Db.DataSyncEntityDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ChildrenLocal")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CreatedBySync")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Fingerprint")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastActorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastEditorName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastEditorNodeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LocalHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LocalKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OrderKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginNodeId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OverlayJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("PublishHeld")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RawHash")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Seq")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SharedHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SyncKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TombstoneKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("TombstoneServed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Unreadable")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VvJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "LocalKey")
+                        .IsUnique()
+                        .HasFilter("\"DeletedAtUtc\" IS NULL");
+
+                    b.HasIndex("Kind", "Seq");
+
+                    b.HasIndex("Kind", "SyncKey")
+                        .IsUnique();
+
+                    b.ToTable("DataSyncEntities");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.DataSync.Models.Db.DataSyncInboxItemDbModel", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("Action")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ApplyLogId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClosedByName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClosedByNodeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Closure")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FlagsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("LinkId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LocalKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LocalVvJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("NotificationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("NotifiedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Origin")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PeerNodeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecordHash")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecordVvJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubjectPath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SyncKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClosedAtUtc");
+
+                    b.HasIndex("Kind", "SyncKey");
+
+                    b.HasIndex("Kind", "SyncKey", "Type", "SubjectPath")
+                        .IsUnique()
+                        .HasFilter("\"ClosedAtUtc\" IS NULL AND \"LinkId\" IS NULL");
+
+                    b.HasIndex("LinkId", "Kind", "SyncKey", "Type", "SubjectPath")
+                        .IsUnique()
+                        .HasFilter("\"ClosedAtUtc\" IS NULL AND \"LinkId\" IS NOT NULL");
+
+                    b.ToTable("DataSyncInboxItems");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.DataSync.Models.Db.DataSyncKeyAliasDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AliasKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SyncKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "AliasKey")
+                        .IsUnique();
+
+                    b.HasIndex("Kind", "SyncKey");
+
+                    b.ToTable("DataSyncKeyAliases");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.DataSync.Models.Db.DataSyncLinkDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CounterpartJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CursorsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("FirstContactCompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Initiator")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("KindsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastErrorDetail")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastFullReconciliationAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LastMode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastSyncedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PausedDetail")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PausedReason")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PeerActorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PeerAddress")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PeerAppVersion")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PeerAttentionJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PeerContractVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PeerLibraryEpoch")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PeerName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PeerNodeId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PendingRequestId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("ReadBackDeclined")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PeerNodeId")
+                        .IsUnique();
+
+                    b.ToTable("DataSyncLinks");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.DataSync.Models.Db.DataSyncLocalStateDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ActorCounter")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ActorGeneration")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActorSalt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AllPaused")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ComparisonFormVersionsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DbInstanceId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("LastSeq")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LibraryEpoch")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("NewDefinitionsStayLocal")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RefreshedAtJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RestoreDetail")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RestoreDetectedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RestoreEvidenceJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RestoreLinkId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("RestoreReason")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RetiredActorsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TombstoneFloorSeqsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DataSyncLocalStates");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.DataSync.Models.Db.DataSyncPeerBaseDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ChildMapJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExclusionKeysJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ExclusionReason")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LinkId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PendingFlagsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PendingReason")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PendingRecordHash")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PendingRecordJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("PendingSeq")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RecordJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SharedHash")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SyncKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VvJson")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LinkId", "PendingReason")
+                        .HasFilter("\"PendingReason\" IS NOT NULL");
+
+                    b.HasIndex("LinkId", "Kind", "SyncKey")
+                        .IsUnique();
+
+                    b.ToTable("DataSyncPeerBases");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.DataSync.Models.Db.DataSyncReaderDbModel", b =>
+                {
+                    b.Property<string>("NodeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FirstReadAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastReadAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("LastSeqServed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Mode")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("NotifiedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("NodeId");
+
+                    b.ToTable("DataSyncReaders");
+                });
+
             modelBuilder.Entity("Bakabase.Modules.HealthScore.Models.Db.HealthScoreProfileDbModel", b =>
                 {
                     b.Property<int>("Id")
@@ -2809,6 +3377,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.ToTable("WorkflowRuns");
                 });
+
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskFileDbModel", b =>
                 {
                     b.HasOne("Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel", null)

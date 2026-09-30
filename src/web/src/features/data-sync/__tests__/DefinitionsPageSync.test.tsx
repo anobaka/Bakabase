@@ -1,0 +1,320 @@
+import type * as Api from "../api";
+import type { DataSyncEntityStatusView } from "../api";
+
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  DataSyncEmptyStateLine,
+  DataSyncHeaderLink,
+  DefinitionSyncRow,
+  STATUS_RELOAD_DELAY_MS,
+  useDefinitionSync,
+} from "../components/DefinitionsPageSync";
+import { dataSyncApi } from "../api";
+import { useDataSyncStore } from "../stores/dataSync";
+
+import { blurWhenDisabled } from "./blurWhenDisabled";
+import { status } from "./dataSyncFixtures";
+
+import {
+  ClientMode,
+  DataSyncEntitySyncState,
+  DataSyncHeldReason,
+  DataSyncStatusLevel,
+  RemoteAccessMode,
+} from "@/sdk/constants";
+import { useRemoteAccessStore } from "@/stores/remoteAccess";
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) =>
+      options
+        ? [
+            key,
+            ...Object.entries(options)
+              .filter(([name, value]) => name !== "defaultValue" && value !== undefined)
+              .map(([, value]) => String(value)),
+          ].join(" ")
+        : key,
+    i18n: { language: "en", changeLanguage: vi.fn(), exists: () => false },
+  }),
+  initReactI18next: { type: "3rdParty", init: vi.fn() },
+}));
+vi.mock("../api", async (importOriginal) => ({
+  ...(await importOriginal<typeof Api>()),
+  dataSyncApi: {
+    entities: vi.fn(),
+    setEntitySync: vi.fn(async () => ({})),
+  },
+}));
+
+/*
+ * What the Properties and Extension groups pages show of data sync (hooks H-props, H-ext): the
+ * header link with its dot, a badge and the sync choices per row, the hint for a property too
+ * large to sync whole, and the empty page's way to another device — only where this window may
+ * administer the server it shows.
+ */
+
+const initialRemote = useRemoteAccessStore.getState();
+
+const entity = (
+  localKey: string,
+  patch: Partial<DataSyncEntityStatusView> = {},
+): DataSyncEntityStatusView => ({
+  localKey,
+  syncKey: `${localKey}`.padStart(32, "0"),
+  state: DataSyncEntitySyncState.Synced,
+  childrenLocal: false,
+  localOnlyChildren: 0,
+  heldChildren: 0,
+  originNodeId: "node-nas",
+  originName: "NAS",
+  openItems: 0,
+  differsFromSource: false,
+  ...patch,
+});
+
+function PropertiesRows({ onApplied }: { onApplied?: () => void }) {
+  const sync = useDefinitionSync("customProperty", onApplied);
+
+  return (
+    <>
+      {sync.host}
+      {["12", "13", "99"].map((key) => (
+        <div key={key} data-row={key}>
+          <DefinitionSyncRow
+            offersDefinitionOnly
+            kind="customProperty"
+            localKey={key}
+            name={`Property ${key}`}
+            sync={sync}
+          />
+        </div>
+      ))}
+    </>
+  );
+}
+
+const renderIn = (node: JSX.Element) => render(<MemoryRouter>{node}</MemoryRouter>);
+const rowOf = (key: string) => document.querySelector<HTMLElement>(`[data-row="${key}"]`)!;
+
+const asWindow = (window: "local" | "unrestricted" | "lan") =>
+  useRemoteAccessStore.setState({
+    initialized: true,
+    context: "known",
+    isLocal: window === "local",
+    clientMode: window === "local" ? ClientMode.AllInOne : ClientMode.RemoteBrowser,
+    mode:
+      window === "unrestricted"
+        ? RemoteAccessMode.Unrestricted
+        : window === "lan"
+          ? RemoteAccessMode.Enabled
+          : RemoteAccessMode.Disabled,
+  });
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  useDataSyncStore.getState().clear();
+  asWindow("local");
+  vi.mocked(dataSyncApi.entities).mockResolvedValue([
+    entity("12", { openItems: 2 }),
+    entity("13", { heldAtSource: DataSyncHeldReason.TooLarge, originName: undefined }),
+  ]);
+});
+afterEach(() => {
+  cleanup();
+  useRemoteAccessStore.setState(initialRemote, true);
+});
+
+describe("the definitions pages", () => {
+  it("link to data sync from the header, with the dot of how it is going", () => {
+    useDataSyncStore
+      .getState()
+      .setStatus(status({ level: DataSyncStatusLevel.NeedsYou, openItems: 2 }));
+    renderIn(<DataSyncHeaderLink />);
+
+    const header = screen.getByTestId("data-sync-header-link");
+
+    expect(header).toHaveAttribute("href", "/data-sync");
+    expect(header).toHaveTextContent("dataSync.title");
+    expect(screen.getByTestId("data-sync-header-dot")).toHaveAttribute("data-tone", "warning");
+  });
+
+  it("badge each definition, and offer its sync choices from the row", async () => {
+    renderIn(<PropertiesRows />);
+    await waitFor(() =>
+      expect(within(rowOf("12")).getByTestId("data-sync-entity-badge")).toBeInTheDocument(),
+    );
+
+    expect(dataSyncApi.entities).toHaveBeenCalledWith("customProperty");
+    expect(within(rowOf("12")).getByTestId("data-sync-entity-badge")).toHaveAttribute(
+      "data-badge",
+      "needsYou",
+    );
+    // A definition data sync does not know yet shows nothing.
+    expect(rowOf("99")).toBeEmptyDOMElement();
+
+    await act(async () => {
+      fireEvent.click(within(rowOf("12")).getByTestId("data-sync-entity-menu"));
+    });
+    const menu = screen.getByRole("menu");
+
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((item) => item.getAttribute("data-action")),
+    ).toEqual(["keepLocal", "definitionOnlyOn", "detach"]);
+    await act(async () => {
+      fireEvent.click(within(menu).getByText("dataSync.entity.action.keepLocal"));
+    });
+    expect(dataSyncApi.setEntitySync).toHaveBeenCalledWith("customProperty", "12", {
+      state: DataSyncEntitySyncState.LocalOnly,
+    });
+  });
+
+  it("offer to sync only the definition of a property with too many options", async () => {
+    renderIn(<PropertiesRows />);
+    await waitFor(() =>
+      expect(screen.getByTestId("data-sync-too-many-options")).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByTestId("data-sync-too-many-options"));
+    const dialog = screen.getByRole("alertdialog");
+
+    expect(dialog).toHaveTextContent("dataSync.entity.definitionOnly.everyDevice");
+    await act(async () => {
+      fireEvent.click(within(dialog).getByText("federation.confirm"));
+    });
+    expect(dataSyncApi.setEntitySync).toHaveBeenCalledWith("customProperty", "13", {
+      childrenLocal: true,
+    });
+  });
+
+  it("read the page's list again when an apply wrote definitions of its kind", async () => {
+    const onApplied = vi.fn();
+
+    renderIn(<PropertiesRows onApplied={onApplied} />);
+    await waitFor(() => expect(dataSyncApi.entities).toHaveBeenCalledTimes(1));
+    act(() =>
+      useDataSyncStore.getState().setApplied({ kinds: ["extensionGroup"], localKeys: ["1"] }),
+    );
+    expect(onApplied).not.toHaveBeenCalled();
+    act(() =>
+      useDataSyncStore.getState().setApplied({ kinds: ["customProperty"], localKeys: ["12"] }),
+    );
+    expect(onApplied).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(dataSyncApi.entities).toHaveBeenCalledTimes(2));
+  });
+
+  it("read the badges again when what needs you changes without an apply", async () => {
+    useDataSyncStore.getState().setStatus(status());
+    renderIn(<PropertiesRows />);
+    await waitFor(() => expect(dataSyncApi.entities).toHaveBeenCalledTimes(1));
+    vi.mocked(dataSyncApi.entities).mockResolvedValue([entity("12", { openItems: 3 })]);
+
+    // A conflict came in: nothing was applied, the status says one more needs you.
+    act(() => useDataSyncStore.getState().setStatus(status({ openItems: 1 })));
+    act(() => useDataSyncStore.getState().setStatus(status({ openItems: 2 })));
+    await waitFor(() => expect(dataSyncApi.entities).toHaveBeenCalledTimes(2), {
+      timeout: STATUS_RELOAD_DELAY_MS * 4,
+    });
+    await waitFor(() =>
+      expect(within(rowOf("12")).getByTestId("data-sync-entity-badge")).toHaveTextContent(
+        "dataSync.entity.badge.needsYou 3",
+      ),
+    );
+    // A push that changes neither reads nothing.
+    act(() => useDataSyncStore.getState().setStatus(status({ openItems: 2 })));
+    await new Promise((resolve) => setTimeout(resolve, STATUS_RELOAD_DELAY_MS * 2));
+    expect(dataSyncApi.entities).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ["confirmed", "definitionOnlyOn", true],
+    ["run at once", "keepLocal", false],
+  ] as const)(
+    "give the keyboard back to the row's menu button once a choice %s is over",
+    async (_, action, confirms) => {
+      renderIn(<PropertiesRows />);
+      await waitFor(() =>
+        expect(within(rowOf("12")).getByTestId("data-sync-entity-menu")).toBeInTheDocument(),
+      );
+      const button = within(rowOf("12")).getByTestId("data-sync-entity-menu");
+
+      act(() => button.focus());
+      await act(async () => {
+        fireEvent.click(button);
+      });
+      const item = screen
+        .getByRole("menu")
+        .querySelector<HTMLElement>(`[data-action="${action}"]`)!;
+
+      act(() => item.focus());
+      // The browser takes focus off the button while it is disabled.
+      const letGo = blurWhenDisabled();
+
+      try {
+        await act(async () => {
+          fireEvent.click(item);
+        });
+        if (confirms) {
+          const dialog = screen.getByRole("alertdialog");
+          const confirm = within(dialog).getByText("federation.confirm");
+
+          act(() => confirm.focus());
+          await act(async () => {
+            fireEvent.click(confirm);
+          });
+          expect(screen.queryByRole("alertdialog")).toBeNull();
+        }
+      } finally {
+        letGo();
+      }
+
+      expect(dataSyncApi.setEntitySync).toHaveBeenCalled();
+      await waitFor(() => expect(button).toHaveFocus());
+    },
+  );
+
+  it("point an empty Properties page to another device", () => {
+    renderIn(<DataSyncEmptyStateLine />);
+
+    const line = screen.getByTestId("data-sync-empty-state-line");
+
+    expect(line).toHaveTextContent("customProperty.empty.syncHint");
+    expect(within(line).getByRole("link")).toHaveAttribute("href", "/data-sync?add=1");
+  });
+
+  it("show all of it to an Unrestricted browser, which may administer the server", async () => {
+    asWindow("unrestricted");
+    renderIn(
+      <>
+        <DataSyncHeaderLink />
+        <PropertiesRows />
+      </>,
+    );
+
+    expect(screen.getByTestId("data-sync-header-link")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getAllByTestId("data-sync-entity-badge").length).toBeGreaterThan(0),
+    );
+  });
+
+  it("show none of it to a browser that may not administer the server, and ask nothing", () => {
+    asWindow("lan");
+    renderIn(
+      <>
+        <DataSyncHeaderLink />
+        <DataSyncEmptyStateLine />
+        <PropertiesRows />
+      </>,
+    );
+
+    expect(screen.queryByTestId("data-sync-header-link")).toBeNull();
+    expect(screen.queryByTestId("data-sync-empty-state-line")).toBeNull();
+    expect(screen.queryByTestId("data-sync-entity-badge")).toBeNull();
+    expect(dataSyncApi.entities).not.toHaveBeenCalled();
+  });
+});

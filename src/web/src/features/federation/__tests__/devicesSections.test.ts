@@ -1,3 +1,6 @@
+import type { DevicesData } from "../devices/context";
+import type { DataSyncStatusView } from "@/features/data-sync/api";
+
 import { describe, expect, it } from "vitest";
 
 import { classifyAddress, deviceAddresses } from "../devices/addresses";
@@ -5,6 +8,7 @@ import { devicesAnchors, devicesTabs, resolveSection } from "../devices/sections
 import { devicesRoute } from "../switching";
 
 import { RemoteAccessAddressKind } from "@/sdk/constants";
+import { status as syncStatus } from "@/features/data-sync/__tests__/dataSyncFixtures";
 
 /*
  * `?section=` is a contract with things outside the page — the Service's notifications,
@@ -20,6 +24,8 @@ describe("where a devices page link lands", () => {
     ["device", "device", null, true],
     ["manage", "manage", null, true],
     ["sharing", "sharing", null, true],
+    // Data sync's summary; everything else about it is on /data-sync.
+    ["sync", "sync", null, true],
     ["advanced", "advanced", null, true],
     ["addresses", "device", "addresses", true],
     // The window's switcher.
@@ -52,12 +58,37 @@ describe("where a devices page link lands", () => {
   it.each([
     [undefined, "/federation/devices"],
     ["manage", "/federation/devices?section=manage"],
+    ["sync", "/federation/devices?section=sync"],
     ["servers", "/federation/devices?section=servers"],
     ["management", "/federation/devices?section=management"],
     ["sharing-requests", "/federation/devices?section=sharing-requests"],
     ["identity", "/federation/devices?section=identity"],
   ] as const)("devicesRoute(%s) is %s", (section, route) => {
     expect(devicesRoute(section)).toBe(route);
+  });
+});
+
+describe("the data sync tab", () => {
+  const sync = devicesTabs.find((tab) => tab.id === "sync")!;
+  const withStatus = (patch?: Partial<DataSyncStatusView>) =>
+    ({ dataSyncStatus: patch && syncStatus(patch) }) as unknown as DevicesData;
+
+  it("stands before Advanced", () => {
+    expect(devicesTabs.map((tab) => tab.id)).toEqual([
+      "device",
+      "manage",
+      "sharing",
+      "sync",
+      "advanced",
+    ]);
+  });
+
+  it("counts decisions, first syncs to review and requests to answer, and nothing else", () => {
+    expect(sync.badge!(withStatus())).toBeUndefined();
+    expect(sync.badge!(withStatus({ links: 3, readers: 2, linksWaiting: 1 }))).toBeUndefined();
+    expect(sync.badge!(withStatus({ openItems: 2, linksToReview: 1, pendingRequests: 1 }))).toEqual(
+      { count: 4, countKey: "federation.devices.nav.pendingSync", attention: false },
+    );
   });
 });
 

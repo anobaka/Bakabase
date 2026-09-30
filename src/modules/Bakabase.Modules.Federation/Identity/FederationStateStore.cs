@@ -85,6 +85,17 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
     public async Task<bool> IsSharingEnabledAsync(CancellationToken ct = default) =>
         (await ReadAsync(ct)).SharingEnabled;
 
+    /// <summary>Whether devices this one approved may read its definitions (<c>datasync.read</c>).</summary>
+    public async Task<bool> IsDataSyncSharingEnabledAsync(CancellationToken ct = default) =>
+        (await ReadAsync(ct)).DataSyncSharingEnabled;
+
+    /// <summary>Both sharing switches from one read, as the node gate checks them before authentication (§7.3).</summary>
+    public async Task<FederationSharingSwitches> GetSharingSwitchesAsync(CancellationToken ct = default)
+    {
+        var state = await ReadAsync(ct);
+        return new FederationSharingSwitches(state.SharingEnabled, state.DataSyncSharingEnabled);
+    }
+
     public async Task<bool> IsBrowsingEnabledAsync(CancellationToken ct = default) =>
         (await ReadAsync(ct)).BrowsingEnabled;
 
@@ -147,6 +158,12 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
                 state.Peers == null || state.InboundGrants == null || state.OutboundGrants == null ||
                 state.IncomingRequests == null || state.OutgoingRequests == null)
                 throw new JsonException("Invalid node state schema.");
+            // Added for data sync: absent from older files, so missing or null is simply empty.
+            state.InboundDataSyncGrants ??= new(StringComparer.Ordinal);
+            state.OutboundDataSyncGrants ??= new(StringComparer.Ordinal);
+            state.IncomingDataSyncRequests ??= [];
+            state.OutgoingDataSyncRequests ??= [];
+            state.DataSyncReciprocalInvitations ??= [];
             return _state = state;
         }
         catch (Exception e) when (e is JsonException or IOException)
@@ -183,3 +200,7 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
     private static FederationState Clone(FederationState state) =>
         JsonSerializer.Deserialize<FederationState>(JsonSerializer.SerializeToUtf8Bytes(state, Json), Json)!;
 }
+
+/// <param name="Library">Library sharing: <c>library.read</c> grants may read.</param>
+/// <param name="DataSync">Definitions sharing: <c>datasync.read</c> grants may read.</param>
+public readonly record struct FederationSharingSwitches(bool Library, bool DataSync);

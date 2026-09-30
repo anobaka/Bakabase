@@ -18,6 +18,8 @@
   "customProperty.empty.title": "Create your first custom property",
   "customProperty.empty.tryAgain": "Try another name or clear the type filter.",
   "customProperty.empty.description": "Start with authors, categories or tags to capture the resource information that matters to you.",
+  "customProperty.empty.syncHint": "Already have properties on another device?",
+  "customProperty.action.syncWithDevice": "Sync with a device",
   "customProperty.action.clearFilters": "Clear filters",
   "customProperty.column.property": "Property / type",
   "customProperty.column.configuration": "Configuration",

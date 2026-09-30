@@ -2308,6 +2308,534 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/data-sync/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncMap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/sharing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetDataSyncSharing"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/peers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncPeers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncLinks"];
+        put?: never;
+        post: operations["CreateDataSyncLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/links/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateDataSyncLink"];
+        post?: never;
+        delete: operations["ResetDataSyncLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/links/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PauseDataSyncLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/links/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResumeDataSyncLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/sync-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SyncDataSyncNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/paused": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetDataSyncAllPaused"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/access/{nodeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["ForgetDataSyncAccess"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/copy-once": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateDataSyncCopyOnce"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/links/{id}/first-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncFirstSync"];
+        put?: never;
+        post: operations["StartDataSyncFirstSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/requests/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApproveDataSyncRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/requests/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RejectDataSyncRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["CancelDataSyncRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/readers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncReaders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/readers/{nodeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["RevokeDataSyncReader"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateDataSyncInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/inbox/{id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PreviewDataSyncInboxItem"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/inbox/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResolveDataSyncInbox"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncEntities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/entities/{kind}/{localKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetDataSyncEntitySync"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/history/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncHistoryEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/history/{id}/undo-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PreviewDataSyncUndo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/history/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UndoDataSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncRestore"];
+        put?: never;
+        post: operations["ChooseDataSyncRestore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/export/datasync/head": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetFederationDataSyncHead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/export/datasync/manifest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CreateFederationDataSyncSnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/export/datasync/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReadFederationDataSyncChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dlsite-work": {
         parameters: {
             query?: never;
@@ -2991,6 +3519,54 @@ export interface paths {
         put: operations["PutExtensionGroup"];
         post?: never;
         delete: operations["DeleteExtensionGroup"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/pair/datasync/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RequestFederationDataSyncPairing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/pair/datasync/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ExchangeFederationDataSyncInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/pair/datasync/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClaimFederationDataSyncNodeGrant"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -11696,6 +12272,715 @@ export interface components {
         "Bakabase.Modules.DataCard.Models.Input.DataCardUpdateInputModel": {
             propertyValues?: components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardPropertyValueInputModel"][];
         };
+        "Bakabase.Modules.DataSync.Abstractions.DataSyncFieldOutcome": {
+            path: string;
+            resolution: components["schemas"]["Bakabase.Modules.DataSync.DataSyncFieldResolution"];
+            base?: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncDisplayValue"];
+            local?: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncDisplayValue"];
+            remote?: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncDisplayValue"];
+            result?: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncDisplayValue"];
+        };
+        /**
+         * Format: int32
+         * @description [0: None, 1: Clash, 2: Similar, 3: Exact, 4: Identical]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Abstractions.DataSyncNaturalMatch": 0 | 1 | 2 | 3 | 4;
+        "Bakabase.Modules.DataSync.Abstractions.DataSyncTypeChangePreview": {
+            fromSubtype: string;
+            toSubtype: string;
+            /** Format: int32 */
+            valueCount: number;
+            /** Format: int32 */
+            changedCount: number;
+            /** Format: int32 */
+            lossyCount: number;
+            samples: components["schemas"]["Bakabase.Modules.DataSync.Abstractions.DataSyncTypeChangeSample"][];
+        };
+        "Bakabase.Modules.DataSync.Abstractions.DataSyncTypeChangeSample": {
+            from?: string;
+            to?: string;
+        };
+        /**
+         * Format: int32
+         * @description [1: Synced, 2: LocalOnly, 3: Detached]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncEntitySyncState": 1 | 2 | 3;
+        /**
+         * Format: int32
+         * @description [1: Unchanged, 2: TookRemote, 3: KeptLocal, 4: Combined, 5: Conflict, 6: AppearanceTookRemote, 7: AppearanceKeptLocal, 8: FollowTookRemote, 9: DeletionHeldInUse, 10: EditWinsRestored, 11: TypeChangeHeld]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncFieldResolution": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+        /**
+         * Format: int32
+         * @description [1: FirstLink, 2: CopyOnce, 3: AutoSync, 4: Resolution, 5: Undo, 6: Restore, 7: EntitySetting]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncHistoryKind": 1 | 2 | 3 | 4 | 5 | 6 | 7;
+        /**
+         * Format: int32
+         * @description [1: KeepLocal, 2: UseRemote, 3: UseCustom, 4: Detach, 5: DeleteHere, 6: KeepHereOnly, 7: RestoreEverywhere, 8: RestoreHere, 9: KeepDeleted, 10: Link, 11: KeepBoth, 12: Convert, 13: ApplyAll, 14: ReviewEach, 15: KeepWithEntity, 16: Publish, 17: Reapply, 18: Skip, 19: KeepRecordLinked]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncInboxAction": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19;
+        /**
+         * Format: int32
+         * @description [1: ResolvedHere, 2: ResolvedElsewhere, 3: Superseded, 4: LinkRemoved, 5: LinkStopped]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncInboxClosure": 1 | 2 | 3 | 4 | 5;
+        /**
+         * Format: int32
+         * @description [1: Merger, 2: State]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncInboxItemOrigin": 1 | 2;
+        /**
+         * Format: int32
+         * @description [1: FieldConflict, 2: ChildRenameConflict, 3: TypeChange, 4: DeletedThere, 5: ChildDeletedInUse, 6: DeletedHereEditedThere, 7: LinkSuggestion, 8: IdentityConflict, 9: MassChildDeletion, 10: SuspectedLostUpdate]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncInboxItemType": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+        /**
+         * Format: int32
+         * @description [1: ThisDevice, 2: Peer]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncLinkInitiator": 1 | 2;
+        /**
+         * Format: int32
+         * @description [0: Off, 1: Follow, 2: TwoWay]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncLinkMode": 0 | 1 | 2;
+        /**
+         * Format: int32
+         * @description [1: Active, 2: AwaitingAccess, 3: AwaitingReview, 4: WaitingForPeerReview, 5: Paused, 6: Stopped]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncLinkState": 1 | 2 | 3 | 4 | 5 | 6;
+        /**
+         * Format: int32
+         * @description [1: ByUser, 2: AllPaused, 3: PeerReset, 4: PeerIdentityDuplicated, 7: LocalRestoreDetected, 9: LocalRestoreSuspected]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncPauseReason": 1 | 2 | 3 | 4 | 7 | 9;
+        /**
+         * Format: int32
+         * @description [1: Incoming, 2: Outgoing]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncRequestDirection": 1 | 2;
+        /**
+         * Format: int32
+         * @description [1: Follow, 2: TwoWay]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncRequestIntent": 1 | 2;
+        /**
+         * Format: int32
+         * @description [1: ThisDeviceWins, 2: OthersWin]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncRestoreChoice": 1 | 2;
+        /**
+         * Format: int32
+         * @description [0: Off, 1: InStep, 2: Syncing, 3: NeedsYou, 4: Paused, 5: Offline, 6: Failed, 7: UpdateNeeded]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.DataSyncStatusLevel": 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+        "Bakabase.Modules.DataSync.Merging.DataSyncEditorRef": {
+            nodeId: string;
+            name: string;
+            actorId: string;
+        };
+        "Bakabase.Modules.DataSync.Merging.DataSyncInboxCandidate": {
+            localKey: string;
+            name: string;
+            subtype?: string;
+            match: components["schemas"]["Bakabase.Modules.DataSync.Abstractions.DataSyncNaturalMatch"];
+            updatable: boolean;
+        };
+        "Bakabase.Modules.DataSync.Merging.DataSyncInboxPayload": {
+            entityName: string;
+            subtype?: string;
+            peerName?: string;
+            remoteEditor?: components["schemas"]["Bakabase.Modules.DataSync.Merging.DataSyncEditorRef"];
+            originName?: string;
+            fields: components["schemas"]["Bakabase.Modules.DataSync.Abstractions.DataSyncFieldOutcome"][];
+            /** Format: int32 */
+            valueCount?: number;
+            /** Format: int32 */
+            usageCount?: number;
+            children?: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncDisplayValue"][];
+            /** Format: int32 */
+            childrenTotal: number;
+            remoteSubtype?: string;
+            localSubtype?: string;
+            candidates?: components["schemas"]["Bakabase.Modules.DataSync.Merging.DataSyncInboxCandidate"][];
+            records?: components["schemas"]["Bakabase.Modules.DataSync.Merging.DataSyncInboxRecordRef"][];
+            detail?: string;
+        };
+        "Bakabase.Modules.DataSync.Merging.DataSyncInboxRecordRef": {
+            primaryKey: string;
+            name: string;
+            subtype?: string;
+        };
+        "Bakabase.Modules.DataSync.Planning.DataSyncDisplayValue": {
+            text?: string;
+            color?: string;
+            group?: string;
+            path?: string[];
+            flag?: boolean;
+            /** Format: int32 */
+            number?: number;
+        };
+        /**
+         * Format: int32
+         * @description [1: NewerSchema, 2: UnknownKind, 3: UnknownEnumValue, 4: Invalid, 5: AtSource, 6: LocalUnreadable, 7: PendingDecision, 8: TooLarge]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Planning.DataSyncHeldReason": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+        /**
+         * Format: int32
+         * @description [0: None, 1: Created, 2: Updated, 3: Linked, 4: KeysRecorded, 5: Deleted, 6: TypeChanged, 7: Reordered]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Planning.DataSyncItemAction": 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+        /**
+         * Format: int32
+         * @description [1: Applied, 2: SkippedByUser, 3: ChangedSinceReview, 4: Held, 5: ChangedDuringApply, 6: NoChange]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Planning.DataSyncItemOutcome": 1 | 2 | 3 | 4 | 5 | 6;
+        /**
+         * Format: int32
+         * @description [1: Create, 2: Update, 3: Unchanged, 4: Link, 5: NeedsDecision, 6: Held]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Planning.DataSyncPlanItemType": 1 | 2 | 3 | 4 | 5 | 6;
+        "Bakabase.Modules.DataSync.Services.DataSyncAccessRequestView": {
+            requestId: string;
+            direction: components["schemas"]["Bakabase.Modules.DataSync.DataSyncRequestDirection"];
+            nodeId: string;
+            nodeName: string;
+            intent: components["schemas"]["Bakabase.Modules.DataSync.DataSyncRequestIntent"];
+            status: string;
+            /** Format: date-time */
+            expiresAt: string;
+            remoteAddress?: string;
+            claimsKnownDevice: boolean;
+            knownAddress?: string;
+            replacesExistingAccess: boolean;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncApproveInput": {
+            receiveBack: boolean;
+            kinds?: string[];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput": {
+            peerNodeId?: string;
+            address?: string;
+            code?: string;
+            kinds: string[];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncEntityStatusView": {
+            localKey: string;
+            syncKey: string;
+            state: components["schemas"]["Bakabase.Modules.DataSync.DataSyncEntitySyncState"];
+            childrenLocal: boolean;
+            /** Format: int32 */
+            localOnlyChildren: number;
+            /** Format: int32 */
+            heldChildren: number;
+            originNodeId?: string;
+            originName?: string;
+            lastEditorName?: string;
+            /** Format: date-time */
+            lastSyncedAt?: string;
+            /** Format: int32 */
+            openItems: number;
+            differsFromSource: boolean;
+            heldAtSource?: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncHeldReason"];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncEntitySyncInput": {
+            state?: components["schemas"]["Bakabase.Modules.DataSync.DataSyncEntitySyncState"];
+            childrenLocal?: boolean;
+            addLocalOnlyChildren?: string[];
+            removeLocalOnlyChildren?: string[];
+        };
+        /**
+         * Format: int32
+         * @description [1: Skip, 2: Link, 3: KeepBoth]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Services.DataSyncFirstSyncAction": 1 | 2 | 3;
+        "Bakabase.Modules.DataSync.Services.DataSyncFirstSyncChoice": {
+            kind: string;
+            key: string;
+            action: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncFirstSyncAction"];
+            localKey?: string;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncFirstSyncPreview": {
+            /** Format: int32 */
+            linkId: number;
+            copyOnce: boolean;
+            mode: components["schemas"]["Bakabase.Modules.DataSync.DataSyncLinkMode"];
+            state: components["schemas"]["Bakabase.Modules.DataSync.DataSyncLinkState"];
+            source?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncReviewSource"];
+            entries: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncPreviewEntry"][];
+            taskId?: string;
+            problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncFirstSyncStartInput": {
+            choices: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncFirstSyncChoice"][];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncHistoryCounts": {
+            /** Format: int32 */
+            created: number;
+            /** Format: int32 */
+            updated: number;
+            /** Format: int32 */
+            linked: number;
+            /** Format: int32 */
+            unchanged: number;
+            /** Format: int32 */
+            skipped: number;
+            /** Format: int32 */
+            changedSinceReview: number;
+            /** Format: int32 */
+            changedDuringApply: number;
+            /** Format: int32 */
+            held: number;
+            /** Format: int32 */
+            deleted: number;
+            /** Format: int32 */
+            typeChanged: number;
+            /** Format: int32 */
+            reordered: number;
+            /** Format: int32 */
+            resolved: number;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail": {
+            entry: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryEntry"];
+            items: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryItem"][];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncHistoryEntry": {
+            /** Format: int32 */
+            id: number;
+            /** Format: date-time */
+            appliedAt: string;
+            kind: components["schemas"]["Bakabase.Modules.DataSync.DataSyncHistoryKind"];
+            /** Format: int32 */
+            linkId?: number;
+            peerNodeId?: string;
+            peerName?: string;
+            counts: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryCounts"];
+            undoState: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoState"];
+            /** Format: date-time */
+            undoneAt?: string;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncHistoryItem": {
+            itemId: string;
+            kind: string;
+            name: string;
+            outcome: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncItemOutcome"];
+            action: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncItemAction"];
+            localKey?: string;
+            type: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncPlanItemType"];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncInboxItemView": {
+            /** Format: int64 */
+            id: number;
+            /** Format: int32 */
+            linkId?: number;
+            peerNodeId?: string;
+            peerName?: string;
+            kind: string;
+            localKey?: string;
+            type: components["schemas"]["Bakabase.Modules.DataSync.DataSyncInboxItemType"];
+            origin: components["schemas"]["Bakabase.Modules.DataSync.DataSyncInboxItemOrigin"];
+            subjectPath: string;
+            payload: components["schemas"]["Bakabase.Modules.DataSync.Merging.DataSyncInboxPayload"];
+            allowedActions: components["schemas"]["Bakabase.Modules.DataSync.DataSyncInboxAction"][];
+            defaultAction?: components["schemas"]["Bakabase.Modules.DataSync.DataSyncInboxAction"];
+            token: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            closedAt?: string;
+            closure?: components["schemas"]["Bakabase.Modules.DataSync.DataSyncInboxClosure"];
+            action?: components["schemas"]["Bakabase.Modules.DataSync.DataSyncInboxAction"];
+            closedByName?: string;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncInboxPage": {
+            items: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncInboxItemView"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            openTotal: number;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncInvitationResult": {
+            invitation?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncInvitationView"];
+            problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncInvitationView": {
+            code: string;
+            /** Format: date-time */
+            expiresAt: string;
+            addresses: string[];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncKindCount": {
+            kind: string;
+            /** Format: int32 */
+            count: number;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncLinkCreateInput": {
+            peerNodeId?: string;
+            address?: string;
+            code?: string;
+            mode: components["schemas"]["Bakabase.Modules.DataSync.DataSyncLinkMode"];
+            kinds: string[];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncLinkResult": {
+            link?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkView"];
+            requestId?: string;
+            problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncLinkUpdateInput": {
+            mode?: components["schemas"]["Bakabase.Modules.DataSync.DataSyncLinkMode"];
+            kinds?: string[];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncLinkView": {
+            /** Format: int32 */
+            id: number;
+            peerNodeId: string;
+            peerName: string;
+            peerAddress?: string;
+            mode: components["schemas"]["Bakabase.Modules.DataSync.DataSyncLinkMode"];
+            lastMode: components["schemas"]["Bakabase.Modules.DataSync.DataSyncLinkMode"];
+            state: components["schemas"]["Bakabase.Modules.DataSync.DataSyncLinkState"];
+            pausedReason?: components["schemas"]["Bakabase.Modules.DataSync.DataSyncPauseReason"];
+            pausedDetail?: string;
+            initiator: components["schemas"]["Bakabase.Modules.DataSync.DataSyncLinkInitiator"];
+            kinds: string[];
+            peerKinds?: string[];
+            /** Format: date-time */
+            lastSyncedAt?: string;
+            lastErrorCode?: string;
+            lastErrorDetail?: string;
+            /** Format: int32 */
+            openItems: number;
+            /** Format: int32 */
+            pendingCount: number;
+            peerAppVersion?: string;
+            /** Format: int32 */
+            peerContractVersion?: number;
+            peerMayReadUs: boolean;
+            readBackDeclined: boolean;
+            peerModeTowardsUs?: string;
+            /** Format: date-time */
+            peerLastReadAt?: string;
+            peerAttention?: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncSourceAttention"];
+            /** Format: int32 */
+            excludedCount: number;
+            /** Format: int32 */
+            heldCount: number;
+            /** Format: int32 */
+            missingAtPeerCount: number;
+            /** Format: date-time */
+            startAnywayAt?: string;
+            fullReconciliationRunning: boolean;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncMapPeer": {
+            nodeId: string;
+            name: string;
+            link?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkView"];
+            reader?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncReaderView"];
+            request?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncOwnRequest"];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncMapRequest": {
+            requestId: string;
+            nodeId: string;
+            nodeName: string;
+            remoteAddress?: string;
+            intent: components["schemas"]["Bakabase.Modules.DataSync.DataSyncRequestIntent"];
+            /** Format: date-time */
+            expiresAt: string;
+            claimsKnownDevice: boolean;
+            knownAddress?: string;
+            replacesExistingAccess: boolean;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncMapView": {
+            sharingEnabled: boolean;
+            remoteAccessMode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
+            peers: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncMapPeer"][];
+            requests: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncMapRequest"][];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncOverview": {
+            deviceName: string;
+            nodeId: string;
+            isHeadless: boolean;
+            sharingEnabled: boolean;
+            remoteAccessMode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
+            canManageSharing: boolean;
+            newDefinitionsStayLocal: boolean;
+            allPaused: boolean;
+            kinds: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncKindCount"][];
+            status: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncStatusView"];
+            activeTaskId?: string;
+            restorePending: boolean;
+            /** Format: int32 */
+            openInboxItems: number;
+            /** Format: int32 */
+            pendingRequests: number;
+            /** Format: int64 */
+            databaseBytes: number;
+            reachableAddresses: string[];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncOwnRequest": {
+            requestId?: string;
+            outcome: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            address?: string;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncPeerCandidate": {
+            nodeId: string;
+            name: string;
+            address?: string;
+            known: boolean;
+            discovered: boolean;
+            /** Format: int32 */
+            contractVersion?: number;
+            sharesDefinitions?: boolean;
+            weMayRead: boolean;
+            theyMayRead: boolean;
+            /** Format: int32 */
+            linkId?: number;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncPreviewEntry": {
+            kind: string;
+            key: string;
+            name: string;
+            subtype?: string;
+            outcome: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncPreviewOutcome"];
+            candidates?: components["schemas"]["Bakabase.Modules.DataSync.Merging.DataSyncInboxCandidate"][];
+        };
+        /**
+         * Format: int32
+         * @description [1: Create, 2: Update, 3: Unchanged, 4: Delete, 5: NameMatch, 6: Question, 7: Held, 8: NotSynced]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Services.DataSyncPreviewOutcome": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+        "Bakabase.Modules.DataSync.Services.DataSyncProblem": {
+            code: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblemCode"];
+            detail?: string;
+        };
+        /**
+         * Format: int32
+         * @description [1: Busy, 2: ApplyInProgress, 3: DecisionsInvalid, 5: UnknownItem, 6: UnknownKind, 8: NothingToReview, 9: UndoNotAvailable, 10: PeerUnreachable, 11: AccessMissing, 12: AccessRevoked, 13: PeerSharingOff, 14: PeerTooOld, 15: ThisTooOld, 16: PeerReset, 17: LinkNotFound, 18: LinkExists, 19: SharingOff, 20: RequestNotFound, 21: InvitationInvalid, 22: InboxItemChanged, 23: InboxItemClosed, 24: BackupFailed, 25: NothingSelected, 26: NotAllowedOnThisDevice, 27: ResolveTogether, 28: RemoteAccessOff]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Services.DataSyncProblemCode": 1 | 2 | 3 | 5 | 6 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28;
+        "Bakabase.Modules.DataSync.Services.DataSyncReaderView": {
+            nodeId: string;
+            name: string;
+            /** Format: date-time */
+            lastReadAt?: string;
+            mode?: string;
+            state?: string;
+            upToDate: boolean;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncRequestResult": {
+            createdLink?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkView"];
+            readBackGranted: boolean;
+            problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncResolveBatchInput": {
+            items: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncResolveInput"][];
+            backupBeforeDestructive: boolean;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncResolveInput": {
+            /** Format: int64 */
+            itemId: number;
+            action: components["schemas"]["Bakabase.Modules.DataSync.DataSyncInboxAction"];
+            token: string;
+            customValue?: string;
+            targetLocalKey?: string;
+            targetRecordKey?: string;
+            newName?: string;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncRestoreView": {
+            pending: boolean;
+            reason?: components["schemas"]["Bakabase.Modules.DataSync.DataSyncPauseReason"];
+            /** Format: date-time */
+            detectedAt?: string;
+            /** Format: int32 */
+            pausedLinks: number;
+            detail?: string;
+            /** Format: int32 */
+            linkId?: number;
+            evidenceFromName?: string;
+        };
+        /**
+         * Format: int32
+         * @description [1: Resume, 4: AskAccessAgain, 5: ThisDeviceWins, 6: TakeTheirs, 7: StartAnyway]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Services.DataSyncResumeAction": 1 | 4 | 5 | 6 | 7;
+        "Bakabase.Modules.DataSync.Services.DataSyncReviewSource": {
+            nodeId: string;
+            name: string;
+            appVersion: string;
+            /** Format: date-time */
+            fetchedAt: string;
+            kinds: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncKindCount"][];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncSharingInput": {
+            enabled?: boolean;
+            enablePairedRemoteAccess: boolean;
+            newDefinitionsStayLocal?: boolean;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncStatusView": {
+            level: components["schemas"]["Bakabase.Modules.DataSync.DataSyncStatusLevel"];
+            /** Format: int32 */
+            openItems: number;
+            /** Format: int32 */
+            links: number;
+            /** Format: int32 */
+            linksInStep: number;
+            /** Format: int32 */
+            peersNeedingDecisions: number;
+            /** Format: date-time */
+            lastSyncedAt?: string;
+            lastErrorCode?: string;
+            /** Format: int32 */
+            pendingRequests: number;
+            /** Format: int32 */
+            readers: number;
+            /** Format: int32 */
+            linksToReview: number;
+            /** Format: int32 */
+            linksWaiting: number;
+            lastErrorDetail?: string;
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncTaskStart": {
+            taskId?: string;
+            problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
+        };
+        /**
+         * Format: int32
+         * @description [1: Remove, 2: Revert, 3: RemoveAliases, 4: Recreate, 5: Exclude]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Services.DataSyncUndoAction": 1 | 2 | 3 | 4 | 5;
+        /**
+         * Format: int32
+         * @description [1: ChangedSinceImport, 2: InUse, 3: AddedOptionsInUse, 4: Missing]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Services.DataSyncUndoBlock": 1 | 2 | 3 | 4;
+        "Bakabase.Modules.DataSync.Services.DataSyncUndoPreview": {
+            canUndo: boolean;
+            items: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoPreviewItem"][];
+            problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncUndoPreviewItem": {
+            kind: string;
+            localKey: string;
+            name: string;
+            action: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoAction"];
+            blocked?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoBlock"];
+            /** Format: int32 */
+            valueCount?: number;
+            settingsMayReferenceIt: boolean;
+            recreatedGetsNewId: boolean;
+        };
+        /**
+         * Format: int32
+         * @description [1: Available, 2: Undone, 3: Expired]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataSync.Services.DataSyncUndoState": 1 | 2 | 3;
+        "Bakabase.Modules.DataSync.Wire.DataSyncFeedCounterpart": {
+            mode: string;
+            firstContactCompleted: boolean;
+            kinds: string[];
+        };
+        "Bakabase.Modules.DataSync.Wire.DataSyncFeedHead": {
+            nodeId: string;
+            libraryEpoch: string;
+            actorId: string;
+            /** Format: int32 */
+            contractVersion: number;
+            /** Format: int32 */
+            minimumPeerContract: number;
+            appVersion: string;
+            /** Format: int64 */
+            seq: number;
+            kinds: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedKindHead"][];
+            attention: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncSourceAttention"];
+            /** Format: int64 */
+            seenCounter?: number;
+            counterpart?: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedCounterpart"];
+        };
+        "Bakabase.Modules.DataSync.Wire.DataSyncFeedKind": {
+            kind: string;
+            /** Format: int32 */
+            schemaVersion: number;
+            /** Format: int64 */
+            maxSeq: number;
+            /** Format: int64 */
+            tombstoneFloorSeq: number;
+            /** Format: int32 */
+            liveCount: number;
+            /** Format: int32 */
+            tombstoneCount: number;
+            contentHash: string;
+            /** Format: int64 */
+            sinceSeq: number;
+            /** Format: int32 */
+            recordCount: number;
+            cursorSuperseded: boolean;
+        };
+        "Bakabase.Modules.DataSync.Wire.DataSyncFeedKindHead": {
+            kind: string;
+            /** Format: int32 */
+            schemaVersion: number;
+            /** Format: int64 */
+            maxSeq: number;
+            cursorSuperseded: boolean;
+        };
+        "Bakabase.Modules.DataSync.Wire.DataSyncFeedManifest": {
+            snapshotId: string;
+            /** Format: int64 */
+            expiresInMs: number;
+            nodeId: string;
+            libraryEpoch: string;
+            actorId: string;
+            /** Format: int32 */
+            contractVersion: number;
+            /** Format: int32 */
+            minimumPeerContract: number;
+            appVersion: string;
+            kinds: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedKind"][];
+            counterpart?: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedCounterpart"];
+            attention: components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncSourceAttention"];
+        };
+        "Bakabase.Modules.DataSync.Wire.DataSyncSourceAttention": {
+            headless: boolean;
+            /** Format: int32 */
+            openDecisions: number;
+            /** Format: int32 */
+            pausedLinks: number;
+            restorePending: boolean;
+            /** Format: int32 */
+            awaitingReview: number;
+        };
         "Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancementConverter": Record<string, never>;
         "Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor": {
             /** Format: int32 */
@@ -11943,12 +13228,32 @@ export interface components {
             /** Format: int64 */
             revision: number;
         };
+        "Bakabase.Modules.Federation.Peers.NodeDataSyncPairCodeRequest": {
+            nodeId: string;
+            nodeName: string;
+            code: string;
+            transactionId: string;
+            claimSecret: string;
+            intent: string;
+            reciprocal?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeReciprocalOffer"];
+        };
+        "Bakabase.Modules.Federation.Peers.NodeDataSyncPairRequest": {
+            nodeId: string;
+            nodeName: string;
+            transactionId: string;
+            claimSecret: string;
+            intent: string;
+            reciprocal?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeReciprocalOffer"];
+        };
         "Bakabase.Modules.Federation.Peers.NodeDiscoveryCandidate": {
             nodeId: string;
             name: string;
             address: string;
             kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
             platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
+            /** Format: int32 */
+            dataSyncContractVersion?: number;
+            sharesDefinitions?: boolean;
         };
         "Bakabase.Modules.Federation.Peers.NodeGrantSummary": {
             grantId: string;
@@ -11980,6 +13285,11 @@ export interface components {
             maxBatchSize: number;
             kind?: string;
             platform?: string;
+            /** Format: int32 */
+            dataSyncContractVersion?: number;
+            /** Format: int32 */
+            dataSyncMinimumPeerContract?: number;
+            sharesDefinitions?: boolean;
         };
         "Bakabase.Modules.Federation.Peers.NodeInvitation": {
             code: string;
@@ -12005,6 +13315,7 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
             credentials?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeCredentials"];
+            readBack?: string;
         };
         "Bakabase.Modules.Federation.Peers.NodePairRequest": {
             nodeId: string;
@@ -13038,6 +14349,21 @@ export interface components {
             includeUnknownFiles: boolean;
             /** Format: int32 */
             unknownFilesMinMb?: number;
+        };
+        "Bakabase.Service.Models.Input.DataSync.DataSyncLinkResumeInputModel": {
+            action: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncResumeAction"];
+        };
+        "Bakabase.Service.Models.Input.DataSync.DataSyncPausedInputModel": {
+            paused: boolean;
+        };
+        "Bakabase.Service.Models.Input.DataSync.DataSyncRestoreChoiceInputModel": {
+            choice: components["schemas"]["Bakabase.Modules.DataSync.DataSyncRestoreChoice"];
+            /** Format: int32 */
+            linkId?: number;
+        };
+        "Bakabase.Service.Models.Input.DataSync.DataSyncSyncNowInputModel": {
+            /** Format: int32 */
+            linkId?: number;
         };
         "Bakabase.Service.Models.Input.DecompressionInputModel": {
             onFailureContinue: boolean;
@@ -14169,6 +15495,42 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncAccessRequestView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncAccessRequestView"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncEntityStatusView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncEntityStatusView"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryEntry]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryEntry"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkView"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncPeerCandidate]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncPeerCandidate"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncReaderView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncReaderView"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor]": {
             /** Format: int32 */
             code: number;
@@ -15080,6 +16442,84 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Abstractions.DataSyncTypeChangePreview]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Abstractions.DataSyncTypeChangePreview"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncFirstSyncPreview]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncFirstSyncPreview"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInboxPage]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncInboxPage"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncInvitationResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncMapView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncMapView"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncOverview]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncOverview"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncRequestResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncRequestResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncRestoreView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncRestoreView"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncTaskStart"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoPreview"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]": {
             /** Format: int32 */
@@ -20835,6 +22275,958 @@ export interface operations {
             };
         };
     };
+    GetDataSyncOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncOverview]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncOverview]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncOverview]"];
+                };
+            };
+        };
+    };
+    GetDataSyncMap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncMapView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncMapView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncMapView]"];
+                };
+            };
+        };
+    };
+    SetDataSyncSharing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncSharingInput"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncSharingInput"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncSharingInput"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncSharingInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                };
+            };
+        };
+    };
+    GetDataSyncPeers: {
+        parameters: {
+            query?: {
+                discover?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncPeerCandidate]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncPeerCandidate]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncPeerCandidate]"];
+                };
+            };
+        };
+    };
+    GetDataSyncLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkView]"];
+                };
+            };
+        };
+    };
+    CreateDataSyncLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkCreateInput"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkCreateInput"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkCreateInput"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkCreateInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                };
+            };
+        };
+    };
+    UpdateDataSyncLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkUpdateInput"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkUpdateInput"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkUpdateInput"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncLinkUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                };
+            };
+        };
+    };
+    ResetDataSyncLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                };
+            };
+        };
+    };
+    PauseDataSyncLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                };
+            };
+        };
+    };
+    ResumeDataSyncLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncLinkResumeInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncLinkResumeInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncLinkResumeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncLinkResumeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                };
+            };
+        };
+    };
+    SyncDataSyncNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncSyncNowInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncSyncNowInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncSyncNowInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncSyncNowInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                };
+            };
+        };
+    };
+    SetDataSyncAllPaused: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncPausedInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncPausedInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncPausedInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncPausedInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                };
+            };
+        };
+    };
+    ForgetDataSyncAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                };
+            };
+        };
+    };
+    CreateDataSyncCopyOnce: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
+                };
+            };
+        };
+    };
+    GetDataSyncFirstSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncFirstSyncPreview]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncFirstSyncPreview]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncFirstSyncPreview]"];
+                };
+            };
+        };
+    };
+    StartDataSyncFirstSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncFirstSyncStartInput"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncFirstSyncStartInput"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncFirstSyncStartInput"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncFirstSyncStartInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                };
+            };
+        };
+    };
+    GetDataSyncRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncAccessRequestView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncAccessRequestView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncAccessRequestView]"];
+                };
+            };
+        };
+    };
+    ApproveDataSyncRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncApproveInput"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncApproveInput"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncApproveInput"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncApproveInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncRequestResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncRequestResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncRequestResult]"];
+                };
+            };
+        };
+    };
+    RejectDataSyncRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                };
+            };
+        };
+    };
+    CancelDataSyncRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                };
+            };
+        };
+    };
+    GetDataSyncReaders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncReaderView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncReaderView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncReaderView]"];
+                };
+            };
+        };
+    };
+    RevokeDataSyncReader: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
+                };
+            };
+        };
+    };
+    CreateDataSyncInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]"];
+                };
+            };
+        };
+    };
+    GetDataSyncInbox: {
+        parameters: {
+            query?: {
+                openOnly?: boolean;
+                peerNodeId?: string;
+                kind?: string;
+                skip?: number;
+                take?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInboxPage]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInboxPage]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInboxPage]"];
+                };
+            };
+        };
+    };
+    PreviewDataSyncInboxItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Abstractions.DataSyncTypeChangePreview]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Abstractions.DataSyncTypeChangePreview]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Abstractions.DataSyncTypeChangePreview]"];
+                };
+            };
+        };
+    };
+    ResolveDataSyncInbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncResolveBatchInput"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncResolveBatchInput"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncResolveBatchInput"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncResolveBatchInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                };
+            };
+        };
+    };
+    GetDataSyncEntities: {
+        parameters: {
+            query?: {
+                kind?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncEntityStatusView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncEntityStatusView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncEntityStatusView]"];
+                };
+            };
+        };
+    };
+    SetDataSyncEntitySync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+                localKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncEntitySyncInput"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncEntitySyncInput"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncEntitySyncInput"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncEntitySyncInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                };
+            };
+        };
+    };
+    GetDataSyncHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryEntry]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryEntry]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryEntry]"];
+                };
+            };
+        };
+    };
+    GetDataSyncHistoryEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail]"];
+                };
+            };
+        };
+    };
+    PreviewDataSyncUndo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]"];
+                };
+            };
+        };
+    };
+    UndoDataSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                };
+            };
+        };
+    };
+    GetDataSyncRestore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncRestoreView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncRestoreView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncRestoreView]"];
+                };
+            };
+        };
+    };
+    ChooseDataSyncRestore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncRestoreChoiceInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncRestoreChoiceInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncRestoreChoiceInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.DataSync.DataSyncRestoreChoiceInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
+                };
+            };
+        };
+    };
+    GetFederationDataSyncHead: {
+        parameters: {
+            query?: {
+                mode?: string;
+                since?: string;
+                actor?: string;
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedHead"];
+                    "application/json": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedHead"];
+                    "text/json": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedHead"];
+                };
+            };
+        };
+    };
+    CreateFederationDataSyncSnapshot: {
+        parameters: {
+            query?: {
+                mode?: string;
+                since?: string;
+                actor?: string;
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedManifest"];
+                    "application/json": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedManifest"];
+                    "text/json": components["schemas"]["Bakabase.Modules.DataSync.Wire.DataSyncFeedManifest"];
+                };
+            };
+        };
+    };
+    ReadFederationDataSyncChanges: {
+        parameters: {
+            query?: {
+                snapshot?: string;
+                kind?: string;
+                since?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     GetAllDLsiteWorks: {
         parameters: {
             query?: {
@@ -22241,6 +24633,93 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    RequestFederationDataSyncPairing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDataSyncPairRequest"];
+                "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDataSyncPairRequest"];
+                "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDataSyncPairRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDataSyncPairRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
+                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
+                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
+                };
+            };
+        };
+    };
+    ExchangeFederationDataSyncInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDataSyncPairCodeRequest"];
+                "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDataSyncPairCodeRequest"];
+                "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDataSyncPairCodeRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDataSyncPairCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
+                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
+                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
+                };
+            };
+        };
+    };
+    ClaimFederationDataSyncNodeGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
+                "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
+                "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
+                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
+                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
                 };
             };
         };

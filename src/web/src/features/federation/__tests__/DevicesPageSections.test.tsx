@@ -1,4 +1,5 @@
 import type { FederationStatus, ManagedServersView } from "../types";
+import type * as DataSyncApi from "@/features/data-sync/api";
 
 import { useState } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -12,8 +13,21 @@ import { useFederationStatus } from "../hooks/useFederationStatus";
 import { REVEAL_HIGHLIGHT_MS } from "../hooks/useSectionReveal";
 
 import BApi from "@/sdk/BApi";
-import { ClientMode, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
+import {
+  ClientMode,
+  DataSyncStatusLevel,
+  ManagedServerState,
+  RemoteAccessMode,
+} from "@/sdk/constants";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
+import { dataSyncApi } from "@/features/data-sync/api";
+import { useDataSyncStore } from "@/features/data-sync/stores/dataSync";
+import {
+  mapPeer,
+  mapView,
+  overview as syncOverview,
+  status as syncStatus,
+} from "@/features/data-sync/__tests__/dataSyncFixtures";
 
 /*
  * The devices page's sections: its nav, landing on a tab or a place inside one
@@ -49,6 +63,11 @@ vi.mock("@/sdk/BApi", () => ({
   default: {
     remoteAccess: { getRemoteAccessSettings: vi.fn(), getRemoteAccessContext: vi.fn() },
   },
+}));
+// Data sync's own reader, which the page shares with the map; nothing to say unless a test says it.
+vi.mock("@/features/data-sync/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof DataSyncApi>()),
+  dataSyncApi: { map: vi.fn(), overview: vi.fn() },
 }));
 
 const initialStore = useRemoteAccessStore.getState();
@@ -142,6 +161,7 @@ afterEach(() => {
   vi.useRealTimers();
   delete (Element.prototype as Partial<Element>).scrollIntoView;
   useRemoteAccessStore.setState(initialStore, true);
+  useDataSyncStore.getState().clear();
 });
 
 const settingsReads = () => vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mock.calls.length;
@@ -298,12 +318,14 @@ describe("the devices page's nav", () => {
       "device",
       "manage",
       "sharing",
+      "sync",
       "advanced",
     ]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/federation/devices?section=device",
       "/federation/devices?section=manage",
       "/federation/devices?section=sharing",
+      "/federation/devices?section=sync",
       "/federation/devices?section=advanced",
     ]);
     expect(navLink("device")).toHaveAttribute("aria-current", "page");
@@ -364,6 +386,43 @@ describe("the devices page's nav", () => {
     expect(screen.getByTestId("devices-waiting")).toHaveTextContent(
       "federation.devices.waiting.unrestricted",
     );
+  });
+
+  it("sums data sync up in its own tab, counts what waits for it here, and leads to its page", async () => {
+    vi.mocked(dataSyncApi.map).mockResolvedValue(mapView({ peers: [mapPeer("nas", "NAS")] }));
+    vi.mocked(dataSyncApi.overview).mockResolvedValue(
+      syncOverview({
+        openInboxItems: 2,
+        status: syncStatus({ level: DataSyncStatusLevel.NeedsYou, openItems: 2, linksToReview: 1 }),
+      }),
+    );
+    renderPage("/federation/devices?section=sync");
+    const panel = await screen.findByTestId("devices-sync");
+
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+      "federation.devices.tab.sync",
+    );
+    await waitFor(() => expect(panel).toHaveTextContent("dataSync.status.NeedsYou 2"));
+    expect(panel).toHaveTextContent("dataSync.sharing.isOn");
+    // NAS is received from and reads this device.
+    expect(
+      within(panel)
+        .getAllByRole("definition")
+        .map((value) => value.textContent),
+    ).toEqual(["1", "1"]);
+    expect(within(panel).getByRole("link", { name: "dataSync.link.openPage" })).toHaveAttribute(
+      "href",
+      "/data-sync",
+    );
+    // Two decisions and a first sync to review wait here: the nav counts them in words too.
+    expect(navLink("sync")).toHaveTextContent("federation.devices.nav.pendingSync 3");
+    // And the device tab lists them, leading here.
+    fireEvent.click(navLink("device"));
+    expect(
+      within(await screen.findByTestId("devices-waiting")).getByRole("link", {
+        name: "federation.devices.waiting.sync 3",
+      }),
+    ).toHaveAttribute("href", "/federation/devices?section=sync");
   });
 
   it("offers nothing to manage where this installation cannot manage anything", async () => {

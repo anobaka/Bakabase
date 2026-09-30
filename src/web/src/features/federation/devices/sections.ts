@@ -8,13 +8,15 @@ import {
   AiOutlineLaptop,
   AiOutlineSetting,
   AiOutlineShareAlt,
+  AiOutlineSync,
 } from "react-icons/ai";
 
 import AdvancedTab from "./AdvancedTab";
 import ManageTab from "./ManageTab";
 import SharingTab from "./SharingTab";
+import SyncTab from "./SyncTab";
 import ThisDeviceTab from "./ThisDeviceTab";
-import { loaded, troubledServers, waitingSharingRequests } from "./selectors";
+import { dataSyncWaiting, loaded, troubledServers, waitingSharingRequests } from "./selectors";
 
 import { RemoteAccessMode } from "@/sdk/constants";
 
@@ -115,6 +117,21 @@ export const devicesTabs: DevicesTab[] = [
       titleKey: "federation.devices.chooser.browse.title",
       descKey: "federation.devices.chooser.browse.desc",
       section: "connect",
+    },
+  },
+  {
+    // Only a summary: data sync is decided on its own page (`/data-sync`).
+    id: "sync",
+    labelKey: "federation.devices.tab.sync",
+    icon: AiOutlineSync,
+    anchors: [],
+    Panel: SyncTab,
+    badge: (data) => {
+      const count = dataSyncWaiting(data);
+
+      return count
+        ? { count, countKey: "federation.devices.nav.pendingSync", attention: false }
+        : undefined;
     },
   },
   {

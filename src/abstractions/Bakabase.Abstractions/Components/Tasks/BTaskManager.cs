@@ -277,6 +277,12 @@ public class BTaskManager : IAsyncDisposable
     /// </summary>
     private volatile bool _shuttingDown;
 
+    /// <summary>
+    /// True once <see cref="PrepareForShutdown"/> ran. <see cref="Start"/> has no shutdown check of its own, so a
+    /// component that starts tasks by itself reads this first.
+    /// </summary>
+    public bool IsShuttingDown => _shuttingDown;
+
     private Task Daemon()
     {
         _daemonTask = Task.Run(async () =>

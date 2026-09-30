@@ -1,0 +1,1019 @@
+import type { TFunction } from "i18next";
+import type {
+  DataSyncEntityStatusView,
+  DataSyncMapPeer,
+  DataSyncReaderView,
+  DataSyncSourceAttention,
+  DataSyncStatusView,
+} from "./api";
+
+import { serverTime, timeAgo } from "./times";
+
+import {
+  DataSyncEntitySyncState,
+  DataSyncHeldReason,
+  DataSyncKinds,
+  DataSyncLinkInitiator,
+  DataSyncLinkMode,
+  DataSyncLinkState,
+  DataSyncPauseReason,
+  DataSyncPauseReasonLabel,
+  DataSyncPeerErrorCode,
+  DataSyncPeerErrorCodeLabel,
+  DataSyncStatusLevel,
+  RemoteAccessMode,
+} from "@/sdk/constants";
+
+/*
+ * What the data sync page and its drawings show, worked out from what the server answers —
+ * pure, so every rule is tested without rendering: which way each arrow points and how it is
+ * drawn, what each direction says, and which line of the status catalogue (spec §11.6) a link
+ * reads as.
+ */
+
+type T = TFunction;
+
+// ---- words put together ------------------------------------------------------------------------
+
+type Part = string | false | null | undefined;
+
+/**
+ * Sentences read as one label (a screen reader's name for a card, a line, the indicator), joined
+ * the way the language joins them: ". " in English, "。" in Chinese. Never a literal here.
+ */
+export const sentences = (t: T, parts: Part[]) =>
+  parts.filter(Boolean).join(t("dataSync.a11y.sentenceBreak"));
+
+// ---- kinds -------------------------------------------------------------------------------------
+
+/** Every kind this build syncs, in the order the page lists them: properties first. */
+export const dataSyncKinds: readonly string[] = [
+  ...["customProperty", "extensionGroup"].filter((kind) => DataSyncKinds.includes(kind)),
+  ...DataSyncKinds.filter((kind) => kind !== "customProperty" && kind !== "extensionGroup"),
+];
+
+/** Kinds in the page's order; a kind this build does not know keeps its place at the end. */
+export const orderKinds = (kinds: readonly string[]) => {
+  const known = dataSyncKinds.filter((kind) => kinds.includes(kind));
+
+  return [...known, ...kinds.filter((kind) => !dataSyncKinds.includes(kind))];
+};
+
+/**
+ * The kinds with `kind` switched: on when it was off, off when it was on. Null when switching
+ * it off would leave none — a link always syncs at least one kind.
+ */
+export const toggleKind = (kinds: readonly string[], kind: string): string[] | null => {
+  if (!kinds.includes(kind)) return orderKinds([...kinds, kind]);
+  if (kinds.length <= 1) return null;
+
+  return orderKinds(kinds.filter((item) => item !== kind));
+};
+
+// ---- modes -------------------------------------------------------------------------------------
+
+export type ModeName = "off" | "follow" | "twoWay";
+
+export const modeName = (mode?: DataSyncLinkMode | number | null): ModeName =>
+  mode === DataSyncLinkMode.TwoWay ? "twoWay" : mode === DataSyncLinkMode.Follow ? "follow" : "off";
+
+export const modeValue = (name: ModeName): DataSyncLinkMode =>
+  name === "twoWay"
+    ? DataSyncLinkMode.TwoWay
+    : name === "follow"
+      ? DataSyncLinkMode.Follow
+      : DataSyncLinkMode.Off;
+
+/** A peer's mode towards this device as the server words it (`"follow"`, `"twoWay"`). */
+const peerModeName = (mode?: string | null): ModeName | undefined => {
+  const value = mode?.trim().toLowerCase();
+
+  if (value === "twoway") return "twoWay";
+  if (value === "follow") return "follow";
+
+  return undefined;
+};
+
+// ---- one peer ----------------------------------------------------------------------------------
+
+/** How a direction is drawn: working, waiting, or not there. */
+export type LaneStatus = "active" | "pending" | "none";
+
+/** What does not work on the receive direction right now — the map's issue names. */
+export type SyncIssue = "syncPaused" | "syncFailed" | "syncUpdateNeeded" | "syncAccessLost";
+
+/** How a status reads at a glance: its dot, its colour. */
+export type Tone = "success" | "primary" | "warning" | "danger" | "default";
+
+/** An ended request of this device's own: rejected or expired. */
+export type SyncOutcome = "awaitingApproval" | "rejected" | "expired";
+
+/**
+ * One other device as data sync sees it: this device's link to it, what it reads of this
+ * device, this device's own request to it, and what it says about itself — from the one record
+ * the page and the device map both read (`DataSyncMapPeer`).
+ */
+export interface SyncPeer {
+  nodeId: string;
+  name: string;
+  address?: string;
+  /** A one-time code of its own that a new link or copy redeems (the wizard's way in by address). */
+  code?: string;
+  linkId?: number;
+  mode: DataSyncLinkMode;
+  state?: DataSyncLinkState;
+  pausedReason?: DataSyncPauseReason;
+  pausedDetail?: string;
+  initiator?: DataSyncLinkInitiator;
+  /** The kinds this device receives from it. */
+  kinds: string[];
+  /** The kinds it receives from this device, as its own link says. */
+  peerKinds?: string[];
+  /** It may read this device's definitions (this device's grant). */
+  peerMayRead: boolean;
+  /**
+   * This device may read its definitions already, so linking to it sends no request. Unknown
+   * (undefined) where nothing said — then a new link is taken to send one.
+   */
+  weMayRead?: boolean;
+  /** Its own link to this device: `follow`, `twoWay`, or none. */
+  peerMode?: ModeName;
+  peerLastReadAt?: string;
+  lastSyncedAt?: string;
+  lastErrorCode?: string;
+  /** What the error says beyond its code: for `ReadBackFailed`, the peer error code that says why. */
+  lastErrorDetail?: string;
+  openItems: number;
+  attention?: DataSyncSourceAttention;
+  readBackDeclined: boolean;
+  heldCount: number;
+  excludedCount: number;
+  missingAtPeerCount: number;
+  peerAppVersion?: string;
+  /** This device's own request to it, when it is waiting or has ended. */
+  outcome?: SyncOutcome;
+  outcomeExpiresAt?: string;
+  /** That request while it waits, when it is listed: what [Cancel] withdraws. */
+  requestId?: string;
+  /** Its grant to read this device, with what it declared when it last read. */
+  reader?: DataSyncReaderView;
+  /**
+   * Waiting for its first review: from when this device may start without it ([Start anyway],
+   * spec §8.3).
+   */
+  startAnywayAt?: string;
+  /** A full reconciliation with it is being fetched, waits to be applied, or is being applied (§8.8). */
+  fullReconciliationRunning?: boolean;
+}
+
+/** This device's own request to it ended without an answer it can use: rejected or expired. */
+export const requestEnded = (peer: SyncPeer) =>
+  peer.outcome === "rejected" || peer.outcome === "expired";
+
+const asOutcome = (value?: string | null): SyncOutcome | undefined =>
+  value === "awaitingApproval" || value === "rejected" || value === "expired" ? value : undefined;
+
+/** One device, from the record the map view has of it. */
+export const syncPeerOf = ({ nodeId, name, link, reader, request }: DataSyncMapPeer): SyncPeer => ({
+  nodeId,
+  name,
+  address: request?.address ?? link?.peerAddress ?? undefined,
+  linkId: link?.id,
+  mode: link?.mode ?? DataSyncLinkMode.Off,
+  state: link?.state,
+  pausedReason: link?.pausedReason ?? undefined,
+  pausedDetail: link?.pausedDetail ?? undefined,
+  initiator: link?.initiator,
+  kinds: orderKinds(link?.kinds ?? dataSyncKinds),
+  peerKinds: link?.peerKinds ? orderKinds(link.peerKinds) : undefined,
+  peerMayRead: !!reader,
+  peerMode: peerModeName(link?.peerModeTowardsUs ?? reader?.mode),
+  peerLastReadAt: link?.peerLastReadAt ?? reader?.lastReadAt ?? undefined,
+  lastSyncedAt: link?.lastSyncedAt ?? undefined,
+  lastErrorCode: link?.lastErrorCode ?? undefined,
+  lastErrorDetail: link?.lastErrorDetail ?? undefined,
+  openItems: link?.openItems ?? 0,
+  attention: link?.peerAttention ?? undefined,
+  readBackDeclined: link?.readBackDeclined ?? false,
+  heldCount: link?.heldCount ?? 0,
+  excludedCount: link?.excludedCount ?? 0,
+  missingAtPeerCount: link?.missingAtPeerCount ?? 0,
+  peerAppVersion: link?.peerAppVersion ?? undefined,
+  startAnywayAt: link?.startAnywayAt ?? undefined,
+  fullReconciliationRunning: link?.fullReconciliationRunning ?? false,
+  outcome: asOutcome(request?.outcome),
+  outcomeExpiresAt: request?.expiresAt ?? undefined,
+  requestId: request?.requestId ?? undefined,
+  reader: reader ?? undefined,
+});
+
+/**
+ * A device data sync has nothing to do with yet, to start syncing with: no link, no grant.
+ * `address` is where a request to it goes, when it is not a device the server knows by its id.
+ */
+export const newSyncPeer = (nodeId: string, name: string, address?: string): SyncPeer => ({
+  nodeId,
+  name,
+  address,
+  mode: DataSyncLinkMode.Off,
+  kinds: [...dataSyncKinds],
+  peerMayRead: false,
+  openItems: 0,
+  readBackDeclined: false,
+  heldCount: 0,
+  excludedCount: 0,
+  missingAtPeerCount: 0,
+});
+
+/** Every device the map view names, by name, so the drawing keeps its order between reads. */
+export const syncPeersOf = (peers: readonly DataSyncMapPeer[] = []): SyncPeer[] =>
+  peers
+    .map(syncPeerOf)
+    .sort((a, b) => a.name.localeCompare(b.name) || a.nodeId.localeCompare(b.nodeId));
+
+const waitingStates = new Set<DataSyncLinkState>([
+  DataSyncLinkState.AwaitingAccess,
+  DataSyncLinkState.AwaitingReview,
+  DataSyncLinkState.WaitingForPeerReview,
+]);
+
+/**
+ * What the candidates list (`GET /data-sync/peers`) says each device allows: whether this device
+ * may read it already. A device this device reads over a link already needs no request either.
+ */
+export const withCandidates = (
+  peers: SyncPeer[],
+  candidates: { nodeId: string; weMayRead: boolean }[] | undefined,
+): SyncPeer[] => {
+  if (!candidates?.length) return peers;
+  const reads = new Map(candidates.map((candidate) => [candidate.nodeId, candidate.weMayRead]));
+
+  return peers.map((peer) =>
+    reads.has(peer.nodeId) ? { ...peer, weMayRead: reads.get(peer.nodeId) } : peer,
+  );
+};
+
+/**
+ * Errors that say only that the other device was away — it could not be reached: shown grey,
+ * never as failures. The same the server counts as offline.
+ */
+const offlineErrors = new Set([DataSyncPeerErrorCodeLabel[DataSyncPeerErrorCode.Unreachable]]);
+
+/**
+ * The other device answered, but busy — or this device was still reading it: it is there, and
+ * tried again within minutes. Syncing, never offline and never a failure, as the server says it.
+ */
+const busyError = DataSyncPeerErrorCodeLabel[DataSyncPeerErrorCode.Busy];
+
+/** The other device refuses the link: a code the link carries, whatever its state (spec §8.1). */
+const peerErrors = new Set([
+  "PeerTooOld",
+  "ThisTooOld",
+  "AccessRevoked",
+  "PeerSharingOff",
+  "PeerRemoteAccessOff",
+]);
+
+export const hasPeerError = (peer: SyncPeer) =>
+  !!peer.lastErrorCode && peerErrors.has(peer.lastErrorCode);
+
+/** Codes a link carries that have a line of their own rather than "Sync failed". */
+const ownLineErrors = new Set([
+  ...peerErrors,
+  "AccessRejected",
+  "AccessExpired",
+  "PeerRestorePending",
+]);
+
+/** Whether the other device was away the last time it was asked — said by the link's error alone. */
+export const isOffline = (peer: SyncPeer) =>
+  !!peer.lastErrorCode && offlineErrors.has(peer.lastErrorCode);
+
+/** Whether the other device was busy the last time it was asked (see `busyError`). */
+const isBusy = (peer: SyncPeer) => peer.lastErrorCode === busyError;
+
+/** An error on a working link that is neither "offline", busy nor a state of its own. */
+const failure = (peer: SyncPeer) =>
+  peer.state === DataSyncLinkState.Active &&
+  !!peer.lastErrorCode &&
+  !offlineErrors.has(peer.lastErrorCode) &&
+  !isBusy(peer) &&
+  !ownLineErrors.has(peer.lastErrorCode)
+    ? peer.lastErrorCode
+    : undefined;
+
+/**
+ * Keeping in step both ways was approved here, but reading the other device back failed (spec
+ * §7.2.4): the link waits for access nobody is asked for, with the failure on it. Both the link
+ * view and the map view say who started the link.
+ */
+export const readBackFailed = (peer: SyncPeer) =>
+  peer.state === DataSyncLinkState.AwaitingAccess &&
+  !!peer.lastErrorCode &&
+  peer.initiator === DataSyncLinkInitiator.Peer;
+
+/** What does not work on the receive direction right now, if anything. */
+export const syncIssueOf = (peer: SyncPeer): SyncIssue | undefined => {
+  if (readBackFailed(peer)) return "syncFailed";
+  if (peer.state === DataSyncLinkState.Paused) return "syncPaused";
+  if (peer.state === DataSyncLinkState.Stopped || !hasPeerError(peer))
+    return failure(peer) ? "syncFailed" : undefined;
+
+  return peer.lastErrorCode === "PeerTooOld" || peer.lastErrorCode === "ThisTooOld"
+    ? "syncUpdateNeeded"
+    : "syncAccessLost";
+};
+
+/**
+ * How the receive direction (the other device → this device) is drawn: waiting also for a
+ * request of this device's own that no link carries yet.
+ */
+export const receiveLane = (peer: SyncPeer): LaneStatus => {
+  if (peer.state !== undefined && waitingStates.has(peer.state)) return "pending";
+  if (peer.state === DataSyncLinkState.Stopped) return "none";
+  if (peer.mode !== DataSyncLinkMode.Off) return "active";
+
+  return peer.outcome === "awaitingApproval" ? "pending" : "none";
+};
+
+/**
+ * Whether the receive direction waits for a first review — this device's, or the other one's —
+ * rather than for the other device to let this one read it: drawn as waiting all the same.
+ */
+export const receiveWaitsForReview = (peer: SyncPeer) =>
+  peer.state === DataSyncLinkState.AwaitingReview ||
+  peer.state === DataSyncLinkState.WaitingForPeerReview;
+
+/**
+ * The receive direction in words: what it does, what it waits for, or that it is off — the
+ * same wherever it is said (the drawing's spokes, the rule editor, the device map).
+ */
+export const receivePhrase = (t: T, peer: SyncPeer, name: string = peer.name) => {
+  const lane = receiveLane(peer);
+
+  if (lane === "none") return t("dataSync.arrow.receive.off", { name });
+  if (lane === "pending" && receiveWaitsForReview(peer))
+    return t("federation.map.direction.sync.in.review", { name });
+
+  return t(`federation.map.direction.sync.in.${lane}`, { name });
+};
+
+/** How the may-read direction (this device → the other device) is drawn. */
+export const readLane = (peer: SyncPeer): LaneStatus => (peer.peerMayRead ? "active" : "none");
+
+/** Each receives from the other: two Follow links that together work as keeping in step (§8.1). */
+export const isMutualFollow = (peer: SyncPeer) =>
+  peer.mode === DataSyncLinkMode.Follow && peer.peerMode === "follow";
+
+/**
+ * The mode a drawing's line shows on its badge: this link's mode — "both ways" also when both
+ * devices follow each other, which works as that — or none when this device does not receive.
+ */
+export const lineMode = (peer: SyncPeer): "follow" | "twoWay" | undefined => {
+  if (peer.mode === DataSyncLinkMode.TwoWay || isMutualFollow(peer)) return "twoWay";
+  if (peer.mode === DataSyncLinkMode.Follow) return "follow";
+
+  return undefined;
+};
+
+// ---- the rule editor ---------------------------------------------------------------------------
+
+/** What the rule editor shows: the mode buttons' value (this link's own mode), both arrows, the kinds. */
+export interface LinkEditor {
+  mode: ModeName;
+  receive: LaneStatus;
+  read: LaneStatus;
+  kinds: string[];
+}
+
+export const linkEditor = (peer: SyncPeer): LinkEditor => ({
+  mode: modeName(peer.mode),
+  receive: receiveLane(peer),
+  read: readLane(peer),
+  kinds: peer.kinds.length ? peer.kinds : [...dataSyncKinds],
+});
+
+/** This device's own side, as keeping in step both ways needs it. */
+export interface OwnSharing {
+  sharingEnabled: boolean;
+  remoteAccessMode: RemoteAccessMode | number;
+}
+
+/** Whether the other device can read this one only once sharing, or remote access, is turned on here. */
+export const sharingNeeded = (own: OwnSharing) =>
+  !own.sharingEnabled || own.remoteAccessMode === RemoteAccessMode.Disabled;
+
+/**
+ * The confirmation for keeping in step both ways with a device (spec §11.1, §7.2.4), worded the
+ * same wherever it is offered: the consent, and what this device turns on so the other can read
+ * it — sharing only where it is off, remote access only where it is off. `turnsOn` is false where
+ * nothing is turned on (the other device reads this one already).
+ */
+export const twoWayConfirmation = (t: T, name: string, own: OwnSharing, turnsOn = true) => ({
+  title: t("dataSync.twoWay.title", { name }),
+  description: t("dataSync.twoWay.consent", { name }),
+  warning: turnsOn ? turnsOnWarning(t, own) : undefined,
+});
+
+/**
+ * What making this device readable turns on here, said only for what is off: sharing, remote
+ * access (with pairing required). Undefined when both are on.
+ */
+export const turnsOnWarning = (t: T, own: OwnSharing) =>
+  [
+    own.sharingEnabled ? undefined : t("dataSync.twoWay.turnsOnSharing"),
+    own.remoteAccessMode === RemoteAccessMode.Disabled
+      ? t("dataSync.sharing.remoteAccess")
+      : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ") || undefined;
+
+/**
+ * The question asked before a code is shown where it could not work yet (spec §7.2.3, §7.2.4):
+ * a code needs this device to share its definitions and remote access to be on, and what is off
+ * is turned on first. For a code meant for one device, `name` names it.
+ */
+export const codeTurnsOnConfirmation = (t: T, own: OwnSharing, name?: string) => ({
+  title: own.sharingEnabled ? t("dataSync.remoteAccess.onTitle") : t("dataSync.sharing.onTitle"),
+  description: name
+    ? t("dataSync.invitation.needsSharingFirst", { name })
+    : t("dataSync.invitation.turnOnFirst"),
+  warning: turnsOnWarning(t, own),
+});
+
+/**
+ * The question asked before remote access is turned on where sharing already is (spec §7.2.4):
+ * while it is off, no device can read this one's definitions.
+ */
+export const remoteAccessConfirmation = (t: T) => ({
+  title: t("dataSync.remoteAccess.onTitle"),
+  description: t("dataSync.remoteAccess.onDescription"),
+  warning: t("dataSync.remoteAccess.onWarning"),
+});
+
+/**
+ * Whether "[Ask {{name}} to keep in step]" is offered (spec §7.2.3): a two-way link, working, whose
+ * device took this one's access but does not read it back. The runtime answers the resume action
+ * `AskAccessAgain` on exactly such a link with an ordinary two-way request, leaving the link's
+ * state alone; on a paused or stopped link that action means something else, so it is not offered.
+ */
+export const offersAskToKeepInStep = (peer: SyncPeer) =>
+  peer.readBackDeclined &&
+  peer.linkId !== undefined &&
+  peer.mode === DataSyncLinkMode.TwoWay &&
+  peer.state !== DataSyncLinkState.Paused &&
+  peer.state !== DataSyncLinkState.Stopped;
+
+/**
+ * Whether a link that has waited for its peer's first review may start without it now ([Start
+ * anyway], spec §8.3): once the runtime says from when.
+ */
+export const canStartAnyway = (peer: SyncPeer, now: number = Date.now()) => {
+  const waits = peer.state === DataSyncLinkState.WaitingForPeerReview && !hasPeerError(peer);
+  const at = waits && peer.startAnywayAt ? serverTime(peer.startAnywayAt) : null;
+
+  return at !== null && at.getTime() <= now;
+};
+
+// ---- the status catalogue (§11.6) ----------------------------------------------------------------
+
+/**
+ * One line of the status catalogue. `code` names the entry (`InStep`, `Paused.PeerReset`,
+ * …); `text` is what it says.
+ */
+export interface StatusLine {
+  code: string;
+  text: string;
+  tone: Tone;
+}
+
+const line = (code: string, tone: Tone, text: string): StatusLine => ({ code, text, tone });
+
+/**
+ * Codes a link carries that are no peer error code but have words of their own: an apply or a
+ * fetch that failed here, and a read-back refused because the device no longer honours its code.
+ */
+export const failureCodesWithWords = ["ApplyFailed", "FetchFailed", "InvitationInvalid"] as const;
+
+const worded = new Set<string>([
+  ...Object.values(DataSyncPeerErrorCodeLabel),
+  ...failureCodesWithWords,
+]);
+
+/** The words for why a sync failed, from the peer error code the link carries. */
+export const failureReason = (t: T, code?: string) =>
+  code && worded.has(code)
+    ? t(`dataSync.peerError.${code}`)
+    : t("dataSync.peerError.other", { code: code || "?" });
+
+/**
+ * The code that says why a link — or, from its status, the whole device — failed: a failed
+ * read-back carries it as its detail (spec §7.2.4), every other failure as its own code.
+ */
+export const failureCodeOf = (failed: {
+  lastErrorCode?: string | null;
+  lastErrorDetail?: string | null;
+}) =>
+  (failed.lastErrorCode === "ReadBackFailed" ? failed.lastErrorDetail : failed.lastErrorCode) ??
+  undefined;
+
+/** A link paused because its device looks restored from a backup, not reset (§5.6). */
+export const pausedAsRestored = (peer: SyncPeer) =>
+  peer.pausedReason === DataSyncPauseReason.PeerReset && peer.pausedDetail === "restored";
+
+/** Why a link is paused, as the catalogue says it. */
+export const pausedLine = (t: T, peer: SyncPeer): StatusLine => {
+  const name = peer.name;
+  const reason = peer.pausedReason ?? DataSyncPauseReason.ByUser;
+  const label = DataSyncPauseReasonLabel[reason] ?? "ByUser";
+
+  switch (reason) {
+    case DataSyncPauseReason.PeerReset:
+      return pausedAsRestored(peer)
+        ? line(
+            "Paused.PeerResetRestored",
+            "warning",
+            t("dataSync.status.paused.PeerResetRestored", { name }),
+          )
+        : line("Paused.PeerReset", "warning", t("dataSync.status.paused.PeerReset", { name }));
+    case DataSyncPauseReason.AllPaused:
+      return line("Paused.AllPaused", "default", t("dataSync.status.paused.ByUser"));
+    case DataSyncPauseReason.ByUser:
+      return line("Paused.ByUser", "default", t("dataSync.status.paused.ByUser"));
+    default:
+      return line(`Paused.${label}`, "warning", t(`dataSync.status.paused.${label}`, { name }));
+  }
+};
+
+/**
+ * The line a link reads as: the first of the catalogue that holds. A failure is never shown
+ * as "nothing to sync".
+ */
+export function linkStatus(t: T, peer: SyncPeer, now: number = Date.now()): StatusLine {
+  const name = peer.name;
+
+  if (requestEnded(peer))
+    return line(
+      peer.outcome === "rejected" ? "AccessRejected" : "AccessExpired",
+      "danger",
+      t("dataSync.status.AccessRejected", { name }),
+    );
+  if (peer.linkId === undefined)
+    return peer.outcome === "awaitingApproval"
+      ? line("AwaitingAccess", "primary", t("dataSync.status.AwaitingAccess", { name }))
+      : peer.peerMayRead
+        ? line("ReaderOnly", "default", t("dataSync.status.ReaderOnly", { name }))
+        : line("NotLinked", "default", t("dataSync.status.NotLinked", { name }));
+
+  if (peer.state === DataSyncLinkState.Paused) return pausedLine(t, peer);
+  if (peer.state === DataSyncLinkState.Stopped)
+    return line("Stopped", "default", t("dataSync.status.Stopped", { name }));
+
+  switch (peer.lastErrorCode) {
+    case "PeerTooOld":
+      return line("PeerTooOld", "warning", t("dataSync.status.PeerTooOld", { name }));
+    case "ThisTooOld":
+      return peer.heldCount > 0
+        ? line("ThisTooOld", "warning", t("dataSync.status.ThisTooOld", { count: peer.heldCount }))
+        : line("ThisTooOld", "warning", t("dataSync.status.ThisTooOldNoCount", { name }));
+    case "AccessRevoked":
+    case "PeerSharingOff":
+      return line("AccessRevoked", "danger", t("dataSync.status.AccessRevoked", { name }));
+    case "PeerRemoteAccessOff":
+      return line(
+        "PeerRemoteAccessOff",
+        "danger",
+        t("dataSync.status.PeerRemoteAccessOff", { name }),
+      );
+  }
+
+  switch (peer.state) {
+    case DataSyncLinkState.AwaitingAccess:
+      // Nothing waits for an approval there: reading it back failed, and says why.
+      return readBackFailed(peer)
+        ? line(
+            "ReadBackFailed",
+            "danger",
+            t("dataSync.status.ReadBackFailed", {
+              name,
+              reason: failureReason(t, failureCodeOf(peer)),
+            }),
+          )
+        : line("AwaitingAccess", "primary", t("dataSync.status.AwaitingAccess", { name }));
+    case DataSyncLinkState.AwaitingReview:
+      return line("AwaitingReview", "primary", t("dataSync.status.AwaitingReview"));
+    case DataSyncLinkState.WaitingForPeerReview:
+      return line(
+        "WaitingForPeerReview",
+        "primary",
+        t("dataSync.status.WaitingForPeerReview", { name }),
+      );
+    default:
+      break;
+  }
+
+  if (peer.lastErrorCode === "PeerRestorePending")
+    return line("PeerRestorePending", "warning", t("dataSync.status.PeerRestorePending", { name }));
+  if (peer.lastErrorCode === DataSyncPeerErrorCodeLabel[DataSyncPeerErrorCode.TooLarge])
+    return line("TooLarge", "danger", t("dataSync.status.TooLarge", { name }));
+  if (isOffline(peer))
+    return line(
+      "Offline",
+      "default",
+      peer.lastSyncedAt
+        ? t("dataSync.status.Offline", { name, time: timeAgo(t, peer.lastSyncedAt, now) })
+        : t("dataSync.status.OfflineNever", { name }),
+    );
+  if (failure(peer))
+    return line(
+      "Failed",
+      "danger",
+      t("dataSync.status.Failed", { reason: failureReason(t, failureCodeOf(peer)) }),
+    );
+  if (peer.openItems > 0)
+    return line("NeedsYou", "warning", t("dataSync.status.NeedsYou", { count: peer.openItems }));
+  // Working, but never synced yet (§8.1 reaches Active before the first pull): not "in step".
+  if (!peer.lastSyncedAt) return line("Syncing", "primary", t("dataSync.status.Syncing"));
+  if (peer.fullReconciliationRunning)
+    return line("FullReconciliation", "primary", t("dataSync.status.FullReconciliation", { name }));
+  // It answered busy, or this device was still reading it: tried again within minutes.
+  if (isBusy(peer)) return line("Syncing", "primary", t("dataSync.status.Syncing"));
+
+  return line(
+    "InStep",
+    "success",
+    t("dataSync.status.InStep", { time: timeAgo(t, peer.lastSyncedAt, now) }),
+  );
+}
+
+/**
+ * What a link's details add under its status line: mutual Follow, a read-back that was
+ * declined, decisions and a restore waiting on the other device, changes held for a newer
+ * version here, and how the other device reads this one.
+ */
+export function linkNotes(t: T, peer: SyncPeer, now: number = Date.now()): StatusLine[] {
+  const name = peer.name;
+  const notes: StatusLine[] = [];
+
+  if (isMutualFollow(peer))
+    notes.push(line("MutualFollow", "primary", t("dataSync.status.MutualFollow")));
+  if (peer.readBackDeclined)
+    notes.push(
+      line("ReadBackDeclined", "warning", t("dataSync.status.ReadBackDeclined", { name })),
+    );
+  if (peer.attention?.openDecisions)
+    notes.push(
+      line(
+        "NeedsYouThere",
+        "warning",
+        t("dataSync.status.NeedsYouThere", { name, count: peer.attention.openDecisions }),
+      ),
+    );
+  if (peer.attention?.restorePending && peer.lastErrorCode !== "PeerRestorePending")
+    notes.push(
+      line("PeerRestorePending", "warning", t("dataSync.status.PeerRestorePending", { name })),
+    );
+  if (peer.heldCount > 0 && peer.lastErrorCode !== "ThisTooOld")
+    notes.push(line("Held", "warning", t("dataSync.status.ThisTooOld", { count: peer.heldCount })));
+  if (peer.peerMayRead && peer.peerMode)
+    notes.push(
+      line(
+        "PeerReads",
+        "default",
+        t(
+          peer.peerMode === "twoWay"
+            ? "dataSync.link.peerKeepsInStep"
+            : "dataSync.link.peerReceives",
+          {
+            name,
+            time: timeAgo(t, peer.peerLastReadAt, now),
+          },
+        ),
+      ),
+    );
+
+  return notes;
+}
+
+/** A card's line under its name on the drawing: the status, short. */
+export const peerCardLine = (t: T, peer: SyncPeer, now: number = Date.now()) => {
+  const status = linkStatus(t, peer, now);
+
+  return {
+    ...status,
+    text:
+      status.code === "Offline" && !peer.lastSyncedAt
+        ? t("dataSync.diagram.card.offlineNever")
+        : t(`dataSync.diagram.card.${cardKey(status.code)}`, cardValues(t, peer, now)),
+  };
+};
+
+const cardKey = (code: string) => {
+  if (code.startsWith("Paused.")) return "paused";
+  switch (code) {
+    case "AccessRejected":
+    case "AccessExpired":
+      return "notApproved";
+    case "InStep":
+      return "inStep";
+    case "Syncing":
+      return "syncing";
+    case "Offline":
+      return "offline";
+    case "NeedsYou":
+      return "needsYou";
+    case "AwaitingAccess":
+      return "awaitingAccess";
+    case "AwaitingReview":
+      return "awaitingReview";
+    case "WaitingForPeerReview":
+      return "waitingForPeerReview";
+    case "Stopped":
+      return "off";
+    case "ReaderOnly":
+      return "readsHere";
+    case "NotLinked":
+      return "off";
+    case "PeerTooOld":
+    case "ThisTooOld":
+      return "updateNeeded";
+    case "AccessRevoked":
+    case "PeerRemoteAccessOff":
+      return "accessLost";
+    case "PeerRestorePending":
+      return "restorePending";
+    default:
+      return "failed";
+  }
+};
+
+const cardValues = (t: T, peer: SyncPeer, now: number) => ({
+  time: timeAgo(t, peer.lastSyncedAt, now),
+  count: peer.openItems,
+});
+
+// ---- this device, as a whole ---------------------------------------------------------------------
+
+/**
+ * The line for a device where nothing is wrong: a first sync ready to review here, links that
+ * have synced, links that wait for another device (its approval, or its first review), a link
+ * working towards its first sync — or, with no link, the devices that read this one and the
+ * requests that wait for an answer here.
+ */
+const quietStatus = (t: T, status: DataSyncStatusView, now: number): StatusLine => {
+  const toReview = status.linksToReview ?? 0;
+  const waiting = status.linksWaiting ?? 0;
+
+  if (toReview > 0)
+    return line("ToReview", "primary", t("dataSync.status.level.ToReview", { count: toReview }));
+  if (status.lastSyncedAt && status.linksInStep > 0)
+    return line(
+      "InStep",
+      "success",
+      t("dataSync.status.InStep", { time: timeAgo(t, status.lastSyncedAt, now) }),
+    );
+  if (waiting > 0)
+    return line("Waiting", "primary", t("dataSync.status.level.Waiting", { count: waiting }));
+  // Working, but nothing synced yet: not "in step · never".
+  if (status.links > 0 || !(status.readers || status.pendingRequests))
+    return status.lastSyncedAt
+      ? line(
+          "InStep",
+          "success",
+          t("dataSync.status.InStep", { time: timeAgo(t, status.lastSyncedAt, now) }),
+        )
+      : line("Syncing", "primary", t("dataSync.status.Syncing"));
+  if (status.readers)
+    return line(
+      "ReadersOnly",
+      "success",
+      t("dataSync.status.level.ReadersOnly", { count: status.readers }),
+    );
+
+  return line(
+    "Requests",
+    "primary",
+    t("dataSync.status.level.Requests", { count: status.pendingRequests ?? 0 }),
+  );
+};
+
+/**
+ * The status indicator's line for the whole device, or none while data sync is off (no links,
+ * no readers, no requests) — the indicator is hidden then.
+ */
+export function overallStatus(
+  t: T,
+  status: DataSyncStatusView | undefined,
+  now: number = Date.now(),
+): StatusLine | undefined {
+  if (!status || status.level === DataSyncStatusLevel.Off) return undefined;
+  switch (status.level) {
+    case DataSyncStatusLevel.InStep:
+      return quietStatus(t, status, now);
+    case DataSyncStatusLevel.Syncing:
+      return line("Syncing", "primary", t("dataSync.status.Syncing"));
+    case DataSyncStatusLevel.NeedsYou:
+      return line(
+        "NeedsYou",
+        "warning",
+        t("dataSync.status.NeedsYou", { count: status.openItems }),
+      );
+    case DataSyncStatusLevel.Paused:
+      return line("Paused", "warning", t("dataSync.status.paused.ByUser"));
+    case DataSyncStatusLevel.Offline:
+      return line(
+        "Offline",
+        "default",
+        status.lastSyncedAt
+          ? t("dataSync.status.level.Offline", { time: timeAgo(t, status.lastSyncedAt, now) })
+          : t("dataSync.status.level.OfflineNever"),
+      );
+    case DataSyncStatusLevel.Failed:
+      return line(
+        "Failed",
+        "danger",
+        t("dataSync.status.Failed", { reason: failureReason(t, failureCodeOf(status)) }),
+      );
+    case DataSyncStatusLevel.UpdateNeeded:
+      return line("UpdateNeeded", "warning", t("dataSync.status.level.UpdateNeeded"));
+    default:
+      return line("Unknown", "default", t("dataSync.title"));
+  }
+}
+
+/** The indicator's second line: sources that hold decisions nobody has taken there. */
+export const waitingElsewhereLine = (t: T, status: DataSyncStatusView | undefined) =>
+  status?.peersNeedingDecisions
+    ? t("dataSync.status.peersNeedingDecisions", { count: status.peersNeedingDecisions })
+    : undefined;
+
+/**
+ * Another line: requests from other devices that wait for an answer here — unless the status
+ * line says that already.
+ */
+export const pendingRequestsLine = (
+  t: T,
+  status: DataSyncStatusView | undefined,
+  shown?: StatusLine,
+) =>
+  status?.pendingRequests && shown?.code !== "Requests"
+    ? t("dataSync.status.level.Requests", { count: status.pendingRequests })
+    : undefined;
+
+/**
+ * "Waiting on other devices": one line per source whose attention shows open decisions, so
+ * the reader knows where to go to decide them.
+ */
+export const elsewhereLines = (t: T, peers: SyncPeer[]) =>
+  peers
+    .filter((peer) => (peer.attention?.openDecisions ?? 0) > 0)
+    .map((peer) => ({
+      nodeId: peer.nodeId,
+      name: peer.name,
+      count: peer.attention!.openDecisions,
+      headless: peer.attention!.headless,
+      text: t("dataSync.status.NeedsYouThere", {
+        name: peer.name,
+        count: peer.attention!.openDecisions,
+      }),
+    }));
+
+/** Whether anything data sync shows is waiting on someone right now: read again more often. */
+export const isLive = ({
+  peers,
+  pendingRequests,
+  activeTaskId,
+}: {
+  peers: SyncPeer[];
+  pendingRequests: number;
+  activeTaskId?: string | null;
+}) =>
+  !!activeTaskId ||
+  pendingRequests > 0 ||
+  peers.some(
+    (peer) =>
+      peer.outcome === "awaitingApproval" ||
+      (peer.state !== undefined && waitingStates.has(peer.state)),
+  );
+
+// ---- one definition --------------------------------------------------------------------------------
+
+export type EntityBadgeCode =
+  | "needsYou"
+  | "localOnly"
+  | "detached"
+  | "heldAtSource"
+  | "tooLarge"
+  | "unreadable"
+  | "differs"
+  | "definitionOnly"
+  | "synced"
+  | "syncedFrom";
+
+/**
+ * Why this device holds its own definition back, in the badge's words: too large to travel whole,
+ * unreadable here — neither of which an update would help — or written by a newer version.
+ */
+const heldBadge = (reason: DataSyncHeldReason): EntityBadgeCode => {
+  switch (reason) {
+    case DataSyncHeldReason.TooLarge:
+      return "tooLarge";
+    case DataSyncHeldReason.LocalUnreadable:
+    case DataSyncHeldReason.Invalid:
+      return "unreadable";
+    default:
+      return "heldAtSource";
+  }
+};
+
+/** What a definition's sync badge says (Properties and Extension groups pages, the page's list). */
+export const entityBadge = (
+  entity: DataSyncEntityStatusView,
+): { code: EntityBadgeCode; tone: Tone; values: Record<string, unknown> } => {
+  if (entity.openItems > 0)
+    return { code: "needsYou", tone: "warning", values: { count: entity.openItems } };
+  if (entity.state === DataSyncEntitySyncState.LocalOnly)
+    return { code: "localOnly", tone: "default", values: {} };
+  if (entity.state === DataSyncEntitySyncState.Detached)
+    return { code: "detached", tone: "default", values: {} };
+  if (entity.heldAtSource != null)
+    return {
+      code: heldBadge(entity.heldAtSource),
+      tone: "warning",
+      values: { reason: entity.heldAtSource },
+    };
+  if (entity.differsFromSource)
+    return { code: "differs", tone: "warning", values: { name: entity.originName ?? "" } };
+  if (entity.childrenLocal) return { code: "definitionOnly", tone: "primary", values: {} };
+  if (entity.originName)
+    return { code: "syncedFrom", tone: "success", values: { name: entity.originName } };
+
+  return { code: "synced", tone: "success", values: {} };
+};
+
+/** A definition too large to travel whole: offer to sync its definition only. */
+export const isTooLargeToSync = (entity: DataSyncEntityStatusView) =>
+  entity.heldAtSource === DataSyncHeldReason.TooLarge;
+
+export type EntityMenuAction =
+  | "keepLocal"
+  | "detach"
+  | "rejoin"
+  | "definitionOnlyOn"
+  | "definitionOnlyOff";
+
+/** What a definition's sync menu offers, in its order. */
+export const entityMenu = (
+  entity: DataSyncEntityStatusView,
+  offersDefinitionOnly: boolean,
+): EntityMenuAction[] => {
+  if (entity.state !== DataSyncEntitySyncState.Synced) return ["rejoin"];
+  const actions: EntityMenuAction[] = ["keepLocal"];
+
+  if (offersDefinitionOnly)
+    actions.push(entity.childrenLocal ? "definitionOnlyOff" : "definitionOnlyOn");
+  actions.push("detach");
+
+  return actions;
+};
+
+// ---- "sync with another device" --------------------------------------------------------------
+
+/**
+ * What a device found for the wizard can do, as the list says it under its name: already
+ * linked, too old for data sync, not sharing its definitions, readable already, or to be asked.
+ * `manageElsewhere`: asking it would create access, which this window may not (§7.1.5).
+ */
+export type CandidateStatus =
+  | "linked"
+  | "tooOld"
+  | "notSharing"
+  | "readable"
+  | "asks"
+  | "manageElsewhere";
+
+export const candidateStatus = (
+  candidate: {
+    linkId?: number | null;
+    discovered: boolean;
+    contractVersion?: number | null;
+    sharesDefinitions?: boolean | null;
+    weMayRead: boolean;
+  },
+  canManage: boolean,
+): CandidateStatus => {
+  if (candidate.linkId != null) return "linked";
+  if (
+    (candidate.contractVersion != null && candidate.contractVersion < 1) ||
+    (candidate.discovered && candidate.contractVersion == null)
+  )
+    return "tooOld";
+  if (candidate.sharesDefinitions === false) return "notSharing";
+  if (candidate.weMayRead) return "readable";
+
+  return canManage ? "asks" : "manageElsewhere";
+};
+
+/** Whether the wizard lets the reader pick it. */
+export const isPickable = (status: CandidateStatus) => status === "readable" || status === "asks";

@@ -1,0 +1,294 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.DataSync;
+using Bakabase.Modules.DataSync.Merging;
+using Bakabase.Modules.DataSync.Models.Db;
+using Bakabase.Modules.DataSync.Runtime;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
+
+/// <summary>
+/// Once per second, decides what data sync runs (§8.2). It never does network work, and its only database work is
+/// reading link rows and the local state row (and, once at the start, making every link due; once after each
+/// lost-update window, a Refresh):
+/// <list type="bullet">
+/// <item>once at the start, it runs the actor check (§5.6) and makes every link due five seconds later;</item>
+/// <item>once the lost-update guard's window after the most recent apply has passed, it refreshes the kinds no Refresh
+/// looked at since (<c>DataSyncRefreshCoordinator.CloseLostUpdateWindowsAsync</c>, §6.5), without waiting for the
+/// gate;</item>
+/// <item>it hands grant events to the link service, so a granted request reaches its review within seconds;</item>
+/// <item>it starts the <c>DataSync</c> fetch task when a link is due and the task is not active — also when a
+/// federation session to a link's peer came online since the last tick;</item>
+/// <item>it enqueues <c>DataSyncApply</c> when staged pulls or requested re-merges wait, and the
+/// actor is verified.</item>
+/// </list>
+/// Two rules keep it from fighting the person and the host: nothing is started or enqueued once the app committed to
+/// quitting (<c>BTaskManager.PrepareForShutdown</c> or <c>ApplicationStopping</c>; <c>BTaskManager.Start</c> has no
+/// shutdown check, F71), and a task the person stopped is not started again on its own: the <c>DataSync</c> task not
+/// before its next 10-minute interval unless they press "Sync now" (<c>Start</c> would otherwise restart a cancelled
+/// task one second later), <c>DataSyncApply</c> not for what already waited until the next pull, "Sync now" or that
+/// interval.
+/// </summary>
+/// <remarks>
+/// Nothing runs until the fetch task is registered with the task manager: the host registers predefined tasks after
+/// its database migrations, and hosted services start before them.
+/// </remarks>
+public sealed class DataSyncScheduler : BackgroundService
+{
+    private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(1);
+
+    private readonly IServiceScopeFactory _scopes;
+    private readonly BTaskManager _btm;
+    private readonly DataSyncTaskLauncher _launcher;
+    private readonly DataSyncLinkService _links;
+    private readonly DataSyncGrantEventsHandler _grantEvents;
+    private readonly DataSyncRuntimeState _state;
+    private readonly IDataSyncClock _clock;
+    private readonly IDataSyncRuntimeObserver _observer;
+    private readonly ILogger<DataSyncScheduler> _logger;
+    private readonly SemaphoreSlim _tickLock = new(1, 1);
+
+    private DateTime? _observedFetchStopStartedAt;
+    private DateTime? _observedApplyStopStartedAt;
+    private HashSet<string> _peersOnline = new(StringComparer.Ordinal);
+
+    public DataSyncScheduler(IServiceScopeFactory scopes, BTaskManager btm, DataSyncTaskLauncher launcher,
+        DataSyncLinkService links, DataSyncGrantEventsHandler grantEvents, DataSyncRuntimeState state,
+        IDataSyncClock clock, IDataSyncRuntimeObserver observer,
+        ILogger<DataSyncScheduler> logger)
+    {
+        _scopes = scopes;
+        _btm = btm;
+        _launcher = launcher;
+        _links = links;
+        _grantEvents = grantEvents;
+        _state = state;
+        _clock = clock;
+        _observer = observer;
+        _logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await TickAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "The data sync scheduler failed a tick");
+            }
+
+            try
+            {
+                await Task.Delay(TickInterval, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+    }
+
+    /// <summary>One evaluation (§8.2). Public so tests drive it with their own clock instead of waiting.</summary>
+    public async Task TickAsync(CancellationToken ct)
+    {
+        if (_launcher.IsStopping) return;
+        await _tickLock.WaitAsync(ct);
+        try
+        {
+            if (_launcher.IsStopping) return;
+            var fetchTask = FetchTask();
+            if (fetchTask is null) return;
+
+            var now = _clock.UtcNow;
+            var starting = _state.TryStart(now);
+            // Startup: every link is due in 5 s; the cycle that asks them all verifies the actor (§5.6).
+            if (starting) await _links.ScheduleAllAsync(now + DataSyncSchedule.StartupDelay, ct);
+            await CheckActorAsync(starting, ct);
+
+            await _grantEvents.DrainAsync(ct);
+            if (_launcher.IsStopping) return;
+
+            var links = await _links.GetLinksAsync(ct);
+            DataSyncLocalStateDbModel? local;
+            IDataSyncActorGuard guard;
+            Persistence.DataSyncRefreshCoordinator refresh;
+            await using (var scope = _scopes.CreateAsyncScope())
+            {
+                local = await scope.ServiceProvider.GetRequiredService<IDataSyncStore>().GetLocalStateAsync(ct);
+                guard = scope.ServiceProvider.GetRequiredService<IDataSyncActorGuard>();
+                WakeLinksWhosePeerCameOnline(scope.ServiceProvider.GetService<IDataSyncPeerSessions>(), links);
+                refresh = scope.ServiceProvider.GetRequiredService<Persistence.DataSyncRefreshCoordinator>();
+            }
+
+            // The lost-update guard's window after an apply closes with a Refresh once it has passed (§6.5).
+            try
+            {
+                await refresh.CloseLostUpdateWindowsAsync(ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                _logger.LogWarning(e, "Data sync could not refresh after the lost-update window closed");
+            }
+
+            // A restore detection announces itself from here, whoever paused the links (§9.4).
+            try
+            {
+                await _observer.LocalStateSeenAsync(local, ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                _logger.LogWarning(e, "A data sync observer failed");
+            }
+
+            var allPaused = local?.AllPaused == true;
+            if (!allPaused && links.Any(l => l.IsFetchable() && (_state.IsDue(l.Id, now) || _state.IsWoken(l.Id))) &&
+                CanStartFetch(fetchTask, now))
+            {
+                await _btm.Start(DataSyncTaskIds.Fetch);
+            }
+
+            if (_launcher.IsStopping) return;
+            var verified = guard.IsVerified;
+            var applyWaits = _state.StagedLinks().Count > 0 || links.Any(l => HasApplyWork(l, now));
+            if (!allPaused && verified && applyWaits && CanEnqueueApply(now)) await _launcher.EnqueueApplyAsync();
+        }
+        finally
+        {
+            _tickLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// "Sync now" (§8.2): the link (or every link) is due now, a person's earlier stop no longer holds, and the fetch
+    /// task starts at once. Returns the task id, or null while the host is stopping or the task is not registered.
+    /// </summary>
+    public async Task<string?> SyncNowAsync(int? linkId, CancellationToken ct)
+    {
+        await _links.MarkDueAsync(linkId, ct);
+        _state.ReleaseFetch();
+        _state.ReleaseApply();
+        if (_launcher.IsStopping) return null;
+        var fetchTask = FetchTask();
+        if (fetchTask is null) return null;
+        if (!fetchTask.Task.Status.IsActive()) await _btm.Start(DataSyncTaskIds.Fetch);
+        return DataSyncTaskIds.Fetch;
+    }
+
+    /// <summary>
+    /// The actor check (§5.6) under the gate: once at the start, before the first head round — an <c>actor.json</c>
+    /// ahead of the database, the database alone restored from a backup, pauses every link <c>LocalRestoreDetected</c>
+    /// at once, and is never first taken for one peer's <c>SeenCounter</c>, which would pause only that link as
+    /// suspected — and later on every tick while evidence reported outside the gate waits, without waiting for the
+    /// gate: whoever holds it checks when it enters next. It never fails the tick.
+    /// </summary>
+    private async Task CheckActorAsync(bool atStart, CancellationToken ct)
+    {
+        try
+        {
+            await using var scope = _scopes.CreateAsyncScope();
+            var guard = scope.ServiceProvider.GetRequiredService<IDataSyncActorGuard>();
+            if (!atStart && !guard.HasPendingEvidence) return;
+            var gate = scope.ServiceProvider.GetRequiredService<IDataSyncGateEntry>();
+            // A device that never used data sync — no local state row, no actor.json — has nothing to detect, and the
+            // check would make both: nothing is written for it at the start.
+            var watermark = scope.ServiceProvider.GetRequiredService<Persistence.DataSyncActorWatermarkFile>();
+            if (await scope.ServiceProvider.GetRequiredService<IDataSyncStore>().GetLocalStateAsync(ct) is null &&
+                watermark.Read().Missing)
+            {
+                return;
+            }
+
+            using var lease = await gate.TryEnterAsync(atStart ? DataSyncGateHold.RequestTimeout : TimeSpan.Zero, ct);
+            if (lease is not null) await guard.CheckAsync(lease, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            _logger.LogWarning(e, "The data sync actor check failed; the next caller runs it");
+        }
+    }
+
+    /// <summary>
+    /// §8.2 "a federation session to it came online → now": a link whose peer's session was verified since the last
+    /// tick is due now — a link backing off after <c>Unreachable</c> or an access error need not wait out its timer
+    /// once the peer is back. Kept in memory like a discovered peer (<see cref="DataSyncRuntimeState.Wake"/>), so a
+    /// tick still writes nothing. Without the Service's sessions (tests, a host without federation) nothing is woken.
+    /// </summary>
+    private void WakeLinksWhosePeerCameOnline(IDataSyncPeerSessions? sessions,
+        IReadOnlyList<DataSyncLinkDbModel> links)
+    {
+        if (sessions is null) return;
+        var online = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var link in links.Where(l => l.IsFetchable() && sessions.IsOnline(l.PeerNodeId)))
+        {
+            online.Add(link.PeerNodeId);
+            if (!_peersOnline.Contains(link.PeerNodeId)) _state.Wake(link.Id);
+        }
+
+        _peersOnline = online;
+    }
+
+    /// <summary>
+    /// A link whose pending records wait for a re-merge without a pull (§8.10.2 step 1): the scheduler enqueues
+    /// <c>DataSyncApply</c> for it, unless the link is backing off after a failed apply.
+    /// </summary>
+    private bool HasApplyWork(DataSyncLinkDbModel link, DateTime nowUtc) =>
+        link.IsRunning() && _state.IsReMergeRequested(link.Id) &&
+        !(link.ConsecutiveFailures > 0 && !_state.IsDue(link.Id, nowUtc));
+
+    private BTaskHandler? FetchTask() =>
+        _btm.Tasks.FirstOrDefault(t => string.Equals(t.Id, DataSyncTaskIds.Fetch, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Whether the scheduler may start the fetch task now: it is not active, and it was not stopped by a person
+    /// within its interval. A stop is recognised by the task ending Cancelled — the scheduler itself never stops it,
+    /// and a shutdown stops the scheduler first — or recorded by a cancel through the API, and is timed by this
+    /// runtime's clock from when it was seen.
+    /// </summary>
+    private bool CanStartFetch(BTaskHandler fetchTask, DateTime nowUtc)
+    {
+        var task = fetchTask.Task;
+        if (task.Status.IsActive()) return false;
+        if (task.Status == BTaskStatus.Cancelled && _observedFetchStopStartedAt != task.StartedAt)
+        {
+            _observedFetchStopStartedAt = task.StartedAt;
+            if (!_state.IsFetchHeld(nowUtc)) _state.HoldFetch(nowUtc);
+            _logger.LogInformation("The data sync task was stopped; it runs again at its next interval");
+        }
+
+        return !_state.IsFetchHeld(nowUtc);
+    }
+
+    /// <summary>
+    /// Whether the scheduler may enqueue <c>DataSyncApply</c> for what waits: not while a person's stop holds it
+    /// (§8.10.1). A stop through the task list is recognised by the task ending Cancelled, as for the fetch task.
+    /// </summary>
+    private bool CanEnqueueApply(DateTime nowUtc)
+    {
+        var task = _btm.Tasks
+            .FirstOrDefault(t => string.Equals(t.Id, DataSyncTaskIds.Apply, StringComparison.Ordinal))?.Task;
+        if (task?.Status == BTaskStatus.Cancelled && _observedApplyStopStartedAt != task.StartedAt)
+        {
+            _observedApplyStopStartedAt = task.StartedAt;
+            if (!_state.IsApplyHeld(nowUtc)) _state.HoldApply(nowUtc);
+            _logger.LogInformation("Applying synced changes was stopped; it runs again with the next pull");
+        }
+
+        return !_state.IsApplyHeld(nowUtc);
+    }
+}

@@ -55,25 +55,37 @@ export const cardLine = (t: T, node: MapNode) => {
   if (node.unverified) return t("federation.map.unverified");
   if (what) return what;
 
-  return node.issues.includes("requestEnded")
-    ? issueLabel(t, "requestEnded")
-    : presenceLabel(t, node);
+  const ended = node.issues.find(
+    (issue) => issue === "requestEnded" || issue === "syncRequestEnded",
+  );
+
+  return ended ? issueLabel(t, ended) : presenceLabel(t, node);
+};
+
+/**
+ * One direction of a relationship as a sentence, e.g. "NAS can browse this device's library". A
+ * data sync line whose receive direction waits for the first review says so, rather than that
+ * it waits for access.
+ */
+export const directionPhrase = (t: T, edge: MapEdge, direction: "in" | "out", name: string) => {
+  const status = edge[direction];
+
+  return direction === "in" && status === "pending" && edge.inReview
+    ? t(`federation.map.direction.${edge.kind}.in.review`, { name })
+    : t(`federation.map.direction.${edge.kind}.${direction}.${status}`, { name });
 };
 
 /**
  * One sentence per direction the relationship has, e.g. "NAS can browse this device's
- * library" — and, for a direction that does not work right now, why.
+ * library", then its mode where it has one (data sync: both ways, receive only) — and, for a
+ * direction that does not work right now, why.
  */
 export const directionPhrases = (t: T, edge: MapEdge, name: string) => {
-  if (edge.kind === "sync") return [t("federation.map.edge.sync")];
   const phrases: string[] = [];
 
-  for (const direction of ["in", "out"] as const) {
-    const status = edge[direction];
-
-    if (status !== "none")
-      phrases.push(t(`federation.map.direction.${edge.kind}.${direction}.${status}`, { name }));
-  }
+  for (const direction of ["in", "out"] as const)
+    if (edge[direction] !== "none") phrases.push(directionPhrase(t, edge, direction, name));
+  if (edge.mode) phrases.push(t(`federation.map.${edge.kind}.mode.${edge.mode}`));
   if (edge.attention)
     phrases.push(
       t(`federation.map.attention.${edge.kind}.${edge.attention.direction}`, {

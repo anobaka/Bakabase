@@ -19,6 +19,7 @@
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Alias\Bakabase.Modules.Alias.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Comparison\Bakabase.Modules.Comparison.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.DataCard\Bakabase.Modules.DataCard.csproj" />
+		<ProjectReference Include="..\..\modules\Bakabase.Modules.DataSync\Bakabase.Modules.DataSync.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Presets\Bakabase.Modules.Presets.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.BulkModification\Bakabase.Modules.BulkModification.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.HealthScore\Bakabase.Modules.HealthScore.csproj" />

@@ -35,8 +35,8 @@ const Dot = ({ className }: { className: string }) => (
 );
 
 /**
- * What the lines and marks mean. Relationship kinds that nothing on the map uses yet (data
- * sync) are left out, so the legend never promises what the product cannot do.
+ * What the lines and marks mean. A relationship kind nothing on the map uses (data sync, until
+ * something syncs) is left out, so the legend never explains a line that is not there.
  */
 export default function DeviceMapLegend({ graph }: { graph: DeviceGraph }) {
   const { t } = useTranslation();

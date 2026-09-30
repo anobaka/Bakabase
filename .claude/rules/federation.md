@@ -17,35 +17,43 @@ current device merges results.
 | Endpoints | `src/apps/Bakabase.Service/Controllers/Federation*.cs` |
 | UI | `src/web/src/features/federation/` |
 | Device map (`/federation/map`) | `src/web/src/features/federation/map/`, `DeviceMapPage.tsx` |
+| Data sync (definitions kept in step over `datasync.read` grants) | see `data-sync.md`; its node side is `src/apps/Bakabase.Service/Controllers/{DataSyncNodeController,FederationDataSyncPairingController}.cs`, `src/apps/Bakabase.Service/Components/Federation/{FederationDataSync*,DataSyncNodeInfoContributor}.cs` and `src/modules/Bakabase.Modules.Federation/Peers/FederationScopes.cs` |
 | Devices page (`/federation/devices`) | `DevicesPage.tsx`, `src/web/src/features/federation/devices/` |
 | Both pages' data (one hook) | `src/web/src/features/federation/hooks/useDevicesData.ts` |
 | Design history | `docs/multi-device-library-execution-plan.md` |
 
-The whole multi-server mode — sharing, management, and later data sync — is named
+The whole multi-server mode — sharing, management, and data sync — is named
 「多设备互联」 / "Multi-device" in the UI (`federation.mode`, the menu group, the help topic
 `multiDevice`). Route and id names stay `federation`.
 
 ## The devices page
 
-`/federation/devices` is split by capability into tabs, the same two kinds of trust the map
+`/federation/devices` is split by capability into tabs, the same kinds of trust the map
 draws: **本机 / This device** (name, the address to type, what waits here, "add another
 device"), **管理 / Management** (full control: devices this one manages, who may manage this
 one), **资源库分享 / Library sharing** (read-only: libraries this device browses, sharing its
-own) and **高级 / Advanced** (device ID, "after copying or restoring data"). The registry is
-`devices/sections.ts`; the nav is links, not a tablist (Back and copied links work).
+own), **数据同步 / Data sync** (a summary — its status, definitions sharing, how many devices
+this one receives from and how many read it — and the way to `/data-sync`, where all of it is
+decided) and **高级 / Advanced** (device ID, "after copying or restoring data"). The registry
+is `devices/sections.ts`; the nav is links, not a tablist (Back and copied links work). A
+device known only through data sync (a definitions grant, no library access either way) is in
+neither library sharing list.
 
 - **`?section=` is a contract.** A value is a tab id or a place inside a tab, and a place
   implies its tab (`resolveSection`). Producers: the Service's notifications (`management`,
   `sharing-requests`), the window's switcher (`servers`), the configuration page
   (`identity`), the map (`device`, `management`, `share`, `sharing`), the library (`sharing`,
-  `connect`, `browsing`), the help (`management`, `add-server`, `sharing`). Never rename one;
+  `connect`, `browsing`), the help (`management`, `add-server`, `sharing`), the device tab's
+  "waiting for you" (`sync`). Never rename one;
   `devicesSections.test.ts` pins them. A place is revealed (scrolled to, focused, marked
   2.5 s) once what it waits for has loaded, again for every navigation; a place that is not
   there (a request decided meanwhile) and a bare tab focus the tab's heading instead.
-- **One read for the page.** The page reads sharing, managed servers and remote access once
-  (`useDevicesData`, shared with the map) and mounts only the tab shown, so switching tabs
-  never waits and the nav's counts stay live. The management sections still read their own
-  data where the rest of the page is not available (a managed window, a LAN browser).
+- **One read for the page.** The page reads sharing, managed servers, remote access and data
+  sync's `/data-sync/map` once (`useDevicesData`, shared with the map) and mounts only the tab
+  shown, so switching tabs never waits and the nav's counts stay live. The data sync tab's
+  count is what waits on this device (decisions, first syncs to review, requests to answer),
+  from the status the hub keeps current. The management sections still read their own data
+  where the rest of the page is not available (a managed window, a LAN browser).
 - **Focus** follows the map's rules (`devices/useSectionFocusKeeper.ts`): when an action takes
   away the control that had the keyboard, focus goes to the heading of the part it was in;
   a pointer press or focus moved elsewhere is never pulled back — nor the focus a click gives
@@ -92,10 +100,10 @@ own) and **高级 / Advanced** (device ID, "after copying or restoring data"). T
 
 `/federation/map` draws this device in the middle and every relationship it knows of as a
 spoke: library sharing (arrow towards the device that may browse), management (arrow from the
-manager), pending requests dashed, devices found nearby as outlines. It reads only the three
-listings the devices page reads — `/federation/local/peers`, `/federation/local/servers`,
-`/remote-access/settings` — plus both discoveries on request, and acts through the same
-endpoints and confirmations.
+manager), pending requests dashed, devices found nearby as outlines. It reads the listings the
+devices page reads — `/federation/local/peers`, `/federation/local/servers`,
+`/remote-access/settings` and data sync's `/data-sync/map` (below) — and both discoveries on
+request, and acts through the same endpoints and confirmations.
 
 - **Records are merged on evidence only** (`map/graph.ts`). The install id first and always:
   a peer's NodeId is the install's remote-access ServerId (`FederationNodeIdSource`; "Make this
@@ -212,8 +220,34 @@ endpoints and confirmations.
   shortened in the middle, and two different names are never shortened alike. A direction
   that does not work is a dotted lane with a warning triangle, explained in the legend and
   named in its accessible name.
-- **`sync` is a reserved edge kind.** The renderer and legend know it; nothing produces it,
-  and the legend hides it until something does. Never describe data sync as available.
+- **Data sync lines (`kind: "sync"`) are built by data sync, inside the graph.** The map reads a
+  fourth source, `GET /data-sync/map` (`useDataSyncMap`: every 5 s while a definitions request
+  or a link waiting for access is live, 15 s otherwise; a failure leaves the other sources on
+  the map). `buildSyncEdges` (`features/data-sync/map/mapAdapter.ts`, pure and tested there)
+  runs inside `buildDeviceGraph` — never through `extraEdges` — and draws one line per peer on
+  the node that carries that peer's install key. Its `in` lane is this device's link
+  (receiving, waiting for access or a first sync, or none), its `out` lane the peer's
+  `datasync.read` grant; the arrow points to the device that **receives** the definitions, and
+  the badge says both ways or receive only (two devices receiving from each other show both
+  ways). A link that does not work marks its lane (`syncPaused`, `syncFailed`,
+  `syncUpdateNeeded`, `syncAccessLost`); open items add `syncNeedsYou` to the node, and a
+  headless peer whose heads report open decisions, paused links or a pending restore adds
+  `syncNeedsYouThere`.
+- **Definitions requests follow the request rules above.** A request this device filed comes on
+  its device's own record (`DataSyncMapPeer.Request`), which finds or creates its `peer:{nodeId}`
+  node at step 3, like a library request, so a link to a device that is not a peer yet still has
+  a node, and one that ended stays with its outcome and Dismiss (which resets the link). An incoming one is a claim: its own unverified
+  `sync-request:{id}` node, deduplicated like `sharing-request:` nodes and never merged into a
+  trusted device; its panel shows the request card only, never the rule editor.
+- **The data sync sections of the panel act through the map.** They live in
+  `features/data-sync/map/` and import nothing from the map: every action goes through the
+  panel's own `run`/`confirm` (`DataSyncPanelActions`, a structural subset of
+  `usePanelActions`), what an action said through `setNotice`, and they never move focus
+  themselves, so the focus rules above hold unchanged. Their rule editor (`SyncRuleDrawing`)
+  stands vertical at every width; its arrows are drawn, never pressed, and each choice has one
+  control — the mode buttons, the kind chips, [Stop X reading]. The per-direction phrases
+  (`federation.map.direction.sync.*`) live in `pages/dataSync.json`; the legend's sync entry,
+  like the others, shows only once a line has the kind.
 
 ## Invariants — do not weaken
 
@@ -228,6 +262,19 @@ endpoints and confirmations.
   loopback socket + loopback `Host` + matching `Origin` (`FederationAccessMiddleware.IsLocalCaller`).
   `/federation/v1/*` is node-to-node: `export/*` always needs a `Bakabase-Node` signature, even
   from loopback or in `Unrestricted` mode.
+  **The one recorded exception:** data sync's ordinary API, `/data-sync/*`, may create or widen
+  `datasync.read` access — turn definitions sharing on, approve a definitions request, create a
+  definitions code, send a request or mint a reciprocal code — for a **paired** caller
+  (`RemoteAccessContext.Device != null`: the desktop app's switching window or another paired
+  device) as well as for this device's own window and the CLI. A paired device already has full
+  control of the server, and a read-only definitions grant is less. A browser admitted only
+  because the mode is `Unrestricted` may reduce access (reject, revoke, sharing off, pause),
+  never create it (`NotAllowedOnThisDevice`) — until it pairs, which on an Unrestricted server
+  any LAN caller can do (it may approve pairing requests there), so the rule refuses only
+  callers that have not paired; on an Enabled server an unpaired caller cannot pair itself
+  (see `data-sync.md`, "Who may create or widen access"). Library grants stay on
+  `/federation/local/*` and the CLI; `/data-sync` has no path to them
+  (`DataSyncGrantBoundaryTests`).
 - **A node credential is never a legacy principal.** It must not reach options, resource
   writes, `/hub/ui`, file APIs or legacy pairing. Never map it to `IsPaired`.
 - **Default deny.** Every new federation action needs an exact entry in
@@ -235,7 +282,32 @@ endpoints and confirmations.
   fails otherwise.
 - **Directional grants.** A→B never implies B→A or A→C, and a node never queries on behalf of
   another. Two-way pairing is two grants orchestrated by one flow (a single-use reciprocal code
-  bound to the requester's NodeId), not one symmetric grant.
+  bound to the requester's NodeId), not one symmetric grant. A reciprocal datasync code is the
+  requester's consent to be read back, and goes when that consent does: revoking the device,
+  forgetting it ("Done — stop reading X"), removing the peer or an identity reset drop it, and
+  so does withdrawing the request unless another two-way request to that device stands — a
+  stale copy of the request approved later reads nothing back.
+- **Grants have scopes.** A grant is `library.read` (the whole library, read-only; every grant
+  made before data sync) or `datasync.read` (the definitions data sync publishes); `*` is only
+  ever an endpoint's declaration (the handshake), never a grant's. The two are **separate
+  grants** in separate `state.json` collections, approved, revoked and lease-cancelled on their
+  own, behind their own switches (`SharingEnabled`, `DataSyncSharingEnabled`); neither ever
+  implies the other, and approving one never touches the other. Definitions pair on their own
+  routes (`pair/datasync/{request|code|claim}`), so an older node refuses them instead of
+  taking them for library requests, and a code of one scope is never accepted on the other's
+  route. Definitions pairing never rewrites a library peer's `Label`, `Address`,
+  `LibraryEpoch`, `Kind`, `Platform` or `Enabled` (it keeps its own `DataSyncAddress`). The
+  gate checks per route: `FederationRoutePolicy.RequiredSharing` names the switch the route
+  needs, checked before authentication (`info` answers when either is on). After
+  authentication the middleware checks the principal's scope against the route's: a library
+  grant on `export/datasync/*`, or a definitions grant on any other Export route, gets 403
+  `ScopeNotGranted` (gate rows G6–G9). Behind it, every Export action declares its scope on
+  `FederationEndpointAttribute.Scope`, and `FederationLocalAccessFilter` is the fail-closed
+  backstop (403 `FederationEndpointDenied`) for an Export action that declares no scope, or
+  one whose scope the principal's does not match. Library export services also require
+  `library.read` in `NodeGrantService.ValidateAsync` (`ScopeNotGranted`).
+  `EveryExportActionDeclaresAScope` and the generated per-action matrix in
+  `FederationGateTests` pin it.
 - **Local actions stay local.** Playing and opening folders happen on the viewing device with its
   own player configuration. Never launch a program named by a peer; on macOS, packages are only
   revealed (`open -R`), never opened.
@@ -320,14 +392,17 @@ after any DTO/endpoint change.
 
 `BAKABASE_FEDERATION_SHARING=true` turns sharing on at startup; `BAKABASE_NODE_NAME` names the
 node; `--federation-invite-on-start` prints a one-time code. The running instance is managed with
-`docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|invite|approve|reject|revoke|new-identity>`,
+`docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|off|invite|approve|reject|revoke|new-identity>`,
 which only calls its loopback API. `new-identity` is the devices page's "Make this a new device"
 (Advanced → After copying or restoring data), for a copied data directory: a headless server's own UI is only ever reached from
-another device, and never reaches `/federation/local/*`.
+another device, and never reaches `/federation/local/*`. Data sync's counterparts —
+`BAKABASE_DATASYNC_SHARING=true` (definitions sharing on at every start) and
+`federation datasync <command>` — are in `data-sync.md` ("Headless").
 
 ## Tests
 
 - `src/tests/Bakabase.Modules.Federation.Tests` — protocol, pairing, security, queries (fast).
 - `src/tests/Bakabase.Tests/Federation` — real middleware/controllers, media, gate matrix.
-- `src/tests/federation-smoke/run.py` + `Bakabase.Federation.TestHost` — three real processes.
+- `src/tests/federation-smoke/run.py` + `Bakabase.Federation.TestHost` — three real processes;
+  then `datasync.py`, data sync across three more (two desktops and a headless server).
 - Frontend: `yarn vitest run src/features/federation`.

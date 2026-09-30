@@ -1,0 +1,174 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Bakabase.InsideWorld.Business.Components.DataSync.Feed;
+using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
+using Bakabase.Modules.DataSync;
+using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Canonical;
+using Bakabase.Modules.DataSync.Models.Db;
+using Bakabase.Modules.DataSync.Planning;
+using Bakabase.Modules.DataSync.Runtime;
+using Bakabase.Modules.DataSync.Wire;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace Bakabase.Tests.DataSync;
+
+/// <summary>
+/// A <see cref="DataSyncRefreshFixture"/> whose feed source is read as a reader would read it: head, manifest and
+/// every page's bytes, parsed back from raw canonical JSON and reassembled. Optionally a second memory kind
+/// (extension groups), and limits a test lowers.
+/// </summary>
+internal sealed class DataSyncFeedFixture
+{
+    public const string ReaderNode = "reader-node-1";
+    public const string ReaderGrant = "grant-1";
+    public const string ReaderActor = "1111111111111111";
+
+    private DataSyncFeedFixture(DataSyncRefreshFixture refresh, MemoryDataSyncKind? groups, ReferenceFeedPageWriter writer)
+    {
+        R = refresh;
+        Groups = groups;
+        Writer = writer;
+    }
+
+    public DataSyncRefreshFixture R { get; }
+    public MemoryDataSyncKind Kind => R.Kind;
+    public MemoryDataSyncKind? Groups { get; }
+    public ReferenceFeedPageWriter Writer { get; }
+    public IServiceProvider Services => R.Services;
+    public IDataSyncFeedSource Feed => Services.GetRequiredService<IDataSyncFeedSource>();
+    public DataSyncFeedSnapshots Snapshots => Services.GetRequiredService<DataSyncFeedSnapshots>();
+    public DataSyncStore Store => R.Store;
+    public ManualTimeProvider Clock => R.Clock;
+
+    public static async Task<DataSyncFeedFixture> CreateAsync(bool hasOrder = false, bool verified = true,
+        DataSyncLimits? limits = null, bool extensionGroups = false, Action<IServiceCollection>? configure = null)
+    {
+        var writer = new ReferenceFeedPageWriter();
+        var groups = extensionGroups ? new MemoryDataSyncKind(DataSyncKindIds.ExtensionGroup) : null;
+        var refresh = await DataSyncRefreshFixture.CreateAsync(hasOrder, verified, s =>
+        {
+            s.AddSingleton<IDataSyncFeedPageWriter>(writer);
+            if (limits is not null) s.AddSingleton(limits);
+            if (groups is not null) s.AddScoped<IDataSyncKind>(_ => groups);
+            configure?.Invoke(s);
+        });
+        return new DataSyncFeedFixture(refresh, groups, writer);
+    }
+
+    public static DataSyncReader Reader(string node = ReaderNode, string grant = ReaderGrant, string name = "PC-2") =>
+        new(node, grant, name);
+
+    public static DataSyncFeedQuery Query(params (string Kind, long Since)[] since) =>
+        new("twoWay", since.ToDictionary(s => s.Kind, s => s.Since), null, "ok");
+
+    public static DataSyncFeedQuery Query(string? actor, params (string Kind, long Since)[] since) =>
+        Query(since) with {ReaderActorId = actor};
+
+    public Task<DataSyncFeedHead> HeadAsync(DataSyncFeedQuery query, DataSyncReader? reader = null) =>
+        Feed.GetHeadAsync(reader ?? Reader(), query, default);
+
+    public Task<DataSyncFeedManifest> ManifestAsync(DataSyncFeedQuery query, DataSyncReader? reader = null) =>
+        Feed.CreateSnapshotAsync(reader ?? Reader(), query, default);
+
+    /// <summary>A manifest, then every page of every kind it serves, parsed and reassembled.</summary>
+    public async Task<ReadSnapshot> ReadAsync(DataSyncFeedQuery query, DataSyncReader? reader = null)
+    {
+        reader ??= Reader();
+        var manifest = await ManifestAsync(query, reader);
+        var kinds = new Dictionary<string, ReadKind>(StringComparer.Ordinal);
+        foreach (var kind in manifest.Kinds) kinds[kind.Kind] = await ReadKindAsync(Feed, reader, manifest, kind);
+        return new ReadSnapshot(manifest, kinds);
+    }
+
+    /// <summary>Every page of one kind, following the pages' own cursors, as a receiver does.</summary>
+    public static async Task<ReadKind> ReadKindAsync(IDataSyncFeedSource feed, DataSyncReader reader,
+        DataSyncFeedManifest manifest, DataSyncFeedKind kind)
+    {
+        var pages = new List<byte[]>();
+        string? cursor = null;
+        while (true)
+        {
+            var bytes = await feed.GetPageAsync(reader, manifest.SnapshotId, kind.Kind, kind.SinceSeq, cursor, default);
+            pages.Add(bytes);
+            var page = ParsePage(bytes);
+            Assert.AreEqual(manifest.SnapshotId, page["snapshotId"]!.GetValue<string>());
+            Assert.AreEqual(kind.Kind, page["kind"]!.GetValue<string>());
+            Assert.AreEqual(kind.SinceSeq, page["sinceSeq"]!.GetValue<long>());
+            if (page["complete"]!.GetValue<bool>()) break;
+            cursor = page["nextCursor"]!.GetValue<string>();
+            Assert.IsTrue(pages.Count < 10_000, "the pages never end");
+        }
+
+        return new ReadKind(kind, pages, RecordsOf(pages));
+    }
+
+    /// <summary>Raw canonical page bytes, parsed as a receiver does (depth 64, never federation JSON).</summary>
+    public static JsonObject ParsePage(byte[] bytes) =>
+        JsonNode.Parse(bytes, documentOptions: new JsonDocumentOptions {MaxDepth = 64})!.AsObject();
+
+    /// <summary>Records in page order.</summary>
+    public static IReadOnlyList<JsonObject> RecordsOf(IEnumerable<byte[]> pages) =>
+        pages.SelectMany(p => ParsePage(p)["records"]!.AsArray().Select(i => i!.DeepClone().AsObject())).ToList();
+
+    public Task<DataSyncLocalStateDbModel> StateAsync() => R.StateAsync();
+
+    public async Task<IReadOnlyList<DataSyncRestoreEvidence>> EvidenceAsync() =>
+        DataSyncRestoreEvidence.Read((await StateAsync()).RestoreEvidenceJson);
+
+    /// <summary>What a reader should find in a live record: exactly what the codec publishes for the definition.</summary>
+    public JsonObject Published(string localKey) =>
+        (JsonObject) Kind.MemoryCodec.Publish(Kind.Definitions[localKey].ToContent(), DataSyncOverlay.None, false).Content!;
+
+    public async Task<DataSyncEntityDbModel> SetAsync(string localKey, Action<DataSyncEntityDbModel> change)
+    {
+        var db = R.Db;
+        var row = await db.DataSyncEntities.SingleAsync(e => e.Kind == R.KindId && e.LocalKey == localKey && e.DeletedAtUtc == null);
+        change(row);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        return row;
+    }
+
+    public static async Task<DataSyncFeedException> RefusedAsync(Func<Task> call)
+    {
+        try
+        {
+            await call();
+        }
+        catch (DataSyncFeedException e)
+        {
+            return e;
+        }
+
+        Assert.Fail("The feed answered instead of refusing.");
+        return null!;
+    }
+}
+
+internal sealed record ReadKind(DataSyncFeedKind Manifest, IReadOnlyList<byte[]> Pages, IReadOnlyList<JsonObject> Records)
+{
+    public IReadOnlyList<string> PrimaryKeys => Records.Select(r => r["keys"]![0]!.GetValue<string>()).ToList();
+}
+
+internal sealed record ReadSnapshot(DataSyncFeedManifest Manifest, IReadOnlyDictionary<string, ReadKind> Kinds);
+
+/// <summary>
+/// The page writer the feed's tests run with: the pure engine's <see cref="DataSyncWireWriter.WriteKind"/> (package A),
+/// counting its calls.
+/// </summary>
+internal sealed class ReferenceFeedPageWriter : IDataSyncFeedPageWriter
+{
+    private int _calls;
+
+    public int Calls => _calls;
+
+    public DataSyncWrittenKind WriteKind(string snapshotId, string kind, long sinceSeq,
+        IReadOnlyList<DataSyncWireRecord> records, DataSyncLimits limits)
+    {
+        Interlocked.Increment(ref _calls);
+        return DataSyncWireWriter.WriteKind(snapshotId, kind, sinceSeq, records, limits);
+    }
+}

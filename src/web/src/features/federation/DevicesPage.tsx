@@ -239,8 +239,9 @@ function Devices() {
     setConfirmationError(undefined);
     try {
       await operation();
-      // Turning sharing on can turn remote access on as well: both are read again.
-      if (mounted.current) await data.reload(["sharing", "access"]);
+      // Turning sharing on can turn remote access on as well: both are read again, and data
+      // sync, which removing a device ends too.
+      if (mounted.current) await data.reload(["sharing", "access", "dataSync"]);
 
       return true;
     } catch (cause) {
