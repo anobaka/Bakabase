@@ -160,9 +160,16 @@ public class ForgetAllLocallyTests
         await _console.AddManagedAsync(nas);
         var deskPort = ConsoleHarness.PortOf((await _console.Manager.OpenAsync(desk.ServerId, null))!.Url);
 
-        // A directory where the file was, which every write's final rename fails on.
-        File.Delete(_console.ManagedFile);
-        Directory.CreateDirectory(Path.Combine(_console.ManagedFile, "held"));
+        // Replace the file under the store's write gate so the relay's background connection
+        // note cannot recreate it between deletion and directory creation. This no-op
+        // mutation must itself fail to persist once its final rename meets the directory.
+        var heldDirectory = Path.Combine(_console.ManagedFile, "held");
+        await Assert.ThrowsAsync<Exception>(() => _console.Store.MutateAsync(_ =>
+        {
+            File.Delete(_console.ManagedFile);
+            Directory.CreateDirectory(heldDirectory);
+        }));
+        Assert.IsTrue(Directory.Exists(heldDirectory), "the store must be unwritable before attempting the reset");
 
         await Assert.ThrowsAsync<Exception>(() => _console.Manager.ForgetAllLocallyAsync());
 
