@@ -1,0 +1,54 @@
+# Exercise the real release builder when its implementation changes, without
+# uploading to OSS, publishing a GitHub Release, or using deployment secrets.
+name: Release build validation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/_build.yml'
+      - '.github/workflows/deploy.yml'
+      - '.github/workflows/build-validation.yml'
+      - '.github/scripts/wait_for_artifact.py'
+      - '.github/scripts/test_wait_for_artifact.py'
+  workflow_dispatch:
+
+concurrency:
+  group: build-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha: ${{ steps.version.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+      - uses: dotnet/nbgv@v0.4.2
+        with:
+          setAllVars: true
+      - name: Resolve build version and source
+        id: version
+        shell: bash
+        run: |
+          echo "version=$NBGV_CloudBuildNumber" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Verify workflow helpers
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+
+  build:
+    needs: prepare
+    uses: ./.github/workflows/_build.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      ref: ${{ needs.prepare.outputs.sha }}
