@@ -1,0 +1,299 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
+using Bakabase.Modules.DataSync;
+using Bakabase.Modules.DataSync.Identity;
+using Bakabase.Modules.DataSync.Merging;
+using Bakabase.Modules.DataSync.Models.Db;
+using Bakabase.Modules.DataSync.Runtime;
+using Bakabase.Modules.DataSync.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Bakabase.InsideWorld.Business.Components.DataSync.Apply;
+
+/// <summary>What changed definitions after an apply committed: the hub's <c>DataSyncApplied</c> (§8.10.6).</summary>
+/// <param name="Kinds">The kinds whose definitions changed.</param>
+/// <param name="LocalKeys">The local keys that changed, as <c>{kind}:{localKey}</c>.</param>
+public sealed record DataSyncAppliedEvent(IReadOnlyList<string> Kinds, IReadOnlyList<string> LocalKeys,
+    DataSyncHistoryKind HistoryKind, int? ApplyLogId, int? LinkId);
+
+/// <summary>Told after every apply that changed definitions committed (the runtime's hub publisher, §8.10.6).</summary>
+public interface IDataSyncApplyListener
+{
+    void OnApplied(DataSyncAppliedEvent applied);
+}
+
+/// <summary>
+/// The apply runner (§8.10): the bodies of <c>DataSyncApply</c>, <c>DataSyncReview:{linkId}</c> (a first sync's
+/// Start), <c>DataSyncResolve:{id}</c>,
+/// <c>DataSyncUndo:{id}</c> and <c>DataSyncRestore</c>. Every method follows one shape: <c>YieldAsync</c> and the
+/// attempt check, the gate (waited for without a limit), the attempt check again, the actor check
+/// (<see cref="IDataSyncActorGuard.CheckAsync"/>) before any transaction, then its work in <c>BEGIN IMMEDIATE</c>
+/// transactions that start with Refresh (§6.6). A <see cref="DataSyncActorChangedException"/> rolls back, checks the
+/// actor again and retries once; every other failure rolls back, drops the touched kinds' caches (§8.10.5) and ends the
+/// task <c>Error</c>, except an <see cref="OperationCanceledException"/>, which is rethrown unchanged so the task ends
+/// <c>Cancelled</c> (v3.1 M-f). After a commit: dominance closure in its own short transaction, <c>actor.json</c>, and
+/// the <see cref="IDataSyncApplyListener"/>s.
+/// </summary>
+/// <remarks>
+/// Every committed transaction is a complete attempt with its history entry: an auto-sync apply, a first sync, an undo
+/// and a restore run in one transaction, and a large resolution batch in parts, each its own attempt. No task waits for a
+/// pause while it holds the gate: every attempt honours a pause before it enters the gate, and inside a transaction only
+/// a stop reaches any task.
+/// </remarks>
+public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
+{
+    private readonly IServiceScopeFactory _scopes;
+    private readonly DataSyncGate _gate;
+    private readonly DataSyncActorGuard _guard;
+    private readonly DataSyncActorWatermarkFile _watermark;
+    private readonly IDataSyncTaskRegistry _registry;
+    private readonly DataSyncBackup _backup;
+    private readonly DataSyncRefreshCoordinator? _coordinator;
+    private readonly IServiceProvider _services;
+    private readonly ILogger _logger;
+
+    public DataSyncApplyRunner(IServiceProvider services, IServiceScopeFactory scopes, DataSyncGate gate,
+        DataSyncActorGuard guard, DataSyncActorWatermarkFile watermark, IDataSyncTaskRegistry registry,
+        DataSyncBackup backup, DataSyncRefreshCoordinator? coordinator = null,
+        ILogger<DataSyncApplyRunner>? logger = null)
+    {
+        _services = services;
+        _scopes = scopes;
+        _gate = gate;
+        _guard = guard;
+        _watermark = watermark;
+        _registry = registry;
+        _backup = backup;
+        _coordinator = coordinator;
+        _logger = logger ?? (ILogger) NullLogger.Instance;
+    }
+
+    /// <summary>
+    /// How long one part of a resolution batch runs before it commits and the next begins (≈ 2 s, non-blocking note
+    /// 6): the write lock is never held much longer, however many entities a batch decides.
+    /// </summary>
+    internal TimeSpan TransactionBudget { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// How long a resolution leaves SQLite's write lock free between two of its parts. Another writer of the app that
+    /// waits for the lock retries every 150 ms (Microsoft.Data.Sqlite's busy loop): a gap shorter than that would let
+    /// the task take the lock back before any waiting writer looked, until the writer's timeout ran out.
+    /// </summary>
+    internal static readonly TimeSpan ChunkGap = TimeSpan.FromMilliseconds(200);
+
+    #region Shared shape
+
+    /// <summary><c>YieldAsync</c>, then the attempt check (§8.10.1). False: exit without writing.</summary>
+    private async Task<bool> StartAsync(BTaskArgs args)
+    {
+        await args.YieldAsync();
+        return MayRun(args);
+    }
+
+    private bool MayRun(BTaskArgs args) => DataSyncTaskAttempts.MayRun(_registry, args.Task.Id);
+
+    /// <summary>
+    /// A write waits until the actor's start-up verification is done (§5.6); pending evidence is then handled by the
+    /// actor check under the gate.
+    /// </summary>
+    private async Task WaitStartupVerifiedAsync(CancellationToken ct)
+    {
+        while (!_guard.IsStartupVerified) await Task.Delay(TimeSpan.FromMilliseconds(250), ct);
+    }
+
+    /// <summary>
+    /// Runs <paramref name="body"/> in a new session with an open transaction: a changed actor rolls back, checks the
+    /// actor again and runs it once more; anything else rolls back and propagates.
+    /// </summary>
+    private async Task<T> InTransactionAsync<T>(DataSyncGateLease lease, Func<DataSyncApplySession, Task<T>> body,
+        CancellationToken ct)
+    {
+        for (var attempt = 0;; attempt++)
+        {
+            await using var s = await DataSyncApplySession.OpenAsync(_scopes, ct);
+            await s.BeginAsync(ct);
+            try
+            {
+                return await body(s);
+            }
+            catch (DataSyncActorChangedException) when (attempt == 0)
+            {
+                await s.RollbackAsync();
+                await _guard.CheckAsync(lease, ct);
+            }
+            catch
+            {
+                await s.RollbackAsync();
+                throw;
+            }
+        }
+    }
+
+    /// <summary>Refresh first, inside the transaction (§6.6); a skipped Refresh means nothing may be applied now.</summary>
+    private async Task RefreshAsync(DataSyncApplySession s, DataSyncGateLease lease, IReadOnlyCollection<string> kinds,
+        DataSyncRefreshOptions? options, CancellationToken ct)
+    {
+        var refresh = await s.Refresher.RefreshAsync(lease, kinds.Where(s.Kinds.ContainsKey).ToList(), false,
+            options ?? DataSyncRefreshOptions.None, ct);
+        if (refresh.Skipped) throw new DataSyncActorUnverifiedException();
+        await s.LoadStateAsync(ct);
+    }
+
+    /// <summary>Refresh at the start of a task body; a skipped one ends the task with nothing applied.</summary>
+    private async Task RefreshOrFailAsync(DataSyncApplySession s, DataSyncGateLease lease,
+        IReadOnlyCollection<string> kinds, CancellationToken ct, DataSyncRefreshOptions? options = null)
+    {
+        try
+        {
+            await RefreshAsync(s, lease, kinds, options, ct);
+        }
+        catch (DataSyncActorUnverifiedException)
+        {
+            throw new BTaskException("ActorUnverified", "Nothing was changed; it will run again.");
+        }
+    }
+
+    /// <summary>
+    /// Commits, then writes <c>actor.json</c>. Only the actor check rotates, under the gate this task holds, so the
+    /// actor the transaction issued counters under is still current; evidence reported meanwhile is judged against
+    /// its baseline by the next check (§5.6).
+    /// </summary>
+    private async Task CommitAsync(DataSyncApplySession s, CancellationToken ct)
+    {
+        await s.CommitAsync(ct);
+        // Committed counters must reach actor.json (§5.6), whatever a stop requested meanwhile.
+        await WriteWatermarkAsync(s);
+    }
+
+    private async Task WriteWatermarkAsync(DataSyncApplySession s)
+    {
+        if (await s.Store.GetLocalStateAsync(CancellationToken.None) is { } state)
+            await _watermark.WriteAsync(state, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// After a commit (§8.10.2): dominance closure across links in its own short transaction (§9.3), the kinds noted as
+    /// refreshed, and the listeners told what changed. A failure here never undoes the committed apply, and neither
+    /// does a stop requested meanwhile: none of it takes the task's token, so a finished apply never ends Cancelled.
+    /// </summary>
+    private async Task AfterCommitAsync(DataSyncApplySession s, DataSyncApplyRecorder recorder,
+        IReadOnlyCollection<string> refreshedKinds, DataSyncHistoryKind kind, int? logId, int? linkId)
+    {
+        try
+        {
+            if (recorder.Touched.Count > 0)
+            {
+                await s.BeginAsync(CancellationToken.None);
+                await s.Store.CloseDominatedItemsAsync(recorder.Touched.ToList(), s.Now, CancellationToken.None);
+                await s.CommitAsync(CancellationToken.None);
+            }
+        }
+        catch (Exception e)
+        {
+            await s.RollbackAsync();
+            _logger.LogWarning(e, "Data sync could not close dominated inbox items after an apply.");
+        }
+
+        _coordinator?.NoteRefreshed(refreshedKinds);
+        if (recorder.ChangedDefinitions.Count == 0) return;
+        var applied = new DataSyncAppliedEvent(
+            recorder.ChangedDefinitions.Select(c => c.Kind).Distinct(StringComparer.Ordinal).OrderBy(k => k, StringComparer.Ordinal).ToList(),
+            recorder.ChangedDefinitions.Select(c => c.Kind + ":" + c.LocalKey).Distinct(StringComparer.Ordinal)
+                .OrderBy(k => k, StringComparer.Ordinal).ToList(),
+            kind, logId, linkId);
+        foreach (var listener in _services.GetServices<IDataSyncApplyListener>())
+        {
+            try
+            {
+                listener.OnApplied(applied);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "A data sync apply listener failed.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// A merge met row A1 or A2 (§5.6, §8.4), and its transaction was rolled back: outside any transaction, a duplicate
+    /// actor pauses the link (<c>PeerIdentityDuplicated</c>); a regression is reported as the peer's evidence and the
+    /// actor checked, which rotates and pauses, or only raises a retired actor's recorded counter. Returns the link's
+    /// pause, if any.
+    /// </summary>
+    private async Task<DataSyncPauseReason?> HandleAnomalyAsync(DataSyncGateLease lease, int linkId, string peerNodeId,
+        DataSyncAnomaly anomaly, DataSyncPauseReason? pause, string? pauseDetail, CancellationToken ct)
+    {
+        if (anomaly.Code == DataSyncAnomalies.DuplicateActor)
+        {
+            var reason = pause ?? DataSyncPauseReason.PeerIdentityDuplicated;
+            await PauseLinkAsync(linkId, reason, pauseDetail, ct);
+            return reason;
+        }
+
+        await _guard.ReportPeerEvidenceAsync(peerNodeId, anomaly.ActorId, anomaly.SeenCounter, ct);
+        await _guard.CheckAsync(lease, ct);
+        return await PausedReasonAsync(linkId, ct);
+    }
+
+    private static async Task<HashSet<long>> OpenItemIdsAsync(DataSyncApplySession s, CancellationToken ct) =>
+        (await s.Db.DataSyncInboxItems.AsNoTracking().Where(i => i.ClosedAtUtc == null).Select(i => i.Id)
+            .ToListAsync(ct)).ToHashSet();
+
+    /// <summary>§8.10.4: <c>VACUUM INTO</c> before the transaction; a failure ends the task with nothing applied.</summary>
+    private async Task BackupAsync(CancellationToken ct)
+    {
+        await using var scope = _scopes.CreateAsyncScope();
+        try
+        {
+            await _backup.CreateAsync(scope.ServiceProvider.GetRequiredService<BakabaseDbContext>(), ct);
+        }
+        catch (DataSyncBackupFailedException e)
+        {
+            throw new BTaskException(DataSyncBackupFailedException.Code, e.Message);
+        }
+    }
+
+    private static long ElapsedMs(long started) => (long) Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+
+    private static string Truncate(string? value, int length) =>
+        value is null ? "" : value.Length <= length ? value : value[..length];
+
+    #endregion
+}
+
+/// <summary>Refresh was skipped (the actor is unverified or evidence waits): nothing may be applied now (§5.6).</summary>
+public sealed class DataSyncActorUnverifiedException() : Exception("actorUnverified");
+
+/// <summary>
+/// Something a task wrote cannot stand: an undo step refused after it wrote (<see cref="Block"/>, §8.11), a Convert
+/// whose phase two cannot run (§8.5.6). The transaction rolls back, and the task runs again without <see cref="Id"/>:
+/// the step's place in the undo's plan, or the inbox item.
+/// </summary>
+internal sealed class DataSyncRunWithoutException(long id, DataSyncUndoBlock? block = null) : Exception("runWithout")
+{
+    public long Id { get; } = id;
+    public DataSyncUndoBlock? Block { get; } = block;
+}
+
+/// <summary>
+/// A merge inside a resolution met row A1 or A2 (§8.4): the transaction rolls back, Refresh included, and the runner
+/// handles the anomaly outside it (§5.6) before it runs the batch once more.
+/// </summary>
+internal sealed class DataSyncMergeAnomalyException(int linkId, string peerNodeId, DataSyncAnomaly anomaly,
+    DataSyncPauseReason? pause, string? pauseDetail) : Exception("mergeAnomaly:" + anomaly.Code)
+{
+    public int LinkId { get; } = linkId;
+    public string PeerNodeId { get; } = peerNodeId;
+    public DataSyncAnomaly Anomaly { get; } = anomaly;
+    public DataSyncPauseReason? Pause { get; } = pause;
+    public string? PauseDetail { get; } = pauseDetail;
+}

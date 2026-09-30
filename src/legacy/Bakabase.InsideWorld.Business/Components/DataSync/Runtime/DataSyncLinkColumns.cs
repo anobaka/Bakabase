@@ -1,0 +1,193 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
+using Bakabase.Modules.DataSync;
+using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Canonical;
+using Bakabase.Modules.DataSync.Merging;
+using Bakabase.Modules.DataSync.Models.Db;
+using Bakabase.Modules.DataSync.Wire;
+
+namespace Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
+
+/// <summary>
+/// Reads and writes the JSON columns of <see cref="DataSyncLinkDbModel"/> (§4.1) with <see cref="DataSyncJson.Options"/>,
+/// and the link facts derived from them. Reads are tolerant: a column that does not parse reads as its default,
+/// because a link row must never become unusable over one bad column.
+/// </summary>
+public static class DataSyncLinkColumns
+{
+    /// <summary>The link's kinds in apply order (<see cref="DataSyncKindIds.All"/>); both kinds when the column is empty.</summary>
+    public static IReadOnlyList<string> GetKinds(this DataSyncLinkDbModel link)
+    {
+        var kinds = Read<List<string>>(link.KindsJson);
+        if (kinds is not { Count: > 0 }) return DataSyncKindIds.All;
+        return DataSyncKindIds.All.Where(kinds.Contains).ToList();
+    }
+
+    public static void SetKinds(this DataSyncLinkDbModel link, IEnumerable<string> kinds) =>
+        link.KindsJson = Write(DataSyncKindIds.All.Where(kinds.Contains).ToList());
+
+    /// <summary>Kind → the source Seq fully evaluated and committed (§7.5.5).</summary>
+    public static Dictionary<string, long> GetCursors(this DataSyncLinkDbModel link) =>
+        Read<Dictionary<string, long>>(link.CursorsJson) is { } cursors
+            ? new Dictionary<string, long>(cursors, StringComparer.Ordinal)
+            : new Dictionary<string, long>(StringComparer.Ordinal);
+
+    public static void SetCursors(this DataSyncLinkDbModel link, IReadOnlyDictionary<string, long> cursors) =>
+        link.CursorsJson = Write(cursors.OrderBy(c => c.Key, StringComparer.Ordinal)
+            .ToDictionary(c => c.Key, c => c.Value, StringComparer.Ordinal));
+
+    /// <summary>
+    /// The link after an apply committed (§8.10.2, last), the one writer of it: cursors advanced for every kind fully
+    /// evaluated and errors cleared; with a pull, when it synced, the first contact once it pulled any of the link's
+    /// kinds, and the link's full reconciliation when the fetch half says the pull is one; a link that awaited its
+    /// first sync's Start is active from here. True when it completed the first contact: the apply is the first sync
+    /// (§8.3).
+    /// </summary>
+    public static bool RecordApplied(this DataSyncLinkDbModel link, DataSyncStagedPull? pull,
+        IReadOnlyDictionary<string, long> cursorAdvance, DateTime now)
+    {
+        var cursors = new Dictionary<string, long>(DataSyncStoredJson.ReadCounters(link.CursorsJson, "CursorsJson"),
+            StringComparer.Ordinal);
+        foreach (var (kind, seq) in cursorAdvance) cursors[kind] = seq;
+        link.CursorsJson = DataSyncStoredJson.WriteCounters(cursors);
+        // A peer error stays until the peer answers again: a review of what it served before is no answer.
+        if (!link.HasPeerError())
+        {
+            link.ConsecutiveFailures = 0;
+            link.LastErrorCode = null;
+            link.LastErrorDetail = null;
+        }
+
+        link.UpdatedAtUtc = now;
+        if (pull is null) return false;
+        if (link.State == DataSyncLinkState.AwaitingReview) link.State = DataSyncLinkState.Active;
+        link.LastSyncedAtUtc = now;
+        if (pull.ReconcilesLink) link.LastFullReconciliationAtUtc = now;
+        var kinds = DataSyncStoredJson.ReadKinds(link.KindsJson);
+        var firstSync = link.FirstContactCompletedAtUtc is null && pull.Kinds.Any(k => kinds.Contains(k.Kind));
+        if (firstSync) link.FirstContactCompletedAtUtc = now;
+        return firstSync;
+    }
+
+    public static DataSyncFeedCounterpart? GetCounterpart(this DataSyncLinkDbModel link) =>
+        Read<DataSyncFeedCounterpart>(link.CounterpartJson);
+
+    public static void SetCounterpart(this DataSyncLinkDbModel link, DataSyncFeedCounterpart? counterpart) =>
+        link.CounterpartJson = counterpart is null ? null : Write(counterpart);
+
+    public static DataSyncSourceAttention? GetPeerAttention(this DataSyncLinkDbModel link) =>
+        Read<DataSyncSourceAttention>(link.PeerAttentionJson);
+
+    public static void SetPeerAttention(this DataSyncLinkDbModel link, DataSyncSourceAttention? attention) =>
+        link.PeerAttentionJson = attention is null ? null : Write(attention);
+
+    /// <summary>
+    /// The mode the merge uses (§8.1): <see cref="DataSyncLinkMode.TwoWay"/> when this device follows the peer and
+    /// the peer's counterpart says it follows this device too (mutual Follow is two-way, engineering B8).
+    /// </summary>
+    public static DataSyncLinkMode GetEffectiveMode(this DataSyncLinkDbModel link) =>
+        link.Mode == DataSyncLinkMode.Follow && link.GetCounterpart()?.Mode == "follow"
+            ? DataSyncLinkMode.TwoWay
+            : link.Mode;
+
+    /// <summary>The <c>mode</c> this device declares in head and manifest queries (§7.5): a copy once reads like Follow.</summary>
+    public static string GetDeclaredMode(this DataSyncLinkDbModel link) =>
+        link.GetEffectiveMode() == DataSyncLinkMode.TwoWay ? "twoWay" : "follow";
+
+    /// <summary>
+    /// The state a link returns to once nothing holds it (a pause resumed, access back, a peer answering again): Active
+    /// after its first contact (Stopped for a copy once), else the side of the first contact it is on (§8.1, §8.3).
+    /// </summary>
+    public static DataSyncLinkState GetResumeState(this DataSyncLinkDbModel link)
+    {
+        if (link.FirstContactCompletedAtUtc is not null)
+            return link.Mode == DataSyncLinkMode.Off ? DataSyncLinkState.Stopped : DataSyncLinkState.Active;
+        return link.Initiator == DataSyncLinkInitiator.ThisDevice
+            ? DataSyncLinkState.AwaitingReview
+            : DataSyncLinkState.WaitingForPeerReview;
+    }
+
+    /// <summary>
+    /// Makes the link's next pull a full reconciliation (§8.8), which re-merges every pending record of the link (§8.4
+    /// condition 4): the last one reads as a full interval ago. Used when a stopped link is turned on again, whose stop
+    /// closed its items while its pending records stayed (§8.1).
+    /// </summary>
+    public static void MarkFullReconciliationDue(this DataSyncLinkDbModel link, DateTime nowUtc) =>
+        link.LastFullReconciliationAtUtc = nowUtc - DataSyncSchedule.FullReconciliationInterval;
+
+    /// <summary>
+    /// When an approver waiting for its peer's first review may start anyway (§8.3):
+    /// <see cref="DataSyncSchedule.StartAnywayAfter"/> after the wait began. Null in any other state. The row keeps no
+    /// time for when a state began (<c>UpdatedAtUtc</c> moves with every write), so the wait is taken to begin when the
+    /// row was made, which is when an approval makes it. Known limit: a stopped row that a later approval turns back
+    /// into a waiting approver keeps its old creation time, and may start at once, as before this check.
+    /// </summary>
+    public static DateTime? GetStartAnywayAt(this DataSyncLinkDbModel link) =>
+        link.State == DataSyncLinkState.WaitingForPeerReview
+            ? DateTime.SpecifyKind(link.CreatedAtUtc, DateTimeKind.Utc) + DataSyncSchedule.StartAnywayAfter
+            : null;
+
+    /// <summary>
+    /// The peer refuses the link (§8.1): its access revoked (<c>AccessMissing</c> is stored as that), sharing or remote
+    /// access off there, or a version too old on either side. The link keeps its state and carries the code, retried
+    /// hourly or every 6 h, until the peer answers again; meanwhile it neither applies nor counts as waiting.
+    /// </summary>
+    public static bool HasPeerError(this DataSyncLinkDbModel link) =>
+        link.LastErrorCode is nameof(DataSyncPeerErrorCode.AccessRevoked) or nameof(DataSyncPeerErrorCode.PeerSharingOff)
+            or nameof(DataSyncPeerErrorCode.PeerRemoteAccessOff) or nameof(DataSyncPeerErrorCode.PeerTooOld)
+            or nameof(DataSyncPeerErrorCode.ThisTooOld);
+
+    /// <summary>Active and not refused by its peer: the link applies what it pulled and re-merges (§8.10.2).</summary>
+    public static bool IsRunning(this DataSyncLinkDbModel link) =>
+        link.State == DataSyncLinkState.Active && !link.HasPeerError();
+
+    /// <summary>
+    /// Whether the fetch cycle looks at this link: every state except Paused and Stopped. A link whose mode is Off is
+    /// a copy once while it waits for access or its review (§8.1).
+    /// </summary>
+    public static bool IsFetchable(this DataSyncLinkDbModel link) =>
+        link.State is not (DataSyncLinkState.Paused or DataSyncLinkState.Stopped) &&
+        (link.Mode != DataSyncLinkMode.Off ||
+         link.State is DataSyncLinkState.AwaitingAccess or DataSyncLinkState.AwaitingReview);
+
+    /// <summary>
+    /// The <c>state</c> this device declares to the peer (§7.5.6):
+    /// <c>ok|awaitingReview|waitingForPeerReview|paused:{reason}|needsYou:{n}</c>. <c>waitingForPeerReview</c> is this
+    /// device waiting for the peer's own first review, which the peer's readers list says as "waiting for this
+    /// device's review"; the field is free-form, and a reader that does not know a word shows nothing for it.
+    /// </summary>
+    public static string GetDeclaredState(this DataSyncLinkDbModel link, int openItems) => link.State switch
+    {
+        DataSyncLinkState.AwaitingReview => "awaitingReview",
+        DataSyncLinkState.WaitingForPeerReview => "waitingForPeerReview",
+        DataSyncLinkState.Paused => "paused:" + JsonNamingPolicy.CamelCase.ConvertName(
+            (link.PausedReason ?? DataSyncPauseReason.ByUser).ToString()),
+        _ when openItems > 0 => "needsYou:" + openItems.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        _ => "ok",
+    };
+
+    public static string ToCode(this DataSyncPeerErrorCode code) => code.ToString();
+
+    private static T? Read<T>(string? json) where T : class
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<T>(json, DataSyncJson.Options);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    private static string Write<T>(T value) => JsonSerializer.Serialize(value, DataSyncJson.Options);
+}

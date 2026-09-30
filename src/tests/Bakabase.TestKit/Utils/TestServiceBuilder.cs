@@ -24,6 +24,7 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
@@ -31,6 +32,8 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZ
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.Modules.DataSync.Abstractions;
+using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
 using Bakabase.Modules.ThirdParty.Extensions;
@@ -38,6 +41,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using Bakabase.Service.Extensions;
+using Bakabase.TestKit.DataSync;
 using Bakabase.TestKit.Implementations;
 using Bootstrap.Components.Configuration;
 using Bootstrap.Components.DependencyInjection;
@@ -76,20 +80,39 @@ public static class TestServiceBuilder
     /// <c>IResourceProfileService</c> implementation when a test needs to drive
     /// downstream consumers with synthetic profile data.
     /// </param>
-    public static async Task<IServiceProvider> BuildServiceProvider(
-        Action<IServiceCollection>? configure = null)
-    {
-        var started = Stopwatch.GetTimestamp();
+    public static Task<IServiceProvider> BuildServiceProvider(
+        Action<IServiceCollection>? configure = null) =>
+        BuildServiceProvider(NewTestDirectory(), configure);
 
+    /// <summary>
+    /// A fresh test directory under the temp folder, as <see cref="BuildServiceProvider(Action{IServiceCollection})"/>
+    /// uses: a test that restarts a provider over what an earlier one left (its <c>test.db</c> and data sync folder)
+    /// fills one and passes it to <see cref="BuildServiceProvider(string, Action{IServiceCollection})"/>.
+    /// </summary>
+    public static string NewTestDirectory()
+    {
         // Use unique database file names to avoid conflicts between parallel tests
         var uniqueId = Guid.NewGuid().ToString("N");
-        var testDir = Path.Combine(Path.GetTempPath(), $"BakabaseTests_{uniqueId}");
+        return Path.Combine(Path.GetTempPath(), $"BakabaseTests_{uniqueId}");
+    }
+
+    /// <summary>
+    /// Build a fully wired test service provider whose database (<c>test.db</c>) and data sync folders live in
+    /// <paramref name="testDir"/>; a database already there (left by an earlier provider, so copied from the same
+    /// migrated template) is kept, not replaced.
+    /// </summary>
+    /// <param name="options">How the provider validates its registrations; none by default.</param>
+    public static async Task<IServiceProvider> BuildServiceProvider(string testDir,
+        Action<IServiceCollection>? configure = null, ServiceProviderOptions? options = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(testDir);
+        var started = Stopwatch.GetTimestamp();
         Directory.CreateDirectory(testDir);
 
         var dbFilePath = Path.Combine(testDir, "test.db");
         var templatePath = await MigratedDatabaseTemplate.Value;
         var templateReady = Stopwatch.GetTimestamp();
-        File.Copy(templatePath, dbFilePath);
+        if (!File.Exists(dbFilePath)) File.Copy(templatePath, dbFilePath);
         var databaseReady = Stopwatch.GetTimestamp();
 
         var services = new ServiceCollection();
@@ -212,6 +235,13 @@ public static class TestServiceBuilder
         // AppService (used by SevenZipService and other dependency components)
         services.AddSingleton<Bakabase.Infrastructures.Components.App.AppService>();
 
+        // Data sync (spec §2.11, §4.7): a per-provider device identity and a desktop host kind, with TryAdd, and
+        // this provider's own data sync folders, with AddSingleton so they win over AddDataSync()'s default
+        // (AppService's data directory is shared by every provider of the process).
+        services.TryAddSingleton<IDataSyncDeviceIdentity>(_ => new TestDataSyncDeviceIdentity());
+        services.TryAddSingleton<IDataSyncHostKind>(_ => new TestDataSyncHostKind());
+        services.AddSingleton<IDataSyncDataDirectory>(FixedDataSyncDataDirectory.Under(testDir));
+
         // Auto-register all [Options]-attributed types as default IBOptions/IBOptionsManager
         // (mirrors what ConfigurationRegistrations does in production, but with empty values).
         // TryAdd so manual registrations above (FileSystemOptions, ResourceOptions, etc.) win.
@@ -221,7 +251,7 @@ public static class TestServiceBuilder
         configure?.Invoke(services);
 
         // Build provider against its private copy of the fully migrated database.
-        var sp = services.BuildServiceProvider();
+        var sp = services.BuildServiceProvider(options ?? new ServiceProviderOptions());
         var scope = sp.CreateAsyncScope();
         var scopeSp = scope.ServiceProvider;
 

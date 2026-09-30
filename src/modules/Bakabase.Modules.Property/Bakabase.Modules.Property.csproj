@@ -16,6 +16,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
     <ProjectReference Include="..\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
+    <!-- The custom property kind of data sync lives next to the service that owns the table (spec §1). -->
+    <ProjectReference Include="..\Bakabase.Modules.DataSync\Bakabase.Modules.DataSync.csproj" />
   </ItemGroup>
 
   <ItemGroup>
