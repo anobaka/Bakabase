@@ -57,16 +57,27 @@ async function start(spec, timeout = 90000) {
   return stop;
 }
 
-/** Polls a read until it satisfies `done`, or fails with the last value. */
+/** Polls a read until it satisfies `done`, or fails with the last value and parse error. */
 async function until(read, done, what, timeout = 20000) {
   const deadline = Date.now() + timeout;
   let value;
+  let lastParseError;
   while (Date.now() < deadline) {
-    value = read();
-    if (done(value)) return value;
+    let readSucceeded = false;
+    try {
+      value = read();
+      readSucceeded = true;
+    } catch (error) {
+      // JsonOptionsManager overwrites the file, so a read can observe a partial JSON write.
+      // I/O errors and assertion failures still fail immediately.
+      if (!(error instanceof SyntaxError)) throw error;
+      lastParseError = error;
+    }
+    if (readSucceeded && done(value)) return value;
     await new Promise(resolve => setTimeout(resolve, 200));
   }
-  assert.fail(`Timed out waiting for ${what}: ${JSON.stringify(value)}`);
+  const parseFailure = lastParseError ? `; last JSON parse error: ${lastParseError}` : '';
+  assert.fail(`Timed out waiting for ${what}: ${JSON.stringify(value)}${parseFailure}`);
 }
 
 /**
@@ -81,7 +92,8 @@ async function freshInstallNotices(browser, spec) {
     field(field(JSON.parse(fs.readFileSync(uiFile, 'utf8').replace(/^\uFEFF/, '')), 'UI'), 'Notices');
   // Read as the host started, before it recorded the running version over the one this
   // install last ran — none.
-  assert.equal(field(notices(), 'BaselinePending'), true, 'The first launch did not open the fresh install\'s notice baseline');
+  const initial = await until(notices, () => true, 'the initial notice baseline JSON');
+  assert.equal(field(initial, 'BaselinePending'), true, 'The first launch did not open the fresh install\'s notice baseline');
 
   const origins = new Set([new URL(spec.window).origin, new URL(spec.base).origin]);
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'en-US' });
@@ -126,3 +138,6 @@ module.exports = async function firstLaunch({ browser, config }) {
     await stop();
   }
 };
+
+// Offline regression tests exercise the same poll used by the browser smoke.
+module.exports.until = until;
