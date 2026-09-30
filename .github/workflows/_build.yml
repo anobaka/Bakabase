@@ -147,6 +147,9 @@ jobs:
       - name: Check dotnet info
         run: dotnet --info
       - name: Cache NuGet packages
+        # Desktop cache extraction costs more than restoring packages directly.
+        # Keep the smaller Linux cache, where the measured restore is cheaper.
+        if: matrix.runtimeMode == 'DOCKER'
         uses: actions/cache@v4
         with:
           path: ${{ env.NUGET_PACKAGES }}
