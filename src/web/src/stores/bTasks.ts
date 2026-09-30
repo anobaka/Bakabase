@@ -66,6 +66,7 @@ const activeMoveStatuses = new Set([
   BTaskStatus.Cancelling,
   BTaskStatus.Pausing,
   BTaskStatus.Resuming,
+  BTaskStatus.WaitingForInput,
 ]);
 
 /**

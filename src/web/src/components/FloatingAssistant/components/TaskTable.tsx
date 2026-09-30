@@ -41,6 +41,8 @@ import {
 import BApi from "@/sdk/BApi";
 import { BTaskStatus, BTaskType } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { cancelResourceMoveBatch } from "@/components/ResourceMovePanel/api";
+import { openMovePanel, refreshMovePanel } from "@/stores/resourceMovePanel";
 
 interface TaskTableProps {
   tasks: BTask[];
@@ -52,6 +54,12 @@ const TaskStatusIcon = ({ task, onShowError }: { task: BTask; onShowError: () =>
   const { t } = useTranslation();
 
   switch (task.status) {
+    case BTaskStatus.WaitingForInput:
+      return (
+        <Chip color="warning" size="sm" variant="flat">
+          {t<string>("resourceMove.panel.waitingForInput", "Needs attention")}
+        </Chip>
+      );
     case BTaskStatus.NotStarted:
       return (
         <Tooltip content={t("floatingAssistant.tip.willRunAutomatically")} placement="top">
@@ -183,6 +191,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
           break;
         case BTaskStatus.NotStarted:
         case BTaskStatus.Paused:
+        case BTaskStatus.WaitingForInput:
           counts.pending++;
           break;
         case BTaskStatus.Completed:
@@ -219,7 +228,11 @@ export function TaskTable({ tasks }: TaskTableProps) {
               task.status === BTaskStatus.Resuming
             );
           case "pending":
-            return task.status === BTaskStatus.NotStarted || task.status === BTaskStatus.Paused;
+            return (
+              task.status === BTaskStatus.NotStarted ||
+              task.status === BTaskStatus.Paused ||
+              task.status === BTaskStatus.WaitingForInput
+            );
           case "completed":
             return task.status === BTaskStatus.Completed;
           case "failed":
@@ -325,7 +338,12 @@ export function TaskTable({ tasks }: TaskTableProps) {
           await BApi.backgroundTask.resumeBackgroundTask(task.id);
           break;
         case TaskAction.Stop:
-          await BApi.backgroundTask.stopBackgroundTask(task.id);
+          if (task.type === BTaskType.MoveResources) {
+            await cancelResourceMoveBatch(task.id.replace(/^MoveResources:/, ""));
+            await refreshMovePanel();
+          } else {
+            await BApi.backgroundTask.stopBackgroundTask(task.id);
+          }
           break;
       }
       toast.success({ title: `${task.name}: ${getActionLabel(action)}` });
@@ -391,7 +409,14 @@ export function TaskTable({ tasks }: TaskTableProps) {
             <Tooltip
               key={`stop-${task.id}`}
               color="danger"
-              content={t("common.action.stop")}
+              content={
+                task.type === BTaskType.MoveResources
+                  ? t<string>(
+                      "resourceMove.panel.stopAtBoundary",
+                      "Finish the current resource, then stop",
+                    )
+                  : t("common.action.stop")
+              }
               placement="top"
             >
               <Button
@@ -401,6 +426,10 @@ export function TaskTable({ tasks }: TaskTableProps) {
                 size="sm"
                 variant="light"
                 onPress={() => {
+                  if (task.type === BTaskType.MoveResources) {
+                    void handleTaskAction(task, TaskAction.Stop);
+                    return;
+                  }
                   createPortal(Modal, {
                     defaultVisible: true,
                     title: t("floatingAssistant.modal.stoppingTaskTitle", { taskName: task.name }),
@@ -462,6 +491,13 @@ export function TaskTable({ tasks }: TaskTableProps) {
       }
     });
 
+    if (task.type === BTaskType.MoveResources && task.status === BTaskStatus.WaitingForInput) {
+      actions.push(
+        <Button key={`resolve-${task.id}`} size="sm" variant="flat" onPress={() => openMovePanel()}>
+          {t<string>("resourceMove.panel.open", "Move panel")}
+        </Button>,
+      );
+    }
     return actions;
   };
 

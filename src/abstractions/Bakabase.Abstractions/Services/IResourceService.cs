@@ -91,7 +91,13 @@ public interface IResourceService
     Task MarkPlayed(IReadOnlyDictionary<int, string> playedItemsByResourceId);
 
     Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, Dictionary<int, string>? newPaths = null);
-    Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths);
+    /// <param name="publishChange">A move coordinator may defer the event until source-owned
+    /// locations and caches have been repaired. Other callers publish immediately.</param>
+    /// <param name="expectedPaths">When supplied, atomically require every resource to still
+    /// exist at its expected path or the requested new path. Reject unexpected paths without
+    /// changing any resource; this also makes recovery after a committed move idempotent.</param>
+    Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths, bool publishChange = true,
+        Dictionary<int, string>? expectedPaths = null);
 
     Task Pin(int id, bool pin);
 

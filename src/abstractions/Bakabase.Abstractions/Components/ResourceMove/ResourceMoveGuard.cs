@@ -4,9 +4,8 @@ namespace Bakabase.Abstractions.Components.ResourceMove;
 
 /// <summary>
 /// In-memory registry of the resources and path subtrees reserved by in-flight move batches.
-/// Deliberately not persisted: when the process dies the executing task dies with it, the
-/// records table (Interrupted rows) becomes the durable trace, and an empty registry after a
-/// restart is therefore correct — no stale-lock cleanup is ever needed.
+/// Rebuilt from durable move records before startup scheduling. Waiting and recovery jobs
+/// retain their reservations even after their executing task releases its scheduler slot.
 /// Path overlap is judged on whole segments (<see cref="StringExtensions.IsPathEqualOrUnder"/>),
 /// in both directions: reserving /a blocks a batch touching /a/b, and vice versa.
 /// </summary>
@@ -14,6 +13,7 @@ public class ResourceMoveGuard
 {
     private readonly object _lock = new();
     private readonly Dictionary<string, Reservation> _reservations = new();
+    private readonly HashSet<string> _retained = [];
 
     private record Reservation(HashSet<int> ResourceIds, List<string> Paths);
 
@@ -63,7 +63,70 @@ public class ResourceMoveGuard
         lock (_lock)
         {
             _reservations.Remove(batchId);
+            _retained.Remove(batchId);
         }
+    }
+
+    /// <summary>
+    /// A recovered batch may initially reserve only its unfinished subset. Retrying additional
+    /// records must atomically extend that reservation, rather than assuming the batch owns
+    /// every path just because it owns some paths. A rejected extension leaves the old lock intact.
+    /// </summary>
+    public bool TryExtendReservation(string batchId, IEnumerable<int> resourceIds,
+        IEnumerable<string?> paths, out string? conflictPath)
+    {
+        var requested = paths.Select(p => p.StandardizePath()).OfType<string>().Distinct().ToList();
+        lock (_lock)
+        {
+            foreach (var (owner, reservation) in _reservations)
+            {
+                if (owner == batchId) continue;
+                foreach (var path in requested)
+                {
+                    conflictPath = reservation.Paths.FirstOrDefault(existing =>
+                        path.IsPathEqualOrUnder(existing) || existing.IsPathEqualOrUnder(path));
+                    if (conflictPath != null) return false;
+                }
+            }
+            var previous = _reservations.GetValueOrDefault(batchId);
+            _reservations[batchId] = new Reservation(
+                resourceIds.Concat(previous?.ResourceIds ?? []).ToHashSet(),
+                requested.Concat(previous?.Paths ?? []).Distinct().ToList());
+            conflictPath = null;
+            return true;
+        }
+    }
+
+    public bool HoldsReservation(string batchId)
+    {
+        lock (_lock) return _reservations.ContainsKey(batchId);
+    }
+
+    /// <summary>Waiting/recovery reservations outlive an executor. Legacy sync/mover tasks
+    /// must not run until they understand these path exclusions.</summary>
+    public bool HasRetainedReservations
+    {
+        get { lock (_lock) return _retained.Count != 0; }
+    }
+
+    public void Retain(string batchId)
+    {
+        lock (_lock) if (_reservations.ContainsKey(batchId)) _retained.Add(batchId);
+    }
+
+    public void Resume(string batchId)
+    {
+        lock (_lock) _retained.Remove(batchId);
+    }
+
+    public int[] GetReservedResourceIds(string batchId)
+    {
+        lock (_lock) return _reservations.TryGetValue(batchId, out var r) ? r.ResourceIds.ToArray() : [];
+    }
+
+    public string[] GetReservedPaths(string batchId)
+    {
+        lock (_lock) return _reservations.TryGetValue(batchId, out var r) ? r.Paths.ToArray() : [];
     }
 
     public bool IsResourceLocked(int resourceId)

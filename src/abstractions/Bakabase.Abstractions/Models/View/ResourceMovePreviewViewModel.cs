@@ -10,6 +10,19 @@ namespace Bakabase.Abstractions.Models.View;
 public record ResourceMovePreviewViewModel
 {
     public List<Item> Items { get; set; } = [];
+    public int[] SkippedResourceIds { get; set; } = [];
+    public string[] DuplicateDestinationPaths { get; set; } = [];
+    public string? PreviewFingerprint { get; set; }
+    public List<ExcludedResource> ExcludedResources { get; set; } = [];
+
+    public record ExcludedResource
+    {
+        public int ResourceId { get; set; }
+        public string DisplayName { get; set; } = null!;
+        public string? Path { get; set; }
+        public string ReasonCode { get; set; } = null!;
+        public int[]? BlockingResourceIds { get; set; }
+    }
 
     public record Item
     {
@@ -22,6 +35,9 @@ public record ResourceMovePreviewViewModel
 
         /// <summary>The destination sits inside this resource's own subtree — the batch will be rejected.</summary>
         public bool DestInsideSource { get; set; }
+        public string? UnavailableReason { get; set; }
+        public string? ConflictKind { get; set; }
+        public bool CanOverwrite { get; set; }
 
         public List<MarkEffect> Effects { get; set; } = [];
 

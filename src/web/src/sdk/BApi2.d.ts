@@ -7904,6 +7904,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-move/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceMoveContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource-move": {
         parameters: {
             query?: never;
@@ -7914,6 +7930,86 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["MoveResources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-move/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceMoveBatches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-move/batches/{batchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceMoveBatch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-move/batches/{batchId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CancelResourceMoveBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-move/batches/{batchId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetryResourceMoveBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-move/records/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResolveResourceMoveConflict"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7995,6 +8091,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["DeleteInactiveResourceMoveRecords"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-move/panel-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceMovePanelOptions"];
+        put: operations["SaveResourceMovePanelOptions"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -8884,6 +8996,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        "Bakabase.Abstractions.Components.Configuration.ResourceMoveDestination": {
+            id: string;
+            path: string;
+            name?: string;
+            scope: string;
+            tabId?: string;
+            /** Format: int32 */
+            order: number;
+            isDeleted: boolean;
+        };
+        "Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions": {
+            destinations: components["schemas"]["Bakabase.Abstractions.Components.Configuration.ResourceMoveDestination"][];
+            autoOverwrite: boolean;
+            /** Format: int64 */
+            revision: number;
+        };
         "Bakabase.Abstractions.Components.Configuration.TaskOptions": {
             tasks?: components["schemas"]["Bakabase.Abstractions.Models.Db.BTaskDbModel"][];
         };
@@ -8976,6 +9104,28 @@ export interface components {
             startedAt?: string;
             /** Format: date-time */
             completedAt?: string;
+            origin?: string;
+            sourceTabId?: string;
+            sourceTabName?: string;
+            destinationId?: string;
+            destinationName?: string;
+            idempotencyKey?: string;
+            requestFingerprint?: string;
+            conflictPolicy: string;
+            cancelRequested: boolean;
+            errorCode?: string;
+            conflictKind?: string;
+            conflictPath?: string;
+            /** Format: int32 */
+            conflictVersion: number;
+            canOverwrite: boolean;
+            conflictFingerprint?: string;
+            conflictDecisionsJson?: string;
+            moveJournalJson?: string;
+            reservedResourceIdsJson?: string;
+            sourceResourcePathsJson?: string;
+            executionPlanJson?: string;
+            policyAuditJson?: string;
         };
         "Bakabase.Abstractions.Models.Db.SteamAppDbModel": {
             /** Format: int32 */
@@ -9152,10 +9302,10 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceMatchSuggestionStatus": 1 | 2;
         /**
          * Format: int32
-         * @description [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted]
+         * @description [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted, 7: WaitingForConflict, 8: NeedsRecovery, 9: Skipped]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.ResourceMoveRecordStatus": 1 | 2 | 3 | 4 | 5 | 6;
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceMoveRecordStatus": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
         /**
          * Format: int32
          * @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv]
@@ -9579,6 +9729,12 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        "Bakabase.Abstractions.Models.Domain.ResourceMoveConflictResolution": {
+            action: string;
+            scope: string;
+            /** Format: int32 */
+            conflictVersion: number;
+        };
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions": {
             enhancers?: components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
         };
@@ -9856,6 +10012,46 @@ export interface components {
             uniqueCustomProperties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"][];
             uniqueExtensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
         };
+        "Bakabase.Abstractions.Models.View.ResourceMoveBatchCounts": {
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            succeeded: number;
+            /** Format: int32 */
+            failed: number;
+            /** Format: int32 */
+            cancelled: number;
+            /** Format: int32 */
+            skipped: number;
+            /** Format: int32 */
+            waiting: number;
+        };
+        "Bakabase.Abstractions.Models.View.ResourceMoveBatchDetailViewModel": {
+            batchId: string;
+            taskId: string;
+            origin?: string;
+            sourceTabId?: string;
+            sourceTabName?: string;
+            destDir: string;
+            destinationId?: string;
+            destinationName?: string;
+            status: string;
+            conflictPolicy: string;
+            /** Format: int32 */
+            percentage: number;
+            cancelRequested: boolean;
+            canCancel: boolean;
+            canRetry: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt?: string;
+            resourceIds: number[];
+            lockedResourceIds: number[];
+            reservedPaths: string[];
+            counts: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMoveBatchCounts"];
+            records: components["schemas"]["Bakabase.Abstractions.Models.Db.ResourceMoveRecordDbModel"][];
+        };
         "Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel": {
             batchId: string;
             /** Format: int32 */
@@ -9863,12 +10059,24 @@ export interface components {
         };
         "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel": {
             items: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+Item"][];
+            skippedResourceIds: number[];
+            duplicateDestinationPaths: string[];
+            previewFingerprint?: string;
+            excludedResources: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+ExcludedResource"][];
         };
         "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+CoveredResource": {
             /** Format: int32 */
             resourceId: number;
             path: string;
             wasSelected: boolean;
+        };
+        "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+ExcludedResource": {
+            /** Format: int32 */
+            resourceId: number;
+            displayName: string;
+            path?: string;
+            reasonCode: string;
+            blockingResourceIds?: number[];
         };
         "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+Item": {
             /** Format: int32 */
@@ -9877,6 +10085,9 @@ export interface components {
             destPath: string;
             destConflict: boolean;
             destInsideSource: boolean;
+            unavailableReason?: string;
+            conflictKind?: string;
+            canOverwrite: boolean;
             effects: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+MarkEffect"][];
             coveredResources: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+CoveredResource"][];
         };
@@ -14456,8 +14667,17 @@ export interface components {
             mediaLibraryIds: number[];
         };
         "Bakabase.Service.Models.Input.ResourceMoveInputModel": {
+            origin?: string;
+            sourceTabId?: string;
+            sourceTabName?: string;
+            destinationId?: string;
+            destinationName?: string;
+            idempotencyKey?: string;
+            expectedPreviewFingerprint?: string;
+            conflictPolicy: string;
             resourceIds: number[];
             destDir: string;
+            resourceRefs?: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"][];
         };
         "Bakabase.Service.Models.Input.ResourceOptionsPatchInputModel": {
             additionalCoverDiscoveringSources?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalCoverDiscoveringSource"][];
@@ -15124,6 +15344,10 @@ export interface components {
             occupiedByResourceName?: string;
             merged: boolean;
         };
+        "Bakabase.Service.Models.View.ResourceMoveContextViewModel": {
+            nodeId: string;
+            libraryEpoch: string;
+        };
         "Bakabase.Service.Models.View.ResourcePathInfoViewModel": {
             /** Format: int32 */
             id: number;
@@ -15326,6 +15550,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.TextTypeDescriptor"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchDetailViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMoveBatchDetailViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel]": {
             /** Format: int32 */
@@ -15915,6 +16145,12 @@ export interface components {
             /** Format: int32 */
             pageSize: number;
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.TaskOptions]": {
             /** Format: int32 */
             code: number;
@@ -16034,6 +16270,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchDetailViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMoveBatchDetailViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]": {
             /** Format: int32 */
@@ -16784,6 +17026,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourceMaterializeResultViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMoveContextViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceMoveContextViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]": {
             /** Format: int32 */
@@ -33377,6 +33625,28 @@ export interface operations {
             };
         };
     };
+    GetResourceMoveContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMoveContextViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMoveContextViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMoveContextViewModel]"];
+                };
+            };
+        };
+    };
     MoveResources: {
         parameters: {
             query?: never;
@@ -33402,6 +33672,137 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]"];
+                };
+            };
+        };
+    };
+    GetResourceMoveBatches: {
+        parameters: {
+            query?: {
+                origin?: string;
+                sourceTabId?: string;
+                activeOnly?: boolean;
+                skip?: number;
+                take?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchDetailViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchDetailViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchDetailViewModel]"];
+                };
+            };
+        };
+    };
+    GetResourceMoveBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchDetailViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchDetailViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchDetailViewModel]"];
+                };
+            };
+        };
+    };
+    CancelResourceMoveBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    RetryResourceMoveBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ResolveResourceMoveConflict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceMoveConflictResolution"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceMoveConflictResolution"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceMoveConflictResolution"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceMoveConflictResolution"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -33525,6 +33926,57 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetResourceMovePanelOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions]"];
+                };
+            };
+        };
+    };
+    SaveResourceMovePanelOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions]"];
                 };
             };
         };

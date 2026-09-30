@@ -442,5 +442,9 @@
   "client.failure.notConnected": "No longer managed from this computer",
   "client.failure.serverUnreachable": "The server is not answering",
   "client.failure.refused": "Refused by this computer",
-  "client.failure.wrongServer": "Another server answers at this address"
+  "client.failure.wrongServer": "Another server answers at this address",
+  "WaitingForInput": "Waiting for input",
+  "WaitingForConflict": "Waiting for conflict resolution",
+  "NeedsRecovery": "Recovery required",
+  "Skipped": "Skipped"
 }

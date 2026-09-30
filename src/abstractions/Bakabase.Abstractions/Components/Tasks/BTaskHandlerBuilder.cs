@@ -34,6 +34,7 @@ public record BTaskHandlerBuilder
     /// same syntactic shape as a method call).
     /// </summary>
     public Func<BTaskArgs, Task> RunAction { get; init; } = _ => Task.CompletedTask;
+    public Func<Task>? StopAction { get; init; }
 
     public HashSet<string>? ConflictKeys { get; init; }
     public HashSet<string>? DependsOn { get; init; }
@@ -107,6 +108,10 @@ public static class BTaskHandlerBuilderFluentExtensions
 
     public static BTaskHandlerBuilder Run(this BTaskHandlerBuilder b, Func<BTaskArgs, Task> run) =>
         b with { RunAction = run };
+
+    /// <summary>Delegate user cancellation to a domain service with a safe stopping boundary.</summary>
+    public static BTaskHandlerBuilder OnStop(this BTaskHandlerBuilder b, Func<Task> stop) =>
+        b with { StopAction = stop };
 
     public static BTaskHandlerBuilder OfType(this BTaskHandlerBuilder b, BTaskType type) =>
         b with { Type = type };

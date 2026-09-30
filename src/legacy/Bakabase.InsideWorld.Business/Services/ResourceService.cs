@@ -49,6 +49,7 @@ using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
+using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using CliWrap;
 using DotNext.Collections.Generic;
@@ -2414,8 +2415,12 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths)
+        public async Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths, bool publishChange = true,
+            Dictionary<int, string>? expectedPaths = null)
         {
+            if (expectedPaths != null)
+                return await ChangePathWithExpectedPaths(ids, newPaths, expectedPaths, publishChange);
+
             var resources = await _orm.GetByKeys(ids);
             if (resources == null)
             {
@@ -2450,8 +2455,46 @@ namespace Bakabase.InsideWorld.Business.Services
             }
 
             await _orm.UpdateRange(resourcesToBeChanged);
-            ResourceDataChangeEventPublisher.PublishResourcesChanged(resourcesToBeChanged.Select(r => r.Id));
+            if (publishChange)
+                ResourceDataChangeEventPublisher.PublishResourcesChanged(resourcesToBeChanged.Select(r => r.Id));
 
+            return BaseResponseBuilder.Ok;
+        }
+
+        private async Task<BaseResponse> ChangePathWithExpectedPaths(int[] ids, Dictionary<int, string> newPaths,
+            Dictionary<int, string> expectedPaths, bool publishChange)
+        {
+            var uniqueIds = ids.Distinct().ToArray();
+            if (uniqueIds.Any(id => !expectedPaths.ContainsKey(id) ||
+                                    !newPaths.TryGetValue(id, out var path) || path.IsNullOrEmpty()))
+                return BaseResponseBuilder.Build(ResponseCode.Conflict, "sourceLocationChanged");
+
+            var destinations = uniqueIds.ToDictionary(id => id, id => newPaths[id].StandardizePath()!);
+            var db = GetRequiredService<BakabaseDbContext>();
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            // Read the database, not the full-memory cache: another operation may have changed
+            // a resource while this move was suspended. All descendants must pass together.
+            var current = await db.ResourcesV2.AsNoTracking().Where(r => uniqueIds.Contains(r.Id)).ToListAsync();
+            if (current.Count != uniqueIds.Length || current.Any(r =>
+                    r.Path != expectedPaths[r.Id] && r.Path != destinations[r.Id]))
+                return BaseResponseBuilder.Build(ResponseCode.Conflict, "sourceLocationChanged");
+
+            var changedIds = current.Where(r => r.Path != destinations[r.Id]).Select(r => r.Id).ToArray();
+            foreach (var id in uniqueIds)
+            {
+                var expected = expectedPaths[id];
+                var destination = destinations[id];
+                var affected = await db.ResourcesV2.Where(r => r.Id == id &&
+                        (r.Path == expected || r.Path == destination))
+                    .ExecuteUpdateAsync(s => s.SetProperty(r => r.Path, destination));
+                if (affected != 1)
+                    return BaseResponseBuilder.Build(ResponseCode.Conflict, "sourceLocationChanged");
+            }
+
+            await transaction.CommitAsync();
+            _orm.ClearCache();
+            if (publishChange && changedIds.Length > 0)
+                ResourceDataChangeEventPublisher.PublishResourcesChanged(changedIds);
             return BaseResponseBuilder.Ok;
         }
 

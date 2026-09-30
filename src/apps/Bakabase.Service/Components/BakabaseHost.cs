@@ -143,6 +143,14 @@ namespace Bakabase.Service.Components
             var dynamicTaskRegistry = serviceProvider.GetRequiredService<DynamicTaskRegistry>();
             var taskManager = serviceProvider.GetRequiredService<BTaskManager>();
 
+            // Rebuild durable move reservations before any synchronization task can start.
+            await using (var resourceMoveScope = serviceProvider.CreateAsyncScope())
+            {
+                await resourceMoveScope.ServiceProvider
+                    .GetRequiredService<Bakabase.Abstractions.Services.IResourceMoveService>()
+                    .MarkInterruptedOnStartup();
+            }
+
             // Initialize BTaskManager
             await taskManager.Initialize();
 
@@ -176,15 +184,6 @@ namespace Bakabase.Service.Components
                     .SeedAsync();
             }
 
-            // Resource move records survive restarts too, but a half-done physical move is not
-            // safe to auto-resume — flip dead Pending/Moving rows to Interrupted so the user can
-            // see and retry them explicitly.
-            await using (var resourceMoveScope = serviceProvider.CreateAsyncScope())
-            {
-                await resourceMoveScope.ServiceProvider
-                    .GetRequiredService<Bakabase.Abstractions.Services.IResourceMoveService>()
-                    .MarkInterruptedOnStartup();
-            }
         }
 
         protected override Task<string?> CheckIfAppCanExitSafely()

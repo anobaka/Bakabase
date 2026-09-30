@@ -12,5 +12,8 @@ public enum ResourceMoveRecordStatus
     /// The process died while this record was <see cref="Moving"/>. Files may be split across the
     /// source and destination; never auto-resumed — the user retries explicitly.
     /// </summary>
-    Interrupted = 6
+    Interrupted = 6,
+    WaitingForConflict = 7,
+    NeedsRecovery = 8,
+    Skipped = 9
 }

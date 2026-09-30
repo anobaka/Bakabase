@@ -55,6 +55,7 @@ type Props = {
   /** Fires right before the browser delivers the click that closes a rectangle drag, so
    *  a document-level click handler above this component can ignore that one. */
   onRectSelectionSuppressClick?: () => any;
+  shouldStartRectSelection?: (event: MouseEvent) => boolean;
 };
 
 export type ResourcesRef = {
@@ -81,6 +82,7 @@ const Resources = forwardRef<ResourcesRef, Props>(
       onRectSelectionStart,
       onRectSelectionEnd,
       onRectSelectionSuppressClick,
+      shouldStartRectSelection,
     },
     ref,
   ) => {
@@ -201,6 +203,7 @@ const Resources = forwardRef<ResourcesRef, Props>(
       onEnd: onRectSelectionEnd,
       onActiveChange: setRectSelecting,
       onSuppressClick: onRectSelectionSuppressClick,
+      shouldStart: shouldStartRectSelection,
     });
 
     // While a rectangle is being dragged the cells must not react to the pointer, or

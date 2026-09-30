@@ -5,7 +5,7 @@ import type { SearchForm as ResourceSearchForm } from "@/pages/resource/models";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineClose } from "react-icons/ai";
-import { MdSavedSearch, MdEdit } from "react-icons/md";
+import { MdSavedSearch, MdEdit, MdDriveFileMove } from "react-icons/md";
 
 import { Button, Input, Tooltip } from "@/components/bakaui";
 import { useResourceOptionsStore } from "@/stores/options";
@@ -16,6 +16,8 @@ import ResourceTabContent from "@/pages/resource/components/ResourceTabContent";
 import RecentlyPlayedDrawer from "@/pages/resource/components/RecentlyPlayedDrawer";
 import SearchSummary from "@/pages/resource/components/SearchSummary";
 import { buildAutoTabName } from "@/pages/resource/utils/buildAutoTabName";
+import { ResourceMovePanelDock } from "@/components/ResourceMovePanel";
+import { openMovePanel } from "@/stores/resourceMovePanel";
 
 type SearchForm = components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
 
@@ -259,120 +261,122 @@ const ResourcePage = () => {
 
   return (
     <div className={"flex flex-col h-full max-h-full gap-1"}>
-      {ss.length > 1 && (
-        <div className="flex flex-wrap items-center gap-1 pb-2 border-b border-divider">
-          {ss.map((s, i) => {
-            const isActive = activeSearchId == s.id || (activeSearchId == undefined && i == 0);
-            const isEditing = editingId == s.id;
-            // A mounted tab reports its criteria live, so its edits show up in
-            // the tooltip without a round trip; everything else falls back to
-            // the copy fetched on hover.
-            const liveForm = liveSearchForms[s.id];
-            const summaryForm = liveForm ?? fetchedSearchForms[s.id];
-            const revealSummary = () => {
-              if (!liveForm) ensureSearchForm(s.id);
-            };
+      <div className="flex items-center gap-2 border-b border-divider pb-1">
+        <div className="grow min-w-0">
+          {ss.length > 1 && (
+            <div className="flex flex-wrap items-center gap-1">
+              {ss.map((s, i) => {
+                const isActive = activeSearchId == s.id || (activeSearchId == undefined && i == 0);
+                const isEditing = editingId == s.id;
+                // A mounted tab reports its criteria live, so its edits show up in
+                // the tooltip without a round trip; everything else falls back to
+                // the copy fetched on hover.
+                const liveForm = liveSearchForms[s.id];
+                const summaryForm = liveForm ?? fetchedSearchForms[s.id];
+                const revealSummary = () => {
+                  if (!liveForm) ensureSearchForm(s.id);
+                };
 
-            return (
-              <div
-                key={s.id}
-                className="group flex items-center"
-                onFocus={revealSummary}
-                onMouseEnter={revealSummary}
-              >
-                <Button
-                  className="gap-1 pr-1"
-                  color={isActive ? "primary" : "default"}
-                  size="sm"
-                  onPress={() => {
-                    if (!isActive) {
-                      changeTab(s.id);
-                    }
-                  }}
-                >
-                  {/* The tab name is renameable, but nothing said so. Swapping the
-                      saved-search glyph for a pencil on hover advertises it, and makes
-                      the icon itself the click target so renaming no longer depends on
-                      discovering the double-click. */}
-                  <Tooltip content={t<string>("resource.tab.rename")} placement="top">
-                    <div
-                      className="relative w-[18px] h-[18px] shrink-0"
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        beginRename(s.id);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          beginRename(s.id);
+                return (
+                  <div
+                    key={s.id}
+                    className="group flex items-center"
+                    onFocus={revealSummary}
+                    onMouseEnter={revealSummary}
+                  >
+                    <Button
+                      className="gap-1 pr-1"
+                      color={isActive ? "primary" : "default"}
+                      size="sm"
+                      onPress={() => {
+                        if (!isActive) {
+                          changeTab(s.id);
                         }
                       }}
                     >
-                      <MdSavedSearch className="text-lg absolute inset-0 transition-opacity group-hover:opacity-0" />
-                      <MdEdit className="text-lg absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100" />
-                    </div>
-                  </Tooltip>
-                  <div className="relative">
-                    {/* The name is where the tab's identity lives, so it also
+                      {/* The tab name is renameable, but nothing said so. Swapping the
+                      saved-search glyph for a pencil on hover advertises it, and makes
+                      the icon itself the click target so renaming no longer depends on
+                      discovering the double-click. */}
+                      <Tooltip content={t<string>("resource.tab.rename")} placement="top">
+                        <div
+                          className="relative w-[18px] h-[18px] shrink-0"
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            beginRename(s.id);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              beginRename(s.id);
+                            }
+                          }}
+                        >
+                          <MdSavedSearch className="text-lg absolute inset-0 transition-opacity group-hover:opacity-0" />
+                          <MdEdit className="text-lg absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                        </div>
+                      </Tooltip>
+                      <div className="relative">
+                        {/* The name is where the tab's identity lives, so it also
                         carries the search-criteria digest. Hanging it on the
                         name rather than the whole button keeps it from firing
                         at the same time as the rename hint on the icon. */}
-                    <Tooltip
-                      content={<SearchSummary form={summaryForm} loading={!summaryForm} />}
-                      delay={300}
-                      isDisabled={isEditing}
-                      placement="bottom"
-                    >
-                      <span
-                        className={`text-sm font-medium max-w-[150px] truncate block ${isEditing ? "invisible" : ""}`}
-                        onDoubleClick={(e) => {
-                          if (isActive) {
-                            e.stopPropagation();
-                            beginRename(s.id);
-                          }
-                        }}
-                      >
-                        {getDisplayName(s, i)}
-                      </span>
-                    </Tooltip>
-                    {isEditing && (
-                      <Input
-                        ref={inputRef}
-                        className="absolute inset-0"
-                        classNames={{
-                          input: "text-sm font-medium",
-                          inputWrapper: "min-h-0 h-full px-0 bg-transparent shadow-none",
-                          base: "h-full",
-                        }}
-                        size="sm"
-                        value={editingName}
-                        onBlur={() => {
-                          if (editingId == s.id) commitRename();
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            commitRename();
-                          }
-                          // Entering edit mode locks the name (per spec —
-                          // even Escape commits the currently pre-filled
-                          // auto-name). Clearing the input and committing
-                          // is the explicit way back to auto-mode.
-                          if (e.key === "Escape") {
-                            e.preventDefault();
-                            commitRename();
-                          }
-                        }}
-                        onValueChange={(v) => setEditingName(v)}
-                      />
-                    )}
-                  </div>
-                  <div
-                    className={`
+                        <Tooltip
+                          content={<SearchSummary form={summaryForm} loading={!summaryForm} />}
+                          delay={300}
+                          isDisabled={isEditing}
+                          placement="bottom"
+                        >
+                          <span
+                            className={`text-sm font-medium max-w-[150px] truncate block ${isEditing ? "invisible" : ""}`}
+                            onDoubleClick={(e) => {
+                              if (isActive) {
+                                e.stopPropagation();
+                                beginRename(s.id);
+                              }
+                            }}
+                          >
+                            {getDisplayName(s, i)}
+                          </span>
+                        </Tooltip>
+                        {isEditing && (
+                          <Input
+                            ref={inputRef}
+                            className="absolute inset-0"
+                            classNames={{
+                              input: "text-sm font-medium",
+                              inputWrapper: "min-h-0 h-full px-0 bg-transparent shadow-none",
+                              base: "h-full",
+                            }}
+                            size="sm"
+                            value={editingName}
+                            onBlur={() => {
+                              if (editingId == s.id) commitRename();
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                commitRename();
+                              }
+                              // Entering edit mode locks the name (per spec —
+                              // even Escape commits the currently pre-filled
+                              // auto-name). Clearing the input and committing
+                              // is the explicit way back to auto-mode.
+                              if (e.key === "Escape") {
+                                e.preventDefault();
+                                commitRename();
+                              }
+                            }}
+                            onValueChange={(v) => setEditingName(v)}
+                          />
+                        )}
+                      </div>
+                      <div
+                        className={`
                       p-0.5 rounded transition-opacity
                       ${
                         isActive
@@ -380,45 +384,57 @@ const ResourcePage = () => {
                           : "opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-default-300"
                       }
                     `}
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeSaved(s.id);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        removeSaved(s.id);
-                      }
-                    }}
-                  >
-                    <AiOutlineClose className="text-xs" />
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeSaved(s.id);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            removeSaved(s.id);
+                          }
+                        }}
+                      >
+                        <AiOutlineClose className="text-xs" />
+                      </div>
+                    </Button>
                   </div>
-                </Button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <Button data-resource-move-panel size="sm" variant="flat" onPress={() => openMovePanel()}>
+          <MdDriveFileMove className="text-lg" />
+          {t<string>("resourceMove.panel.open", "Move panel")}
+        </Button>
+      </div>
+      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+        <div className="flex flex-col flex-1 min-h-0 min-w-0">
+          {ss.map((s) => {
+            const isActive = s.id == activeSearchId;
+
+            return (
+              <div key={s.id} className={`grow min-h-0 ${isActive ? "" : "hidden"}`}>
+                {mountedTabIds.includes(s.id) && (
+                  <ResourceTabContent
+                    activated={isActive}
+                    searchId={s.id}
+                    searchName={getDisplayName(s, ss.indexOf(s))}
+                    searchInNewTab={searchInNewTab}
+                    onOpenRecentlyPlayed={handleOpenRecentlyPlayed}
+                    onSearchFormChange={handleSearchFormChange}
+                  />
+                )}
               </div>
             );
           })}
         </div>
-      )}
-      {ss.map((s) => {
-        const isActive = s.id == activeSearchId;
-
-        return (
-          <div key={s.id} className={`grow min-h-0 ${isActive ? "" : "hidden"}`}>
-            {mountedTabIds.includes(s.id) && (
-              <ResourceTabContent
-                activated={isActive}
-                searchId={s.id}
-                searchInNewTab={searchInNewTab}
-                onOpenRecentlyPlayed={handleOpenRecentlyPlayed}
-                onSearchFormChange={handleSearchFormChange}
-              />
-            )}
-          </div>
-        );
-      })}
+        <ResourceMovePanelDock />
+      </div>
       <RecentlyPlayedDrawer
         isOpen={recentlyPlayedOpen}
         onClose={() => setRecentlyPlayedOpen(false)}

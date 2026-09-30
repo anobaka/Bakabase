@@ -7,6 +7,7 @@ import {
   CaretRightOutlined,
   ClearOutlined,
   CloseCircleOutlined,
+  ExclamationCircleOutlined,
   PauseOutlined,
 } from "@ant-design/icons";
 
@@ -68,7 +69,9 @@ const FloatingAssistant = () => {
         if (ongoingTasks.length > 0) {
           newStatus = AssistantStatus.Working;
         } else {
-          const failedTasks = tempTasks.filter((a) => a.status === BTaskStatus.Error);
+          const failedTasks = tempTasks.filter(
+            (a) => a.status === BTaskStatus.Error || a.status === BTaskStatus.WaitingForInput,
+          );
 
           if (failedTasks.length > 0) {
             newStatus = AssistantStatus.Failed;
@@ -148,6 +151,7 @@ const FloatingAssistant = () => {
   }, [runningTasks]);
 
   const statusClassName = useMemo(() => Object.keys(AssistantStatus)[status], [status]);
+  const needsAttention = bTasks.some((task) => task.status === BTaskStatus.WaitingForInput);
 
   return (
     <Popover
@@ -223,12 +227,20 @@ const FloatingAssistant = () => {
           </div>
           {/* Failed */}
           <Tooltip
-            color="danger"
-            content={t("floatingAssistant.status.someTasksFailed")}
+            color={needsAttention ? "warning" : "danger"}
+            content={
+              needsAttention
+                ? t<string>("resourceMove.panel.waitingForInput", "Needs attention")
+                : t("floatingAssistant.status.someTasksFailed")
+            }
             placement="right"
           >
             <div className="failed flex items-center justify-center w-[48px] h-[48px]">
-              <CloseCircleOutlined className="text-4xl" />
+              {needsAttention ? (
+                <ExclamationCircleOutlined className="text-4xl text-warning" />
+              ) : (
+                <CloseCircleOutlined className="text-4xl" />
+              )}
             </div>
           </Tooltip>
         </div>

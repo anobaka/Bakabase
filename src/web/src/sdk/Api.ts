@@ -14,6 +14,24 @@ const log = buildLogger("BApi");
  * ---------------------------------------------------------------
  */
 
+export interface BakabaseAbstractionsComponentsConfigurationResourceMoveDestination {
+  id: string;
+  path: string;
+  name?: string;
+  scope: string;
+  tabId?: string;
+  /** @format int32 */
+  order: number;
+  isDeleted: boolean;
+}
+
+export interface BakabaseAbstractionsComponentsConfigurationResourceMovePanelOptions {
+  destinations: BakabaseAbstractionsComponentsConfigurationResourceMoveDestination[];
+  autoOverwrite: boolean;
+  /** @format int64 */
+  revision: number;
+}
+
 export interface BakabaseAbstractionsComponentsConfigurationTaskOptions {
   tasks?: BakabaseAbstractionsModelsDbBTaskDbModel[];
 }
@@ -107,7 +125,7 @@ export interface BakabaseAbstractionsModelsDbResourceMoveRecordDbModel {
   sourcePath: string;
   /** @minLength 1 */
   destPath: string;
-  /** [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted] */
+  /** [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted, 7: WaitingForConflict, 8: NeedsRecovery, 9: Skipped] */
   status: BakabaseAbstractionsModelsDomainConstantsResourceMoveRecordStatus;
   /** @format int32 */
   attempts: number;
@@ -119,6 +137,28 @@ export interface BakabaseAbstractionsModelsDbResourceMoveRecordDbModel {
   startedAt?: string;
   /** @format date-time */
   completedAt?: string;
+  origin?: string;
+  sourceTabId?: string;
+  sourceTabName?: string;
+  destinationId?: string;
+  destinationName?: string;
+  idempotencyKey?: string;
+  requestFingerprint?: string;
+  conflictPolicy: string;
+  cancelRequested: boolean;
+  errorCode?: string;
+  conflictKind?: string;
+  conflictPath?: string;
+  /** @format int32 */
+  conflictVersion: number;
+  canOverwrite: boolean;
+  conflictFingerprint?: string;
+  conflictDecisionsJson?: string;
+  moveJournalJson?: string;
+  reservedResourceIdsJson?: string;
+  sourceResourcePathsJson?: string;
+  executionPlanJson?: string;
+  policyAuditJson?: string;
 }
 
 export interface BakabaseAbstractionsModelsDbSteamAppDbModel {
@@ -324,7 +364,7 @@ export type BakabaseAbstractionsModelsDomainConstantsResourceDataType = 1 | 2 | 
 export type BakabaseAbstractionsModelsDomainConstantsResourceMatchSuggestionStatus = 1 | 2;
 
 /**
- * [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted]
+ * [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted, 7: WaitingForConflict, 8: NeedsRecovery, 9: Skipped]
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsResourceMoveRecordStatus =
@@ -333,7 +373,10 @@ export type BakabaseAbstractionsModelsDomainConstantsResourceMoveRecordStatus =
   | 3
   | 4
   | 5
-  | 6;
+  | 6
+  | 7
+  | 8
+  | 9;
 
 /**
  * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 7: Pixiv]
@@ -848,6 +891,13 @@ export interface BakabaseAbstractionsModelsDomainResourceMatchSuggestion {
   createdAt: string;
 }
 
+export interface BakabaseAbstractionsModelsDomainResourceMoveConflictResolution {
+  action: string;
+  scope: string;
+  /** @format int32 */
+  conflictVersion: number;
+}
+
 export interface BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions {
   enhancers?: BakabaseAbstractionsModelsDomainEnhancerFullOptions[];
 }
@@ -1205,6 +1255,48 @@ export interface BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigu
   uniqueExtensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
 }
 
+export interface BakabaseAbstractionsModelsViewResourceMoveBatchCounts {
+  /** @format int32 */
+  total: number;
+  /** @format int32 */
+  succeeded: number;
+  /** @format int32 */
+  failed: number;
+  /** @format int32 */
+  cancelled: number;
+  /** @format int32 */
+  skipped: number;
+  /** @format int32 */
+  waiting: number;
+}
+
+export interface BakabaseAbstractionsModelsViewResourceMoveBatchDetailViewModel {
+  batchId: string;
+  taskId: string;
+  origin?: string;
+  sourceTabId?: string;
+  sourceTabName?: string;
+  destDir: string;
+  destinationId?: string;
+  destinationName?: string;
+  status: string;
+  conflictPolicy: string;
+  /** @format int32 */
+  percentage: number;
+  cancelRequested: boolean;
+  canCancel: boolean;
+  canRetry: boolean;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  completedAt?: string;
+  resourceIds: number[];
+  lockedResourceIds: number[];
+  reservedPaths: string[];
+  counts: BakabaseAbstractionsModelsViewResourceMoveBatchCounts;
+  records: BakabaseAbstractionsModelsDbResourceMoveRecordDbModel[];
+}
+
 export interface BakabaseAbstractionsModelsViewResourceMoveBatchViewModel {
   batchId: string;
   /** @format int32 */
@@ -1213,6 +1305,10 @@ export interface BakabaseAbstractionsModelsViewResourceMoveBatchViewModel {
 
 export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModel {
   items: BakabaseAbstractionsModelsViewResourceMovePreviewViewModelItem[];
+  skippedResourceIds: number[];
+  duplicateDestinationPaths: string[];
+  previewFingerprint?: string;
+  excludedResources: BakabaseAbstractionsModelsViewResourceMovePreviewViewModelExcludedResource[];
 }
 
 export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelCoveredResource {
@@ -1222,6 +1318,15 @@ export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelCover
   wasSelected: boolean;
 }
 
+export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelExcludedResource {
+  /** @format int32 */
+  resourceId: number;
+  displayName: string;
+  path?: string;
+  reasonCode: string;
+  blockingResourceIds?: number[];
+}
+
 export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelItem {
   /** @format int32 */
   resourceId: number;
@@ -1229,6 +1334,9 @@ export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelItem 
   destPath: string;
   destConflict: boolean;
   destInsideSource: boolean;
+  unavailableReason?: string;
+  conflictKind?: string;
+  canOverwrite: boolean;
   effects: BakabaseAbstractionsModelsViewResourceMovePreviewViewModelMarkEffect[];
   coveredResources: BakabaseAbstractionsModelsViewResourceMovePreviewViewModelCoveredResource[];
 }
@@ -6825,9 +6933,18 @@ export interface BakabaseServiceModelsInputResourceMediaLibraryMappingInputModel
 }
 
 export interface BakabaseServiceModelsInputResourceMoveInputModel {
+  origin?: string;
+  sourceTabId?: string;
+  sourceTabName?: string;
+  destinationId?: string;
+  destinationName?: string;
+  idempotencyKey?: string;
+  expectedPreviewFingerprint?: string;
+  conflictPolicy: string;
   resourceIds: number[];
   /** @minLength 1 */
   destDir: string;
+  resourceRefs?: BakabaseModulesFederationContractsResourceRef[];
 }
 
 export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
@@ -7620,6 +7737,11 @@ export interface BakabaseServiceModelsViewResourceMaterializeResultViewModel {
   merged: boolean;
 }
 
+export interface BakabaseServiceModelsViewResourceMoveContextViewModel {
+  nodeId: string;
+  libraryEpoch: string;
+}
+
 export interface BakabaseServiceModelsViewResourcePathInfoViewModel {
   /** @format int32 */
   id: number;
@@ -7854,6 +7976,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainTextTypeDescriptor[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewResourceMoveBatchDetailViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewResourceMoveBatchDetailViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusViewModel {
@@ -8530,6 +8659,13 @@ export interface BootstrapModelsResponseModelsSearchResponse1BootstrapComponents
   pageSize: number;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsConfigurationResourceMovePanelOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsComponentsConfigurationResourceMovePanelOptions;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsConfigurationTaskOptions {
   /** @format int32 */
   code: number;
@@ -8669,6 +8805,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewResourceMoveBatchDetailViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewResourceMoveBatchDetailViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewResourceMoveBatchViewModel {
@@ -9544,6 +9687,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewResourceMaterializeResultViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceMoveContextViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceMoveContextViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel {
@@ -28319,6 +28469,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags ResourceMove
+     * @name GetResourceMoveContext
+     * @request GET:/resource-move/context
+     */
+    getResourceMoveContext: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceMoveContextViewModel,
+        any
+      >({
+        path: `/resource-move/context`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceMoveContext
+     * @name getResourceMoveContextUrl
+     */
+    getResourceMoveContextUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-move/context`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMove
      * @name MoveResources
      * @request POST:/resource-move
      */
@@ -28348,6 +28527,150 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMove
+     * @name GetResourceMoveBatches
+     * @request GET:/resource-move/batches
+     */
+    getResourceMoveBatches: (
+      query?: {
+        origin?: string;
+        sourceTabId?: string;
+        /** @default false */
+        activeOnly?: boolean;
+        /**
+         * @format int32
+         * @default 0
+         */
+        skip?: number;
+        /**
+         * @format int32
+         * @default 100
+         */
+        take?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewResourceMoveBatchDetailViewModel,
+        any
+      >({
+        path: `/resource-move/batches`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceMoveBatches
+     * @name getResourceMoveBatchesUrl
+     */
+    getResourceMoveBatchesUrl: (query?: {
+        origin?: string;
+        sourceTabId?: string;
+        /** @default false */
+        activeOnly?: boolean;
+        /**
+         * @format int32
+         * @default 0
+         */
+        skip?: number;
+        /**
+         * @format int32
+         * @default 100
+         */
+        take?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-move/batches`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMove
+     * @name GetResourceMoveBatch
+     * @request GET:/resource-move/batches/{batchId}
+     */
+    getResourceMoveBatch: (batchId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewResourceMoveBatchDetailViewModel,
+        any
+      >({
+        path: `/resource-move/batches/${batchId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceMove
+     * @name CancelResourceMoveBatch
+     * @request POST:/resource-move/batches/{batchId}/cancel
+     */
+    cancelResourceMoveBatch: (batchId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-move/batches/${batchId}/cancel`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceMove
+     * @name RetryResourceMoveBatch
+     * @request POST:/resource-move/batches/{batchId}/retry
+     */
+    retryResourceMoveBatch: (batchId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-move/batches/${batchId}/retry`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceMove
+     * @name ResolveResourceMoveConflict
+     * @request POST:/resource-move/records/{id}/resolve
+     */
+    resolveResourceMoveConflict: (
+      id: number,
+      data: BakabaseAbstractionsModelsDomainResourceMoveConflictResolution,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-move/records/${id}/resolve`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description
@@ -28492,6 +28815,69 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteInactiveResourceMoveRecordsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-move/records/inactive`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMovePanel
+     * @name GetResourceMovePanelOptions
+     * @request GET:/resource-move/panel-options
+     */
+    getResourceMovePanelOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsConfigurationResourceMovePanelOptions,
+        any
+      >({
+        path: `/resource-move/panel-options`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceMovePanelOptions
+     * @name getResourceMovePanelOptionsUrl
+     */
+    getResourceMovePanelOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-move/panel-options`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMovePanel
+     * @name SaveResourceMovePanelOptions
+     * @request PUT:/resource-move/panel-options
+     */
+    saveResourceMovePanelOptions: (
+      data: BakabaseAbstractionsComponentsConfigurationResourceMovePanelOptions,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsConfigurationResourceMovePanelOptions,
+        any
+      >({
+        path: `/resource-move/panel-options`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for saveResourceMovePanelOptions
+     * @name saveResourceMovePanelOptionsUrl
+     */
+    saveResourceMovePanelOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-move/panel-options`;
 
       return baseUrl + path;
     },

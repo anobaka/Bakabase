@@ -2,6 +2,9 @@
 using Bakabase.Infrastructures.Components.App;
 using System.IO;
 using Bakabase.Abstractions.Components.Events;
+using Bakabase.Abstractions.Components.ResourceMove;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.ResourceMove;
 using Bakabase.Service.Components.Workflow.Resources;
 using Bakabase.Service.Components.IdentityLookups;
 using Bakabase.Modules.Acquisition.Extensions;
@@ -121,9 +124,19 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<IResourceLegacySearchService, ResourceLegacySearchService>();
             services.AddScoped<IResourceService, ResourceService>();
             services.AddSingleton<Bakabase.Abstractions.Components.ResourceMove.ResourceMoveGuard>();
+            services.AddSingleton<Bakabase.InsideWorld.Business.Components.ResourceMove.ResourceMovePanelSettings>();
+            services.AddSingleton<Bakabase.Abstractions.Components.ResourceMove.IResourceMovePanelSettings>(sp =>
+                sp.GetRequiredService<Bakabase.InsideWorld.Business.Components.ResourceMove.ResourceMovePanelSettings>());
             services
                 .AddScoped<IResourceMoveService,
                     Bakabase.InsideWorld.Business.Components.ResourceMove.ResourceMoveService>();
+            services.AddScoped<IResourceMoveExecutor, LocalFilesResourceMoveExecutor>();
+            services.AddScoped<IResourceSourceMoveHandler, SteamResourceSourceMoveHandler>();
+            services.AddScoped<IResourceSourceMoveHandler, PathMarkResourceSourceMoveHandler>();
+            services.AddScoped<IResourceSourceMoveHandler, DLsiteResourceSourceMoveHandler>();
+            services.AddScoped<IResourceSourceMoveHandler, ExHentaiResourceSourceMoveHandler>();
+            services.AddScoped<IResourceSourceMoveHandler>(_ => new LocalContentResourceSourceMoveHandler(ResourceSource.Aigc));
+            services.AddScoped<IResourceSourceMoveHandler>(_ => new LocalContentResourceSourceMoveHandler(ResourceSource.Pixiv));
             services.AddSingleton<IPropertyValueScopeResolver, PropertyValueScopeResolver>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int>>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, PlayHistoryDbModel, int>>();

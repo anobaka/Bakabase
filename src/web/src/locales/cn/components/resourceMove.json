@@ -29,5 +29,12 @@
   "resourceMove.records.empty": "暂无移动记录",
   "resourceMove.records.retry": "重试",
   "resourceMove.records.retryScheduled": "已安排重试",
-  "resourceMove.records.clearInactive": "清除已结束记录"
+  "resourceMove.records.clearInactive": "清除已结束记录",
+  "resourceMove.panel.preparing": "准备移动中",
+  "resourceMove.panel.queued": "等待移动",
+  "resourceMove.panel.stopping": "正在停止移动",
+  "resourceMove.panel.stopAtBoundary": "完成当前资源后停止剩余移动",
+  "resourceMove.panel.waitingForInput": "移动需要处理",
+  "resourceMove.panel.open": "移动面板",
+  "resourceMove.panel.dragCount": "移动 {{count}} 个资源"
 }

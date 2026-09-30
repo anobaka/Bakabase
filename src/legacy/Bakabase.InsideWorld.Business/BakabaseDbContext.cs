@@ -576,6 +576,8 @@ namespace Bakabase.InsideWorld.Business
 
             modelBuilder.Entity<ResourceMoveRecordDbModel>(t =>
             {
+                t.HasIndex(x => x.IdempotencyKey).IsUnique();
+                t.Property(x => x.ConflictPolicy).HasDefaultValue("inherit");
                 t.HasIndex(x => x.BatchId);
                 t.HasIndex(x => x.Status);
                 t.HasIndex(x => x.ResourceId);
