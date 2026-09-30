@@ -6,15 +6,17 @@ import { movePanelApi } from "./api";
 import { getKnownMoveReasonCode, useMoveReasonText, useMoveText } from "./messages";
 import { moveSourceContextError } from "./sourceContext";
 
-import { Modal } from "@/components/bakaui";
+import { Button, Checkbox, Modal, Progress, Select } from "@/components/bakaui";
 import { useBTasksStore } from "@/stores/bTasks";
 import { refreshMovePanel, useResourceMovePanelStore } from "@/stores/resourceMovePanel";
 
 function ConflictActions({
   record,
+  isDisabled,
   onAction,
 }: {
   record: MoveRecord;
+  isDisabled: boolean;
   onAction: (action: () => Promise<unknown>) => void;
 }) {
   const [scope, setScope] = useState<"once" | "batch" | "panel">("once");
@@ -26,43 +28,64 @@ function ConflictActions({
       <code>{record.conflictPath ?? record.destPath}</code>
       {record.canOverwrite && (
         <>
-          <label>
-            {text("scope")}
-            <select value={scope} onChange={(e) => setScope(e.target.value as typeof scope)}>
-              <option value="once">{text("once")}</option>
-              <option value="batch">{text("batch")}</option>
-              <option value="panel">{text("panel")}</option>
-            </select>
-          </label>
+          <Select
+            disallowEmptySelection
+            dataSource={["once", "batch", "panel"].map((value) => ({
+              value,
+              label: text(value as typeof scope),
+            }))}
+            isDisabled={isDisabled}
+            label={text("scope")}
+            labelPlacement="outside"
+            selectedKeys={[scope]}
+            size="sm"
+            onSelectionChange={(keys) => {
+              const value = Array.from(keys)[0];
+
+              if (value === "once" || value === "batch" || value === "panel") setScope(value);
+            }}
+          />
           {scope === "panel" && <p>{text("autoHelp")}</p>}
-          <button
-            className="danger"
+          <Button
+            color="danger"
+            isDisabled={isDisabled}
+            size="sm"
             type="button"
-            onClick={() =>
+            variant="flat"
+            onPress={() =>
               onAction(() =>
                 movePanelApi.resolve(record.id, "overwrite", scope, record.conflictVersion ?? 0),
               )
             }
           >
             {text("resolveOverwrite")}
-          </button>
+          </Button>
         </>
       )}
-      <button
+      <Button
+        isDisabled={isDisabled}
+        size="sm"
         type="button"
-        onClick={() =>
+        variant="flat"
+        onPress={() =>
           onAction(() =>
             movePanelApi.resolve(record.id, "skip", "once", record.conflictVersion ?? 0),
           )
         }
       >
         {text("skip")}
-      </button>
+      </Button>
     </div>
   );
 }
 /** Legacy records can only be released after explicitly confirming and verifying manual restoration. */
-function LegacyRecoveryActions({ record }: { record: MoveRecord }) {
+function LegacyRecoveryActions({
+  record,
+  isDisabled,
+}: {
+  record: MoveRecord;
+  isDisabled: boolean;
+}) {
   const text = useMoveText();
   const reasonText = useMoveReasonText();
   const sourceContext = useResourceMovePanelStore((s) => s.sourceContext);
@@ -101,9 +124,15 @@ function LegacyRecoveryActions({ record }: { record: MoveRecord }) {
 
   return (
     <>
-      <button type="button" onClick={() => setConfirming(true)}>
+      <Button
+        isDisabled={isDisabled}
+        size="sm"
+        type="button"
+        variant="flat"
+        onPress={() => setConfirming(true)}
+      >
         {text(restorePlatformLinks ? "restorePlatformSource" : "restoreSource")}
-      </button>
+      </Button>
       {confirming && (
         <Modal
           visible
@@ -117,36 +146,37 @@ function LegacyRecoveryActions({ record }: { record: MoveRecord }) {
           <div data-resource-move-panel className="move-panel-confirm">
             <p>{text(restorePlatformLinks ? "restorePlatformSourceHelp" : "restoreSourceHelp")}</p>
             <code className="move-panel-full-path">{record.sourcePath}</code>
-            <label>
-              <input
-                checked={acknowledged}
-                disabled={busy}
-                type="checkbox"
-                onChange={(e) => setAcknowledged(e.target.checked)}
-              />
+            <Checkbox
+              isDisabled={busy}
+              isSelected={acknowledged}
+              size="sm"
+              onValueChange={setAcknowledged}
+            >
               {text(
                 restorePlatformLinks
                   ? "restorePlatformSourceAcknowledgement"
                   : "restoreSourceAcknowledgement",
               )}
-            </label>
+            </Checkbox>
             {error && (
               <p className="move-panel-error" role="alert">
                 {getKnownMoveReasonCode(error) ? reasonText(error) : error}
               </p>
             )}
             <div className="move-panel-actions">
-              <button disabled={busy} type="button" onClick={close}>
+              <Button isDisabled={busy} size="sm" type="button" variant="flat" onPress={close}>
                 {text("cancel")}
-              </button>
-              <button
-                className="primary"
-                disabled={!acknowledged || busy}
+              </Button>
+              <Button
+                color="primary"
+                isDisabled={!acknowledged || busy}
+                isLoading={busy}
+                size="sm"
                 type="button"
-                onClick={() => void confirm()}
+                onPress={() => void confirm()}
               >
                 {text(restorePlatformLinks ? "restorePlatformSourceSubmit" : "restoreSourceSubmit")}
-              </button>
+              </Button>
             </div>
           </div>
         </Modal>
@@ -218,7 +248,13 @@ export function MoveTaskCard({ batch }: { batch: MoveBatch }) {
         {text("taskSource")}: {batch.sourceTabName || batch.sourceTabId || text("noTab")}
       </div>
       <div className="move-panel-progress">
-        <progress aria-label={text("tasks")} max={100} value={progress} />
+        <Progress
+          aria-label={text("tasks")}
+          className="min-w-0 flex-1"
+          maxValue={100}
+          size="sm"
+          value={progress}
+        />
         <span>{Math.round(progress)}%</span>
       </div>
       <div className="move-panel-counts">
@@ -235,14 +271,26 @@ export function MoveTaskCard({ batch }: { batch: MoveBatch }) {
       )}
       <fieldset className="move-panel-task-actions" disabled={busy}>
         {batch.canCancel && (
-          <button type="button" onClick={() => void act(() => movePanelApi.cancel(batch.batchId))}>
+          <Button
+            isDisabled={busy}
+            size="sm"
+            type="button"
+            variant="flat"
+            onPress={() => void act(() => movePanelApi.cancel(batch.batchId))}
+          >
             {text("stop")}
-          </button>
+          </Button>
         )}
         {batch.canRetry && (
-          <button type="button" onClick={() => void act(() => movePanelApi.retry(batch.batchId))}>
+          <Button
+            isDisabled={busy}
+            size="sm"
+            type="button"
+            variant="flat"
+            onPress={() => void act(() => movePanelApi.retry(batch.batchId))}
+          >
             {text("retry")}
-          </button>
+          </Button>
         )}
         <details open={hasConflicts || undefined}>
           <summary>
@@ -262,10 +310,14 @@ export function MoveTaskCard({ batch }: { batch: MoveBatch }) {
               {record.conflictKind === "legacyRecovery" ||
               record.conflictKind === "legacySourcePlanMissing" ||
               record.errorCode === "legacySourcePlanMissing" ? (
-                <LegacyRecoveryActions record={record} />
+                <LegacyRecoveryActions isDisabled={busy} record={record} />
               ) : (
                 record.status === 7 && (
-                  <ConflictActions record={record} onAction={(fn) => void act(fn)} />
+                  <ConflictActions
+                    isDisabled={busy}
+                    record={record}
+                    onAction={(fn) => void act(fn)}
+                  />
                 )
               )}
             </div>
@@ -328,19 +380,34 @@ export default function TaskList() {
         <h3>
           {text("tasks")} ({all.length})
         </h3>
-        <select
+        <Select
+          disallowEmptySelection
           aria-label={text("tasks")}
-          value={filterCurrent ? "current" : "all"}
-          onChange={(e) => setFilterCurrent(e.target.value === "current")}
-        >
-          <option value="all">{text("allTasks")}</option>
-          {tabId && <option value="current">{text("currentTasks")}</option>}
-        </select>
+          className="min-w-0 max-w-48"
+          dataSource={[
+            { value: "all", label: text("allTasks") },
+            ...(tabId ? [{ value: "current", label: text("currentTasks") }] : []),
+          ]}
+          selectedKeys={[filterCurrent ? "current" : "all"]}
+          size="sm"
+          onSelectionChange={(keys) => {
+            const value = Array.from(keys)[0];
+
+            if (value === "all" || value === "current") setFilterCurrent(value === "current");
+          }}
+        />
       </div>
       {filterCurrent && otherWaiting > 0 && (
-        <button className="move-panel-notice" type="button" onClick={() => setFilterCurrent(false)}>
+        <Button
+          className="h-auto whitespace-normal py-2"
+          color="warning"
+          size="sm"
+          type="button"
+          variant="flat"
+          onPress={() => setFilterCurrent(false)}
+        >
           {text("pendingOther")}: {otherWaiting}
-        </button>
+        </Button>
       )}
       <div className="move-panel-task-list">
         {shown.length ? (
@@ -349,9 +416,16 @@ export default function TaskList() {
           <p className="move-panel-empty">{text("noTasks")}</p>
         )}
         {hasMore && batches.length >= 100 && (
-          <button disabled={moreLoading} type="button" onClick={() => void more()}>
+          <Button
+            isDisabled={moreLoading}
+            isLoading={moreLoading}
+            size="sm"
+            type="button"
+            variant="flat"
+            onPress={() => void more()}
+          >
             {text("more")}
-          </button>
+          </Button>
         )}
         {moreError && (
           <p className="move-panel-error" role="alert">

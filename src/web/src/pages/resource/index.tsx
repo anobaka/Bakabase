@@ -5,7 +5,7 @@ import type { SearchForm as ResourceSearchForm } from "@/pages/resource/models";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineClose } from "react-icons/ai";
-import { MdSavedSearch, MdEdit, MdDriveFileMove } from "react-icons/md";
+import { MdSavedSearch, MdEdit } from "react-icons/md";
 
 import { Button, Input, Tooltip } from "@/components/bakaui";
 import { useResourceOptionsStore } from "@/stores/options";
@@ -17,7 +17,6 @@ import RecentlyPlayedDrawer from "@/pages/resource/components/RecentlyPlayedDraw
 import SearchSummary from "@/pages/resource/components/SearchSummary";
 import { buildAutoTabName } from "@/pages/resource/utils/buildAutoTabName";
 import { ResourceMovePanelDock } from "@/components/ResourceMovePanel";
-import { openMovePanel } from "@/stores/resourceMovePanel";
 
 type SearchForm = components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
 
@@ -407,10 +406,6 @@ const ResourcePage = () => {
             </div>
           )}
         </div>
-        <Button data-resource-move-panel size="sm" variant="flat" onPress={() => openMovePanel()}>
-          <MdDriveFileMove className="text-lg" />
-          {t<string>("resourceMove.panel.open", "Move panel")}
-        </Button>
       </div>
       <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
         <div className="flex flex-col flex-1 min-h-0 min-w-0">

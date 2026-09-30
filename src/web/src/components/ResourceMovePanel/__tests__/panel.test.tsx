@@ -30,16 +30,34 @@ vi.mock("@/sdk/BApi", () => ({
   },
 }));
 vi.mock("@/components/FileExplorer", () => ({ FileExplorer: () => <div>Folder picker</div> }));
-vi.mock("@/components/bakaui", () => ({
-  Modal: ({ children, title, visible, onClose, hideCloseButton }: any) =>
-    visible ? (
-      <div aria-label={title} role="dialog">
-        {!hideCloseButton && <button onClick={onClose}>Close dialog</button>}
-        {children}
-      </div>
-    ) : null,
-  Spinner: () => <span>Loading</span>,
-}));
+vi.mock("@/components/bakaui", async () => {
+  const { Button, Checkbox, Chip, Input, Progress, Select, SelectItem } = await import(
+    "@heroui/react"
+  );
+
+  return {
+    Button,
+    Checkbox,
+    Chip,
+    Input,
+    Progress,
+    Select: ({ dataSource, ...props }: any) => (
+      <Select {...props}>
+        {(dataSource ?? []).map((item: any) => (
+          <SelectItem key={item.value}>{item.label}</SelectItem>
+        ))}
+      </Select>
+    ),
+    Modal: ({ children, title, visible, onClose, hideCloseButton }: any) =>
+      visible ? (
+        <div aria-label={title} role="dialog">
+          {!hideCloseButton && <button onClick={onClose}>Close dialog</button>}
+          {children}
+        </div>
+      ) : null,
+    Spinner: () => <span>Loading</span>,
+  };
+});
 vi.mock("react-rnd", () => ({ Rnd: ({ children }: any) => <div>{children}</div> }));
 import ResourceMovePanel from "../index";
 import MoveConfirmation from "../MoveConfirmation";
@@ -66,7 +84,8 @@ const preview = {
 };
 
 beforeEach(() => {
-  vi.resetAllMocks();
+  vi.clearAllMocks();
+  Object.values(api).forEach((mock) => mock.mockReset());
   api.context.mockResolvedValue(sourceContext);
   vi.mocked(BApi.pathMark.getAllPathMarks).mockResolvedValue({ data: [] } as any);
   vi.mocked(BApi.pathMark.getAllPathMarkPaths).mockResolvedValue({ data: [] } as any);
@@ -501,7 +520,8 @@ describe("real move panel interactions", () => {
     api.resolve.mockResolvedValue({});
     api.options.mockResolvedValue({ ...options, revision: 2, autoOverwrite: true });
     render(<MoveTaskCard batch={batch} />);
-    fireEvent.change(screen.getByLabelText("Available in"), { target: { value: "panel" } });
+    fireEvent.click(screen.getByRole("button", { name: "This conflict only" }));
+    fireEvent.click(await screen.findByRole("option", { name: "All panel tasks" }));
     fireEvent.click(screen.getByRole("button", { name: "Overwrite and continue" }));
     await waitFor(() => expect(api.resolve).toHaveBeenCalledWith(7, "overwrite", "panel", 4));
     await waitFor(() =>

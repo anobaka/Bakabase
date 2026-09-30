@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useMoveText } from "./messages";
 
-import { Modal } from "@/components/bakaui";
+import { Button, Checkbox, Input, Modal } from "@/components/bakaui";
 import { FileExplorer } from "@/components/FileExplorer";
 import BApi from "@/sdk/BApi";
 import { IwFsType } from "@/sdk/constants";
@@ -113,41 +113,49 @@ export default function DestinationEditor({
       visible
       classNames={{ base: "max-w-4xl w-[92vw] h-[82vh]", body: "min-h-0 overflow-hidden" }}
       footer={false}
+      hideCloseButton={saving}
+      isDismissable={!saving}
+      isKeyboardDismissDisabled={saving}
       title={text(destination ? "edit" : "add")}
       onClose={onClose}
     >
       <div data-resource-move-panel className="move-panel-editor">
-        <label>
-          {text("name")}
-          <input value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label>
-          {text("path")}
-          <input
-            placeholder="/media/library"
-            value={path}
-            onChange={(e) => setPath(e.target.value)}
-          />
-        </label>
-        <label>
-          {text("scope")}
-          <select value={scope} onChange={(e) => setScope(e.target.value as "global" | "tab")}>
-            <option value="global">{text("global")}</option>
-            {(tabId || destination?.tabId) && <option value="tab">{text("local")}</option>}
-          </select>
-        </label>
+        <Input
+          isDisabled={saving}
+          label={text("name")}
+          size="sm"
+          value={name}
+          onValueChange={setName}
+        />
+        <Input
+          isDisabled={saving}
+          label={text("path")}
+          placeholder="/media/library"
+          size="sm"
+          value={path}
+          onValueChange={setPath}
+        />
+        <Checkbox
+          isDisabled={saving || (!tabId && !destination?.tabId)}
+          isSelected={scope === "global"}
+          size="sm"
+          onValueChange={(isGlobal) => setScope(isGlobal ? "global" : "tab")}
+        >
+          {text("globalDestination")}
+        </Checkbox>
+        {!tabId && !destination?.tabId && <p className="move-panel-muted">{text("scopeHint")}</p>}
         <div className="move-panel-folder-picker">
           {roots && (
             <FileExplorer
               expandable
-              capabilities={["select", "enter-directory"]}
+              capabilities={saving ? [] : ["select", "enter-directory"]}
               filter={filter}
               keyboard={false}
               rootPath={destination?.path}
               rootPaths={roots.length ? roots : undefined}
               selectable="single"
               onSelected={(entries) => {
-                if (entries[0]) setPath(entries[0].path);
+                if (!saving && entries[0]) setPath(entries[0].path);
               }}
             />
           )}
@@ -158,17 +166,18 @@ export default function DestinationEditor({
           </div>
         )}
         <div className="move-panel-actions">
-          <button disabled={saving} type="button" onClick={onClose}>
+          <Button isDisabled={saving} size="sm" variant="light" onPress={onClose}>
             {text("cancel")}
-          </button>
-          <button
-            className="primary"
-            disabled={!path.trim() || saving}
-            type="button"
-            onClick={() => void save()}
+          </Button>
+          <Button
+            color="primary"
+            isDisabled={!path.trim() || saving}
+            isLoading={saving}
+            size="sm"
+            onPress={() => void save()}
           >
             {text("save")}
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

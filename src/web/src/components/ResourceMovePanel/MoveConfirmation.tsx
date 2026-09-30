@@ -2,7 +2,7 @@ import type { MoveExcludedResource } from "./types";
 
 import { getKnownMoveReasonCode, useMoveReasonText, useMoveText } from "./messages";
 
-import { Modal, Spinner } from "@/components/bakaui";
+import { Button, Modal, Select, Spinner } from "@/components/bakaui";
 import {
   cancelMoveDraft,
   hideUnknownMoveDraft,
@@ -182,45 +182,53 @@ export default function MoveConfirmation() {
             })}
           </details>
         )}
-        <label>
-          {text("policy")}
-          <select
-            disabled={irreversibleSubmit}
-            value={draft.conflictPolicy}
-            onChange={(e) => setMoveDraftPolicy(e.target.value as typeof draft.conflictPolicy)}
-          >
-            <option value="inherit">{text("inherit")}</option>
-            <option value="ask">{text("ask")}</option>
-            <option value="overwrite">{text("overwrite")}</option>
-          </select>
-        </label>
+        <Select
+          disallowEmptySelection
+          dataSource={["inherit", "ask", "overwrite"].map((value) => ({
+            value,
+            label: text(value as typeof draft.conflictPolicy),
+          }))}
+          isDisabled={irreversibleSubmit}
+          label={text("policy")}
+          labelPlacement="outside"
+          selectedKeys={[draft.conflictPolicy]}
+          size="sm"
+          onSelectionChange={(keys) => {
+            const value = Array.from(keys)[0];
+
+            if (value === "inherit" || value === "ask" || value === "overwrite")
+              setMoveDraftPolicy(value);
+          }}
+        />
         <div className="move-panel-actions">
           {draft.phase === "unknown" && (
-            <button type="button" onClick={hideUnknownMoveDraft}>
+            <Button size="sm" type="button" variant="flat" onPress={hideUnknownMoveDraft}>
               {text("hideForNow")}
-            </button>
+            </Button>
           )}
           {!irreversibleSubmit && (
-            <button type="button" onClick={cancelMoveDraft}>
+            <Button size="sm" type="button" variant="flat" onPress={cancelMoveDraft}>
               {text("cancel")}
-            </button>
+            </Button>
           )}
-          <button
-            className="primary"
-            disabled={
+          <Button
+            color="primary"
+            isDisabled={
               loading ||
               !ids.length ||
               blocked ||
               !!draft.contextError ||
               (!!draft.error && draft.phase !== "unknown")
             }
+            isLoading={draft.phase === "submitting"}
+            size="sm"
             type="button"
-            onClick={() => void submitMoveDraft()}
+            onPress={() => void submitMoveDraft()}
           >
             {draft.phase === "unknown"
               ? text("retrySubmission")
               : `${text("confirmMove")} ${ids.length}`}
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

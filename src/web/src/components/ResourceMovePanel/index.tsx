@@ -14,6 +14,8 @@ import {
   MinusOutlined,
   PlusOutlined,
   PushpinOutlined,
+  PushpinFilled,
+  LayoutOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
 
@@ -23,6 +25,7 @@ import TaskList from "./TaskList";
 import { getKnownMoveReasonCode, useMoveReasonText, useMoveText } from "./messages";
 import { clampGeometry, groupDestinations, parseMovePayload, reorderDestinations } from "./utils";
 
+import { Button, Checkbox, Chip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { BTaskType, IwFsType, PathMarkAdditionalItem, PathMarkType } from "@/sdk/constants";
 import { useBTasksStore } from "@/stores/bTasks";
@@ -99,6 +102,8 @@ function DestinationRow({
   onEdit,
   onDelete,
   onSort,
+  onToggleGlobal,
+  canToggleGlobal,
 }: {
   destination: MoveDestination;
   relativeTo?: string;
@@ -106,6 +111,8 @@ function DestinationRow({
   onEdit: () => void;
   onDelete: () => void;
   onSort: (from: string, to: string) => void;
+  onToggleGlobal: () => void;
+  canToggleGlobal: boolean;
 }) {
   const text = useMoveText();
   const reasonText = useMoveReasonText();
@@ -168,12 +175,15 @@ function DestinationRow({
       onDrop={drop}
     >
       <div className="move-panel-destination-heading">
-        <button
+        <Button
           draggable
+          isIconOnly
           aria-label={text("sort")}
-          className="icon sort-handle"
+          className="sort-handle"
+          size="sm"
           title={text("sort")}
           type="button"
+          variant="light"
           onDragStart={(e) => {
             e.stopPropagation();
             e.dataTransfer.setData(DESTINATION_MIME, destination.id);
@@ -181,52 +191,73 @@ function DestinationRow({
           }}
         >
           <HolderOutlined />
-        </button>
+        </Button>
         <strong title={destination.path}>
           {destination.name ||
             normalizedMovePath(destination.path).split("/").at(-1) ||
             destination.path}
         </strong>
-        <button
+        <Button
+          isIconOnly
           aria-label={text("openFolder")}
-          className="icon"
+          size="sm"
           title={text("openFolder")}
           type="button"
-          onClick={() => {
+          variant="light"
+          onPress={() => {
             void BApi.tool
               .openFileOrDirectory({ path: destination.path })
               .catch((e) => setError(String(e)));
           }}
         >
           <FolderOpenOutlined />
-        </button>
-        <button
+        </Button>
+        <Button
+          isIconOnly
           aria-label={text("copyPath")}
-          className="icon"
+          size="sm"
           title={text("copyPath")}
           type="button"
-          onClick={copy}
+          variant="light"
+          onPress={copy}
         >
           <CopyOutlined />
-        </button>
-        <button
+        </Button>
+        <Button
+          isIconOnly
+          aria-label={text(destination.scope === "global" ? "unpinGlobal" : "pinGlobal")}
+          aria-pressed={destination.scope === "global"}
+          color={destination.scope === "global" ? "primary" : "default"}
+          isDisabled={!canToggleGlobal}
+          size="sm"
+          title={text(destination.scope === "global" ? "unpinGlobal" : "pinGlobal")}
+          variant={destination.scope === "global" ? "flat" : "light"}
+          onPress={onToggleGlobal}
+        >
+          {destination.scope === "global" ? <PushpinFilled /> : <PushpinOutlined />}
+        </Button>
+        <Button
+          isIconOnly
           aria-label={text("edit")}
-          className="icon"
+          size="sm"
           title={text("edit")}
           type="button"
-          onClick={onEdit}
+          variant="light"
+          onPress={onEdit}
         >
           <EditOutlined />
-        </button>
-        <button
+        </Button>
+        <Button
+          isIconOnly
           aria-label={text("remove")}
-          className="icon"
+          size="sm"
           title={text("remove")}
           type="button"
-          onClick={onDelete}
+          variant="light"
+          onPress={onDelete}
         >
           <CloseOutlined />
-        </button>
+        </Button>
       </div>
       <code className="move-panel-path" title={destination.path}>
         {relativeTo ? destination.path.slice(relativeTo.length + 1) : destination.path}
@@ -234,9 +265,9 @@ function DestinationRow({
       <div className="move-panel-badges" title={text("related")}>
         {libraries.length ? (
           libraries.map((name) => (
-            <span key={name} className="move-panel-badge">
+            <Chip key={name} color="primary" radius="sm" size="sm" variant="flat">
               {name}
-            </span>
+            </Chip>
           ))
         ) : (
           <span className="move-panel-muted">{text("noLibrary")}</span>
@@ -244,14 +275,16 @@ function DestinationRow({
       </div>
       {available === false && <p className="move-panel-error">{text("unavailable")}</p>}
       {error && <p className="move-panel-error">{error}</p>}
-      <button
+      <Button
         className="move-panel-move-selected"
-        disabled={!selection.length || !!draft || available === false || !contextReady}
+        isDisabled={!selection.length || !!draft || available === false || !contextReady}
+        size="sm"
         type="button"
-        onClick={() => void prepareMove(destination)}
+        variant="flat"
+        onPress={() => void prepareMove(destination)}
       >
         {text("moveSelected")} ({selection.length})
-      </button>
+      </Button>
     </article>
   );
 }
@@ -347,6 +380,43 @@ function PanelContent() {
       setDeleted(id);
     });
   };
+  const toggleGlobal = (destination: MoveDestination) => {
+    if (s.savingOptions || !s.initialized || (destination.scope === "global" && !tabId)) return;
+    void act(() =>
+      updateMovePanelOptions((options) => {
+        const current = options.destinations.find((d) => d.id === destination.id && !d.isDeleted);
+
+        if (!current) return options;
+        const scope = current.scope === "global" ? "tab" : "global";
+        const ownerTab = scope === "tab" ? tabId : undefined;
+
+        if (scope === "tab" && !ownerTab) throw new Error(text("scopeHint"));
+        const sameScope = options.destinations.filter(
+          (d) => !d.isDeleted && d.scope === scope && d.tabId === ownerTab,
+        );
+        const duplicate = sameScope.find(
+          (d) =>
+            d.id !== current.id && normalizedMovePath(d.path) === normalizedMovePath(current.path),
+        );
+
+        return {
+          ...options,
+          destinations: options.destinations.map((d) =>
+            d.id !== current.id
+              ? d
+              : duplicate
+                ? { ...d, isDeleted: true }
+                : {
+                    ...d,
+                    scope,
+                    tabId: ownerTab,
+                    order: Math.max(-1, ...sameScope.map((d) => d.order)) + 1,
+                  },
+          ),
+        };
+      }),
+    );
+  };
   const beginResize = (e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     const onMove = (event: PointerEvent) => {
@@ -371,66 +441,79 @@ function PanelContent() {
       <header className="move-panel-titlebar">
         <h2>{text("title")}</h2>
         <div className="move-panel-title-actions">
-          <button
+          <Button
+            isIconOnly
             aria-label={text(s.mode === "docked" ? "float" : "dock")}
-            className="icon"
-            disabled={!s.dockAvailable && s.mode === "floating"}
+            isDisabled={!s.dockAvailable && s.mode === "floating"}
+            size="sm"
             title={text(s.mode === "docked" ? "float" : "dock")}
             type="button"
-            onClick={() => setMovePanelMode(s.mode === "docked" ? "floating" : "docked")}
+            variant="light"
+            onPress={() => setMovePanelMode(s.mode === "docked" ? "floating" : "docked")}
           >
-            <PushpinOutlined />
-          </button>
-          <button
+            <LayoutOutlined />
+          </Button>
+          <Button
+            isIconOnly
             aria-label={text("minimize")}
-            className="icon"
+            size="sm"
             title={text("minimize")}
             type="button"
-            onClick={minimizeMovePanel}
+            variant="light"
+            onPress={minimizeMovePanel}
           >
             <MinusOutlined />
-          </button>
-          <button
+          </Button>
+          <Button
+            isIconOnly
             aria-label={text("close")}
-            className="icon"
+            size="sm"
             title={text("close")}
             type="button"
-            onClick={closeMovePanel}
+            variant="light"
+            onPress={closeMovePanel}
           >
             <CloseOutlined />
-          </button>
+          </Button>
         </div>
       </header>
       <div className="move-panel-toolbar">
-        <button type="button" onClick={() => setEditor("new")}>
+        <Button size="sm" type="button" variant="flat" onPress={() => setEditor("new")}>
           <PlusOutlined /> {text("add")}
-        </button>
-        <button
+        </Button>
+        <Button
+          isIconOnly
           aria-label={text("refresh")}
-          className="icon"
+          size="sm"
           title={text("refresh")}
           type="button"
-          onClick={() => void refreshMovePanel()}
+          variant="light"
+          onPress={() => void refreshMovePanel()}
         >
           <ReloadOutlined />
-        </button>
-        <button aria-pressed={grouped} type="button" onClick={() => setGrouped(!grouped)}>
+        </Button>
+        <Button
+          aria-pressed={grouped}
+          size="sm"
+          type="button"
+          variant="flat"
+          onPress={() => setGrouped(!grouped)}
+        >
           {text(grouped ? "flat" : "grouped")}
-        </button>
+        </Button>
       </div>
-      <label className="move-panel-auto" title={text("autoHelp")}>
-        <input
-          checked={s.options.autoOverwrite}
-          disabled={s.savingOptions || !s.initialized}
-          type="checkbox"
-          onChange={(e) => {
-            const autoOverwrite = e.target.checked;
-
+      <div className="move-panel-auto" title={text("autoHelp")}>
+        <Checkbox
+          isDisabled={s.savingOptions || !s.initialized}
+          isSelected={s.options.autoOverwrite}
+          size="sm"
+          onValueChange={(autoOverwrite) => {
             void act(() => updateMovePanelOptions((options) => ({ ...options, autoOverwrite })));
           }}
-        />
-        {text("autoOverwrite")}
-      </label>
+        >
+          {text("autoOverwrite")}
+        </Checkbox>
+      </div>
       {s.options.autoOverwrite && <p className="move-panel-auto-help">{text("autoHelp")}</p>}
       {(s.error || operationError) && (
         <div className="move-panel-error" role="alert">
@@ -443,9 +526,11 @@ function PanelContent() {
         <p className="move-panel-notice">{reasonText("sourceContextRequired")}</p>
       )}
       {deleted && (
-        <button
+        <Button
+          size="sm"
           type="button"
-          onClick={() =>
+          variant="flat"
+          onPress={() =>
             void act(async () => {
               await updateMovePanelOptions((options) => ({
                 ...options,
@@ -458,18 +543,21 @@ function PanelContent() {
           }
         >
           {text("undo")}
-        </button>
+        </Button>
       )}
       {s.pendingDrafts.map((draft) => (
-        <button
+        <Button
           key={draft.id}
-          className="move-panel-notice"
-          disabled={!!s.draft}
+          className="mx-2 my-1 h-auto whitespace-normal py-2"
+          color="warning"
+          isDisabled={!!s.draft}
+          size="sm"
           type="button"
-          onClick={() => resumePendingMoveDraft(draft.id)}
+          variant="flat"
+          onPress={() => resumePendingMoveDraft(draft.id)}
         >
           {text("unresolved")}: {draft.destination.name || draft.destination.path}
-        </button>
+        </Button>
       ))}
       <div ref={root} className="move-panel-body">
         <section className="move-panel-path-section" style={{ flexBasis: `${pathsRatio}%` }}>
@@ -494,11 +582,15 @@ function PanelContent() {
                         <DestinationRow
                           key={d.id}
                           available={availability[d.id]}
+                          canToggleGlobal={
+                            s.initialized && !s.savingOptions && (d.scope === "tab" || !!tabId)
+                          }
                           destination={d}
                           relativeTo={group.prefix}
                           onDelete={() => remove(d.id)}
                           onEdit={() => setEditor(d)}
                           onSort={sort}
+                          onToggleGlobal={() => toggleGlobal(d)}
                         />
                       ))}
                     </div>
@@ -651,13 +743,14 @@ export default function ResourceMovePanel() {
         )}
       {s.minimized &&
         createPortal(
-          <button
+          <Button
             data-resource-move-panel
             aria-label={text("expand")}
             className="move-panel-minimized"
+            size="sm"
             title={text("expand")}
             type="button"
-            onClick={expandMovePanel}
+            variant="flat"
             onDragLeave={() => {
               clearTimeout(hoverTimer.current);
               hoverTimer.current = undefined;
@@ -678,6 +771,7 @@ export default function ResourceMovePanel() {
               clearTimeout(hoverTimer.current);
               hoverTimer.current = undefined;
             }}
+            onPress={expandMovePanel}
           >
             <FolderOpenOutlined />
             <span>
@@ -687,7 +781,7 @@ export default function ResourceMovePanel() {
               {queued > 0 && ` · ${queued} ${text("queued")}`}
               {attention > 0 && ` · ${attention} !`}
             </span>
-          </button>,
+          </Button>,
           document.body,
         )}
       <MoveConfirmation />

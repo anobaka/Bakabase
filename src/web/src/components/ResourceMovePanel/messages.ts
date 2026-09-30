@@ -48,6 +48,9 @@ const messages = {
   undo: ["Undo remove", "撤销移除"],
   global: ["All resource tabs", "所有资源 Tab"],
   local: ["Current tab", "当前 Tab"],
+  globalDestination: ["Use in all resource tabs", "设为全局路径（所有资源 Tab 可用）"],
+  pinGlobal: ["Pin for all resource tabs", "设为全局路径"],
+  unpinGlobal: ["Use only in the current tab", "取消全局，仅在当前 Tab 使用"],
   noPaths: [
     "Save a folder, then drop selected resources onto it.",
     "保存目标文件夹，然后将选中的资源拖到这里。",
