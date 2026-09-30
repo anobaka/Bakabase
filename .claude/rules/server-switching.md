@@ -203,11 +203,21 @@ manage anything; they are only ever managed.
   and sends `frame-ancestors 'self'`, so a relay page cannot load this device's own UI in a
   frame and drive it.
 - **Trust is explicit and pairwise.** Managing B is a decision taken on B (approve or show a
-  code). Nothing joins a device to others automatically. One known gap: a copy of a data
-  directory keeps the servers the original manages, keys included — "Make this a new device"
-  leaves them — so each such server sees the two as one paired device. Revoking that
-  device there, or "stop managing" on either install (which asks the server to revoke it),
-  ends management from both.
+  code). Nothing joins a device to others automatically. A copy of a data directory arrives
+  with the servers the original manages, keys included, and each such server sees the two as
+  one paired device. So "Make this a new device" forgets every server the install manages,
+  **here only** (`IManagedServerService.ForgetAllLocallyAsync`): it drops the management
+  requests this install filed, deletes every key, stops every relay and sends nothing to any
+  server — no revoke, no handshake, no withdrawn request: a revoke would cut off the original,
+  which still manages with the same key. The servers keep listing that one device, the
+  original keeps managing them, and the copy pairs again with the ones it should manage, each
+  back on its old relay origin (`RetiredRelayPorts`, as after "stop managing"). The reset
+  forgets them first, before the `ServerId` is replaced: a store that cannot be written
+  refuses the reset (`ManagedServersNotForgotten`) with the install's identity, paired devices
+  and node as they were. A headless server manages nothing and composes no
+  `IManagedServerService`, so `federation new-identity` has nothing to forget there. Until
+  the copy is made a new device, revoking that device on a server, or "stop managing" on
+  either install (which asks the server to revoke it), ends management from both.
 - **Warn, never reconfigure.** A target in `RemoteAccessMode.Unrestricted` is flagged in the UI;
   the app never changes another server's mode on its own.
 - **Never pair with yourself, never talk to yourself.** Refuse an address whose handshake
@@ -219,9 +229,9 @@ manage anything; they are only ever managed.
   carry): refused as `SameIdentity` (a managed server's address: `WrongServer` with
   `IsSameIdentity`), whose message points at Devices and sharing → Advanced → After copying or
   restoring data → "Make this a new device" — which replaces
-  the `ServerId`, forgets the devices paired under the old one, and gives the node the new id
-  (headless: `federation new-identity`). This device's own name from such an address is this
-  device through another door — a reverse proxy or port forward on another host, the router's
+  the `ServerId`, forgets the devices paired under the old one and, here only, the servers it
+  manages, and gives the node the new id (headless: `federation new-identity`). This device's
+  own name from such an address is this device through another door — a reverse proxy or port forward on another host, the router's
   public address looping back — and stays `ThisDevice`: the reset would unpair every device
   for nothing (a copy on a machine of the same name reads as this device too, refused all the
   same). Library sharing cannot tell those two apart (a node's name is in its data
@@ -268,7 +278,13 @@ app. What stays is deliberate:
   `ConsoleNetworkTests` put a network under the real handlers (`RemoteConsoleOptions.Connector`,
   `TestNetwork`): a server stored by a name that resolves IPv6-first to a dropped address is
   probed, paired and relayed to at once, and a relay whose name leads to two installs connects
-  only to the one that answered its question.
+  only to the one that answered its question. `ForgetAllLocallyTests`: forgetting every server
+  here drops every key, relay and filed request (an approval afterwards is never collected)
+  and sends no server a single request, and a server paired again gets its origin back.
+- `src/tests/Bakabase.Tests/Federation/FederationIdentityResetTests` — "Make this a new device"
+  through its controller: the console's servers forgotten without a word to them (fake
+  servers behind a real console) and paired again; a headless composition resetting all the
+  same; a store that cannot be written leaving the identity as it was.
 - `src/tests/Bakabase.Tests/RemoteAccess/UpstreamIdentityTests` — when the relay asks, and what
   an answer stands for (lifetime, refresh ahead, the new-connection window, suspicion, shared
   questions, a moved address, failures), with the clock under the test's control.

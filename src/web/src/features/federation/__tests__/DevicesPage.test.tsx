@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FederationError } from "../transport";
 import DevicesPage from "../DevicesPage";
 import { federationPeerApi } from "../peerApi";
+import { managedServerApi } from "../serverApi";
 import { useFederationStatus } from "../hooks/useFederationStatus";
 
 import BApi from "@/sdk/BApi";
@@ -188,10 +189,19 @@ describe("device permission workflows", () => {
     fireEvent.click(screen.getByText("federation.identity.reset"));
     expect(screen.getByRole("alertdialog")).toHaveTextContent("federation.identity.confirm");
     expect(federationPeerApi.resetIdentity).not.toHaveBeenCalled();
+    // Listed, then probed, as the page does when it opens.
+    await waitFor(() => expect(managedServerApi.list).toHaveBeenCalledWith(true));
+    const listed = vi.mocked(managedServerApi.list).mock.calls.length;
+
     fireEvent.click(screen.getByText("federation.confirm"));
     // A copy: the install's own identity goes too.
     await waitFor(() => expect(federationPeerApi.resetIdentity).toHaveBeenCalledWith(true, true));
     expect(federationPeerApi.sharing).not.toHaveBeenCalled();
+    // …and the servers it managed, which the page lists again rather than keep showing.
+    await waitFor(() =>
+      expect(vi.mocked(managedServerApi.list).mock.calls.slice(listed)).toContainEqual([false]),
+    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
   });
   it("opens recovery help from configuration without resetting and restores with the original node identity", async () => {
     renderPage("/federation/devices?section=identity");

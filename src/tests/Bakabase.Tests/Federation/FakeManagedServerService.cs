@@ -77,6 +77,15 @@ internal sealed class FakeManagedServerService : IManagedServerService
         return Task.FromResult(serverId == KnownServerId);
     }
 
+    /// <summary>What <see cref="ForgetAllLocallyAsync"/> throws instead of forgetting: a store that cannot be written.</summary>
+    public Exception? ForgetAllFailure { get; set; }
+
+    public Task<int> ForgetAllLocallyAsync(CancellationToken ct = default)
+    {
+        Calls.Enqueue("ForgetAllLocally");
+        return ForgetAllFailure is { } failure ? Task.FromException<int>(failure) : Task.FromResult(1);
+    }
+
     public Task<bool> SetPathMappingsAsync(string serverId, IReadOnlyList<ManagedServerPathMapping> mappings,
         CancellationToken ct = default)
     {

@@ -105,6 +105,9 @@ const dynamicKeys = [
   "federation.error.PortMissing",
   "federation.error.SelfAddress",
   "federation.error.SameIdentity",
+  // What "Make this a new device" is refused as when the servers this device manages cannot be
+  // forgotten here (`POST /federation/local/peers/identity/reset`).
+  "federation.error.ManagedServersNotForgotten",
   // Paired devices and requests name their platform.
   ...Object.values(RemoteDevicePlatform)
     .filter((value): value is RemoteDevicePlatform => typeof value === "number")
