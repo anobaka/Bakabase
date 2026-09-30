@@ -26,6 +26,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using AppContext = Bakabase.Infrastructures.Components.App.AppContext;
 
 namespace Bakabase.Tests.RemoteAccess.Console;
@@ -129,6 +130,33 @@ internal sealed class ConsoleHarness : IAsyncDisposable
         }));
 
         return (deviceId, key);
+    }
+
+    /// <summary>
+    /// Makes the store's final rename fail without letting a background answer write recreate
+    /// the file between deleting it and installing the non-empty directory in its place.
+    /// </summary>
+    public async Task BlockManagedStoreWritesAsync()
+    {
+        var blocker = Path.Combine(ManagedFile, "held");
+        try
+        {
+            // The mutation callback runs inside the same write gate as answer bookkeeping.
+            // No data is changed; this save must fail and leave the published snapshot intact.
+            await Store.MutateAsync(_ =>
+            {
+                File.Delete(ManagedFile);
+                Directory.CreateDirectory(blocker);
+            });
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Assert.IsTrue(Directory.Exists(blocker),
+                "The store was not blocked by the intended non-empty directory.");
+            return;
+        }
+
+        Assert.Fail("The store unexpectedly saved over the non-empty blocking directory.");
     }
 
     /// <summary>Stops the app, leaving its data where it was.</summary>
