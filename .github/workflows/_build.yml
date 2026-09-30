@@ -6,12 +6,14 @@ on:
       version:
         required: true
         type: string
-      # Commit SHA to build. Required because the caller runs under
-      # `workflow_run`, where the default GITHUB_SHA points at the default
-      # branch's HEAD instead of the commit CI validated.
+      # Build the exact commit resolved by the caller, including PR validation.
       ref:
         required: true
         type: string
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   build-frontend:
@@ -22,16 +24,6 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: Cache Yarn
-        uses: actions/cache@v4
-        with:
-          path: |
-            src/web/.yarn/cache
-            src/web/node_modules
-          key: yarn-${{ runner.os }}-${{ hashFiles('src/web/yarn.lock') }}
-          restore-keys: |
-            yarn-${{ runner.os }}-
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -40,9 +32,25 @@ jobs:
       - name: Enable corepack
         run: corepack enable yarn
 
+      - name: Locate Yarn cache
+        id: yarn-cache
+        working-directory: src/web
+        run: echo "path=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Yarn
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.yarn-cache.outputs.path }}
+            src/web/node_modules
+            src/web/.yarn/install-state.gz
+          key: yarn-v2-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('src/web/yarn.lock', 'src/web/package.json', 'src/web/.yarnrc.yml', 'src/web/.yarn/patches/**') }}
+          restore-keys: |
+            yarn-v2-${{ runner.os }}-${{ runner.arch }}-node22-
+
       - name: Install yarn dependencies
         working-directory: src/web
-        run: yarn install
+        run: yarn install --immutable
 
       - name: Build frontend
         working-directory: src/web
@@ -51,7 +59,7 @@ jobs:
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fe
+          name: fe-${{ github.run_attempt }}
           path: src/web/dist/*
 
   build-tampermonkey:
@@ -88,10 +96,12 @@ jobs:
 
   build-app:
     runs-on: ${{ matrix.os }}
-    needs: [build-frontend]
+    # Compile alongside the frontend; only packaging needs its artifact.
 
     env:
       DOTNET_MULTILEVEL_LOOKUP: 0
+      # Keep SDK/image packages and other RIDs out of this release cache.
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/release-packages
 
     strategy:
       matrix:
@@ -100,25 +110,21 @@ jobs:
             rid: win-x64
             artifact: win-x64
             csproj: Bakabase/src/apps/Bakabase.App/Bakabase.App.csproj
-            nuget-path: ~\\.nuget\\packages
             runtimeMode: WINFORMS
           - os: macos-15-intel
             rid: osx-x64
             artifact: osx-x64
             csproj: Bakabase/src/apps/Bakabase.App/Bakabase.App.csproj
-            nuget-path: ~/.nuget/packages
             runtimeMode: MACOS
           - os: macos-15
             rid: osx-arm64
             artifact: osx-arm64
             csproj: Bakabase/src/apps/Bakabase.App/Bakabase.App.csproj
-            nuget-path: ~/.nuget/packages
             runtimeMode: MACOS
           - os: ubuntu-latest
             rid: linux-x64
             artifact: docker
             csproj: Bakabase/src/apps/Bakabase.Service/Bakabase.Service.csproj
-            nuget-path: ~/.nuget/packages
             runtimeMode: DOCKER
     steps:
       - name: Checkout main repo
@@ -143,17 +149,26 @@ jobs:
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
-          path: ${{ matrix.nuget-path }}
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages.lock.json', '**/*.csproj') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
+          path: ${{ env.NUGET_PACKAGES }}
+          # Exact dependency keys avoid accumulating old package versions.
+          key: release-nuget-v2-${{ runner.os }}-${{ matrix.rid }}-${{ hashFiles('**/global.json', '**/*.csproj', '**/*.props', '**/*.targets', '**/packages.lock.json', '**/NuGet.Config', '**/nuget.config') }}
       - name: Build Bakabase project
         run: dotnet publish -p:RuntimeMode=${{ matrix.runtimeMode }} ${{matrix.csproj}} --self-contained -r ${{ matrix.rid }} -o ./publish
+      - name: Wait for frontend artifact
+        id: frontend-artifact
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          FRONTEND_ARTIFACT: fe-${{ github.run_attempt }}
+        shell: bash
+        # A failed-job rerun may reuse the completed frontend from the same
+        # run/commit; attempt-specific names keep artifact IDs immutable.
+        run: python Bakabase/.github/scripts/wait_for_artifact.py --name "$FRONTEND_ARTIFACT" --allow-previous-attempts
       - name: Download frontend artifact
         uses: actions/download-artifact@v4
         with:
-          name: fe
+          artifact-ids: ${{ steps.frontend-artifact.outputs.artifact-id }}
           path: ./publish/web
+          merge-multiple: true
       - name: Verify product and published role boundaries
         shell: bash
         run: |
@@ -217,7 +232,11 @@ jobs:
         with:
           name: vpk-${{ matrix.artifact }}
           path: ./vpk-output/*
+          # Installers, nupkg and portable ZIPs are already compressed.
+          compression-level: 0
       - name: Upload Bakabase build artifact
+        # Desktop consumers use vpk-*; only Docker needs the raw publish tree.
+        if: matrix.runtimeMode == 'DOCKER'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
