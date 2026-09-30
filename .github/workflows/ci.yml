@@ -118,6 +118,7 @@ jobs:
             "src/tests/Bakabase.Modules.Collection.Tests/Bakabase.Modules.Collection.Tests.csproj"
             "src/tests/Bakabase.Modules.BulkModification.Tests/Bakabase.Modules.BulkModification.Tests.csproj"
             "src/tests/Bakabase.Modules.Comparison.Tests/Bakabase.Modules.Comparison.Tests.csproj"
+            "src/tests/Bakabase.Modules.DataSync.Tests/Bakabase.Modules.DataSync.Tests.csproj"
             "src/tests/Bakabase.Modules.Enhancer.Tests/Bakabase.Modules.Enhancer.Tests.csproj"
             "src/tests/Bakabase.Modules.Federation.Tests/Bakabase.Modules.Federation.Tests.csproj"
             "src/tests/Bakabase.Modules.HealthScore.Tests/Bakabase.Modules.HealthScore.Tests.csproj"
@@ -292,7 +293,7 @@ jobs:
           python src/scripts/check-release-contract.py --report "$RUNNER_TEMP/federation-results/product-identities.json"
           python src/tests/upgrade-tests/test_release_contract.py
           python src/tests/upgrade-tests/test_package_acceptance.py
-      - name: Three independent hosts
+      - name: Three independent hosts, then data sync across three more
         run: |
           dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj
           python src/tests/federation-smoke/run.py --timeout 300 --results-directory "$RUNNER_TEMP/federation-results/smoke"
@@ -357,13 +358,14 @@ jobs:
           dotnet test src/tests/Bakabase.Modules.Federation.Tests/Bakabase.Modules.Federation.Tests.csproj
           dotnet test src/tests/Bakabase.Modules.Player.Tests/Bakabase.Modules.Player.Tests.csproj
           dotnet test src/tests/Bakabase.Tests/Bakabase.Tests.csproj --filter "FullyQualifiedName~Bakabase.Tests.Federation"
+          for nls in false true; do for p in Bakabase.Modules.DataSync.Tests/Bakabase.Modules.DataSync.Tests Bakabase.Tests/Bakabase.Tests; do DOTNET_SYSTEM_GLOBALIZATION_USENLS=$nls dotnet test src/tests/$p.csproj -- --filter "FullyQualifiedName~LabelKeyCrossCheckTests" || exit 1; done; done
       - name: Verify the actual macOS rectangle calling convention
         if: startsWith(matrix.rid, 'osx-')
         run: |
           dotnet run --project src/tests/Bakabase.Shell.NativeAbiProbe \
             --configuration Release -p:RuntimeMode=MACOS \
             -- --report "$RUNNER_TEMP/federation-results/native-abi.json"
-      - name: Three independent hosts
+      - name: Three independent hosts, then data sync across three more
         run: |
           dotnet build src/tests/Bakabase.Federation.TestHost/Bakabase.Federation.TestHost.csproj
           python src/tests/federation-smoke/run.py --timeout 300 --results-directory "$RUNNER_TEMP/federation-results/smoke"

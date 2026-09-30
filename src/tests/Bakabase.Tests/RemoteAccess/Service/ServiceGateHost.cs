@@ -187,7 +187,11 @@ internal sealed class ServiceGateHost : IAsyncDisposable
     {
         var trusted = origins ?? ServiceCorsOrigins.ForThisBuild;
         var root = Path.Combine(Path.GetTempPath(), "bakabase-service-gates", Guid.NewGuid().ToString("N"));
-        var port = LoopbackPortAllocator.Allocate(47000 + Random.Shared.Next(0, 2000));
+        // Below every port another test asks for by number (the console's services from 46800,
+        // its fake servers at 47100 and 47150, its relays from 47300, 47600, 48500, 49000): a
+        // gate host started in parallel must never take a relay's port while its console
+        // restarts, or the relay moves and the test that pins it fails.
+        var port = LoopbackPortAllocator.Allocate(44000 + Random.Shared.Next(0, 2000));
         string[] apiEndpoints = [$"http://localhost:{port}"];
 
         var host = new HostBuilder()

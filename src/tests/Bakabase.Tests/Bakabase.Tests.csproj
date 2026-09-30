@@ -22,6 +22,8 @@
     </Content>
     <!-- One fake of the Bilibili wire (API, CDN, merger) for both suites, so they test the same protocol. -->
     <Compile Include="..\Bakabase.Modules.ThirdParty.Tests\Bilibili\Shared\*.cs" LinkBase="Bilibili\Shared" />
+    <!-- The data sync engine's generic test kind, so the apply runner's tests merge through the same kind. -->
+    <Compile Include="..\Bakabase.Modules.DataSync.Tests\TestKinds\TestItemCodec.cs;..\Bakabase.Modules.DataSync.Tests\TestKinds\TestItemContent.cs" LinkBase="DataSync\TestKinds" />
   </ItemGroup>
 
 </Project>

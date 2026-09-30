@@ -3,6 +3,8 @@
 
 Build Bakabase.Federation.TestHost first. Run with --dotnet /path/to/dotnet.
 Only temporary fixture directories are used. --keep leaves the three hosts for manual UI checks.
+After the library checks, datasync.py runs data sync across three more hosts within the same
+deadline (--skip-datasync leaves it out).
 """
 import argparse
 from contextlib import closing
@@ -18,6 +20,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+
+import datasync
 
 REQUEST_DEADLINE = None
 
@@ -254,6 +258,8 @@ def run(args):
                 shutil.copyfile(log, results / f"{label}.log")
         if not args.keep:
             shutil.rmtree(root)
+    if not args.skip_datasync:
+        datasync.run(args.dotnet, REQUEST_DEADLINE, results / "datasync", keep=args.keep)
 
 
 if __name__ == "__main__":
@@ -262,4 +268,5 @@ if __name__ == "__main__":
     parser.add_argument("--keep", action="store_true")
     parser.add_argument("--timeout", type=int, default=300, help="Overall request/startup deadline in seconds")
     parser.add_argument("--results-directory", type=Path, help="Retain logs/result.json here; fixture databases are deleted")
+    parser.add_argument("--skip-datasync", action="store_true", help="Leave out the data sync stage (datasync.py)")
     run(parser.parse_args())
