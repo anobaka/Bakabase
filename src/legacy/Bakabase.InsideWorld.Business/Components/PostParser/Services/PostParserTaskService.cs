@@ -71,7 +71,7 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
                     continue;
                 if (task == null)
                 {
-                    task = new PostParserTaskDbModel {Source = source, Link = link};
+                    task = new PostParserTaskDbModel {Source = source, Link = link, CreatedAt = DateTime.UtcNow};
                     ParserTasks.Add(task);
                     existing.Add(task);
                 }
@@ -81,7 +81,7 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
             if (!string.IsNullOrWhiteSpace(text))
             {
                 // Pasted text is its own task; do not accidentally merge unrelated posts by title.
-                var task = new PostParserTaskDbModel {Source = 0, Link = "", Text = text.Trim()};
+                var task = new PostParserTaskDbModel {Source = 0, Link = "", Text = text.Trim(), CreatedAt = DateTime.UtcNow};
                 Reset(task, targets, title, stoppedRuns);
                 ParserTasks.Add(task);
                 changed.Add(task);
@@ -104,6 +104,7 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
         task.WorkflowDefinitionId = null;
         task.Results = null;
         task.Error = null;
+        task.CompletedAt = null;
         task.IsDeleted = false;
         task.Targets = Newtonsoft.Json.JsonConvert.SerializeObject(targets);
         if (!string.IsNullOrWhiteSpace(title)) task.Title = title.Trim();
@@ -168,7 +169,7 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
             var current = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id);
             if (current == null || current.IsDeleted || current.Revision != value.Revision || current.WorkflowRunId != value.WorkflowRunId)
                 return;
-            var model = (value with {Id = id}).ToDbModel();
+            var model = (value with {Id = id, CreatedAt = current.CreatedAt, CompletedAt = current.CompletedAt}).ToDbModel();
             await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Title, model.Title)
                 .SetProperty(t => t.Results, model.Results).SetProperty(t => t.Error, model.Error));
             cache.ClearCache();

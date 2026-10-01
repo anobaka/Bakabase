@@ -107,8 +107,14 @@ public sealed class PostParserWorkflowTests
     [TestMethod]
     public async Task ConcurrentDispatchAndRepeatedAddShareOneRun()
     {
+        var beforeCreation = DateTime.UtcNow;
         var id = await Add();
-        var revision = (await TaskState(id)).Revision;
+        var created = await TaskState(id);
+        var revision = created.Revision;
+        Assert.IsNotNull(created.CreatedAt);
+        Assert.IsTrue(created.CreatedAt >= beforeCreation && created.CreatedAt <= DateTime.UtcNow);
+        Assert.AreEqual(DateTimeKind.Utc, created.CreatedAt.Value.Kind);
+        Assert.IsNull(created.CompletedAt);
         await Task.WhenAll(Dispatch(), Dispatch(), Dispatch());
         var first = await TaskState(id);
         await Add();
@@ -116,11 +122,17 @@ public sealed class PostParserWorkflowTests
         var second = await TaskState(id);
         Assert.AreEqual(revision, second.Revision);
         Assert.AreEqual(first.WorkflowRunId, second.WorkflowRunId);
+        Assert.AreEqual(created.CreatedAt, second.CreatedAt);
+        Assert.IsNull(second.CompletedAt);
         await using var scope = _services.CreateAsyncScope();
         Assert.AreEqual(1, await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().Set<WorkflowRunDbModel>().CountAsync());
         await Execute(first.WorkflowRunId!.Value);
         var done = await TaskState(id);
         Assert.AreEqual(WorkflowRunStatus.Success, done.WorkflowStatus);
+        Assert.AreEqual(created.CreatedAt, done.CreatedAt);
+        Assert.IsNotNull(done.CompletedAt);
+        Assert.AreEqual((await RunState(done.WorkflowRunId!.Value)).CompletedAt!.Value.ToUniversalTime(), done.CompletedAt);
+        Assert.AreEqual(DateTimeKind.Utc, done.CompletedAt.Value.Kind);
         Assert.AreEqual("Extracted title", done.Title);
         Assert.AreEqual("secret", done.Results![PostParseTarget.DownloadInfo]!["resources"]![0]!["password"]!.GetValue<string>());
         Assert.AreEqual(1, _reader.Reads);
@@ -131,16 +143,23 @@ public sealed class PostParserWorkflowTests
     {
         _extractor.FailuresRemaining = 1;
         var id = await Add();
+        var createdAt = (await TaskState(id)).CreatedAt;
         await Dispatch();
         var runId = (await TaskState(id)).WorkflowRunId!.Value;
         await Execute(runId);
         Assert.AreEqual(WorkflowRunStatus.Failed, (await TaskState(id)).WorkflowStatus);
+        Assert.IsNotNull((await RunState(runId)).CompletedAt);
+        Assert.IsNull((await TaskState(id)).CompletedAt);
         Assert.AreEqual(1, (await RunState(runId)).CurrentStepIndex);
         await using (var scope = _services.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<IPostParserTaskService>().Retry(id);
+        Assert.IsNull((await TaskState(id)).CompletedAt);
+        Assert.AreEqual(createdAt, (await TaskState(id)).CreatedAt);
         await Execute(runId);
         Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
         Assert.AreEqual(runId, (await TaskState(id)).WorkflowRunId);
+        Assert.IsNotNull((await TaskState(id)).CompletedAt);
+        Assert.AreEqual(createdAt, (await TaskState(id)).CreatedAt);
         Assert.AreEqual(1, _reader.Reads);
         Assert.AreEqual(2, _extractor.Extractions);
     }
@@ -158,14 +177,108 @@ public sealed class PostParserWorkflowTests
             await scope.ServiceProvider.GetRequiredService<IPostParserTaskService>().ReParse(id);
         await Dispatch();
         var fresh = await TaskState(id);
+        Assert.AreEqual(old.CreatedAt, fresh.CreatedAt);
+        Assert.IsNull(fresh.CompletedAt);
         _extractor.Hold = false;
         _extractor.Release.TrySetResult();
         await executing;
         Assert.IsNull((await TaskState(id)).Results);
+        Assert.IsNull((await TaskState(id)).CompletedAt);
         Assert.AreNotEqual(old.WorkflowRunId, fresh.WorkflowRunId);
         Assert.IsTrue(fresh.Revision > old.Revision);
         await Execute(fresh.WorkflowRunId!.Value);
         Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual((await RunState(fresh.WorkflowRunId.Value)).CompletedAt!.Value.ToUniversalTime(), (await TaskState(id)).CompletedAt);
+    }
+
+    [TestMethod]
+    public async Task ReparseKeepsOriginalCreationAndClearsPreviousCompletion()
+    {
+        var id = await Add();
+        await Dispatch();
+        var runId = (await TaskState(id)).WorkflowRunId!.Value;
+        await Execute(runId);
+        var completed = await TaskState(id);
+        Assert.IsNotNull(completed.CompletedAt);
+        await using (var scope = _services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<IPostParserTaskService>().ReParse(id);
+        var pending = await TaskState(id);
+        Assert.AreEqual(completed.CreatedAt, pending.CreatedAt);
+        Assert.IsNull(pending.CompletedAt);
+        Assert.IsNull(pending.WorkflowRunId);
+        await Dispatch();
+        var newRunId = (await TaskState(id)).WorkflowRunId!.Value;
+        Assert.AreNotEqual(runId, newRunId);
+        await Execute(newRunId);
+        var latest = await TaskState(id);
+        Assert.AreEqual(completed.CreatedAt, latest.CreatedAt);
+        Assert.AreEqual((await RunState(newRunId)).CompletedAt!.Value.ToUniversalTime(), latest.CompletedAt);
+    }
+
+    [TestMethod]
+    public async Task SupersededRunCannotChangeLatestSuccessfulCompletion()
+    {
+        var id = await Add();
+        await Dispatch();
+        var old = await TaskState(id);
+        await using (var scope = _services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<IPostParserTaskService>().ReParse(id);
+        await Dispatch();
+        var newRunId = (await TaskState(id)).WorkflowRunId!.Value;
+        await Execute(newRunId);
+        var latest = await TaskState(id);
+        Assert.IsNotNull(latest.CompletedAt);
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            await db.WorkflowRuns.Where(r => r.Id == old.WorkflowRunId)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Failed)
+                    .SetProperty(r => r.CompletedAt, DateTime.Now.AddMinutes(1)));
+            await Assert.ThrowsExceptionAsync<OperationCanceledException>(() =>
+                scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>()
+                    .SaveResultAsync(new PostParserInput {TaskId = id, Revision = old.Revision},
+                        old.WorkflowRunId!.Value, new PostDownloadInfo {Title = "Stale title"}, CancellationToken.None));
+        }
+        var refreshed = await TaskState(id);
+        Assert.AreEqual(latest.CreatedAt, refreshed.CreatedAt);
+        Assert.AreEqual(latest.CompletedAt, refreshed.CompletedAt);
+        Assert.AreEqual(latest.Title, refreshed.Title);
+        Assert.IsNull(refreshed.Error);
+    }
+
+    [TestMethod]
+    public async Task HistoricalRecordsKeepUnknownTimesAndPastedTextGetsCreationTime()
+    {
+        await using var scope = _services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        var historical = new PostParserTaskDbModel
+        {
+            Link = "https://example.test/historical", Targets = "[1]", Results = "{\"DownloadInfo\":{}}"
+        };
+        db.PostParserTasks.Add(historical);
+        await db.SaveChangesAsync();
+        var service = scope.ServiceProvider.GetRequiredService<IPostParserTaskService>();
+        await service.AddInputs([], [PostParseTarget.DownloadInfo], [], "Pasted content", null);
+        var all = await service.GetAll();
+        var old = all.Single(t => t.Id == historical.Id);
+        Assert.IsNull(old.CreatedAt);
+        Assert.IsNull(old.CompletedAt);
+        Assert.IsNotNull(all.Single(t => t.Text == "Pasted content").CreatedAt);
+    }
+
+    [TestMethod]
+    public async Task SuccessfulWorkflowWithoutResultsDoesNotClaimCompletedParsing()
+    {
+        var id = await Add();
+        await Dispatch();
+        var runId = (await TaskState(id)).WorkflowRunId!.Value;
+        await using (var scope = _services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.Where(r => r.Id == runId)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Success)
+                    .SetProperty(r => r.CompletedAt, DateTime.Now));
+        var task = await TaskState(id);
+        Assert.IsNotNull(task.Error);
+        Assert.IsNull(task.CompletedAt);
     }
 
     [TestMethod]

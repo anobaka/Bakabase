@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
@@ -13,6 +14,10 @@ public record PostParserTask
     public string? Title { get; set; }
     public string? Content { get; set; }
     public string? Text { get; set; }
+    [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.IsoDateTimeConverter))]
+    public DateTime? CreatedAt { get; set; }
+    [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.IsoDateTimeConverter))]
+    public DateTime? CompletedAt { get; set; }
     public int Revision { get; set; }
     public int? WorkflowDefinitionId { get; set; }
     public int? WorkflowRunId { get; set; }

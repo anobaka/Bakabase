@@ -23,7 +23,12 @@ const task: PostParserTask = {
 
 describe("post parsing result compatibility", () => {
   it("renders and exports all current bare result links and their individual passwords", () => {
-    const record = { ...task, results: { [PostParseTarget.DownloadInfo]: result } };
+    const record = {
+      ...task,
+      createdAt: "2026-10-01T07:08:09Z",
+      completedAt: "2026-10-01T07:09:10Z",
+      results: { [PostParseTarget.DownloadInfo]: result },
+    };
 
     expect(getDownloadInfo(record)).toEqual(result);
     const rows = buildExportRows([record], (key) => key);
@@ -34,6 +39,8 @@ describe("post parsing result compatibility", () => {
       "Resource Link": result.resources[0].link,
       "Access Code": "aB12",
       Password: "archive-1",
+      CreatedAt: record.createdAt,
+      CompletedAt: record.completedAt,
     });
     expect(rows[1]).toMatchObject({
       "Resource Link": result.resources[1].link,
@@ -54,6 +61,8 @@ describe("post parsing result compatibility", () => {
       Password: "archive-2",
       ParsedAt: "2026-09-14",
       Error: "partial",
+      CreatedAt: "",
+      CompletedAt: "",
     });
   });
 

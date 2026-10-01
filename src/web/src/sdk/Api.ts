@@ -1521,6 +1521,34 @@ export type BakabaseInfrastructuresComponentsGuiIconType = 1 | 2 | 3;
  */
 export type BakabaseInfrastructuresComponentsGuiUiTheme = 0 | 1 | 2;
 
+export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoRange {
+  /** @format int32 */
+  id: number;
+  /** @format date-time */
+  startAt: string;
+  /** @format date-time */
+  endAt: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoTarget {
+  /** @format int32 */
+  id: number;
+  name: string;
+  ranges: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoRange[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoRangeInputModel {
+  /** @minLength 1 */
+  startAt: string;
+  /** @minLength 1 */
+  endAt: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoTargetInputModel {
+  /** @minLength 1 */
+  name: string;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
   path: string;
   /** @format int64 */
@@ -2177,7 +2205,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   /** @format date-time */
   createdAt: string;
   /** @format date-time */
-  completedAt?: string | null;
+  completedAt?: string;
   options?: string;
   metadata?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskMetadata;
   displayName: string;
@@ -2521,6 +2549,10 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
   title?: string;
   content?: string;
   text?: string;
+  /** @format date-time */
+  createdAt?: string;
+  /** @format date-time */
+  completedAt?: string;
   /** @format int32 */
   revision: number;
   /** @format int32 */
@@ -8028,6 +8060,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoTarget {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoTarget[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
@@ -16430,6 +16469,161 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/collection/${id}/progress`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+  };
+  collectionMemo = {
+    /**
+     * No description
+     *
+     * @tags CollectionMemo
+     * @name GetCollectionMemoTargets
+     * @request GET:/collection-memo
+     */
+    getCollectionMemoTargets: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoTarget,
+        any
+      >({
+        path: `/collection-memo`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getCollectionMemoTargets
+     * @name getCollectionMemoTargetsUrl
+     */
+    getCollectionMemoTargetsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/collection-memo`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags CollectionMemo
+     * @name CreateCollectionMemoTarget
+     * @request POST:/collection-memo
+     */
+    createCollectionMemoTarget: (
+      data: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoTargetInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection-memo`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createCollectionMemoTarget
+     * @name createCollectionMemoTargetUrl
+     */
+    createCollectionMemoTargetUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/collection-memo`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags CollectionMemo
+     * @name UpdateCollectionMemoTarget
+     * @request PUT:/collection-memo/{targetId}
+     */
+    updateCollectionMemoTarget: (
+      targetId: number,
+      data: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoTargetInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection-memo/${targetId}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CollectionMemo
+     * @name DeleteCollectionMemoTarget
+     * @request DELETE:/collection-memo/{targetId}
+     */
+    deleteCollectionMemoTarget: (targetId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection-memo/${targetId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CollectionMemo
+     * @name CreateCollectionMemoRange
+     * @request POST:/collection-memo/{targetId}/ranges
+     */
+    createCollectionMemoRange: (
+      targetId: number,
+      data: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoRangeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection-memo/${targetId}/ranges`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CollectionMemo
+     * @name UpdateCollectionMemoRange
+     * @request PUT:/collection-memo/{targetId}/ranges/{id}
+     */
+    updateCollectionMemoRange: (
+      targetId: number,
+      id: number,
+      data: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoRangeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection-memo/${targetId}/ranges/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CollectionMemo
+     * @name DeleteCollectionMemoRange
+     * @request DELETE:/collection-memo/{targetId}/ranges/{id}
+     */
+    deleteCollectionMemoRange: (targetId: number, id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection-memo/${targetId}/ranges/${id}`,
+        method: "DELETE",
         format: "json",
         ...params,
       }),

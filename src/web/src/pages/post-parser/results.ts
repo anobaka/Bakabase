@@ -84,6 +84,8 @@ export function buildExportRows(tasks: PostParserTask[], targetLabel: (key: stri
       Source: PostParserSource[task.source] ?? "Automatic",
       Link: task.link,
       Title: task.title ?? "",
+      CreatedAt: task.createdAt ?? "",
+      CompletedAt: task.completedAt ?? "",
       Target: "",
       "Resource Link": "",
       "Access Code": "",

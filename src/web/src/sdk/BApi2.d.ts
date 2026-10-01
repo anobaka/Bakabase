@@ -1700,6 +1700,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/collection-memo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCollectionMemoTargets"];
+        put?: never;
+        post: operations["CreateCollectionMemoTarget"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection-memo/{targetId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateCollectionMemoTarget"];
+        post?: never;
+        delete: operations["DeleteCollectionMemoTarget"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection-memo/{targetId}/ranges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateCollectionMemoRange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection-memo/{targetId}/ranges/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateCollectionMemoRange"];
+        post?: never;
+        delete: operations["DeleteCollectionMemoRange"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/comparison/plan": {
         parameters: {
             query?: never;
@@ -10270,6 +10334,27 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Infrastructures.Components.Gui.UiTheme": 0 | 1 | 2;
+        "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoRange": {
+            /** Format: int32 */
+            id: number;
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            endAt: string;
+        };
+        "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoTarget": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            ranges: components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoRange"][];
+        };
+        "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel": {
+            startAt: string;
+            endAt: string;
+        };
+        "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel": {
+            name: string;
+        };
         "Bakabase.InsideWorld.Business.Components.Compression.CompressedFileEntry": {
             path: string;
             /** Format: int64 */
@@ -10888,7 +10973,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
-            completedAt?: string | null;
+            completedAt?: string;
             options?: string;
             metadata?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskMetadata"];
             readonly displayName: string;
@@ -11162,6 +11247,10 @@ export interface components {
             title?: string;
             content?: string;
             text?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            completedAt?: string;
             /** Format: int32 */
             revision: number;
             /** Format: int32 */
@@ -15621,6 +15710,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoTarget]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoTarget"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Compression.CompressedFileEntry]": {
             /** Format: int32 */
@@ -21313,6 +21408,200 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[System.Int32]]]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[System.Int32]]]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[System.Int32]]]"];
+                };
+            };
+        };
+    };
+    GetCollectionMemoTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoTarget]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoTarget]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoTarget]"];
+                };
+            };
+        };
+    };
+    CreateCollectionMemoTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    UpdateCollectionMemoTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteCollectionMemoTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    CreateCollectionMemoRange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    UpdateCollectionMemoRange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: number;
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteCollectionMemoRange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: number;
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };

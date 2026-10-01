@@ -1,5 +1,6 @@
 ﻿using System;
 using Bakabase.Abstractions.Models.Db;
+using Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PlayList.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
@@ -31,6 +32,8 @@ namespace Bakabase.InsideWorld.Business
         /// </summary>
         public DbSet<LegacySpecialText> SpecialTexts { get; set; }
         public DbSet<PlayListDbModel> Playlists { get; set; }
+        public DbSet<CollectionMemoTargetDbModel> CollectionMemoTargets { get; set; }
+        public DbSet<CollectionMemoRangeDbModel> CollectionMemoRanges { get; set; }
 
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
         public DbSet<DownloadTaskFileDbModel> DownloadTaskFiles { get; set; }
@@ -174,6 +177,23 @@ namespace Bakabase.InsideWorld.Business
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<CollectionMemoTargetDbModel>(t =>
+            {
+                t.Property(a => a.Name).HasMaxLength(200);
+                t.Property(a => a.NormalizedName).HasMaxLength(200);
+                t.HasIndex(a => a.NormalizedName).IsUnique();
+            });
+
+            modelBuilder.Entity<CollectionMemoRangeDbModel>(t =>
+            {
+                t.HasOne<CollectionMemoTargetDbModel>().WithMany().HasForeignKey(a => a.TargetId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                t.HasIndex(a => new {a.TargetId, a.StartAt});
+                // SQLite stores no DateTime.Kind. Reapply UTC when reading to keep JSON unambiguous.
+                t.Property(a => a.StartAt).HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+                t.Property(a => a.EndAt).HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+            });
 
             modelBuilder.Entity<DownloadTaskDbModel>(t =>
             {
