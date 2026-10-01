@@ -48,10 +48,93 @@ public sealed class ExHentaiTorrentDownloadTests
             ? Response(Encoding.UTF8.GetBytes("<html>Login failed</html>"), "text/html")
             : Response(Metadata, "application/x-bittorrent"));
         await Assert.ThrowsExceptionAsync<InvalidDataException>(() => fixture.Client.DownloadTorrent(Url, PathToTorrent));
+        Assert.AreEqual("<html>Old login page</html>", await File.ReadAllTextAsync(PathToTorrent));
+        CollectionAssert.AreEqual(new[] {PathToTorrent}, Directory.GetFiles(_directory));
         await fixture.Client.DownloadTorrent(Url, PathToTorrent);
         Assert.AreEqual(2, attempt, "An old filename must not suppress the retry request.");
         CollectionAssert.AreEqual(Metadata, await File.ReadAllBytesAsync(PathToTorrent));
         Assert.AreEqual(1, Directory.GetFiles(_directory).Length);
+    }
+
+    [DataTestMethod]
+    [DataRow(200, false)]
+    [DataRow(240, false)]
+    [DataRow(240, true)]
+    public async Task LongLegalTargetNames_AreReplacedAtomicallyWithoutLengtheningTheTemporaryBasename(
+        int componentLength, bool unicode)
+    {
+        var path = LongTorrentPath(componentLength, unicode);
+        await File.WriteAllTextAsync(path, "Previously downloaded content.");
+        var requests = 0;
+        using var fixture = new Fixture(_ => { requests++; return Response(Metadata, "application/x-bittorrent"); });
+
+        await fixture.Client.DownloadTorrent(Url, path);
+
+        Assert.AreEqual(1, requests);
+        CollectionAssert.AreEqual(Metadata, await File.ReadAllBytesAsync(path));
+        CollectionAssert.AreEqual(new[] {path}, Directory.GetFiles(_directory));
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task LongTarget_InvalidResponseKeepsTheExistingFileAndLeavesNoStagingFiles(bool unicode)
+    {
+        var path = LongTorrentPath(240, unicode);
+        var previous = Encoding.UTF8.GetBytes("Previous torrent must remain untouched.");
+        await File.WriteAllBytesAsync(path, previous);
+        using var fixture = new Fixture(_ => Response("<html>Login required</html>"u8.ToArray(), "text/html"));
+
+        await Assert.ThrowsExceptionAsync<InvalidDataException>(() => fixture.Client.DownloadTorrent(Url, path));
+
+        CollectionAssert.AreEqual(previous, await File.ReadAllBytesAsync(path));
+        CollectionAssert.AreEqual(new[] {path}, Directory.GetFiles(_directory));
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task LongTarget_CancellationAfterReadingMetadataKeepsTheExistingFileAndCleansStaging(bool unicode)
+    {
+        var path = LongTorrentPath(240, unicode);
+        var previous = Encoding.UTF8.GetBytes("Previous torrent must remain untouched.");
+        await File.WriteAllBytesAsync(path, previous);
+        using var cancellation = new CancellationTokenSource();
+        using var fixture = new Fixture(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {Content = new CancelAtEndContent(cancellation)});
+
+        try
+        {
+            await fixture.Client.DownloadTorrent(Url, path, cancellation.Token);
+            Assert.Fail("A cancelled download must not replace its target.");
+        }
+        catch (OperationCanceledException) { Assert.IsTrue(cancellation.IsCancellationRequested); }
+
+        CollectionAssert.AreEqual(previous, await File.ReadAllBytesAsync(path));
+        CollectionAssert.AreEqual(new[] {path}, Directory.GetFiles(_directory));
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task LongTarget_PromotionFailureCleansStagingAndPreservesExistingDirectoryContents(bool unicode)
+    {
+        var path = LongTorrentPath(240, unicode);
+        Directory.CreateDirectory(path);
+        var previous = Path.Combine(path, "keep.txt");
+        await File.WriteAllTextAsync(previous, "Existing contents.");
+        using var fixture = new Fixture(_ => Response(Metadata, "application/x-bittorrent"));
+
+        try
+        {
+            await fixture.Client.DownloadTorrent(Url, path);
+            Assert.Fail("A torrent download cannot replace an existing directory.");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+
+        Assert.AreEqual("Existing contents.", await File.ReadAllTextAsync(previous));
+        Assert.AreEqual(0, Directory.GetFiles(_directory).Length);
+        CollectionAssert.AreEqual(new[] {path}, Directory.GetDirectories(_directory));
     }
 
     [TestMethod]
@@ -130,6 +213,39 @@ public sealed class ExHentaiTorrentDownloadTests
         var response = new HttpResponseMessage(HttpStatusCode.OK) {Content = new ByteArrayContent(bytes)};
         if (mediaType != null) response.Content.Headers.ContentType = new(mediaType);
         return response;
+    }
+
+    private string LongTorrentPath(int componentLength, bool unicode)
+    {
+        const string extension = ".torrent";
+        var available = componentLength - extension.Length;
+        var name = unicode ? new string('图', available / 3) + new string('x', available % 3) : new string('x', available);
+        var filename = name + extension;
+        Assert.AreEqual(componentLength, unicode ? Encoding.UTF8.GetByteCount(filename) : filename.Length);
+        return Path.Combine(_directory, filename);
+    }
+
+    private sealed class CancelAtEndContent(CancellationTokenSource cancellation) : HttpContent
+    {
+        protected override bool TryComputeLength(out long length) { length = Metadata.Length; return true; }
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
+            throw new NotSupportedException();
+        protected override Task<Stream> CreateContentReadStreamAsync() =>
+            Task.FromResult<Stream>(new CancelAtEndStream(cancellation));
+        protected override Task<Stream> CreateContentReadStreamAsync(CancellationToken ct) =>
+            CreateContentReadStreamAsync();
+    }
+
+    private sealed class CancelAtEndStream(CancellationTokenSource cancellation) : MemoryStream(Metadata, writable: false)
+    {
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+        {
+            var read = await base.ReadAsync(buffer, ct);
+            // Complete EOF normally, then cancel exactly before the validated response can
+            // be written/promoted. No timing-dependent file watcher or real HTTP is needed.
+            if (read == 0) cancellation.Cancel();
+            return read;
+        }
     }
 
     private sealed class Fixture : IDisposable

@@ -213,9 +213,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     galleryNameParts.Add(filename.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase)
                         ? filename[..^".torrent".Length] : filename);
                 if (galleryNameParts.Count > 0)
-                    return FileNameSanitizer.Sanitize(string.Join(" ", galleryNameParts) + ".torrent");
-                return FileNameSanitizer.Sanitize(filename.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase)
-                    ? filename : filename + ".torrent");
+                    return ExHentaiTorrentFileName.Limit(
+                        FileNameSanitizer.Sanitize(string.Join(" ", galleryNameParts) + ".torrent"), sourceKey);
+                return ExHentaiTorrentFileName.Limit(
+                    FileNameSanitizer.Sanitize(filename.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase)
+                        ? filename : filename + ".torrent"), sourceKey);
             }
 
             // Use the API count: an empty torrent window must not become a cached negative verdict.
@@ -264,7 +266,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 for (var index = 0; index < candidates.Count; index++)
                 {
                     ct.ThrowIfCancellationRequested();
-                    var candidateTemporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                    var candidateTemporary = Path.Combine(downloadPath, $".bakabase-torrent-{Guid.NewGuid():N}.tmp");
                     var selected = false;
                     var validatingMetadata = false;
                     try
@@ -627,7 +629,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 var wrotePath = await ResolvePagePath(title, actualExtension);
                                 batchToken.ThrowIfCancellationRequested();
                                 Directory.CreateDirectory(Path.GetDirectoryName(wrotePath)!);
-                                var temporary = wrotePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                                var temporary = Path.Combine(Path.GetDirectoryName(wrotePath)!, $".bakabase-image-{Guid.NewGuid():N}.tmp");
                                 try
                                 {
                                     ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, galleryDirectoryForImages, wrotePath);

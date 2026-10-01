@@ -126,16 +126,26 @@ public partial class ExHentaiClient
 
         // An existing filename is not evidence of a completed download: older versions could
         // save an HTML error page there. Always obtain a fresh response and replace atomically.
-        var temporary = downloadPath + "." + Guid.NewGuid().ToString("N") + ".download";
+        // Extending a legal gallery filename can exceed the filesystem's component limit.
+        // Keep the staging file on the same volume without inheriting the target basename.
+        var temporary = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(downloadPath))!,
+            ".bakabase-" + Guid.NewGuid().ToString("N") + ".download");
+        var created = false;
         try
         {
-            await File.WriteAllBytesAsync(temporary, bytes, ct);
+            await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                             81920, FileOptions.Asynchronous))
+            {
+                created = true;
+                await output.WriteAsync(bytes, ct);
+            }
             ct.ThrowIfCancellationRequested();
             File.Move(temporary, downloadPath, true);
         }
         finally
         {
-            if (File.Exists(temporary)) File.Delete(temporary);
+            // A CreateNew collision belongs to another writer and must not be deleted.
+            if (created && File.Exists(temporary)) File.Delete(temporary);
         }
     }
 
