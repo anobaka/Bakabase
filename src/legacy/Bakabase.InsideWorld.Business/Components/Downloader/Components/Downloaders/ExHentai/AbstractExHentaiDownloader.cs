@@ -34,9 +34,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         protected readonly ExHentaiClient Client;
         protected readonly ITextVocabularyService TextVocabularyService;
         protected readonly IHostEnvironment Env;
-        // Serialize fullimg preflight + request across tasks; a balance read must not race
-        // another in-app original request against the same account.
-        private static readonly SemaphoreSlim OriginalImageGate = new(1, 1);
         
         protected AbstractExHentaiDownloader(IServiceProvider serviceProvider,
             IStringLocalizer<SharedResource> localizer,
@@ -419,8 +416,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             var doneCount = 0;
             var cookieSnapshot = originalOptions.Cookie;
             var requestContext = preferOriginal ? new ExHentaiRequestContext(cookieSnapshot) : null;
-            var preflightWasFree = false;
-            long preflightMinimum = 0, preflightMaximum = 0;
 
             bool CanConfirmFree(ExHentaiOriginalImageInfo info)
             {
@@ -431,50 +426,67 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                        ExHentaiOriginalImagePolicy.IsPubliclyFree(detail.UpdateDt, serverNow);
             }
 
-            async Task BeforeOriginalDownload(ExHentaiOriginalImageInfo info, CancellationToken token)
+            ExHentaiImageDownloadOptions CreateOriginalDownloadOptions()
             {
-                var current = exOptionsManager.Value;
-                if (!current.PreferOriginalImages || !string.Equals(current.Cookie, cookieSnapshot, StringComparison.Ordinal))
-                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the account or original-image preference changed. Retry to apply the new settings.");
-                preflightWasFree = CanConfirmFree(info);
-                if (preflightWasFree) return;
-                if (!current.AllowOriginalImageGpSpending)
-                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: this request could consume GP/Credits and spending is disabled. Previously downloaded files are retained. No paid original-image request was sent.");
-                var reservation = ExHentaiOriginalImagePolicy.EstimateGpReservation(info.OriginalSizeBytes);
-                var minimum = current.OriginalImageMinimumGpBalance ?? ExHentaiOriginalImagePolicy.DefaultMinimumGpBalance;
-                var maximum = current.OriginalImageMaximumGpCostPerTask ?? ExHentaiOriginalImagePolicy.DefaultMaximumGpCostPerTask;
-                if (minimum < 0 || maximum < 0)
-                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: GP limits must be non-negative.");
-                try
-                {
-                    var balance = await Client.GetAccountBalance(requestContext!, token);
-                    ExHentaiOriginalImagePolicy.CheckBalance(balance.GpBalance, reservation, minimum);
-                    await ledger.ReserveGpAsync(downloadTaskId, reservation, maximum, token);
-                    preflightMinimum = minimum;
-                    preflightMaximum = maximum;
-                }
-                catch (Exception e) when (e is not ExHentaiOriginalImageSafetyException && e is not OperationCanceledException)
-                {
-                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the account balance or durable GP budget could not be verified. No paid original-image request was sent. " + e.Message);
-                }
-            }
+                // Each attempt owns its preflight state; parallel pages must not overwrite
+                // another page's free/paid decision or the limits checked before sending.
+                var preflightWasFree = false;
+                long preflightMinimum = 0, preflightMaximum = 0;
 
-            Task BeforeOriginalSend(ExHentaiOriginalImageInfo info, CancellationToken token)
-            {
-                token.ThrowIfCancellationRequested();
-                var current = exOptionsManager.Value;
-                if (!current.PreferOriginalImages || !string.Equals(current.Cookie, cookieSnapshot, StringComparison.Ordinal))
-                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the account or original-image preference changed while the request was queued.");
-                if (preflightWasFree)
+                async Task BeforeOriginalDownload(ExHentaiOriginalImageInfo info, CancellationToken token)
                 {
-                    if (!CanConfirmFree(info))
-                        throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the free-download window ended while the request was queued. Retry to apply the current spending policy. No paid original-image request was sent.");
+                    var current = exOptionsManager.Value;
+                    if (!current.PreferOriginalImages || !string.Equals(current.Cookie, cookieSnapshot, StringComparison.Ordinal))
+                        throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the account or original-image preference changed. Retry to apply the new settings.");
+                    preflightWasFree = CanConfirmFree(info);
+                    if (preflightWasFree) return;
+                    if (!current.AllowOriginalImageGpSpending)
+                        throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: this request could consume GP/Credits and spending is disabled. Previously downloaded files are retained. No paid original-image request was sent.");
+                    var reservation = ExHentaiOriginalImagePolicy.EstimateGpReservation(info.OriginalSizeBytes);
+                    var minimum = current.OriginalImageMinimumGpBalance ?? ExHentaiOriginalImagePolicy.DefaultMinimumGpBalance;
+                    var maximum = current.OriginalImageMaximumGpCostPerTask ?? ExHentaiOriginalImagePolicy.DefaultMaximumGpCostPerTask;
+                    if (minimum < 0 || maximum < 0)
+                        throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: GP limits must be non-negative.");
+                    try
+                    {
+                        var balance = await Client.GetAccountBalance(requestContext!, token);
+                        ExHentaiOriginalImagePolicy.CheckBalance(balance.GpBalance, reservation, minimum);
+                        await ledger.ReserveGpAsync(downloadTaskId, reservation, maximum, token);
+                        preflightMinimum = minimum;
+                        preflightMaximum = maximum;
+                    }
+                    catch (Exception e) when (e is not ExHentaiOriginalImageSafetyException && e is not OperationCanceledException)
+                    {
+                        throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the account balance or durable GP budget could not be verified. No paid original-image request was sent. " + e.Message);
+                    }
                 }
-                else if (!current.AllowOriginalImageGpSpending ||
-                         (current.OriginalImageMinimumGpBalance ?? ExHentaiOriginalImagePolicy.DefaultMinimumGpBalance) > preflightMinimum ||
-                         (current.OriginalImageMaximumGpCostPerTask ?? ExHentaiOriginalImagePolicy.DefaultMaximumGpCostPerTask) < preflightMaximum)
-                    throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: GP permission or limits changed while the request was queued. Retry to apply the new limits.");
-                return Task.CompletedTask;
+
+                Task BeforeOriginalSend(ExHentaiOriginalImageInfo info, CancellationToken token)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var current = exOptionsManager.Value;
+                    if (!current.PreferOriginalImages || !string.Equals(current.Cookie, cookieSnapshot, StringComparison.Ordinal))
+                        throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the account or original-image preference changed while the request was queued.");
+                    if (preflightWasFree)
+                    {
+                        if (!CanConfirmFree(info))
+                            throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: the free-download window ended while the request was queued. Retry to apply the current spending policy. No paid original-image request was sent.");
+                    }
+                    else if (!current.AllowOriginalImageGpSpending ||
+                             (current.OriginalImageMinimumGpBalance ?? ExHentaiOriginalImagePolicy.DefaultMinimumGpBalance) > preflightMinimum ||
+                             (current.OriginalImageMaximumGpCostPerTask ?? ExHentaiOriginalImagePolicy.DefaultMaximumGpCostPerTask) < preflightMaximum)
+                        throw new ExHentaiOriginalImageSafetyException("Original-image download stopped: GP permission or limits changed while the request was queued. Retry to apply the new limits.");
+                    return Task.CompletedTask;
+                }
+
+                return new ExHentaiImageDownloadOptions
+                {
+                    PreferOriginal = true,
+                    RequestContext = requestContext,
+                    BeforeOriginalDownload = BeforeOriginalDownload,
+                    BeforeOriginalSend = BeforeOriginalSend,
+                    CanRecoverOriginalWithoutGp = CanConfirmFree
+                };
             }
 
             async Task<string> ResolvePagePath(string title, string extension)
@@ -548,10 +560,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     await onCurrentChanged($"{doneCount}/{detail.FileCount}");
                 }
 
-                // Avoid large mount of tasks being created.
-                // Original downloads stop on the first financial preflight failure. Keep their
-                // requests sequential so later pages cannot spend while a failed page unwinds.
-                var threads = preferOriginal ? 1 : Math.Max(1, options.MaxConcurrency);
+                // Both original and displayed images use the configured concurrency. A failed
+                // preflight cancels the batch, but already-sent requests may still incur charges.
+                var threads = Math.Max(1, options.MaxConcurrency);
                 using var sm = new SemaphoreSlim(threads, threads);
                 var tasks = new ConcurrentQueue<Task>();
                 ExceptionDispatchInfo? batchFailure = null;
@@ -616,19 +627,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                         ExHentaiDownloadedImage r;
                                         if (preferOriginal)
                                         {
-                                            await OriginalImageGate.WaitAsync(batchToken);
-                                            try
-                                            {
-                                                r = await Client.DownloadImage(pageUrl, new ExHentaiImageDownloadOptions
-                                                {
-                                                    PreferOriginal = true,
-                                                    RequestContext = requestContext,
-                                                    BeforeOriginalDownload = BeforeOriginalDownload,
-                                                    BeforeOriginalSend = BeforeOriginalSend,
-                                                    CanRecoverOriginalWithoutGp = CanConfirmFree
-                                                }, batchToken);
-                                            }
-                                            finally { OriginalImageGate.Release(); }
+                                            r = await Client.DownloadImage(pageUrl, CreateOriginalDownloadOptions(), batchToken);
                                         }
                                         else r = await Client.DownloadImage(pageUrl, new ExHentaiImageDownloadOptions(), batchToken);
                                         data = r.Data;
@@ -702,8 +701,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                         }
                         // Do not pass the token to Task.Run: even a cancelled scheduled task must
                         // enter DownloadPage's finally to return the semaphore permit.
-                        if (preferOriginal) await DownloadPage();
-                        else tasks.Enqueue(Task.Run(DownloadPage));
+                        tasks.Enqueue(Task.Run(DownloadPage));
                     }
 
                     await Task.WhenAll(tasks);
