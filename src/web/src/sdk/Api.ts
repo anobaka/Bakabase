@@ -1387,6 +1387,13 @@ export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptio
   language?: string;
   enablePreReleaseChannel?: boolean;
   enableAnonymousDataTracking?: boolean;
+  enableAutomaticBackup?: boolean;
+  /**
+   * @format int32
+   * @min 1
+   * @max 2147483647
+   */
+  maxBackupVersions?: number;
   /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
   closeBehavior?: BakabaseInfrastructuresComponentsGuiCloseBehavior;
   /** [0: FollowSystem, 1: Light, 2: Dark] */
@@ -1470,6 +1477,13 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   version: string;
   enablePreReleaseChannel: boolean;
   enableAnonymousDataTracking: boolean;
+  enableAutomaticBackup: boolean;
+  /**
+   * @format int32
+   * @min 1
+   * @max 2147483647
+   */
+  maxBackupVersions: number;
   wwwRootPath: string;
   prevDataPath: string;
   /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
@@ -1641,7 +1655,9 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   preferTorrent: boolean;
   preferOriginalImages: boolean;
   allowOriginalImageGpSpending: boolean;
+  /** @format int64 */
   originalImageMinimumGpBalance?: number;
+  /** @format int64 */
   originalImageMaximumGpCostPerTask?: number;
   /** @format int32 */
   downloadResultWorkflowId?: number;
@@ -1906,7 +1922,9 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
   preferTorrent?: boolean;
   preferOriginalImages?: boolean;
   allowOriginalImageGpSpending?: boolean;
+  /** @format int64 */
   originalImageMinimumGpBalance?: number;
+  /** @format int64 */
   originalImageMaximumGpCostPerTask?: number;
   /** @format int32 */
   downloadResultWorkflowId?: number;
@@ -2181,6 +2199,11 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   noTorrentCheckedAt?: string;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskOpenTarget {
+  path: string;
+  openInDirectory: boolean;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition {
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
@@ -2249,6 +2272,11 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   ids?: number[];
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskDirectDownloadRequestModel {
+  /** [0: NotSet, 1: StopOthers, 2: Ignore] */
+  actionOnConflict: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskPutInputModel {
@@ -8988,6 +9016,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsDependencyImplementationsFfMpegHardwareAccelerationInfo;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskOpenTarget {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskOpenTarget;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask {
@@ -20550,6 +20585,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DownloadTask
+     * @name GetDownloadTaskOpenTarget
+     * @request GET:/download-task/{id}/open-target
+     */
+    getDownloadTaskOpenTarget: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskOpenTarget,
+        any
+      >({
+        path: `/download-task/${id}/open-target`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
      * @name QueryDownloadRecords
      * @request POST:/download-task/records/query
      */
@@ -20672,6 +20725,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
+     * @name DirectDownloadTask
+     * @request POST:/download-task/{id}/direct-download
+     */
+    directDownloadTask: (
+      id: number,
+      data: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskDirectDownloadRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-task/${id}/direct-download`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description

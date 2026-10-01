@@ -3124,6 +3124,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/download-task/{id}/open-target": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDownloadTaskOpenTarget"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download-task/records/query": {
         parameters: {
             query?: never;
@@ -3167,6 +3183,22 @@ export interface paths {
         put?: never;
         post: operations["StartDownloadTasks"];
         delete: operations["StopDownloadTasks"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download-task/{id}/direct-download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DirectDownloadTask"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -10132,6 +10164,9 @@ export interface components {
             language?: string;
             enablePreReleaseChannel?: boolean;
             enableAnonymousDataTracking?: boolean;
+            enableAutomaticBackup?: boolean;
+            /** Format: int32 */
+            maxBackupVersions?: number;
             closeBehavior?: components["schemas"]["Bakabase.Infrastructures.Components.Gui.CloseBehavior"];
             uiTheme?: components["schemas"]["Bakabase.Infrastructures.Components.Gui.UiTheme"];
             /** Format: int32 */
@@ -10198,6 +10233,9 @@ export interface components {
             version: string;
             enablePreReleaseChannel: boolean;
             enableAnonymousDataTracking: boolean;
+            enableAutomaticBackup: boolean;
+            /** Format: int32 */
+            maxBackupVersions: number;
             wwwRootPath: string;
             prevDataPath: string;
             closeBehavior: components["schemas"]["Bakabase.Infrastructures.Components.Gui.CloseBehavior"];
@@ -10364,7 +10402,9 @@ export interface components {
             preferTorrent: boolean;
             preferOriginalImages: boolean;
             allowOriginalImageGpSpending: boolean;
+            /** Format: int64 */
             originalImageMinimumGpBalance?: number;
+            /** Format: int64 */
             originalImageMaximumGpCostPerTask?: number;
             /** Format: int32 */
             downloadResultWorkflowId?: number;
@@ -10616,7 +10656,9 @@ export interface components {
             preferTorrent?: boolean;
             preferOriginalImages?: boolean;
             allowOriginalImageGpSpending?: boolean;
+            /** Format: int64 */
             originalImageMinimumGpBalance?: number;
+            /** Format: int64 */
             originalImageMaximumGpCostPerTask?: number;
             /** Format: int32 */
             downloadResultWorkflowId?: number;
@@ -10864,6 +10906,10 @@ export interface components {
             /** Format: date-time */
             noTorrentCheckedAt?: string;
         };
+        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskOpenTarget": {
+            path: string;
+            openInDirectory: boolean;
+        };
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloaderDefinition": {
             thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
             /** Format: int32 */
@@ -10922,6 +10968,9 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskDeleteInputModel": {
             ids?: number[];
             thirdPartyId?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+        };
+        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskDirectDownloadRequestModel": {
+            actionOnConflict: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskActionOnConflict"];
         };
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskPutInputModel": {
             /** Format: int64 */
@@ -16428,6 +16477,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.HardwareAccelerationInfo"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskOpenTarget]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskOpenTarget"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask]": {
             /** Format: int32 */
@@ -24063,6 +24118,30 @@ export interface operations {
             };
         };
     };
+    GetDownloadTaskOpenTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskOpenTarget]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskOpenTarget]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskOpenTarget]"];
+                };
+            };
+        };
+    };
     QueryDownloadRecords: {
         parameters: {
             query?: never;
@@ -24163,6 +24242,37 @@ export interface operations {
                 "application/json": number[];
                 "text/json": number[];
                 "application/*+json": number[];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DirectDownloadTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskDirectDownloadRequestModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskDirectDownloadRequestModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskDirectDownloadRequestModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskDirectDownloadRequestModel"];
             };
         };
         responses: {
