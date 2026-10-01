@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
+using Bakabase.InsideWorld.Business.Components.Downloader.Services;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -25,6 +29,25 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         protected override async Task StartCore(DownloadTask task, ExHentaiTaskOptions options, CancellationToken ct)
         {
             var checkpointContext = new RangeCheckpointContext(task.Checkpoint);
+            var results = GetRequiredService<DownloadResultService>();
+            var preferOriginal = GetRequiredService<IBOptionsManager<ExHentaiOptions>>().Value.PreferOriginalImages;
+            var missingSources = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var gallery in (await results.GetByTaskAsync(task.Id, ct)).GroupBy(x => x.SourceKey))
+            {
+                var latest = gallery.MaxBy(x => x.Id)!;
+                var available = await CanReuseResultAsync(results, latest, options.PreferTorrent, preferOriginal, ct);
+                if (available && latest.Kind == DownloadResultKind.TorrentMetadata)
+                {
+                    // Valid managed metadata can repair the user copy without a network request,
+                    // but a list checkpoint must first let that gallery reach its producer.
+                    var userCopy = ExHentaiDownloadResultHelper.GetTorrentDownloadPath(latest);
+                    available = userCopy != null &&
+                        await DownloadResultService.ReadReusableTorrentMetadataAsync(latest, ct, userCopy) != null;
+                }
+                if (!available)
+                    missingSources.Add(gallery.Key);
+            }
+            var traversingCompletedRange = false;
 
             var doneCount = 0;
             var taskIsDone = false;
@@ -52,6 +75,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     foreach (var r in result.Resources)
                     {
                         var action = checkpointContext.Analyze(r.Id.ToString());
+                        // A completed range must not conceal a lost recorded result. Traverse
+                        // that range to recover missing works, preserving intentional skips for
+                        // works without an unavailable result.
+                        if (action == RangeCheckpointContext.AnalyzeResult.AllTaskIsDone && missingSources.Count > 0)
+                            traversingCompletedRange = true;
+                        if (traversingCompletedRange) action = RangeCheckpointContext.AnalyzeResult.Skip;
+                        if (missingSources.Contains(ExHentaiDownloadResultHelper.NormalizeSourceKey(r.Url)))
+                            action = RangeCheckpointContext.AnalyzeResult.Download;
 
                         Current = $"[{doneCount + 1}/{totalCount}]{r.RawName ?? r.Name}";
                         await OnCurrentChangedInternal();

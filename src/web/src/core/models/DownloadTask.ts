@@ -26,6 +26,8 @@ export type DownloadTask = {
   displayName: string;
   canStart: boolean;
   createdAt: string;
+  /** Most recent successful completion; unknown for older tasks that have not completed again. */
+  completedAt?: string | null;
   /** Serialized per-downloader options (e.g. ExHentai `{ "preferTorrent": true }`). */
   options?: string;
   /**

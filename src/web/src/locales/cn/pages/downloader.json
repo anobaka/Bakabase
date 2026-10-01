@@ -33,6 +33,8 @@
   "downloader.empty.noTasks": "未找到任务",
   "downloader.label.nextStartTime": "下次开始时间",
   "downloader.label.createdAt": "创建于",
+  "downloader.label.completedAt": "最近完成时间",
+  "downloader.action.copyDownloadLink": "复制下载链接",
   "downloader.label.estimatedRemaining": "预计剩余",
   "downloader.label.downloadedFileSize": "已下载文件总大小",
   "downloader.label.downloadSpeed": "下载速度",

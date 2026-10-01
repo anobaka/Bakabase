@@ -182,7 +182,9 @@ public sealed partial class ExHentaiDownloadResultTests
         await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask);
         Assert.AreEqual(0, handler.Requests, "The managed result must survive removal of the user's torrent copy.");
         Assert.AreEqual(1, (await _results.GetByTaskAsync(10)).Count);
-        Assert.AreEqual(1, accountedFiles.Count, "The managed metadata copy is not a user download.");
+        Assert.AreEqual(2, accountedFiles.Count, "The restored user copy is accounted; managed metadata is not a user download.");
+        CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(original));
+        Assert.IsTrue(accountedFiles.All(x => x.Path == Path.GetFullPath(original)));
     }
 
     [TestMethod]
@@ -604,6 +606,8 @@ public sealed partial class ExHentaiDownloadResultTests
         public Action? BeforeOriginalSending;
         public bool IncludeServerDate = true;
         public byte[]? ImageBytes;
+        public int[]? ListGalleryIds;
+        public bool EmptyImageEntries;
         public byte[] GetImageBytes()
         {
             if (ImageBytes != null) return ImageBytes;
@@ -691,13 +695,18 @@ public sealed partial class ExHentaiDownloadResultTests
                 {Content = new StringContent($"<img id='img' src='https://exhentai.org/image/{uri.Segments.Last()}' />" +
                     (OriginalLinkSize == null ? "" : $"<div id='i7'><a href='https://exhentai.org/fullimg.php?gid=12345&amp;page=1&amp;key=abcdef'>Download original 1000 x 1000 {OriginalLinkSize}</a></div>"))};
             }
+            if (uri.AbsolutePath == "/" && ListGalleryIds != null)
+                return new HttpResponseMessage(HttpStatusCode.OK) {Content = new StringContent(
+                    "<div class='searchtext'>" + ListGalleryIds.Length + " results</div><table class='itg gltm'><tbody>" +
+                    string.Concat(ListGalleryIds.Select(id => $"<tr><td><a href='https://exhentai.org/g/{id}/abcdef0123/'>Gallery {id}</a></td></tr>")) +
+                    "</tbody></table>")};
             GalleryRequests++;
             var id = uri.Segments[2].Trim('/');
             var torrentLink = TorrentBytes == null ? "" : "<div id='gd5'><a onclick=\"popUp('https://exhentai.org/torrents')\">Torrent (1)</a></div>";
             var page = uri.Query.Contains("p=1") ? 2 : 1;
             var pagination = GalleryPageCount == 1 ? "" :
                 $"<table class='ptt'><tr><td>Previous</td><td><a href='/g/{id}/abcdef0123/?p=0'>1</a></td><td><a href='/g/{id}/abcdef0123/?p=1'>2</a></td><td>Next</td></tr></table>";
-            var images = string.Concat(Enumerable.Range(1, ImagesPerPage).Select(index =>
+            var images = EmptyImageEntries ? "" : string.Concat(Enumerable.Range(1, ImagesPerPage).Select(index =>
             {
                 var image = (page - 1) * ImagesPerPage + index;
                 var imageKey = GalleryPageCount * ImagesPerPage == 1 ? id : $"{id}-{image}";

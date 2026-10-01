@@ -127,6 +127,29 @@ public sealed class DownloadResultContentStageTests
     }
 
     [TestMethod]
+    public async Task StaleWorkflowContents_FallBackToReacquiredSource_AndRefreshWithoutRetargetingRun()
+    {
+        var result = await Result(owned: false, local: true);
+        var db = _sp.GetRequiredService<BakabaseDbContext>();
+        var state = await db.Set<DownloadResultProcessingDbModel>().SingleAsync(x => x.DownloadResultId == result.Id);
+        state.ContentsDirectory = Path.Combine(_root, "old-location");
+        state.ContentsFilesJson = JsonSerializer.Serialize(new[] {Path.Combine(state.ContentsDirectory, "missing.txt")});
+        state.ContentsReadyAt = DateTime.UtcNow.AddDays(-1);
+        await db.SaveChangesAsync();
+        var view = await View();
+        Assert.IsTrue(view.ContentsReady);
+        Assert.AreEqual(result.Path, view.ContentsDirectory);
+        var item = await _sp.GetRequiredService<DownloadResultWorkflowService>()
+            .PrepareResourceAsync(result.Id, 19, result.Name, default);
+        Assert.AreEqual(1, item.Files!.Count);
+        var persisted = await State(result.Id);
+        Assert.AreEqual(19, persisted.WorkflowRunId);
+        Assert.AreEqual(11, persisted.ResourceId);
+        Assert.AreEqual(result.Path, persisted.ContentsDirectory);
+        Assert.AreEqual(0, _torrent.Downloads);
+    }
+
+    [TestMethod]
     public async Task OwnedTorrent_IsReadyWhilePlacementWaits_WithoutResourceMaterialization()
     {
         var result = await Result();

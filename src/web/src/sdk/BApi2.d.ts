@@ -10887,6 +10887,8 @@ export interface components {
             availableActions: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskAction"][];
             /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
+            completedAt?: string | null;
             options?: string;
             metadata?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskMetadata"];
             readonly displayName: string;

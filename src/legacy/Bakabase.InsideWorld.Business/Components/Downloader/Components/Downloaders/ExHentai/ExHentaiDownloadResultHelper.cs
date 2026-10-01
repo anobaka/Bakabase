@@ -27,7 +27,8 @@ public static class ExHentaiDownloadResultHelper
                     Path.GetExtension(path).Equals(".torrent", StringComparison.OrdinalIgnoreCase)) return path;
             }
             // Older results recorded only their managed metadata. Their user copy used this name.
-            return Path.Combine(directory, FileNameSanitizer.Sanitize($"{result.Name.RemoveInvalidFileNameChars()}.torrent"));
+            return Path.Combine(directory, ExHentaiTorrentFileName.Limit(
+                FileNameSanitizer.Sanitize($"{result.Name.RemoveInvalidFileNameChars()}.torrent"), result.SourceKey));
         }
         catch (Exception error) when (error is JsonException or ArgumentException or NotSupportedException)
         {

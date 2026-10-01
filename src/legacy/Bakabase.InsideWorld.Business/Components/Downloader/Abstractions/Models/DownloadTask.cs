@@ -46,6 +46,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         public DateTime? NextStartDt { get; set; }
         public HashSet<DownloadTaskAction> AvailableActions { get; set; } = new();
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        /// <summary>UTC time of the most recent successful run; failures do not erase this history.</summary>
+        public DateTime? CompletedAt { get; set; }
         public string? Options { get; set; }
 
         /// <summary>

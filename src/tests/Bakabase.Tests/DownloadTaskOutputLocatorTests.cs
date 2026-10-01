@@ -72,6 +72,25 @@ public sealed class DownloadTaskOutputLocatorTests
     }
 
     [TestMethod]
+    public async Task PlacedContents_OpenFinalDirectory_WhileSourceAndLedgerCopiesStillExist()
+    {
+        var source = await WriteFile("downloads/Gallery/001.webp");
+        var placed = await WriteFile("library/Gallery/001.webp");
+        var result = await Record(DownloadResultKind.LocalFiles, "12345/abc", _downloads, _downloads, source);
+        _db.Set<DownloadResultProcessingDbModel>().Add(new()
+        {
+            DownloadResultId = result.Id, ContentsDirectory = Path.GetDirectoryName(placed),
+            ContentsFilesJson = JsonSerializer.Serialize(new[] {placed}), ContentsReadyAt = DateTime.UtcNow
+        });
+        _db.DownloadTaskFiles.Add(new() {DownloadTaskId = _task.Id, Path = source, Size = 1});
+        await _db.SaveChangesAsync();
+        await _ledger.RecordImageAsync(_task.Id, "12345/abc", "https://exhentai.org/s/image/12345-1", source, true, default);
+        Assert.AreEqual(new DownloadTaskOpenTarget(Path.GetDirectoryName(placed)!, false), await _locator.GetAsync(_task.Id));
+        File.Delete(placed);
+        Assert.AreEqual(new DownloadTaskOpenTarget(Path.GetDirectoryName(source)!, false), await _locator.GetAsync(_task.Id));
+    }
+
+    [TestMethod]
     public async Task Images_OpenDeepestCommonTemplateDirectory_InsteadOfConfiguredRoot()
     {
         var first = await WriteFile("downloads/Category/Gallery/Images/001.webp");

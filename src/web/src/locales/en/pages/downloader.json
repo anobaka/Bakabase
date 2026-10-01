@@ -33,6 +33,8 @@
   "downloader.empty.noTasks": "No tasks found",
   "downloader.label.nextStartTime": "Next start time",
   "downloader.label.createdAt": "Created at",
+  "downloader.label.completedAt": "Last completed at",
+  "downloader.action.copyDownloadLink": "Copy download link",
   "downloader.label.estimatedRemaining": "Estimated remaining",
   "downloader.label.downloadedFileSize": "Total downloaded file size",
   "downloader.label.downloadSpeed": "Download speed",

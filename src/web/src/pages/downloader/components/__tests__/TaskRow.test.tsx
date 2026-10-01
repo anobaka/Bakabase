@@ -40,6 +40,7 @@ const task: DownloadTask = {
 
 let container: HTMLDivElement;
 let root: Root;
+let originalClipboard: PropertyDescriptor | undefined;
 
 function element(label: string) {
   return document.querySelector<HTMLElement>(`[aria-label="${label}"]`)!;
@@ -100,6 +101,7 @@ async function show(
 
 beforeEach(() => {
   dangerToast.mockClear();
+  originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -108,6 +110,8 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  if (originalClipboard) Object.defineProperty(navigator, "clipboard", originalClipboard);
+  else Reflect.deleteProperty(navigator, "clipboard");
   vi.unstubAllGlobals();
 });
 
@@ -125,6 +129,59 @@ describe("download task row interaction", () => {
     expect(
       document.querySelector('[aria-label^="downloader.label.downloadedFileSize:"]'),
     ).toBeNull();
+  });
+
+  it.each([null, undefined])(
+    "does not invent a completed date when it is %s",
+    async (completedAt) => {
+      await show({ status: DownloadTaskStatus.Complete, completedAt });
+
+      expect(container).not.toHaveTextContent("downloader.label.completedAt");
+      expect(container).toHaveTextContent(`downloader.label.createdAt ${task.createdAt}`);
+    },
+  );
+
+  it("shows the last successful completion even after a later failure", async () => {
+    const completedAt = "2026-09-15T02:03:04Z";
+
+    await show({ status: DownloadTaskStatus.Failed, completedAt });
+
+    const dates = document.querySelector<HTMLElement>(
+      '[aria-label^="downloader.label.createdAt"]',
+    )!;
+
+    expect(dates).toHaveTextContent(`downloader.label.completedAt ${completedAt}`);
+    expect(dates).toHaveTextContent(`downloader.label.createdAt ${task.createdAt}`);
+  });
+
+  it("keeps the next start and original creation date available beside the completion", async () => {
+    const completedAt = "2026-09-15T02:03:04Z";
+    const nextStartDt = new Date("2026-09-16T05:00:00Z");
+
+    await show({ completedAt, nextStartDt });
+
+    const dates = document.querySelector<HTMLElement>(
+      '[aria-label^="downloader.label.createdAt"]',
+    )!;
+
+    expect(dates).toHaveTextContent(`downloader.label.completedAt ${completedAt}`);
+    expect(dates).toHaveTextContent(`downloader.label.nextStartTime ${String(nextStartDt)}`);
+    expect(dates.title).toContain(`downloader.label.createdAt ${task.createdAt}`);
+  });
+
+  it("copies the download key without selecting the row and keeps clicking its text unchanged", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const props = await show();
+    const address = document.querySelector<HTMLElement>(`[title="${task.key}"]`)!;
+
+    expect(address.closest("a")).toBeNull();
+    await click(element("downloader.action.copyDownloadLink"));
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(task.key);
+    expect(props.onClick).not.toHaveBeenCalled();
+    await click(address);
+    expect(props.onClick).toHaveBeenCalledExactlyOnceWith(task.id, expect.anything());
   });
 
   it("orders size, speed, remaining time, and percent while downloading", async () => {

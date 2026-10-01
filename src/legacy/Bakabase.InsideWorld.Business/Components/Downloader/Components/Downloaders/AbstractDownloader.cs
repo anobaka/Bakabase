@@ -340,6 +340,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
         /// <inheritdoc />
         public DateTime LastActivityAt { get; private set; } = DateTime.Now;
+        public DateTime? CompletedAt { get; private set; }
 
         /// <summary>Records a sign of life for the queue watchdog.</summary>
         protected void Touch() => LastActivityAt = DateTime.Now;
@@ -461,6 +462,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             }
 
             StoppedBy = null;
+            CompletedAt = task.CompletedAt;
             Status = DownloaderStatus.Starting;
             if (Cts != null)
             {
@@ -568,6 +570,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     // nothing was noted, so a clean run never shows a stale note.
                     Message = BuildNoticesMessage();
                     ClearNotices();
+                    CompletedAt = DateTime.UtcNow;
                     Status = DownloaderStatus.Complete;
                     FailureTimes = 0;
                     if (OnProgress != null)

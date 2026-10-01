@@ -93,7 +93,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         }
 
         protected async Task OnChange(int taskId, object value, Func<DownloadTask, object> getter,
-            Action<DownloadTask, object> setter)
+            Action<DownloadTaskDbModel, object> setter)
         {
             try
             {
@@ -104,13 +104,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 // database and broadcast over SignalR even when the value had not moved.
                 if (!Equals(getter(task), value))
                 {
-                    setter(task, value);
-                    // Logger.LogInformation(
-                    //     $"Use new value: {value} to update download task to: {JsonConvert.SerializeObject(task)}");
-                    var dbModel = task.ToDbModel()!;
-                    await Update(dbModel);
+                    // Mutate only the event's field on a tracked row. A progress/name/checkpoint
+                    // snapshot read before completion must not overwrite the newly saved success
+                    // time or status through an unrelated whole-row update.
+                    await base.UpdateByKey(taskId, row => setter(row, value));
                     await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
-                        (await ToDto(new[] {dbModel}))[0]);
+                        await GetDto(taskId));
                 }
             }
             catch (Exception ex)
@@ -239,6 +238,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 
                 if (newStatus == DownloadTaskDbModelStatus.Complete)
                 {
+                    task.CompletedAt = downloader.CompletedAt ?? DateTime.UtcNow;
                     if (downloader.Checkpoint.IsNotEmpty())
                     {
                         task.Checkpoint = downloader.Checkpoint;
@@ -528,7 +528,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                         DownloaderManager[current.Id]?.IsOccupyingDownloadTaskSource() == true)
                         return false;
                     var currentDto = current.ToDomainModel(DownloaderManager)!;
-                    var verdicts = await GetRequiredService<DownloadTaskPrecheckRunner>().EvaluateAsync([currentDto]);
+                    // Files may have disappeared since the queue's cached ordering pass.
+                    var verdicts = await GetRequiredService<DownloadTaskPrecheckRunner>()
+                        .EvaluateAsync([currentDto], useCache: false);
                     if (!verdicts.TryGetValue(task.Id, out var verdict) ||
                         verdict.Outcome != DownloadTaskPrecheckOutcome.AlreadySatisfied)
                         return false;

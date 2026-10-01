@@ -63,7 +63,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         /// gate, so its failure must cost speed and nothing else.
         /// </summary>
         public async Task<IReadOnlyDictionary<int, DownloadTaskPrecheckVerdict>> EvaluateAsync(
-            IReadOnlyList<DownloadTask> candidates, CancellationToken ct = default)
+            IReadOnlyList<DownloadTask> candidates, CancellationToken ct = default, bool useCache = true)
         {
             var result = new Dictionary<int, DownloadTaskPrecheckVerdict>();
 
@@ -76,7 +76,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 
                 var tasks = group.ToArray();
 
-                foreach (var (taskId, verdict) in await EvaluateSourceAsync(precheck, tasks, ct))
+                foreach (var (taskId, verdict) in await EvaluateSourceAsync(precheck, tasks, ct, useCache))
                 {
                     result[taskId] = verdict;
                 }
@@ -86,12 +86,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         }
 
         private async Task<IReadOnlyDictionary<int, DownloadTaskPrecheckVerdict>> EvaluateSourceAsync(
-            IDownloadTaskPrecheck precheck, IReadOnlyList<DownloadTask> tasks, CancellationToken ct)
+            IDownloadTaskPrecheck precheck, IReadOnlyList<DownloadTask> tasks, CancellationToken ct, bool useCache)
         {
             var version = Interlocked.Read(ref _version);
             var ids = tasks.Select(t => t.Id).ToHashSet();
 
-            if (_snapshots.TryGetValue(precheck.ThirdPartyId, out var cached) &&
+            if (useCache && _snapshots.TryGetValue(precheck.ThirdPartyId, out var cached) &&
                 cached.Version == version &&
                 DateTime.Now - cached.EvaluatedAt < Ttl &&
                 // A snapshot only answers for the tasks it looked at. A pass over a wider set (a task
@@ -115,7 +115,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             }
 
             // Only cache when nothing invalidated us while we were evaluating.
-            if (Interlocked.Read(ref _version) == version)
+            if (useCache && Interlocked.Read(ref _version) == version)
             {
                 _snapshots[precheck.ThirdPartyId] = new Snapshot(version, DateTime.Now, verdicts, ids);
             }

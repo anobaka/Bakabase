@@ -118,10 +118,9 @@ public class DownloadTaskPrecheckTests
     }
 
     [TestMethod]
-    public async Task TorrentDownloadedStamp_IsSatisfiedWithoutTouchingTheDisk()
+    public async Task TorrentDownloadedStamp_AloneCannotProveTheFilesAreStillAvailable()
     {
-        // The stamp is the whole point: no network, and no folder listing either. Note there is no
-        // file on disk here at all — the stamp alone has to settle it.
+        // Historical completion is insufficient when its actual output has been removed.
         var verdict = await Evaluate(BuildPrecheck(),
             NewTask(1, "Some Gallery", new ExHentaiTaskOptions
             {
@@ -129,7 +128,7 @@ public class DownloadTaskPrecheckTests
                 TorrentDownloadedAt = DateTime.Now.AddDays(-3)
             }));
 
-        Assert.AreEqual(DownloadTaskPrecheckOutcome.AlreadySatisfied, verdict?.Outcome);
+        Assert.IsNull(verdict);
     }
 
     [TestMethod]
@@ -350,6 +349,18 @@ public class DownloadTaskPrecheckRunnerTests
 
     private static DownloadTaskPrecheckRunner Build(IDownloadTaskPrecheck precheck) =>
         new([precheck], NullLogger<DownloadTaskPrecheckRunner>.Instance);
+
+    [TestMethod]
+    public async Task FinalCompletionCheck_ReEvaluatesWithoutReplacingTheBulkOrderingSnapshot()
+    {
+        var precheck = new CountingPrecheck();
+        var runner = Build(precheck);
+        await runner.EvaluateAsync([NewTask(1), NewTask(2)]);
+        await runner.EvaluateAsync([NewTask(1)], useCache: false);
+        Assert.AreEqual(2, precheck.Calls);
+        await runner.EvaluateAsync([NewTask(1), NewTask(2)]);
+        Assert.AreEqual(2, precheck.Calls, "An uncached final check must preserve the wider queue snapshot.");
+    }
 
     [TestMethod]
     public async Task RepeatedPassesOverTheSameTasks_EvaluateOnce()
