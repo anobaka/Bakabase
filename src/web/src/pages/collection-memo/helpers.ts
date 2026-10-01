@@ -13,6 +13,8 @@ export interface CollectionMemoTarget {
 export interface TimelineDomain {
   start: number;
   end: number;
+  /** Exact global start when its precision exceeds the millisecond pixel scale. */
+  startAt?: string;
 }
 
 export interface TimelineSegment extends TimelineDomain {
@@ -22,78 +24,199 @@ export interface TimelineSegment extends TimelineDomain {
   width: number;
 }
 
-/** All targets share the same scale, including targets hidden by the search field. */
-export const getTimelineDomain = (
-  targets: CollectionMemoTarget[],
-  now: number,
-): TimelineDomain => ({
-  start: targets.reduce(
-    (earliest, target) =>
-      target.ranges.reduce((start, range) => {
-        const value = Date.parse(range.startAt);
+export interface TimelineCoverage extends TimelineDomain {
+  startAt: string;
+  endAt: string;
+  ranges: CollectionMemoRange[];
+}
 
-        return Number.isFinite(value) ? Math.min(start, value) : start;
-      }, earliest),
-    now,
-  ),
-  end: now,
-});
+export interface TimelineRegion extends TimelineSegment {
+  startAt: string;
+  endAt: string;
+}
+
+export interface CollectionMemoCoverageResize {
+  ranges: CollectionMemoRange[];
+  edge: "start" | "end";
+  at: string;
+}
+
+/** Date.parse supplies milliseconds; the remaining four digits preserve .NET ticks. */
+export const getTimestampTicks = (value: string): bigint | undefined => {
+  const milliseconds = Date.parse(value);
+
+  if (!Number.isFinite(milliseconds)) return undefined;
+
+  const fraction = /\.(\d+)(?:Z|[+-]\d{2}:?\d{2})$/i.exec(value)?.[1] ?? "";
+
+  return BigInt(milliseconds) * 10_000n + BigInt(fraction.slice(3, 7).padEnd(4, "0"));
+};
+
+export const getTimelineCoverage = (ranges: CollectionMemoRange[]): TimelineCoverage[] => {
+  const valid = ranges
+    .map((range) => ({
+      range,
+      start: getTimestampTicks(range.startAt),
+      end: getTimestampTicks(range.endAt),
+    }))
+    .filter(
+      (item): item is { range: CollectionMemoRange; start: bigint; end: bigint } =>
+        item.start !== undefined && item.end !== undefined && item.start <= item.end,
+    )
+    .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.range.id - b.range.id));
+  const result: TimelineCoverage[] = [];
+
+  for (const item of valid) {
+    const previous = result[result.length - 1];
+
+    if (previous && item.start <= getTimestampTicks(previous.endAt)!) {
+      previous.ranges.push({ ...item.range });
+      if (item.end > getTimestampTicks(previous.endAt)!) {
+        previous.endAt = item.range.endAt;
+        previous.end = Date.parse(item.range.endAt);
+      }
+    } else {
+      result.push({
+        start: Date.parse(item.range.startAt),
+        end: Date.parse(item.range.endAt),
+        startAt: item.range.startAt,
+        endAt: item.range.endAt,
+        ranges: [{ ...item.range }],
+      });
+    }
+  }
+
+  return result;
+};
+
+export const getTimelineRegions = (
+  coverage: TimelineCoverage[],
+  domain: TimelineDomain,
+): TimelineRegion[] => {
+  const result: TimelineRegion[] = [];
+  const duration = domain.end - domain.start;
+  const domainStartAt = domain.startAt ?? new Date(domain.start).toISOString();
+  const domainEndAt = new Date(domain.end).toISOString();
+  const add = (startAt: string, endAt: string, collected: boolean) => {
+    const start = Date.parse(startAt);
+    const end = Date.parse(endAt);
+
+    result.push({
+      start,
+      end,
+      startAt,
+      endAt,
+      collected,
+      point: collected && getTimestampTicks(startAt) === getTimestampTicks(endAt),
+      left: duration > 0 ? ((start - domain.start) / duration) * 100 : 100,
+      width: duration > 0 ? ((end - start) / duration) * 100 : 0,
+    });
+  };
+  let cursorAt = domainStartAt;
+
+  for (const component of coverage) {
+    if (
+      getTimestampTicks(component.endAt)! < getTimestampTicks(domainStartAt)! ||
+      getTimestampTicks(component.startAt)! > getTimestampTicks(domainEndAt)!
+    )
+      continue;
+
+    const startAt =
+      getTimestampTicks(component.startAt)! < getTimestampTicks(domainStartAt)!
+        ? domainStartAt
+        : component.startAt;
+    const endAt =
+      getTimestampTicks(component.endAt)! > getTimestampTicks(domainEndAt)!
+        ? domainEndAt
+        : component.endAt;
+
+    if (getTimestampTicks(startAt)! > getTimestampTicks(cursorAt)!) add(cursorAt, startAt, false);
+    add(startAt, endAt, true);
+    cursorAt = endAt;
+  }
+  if (getTimestampTicks(cursorAt)! < getTimestampTicks(domainEndAt)! || result.length === 0)
+    add(cursorAt, domainEndAt, false);
+
+  return result;
+};
+
+export const getCoverageResizeBounds = (
+  coverage: TimelineCoverage[],
+  index: number,
+  domain: TimelineDomain,
+  edge: "start" | "end",
+): { min: string; max: string } => {
+  const component = coverage[index];
+  const domainStart = domain.startAt ?? new Date(domain.start).toISOString();
+  const domainEnd = new Date(domain.end).toISOString();
+  const previousEnd = coverage[index - 1]?.endAt;
+  const nextStart = coverage[index + 1]?.startAt;
+
+  return edge === "start"
+    ? {
+        min:
+          previousEnd && getTimestampTicks(previousEnd)! > getTimestampTicks(domainStart)!
+            ? previousEnd
+            : domainStart,
+        max: component.endAt,
+      }
+    : {
+        min: component.startAt,
+        max:
+          nextStart && getTimestampTicks(nextStart)! < getTimestampTicks(domainEnd)!
+            ? nextStart
+            : domainEnd,
+      };
+};
+
+export const clampCoverageBoundary = (
+  value: number,
+  bounds: { min: string; max: string },
+): string => {
+  const candidate = new Date(value).toISOString();
+
+  if (getTimestampTicks(candidate)! <= getTimestampTicks(bounds.min)!) return bounds.min;
+  if (getTimestampTicks(candidate)! >= getTimestampTicks(bounds.max)!) return bounds.max;
+
+  return candidate;
+};
+
+/** All targets share the same scale, including targets hidden by the search field. */
+export const getTimelineDomain = (targets: CollectionMemoTarget[], now: number): TimelineDomain => {
+  let startAt = new Date(now).toISOString();
+  let earliest = getTimestampTicks(startAt)!;
+
+  for (const target of targets) {
+    for (const range of target.ranges) {
+      const ticks = getTimestampTicks(range.startAt);
+
+      if (ticks !== undefined && ticks < earliest) {
+        earliest = ticks;
+        startAt = range.startAt;
+      }
+    }
+  }
+  const start = Date.parse(startAt);
+  const hasExtraPrecision = earliest !== getTimestampTicks(new Date(start).toISOString());
+
+  return { start, end: now, ...(hasExtraPrecision ? { startAt } : {}) };
+};
 
 /** Merge overlaps for display only; the original records remain individually editable. */
 export const getTimelineSegments = (
   ranges: CollectionMemoRange[],
   domain: TimelineDomain,
 ): TimelineSegment[] => {
-  const spans = ranges
-    .map((range) => ({ start: Date.parse(range.startAt), end: Date.parse(range.endAt) }))
-    .filter(
-      (range) =>
-        Number.isFinite(range.start) &&
-        Number.isFinite(range.end) &&
-        range.start <= range.end &&
-        range.start <= domain.end &&
-        range.end >= domain.start,
-    )
-    .map((range) => ({
-      start: Math.max(domain.start, range.start),
-      end: Math.min(domain.end, range.end),
-    }))
-    .sort((a, b) => a.start - b.start || a.end - b.end);
-
-  const merged: TimelineDomain[] = [];
-
-  for (const span of spans) {
-    const previous = merged[merged.length - 1];
-
-    if (previous && span.start <= previous.end) {
-      previous.end = Math.max(previous.end, span.end);
-    } else {
-      merged.push({ ...span });
-    }
-  }
-
-  const result: TimelineSegment[] = [];
-  const duration = domain.end - domain.start;
-  const add = (start: number, end: number, collected: boolean) => {
-    result.push({
+  return getTimelineRegions(getTimelineCoverage(ranges), domain).map(
+    ({ start, end, collected, point, left, width }) => ({
       start,
       end,
       collected,
-      point: collected && start === end,
-      left: duration > 0 ? ((start - domain.start) / duration) * 100 : 100,
-      width: duration > 0 ? ((end - start) / duration) * 100 : 0,
-    });
-  };
-  let cursor = domain.start;
-
-  for (const span of merged) {
-    if (span.start > cursor) add(cursor, span.start, false);
-    add(span.start, span.end, true);
-    cursor = span.end;
-  }
-  if (cursor < domain.end || merged.length === 0) add(cursor, domain.end, false);
-
-  return result;
+      point,
+      left,
+      width,
+    }),
+  );
 };
 
 const pad = (value: number) => String(value).padStart(2, "0");
@@ -155,7 +278,9 @@ export const requireSuccess = <T extends { code?: number; message?: string | nul
   response: T,
 ): T => {
   if (response.code !== undefined && response.code !== 0) {
-    throw new Error(response.message || String(response.code));
+    throw Object.assign(new Error(response.message || String(response.code)), {
+      code: response.code,
+    });
   }
 
   return response;

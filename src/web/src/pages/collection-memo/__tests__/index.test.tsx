@@ -16,6 +16,8 @@ const { api, createPortal } = vi.hoisted(() => ({
     createCollectionMemoRange: vi.fn(),
     updateCollectionMemoRange: vi.fn(),
     deleteCollectionMemoRange: vi.fn(),
+    fillCollectionMemoGap: vi.fn(),
+    resizeCollectionMemoRangeCoverage: vi.fn(),
   },
   createPortal: vi.fn(),
 }));
@@ -339,6 +341,123 @@ describe("collection memo page", () => {
         { showErrorToast: false },
       ),
     );
+  });
+});
+
+describe("collection memo timeline shortcuts", () => {
+  it("fills a gap with the atomic API and reloads the consolidated range list", async () => {
+    const nextStart = "2026-09-10T00:00:00.1234567Z";
+    const nextEnd = "2026-09-20T00:00:00.7654321Z";
+
+    api.getCollectionMemoTargets
+      .mockResolvedValueOnce({
+        code: 0,
+        data: [
+          { ...target, ranges: [...target.ranges, { id: 12, startAt: nextStart, endAt: nextEnd }] },
+        ],
+      })
+      .mockResolvedValue({
+        code: 0,
+        data: [{ ...target, ranges: [{ id: 11, startAt: earliest, endAt: nextEnd }] }],
+      });
+    page();
+    await screen.findByText("exhentai");
+    fireEvent.pointerEnter(
+      screen.getAllByRole("button", { name: "collectionMemo.timeline.uncollectedRange" })[0],
+    );
+    click("collectionMemo.timeline.fillGap");
+
+    await waitFor(() =>
+      expect(api.fillCollectionMemoGap).toHaveBeenCalledWith(
+        7,
+        { startAt: end, endAt: nextStart },
+        { showErrorToast: false },
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("button", { name: "collectionMemo.action.editRange" }),
+      ).toHaveLength(1),
+    );
+    expect(api.getCollectionMemoTargets).toHaveBeenCalledTimes(2);
+    expect(api.createCollectionMemoRange).not.toHaveBeenCalled();
+    expect(api.updateCollectionMemoRange).not.toHaveBeenCalled();
+    expect(api.deleteCollectionMemoRange).not.toHaveBeenCalled();
+  });
+
+  it("keeps a rejected gap fill visible and retryable without reloading or discarding coverage", async () => {
+    api.fillCollectionMemoGap.mockResolvedValueOnce({ code: 500, message: "Save failed" });
+    page();
+    await screen.findByText("exhentai");
+    fireEvent.pointerEnter(
+      screen.getByRole("button", { name: "collectionMemo.timeline.uncollectedRange" }),
+    );
+    click("collectionMemo.timeline.fillGap");
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("alert")[0]).toHaveTextContent(
+        "collectionMemo.timeline.saveFailed",
+      ),
+    );
+    expect(api.getCollectionMemoTargets).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "collectionMemo.timeline.fillGap" })).toBeEnabled();
+    click("collectionMemo.timeline.fillGap");
+    await waitFor(() => expect(api.fillCollectionMemoGap).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(api.getCollectionMemoTargets).toHaveBeenCalledTimes(2));
+  });
+
+  it("persists a keyboard boundary adjustment with the raw component snapshot and target id", async () => {
+    const newEnd = new Date(Date.parse(end) - 60_000).toISOString();
+
+    api.getCollectionMemoTargets
+      .mockResolvedValueOnce({ code: 0, data: [target] })
+      .mockResolvedValue({
+        code: 0,
+        data: [{ ...target, ranges: [{ ...target.ranges[0], endAt: newEnd }] }],
+      });
+    page();
+    await screen.findByText("exhentai");
+    fireEvent.keyDown(screen.getByRole("slider", { name: "collectionMemo.timeline.resizeEnd" }), {
+      key: "ArrowLeft",
+    });
+
+    await waitFor(() =>
+      expect(api.resizeCollectionMemoRangeCoverage).toHaveBeenCalledWith(
+        7,
+        { ranges: target.ranges, edge: "end", at: newEnd },
+        { showErrorToast: false },
+      ),
+    );
+    await waitFor(() => expect(api.getCollectionMemoTargets).toHaveBeenCalledTimes(2));
+    expect(api.updateCollectionMemoRange).not.toHaveBeenCalled();
+  });
+
+  it("refreshes a conflicting boundary snapshot and asks the user to adjust the updated records", async () => {
+    api.resizeCollectionMemoRangeCoverage.mockResolvedValueOnce({ code: 409, message: "Changed" });
+    const updatedEnd = "2026-09-06T08:00:35Z";
+
+    api.getCollectionMemoTargets
+      .mockResolvedValueOnce({ code: 0, data: [target] })
+      .mockResolvedValue({
+        code: 0,
+        data: [{ ...target, ranges: [{ ...target.ranges[0], endAt: updatedEnd }] }],
+      });
+    page();
+    await screen.findByText("exhentai");
+    fireEvent.keyDown(screen.getByRole("slider", { name: "collectionMemo.timeline.resizeEnd" }), {
+      key: "ArrowLeft",
+    });
+
+    await waitFor(() => expect(api.getCollectionMemoTargets).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("collectionMemo.timeline.changed"),
+    );
+    expect(screen.queryByRole("button", { name: "collectionMemo.timeline.retry" })).toBeNull();
+    expect(
+      screen.getByRole("slider", { name: "collectionMemo.timeline.resizeEnd" }),
+    ).toHaveAttribute("aria-valuenow", String(Date.parse(updatedEnd)));
+    expect(api.resizeCollectionMemoRangeCoverage).toHaveBeenCalledTimes(1);
   });
 });
 

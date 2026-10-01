@@ -1,6 +1,10 @@
 "use client";
 
-import type { CollectionMemoRange, CollectionMemoTarget } from "./helpers";
+import type {
+  CollectionMemoCoverageResize,
+  CollectionMemoRange,
+  CollectionMemoTarget,
+} from "./helpers";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,6 +25,7 @@ const CollectionMemoPage = () => {
   const [targets, setTargets] = useState<CollectionMemoTarget[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [timelineSavingCount, setTimelineSavingCount] = useState(0);
   const [keyword, setKeyword] = useState("");
   const [now, setNow] = useState(Date.now);
   const requestSequence = useRef(0);
@@ -74,6 +79,39 @@ const CollectionMemoPage = () => {
 
     return () => window.clearInterval(timer);
   }, []);
+
+  const saveTimelineChange = async (save: () => Promise<unknown>) => {
+    setTimelineSavingCount((count) => count + 1);
+    try {
+      await save();
+      await load();
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "code" in error && error.code === 409) {
+        await load();
+      }
+      throw error;
+    } finally {
+      setTimelineSavingCount((count) => count - 1);
+    }
+  };
+
+  const fillGap = (targetId: number, range: { startAt: string; endAt: string }) =>
+    saveTimelineChange(async () => {
+      requireSuccess(
+        await BApi.collectionMemo.fillCollectionMemoGap(targetId, range, {
+          showErrorToast: false,
+        }),
+      );
+    });
+
+  const resizeCoverage = (targetId: number, resize: CollectionMemoCoverageResize) =>
+    saveTimelineChange(async () => {
+      requireSuccess(
+        await BApi.collectionMemo.resizeCollectionMemoRangeCoverage(targetId, resize, {
+          showErrorToast: false,
+        }),
+      );
+    });
 
   const editTarget = (target?: CollectionMemoTarget) => {
     createPortal(TargetEditor, {
@@ -247,7 +285,14 @@ const CollectionMemoPage = () => {
                   <AiOutlineDelete />
                 </Button>
               </div>
-              <Timeline domain={domain} formatDate={formatDate} target={target} />
+              <Timeline
+                domain={domain}
+                formatDate={formatDate}
+                isSaving={loading || timelineSavingCount > 0}
+                target={target}
+                onFillGap={(range) => fillGap(target.id, range)}
+                onResizeCoverage={(resize) => resizeCoverage(target.id, resize)}
+              />
               {target.ranges.length === 0 ? (
                 <p className="text-sm text-default-500">
                   {t<string>("collectionMemo.range.empty")}
