@@ -36,6 +36,16 @@ public class CollectionMemoController(CollectionMemoService service) : Controlle
     public Task<BaseResponse> CreateRange(int targetId, [FromBody] CollectionMemoRangeInputModel input) =>
         service.CreateRange(targetId, input);
 
+    [HttpPost("{targetId:int}/ranges/fill")]
+    [SwaggerOperation(OperationId = "FillCollectionMemoGap")]
+    public Task<BaseResponse> FillGap(int targetId, [FromBody] CollectionMemoRangeInputModel input) =>
+        service.FillGap(targetId, input);
+
+    [HttpPatch("{targetId:int}/ranges/resize")]
+    [SwaggerOperation(OperationId = "ResizeCollectionMemoRangeCoverage")]
+    public Task<BaseResponse> ResizeCoverage(int targetId, [FromBody] CollectionMemoCoverageResizeInputModel input) =>
+        service.ResizeCoverage(targetId, input);
+
     [HttpPut("{targetId:int}/ranges/{id:int}")]
     [SwaggerOperation(OperationId = "UpdateCollectionMemoRange")]
     public Task<BaseResponse> UpdateRange(int targetId, int id, [FromBody] CollectionMemoRangeInputModel input) =>

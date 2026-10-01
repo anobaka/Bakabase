@@ -1537,11 +1537,32 @@ export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomain
   ranges: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoRange[];
 }
 
+export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoCoverageResizeInputModel {
+  /** @minItems 1 */
+  ranges: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoRangeSnapshotInputModel[];
+  /**
+   * @minLength 1
+   * @pattern ^(start|end)$
+   */
+  edge: string;
+  /** @minLength 1 */
+  at: string;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoRangeInputModel {
   /** @minLength 1 */
   startAt: string;
   /** @minLength 1 */
   endAt: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoRangeSnapshotInputModel {
+  /** @minLength 1 */
+  startAt: string;
+  /** @minLength 1 */
+  endAt: string;
+  /** @format int32 */
+  id: number;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoTargetInputModel {
@@ -16585,6 +16606,48 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/collection-memo/${targetId}/ranges`,
         method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CollectionMemo
+     * @name FillCollectionMemoGap
+     * @request POST:/collection-memo/{targetId}/ranges/fill
+     */
+    fillCollectionMemoGap: (
+      targetId: number,
+      data: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoRangeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection-memo/${targetId}/ranges/fill`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CollectionMemo
+     * @name ResizeCollectionMemoRangeCoverage
+     * @request PATCH:/collection-memo/{targetId}/ranges/resize
+     */
+    resizeCollectionMemoRangeCoverage: (
+      targetId: number,
+      data: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoCoverageResizeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection-memo/${targetId}/ranges/resize`,
+        method: "PATCH",
         body: data,
         type: ContentType.Json,
         format: "json",

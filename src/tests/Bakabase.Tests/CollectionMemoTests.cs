@@ -1,6 +1,7 @@
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.CollectionMemo;
 using Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Db;
+using Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input;
 using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Controllers;
@@ -9,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Newtonsoft.Json;
+using System.Data.Common;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Bakabase.Tests;
 
@@ -183,6 +186,256 @@ public class CollectionMemoTests
         Assert.IsNull(historicTask.CompletedAt);
         await CreateTarget("After migration");
         Assert.AreEqual(1, (await _service.GetTargets()).Count);
+    }
+
+    [TestMethod]
+    public async Task FillGap_MergesTransitiveTouchingCoverageAndPersistsOtherComponents()
+    {
+        var id = await CreateTarget("Fill");
+        await _service.CreateRange(id, Range(Time(1), Time(5)));
+        await _service.CreateRange(id, Range(Time(4), Time(15)));
+        await _service.CreateRange(id, Range(Time(22), Time(25)));
+        var original = await Ranges(id);
+        var other = original.Single(r => r.StartAt.Day == 22);
+
+        Assert.AreEqual(0, (await _service.FillGap(id, Range(Time(15), Time(20)))).Code);
+        await RestartContext();
+        var result = await Ranges(id);
+        Assert.AreEqual(2, result.Count);
+        Assert.AreEqual(original.Min(r => r.Id), result[0].Id);
+        Assert.AreEqual(DateTime.Parse(Time(1)).ToUniversalTime(), result[0].StartAt);
+        Assert.AreEqual(DateTime.Parse(Time(20)).ToUniversalTime(), result[0].EndAt);
+        AssertRangeEqual(other, result[1]);
+        Assert.AreEqual(DateTimeKind.Utc, result[0].StartAt.Kind);
+    }
+
+    [DataTestMethod]
+    [DataRow("leading", 2, 5, 2, 6)]
+    [DataRow("trailing", 6, 8, 5, 8)]
+    public async Task FillGap_HandlesOneNeighbor(string name, int fillStart, int fillEnd, int resultStart, int resultEnd)
+    {
+        var id = await CreateTarget(name);
+        await _service.CreateRange(id, Range(Time(5), Time(6)));
+        Assert.AreEqual(0, (await _service.FillGap(id, Range(Time(fillStart), Time(fillEnd)))).Code);
+        var result = (await Ranges(id)).Single();
+        Assert.AreEqual(resultStart, result.StartAt.Day);
+        Assert.AreEqual(resultEnd, result.EndAt.Day);
+    }
+
+    [TestMethod]
+    public async Task FillGap_HandlesEmptyAndDisconnectedCoverageWithoutChangingExistingRecords()
+    {
+        var id = await CreateTarget("Empty");
+        Assert.AreEqual(0, (await _service.FillGap(id, Range(Time(5), Time(6)))).Code);
+        var existing = (await Ranges(id)).Single();
+        Assert.AreEqual(0, (await _service.FillGap(id, Range(Time(1), Time(2)))).Code);
+        var result = await Ranges(id);
+        Assert.AreEqual(2, result.Count);
+        AssertRangeEqual(existing, result[1]);
+    }
+
+    [DataTestMethod]
+    [DataRow("start")]
+    [DataRow("end")]
+    public async Task ResizeCoverage_ConsolidatesOnlySelectedComponentAndPreservesExactOtherBoundary(string edge)
+    {
+        var id = await CreateTarget("Resize");
+        await _service.CreateRange(id, Range(Time(1, "1234567"), Time(2, "1234567")));
+        await _service.CreateRange(id, Range(Time(5, "1234567"), Time(6, "7654321")));
+        await _service.CreateRange(id, Range(Time(6), Time(8, "7654321")));
+        await _service.CreateRange(id, Range(Time(10, "1234567"), Time(11, "1234567")));
+        var original = await Ranges(id);
+        var selected = original.Where(r => r.StartAt.Day is 5 or 6).ToList();
+        var at = edge == "start" ? Time(4, "9876543") : Time(9, "9876543");
+
+        Assert.AreEqual(0, (await _service.ResizeCoverage(id, Resize(selected, edge, at))).Code);
+        await RestartContext();
+        var result = await Ranges(id);
+        Assert.AreEqual(3, result.Count);
+        AssertRangeEqual(original[0], result[0]);
+        AssertRangeEqual(original[3], result[2]);
+        Assert.AreEqual(selected.Min(r => r.Id), result[1].Id);
+        Assert.AreEqual(edge == "start" ? DateTime.Parse(at).ToUniversalTime() : selected.Min(r => r.StartAt), result[1].StartAt);
+        Assert.AreEqual(edge == "end" ? DateTime.Parse(at).ToUniversalTime() : selected.Max(r => r.EndAt), result[1].EndAt);
+    }
+
+    [TestMethod]
+    public async Task ResizeCoverage_RejectsStaleIncompleteForeignDuplicateAndDisconnectedSnapshots()
+    {
+        var id = await CreateTarget("Snapshots");
+        var foreignId = await CreateTarget("Other");
+        await _service.CreateRange(id, Range(Time(1), Time(3)));
+        await _service.CreateRange(id, Range(Time(3), Time(5)));
+        await _service.CreateRange(id, Range(Time(10), Time(12)));
+        await _service.CreateRange(foreignId, Range(Time(1), Time(2)));
+        var original = await Ranges(id);
+        var component = original.Take(2).ToList();
+
+        Assert.AreEqual((int) ResponseCode.Conflict,
+            (await _service.ResizeCoverage(id, Resize(component.Take(1), "end", Time(6)))).Code);
+        Assert.AreEqual((int) ResponseCode.Conflict,
+            (await _service.ResizeCoverage(id, Resize(original, "end", Time(13)))).Code);
+        Assert.AreEqual((int) ResponseCode.Conflict,
+            (await _service.ResizeCoverage(id, Resize(await Ranges(foreignId), "end", Time(6)))).Code);
+        Assert.AreEqual((int) ResponseCode.InvalidPayloadOrOperation,
+            (await _service.ResizeCoverage(id, Resize([component[0], component[0]], "end", Time(6)))).Code);
+        var stale = Resize(component, "end", Time(6));
+        await _service.UpdateRange(id, component[0].Id, Range(Time(1), Time(4)));
+        var edited = await Ranges(id);
+        Assert.AreEqual((int) ResponseCode.Conflict, (await _service.ResizeCoverage(id, stale)).Code);
+        AssertRangesEqual(edited, await Ranges(id));
+    }
+
+    [TestMethod]
+    public async Task ResizeCoverage_RejectsNewlyConnectedRowsButAcceptsUnrelatedNewRows()
+    {
+        var id = await CreateTarget("Connections");
+        await _service.CreateRange(id, Range(Time(5), Time(8)));
+        var selected = await Ranges(id);
+        await _service.CreateRange(id, Range(Time(10), Time(12)));
+        Assert.AreEqual(0, (await _service.ResizeCoverage(id, Resize(selected, "start", Time(4)))).Code);
+
+        selected = (await Ranges(id)).Where(r => r.StartAt.Day == 4).ToList();
+        await _service.CreateRange(id, Range(Time(7), Time(9)));
+        var current = await Ranges(id);
+        Assert.AreEqual((int) ResponseCode.Conflict,
+            (await _service.ResizeCoverage(id, Resize(selected, "end", Time(9)))).Code);
+        AssertRangesEqual(current, await Ranges(id));
+    }
+
+    [TestMethod]
+    public async Task ResizeCoverage_RechecksCurrentNeighborAndAllowsTouchingWithoutMergingIt()
+    {
+        var id = await CreateTarget("Neighbors");
+        await _service.CreateRange(id, Range(Time(10), Time(20)));
+        await _service.CreateRange(id, Range(Time(28), Time(30)));
+        var original = await Ranges(id);
+        var input = Resize(original.Take(1), "end", Time(27));
+        await _service.UpdateRange(id, original[1].Id, Range(Time(25), Time(30)));
+        var current = await Ranges(id);
+        Assert.AreEqual((int) ResponseCode.InvalidPayloadOrOperation, (await _service.ResizeCoverage(id, input)).Code);
+        AssertRangesEqual(current, await Ranges(id));
+
+        Assert.AreEqual(0, (await _service.ResizeCoverage(id, Resize(current.Take(1), "end", Time(25)))).Code);
+        var touching = await Ranges(id);
+        Assert.AreEqual(2, touching.Count);
+        AssertRangeEqual(current[1], touching[1]);
+        Assert.AreEqual(25, touching[0].EndAt.Day);
+    }
+
+    [TestMethod]
+    public async Task CoverageOperations_PreserveOneTickGapsUntilExplicitlyFilled()
+    {
+        var id = await CreateTarget("Ticks");
+        await _service.CreateRange(id, Range(Time(1, "1234560"), Time(1, "1234567")));
+        await _service.CreateRange(id, Range(Time(1, "1234568"), Time(1, "1234570")));
+        var original = await Ranges(id);
+        Assert.AreEqual(1L, original[1].StartAt.Ticks - original[0].EndAt.Ticks);
+        Assert.AreEqual(0, (await _service.ResizeCoverage(id,
+            Resize(original.Take(1), "start", Time(1, "1234561")))).Code);
+        var resized = await Ranges(id);
+        Assert.AreEqual(2, resized.Count);
+        AssertRangeEqual(original[1], resized[1]);
+        Assert.AreEqual(original[0].EndAt.Ticks, resized[0].EndAt.Ticks);
+
+        Assert.AreEqual(0, (await _service.FillGap(id, Range(Time(1, "1234567"), Time(1, "1234568")))).Code);
+        var merged = (await Ranges(id)).Single();
+        Assert.AreEqual(resized[0].StartAt.Ticks, merged.StartAt.Ticks);
+        Assert.AreEqual(original[1].EndAt.Ticks, merged.EndAt.Ticks);
+    }
+
+    [DataTestMethod]
+    [DataRow("fill")]
+    [DataRow("resize")]
+    public async Task CoverageOperations_RollBackBoundaryUpdateIfConsolidationDeletionFails(string operation)
+    {
+        var id = await CreateTarget("Atomic");
+        await _service.CreateRange(id, Range(Time(1), Time(3)));
+        await _service.CreateRange(id, Range(Time(3), Time(5)));
+        var original = await Ranges(id);
+        await using (var failingDb = new BakabaseDbContext(new DbContextOptionsBuilder<BakabaseDbContext>(_options)
+                         .AddInterceptors(new FailConsolidationDelete()).Options))
+        {
+            var service = new CollectionMemoService(failingDb);
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => operation == "fill"
+                ? service.FillGap(id, Range(Time(5), Time(8)))
+                : service.ResizeCoverage(id, Resize(original, "end", Time(8))));
+        }
+        await RestartContext();
+        AssertRangesEqual(original, await Ranges(id));
+        Assert.AreEqual(0, (await _service.FillGap(id, Range(Time(5), Time(8)))).Code);
+        Assert.AreEqual(8, (await Ranges(id)).Single().EndAt.Day);
+    }
+
+    [TestMethod]
+    public async Task CoverageController_ValidatesBoundaryInputsAndMissingTargets()
+    {
+        var controller = new CollectionMemoController(_service);
+        var id = await CreateTarget("API");
+        Assert.AreEqual(0, (await controller.FillGap(id, Range(Time(5), Time(8)))).Code);
+        var original = await Ranges(id);
+        Assert.AreEqual(0, (await controller.ResizeCoverage(id, Resize(original, "start", Time(4)))).Code);
+        var current = await Ranges(id);
+        Assert.AreEqual((int) ResponseCode.InvalidPayloadOrOperation,
+            (await controller.FillGap(id, Range(Time(9), Time(8)))).Code);
+        Assert.AreEqual((int) ResponseCode.InvalidPayloadOrOperation,
+            (await controller.ResizeCoverage(id, Resize(current, "middle", Time(5)))).Code);
+        Assert.AreEqual((int) ResponseCode.InvalidPayloadOrOperation,
+            (await controller.ResizeCoverage(id, Resize(current, "start", Time(9)))).Code);
+        Assert.AreEqual((int) ResponseCode.InvalidPayloadOrOperation,
+            (await controller.ResizeCoverage(id, Resize(current, "end", DateTime.UtcNow.AddDays(1).ToString("O")))).Code);
+        Assert.AreEqual((int) ResponseCode.NotFound,
+            (await controller.FillGap(int.MaxValue, Range(Time(1), Time(2)))).Code);
+        Assert.AreEqual((int) ResponseCode.NotFound,
+            (await controller.ResizeCoverage(int.MaxValue, Resize(current, "end", Time(9)))).Code);
+        AssertRangesEqual(current, await Ranges(id));
+    }
+
+    private async Task<List<CollectionMemoRange>> Ranges(int targetId) =>
+        (await _service.GetTargets()).Single(t => t.Id == targetId).Ranges;
+
+    private async Task RestartContext()
+    {
+        await _db.DisposeAsync();
+        _db = new BakabaseDbContext(_options);
+        _service = new CollectionMemoService(_db);
+    }
+
+    private static CollectionMemoCoverageResizeInputModel Resize(IEnumerable<CollectionMemoRange> ranges,
+        string edge, string at) => new()
+    {
+        Ranges = ranges.Select(r => new CollectionMemoRangeSnapshotInputModel
+        {
+            Id = r.Id, StartAt = r.StartAt.ToString("O"), EndAt = r.EndAt.ToString("O")
+        }).ToList(),
+        Edge = edge,
+        At = at
+    };
+
+    private static string Time(int day, string fraction = "0000000") => $"2026-09-{day:D2}T00:00:00.{fraction}Z";
+
+    private static void AssertRangeEqual(CollectionMemoRange expected, CollectionMemoRange actual)
+    {
+        Assert.AreEqual(expected.Id, actual.Id);
+        Assert.AreEqual(expected.StartAt.Ticks, actual.StartAt.Ticks);
+        Assert.AreEqual(expected.EndAt.Ticks, actual.EndAt.Ticks);
+    }
+
+    private static void AssertRangesEqual(List<CollectionMemoRange> expected, List<CollectionMemoRange> actual)
+    {
+        Assert.AreEqual(expected.Count, actual.Count);
+        foreach (var range in expected) AssertRangeEqual(range, actual.Single(r => r.Id == range.Id));
+    }
+
+    private sealed class FailConsolidationDelete : DbCommandInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.StartsWith("DELETE FROM \"CollectionMemoRanges\"", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Test consolidation deletion failed.");
+            return base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
+        }
     }
 
     private async Task<int> CreateTarget(string name)

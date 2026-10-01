@@ -1748,6 +1748,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/collection-memo/{targetId}/ranges/fill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FillCollectionMemoGap"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection-memo/{targetId}/ranges/resize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["ResizeCollectionMemoRangeCoverage"];
+        trace?: never;
+    };
     "/collection-memo/{targetId}/ranges/{id}": {
         parameters: {
             query?: never;
@@ -10348,9 +10380,20 @@ export interface components {
             name: string;
             ranges: components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoRange"][];
         };
+        "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoCoverageResizeInputModel": {
+            ranges: components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeSnapshotInputModel"][];
+            edge: string;
+            at: string;
+        };
         "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel": {
             startAt: string;
             endAt: string;
+        };
+        "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeSnapshotInputModel": {
+            startAt: string;
+            endAt: string;
+            /** Format: int32 */
+            id: number;
         };
         "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel": {
             name: string;
@@ -21533,6 +21576,68 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
                 "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    FillCollectionMemoGap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ResizeCollectionMemoRangeCoverage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoCoverageResizeInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoCoverageResizeInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoCoverageResizeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoCoverageResizeInputModel"];
             };
         };
         responses: {
