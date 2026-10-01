@@ -84,6 +84,11 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PatchAppOptions")]
         public async Task<BaseResponse> PatchAppOptions([FromBody] AppOptionsPatchRequestModel model)
         {
+            if (model.MaxBackupVersions is < 1)
+            {
+                return BaseResponseBuilder.BuildBadRequest("The number of retained backup versions must be at least 1.");
+            }
+
             UiTheme? newUiTheme = null;
             await _appOptionsManager.SaveAsync(options =>
             {
@@ -100,6 +105,16 @@ namespace Bakabase.Service.Controllers
                 if (model.EnableAnonymousDataTracking.HasValue)
                 {
                     options.EnableAnonymousDataTracking = model.EnableAnonymousDataTracking.Value;
+                }
+
+                if (model.EnableAutomaticBackup.HasValue)
+                {
+                    options.EnableAutomaticBackup = model.EnableAutomaticBackup.Value;
+                }
+
+                if (model.MaxBackupVersions.HasValue)
+                {
+                    options.MaxBackupVersions = model.MaxBackupVersions.Value;
                 }
 
                 if (model.EnablePreReleaseChannel.HasValue)
@@ -147,6 +162,11 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PutAppOptions")]
         public async Task<BaseResponse> PutAppOptions([FromBody] AppOptions model)
         {
+            if (model.MaxBackupVersions < 1)
+            {
+                return BaseResponseBuilder.BuildBadRequest("The number of retained backup versions must be at least 1.");
+            }
+
             await _appOptionsManager.SaveAsync(model);
             return BaseResponseBuilder.Ok;
         }

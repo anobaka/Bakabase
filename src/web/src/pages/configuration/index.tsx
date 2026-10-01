@@ -13,6 +13,7 @@ import "./index.scss";
 import AppInfo from "@/pages/configuration/components/AppInfo";
 import ContactUs from "@/pages/configuration/components/ContactUs";
 import Functional from "@/pages/configuration/components/Functional";
+import Backup from "@/pages/configuration/components/VersionBackups";
 import Others from "@/pages/configuration/components/Others";
 import Development from "@/pages/configuration/components/Development";
 import RemoteAccess from "@/pages/configuration/components/RemoteAccess";
@@ -73,6 +74,7 @@ const ConfigurationPage: React.FC = () => {
           <>
             <Dependency query={query} />
             <Functional applyPatches={applyPatches} query={query} />
+            <Backup query={query} />
             <Others applyPatches={applyPatches} query={query} />
             <RemoteAccess query={query} />
             <AppInfo appInfo={appInfo} applyPatches={applyPatches} query={query} />
