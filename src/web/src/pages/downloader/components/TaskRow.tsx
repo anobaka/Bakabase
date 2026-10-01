@@ -23,6 +23,7 @@ import { TbMagnet, TbMagnetOff } from "react-icons/tb";
 
 import { DownloadTaskTypeIconMap } from "./TaskDetailModal/models";
 import { useEstimatedRemainingLabel } from "./EstimatedRemainingTime";
+import TaskLinkCopyButton from "./TaskLinkCopyButton";
 
 import { humanFileSize } from "@/components/utils";
 import { DownloadTaskAction, DownloadTaskStatus, ThirdPartyId } from "@/sdk/constants";
@@ -112,6 +113,9 @@ const TaskRow = memo(function TaskRow({
       : undefined;
   const name = task.name || task.key;
   const createdAt = `${t<string>("downloader.label.createdAt")} ${formatDateTime(task.createdAt)}`;
+  const completedAt = task.completedAt
+    ? `${t<string>("downloader.label.completedAt")} ${formatDateTime(task.completedAt)}`
+    : undefined;
   const nextStart = task.nextStartDt
     ? `${t<string>("downloader.label.nextStartTime")} ${formatDateTime(task.nextStartDt)}`
     : undefined;
@@ -165,8 +169,11 @@ const TaskRow = memo(function TaskRow({
               onDownloadDirectly={onDownloadDirectly}
             />
           </div>
-          <div className="truncate text-xs leading-4 text-default-400" title={task.key}>
-            {task.name ? task.key : `#${task.id}`}
+          <div className="flex min-w-0 items-center gap-1 text-xs leading-4 text-default-400">
+            <span className="truncate" title={task.key}>
+              {task.name ? task.key : `#${task.id}`}
+            </span>
+            <TaskLinkCopyButton value={task.key} />
           </div>
         </div>
         <Chip className="h-6 shrink-0" color={statusColor} size="sm" variant="flat">
@@ -389,11 +396,11 @@ const TaskRow = memo(function TaskRow({
       </div>
       <div className="flex h-6 min-w-0 shrink-0 items-center gap-2">
         <span
-          aria-label={[createdAt, nextStart].filter(Boolean).join(" · ")}
+          aria-label={[createdAt, completedAt, nextStart].filter(Boolean).join(" · ")}
           className="min-w-0 flex-1 truncate text-xs text-default-400"
-          title={[createdAt, nextStart].filter(Boolean).join(" · ")}
+          title={[createdAt, completedAt, nextStart].filter(Boolean).join(" · ")}
         >
-          {nextStart || createdAt}
+          {[completedAt, nextStart || createdAt].filter(Boolean).join(" · ")}
         </span>
       </div>
     </div>

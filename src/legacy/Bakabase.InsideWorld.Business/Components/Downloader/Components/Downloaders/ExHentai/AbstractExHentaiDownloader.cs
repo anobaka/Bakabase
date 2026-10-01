@@ -56,6 +56,23 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 ? null : base.GetTransientRetry(e, attempt);
 
 
+        protected static async Task<bool> CanReuseResultAsync(DownloadResultService results,
+            Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadResultDbModel result,
+            bool preferTorrent, bool preferOriginal, CancellationToken ct)
+        {
+            if (result.Kind == DownloadResultKind.TorrentMetadata && (!preferTorrent ||
+                ExHentaiDownloadResultHelper.GetTorrentDownloadPath(result) == null) ||
+                !await results.CanReuseAsync(result, ct)) return false;
+            if (!preferOriginal || result.Kind != DownloadResultKind.LocalFiles) return true;
+            try
+            {
+                var sourceFiles = JsonSerializer.Deserialize<string[]>(result.FilesJson) ?? [];
+                return sourceFiles.Length > 0 && await results.ExHentaiLedger.HasPreferredImageResultAsync(
+                    result.DownloadTaskId, result.SourceKey, sourceFiles, ct);
+            }
+            catch (JsonException) { return false; }
+        }
+
         protected async Task DownloadSingleWork(int downloadTaskId, string url, string checkpoint, string downloadPath,
             Func<string, Task> onNameAcquired,
             Func<string, Task> onCurrentChanged,
@@ -76,36 +93,55 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             var preferOriginal = originalOptions.PreferOriginalImages;
             var ledger = results.ExHentaiLedger;
             var previous = await results.GetLatestBySourceAsync(downloadTaskId, sourceKey, ct);
-            var canReusePrevious = previous != null && (preferTorrent || previous.Kind != DownloadResultKind.TorrentMetadata);
-            if (canReusePrevious && preferOriginal && previous!.Kind == DownloadResultKind.LocalFiles)
-            {
-                // Enabling originals must upgrade a completed resampled result too. Preserve
-                // the old result's history, and reuse only outputs from an original-preference pass.
-                var previousFiles = JsonSerializer.Deserialize<string[]>(previous.FilesJson) ?? [];
-                canReusePrevious = await ledger.HasPreferredImageResultAsync(downloadTaskId, sourceKey, previousFiles, ct);
-            }
+            var canReusePrevious = previous != null &&
+                await CanReuseResultAsync(results, previous, preferTorrent, preferOriginal, ct);
             if (canReusePrevious && previous != null)
             {
-                // The source work has already been durably handed off. A workflow retry must not
-                // scrape the gallery again, even after the workflow moved its actual files.
+                // Reuse only actual source or placed files. A durable row alone cannot prove
+                // completion after deletion; workflow placement remains a valid handoff.
                 if (previous.Kind == DownloadResultKind.LocalFiles)
                 {
-                    try
-                    {
-                        foreach (var file in JsonSerializer.Deserialize<string[]>(previous.FilesJson) ?? [])
-                        {
-                            await OnFileDownloadedInternal(file);
-                        }
-                    }
-                    catch (JsonException e)
-                    {
-                        Logger.LogWarning(e, "Could not read recorded files for download result {Id}", previous.Id);
-                    }
+                    var contents = await results.GetAvailableContentsAsync(previous, ct);
+                    if (contents == null) throw new IOException("Recorded download files are missing.");
+                    foreach (var file in contents.Files) await OnFileDownloadedInternal(file);
                 }
                 else if (previous.Kind == DownloadResultKind.TorrentMetadata)
                 {
-                    var torrentPath = ExHentaiDownloadResultHelper.GetTorrentDownloadPath(previous);
-                    if (torrentPath != null) await OnFileDownloadedInternal(torrentPath);
+                    var torrentPath = ExHentaiDownloadResultHelper.GetTorrentDownloadPath(previous)
+                        ?? throw new IOException("The recorded torrent output path is invalid.");
+                    // Restore a missing or damaged user copy from verified managed bytes.
+                    // Bounded reads also protect recovery from a corrupt oversized file.
+                    var metadata = await DownloadResultService.ReadReusableTorrentMetadataAsync(previous, ct)
+                        ?? throw new IOException("The saved torrent metadata changed during recovery. Retry to acquire it again.");
+                    var userCopyMatches = false;
+                    try
+                    {
+                        await using var userCopy = File.OpenRead(torrentPath);
+                        var userBytes = await Bakabase.Modules.Downloader.Components.TorrentMetadata.ReadBoundedAsync(userCopy, ct);
+                        userCopyMatches = metadata.AsSpan().SequenceEqual(userBytes);
+                    }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { }
+                    if (!userCopyMatches)
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(torrentPath)!);
+                        ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(previous.DownloadDirectory, torrentPath);
+                        var temporary = Path.Combine(Path.GetDirectoryName(torrentPath)!,
+                            ".bakabase-torrent-" + Guid.NewGuid().ToString("N") + ".tmp");
+                        var ownsTemporary = false;
+                        try
+                        {
+                            await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                            {
+                                ownsTemporary = true;
+                                await output.WriteAsync(metadata, ct);
+                            }
+                            ct.ThrowIfCancellationRequested();
+                            ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(previous.DownloadDirectory, torrentPath);
+                            File.Move(temporary, torrentPath, true);
+                        }
+                        finally { if (ownsTemporary && File.Exists(temporary)) File.Delete(temporary); }
+                    }
+                    await OnFileDownloadedInternal(torrentPath);
                 }
                 if (onNameAcquired != null) await onNameAcquired(previous.Name);
                 if (previous.Kind == DownloadResultKind.TorrentMetadata && onTorrentDownloaded != null)
@@ -704,6 +740,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 }
             }
 
+            if (doneCount != detail.FileCount || workFiles.Count != detail.FileCount)
+                throw new InvalidDataException($"The gallery contains {detail.FileCount} images, but only {workFiles.Count} distinct files were downloaded. Retry to acquire the missing pages.");
             foreach (var file in workFiles.Keys)
             {
                 ct.ThrowIfCancellationRequested();

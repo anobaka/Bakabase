@@ -11,6 +11,7 @@ import type {
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ButtonGroup, Input, Textarea } from "@heroui/react";
+import moment from "moment";
 
 import { DownloadTaskActionOnConflict, ThirdPartyId } from "@/sdk/constants";
 import { Alert, Button, Modal } from "@/components/bakaui";
@@ -37,6 +38,7 @@ import AllowDuplicateField from "@/pages/downloader/components/TaskDetailModal/c
 import PreferTorrentField from "@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField.tsx";
 import DownloadResultsPanel from "@/pages/downloader/components/TaskDetailModal/components/DownloadResultsPanel";
 import EstimatedRemainingTime from "@/pages/downloader/components/EstimatedRemainingTime";
+import TaskLinkCopyButton from "@/pages/downloader/components/TaskLinkCopyButton";
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
 
 type Form =
@@ -188,6 +190,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
             return (
               <Input
                 defaultValue={f.defaultValue}
+                endContent={<TaskLinkCopyButton value={form.keys?.[0]} />}
                 label={f.label && t(f.label)}
                 placeholder={f.placeholder}
                 size={"sm"}
@@ -203,6 +206,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
           case DownloadTaskFieldType.Keys:
             return (
               <Textarea
+                endContent={<TaskLinkCopyButton value={form.keys?.join("\n")} />}
                 label={f.label && t(f.label)}
                 placeholder={f.placeholder}
                 size={"sm"}
@@ -384,6 +388,28 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
           }
         }}
       >
+        {!isAdding && task && (
+          <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-default-500">
+            <div className="flex items-center gap-1">
+              <dt>{t<string>("downloader.label.createdAt")}</dt>
+              <dd>
+                <time dateTime={task.createdAt}>
+                  {moment(task.createdAt).format("YYYY-MM-DD HH:mm:ss")}
+                </time>
+              </dd>
+            </div>
+            {task.completedAt && (
+              <div className="flex items-center gap-1">
+                <dt>{t<string>("downloader.label.completedAt")}</dt>
+                <dd>
+                  <time dateTime={task.completedAt}>
+                    {moment(task.completedAt).format("YYYY-MM-DD HH:mm:ss")}
+                  </time>
+                </dd>
+              </div>
+            )}
+          </dl>
+        )}
         {!isAdding && task && <EstimatedRemainingTime task={task} />}
         <div className={"grid gap-2 items-center"} style={{ gridTemplateColumns: "auto 1fr" }}>
           <div>{t<string>("downloader.label.site")}</div>

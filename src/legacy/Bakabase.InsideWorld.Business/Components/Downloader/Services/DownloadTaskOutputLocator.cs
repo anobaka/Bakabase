@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,6 +35,9 @@ public sealed class DownloadTaskOutputLocator(BakabaseDbContext db, ExHentaiDown
             .Where(x => x.DownloadTaskId == taskId && x.ThirdPartyId == ThirdPartyId.ExHentai)
             .OrderByDescending(x => x.Id).ToListAsync(ct);
         var latest = results.FirstOrDefault();
+        var resultIds = results.Select(x => x.Id).ToArray();
+        var processing = await db.Set<DownloadResultProcessingDbModel>().AsNoTracking()
+            .Where(x => resultIds.Contains(x.DownloadResultId)).ToDictionaryAsync(x => x.DownloadResultId, ct);
         var imagePaths = new HashSet<string>(PathComparer);
         var currentRecordedPaths = new HashSet<string>(PathComparer);
         var supersededPaths = new HashSet<string>(PathComparer);
@@ -42,13 +46,28 @@ public sealed class DownloadTaskOutputLocator(BakabaseDbContext db, ExHentaiDown
         foreach (var gallery in results.GroupBy(x => x.SourceKey))
         {
             var result = gallery.First();
-            if (result.Kind != DownloadResultKind.LocalFiles) continue;
-            foreach (var path in ReadPaths(result.FilesJson))
-                if (AbsolutePath(path) is { } file && IsWithin(file, result.DownloadDirectory))
+            var state = processing.GetValueOrDefault(result.Id);
+            var placed = state?.ContentsReadyAt != null
+                ? DownloadResultContents.Read(state.ContentsDirectory, state.ContentsFilesJson) : null;
+            if (placed != null)
+            {
+                foreach (var file in placed.Files)
                 {
                     currentRecordedPaths.Add(file);
-                    if (File.Exists(file)) imagePaths.Add(file);
+                    imagePaths.Add(file);
                 }
+                if (result.Kind == DownloadResultKind.LocalFiles)
+                    foreach (var path in ReadPaths(result.FilesJson))
+                        if (AbsolutePath(path) is { } file) supersededPaths.Add(file);
+            }
+            else if (result.Kind == DownloadResultKind.LocalFiles)
+                foreach (var path in ReadPaths(result.FilesJson))
+                    if (AbsolutePath(path) is { } file && IsWithin(file, result.DownloadDirectory))
+                    {
+                        currentRecordedPaths.Add(file);
+                        if (File.Exists(file)) imagePaths.Add(file);
+                    }
+            if (result.Kind != DownloadResultKind.LocalFiles && placed == null) continue;
             foreach (var previous in gallery.Skip(1).Where(x => x.Kind == DownloadResultKind.LocalFiles))
                 foreach (var path in ReadPaths(previous.FilesJson))
                     if (AbsolutePath(path) is { } file && IsWithin(file, previous.DownloadDirectory))

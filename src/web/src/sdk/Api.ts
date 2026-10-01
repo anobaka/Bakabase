@@ -2176,6 +2176,8 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   availableActions: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskAction[];
   /** @format date-time */
   createdAt: string;
+  /** @format date-time */
+  completedAt?: string | null;
   options?: string;
   metadata?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskMetadata;
   displayName: string;

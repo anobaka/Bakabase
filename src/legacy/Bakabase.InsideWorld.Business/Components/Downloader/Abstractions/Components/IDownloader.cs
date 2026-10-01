@@ -36,6 +36,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Compo
         /// The queue watchdog uses it to tell a slow download from a wedged one.
         /// </summary>
         DateTime LastActivityAt { get; }
+        /// <summary>UTC time of the most recent successful run, retained across failed or stopped runs.</summary>
+        DateTime? CompletedAt => null;
 
         void ResetStatus();
 

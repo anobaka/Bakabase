@@ -14,6 +14,7 @@ using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
@@ -205,8 +206,8 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
         var (result, state) = await GetForRunAsync(id, runId, ct);
         // Piece integrity on transfer retries belongs to the shared BitTorrent service. A fully
         // completed result can be reused only while its recorded files still exist.
-        if (state.ContentsReadyAt != null && Directory.Exists(state.ContentsDirectory) &&
-            ReadFiles(state.ContentsFilesJson) is {Count: > 0} oldFiles && oldFiles.All(File.Exists)) return;
+        if (state.ContentsReadyAt != null &&
+            DownloadResultContents.Read(state.ContentsDirectory, state.ContentsFilesJson) != null) return;
         string directory;
         IReadOnlyList<string> files;
         if (result.Kind == DownloadResultKind.TorrentMetadata)
@@ -245,7 +246,8 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
     public async Task<AcquisitionWorkItem> PrepareResourceAsync(int id, int runId, string name, CancellationToken ct)
     {
         var (result, state) = await GetForRunAsync(id, runId, ct);
-        if (state.ContentsReadyAt == null && result.Kind == DownloadResultKind.LocalFiles)
+        if (result.Kind == DownloadResultKind.LocalFiles && (state.ContentsReadyAt == null ||
+            DownloadResultContents.Read(state.ContentsDirectory, state.ContentsFilesJson) == null))
         {
             await DownloadContentsAsync(id, runId, 240, null, ct);
         }

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Service.Components.Downloader;
@@ -51,7 +52,7 @@ public sealed class DownloadResultController(BakabaseDbContext db, DownloadResul
             var runId = owner?.WorkflowRunId ?? state?.WorkflowRunId;
             var run = runId is { } id ? runs.GetValueOrDefault(id) : null;
             var definitionId = run?.WorkflowDefinitionId ?? result.WorkflowDefinitionId;
-            var directory = state?.ContentsDirectory ?? (result.Kind == DownloadResultKind.LocalFiles ? result.Path : null);
+            var contents = DownloadResultContents.Resolve(result, state);
             return new DownloadResultViewModel
             {
                 Id = result.Id, DownloadTaskId = taskId, SourceKey = result.SourceKey, Name = result.Name,
@@ -60,26 +61,14 @@ public sealed class DownloadResultController(BakabaseDbContext db, DownloadResul
                 WorkflowName = definitionId is { } defId ? definitions.GetValueOrDefault(defId)?.Name : null,
                 WorkflowIsBuiltin = definitionId is { } builtinId && definitions.GetValueOrDefault(builtinId)?.IsBuiltin == true,
                 AcquisitionTaskId = owner?.AcquisitionTaskId, ResourceId = owner?.ResourceId ?? state?.ResourceId,
-                ContentsReady = (state?.ContentsReadyAt != null || result.Kind == DownloadResultKind.LocalFiles) &&
-                    FilesArePresent(directory, state?.ContentsFilesJson ?? result.FilesJson),
-                ContentsDirectory = directory, Error = state?.DispatchError ?? run?.ErrorMessage,
+                ContentsReady = contents != null,
+                ContentsDirectory = contents?.Directory, Error = state?.DispatchError ?? run?.ErrorMessage,
                 FilterDidNotMatch = state?.FilterDidNotMatch ?? false,
                 CanRetry = owner == null && result.WorkflowDefinitionId != null &&
                     (run?.Status is WorkflowRunStatus.Failed or WorkflowRunStatus.Cancelled or WorkflowRunStatus.Interrupted ||
                      runId == null && state?.DispatchError != null)
             };
         }).ToList());
-    }
-
-    private static bool FilesArePresent(string? directory, string? filesJson)
-    {
-        if (!Directory.Exists(directory) || string.IsNullOrWhiteSpace(filesJson)) return false;
-        try
-        {
-            var files = JsonSerializer.Deserialize<List<string>>(filesJson);
-            return files is {Count: > 0} && files.All(System.IO.File.Exists);
-        }
-        catch (JsonException) {return false;}
     }
 
     [HttpPost("{id:int}/retry")]

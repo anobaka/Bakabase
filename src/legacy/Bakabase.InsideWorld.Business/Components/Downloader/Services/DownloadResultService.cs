@@ -45,6 +45,33 @@ public sealed class DownloadResultService
         .Where(x => x.DownloadTaskId == downloadTaskId && x.SourceKey == sourceKey)
         .OrderByDescending(x => x.Id).FirstOrDefaultAsync(ct);
 
+    public async Task<DownloadResultContents?> GetAvailableContentsAsync(DownloadResultDbModel result,
+        CancellationToken ct = default) => DownloadResultContents.Resolve(result,
+        await _db.Set<DownloadResultProcessingDbModel>().AsNoTracking()
+            .SingleOrDefaultAsync(x => x.DownloadResultId == result.Id, ct));
+
+    public async Task<bool> CanReuseAsync(DownloadResultDbModel result, CancellationToken ct = default)
+    {
+        if (result.Kind == DownloadResultKind.LocalFiles)
+            return await GetAvailableContentsAsync(result, ct) != null;
+        return await ReadReusableTorrentMetadataAsync(result, ct) != null;
+    }
+
+    internal static async Task<byte[]?> ReadReusableTorrentMetadataAsync(DownloadResultDbModel result,
+        CancellationToken ct, string? path = null)
+    {
+        if (result.Kind != DownloadResultKind.TorrentMetadata) return null;
+        try
+        {
+            await using var stream = File.OpenRead(path ?? result.Path);
+            var metadata = await TorrentMetadata.ReadBoundedAsync(stream, ct);
+            TorrentMetadata.Validate(metadata);
+            return string.Equals(Hash(metadata), result.Fingerprint, StringComparison.OrdinalIgnoreCase) ? metadata : null;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
+        { return null; }
+    }
+
     public async Task<DownloadResultDbModel> RecordTorrentAsync(int downloadTaskId, ThirdPartyId thirdPartyId,
         string sourceKey, string name, string torrentPath, int? workflowDefinitionId, CancellationToken ct = default)
     {
@@ -103,7 +130,7 @@ public sealed class DownloadResultService
         var key = Hash(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new object[]
             {taskId, (int) thirdPartyId, sourceKey, (int) kind, fingerprint})));
         var existing = await _db.DownloadResults.AsNoTracking().SingleOrDefaultAsync(x => x.DeduplicationKey == key, ct);
-        if (existing != null) return existing;
+        if (existing != null) return await RefreshOutputAsync(existing, name, path, downloadDirectory, files, ct);
         var result = new DownloadResultDbModel
         {
             DownloadTaskId = taskId, ThirdPartyId = thirdPartyId, SourceKey = sourceKey, Name = name,
@@ -121,9 +148,25 @@ public sealed class DownloadResultService
             // Another producer may have recovered the same checkpoint concurrently.
             _db.Entry(result).State = EntityState.Detached;
             existing = await _db.DownloadResults.AsNoTracking().SingleOrDefaultAsync(x => x.DeduplicationKey == key, ct);
-            if (existing != null) return existing;
+            if (existing != null) return await RefreshOutputAsync(existing, name, path, downloadDirectory, files, ct);
             throw;
         }
+    }
+
+    private async Task<DownloadResultDbModel> RefreshOutputAsync(DownloadResultDbModel existing, string name,
+        string path, string directory, string[] files, CancellationToken ct)
+    {
+        // Reacquiring identical bytes may use a new root. Keep the durable result identity,
+        // workflow binding and ownership, while repairing its source output locations.
+        var json = JsonSerializer.Serialize(files);
+        await _db.DownloadResults.Where(x => x.Id == existing.Id).ExecuteUpdateAsync(setters => setters
+            .SetProperty(x => x.Name, name).SetProperty(x => x.Path, path)
+            .SetProperty(x => x.DownloadDirectory, directory).SetProperty(x => x.FilesJson, json), ct);
+        existing.Name = name;
+        existing.Path = path;
+        existing.DownloadDirectory = directory;
+        existing.FilesJson = json;
+        return existing;
     }
 
     private static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();

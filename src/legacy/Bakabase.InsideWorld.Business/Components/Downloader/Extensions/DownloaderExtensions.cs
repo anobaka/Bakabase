@@ -190,6 +190,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 AvailableActions = actions,
                 AutoRetry = task.AutoRetry,
                 CreatedAt = task.CreatedAt,
+                CompletedAt = CompletionTimeUtc(task.CompletedAt),
                 Options = task.Options,
                 Metadata = BuildMetadata(task)
             };
@@ -256,9 +257,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 AutoRetry = task.AutoRetry,
                 DownloadPath = task.DownloadPath,
                 CreatedAt = task.CreatedAt,
+                CompletedAt = CompletionTimeUtc(task.CompletedAt),
                 Options = task.Options
             };
         }
+
+        // SQLite reads DateTime TEXT values with Unspecified Kind. This column is always UTC,
+        // so restore its zone before JSON serialization instead of using the browser's timezone.
+        private static DateTime? CompletionTimeUtc(DateTime? value) => value is { } date
+            ? date.Kind == DateTimeKind.Local ? date.ToUniversalTime() : DateTime.SpecifyKind(date, DateTimeKind.Utc)
+            : null;
 
         public static DownloadTaskDbModelStatus ToDomainModel(this DownloadTaskStatus status) {
           return status switch {
