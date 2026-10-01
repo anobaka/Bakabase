@@ -69,6 +69,7 @@ export default function DLsiteWorksPage() {
   const syncTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SYNC_TASK_ID));
   const scanTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SCAN_TASK_ID));
   const allTasks = useBTasksStore((s) => s.tasks);
+  const prevWorkTasksRef = useRef(new Map(allTasks.map((task) => [task.id, task])));
   const isSyncing = syncTask?.status === BTaskStatus.Running;
   const isScanning = scanTask?.status === BTaskStatus.Running;
   const prevSyncStatusRef = useRef(syncTask?.status);
@@ -126,16 +127,29 @@ export default function DLsiteWorksPage() {
   }, [scanTask?.status]);
 
   useEffect(() => {
-    const downloadTasks = allTasks.filter((t) => t.id?.startsWith(DOWNLOAD_TASK_ID_PREFIX));
-    const extractTasks = allTasks.filter((t) => t.id?.startsWith(EXTRACT_TASK_ID_PREFIX));
-    const justCompleted = [...downloadTasks, ...extractTasks].some(
-      (t) => t.status === BTaskStatus.Completed,
+    const workTasks = allTasks.filter(
+      (task) =>
+        task.id.startsWith(DOWNLOAD_TASK_ID_PREFIX) || task.id.startsWith(EXTRACT_TASK_ID_PREFIX),
     );
+    const justCompleted = workTasks.some((task) => {
+      const previousTask = prevWorkTasksRef.current.get(task.id);
+
+      // A retained completion is not a new event. Timestamps also identify fast reruns
+      // whose Running update was coalesced before reaching the client.
+      return (
+        task.status === BTaskStatus.Completed &&
+        (previousTask?.status !== BTaskStatus.Completed ||
+          previousTask.createdAt !== task.createdAt ||
+          previousTask.startedAt !== task.startedAt)
+      );
+    });
+
+    prevWorkTasksRef.current = new Map(workTasks.map((task) => [task.id, task]));
 
     if (justCompleted) {
       loadWorks(page, pageSize, searchKeyword, showHidden);
     }
-  }, [allTasks]);
+  }, [allTasks, loadWorks, page, pageSize, searchKeyword, showHidden]);
 
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [refetchMetadata, setRefetchMetadata] = useState(false);
