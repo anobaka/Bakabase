@@ -102,6 +102,8 @@ public static class PostParserExtensions
             Source = task.Source,
             Link = task.Link,
             Text = task.Text,
+            CreatedAt = TimestampUtc(task.CreatedAt),
+            CompletedAt = TimestampUtc(task.CompletedAt),
             Revision = task.Revision,
             WorkflowDefinitionId = task.WorkflowDefinitionId,
             WorkflowRunId = task.WorkflowRunId,
@@ -157,6 +159,8 @@ public static class PostParserExtensions
             Source = dbModel.Source,
             Link = dbModel.Link,
             Text = dbModel.Text,
+            CreatedAt = TimestampUtc(dbModel.CreatedAt),
+            CompletedAt = TimestampUtc(dbModel.CompletedAt),
             Revision = dbModel.Revision,
             WorkflowDefinitionId = dbModel.WorkflowDefinitionId,
             WorkflowRunId = dbModel.WorkflowRunId,
@@ -167,4 +171,9 @@ public static class PostParserExtensions
             IsDeleted = dbModel.IsDeleted,
         };
     }
+
+    // These columns contain UTC instants; SQLite reads DateTime values without their kind.
+    private static DateTime? TimestampUtc(DateTime? value) => value is { } date
+        ? date.Kind == DateTimeKind.Local ? date.ToUniversalTime() : DateTime.SpecifyKind(date, DateTimeKind.Utc)
+        : null;
 }

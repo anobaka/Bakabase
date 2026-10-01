@@ -47,6 +47,7 @@ import enWorkflow from "@/locales/en/pages/workflow.json";
 import enWorkflowTriggers from "@/locales/en/pages/workflowTriggers.json";
 import enAcquisition from "@/locales/en/pages/acquisition.json";
 import enCollection from "@/locales/en/pages/collection.json";
+import enCollectionMemo from "@/locales/en/pages/collectionMemo.json";
 import enFederation from "@/locales/en/pages/federation.json";
 import enDataSync from "@/locales/en/pages/dataSync.json";
 
@@ -120,6 +121,7 @@ import cnWorkflow from "@/locales/cn/pages/workflow.json";
 import cnWorkflowTriggers from "@/locales/cn/pages/workflowTriggers.json";
 import cnAcquisition from "@/locales/cn/pages/acquisition.json";
 import cnCollection from "@/locales/cn/pages/collection.json";
+import cnCollectionMemo from "@/locales/cn/pages/collectionMemo.json";
 import cnFederation from "@/locales/cn/pages/federation.json";
 import cnDataSync from "@/locales/cn/pages/dataSync.json";
 
@@ -193,6 +195,7 @@ const enResources = {
   ...enWorkflowTriggers,
   ...enAcquisition,
   ...enCollection,
+  ...enCollectionMemo,
   ...enFederation,
   ...enDataSync,
   // Components
@@ -266,6 +269,7 @@ const cnResources = {
   ...cnWorkflowTriggers,
   ...cnAcquisition,
   ...cnCollection,
+  ...cnCollectionMemo,
   ...cnFederation,
   ...cnDataSync,
   // Components

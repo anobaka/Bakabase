@@ -7,6 +7,8 @@ export interface PostParserTask {
   text?: string | null;
   title?: string;
   content?: string;
+  createdAt?: string | null;
+  completedAt?: string | null;
   targets: PostParseTarget[];
   results?: Record<string | number, unknown>;
   error?: string;

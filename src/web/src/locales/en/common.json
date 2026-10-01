@@ -230,6 +230,7 @@
   "menu.experimental": "Experimental",
   "menu.thirdPartyIntegration": "Third Party Integration",
   "menu.postParser": "Post Parser",
+  "menu.collectionMemo": "Collection Memo",
   "menu.ai": "AI",
   "menu.ai.chat": "Chat",
   "menu.ai.configuration": "AI Configuration",

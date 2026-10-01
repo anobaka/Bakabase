@@ -28,6 +28,8 @@ const api = vi.hoisted(() => ({
   openUrl: vi.fn(),
   portal: vi.fn(),
   copy: vi.fn(),
+  copied: vi.fn(),
+  copyFailed: vi.fn(),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
@@ -69,7 +71,7 @@ vi.mock("@/components/Workflow/WorkflowRunsDrawer", () => ({
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@heroui/react")),
   Button: (await import("@/components/bakaui/components/Button")).Button,
-  toast: { success: vi.fn(), danger: vi.fn() },
+  toast: { success: api.copied, danger: api.copyFailed },
   Modal: ({
     children,
     title,
@@ -338,6 +340,59 @@ describe("parsed links to acquisition", () => {
 });
 
 describe("post parsing workspace", () => {
+  it("copies the source post link with feedback and keeps opening it available", async () => {
+    usePostParserTasksStore.getState().setTasks([base]);
+    show(<PostParserPage />);
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.copyPostLink" }));
+    await waitFor(() => expect(api.copy).toHaveBeenCalledWith(base.link));
+    expect(api.copied).toHaveBeenCalledWith("postParser.result.copied");
+    expect(api.openUrl).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: base.link }));
+    expect(api.openUrl).toHaveBeenCalledWith({ url: base.link });
+  });
+
+  it("shows a copy failure when the clipboard and browser fallback both fail", async () => {
+    const original = Object.getOwnPropertyDescriptor(document, "execCommand");
+
+    Object.defineProperty(document, "execCommand", { configurable: true, value: () => false });
+    try {
+      api.copy.mockRejectedValue(new Error("Clipboard unavailable"));
+      usePostParserTasksStore.getState().setTasks([base]);
+      show(<PostParserPage />);
+      fireEvent.click(screen.getByRole("button", { name: "postParser.action.copyPostLink" }));
+      await waitFor(() =>
+        expect(api.copyFailed).toHaveBeenCalledWith("postParser.result.copyFailed"),
+      );
+      expect(api.copied).not.toHaveBeenCalled();
+    } finally {
+      if (original) Object.defineProperty(document, "execCommand", original);
+      else delete (document as Partial<Document>).execCommand;
+    }
+  });
+
+  it("shows persisted creation and completion times and leaves historical times unknown", async () => {
+    const createdAt = "2026-10-01T07:08:09Z";
+    const completedAt = "2026-10-01T07:09:10Z";
+
+    usePostParserTasksStore.getState().setTasks([{ ...parsed, createdAt, completedAt }]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    expect(container.querySelector(`time[datetime="${createdAt}"]`)).toBeVisible();
+    expect(container.querySelector(`time[datetime="${completedAt}"]`)).toBeVisible();
+    expect(screen.getByText("postParser.label.createdAt")).toBeVisible();
+    expect(screen.getByText("postParser.label.completedAt")).toBeVisible();
+    await act(async () =>
+      usePostParserTasksStore.getState().setTasks([{ ...base, link: "", text: "Pasted content" }]),
+    );
+    expect(container.querySelectorAll("time")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "postParser.action.copyPostLink" })).toBeNull();
+    expect(container.querySelectorAll("dl dd")).toHaveLength(2);
+    expect(Array.from(container.querySelectorAll("dl dd")).map((item) => item.textContent)).toEqual(
+      ["—", "—"],
+    );
+    expect(container).not.toHaveTextContent("Invalid Date");
+  });
+
   it("starts pending tasks explicitly and retains old parsed records", async () => {
     usePostParserTasksStore.getState().setTasks([base, { ...parsed, id: 15 }]);
     show(<PostParserPage />);

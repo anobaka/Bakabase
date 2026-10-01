@@ -1,3 +1,4 @@
+using System;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 
 namespace Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
@@ -9,6 +10,8 @@ public record PostParserTaskDbModel
     public string Link { get; set; } = null!;
     public string? Title { get; set; }
     public string? Text { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
     public int Revision { get; set; }
     public int? WorkflowDefinitionId { get; set; }
     public int? WorkflowRunId { get; set; }

@@ -1,4 +1,3 @@
-import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
 ("use client");
 
 import type { PostParserTask } from "@/core/models/PostParserTask";
@@ -19,6 +18,7 @@ import {
   AiOutlineSetting,
 } from "react-icons/ai";
 import * as XLSX from "xlsx";
+import dayjs from "dayjs";
 
 import AddTasksModal from "./components/AddTasksModal";
 import AddToAcquisitionModal from "./components/AddToAcquisitionModal";
@@ -44,6 +44,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import TampermonkeyInstallButton from "@/components/ThirdPartyConfig/base/TampermonkeyInstallButton";
 import WorkflowRunsDrawer from "@/components/Workflow/WorkflowRunsDrawer";
+import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
 import BApi from "@/sdk/BApi";
 import {
   PostParserSource,
@@ -403,18 +404,55 @@ const PostParserPage = () => {
                         )}
                       </div>
                       {task.link && (
-                        <Button
-                          className="h-auto min-w-0 justify-start px-0 py-1"
-                          color="primary"
-                          size="sm"
-                          variant="light"
-                          onPress={() => BApi.gui.openUrlInDefaultBrowser({ url: task.link })}
-                        >
-                          <span className="break-all whitespace-normal text-left text-xs">
-                            {task.link}
-                          </span>
-                        </Button>
+                        <div className="flex min-w-0 items-start gap-1">
+                          <Button
+                            className="h-auto min-w-0 justify-start px-0 py-1"
+                            color="primary"
+                            size="sm"
+                            variant="light"
+                            onPress={() => BApi.gui.openUrlInDefaultBrowser({ url: task.link })}
+                          >
+                            <span className="break-all whitespace-normal text-left text-xs">
+                              {task.link}
+                            </span>
+                          </Button>
+                          <Button
+                            isIconOnly
+                            aria-label={t<string>("postParser.action.copyPostLink")}
+                            className="h-6 min-w-6 w-6 shrink-0"
+                            size="sm"
+                            title={t<string>("postParser.action.copyPostLink")}
+                            variant="light"
+                            onPress={() => copy(task.link)}
+                          >
+                            <AiOutlineCopy aria-hidden />
+                          </Button>
+                        </div>
                       )}
+                      <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs text-default-500">
+                        <dt>{t<string>("postParser.label.createdAt")}</dt>
+                        <dd className="tabular-nums">
+                          {task.createdAt ? (
+                            <time dateTime={task.createdAt}>
+                              {dayjs(task.createdAt).format("YYYY-MM-DD HH:mm:ss")}
+                            </time>
+                          ) : (
+                            "—"
+                          )}
+                        </dd>
+                        <dt title={t<string>("postParser.label.completedAtHint")}>
+                          {t<string>("postParser.label.completedAt")}
+                        </dt>
+                        <dd className="tabular-nums">
+                          {task.completedAt ? (
+                            <time dateTime={task.completedAt}>
+                              {dayjs(task.completedAt).format("YYYY-MM-DD HH:mm:ss")}
+                            </time>
+                          ) : (
+                            "—"
+                          )}
+                        </dd>
+                      </dl>
                       {(task.text || task.content) && (
                         <Button
                           className="w-fit"

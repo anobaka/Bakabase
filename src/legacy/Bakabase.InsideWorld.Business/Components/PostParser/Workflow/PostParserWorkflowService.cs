@@ -166,11 +166,21 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             };
             if (run?.Status == WorkflowRunStatus.Success && IsPending(snapshot.ToDomainModel()))
                 error = "The workflow completed without download information. Parse this task again.";
-            if (snapshot.Error == error) continue;
-            await ParserTasks.Where(t => t.Id == snapshot.Id && t.Revision == snapshot.Revision &&
+            // A saved result is published while the workflow is still running. Record completion
+            // only after this task's current execution has finished successfully.
+            // Workflow timestamps use server-local time, including unspecified values reloaded
+            // from SQLite. Parser timestamps are stored and exposed as UTC instants.
+            var completedAt = run?.Status == WorkflowRunStatus.Success && error == null
+                ? run.CompletedAt?.ToUniversalTime()
+                : null;
+            if (snapshot.Error == error && snapshot.CompletedAt == completedAt) continue;
+            var updated = await ParserTasks.Where(t => t.Id == snapshot.Id && t.Revision == snapshot.Revision &&
                     t.WorkflowRunId == snapshot.WorkflowRunId && !t.IsDeleted)
-                .ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, error), ct);
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, error)
+                    .SetProperty(t => t.CompletedAt, completedAt), ct);
+            if (updated == 0) continue;
             snapshot.Error = error;
+            snapshot.CompletedAt = completedAt;
             cache.ClearCache();
             await PublishAsync(snapshot, run?.Status);
         }
@@ -188,9 +198,11 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             if (tasks.Tasks.Any(t => t.Id == $"workflow.run.{runId}" && !t.Task.Status.IsFinished()))
                 throw new InvalidOperationException("The previous parsing task is still finishing. Retry in a moment.");
             await resumer.RequeueAsync(runId, ct);
-            await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, (string?)null), ct);
+            await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, (string?)null)
+                .SetProperty(t => t.CompletedAt, (DateTime?)null), ct);
             cache.ClearCache();
             task.Error = null;
+            task.CompletedAt = null;
             await PublishAsync(task, WorkflowRunStatus.Pending);
         }
         finally { gate.Semaphore.Release(); }

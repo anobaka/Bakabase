@@ -230,6 +230,7 @@
   "menu.experimental": "实验性",
   "menu.thirdPartyIntegration": "第三方集成",
   "menu.postParser": "帖子解析",
+  "menu.collectionMemo": "收集备忘录",
   "menu.ai": "AI",
   "menu.ai.chat": "对话",
   "menu.ai.configuration": "AI 配置",

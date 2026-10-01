@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests.DataSync;
 
 /// <summary>
-/// Every table is classified for data sync (spec Appendix A, §13.5): 80 DbSets (72 + the 8 data sync tables).
+/// Every table is classified for data sync (spec Appendix A, §13.5), including collection memo history.
 /// </summary>
 [TestClass]
 public class DbSetClassificationTests
@@ -30,8 +30,8 @@ public class DbSetClassificationTests
         Assert.AreEqual(0, unclassified.Count, $"Unclassified DbSets: {string.Join(", ", unclassified)}. {Rule}");
         var stale = DataSyncDbSetClassification.All.Keys.Except(DbSets).ToList();
         Assert.AreEqual(0, stale.Count, $"Classified but not a DbSet: {string.Join(", ", stale)}.");
-        Assert.AreEqual(81, DbSets.Count);
-        Assert.AreEqual(81, DataSyncDbSetClassification.All.Count);
+        Assert.AreEqual(83, DbSets.Count);
+        Assert.AreEqual(83, DataSyncDbSetClassification.All.Count);
     }
 
     [TestMethod]
@@ -40,7 +40,7 @@ public class DbSetClassificationTests
         var byClass = DataSyncDbSetClassification.All.Values.GroupBy(c => c.Class)
             .ToDictionary(g => g.Key, g => g.Count());
         Assert.AreEqual(2, byClass[DataSyncTableClass.Synced]);
-        Assert.AreEqual(28, byClass[DataSyncTableClass.LibraryData]);
+        Assert.AreEqual(30, byClass[DataSyncTableClass.LibraryData]);
         Assert.AreEqual(51, byClass[DataSyncTableClass.NeverSync], "43 existing + 8 data sync tables");
         Assert.IsTrue(DataSyncDbSetClassification.All.Values.All(c => !string.IsNullOrWhiteSpace(c.Reason)));
         Assert.IsTrue(DataSyncDbSetClassification.All.All(e => e.Key == e.Value.DbSetName));

@@ -16,6 +16,7 @@ using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components.CollectionMemo;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.DataSync;
@@ -335,6 +336,7 @@ namespace Bakabase.Service.Extensions
             services.AddFileNameModifier();
 
             services.AddPlayList();
+            services.AddScoped<CollectionMemoService>();
 
             services.AddPlayerModule();
             services.AddScoped<Bakabase.Modules.Player.Abstractions.Components.IBatchPlayPlaylistSource,

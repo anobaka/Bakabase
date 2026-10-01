@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
@@ -81,5 +82,30 @@ public sealed class PostParserSerializationTests
         var http = JObject.Parse(JsonConvert.SerializeObject(task, HttpSettings()));
         Assert.IsTrue(JToken.DeepEquals(http["results"], hub["arguments"]![1]!["results"]));
         Assert.AreEqual("archive password", hub["arguments"]![1]!["results"]!["DownloadInfo"]!["resources"]![0]!["password"]!.Value<string>());
+    }
+
+    [TestMethod]
+    public void ReloadedUtcTimestampsKeepTheirInstantInHttpAndSignalR()
+    {
+        var task = new PostParserTaskDbModel
+        {
+            Id = 7, Link = "https://example.test/post", Targets = "[1]",
+            CreatedAt = new DateTime(2026, 10, 1, 7, 8, 9, DateTimeKind.Unspecified),
+            CompletedAt = new DateTime(2026, 10, 1, 7, 9, 10, DateTimeKind.Unspecified)
+        }.ToDomainModel();
+        Assert.AreEqual(DateTimeKind.Utc, task.CreatedAt!.Value.Kind);
+        Assert.AreEqual(DateTimeKind.Utc, task.CompletedAt!.Value.Kind);
+        using var http = JsonDocument.Parse(JsonConvert.SerializeObject(task, HttpSettings()));
+        Assert.AreEqual("2026-10-01T07:08:09Z", http.RootElement.GetProperty("createdAt").GetString());
+        Assert.AreEqual("2026-10-01T07:09:10Z", http.RootElement.GetProperty("completedAt").GetString());
+        var restored = JsonConvert.DeserializeObject<PostParserTask>(http.RootElement.GetRawText(), HttpSettings())!;
+        Assert.AreEqual(task.CreatedAt, restored.ToDbModel().CreatedAt);
+        Assert.AreEqual(task.CompletedAt, restored.ToDbModel().CompletedAt);
+        var protocol = new JsonHubProtocol(Options.Create(new JsonHubProtocolOptions()));
+        var buffer = new ArrayBufferWriter<byte>();
+        protocol.WriteMessage(new InvocationMessage("GetIncrementalData", [nameof(PostParserTask), task]), buffer);
+        using var hub = JsonDocument.Parse(buffer.WrittenMemory[..^1]);
+        Assert.AreEqual(http.RootElement.GetProperty("createdAt").GetString(), hub.RootElement.GetProperty("arguments")[1].GetProperty("createdAt").GetString());
+        Assert.AreEqual(http.RootElement.GetProperty("completedAt").GetString(), hub.RootElement.GetProperty("arguments")[1].GetProperty("completedAt").GetString());
     }
 }

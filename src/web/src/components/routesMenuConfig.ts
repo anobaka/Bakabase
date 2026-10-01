@@ -63,6 +63,7 @@ import DownloaderPage from "@/pages/downloader";
 import FileMoverPage from "@/pages/file-mover";
 import FileNameModifier from "@/pages/file-name-modifier";
 import PostParserPage from "@/pages/post-parser";
+import CollectionMemoPage from "@/pages/collection-memo";
 import ResourceProfilePage from "@/pages/resource-profile";
 import PathRuleConfigPage from "@/pages/path-mark-config";
 import PathMarksPage from "@/pages/path-marks";
@@ -433,6 +434,14 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/other-devices",
         component: OtherDevicesPage,
         icon: AiOutlineMobile,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.collectionMemo",
+        path: "/collection-memo",
+        component: CollectionMemoPage,
+        icon: AiOutlineHistory,
         layout: "basic",
         menu: true,
       },

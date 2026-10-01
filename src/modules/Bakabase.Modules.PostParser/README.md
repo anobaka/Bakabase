@@ -30,6 +30,13 @@ Tampermonkey endpoints remain available.
 Legacy SoulPlus tasks may use the already-configured automatic purchase threshold.
 Standalone manual runs do not inherit permission to purchase locked content.
 
+Saved tasks record their first creation time and the successful completion time of
+their current parsing execution. Re-parsing clears completion while keeping creation;
+failed, cancelled, incomplete or superseded runs cannot mark a task complete. Historical
+timestamps remain unknown when no timestamp was recorded. The API and incremental
+updates expose UTC instants, and the tool page displays local times, exports both
+fields and offers a copy action beside each post link.
+
 ## From parsing to acquisition
 
 The tool page lets users review and select links before adding a pending resource.
