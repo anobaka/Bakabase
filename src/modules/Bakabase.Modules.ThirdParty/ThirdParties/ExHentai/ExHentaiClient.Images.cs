@@ -166,14 +166,18 @@ public partial class ExHentaiClient
 
     private static IEnumerable<string> ReadVisibleText(IDomObject node)
     {
-        if (node.NodeName.Equals("script", StringComparison.OrdinalIgnoreCase) ||
-            node.NodeName.Equals("style", StringComparison.OrdinalIgnoreCase)) yield break;
         if (node.NodeType == NodeType.TEXT_NODE)
         {
             yield return node.NodeValue;
             yield break;
         }
-        foreach (var child in node.ChildNodes)
+        if (string.Equals(node.NodeName, "script", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(node.NodeName, "style", StringComparison.OrdinalIgnoreCase)) yield break;
+        // CsQuery's doctype/comment leaves inherit DomObject.ChildNodes, which returns null.
+        // They contain no visible text; only containers participate in document-order DFS.
+        var children = node.ChildNodes;
+        if (children == null) yield break;
+        foreach (var child in children)
         foreach (var text in ReadVisibleText(child))
             yield return text;
     }
