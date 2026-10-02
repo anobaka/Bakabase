@@ -5,6 +5,7 @@ import type {
   TimelineCoverage,
   TimelineDomain,
 } from "../helpers";
+import type { TimelineHoverSource } from "./TimelineHoverCard";
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,9 +18,9 @@ import {
   getTimestampTicks,
 } from "../helpers";
 
-import GapHoverCard from "./GapHoverCard";
+import { useTimelineHover } from "./TimelineHoverCard";
 
-import { Button, Tooltip } from "@/components/bakaui";
+import { Button } from "@/components/bakaui";
 
 interface Props {
   target: CollectionMemoTarget;
@@ -165,6 +166,7 @@ const Timeline = ({
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.focus();
+    hover.close();
     const originalCoverage = getTimelineCoverage(target.ranges);
     const component = originalCoverage[index];
     const originalAt = edge === "start" ? component.startAt : component.endAt;
@@ -292,6 +294,89 @@ const Timeline = ({
             region.endAt === retryAction.value.endAt,
         );
 
+  const componentId = (component: TimelineCoverage) =>
+    component.ranges
+      .map((range) => range.id)
+      .sort((a, b) => a - b)
+      .join(",");
+  const regionLabel = (startAt: string, endAt: string, collected: boolean) =>
+    t<string>(
+      collected && getTimestampTicks(startAt) === getTimestampTicks(endAt)
+        ? "collectionMemo.timeline.point"
+        : collected
+          ? "collectionMemo.timeline.collectedRange"
+          : "collectionMemo.timeline.uncollectedRange",
+      { start: formatDate(startAt), end: formatDate(endAt) },
+    );
+  const visibleCoverage = coverage.filter(
+    (component) =>
+      getTimestampTicks(component.endAt)! >=
+        getTimestampTicks(activeDomain.startAt ?? new Date(activeDomain.start).toISOString())! &&
+      getTimestampTicks(component.startAt)! <=
+        getTimestampTicks(new Date(activeDomain.end).toISOString())!,
+  );
+  let regionCursor = 0;
+  const regionSources = regions.map((region) => {
+    const component = region.collected ? visibleCoverage[regionCursor++] : undefined;
+    const previous = visibleCoverage[regionCursor - 1];
+    const next = visibleCoverage[regionCursor];
+    const id = component
+      ? `collected:${componentId(component)}`
+      : visibleCoverage.length === 0
+        ? "gap:empty"
+        : `gap:${previous ? componentId(previous) : "leading"}:${next ? componentId(next) : "trailing"}`;
+
+    return { id, region };
+  });
+  const sources = new Map<string, TimelineHoverSource>();
+
+  for (const { id, region } of regionSources) {
+    sources.set(id, {
+      id,
+      label: regionLabel(region.startAt, region.endAt, region.collected),
+      error:
+        error?.action?.kind === "fill" &&
+        error.action.value.startAt === region.startAt &&
+        error.action.value.endAt === region.endAt
+          ? errorText
+          : undefined,
+      onFill:
+        !region.collected && onFillGap
+          ? () =>
+              runMutation({ kind: "fill", value: { startAt: region.startAt, endAt: region.endAt } })
+          : undefined,
+    });
+  }
+  const boundarySources = coverage.flatMap((component, index) =>
+    (["start", "end"] as const).map((edge) => {
+      const at = edge === "start" ? component.startAt : component.endAt;
+      const bounds = getCoverageResizeBounds(coverage, index, activeDomain, edge);
+      const left =
+        activeDomain.end > activeDomain.start
+          ? ((Date.parse(at) - activeDomain.start) / (activeDomain.end - activeDomain.start)) * 100
+          : 100;
+      const width =
+        activeDomain.end > activeDomain.start
+          ? ((component.end - component.start) / (activeDomain.end - activeDomain.start)) * 100
+          : 0;
+      const id = `edge:${componentId(component)}:${edge}`;
+
+      sources.set(id, {
+        id,
+        label: t<string>(
+          edge === "start"
+            ? "collectionMemo.timeline.resizeStart"
+            : "collectionMemo.timeline.resizeEnd",
+          { date: formatDate(at) },
+        ),
+        description: `${regionLabel(component.startAt, component.endAt, true)} · ${t<string>("collectionMemo.timeline.resizeHint")}`,
+      });
+
+      return { id, component, index, edge, at, bounds, left, width };
+    }),
+  );
+  const hover = useTimelineHover({ sources, track, disabled, suppressed: !!drag.current });
+
   return (
     <div
       aria-label={t<string>("collectionMemo.timeline.label", { name: target.name })}
@@ -302,7 +387,7 @@ const Timeline = ({
         ref={track}
         data-collection-memo-track
         aria-busy={disabled}
-        className="relative my-2 h-4 rounded-full bg-default-200"
+        className="group/timeline relative my-2 h-4"
         onLostPointerCapture={(event) => {
           if (drag.current?.pointerId === event.pointerId) cancel();
         }}
@@ -312,110 +397,105 @@ const Timeline = ({
         onPointerMove={moveDrag}
         onPointerUp={finishDrag}
       >
-        {regions.map((region) => {
-          const label = t<string>(
-            region.point
-              ? "collectionMemo.timeline.point"
-              : region.collected
-                ? "collectionMemo.timeline.collectedRange"
-                : "collectionMemo.timeline.uncollectedRange",
-            { start: formatDate(region.startAt), end: formatDate(region.endAt) },
-          );
-          const key = `${region.collected}:${region.startAt}:${region.endAt}`;
-
-          if (!region.collected)
-            return (
-              <GapHoverCard
-                key={key}
-                disabled={disabled}
-                error={
-                  error?.action?.kind === "fill" &&
-                  error.action.value.startAt === region.startAt &&
-                  error.action.value.endAt === region.endAt
-                    ? errorText
-                    : undefined
-                }
-                label={label}
-                region={region}
-                suppressed={!!drag.current}
-                track={track}
-                onFill={
-                  onFillGap
-                    ? () =>
-                        runMutation({
-                          kind: "fill",
-                          value: { startAt: region.startAt, endAt: region.endAt },
-                        })
-                    : undefined
-                }
-              />
-            );
-
-          return (
-            <Tooltip key={key} content={label}>
-              <button
-                aria-label={label}
-                className="absolute top-0 h-full rounded-sm border-0 bg-success p-0 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-full bg-default-200"
+        >
+          {regionSources
+            .filter(({ region }) => region.collected)
+            .map(({ id, region }) => (
+              <span
+                key={id}
+                className="absolute top-0 h-full bg-success"
                 style={{
                   left: `${region.left}%`,
                   width: region.point || region.width === 0 ? "4px" : `${region.width}%`,
                   transform: region.point ? "translateX(-50%)" : undefined,
-                  zIndex: 1,
                 }}
-                type="button"
               />
-            </Tooltip>
-          );
-        })}
+            ))}
+        </div>
+        {regionSources.map(({ id, region }) => (
+          <button
+            key={id}
+            aria-describedby={hover.activeId === id ? hover.popupId : undefined}
+            aria-expanded={region.collected ? undefined : hover.activeId === id}
+            aria-haspopup={region.collected ? undefined : "dialog"}
+            aria-label={sources.get(id)!.label}
+            className="absolute top-0 h-full border-0 bg-transparent p-0 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+            style={{
+              left: `${region.left}%`,
+              width: region.point || region.width === 0 ? "4px" : `${region.width}%`,
+              transform: region.point ? "translateX(-50%)" : undefined,
+              // Browser hit testing rounds subpixel boxes. Keep even a very short
+              // gap above adjacent inward-facing resize targets.
+              zIndex: region.collected ? 1 : 20,
+            }}
+            type="button"
+            onBlur={(event) => hover.blur(event.relatedTarget)}
+            onClick={(event) => hover.show(id, event.currentTarget)}
+            onFocus={(event) => hover.show(id, event.currentTarget)}
+            onKeyDown={(event) => {
+              if (
+                !region.collected &&
+                (event.key === "Enter" || event.key === " " || event.key === "ArrowDown")
+              ) {
+                event.preventDefault();
+                hover.show(id, event.currentTarget, true);
+              }
+            }}
+            onPointerEnter={(event) => hover.show(id, event.currentTarget)}
+            onPointerLeave={(event) => hover.leave(event.relatedTarget)}
+          />
+        ))}
         {onResizeCoverage &&
-          coverage.map((component, index) =>
-            (["start", "end"] as const).map((edge) => {
-              const at = edge === "start" ? component.startAt : component.endAt;
-              const bounds = getCoverageResizeBounds(coverage, index, activeDomain, edge);
-              const left =
-                activeDomain.end > activeDomain.start
-                  ? ((Date.parse(at) - activeDomain.start) /
-                      (activeDomain.end - activeDomain.start)) *
-                    100
-                  : 100;
-              const label = t<string>(
-                edge === "start"
-                  ? "collectionMemo.timeline.resizeStart"
-                  : "collectionMemo.timeline.resizeEnd",
-                { date: formatDate(at) },
-              );
+          boundarySources.map(({ id, index, edge, at, bounds, left, width }) => {
+            const point = width <= 0;
+            const facesRight = point ? edge === "end" : edge === "start";
+            const active =
+              hover.activeId === id ||
+              (preview?.gesture.index === index && preview.gesture.edge === edge);
 
-              return (
-                <Tooltip
-                  key={`${component.ranges
-                    .map((range) => range.id)
-                    .sort((a, b) => a - b)
-                    .join(",")}:${edge}`}
-                  content={`${label} · ${t<string>("collectionMemo.timeline.resizeHint")}`}
-                >
-                  <div
-                    aria-describedby={hintId}
-                    aria-disabled={disabled}
-                    aria-label={label}
-                    aria-valuemax={Date.parse(bounds.max)}
-                    aria-valuemin={Date.parse(bounds.min)}
-                    aria-valuenow={Date.parse(at)}
-                    aria-valuetext={formatDate(at)}
-                    className={`absolute top-1/2 z-10 h-6 w-3 touch-none rounded border border-default-400 bg-content1 shadow-sm outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary ${disabled ? "cursor-wait" : "cursor-ew-resize"}`}
-                    role="slider"
-                    style={{
-                      left: `${left}%`,
-                      transform: edge === "start" ? "translate(-100%, -50%)" : "translate(0, -50%)",
-                    }}
-                    tabIndex={0}
-                    onKeyDown={(event) => resizeWithKeyboard(event, index, edge)}
-                    onPointerDown={(event) => startDrag(event, index, edge)}
-                  />
-                </Tooltip>
-              );
-            }),
-          )}
+            return (
+              <div
+                key={id}
+                aria-describedby={`${hintId}${hover.activeId === id ? ` ${hover.popupId}` : ""}`}
+                aria-disabled={disabled}
+                aria-label={sources.get(id)!.label}
+                aria-valuemax={Date.parse(bounds.max)}
+                aria-valuemin={Date.parse(bounds.min)}
+                aria-valuenow={Date.parse(at)}
+                aria-valuetext={formatDate(at)}
+                className={`group/edge absolute top-1/2 z-10 h-10 max-w-5 touch-none bg-transparent outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary ${disabled ? "cursor-wait" : "cursor-ew-resize"}`}
+                role="slider"
+                style={{
+                  left: `${left}%`,
+                  width: point ? "20px" : `${width / 2}%`,
+                  zIndex: point ? 30 : undefined,
+                  transform: facesRight ? "translate(0, -50%)" : "translate(-100%, -50%)",
+                }}
+                tabIndex={0}
+                onBlur={(event) => hover.blur(event.relatedTarget)}
+                onFocus={(event) => hover.show(id, event.currentTarget)}
+                onKeyDown={(event) => resizeWithKeyboard(event, index, edge)}
+                onPointerDown={(event) => startDrag(event, index, edge)}
+                onPointerEnter={(event) => hover.show(id, event.currentTarget)}
+                onPointerLeave={(event) => hover.leave(event.relatedTarget)}
+              >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute top-1/2 h-5 w-px -translate-y-1/2 bg-foreground/70 opacity-0 transition-opacity group-hover/timeline:opacity-30 group-hover/edge:opacity-100 group-focus-visible/edge:opacity-100"
+                  style={{
+                    [facesRight ? "left" : "right"]: 0,
+                    opacity: active ? 1 : undefined,
+                    width: active ? 2 : undefined,
+                  }}
+                />
+              </div>
+            );
+          })}
       </div>
+      {hover.popup}
       <div className="flex justify-between gap-2 text-xs text-default-500">
         <time dateTime={activeDomain.startAt ?? new Date(activeDomain.start).toISOString()}>
           {formatDate(activeDomain.startAt ?? activeDomain.start)}
