@@ -26,6 +26,7 @@ interface Props {
   target: CollectionMemoTarget;
   domain: TimelineDomain;
   formatDate: (value: number | string) => string;
+  reverse?: boolean;
   isSaving?: boolean;
   onFillGap?: (gap: { startAt: string; endAt: string }) => Promise<void>;
   onResizeCoverage?: (value: CollectionMemoCoverageResize) => Promise<void>;
@@ -39,6 +40,8 @@ interface Gesture {
   originX: number;
   width: number;
   domain: TimelineDomain;
+  reverse: boolean;
+  globalStartAt: string;
   coverage: TimelineCoverage[];
   index: number;
   edge: "start" | "end";
@@ -51,10 +54,25 @@ interface Gesture {
 const signatureOf = (ranges: CollectionMemoTarget["ranges"]) =>
   JSON.stringify([...ranges].sort((a, b) => a.id - b.id));
 
+const resizeValue = (
+  component: TimelineCoverage,
+  edge: "start" | "end",
+  at: string,
+  globalStartAt: string,
+): CollectionMemoCoverageResize => ({
+  ranges: component.ranges,
+  edge,
+  at,
+  ...(component.ranges.some((range) => range.startAt === null)
+    ? { expectedGlobalStartAt: globalStartAt }
+    : {}),
+});
+
 const Timeline = ({
   target,
   domain,
   formatDate,
+  reverse = true,
   isSaving = false,
   onFillGap,
   onResizeCoverage,
@@ -67,12 +85,14 @@ const Timeline = ({
   const [preview, setPreview] = useState<{ gesture: Gesture; at: string }>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<{ changed?: boolean; action?: Mutation }>();
-  const signature = signatureOf(target.ranges);
+  const globalStartAt = domain.startAt ?? new Date(domain.start).toISOString();
+  const signature = JSON.stringify([signatureOf(target.ranges), globalStartAt, reverse]);
   const currentSignature = useRef(signature);
 
   currentSignature.current = signature;
   const disabled = pending || isSaving;
   const activeDomain = preview?.gesture.domain ?? domain;
+  const activeReverse = preview?.gesture.reverse ?? reverse;
   const coverage = preview
     ? preview.gesture.coverage.map((component, index) =>
         index === preview.gesture.index
@@ -84,8 +104,8 @@ const Timeline = ({
             }
           : component,
       )
-    : getTimelineCoverage(target.ranges);
-  const regions = getTimelineRegions(coverage, activeDomain);
+    : getTimelineCoverage(target.ranges, globalStartAt);
+  const regions = getTimelineRegions(coverage, activeDomain, activeReverse);
   const errorText = error
     ? t<string>(
         error.changed ? "collectionMemo.timeline.changed" : "collectionMemo.timeline.saveFailed",
@@ -167,7 +187,7 @@ const Timeline = ({
     event.stopPropagation();
     event.currentTarget.focus();
     hover.close();
-    const originalCoverage = getTimelineCoverage(target.ranges);
+    const originalCoverage = getTimelineCoverage(target.ranges, globalStartAt);
     const component = originalCoverage[index];
     const originalAt = edge === "start" ? component.startAt : component.endAt;
     const gesture: Gesture = {
@@ -175,6 +195,8 @@ const Timeline = ({
       originX: event.clientX,
       width: rect.width,
       domain: { ...domain },
+      reverse,
+      globalStartAt,
       coverage: originalCoverage,
       index,
       edge,
@@ -198,7 +220,9 @@ const Timeline = ({
       : clampCoverageBoundary(
           Math.round(
             (Date.parse(gesture.originalAt) +
-              (offset / gesture.width) * (gesture.domain.end - gesture.domain.start)) /
+              (gesture.reverse ? -1 : 1) *
+                (offset / gesture.width) *
+                (gesture.domain.end - gesture.domain.start)) /
               1000,
           ) * 1000,
           gesture.bounds,
@@ -241,7 +265,12 @@ const Timeline = ({
 
     void runMutation({
       kind: "resize",
-      value: { ranges: gesture.coverage[gesture.index].ranges, edge: gesture.edge, at: gesture.at },
+      value: resizeValue(
+        gesture.coverage[gesture.index],
+        gesture.edge,
+        gesture.at,
+        gesture.globalStartAt,
+      ),
     });
   };
 
@@ -257,12 +286,13 @@ const Timeline = ({
       return;
     }
     if (disabled || busy.current || drag.current || !onResizeCoverage) return;
-    const backward = event.key === "ArrowLeft" || event.key === "ArrowDown";
-    const forward = event.key === "ArrowRight" || event.key === "ArrowUp";
+    const backward =
+      event.key === (reverse ? "ArrowRight" : "ArrowLeft") || event.key === "ArrowDown";
+    const forward = event.key === (reverse ? "ArrowLeft" : "ArrowRight") || event.key === "ArrowUp";
 
     if (!backward && !forward && event.key !== "Home" && event.key !== "End") return;
     event.preventDefault();
-    const originalCoverage = getTimelineCoverage(target.ranges);
+    const originalCoverage = getTimelineCoverage(target.ranges, globalStartAt);
     const component = originalCoverage[index];
     const originalAt = edge === "start" ? component.startAt : component.endAt;
     const bounds = getCoverageResizeBounds(originalCoverage, index, domain, edge);
@@ -277,17 +307,19 @@ const Timeline = ({
             );
 
     if (getTimestampTicks(at) === getTimestampTicks(originalAt)) return;
-    void runMutation({ kind: "resize", value: { ranges: component.ranges, edge, at } });
+    void runMutation({ kind: "resize", value: resizeValue(component, edge, at, globalStartAt) });
   };
 
   const retryAction = error?.action;
   const canRetry =
     retryAction?.kind === "resize"
-      ? getTimelineCoverage(target.ranges).some(
+      ? (retryAction.value.expectedGlobalStartAt === undefined ||
+          retryAction.value.expectedGlobalStartAt === globalStartAt) &&
+        getTimelineCoverage(target.ranges, globalStartAt).some(
           (component) => signatureOf(component.ranges) === signatureOf(retryAction.value.ranges),
         )
       : retryAction?.kind === "fill" &&
-        getTimelineRegions(getTimelineCoverage(target.ranges), domain).some(
+        getTimelineRegions(getTimelineCoverage(target.ranges, globalStartAt), domain).some(
           (region) =>
             !region.collected &&
             region.startAt === retryAction.value.startAt &&
@@ -348,16 +380,29 @@ const Timeline = ({
     });
   }
   const boundarySources = coverage.flatMap((component, index) =>
-    (["start", "end"] as const).map((edge) => {
+    (["start", "end"] as const).flatMap((edge) => {
       const at = edge === "start" ? component.startAt : component.endAt;
+      const ticks = getTimestampTicks(at)!;
+      const domainStartTicks = getTimestampTicks(
+        activeDomain.startAt ?? new Date(activeDomain.start).toISOString(),
+      )!;
+      const domainEndTicks = getTimestampTicks(new Date(activeDomain.end).toISOString())!;
+
+      // A clipped endpoint is not the stored endpoint and must not rewrite it through dragging.
+      if (ticks < domainStartTicks || ticks > domainEndTicks) return [];
+
       const bounds = getCoverageResizeBounds(coverage, index, activeDomain, edge);
-      const left =
+      const chronologicalLeft =
         activeDomain.end > activeDomain.start
           ? ((Date.parse(at) - activeDomain.start) / (activeDomain.end - activeDomain.start)) * 100
           : 100;
+      const left = activeReverse ? 100 - chronologicalLeft : chronologicalLeft;
       const width =
         activeDomain.end > activeDomain.start
-          ? ((component.end - component.start) / (activeDomain.end - activeDomain.start)) * 100
+          ? ((Math.min(component.end, activeDomain.end) -
+              Math.max(component.start, activeDomain.start)) /
+              (activeDomain.end - activeDomain.start)) *
+            100
           : 0;
       const id = `edge:${componentId(component)}:${edge}`;
 
@@ -372,7 +417,7 @@ const Timeline = ({
         description: `${regionLabel(component.startAt, component.endAt, true)} · ${t<string>("collectionMemo.timeline.resizeHint")}`,
       });
 
-      return { id, component, index, edge, at, bounds, left, width };
+      return [{ id, component, index, edge, at, bounds, left, width }];
     }),
   );
   const hover = useTimelineHover({ sources, track, disabled, suppressed: !!drag.current });
@@ -451,7 +496,7 @@ const Timeline = ({
         {onResizeCoverage &&
           boundarySources.map(({ id, index, edge, at, bounds, left, width }) => {
             const point = width <= 0;
-            const facesRight = point ? edge === "end" : edge === "start";
+            const facesRight = (point ? edge === "end" : edge === "start") !== activeReverse;
             const active =
               hover.activeId === id ||
               (preview?.gesture.index === index && preview.gesture.edge === edge);
@@ -496,11 +541,19 @@ const Timeline = ({
           })}
       </div>
       {hover.popup}
-      <div className="flex justify-between gap-2 text-xs text-default-500">
-        <time dateTime={activeDomain.startAt ?? new Date(activeDomain.start).toISOString()}>
+      <div
+        className={`flex justify-between gap-2 text-xs text-default-500 ${activeReverse ? "flex-row-reverse" : ""}`}
+      >
+        <time
+          className={activeReverse ? "text-right" : undefined}
+          dateTime={activeDomain.startAt ?? new Date(activeDomain.start).toISOString()}
+        >
           {formatDate(activeDomain.startAt ?? activeDomain.start)}
         </time>
-        <time className="text-right" dateTime={new Date(activeDomain.end).toISOString()}>
+        <time
+          className={activeReverse ? undefined : "text-right"}
+          dateTime={new Date(activeDomain.end).toISOString()}
+        >
           {t<string>("collectionMemo.timeline.now", { date: formatDate(activeDomain.end) })}
         </time>
       </div>

@@ -1,6 +1,6 @@
 {
   "collectionMemo.title": "Collection memo",
-  "collectionMemo.description": "Record the date ranges you have collected for each target. All timelines share the earliest recorded date and end at the current time.",
+  "collectionMemo.description": "Record the date ranges you have collected for each target. All timelines share the configured start and end at the current time.",
   "collectionMemo.action.addTarget": "Add collection target",
   "collectionMemo.action.editTarget": "Edit collection target",
   "collectionMemo.action.deleteTarget": "Delete collection target",
@@ -45,5 +45,18 @@
   "collectionMemo.error.save": "Could not save your changes. Check the details and try again.",
   "collectionMemo.empty": "Add a collection target to start recording your collected ranges.",
   "collectionMemo.noResults": "No collection targets match your search.",
-  "collectionMemo.browsingIntegration.pending": "Visited-post integration is pending. Nearby visited posts do not prove that every post between them was collected. A future integration could suggest individual points and let you confirm complete ranges."
+  "collectionMemo.browsingIntegration.pending": "Visited-post integration is pending. Nearby visited posts do not prove that every post between them was collected. A future integration could suggest individual points and let you confirm complete ranges.",
+  "collectionMemo.settings.title": "Timeline settings",
+  "collectionMemo.settings.start": "Global start date and time",
+  "collectionMemo.settings.direction": "Timeline direction",
+  "collectionMemo.settings.reverse": "Current time on the left, start on the right",
+  "collectionMemo.settings.forward": "Start on the left, current time on the right",
+  "collectionMemo.settings.description": "These settings are saved and apply to every collection target. A global start is required and cannot be in the future.",
+  "collectionMemo.settings.inheritHint": "Blank range starts follow changes to the global start. Explicit starts are kept; portions earlier than the global start are outside the visible timeline.",
+  "collectionMemo.settings.future": "The global start cannot be in the future.",
+  "collectionMemo.settings.inheritedOrder": "The global start cannot be later than the end of any range that inherits it. Adjust those ranges first.",
+  "collectionMemo.range.inherited": "Uses global start",
+  "collectionMemo.range.inheritPlaceholder": "Leave blank to use the global start",
+  "collectionMemo.range.inheritHint": "A blank start uses the global start and follows changes to timeline settings. Enter a date to keep this range’s start fixed.",
+  "collectionMemo.validation.inheritedOrder": "The end cannot be before the global start. Change the end or enter an earlier start."
 }

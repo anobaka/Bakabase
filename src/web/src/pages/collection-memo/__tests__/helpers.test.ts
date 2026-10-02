@@ -2,10 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   getTimelineDomain,
+  getTimelineCoverage,
+  getTimelineRegions,
+  getCoverageResizeBounds,
+  getTimestampTicks,
   getTimelineSegments,
   localDateTimeToIso,
   requireSuccess,
   resolveRangeBoundary,
+  resolveCollectionMemoRangeStart,
   toLocalDateTimeInput,
 } from "../helpers";
 
@@ -76,6 +81,86 @@ describe("collection memo timeline", () => {
     ).toMatchObject([
       { start: 0, end: 10 },
       { start: 80, end: 100 },
+    ]);
+  });
+
+  it("uses the configured exact global start even when explicit records are earlier or targets empty", () => {
+    const globalStartAt = "2026-09-01T00:00:00.1234567Z";
+    const now = Date.parse("2026-09-02T00:00:00Z");
+    const expected = { start: Date.parse(globalStartAt), end: now, startAt: globalStartAt };
+
+    expect(
+      getTimelineDomain([{ id: 1, name: "Old", ranges: [range(1, 0, 100)] }], now, globalStartAt),
+    ).toEqual(expected);
+    expect(getTimelineDomain([], now, globalStartAt)).toEqual(expected);
+    expect(getTimelineDomain([], now, "2026-09-01T08:00:00+08:00")).toEqual({
+      start: Date.parse("2026-09-01T00:00:00Z"),
+      end: now,
+      startAt: "2026-09-01T08:00:00+08:00",
+    });
+  });
+
+  it("resolves inherited ranges dynamically while preserving nullable raw snapshots and precision", () => {
+    const startAt = "2026-09-01T00:00:00.1234567Z";
+    const endAt = "2026-09-01T00:00:00.1234568Z";
+    const records = [{ id: 1, startAt: null, endAt }];
+    const coverage = getTimelineCoverage(records, startAt);
+
+    expect(resolveCollectionMemoRangeStart(records[0], startAt)).toBe(startAt);
+    expect(resolveCollectionMemoRangeStart(records[0])).toBeUndefined();
+    expect(coverage[0]).toMatchObject({ startAt, endAt, ranges: records });
+    expect(coverage[0].ranges[0]).not.toBe(records[0]);
+    expect(coverage[0].ranges[0].startAt).toBeNull();
+    expect(getTimestampTicks(coverage[0].endAt)! - getTimestampTicks(coverage[0].startAt)!).toBe(
+      1n,
+    );
+    expect(getTimelineCoverage(records, endAt)[0].startAt).toBe(endAt);
+    expect(getTimelineCoverage(records)).toEqual([]);
+    expect(records[0].startAt).toBeNull();
+  });
+
+  it("merges inherited and explicit records using effective starts without rewriting raw endpoints", () => {
+    const records = [{ id: 1, startAt: null, endAt: new Date(40).toISOString() }, range(2, 30, 60)];
+    const coverage = getTimelineCoverage(records, new Date(20).toISOString());
+
+    expect(coverage).toHaveLength(1);
+    expect(coverage[0]).toMatchObject({ start: 20, end: 60, ranges: records });
+    expect(coverage[0].ranges[0].startAt).toBeNull();
+    expect(getTimelineCoverage(records, new Date(70).toISOString())).toHaveLength(1);
+    expect(getTimelineCoverage(records, new Date(70).toISOString())[0].ranges).toEqual([
+      records[1],
+    ]);
+  });
+
+  it("clips earlier explicit ranges without changing stored endpoints and bounds the visible end at global start", () => {
+    const records = [range(1, 0, 40), range(2, 0, 10)];
+    const configuredDomain = getTimelineDomain([], 100, new Date(20).toISOString());
+    const coverage = getTimelineCoverage(records);
+
+    expect(getTimelineRegions(coverage, configuredDomain)).toMatchObject([
+      { start: 20, end: 40, collected: true },
+      { start: 40, end: 100, collected: false },
+    ]);
+    expect(getCoverageResizeBounds(coverage, 0, configuredDomain, "end").min).toBe(
+      new Date(20).toISOString(),
+    );
+    expect(coverage[0].startAt).toBe(new Date(0).toISOString());
+    expect(records[0].startAt).toBe(new Date(0).toISOString());
+  });
+
+  it("mirrors visible positions while leaving chronological endpoints and point widths intact", () => {
+    const records = [range(1, 20, 40), range(2, 80, 80)];
+    const forward = getTimelineSegments(records, { start: 0, end: 100 });
+    const reversed = getTimelineSegments(records, { start: 0, end: 100 }, true);
+
+    expect(reversed).toEqual(
+      forward.map((segment) => ({ ...segment, left: 100 - segment.left - segment.width })),
+    );
+    expect(getTimelineSegments([], { start: 0, end: 100 }, true)).toEqual([
+      { start: 0, end: 100, collected: false, point: false, left: 0, width: 100 },
+    ]);
+    expect(getTimelineSegments([range(1, 100, 100)], { start: 100, end: 100 }, true)).toEqual([
+      { start: 100, end: 100, collected: true, point: true, left: 0, width: 0 },
     ]);
   });
 });

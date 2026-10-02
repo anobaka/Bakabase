@@ -1,16 +1,19 @@
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 
-import { useState } from "react";
+import { Children, cloneElement, isValidElement, useState } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import CollectionMemoPage from "..";
 import RangeEditor from "../components/RangeEditor";
+import SettingsEditor from "../components/SettingsEditor";
 
 const { api, createPortal } = vi.hoisted(() => ({
   api: {
     getCollectionMemoTargets: vi.fn(),
+    getCollectionMemoSettings: vi.fn(),
+    updateCollectionMemoSettings: vi.fn(),
     createCollectionMemoTarget: vi.fn(),
     updateCollectionMemoTarget: vi.fn(),
     deleteCollectionMemoTarget: vi.fn(),
@@ -56,6 +59,8 @@ vi.mock("@/components/bakaui", () => ({
     placeholder,
     description,
     errorMessage,
+    onCompositionStart,
+    onCompositionEnd,
     "aria-label": ariaLabel,
   }: {
     label?: string;
@@ -65,6 +70,8 @@ vi.mock("@/components/bakaui", () => ({
     placeholder?: string;
     description?: ReactNode;
     errorMessage?: string;
+    onCompositionStart?: () => void;
+    onCompositionEnd?: () => void;
     "aria-label"?: string;
   }) => (
     <label>
@@ -75,9 +82,57 @@ vi.mock("@/components/bakaui", () => ({
         type={type}
         value={value}
         onChange={(event) => onValueChange?.(event.target.value)}
+        onCompositionEnd={onCompositionEnd}
+        onCompositionStart={onCompositionStart}
       />
       {description && <span>{description}</span>}
       {errorMessage && <span role="alert">{errorMessage}</span>}
+    </label>
+  ),
+  RadioGroup: ({
+    children,
+    label,
+    value,
+    onValueChange,
+  }: {
+    children?: ReactNode;
+    label?: string;
+    value?: string;
+    onValueChange?: (value: string) => void;
+  }) => (
+    <fieldset>
+      <legend>{label}</legend>
+      {Children.map(children, (child) => {
+        if (!isValidElement(child)) return child;
+        const radio = child as ReactElement<{
+          value: string;
+          isSelected?: boolean;
+          onValueChange?: (value: string) => void;
+        }>;
+
+        return cloneElement(radio, { isSelected: radio.props.value === value, onValueChange });
+      })}
+    </fieldset>
+  ),
+  Radio: ({
+    children,
+    value,
+    isSelected,
+    onValueChange,
+  }: {
+    children?: ReactNode;
+    value: string;
+    isSelected?: boolean;
+    onValueChange?: (value: string) => void;
+  }) => (
+    <label>
+      <input
+        checked={isSelected}
+        type="radio"
+        value={value}
+        onChange={() => onValueChange?.(value)}
+      />
+      {children}
     </label>
   ),
   Modal: ({
@@ -131,6 +186,10 @@ beforeEach(() => {
   vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-01T08:00:00.000Z"));
   for (const method of Object.values(api)) method.mockResolvedValue({ code: 0 });
   api.getCollectionMemoTargets.mockResolvedValue({ code: 0, data: [target] });
+  api.getCollectionMemoSettings.mockResolvedValue({
+    code: 0,
+    data: { startAt: earliest, reverse: true },
+  });
   createPortal.mockImplementation((Component, props) => render(<Component {...props} />));
 });
 
@@ -170,7 +229,9 @@ describe("collection memo page", () => {
     expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
     const article = screen.getByRole("article");
 
-    expect(article.querySelector("time")?.dateTime).toBe(earliest);
+    expect(Array.from(article.querySelectorAll("time")).map((time) => time.dateTime)).toContain(
+      earliest,
+    );
     expect(
       within(article).getByRole("button", { name: "collectionMemo.timeline.uncollectedRange" }),
     ).toHaveAccessibleName("collectionMemo.timeline.uncollectedRange");
@@ -244,6 +305,11 @@ describe("collection memo page", () => {
 
   it("keeps a fresh post-save list when an older initial load finishes later", async () => {
     let finishOldRequest!: (value: { code: number; data: (typeof target)[] }) => void;
+    const freshOrigin = "2026-08-01T00:00:00.0000001Z";
+
+    api.getCollectionMemoSettings
+      .mockResolvedValueOnce({ code: 0, data: { startAt: earliest, reverse: true } })
+      .mockResolvedValue({ code: 0, data: { startAt: freshOrigin, reverse: false } });
 
     api.getCollectionMemoTargets.mockReturnValueOnce(
       new Promise((resolve) => {
@@ -266,6 +332,8 @@ describe("collection memo page", () => {
 
     expect(screen.getByRole("heading", { name: "Fresh", level: 2 })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "exhentai", level: 2 })).not.toBeInTheDocument();
+    expect(document.querySelector("time")?.dateTime).toBe(freshOrigin);
+    expect(screen.getByText("collectionMemo.settings.forward")).toBeInTheDocument();
   });
 
   it("requires confirmation before deleting a target and its ranges", async () => {
@@ -420,7 +488,7 @@ describe("collection memo timeline shortcuts", () => {
   });
 
   it("persists a keyboard boundary adjustment with the raw component snapshot and target id", async () => {
-    const newEnd = new Date(Date.parse(end) - 60_000).toISOString();
+    const newEnd = new Date(Date.parse(end) + 60_000).toISOString();
 
     api.getCollectionMemoTargets
       .mockResolvedValueOnce({ code: 0, data: [target] })
@@ -480,6 +548,7 @@ describe("collection memo text date-time entry", () => {
 
     render(
       <RangeEditor
+        globalStartAt={earliest}
         range={{ id: 11, startAt: minimum, endAt: minimum }}
         targetName="Target"
         onSave={onSave}
@@ -499,7 +568,7 @@ describe("collection memo text date-time entry", () => {
     const value = "2026年9月5日 16时00分35秒";
     const iso = new Date(2026, 8, 5, 16, 0, 35).toISOString();
 
-    render(<RangeEditor targetName="Target" onSave={onSave} />);
+    render(<RangeEditor globalStartAt={earliest} targetName="Target" onSave={onSave} />);
     const startInput = screen.getByRole("textbox", { name: "collectionMemo.range.start" });
     const endInput = screen.getByRole("textbox", { name: "collectionMemo.range.end" });
 
@@ -523,7 +592,7 @@ describe("collection memo text date-time entry", () => {
   it("uses local midnight for date-only start and end entries", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
 
-    render(<RangeEditor targetName="Target" onSave={onSave} />);
+    render(<RangeEditor globalStartAt={earliest} targetName="Target" onSave={onSave} />);
     fireEvent.change(screen.getByLabelText("collectionMemo.range.start"), {
       target: { value: "2026.9.1" },
     });
@@ -544,7 +613,7 @@ describe("collection memo text date-time entry", () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const expected = "2026-09-04T16:00:35.1234567Z";
 
-    render(<RangeEditor targetName="Target" onSave={onSave} />);
+    render(<RangeEditor globalStartAt={earliest} targetName="Target" onSave={onSave} />);
     fireEvent.change(screen.getByLabelText("collectionMemo.range.start"), {
       target: { value: "2026-09-05 01:00:35.1234567+09:00" },
     });
@@ -562,7 +631,7 @@ describe("collection memo text date-time entry", () => {
     const user = userEvent.setup();
     const onSave = vi.fn().mockResolvedValue(undefined);
 
-    render(<RangeEditor targetName="Target" onSave={onSave} />);
+    render(<RangeEditor globalStartAt={earliest} targetName="Target" onSave={onSave} />);
     const startInput = screen.getByRole("textbox", { name: "collectionMemo.range.start" });
 
     await user.clear(startInput);
@@ -586,7 +655,7 @@ describe("collection memo range validation", () => {
   it.each([
     ["2026-09-05T16:00", "2026-09-01T16:00", "collectionMemo.validation.order"],
     ["2027-09-05T16:00", "2027-09-05T16:00", "collectionMemo.validation.future"],
-    ["", "2026-09-05T16:00", "collectionMemo.validation.date"],
+    ["", "2026-08-05T16:00", "collectionMemo.validation.inheritedOrder"],
     ["2026/02/30", "2026/09/05", "collectionMemo.validation.date"],
     [
       "2026-09-05T08:00:35.1234568Z",
@@ -601,7 +670,7 @@ describe("collection memo range validation", () => {
   ])("keeps invalid dates open (%s to %s)", async (start, finish, message) => {
     const onSave = vi.fn();
 
-    render(<RangeEditor targetName="Target" onSave={onSave} />);
+    render(<RangeEditor globalStartAt={earliest} targetName="Target" onSave={onSave} />);
     fireEvent.change(screen.getByLabelText("collectionMemo.range.start"), {
       target: { value: start },
     });
@@ -615,5 +684,305 @@ describe("collection memo range validation", () => {
     ).toBe(true);
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+});
+
+describe("collection memo global settings", () => {
+  it("waits for settings before publishing targets or enabling settings actions", async () => {
+    let finishSettings!: (value: {
+      code: number;
+      data: { startAt: string; reverse: boolean };
+    }) => void;
+
+    api.getCollectionMemoSettings.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishSettings = resolve;
+      }),
+    );
+    page();
+    await waitFor(() => expect(api.getCollectionMemoTargets).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("heading", { name: "exhentai" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "collectionMemo.settings.title" })).toBeDisabled();
+    await act(async () => finishSettings({ code: 0, data: { startAt: earliest, reverse: true } }));
+    expect(await screen.findByRole("heading", { name: "exhentai" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "collectionMemo.settings.title" })).toBeEnabled();
+    expect(screen.getByText("collectionMemo.settings.reverse")).toBeInTheDocument();
+  });
+
+  it.each([
+    { code: 500, message: "Failed" },
+    { code: 0, data: { reverse: true } },
+    { code: 0, data: { startAt: "invalid", reverse: false } },
+    { code: 0, data: { startAt: earliest } },
+  ])("keeps a partial initial load retryable without inventing settings (%j)", async (response) => {
+    api.getCollectionMemoSettings.mockResolvedValueOnce(response);
+    page();
+    expect(await screen.findByRole("alert")).toHaveTextContent("collectionMemo.error.load");
+    expect(screen.queryByRole("heading", { name: "exhentai" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "collectionMemo.settings.title" })).toBeDisabled();
+    expect(screen.queryByText("collectionMemo.empty")).not.toBeInTheDocument();
+    click("common.action.refresh");
+    expect(await screen.findByRole("heading", { name: "exhentai" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "collectionMemo.settings.title" })).toBeEnabled();
+  });
+
+  it("retains the last coherent pair when a refresh only loads new targets", async () => {
+    page();
+    await screen.findByText("exhentai");
+    api.getCollectionMemoTargets.mockResolvedValue({ code: 0, data: [{ ...target, name: "New" }] });
+    api.getCollectionMemoSettings.mockResolvedValue({ code: 500 });
+    click("common.action.refresh");
+    expect(await screen.findByRole("alert")).toHaveTextContent("collectionMemo.error.load");
+    expect(screen.getByRole("heading", { name: "exhentai" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "New" })).not.toBeInTheDocument();
+    expect(screen.getByText("collectionMemo.settings.reverse")).toBeInTheDocument();
+  });
+
+  it("saves the shared origin and direction, then loads the persisted values again", async () => {
+    const nextStart = "2026-08-01T00:00:00.1234567Z";
+
+    page();
+    await screen.findByText("exhentai");
+    click("collectionMemo.settings.title");
+    expect(screen.getByRole("radio", { name: "collectionMemo.settings.reverse" })).toBeChecked();
+    fireEvent.change(screen.getByRole("textbox", { name: "collectionMemo.settings.start" }), {
+      target: { value: nextStart },
+    });
+    fireEvent.click(screen.getByRole("radio", { name: "collectionMemo.settings.forward" }));
+    expect(screen.getByRole("dialog").querySelector("time")?.dateTime).toBe(nextStart);
+    api.getCollectionMemoSettings.mockResolvedValue({
+      code: 0,
+      data: { startAt: nextStart, reverse: false },
+    });
+    click("Save");
+    await waitFor(() =>
+      expect(api.updateCollectionMemoSettings).toHaveBeenCalledWith(
+        { startAt: nextStart, reverse: false },
+        { showErrorToast: false },
+      ),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByText("collectionMemo.settings.forward")).toBeInTheDocument();
+    expect(screen.getByRole("article").querySelector("time")?.dateTime).toBe(nextStart);
+    click("collectionMemo.settings.title");
+    expect(screen.getByRole("radio", { name: "collectionMemo.settings.forward" })).toBeChecked();
+    expect(screen.getByRole("dialog").querySelector("time")?.dateTime).toBe(nextStart);
+    expect(api.getCollectionMemoSettings).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps rejected settings edits open without replacing the persisted summary", async () => {
+    api.updateCollectionMemoSettings.mockResolvedValue({ code: 400 });
+    page();
+    await screen.findByText("exhentai");
+    click("collectionMemo.settings.title");
+    const typed = "2026/8/1 00:00";
+
+    fireEvent.change(screen.getByRole("textbox", { name: "collectionMemo.settings.start" }), {
+      target: { value: typed },
+    });
+    fireEvent.click(screen.getByRole("radio", { name: "collectionMemo.settings.forward" }));
+    click("Save");
+    expect(await screen.findByRole("alert")).toHaveTextContent("collectionMemo.error.save");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "collectionMemo.settings.start" })).toHaveValue(
+      typed,
+    );
+    expect(screen.getByRole("radio", { name: "collectionMemo.settings.forward" })).toBeChecked();
+    expect(api.getCollectionMemoSettings).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("time")?.dateTime).toBe(earliest);
+  });
+
+  it("validates global start against the earliest inherited end across all targets", async () => {
+    const minimumEnd = "2026-09-03T00:00:00.1234567Z";
+
+    api.getCollectionMemoTargets.mockResolvedValue({
+      code: 0,
+      data: [
+        { ...target, ranges: [{ id: 11, startAt: null, endAt: end }] },
+        { id: 8, name: "Other", ranges: [{ id: 12, startAt: null, endAt: minimumEnd }] },
+      ],
+    });
+    page();
+    await screen.findByText("exhentai");
+    click("collectionMemo.settings.title");
+    fireEvent.change(screen.getByRole("textbox", { name: "collectionMemo.settings.start" }), {
+      target: { value: "2026-09-03T00:00:00.1234568Z" },
+    });
+    click("Save");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "collectionMemo.settings.inheritedOrder",
+    );
+    expect(api.updateCollectionMemoSettings).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole("textbox", { name: "collectionMemo.settings.start" }), {
+      target: { value: minimumEnd },
+    });
+    click("Save");
+    await waitFor(() =>
+      expect(api.updateCollectionMemoSettings).toHaveBeenCalledWith(
+        { startAt: minimumEnd, reverse: true },
+        { showErrorToast: false },
+      ),
+    );
+  });
+
+  it("preserves precise global origin on an unchanged local edit", async () => {
+    const precise = "2025-11-02T06:30:35.1234567Z";
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(<SettingsEditor settings={{ startAt: precise, reverse: true }} onSave={onSave} />);
+    expect(screen.getByRole("dialog").querySelector("time")?.dateTime).toBe(precise);
+    click("Save");
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ startAt: precise, reverse: true }));
+  });
+
+  it.each([
+    ["", "collectionMemo.validation.date"],
+    ["2026/02/30", "collectionMemo.validation.date"],
+    ["2026-10-01T08:00:00.0000001Z", "collectionMemo.settings.future"],
+  ])("rejects invalid global origins (%s)", async (value, error) => {
+    const onSave = vi.fn();
+
+    render(<SettingsEditor settings={{ startAt: earliest, reverse: true }} onSave={onSave} />);
+    const input = screen.getByRole("textbox", { name: "collectionMemo.settings.start" });
+
+    fireEvent.change(input, { target: { value } });
+    fireEvent.blur(input);
+    expect(input).toHaveValue(value);
+    click("Save");
+    expect(
+      (await screen.findAllByRole("alert")).some((alert) => alert.textContent?.includes(error)),
+    ).toBe(true);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+});
+
+describe("collection memo inherited starts", () => {
+  it("creates a blank-start range and persists its inheritance as null", async () => {
+    page();
+    await screen.findByText("exhentai");
+    click("collectionMemo.action.addRange");
+    expect(screen.getByLabelText("collectionMemo.range.start")).toHaveValue("");
+    expect(screen.getByRole("dialog").querySelector("time")?.dateTime).toBe(earliest);
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.end"), { target: { value: end } });
+    click("Save");
+    await waitFor(() =>
+      expect(api.createCollectionMemoRange).toHaveBeenCalledWith(
+        7,
+        { startAt: undefined, endAt: end },
+        { showErrorToast: false },
+      ),
+    );
+  });
+
+  it.each([null, undefined])(
+    "displays inherited dates and retains a blank start when editing (%s)",
+    async (startAt) => {
+      api.getCollectionMemoTargets.mockResolvedValue({
+        code: 0,
+        data: [{ ...target, ranges: [{ id: 11, startAt, endAt: end }] }],
+      });
+      page();
+      await screen.findByText("exhentai");
+      expect(
+        within(screen.getByRole("listitem")).getByText("collectionMemo.range.inherited"),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("listitem").querySelector("time")?.dateTime).toBe(earliest);
+      click("collectionMemo.action.editRange");
+      expect(screen.getByLabelText("collectionMemo.range.start")).toHaveValue("");
+      click("Save");
+      await waitFor(() =>
+        expect(api.updateCollectionMemoRange).toHaveBeenCalledWith(
+          7,
+          11,
+          { startAt: undefined, endAt: end },
+          { showErrorToast: false },
+        ),
+      );
+    },
+  );
+
+  it("lets an explicit range switch to a blank inherited start", async () => {
+    page();
+    await screen.findByText("exhentai");
+    click("collectionMemo.action.editRange");
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.start"), {
+      target: { value: "   " },
+    });
+    click("Save");
+    await waitFor(() =>
+      expect(api.updateCollectionMemoRange).toHaveBeenCalledWith(
+        7,
+        11,
+        { startAt: undefined, endAt: end },
+        { showErrorToast: false },
+      ),
+    );
+  });
+
+  it("updates a blank start preview dynamically and validates its new effective instant", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const range = { id: 11, startAt: null, endAt: end };
+    const later = "2026-09-06T00:00:00Z";
+    const view = render(
+      <RangeEditor globalStartAt={earliest} range={range} targetName="Target" onSave={onSave} />,
+    );
+
+    expect(screen.getByRole("dialog").querySelector("time")?.dateTime).toBe(earliest);
+    view.rerender(
+      <RangeEditor globalStartAt={later} range={range} targetName="Target" onSave={onSave} />,
+    );
+    expect(screen.getByLabelText("collectionMemo.range.start")).toHaveValue("");
+    expect(screen.getByRole("dialog").querySelector("time")?.dateTime).toBe(later);
+    click("Save");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "collectionMemo.validation.inheritedOrder",
+    );
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.start"), {
+      target: { value: earliest },
+    });
+    click("Save");
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ startAt: earliest, endAt: end }));
+  });
+
+  it("keeps the default new end precise enough for a global start initialized now", async () => {
+    const instant = "2026-10-01T08:00:00.123Z";
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse(instant));
+    render(<RangeEditor globalStartAt={instant} targetName="Target" onSave={onSave} />);
+    expect(
+      Array.from(screen.getByRole("dialog").querySelectorAll("time")).map((time) => time.dateTime),
+    ).toEqual([instant, instant]);
+    click("Save");
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ startAt: null, endAt: instant }));
+  });
+
+  it("resizes inherited coverage with the raw null snapshot and expected global origin", async () => {
+    const inherited = { id: 11, startAt: null, endAt: end };
+    const newEnd = new Date(Date.parse(end) + 60_000).toISOString();
+
+    api.getCollectionMemoTargets.mockResolvedValue({
+      code: 0,
+      data: [{ ...target, ranges: [inherited] }],
+    });
+    page();
+    await screen.findByText("exhentai");
+    fireEvent.keyDown(screen.getByRole("slider", { name: "collectionMemo.timeline.resizeEnd" }), {
+      key: "ArrowLeft",
+    });
+    await waitFor(() =>
+      expect(api.resizeCollectionMemoRangeCoverage).toHaveBeenCalledWith(
+        7,
+        {
+          ranges: [{ ...inherited, startAt: undefined }],
+          edge: "end",
+          at: newEnd,
+          expectedGlobalStartAt: earliest,
+        },
+        { showErrorToast: false },
+      ),
+    );
   });
 });

@@ -1525,9 +1525,15 @@ export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomain
   /** @format int32 */
   id: number;
   /** @format date-time */
-  startAt: string;
+  startAt?: string;
   /** @format date-time */
   endAt: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoSettings {
+  /** @format date-time */
+  startAt: string;
+  reverse: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoTarget {
@@ -1547,22 +1553,27 @@ export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputC
   edge: string;
   /** @minLength 1 */
   at: string;
+  expectedGlobalStartAt?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoRangeInputModel {
-  /** @minLength 1 */
-  startAt: string;
+  startAt?: string;
   /** @minLength 1 */
   endAt: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoRangeSnapshotInputModel {
-  /** @minLength 1 */
-  startAt: string;
+  startAt?: string;
   /** @minLength 1 */
   endAt: string;
   /** @format int32 */
   id: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoSettingsInputModel {
+  /** @minLength 1 */
+  startAt: string;
+  reverse: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoTargetInputModel {
@@ -8959,6 +8970,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastr
   code: number;
   message?: string;
   data?: BakabaseInfrastructuresComponentsConfigurationsAppAppOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoSettings {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoSettings;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAiOptions {
@@ -16551,6 +16569,66 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createCollectionMemoTargetUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/collection-memo`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags CollectionMemo
+     * @name GetCollectionMemoSettings
+     * @request GET:/collection-memo/settings
+     */
+    getCollectionMemoSettings: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoSettings,
+        any
+      >({
+        path: `/collection-memo/settings`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getCollectionMemoSettings
+     * @name getCollectionMemoSettingsUrl
+     */
+    getCollectionMemoSettingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/collection-memo/settings`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags CollectionMemo
+     * @name UpdateCollectionMemoSettings
+     * @request PUT:/collection-memo/settings
+     */
+    updateCollectionMemoSettings: (
+      data: BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoSettingsInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection-memo/settings`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for updateCollectionMemoSettings
+     * @name updateCollectionMemoSettingsUrl
+     */
+    updateCollectionMemoSettingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/collection-memo/settings`;
 
       return baseUrl + path;
     },

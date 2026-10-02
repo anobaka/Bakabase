@@ -12,7 +12,8 @@ import { formatDateTimeInput } from "@/components/bakaui/components/Date/dateTim
 interface Props extends DestroyableProps {
   range?: CollectionMemoRange;
   targetName: string;
-  onSave: (range: { startAt: string; endAt: string }) => Promise<void>;
+  globalStartAt: string;
+  onSave: (range: { startAt: string | null; endAt: string }) => Promise<void>;
 }
 
 const dateTimeFormat: Intl.DateTimeFormatOptions = {
@@ -25,14 +26,21 @@ const dateTimeFormat: Intl.DateTimeFormatOptions = {
   hourCycle: "h23",
 };
 
-const RangeEditor = ({ range, targetName, onSave, onDestroyed }: Props) => {
+const RangeEditor = ({ range, targetName, globalStartAt, onSave, onDestroyed }: Props) => {
   const { t, i18n } = useTranslation();
-  const [start, setStart] = useState(() => formatDateTimeInput(range?.startAt ?? Date.now()));
-  const [end, setEnd] = useState(() => formatDateTimeInput(range?.endAt ?? Date.now()));
+  const [start, setStart] = useState(() =>
+    range?.startAt ? formatDateTimeInput(range.startAt) : "",
+  );
+  const [end, setEnd] = useState(() =>
+    formatDateTimeInput(range?.endAt ?? new Date(Date.now()).toISOString()),
+  );
   const [edited, setEdited] = useState({ start: false, end: false });
   const [composing, setComposing] = useState({ start: false, end: false });
   const [error, setError] = useState<string>();
-  const startAt = resolveRangeBoundary(start, range?.startAt);
+  const inherited = !start.trim();
+  const startAt = inherited
+    ? globalStartAt
+    : resolveRangeBoundary(start, range?.startAt ?? undefined);
   const endAt = resolveRangeBoundary(end, range?.endAt);
   const locale =
     i18n.language === "cn" ? "zh-CN" : i18n.language === "en" ? "en-US" : i18n.language;
@@ -86,7 +94,9 @@ const RangeEditor = ({ range, targetName, onSave, onDestroyed }: Props) => {
           !startAt || !endAt || startTicks === undefined || endTicks === undefined
             ? "collectionMemo.validation.date"
             : startTicks > endTicks
-              ? "collectionMemo.validation.order"
+              ? inherited
+                ? "collectionMemo.validation.inheritedOrder"
+                : "collectionMemo.validation.order"
               : endTicks > BigInt(Date.now()) * 10_000n
                 ? "collectionMemo.validation.future"
                 : undefined;
@@ -100,7 +110,7 @@ const RangeEditor = ({ range, targetName, onSave, onDestroyed }: Props) => {
 
         setError(undefined);
         try {
-          await onSave({ startAt, endAt });
+          await onSave({ startAt: inherited ? null : startAt, endAt });
         } catch (cause) {
           setError(t<string>("collectionMemo.error.save"));
           throw cause;
@@ -110,9 +120,13 @@ const RangeEditor = ({ range, targetName, onSave, onDestroyed }: Props) => {
       <div className="flex flex-col gap-3">
         <div className="break-words font-medium">{targetName}</div>
         <Input
-          isRequired
           autoComplete="off"
-          description={renderPreview(startAt)}
+          description={
+            <span className="flex flex-col gap-1">
+              {inherited && <span>{t<string>("collectionMemo.range.inherited")}</span>}
+              {renderPreview(startAt)}
+            </span>
+          }
           errorMessage={
             edited.start && !composing.start && !startAt
               ? t<string>("collectionMemo.validation.date")
@@ -120,7 +134,7 @@ const RangeEditor = ({ range, targetName, onSave, onDestroyed }: Props) => {
           }
           isInvalid={edited.start && !composing.start && !startAt}
           label={t<string>("collectionMemo.range.start")}
-          placeholder={t<string>("collectionMemo.range.placeholder")}
+          placeholder={t<string>("collectionMemo.range.inheritPlaceholder")}
           spellCheck="false"
           type="text"
           value={start}
@@ -156,6 +170,7 @@ const RangeEditor = ({ range, targetName, onSave, onDestroyed }: Props) => {
           }}
         />
         <div className="space-y-1 text-xs text-default-500">
+          <p>{t<string>("collectionMemo.range.inheritHint")}</p>
           <p>{t<string>("collectionMemo.range.formatsHelp")}</p>
           <p>
             {t<string>("collectionMemo.range.localTime", { zone })}{" "}

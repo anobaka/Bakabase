@@ -14,7 +14,7 @@ public class CollectionMemoRange
 {
     public int Id { get; set; }
     [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.IsoDateTimeConverter))]
-    public DateTime StartAt { get; set; }
+    public DateTime? StartAt { get; set; }
     [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.IsoDateTimeConverter))]
     public DateTime EndAt { get; set; }
 }

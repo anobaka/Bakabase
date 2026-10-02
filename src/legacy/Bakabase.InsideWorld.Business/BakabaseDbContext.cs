@@ -34,6 +34,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<PlayListDbModel> Playlists { get; set; }
         public DbSet<CollectionMemoTargetDbModel> CollectionMemoTargets { get; set; }
         public DbSet<CollectionMemoRangeDbModel> CollectionMemoRanges { get; set; }
+        public DbSet<CollectionMemoSettingsDbModel> CollectionMemoSettings { get; set; }
 
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
         public DbSet<DownloadTaskFileDbModel> DownloadTaskFiles { get; set; }
@@ -191,8 +192,16 @@ namespace Bakabase.InsideWorld.Business
                     .OnDelete(DeleteBehavior.Cascade);
                 t.HasIndex(a => new {a.TargetId, a.StartAt});
                 // SQLite stores no DateTime.Kind. Reapply UTC when reading to keep JSON unambiguous.
-                t.Property(a => a.StartAt).HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+                t.Property(a => a.StartAt).HasConversion(v => v,
+                    v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : (DateTime?) null);
                 t.Property(a => a.EndAt).HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+            });
+
+            modelBuilder.Entity<CollectionMemoSettingsDbModel>(t =>
+            {
+                t.Property(a => a.Id).ValueGeneratedNever();
+                t.ToTable("CollectionMemoSettings", table => table.HasCheckConstraint("CK_CollectionMemoSettings_Singleton", "Id = 1"));
+                t.Property(a => a.StartAt).HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
             });
 
             modelBuilder.Entity<DownloadTaskDbModel>(t =>

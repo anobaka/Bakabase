@@ -5,8 +5,13 @@ import {
 
 export interface CollectionMemoRange {
   id: number;
-  startAt: string;
+  startAt: string | null;
   endAt: string;
+}
+
+export interface CollectionMemoSettings {
+  startAt: string;
+  reverse: boolean;
 }
 
 export interface CollectionMemoTarget {
@@ -44,6 +49,7 @@ export interface CollectionMemoCoverageResize {
   ranges: CollectionMemoRange[];
   edge: "start" | "end";
   at: string;
+  expectedGlobalStartAt?: string;
 }
 
 /** Date.parse supplies milliseconds; the remaining four digits preserve .NET ticks. */
@@ -57,16 +63,33 @@ export const getTimestampTicks = (value: string): bigint | undefined => {
   return BigInt(milliseconds) * 10_000n + BigInt(fraction.slice(3, 7).padEnd(4, "0"));
 };
 
-export const getTimelineCoverage = (ranges: CollectionMemoRange[]): TimelineCoverage[] => {
+/** An inherited start stays nullable in records and follows the current global setting. */
+export const resolveCollectionMemoRangeStart = (
+  range: Pick<CollectionMemoRange, "startAt">,
+  globalStartAt?: string,
+): string | undefined => range.startAt ?? globalStartAt;
+
+export const getTimelineCoverage = (
+  ranges: CollectionMemoRange[],
+  globalStartAt?: string,
+): TimelineCoverage[] => {
   const valid = ranges
-    .map((range) => ({
-      range,
-      start: getTimestampTicks(range.startAt),
-      end: getTimestampTicks(range.endAt),
-    }))
+    .map((range) => {
+      const startAt = resolveCollectionMemoRangeStart(range, globalStartAt);
+
+      return {
+        range,
+        startAt,
+        start: startAt === undefined ? undefined : getTimestampTicks(startAt),
+        end: getTimestampTicks(range.endAt),
+      };
+    })
     .filter(
-      (item): item is { range: CollectionMemoRange; start: bigint; end: bigint } =>
-        item.start !== undefined && item.end !== undefined && item.start <= item.end,
+      (item): item is { range: CollectionMemoRange; startAt: string; start: bigint; end: bigint } =>
+        item.startAt !== undefined &&
+        item.start !== undefined &&
+        item.end !== undefined &&
+        item.start <= item.end,
     )
     .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.range.id - b.range.id));
   const result: TimelineCoverage[] = [];
@@ -82,9 +105,9 @@ export const getTimelineCoverage = (ranges: CollectionMemoRange[]): TimelineCove
       }
     } else {
       result.push({
-        start: Date.parse(item.range.startAt),
+        start: Date.parse(item.startAt),
         end: Date.parse(item.range.endAt),
-        startAt: item.range.startAt,
+        startAt: item.startAt,
         endAt: item.range.endAt,
         ranges: [{ ...item.range }],
       });
@@ -97,6 +120,7 @@ export const getTimelineCoverage = (ranges: CollectionMemoRange[]): TimelineCove
 export const getTimelineRegions = (
   coverage: TimelineCoverage[],
   domain: TimelineDomain,
+  reverse = false,
 ): TimelineRegion[] => {
   const result: TimelineRegion[] = [];
   const duration = domain.end - domain.start;
@@ -106,6 +130,9 @@ export const getTimelineRegions = (
     const start = Date.parse(startAt);
     const end = Date.parse(endAt);
 
+    const chronologicalLeft = duration > 0 ? ((start - domain.start) / duration) * 100 : 100;
+    const width = duration > 0 ? ((end - start) / duration) * 100 : 0;
+
     result.push({
       start,
       end,
@@ -113,8 +140,8 @@ export const getTimelineRegions = (
       endAt,
       collected,
       point: collected && getTimestampTicks(startAt) === getTimestampTicks(endAt),
-      left: duration > 0 ? ((start - domain.start) / duration) * 100 : 100,
-      width: duration > 0 ? ((end - start) / duration) * 100 : 0,
+      left: reverse ? 100 - chronologicalLeft - width : chronologicalLeft,
+      width,
     });
   };
   let cursorAt = domainStartAt;
@@ -163,10 +190,16 @@ export const getCoverageResizeBounds = (
           previousEnd && getTimestampTicks(previousEnd)! > getTimestampTicks(domainStart)!
             ? previousEnd
             : domainStart,
-        max: component.endAt,
+        max:
+          getTimestampTicks(component.endAt)! < getTimestampTicks(domainEnd)!
+            ? component.endAt
+            : domainEnd,
       }
     : {
-        min: component.startAt,
+        min:
+          getTimestampTicks(component.startAt)! > getTimestampTicks(domainStart)!
+            ? component.startAt
+            : domainStart,
         max:
           nextStart && getTimestampTicks(nextStart)! < getTimestampTicks(domainEnd)!
             ? nextStart
@@ -187,15 +220,22 @@ export const clampCoverageBoundary = (
 };
 
 /** All targets share the same scale, including targets hidden by the search field. */
-export const getTimelineDomain = (targets: CollectionMemoTarget[], now: number): TimelineDomain => {
+export const getTimelineDomain = (
+  targets: CollectionMemoTarget[],
+  now: number,
+  globalStartAt?: string,
+): TimelineDomain => {
+  if (globalStartAt !== undefined && getTimestampTicks(globalStartAt) !== undefined)
+    return { start: Date.parse(globalStartAt), end: now, startAt: globalStartAt };
+
   let startAt = new Date(now).toISOString();
   let earliest = getTimestampTicks(startAt)!;
 
   for (const target of targets) {
     for (const range of target.ranges) {
-      const ticks = getTimestampTicks(range.startAt);
+      const ticks = range.startAt === null ? undefined : getTimestampTicks(range.startAt);
 
-      if (ticks !== undefined && ticks < earliest) {
+      if (range.startAt !== null && ticks !== undefined && ticks < earliest) {
         earliest = ticks;
         startAt = range.startAt;
       }
@@ -211,17 +251,20 @@ export const getTimelineDomain = (targets: CollectionMemoTarget[], now: number):
 export const getTimelineSegments = (
   ranges: CollectionMemoRange[],
   domain: TimelineDomain,
+  reverse = false,
 ): TimelineSegment[] => {
-  return getTimelineRegions(getTimelineCoverage(ranges), domain).map(
-    ({ start, end, collected, point, left, width }) => ({
-      start,
-      end,
-      collected,
-      point,
-      left,
-      width,
-    }),
-  );
+  return getTimelineRegions(
+    getTimelineCoverage(ranges, domain.startAt ?? new Date(domain.start).toISOString()),
+    domain,
+    reverse,
+  ).map(({ start, end, collected, point, left, width }) => ({
+    start,
+    end,
+    collected,
+    point,
+    left,
+    width,
+  }));
 };
 
 const pad = (value: number) => String(value).padStart(2, "0");
