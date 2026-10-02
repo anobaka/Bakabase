@@ -11,6 +11,8 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 
 namespace Bakabase.Tests;
 
@@ -118,7 +120,24 @@ public class CollectionMemoGlobalTimelineTests
         Assert.AreEqual(Parse(Time(9)), ranges.Single(r => r.Id == inherited.Id).EndAt);
         Assert.AreEqual(Parse(Time(1, "1234567")), ranges.Single(r => r.Id != inherited.Id).StartAt);
         Assert.AreEqual(Parse(Time(5, "1234567")), (await _service.GetSettings()).StartAt);
-        StringAssert.Contains(JsonConvert.SerializeObject(ranges), "\"StartAt\":null");
+        // Create (rather than CreateDefault) ignores process-wide JsonConvert defaults
+        // that other suites may configure with camel casing and omitted null values.
+        var serializer = JsonSerializer.Create(new JsonSerializerSettings
+        {
+            ContractResolver = new DefaultContractResolver
+            {
+                NamingStrategy = new CamelCaseNamingStrategy {ProcessDictionaryKeys = false}
+            },
+            NullValueHandling = NullValueHandling.Include,
+            DateFormatString = "yyyy-MM-dd HH:mm:ss.fff",
+            ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+        });
+        var payload = JArray.FromObject(ranges, serializer);
+        var inheritedPayload = payload.Single(r => r["id"]!.Value<int>() == inherited.Id);
+        Assert.AreEqual(JTokenType.Null, inheritedPayload["startAt"]?.Type);
+        Assert.AreEqual("2026-09-09T00:00:00Z", inheritedPayload["endAt"]!.Value<string>());
+        var explicitPayload = payload.Single(r => r["id"]!.Value<int>() != inherited.Id);
+        Assert.AreEqual("2026-09-01T00:00:00.1234567Z", explicitPayload["startAt"]!.Value<string>());
     }
 
     [TestMethod]
