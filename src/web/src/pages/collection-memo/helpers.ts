@@ -1,3 +1,8 @@
+import {
+  formatDateTimeInput,
+  parseDateTimeInput,
+} from "@/components/bakaui/components/Date/dateTimeInput";
+
 export interface CollectionMemoRange {
   id: number;
   startAt: string;
@@ -262,15 +267,21 @@ export const localDateTimeToIso = (value: string): string | undefined => {
   return date.toISOString();
 };
 
-/** Keep precision and the original DST-fold instant when the displayed field is unchanged. */
+/** Keep the original DST-fold instant only for an equivalent local field value. */
 export const resolveRangeBoundary = (value: string, original?: string): string | undefined => {
-  const converted = localDateTimeToIso(value);
+  const parsed = parseDateTimeInput(value);
 
-  if (original && converted && converted === localDateTimeToIso(toLocalDateTimeInput(original))) {
-    return original;
+  if (parsed && original && !parsed.hasExplicitTimezone) {
+    const displayedOriginal = parseDateTimeInput(formatDateTimeInput(original));
+
+    if (
+      displayedOriginal &&
+      getTimestampTicks(parsed.iso) === getTimestampTicks(displayedOriginal.iso)
+    )
+      return original;
   }
 
-  return converted;
+  return parsed?.iso;
 };
 
 /** The generated SDK returns application errors as successful promises. */

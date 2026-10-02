@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { useState } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import CollectionMemoPage from "..";
@@ -53,6 +54,7 @@ vi.mock("@/components/bakaui", () => ({
     onValueChange,
     type,
     placeholder,
+    description,
     errorMessage,
     "aria-label": ariaLabel,
   }: {
@@ -61,6 +63,7 @@ vi.mock("@/components/bakaui", () => ({
     onValueChange?: (value: string) => void;
     type?: string;
     placeholder?: string;
+    description?: ReactNode;
     errorMessage?: string;
     "aria-label"?: string;
   }) => (
@@ -73,6 +76,7 @@ vi.mock("@/components/bakaui", () => ({
         value={value}
         onChange={(event) => onValueChange?.(event.target.value)}
       />
+      {description && <span>{description}</span>}
       {errorMessage && <span role="alert">{errorMessage}</span>}
     </label>
   ),
@@ -272,7 +276,7 @@ describe("collection memo page", () => {
     page();
     await screen.findByText("exhentai");
     click("collectionMemo.action.addRange");
-    const local = "2026-09-05T16:00:35";
+    const local = "2026/09/05 16:00:35";
 
     fireEvent.change(screen.getByLabelText("collectionMemo.range.start"), {
       target: { value: local },
@@ -300,7 +304,7 @@ describe("collection memo page", () => {
 
     expect((screen.getByLabelText("collectionMemo.range.end") as HTMLInputElement).value).toMatch(
       new RegExp(
-        `^2026-09-05T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:35(?:\\.000)?$`,
+        `^2026-09-05 ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:35(?:\\.000)?$`,
       ),
     );
     click("Save");
@@ -461,11 +465,131 @@ describe("collection memo timeline shortcuts", () => {
   });
 });
 
+describe("collection memo text date-time entry", () => {
+  it("keeps a valid UTC minimum record editable and previews its actual instant", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const minimum = "0001-01-01T00:00:00.0000001Z";
+
+    render(
+      <RangeEditor
+        range={{ id: 11, startAt: minimum, endAt: minimum }}
+        targetName="Target"
+        onSave={onSave}
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: "collectionMemo.range.start" })).not.toHaveValue("");
+    expect(
+      Array.from(screen.getByRole("dialog").querySelectorAll("time")).map((time) => time.dateTime),
+    ).toEqual([minimum, minimum]);
+    click("Save");
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ startAt: minimum, endAt: minimum }));
+  });
+
+  it("accepts pasted Chinese dates as plain text and previews the saved instant without rewriting input", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const value = "2026年9月5日 16时00分35秒";
+    const iso = new Date(2026, 8, 5, 16, 0, 35).toISOString();
+
+    render(<RangeEditor targetName="Target" onSave={onSave} />);
+    const startInput = screen.getByRole("textbox", { name: "collectionMemo.range.start" });
+    const endInput = screen.getByRole("textbox", { name: "collectionMemo.range.end" });
+
+    expect(startInput).toHaveAttribute("type", "text");
+    expect(endInput).toHaveAttribute("type", "text");
+    await user.clear(startInput);
+    await user.paste(value);
+    await user.clear(endInput);
+    await user.paste(value);
+    await user.tab();
+    expect(startInput).toHaveValue(value);
+    expect(endInput).toHaveValue(value);
+    expect(
+      Array.from(screen.getByRole("dialog").querySelectorAll("time")).map((time) => time.dateTime),
+    ).toEqual([iso, iso]);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ startAt: iso, endAt: iso }));
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses local midnight for date-only start and end entries", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(<RangeEditor targetName="Target" onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.start"), {
+      target: { value: "2026.9.1" },
+    });
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.end"), {
+      target: { value: "20260905" },
+    });
+    click("Save");
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({
+        startAt: new Date(2026, 8, 1).toISOString(),
+        endAt: new Date(2026, 8, 5).toISOString(),
+      }),
+    );
+  });
+
+  it("honors explicit pasted offsets and full fractional seconds while comparing actual instants", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const expected = "2026-09-04T16:00:35.1234567Z";
+
+    render(<RangeEditor targetName="Target" onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.start"), {
+      target: { value: "2026-09-05 01:00:35.1234567+09:00" },
+    });
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.end"), {
+      target: { value: expected },
+    });
+    click("Save");
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({ startAt: expected, endAt: expected }),
+    );
+  });
+
+  it("preserves incomplete typed text on blur and keeps the editor open until corrected", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(<RangeEditor targetName="Target" onSave={onSave} />);
+    const startInput = screen.getByRole("textbox", { name: "collectionMemo.range.start" });
+
+    await user.clear(startInput);
+    await user.type(startInput, "2026/0");
+    await user.tab();
+    expect(startInput).toHaveValue("2026/0");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(startInput).toHaveValue("2026/0");
+    fireEvent.change(startInput, { target: { value: "2026/09/01" } });
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.end"), {
+      target: { value: "2026/09/05" },
+    });
+    click("Save");
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+  });
+});
+
 describe("collection memo range validation", () => {
   it.each([
     ["2026-09-05T16:00", "2026-09-01T16:00", "collectionMemo.validation.order"],
     ["2027-09-05T16:00", "2027-09-05T16:00", "collectionMemo.validation.future"],
     ["", "2026-09-05T16:00", "collectionMemo.validation.date"],
+    ["2026/02/30", "2026/09/05", "collectionMemo.validation.date"],
+    [
+      "2026-09-05T08:00:35.1234568Z",
+      "2026-09-05T08:00:35.1234567Z",
+      "collectionMemo.validation.order",
+    ],
+    [
+      "2026-10-01T08:00:00.0000001Z",
+      "2026-10-01T08:00:00.0000001Z",
+      "collectionMemo.validation.future",
+    ],
   ])("keeps invalid dates open (%s to %s)", async (start, finish, message) => {
     const onSave = vi.fn();
 
@@ -478,7 +602,9 @@ describe("collection memo range validation", () => {
     });
     click("Save");
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(
+      (await screen.findAllByRole("alert")).some((alert) => alert.textContent?.includes(message)),
+    ).toBe(true);
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
