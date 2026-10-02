@@ -1,12 +1,13 @@
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { CollectionMemoRange } from "../helpers";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { resolveRangeBoundary, toLocalDateTimeInput } from "../helpers";
+import { getTimestampTicks, resolveRangeBoundary } from "../helpers";
 
 import { Input, Modal } from "@/components/bakaui";
+import { formatDateTimeInput } from "@/components/bakaui/components/Date/dateTimeInput";
 
 interface Props extends DestroyableProps {
   range?: CollectionMemoRange;
@@ -14,11 +15,56 @@ interface Props extends DestroyableProps {
   onSave: (range: { startAt: string; endAt: string }) => Promise<void>;
 }
 
+const dateTimeFormat: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+};
+
 const RangeEditor = ({ range, targetName, onSave, onDestroyed }: Props) => {
-  const { t } = useTranslation();
-  const [start, setStart] = useState(() => toLocalDateTimeInput(range?.startAt ?? Date.now()));
-  const [end, setEnd] = useState(() => toLocalDateTimeInput(range?.endAt ?? Date.now()));
+  const { t, i18n } = useTranslation();
+  const [start, setStart] = useState(() => formatDateTimeInput(range?.startAt ?? Date.now()));
+  const [end, setEnd] = useState(() => formatDateTimeInput(range?.endAt ?? Date.now()));
+  const [edited, setEdited] = useState({ start: false, end: false });
+  const [composing, setComposing] = useState({ start: false, end: false });
   const [error, setError] = useState<string>();
+  const startAt = resolveRangeBoundary(start, range?.startAt);
+  const endAt = resolveRangeBoundary(end, range?.endAt);
+  const locale =
+    i18n.language === "cn" ? "zh-CN" : i18n.language === "en" ? "en-US" : i18n.language;
+  const formatter = useMemo(() => new Intl.DateTimeFormat(locale, dateTimeFormat), [locale]);
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const renderPreview = (resolved?: string) => {
+    if (!resolved) return t<string>("collectionMemo.range.parseHint");
+    const date = new Date(resolved);
+    const useUtc = date.getFullYear() < 1 || date.getFullYear() > 9999;
+    const previewFormatter = useUtc
+      ? new Intl.DateTimeFormat(locale, { ...dateTimeFormat, timeZone: "UTC" })
+      : formatter;
+    const fraction = /\.(\d+)(?:Z|[+-]\d{2}:?\d{2})$/i.exec(resolved)?.[1];
+    const local = previewFormatter
+      .formatToParts(date)
+      .map((part) =>
+        part.type === "second" && fraction ? `${part.value}.${fraction}` : part.value,
+      )
+      .join("");
+    const offset = useUtc ? 0 : date.getTimezoneOffset();
+    const absoluteOffset = Math.abs(offset);
+    const offsetText = `UTC${offset <= 0 ? "+" : "-"}${String(Math.floor(absoluteOffset / 60)).padStart(2, "0")}:${String(absoluteOffset % 60).padStart(2, "0")}`;
+
+    return (
+      <span>
+        {t<string>("collectionMemo.range.parsed")}{" "}
+        <time dateTime={resolved}>
+          {local} {offsetText}
+        </time>
+      </span>
+    );
+  };
 
   return (
     <Modal
@@ -33,14 +79,15 @@ const RangeEditor = ({ range, targetName, onSave, onDestroyed }: Props) => {
       )}
       onDestroyed={onDestroyed}
       onOk={async () => {
-        const startAt = resolveRangeBoundary(start, range?.startAt);
-        const endAt = resolveRangeBoundary(end, range?.endAt);
+        setEdited({ start: true, end: true });
+        const startTicks = startAt ? getTimestampTicks(startAt) : undefined;
+        const endTicks = endAt ? getTimestampTicks(endAt) : undefined;
         const validationKey =
-          !startAt || !endAt
+          !startAt || !endAt || startTicks === undefined || endTicks === undefined
             ? "collectionMemo.validation.date"
-            : Date.parse(startAt) > Date.parse(endAt)
+            : startTicks > endTicks
               ? "collectionMemo.validation.order"
-              : Date.parse(endAt) > Date.now()
+              : endTicks > BigInt(Date.now()) * 10_000n
                 ? "collectionMemo.validation.future"
                 : undefined;
 
@@ -64,21 +111,57 @@ const RangeEditor = ({ range, targetName, onSave, onDestroyed }: Props) => {
         <div className="break-words font-medium">{targetName}</div>
         <Input
           isRequired
+          autoComplete="off"
+          description={renderPreview(startAt)}
+          errorMessage={
+            edited.start && !composing.start && !startAt
+              ? t<string>("collectionMemo.validation.date")
+              : undefined
+          }
+          isInvalid={edited.start && !composing.start && !startAt}
           label={t<string>("collectionMemo.range.start")}
-          step="1"
-          type="datetime-local"
+          placeholder={t<string>("collectionMemo.range.placeholder")}
+          spellCheck="false"
+          type="text"
           value={start}
-          onValueChange={setStart}
+          onCompositionEnd={() => setComposing((previous) => ({ ...previous, start: false }))}
+          onCompositionStart={() => setComposing((previous) => ({ ...previous, start: true }))}
+          onValueChange={(value) => {
+            setStart(value);
+            setEdited((previous) => ({ ...previous, start: true }));
+            setError(undefined);
+          }}
         />
         <Input
           isRequired
+          autoComplete="off"
+          description={renderPreview(endAt)}
+          errorMessage={
+            edited.end && !composing.end && !endAt
+              ? t<string>("collectionMemo.validation.date")
+              : undefined
+          }
+          isInvalid={edited.end && !composing.end && !endAt}
           label={t<string>("collectionMemo.range.end")}
-          step="1"
-          type="datetime-local"
+          placeholder={t<string>("collectionMemo.range.placeholder")}
+          spellCheck="false"
+          type="text"
           value={end}
-          onValueChange={setEnd}
+          onCompositionEnd={() => setComposing((previous) => ({ ...previous, end: false }))}
+          onCompositionStart={() => setComposing((previous) => ({ ...previous, end: true }))}
+          onValueChange={(value) => {
+            setEnd(value);
+            setEdited((previous) => ({ ...previous, end: true }));
+            setError(undefined);
+          }}
         />
-        <p className="text-sm text-default-500">{t<string>("collectionMemo.range.localTime")}</p>
+        <div className="space-y-1 text-xs text-default-500">
+          <p>{t<string>("collectionMemo.range.formatsHelp")}</p>
+          <p>
+            {t<string>("collectionMemo.range.localTime", { zone })}{" "}
+            {t<string>("collectionMemo.range.dateOnlyHint")}
+          </p>
+        </div>
         <p className="text-sm text-default-500">{t<string>("collectionMemo.range.pointHint")}</p>
         {error && (
           <p className="text-sm text-danger" role="alert">

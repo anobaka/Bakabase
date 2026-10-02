@@ -9,6 +9,8 @@ import {
   toLocalDateTimeInput,
 } from "../helpers";
 
+import { formatDateTimeInput } from "@/components/bakaui/components/Date/dateTimeInput";
+
 const range = (id: number, start: number, end: number) => ({
   id,
   startAt: new Date(start).toISOString(),
@@ -101,10 +103,12 @@ describe("collection memo date-time conversion", () => {
     // In America/New_York this is the second 01:30, which local Date parsing
     // would otherwise reconstruct as the first 01:30, one hour earlier.
     const original = "2025-11-02T06:30:35.1234567Z";
-    const visible = toLocalDateTimeInput(original);
+    const visible = formatDateTimeInput(original);
 
     expect(resolveRangeBoundary(visible, original)).toBe(original);
-    expect(resolveRangeBoundary(`${visible}.000`, original)).toBe(original);
+    const wholeSeconds = visible.replace(/\.\d+$/, ".000");
+
+    expect(resolveRangeBoundary(wholeSeconds, original)).not.toBe(original);
     const changed = "2025-11-02T03:30:35";
 
     expect(resolveRangeBoundary(changed, original)).toBe(localDateTimeToIso(changed));
