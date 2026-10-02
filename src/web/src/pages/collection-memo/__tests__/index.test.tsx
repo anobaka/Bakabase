@@ -121,6 +121,13 @@ const click = (label: string) => fireEvent.click(screen.getByRole("button", { na
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
   vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-01T08:00:00.000Z"));
   for (const method of Object.values(api)) method.mockResolvedValue({ code: 0 });
   api.getCollectionMemoTargets.mockResolvedValue({ code: 0, data: [target] });
@@ -130,6 +137,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("collection memo page", () => {

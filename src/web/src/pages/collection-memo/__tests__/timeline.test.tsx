@@ -71,6 +71,13 @@ const oldHas = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "hasPointe
 
 beforeEach(() => {
   vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  vi.stubGlobal(
     "PointerEvent",
     class extends MouseEvent {
       pointerId: number;
@@ -108,14 +115,14 @@ beforeEach(() => {
     this: HTMLElement,
   ) {
     const top = 100;
-    const isCard = this.getAttribute("role") === "dialog";
+    const isCard = ["dialog", "tooltip"].includes(this.getAttribute("role") ?? "");
     const left = 100 + (Number.parseFloat(this.style.left) || 0) * 10;
     const width = isCard
       ? 320
       : this.hasAttribute("data-collection-memo-track")
         ? 1000
         : (Number.parseFloat(this.style.width) || 0) * 10;
-    const height = isCard ? 112 : 16;
+    const height = isCard ? Math.min(112, Number.parseFloat(this.style.maxHeight) || 112) : 16;
 
     return {
       top,
@@ -302,7 +309,123 @@ describe("timeline gap hover actions", () => {
     showTimeline();
     fireEvent.pointerEnter(gaps()[1]);
 
-    expect(screen.getByRole("dialog")).toHaveStyle({ top: "16px" });
+    const card = screen.getByRole("dialog");
+    const top = Number.parseFloat(card.style.top);
+    const height = card.getBoundingClientRect().height;
+
+    expect(top).toBeGreaterThanOrEqual(8);
+    expect(top + height).toBeLessThanOrEqual(92);
+    fireEvent.pointerEnter(gaps()[1]);
+    fireEvent.focus(gaps()[1]);
+    expect(card.style.top).toBe(`${top}px`);
+  });
+
+  it("keeps the trailing gap card and focused action mounted across clock and parent updates", async () => {
+    const { props, rerender, onFillGap } = showTimeline();
+
+    fireEvent.click(gaps()[2]);
+    const card = screen.getByRole("dialog");
+    const action = within(card).getByRole("button");
+
+    act(() => action.focus());
+    for (let tick = 1; tick <= 3; tick++) {
+      rerender(
+        <Timeline
+          {...props}
+          domain={{ ...domain, end: domain.end + tick * minute }}
+          formatDate={(date) => new Date(date).toISOString()}
+        />,
+      );
+      expect(screen.getByRole("dialog")).toBe(card);
+      expect(within(card).getByRole("button")).toBe(action);
+      expect(action).toHaveFocus();
+    }
+    await act(async () => fireEvent.click(action));
+    expect(onFillGap).toHaveBeenCalledExactlyOnceWith({ startAt: iso(80), endAt: iso(103) });
+  });
+
+  it("uses one stable hover surface while moving between collected ranges, boundaries, and gaps", () => {
+    vi.useFakeTimers();
+    showTimeline();
+    const collected = screen.getAllByRole("button", {
+      name: "collectionMemo.timeline.collectedRange",
+    })[0];
+
+    fireEvent.pointerEnter(collected);
+    const card = screen.getByRole("tooltip");
+
+    expect(card).toHaveTextContent("collectionMemo.timeline.collectedRange");
+    fireEvent.pointerLeave(collected);
+    fireEvent.pointerEnter(endHandles()[0]);
+    expect(screen.getByRole("tooltip")).toBe(card);
+    fireEvent.pointerLeave(endHandles()[0]);
+    fireEvent.pointerEnter(gaps()[1]);
+    expect(screen.getByRole("dialog")).toBe(card);
+    expect(card).toHaveTextContent("collectionMemo.timeline.uncollectedRange");
+    act(() => vi.advanceTimersByTime(1000));
+    expect(screen.getByRole("dialog")).toBe(card);
+    fireEvent.pointerLeave(gaps()[1]);
+    fireEvent.pointerEnter(collected);
+    expect(screen.getByRole("tooltip")).toBe(card);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.querySelectorAll('[role="tooltip"], [role="dialog"]')).toHaveLength(1);
+  });
+
+  it("keeps popup scrolling open and closes on scrolling the surrounding page", () => {
+    showTimeline();
+    fireEvent.pointerEnter(gaps()[1]);
+    const card = screen.getByRole("dialog");
+
+    fireEvent.scroll(card);
+    expect(card).toBeInTheDocument();
+    fireEvent.scroll(within(card).getByRole("button"));
+    expect(card).toBeInTheDocument();
+    fireEvent.scroll(window);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("preserves a focused fill action when the pointer passes over another hover source", () => {
+    showTimeline();
+    fireEvent.keyDown(gaps()[1], { key: "Enter" });
+    const card = screen.getByRole("dialog");
+    const action = within(card).getByRole("button");
+
+    expect(action).toHaveFocus();
+    fireEvent.pointerEnter(endHandles()[0]);
+    fireEvent.pointerEnter(
+      screen.getAllByRole("button", { name: "collectionMemo.timeline.collectedRange" })[0],
+    );
+    expect(screen.getByRole("dialog")).toBe(card);
+    expect(action).toHaveFocus();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(gaps()[1]).toHaveFocus();
+  });
+
+  it("dismisses a removed hover source while preserving unrelated collection changes", () => {
+    const { props, rerender } = showTimeline();
+
+    fireEvent.pointerEnter(gaps()[1]);
+    const card = screen.getByRole("dialog");
+
+    rerender(
+      <Timeline {...props} target={{ ...target, ranges: [...target.ranges, record(3, 90, 95)] }} />,
+    );
+    expect(screen.getByRole("dialog")).toBe(card);
+    rerender(<Timeline {...props} target={{ ...target, ranges: [record(1, 20, 80)] }} />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("does not leave an orphan card when saving is enabled while the pointer leaves", () => {
+    vi.useFakeTimers();
+    const { props, rerender } = showTimeline();
+
+    fireEvent.pointerEnter(gaps()[1]);
+    rerender(<Timeline {...props} isSaving />);
+    fireEvent.pointerLeave(gaps()[1]);
+    act(() => vi.advanceTimersByTime(500));
+    rerender(<Timeline {...props} />);
+    act(() => vi.advanceTimersByTime(500));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("blocks duplicate saves and keeps a failed gap action visible for retry", async () => {
@@ -339,6 +462,32 @@ describe("timeline gap hover actions", () => {
 });
 
 describe("timeline boundary gestures", () => {
+  it("suppresses the boundary hover card during a drag and restores coverage without saving on cancellation", () => {
+    const { onResizeCoverage } = showTimeline();
+
+    fireEvent.pointerEnter(endHandles()[0]);
+    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+    pointerDown(endHandles()[0], 500);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    pointerMove(trackElement(), 600);
+    fireEvent.keyDown(document, { key: "Escape" });
+    pointerUp(trackElement(), 600);
+    expect(onResizeCoverage).not.toHaveBeenCalled();
+    expect(endHandles()[0]).toHaveAttribute("aria-valuenow", String(base + 40 * minute));
+  });
+
+  it("keeps boundary controls transparent, focusable, and described for keyboard adjustment", () => {
+    showTimeline();
+    for (const handle of [...startHandles(), ...endHandles()]) {
+      expect(handle).toHaveAttribute("tabindex", "0");
+      expect(handle.className).toContain("cursor-ew-resize");
+      expect(handle.className).not.toMatch(/(?:bg-content1|rounded|shadow|border-)/);
+      fireEvent.focus(handle);
+      expect(screen.getByRole("tooltip")).toHaveTextContent("collectionMemo.timeline.resizeHint");
+      fireEvent.blur(handle);
+    }
+  });
+
   it("captures the stable track, previews the dates and colors, then commits once on release", async () => {
     const { onResizeCoverage } = showTimeline();
     const track = trackElement();
