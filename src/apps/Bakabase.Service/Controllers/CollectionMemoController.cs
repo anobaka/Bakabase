@@ -18,6 +18,14 @@ public class CollectionMemoController(CollectionMemoService service) : Controlle
     [SwaggerOperation(OperationId = "GetCollectionMemoTargets")]
     public async Task<ListResponse<CollectionMemoTarget>> GetTargets() => new(await service.GetTargets());
 
+    [HttpGet("settings")]
+    [SwaggerOperation(OperationId = "GetCollectionMemoSettings")]
+    public async Task<SingletonResponse<CollectionMemoSettings>> GetSettings() => new(await service.GetSettings());
+
+    [HttpPut("settings")]
+    [SwaggerOperation(OperationId = "UpdateCollectionMemoSettings")]
+    public Task<BaseResponse> UpdateSettings([FromBody] CollectionMemoSettingsInputModel input) => service.UpdateSettings(input);
+
     [HttpPost]
     [SwaggerOperation(OperationId = "CreateCollectionMemoTarget")]
     public Task<BaseResponse> CreateTarget([FromBody] CollectionMemoTargetInputModel input) => service.CreateTarget(input);

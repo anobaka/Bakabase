@@ -74,7 +74,7 @@ public class CollectionMemoTests
         Assert.AreEqual("exhentai", target.Name);
         Assert.AreEqual(new DateTime(2026, 9, 1, 0, 0, 17, DateTimeKind.Utc), range.StartAt);
         Assert.AreEqual(new DateTime(2026, 9, 5, 8, 0, 23, DateTimeKind.Utc), range.EndAt);
-        Assert.AreEqual(DateTimeKind.Utc, range.StartAt.Kind);
+        Assert.AreEqual(DateTimeKind.Utc, range.StartAt!.Value.Kind);
         StringAssert.Contains(JsonConvert.SerializeObject(range, new JsonSerializerSettings
         {
             DateFormatString = "yyyy-MM-dd HH:mm:ss.fff"
@@ -90,7 +90,7 @@ public class CollectionMemoTests
         await _service.CreateRange(id, Range("2026-09-02T00:00:00Z", "2026-09-04T00:00:00Z"));
         var ranges = (await _service.GetTargets()).Single().Ranges;
         Assert.AreEqual(3, ranges.Count, "Overlaps remain separate editable records.");
-        CollectionAssert.AreEqual(new[] {1, 2, 5}, ranges.Select(r => r.StartAt.Day).ToArray());
+        CollectionAssert.AreEqual(new[] {1, 2, 5}, ranges.Select(r => r.StartAt!.Value.Day).ToArray());
         Assert.AreEqual(ranges[2].StartAt, ranges[2].EndAt);
     }
 
@@ -106,7 +106,7 @@ public class CollectionMemoTests
         Assert.AreEqual((int) ResponseCode.NotFound, (await _service.UpdateRange(second, rangeId, updated)).Code);
         Assert.AreEqual((int) ResponseCode.NotFound, (await _service.DeleteRange(second, rangeId)).Code);
         Assert.AreEqual(0, (await _service.UpdateRange(first, rangeId, updated)).Code);
-        Assert.AreEqual(3, (await _service.GetTargets()).Single(t => t.Id == first).Ranges.Single().StartAt.Day);
+        Assert.AreEqual(3, (await _service.GetTargets()).Single(t => t.Id == first).Ranges.Single().StartAt!.Value.Day);
         Assert.AreEqual(0, (await _service.DeleteRange(first, rangeId)).Code);
         Assert.AreEqual(0, await _db.CollectionMemoRanges.CountAsync());
 
@@ -196,7 +196,7 @@ public class CollectionMemoTests
         await _service.CreateRange(id, Range(Time(4), Time(15)));
         await _service.CreateRange(id, Range(Time(22), Time(25)));
         var original = await Ranges(id);
-        var other = original.Single(r => r.StartAt.Day == 22);
+        var other = original.Single(r => r.StartAt!.Value.Day == 22);
 
         Assert.AreEqual(0, (await _service.FillGap(id, Range(Time(15), Time(20)))).Code);
         await RestartContext();
@@ -206,7 +206,7 @@ public class CollectionMemoTests
         Assert.AreEqual(DateTime.Parse(Time(1)).ToUniversalTime(), result[0].StartAt);
         Assert.AreEqual(DateTime.Parse(Time(20)).ToUniversalTime(), result[0].EndAt);
         AssertRangeEqual(other, result[1]);
-        Assert.AreEqual(DateTimeKind.Utc, result[0].StartAt.Kind);
+        Assert.AreEqual(DateTimeKind.Utc, result[0].StartAt!.Value.Kind);
     }
 
     [DataTestMethod]
@@ -218,7 +218,7 @@ public class CollectionMemoTests
         await _service.CreateRange(id, Range(Time(5), Time(6)));
         Assert.AreEqual(0, (await _service.FillGap(id, Range(Time(fillStart), Time(fillEnd)))).Code);
         var result = (await Ranges(id)).Single();
-        Assert.AreEqual(resultStart, result.StartAt.Day);
+        Assert.AreEqual(resultStart, result.StartAt!.Value.Day);
         Assert.AreEqual(resultEnd, result.EndAt.Day);
     }
 
@@ -245,7 +245,7 @@ public class CollectionMemoTests
         await _service.CreateRange(id, Range(Time(6), Time(8, "7654321")));
         await _service.CreateRange(id, Range(Time(10, "1234567"), Time(11, "1234567")));
         var original = await Ranges(id);
-        var selected = original.Where(r => r.StartAt.Day is 5 or 6).ToList();
+        var selected = original.Where(r => r.StartAt!.Value.Day is 5 or 6).ToList();
         var at = edge == "start" ? Time(4, "9876543") : Time(9, "9876543");
 
         Assert.AreEqual(0, (await _service.ResizeCoverage(id, Resize(selected, edge, at))).Code);
@@ -295,7 +295,7 @@ public class CollectionMemoTests
         await _service.CreateRange(id, Range(Time(10), Time(12)));
         Assert.AreEqual(0, (await _service.ResizeCoverage(id, Resize(selected, "start", Time(4)))).Code);
 
-        selected = (await Ranges(id)).Where(r => r.StartAt.Day == 4).ToList();
+        selected = (await Ranges(id)).Where(r => r.StartAt!.Value.Day == 4).ToList();
         await _service.CreateRange(id, Range(Time(7), Time(9)));
         var current = await Ranges(id);
         Assert.AreEqual((int) ResponseCode.Conflict,
@@ -330,7 +330,7 @@ public class CollectionMemoTests
         await _service.CreateRange(id, Range(Time(1, "1234560"), Time(1, "1234567")));
         await _service.CreateRange(id, Range(Time(1, "1234568"), Time(1, "1234570")));
         var original = await Ranges(id);
-        Assert.AreEqual(1L, original[1].StartAt.Ticks - original[0].EndAt.Ticks);
+        Assert.AreEqual(1L, original[1].StartAt!.Value.Ticks - original[0].EndAt.Ticks);
         Assert.AreEqual(0, (await _service.ResizeCoverage(id,
             Resize(original.Take(1), "start", Time(1, "1234561")))).Code);
         var resized = await Ranges(id);
@@ -340,7 +340,7 @@ public class CollectionMemoTests
 
         Assert.AreEqual(0, (await _service.FillGap(id, Range(Time(1, "1234567"), Time(1, "1234568")))).Code);
         var merged = (await Ranges(id)).Single();
-        Assert.AreEqual(resized[0].StartAt.Ticks, merged.StartAt.Ticks);
+        Assert.AreEqual(resized[0].StartAt!.Value.Ticks, merged.StartAt!.Value.Ticks);
         Assert.AreEqual(original[1].EndAt.Ticks, merged.EndAt.Ticks);
     }
 
@@ -406,7 +406,7 @@ public class CollectionMemoTests
     {
         Ranges = ranges.Select(r => new CollectionMemoRangeSnapshotInputModel
         {
-            Id = r.Id, StartAt = r.StartAt.ToString("O"), EndAt = r.EndAt.ToString("O")
+            Id = r.Id, StartAt = r.StartAt?.ToString("O"), EndAt = r.EndAt.ToString("O")
         }).ToList(),
         Edge = edge,
         At = at
@@ -417,7 +417,7 @@ public class CollectionMemoTests
     private static void AssertRangeEqual(CollectionMemoRange expected, CollectionMemoRange actual)
     {
         Assert.AreEqual(expected.Id, actual.Id);
-        Assert.AreEqual(expected.StartAt.Ticks, actual.StartAt.Ticks);
+        Assert.AreEqual(expected.StartAt, actual.StartAt);
         Assert.AreEqual(expected.EndAt.Ticks, actual.EndAt.Ticks);
     }
 
@@ -444,6 +444,6 @@ public class CollectionMemoTests
         return (await _service.GetTargets()).Single(t => t.Name == name).Id;
     }
 
-    private static CollectionMemoRangeInputModel Range(string startAt, string endAt) =>
+    private static CollectionMemoRangeInputModel Range(string? startAt, string endAt) =>
         new() {StartAt = startAt, EndAt = endAt};
 }

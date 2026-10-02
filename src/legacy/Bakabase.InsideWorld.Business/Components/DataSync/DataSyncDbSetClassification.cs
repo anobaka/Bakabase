@@ -42,7 +42,7 @@ public static class DataSyncDbSetClassification
             "ResourceExternalIdentities", "SteamApps", "DLsiteWorks", "ExHentaiGalleries", "DataCards",
             "DataCardPropertyValues", "ComparisonResultGroups", "ComparisonResultGroupMembers",
             "ComparisonResultPairs", "CollectionResourceMappings", "ResourceMatchSuggestions",
-            "CollectionMemoTargets", "CollectionMemoRanges");
+            "CollectionMemoTargets", "CollectionMemoRanges", "CollectionMemoSettings");
 
         Add(DataSyncTableClass.NeverSync, "Future kind (P1 vocabulary)", null, "AliasesV2", "TextTypes", "TextEntries");
         Add(DataSyncTableClass.NeverSync, "Future kind (P4)", null,

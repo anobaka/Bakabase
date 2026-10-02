@@ -161,6 +161,7 @@ const showTimeline = (
   const props = {
     target: selectedTarget,
     domain,
+    reverse: false,
     formatDate: (date: string | number) => new Date(date).toISOString(),
     onResizeCoverage,
     onFillGap,
@@ -723,5 +724,233 @@ describe("timeline boundary gestures", () => {
       edge: "end",
       at: iso(60),
     });
+  });
+});
+
+describe("timeline global start and direction", () => {
+  it("defaults to newest on the left and mirrors intervals, boundary faces, and captions", () => {
+    const { props, rerender } = showTimeline();
+
+    rerender(<Timeline {...props} reverse={undefined} />);
+    const collected = screen.getAllByRole("button", {
+      name: "collectionMemo.timeline.collectedRange",
+    });
+
+    expect(collected[0]).toHaveStyle({ left: "60%", width: "20%" });
+    expect(collected[1]).toHaveStyle({ left: "20%", width: "20%" });
+    expect(startHandles()[0]).toHaveStyle({ left: "80%", transform: "translate(-100%, -50%)" });
+    expect(endHandles()[0]).toHaveStyle({ left: "60%", transform: "translate(0, -50%)" });
+    expect(document.querySelector("time")?.parentElement?.className).toContain("flex-row-reverse");
+  });
+
+  it.each([false, true])(
+    "keeps fill chronological and moves dragged edges visually when reverse=%s",
+    async (reverse) => {
+      const { props, rerender, onFillGap, onResizeCoverage } = showTimeline();
+
+      rerender(<Timeline {...props} reverse={reverse} />);
+      fireEvent.click(gaps()[1]);
+      await act(async () =>
+        fireEvent.click(within(screen.getByRole("dialog")).getByRole("button")),
+      );
+      expect(onFillGap).toHaveBeenCalledExactlyOnceWith({ startAt: iso(40), endAt: iso(60) });
+      pointerDown(endHandles()[0], 500);
+      pointerMove(trackElement(), reverse ? 400 : 600);
+      expect(endHandles()[0]).toHaveAttribute("aria-valuenow", String(base + 50 * minute));
+      expect(endHandles()[0]).toHaveStyle({ left: reverse ? "50%" : "50%" });
+      await act(async () => pointerUp(trackElement(), reverse ? 400 : 600));
+      expect(onResizeCoverage).toHaveBeenCalledExactlyOnceWith({
+        ranges: [target.ranges[0]],
+        edge: "end",
+        at: iso(50),
+      });
+    },
+  );
+
+  it("reverses horizontal keyboard motion while retaining chronological Home/End and vertical arrows", async () => {
+    const { props, rerender, onResizeCoverage } = showTimeline();
+
+    rerender(<Timeline {...props} reverse />);
+    await act(async () => fireEvent.keyDown(endHandles()[0], { key: "ArrowLeft" }));
+    expect(onResizeCoverage.mock.calls[0][0].at).toBe(iso(41));
+    await act(async () => fireEvent.keyDown(endHandles()[0], { key: "ArrowRight" }));
+    expect(onResizeCoverage.mock.calls[1][0].at).toBe(iso(39));
+    await act(async () => fireEvent.keyDown(endHandles()[0], { key: "Home" }));
+    expect(onResizeCoverage.mock.calls[2][0].at).toBe(iso(20));
+    await act(async () => fireEvent.keyDown(endHandles()[0], { key: "End" }));
+    expect(onResizeCoverage.mock.calls[3][0].at).toBe(iso(60));
+    await act(async () => fireEvent.keyDown(endHandles()[0], { key: "ArrowUp" }));
+    expect(onResizeCoverage.mock.calls[4][0].at).toBe(iso(41));
+    await act(async () => fireEvent.keyDown(endHandles()[0], { key: "ArrowLeft", shiftKey: true }));
+    expect(onResizeCoverage.mock.calls[5][0].at).toBe(iso(60));
+  });
+
+  it.each(["direction", "global-start"])("cancels an active gesture when %s changes", (change) => {
+    const { props, rerender, onResizeCoverage } = showTimeline();
+
+    pointerDown(endHandles()[0], 500);
+    pointerMove(trackElement(), 600);
+    rerender(
+      <Timeline
+        {...props}
+        {...(change === "direction"
+          ? { reverse: true }
+          : {
+              domain: {
+                start: base + 10 * minute,
+                end: domain.end,
+                startAt: "2026-09-01T08:10:00+08:00",
+              },
+            })}
+      />,
+    );
+    pointerUp(trackElement(), 600);
+    expect(onResizeCoverage).not.toHaveBeenCalled();
+    expect(release).toHaveBeenCalledExactlyOnceWith(7);
+    expect(endHandles()[0]).toHaveAttribute("aria-valuenow", String(base + 40 * minute));
+    expect(screen.getByRole("alert")).toHaveTextContent("collectionMemo.timeline.changed");
+  });
+
+  it("freezes reverse direction, geometry, and current-time domain through timer updates", async () => {
+    const { props, rerender, onResizeCoverage } = showTimeline();
+
+    rerender(<Timeline {...props} reverse />);
+    pointerDown(endHandles()[0], 500);
+    rerender(
+      <Timeline {...props} reverse domain={{ ...domain, end: domain.end + 100 * minute }} />,
+    );
+    pointerMove(trackElement(), 400);
+    expect(endHandles()[0]).toHaveStyle({ left: "50%" });
+    expect(document.querySelectorAll("time")[1]).toHaveAttribute("dateTime", iso(100));
+    await act(async () => pointerUp(trackElement(), 400));
+    expect(onResizeCoverage.mock.calls[0][0].at).toBe(iso(50));
+  });
+
+  it("sends nullable original snapshots and the exact global setting for inherited start and end edits", async () => {
+    const globalStartAt = "2026-09-01T00:00:00.1234567Z";
+    const originalEndAt = "2026-09-01T00:40:00.1234568Z";
+    const inherited = {
+      ...target,
+      ranges: [{ id: 1, startAt: null, endAt: originalEndAt }, record(2, 60, 80)],
+    };
+    const { props, rerender, onResizeCoverage } = showTimeline(undefined, undefined, inherited);
+
+    rerender(
+      <Timeline
+        {...props}
+        domain={{ ...domain, start: Date.parse(globalStartAt), startAt: globalStartAt }}
+      />,
+    );
+    expect(startHandles()[0]).toHaveAttribute("aria-valuenow", String(Date.parse(globalStartAt)));
+    await act(async () => fireEvent.keyDown(endHandles()[0], { key: "ArrowRight" }));
+    expect(onResizeCoverage.mock.calls[0][0]).toMatchObject({
+      ranges: [{ id: 1, startAt: null, endAt: originalEndAt }],
+      edge: "end",
+      expectedGlobalStartAt: globalStartAt,
+    });
+    await act(async () => fireEvent.keyDown(startHandles()[0], { key: "ArrowRight" }));
+    expect(onResizeCoverage.mock.calls[1][0]).toMatchObject({
+      ranges: [{ id: 1, startAt: null, endAt: originalEndAt }],
+      edge: "start",
+      expectedGlobalStartAt: globalStartAt,
+    });
+    expect(inherited.ranges[0].startAt).toBeNull();
+    expect(inherited.ranges[0].endAt).toBe(originalEndAt);
+  });
+
+  it("updates inherited coverage with global start while preserving a trailing gap hover source", () => {
+    const inherited = { ...target, ranges: [{ id: 1, startAt: null, endAt: iso(40) }] };
+    const { props, rerender } = showTimeline(undefined, undefined, inherited);
+
+    rerender(<Timeline {...props} domain={{ ...domain, startAt: iso(0) }} />);
+    fireEvent.pointerEnter(gaps()[0]);
+    const card = screen.getByRole("dialog");
+
+    rerender(
+      <Timeline
+        {...props}
+        domain={{ start: base + 10 * minute, end: domain.end, startAt: iso(10) }}
+      />,
+    );
+    expect(screen.getByRole("dialog")).toBe(card);
+    expect(startHandles()[0]).toHaveAttribute("aria-valuenow", String(base + 10 * minute));
+    const collected = screen.getByRole("button", {
+      name: "collectionMemo.timeline.collectedRange",
+    });
+
+    expect(collected).toHaveStyle({ left: "0%" });
+    expect(Number.parseFloat(collected.style.width)).toBeCloseTo(100 / 3);
+  });
+
+  it("disables retry when an inherited operation's global start has become stale", async () => {
+    const onResizeCoverage = vi.fn().mockRejectedValue(new Error("Failed"));
+    const inherited = { ...target, ranges: [{ id: 1, startAt: null, endAt: iso(40) }] };
+    const { props, rerender } = showTimeline(onResizeCoverage, undefined, inherited);
+
+    rerender(<Timeline {...props} domain={{ ...domain, startAt: iso(0) }} />);
+    await act(async () => fireEvent.keyDown(endHandles()[0], { key: "ArrowRight" }));
+    expect(
+      screen.getByRole("button", { name: "collectionMemo.timeline.retry" }),
+    ).toBeInTheDocument();
+    rerender(
+      <Timeline
+        {...props}
+        domain={{ start: base + 10 * minute, end: domain.end, startAt: iso(10) }}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "collectionMemo.timeline.retry" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([false, true])(
+    "omits cropped start and off-track controls without rewriting earlier explicit records when reverse=%s",
+    async (reverse) => {
+      const originalStartAt = "2026-08-31T23:59:59.1234567Z";
+      const clipped = {
+        ...target,
+        ranges: [{ id: 1, startAt: originalStartAt, endAt: iso(40) }, record(2, -30, -20)],
+      };
+      const { props, rerender, onResizeCoverage } = showTimeline(undefined, undefined, clipped);
+
+      rerender(
+        <Timeline
+          {...props}
+          domain={{ start: base + 20 * minute, end: domain.end, startAt: iso(20) }}
+          reverse={reverse}
+        />,
+      );
+      expect(
+        screen.queryByRole("slider", { name: "collectionMemo.timeline.resizeStart" }),
+      ).not.toBeInTheDocument();
+      expect(endHandles()).toHaveLength(1);
+      expect(endHandles()[0]).toHaveAttribute("aria-valuemin", String(base + 20 * minute));
+      await act(async () => fireEvent.keyDown(endHandles()[0], { key: "Home" }));
+      expect(onResizeCoverage).toHaveBeenCalledExactlyOnceWith({
+        ranges: [clipped.ranges[0]],
+        edge: "end",
+        at: iso(20),
+      });
+      expect(clipped.ranges[0].startAt).toBe(originalStartAt);
+    },
+  );
+
+  it("mirrors split point handles and keeps empty configured domains usable", () => {
+    const point = { ...target, ranges: [record(1, 50, 50)] };
+    const { props, rerender } = showTimeline(undefined, undefined, point);
+
+    rerender(<Timeline {...props} reverse />);
+    expect(startHandles()[0]).toHaveStyle({ left: "50%", transform: "translate(0, -50%)" });
+    expect(endHandles()[0]).toHaveStyle({ left: "50%", transform: "translate(-100%, -50%)" });
+    rerender(
+      <Timeline
+        {...props}
+        reverse
+        domain={{ ...domain, startAt: iso(0) }}
+        target={{ ...target, ranges: [] }}
+      />,
+    );
+    expect(gaps()[0]).toHaveStyle({ left: "0%", width: "100%" });
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
   });
 });

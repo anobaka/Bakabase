@@ -1,6 +1,6 @@
 {
   "collectionMemo.title": "收集备忘录",
-  "collectionMemo.description": "按收集目标记录已收集的时间段。所有时间条共用最早的记录时间作为起点，以当前时间作为终点。",
+  "collectionMemo.description": "按收集目标记录已收集的时间段。所有时间条共用设置中的开始时间，以当前时间作为终点。",
   "collectionMemo.action.addTarget": "添加收集目标",
   "collectionMemo.action.editTarget": "编辑收集目标",
   "collectionMemo.action.deleteTarget": "删除收集目标",
@@ -45,5 +45,18 @@
   "collectionMemo.error.save": "保存失败，请检查填写内容后重试。",
   "collectionMemo.empty": "添加收集目标，开始记录已收集时间段。",
   "collectionMemo.noResults": "没有匹配的收集目标。",
-  "collectionMemo.browsingIntegration.pending": "已浏览帖子集成待定：时间相近的浏览记录不能证明中间的所有帖子均已收集。后续可先推荐单个时间点，再由用户确认完整时间段。"
+  "collectionMemo.browsingIntegration.pending": "已浏览帖子集成待定：时间相近的浏览记录不能证明中间的所有帖子均已收集。后续可先推荐单个时间点，再由用户确认完整时间段。",
+  "collectionMemo.settings.title": "时间条设置",
+  "collectionMemo.settings.start": "全局开始日期时间",
+  "collectionMemo.settings.direction": "时间条方向",
+  "collectionMemo.settings.reverse": "当前时间在左，开始时间在右",
+  "collectionMemo.settings.forward": "开始时间在左，当前时间在右",
+  "collectionMemo.settings.description": "设置会保存并应用于所有收集目标。全局开始时间必须填写，且不能晚于当前时间。",
+  "collectionMemo.settings.inheritHint": "空白的时间段起点会随全局开始时间变化；已填写的起点会保留，早于全局开始时间的部分不显示在时间条中。",
+  "collectionMemo.settings.future": "全局开始时间不能在未来。",
+  "collectionMemo.settings.inheritedOrder": "全局开始时间不能晚于任何继承此起点的时间段的结束时间。请先调整相关时间段。",
+  "collectionMemo.range.inherited": "使用全局开始时间",
+  "collectionMemo.range.inheritPlaceholder": "留空以使用全局开始时间",
+  "collectionMemo.range.inheritHint": "开始时间留空时使用全局开始时间，并随时间条设置变化。填写具体时间可固定此时间段的起点。",
+  "collectionMemo.validation.inheritedOrder": "结束时间不能早于全局开始时间。请修改结束时间，或填写更早的开始时间。"
 }

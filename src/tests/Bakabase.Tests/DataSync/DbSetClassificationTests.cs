@@ -30,8 +30,8 @@ public class DbSetClassificationTests
         Assert.AreEqual(0, unclassified.Count, $"Unclassified DbSets: {string.Join(", ", unclassified)}. {Rule}");
         var stale = DataSyncDbSetClassification.All.Keys.Except(DbSets).ToList();
         Assert.AreEqual(0, stale.Count, $"Classified but not a DbSet: {string.Join(", ", stale)}.");
-        Assert.AreEqual(83, DbSets.Count);
-        Assert.AreEqual(83, DataSyncDbSetClassification.All.Count);
+        Assert.AreEqual(84, DbSets.Count);
+        Assert.AreEqual(84, DataSyncDbSetClassification.All.Count);
     }
 
     [TestMethod]
@@ -40,7 +40,7 @@ public class DbSetClassificationTests
         var byClass = DataSyncDbSetClassification.All.Values.GroupBy(c => c.Class)
             .ToDictionary(g => g.Key, g => g.Count());
         Assert.AreEqual(2, byClass[DataSyncTableClass.Synced]);
-        Assert.AreEqual(30, byClass[DataSyncTableClass.LibraryData]);
+        Assert.AreEqual(31, byClass[DataSyncTableClass.LibraryData]);
         Assert.AreEqual(51, byClass[DataSyncTableClass.NeverSync], "43 existing + 8 data sync tables");
         Assert.IsTrue(DataSyncDbSetClassification.All.Values.All(c => !string.IsNullOrWhiteSpace(c.Reason)));
         Assert.IsTrue(DataSyncDbSetClassification.All.All(e => e.Key == e.Value.DbSetName));
@@ -70,6 +70,17 @@ public class DbSetClassificationTests
 
         Assert.AreEqual(DataSyncTableClass.NeverSync, DataSyncDbSetClassification.Get("Passwords")!.Class);
         Assert.AreEqual(DataSyncTableClass.NeverSync, DataSyncDbSetClassification.Get("AiProviders")!.Class);
+    }
+
+    [TestMethod]
+    public void Collection_memo_history_and_global_settings_remain_local_library_data()
+    {
+        foreach (var dbSet in new[] {"CollectionMemoTargets", "CollectionMemoRanges", "CollectionMemoSettings"})
+        {
+            var classification = DataSyncDbSetClassification.Get(dbSet)!;
+            Assert.AreEqual(DataSyncTableClass.LibraryData, classification.Class, dbSet);
+            Assert.IsNull(classification.Kind, dbSet);
+        }
     }
 
     [TestMethod]

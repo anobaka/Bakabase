@@ -1716,6 +1716,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/collection-memo/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCollectionMemoSettings"];
+        put: operations["UpdateCollectionMemoSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/collection-memo/{targetId}": {
         parameters: {
             query?: never;
@@ -10370,9 +10386,14 @@ export interface components {
             /** Format: int32 */
             id: number;
             /** Format: date-time */
-            startAt: string;
+            startAt?: string;
             /** Format: date-time */
             endAt: string;
+        };
+        "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoSettings": {
+            /** Format: date-time */
+            startAt: string;
+            reverse: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoTarget": {
             /** Format: int32 */
@@ -10384,16 +10405,21 @@ export interface components {
             ranges: components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeSnapshotInputModel"][];
             edge: string;
             at: string;
+            expectedGlobalStartAt?: string;
         };
         "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel": {
-            startAt: string;
+            startAt?: string;
             endAt: string;
         };
         "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeSnapshotInputModel": {
-            startAt: string;
+            startAt?: string;
             endAt: string;
             /** Format: int32 */
             id: number;
+        };
+        "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoSettingsInputModel": {
+            startAt: string;
+            reverse: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel": {
             name: string;
@@ -16516,6 +16542,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Infrastructures.Components.Configurations.App.AppOptions"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoSettings]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoSettings"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AiOptions]": {
             /** Format: int32 */
             code: number;
@@ -21490,6 +21522,57 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel"];
                 "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel"];
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoTargetInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetCollectionMemoSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoSettings]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoSettings]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoSettings]"];
+                };
+            };
+        };
+    };
+    UpdateCollectionMemoSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoSettingsInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoSettingsInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoSettingsInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoSettingsInputModel"];
             };
         };
         responses: {

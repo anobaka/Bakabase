@@ -24,8 +24,11 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
     public async Task<List<CollectionMemoTarget>> GetTargets()
     {
         var targets = await dbContext.CollectionMemoTargets.AsNoTracking().ToListAsync();
-        var ranges = (await dbContext.CollectionMemoRanges.AsNoTracking().ToListAsync())
-            .OrderBy(r => r.StartAt).ThenBy(r => r.EndAt).ThenBy(r => r.Id).ToLookup(r => r.TargetId);
+        var rawRanges = await dbContext.CollectionMemoRanges.AsNoTracking().ToListAsync();
+        var globalStart = await dbContext.CollectionMemoSettings.AsNoTracking().Where(s => s.Id == CollectionMemoSettingsDbModel.SingletonId)
+            .Select(s => (DateTime?) s.StartAt).SingleOrDefaultAsync()
+            ?? rawRanges.Where(r => r.StartAt.HasValue).Select(r => r.StartAt).Min() ?? DateTime.UtcNow;
+        var ranges = rawRanges.OrderBy(r => r.StartAt ?? globalStart).ThenBy(r => r.EndAt).ThenBy(r => r.Id).ToLookup(r => r.TargetId);
         return targets.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ThenBy(t => t.Id)
             .Select(t => new CollectionMemoTarget
             {
@@ -36,6 +39,55 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
                     Id = r.Id, StartAt = r.StartAt, EndAt = r.EndAt
                 }).ToList()
             }).ToList();
+    }
+
+    public async Task<CollectionMemoSettings> GetSettings()
+    {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var settings = await EnsureSettings();
+        await transaction.CommitAsync();
+        return new CollectionMemoSettings {StartAt = settings.StartAt, Reverse = settings.Reverse};
+    }
+
+    public async Task<BaseResponse> UpdateSettings(CollectionMemoSettingsInputModel input)
+    {
+        if (!TryParseTime(input.StartAt, out var startAt))
+            return BaseResponseBuilder.BuildBadRequest("The global start must be a valid ISO date-time with a UTC offset.");
+        if (startAt > DateTime.UtcNow)
+            return BaseResponseBuilder.BuildBadRequest("The global start cannot be in the future.");
+
+        // The same immediate transaction used by range mutations prevents a settings change
+        // from invalidating an inherited range inserted or resized by another request.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        if (await dbContext.CollectionMemoRanges.AnyAsync(r => r.StartAt == null && r.EndAt < startAt))
+            return BaseResponseBuilder.BuildBadRequest("The global start must be at or before every inherited range's end.");
+        var updated = await dbContext.CollectionMemoSettings.Where(s => s.Id == CollectionMemoSettingsDbModel.SingletonId)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.StartAt, startAt).SetProperty(r => r.Reverse, input.Reverse));
+        if (updated == 0)
+        {
+            var settings = new CollectionMemoSettingsDbModel {StartAt = startAt, Reverse = input.Reverse};
+            dbContext.CollectionMemoSettings.Add(settings);
+            await dbContext.SaveChangesAsync();
+            dbContext.Entry(settings).State = EntityState.Detached;
+        }
+        await transaction.CommitAsync();
+        return BaseResponseBuilder.Ok;
+    }
+
+    private async Task<CollectionMemoSettingsDbModel> EnsureSettings()
+    {
+        var settings = await dbContext.CollectionMemoSettings.AsNoTracking()
+            .SingleOrDefaultAsync(s => s.Id == CollectionMemoSettingsDbModel.SingletonId);
+        if (settings != null) return settings;
+        // Initialize in the service, not a data backfill in the schema migration. Once
+        // persisted this start stays fixed when the clock or individual ranges change.
+        var starts = await dbContext.CollectionMemoRanges.AsNoTracking().Where(r => r.StartAt != null)
+            .Select(r => r.StartAt).ToListAsync();
+        settings = new CollectionMemoSettingsDbModel {StartAt = starts.Min() ?? DateTime.UtcNow};
+        dbContext.CollectionMemoSettings.Add(settings);
+        await dbContext.SaveChangesAsync();
+        dbContext.Entry(settings).State = EntityState.Detached;
+        return settings;
     }
 
     public async Task<BaseResponse> CreateTarget(CollectionMemoTargetInputModel input)
@@ -74,29 +126,37 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
 
     public async Task<BaseResponse> CreateRange(int targetId, CollectionMemoRangeInputModel input)
     {
-        if (!await dbContext.CollectionMemoTargets.AnyAsync(t => t.Id == targetId))
-            return BaseResponseBuilder.NotFound;
         var error = ValidateRange(input, out var startAt, out var endAt);
         if (error != null) return error;
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        if (!await dbContext.CollectionMemoTargets.AnyAsync(t => t.Id == targetId))
+            return BaseResponseBuilder.NotFound;
+        if (startAt == null && endAt < (await EnsureSettings()).StartAt)
+            return BaseResponseBuilder.BuildBadRequest("The end must be at or after the global start.");
 
         dbContext.CollectionMemoRanges.Add(new CollectionMemoRangeDbModel
         {
             TargetId = targetId, StartAt = startAt, EndAt = endAt
         });
         await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
         return BaseResponseBuilder.Ok;
     }
 
     public async Task<BaseResponse> UpdateRange(int targetId, int id, CollectionMemoRangeInputModel input)
     {
-        var range = await dbContext.CollectionMemoRanges.SingleOrDefaultAsync(r => r.TargetId == targetId && r.Id == id);
-        if (range == null) return BaseResponseBuilder.NotFound;
         var error = ValidateRange(input, out var startAt, out var endAt);
         if (error != null) return error;
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var range = await dbContext.CollectionMemoRanges.AsNoTracking().SingleOrDefaultAsync(r => r.TargetId == targetId && r.Id == id);
+        if (range == null) return BaseResponseBuilder.NotFound;
+        if (startAt == null && endAt < (await EnsureSettings()).StartAt)
+            return BaseResponseBuilder.BuildBadRequest("The end must be at or after the global start.");
 
-        range.StartAt = startAt;
-        range.EndAt = endAt;
-        await dbContext.SaveChangesAsync();
+        await dbContext.CollectionMemoRanges.Where(r => r.TargetId == targetId && r.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.StartAt, startAt).SetProperty(r => r.EndAt, endAt));
+        await transaction.CommitAsync();
+        DetachRanges([range]);
         return BaseResponseBuilder.Ok;
     }
 
@@ -119,9 +179,13 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
         if (!await dbContext.CollectionMemoTargets.AnyAsync(t => t.Id == targetId))
             return BaseResponseBuilder.NotFound;
+        var globalStart = (await EnsureSettings()).StartAt;
+        var effectiveStart = startAt ?? globalStart;
+        if (endAt < effectiveStart)
+            return BaseResponseBuilder.BuildBadRequest("The end must be at or after the global start.");
         var components = BuildComponents(await dbContext.CollectionMemoRanges.AsNoTracking()
-            .Where(r => r.TargetId == targetId).ToListAsync());
-        var connected = components.Where(c => c.StartAt <= endAt && c.EndAt >= startAt).ToList();
+            .Where(r => r.TargetId == targetId).ToListAsync(), globalStart);
+        var connected = components.Where(c => c.StartAt <= endAt && c.EndAt >= effectiveStart).ToList();
         var selected = connected.SelectMany(c => c.Ranges).ToList();
         if (selected.Count == 0)
         {
@@ -133,9 +197,10 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
         }
         else
         {
-            startAt = connected.Min(c => c.StartAt) < startAt ? connected.Min(c => c.StartAt) : startAt;
+            effectiveStart = connected.Min(c => c.StartAt) < effectiveStart ? connected.Min(c => c.StartAt) : effectiveStart;
             endAt = connected.Max(c => c.EndAt) > endAt ? connected.Max(c => c.EndAt) : endAt;
-            await Consolidate(targetId, selected, startAt, endAt);
+            var inherited = (startAt == null || selected.Any(r => r.StartAt == null)) && effectiveStart == globalStart;
+            await Consolidate(targetId, selected, inherited ? null : effectiveStart, endAt);
         }
         await transaction.CommitAsync();
         DetachRanges(selected);
@@ -151,17 +216,27 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
         if (input.Ranges == null || input.Ranges.Count == 0 || input.Ranges.Any(r => r == null || r.Id <= 0) ||
             input.Ranges.Select(r => r.Id).Distinct().Count() != input.Ranges.Count)
             return BaseResponseBuilder.BuildBadRequest("Provide each collected range exactly once.");
-        var snapshots = new Dictionary<int, (DateTime StartAt, DateTime EndAt)>();
+        var snapshots = new Dictionary<int, (DateTime? StartAt, DateTime EndAt)>();
         foreach (var range in input.Ranges)
         {
             var error = ValidateRange(range, out var startAt, out var endAt);
             if (error != null) return error;
             snapshots.Add(range.Id, (startAt, endAt));
         }
+        var hasInheritedStart = snapshots.Values.Any(r => r.StartAt == null);
+        DateTime? expectedGlobalStart = null;
+        if (hasInheritedStart || input.ExpectedGlobalStartAt != null)
+        {
+            if (!TryParseTime(input.ExpectedGlobalStartAt, out var expected))
+                return BaseResponseBuilder.BuildBadRequest("Provide the unchanged global start when resizing inherited ranges.");
+            expectedGlobalStart = expected;
+        }
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
         if (!await dbContext.CollectionMemoTargets.AnyAsync(t => t.Id == targetId))
             return BaseResponseBuilder.NotFound;
+        var globalStart = (await EnsureSettings()).StartAt;
+        if (hasInheritedStart && expectedGlobalStart != globalStart) return CoverageChanged();
         var current = await dbContext.CollectionMemoRanges.AsNoTracking().Where(r => r.TargetId == targetId).ToListAsync();
         var byId = current.ToDictionary(r => r.Id);
         foreach (var (id, snapshot) in snapshots)
@@ -169,7 +244,7 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
             if (!byId.TryGetValue(id, out var range) || range.StartAt != snapshot.StartAt || range.EndAt != snapshot.EndAt)
                 return CoverageChanged();
         }
-        var components = BuildComponents(current);
+        var components = BuildComponents(current, globalStart);
         var selectedIndex = components.FindIndex(c => c.Ranges.Any(r => r.Id == input.Ranges[0].Id));
         var selected = components[selectedIndex];
         if (selected.Ranges.Count != snapshots.Count || selected.Ranges.Any(r => !snapshots.ContainsKey(r.Id)))
@@ -185,13 +260,15 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
 
         // Preserve the untouched endpoint at full DateTime tick precision; the client need only
         // choose the moved boundary. Neighboring components remain separate stored records.
-        await Consolidate(targetId, selected.Ranges, newStart, newEnd);
+        var keepInherited = input.Edge == "end" && selected.StartAt == globalStart &&
+                            selected.Ranges.Any(r => r.StartAt == null);
+        await Consolidate(targetId, selected.Ranges, keepInherited ? null : newStart, newEnd);
         await transaction.CommitAsync();
         DetachRanges(selected.Ranges);
         return BaseResponseBuilder.Ok;
     }
 
-    private async Task Consolidate(int targetId, List<CollectionMemoRangeDbModel> ranges, DateTime startAt, DateTime endAt)
+    private async Task Consolidate(int targetId, List<CollectionMemoRangeDbModel> ranges, DateTime? startAt, DateTime endAt)
     {
         var survivorId = ranges.Min(r => r.Id);
         await dbContext.CollectionMemoRanges.Where(r => r.TargetId == targetId && r.Id == survivorId)
@@ -211,15 +288,16 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
     private static BaseResponse CoverageChanged() => BaseResponseBuilder.Build(
         Bootstrap.Models.Constants.ResponseCode.Conflict, "Collected ranges changed. Refresh the timeline and try again.");
 
-    private static List<CoverageComponent> BuildComponents(IEnumerable<CollectionMemoRangeDbModel> ranges)
+    private static List<CoverageComponent> BuildComponents(IEnumerable<CollectionMemoRangeDbModel> ranges, DateTime globalStart)
     {
         var components = new List<CoverageComponent>();
-        foreach (var range in ranges.OrderBy(r => r.StartAt).ThenBy(r => r.EndAt).ThenBy(r => r.Id))
+        foreach (var range in ranges.OrderBy(r => r.StartAt ?? globalStart).ThenBy(r => r.EndAt).ThenBy(r => r.Id))
         {
+            var startAt = range.StartAt ?? globalStart;
             var component = components.LastOrDefault();
-            if (component == null || range.StartAt > component.EndAt)
+            if (component == null || startAt > component.EndAt)
             {
-                component = new CoverageComponent {EndAt = range.EndAt};
+                component = new CoverageComponent {StartAt = startAt, EndAt = range.EndAt};
                 components.Add(component);
             }
             component.Ranges.Add(range);
@@ -231,7 +309,7 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
     private sealed class CoverageComponent
     {
         public List<CollectionMemoRangeDbModel> Ranges { get; } = [];
-        public DateTime StartAt => Ranges[0].StartAt;
+        public DateTime StartAt { get; set; }
         public DateTime EndAt { get; set; }
     }
 
@@ -262,12 +340,18 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
             : null;
     }
 
-    private static BaseResponse? ValidateRange(CollectionMemoRangeInputModel input, out DateTime startAt,
+    private static BaseResponse? ValidateRange(CollectionMemoRangeInputModel input, out DateTime? startAt,
         out DateTime endAt)
     {
-        startAt = endAt = default;
-        if (!TryParseTime(input.StartAt, out startAt) || !TryParseTime(input.EndAt, out endAt))
+        startAt = null;
+        endAt = default;
+        if ((input.StartAt != null && !TryParseTime(input.StartAt, out var _)) || !TryParseTime(input.EndAt, out endAt))
             return BaseResponseBuilder.BuildBadRequest("Start and end must be valid ISO date-times with a UTC offset.");
+        if (input.StartAt != null)
+        {
+            TryParseTime(input.StartAt, out var parsedStart);
+            startAt = parsedStart;
+        }
         if (endAt < startAt)
             return BaseResponseBuilder.BuildBadRequest("The end must be at or after the start.");
         if (endAt > DateTime.UtcNow)

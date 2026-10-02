@@ -17,6 +17,9 @@ public class CollectionMemoCoverageResizeInputModel
     /// <summary>New boundary as an ISO 8601 date-time with Z or an explicit UTC offset.</summary>
     [Required]
     public string At { get; set; } = null!;
+
+    /// <summary>Unchanged global start; required when any raw snapshot range inherits its start.</summary>
+    public string? ExpectedGlobalStartAt { get; set; }
 }
 
 public class CollectionMemoRangeSnapshotInputModel : CollectionMemoRangeInputModel

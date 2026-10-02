@@ -3,17 +3,30 @@
 import type {
   CollectionMemoCoverageResize,
   CollectionMemoRange,
+  CollectionMemoSettings,
   CollectionMemoTarget,
 } from "./helpers";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineDelete, AiOutlineEdit, AiOutlinePlus, AiOutlineReload } from "react-icons/ai";
+import {
+  AiOutlineDelete,
+  AiOutlineEdit,
+  AiOutlinePlus,
+  AiOutlineReload,
+  AiOutlineSetting,
+} from "react-icons/ai";
 
 import RangeEditor from "./components/RangeEditor";
+import SettingsEditor from "./components/SettingsEditor";
 import TargetEditor from "./components/TargetEditor";
 import Timeline from "./components/Timeline";
-import { getTimelineDomain, requireSuccess } from "./helpers";
+import {
+  getTimelineDomain,
+  getTimestampTicks,
+  requireSuccess,
+  resolveCollectionMemoRangeStart,
+} from "./helpers";
 
 import BApi from "@/sdk/BApi";
 import { Button, Card, CardBody, Input, Modal, Spinner } from "@/components/bakaui";
@@ -23,6 +36,7 @@ const CollectionMemoPage = () => {
   const { t, i18n } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [targets, setTargets] = useState<CollectionMemoTarget[]>([]);
+  const [settings, setSettings] = useState<CollectionMemoSettings>();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [timelineSavingCount, setTimelineSavingCount] = useState(0);
@@ -52,13 +66,30 @@ const CollectionMemoPage = () => {
     setLoading(true);
     setLoadError(false);
     try {
-      const response = requireSuccess(
-        await BApi.collectionMemo.getCollectionMemoTargets({ showErrorToast: false }),
-      );
+      const [targetsResponse, settingsResponse] = await Promise.all([
+        BApi.collectionMemo.getCollectionMemoTargets({ showErrorToast: false }),
+        BApi.collectionMemo.getCollectionMemoSettings({ showErrorToast: false }),
+      ]);
+      const response = requireSuccess(targetsResponse);
+      const nextSettings = requireSuccess(settingsResponse).data;
+
+      if (
+        !nextSettings ||
+        typeof nextSettings.startAt !== "string" ||
+        getTimestampTicks(nextSettings.startAt) === undefined ||
+        typeof nextSettings.reverse !== "boolean"
+      )
+        throw new Error("Invalid collection memo settings.");
 
       if (request !== requestSequence.current) return;
 
-      setTargets((response.data ?? []) as CollectionMemoTarget[]);
+      setTargets(
+        ((response.data ?? []) as CollectionMemoTarget[]).map((target) => ({
+          ...target,
+          ranges: target.ranges.map((range) => ({ ...range, startAt: range.startAt ?? null })),
+        })),
+      );
+      setSettings({ startAt: nextSettings.startAt, reverse: nextSettings.reverse });
       setNow(Date.now());
     } catch {
       if (request === requestSequence.current) setLoadError(true);
@@ -107,9 +138,19 @@ const CollectionMemoPage = () => {
   const resizeCoverage = (targetId: number, resize: CollectionMemoCoverageResize) =>
     saveTimelineChange(async () => {
       requireSuccess(
-        await BApi.collectionMemo.resizeCollectionMemoRangeCoverage(targetId, resize, {
-          showErrorToast: false,
-        }),
+        await BApi.collectionMemo.resizeCollectionMemoRangeCoverage(
+          targetId,
+          {
+            ...resize,
+            ranges: resize.ranges.map((range) => ({
+              ...range,
+              startAt: range.startAt ?? undefined,
+            })),
+          },
+          {
+            showErrorToast: false,
+          },
+        ),
       );
     });
 
@@ -135,18 +176,53 @@ const CollectionMemoPage = () => {
   };
 
   const editRange = (target: CollectionMemoTarget, range?: CollectionMemoRange) => {
+    if (!settings) return;
     createPortal(RangeEditor, {
       range,
       targetName: target.name,
-      onSave: async (value: { startAt: string; endAt: string }) => {
+      globalStartAt: settings.startAt,
+      onSave: async (value: { startAt: string | null; endAt: string }) => {
+        const input = { ...value, startAt: value.startAt ?? undefined };
+
         requireSuccess(
           range
-            ? await BApi.collectionMemo.updateCollectionMemoRange(target.id, range.id, value, {
+            ? await BApi.collectionMemo.updateCollectionMemoRange(target.id, range.id, input, {
                 showErrorToast: false,
               })
-            : await BApi.collectionMemo.createCollectionMemoRange(target.id, value, {
+            : await BApi.collectionMemo.createCollectionMemoRange(target.id, input, {
                 showErrorToast: false,
               }),
+        );
+        await load();
+      },
+    });
+  };
+
+  const editSettings = () => {
+    if (!settings) return;
+    const inheritedEndTimes = targets
+      .flatMap((target) => target.ranges)
+      .filter((range) => range.startAt === null)
+      .map((range) => range.endAt)
+      .sort((a, b) => {
+        const first = getTimestampTicks(a);
+        const second = getTimestampTicks(b);
+
+        return first === undefined || second === undefined
+          ? 0
+          : first < second
+            ? -1
+            : first > second
+              ? 1
+              : 0;
+      });
+
+    createPortal(SettingsEditor, {
+      settings,
+      latestInheritedEndAt: inheritedEndTimes[0],
+      onSave: async (value: CollectionMemoSettings) => {
+        requireSuccess(
+          await BApi.collectionMemo.updateCollectionMemoSettings(value, { showErrorToast: false }),
         );
         await load();
       },
@@ -183,7 +259,7 @@ const CollectionMemoPage = () => {
     });
   };
 
-  const domain = getTimelineDomain(targets, now);
+  const domain = getTimelineDomain(targets, now, settings?.startAt);
   const shown = targets
     .filter((target) =>
       target.name.toLocaleLowerCase(locale).includes(keyword.trim().toLocaleLowerCase(locale)),
@@ -198,6 +274,21 @@ const CollectionMemoPage = () => {
       <div className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold">{t<string>("collectionMemo.title")}</h1>
         <p className="text-sm text-default-500">{t<string>("collectionMemo.description")}</p>
+        {settings && (
+          <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-default-500">
+            <span>
+              {t<string>("collectionMemo.settings.start")}：{" "}
+              <time dateTime={settings.startAt}>{formatDate(settings.startAt)}</time>
+            </span>
+            <span>
+              {t<string>(
+                settings.reverse
+                  ? "collectionMemo.settings.reverse"
+                  : "collectionMemo.settings.forward",
+              )}
+            </span>
+          </p>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button
@@ -207,6 +298,15 @@ const CollectionMemoPage = () => {
           onPress={() => editTarget()}
         >
           {t<string>("collectionMemo.action.addTarget")}
+        </Button>
+        <Button
+          isDisabled={!settings || loading || timelineSavingCount > 0}
+          size="sm"
+          startContent={<AiOutlineSetting />}
+          variant="flat"
+          onPress={editSettings}
+        >
+          {t<string>("collectionMemo.settings.title")}
         </Button>
         <Input
           aria-label={t<string>("collectionMemo.action.search")}
@@ -258,6 +358,7 @@ const CollectionMemoPage = () => {
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="min-w-0 flex-1 break-words text-base font-medium">{target.name}</h2>
                 <Button
+                  isDisabled={!settings || loading || timelineSavingCount > 0}
                   size="sm"
                   startContent={<AiOutlinePlus />}
                   variant="flat"
@@ -289,6 +390,7 @@ const CollectionMemoPage = () => {
                 domain={domain}
                 formatDate={formatDate}
                 isSaving={loading || timelineSavingCount > 0}
+                reverse={settings?.reverse}
                 target={target}
                 onFillGap={(range) => fillGap(target.id, range)}
                 onResizeCoverage={(resize) => resizeCoverage(target.id, resize)}
@@ -300,43 +402,70 @@ const CollectionMemoPage = () => {
               ) : (
                 <ul className="flex flex-col divide-y divide-default-100">
                   {[...target.ranges]
-                    .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt) || a.id - b.id)
-                    .map((range) => (
-                      <li key={range.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                        <div className="min-w-0 flex-1">
-                          <time dateTime={range.startAt}>{formatDate(range.startAt)}</time>
-                          {range.startAt === range.endAt ? (
-                            <span className="ml-2 text-xs text-default-500">
-                              {t<string>("collectionMemo.range.point")}
-                            </span>
-                          ) : (
-                            <>
-                              <span className="px-2">~</span>
-                              <time dateTime={range.endAt}>{formatDate(range.endAt)}</time>
-                            </>
-                          )}
-                        </div>
-                        <Button
-                          isIconOnly
-                          aria-label={t<string>("collectionMemo.action.editRange")}
-                          size="sm"
-                          variant="light"
-                          onPress={() => editRange(target, range)}
+                    .sort((a, b) => {
+                      const first = getTimestampTicks(
+                        resolveCollectionMemoRangeStart(a, settings?.startAt) ?? "",
+                      );
+                      const second = getTimestampTicks(
+                        resolveCollectionMemoRangeStart(b, settings?.startAt) ?? "",
+                      );
+
+                      return first === undefined || second === undefined || first === second
+                        ? a.id - b.id
+                        : first < second
+                          ? -1
+                          : 1;
+                    })
+                    .map((range) => {
+                      const startAt = resolveCollectionMemoRangeStart(range, settings?.startAt);
+
+                      return (
+                        <li
+                          key={range.id}
+                          className="flex flex-wrap items-center gap-2 py-2 text-sm"
                         >
-                          <AiOutlineEdit />
-                        </Button>
-                        <Button
-                          isIconOnly
-                          aria-label={t<string>("collectionMemo.action.deleteRange")}
-                          color="danger"
-                          size="sm"
-                          variant="light"
-                          onPress={() => remove(target, range)}
-                        >
-                          <AiOutlineDelete />
-                        </Button>
-                      </li>
-                    ))}
+                          <div className="min-w-0 flex-1">
+                            {range.startAt === null && (
+                              <span className="mr-2 text-xs text-default-500">
+                                {t<string>("collectionMemo.range.inherited")}
+                              </span>
+                            )}
+                            {startAt && <time dateTime={startAt}>{formatDate(startAt)}</time>}
+                            {startAt &&
+                            getTimestampTicks(startAt) === getTimestampTicks(range.endAt) ? (
+                              <span className="ml-2 text-xs text-default-500">
+                                {t<string>("collectionMemo.range.point")}
+                              </span>
+                            ) : (
+                              <>
+                                <span className="px-2">~</span>
+                                <time dateTime={range.endAt}>{formatDate(range.endAt)}</time>
+                              </>
+                            )}
+                          </div>
+                          <Button
+                            isIconOnly
+                            aria-label={t<string>("collectionMemo.action.editRange")}
+                            isDisabled={!settings || loading || timelineSavingCount > 0}
+                            size="sm"
+                            variant="light"
+                            onPress={() => editRange(target, range)}
+                          >
+                            <AiOutlineEdit />
+                          </Button>
+                          <Button
+                            isIconOnly
+                            aria-label={t<string>("collectionMemo.action.deleteRange")}
+                            color="danger"
+                            size="sm"
+                            variant="light"
+                            onPress={() => remove(target, range)}
+                          >
+                            <AiOutlineDelete />
+                          </Button>
+                        </li>
+                      );
+                    })}
                 </ul>
               )}
             </CardBody>
