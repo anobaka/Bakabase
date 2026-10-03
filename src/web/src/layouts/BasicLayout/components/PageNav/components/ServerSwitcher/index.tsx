@@ -46,7 +46,7 @@ interface Props {
 const MANAGE_DEVICES_ROUTE = devicesRoute("servers");
 
 /**
- * The top of the menu: which server this window is showing, and the way to another.
+ * The top of the menu: the dashboard brand link, then the device this window shows.
  *
  * Three answers to "what can this window switch to", one per flavour:
  * - this device's own window (all-in-one, sitting at it): itself plus every server it
@@ -54,8 +54,7 @@ const MANAGE_DEVICES_ROUTE = devicesRoute("servers");
  * - the console (the desktop app showing a managed server): whatever the relay lists at
  *   `/client/switcher` — the relay, not the server being shown, knows the way back;
  * - anything else — an ordinary browser on another device, or a flavour not yet
- *   identified — keeps the plain brand link. None of them has anywhere
- *   to switch to, and a switcher offering nothing would only suggest otherwise.
+ *   identified — keeps only the brand link. None of them has anywhere to switch to.
  */
 const ServerSwitcher: React.FC<Props> = ({ collapsed }) => {
   const initialized = useRemoteAccessStore((state) => state.initialized);
@@ -63,18 +62,26 @@ const ServerSwitcher: React.FC<Props> = ({ collapsed }) => {
   const clientMode = useRemoteAccessStore((state) => state.clientMode);
   const clientHost = useRemoteAccessStore((state) => state.clientHost);
 
-  if (initialized && clientMode === ClientMode.PureClient && clientHost === "console") {
-    return <ConsoleSwitcher collapsed={collapsed} />;
-  }
-  if (initialized && isLocal && clientMode !== ClientMode.PureClient) {
-    return <LocalSwitcher collapsed={collapsed} />;
-  }
-
-  return <BrandLink collapsed={collapsed} />;
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <BrandLink collapsed={collapsed} />
+      {initialized && clientMode === ClientMode.PureClient && clientHost === "console" ? (
+        <ConsoleSwitcher collapsed={collapsed} />
+      ) : initialized && isLocal && clientMode !== ClientMode.PureClient ? (
+        <LocalSwitcher collapsed={collapsed} />
+      ) : null}
+    </div>
+  );
 };
 
 const BrandLink: React.FC<Props> = ({ collapsed }) => (
-  <Link to="/">{collapsed ? "B" : "Bakabase"}</Link>
+  <Link
+    aria-label="Bakabase"
+    className="block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+    to="/"
+  >
+    {collapsed ? "B" : "Bakabase"}
+  </Link>
 );
 
 /** This device's own window: itself, then the servers it manages. */
@@ -111,8 +118,8 @@ const LocalSwitcher: React.FC<Props> = ({ collapsed }) => {
     };
   }, [load]);
 
-  // A headless server has nothing to switch to; do not dress its brand link up as a menu.
-  if (view && !view.available) return <BrandLink collapsed={collapsed} />;
+  // A headless server has nothing to switch to; its dashboard brand remains above.
+  if (view && !view.available) return null;
 
   const localName = serverName || t<string>("federation.thisDevice");
   const entries: SwitcherEntry[] = [

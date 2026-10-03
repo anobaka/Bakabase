@@ -2,7 +2,7 @@
 
 import type { PostParserTask } from "@/core/models/PostParserTask";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AiOutlineCloudDownload,
@@ -24,22 +24,12 @@ import AddTasksModal from "./components/AddTasksModal";
 import AddToAcquisitionModal from "./components/AddToAcquisitionModal";
 import ConfigurationModal from "./components/ConfigurationModal";
 import DownloadInfoResultRenderer from "./components/DownloadInfoResultRenderer";
+import TaskList from "./components/TaskList";
+import TaskSearch from "./components/TaskSearch";
 import { buildExportRows, copyParserText, getDownloadInfo, getTargetResult } from "./results";
+import { buildTaskSearchText } from "./search";
 
-import {
-  Alert,
-  Button,
-  Checkbox,
-  Chip,
-  Modal,
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-  toast,
-} from "@/components/bakaui";
+import { Alert, Button, Checkbox, Chip, Modal, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import TampermonkeyInstallButton from "@/components/ThirdPartyConfig/base/TampermonkeyInstallButton";
@@ -73,8 +63,22 @@ const PostParserPage = () => {
   const automaticallyParsing = useThirdPartyOptionsStore(
     (state) => state.data.automaticallyParsingPosts,
   );
-  const tasks = usePostParserTasksStore((state) => state.tasks).filter((task) => !task.isDeleted);
+  const storedTasks = usePostParserTasksStore((state) => state.tasks);
+  const tasks = useMemo(() => storedTasks.filter((task) => !task.isDeleted), [storedTasks]);
   const setTasks = usePostParserTasksStore((state) => state.setTasks);
+  const [keyword, setKeyword] = useState("");
+  const search = keyword.trim().toLocaleLowerCase();
+  const searchIndex = useMemo(
+    () => tasks.map((task) => ({ task, text: buildTaskSearchText(task) })),
+    [tasks],
+  );
+  const shownTasks = useMemo(
+    () =>
+      search
+        ? searchIndex.filter(({ text }) => text.includes(search)).map(({ task }) => task)
+        : tasks,
+    [search, searchIndex, tasks],
+  );
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<string>();
   const [runs, setRuns] = useState<PostParserTask>();
@@ -161,15 +165,7 @@ const PostParserPage = () => {
         </p>
       )}
       {!hasResults(task) ? (
-        <span className="text-sm text-default-400">
-          {t<string>(
-            task.error
-              ? "postParser.label.noResult"
-              : isRunning(task)
-                ? "postParser.label.parsing"
-                : "postParser.label.pending",
-          )}
-        </span>
+        <span className="text-sm text-default-400">—</span>
       ) : (
         task.targets.map((target) => {
           const result = getTargetResult(task, target);
@@ -202,6 +198,218 @@ const PostParserPage = () => {
       )}
     </div>
   );
+
+  const renderTask = (task: PostParserTask) => {
+    const data = getDownloadInfo(task);
+    const canImport = data?.resources?.some((resource) => !!resource.link?.trim());
+    const retryable =
+      task.workflowRunId &&
+      task.workflowStatus != null &&
+      retryStatuses.includes(task.workflowStatus);
+
+    return (
+      <>
+        <div className="min-w-0" role="cell">
+          <span className="text-xs tabular-nums text-default-400">#{task.id}</span>
+        </div>
+        <div className="min-w-0" role="cell">
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              {task.source === PostParserSource.SoulPlus && (
+                <ThirdPartyIcon thirdPartyId={ThirdPartyId.SoulPlus} />
+              )}
+              <span className="min-w-0 break-words font-medium">
+                {task.title || t<string>("postParser.label.untitled")}
+              </span>
+              <div className="flex shrink-0 items-center gap-1">
+                {task.workflowStatus != null ? (
+                  <Chip
+                    color={
+                      isRunning(task)
+                        ? "primary"
+                        : task.workflowStatus === WorkflowRunStatus.Success
+                          ? "success"
+                          : "default"
+                    }
+                    size="sm"
+                    variant="flat"
+                  >
+                    {t<string>(`workflow.runs.status.${WorkflowRunStatus[task.workflowStatus]}`)}
+                  </Chip>
+                ) : (
+                  <Chip size="sm" variant="flat">
+                    {t<string>(
+                      task.error
+                        ? "postParser.label.error"
+                        : hasResults(task)
+                          ? "postParser.label.parsed"
+                          : "postParser.label.pending",
+                    )}
+                  </Chip>
+                )}
+                {task.workflowRunId && (
+                  <span className="self-center text-xs tabular-nums text-default-400">
+                    {t<string>("postParser.label.run", { id: task.workflowRunId })}
+                  </span>
+                )}
+              </div>
+              {task.title && (
+                <Button
+                  isIconOnly
+                  aria-label={t<string>("postParser.action.copyTitle")}
+                  className="h-6 min-w-6 w-6 shrink-0"
+                  size="sm"
+                  variant="light"
+                  onPress={() => copy(task.title!)}
+                >
+                  <AiOutlineCopy aria-hidden />
+                </Button>
+              )}
+            </div>
+            {task.link && (
+              <div className="flex min-w-0 items-start gap-1">
+                <Button
+                  className="h-auto min-w-0 justify-start px-0 py-1"
+                  color="primary"
+                  size="sm"
+                  variant="light"
+                  onPress={() => BApi.gui.openUrlInDefaultBrowser({ url: task.link })}
+                >
+                  <span className="break-all whitespace-normal text-left text-xs">{task.link}</span>
+                </Button>
+                <Button
+                  isIconOnly
+                  aria-label={t<string>("postParser.action.copyPostLink")}
+                  className="h-6 min-w-6 w-6 shrink-0"
+                  size="sm"
+                  title={t<string>("postParser.action.copyPostLink")}
+                  variant="light"
+                  onPress={() => copy(task.link)}
+                >
+                  <AiOutlineCopy aria-hidden />
+                </Button>
+              </div>
+            )}
+            <dl className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-default-500">
+              <div className="flex items-center gap-1 whitespace-nowrap">
+                <dt>{t<string>("postParser.label.createdAt")}</dt>
+                <dd className="tabular-nums">
+                  {task.createdAt ? (
+                    <time dateTime={task.createdAt}>
+                      {dayjs(task.createdAt).format("YYYY-MM-DD HH:mm:ss")}
+                    </time>
+                  ) : (
+                    "—"
+                  )}
+                </dd>
+              </div>
+              <div className="flex items-center gap-1 whitespace-nowrap">
+                <dt title={t<string>("postParser.label.completedAtHint")}>
+                  {t<string>("postParser.label.completedAt")}
+                </dt>
+                <dd className="tabular-nums">
+                  {task.completedAt ? (
+                    <time dateTime={task.completedAt}>
+                      {dayjs(task.completedAt).format("YYYY-MM-DD HH:mm:ss")}
+                    </time>
+                  ) : (
+                    "—"
+                  )}
+                </dd>
+              </div>
+            </dl>
+            {(task.text || task.content) && (
+              <Button
+                className="w-fit"
+                size="sm"
+                startContent={<AiOutlineFileText aria-hidden />}
+                variant="light"
+                onPress={() => showContent(task)}
+              >
+                {t<string>("postParser.action.viewContent")}
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="min-w-0" role="cell">
+          {renderResults(task)}
+        </div>
+        <div className="min-w-0" role="cell">
+          <div className="flex flex-col items-start gap-1">
+            {canImport && (
+              <Button
+                color="primary"
+                size="sm"
+                startContent={<AiOutlineCloudDownload aria-hidden />}
+                variant="flat"
+                onPress={() => createPortal(AddToAcquisitionModal, { task })}
+              >
+                {t<string>("postParser.action.addToAcquisition")}
+              </Button>
+            )}
+            {task.workflowDefinitionId && (
+              <Button
+                size="sm"
+                startContent={<AiOutlineHistory aria-hidden />}
+                variant="light"
+                onPress={() => setRuns(task)}
+              >
+                {t<string>("postParser.action.viewRuns")}
+              </Button>
+            )}
+            <div className="flex items-center gap-1">
+              {retryable ? (
+                <Button
+                  isDisabled={!!busy}
+                  isLoading={busy === `retry-${task.id}`}
+                  size="sm"
+                  startContent={<AiOutlineReload aria-hidden />}
+                  variant="light"
+                  onPress={() =>
+                    action(`retry-${task.id}`, () =>
+                      BApi.postParser.retryPostParserTaskWorkflow(task.id),
+                    )
+                  }
+                >
+                  {t<string>("postParser.action.retry")}
+                </Button>
+              ) : null}
+              {(hasResults(task) || task.error || task.workflowRunId) && !isRunning(task) && (
+                <Button
+                  isDisabled={!!busy}
+                  isLoading={busy === `reparse-${task.id}`}
+                  size="sm"
+                  variant="light"
+                  onPress={() =>
+                    action(`reparse-${task.id}`, async () => {
+                      const response = await BApi.postParser.reParsePostParserTask(task.id);
+
+                      return response.code ? response : BApi.postParser.startAllPostParserTasks();
+                    })
+                  }
+                >
+                  {t<string>("postParser.action.reParse")}
+                </Button>
+              )}
+              <Button
+                isIconOnly
+                aria-label={t<string>("postParser.action.delete")}
+                color="danger"
+                isDisabled={!!busy}
+                size="sm"
+                variant="light"
+                onPress={() =>
+                  action(`delete-${task.id}`, () => BApi.postParser.deletePostParserTask(task.id))
+                }
+              >
+                <AiOutlineDelete aria-hidden className="text-base" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
@@ -342,251 +550,26 @@ const PostParserPage = () => {
           {error}
         </p>
       )}
-      <div className="min-w-0 overflow-x-auto">
-        <Table
-          removeWrapper
-          aria-label={t<string>("postParser.page.title")}
-          classNames={{
-            table: "table-fixed min-w-[680px]",
-            td: "align-top py-4",
-            wrapper: "overflow-x-auto",
-          }}
-        >
-          <TableHeader>
-            <TableColumn className="w-16">{t<string>("postParser.table.id")}</TableColumn>
-            <TableColumn className="w-[30%]">{t<string>("postParser.table.target")}</TableColumn>
-            <TableColumn>{t<string>("postParser.table.results")}</TableColumn>
-            <TableColumn className="w-44">{t<string>("postParser.table.operations")}</TableColumn>
-          </TableHeader>
-          <TableBody
-            emptyContent={
-              <div className="py-8 text-sm text-default-500">
-                {t<string>("postParser.page.empty")}
-              </div>
-            }
-          >
-            {tasks.map((task) => {
-              const data = getDownloadInfo(task);
-              const canImport = data?.resources?.some((resource) => !!resource.link?.trim());
-              const retryable =
-                task.workflowRunId &&
-                task.workflowStatus != null &&
-                retryStatuses.includes(task.workflowStatus);
-
-              return (
-                <TableRow key={task.id}>
-                  <TableCell>
-                    <span className="text-xs tabular-nums text-default-400">#{task.id}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex min-w-0 flex-col gap-2">
-                      <div className="flex min-w-0 items-center gap-1">
-                        {task.source === PostParserSource.SoulPlus && (
-                          <ThirdPartyIcon thirdPartyId={ThirdPartyId.SoulPlus} />
-                        )}
-                        <span className="min-w-0 break-words font-medium">
-                          {task.title ||
-                            t<string>(
-                              task.text ? "postParser.input.text" : "postParser.label.untitled",
-                            )}
-                        </span>
-                        {task.title && (
-                          <Button
-                            isIconOnly
-                            aria-label={t<string>("postParser.action.copyTitle")}
-                            className="h-6 min-w-6 w-6 shrink-0"
-                            size="sm"
-                            variant="light"
-                            onPress={() => copy(task.title!)}
-                          >
-                            <AiOutlineCopy aria-hidden />
-                          </Button>
-                        )}
-                      </div>
-                      {task.link && (
-                        <div className="flex min-w-0 items-start gap-1">
-                          <Button
-                            className="h-auto min-w-0 justify-start px-0 py-1"
-                            color="primary"
-                            size="sm"
-                            variant="light"
-                            onPress={() => BApi.gui.openUrlInDefaultBrowser({ url: task.link })}
-                          >
-                            <span className="break-all whitespace-normal text-left text-xs">
-                              {task.link}
-                            </span>
-                          </Button>
-                          <Button
-                            isIconOnly
-                            aria-label={t<string>("postParser.action.copyPostLink")}
-                            className="h-6 min-w-6 w-6 shrink-0"
-                            size="sm"
-                            title={t<string>("postParser.action.copyPostLink")}
-                            variant="light"
-                            onPress={() => copy(task.link)}
-                          >
-                            <AiOutlineCopy aria-hidden />
-                          </Button>
-                        </div>
-                      )}
-                      <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs text-default-500">
-                        <dt>{t<string>("postParser.label.createdAt")}</dt>
-                        <dd className="tabular-nums">
-                          {task.createdAt ? (
-                            <time dateTime={task.createdAt}>
-                              {dayjs(task.createdAt).format("YYYY-MM-DD HH:mm:ss")}
-                            </time>
-                          ) : (
-                            "—"
-                          )}
-                        </dd>
-                        <dt title={t<string>("postParser.label.completedAtHint")}>
-                          {t<string>("postParser.label.completedAt")}
-                        </dt>
-                        <dd className="tabular-nums">
-                          {task.completedAt ? (
-                            <time dateTime={task.completedAt}>
-                              {dayjs(task.completedAt).format("YYYY-MM-DD HH:mm:ss")}
-                            </time>
-                          ) : (
-                            "—"
-                          )}
-                        </dd>
-                      </dl>
-                      {(task.text || task.content) && (
-                        <Button
-                          className="w-fit"
-                          size="sm"
-                          startContent={<AiOutlineFileText aria-hidden />}
-                          variant="light"
-                          onPress={() => showContent(task)}
-                        >
-                          {t<string>("postParser.action.viewContent")}
-                        </Button>
-                      )}
-                      <div className="flex flex-wrap gap-1">
-                        {task.workflowStatus != null ? (
-                          <Chip
-                            color={
-                              isRunning(task)
-                                ? "primary"
-                                : task.workflowStatus === WorkflowRunStatus.Success
-                                  ? "success"
-                                  : "default"
-                            }
-                            size="sm"
-                            variant="flat"
-                          >
-                            {t<string>(
-                              `workflow.runs.status.${WorkflowRunStatus[task.workflowStatus]}`,
-                            )}
-                          </Chip>
-                        ) : (
-                          <Chip size="sm" variant="flat">
-                            {t<string>(
-                              task.error
-                                ? "postParser.label.error"
-                                : hasResults(task)
-                                  ? "postParser.label.parsed"
-                                  : "postParser.label.pending",
-                            )}
-                          </Chip>
-                        )}
-                        {task.workflowRunId && (
-                          <span className="self-center text-xs tabular-nums text-default-400">
-                            {t<string>("postParser.label.run", { id: task.workflowRunId })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{renderResults(task)}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col items-start gap-1">
-                      {canImport && (
-                        <Button
-                          color="primary"
-                          size="sm"
-                          startContent={<AiOutlineCloudDownload aria-hidden />}
-                          variant="flat"
-                          onPress={() => createPortal(AddToAcquisitionModal, { task })}
-                        >
-                          {t<string>("postParser.action.addToAcquisition")}
-                        </Button>
-                      )}
-                      {task.workflowDefinitionId && (
-                        <Button
-                          size="sm"
-                          startContent={<AiOutlineHistory aria-hidden />}
-                          variant="light"
-                          onPress={() => setRuns(task)}
-                        >
-                          {t<string>("postParser.action.viewRuns")}
-                        </Button>
-                      )}
-                      <div className="flex items-center gap-1">
-                        {retryable ? (
-                          <Button
-                            isDisabled={!!busy}
-                            isLoading={busy === `retry-${task.id}`}
-                            size="sm"
-                            startContent={<AiOutlineReload aria-hidden />}
-                            variant="light"
-                            onPress={() =>
-                              action(`retry-${task.id}`, () =>
-                                BApi.postParser.retryPostParserTaskWorkflow(task.id),
-                              )
-                            }
-                          >
-                            {t<string>("postParser.action.retry")}
-                          </Button>
-                        ) : null}
-                        {(hasResults(task) || task.error || task.workflowRunId) &&
-                          !isRunning(task) && (
-                            <Button
-                              isDisabled={!!busy}
-                              isLoading={busy === `reparse-${task.id}`}
-                              size="sm"
-                              variant="light"
-                              onPress={() =>
-                                action(`reparse-${task.id}`, async () => {
-                                  const response = await BApi.postParser.reParsePostParserTask(
-                                    task.id,
-                                  );
-
-                                  return response.code
-                                    ? response
-                                    : BApi.postParser.startAllPostParserTasks();
-                                })
-                              }
-                            >
-                              {t<string>("postParser.action.reParse")}
-                            </Button>
-                          )}
-                        <Button
-                          isIconOnly
-                          aria-label={t<string>("postParser.action.delete")}
-                          color="danger"
-                          isDisabled={!!busy}
-                          size="sm"
-                          variant="light"
-                          onPress={() =>
-                            action(`delete-${task.id}`, () =>
-                              BApi.postParser.deletePostParserTask(task.id),
-                            )
-                          }
-                        >
-                          <AiOutlineDelete aria-hidden className="text-base" />
-                        </Button>
-                      </div>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+      <TaskSearch
+        shown={shownTasks.length}
+        total={tasks.length}
+        value={keyword}
+        onChange={setKeyword}
+      />
+      {shownTasks.length > 0 ? (
+        <TaskList renderTask={renderTask} search={search} tasks={shownTasks} />
+      ) : (
+        <div className="rounded-xl border border-dashed border-default-200 px-4 py-12 text-center">
+          <p className="text-sm text-default-500" role="status">
+            {t<string>(tasks.length ? "postParser.search.empty" : "postParser.page.empty")}
+          </p>
+          {tasks.length > 0 && (
+            <Button className="mt-3" size="sm" variant="flat" onPress={() => setKeyword("")}>
+              {t<string>("postParser.search.clear")}
+            </Button>
+          )}
+        </div>
+      )}
       {runs?.workflowDefinitionId && (
         <WorkflowRunsDrawer
           isOpen

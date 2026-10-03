@@ -10,7 +10,7 @@
   "postParser.tip.browserIntegration": "某些站点可以通过浏览器集成快速操作（例如一键创建任务）。您可以查看「第三方集成」部分。",
   "postParser.label.browserIntegrations": "浏览器集成",
   "postParser.table.id": "#",
-  "postParser.table.target": "目标",
+  "postParser.table.target": "帖子",
   "postParser.table.results": "解析结果",
   "postParser.table.operations": "操作",
   "postParser.label.accessCode": "访问码",
@@ -66,7 +66,7 @@
   "postParser.help.result": "检查结果，复制链接和密码或导出 Excel。要下载文件时，将选中的链接加入获取资源，再配置和启动获取工作流。",
   "postParser.label.parsing": "解析中",
   "postParser.label.parsed": "已解析",
-  "postParser.label.untitled": "未命名帖子",
+  "postParser.label.untitled": "暂未获取帖子标题",
   "postParser.label.run": "执行 #{{id}}",
   "postParser.label.execution": "帖子解析 · 当前执行 #{{id}}",
   "postParser.acquisition.description": "选中的链接将作为同一资源的获取方式。可勾选该资源的多个下载地址；不同资源请分次添加。",
@@ -75,5 +75,11 @@
   "postParser.acquisition.selectLink": "选择链接 {{number}}",
   "postParser.acquisition.noDownload": "保留所选链接的访问码和解压密码。加入后不会立即下载，请到获取资源页面选择适用工作流。",
   "postParser.acquisition.added": "已加入获取资源（资源 #{{id}}）",
-  "postParser.acquisition.nextStep": "下载地址和密码已保存。前往获取资源，确认工作流和配置后再启动下载。"
+  "postParser.acquisition.nextStep": "下载地址和密码已保存。前往获取资源，确认工作流和配置后再启动下载。",
+  "postParser.search.label": "本地搜索帖子",
+  "postParser.search.placeholder": "搜索标题、链接、正文或解析结果",
+  "postParser.search.total": "共 {{count}} 条记录",
+  "postParser.search.filteredCount": "显示 {{shown}} / {{count}} 条记录",
+  "postParser.search.empty": "没有找到匹配的帖子记录。",
+  "postParser.search.clear": "清空搜索"
 }
