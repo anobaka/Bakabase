@@ -117,6 +117,25 @@ describe("this device's own window", () => {
     });
   });
 
+  it.each([false, true])(
+    "opens the dashboard from the brand without opening the device menu (collapsed: %s)",
+    async (collapsed) => {
+      routes = [
+        on("GET", "/federation/local/servers", { available: true, servers: [], requests: [] }),
+      ];
+      renderSwitcher(collapsed);
+      const brand = screen.getByRole("link", { name: "Bakabase" });
+
+      expect(brand).toHaveTextContent(collapsed ? "B" : "Bakabase");
+      expect(trigger()).toHaveAttribute("title", "Desk");
+      await act(async () => fireEvent.click(brand));
+      expect(screen.getByTestId("location")).toHaveTextContent(/^\/$/);
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(assign).not.toHaveBeenCalled();
+      expect(requestsTo("GET", "/federation/local/servers?probe=true")).toHaveLength(0);
+    },
+  );
+
   it("lists this device and the managed servers, and switches the window to the one chosen", async () => {
     routes = [
       on("GET", "/federation/local/servers", {
@@ -425,6 +444,16 @@ describe("the console (the desktop app showing a managed server)", () => {
     routes = [on("GET", "/client/switcher", switcher)];
   });
 
+  it("keeps a separate dashboard link while managing another device", async () => {
+    renderSwitcher();
+    await waitFor(() => expect(within(trigger()).getByText("NAS")).toBeInTheDocument());
+    await act(async () => fireEvent.click(screen.getByRole("link", { name: "Bakabase" })));
+    expect(screen.getByTestId("location")).toHaveTextContent(/^\/$/);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(assign).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls.every(([, init]) => (init?.method ?? "GET") === "GET")).toBe(true);
+  });
+
   it("marks which server the window is managing", async () => {
     renderSwitcher();
     const button = trigger();
@@ -699,6 +728,6 @@ describe("windows with nothing to switch to", () => {
       clientMode: ClientMode.RemoteBrowser,
     });
     renderSwitcher(true);
-    expect(screen.getByRole("link", { name: "B" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Bakabase" })).toHaveTextContent("B");
   });
 });

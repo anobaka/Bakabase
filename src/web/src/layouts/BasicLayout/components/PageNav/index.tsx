@@ -34,8 +34,7 @@ const Navigation = () => {
   return (
     <div className={`${styles.nav} ${isCollapsed ? `${styles.collapsed}` : ""}`}>
       <div className={styles.top}>
-        {/* Which server this window shows, and the way to another. A plain brand link
-            wherever there is nothing to switch to. */}
+        {/* The brand always returns to the dashboard; device switching lives below it. */}
         <ServerSwitcher collapsed={isCollapsed} />
       </div>
       <div className={styles.menu}>
