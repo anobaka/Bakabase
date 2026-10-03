@@ -12,7 +12,8 @@ import { useRemoteAccessStore } from "@/stores/remoteAccess";
 
 /*
  * The multi-device mode (「多设备互联」, "Multi-device") is one menu group: the merged library, the devices
- * page and the device map. Every page of it belongs to this device's own window.
+ * page, the device map and downloads. Its menu belongs to this device's own window;
+ * the public download page can still be opened directly in a browser or a managed server.
  */
 
 // Every page is imported with the route config, and some reach into BApi as they load.
@@ -55,7 +56,7 @@ const flatten = (items: RouteMenuItem[]): RouteMenuItem[] =>
   items.flatMap((item) => [item, ...flatten(item.children ?? [])]);
 
 describe("the multi-device menu group", () => {
-  it("holds the library, the devices page and the device map, all this device's own", () => {
+  it("ends with downloads after the library, the devices page and the device map", () => {
     const group = routesMenuConfig.find((route) => route.name === "federation.mode");
 
     expect(group?.localNodeOnly).toBe(true);
@@ -63,6 +64,7 @@ describe("the multi-device menu group", () => {
       ["federation.title", "/federation", true],
       ["federation.devices.title", "/federation/devices", true],
       ["federation.map.title", "/federation/map", true],
+      ["menu.otherDevices", "/other-devices", undefined],
     ]);
     // Moved into the group, not duplicated: every route is registered once, at its old path.
     const paths = flatten(routesMenuConfig)
@@ -70,6 +72,14 @@ describe("the multi-device menu group", () => {
       .filter((path) => path?.startsWith("/federation"));
 
     expect(paths).toEqual(["/federation", "/federation/devices", "/federation/map"]);
+    expect(
+      flatten(routesMenuConfig).filter((route) => route.path === "/other-devices"),
+    ).toHaveLength(1);
+    expect(
+      routesMenuConfig
+        .find((route) => route.name === "menu.tools")
+        ?.children?.some((route) => route.path === "/other-devices"),
+    ).toBe(false);
   });
 
   it("is in this device's own window", async () => {
@@ -88,6 +98,7 @@ describe("the multi-device menu group", () => {
     expect(await screen.findAllByText("federation.map.title")).not.toHaveLength(0);
     expect(screen.getAllByText("federation.devices.title")).not.toHaveLength(0);
     expect(screen.getAllByText("federation.title")).not.toHaveLength(0);
+    expect(screen.getAllByText("menu.otherDevices")).not.toHaveLength(0);
   });
 
   it("is absent where the window shows a server this device manages, and from a browser", () => {
