@@ -10,7 +10,7 @@
   "postParser.tip.browserIntegration": "Some sites can integrate quick actions through the browser (such as one-click task creation). You can check the \"Third-Party Integrations\" section.",
   "postParser.label.browserIntegrations": "Browser integrations",
   "postParser.table.id": "#",
-  "postParser.table.target": "Target",
+  "postParser.table.target": "Post",
   "postParser.table.results": "Results",
   "postParser.table.operations": "Operations",
   "postParser.label.accessCode": "Access code",
@@ -66,7 +66,7 @@
   "postParser.help.result": "Review the result, copy links and passwords, or export Excel. To download files, add selected links to acquisition, then configure and start an acquisition workflow.",
   "postParser.label.parsing": "Parsing",
   "postParser.label.parsed": "Parsed",
-  "postParser.label.untitled": "Untitled post",
+  "postParser.label.untitled": "Post title not yet retrieved",
   "postParser.label.run": "Run #{{id}}",
   "postParser.label.execution": "Post Parser · Current run #{{id}}",
   "postParser.acquisition.description": "Selected links become acquisition sources for one resource. Select several download links for the same resource; add different resources separately.",
@@ -75,5 +75,11 @@
   "postParser.acquisition.selectLink": "Select link {{number}}",
   "postParser.acquisition.noDownload": "Access codes and archive passwords are preserved. Adding a resource does not start a download; choose a suitable workflow on the acquisition page.",
   "postParser.acquisition.added": "Added to acquisition (resource #{{id}})",
-  "postParser.acquisition.nextStep": "Download links and passwords have been saved. Open acquisition to review the workflow and configuration before starting a download."
+  "postParser.acquisition.nextStep": "Download links and passwords have been saved. Open acquisition to review the workflow and configuration before starting a download.",
+  "postParser.search.label": "Search local posts",
+  "postParser.search.placeholder": "Search titles, links, text or parsed results",
+  "postParser.search.total": "{{count}} records",
+  "postParser.search.filteredCount": "Showing {{shown}} of {{count}} records",
+  "postParser.search.empty": "No matching post records found.",
+  "postParser.search.clear": "Clear search"
 }

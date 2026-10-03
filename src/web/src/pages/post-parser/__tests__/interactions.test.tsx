@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { PostParserTask } from "@/core/models/PostParserTask";
+import type * as ReactVirtualized from "react-virtualized";
 
 import { HeroUIProvider } from "@heroui/react";
 import { act } from "react-dom/test-utils";
@@ -30,6 +31,13 @@ const api = vi.hoisted(() => ({
   copy: vi.fn(),
   copied: vi.fn(),
   copyFailed: vi.fn(),
+}));
+
+// Keep the real virtual list; jsdom only needs its viewport dimensions supplied.
+vi.mock("react-virtualized", async () => ({
+  ...(await vi.importActual<typeof ReactVirtualized>("react-virtualized")),
+  AutoSizer: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
+    children({ width: 960, height: 360 }),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
@@ -340,6 +348,60 @@ describe("parsed links to acquisition", () => {
 });
 
 describe("post parsing workspace", () => {
+  it("searches records outside the virtual viewport locally and keeps actions on the matching record", async () => {
+    const records = Array.from({ length: 200 }, (_, index) => ({
+      ...base,
+      id: index + 1,
+      title: `Post ${index + 1}`,
+      link: `https://example.com/post/${index + 1}`,
+    }));
+
+    usePostParserTasksStore.getState().setTasks(records);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    expect(container.querySelectorAll("[data-task-id]").length).toBeLessThan(15);
+    expect(container.querySelector('[data-task-id="200"]')).toBeNull();
+    const initialRequests = api.getAll.mock.calls.length;
+
+    fireEvent.change(screen.getByLabelText("postParser.search.label"), {
+      target: { value: "  POST 200 " },
+    });
+    expect(container.querySelectorAll("[data-task-id]")).toHaveLength(1);
+    expect(container.querySelector('[data-task-id="200"]')).toHaveTextContent("Post 200");
+    expect(api.getAll).toHaveBeenCalledTimes(initialRequests);
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.delete" }));
+    await waitFor(() => expect(api.remove).toHaveBeenCalledWith(200));
+  });
+
+  it("searches parsed information, handles no matches and clears the filter", async () => {
+    usePostParserTasksStore.getState().setTasks([base, { ...parsed, id: 15 }]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    const input = screen.getByLabelText("postParser.search.label");
+
+    fireEvent.change(input, { target: { value: "SECOND PASSWORD" } });
+    expect(container.querySelectorAll("[data-task-id]")).toHaveLength(1);
+    expect(container.querySelector('[data-task-id="15"]')).toHaveTextContent("second password");
+    fireEvent.change(input, { target: { value: "does not exist" } });
+    expect(screen.getByRole("status")).toHaveTextContent("postParser.search.empty");
+    expect(container.querySelector('[role="table"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "postParser.search.clear" }));
+    expect(container.querySelectorAll("[data-task-id]")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "postParser.action.start" })).toBeEnabled();
+  });
+
+  it("shows the missing title and parsing status together before the post details", async () => {
+    usePostParserTasksStore.getState().setTasks([{ ...base, title: undefined }]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    const title = screen.getByText("postParser.label.untitled");
+
+    expect(title.parentElement).toHaveTextContent("postParser.label.pending");
+    expect(
+      container.querySelector('[data-task-id="14"] [role="cell"]:nth-child(3)'),
+    ).not.toHaveTextContent("postParser.label.pending");
+  });
+
   it("copies the source post link with feedback and keeps opening it available", async () => {
     usePostParserTasksStore.getState().setTasks([base]);
     show(<PostParserPage />);
@@ -381,6 +443,7 @@ describe("post parsing workspace", () => {
     expect(container.querySelector(`time[datetime="${completedAt}"]`)).toBeVisible();
     expect(screen.getByText("postParser.label.createdAt")).toBeVisible();
     expect(screen.getByText("postParser.label.completedAt")).toBeVisible();
+    expect(container.querySelector("dl")?.children).toHaveLength(2);
     await act(async () =>
       usePostParserTasksStore.getState().setTasks([{ ...base, link: "", text: "Pasted content" }]),
     );
