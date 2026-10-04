@@ -40,6 +40,8 @@ public sealed class DownloadTaskDirectDownloadTests
         _precheck = new FakePrecheck();
         var sp = await TestServiceBuilder.BuildServiceProvider(services =>
         {
+            // Load the real messages so conflict details are verified, not resource keys.
+            services.AddLocalization(options => options.ResourcesPath = "Resources");
             services.AddSingleton<IDownloaderFactory>(_factory);
             services.RemoveAll<IDownloadTaskPrecheck>();
             services.AddSingleton<IDownloadTaskPrecheck>(_precheck);
@@ -194,7 +196,10 @@ public sealed class DownloadTaskDirectDownloadTests
         var occupied = await AddTask();
         var target = await AddTask();
         await _manager.Start(await _service.GetDto(occupied), false);
-        Assert.AreEqual((int) ResponseCode.Conflict, (await _service.DirectDownload(target)).Code);
+        var response = await _service.DirectDownload(target);
+        Assert.AreEqual((int) ResponseCode.Conflict, response.Code);
+        StringAssert.Contains(response.Message!, "My work");
+        Assert.AreNotEqual("FailedToStart", response.Message);
         Assert.IsFalse((await _service.GetDto(target)).GetTypedOptions<ExHentaiTaskOptions>().PreferTorrent);
         Assert.AreEqual(DownloaderStatus.Downloading, _manager[occupied]!.Status);
         Assert.AreEqual((int) ResponseCode.Success,
