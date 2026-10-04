@@ -9,7 +9,7 @@ import CollectionMemoPage from "..";
 import RangeEditor from "../components/RangeEditor";
 import SettingsEditor from "../components/SettingsEditor";
 
-const { api, createPortal } = vi.hoisted(() => ({
+const { api, createPortal, openUrl } = vi.hoisted(() => ({
   api: {
     getCollectionMemoTargets: vi.fn(),
     getCollectionMemoSettings: vi.fn(),
@@ -24,9 +24,12 @@ const { api, createPortal } = vi.hoisted(() => ({
     resizeCollectionMemoRangeCoverage: vi.fn(),
   },
   createPortal: vi.fn(),
+  openUrl: vi.fn(),
 }));
 
-vi.mock("@/sdk/BApi", () => ({ default: { collectionMemo: api } }));
+vi.mock("@/sdk/BApi", () => ({
+  default: { collectionMemo: api, gui: { openUrlInDefaultBrowser: openUrl } },
+}));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal }),
 }));
@@ -51,6 +54,20 @@ vi.mock("@/components/bakaui", () => ({
   ),
   Card: ({ children }: { children?: ReactNode }) => <article>{children}</article>,
   CardBody: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  Textarea: ({
+    label,
+    value,
+    onValueChange,
+  }: {
+    label: string;
+    value: string;
+    onValueChange: (value: string) => void;
+  }) => (
+    <label>
+      {label}
+      <textarea value={value} onChange={(event) => onValueChange(event.target.value)} />
+    </label>
+  ),
   Input: ({
     label,
     value,
@@ -139,10 +156,12 @@ vi.mock("@/components/bakaui", () => ({
     children,
     title,
     onOk,
+    footer,
   }: {
     children?: ReactNode;
     title?: string;
     onOk?: () => Promise<void>;
+    footer?: { okProps?: { isDisabled?: boolean } };
   }) => {
     const [open, setOpen] = useState(true);
 
@@ -150,6 +169,7 @@ vi.mock("@/components/bakaui", () => ({
       <div aria-label={title} role="dialog">
         {children}
         <button
+          disabled={footer?.okProps?.isDisabled}
           onClick={async () => {
             try {
               await onOk?.();
@@ -200,6 +220,115 @@ afterEach(() => {
 });
 
 describe("collection memo page", () => {
+  it("opens a linked range through ExternalLink and displays its note as plain text", async () => {
+    const annotated = {
+      ...target.ranges[0],
+      url: "https://example.com/source",
+      note: "Source <b>one</b>\nsecond line",
+    };
+
+    api.getCollectionMemoTargets.mockResolvedValue({
+      code: 0,
+      data: [{ ...target, ranges: [annotated] }],
+    });
+    page();
+    await screen.findByText(target.name);
+    const article = screen.getByRole("article");
+
+    expect(within(article).getByText(/Source <b>one<\/b>/)).toHaveTextContent("second line");
+    expect(article.querySelector("b")).toBeNull();
+    fireEvent.click(article.querySelector("li a")!);
+    expect(openUrl).toHaveBeenCalledExactlyOnceWith({ url: annotated.url });
+  });
+
+  it("saves optional links and multiline notes, then allows clearing both without changing dates", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const annotated = {
+      ...target.ranges[0],
+      url: "https://example.com/source",
+      note: "First\nSecond",
+    };
+    const view = render(
+      <RangeEditor
+        globalStartAt={earliest}
+        range={annotated}
+        targetName="Target"
+        onSave={onSave}
+      />,
+    );
+
+    expect(screen.getByLabelText("collectionMemo.range.url")).toHaveValue(annotated.url);
+    expect(screen.getByLabelText("collectionMemo.range.note")).toHaveValue(annotated.note);
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.url"), {
+      target: { value: "  https://example.com/new  " },
+    });
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.note"), {
+      target: { value: "  Changed\nnotes  " },
+    });
+    click("Save");
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({
+        startAt: earliest,
+        endAt: end,
+        url: "https://example.com/new",
+        note: "Changed\nnotes",
+      }),
+    );
+    view.unmount();
+
+    render(
+      <RangeEditor
+        globalStartAt={earliest}
+        range={annotated}
+        targetName="Target"
+        onSave={onSave}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.url"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("collectionMemo.range.note"), { target: { value: "" } });
+    click("Save");
+    await waitFor(() => expect(onSave).toHaveBeenLastCalledWith({ startAt: earliest, endAt: end }));
+  });
+
+  it.each(["not a link", "javascript:alert(1)", "https://user:pass@example.com"])(
+    "keeps an invalid range link open: %s",
+    async (url) => {
+      const onSave = vi.fn();
+
+      render(
+        <RangeEditor
+          globalStartAt={earliest}
+          range={target.ranges[0]}
+          targetName="Target"
+          onSave={onSave}
+        />,
+      );
+      fireEvent.change(screen.getByLabelText("collectionMemo.range.url"), {
+        target: { value: url },
+      });
+      click("Save");
+      expect(await screen.findByRole("alert")).toHaveTextContent("collectionMemo.validation.url");
+      expect(onSave).not.toHaveBeenCalled();
+    },
+  );
+
+  it("shows the shared current time once above all target timelines", async () => {
+    api.getCollectionMemoTargets.mockResolvedValue({
+      code: 0,
+      data: [target, { ...target, id: 8, name: "soulplus" }],
+    });
+    page();
+
+    await screen.findByText("soulplus");
+    const currentTime = screen.getByText("collectionMemo.timeline.now");
+
+    expect(currentTime).toHaveAttribute("dateTime", "2026-10-01T08:00:00.000Z");
+    for (const article of screen.getAllByRole("article")) {
+      expect(article).not.toContainElement(currentTime);
+      expect(within(article).queryByText("collectionMemo.timeline.now")).not.toBeInTheDocument();
+    }
+  });
+
   it("finishes loading empty data and offers creating a target", async () => {
     api.getCollectionMemoTargets.mockResolvedValue({ code: 0, data: [] });
     page();

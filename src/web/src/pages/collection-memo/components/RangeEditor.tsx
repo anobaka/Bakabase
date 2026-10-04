@@ -1,19 +1,19 @@
 import type { DestroyableProps } from "@/components/bakaui/types";
-import type { CollectionMemoRange } from "../helpers";
+import type { CollectionMemoRange, CollectionMemoRangeInput } from "../helpers";
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getTimestampTicks, resolveRangeBoundary } from "../helpers";
+import { getCollectionMemoRangeUrl, getTimestampTicks, resolveRangeBoundary } from "../helpers";
 
-import { Input, Modal } from "@/components/bakaui";
+import { Input, Modal, Textarea } from "@/components/bakaui";
 import { formatDateTimeInput } from "@/components/bakaui/components/Date/dateTimeInput";
 
 interface Props extends DestroyableProps {
   range?: CollectionMemoRange;
   targetName: string;
   globalStartAt: string;
-  onSave: (range: { startAt: string | null; endAt: string }) => Promise<void>;
+  onSave: (range: CollectionMemoRangeInput) => Promise<void>;
 }
 
 const dateTimeFormat: Intl.DateTimeFormatOptions = {
@@ -37,6 +37,11 @@ const RangeEditor = ({ range, targetName, globalStartAt, onSave, onDestroyed }: 
   const [edited, setEdited] = useState({ start: false, end: false });
   const [composing, setComposing] = useState({ start: false, end: false });
   const [error, setError] = useState<string>();
+  const [url, setUrl] = useState(range?.url ?? "");
+  const [note, setNote] = useState(range?.note ?? "");
+  const [urlEdited, setUrlEdited] = useState(false);
+  const validUrl = getCollectionMemoRangeUrl(url);
+  const invalidUrl = !!url.trim() && !validUrl;
   const inherited = !start.trim();
   const startAt = inherited
     ? globalStartAt
@@ -79,7 +84,7 @@ const RangeEditor = ({ range, targetName, globalStartAt, onSave, onDestroyed }: 
       defaultVisible
       footer={{
         actions: ["ok", "cancel"],
-        okProps: { children: t<string>("common.action.save") },
+        okProps: { children: t<string>("common.action.save"), isDisabled: invalidUrl },
         cancelProps: { children: t<string>("common.action.cancel") },
       }}
       title={t<string>(
@@ -88,6 +93,7 @@ const RangeEditor = ({ range, targetName, globalStartAt, onSave, onDestroyed }: 
       onDestroyed={onDestroyed}
       onOk={async () => {
         setEdited({ start: true, end: true });
+        setUrlEdited(true);
         const startTicks = startAt ? getTimestampTicks(startAt) : undefined;
         const endTicks = endAt ? getTimestampTicks(endAt) : undefined;
         const validationKey =
@@ -99,18 +105,25 @@ const RangeEditor = ({ range, targetName, globalStartAt, onSave, onDestroyed }: 
                 : "collectionMemo.validation.order"
               : endTicks > BigInt(Date.now()) * 10_000n
                 ? "collectionMemo.validation.future"
-                : undefined;
+                : invalidUrl
+                  ? "collectionMemo.validation.url"
+                  : undefined;
 
         if (validationKey || !startAt || !endAt) {
           const message = t<string>(validationKey ?? "collectionMemo.validation.date");
 
-          setError(message);
+          setError(validationKey === "collectionMemo.validation.url" ? undefined : message);
           throw new Error(message);
         }
 
         setError(undefined);
         try {
-          await onSave({ startAt: inherited ? null : startAt, endAt });
+          await onSave({
+            startAt: inherited ? null : startAt,
+            endAt,
+            ...(validUrl ? { url: validUrl } : {}),
+            ...(note.trim() ? { note: note.trim() } : {}),
+          });
         } catch (cause) {
           setError(t<string>("collectionMemo.error.save"));
           throw cause;
@@ -178,6 +191,28 @@ const RangeEditor = ({ range, targetName, globalStartAt, onSave, onDestroyed }: 
           </p>
         </div>
         <p className="text-sm text-default-500">{t<string>("collectionMemo.range.pointHint")}</p>
+        <Input
+          description={t<string>("collectionMemo.range.urlHint")}
+          errorMessage={
+            urlEdited && invalidUrl ? t<string>("collectionMemo.validation.url") : undefined
+          }
+          isInvalid={urlEdited && invalidUrl}
+          label={t<string>("collectionMemo.range.url")}
+          placeholder="https://"
+          type="url"
+          value={url}
+          onValueChange={(value) => {
+            setUrl(value);
+            setUrlEdited(true);
+            setError(undefined);
+          }}
+        />
+        <Textarea
+          label={t<string>("collectionMemo.range.note")}
+          minRows={2}
+          value={note}
+          onValueChange={setNote}
+        />
         {error && (
           <p className="text-sm text-danger" role="alert">
             {error}

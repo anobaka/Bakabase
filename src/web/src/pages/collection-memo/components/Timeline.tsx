@@ -1,4 +1,9 @@
-import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
+import type {
+  PointerEvent as ReactPointerEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  FocusEvent as ReactFocusEvent,
+  MouseEvent as ReactMouseEvent,
+} from "react";
 import type {
   CollectionMemoCoverageResize,
   CollectionMemoTarget,
@@ -15,12 +20,15 @@ import {
   getCoverageResizeBounds,
   getTimelineCoverage,
   getTimelineRegions,
+  getCollectionMemoRangeUrl,
   getTimestampTicks,
+  resolveCollectionMemoRangeStart,
 } from "../helpers";
 
 import { useTimelineHover } from "./TimelineHoverCard";
 
 import { Button } from "@/components/bakaui";
+import ExternalLink from "@/components/ExternalLink";
 
 interface Props {
   target: CollectionMemoTarget;
@@ -49,6 +57,7 @@ interface Gesture {
   at: string;
   bounds: { min: string; max: string };
   signature: string;
+  dragged: boolean;
 }
 
 const signatureOf = (ranges: CollectionMemoTarget["ranges"]) =>
@@ -204,6 +213,7 @@ const Timeline = ({
       at: originalAt,
       bounds: getCoverageResizeBounds(originalCoverage, index, domain, edge),
       signature,
+      dragged: false,
     };
 
     setError(undefined);
@@ -240,6 +250,7 @@ const Timeline = ({
     }
     const at = pointerBoundary(gesture, event.clientX);
 
+    if (Math.abs(event.clientX - gesture.originX) >= 3) gesture.dragged = true;
     gesture.at = at;
     setPreview({ gesture, at });
   };
@@ -259,6 +270,29 @@ const Timeline = ({
     }
     if (getTimestampTicks(gesture.at) === getTimestampTicks(gesture.originalAt)) {
       setPreview(undefined);
+      // Resize hit areas cover points and narrow intervals. A click still opens
+      // their source; only a movement of at least three pixels is a drag.
+      if (!gesture.dragged && Math.abs(event.clientX - gesture.originX) < 3) {
+        const component = gesture.coverage[gesture.index];
+        const id = componentId(component);
+        const link = track.current?.querySelector<HTMLElement>(
+          `[data-collection-memo-range-link="${id}"]`,
+        );
+
+        if (link) {
+          link.click();
+        } else if (component.ranges.some((range) => range.url || range.note)) {
+          const anchor = track.current?.querySelector<HTMLElement>(
+            `[data-collection-memo-boundary="edge:${id}:${gesture.edge}"]`,
+          );
+
+          if (anchor)
+            window.requestAnimationFrame(() => {
+              if (anchor.isConnected && gesture.signature === currentSignature.current)
+                hover.show(`edge:${id}:${gesture.edge}`, anchor, true);
+            });
+        }
+      }
 
       return;
     }
@@ -340,6 +374,41 @@ const Timeline = ({
           : "collectionMemo.timeline.uncollectedRange",
       { start: formatDate(startAt), end: formatDate(endAt) },
     );
+  const metadataDetails = (component?: TimelineCoverage) => {
+    const annotated = component?.ranges.filter((range) => range.url || range.note) ?? [];
+
+    return {
+      interactive: annotated.some((range) => !!getCollectionMemoRangeUrl(range.url)),
+      details:
+        annotated.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {annotated.map((range) => {
+              const url = getCollectionMemoRangeUrl(range.url);
+              const label = regionLabel(
+                resolveCollectionMemoRangeStart(range, globalStartAt)!,
+                range.endAt,
+                true,
+              );
+
+              return (
+                <li key={range.id} className="flex flex-col gap-1">
+                  {url ? (
+                    <ExternalLink className="flex-wrap break-words text-sm" href={url}>
+                      {label}
+                    </ExternalLink>
+                  ) : annotated.length > 1 || component!.ranges.length > 1 ? (
+                    <p>{label}</p>
+                  ) : null}
+                  {range.note && (
+                    <p className="whitespace-pre-wrap break-words text-default-500">{range.note}</p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : undefined,
+    };
+  };
   const visibleCoverage = coverage.filter(
     (component) =>
       getTimestampTicks(component.endAt)! >=
@@ -358,14 +427,20 @@ const Timeline = ({
         ? "gap:empty"
         : `gap:${previous ? componentId(previous) : "leading"}:${next ? componentId(next) : "trailing"}`;
 
-    return { id, region };
+    const url =
+      component?.ranges.length === 1
+        ? getCollectionMemoRangeUrl(component.ranges[0].url)
+        : undefined;
+
+    return { id, region, component, url };
   });
   const sources = new Map<string, TimelineHoverSource>();
 
-  for (const { id, region } of regionSources) {
+  for (const { id, region, component } of regionSources) {
     sources.set(id, {
       id,
       label: regionLabel(region.startAt, region.endAt, region.collected),
+      ...metadataDetails(component),
       error:
         error?.action?.kind === "fill" &&
         error.action.value.startAt === region.startAt &&
@@ -406,15 +481,18 @@ const Timeline = ({
           : 0;
       const id = `edge:${componentId(component)}:${edge}`;
 
+      const metadata = metadataDetails(component);
+
       sources.set(id, {
         id,
+        ...metadata,
         label: t<string>(
           edge === "start"
             ? "collectionMemo.timeline.resizeStart"
             : "collectionMemo.timeline.resizeEnd",
           { date: formatDate(at) },
         ),
-        description: `${regionLabel(component.startAt, component.endAt, true)} · ${t<string>("collectionMemo.timeline.resizeHint")}`,
+        description: `${regionLabel(component.startAt, component.endAt, true)} · ${t<string>("collectionMemo.timeline.resizeHint")}${metadata.interactive ? ` ${t<string>("collectionMemo.timeline.linksHint")}` : ""}`,
       });
 
       return [{ id, component, index, edge, at, bounds, left, width }];
@@ -460,39 +538,61 @@ const Timeline = ({
               />
             ))}
         </div>
-        {regionSources.map(({ id, region }) => (
-          <button
-            key={id}
-            aria-describedby={hover.activeId === id ? hover.popupId : undefined}
-            aria-expanded={region.collected ? undefined : hover.activeId === id}
-            aria-haspopup={region.collected ? undefined : "dialog"}
-            aria-label={sources.get(id)!.label}
-            className="absolute top-0 h-full border-0 bg-transparent p-0 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
-            style={{
+        {regionSources.map(({ id, region, url, component }) => {
+          const interactive = !region.collected || sources.get(id)!.interactive;
+          const props = {
+            "aria-describedby": hover.activeId === id ? hover.popupId : undefined,
+            "aria-expanded": interactive ? hover.activeId === id : undefined,
+            "aria-haspopup": interactive ? ("dialog" as const) : undefined,
+            "aria-label": sources.get(id)!.label,
+            className:
+              "absolute top-0 h-full border-0 bg-transparent p-0 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary",
+            style: {
               left: `${region.left}%`,
               width: region.point || region.width === 0 ? "4px" : `${region.width}%`,
               transform: region.point ? "translateX(-50%)" : undefined,
               // Browser hit testing rounds subpixel boxes. Keep even a very short
               // gap above adjacent inward-facing resize targets.
               zIndex: region.collected ? 1 : 20,
-            }}
-            type="button"
-            onBlur={(event) => hover.blur(event.relatedTarget)}
-            onClick={(event) => hover.show(id, event.currentTarget)}
-            onFocus={(event) => hover.show(id, event.currentTarget)}
-            onKeyDown={(event) => {
+            },
+            onBlur: (event: ReactFocusEvent<Element>) => hover.blur(event.relatedTarget),
+            onClick: (event: ReactMouseEvent<Element>) => {
+              if (event.currentTarget instanceof HTMLElement) hover.show(id, event.currentTarget);
+            },
+            onFocus: (event: ReactFocusEvent<Element>) => {
+              if (event.currentTarget instanceof HTMLElement) hover.show(id, event.currentTarget);
+            },
+            onKeyDown: (event: ReactKeyboardEvent<Element>) => {
+              if (!(event.currentTarget instanceof HTMLElement)) return;
               if (
-                !region.collected &&
-                (event.key === "Enter" || event.key === " " || event.key === "ArrowDown")
+                (interactive && event.key === "ArrowDown") ||
+                (!url && interactive && (event.key === "Enter" || event.key === " "))
               ) {
                 event.preventDefault();
                 hover.show(id, event.currentTarget, true);
               }
-            }}
-            onPointerEnter={(event) => hover.show(id, event.currentTarget)}
-            onPointerLeave={(event) => hover.leave(event.relatedTarget)}
-          />
-        ))}
+            },
+            onPointerEnter: (event: ReactPointerEvent<Element>) => {
+              if (event.currentTarget instanceof HTMLElement) hover.show(id, event.currentTarget);
+            },
+            onPointerLeave: (event: ReactPointerEvent<HTMLElement>) =>
+              hover.leave(event.relatedTarget),
+          };
+
+          return url ? (
+            <ExternalLink
+              key={id}
+              {...props}
+              className={`${props.className} min-w-0 [&>svg]:hidden`}
+              data-collection-memo-range-link={componentId(component!)}
+              href={url}
+            >
+              <span className="sr-only">{props["aria-label"]}</span>
+            </ExternalLink>
+          ) : (
+            <button key={id} {...props} type="button" />
+          );
+        })}
         {onResizeCoverage &&
           boundarySources.map(({ id, index, edge, at, bounds, left, width }) => {
             const point = width <= 0;
@@ -512,6 +612,7 @@ const Timeline = ({
                 aria-valuenow={Date.parse(at)}
                 aria-valuetext={formatDate(at)}
                 className={`group/edge absolute top-1/2 z-10 h-10 max-w-5 touch-none bg-transparent outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary ${disabled ? "cursor-wait" : "cursor-ew-resize"}`}
+                data-collection-memo-boundary={id}
                 role="slider"
                 style={{
                   left: `${left}%`,
@@ -522,7 +623,14 @@ const Timeline = ({
                 tabIndex={0}
                 onBlur={(event) => hover.blur(event.relatedTarget)}
                 onFocus={(event) => hover.show(id, event.currentTarget)}
-                onKeyDown={(event) => resizeWithKeyboard(event, index, edge)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && sources.get(id)?.interactive) {
+                    event.preventDefault();
+                    hover.show(id, event.currentTarget, true);
+                  } else {
+                    resizeWithKeyboard(event, index, edge);
+                  }
+                }}
                 onPointerDown={(event) => startDrag(event, index, edge)}
                 onPointerEnter={(event) => hover.show(id, event.currentTarget)}
                 onPointerLeave={(event) => hover.leave(event.relatedTarget)}
@@ -541,20 +649,12 @@ const Timeline = ({
           })}
       </div>
       {hover.popup}
-      <div
-        className={`flex justify-between gap-2 text-xs text-default-500 ${activeReverse ? "flex-row-reverse" : ""}`}
-      >
+      <div className={`flex gap-2 text-xs text-default-500 ${activeReverse ? "justify-end" : ""}`}>
         <time
           className={activeReverse ? "text-right" : undefined}
           dateTime={activeDomain.startAt ?? new Date(activeDomain.start).toISOString()}
         >
           {formatDate(activeDomain.startAt ?? activeDomain.start)}
-        </time>
-        <time
-          className={activeReverse ? undefined : "text-right"}
-          dateTime={new Date(activeDomain.end).toISOString()}
-        >
-          {t<string>("collectionMemo.timeline.now", { date: formatDate(activeDomain.end) })}
         </time>
       </div>
       {onResizeCoverage && (

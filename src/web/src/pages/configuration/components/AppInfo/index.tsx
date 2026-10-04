@@ -6,28 +6,19 @@ import type {
 } from "@/sdk/Api";
 import type { SettingItem } from "@/pages/configuration/components/SettingsSection";
 
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  CheckCircleOutlined,
-  FolderOpenOutlined,
-  InfoCircleOutlined,
-  PoweroffOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
-import { AiOutlineQuestionCircle } from "react-icons/ai";
+import { FolderOpenOutlined, WarningOutlined } from "@ant-design/icons";
 
 import IdentityRecoveryLink from "./IdentityRecoveryLink";
+import AppVersionPanel, { CurrentVersionValue } from "./AppVersionPanel";
 
-import { Popover, Divider, Icon, Progress, Snippet, Spinner, Tooltip } from "@/components/bakaui";
-import { UpdaterStatus, DataPathSource } from "@/sdk/constants";
-import ExternalLink from "@/components/ExternalLink";
+import { Divider, Snippet } from "@/components/bakaui";
+import { DataPathSource } from "@/sdk/constants";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { useIsPureClient, useIsRemoteClient } from "@/stores/remoteAccess";
 import { useAppOptionsStore } from "@/stores/options";
-import { Button, Chip, Switch } from "@/components/bakaui";
-import { ChangelogButton } from "@/components/Changelog";
+import { Button, Chip } from "@/components/bakaui";
 import FilePathValue from "@/components/FilePathValue";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import BApi from "@/sdk/BApi";
@@ -50,7 +41,6 @@ interface AppInfoProps {
 
 const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [newVersion, setNewVersion] =
     useState<BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo>();
   const appUpdaterState = useAppUpdaterStateStore((state) => state);
@@ -63,233 +53,55 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
   const { restarting, restart } = useUpdateRestart();
   const remoteRestart = useRemoteServerUpdateRestart(appUpdaterState.status);
 
-  // The version an update moves the user off, so the changelog can show the whole span
-  // rather than only the newest release. Velopack decides against the install manifest;
-  // runningVersion only differs on a dev build, where it is still better than no bound.
-  const updateFrom = newVersion?.installedVersion ?? newVersion?.runningVersion;
+  const [checking, setChecking] = useState(true);
+  const [checkError, setCheckError] = useState<string>();
+  const checkRequestRef = useRef(0);
+  const checkingRef = useRef(false);
 
-  const checkNewAppVersion = () => {
-    BApi.updater.getNewAppVersion().then((a) => {
-      setNewVersion(a.data);
-    });
-  };
+  const checkNewAppVersion = useCallback(async (supersede = false) => {
+    // Normal checks cannot be started twice; a saved channel change must be able
+    // to replace an in-flight check for the previous channel.
+    if (checkingRef.current && !supersede) return;
 
-  useEffect(() => {
-    checkNewAppVersion();
+    const request = ++checkRequestRef.current;
 
-    return () => {};
+    checkingRef.current = true;
+    setChecking(true);
+    setCheckError(undefined);
+    try {
+      const response = await BApi.updater.getNewAppVersion();
+
+      if (request !== checkRequestRef.current) return;
+
+      if (response.code || !response.data) {
+        setCheckError(response.message || "configuration.appInfo.failedToGetLatestVersion");
+      } else {
+        setNewVersion(response.data);
+      }
+    } catch (error) {
+      if (request !== checkRequestRef.current) return;
+
+      setCheckError(
+        error instanceof Error && error.message
+          ? error.message
+          : "configuration.appInfo.failedToGetLatestVersion",
+      );
+    } finally {
+      if (request === checkRequestRef.current) {
+        checkingRef.current = false;
+        setChecking(false);
+      }
+    }
   }, []);
 
-  const upToDateIndicator = (
-    <span className="flex items-center gap-1 text-success">
-      <CheckCircleOutlined className="text-base" />
-      {t("configuration.appInfo.upToDate")}
-    </span>
-  );
+  useEffect(() => {
+    void checkNewAppVersion();
 
-  // "No new version" is not always what it looks like: when the selected channel's newest
-  // release is older than the installed one (a pre-release build with the pre-release
-  // channel off, say), the check will answer that forever. Say so instead of showing a
-  // green tick the user cannot argue with.
-  const renderNoNewVersion = () => {
-    if (!newVersion?.channelBehindInstalled) {
-      return upToDateIndicator;
-    }
-
-    return (
-      <Tooltip
-        className="max-w-[360px]"
-        color="warning"
-        content={t("configuration.appInfo.channelBehind.tip")}
-        placement="top"
-      >
-        <span className="flex items-center gap-1 text-warning">
-          <WarningOutlined className="text-base" />
-          {t("configuration.appInfo.channelBehind", {
-            channel: newVersion.channel,
-            latest: newVersion.channelLatestVersion,
-            installed: newVersion.installedVersion,
-          })}
-        </span>
-      </Tooltip>
-    );
-  };
-
-  // Velopack compares the feed against the install manifest, never against the assembly
-  // the app is running. Copy a build into an existing install directory — the ordinary
-  // local dev loop — and the version on screen stops being the one updates are decided
-  // for, which reads as "it keeps telling me I'm up to date".
-  const renderRunningVersionMismatch = () => {
-    const { runningVersion, installedVersion } = newVersion ?? {};
-
-    if (!runningVersion || !installedVersion || runningVersion === installedVersion) {
-      return null;
-    }
-
-    return (
-      <Tooltip
-        className="max-w-[360px]"
-        color="warning"
-        content={t("configuration.appInfo.runningVersionMismatch.tip", {
-          running: runningVersion,
-          installed: installedVersion,
-        })}
-        placement="top"
-      >
-        <span className="flex items-center gap-1 text-warning text-sm">
-          <WarningOutlined className="text-base" />
-          {t("configuration.appInfo.runningVersionMismatch", { installed: installedVersion })}
-        </span>
-      </Tooltip>
-    );
-  };
-
-  const renderNewVersion = () => {
-    // When the API has returned a concrete new version, trust it over a
-    // possibly-stale UpToDate status carried by the backend singleton.
-    const effectiveStatus =
-      newVersion?.version &&
-      (appUpdaterState.status === undefined || appUpdaterState.status === UpdaterStatus.UpToDate)
-        ? UpdaterStatus.Idle
-        : appUpdaterState.status;
-
-    switch (effectiveStatus) {
-      case UpdaterStatus.UpToDate:
-        return renderNoNewVersion();
-      case UpdaterStatus.Unavailable:
-        return (
-          <Tooltip
-            className="max-w-[360px]"
-            color="secondary"
-            content={t("configuration.appInfo.updateCheckUnavailable.tip")}
-            placement="top"
-          >
-            <span className="flex items-center gap-1 text-foreground-500">
-              <InfoCircleOutlined className="text-base" />
-              {t("configuration.appInfo.updateCheckUnavailable")}
-            </span>
-          </Tooltip>
-        );
-      case UpdaterStatus.Idle:
-        if (newVersion) {
-          if (newVersion.version) {
-            return (
-              <div className="flex items-center gap-2">
-                <Chip radius="sm" variant="light">
-                  {newVersion.version}
-                </Chip>
-                <Divider orientation="vertical" />
-                <ChangelogButton from={updateFrom} version={newVersion.version} />
-                <Divider orientation="vertical" />
-                <Button
-                  color="success"
-                  size="sm"
-                  variant="light"
-                  onClick={() => {
-                    BApi.updater.startUpdatingApp();
-                  }}
-                >
-                  {t("configuration.appInfo.clickToAutoUpdate")}
-                </Button>
-                {newVersion.installers?.length > 0 ? (
-                  <>
-                    <Divider orientation="vertical" />
-                    <Popover
-                      trigger={
-                        <Button color="primary" size="sm" variant="light">
-                          {t("configuration.appInfo.autoUpdateFails")}
-                        </Button>
-                      }
-                    >
-                      {newVersion.installers.map((i) => (
-                        <div key={i.url}>
-                          <ExternalLink href={i.url}>{i.name}</ExternalLink>
-                        </div>
-                      ))}
-                    </Popover>
-                  </>
-                ) : undefined}
-              </div>
-            );
-          } else {
-            return renderNoNewVersion();
-          }
-        } else {
-          return renderNoNewVersion();
-        }
-      // Downloading, pending restart and failed all concern a known version, so
-      // each keeps the changelog within reach — the notes are most wanted right
-      // before the restart that applies them.
-      case UpdaterStatus.Running:
-        return (
-          <div className="flex items-center gap-2">
-            <Progress
-              showValueLabel
-              className="w-[200px] pl-3"
-              label={`${t("configuration.appInfo.downloading")} ${newVersion?.version ?? ""}`}
-              size="sm"
-              value={appUpdaterState.percentage}
-            />
-            <ChangelogButton from={updateFrom} version={newVersion?.version} />
-          </div>
-        );
-      case UpdaterStatus.PendingRestart:
-        return (
-          <div className="flex items-center gap-2">
-            {isRemoteClient && remoteRestart.restarting ? (
-              <span className="flex items-center gap-2 text-sm text-foreground-500">
-                <Spinner size="sm" />
-                {t("appUpdate.serverRestarting")}
-              </span>
-            ) : (
-              <Button
-                color="primary"
-                isDisabled={restarting}
-                size="sm"
-                onClick={() => {
-                  if (isRemoteClient) {
-                    remoteRestart.restart();
-                  } else {
-                    restart();
-                  }
-                }}
-              >
-                <PoweroffOutlined />
-                {t("configuration.appInfo.restartToUpdate")}
-              </Button>
-            )}
-            {isRemoteClient && remoteRestart.timedOut && (
-              <span className="text-xs text-warning-500">
-                {t("appUpdate.serverRestartUnconfirmed")}
-              </span>
-            )}
-            <ChangelogButton from={updateFrom} version={newVersion?.version} />
-          </div>
-        );
-      case UpdaterStatus.Failed:
-        return (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span>
-              {t("configuration.appInfo.failedToUpdateApp")}: {t(appUpdaterState.error!)}
-            </span>
-            <Button
-              color="primary"
-              variant="light"
-              onClick={() => {
-                BApi.updater.startUpdatingApp();
-              }}
-            >
-              {t("configuration.appInfo.clickToRetry")}
-            </Button>
-            {newVersion?.version && (
-              <ChangelogButton from={updateFrom} version={newVersion.version} />
-            )}
-          </div>
-        );
-      default:
-        return <Icon type="loading" />;
-    }
-  };
+    return () => {
+      ++checkRequestRef.current;
+      checkingRef.current = false;
+    };
+  }, [checkNewAppVersion]);
 
   const renderPathValue = (path: string, description?: string) => (
     <FilePathValue description={description} path={path} />
@@ -423,59 +235,54 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
       {
         id: "coreVersion",
         label: "configuration.appInfo.coreVersion",
-        keywords: ["version", "build", "版本"],
-        value: (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Chip radius="sm" variant="light">
-              {appInfo.coreVersion}
-            </Chip>
-            {appInfo.coreVersion && <ChangelogButton version={appInfo.coreVersion} />}
-            {renderRunningVersionMismatch()}
-          </div>
-        ),
+        keywords: ["version", "build", "core", "current", "版本", "核心", "当前"],
+        value: <CurrentVersionValue newVersion={newVersion} version={appInfo.coreVersion} />,
       },
       {
         id: "latestVersion",
         label: "configuration.appInfo.latestVersion",
-        keywords: ["update", "upgrade", "release", "更新", "版本"],
+        keywords: [
+          "update",
+          "upgrade",
+          "release",
+          "latest",
+          "beta",
+          "channel",
+          "更新",
+          "版本",
+          "最新",
+          "测试",
+          "渠道",
+        ],
         value: (
-          <div className="flex items-center gap-3 flex-wrap">
-            {renderNewVersion()}
-            <Divider orientation="vertical" />
-            <Button
-              color="primary"
-              size="sm"
-              variant="light"
-              onPress={() => navigate("/changelog")}
-            >
-              {t("configuration.appInfo.viewAllChangelogs")}
-            </Button>
-            <Divider orientation="vertical" />
-            <div className="flex items-center gap-1">
-              <Tooltip
-                className="max-w-[300px]"
-                color="secondary"
-                content={t("configuration.others.enablePreRelease.tip")}
-                placement="top"
-              >
-                <div className="flex items-center gap-1 text-foreground-500">
-                  <span className="text-sm">{t("configuration.others.enablePreRelease")}</span>
-                  <AiOutlineQuestionCircle className="text-base" />
-                </div>
-              </Tooltip>
-              <Switch
-                isSelected={appOptions.enablePreReleaseChannel}
-                size="sm"
-                onValueChange={(checked) => {
-                  applyPatches(
-                    BApi.options.patchAppOptions,
-                    { enablePreReleaseChannel: checked },
-                    () => checkNewAppVersion(),
-                  );
-                }}
-              />
-            </div>
-          </div>
+          <AppVersionPanel
+            checkError={checkError}
+            checking={checking}
+            enablePreReleaseChannel={appOptions.enablePreReleaseChannel}
+            newVersion={newVersion}
+            percentage={appUpdaterState.percentage}
+            remoteRestarting={isRemoteClient && remoteRestart.restarting}
+            restartUnconfirmed={isRemoteClient && remoteRestart.timedOut}
+            restarting={isRemoteClient ? remoteRestart.restarting : restarting}
+            status={appUpdaterState.status}
+            updateError={appUpdaterState.error}
+            onChannelChange={(checked) => {
+              applyPatches(
+                BApi.options.patchAppOptions,
+                { enablePreReleaseChannel: checked },
+                () => void checkNewAppVersion(true),
+              );
+            }}
+            onCheck={() => void checkNewAppVersion()}
+            onDownload={() => BApi.updater.startUpdatingApp()}
+            onRestart={() => {
+              if (isRemoteClient) {
+                remoteRestart.restart();
+              } else {
+                restart();
+              }
+            }}
+          />
         ),
       },
     ];

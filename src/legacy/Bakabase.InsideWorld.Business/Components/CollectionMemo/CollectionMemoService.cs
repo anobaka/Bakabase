@@ -36,7 +36,7 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
                 Name = t.Name,
                 Ranges = ranges[t.Id].Select(r => new CollectionMemoRange
                 {
-                    Id = r.Id, StartAt = r.StartAt, EndAt = r.EndAt
+                    Id = r.Id, StartAt = r.StartAt, EndAt = r.EndAt, Url = r.Url, Note = r.Note
                 }).ToList()
             }).ToList();
     }
@@ -126,7 +126,7 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
 
     public async Task<BaseResponse> CreateRange(int targetId, CollectionMemoRangeInputModel input)
     {
-        var error = ValidateRange(input, out var startAt, out var endAt);
+        var error = ValidateRange(input, out var startAt, out var endAt, out var url, out var note);
         if (error != null) return error;
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
         if (!await dbContext.CollectionMemoTargets.AnyAsync(t => t.Id == targetId))
@@ -136,7 +136,7 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
 
         dbContext.CollectionMemoRanges.Add(new CollectionMemoRangeDbModel
         {
-            TargetId = targetId, StartAt = startAt, EndAt = endAt
+            TargetId = targetId, StartAt = startAt, EndAt = endAt, Url = url, Note = note
         });
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
@@ -145,7 +145,7 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
 
     public async Task<BaseResponse> UpdateRange(int targetId, int id, CollectionMemoRangeInputModel input)
     {
-        var error = ValidateRange(input, out var startAt, out var endAt);
+        var error = ValidateRange(input, out var startAt, out var endAt, out var url, out var note);
         if (error != null) return error;
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
         var range = await dbContext.CollectionMemoRanges.AsNoTracking().SingleOrDefaultAsync(r => r.TargetId == targetId && r.Id == id);
@@ -154,7 +154,8 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
             return BaseResponseBuilder.BuildBadRequest("The end must be at or after the global start.");
 
         await dbContext.CollectionMemoRanges.Where(r => r.TargetId == targetId && r.Id == id)
-            .ExecuteUpdateAsync(s => s.SetProperty(r => r.StartAt, startAt).SetProperty(r => r.EndAt, endAt));
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.StartAt, startAt).SetProperty(r => r.EndAt, endAt)
+                .SetProperty(r => r.Url, url).SetProperty(r => r.Note, note));
         await transaction.CommitAsync();
         DetachRanges([range]);
         return BaseResponseBuilder.Ok;
@@ -171,7 +172,7 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
 
     public async Task<BaseResponse> FillGap(int targetId, CollectionMemoRangeInputModel input)
     {
-        var error = ValidateRange(input, out var startAt, out var endAt);
+        var error = ValidateRange(input, out var startAt, out var endAt, out var url, out var note);
         if (error != null) return error;
 
         // SQLite begins an immediate write transaction: no other writer can change coverage
@@ -187,11 +188,13 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
             .Where(r => r.TargetId == targetId).ToListAsync(), globalStart);
         var connected = components.Where(c => c.StartAt <= endAt && c.EndAt >= effectiveStart).ToList();
         var selected = connected.SelectMany(c => c.Ranges).ToList();
-        if (selected.Count == 0)
+        // Metadata belongs to its original record, not the whole connected timeline.
+        // Fill only the requested gap when consolidation would remove links or notes.
+        if (selected.Count == 0 || selected.Any(HasMetadata) || url != null || note != null)
         {
             dbContext.CollectionMemoRanges.Add(new CollectionMemoRangeDbModel
             {
-                TargetId = targetId, StartAt = startAt, EndAt = endAt
+                TargetId = targetId, StartAt = startAt, EndAt = endAt, Url = url, Note = note
             });
             await dbContext.SaveChangesAsync();
         }
@@ -216,12 +219,12 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
         if (input.Ranges == null || input.Ranges.Count == 0 || input.Ranges.Any(r => r == null || r.Id <= 0) ||
             input.Ranges.Select(r => r.Id).Distinct().Count() != input.Ranges.Count)
             return BaseResponseBuilder.BuildBadRequest("Provide each collected range exactly once.");
-        var snapshots = new Dictionary<int, (DateTime? StartAt, DateTime EndAt)>();
+        var snapshots = new Dictionary<int, (DateTime? StartAt, DateTime EndAt, string? Url, string? Note)>();
         foreach (var range in input.Ranges)
         {
-            var error = ValidateRange(range, out var startAt, out var endAt);
+            var error = ValidateRange(range, out var startAt, out var endAt, out var url, out var note);
             if (error != null) return error;
-            snapshots.Add(range.Id, (startAt, endAt));
+            snapshots.Add(range.Id, (startAt, endAt, url, note));
         }
         var hasInheritedStart = snapshots.Values.Any(r => r.StartAt == null);
         DateTime? expectedGlobalStart = null;
@@ -241,7 +244,8 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
         var byId = current.ToDictionary(r => r.Id);
         foreach (var (id, snapshot) in snapshots)
         {
-            if (!byId.TryGetValue(id, out var range) || range.StartAt != snapshot.StartAt || range.EndAt != snapshot.EndAt)
+            if (!byId.TryGetValue(id, out var range) || range.StartAt != snapshot.StartAt || range.EndAt != snapshot.EndAt ||
+                range.Url != snapshot.Url || range.Note != snapshot.Note)
                 return CoverageChanged();
         }
         var components = BuildComponents(current, globalStart);
@@ -262,7 +266,10 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
         // choose the moved boundary. Neighboring components remain separate stored records.
         var keepInherited = input.Edge == "end" && selected.StartAt == globalStart &&
                             selected.Ranges.Any(r => r.StartAt == null);
-        await Consolidate(targetId, selected.Ranges, keepInherited ? null : newStart, newEnd);
+        if (selected.Ranges.Any(HasMetadata))
+            await ResizeAnnotatedCoverage(targetId, selected, input.Edge, newStart, newEnd, globalStart);
+        else
+            await Consolidate(targetId, selected.Ranges, keepInherited ? null : newStart, newEnd);
         await transaction.CommitAsync();
         DetachRanges(selected.Ranges);
         return BaseResponseBuilder.Ok;
@@ -276,6 +283,27 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
         var removedIds = ranges.Where(r => r.Id != survivorId).Select(r => r.Id).ToList();
         if (removedIds.Count > 0)
             await dbContext.CollectionMemoRanges.Where(r => r.TargetId == targetId && removedIds.Contains(r.Id)).ExecuteDeleteAsync();
+    }
+
+    private static bool HasMetadata(CollectionMemoRangeDbModel range) => range.Url != null || range.Note != null;
+
+    private async Task ResizeAnnotatedCoverage(int targetId, CoverageComponent component, string edge,
+        DateTime startAt, DateTime endAt, DateTime globalStart)
+    {
+        foreach (var range in component.Ranges)
+        {
+            var originalStart = range.StartAt ?? globalStart;
+            // Keep every source record. A record outside the resized coverage becomes
+            // a boundary point so its URL and note remain editable and discoverable.
+            var newStart = originalStart < startAt ? startAt : originalStart > endAt ? endAt : originalStart;
+            var newEnd = range.EndAt < startAt ? startAt : range.EndAt > endAt ? endAt : range.EndAt;
+            if (edge == "start" && originalStart == component.StartAt) newStart = startAt;
+            if (edge == "end" && range.EndAt == component.EndAt) newEnd = endAt;
+            DateTime? storedStart = range.StartAt == null && edge == "end" && newStart == globalStart
+                ? null : newStart;
+            await dbContext.CollectionMemoRanges.Where(r => r.TargetId == targetId && r.Id == range.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.StartAt, storedStart).SetProperty(r => r.EndAt, newEnd));
+        }
     }
 
     private void DetachRanges(List<CollectionMemoRangeDbModel> ranges)
@@ -341,10 +369,17 @@ public class CollectionMemoService(BakabaseDbContext dbContext)
     }
 
     private static BaseResponse? ValidateRange(CollectionMemoRangeInputModel input, out DateTime? startAt,
-        out DateTime endAt)
+        out DateTime endAt, out string? url, out string? note)
     {
         startAt = null;
         endAt = default;
+        url = string.IsNullOrWhiteSpace(input.Url) ? null : input.Url.Trim();
+        note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim();
+        if (url != null && (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                            !uri.IsWellFormedOriginalString() ||
+                            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+                            string.IsNullOrEmpty(uri.Host) || !string.IsNullOrEmpty(uri.UserInfo)))
+            return BaseResponseBuilder.BuildBadRequest("The link must be an absolute HTTP or HTTPS URL without credentials.");
         if ((input.StartAt != null && !TryParseTime(input.StartAt, out var _)) || !TryParseTime(input.EndAt, out endAt))
             return BaseResponseBuilder.BuildBadRequest("Start and end must be valid ISO date-times with a UTC offset.");
         if (input.StartAt != null)

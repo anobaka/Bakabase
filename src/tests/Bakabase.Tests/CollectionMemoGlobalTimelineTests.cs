@@ -356,7 +356,7 @@ public class CollectionMemoGlobalTimelineTests
     {
         Ranges = ranges.Select(r => new CollectionMemoRangeSnapshotInputModel
         {
-            Id = r.Id, StartAt = r.StartAt?.ToString("O"), EndAt = r.EndAt.ToString("O")
+            Id = r.Id, StartAt = r.StartAt?.ToString("O"), EndAt = r.EndAt.ToString("O"), Url = r.Url, Note = r.Note
         }).ToList(),
         Edge = edge,
         At = at,

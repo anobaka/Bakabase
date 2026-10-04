@@ -58,5 +58,10 @@
   "collectionMemo.range.inherited": "Uses global start",
   "collectionMemo.range.inheritPlaceholder": "Leave blank to use the global start",
   "collectionMemo.range.inheritHint": "A blank start uses the global start and follows changes to timeline settings. Enter a date to keep this range’s start fixed.",
-  "collectionMemo.validation.inheritedOrder": "The end cannot be before the global start. Change the end or enter an earlier start."
+  "collectionMemo.validation.inheritedOrder": "The end cannot be before the global start. Change the end or enter an earlier start.",
+  "collectionMemo.range.url": "Link (optional)",
+  "collectionMemo.range.urlHint": "Click the time range to open this link in your browser.",
+  "collectionMemo.range.note": "Note (optional)",
+  "collectionMemo.validation.url": "Enter a full http:// or https:// link.",
+  "collectionMemo.timeline.linksHint": "Press Enter to choose a link for this time range."
 }
