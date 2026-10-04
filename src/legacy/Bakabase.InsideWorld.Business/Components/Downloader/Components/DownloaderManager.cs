@@ -41,7 +41,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         /// </summary>
         private readonly ConcurrentDictionary<int, byte> _noTorrentTaskIds = new();
         private readonly IStringLocalizer<SharedResource> _localizer;
-        private readonly IDownloaderLocalizer _downloaderLocalizer;
         private readonly IDownloaderFactory _downloaderFactory;
         private readonly BTaskManager _bTaskManager;
 
@@ -77,13 +76,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         }
 
         public DownloaderManager(IServiceProvider serviceProvider, IStringLocalizer<SharedResource> localizer,
-            ILogger<DownloaderManager> logger, IDownloaderLocalizer downloaderLocalizer,
+            ILogger<DownloaderManager> logger,
             IDownloaderFactory downloaderFactory, BTaskManager bTaskManager)
         {
             _serviceProvider = serviceProvider;
             _localizer = localizer;
             _logger = logger;
-            _downloaderLocalizer = downloaderLocalizer;
             _downloaderFactory = downloaderFactory;
             _bTaskManager = bTaskManager;
 
@@ -371,9 +369,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                     var occupiedTasks = await service.GetByKeys(activeConflictDownloaders.Keys);
                     var message = _localizer[SharedResource.Downloader_DownloaderCountExceeded, task.ThirdPartyId,
                         $"{Environment.NewLine}{string.Join(Environment.NewLine, occupiedTasks.Select(a => a.Name ?? a.Key))}"];
-                    var fullMessage = _downloaderLocalizer["FailedToStart", task.ThirdPartyId, task.Name ?? task.Key,
-                        message];
-                    return BaseResponseBuilder.Build(ResponseCode.Conflict, fullMessage);
+                    // An occupied source needs a download-order choice, not a failure message.
+                    return BaseResponseBuilder.Build(ResponseCode.Conflict, message);
                 }
             }
 

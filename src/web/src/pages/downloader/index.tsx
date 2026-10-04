@@ -27,6 +27,7 @@ import { MdPlayCircle, MdAccessTime, MdDelete } from "react-icons/md";
 import DownloadTaskDetailModal from "./components/TaskDetailModal";
 import BatchEditModal from "./components/BatchEditModal";
 import TaskErrorMessage from "./components/TaskErrorMessage";
+import DownloadOrderPrompt from "./components/DownloadOrderPrompt";
 import TaskRow, { DOWNLOAD_TASK_ITEM_HEIGHT } from "./components/TaskRow";
 import DownloadTaskFilters, { type DownloadTaskFilter } from "./components/DownloadTaskFilters";
 import { downloadTaskDirectly } from "./directDownload";
@@ -224,31 +225,51 @@ const DownloaderPage = () => {
     );
 
     if (rsp.code == ResponseCode.Conflict) {
+      let decided = false;
+
       createPortal(Modal, {
         defaultVisible: true,
         size: "lg",
-        title: t<string>("downloader.confirm.conflictedTasks"),
-        children: rsp.message,
+        title: t<string>("downloader.downloadOrder.title"),
+        children: <DownloadOrderPrompt message={rsp.message} />,
         footer: {
           actions: ["ok", "cancel"],
           okProps: {
             children: t<string>("downloader.action.downloadSelectedFirst"),
+            color: "default",
+            variant: "bordered",
           },
           cancelProps: {
             children: t<string>("downloader.action.addToQueue"),
+            color: "primary",
+            variant: "solid",
+            autoFocus: true,
           },
         },
         onOk: async () => {
-          return await BApi.downloadTask.startDownloadTasks({
-            ids,
-            actionOnConflict: DownloadTaskActionOnConflict.StopOthers,
-          });
+          decided = true;
+
+          try {
+            return await BApi.downloadTask.startDownloadTasks({
+              ids,
+              actionOnConflict: DownloadTaskActionOnConflict.StopOthers,
+            });
+          } catch (error) {
+            // A rejected request leaves the modal open so another choice is still possible.
+            decided = false;
+            throw error;
+          }
         },
-        onClose: async () =>
+        onClose: async () => {
+          // Modal also closes after OK; dispatch only the chosen download order.
+          if (decided) return;
+          decided = true;
+
           await BApi.downloadTask.startDownloadTasks({
             ids,
             actionOnConflict: DownloadTaskActionOnConflict.Ignore,
-          }),
+          });
+        },
       });
     }
   };
@@ -531,12 +552,21 @@ const DownloaderPage = () => {
         portal(Modal, {
           defaultVisible: true,
           size: "lg",
-          title: translate<string>("downloader.confirm.conflictedTasks"),
-          children: response.message,
+          title: translate<string>("downloader.downloadOrder.title"),
+          children: <DownloadOrderPrompt message={response.message} />,
           footer: {
             actions: ["ok", "cancel"],
-            okProps: { children: translate<string>("downloader.action.downloadSelectedFirst") },
-            cancelProps: { children: translate<string>("downloader.action.addToQueue") },
+            okProps: {
+              children: translate<string>("downloader.action.downloadSelectedFirst"),
+              color: "default",
+              variant: "bordered",
+            },
+            cancelProps: {
+              children: translate<string>("downloader.action.addToQueue"),
+              color: "primary",
+              variant: "solid",
+              autoFocus: true,
+            },
           },
           onOk: () => {
             decided = true;

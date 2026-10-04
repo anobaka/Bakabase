@@ -5,6 +5,7 @@ import type { DownloadTaskFilter } from "../components/DownloadTaskFilters";
 import { useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { act } from "react-dom/test-utils";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import DownloaderPage from "..";
@@ -242,17 +243,30 @@ describe("downloader page task selection", () => {
     ["first", DownloadTaskActionOnConflict.StopOthers],
     ["queue", DownloadTaskActionOnConflict.Ignore],
   ])(
-    "retries direct download after choosing %s in the normal conflict prompt",
+    "retries direct download after choosing %s in the download order prompt",
     async (choice, action) => {
       directDownload
-        .mockResolvedValueOnce({ code: ResponseCode.Conflict, message: "Another task is running" })
+        .mockResolvedValueOnce({ code: ResponseCode.Conflict, message: "FailedToStart" })
         .mockResolvedValueOnce({ code: ResponseCode.Success });
       await act(async () => root.render(<DownloaderPage />));
       await choose("direct-22");
       const modal = createPortal.mock.calls.at(-1)![1];
 
-      expect(modal.title).toBe("downloader.confirm.conflictedTasks");
-      expect(modal.children).toBe("Another task is running");
+      expect(modal.title).toBe("downloader.downloadOrder.title");
+      const body = renderToStaticMarkup(modal.children);
+
+      expect(body).toContain("downloader.downloadOrder.queueHint");
+      expect(body).toContain("downloader.downloadOrder.priorityHint");
+      expect(body).not.toContain("FailedToStart");
+      expect(modal.footer.cancelProps).toMatchObject({
+        children: "downloader.action.addToQueue",
+        color: "primary",
+        autoFocus: true,
+      });
+      expect(modal.footer.okProps).toMatchObject({
+        children: "downloader.action.downloadSelectedFirst",
+        color: "default",
+      });
       expect(directDownload).toHaveBeenCalledTimes(1);
 
       await act(async () => {
@@ -267,6 +281,56 @@ describe("downloader page task selection", () => {
     },
   );
 
+  it.each([
+    ["first", DownloadTaskActionOnConflict.StopOthers],
+    ["queue", DownloadTaskActionOnConflict.Ignore],
+  ])("starts the selected tasks only once after choosing %s", async (choice, action) => {
+    startTasks
+      .mockResolvedValueOnce({ code: ResponseCode.Conflict, message: "Another task is running" })
+      .mockResolvedValueOnce({ code: ResponseCode.Success });
+    await act(async () => root.render(<DownloaderPage />));
+    await choose("Bravo");
+    await choose("downloader.action.startSelected");
+    const modal = createPortal.mock.calls.at(-1)![1];
+
+    expect(modal.title).toBe("downloader.downloadOrder.title");
+    expect(renderToStaticMarkup(modal.children)).toContain("Another task is running");
+    expect(useDownloadTasksStore.getState().tasks.find((item) => item.id === 22)!.status).toBe(
+      DownloadTaskStatus.Idle,
+    );
+
+    await act(async () => {
+      if (choice === "first") await modal.onOk();
+      // Closing follows OK as well as the queue button, Escape and the close button.
+      await modal.onClose();
+    });
+
+    expect(startTasks.mock.calls.map(([payload]) => payload)).toEqual([
+      { ids: [22], actionOnConflict: DownloadTaskActionOnConflict.NotSet },
+      { ids: [22], actionOnConflict: action },
+    ]);
+  });
+
+  it("can enqueue after a rejected priority request leaves the prompt open", async () => {
+    startTasks
+      .mockResolvedValueOnce({ code: ResponseCode.Conflict, message: "Another task is running" })
+      .mockRejectedValueOnce(new Error("Network unavailable"))
+      .mockResolvedValueOnce({ code: ResponseCode.Success });
+    await act(async () => root.render(<DownloaderPage />));
+    await choose("Bravo");
+    await choose("downloader.action.startSelected");
+    const modal = createPortal.mock.calls.at(-1)![1];
+
+    await expect(modal.onOk()).rejects.toThrow("Network unavailable");
+    await modal.onClose();
+
+    expect(startTasks.mock.calls.map(([payload]) => payload)).toEqual([
+      { ids: [22], actionOnConflict: DownloadTaskActionOnConflict.NotSet },
+      { ids: [22], actionOnConflict: DownloadTaskActionOnConflict.StopOthers },
+      { ids: [22], actionOnConflict: DownloadTaskActionOnConflict.Ignore },
+    ]);
+  });
+
   it("propagates a refused direct download so the row can display the failure", async () => {
     directDownload.mockResolvedValueOnce({
       code: ResponseCode.InvalidPayloadOrOperation,
@@ -276,6 +340,7 @@ describe("downloader page task selection", () => {
     await choose("direct-22");
 
     await expect(directResults.get(22)).rejects.toThrow("Cookie expired");
+    expect(createPortal).not.toHaveBeenCalled();
     expect(startTasks).not.toHaveBeenCalled();
     expect(useDownloadTasksStore.getState().tasks.find((item) => item.id === 22)!.status).toBe(
       DownloadTaskStatus.Idle,
