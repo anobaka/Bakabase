@@ -58,5 +58,10 @@
   "collectionMemo.range.inherited": "使用全局开始时间",
   "collectionMemo.range.inheritPlaceholder": "留空以使用全局开始时间",
   "collectionMemo.range.inheritHint": "开始时间留空时使用全局开始时间，并随时间条设置变化。填写具体时间可固定此时间段的起点。",
-  "collectionMemo.validation.inheritedOrder": "结束时间不能早于全局开始时间。请修改结束时间，或填写更早的开始时间。"
+  "collectionMemo.validation.inheritedOrder": "结束时间不能早于全局开始时间。请修改结束时间，或填写更早的开始时间。",
+  "collectionMemo.range.url": "链接（可选）",
+  "collectionMemo.range.urlHint": "填写后，点击时间段可在外部浏览器打开链接。",
+  "collectionMemo.range.note": "备注（可选）",
+  "collectionMemo.validation.url": "请输入完整的 http:// 或 https:// 链接。",
+  "collectionMemo.timeline.linksHint": "按 Enter 可选择此时间段的链接。"
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getTimelineDomain,
+  getCollectionMemoRangeUrl,
   getTimelineCoverage,
   getTimelineRegions,
   getCoverageResizeBounds,
@@ -20,6 +21,39 @@ const range = (id: number, start: number, end: number) => ({
   id,
   startAt: new Date(start).toISOString(),
   endAt: new Date(end).toISOString(),
+});
+
+describe("collection memo range links", () => {
+  it.each([
+    "https://example.com/path?q=test#source",
+    "http://example.com/%20",
+    "https://例子.测试/来源",
+  ])("preserves a valid external link: %s", (url) =>
+    expect(getCollectionMemoRangeUrl(`  ${url}  `)).toBe(url),
+  );
+
+  it.each([
+    null,
+    "",
+    "not a URL",
+    "javascript:alert(1)",
+    "https://user:pass@example.com",
+    "http:///example.com",
+    "https://example.com/a b",
+    "https://example.com/%no",
+    "https://example.com\\path",
+  ])("rejects a missing or malformed link: %s", (url) =>
+    expect(getCollectionMemoRangeUrl(url)).toBeUndefined(),
+  );
+
+  it("retains each original record's metadata when coverage is combined", () => {
+    const records = [
+      { ...range(1, 20, 50), url: "https://example.com/one", note: "First" },
+      { ...range(2, 40, 60), url: "https://example.com/two", note: "Second" },
+    ];
+
+    expect(getTimelineCoverage(records)[0].ranges).toEqual(records);
+  });
 });
 
 describe("collection memo timeline", () => {

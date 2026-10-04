@@ -142,6 +142,97 @@ public class CollectionMemoTests
     }
 
     [TestMethod]
+    public async Task RangeMetadata_PersistsEditsAndClearsWithoutChangingInheritedStartOrTicks()
+    {
+        var id = await CreateTarget("Metadata");
+        Assert.AreEqual(0, (await _service.UpdateSettings(new() {StartAt = Time(1, "1234567")})).Code);
+        var input = Range(null, Time(5, "7654321"));
+        input.Url = "  https://example.com/gallery?q=one&next=two#page  ";
+        input.Note = "  <b>Plain text</b>\nSecond line  ";
+        Assert.AreEqual(0, (await _service.CreateRange(id, input)).Code);
+        await RestartContext();
+        var original = (await Ranges(id)).Single();
+        Assert.IsNull(original.StartAt);
+        Assert.AreEqual(DateTimeOffset.Parse(input.EndAt).UtcDateTime.Ticks, original.EndAt.Ticks);
+        Assert.AreEqual(input.Url.Trim(), original.Url);
+        Assert.AreEqual("<b>Plain text</b>\nSecond line", original.Note);
+
+        input.Url = "http://example.com/edited";
+        input.Note = "Changed\r\nMultiple lines";
+        Assert.AreEqual(0, (await _service.UpdateRange(id, original.Id, input)).Code);
+        await RestartContext();
+        var edited = (await Ranges(id)).Single();
+        Assert.AreEqual(input.Url, edited.Url);
+        Assert.AreEqual(input.Note, edited.Note);
+        Assert.AreEqual(original.EndAt.Ticks, edited.EndAt.Ticks);
+        Assert.IsNull(edited.StartAt);
+
+        input.Url = " \t ";
+        input.Note = " \r\n ";
+        Assert.AreEqual(0, (await _service.UpdateRange(id, original.Id, input)).Code);
+        await RestartContext();
+        var cleared = (await Ranges(id)).Single();
+        Assert.IsNull(cleared.Url);
+        Assert.IsNull(cleared.Note);
+        Assert.IsNull(cleared.StartAt);
+        Assert.AreEqual(original.EndAt.Ticks, cleared.EndAt.Ticks);
+    }
+
+    [DataTestMethod]
+    [DataRow("javascript:alert(1)")]
+    [DataRow("file:///tmp/memo")]
+    [DataRow("ftp://example.com/file")]
+    [DataRow("//example.com/relative")]
+    [DataRow("/relative")]
+    [DataRow("https://user:password@example.com/path")]
+    [DataRow("https://example.com/path with spaces")]
+    [DataRow("https://example.com/one\ntwo")]
+    public async Task InvalidRangeLinks_RejectCreateEditAndFillWithoutChangingData(string url)
+    {
+        var id = await CreateTarget("URL validation");
+        var input = Range(Time(1), Time(2));
+        input.Url = "https://example.com/original";
+        input.Note = "Keep this note";
+        Assert.AreEqual(0, (await _service.CreateRange(id, input)).Code);
+        var original = (await Ranges(id)).Single();
+        input.Url = url;
+        Assert.AreEqual((int) ResponseCode.InvalidPayloadOrOperation, (await _service.CreateRange(id, input)).Code);
+        Assert.AreEqual((int) ResponseCode.InvalidPayloadOrOperation, (await _service.UpdateRange(id, original.Id, input)).Code);
+        Assert.AreEqual((int) ResponseCode.InvalidPayloadOrOperation, (await _service.FillGap(id, input)).Code);
+        AssertRangeEqual(original, (await Ranges(id)).Single());
+    }
+
+    [TestMethod]
+    public async Task RangeMetadataMigration_AddsNullableColumnsWithoutRewritingLegacyData()
+    {
+        await _db.Database.EnsureDeletedAsync();
+        await RestartContext();
+        await _db.GetService<IMigrator>().MigrateAsync("20261002084359_AddCollectionMemoGlobalTimelineSettings");
+        await _db.Database.ExecuteSqlRawAsync("INSERT INTO CollectionMemoTargets (Id, Name, NormalizedName) VALUES (1, 'Legacy', 'LEGACY')");
+        var start = DateTimeOffset.Parse(Time(1, "1234567")).UtcDateTime;
+        var end = DateTimeOffset.Parse(Time(2, "7654321")).UtcDateTime;
+        await _db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO CollectionMemoRanges (Id, TargetId, StartAt, EndAt) VALUES (1, 1, {start}, {end})");
+        await _db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO CollectionMemoSettings (Id, StartAt, Reverse) VALUES (1, {start}, 1)");
+        await _db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO CollectionMemoRanges (Id, TargetId, StartAt, EndAt) VALUES (2, 1, NULL, {end})");
+        await _db.Database.MigrateAsync();
+        Assert.IsFalse(_db.Database.HasPendingModelChanges());
+        await RestartContext();
+        var records = await Ranges(1);
+        Assert.AreEqual(2, records.Count);
+        Assert.AreEqual(start.Ticks, records.Single(r => r.Id == 1).StartAt!.Value.Ticks);
+        Assert.IsNull(records.Single(r => r.Id == 2).StartAt);
+        foreach (var record in records)
+        {
+            Assert.AreEqual(end.Ticks, record.EndAt.Ticks);
+            Assert.AreEqual(DateTimeKind.Utc, record.EndAt.Kind);
+            Assert.IsNull(record.Url);
+            Assert.IsNull(record.Note);
+        }
+        Assert.AreEqual(start.Ticks, (await _service.GetSettings()).StartAt.Ticks);
+        Assert.IsTrue((await _service.GetSettings()).Reverse);
+    }
+
+    [TestMethod]
     public async Task DatabaseUniqueIndex_RejectsDuplicateNamesAcrossContexts()
     {
         await CreateTarget("Target");
@@ -232,6 +323,92 @@ public class CollectionMemoTests
         var result = await Ranges(id);
         Assert.AreEqual(2, result.Count);
         AssertRangeEqual(existing, result[1]);
+    }
+
+    [TestMethod]
+    public async Task FillGap_PreservesAnnotatedRecordsAndStoresOnlyTheRequestedGap()
+    {
+        var id = await CreateTarget("Linked coverage");
+        var first = Range(Time(1, "1234567"), Time(3, "7654321"));
+        first.Url = "https://example.com/first";
+        var second = Range(Time(5, "1234567"), Time(7, "7654321"));
+        second.Note = "Second source";
+        await _service.CreateRange(id, first);
+        await _service.CreateRange(id, second);
+        var original = await Ranges(id);
+        Assert.AreEqual(0, (await _service.FillGap(id, Range(first.EndAt, second.StartAt!))).Code);
+        await RestartContext();
+        var result = await Ranges(id);
+        Assert.AreEqual(3, result.Count);
+        foreach (var record in original) AssertRangeEqual(record, result.Single(r => r.Id == record.Id));
+        var filled = result.Single(r => original.All(o => o.Id != r.Id));
+        Assert.AreEqual(original[0].EndAt.Ticks, filled.StartAt!.Value.Ticks);
+        Assert.AreEqual(original[1].StartAt!.Value.Ticks, filled.EndAt.Ticks);
+        Assert.IsNull(filled.Url);
+        Assert.IsNull(filled.Note);
+    }
+
+    [DataTestMethod]
+    [DataRow("start", 9)]
+    [DataRow("end", 2)]
+    public async Task ResizeAnnotatedCoverage_PreservesAllMetadataAndCollapsesCroppedRecordsToBoundaryPoints(string edge, int day)
+    {
+        var id = await CreateTarget("Metadata resize");
+        foreach (var (start, end) in new[] {(1, 5), (4, 8), (7, 10)})
+        {
+            var input = Range(Time(start, "1234567"), Time(end, "7654321"));
+            input.Url = $"https://example.com/{start}";
+            input.Note = $"Source {start}\nMore details";
+            Assert.AreEqual(0, (await _service.CreateRange(id, input)).Code);
+        }
+        var original = await Ranges(id);
+        var at = Time(day, "9876543");
+        Assert.AreEqual(0, (await _service.ResizeCoverage(id, Resize(original, edge, at))).Code);
+        await RestartContext();
+        var result = await Ranges(id);
+        Assert.AreEqual(original.Count, result.Count);
+        foreach (var record in original)
+        {
+            var resized = result.Single(r => r.Id == record.Id);
+            Assert.AreEqual(record.Url, resized.Url);
+            Assert.AreEqual(record.Note, resized.Note);
+        }
+        var boundary = DateTimeOffset.Parse(at).UtcDateTime;
+        foreach (var cropped in result.Where(r => edge == "start" ? r.Id != original[2].Id : r.Id != original[0].Id))
+        {
+            Assert.AreEqual(boundary.Ticks, cropped.StartAt!.Value.Ticks);
+            Assert.AreEqual(boundary.Ticks, cropped.EndAt.Ticks);
+        }
+        Assert.AreEqual(edge == "start" ? boundary.Ticks : original[0].StartAt!.Value.Ticks,
+            result.Min(r => r.StartAt)!.Value.Ticks);
+        Assert.AreEqual(edge == "end" ? boundary.Ticks : original[2].EndAt.Ticks, result.Max(r => r.EndAt).Ticks);
+    }
+
+    [TestMethod]
+    public async Task ResizeAnnotatedCoverage_RejectsMetadataChangedSinceSnapshotAndPreservesInheritedStart()
+    {
+        var id = await CreateTarget("Inherited metadata");
+        await _service.UpdateSettings(new() {StartAt = Time(1, "1234567")});
+        var input = Range(null, Time(5, "7654321"));
+        input.Url = "https://example.com/first";
+        input.Note = "Original";
+        await _service.CreateRange(id, input);
+        var original = await Ranges(id);
+        var stale = Resize(original, "end", Time(6));
+        stale.ExpectedGlobalStartAt = Time(1, "1234567");
+        input.Note = "Changed concurrently";
+        await _service.UpdateRange(id, original[0].Id, input);
+        Assert.AreEqual((int) ResponseCode.Conflict, (await _service.ResizeCoverage(id, stale)).Code);
+        var current = await Ranges(id);
+        var fresh = Resize(current, "end", Time(6, "9876543"));
+        fresh.ExpectedGlobalStartAt = stale.ExpectedGlobalStartAt;
+        Assert.AreEqual(0, (await _service.ResizeCoverage(id, fresh)).Code);
+        await RestartContext();
+        var result = (await Ranges(id)).Single();
+        Assert.IsNull(result.StartAt);
+        Assert.AreEqual(input.Url, result.Url);
+        Assert.AreEqual(input.Note, result.Note);
+        Assert.AreEqual(DateTimeOffset.Parse(fresh.At).UtcDateTime.Ticks, result.EndAt.Ticks);
     }
 
     [DataTestMethod]
@@ -406,7 +583,7 @@ public class CollectionMemoTests
     {
         Ranges = ranges.Select(r => new CollectionMemoRangeSnapshotInputModel
         {
-            Id = r.Id, StartAt = r.StartAt?.ToString("O"), EndAt = r.EndAt.ToString("O")
+            Id = r.Id, StartAt = r.StartAt?.ToString("O"), EndAt = r.EndAt.ToString("O"), Url = r.Url, Note = r.Note
         }).ToList(),
         Edge = edge,
         At = at
@@ -419,6 +596,8 @@ public class CollectionMemoTests
         Assert.AreEqual(expected.Id, actual.Id);
         Assert.AreEqual(expected.StartAt, actual.StartAt);
         Assert.AreEqual(expected.EndAt.Ticks, actual.EndAt.Ticks);
+        Assert.AreEqual(expected.Url, actual.Url);
+        Assert.AreEqual(expected.Note, actual.Note);
     }
 
     private static void AssertRangesEqual(List<CollectionMemoRange> expected, List<CollectionMemoRange> actual)

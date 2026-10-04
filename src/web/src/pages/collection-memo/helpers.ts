@@ -7,7 +7,35 @@ export interface CollectionMemoRange {
   id: number;
   startAt: string | null;
   endAt: string;
+  url?: string | null;
+  note?: string | null;
 }
+
+export type CollectionMemoRangeInput = Pick<CollectionMemoRange, "startAt" | "endAt"> & {
+  url?: string;
+  note?: string;
+};
+
+export const getCollectionMemoRangeUrl = (value?: string | null): string | undefined => {
+  if (!value?.trim()) return undefined;
+  const trimmed = value.trim();
+
+  if (
+    !/^https?:\/\/[^/\s]+/i.test(trimmed) ||
+    /[\s\\]/.test(trimmed) ||
+    /%(?![\da-f]{2})/i.test(trimmed)
+  )
+    return undefined;
+  try {
+    const url = new URL(trimmed);
+
+    return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password
+      ? trimmed
+      : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 export interface CollectionMemoSettings {
   startAt: string;

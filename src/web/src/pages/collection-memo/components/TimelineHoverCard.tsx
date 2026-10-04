@@ -10,6 +10,8 @@ export interface TimelineHoverSource {
   id: string;
   label: string;
   description?: string;
+  details?: ReactNode;
+  interactive?: boolean;
   onFill?: () => Promise<boolean>;
   error?: string;
 }
@@ -188,7 +190,9 @@ export const useTimelineHover = ({ sources, track, disabled, suppressed }: Optio
     }
     reposition();
     if (pendingFocus.current) {
-      const action = cardRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)");
+      const action = cardRef.current?.querySelector<HTMLElement>(
+        'button:not(:disabled), [role="link"], a[href]',
+      );
 
       if (action && !disabled && !isFilling) {
         pendingFocus.current = false;
@@ -248,7 +252,7 @@ export const useTimelineHover = ({ sources, track, disabled, suppressed }: Optio
             className="fixed z-[100] overflow-y-auto rounded-large border border-default-200 bg-content1 text-sm shadow-lg"
             data-collection-memo-hover-card=""
             id={popupId}
-            role={source.onFill ? "dialog" : "tooltip"}
+            role={source.onFill || source.interactive ? "dialog" : "tooltip"}
             style={position}
             onBlurCapture={(event) => blur(event.relatedTarget)}
             onFocusCapture={holdOpen}
@@ -264,6 +268,7 @@ export const useTimelineHover = ({ sources, track, disabled, suppressed }: Optio
             <div className="flex flex-col gap-2 p-3">
               <p>{source.label}</p>
               {source.description && <p className="text-default-500">{source.description}</p>}
+              {source.details}
               {source.onFill && (
                 <Button
                   color="success"

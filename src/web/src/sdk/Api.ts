@@ -1528,6 +1528,8 @@ export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomain
   startAt?: string;
   /** @format date-time */
   endAt: string;
+  url?: string;
+  note?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsDomainCollectionMemoSettings {
@@ -1560,12 +1562,16 @@ export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputC
   startAt?: string;
   /** @minLength 1 */
   endAt: string;
+  url?: string;
+  note?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsCollectionMemoModelsInputCollectionMemoRangeSnapshotInputModel {
   startAt?: string;
   /** @minLength 1 */
   endAt: string;
+  url?: string;
+  note?: string;
   /** @format int32 */
   id: number;
 }

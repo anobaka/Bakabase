@@ -3,6 +3,7 @@
 import type {
   CollectionMemoCoverageResize,
   CollectionMemoRange,
+  CollectionMemoRangeInput,
   CollectionMemoSettings,
   CollectionMemoTarget,
 } from "./helpers";
@@ -23,12 +24,14 @@ import TargetEditor from "./components/TargetEditor";
 import Timeline from "./components/Timeline";
 import {
   getTimelineDomain,
+  getCollectionMemoRangeUrl,
   getTimestampTicks,
   requireSuccess,
   resolveCollectionMemoRangeStart,
 } from "./helpers";
 
 import BApi from "@/sdk/BApi";
+import ExternalLink from "@/components/ExternalLink";
 import { Button, Card, CardBody, Input, Modal, Spinner } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -145,6 +148,8 @@ const CollectionMemoPage = () => {
             ranges: resize.ranges.map((range) => ({
               ...range,
               startAt: range.startAt ?? undefined,
+              url: range.url ?? undefined,
+              note: range.note ?? undefined,
             })),
           },
           {
@@ -181,7 +186,7 @@ const CollectionMemoPage = () => {
       range,
       targetName: target.name,
       globalStartAt: settings.startAt,
-      onSave: async (value: { startAt: string | null; endAt: string }) => {
+      onSave: async (value: CollectionMemoRangeInput) => {
         const input = { ...value, startAt: value.startAt ?? undefined };
 
         requireSuccess(
@@ -280,6 +285,9 @@ const CollectionMemoPage = () => {
               {t<string>("collectionMemo.settings.start")}：{" "}
               <time dateTime={settings.startAt}>{formatDate(settings.startAt)}</time>
             </span>
+            <time dateTime={new Date(domain.end).toISOString()}>
+              {t<string>("collectionMemo.timeline.now", { date: formatDate(domain.end) })}
+            </time>
             <span>
               {t<string>(
                 settings.reverse
@@ -418,6 +426,23 @@ const CollectionMemoPage = () => {
                     })
                     .map((range) => {
                       const startAt = resolveCollectionMemoRangeStart(range, settings?.startAt);
+                      const url = getCollectionMemoRangeUrl(range.url);
+                      const dates = (
+                        <>
+                          {startAt && <time dateTime={startAt}>{formatDate(startAt)}</time>}
+                          {startAt &&
+                          getTimestampTicks(startAt) === getTimestampTicks(range.endAt) ? (
+                            <span className="ml-2 text-xs text-default-500">
+                              {t<string>("collectionMemo.range.point")}
+                            </span>
+                          ) : (
+                            <>
+                              <span className="px-2">~</span>
+                              <time dateTime={range.endAt}>{formatDate(range.endAt)}</time>
+                            </>
+                          )}
+                        </>
+                      );
 
                       return (
                         <li
@@ -430,17 +455,20 @@ const CollectionMemoPage = () => {
                                 {t<string>("collectionMemo.range.inherited")}
                               </span>
                             )}
-                            {startAt && <time dateTime={startAt}>{formatDate(startAt)}</time>}
-                            {startAt &&
-                            getTimestampTicks(startAt) === getTimestampTicks(range.endAt) ? (
-                              <span className="ml-2 text-xs text-default-500">
-                                {t<string>("collectionMemo.range.point")}
-                              </span>
+                            {url ? (
+                              <ExternalLink
+                                className="inline-flex max-w-full flex-wrap text-sm"
+                                href={url}
+                              >
+                                {dates}
+                              </ExternalLink>
                             ) : (
-                              <>
-                                <span className="px-2">~</span>
-                                <time dateTime={range.endAt}>{formatDate(range.endAt)}</time>
-                              </>
+                              dates
+                            )}
+                            {range.note && (
+                              <p className="mt-1 whitespace-pre-wrap break-words text-xs text-default-500">
+                                {range.note}
+                              </p>
                             )}
                           </div>
                           <Button

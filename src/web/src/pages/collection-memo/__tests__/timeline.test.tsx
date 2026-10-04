@@ -15,6 +15,12 @@ import {
   getTimestampTicks,
 } from "../helpers";
 
+const openUrl = vi.hoisted(() => vi.fn());
+
+vi.mock("@/sdk/BApi", () => ({
+  default: { gui: { openUrlInDefaultBrowser: openUrl } },
+}));
+
 vi.mock("@/components/bakaui", () => ({
   Button: ({
     children,
@@ -70,6 +76,7 @@ const oldRelease = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "relea
 const oldHas = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "hasPointerCapture");
 
 beforeEach(() => {
+  openUrl.mockClear();
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -170,6 +177,140 @@ const showTimeline = (
 
   return { ...view, props, onResizeCoverage, onFillGap };
 };
+
+describe("timeline range metadata", () => {
+  it.each([20, 20.5])(
+    "opens linked point/short interval on a boundary click without a resize (end=%s)",
+    (end) => {
+      const annotated = { ...record(1, 20, end), url: "https://example.com/short" };
+      const { onResizeCoverage } = showTimeline(undefined, undefined, {
+        ...target,
+        ranges: [annotated],
+      });
+
+      pointerDown(endHandles()[0], 300);
+      pointerUp(trackElement(), 301);
+      expect(openUrl).toHaveBeenCalledExactlyOnceWith({ url: annotated.url });
+      expect(onResizeCoverage).not.toHaveBeenCalled();
+    },
+  );
+
+  it("resizes a linked interval without opening its URL when the pointer moves", async () => {
+    const annotated = {
+      ...record(1, 20, 40),
+      url: "https://example.com/source",
+      note: "Keep note",
+    };
+    const { onResizeCoverage } = showTimeline(undefined, undefined, {
+      ...target,
+      ranges: [annotated],
+    });
+
+    pointerDown(endHandles()[0], 500);
+    pointerMove(trackElement(), 600);
+    await act(async () => pointerUp(trackElement(), 600));
+    expect(openUrl).not.toHaveBeenCalled();
+    expect(onResizeCoverage).toHaveBeenCalledExactlyOnceWith({
+      ranges: [annotated],
+      edge: "end",
+      at: iso(50),
+    });
+  });
+
+  it("does not open a source when a drag returns to its original position", () => {
+    const annotated = { ...record(1, 20, 40), url: "https://example.com/source" };
+    const { onResizeCoverage } = showTimeline(undefined, undefined, {
+      ...target,
+      ranges: [annotated],
+    });
+
+    pointerDown(endHandles()[0], 500);
+    pointerMove(trackElement(), 600);
+    pointerUp(trackElement(), 500);
+    expect(openUrl).not.toHaveBeenCalled();
+    expect(onResizeCoverage).not.toHaveBeenCalled();
+  });
+
+  it("opens original-source choices on a merged boundary click", async () => {
+    const first = { ...record(1, 20, 25), url: "https://example.com/first" };
+    const second = { ...record(2, 25, 30), url: "https://example.com/second" };
+
+    showTimeline(undefined, undefined, { ...target, ranges: [first, second] });
+    pointerDown(endHandles()[0], 400);
+    pointerUp(trackElement(), 400);
+    await waitFor(() => expect(screen.getByRole("dialog").querySelectorAll("a")).toHaveLength(2));
+    expect(openUrl).not.toHaveBeenCalled();
+  });
+
+  it.each([20, 20.5])(
+    "keeps short and point range links accessible through boundary details (end=%s)",
+    (end) => {
+      const annotated = {
+        ...record(1, 20, end),
+        url: "https://example.com/short",
+        note: "Short source",
+      };
+      const { onResizeCoverage } = showTimeline(undefined, undefined, {
+        ...target,
+        ranges: [annotated],
+      });
+      const boundary = endHandles()[0];
+
+      fireEvent.pointerEnter(boundary);
+      expect(screen.getByRole("dialog")).toHaveTextContent(annotated.note);
+      fireEvent.keyDown(boundary, { key: "Enter" });
+      const link = screen.getByRole("dialog").querySelector("a")!;
+
+      expect(link).toHaveFocus();
+      fireEvent.click(link);
+      expect(openUrl).toHaveBeenCalledExactlyOnceWith({ url: annotated.url });
+      expect(onResizeCoverage).not.toHaveBeenCalled();
+    },
+  );
+
+  it("opens a single linked interval directly and keeps its note in the hover details", () => {
+    const annotated = {
+      ...record(1, 20, 40),
+      url: "https://example.com/first",
+      note: "Saved source\nSecond line",
+    };
+
+    showTimeline(undefined, undefined, { ...target, ranges: [annotated] });
+    const link = trackElement().querySelector<HTMLElement>("a")!;
+
+    expect(link).toHaveStyle({ left: "20%", width: "20%" });
+    fireEvent.click(link);
+    expect(openUrl).toHaveBeenCalledExactlyOnceWith({ url: annotated.url });
+    expect(screen.getByRole("dialog")).toHaveTextContent("Saved source");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Second line");
+  });
+
+  it("offers the original links for merged coverage without opening an arbitrary link", async () => {
+    const first = { ...record(1, 20, 45), url: "https://example.com/first", note: "First source" };
+    const second = {
+      ...record(2, 35, 60),
+      url: "https://example.com/second",
+      note: "Second source",
+    };
+
+    showTimeline(undefined, undefined, { ...target, ranges: [first, second] });
+    const segment = screen.getByRole("button", { name: "collectionMemo.timeline.collectedRange" });
+
+    expect(segment).toHaveStyle({ left: "20%", width: "40%" });
+    fireEvent.keyDown(segment, { key: "ArrowDown" });
+    const details = screen.getByRole("dialog");
+    const links = details.querySelectorAll("a");
+
+    expect(openUrl).not.toHaveBeenCalled();
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveFocus();
+    fireEvent.click(links[1]);
+    expect(openUrl).toHaveBeenCalledExactlyOnceWith({ url: second.url });
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(segment).toHaveFocus();
+  });
+});
 
 describe("timeline coverage precision", () => {
   it("keeps the exact global earliest tick without exposing a fake leading gap", () => {
@@ -539,7 +680,7 @@ describe("timeline boundary gestures", () => {
       width: 2000,
     } as DOMRect);
     pointerMove(trackElement(), 600);
-    expect(document.querySelectorAll("time")[1]).toHaveAttribute("dateTime", iso(100));
+    expect(endHandles()[0]).toHaveStyle({ left: "50%" });
     await act(async () => pointerUp(trackElement(), 600));
     expect(onResizeCoverage.mock.calls[0][0].at).toBe(iso(50));
   });
@@ -740,7 +881,10 @@ describe("timeline global start and direction", () => {
     expect(collected[1]).toHaveStyle({ left: "20%", width: "20%" });
     expect(startHandles()[0]).toHaveStyle({ left: "80%", transform: "translate(-100%, -50%)" });
     expect(endHandles()[0]).toHaveStyle({ left: "60%", transform: "translate(0, -50%)" });
-    expect(document.querySelector("time")?.parentElement?.className).toContain("flex-row-reverse");
+    expect(document.querySelector("time")?.parentElement?.className).toContain("justify-end");
+    expect(document.querySelectorAll("time")).toHaveLength(1);
+    expect(document.querySelector("time")).toHaveAttribute("dateTime", iso(0));
+    expect(screen.queryByText("collectionMemo.timeline.now")).not.toBeInTheDocument();
   });
 
   it.each([false, true])(
@@ -821,7 +965,6 @@ describe("timeline global start and direction", () => {
     );
     pointerMove(trackElement(), 400);
     expect(endHandles()[0]).toHaveStyle({ left: "50%" });
-    expect(document.querySelectorAll("time")[1]).toHaveAttribute("dateTime", iso(100));
     await act(async () => pointerUp(trackElement(), 400));
     expect(onResizeCoverage.mock.calls[0][0].at).toBe(iso(50));
   });
