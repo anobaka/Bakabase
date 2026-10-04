@@ -40,6 +40,8 @@ public sealed class DownloadTaskDirectDownloadTests
         _precheck = new FakePrecheck();
         var sp = await TestServiceBuilder.BuildServiceProvider(services =>
         {
+            // Load the real messages so conflict details are verified, not resource keys.
+            services.AddLocalization(options => options.ResourcesPath = "Resources");
             services.AddSingleton<IDownloaderFactory>(_factory);
             services.RemoveAll<IDownloadTaskPrecheck>();
             services.AddSingleton<IDownloadTaskPrecheck>(_precheck);
