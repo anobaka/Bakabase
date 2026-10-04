@@ -89,7 +89,8 @@
 
 #bk-app,
 #bk-overlay-root,
-.bk-marker {
+.bk-marker,
+.bk-cover-overlay-host {
   background: transparent !important;
 }
 
