@@ -59,7 +59,7 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
       ) : (
         <div className="flex items-center gap-0.5">
           <span className={item.isDeprecated ? "line-through" : ""}>{t<string>(item.name)}</span>
-          {item.isBeta && <BetaChip />}
+          {item.isBeta && <BetaChip iconOnly />}
           {item.isDeprecated && <DeprecatedChip />}
         </div>
       ),
