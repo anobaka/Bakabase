@@ -2,6 +2,10 @@ import type { PostContentSnapshot, PostParserTask } from "@/core/models/PostPars
 
 import { PostParserSource, PostParseTarget, WorkflowRunStatus } from "@/sdk/constants";
 
+export type PreviewStoredPostParserTask = Omit<PostParserTask, "targets"> & {
+  targets?: PostParseTarget[] | null;
+};
+
 export const samplePlan = {
   requirement: "required" as const,
   steps: [
@@ -132,7 +136,7 @@ const task = (id: number, title: string): PostParserTask => ({
   minimumRemainingCoins: 50,
 });
 
-export const createFixtures = (): PostParserTask[] => {
+export const createFixtures = (): PreviewStoredPostParserTask[] => {
   const success = task(4, "秋日场景素材包 · 三层解压说明");
   const multiple = task(5, "城市环境音效合集 · 四份独立资源");
   const paid = task(2, "山间小屋插画集 · 等待购买完整说明");
@@ -359,6 +363,13 @@ export const createFixtures = (): PostParserTask[] => {
         reason: "旧链接收到失效反馈，当前没有明确的补档说明。",
       },
       contentSnapshot: limitedSnapshot,
+    },
+    {
+      id: 10,
+      title: "历史帖子 · 未保存解析目标",
+      source: PostParserSource.SoulPlus,
+      link: "https://www.north-plus.net/read.php?tid=900010",
+      revision: 0,
     },
   ];
 };

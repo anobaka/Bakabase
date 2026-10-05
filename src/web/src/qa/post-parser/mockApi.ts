@@ -1,6 +1,7 @@
 import type { Api } from "@/sdk/Api";
 import type { PostParserTask } from "@/core/models/PostParserTask";
 import type { PostParserSource } from "@/sdk/constants";
+import type { PreviewStoredPostParserTask } from "./fixtures";
 
 import { completeResult, createFixtures } from "./fixtures";
 
@@ -25,7 +26,12 @@ interface PreviewRun {
   logs: never[];
   outputPreview: null;
 }
-let records = createFixtures();
+// Old persisted inputs may not have saved a target. The server restores the default on read.
+const readTask = (task: PreviewStoredPostParserTask): PostParserTask => ({
+  ...task,
+  targets: task.targets?.length ? task.targets : [PostParseTarget.DownloadInfo],
+});
+let records = createFixtures().map(readTask);
 let scenario: PreviewScenario = "all";
 let generation = 0;
 let runId = 2000;
@@ -157,7 +163,12 @@ const isActive = (task: PostParserTask) =>
   (task.workflowStatus === WorkflowRunStatus.Pending ||
     task.workflowStatus === WorkflowRunStatus.Running);
 const isPending = (task: PostParserTask) =>
-  !task.isDeleted && !task.error && task.workflowRunId == null;
+  !task.isDeleted &&
+  !task.error &&
+  task.workflowRunId == null &&
+  ((task.parsingState != null && task.parsingState !== "complete") ||
+    task.results == null ||
+    task.targets.some((target) => !Object.prototype.hasOwnProperty.call(task.results, target)));
 const visible = () =>
   records
     .filter(
@@ -183,11 +194,13 @@ const update = (id: number, transform: (task: PostParserTask) => PostParserTask)
 export const resetPreview = () => {
   generation++;
   externallyUnlocked.clear();
-  records = createFixtures().map((task) => ({
-    ...task,
-    autoBuyThreshold: options.soulPlus.autoBuyThreshold,
-    minimumRemainingCoins: options.soulPlus.minimumRemainingCoins,
-  }));
+  records = createFixtures()
+    .map(readTask)
+    .map((task) => ({
+      ...task,
+      autoBuyThreshold: options.soulPlus.autoBuyThreshold,
+      minimumRemainingCoins: options.soulPlus.minimumRemainingCoins,
+    }));
   runs = seedRuns();
   runId = 2000;
   publish();

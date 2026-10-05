@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import mockApi, { resetPreview, setPreviewScenario } from "./mockApi";
+import * as fixtures from "./fixtures";
 
 import { PostParseTarget, PostParserSource, WorkflowRunStatus } from "@/sdk/constants";
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
@@ -26,6 +27,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.clearAllTimers();
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 
@@ -57,7 +59,7 @@ describe("post-parser preview action boundaries", () => {
     const pending = tasks().filter((item) => item.workflowRunId == null);
     const settled = tasks().filter((item) => item.workflowRunId != null);
 
-    expect(pending).toHaveLength(3);
+    expect(pending).toHaveLength(4);
     await Promise.all([
       mockApi.postParser.startAllPostParserTasks(),
       mockApi.postParser.startAllPostParserTasks(),
@@ -71,7 +73,90 @@ describe("post-parser preview action boundaries", () => {
     }
     await vi.advanceTimersByTimeAsync(1000);
     await mockApi.postParser.startAllPostParserTasks();
-    for (const item of pending) expect((await history(item.id)).totalCount).toBe(1);
+    for (const item of pending) {
+      expect(task(item.id).workflowStatus).toBe(WorkflowRunStatus.Success);
+      expect(task(item.id).results?.[PostParseTarget.DownloadInfo]).toMatchObject({
+        isComplete: true,
+      });
+      expect((await history(item.id)).totalCount).toBe(1);
+    }
+  });
+
+  it.each([undefined, null, []])(
+    "restores legacy targets %s and fetches that post once without starting another post",
+    async (targets) => {
+      const saved = fixtures
+        .createFixtures()
+        .map((item) => (item.id === 10 ? { ...item, targets } : item));
+
+      vi.spyOn(fixtures, "createFixtures").mockReturnValueOnce(saved);
+      resetPreview();
+      const unrelated = tasks().filter((item) => item.id !== 10);
+
+      expect(task(10).targets).toEqual([PostParseTarget.DownloadInfo]);
+      await Promise.all([
+        mockApi.postParser.reParsePostParserTask(10),
+        mockApi.postParser.reParsePostParserTask(10),
+      ]);
+      expect(task(10).workflowStatus).toBe(WorkflowRunStatus.Running);
+      expect((await history(10)).totalCount).toBe(1);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(task(10).workflowStatus).toBe(WorkflowRunStatus.Success);
+      expect(task(10).results?.[PostParseTarget.DownloadInfo]).toMatchObject({
+        isComplete: true,
+        resources: [{ extraction: { steps: fixtures.samplePlan.steps } }],
+      });
+      expect(task(10).completedAt).toBeDefined();
+      expect(tasks().filter((item) => item.id !== 10)).toEqual(unrelated);
+    },
+  );
+
+  it("starts legacy pending input in a batch without replacing completed legacy results", async () => {
+    const saved = fixtures.createFixtures();
+    const completed = {
+      ...saved.find((item) => item.id === 10)!,
+      id: 11,
+      link: "https://www.north-plus.net/read.php?tid=900011",
+      title: "历史帖子 · 已有完整结果",
+      targets: null,
+      results: { [PostParseTarget.DownloadInfo]: fixtures.completeResult("Historical result") },
+    };
+
+    vi.spyOn(fixtures, "createFixtures").mockReturnValueOnce([...saved, completed]);
+    resetPreview();
+    const before = structuredClone(task(11));
+
+    expect(before.targets).toEqual([PostParseTarget.DownloadInfo]);
+    expect(before.workflowRunId).toBeUndefined();
+    await Promise.all([
+      mockApi.postParser.startAllPostParserTasks(),
+      mockApi.postParser.startAllPostParserTasks(),
+      mockApi.postParser.reParsePostParserTask(10),
+    ]);
+    expect(task(10).workflowStatus).toBe(WorkflowRunStatus.Running);
+    expect((await history(10)).totalCount).toBe(1);
+    expect(task(11)).toEqual(before);
+    expect((await history(11)).totalCount).toBe(0);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(task(10).workflowStatus).toBe(WorkflowRunStatus.Success);
+    expect(task(10).results?.[PostParseTarget.DownloadInfo]).toMatchObject({ isComplete: true });
+    await mockApi.postParser.startAllPostParserTasks();
+    expect((await history(10)).totalCount).toBe(1);
+    expect(task(11)).toEqual(before);
+    expect((await history(11)).totalCount).toBe(0);
+  });
+
+  it("preserves explicitly saved nonempty targets when reading old inputs", async () => {
+    const targets = [99 as PostParseTarget];
+    const saved = fixtures
+      .createFixtures()
+      .map((item) => (item.id === 10 ? { ...item, targets } : item));
+
+    vi.spyOn(fixtures, "createFixtures").mockReturnValueOnce(saved);
+    resetPreview();
+    const response = await mockApi.postParser.getAllPostParserTasks();
+
+    expect(response.data?.find((item) => item.id === 10)?.targets).toEqual(targets);
   });
 
   it("applies automatic parsing only to subsequently submitted posts", async () => {

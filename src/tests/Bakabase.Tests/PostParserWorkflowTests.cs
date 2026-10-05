@@ -193,6 +193,94 @@ public sealed class PostParserWorkflowTests
     }
 
     [TestMethod]
+    [DataRow(null)]
+    [DataRow("[]")]
+    [DataRow("null")]
+    [DataRow("malformed")]
+    public async Task LegacyPostWithoutTargetsCanBeParsedWithoutCreatingDuplicateRuns(string? targets)
+    {
+        int id;
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            var task = new PostParserTaskDbModel {Link = "https://example.test/legacy", Targets = targets};
+            db.PostParserTasks.Add(task);
+            await db.SaveChangesAsync();
+            id = task.Id;
+        }
+        var untouched = await Add("https://example.test/untouched");
+
+        await Task.WhenAll(Reparse(id), Reparse(id), Reparse(id));
+
+        var queued = await TaskState(id);
+        Assert.IsNotNull(queued.WorkflowRunId);
+        CollectionAssert.AreEqual(new[] {PostParseTarget.DownloadInfo}, queued.Targets);
+        Assert.AreEqual(0, queued.Revision);
+        Assert.IsNull((await TaskState(untouched)).WorkflowRunId);
+        var manager = _services.GetRequiredService<BTaskManager>();
+        Assert.AreEqual(1, manager.Tasks.Count(t => t.Id == $"workflow.run.{queued.WorkflowRunId}"));
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            Assert.AreEqual(1, await db.WorkflowRuns.CountAsync());
+            Assert.AreEqual(targets, await db.PostParserTasks.Where(t => t.Id == id).Select(t => t.Targets).SingleAsync(),
+                "Loading and starting legacy inputs must not require a database backfill.");
+        }
+
+        await manager.Start($"workflow.run.{queued.WorkflowRunId}");
+        await WaitForBTask($"workflow.run.{queued.WorkflowRunId}");
+
+        var completed = await TaskState(id);
+        Assert.AreEqual(WorkflowRunStatus.Success, completed.WorkflowStatus);
+        Assert.IsNotNull(completed.CompletedAt);
+        Assert.IsNotNull(completed.Results![PostParseTarget.DownloadInfo]);
+        Assert.AreEqual(1, _reader.Reads);
+    }
+
+    [TestMethod]
+    public async Task StartAllIncludesLegacyInputsWithoutTargetsAndSkipsTheirCompletedResults()
+    {
+        List<int> ids;
+        int completedId;
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            var pending = new string?[] {null, "[]", "null", "malformed"}.Select((targets, index) =>
+                new PostParserTaskDbModel {Link = $"https://example.test/legacy/{index}", Targets = targets}).ToList();
+            var completed = new PostParserTaskDbModel
+            {
+                Link = "https://example.test/legacy/completed",
+                Results = "{\"DownloadInfo\":{\"resources\":[]}}"
+            };
+            db.PostParserTasks.AddRange(pending);
+            db.PostParserTasks.Add(completed);
+            await db.SaveChangesAsync();
+            ids = pending.Select(t => t.Id).ToList();
+            completedId = completed.Id;
+        }
+        var trigger = _services.GetRequiredService<PostParserTaskTrigger>();
+        await Task.WhenAll(trigger.Start(), trigger.Start(), trigger.Start());
+        await WaitForBTask(PostParserTaskTrigger.TaskId);
+        await trigger.Start();
+        await WaitForBTask(PostParserTaskTrigger.TaskId);
+
+        var manager = _services.GetRequiredService<BTaskManager>();
+        foreach (var id in ids)
+        {
+            var task = await TaskState(id);
+            Assert.IsNotNull(task.WorkflowRunId);
+            Assert.AreEqual(1, manager.Tasks.Count(t => t.Id == $"workflow.run.{task.WorkflowRunId}"));
+            await manager.Start($"workflow.run.{task.WorkflowRunId}");
+            await WaitForBTask($"workflow.run.{task.WorkflowRunId}");
+            Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        }
+        Assert.IsNull((await TaskState(completedId)).WorkflowRunId);
+        Assert.AreEqual(ids.Count, _reader.Reads);
+        await using var verification = _services.CreateAsyncScope();
+        Assert.AreEqual(ids.Count, await verification.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.CountAsync());
+    }
+
+    [TestMethod]
     public async Task RepeatedRetryKeepsOneRunAndExecutesAfterTheRequestScopeIsDisposed()
     {
         _extractor.FailuresRemaining = 1;

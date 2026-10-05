@@ -174,7 +174,9 @@ public static class PostParserExtensions
             WorkflowDefinitionId = dbModel.WorkflowDefinitionId,
             WorkflowRunId = dbModel.WorkflowRunId,
             Title = dbModel.Title,
-            Targets = targets ?? [],
+            // Tasks saved before targets were introduced have no list. Use the same
+            // default as new inputs so both single-post and bulk dispatch can start them.
+            Targets = targets is {Count: > 0} ? targets : [PostParseTarget.DownloadInfo],
             Results = results,
             Error = error,
             IsDeleted = dbModel.IsDeleted,
