@@ -22,6 +22,7 @@ import BApi from "@/sdk/BApi";
 import { WorkflowActivationMode } from "@/sdk/constants";
 
 const api = vi.hoisted(() => ({ getWorkflowTriggers: vi.fn() }));
+
 vi.mock("@/sdk/BApi", async (importOriginal) => {
   const actual = await importOriginal<{ default: typeof BApi }>();
 
@@ -65,6 +66,7 @@ vi.mock("@/components/bakaui", () => ({
 }));
 
 const i18n = createInstance();
+
 await i18n.init({
   lng: "en",
   fallbackLng: "en",
@@ -88,6 +90,7 @@ const descriptor = (
 let container: HTMLDivElement;
 let root: Root;
 let server = 0;
+
 beforeEach(() => {
   (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
   BApi.baseUrl = `/test-${++server}`;
@@ -131,6 +134,7 @@ describe("workflow trigger presentation contract", () => {
       ].map((name) => `apps/Bakabase.Service/Components/Workflow/Triggers/${name}Trigger.cs`),
       "apps/Bakabase.Service/Components/Workflow/Resources/ResourceMaterializedTrigger.cs",
       "apps/Bakabase.Service/Components/Downloader/DownloadResultWorkflow.cs",
+      "apps/Bakabase.Service/Components/FileProcessing/FileProcessingWorkflow.cs",
       "modules/Bakabase.Modules.Acquisition/Components/Workflow/AcquisitionRequestedTrigger.cs",
       "modules/Bakabase.Modules.Acquisition/Components/Workflow/AcquisitionStatusChangedTrigger.cs",
       "modules/Bakabase.Modules.Collection/Components/Workflow/CollectionMembersAddedTrigger.cs",

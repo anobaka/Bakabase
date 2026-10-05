@@ -29,7 +29,18 @@ public static class WorkflowOutputPreview
             if (required > MaximumCharacters - length)
             {
                 truncated = true;
-                continue;
+                if (item is not IWorkflowOutputSummary summary) continue;
+                try
+                {
+                    var compact = summary.ToWorkflowOutputSummary();
+                    json = JsonSerializer.Serialize(compact, compact?.GetType() ?? typeof(object), WorkflowJson.Options);
+                }
+                catch (Exception ex) when (ex is JsonException or NotSupportedException)
+                {
+                    continue;
+                }
+                required = json.Length + (serialized.Count == 0 ? 0 : 1);
+                if (required > MaximumCharacters - length) continue;
             }
             serialized.Add(json);
             length += required;

@@ -1,5 +1,6 @@
 ("use client");
 
+import type { ReactNode } from "react";
 import type { PostParserTask } from "@/core/models/PostParserTask";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -11,6 +12,8 @@ import {
   AiOutlineDownload,
   AiOutlineFileText,
   AiOutlineHistory,
+  AiOutlineLink,
+  AiOutlineFolderOpen,
   AiOutlinePlayCircle,
   AiOutlinePlus,
   AiOutlineQuestionCircle,
@@ -25,8 +28,17 @@ import AddToAcquisitionModal from "./components/AddToAcquisitionModal";
 import ConfigurationModal from "./components/ConfigurationModal";
 import DownloadInfoResultRenderer from "./components/DownloadInfoResultRenderer";
 import TaskList from "./components/TaskList";
+import Tooltip from "./components/PostParserTooltip";
 import TaskSearch from "./components/TaskSearch";
-import { buildExportRows, copyParserText, getDownloadInfo, getTargetResult } from "./results";
+import PostDetails, { AvailabilityDetails, EvidencePopover } from "./components/PostDetails";
+import LocalProcessingModal from "./components/LocalProcessingModal";
+import {
+  buildExportRows,
+  copyParserText,
+  downloadInstructions,
+  getDownloadInfo,
+  getTargetResult,
+} from "./results";
 import { buildTaskSearchText } from "./search";
 
 import { Alert, Button, Checkbox, Chip, Modal, toast } from "@/components/bakaui";
@@ -51,11 +63,25 @@ const retryStatuses = [
   WorkflowRunStatus.Failed,
   WorkflowRunStatus.Cancelled,
   WorkflowRunStatus.Interrupted,
+  WorkflowRunStatus.Waiting,
 ];
 const isRunning = (task: PostParserTask) =>
   !!task.workflowRunId &&
   (task.workflowStatus == null || activeStatuses.includes(task.workflowStatus));
 const hasResults = (task: PostParserTask) => Object.keys(task.results ?? {}).length > 0;
+
+const ActionGroup = ({ stage, children }: { stage: string; children: ReactNode }) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex items-start gap-1" data-operation-stage={stage}>
+      <span className="w-7 shrink-0 pt-1.5 text-[10px] leading-4 text-default-400">
+        {t(`postParser.operations.${stage}`)}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5">{children}</div>
+    </div>
+  );
+};
 
 const PostParserPage = () => {
   const { t } = useTranslation();
@@ -151,57 +177,129 @@ const PostParserPage = () => {
       defaultVisible: true,
       title: task.title || t<string>("postParser.action.viewContent"),
       size: "lg",
-      children: (
-        <pre className="whitespace-pre-wrap break-words text-sm">{task.text || task.content}</pre>
-      ),
+      children: <PostDetails task={task} />,
       footer: { actions: ["cancel"] },
     });
 
-  const renderResults = (task: PostParserTask) => (
-    <div className="flex min-w-0 flex-col gap-2">
-      {task.error && (
-        <p className="break-words text-xs text-danger" role="alert">
-          {task.error}
-        </p>
-      )}
-      {!hasResults(task) ? (
-        <span className="text-sm text-default-400">—</span>
-      ) : (
-        task.targets.map((target) => {
-          const result = getTargetResult(task, target);
+  const renderResults = (task: PostParserTask) => {
+    const availability = task.availability ?? getDownloadInfo(task)?.availability;
+    const reason = [...new Set([availability?.reason, task.parsingMessage].filter(Boolean))].join(
+      "\n",
+    );
 
-          return (
-            <div key={target}>
-              {result?.error && (
-                <p className="text-xs text-danger" role="alert">
-                  {result.error}
-                </p>
-              )}
-              {result?.data ? (
-                target === PostParseTarget.DownloadInfo ? (
-                  <DownloadInfoResultRenderer data={getDownloadInfo(task) ?? {}} />
+    return (
+      <div className="flex min-w-0 flex-col gap-2">
+        {task.error && (
+          <Button
+            className="h-auto min-w-0 justify-start whitespace-normal break-words px-0 text-left text-xs"
+            color="danger"
+            size="sm"
+            variant="light"
+            onPress={() =>
+              createPortal(Modal, {
+                defaultVisible: true,
+                title: t("postParser.action.failureDetails"),
+                size: "lg",
+                children: (
+                  <pre className="whitespace-pre-wrap break-words text-sm">{task.error}</pre>
+                ),
+                footer: {
+                  actions: ["cancel", "ok"],
+                  okProps: { children: t("postParser.action.retry") },
+                },
+                onOk: async () => {
+                  const response =
+                    task.workflowRunId &&
+                    task.workflowStatus != null &&
+                    retryStatuses.includes(task.workflowStatus)
+                      ? await BApi.postParser.retryPostParserTaskWorkflow(task.id)
+                      : await BApi.postParser.reParsePostParserTask(task.id);
+
+                  if (response.code)
+                    throw new Error(response.message || t("postParser.result.failed"));
+                  if (
+                    !task.workflowRunId ||
+                    task.workflowStatus == null ||
+                    !retryStatuses.includes(task.workflowStatus)
+                  )
+                    await BApi.postParser.startAllPostParserTasks();
+                  await refresh();
+                },
+              })
+            }
+          >
+            <span className="line-clamp-2" role="alert" title={task.error}>
+              {task.error}
+            </span>
+          </Button>
+        )}
+        <div className="flex flex-wrap items-center gap-1">
+          <AvailabilityDetails value={availability ? { ...availability, reason } : undefined} />
+          {!availability && task.parsingMessage && (
+            <EvidencePopover label={t("postParser.action.details")} reason={task.parsingMessage} />
+          )}
+        </div>
+        {!hasResults(task) ? (
+          <span className="text-sm text-default-400">—</span>
+        ) : (
+          task.targets.map((target) => {
+            const result = getTargetResult(task, target);
+
+            return (
+              <div key={target}>
+                {result?.error && (
+                  <p className="text-xs text-danger" role="alert">
+                    {result.error}
+                  </p>
+                )}
+                {result?.data ? (
+                  target === PostParseTarget.DownloadInfo ? (
+                    <DownloadInfoResultRenderer
+                      data={getDownloadInfo(task) ?? {}}
+                      showAvailability={false}
+                      showTitle={getDownloadInfo(task)?.title !== task.title}
+                    />
+                  ) : (
+                    <Chip size="sm" variant="flat">
+                      {t<string>(`PostParseTarget.${PostParseTargetLabel[target]}`)}
+                    </Chip>
+                  )
                 ) : (
-                  <Chip size="sm" variant="flat">
-                    {t<string>(`PostParseTarget.${PostParseTargetLabel[target]}`)}
-                  </Chip>
-                )
-              ) : (
-                !result?.error && (
-                  <span className="text-xs text-default-400">
-                    {t<string>("postParser.label.noResult")}
-                  </span>
-                )
-              )}
-            </div>
-          );
-        })
-      )}
-    </div>
-  );
+                  !result?.error && (
+                    <span className="text-xs text-default-400">
+                      {t<string>("postParser.label.noResult")}
+                    </span>
+                  )
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    );
+  };
 
   const renderTask = (task: PostParserTask) => {
     const data = getDownloadInfo(task);
-    const canImport = data?.resources?.some((resource) => !!resource.link?.trim());
+    const hasLinks = !!data?.resources?.some((resource) => !!resource.link?.trim());
+    const locks = task.contentSnapshot?.locks?.filter((lock) => !lock.isBought) ?? [];
+    const needsUnlock =
+      locks.length > 0 ||
+      task.parsingState === "awaitingPurchase" ||
+      task.parsingState === "possiblyExpired";
+    const canImport = hasLinks && !needsUnlock && data?.isComplete !== false && !task.error;
+    const hasContent = !!(task.text || task.content || task.contentSnapshot);
+    const state = task.error
+      ? "error"
+      : task.parsingState && task.parsingState !== "complete"
+        ? task.parsingState
+        : locks.length || data?.isComplete === false
+          ? "partial"
+          : task.workflowStatus === WorkflowRunStatus.Waiting
+            ? "awaitingAction"
+            : isRunning(task)
+              ? null
+              : task.parsingState;
     const retryable =
       task.workflowRunId &&
       task.workflowStatus != null &&
@@ -218,11 +316,21 @@ const PostParserPage = () => {
               {task.source === PostParserSource.SoulPlus && (
                 <ThirdPartyIcon thirdPartyId={ThirdPartyId.SoulPlus} />
               )}
-              <span className="min-w-0 break-words font-medium">
+              <span className="min-w-0 break-words font-medium line-clamp-3" title={task.title}>
                 {task.title || t<string>("postParser.label.untitled")}
               </span>
               <div className="flex shrink-0 items-center gap-1">
-                {task.workflowStatus != null ? (
+                {state ? (
+                  <Chip
+                    color={
+                      state === "complete" ? "success" : state === "error" ? "danger" : "warning"
+                    }
+                    size="sm"
+                    variant="flat"
+                  >
+                    {t<string>(`postParser.state.${state}`)}
+                  </Chip>
+                ) : task.workflowStatus != null ? (
                   <Chip
                     color={
                       isRunning(task)
@@ -269,13 +377,15 @@ const PostParserPage = () => {
             {task.link && (
               <div className="flex min-w-0 items-start gap-1">
                 <Button
-                  className="h-auto min-w-0 justify-start px-0 py-1"
+                  className="h-auto min-w-0 justify-start overflow-hidden px-0 py-1"
                   color="primary"
                   size="sm"
                   variant="light"
                   onPress={() => BApi.gui.openUrlInDefaultBrowser({ url: task.link })}
                 >
-                  <span className="break-all whitespace-normal text-left text-xs">{task.link}</span>
+                  <span className="truncate text-left text-xs" title={task.link}>
+                    {task.link}
+                  </span>
                 </Button>
                 <Button
                   isIconOnly
@@ -318,93 +428,167 @@ const PostParserPage = () => {
                 </dd>
               </div>
             </dl>
-            {(task.text || task.content) && (
-              <Button
-                className="w-fit"
-                size="sm"
-                startContent={<AiOutlineFileText aria-hidden />}
-                variant="light"
-                onPress={() => showContent(task)}
-              >
-                {t<string>("postParser.action.viewContent")}
-              </Button>
-            )}
           </div>
         </div>
         <div className="min-w-0" role="cell">
           {renderResults(task)}
         </div>
         <div className="min-w-0" role="cell">
-          <div className="flex flex-col items-start gap-1">
-            {canImport && (
-              <Button
-                color="primary"
-                size="sm"
-                startContent={<AiOutlineCloudDownload aria-hidden />}
-                variant="flat"
-                onPress={() => createPortal(AddToAcquisitionModal, { task })}
-              >
-                {t<string>("postParser.action.addToAcquisition")}
-              </Button>
-            )}
-            {task.workflowDefinitionId && (
-              <Button
-                size="sm"
-                startContent={<AiOutlineHistory aria-hidden />}
-                variant="light"
-                onPress={() => setRuns(task)}
-              >
-                {t<string>("postParser.action.viewRuns")}
-              </Button>
-            )}
-            <div className="flex items-center gap-1">
-              {retryable ? (
-                <Button
-                  isDisabled={!!busy}
-                  isLoading={busy === `retry-${task.id}`}
-                  size="sm"
-                  startContent={<AiOutlineReload aria-hidden />}
-                  variant="light"
-                  onPress={() =>
-                    action(`retry-${task.id}`, () =>
-                      BApi.postParser.retryPostParserTaskWorkflow(task.id),
-                    )
-                  }
-                >
-                  {t<string>("postParser.action.retry")}
-                </Button>
-              ) : null}
-              {(hasResults(task) || task.error || task.workflowRunId) && !isRunning(task) && (
-                <Button
-                  isDisabled={!!busy}
-                  isLoading={busy === `reparse-${task.id}`}
-                  size="sm"
-                  variant="light"
-                  onPress={() =>
-                    action(`reparse-${task.id}`, async () => {
-                      const response = await BApi.postParser.reParsePostParserTask(task.id);
+          <div className="flex flex-col gap-1 [&_button]:h-7 [&_button]:px-1.5 [&_button]:text-xs">
+            {(task.link || hasContent || (!task.workflowRunId && !hasResults(task))) && (
+              <ActionGroup stage="source">
+                {task.link && (
+                  <Button
+                    color={needsUnlock ? "warning" : "default"}
+                    size="sm"
+                    startContent={<AiOutlineLink aria-hidden />}
+                    variant="light"
+                    onPress={() => BApi.gui.openUrlInDefaultBrowser({ url: task.link })}
+                  >
+                    {t(
+                      needsUnlock
+                        ? "postParser.action.openPostToUnlock"
+                        : "postParser.action.openPost",
+                    )}
+                  </Button>
+                )}
+                {hasContent && (
+                  <Tooltip content={t("postParser.action.viewContent")}>
+                    <Button
+                      isIconOnly
+                      aria-label={t("postParser.action.viewContent")}
+                      className="min-w-7 w-7"
+                      size="sm"
+                      variant="light"
+                      onPress={() => showContent(task)}
+                    >
+                      <AiOutlineFileText aria-hidden />
+                    </Button>
+                  </Tooltip>
+                )}
+                {!task.workflowRunId && !hasResults(task) && !task.error && (
+                  <Button
+                    isDisabled={!!busy}
+                    size="sm"
+                    startContent={<AiOutlinePlayCircle aria-hidden />}
+                    variant="light"
+                    onPress={() =>
+                      action(`fetch-${task.id}`, async () => {
+                        const response = await BApi.postParser.reParsePostParserTask(task.id);
 
-                      return response.code ? response : BApi.postParser.startAllPostParserTasks();
-                    })
-                  }
+                        return response.code ? response : BApi.postParser.startAllPostParserTasks();
+                      })
+                    }
+                  >
+                    {t("postParser.action.fetchPost")}
+                  </Button>
+                )}
+              </ActionGroup>
+            )}
+            {(hasResults(task) ||
+              (!isRunning(task) && (task.error || task.workflowRunId || task.contentSnapshot))) && (
+              <ActionGroup stage="analysis">
+                {!isRunning(task) && (
+                  <Button
+                    isDisabled={!!busy}
+                    isLoading={busy === `retry-${task.id}` || busy === `reparse-${task.id}`}
+                    size="sm"
+                    startContent={<AiOutlineReload aria-hidden />}
+                    variant="light"
+                    onPress={() =>
+                      retryable && !needsUnlock
+                        ? action(`retry-${task.id}`, () =>
+                            BApi.postParser.retryPostParserTaskWorkflow(task.id),
+                          )
+                        : action(`reparse-${task.id}`, async () => {
+                            const response = await BApi.postParser.reParsePostParserTask(task.id);
+
+                            return response.code
+                              ? response
+                              : BApi.postParser.startAllPostParserTasks();
+                          })
+                    }
+                  >
+                    {t(
+                      needsUnlock
+                        ? "postParser.action.refreshAfterUnlock"
+                        : retryable
+                          ? task.workflowStatus === WorkflowRunStatus.Waiting
+                            ? "postParser.action.continueParsing"
+                            : "postParser.action.retry"
+                          : "postParser.action.reParse",
+                    )}
+                  </Button>
+                )}
+                {data && (
+                  <Tooltip content={t("postParser.action.exportInstructions")}>
+                    <Button
+                      isIconOnly
+                      aria-label={t("postParser.action.exportInstructions")}
+                      className="min-w-7 w-7"
+                      size="sm"
+                      variant="light"
+                      onPress={() => downloadInstructions([task])}
+                    >
+                      <AiOutlineDownload aria-hidden />
+                    </Button>
+                  </Tooltip>
+                )}
+              </ActionGroup>
+            )}
+            {canImport && (
+              <ActionGroup stage="download">
+                <Button
+                  color="primary"
+                  size="sm"
+                  startContent={<AiOutlineCloudDownload aria-hidden />}
+                  variant="light"
+                  onPress={() => createPortal(AddToAcquisitionModal, { task })}
                 >
-                  {t<string>("postParser.action.reParse")}
+                  {t("postParser.action.addToAcquisition")}
+                </Button>
+              </ActionGroup>
+            )}
+            {canImport && (
+              <ActionGroup stage="processing">
+                <Button
+                  size="sm"
+                  startContent={<AiOutlineFolderOpen aria-hidden />}
+                  variant="light"
+                  onPress={() => createPortal(LocalProcessingModal, { task })}
+                >
+                  {t("postParser.action.processLocal")}
+                </Button>
+              </ActionGroup>
+            )}
+            <ActionGroup stage="task">
+              {task.workflowDefinitionId && (
+                <Button
+                  size="sm"
+                  startContent={<AiOutlineHistory aria-hidden />}
+                  variant="light"
+                  onPress={() => setRuns(task)}
+                >
+                  {t("postParser.action.viewRuns")}
                 </Button>
               )}
-              <Button
-                isIconOnly
-                aria-label={t<string>("postParser.action.delete")}
-                color="danger"
-                isDisabled={!!busy}
-                size="sm"
-                variant="light"
-                onPress={() =>
-                  action(`delete-${task.id}`, () => BApi.postParser.deletePostParserTask(task.id))
-                }
-              >
-                <AiOutlineDelete aria-hidden className="text-base" />
-              </Button>
-            </div>
+              <Tooltip content={t("postParser.action.delete")}>
+                <Button
+                  isIconOnly
+                  aria-label={t("postParser.action.delete")}
+                  className="min-w-7 w-7"
+                  color="danger"
+                  isDisabled={!!busy}
+                  size="sm"
+                  variant="light"
+                  onPress={() =>
+                    action(`delete-${task.id}`, () => BApi.postParser.deletePostParserTask(task.id))
+                  }
+                >
+                  <AiOutlineDelete aria-hidden />
+                </Button>
+              </Tooltip>
+            </ActionGroup>
           </div>
         </div>
       </>
@@ -478,6 +662,14 @@ const PostParserPage = () => {
           </Checkbox>
         </div>
         <div className="flex flex-wrap items-center gap-1">
+          <Button
+            isDisabled={tasks.length === 0}
+            size="sm"
+            variant="light"
+            onPress={() => downloadInstructions(tasks)}
+          >
+            {t("postParser.action.exportInstructions")}
+          </Button>
           <Button
             isDisabled={tasks.length === 0}
             size="sm"

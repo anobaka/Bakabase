@@ -34,12 +34,18 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
   const options = useSoulPlusOptionsStore((s) => s.data);
   const patch = useSoulPlusOptionsStore((s) => s.patch);
 
-  const [tmpOther, setTmpOther] = useState({ autoBuyThreshold: options?.autoBuyThreshold ?? 10 });
+  const [tmpOther, setTmpOther] = useState({
+    autoBuyThreshold: options?.autoBuyThreshold ?? 0,
+    minimumRemainingCoins: options?.minimumRemainingCoins ?? 0,
+  });
   const [tlsPresets, setTlsPresets] = useState<BakabaseModulesThirdPartyHelpersTlsPresetInfo[]>([]);
 
   useEffect(() => {
-    setTmpOther({ autoBuyThreshold: options?.autoBuyThreshold ?? 10 });
-  }, [options?.autoBuyThreshold]);
+    setTmpOther({
+      autoBuyThreshold: options?.autoBuyThreshold ?? 0,
+      minimumRemainingCoins: options?.minimumRemainingCoins ?? 0,
+    });
+  }, [options?.autoBuyThreshold, options?.minimumRemainingCoins]);
 
   useEffect(() => {
     BApi.tool.getTlsPresets().then((rsp) => {
@@ -82,7 +88,7 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
   };
 
   const saveAutoBuy = async () => {
-    await patch({ autoBuyThreshold: tmpOther.autoBuyThreshold });
+    await patch(tmpOther);
     toast.success(t("thirdPartyConfig.success.saved"));
   };
 
@@ -134,11 +140,26 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
           <div className="space-y-4">
             <ProxyField thirdPartyId={ThirdPartyId.SoulPlus} />
             <Input
+              description={t<string>("postParser.config.autoBuyHint")}
               label={t<string>("thirdPartyConfig.label.autoBuyThreshold")}
+              min={0}
               size="sm"
               type="number"
               value={String(tmpOther.autoBuyThreshold ?? 0)}
-              onValueChange={(v) => setTmpOther({ ...tmpOther, autoBuyThreshold: Number(v) || 0 })}
+              onValueChange={(v) =>
+                setTmpOther({ ...tmpOther, autoBuyThreshold: Math.max(0, Number(v) || 0) })
+              }
+            />
+            <Input
+              description={t<string>("postParser.config.minimumRemainingCoinsHint")}
+              label={t<string>("postParser.config.minimumRemainingCoins")}
+              min={0}
+              size="sm"
+              type="number"
+              value={String(tmpOther.minimumRemainingCoins)}
+              onValueChange={(v) =>
+                setTmpOther({ ...tmpOther, minimumRemainingCoins: Math.max(0, Number(v) || 0) })
+              }
             />
             <Button color="primary" size="sm" onPress={saveAutoBuy}>
               {t<string>("thirdPartyConfig.action.save")}

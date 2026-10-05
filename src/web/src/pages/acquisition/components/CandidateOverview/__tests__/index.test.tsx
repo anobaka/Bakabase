@@ -236,6 +236,27 @@ const click = async (element: HTMLElement) => {
   await act(async () => element.click());
 };
 
+const pressKey = async (element: HTMLElement, key: string, repeat = false) => {
+  await act(async () => element.focus());
+  const down = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+  const events = [down];
+
+  if (repeat) {
+    events.push(
+      new KeyboardEvent("keydown", { key, repeat: true, bubbles: true, cancelable: true }),
+    );
+  }
+  events.push(new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }));
+  for (const event of events) {
+    // Commit each input event so React Aria can register its keyup listener.
+    await act(async () => {
+      element.dispatchEvent(event);
+    });
+  }
+
+  return down;
+};
+
 const pointerPress = async (element: HTMLElement) => {
   await act(async () => {
     if (typeof PointerEvent !== "undefined") {
@@ -348,21 +369,11 @@ describe("CandidateOverview", () => {
       );
       const child = button("Forwarded action");
       const card = container.querySelector("section")!;
-      const pressKey = async (target: HTMLElement) =>
-        act(async () => {
-          target.focus();
-          target.dispatchEvent(
-            new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
-          );
-          target.dispatchEvent(
-            new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }),
-          );
-        });
 
-      await pressKey(child);
+      await pressKey(child, key);
       expect(childPress).toHaveBeenCalledTimes(1);
       expect(cardPress).not.toHaveBeenCalled();
-      await pressKey(card);
+      await pressKey(card, key);
       expect(cardPress).toHaveBeenCalledTimes(1);
     },
   );
@@ -513,14 +524,7 @@ describe("CandidateOverview", () => {
       await renderOverview();
       const card = container.querySelector<HTMLElement>('section[role="button"]')!;
 
-      await act(async () => {
-        card.focus();
-        card.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
-        card.dispatchEvent(
-          new KeyboardEvent("keydown", { key, repeat: true, bubbles: true, cancelable: true }),
-        );
-        card.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }));
-      });
+      await pressKey(card, key, true);
       expect(createPortal).toHaveBeenCalledTimes(1);
       expect(createPortal.mock.calls[0][1].id).toBe(1);
       expect(createAcquisition).not.toHaveBeenCalled();
@@ -536,15 +540,8 @@ describe("CandidateOverview", () => {
       const selector = card.querySelector("select")!;
 
       for (const control of [selector, summary]) {
-        const down = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+        const down = await pressKey(control, key);
 
-        await act(async () => {
-          control.focus();
-          control.dispatchEvent(down);
-          control.dispatchEvent(
-            new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }),
-          );
-        });
         expect(down.defaultPrevented).toBe(false);
         expect(createPortal).not.toHaveBeenCalled();
       }
@@ -562,13 +559,7 @@ describe("CandidateOverview", () => {
       await renderOverview();
       const action = button("acquisition.overview.viewTask");
 
-      await act(async () => {
-        action.focus();
-        action.dispatchEvent(
-          new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
-        );
-        action.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }));
-      });
+      await pressKey(action, key);
       expect(onViewTasks).toHaveBeenCalledTimes(1);
       expect(createPortal).not.toHaveBeenCalled();
     },

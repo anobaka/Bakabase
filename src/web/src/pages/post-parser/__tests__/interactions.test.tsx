@@ -11,6 +11,7 @@ import PostParserPage from "..";
 import AddTasksModal from "../components/AddTasksModal";
 import AddToAcquisitionModal from "../components/AddToAcquisitionModal";
 import DownloadInfoResultRenderer from "../components/DownloadInfoResultRenderer";
+import LocalProcessingModal from "../components/LocalProcessingModal";
 
 import { PostParseTarget, PostParserSource, WorkflowRunStatus } from "@/sdk/constants";
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
@@ -25,6 +26,9 @@ const api = vi.hoisted(() => ({
   removeAll: vi.fn(),
   import: vi.fn(),
   options: vi.fn(),
+  request: vi.fn(),
+  workflows: vi.fn(),
+  runWorkflow: vi.fn(),
   navigate: vi.fn(),
   openUrl: vi.fn(),
   portal: vi.fn(),
@@ -42,6 +46,7 @@ vi.mock("react-virtualized", async () => ({
 
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    request: api.request,
     postParser: {
       addPostParserTasks: api.add,
       startAllPostParserTasks: api.start,
@@ -51,8 +56,10 @@ vi.mock("@/sdk/BApi", () => ({
       deletePostParserTask: api.remove,
       deleteAllPostParserTasks: api.removeAll,
       importPostParserTaskToAcquisition: api.import,
+      purchasePostParserTaskContent: api.request,
     },
     options: { patchThirdPartyOptions: api.options },
+    workflow: { searchWorkflows: api.workflows, runWorkflowManually: api.runWorkflow },
     gui: { openUrlInDefaultBrowser: api.openUrl },
   },
 }));
@@ -227,6 +234,103 @@ const fireEvent = {
     }),
 };
 
+describe("post content purchase and partial results", () => {
+  it("binds distinct selected resources to independent runs and retries only the failed start", async () => {
+    api.workflows.mockResolvedValue({ code: 0, data: [{ id: 99, name: "Local plan" }] });
+    api.runWorkflow
+      .mockResolvedValueOnce({ code: 0, data: { id: 201 } })
+      .mockResolvedValueOnce({ code: 1, message: "Directory not found" })
+      .mockResolvedValueOnce({ code: 0, data: { id: 202 } });
+    const record = {
+      ...base,
+      results: {
+        DownloadInfo: {
+          resources: data.resources.map((resource) => ({
+            ...resource,
+            extraction: { requirement: "notRequired", steps: [], evidence: [] },
+          })),
+        },
+      },
+    };
+
+    show(<LocalProcessingModal task={record} />);
+    await act(async () => Promise.resolve());
+    expect(api.runWorkflow).not.toHaveBeenCalled();
+    const boxes = Array.from(
+      document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+    ).filter((input) => input.getAttribute("role") !== "switch");
+
+    fireEvent.click(boxes[0]);
+    fireEvent.click(boxes[1]);
+    const directories = document.querySelectorAll<HTMLInputElement>('input[type="text"]');
+
+    fireEvent.change(directories[0], { target: { value: "/downloads/one" } });
+    fireEvent.change(directories[1], { target: { value: "/downloads/two" } });
+    fireEvent.click(screen.getByRole("button", { name: "workflow.processing.startSelected" }));
+    await waitFor(() => expect(api.runWorkflow).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(api.runWorkflow.mock.calls[0][1].argsJson)).toMatchObject({
+      directory: "/downloads/one",
+      bindingId: "post:14:3:0",
+    });
+    expect(JSON.parse(api.runWorkflow.mock.calls[1][1].argsJson)).toMatchObject({
+      directory: "/downloads/two",
+      bindingId: "post:14:3:1",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "workflow.processing.startSelected" }));
+    await waitFor(() => expect(api.runWorkflow).toHaveBeenCalledTimes(3));
+    expect(JSON.parse(api.runWorkflow.mock.calls[2][1].argsJson).directory).toBe("/downloads/two");
+  });
+  it("keeps a result partial when paid content is still locked even if the workflow says success", async () => {
+    usePostParserTasksStore.getState().setTasks([
+      {
+        ...parsed,
+        workflowRunId: 37,
+        workflowStatus: WorkflowRunStatus.Success,
+        contentSnapshot: { locks: [{ url: "https://post.test/buy", price: 4, isBought: false }] },
+      },
+    ]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    expect(screen.getByText("postParser.state.partial")).toBeVisible();
+    expect(byRole("button", "postParser.action.purchase")).toHaveLength(0);
+    expect(byRole("button", "postParser.action.openPostToUnlock")).toHaveLength(1);
+    expect(byRole("button", "postParser.action.addToAcquisition")).toHaveLength(0);
+  });
+
+  it("opens the source for manual purchase and refreshes parsing without a purchase request", async () => {
+    usePostParserTasksStore.getState().setTasks([
+      {
+        ...base,
+        workflowRunId: 37,
+        workflowStatus: WorkflowRunStatus.Waiting,
+        parsingState: "awaitingPurchase",
+        contentSnapshot: { locks: [{ url: "https://post.test/buy", price: 4, isBought: false }] },
+      },
+    ]);
+    show(<PostParserPage />);
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.openPostToUnlock" }));
+    expect(api.openUrl).toHaveBeenCalledWith({ url: base.link });
+    expect(api.request).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.refreshAfterUnlock" }));
+    await waitFor(() => expect(api.reparse).toHaveBeenCalledWith(base.id));
+    expect(api.start).toHaveBeenCalledOnce();
+    expect(api.request).not.toHaveBeenCalled();
+    expect(api.retry).not.toHaveBeenCalled();
+  });
+
+  it("orders available actions by source, analysis, download, files and task", async () => {
+    usePostParserTasksStore.getState().setTasks([{ ...parsed, workflowDefinitionId: 9 }]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    expect(
+      Array.from(container.querySelectorAll("[data-operation-stage]")).map((e) =>
+        e.getAttribute("data-operation-stage"),
+      ),
+    ).toEqual(["source", "analysis", "download", "processing", "task"]);
+    expect(byRole("button", "postParser.action.purchase")).toHaveLength(0);
+  });
+});
+
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
@@ -236,6 +340,7 @@ beforeEach(() => {
   for (const key of ["add", "start", "retry", "reparse", "remove", "removeAll", "options"] as const)
     api[key].mockResolvedValue({ code: 0 });
   api.import.mockResolvedValue({ code: 0, data: { resourceId: 77, created: true, leadCount: 1 } });
+  api.request.mockResolvedValue({ code: 0 });
   api.getAll.mockImplementation(async () => ({
     code: 0,
     data: usePostParserTasksStore.getState().tasks,

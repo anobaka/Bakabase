@@ -24,6 +24,7 @@ public record AcquisitionLead
     public string? Password { get; set; }
     public string? SourceReference { get; set; }
     public bool IsResolved { get; set; }
+    public string? ExtractionPlanJson { get; set; }
 
     public DateTime? LastUsedAt { get; set; }
 

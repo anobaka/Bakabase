@@ -21,67 +21,19 @@ public class SoulPlusClient(
 {
     public async Task<SoulPlusPost> GetPostAsync(string link, CancellationToken ct)
     {
-        var html = await GetHtml(link, ct);
-
-        if (html.Contains("此帖被管理员关闭，暂时不能浏览") || html.Contains("用户被禁言,该主题自动屏蔽"))
-        {
-            throw new Exception("Post is deleted");
-        }
-
-        var cq = new CQ(html);
-        var title = cq["#subject_tpc"].Text();
-
-        var post = new SoulPlusPost
-        {
-            Title = title,
-            Html = html,
-        };
-
-        var bought = cq[".s3.f12.fn"];
-        if (bought.Any())
-        {
-            // var quotes = new StringBuilder();
-            var tpcContentElements = new HashSet<CQ>();
-            foreach (var b in bought)
-            {
-                var tpcContentElement = b.Cq().Parents(".tpc_content")!;
-                if (tpcContentElement.Find("#read_tpc").Length == 0 &&
-                    tpcContentElements.Add(tpcContentElement))
-                {
-
-                    post.LockedContents ??= [];
-                    post.LockedContents.Add(new SoulPlusPostLockedContent
-                    {
-                        IsBought = true,
-                        ContentHtml = tpcContentElement.Html()
-                    });
-                }
-            }
-        }
-        else
-        {
-            var buyButton = cq["input[value=\"愿意购买,我买,我付钱\"]"];
-            if (buyButton.Any())
-            {
-                var priceText = buyButton.Prev().Text();
-                var price = int.Parse(Regex.Match(priceText, @" (?<p>\d+) SP").Groups["p"].Value);
-
-                post.LockedContents ??= [];
-                post.LockedContents.Add(new SoulPlusPostLockedContent
-                {
-                    Url = new Uri(new Uri(link),
-                        Regex.Match(buyButton.Attr("onclick"), $"'.*'").Value.Trim('\'')).ToString(),
-                    IsBought = false,
-                    Price = price
-                });
-            }
-        }
-
-        return post;
+        var firstPage = SoulPlusPostParser.FirstPageUrl(link);
+        return SoulPlusPostParser.Parse(await GetHtml(firstPage, ct), firstPage);
     }
+
+    public string PurchaseAccountKey => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+        System.Text.Encoding.UTF8.GetBytes(options.Value.Cookie ?? "")));
 
     protected Task<string> GetHtml(string url, CancellationToken ct)
     {
+        if (!SoulPlusPostParser.IsSupportedUrl(url))
+            throw new InvalidOperationException("This URL is not a supported SoulPlus site.");
+        // Old shared links may use HTTP; account cookies are only sent over HTTPS.
+        url = new UriBuilder(url) {Scheme = Uri.UriSchemeHttps, Port = -1}.Uri.AbsoluteUri;
         if (options.Value.Cookie.IsNullOrEmpty())
         {
             throw new Exception("Cookie is not set");
@@ -111,6 +63,10 @@ public class SoulPlusClient(
 
     public async Task BuyLockedContent(string url, CancellationToken ct)
     {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            !uri.AbsolutePath.EndsWith("job.php", StringComparison.OrdinalIgnoreCase) ||
+            !uri.Query.Contains("buy", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("The locked item has no recognized purchase endpoint.");
         await GetHtml(url, ct);
     }
 

@@ -65,8 +65,12 @@ public class AcquisitionLeadService<TDbContext>(
         if (existing != null)
         {
             if (existing.ResourceId == resourceId &&
+                !AcquisitionLeadExtensions.CanAcceptExtractionPlan(existing.ExtractionPlanJson, model.ExtractionPlanJson))
+                throw new InvalidOperationException("The new extraction instructions conflict with the saved plan for this link.");
+            if (existing.ResourceId == resourceId &&
                 ((existing.AccessCode == null && model.AccessCode != null) ||
                  (existing.Password == null && model.Password != null) ||
+                 (model.ExtractionPlanJson != null && existing.ExtractionPlanJson != model.ExtractionPlanJson) ||
                  (existing.SourceReference == null && model.SourceReference != null) ||
                  (!existing.IsResolved && model.IsResolved)))
             {
@@ -74,6 +78,7 @@ public class AcquisitionLeadService<TDbContext>(
                 {
                     lead.AccessCode ??= model.AccessCode;
                     lead.Password ??= model.Password;
+                    lead.ExtractionPlanJson = model.ExtractionPlanJson ?? lead.ExtractionPlanJson;
                     lead.SourceReference ??= model.SourceReference;
                     lead.IsResolved |= model.IsResolved;
                 });
@@ -93,6 +98,7 @@ public class AcquisitionLeadService<TDbContext>(
             Note = model.Note,
             AccessCode = model.AccessCode,
             Password = model.Password,
+            ExtractionPlanJson = model.ExtractionPlanJson,
             SourceReference = model.SourceReference,
             IsResolved = model.IsResolved,
             CreatedAt = DateTime.Now

@@ -66,7 +66,8 @@ body {
 *,
 *:focus,
 *:hover {
-  outline: none;
+  /* Preserve component outline colors and widths (HeroUI inputs use a transparent outline). */
+  outline-style: none;
 }
 
 .ReactCollapse--collapse {

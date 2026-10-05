@@ -32,5 +32,8 @@ public enum AcquisitionWaitReason
     PickDirectory = 8,
 
     /// <summary>A platform is fetching on its own — a download task, an install — and will say when it is done.</summary>
-    PlatformFetch = 9
+    PlatformFetch = 9,
+
+    /// <summary>The extraction instructions need a human decision or correction.</summary>
+    ExtractionPlanUnknown = 10
 }

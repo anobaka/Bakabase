@@ -13,6 +13,7 @@ using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Service.Components.Acquisition.Steps;
+using Bakabase.Service.Components.FileProcessing;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -87,6 +88,10 @@ public class AcquisitionInboxService(
     public async Task OfferAsync(string filePath, CancellationToken ct = default)
     {
         if (!IsStable(filePath) || !IsCompleteVolumeSet(filePath)) return;
+        var files = FileProcessingFiles.ExpandVolumes([filePath]);
+        // No filename reveals the final part count reliably. Wait for a human completion
+        // signal for multipart archives, then deliver the complete selected group together.
+        if (files.Any(FileProcessingFiles.IsVolume)) return;
 
         var waiting = await WaitingAsync(ct);
 
@@ -124,7 +129,7 @@ public class AcquisitionInboxService(
             return;
         }
 
-        await ClaimAsync(best.Task.Id, [filePath], ct);
+        await ClaimAsync(best.Task.Id, files, ct);
         logger.LogInformation("[Inbox] {File} claimed for acquisition {TaskId} (score {Score})",
             info.Name, best.Task.Id, best.Score);
     }
@@ -279,6 +284,12 @@ public class AcquisitionInboxService(
 
         // Every volume of a set has to be settled, not just present: one still downloading means
         // the set is not ready however many files are sitting there.
-        return siblings.All(n => IsStable(Path.Combine(directory, n)));
+        if (!siblings.All(n => IsStable(Path.Combine(directory, n)))) return false;
+        try
+        {
+            FileProcessingFiles.ValidateVolumes(FileProcessingFiles.ExpandVolumes([path]));
+            return true;
+        }
+        catch (InvalidOperationException) { return false; }
     }
 }

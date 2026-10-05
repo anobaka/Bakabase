@@ -31,7 +31,12 @@ public class LegacyPostContentService(IEnumerable<ISharedContentReader> readers)
         Title = content.Title ?? "",
         MainHtml = content.MainHtml ?? "",
         CommentHtmlList = content.CommentHtmlList?.ToList() ?? [],
-        Locks = content.Locks?.Select(l => new PostContentLock(l.Url, l.Price, l.IsBought)).ToList() ?? [],
+        Comments = content.Comments?.ToList() ?? [],
+        Locks = content.Locks?.Select(l => new PostContentLock(l.Url, l.Price, l.IsBought) {Id = l.Id, Floor = l.Floor}).ToList() ?? [],
+        SourceUrl = content.SourceUrl,
+        CapturedAt = content.CapturedAt,
+        Scope = content.Scope,
+        Balance = content.Balance,
         SourceHint = sourceHint
     };
 

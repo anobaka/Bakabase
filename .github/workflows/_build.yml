@@ -44,13 +44,16 @@ jobs:
             ${{ steps.yarn-cache.outputs.path }}
             src/web/node_modules
             src/web/.yarn/install-state.gz
-          key: yarn-v2-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('src/web/yarn.lock', 'src/web/package.json', 'src/web/.yarnrc.yml', 'src/web/.yarn/patches/**') }}
+          key: yarn-v2-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('src/web/yarn.lock', 'src/web/package.json', 'src/web/.yarnrc.yml', 'src/web/.yarn/patches/**', 'src/web/patches/**') }}
           restore-keys: |
             yarn-v2-${{ runner.os }}-${{ runner.arch }}-node22-
 
       - name: Install yarn dependencies
         working-directory: src/web
-        run: yarn install --immutable
+        run: |
+          yarn install --immutable
+          # Restored install state can skip workspace build scripts.
+          yarn postinstall
 
       - name: Build frontend
         working-directory: src/web

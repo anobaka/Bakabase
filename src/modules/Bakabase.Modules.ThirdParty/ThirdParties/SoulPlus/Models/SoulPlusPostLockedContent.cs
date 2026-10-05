@@ -10,7 +10,9 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus.Models
     {
         // public int Id { get; set; }
         public string? Url { get; set; }
-        public int? Price { get; set; }
+        public decimal? Price { get; set; }
+        public string? Id { get; set; }
+        public string? Floor { get; set; }
         public string? ContentHtml { get; set; }
         public bool IsBought { get; set; }
     }

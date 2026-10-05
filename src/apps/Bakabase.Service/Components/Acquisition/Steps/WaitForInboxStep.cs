@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
+using Bakabase.Service.Components.FileProcessing;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -61,10 +65,13 @@ public class WaitForInboxStep : IAcquisitionStep
         string? AccessCode,
         string? ExpectedFileName,
         string? InboxDirectory,
-        DateTime WaitingSince);
+        DateTime WaitingSince, string? ExtractionPlanJson = null);
 
     /// <summary>The answer: the files in the inbox that belong to this run.</summary>
-    public record ClaimSignal(IReadOnlyList<string> Files);
+    public record ClaimSignal(IReadOnlyList<string>? Files = null, string? Directory = null, bool AlreadyProcessed = false);
+
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> DeliveryGates = new();
+    public record DeliveryEntry(string Source, string Target, string Hash);
 
     public async Task<AcquisitionStepOutcome> ExecuteAsync(AcquisitionStepContext ctx,
         AcquisitionWorkItem item, CancellationToken ct)
@@ -91,7 +98,7 @@ public class WaitForInboxStep : IAcquisitionStep
                 link?.AccessCode,
                 item.Variables.GetValueOrDefault("expectedFileName"),
                 options.InboxDirectory,
-                DateTime.Now), Json),
+                DateTime.Now, item.ExtractionPlanJson ?? link?.ExtractionPlanJson), Json),
             item);
     }
 
@@ -109,67 +116,94 @@ public class WaitForInboxStep : IAcquisitionStep
             }
         }
 
-        if (claim?.Files is not {Count: > 0} claimed)
-        {
-            return new AcquisitionStepOutcome.Fail("No files were claimed for this acquisition.");
-        }
-
+        if (claim == null || (claim.Files is not {Count: > 0} && string.IsNullOrWhiteSpace(claim.Directory)))
+            return new AcquisitionStepOutcome.Fail("Select files or a directory to deliver.");
         var options = ctx.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value;
-        var inbox = options.InboxDirectory;
-
-        Directory.CreateDirectory(ctx.WorkingDirectory);
-
-        var moved = new List<string>();
-
-        foreach (var source in claimed)
+        if (string.IsNullOrWhiteSpace(options.InboxDirectory))
+            return new AcquisitionStepOutcome.Fail("Choose a pending processing directory first.");
+        var identity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
         {
-            if (!File.Exists(source))
+            Files = claim.Files?.Distinct(FileProcessingFiles.PathComparer).OrderBy(x => x, FileProcessingFiles.PathComparer).ToArray(),
+            claim.Directory
+        }, Json))));
+        var journalDirectory = ctx.WorkingDirectory.TrimEnd(Path.DirectorySeparatorChar) + ".delivery";
+        var journalPath = Path.Combine(journalDirectory, identity + ".json");
+        var gate = DeliveryGates.GetOrAdd(journalPath, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        try
+        {
+            var inbox = Path.GetFullPath(options.InboxDirectory);
+            var root = claim.Directory == null ? inbox : FileProcessingFiles.Within(claim.Directory, inbox);
+            List<DeliveryEntry> entries;
+            if (File.Exists(journalPath))
+                entries = JsonSerializer.Deserialize<List<DeliveryEntry>>(await File.ReadAllTextAsync(journalPath, ct), Json)!;
+            else
             {
-                return new AcquisitionStepOutcome.Fail($"\"{Path.GetFileName(source)}\" is no longer there.");
-            }
-
-            // Everything claimed has to come from the inbox. The claim arrives over an API, and a
-            // path outside it would let a request move any file on the machine.
-            if (!string.IsNullOrWhiteSpace(inbox) && !IsInside(source, inbox))
-            {
-                return new AcquisitionStepOutcome.Fail(
-                    $"\"{Path.GetFileName(source)}\" is not in the pending processing folder.");
-            }
-
-            var target = Path.Combine(ctx.WorkingDirectory, Path.GetFileName(source));
-
-            try
-            {
-                if (File.Exists(target))
+                var selected = claim.Directory == null ? new List<string>() : FileProcessingFiles.Enumerate(root);
+                if (claim.Files != null) selected.AddRange(claim.Files.Select(f => FileProcessingFiles.Within(f, root)));
+                var files = (claim.AlreadyProcessed ? selected.Distinct(FileProcessingFiles.PathComparer).ToList() : FileProcessingFiles.ExpandVolumes(selected))
+                    .Select(f => FileProcessingFiles.Within(f, root)).ToList();
+                if (files.Count == 0) return new AcquisitionStepOutcome.Fail("No files were selected for this acquisition.");
+                if (!claim.AlreadyProcessed) FileProcessingFiles.ValidateVolumes(files);
+                entries = [];
+                foreach (var file in files)
                 {
-                    // A re-run after a restart finds its own earlier move already done.
-                    if (new FileInfo(target).Length == new FileInfo(source).Length)
-                    {
-                        File.Delete(source);
-                        moved.Add(target);
-
-                        continue;
-                    }
-
-                    target = Deduplicate(target);
+                    if (!AcquisitionInboxService.IsStable(file))
+                        return new AcquisitionStepOutcome.Fail($"{Path.GetFileName(file)} is missing or still downloading.");
+                    var target = FileProcessingFiles.Within(Path.Combine(ctx.WorkingDirectory,
+                        Path.GetRelativePath(root, file)), ctx.WorkingDirectory);
+                    if (File.Exists(target) || Directory.Exists(target))
+                        return new AcquisitionStepOutcome.Fail($"{Path.GetFileName(target)} already exists in this task. No files were moved.");
+                    entries.Add(new DeliveryEntry(file, target, await Fingerprint(file, ct)));
                 }
-
-                File.Move(source, target);
-                moved.Add(target);
+                Directory.CreateDirectory(journalDirectory);
+                await File.WriteAllTextAsync(journalPath + ".tmp", JsonSerializer.Serialize(entries, Json), ct);
+                File.Move(journalPath + ".tmp", journalPath);
             }
-            catch (IOException ex)
+            foreach (var entry in entries)
             {
-                return new AcquisitionStepOutcome.Fail(
-                    $"Could not move \"{Path.GetFileName(source)}\" out of the pending processing folder: {ex.Message}", ex);
+                ct.ThrowIfCancellationRequested();
+                FileProcessingFiles.Within(entry.Source, inbox);
+                FileProcessingFiles.Within(entry.Target, ctx.WorkingDirectory);
+                if (File.Exists(entry.Target))
+                {
+                    if (await Fingerprint(entry.Target, ct) != entry.Hash)
+                        throw new InvalidOperationException("A delivered file was replaced. The claim cannot overwrite it.");
+                    // A copied file remaining after a crash is removed only after content equality,
+                    // never merely because two unrelated files happen to have the same size.
+                    if (File.Exists(entry.Source))
+                    {
+                        if (await Fingerprint(entry.Source, ct) != entry.Hash)
+                            throw new InvalidOperationException("The inbox file changed after it was selected.");
+                        File.Delete(entry.Source);
+                    }
+                    continue;
+                }
+                if (!File.Exists(entry.Source) || await Fingerprint(entry.Source, ct) != entry.Hash)
+                    throw new InvalidOperationException("A selected file changed or disappeared before delivery.");
+                Directory.CreateDirectory(Path.GetDirectoryName(entry.Target)!);
+                File.Move(entry.Source, entry.Target);
             }
+            await ctx.ReportProgress(100, $"{entries.Count} files delivered");
+            return new AcquisitionStepOutcome.Continue(item with
+            {
+                Files = item.Files.Concat(entries.Select(e => e.Target)).Distinct(FileProcessingFiles.PathComparer).ToList(),
+                AlreadyProcessed = claim.AlreadyProcessed,
+                ExtractedDirectory = claim.AlreadyProcessed ? ctx.WorkingDirectory : item.ExtractedDirectory,
+                PreserveDirectoryStructure = claim.Directory != null || item.PreserveDirectoryStructure
+            });
         }
-
-        await ctx.ReportProgress(100, $"{moved.Count} files claimed");
-
-        return new AcquisitionStepOutcome.Continue(item with
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Files = item.Files.Concat(moved).Distinct().ToList()
-        });
+            return new AcquisitionStepOutcome.Fail($"Could not deliver the selected files: {ex.Message}", ex);
+        }
+        finally { gate.Release(); }
+    }
+
+    private static async Task<string> Fingerprint(string path, CancellationToken ct)
+    {
+        await using var stream = File.OpenRead(path);
+        return Convert.ToHexString(await SHA256.HashDataAsync(stream, ct));
     }
 
     private static void OpenInBrowser(AcquisitionStepContext ctx, string url)
@@ -185,26 +219,4 @@ public class WaitForInboxStep : IAcquisitionStep
         }
     }
 
-    private static bool IsInside(string path, string directory)
-    {
-        var full = Path.GetFullPath(path);
-        var root = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar) +
-                   Path.DirectorySeparatorChar;
-
-        return full.StartsWith(root, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string Deduplicate(string path)
-    {
-        var directory = Path.GetDirectoryName(path)!;
-        var stem = Path.GetFileNameWithoutExtension(path);
-        var extension = Path.GetExtension(path);
-
-        for (var i = 2;; i++)
-        {
-            var candidate = Path.Combine(directory, $"{stem} ({i}){extension}");
-
-            if (!File.Exists(candidate)) return candidate;
-        }
-    }
 }

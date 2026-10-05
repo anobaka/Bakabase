@@ -1864,6 +1864,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   headers?: Record<string, string>;
   /** @format int32 */
   autoBuyThreshold: number;
+  /** @format int32 */
+  minimumRemainingCoins: number;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount {
@@ -2103,6 +2105,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputS
   cookie?: string;
   /** @format int32 */
   autoBuyThreshold?: number;
+  /** @format int32 */
+  minimumRemainingCoins?: number;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSteamOptionsPatchInputModel {
@@ -2586,6 +2590,14 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
   link: string;
   title?: string;
   content?: string;
+  contentSnapshot?: BakabaseModulesPostParserModelsDomainPostContent;
+  availability?: BakabaseModulesPostParserModelsDomainPostAvailabilityAssessment;
+  parsingState?: string;
+  parsingMessage?: string;
+  /** @format int32 */
+  autoBuyThreshold: number;
+  /** @format int32 */
+  minimumRemainingCoins: number;
   text?: string;
   /** @format date-time */
   createdAt?: string;
@@ -3600,6 +3612,7 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLe
   password?: string;
   sourceReference?: string;
   isResolved: boolean;
+  extractionPlanJson?: string;
   /** @format date-time */
   lastUsedAt?: string;
   /** [1: Succeeded, 2: Failed] */
@@ -3628,7 +3641,7 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTa
   workflowRunId?: number;
   /** [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
   status: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus;
-  /** [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch] */
+  /** [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch, 10: ExtractionPlanUnknown] */
   waitReason?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionWaitReason;
   targetDirectory?: string;
   error?: string;
@@ -3711,7 +3724,7 @@ export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisiti
   | 6;
 
 /**
- * [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch]
+ * [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch, 10: ExtractionPlanUnknown]
  * @format int32
  */
 export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionWaitReason =
@@ -3723,7 +3736,8 @@ export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisiti
   | 6
   | 7
   | 8
-  | 9;
+  | 9
+  | 10;
 
 export interface BakabaseModulesAcquisitionAbstractionsModelsDomainPurchaseRecord {
   /** @format double */
@@ -3811,6 +3825,7 @@ export interface BakabaseModulesAcquisitionModelsInputAcquisitionLeadAddInputMod
   /** @maxLength 2048 */
   sourceReference?: string;
   isResolved: boolean;
+  extractionPlanJson?: string;
 }
 
 export interface BakabaseModulesAcquisitionModelsInputAcquisitionResumeInputModel {
@@ -5802,6 +5817,45 @@ export interface BakabaseModulesPlayerAbstractionsModelsInputPlaylistBatchPlayIn
   playerKey: string;
 }
 
+export interface BakabaseModulesPostParserModelsDomainPostAvailabilityAssessment {
+  status: string;
+  evidence: string[];
+  reason?: string;
+}
+
+export interface BakabaseModulesPostParserModelsDomainPostComment {
+  id?: string;
+  floor?: string;
+  author?: string;
+  /** @format date-time */
+  postedAt?: string;
+  html: string;
+}
+
+export interface BakabaseModulesPostParserModelsDomainPostContent {
+  title: string;
+  mainHtml: string;
+  commentHtmlList: string[];
+  comments: BakabaseModulesPostParserModelsDomainPostComment[];
+  locks: BakabaseModulesPostParserModelsDomainPostContentLock[];
+  sourceUrl?: string;
+  /** @format date-time */
+  capturedAt?: string;
+  scope: string;
+  /** @format double */
+  balance?: number;
+  sourceHint?: string;
+}
+
+export interface BakabaseModulesPostParserModelsDomainPostContentLock {
+  url?: string;
+  /** @format double */
+  price?: number;
+  isBought: boolean;
+  id?: string;
+  floor?: string;
+}
+
 /**
  * [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Series, 6: Tag, 7: Language, 8: Original, 9: Actor, 10: VoiceActor, 11: Duration, 12: Director, 13: Singer, 14: EpisodeCount, 15: Resolution, 16: AspectRatio, 17: SubtitleLanguage, 18: VideoCodec, 19: IsCensored, 20: Is3D, 21: ImageCount, 22: IsAi, 23: Developer, 24: Character, 25: AudioFormat, 26: Bitrate, 27: Platform, 28: SubscriptionPlatform, 29: Type]
  * @format int32
@@ -6792,6 +6846,16 @@ export interface BakabaseServiceControllersPostParserAcquisitionInput {
   resourceIndices: number[];
   /** @format int32 */
   revision: number;
+}
+
+export interface BakabaseServiceControllersPostParserPurchaseInput {
+  /** @format int32 */
+  revision: number;
+  /**
+   * @maxItems 100
+   * @minItems 1
+   */
+  lockUrls: string[];
 }
 
 export interface BakabaseServiceControllersResourceHealthScoreRowViewModel {
@@ -28230,6 +28294,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags PostParserAcquisition
+     * @name PurchasePostParserTaskContent
+     * @request POST:/post-parser/task/{id}/purchase
+     */
+    purchasePostParserTaskContent: (
+      id: number,
+      data: BakabaseServiceControllersPostParserPurchaseInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/task/${id}/purchase`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description

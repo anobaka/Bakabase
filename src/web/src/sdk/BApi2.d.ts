@@ -6912,6 +6912,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/post-parser/task/{id}/purchase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PurchasePostParserTaskContent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/post-parser/task/{id}/retry": {
         parameters: {
             query?: never;
@@ -10389,6 +10405,8 @@ export interface components {
             startAt?: string;
             /** Format: date-time */
             endAt: string;
+            url?: string;
+            note?: string;
         };
         "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Domain.CollectionMemoSettings": {
             /** Format: date-time */
@@ -10410,10 +10428,14 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeInputModel": {
             startAt?: string;
             endAt: string;
+            url?: string;
+            note?: string;
         };
         "Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Input.CollectionMemoRangeSnapshotInputModel": {
             startAt?: string;
             endAt: string;
+            url?: string;
+            note?: string;
             /** Format: int32 */
             id: number;
         };
@@ -10689,6 +10711,8 @@ export interface components {
             };
             /** Format: int32 */
             autoBuyThreshold: number;
+            /** Format: int32 */
+            minimumRemainingCoins: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount": {
             name?: string;
@@ -10918,6 +10942,8 @@ export interface components {
             cookie?: string;
             /** Format: int32 */
             autoBuyThreshold?: number;
+            /** Format: int32 */
+            minimumRemainingCoins?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.SteamOptionsPatchInputModel": {
             accounts?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Options.SteamAccount"][];
@@ -11315,6 +11341,14 @@ export interface components {
             link: string;
             title?: string;
             content?: string;
+            contentSnapshot?: components["schemas"]["Bakabase.Modules.PostParser.Models.Domain.PostContent"];
+            availability?: components["schemas"]["Bakabase.Modules.PostParser.Models.Domain.PostAvailabilityAssessment"];
+            parsingState?: string;
+            parsingMessage?: string;
+            /** Format: int32 */
+            autoBuyThreshold: number;
+            /** Format: int32 */
+            minimumRemainingCoins: number;
             text?: string;
             /** Format: date-time */
             createdAt?: string;
@@ -12176,6 +12210,7 @@ export interface components {
             password?: string;
             sourceReference?: string;
             isResolved: boolean;
+            extractionPlanJson?: string;
             /** Format: date-time */
             lastUsedAt?: string;
             lastResult?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadResult"];
@@ -12251,10 +12286,10 @@ export interface components {
         "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus": 1 | 2 | 3 | 4 | 5 | 6;
         /**
          * Format: int32
-         * @description [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch]
+         * @description [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch, 10: ExtractionPlanUnknown]
          * @enum {integer}
          */
-        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionWaitReason": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionWaitReason": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
         "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.PurchaseRecord": {
             /** Format: double */
             price: number;
@@ -12324,6 +12359,7 @@ export interface components {
             password?: string;
             sourceReference?: string;
             isResolved: boolean;
+            extractionPlanJson?: string;
         };
         "Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel": {
             signalJson: string;
@@ -13982,6 +14018,41 @@ export interface components {
         "Bakabase.Modules.Player.Abstractions.Models.Input.PlaylistBatchPlayInputModel": {
             playerKey: string;
         };
+        "Bakabase.Modules.PostParser.Models.Domain.PostAvailabilityAssessment": {
+            status: string;
+            evidence: string[];
+            reason?: string;
+        };
+        "Bakabase.Modules.PostParser.Models.Domain.PostComment": {
+            id?: string;
+            floor?: string;
+            author?: string;
+            /** Format: date-time */
+            postedAt?: string;
+            html: string;
+        };
+        "Bakabase.Modules.PostParser.Models.Domain.PostContent": {
+            title: string;
+            mainHtml: string;
+            commentHtmlList: string[];
+            comments: components["schemas"]["Bakabase.Modules.PostParser.Models.Domain.PostComment"][];
+            locks: components["schemas"]["Bakabase.Modules.PostParser.Models.Domain.PostContentLock"][];
+            sourceUrl?: string;
+            /** Format: date-time */
+            capturedAt?: string;
+            scope: string;
+            /** Format: double */
+            balance?: number;
+            sourceHint?: string;
+        };
+        "Bakabase.Modules.PostParser.Models.Domain.PostContentLock": {
+            url?: string;
+            /** Format: double */
+            price?: number;
+            isBought: boolean;
+            id?: string;
+            floor?: string;
+        };
         /**
          * Format: int32
          * @description [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Series, 6: Tag, 7: Language, 8: Original, 9: Actor, 10: VoiceActor, 11: Duration, 12: Director, 13: Singer, 14: EpisodeCount, 15: Resolution, 16: AspectRatio, 17: SubtitleLanguage, 18: VideoCodec, 19: IsCensored, 20: Is3D, 21: ImageCount, 22: IsAi, 23: Developer, 24: Character, 25: AudioFormat, 26: Bitrate, 27: Platform, 28: SubscriptionPlatform, 29: Type]
@@ -14691,6 +14762,11 @@ export interface components {
             resourceIndices: number[];
             /** Format: int32 */
             revision: number;
+        };
+        "Bakabase.Service.Controllers.PostParserPurchaseInput": {
+            /** Format: int32 */
+            revision: number;
+            lockUrls: string[];
         };
         "Bakabase.Service.Controllers.ResourceHealthScoreRowViewModel": {
             /** Format: int32 */
@@ -32133,6 +32209,37 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
+                };
+            };
+        };
+    };
+    PurchasePostParserTaskContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.PostParserPurchaseInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.PostParserPurchaseInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.PostParserPurchaseInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.PostParserPurchaseInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };

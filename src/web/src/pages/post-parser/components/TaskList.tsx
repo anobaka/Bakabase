@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AutoSizer, CellMeasurer, CellMeasurerCache, List } from "react-virtualized";
 
-const columns = "grid grid-cols-[3rem_minmax(24rem,1fr)_minmax(14rem,1fr)_11rem] gap-4 px-3";
+const columns =
+  "grid grid-cols-[2.5rem_minmax(15rem,0.85fr)_minmax(22rem,1.65fr)_12.5rem] gap-3 px-3";
 
 export const TASK_ROW_MIN_HEIGHT = 128;
 
@@ -49,7 +50,7 @@ const TaskList = ({ tasks, search, renderTask }: Props) => {
           <div
             ref={registerChild}
             aria-rowindex={index + 2}
-            className={`${columns} min-h-32 border-b border-default-100 py-4`}
+            className={`${columns} min-h-32 border-b border-default-100 py-3`}
             data-task-id={task.id}
             role="row"
             style={style}

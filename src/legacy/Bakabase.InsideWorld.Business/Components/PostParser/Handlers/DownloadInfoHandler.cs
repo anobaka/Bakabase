@@ -17,13 +17,15 @@ public class DownloadInfoHandler(IPostDownloadInfoExtractor extractor) : IPostPa
     public async Task<PostParseHandlerResult> HandleAsync(PostContent content, CancellationToken ct)
     {
         var result = await extractor.ExtractAsync(LegacyPostContentService.ToContent(content), ct);
-        var resources = result.Resources.Select(r => new DownloadInfoResource
+        var resources = result.Resources.Select(r => new
         {
             Link = r.Link,
             Code = r.Code,
             Password = r.Password,
+            r.Extraction,
+            r.LinkHealth,
             DriveKind = AcquisitionDriveKinds.Infer(r.Link)
         }).ToList();
-        return new PostParseHandlerResult(new {resources = resources.Count == 0 ? null : resources}, result.Title);
+        return new PostParseHandlerResult(new {result.SchemaVersion, result.IsComplete, result.Warnings, result.Availability, resources}, result.Title);
     }
 }

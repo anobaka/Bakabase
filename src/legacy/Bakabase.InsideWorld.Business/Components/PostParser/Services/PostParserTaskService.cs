@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.Gui;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
@@ -25,7 +26,7 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
     FullMemoryCacheResourceService<TDbContext, PostParserTaskDbModel, int> cache,
     PostParserTaskExecutionGate gate, PostParserWorkflowService<TDbContext> workflow,
     BTaskManager tasks, IBOptions<ThirdPartyOptions> options,
-    IHubContext<WebGuiHub, IWebGuiClient> uiHub) : IPostParserTaskService where TDbContext : DbContext
+    IHubContext<WebGuiHub, IWebGuiClient> uiHub, IBOptions<SoulPlusOptions> purchaseOptions) : IPostParserTaskService where TDbContext : DbContext
 {
     private DbSet<PostParserTaskDbModel> ParserTasks => db.Set<PostParserTaskDbModel>();
 
@@ -38,6 +39,11 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
             .ToDictionaryAsync(r => r.Id, r => r.Status);
         foreach (var task in result)
             if (task.WorkflowRunId is { } id && runs.TryGetValue(id, out var status)) task.WorkflowStatus = status;
+        foreach (var task in result)
+        {
+            task.AutoBuyThreshold = purchaseOptions.Value.AutoBuyThreshold;
+            task.MinimumRemainingCoins = purchaseOptions.Value.MinimumRemainingCoins;
+        }
         return result;
     }
 
@@ -103,6 +109,10 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
         task.WorkflowRunId = null;
         task.WorkflowDefinitionId = null;
         task.Results = null;
+        task.ContentSnapshotJson = null;
+        task.AvailabilityJson = null;
+        task.ParsingState = null;
+        task.ParsingMessage = null;
         task.Error = null;
         task.CompletedAt = null;
         task.IsDeleted = false;
@@ -194,7 +204,7 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
             if (task == null) return PostParserTaskStatus.None;
             if (task.IsDeleted) return PostParserTaskStatus.Deleted;
             if (task.Error != null) return PostParserTaskStatus.Failed;
-            return PostParserWorkflowService<TDbContext>.IsPending(task) ? PostParserTaskStatus.Pending : PostParserTaskStatus.Complete;
+            return (task.WorkflowRunId != null && task.WorkflowStatus != WorkflowRunStatus.Success) || PostParserWorkflowService<TDbContext>.IsPending(task) ? PostParserTaskStatus.Pending : PostParserTaskStatus.Complete;
         });
     }
 

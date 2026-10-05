@@ -69,5 +69,9 @@
   "workflow.trigger.resourceMaterialized.description": "入库服务成功将资源关联到现有本地内容时，启用且符合资源来源筛选条件的工作流会收到该资源。它不涵盖每次资源创建或文件变化，取消关联也不会发送此事件。",
   "workflow.trigger.fsManualScan.description": "手动运行后扫描已配置的现有目录，产出文件或目录条目。没有事件或定时器会启动它；需要先配置根目录和扫描选项。",
   "workflow.trigger.fsScheduledScan.description": "按配置的间隔扫描现有目录，也可手动运行。间隔小于 1 分钟会关闭自动调度；已有排队、运行或等待中的执行时，不会再启动一次定时执行。",
-  "workflow.trigger.fsWatch.description": "监听已配置现有目录的直接子级，条目新增、修改或重命名后，静默达到设定时间才触发。不做初始扫描，也不递归监听子目录；手动运行会使用提供的路径。"
+  "workflow.trigger.fsWatch.description": "监听已配置现有目录的直接子级，条目新增、修改或重命名后，静默达到设定时间才触发。不做初始扫描，也不递归监听子目录；手动运行会使用提供的路径。",
+  "workflowTriggers.guide.fs.processingPlan.input": "手动运行时输入目录、一组文件以及该资源的文件处理方案，不自动监听目录。",
+  "workflowTriggers.guide.fs.processingPlan.configure": "在帖子解析结果中绑定已下载目录，或手动运行本地处理预置。不同资源分别运行。",
+  "workflow.trigger.fsProcessingPlan.description": "手动指定已下载的目录及有序文件处理方案，对同一资源的一组文件执行处理。不会下载文件或监听目录；不同资源应各自绑定目录和方案。",
+  "workflow.trigger.fsProcessingPlan.displayName": "处理本地目录中的文件"
 }

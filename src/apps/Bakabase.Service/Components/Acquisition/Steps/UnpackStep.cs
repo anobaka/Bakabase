@@ -15,6 +15,9 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Models.Domain;
+using Bakabase.Modules.PostParser.Models.Domain;
+using Bakabase.Service.Components.FileProcessing;
+using Bakabase.Infrastructures.Components.App;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -35,7 +38,7 @@ public class UnpackStep : IAcquisitionStep
 
     public string Kind => AcquisitionStepKinds.Unpack;
     public string DisplayName => "Unpack";
-    public string Description => "Extract archives in the working files, trying supplied passwords. Encrypted files may require the user to provide a password; ordinary files are kept.";
+    public string Description => "Execute saved rename, move and extraction instructions when available; otherwise extract recognized archives using supplied passwords. Missing instructions or passwords can be provided manually.";
     public string DescriptionKey => "workflow.activity.acquisition.unpack.description";
     public Type? ConfigType => typeof(Config);
 
@@ -61,7 +64,10 @@ public class UnpackStep : IAcquisitionStep
     public record Prompt(string ArchiveName, IReadOnlyList<string> Tried);
 
     /// <summary>The answer: a password to try.</summary>
-    public record PasswordSignal(string Password);
+    public record PasswordSignal(string? Password = null, string? ExtractionPlanJson = null);
+
+    public record PlanPrompt(string Reason, string Message, string? StepId, string ExtractionPlanJson,
+        string? ArchiveName = null, IReadOnlyList<string>? Tried = null);
 
     public Task<AcquisitionStepOutcome> ExecuteAsync(AcquisitionStepContext ctx, AcquisitionWorkItem item,
         CancellationToken ct) => UnpackAsync(ctx, item, null, ct);
@@ -81,12 +87,19 @@ public class UnpackStep : IAcquisitionStep
             }
         }
 
+        if (answer?.ExtractionPlanJson != null) item = item with {ExtractionPlanJson = answer.ExtractionPlanJson};
         return UnpackAsync(ctx, item, answer?.Password, ct);
     }
 
     private async Task<AcquisitionStepOutcome> UnpackAsync(AcquisitionStepContext ctx,
         AcquisitionWorkItem item, string? suppliedPassword, CancellationToken ct)
     {
+        if (item.AlreadyProcessed) return await ExecutePlan(ctx, item,
+            JsonSerializer.Serialize(new PostExtractionPlan {Requirement = "notRequired"}, Json), null, ct);
+        var planJson = item.ExtractionPlanJson ?? item.SelectedLink?.ExtractionPlanJson ??
+                       (item.Links.Count == 1 ? item.Links[0].ExtractionPlanJson : null);
+        if (planJson != null) return await ExecutePlan(ctx, item, planJson, suppliedPassword, ct);
+
         var config = ctx.GetConfig<Config>() ?? new Config();
         var options = ctx.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value;
         var extraction = ctx.ServiceProvider.GetRequiredService<IArchiveExtractionService>();
@@ -139,6 +152,44 @@ public class UnpackStep : IAcquisitionStep
         }
 
         return new AcquisitionStepOutcome.Continue(current with {ExtractedDirectory = directory});
+    }
+
+    private static async Task<AcquisitionStepOutcome> ExecutePlan(AcquisitionStepContext ctx,
+        AcquisitionWorkItem item, string planJson, string? password, CancellationToken ct)
+    {
+        try
+        {
+            var plan = JsonSerializer.Deserialize<PostExtractionPlan>(planJson, Json)
+                       ?? throw new InvalidOperationException("The extraction plan is empty.");
+            var root = item.ExtractedDirectory ?? ctx.WorkingDirectory;
+            var files = item.Files.Count > 0 ? item.Files : FileProcessingFiles.Enumerate(root);
+            var app = ctx.ServiceProvider.GetService<AppService>();
+            var stateDirectory = item.ProcessingStateDirectory ?? (app != null
+                ? Path.Combine(app.AppDataDirectory, "file-processing", ctx.WorkflowRunId?.ToString() ??
+                    ctx.AcquisitionTaskId?.ToString() ?? Guid.NewGuid().ToString("N"))
+                : ctx.WorkingDirectory.TrimEnd(Path.DirectorySeparatorChar) + ".processing");
+            item = item with {ExtractionPlanJson = planJson, ProcessingStateDirectory = stateDirectory};
+            var executor = ctx.ServiceProvider.GetService<FileProcessingPlanExecutor>() ??
+                           new FileProcessingPlanExecutor(ctx.ServiceProvider.GetRequiredService<IArchiveExtractionService>());
+            var result = await executor.ExecuteAsync(plan, root, files, stateDirectory, password,
+                p => ctx.ReportProgress(p, "Processing extraction instructions").GetAwaiter().GetResult(), ct);
+            if (!result.Completed)
+            {
+                var reason = result.NeedsPassword ? AcquisitionWaitReason.PasswordUnknown : AcquisitionWaitReason.ExtractionPlanUnknown;
+                return new AcquisitionStepOutcome.Suspend(reason,
+                    JsonSerializer.Serialize(new PlanPrompt(reason.ToString(), result.Message ?? "Input is needed.",
+                        result.StepId, planJson, result.StepId, result.TriedPasswords), Json), item);
+            }
+            return new AcquisitionStepOutcome.Continue(item with
+            {
+                Files = result.Files, ExtractedDirectory = result.OutputDirectory,
+                PreserveDirectoryStructure = true
+            });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return new AcquisitionStepOutcome.Fail($"Could not execute extraction instructions: {ex.Message}", ex);
+        }
     }
 
     private async Task<AcquisitionStepOutcome> UnpackOneAsync(AcquisitionStepContext ctx,

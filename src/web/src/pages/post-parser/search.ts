@@ -12,12 +12,17 @@ export function buildTaskSearchText(task: PostParserTask): string {
     task.link,
     task.text,
     task.content,
+    task.contentSnapshot?.mainHtml,
+    ...(task.contentSnapshot?.comments?.map((comment) => comment.html) ??
+      task.contentSnapshot?.commentHtmlList ??
+      []),
     task.error,
     downloads?.title,
     ...(downloads?.resources?.flatMap((resource) => [
       resource.link,
       resource.code,
       resource.password,
+      JSON.stringify(resource.extraction ?? ""),
     ]) ?? []),
     ...task.targets.map((target) => getTargetResult(task, target)?.error),
   ]

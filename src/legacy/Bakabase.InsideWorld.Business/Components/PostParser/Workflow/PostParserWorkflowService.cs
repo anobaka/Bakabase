@@ -8,12 +8,15 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Gui;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.PostParser.Models.Domain;
+using PostContent = Bakabase.Modules.PostParser.Models.Domain.PostContent;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
@@ -36,7 +39,7 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
     FullMemoryCacheResourceService<TDbContext, PostParserTaskDbModel, int> cache,
     PostParserTaskExecutionGate gate, IWorkflowDefinitionService definitions,
     BTaskManager tasks, IWorkflowRunResumer resumer,
-    IHubContext<WebGuiHub, IWebGuiClient> uiHub) : IPostParserWorkflowTaskBridge
+    IHubContext<WebGuiHub, IWebGuiClient> uiHub, IBOptions<SoulPlusOptions> purchaseOptions) : IPostParserWorkflowTaskBridge
     where TDbContext : DbContext
 {
     private DbSet<PostParserTaskDbModel> ParserTasks => db.Set<PostParserTaskDbModel>();
@@ -50,14 +53,18 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         var definition = await definitions.CreateAsync(new WorkflowDefinitionCreationInputModel
         {
             Name = PostParserWorkflow.BuiltinName,
-            Description = "Read a post or pasted text and extract its download links and passwords. This workflow does not download, import or create resources.",
+            Description = "Save post content, assess restricted items before purchases, and extract download links with ordered extraction instructions. This workflow does not download, import or create resources.",
             DescriptionKey = "workflow.recipe.parsePostDownloadInfo.description",
             TriggerKind = PostParserWorkflow.Trigger, Enabled = true,
             Activities =
             [
                 new WorkflowActivityInputModel {Kind = PostParserWorkflow.ReadContent,
+                    ConfigJson = "{}", OnItemError = WorkflowActivityErrorBehavior.Fail},
+                new WorkflowActivityInputModel {Kind = PostParserWorkflow.UnlockContent,
                     ConfigJson = "{\"useConfiguredSoulPlusPurchaseLimit\":true}", OnItemError = WorkflowActivityErrorBehavior.Fail},
                 new WorkflowActivityInputModel {Kind = PostParserWorkflow.ExtractDownloadInfo,
+                    ConfigJson = "{}", OnItemError = WorkflowActivityErrorBehavior.Fail},
+                new WorkflowActivityInputModel {Kind = PostParserWorkflow.CheckLinks,
                     ConfigJson = "{}", OnItemError = WorkflowActivityErrorBehavior.Fail}
             ]
         }, ct);
@@ -102,8 +109,8 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
                     WorkflowDefinitionId = definitionId.Value, Status = WorkflowRunStatus.Pending,
                     StartedAt = DateTime.Now, PayloadJson = JsonSerializer.Serialize(payload, WorkflowJson.Options),
                     PayloadSummary = task.Title ?? (task.Text is {Length: > 0} text ? text[..Math.Min(120, text.Length)] : task.Link),
-                    // Reading can safely restart: it re-reads purchase state before considering
-                    // the legacy limit. A committed cursor also avoids an unresumable first step.
+                    // Reading has no purchasing side effects. A committed cursor also avoids
+                    // an unresumable first step after a restart.
                     CurrentStepIndex = 0
                 };
                 Runs.Add(run);
@@ -197,7 +204,9 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
                 throw new InvalidOperationException("This task has no workflow run. Start parsing it first.");
             if (tasks.Tasks.Any(t => t.Id == $"workflow.run.{runId}" && !t.Task.Status.IsFinished()))
                 throw new InvalidOperationException("The previous parsing task is still finishing. Retry in a moment.");
-            await resumer.RequeueAsync(runId, ct);
+            var status = await Runs.Where(r => r.Id == runId).Select(r => r.Status).SingleAsync(ct);
+            if (status == WorkflowRunStatus.Waiting) await resumer.ResumeAsync(runId, "{}", ct);
+            else await resumer.RequeueAsync(runId, ct);
             await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, (string?)null)
                 .SetProperty(t => t.CompletedAt, (DateTime?)null), ct);
             cache.ClearCache();
@@ -230,19 +239,81 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             domain.Results ??= new();
             domain.Results[PostParseTarget.DownloadInfo] = JsonSerializer.SerializeToNode(new
             {
+                result.SchemaVersion, result.IsComplete, result.Warnings, result.Availability,
                 title = domain.Title,
                 resources = result.Resources.Select(r => new
                 {
-                    r.Link, r.Code, r.Password, DriveKind = AcquisitionDriveKinds.Infer(r.Link)
+                    r.Link, r.Code, r.Password, r.Extraction, r.LinkHealth, DriveKind = AcquisitionDriveKinds.Infer(r.Link)
                 }).ToList()
             }, WorkflowJson.Options);
+            domain.ParsingState = result.IsComplete ? "complete" : "partial";
             domain.Error = null;
             var results = domain.ToDbModel().Results;
             await ParserTasks.Where(t => t.Id == id && t.Revision == input.Revision && t.WorkflowRunId == runId && !t.IsDeleted)
                 .ExecuteUpdateAsync(s => s.SetProperty(t => t.Title, domain.Title)
-                    .SetProperty(t => t.Results, results).SetProperty(t => t.Error, (string?)null), ct);
+                    .SetProperty(t => t.Results, results).SetProperty(t => t.Error, (string?)null)
+                    .SetProperty(t => t.ParsingState, domain.ParsingState), ct);
             cache.ClearCache();
             await PublishAsync(domain.ToDbModel(), WorkflowRunStatus.Running);
+        }
+        finally { gate.Semaphore.Release(); }
+    }
+
+    public async Task SaveSnapshotAsync(PostParserInput input, int runId, PostContent content,
+        PostAvailabilityAssessment? availability, string state, string? message, CancellationToken ct)
+    {
+        if (input.TaskId is not { } id) return;
+        await gate.Semaphore.WaitAsync(ct);
+        try
+        {
+            await EnsureCurrentAsync(input, runId, ct);
+            var snapshotJson = JsonSerializer.Serialize(content, WorkflowJson.Options);
+            var assessmentJson = availability == null ? null : JsonSerializer.Serialize(availability, WorkflowJson.Options);
+            await ParserTasks.Where(t => t.Id == id && t.Revision == input.Revision && t.WorkflowRunId == runId && !t.IsDeleted)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.Title, content.Title)
+                    .SetProperty(t => t.ContentSnapshotJson, snapshotJson).SetProperty(t => t.AvailabilityJson, assessmentJson)
+                    .SetProperty(t => t.ParsingState, state).SetProperty(t => t.ParsingMessage, message)
+                    .SetProperty(t => t.CompletedAt, (DateTime?)null), ct);
+            cache.ClearCache();
+            await PublishAsync(await ParserTasks.AsNoTracking().SingleAsync(t => t.Id == id, ct), WorkflowRunStatus.Running);
+        }
+        finally { gate.Semaphore.Release(); }
+    }
+
+    public async Task PurchaseAndResumeAsync(int id, int revision, IReadOnlyList<string> lockUrls, CancellationToken ct)
+    {
+        if (lockUrls.Count is 0 or > 100) throw new ArgumentException("Select between 1 and 100 restricted items.");
+        await gate.Semaphore.WaitAsync(ct);
+        try
+        {
+            var task = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted, ct)
+                ?? throw new InvalidOperationException("The parsing task no longer exists.");
+            if (task.Revision != revision) throw new InvalidOperationException("The post changed. Refresh before purchasing.");
+            if (task.WorkflowRunId is not { } runId) throw new InvalidOperationException("Read the post before purchasing.");
+            if (tasks.Tasks.Any(t => t.Id == $"workflow.run.{runId}" && !t.Task.Status.IsFinished()))
+                throw new InvalidOperationException("The previous operation is still finishing. Retry in a moment.");
+            var run = await Runs.SingleAsync(r => r.Id == runId, ct);
+            if (run.Status is not (WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted))
+                throw new InvalidOperationException("This parsing task is not waiting for a purchase.");
+            var node = await db.Set<WorkflowActivityDbModel>().AsNoTracking().SingleOrDefaultAsync(a =>
+                a.WorkflowDefinitionId == run.WorkflowDefinitionId && a.Order == run.CurrentStepIndex, ct);
+            if (node?.Kind != PostParserWorkflow.UnlockContent)
+                throw new InvalidOperationException("Refresh or retry this post before purchasing its content.");
+            var domain = task.ToDomainModel();
+            var content = domain.ContentSnapshot ?? throw new InvalidOperationException("No saved purchase quote exists. Read the post first.");
+            var quotes = content.Locks.Where(l => !l.IsBought && l.Url != null && l.Price != null).Select(l => l.Url!).ToHashSet();
+            if (lockUrls.Any(url => !quotes.Contains(url)))
+                throw new InvalidOperationException("A selected item has no current quoted price. Refresh the post first.");
+            var input = JsonSerializer.Deserialize<PostParserInput>(run.PayloadJson!, WorkflowJson.Options)
+                ?? throw new InvalidOperationException("The parsing input is missing.");
+            run.CurrentItemJson = WorkflowItemSnapshot.Capture(new PostParserContentItem(input, content) {Availability = domain.Availability});
+            run.Status = WorkflowRunStatus.Waiting;
+            run.ErrorMessage = null;
+            run.CompletedAt = null;
+            await db.SaveChangesAsync(ct);
+            await resumer.ResumeAsync(runId, JsonSerializer.Serialize(new PostParserPurchaseSignal {LockUrls = lockUrls.Distinct().ToList()}, WorkflowJson.Options), ct);
+            await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, (string?)null), ct);
+            cache.ClearCache();
         }
         finally { gate.Semaphore.Release(); }
     }
@@ -251,9 +322,11 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
     {
         var domain = task.ToDomainModel();
         domain.WorkflowStatus = status;
+        domain.AutoBuyThreshold = purchaseOptions.Value.AutoBuyThreshold;
+        domain.MinimumRemainingCoins = purchaseOptions.Value.MinimumRemainingCoins;
         return uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), domain);
     }
 
     internal static bool IsPending(PostParserTask task) => task.Targets.Count > 0 &&
-        (task.Results == null || task.Targets.Any(target => !task.Results.ContainsKey(target)));
+        (task.ParsingState is not null and not "complete" || task.Results == null || task.Targets.Any(target => !task.Results.ContainsKey(target)));
 }

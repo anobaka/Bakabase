@@ -1,0 +1,108 @@
+diff --git a/node_modules/framer-motion/dist/cjs/client.js b/node_modules/framer-motion/dist/cjs/client.js
+index 8e3cf9a..6e90567 100644
+--- a/node_modules/framer-motion/dist/cjs/client.js
++++ b/node_modules/framer-motion/dist/cjs/client.js
+@@ -3108,7 +3108,8 @@ class AcceleratedAnimation extends BaseAnimation {
+             ease = pregeneratedAnimation.ease;
+             type = "keyframes";
+         }
+-        const animation = startWaapiAnimation(motionValue.owner.current, name, keyframes, { ...this.options, duration, times, ease });
++        const element = motionValue.owner.current;
++        const animation = startWaapiAnimation(element, name, keyframes, { ...this.options, duration, times, ease });
+         // Override the browser calculated startTime with one synchronised to other JS
+         // and WAAPI animations starting this event loop.
+         animation.startTime = startTime !== null && startTime !== void 0 ? startTime : this.calcStartTime();
+@@ -3127,7 +3128,11 @@ class AcceleratedAnimation extends BaseAnimation {
+              */
+             animation.onfinish = () => {
+                 const { onComplete } = this.options;
+-                motionValue.set(getFinalKeyframe(keyframes, this.options, finalKeyframe));
++                const finalValue = getFinalKeyframe(keyframes, this.options, finalKeyframe);
++                motionValue.set(finalValue);
++                // Commit before cancel removes the WAAPI fill; MotionValue renders are scheduled.
++                // Backport of motiondivision/motion@84ec93335f6e7e1040f1870d6254f2dd77241cd4.
++                element.style[name] = finalValue;
+                 onComplete && onComplete();
+                 this.cancel();
+                 this.resolveFinishedPromise();
+diff --git a/node_modules/framer-motion/dist/cjs/dom.js b/node_modules/framer-motion/dist/cjs/dom.js
+index 158d993..64a9d88 100644
+--- a/node_modules/framer-motion/dist/cjs/dom.js
++++ b/node_modules/framer-motion/dist/cjs/dom.js
+@@ -3410,7 +3410,8 @@ class AcceleratedAnimation extends BaseAnimation {
+             ease = pregeneratedAnimation.ease;
+             type = "keyframes";
+         }
+-        const animation = startWaapiAnimation(motionValue.owner.current, name, keyframes, { ...this.options, duration, times, ease });
++        const element = motionValue.owner.current;
++        const animation = startWaapiAnimation(element, name, keyframes, { ...this.options, duration, times, ease });
+         // Override the browser calculated startTime with one synchronised to other JS
+         // and WAAPI animations starting this event loop.
+         animation.startTime = startTime !== null && startTime !== void 0 ? startTime : this.calcStartTime();
+@@ -3429,7 +3430,11 @@ class AcceleratedAnimation extends BaseAnimation {
+              */
+             animation.onfinish = () => {
+                 const { onComplete } = this.options;
+-                motionValue.set(getFinalKeyframe(keyframes, this.options, finalKeyframe));
++                const finalValue = getFinalKeyframe(keyframes, this.options, finalKeyframe);
++                motionValue.set(finalValue);
++                // Commit before cancel removes the WAAPI fill; MotionValue renders are scheduled.
++                // Backport of motiondivision/motion@84ec93335f6e7e1040f1870d6254f2dd77241cd4.
++                element.style[name] = finalValue;
+                 onComplete && onComplete();
+                 this.cancel();
+                 this.resolveFinishedPromise();
+diff --git a/node_modules/framer-motion/dist/cjs/index.js b/node_modules/framer-motion/dist/cjs/index.js
+index 2918c45..ac97074 100644
+--- a/node_modules/framer-motion/dist/cjs/index.js
++++ b/node_modules/framer-motion/dist/cjs/index.js
+@@ -3155,7 +3155,8 @@ class AcceleratedAnimation extends BaseAnimation {
+             ease = pregeneratedAnimation.ease;
+             type = "keyframes";
+         }
+-        const animation = startWaapiAnimation(motionValue.owner.current, name, keyframes, { ...this.options, duration, times, ease });
++        const element = motionValue.owner.current;
++        const animation = startWaapiAnimation(element, name, keyframes, { ...this.options, duration, times, ease });
+         // Override the browser calculated startTime with one synchronised to other JS
+         // and WAAPI animations starting this event loop.
+         animation.startTime = startTime !== null && startTime !== void 0 ? startTime : this.calcStartTime();
+@@ -3174,7 +3175,11 @@ class AcceleratedAnimation extends BaseAnimation {
+              */
+             animation.onfinish = () => {
+                 const { onComplete } = this.options;
+-                motionValue.set(getFinalKeyframe(keyframes, this.options, finalKeyframe));
++                const finalValue = getFinalKeyframe(keyframes, this.options, finalKeyframe);
++                motionValue.set(finalValue);
++                // Commit before cancel removes the WAAPI fill; MotionValue renders are scheduled.
++                // Backport of motiondivision/motion@84ec93335f6e7e1040f1870d6254f2dd77241cd4.
++                element.style[name] = finalValue;
+                 onComplete && onComplete();
+                 this.cancel();
+                 this.resolveFinishedPromise();
+diff --git a/node_modules/framer-motion/dist/es/animation/animators/AcceleratedAnimation.mjs b/node_modules/framer-motion/dist/es/animation/animators/AcceleratedAnimation.mjs
+index a289f3c..f64e06c 100644
+--- a/node_modules/framer-motion/dist/es/animation/animators/AcceleratedAnimation.mjs
++++ b/node_modules/framer-motion/dist/es/animation/animators/AcceleratedAnimation.mjs
+@@ -116,7 +116,8 @@ class AcceleratedAnimation extends BaseAnimation {
+             ease = pregeneratedAnimation.ease;
+             type = "keyframes";
+         }
+-        const animation = startWaapiAnimation(motionValue.owner.current, name, keyframes, { ...this.options, duration, times, ease });
++        const element = motionValue.owner.current;
++        const animation = startWaapiAnimation(element, name, keyframes, { ...this.options, duration, times, ease });
+         // Override the browser calculated startTime with one synchronised to other JS
+         // and WAAPI animations starting this event loop.
+         animation.startTime = startTime !== null && startTime !== void 0 ? startTime : this.calcStartTime();
+@@ -135,7 +136,11 @@ class AcceleratedAnimation extends BaseAnimation {
+              */
+             animation.onfinish = () => {
+                 const { onComplete } = this.options;
+-                motionValue.set(getFinalKeyframe(keyframes, this.options, finalKeyframe));
++                const finalValue = getFinalKeyframe(keyframes, this.options, finalKeyframe);
++                motionValue.set(finalValue);
++                // Commit before cancel removes the WAAPI fill; MotionValue renders are scheduled.
++                // Backport of motiondivision/motion@84ec93335f6e7e1040f1870d6254f2dd77241cd4.
++                element.style[name] = finalValue;
+                 onComplete && onComplete();
+                 this.cancel();
+                 this.resolveFinishedPromise();

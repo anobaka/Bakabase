@@ -60,6 +60,7 @@ public static class PostParserExtensions
         }
 
         services.AddScoped<SharedContentReaderResolver>();
+        services.AddScoped<SharedContentPurchasePolicy>();
         services.AddPostParserCapabilities();
         services.AddScoped<IPostContentService, LegacyPostContentService>();
         services.AddPostParserWorkflows<TDbContext>();
@@ -102,6 +103,10 @@ public static class PostParserExtensions
             Source = task.Source,
             Link = task.Link,
             Text = task.Text,
+            ContentSnapshotJson = task.ContentSnapshot == null ? null : JsonConvert.SerializeObject(task.ContentSnapshot),
+            AvailabilityJson = task.Availability == null ? null : JsonConvert.SerializeObject(task.Availability),
+            ParsingState = task.ParsingState,
+            ParsingMessage = task.ParsingMessage,
             CreatedAt = TimestampUtc(task.CreatedAt),
             CompletedAt = TimestampUtc(task.CompletedAt),
             Revision = task.Revision,
@@ -159,6 +164,10 @@ public static class PostParserExtensions
             Source = dbModel.Source,
             Link = dbModel.Link,
             Text = dbModel.Text,
+            ContentSnapshot = ReadOptional<Bakabase.Modules.PostParser.Models.Domain.PostContent>(dbModel.ContentSnapshotJson),
+            Availability = ReadOptional<Bakabase.Modules.PostParser.Models.Domain.PostAvailabilityAssessment>(dbModel.AvailabilityJson),
+            ParsingState = dbModel.ParsingState,
+            ParsingMessage = dbModel.ParsingMessage,
             CreatedAt = TimestampUtc(dbModel.CreatedAt),
             CompletedAt = TimestampUtc(dbModel.CompletedAt),
             Revision = dbModel.Revision,
@@ -173,6 +182,13 @@ public static class PostParserExtensions
     }
 
     // These columns contain UTC instants; SQLite reads DateTime values without their kind.
+    private static T? ReadOptional<T>(string? json) where T : class
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonConvert.DeserializeObject<T>(json); }
+        catch (JsonException) { return null; }
+    }
+
     private static DateTime? TimestampUtc(DateTime? value) => value is { } date
         ? date.Kind == DateTimeKind.Local ? date.ToUniversalTime() : DateTime.SpecifyKind(date, DateTimeKind.Utc)
         : null;

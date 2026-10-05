@@ -14,7 +14,8 @@ public record AcquisitionLink(
     string Url,
     string? AccessCode = null,
     string? ArchivePassword = null,
-    AcquisitionDriveKind DriveKind = AcquisitionDriveKind.Unknown);
+    AcquisitionDriveKind DriveKind = AcquisitionDriveKind.Unknown,
+    string? ExtractionPlanJson = null);
 
 /// <summary>
 /// Something that was bought on the user's behalf while acquiring. Kept so the spending is visible
@@ -37,7 +38,7 @@ public record PurchaseRecord(decimal Price, DateTime PurchasedAt, string Where);
 /// <c>==</c>.
 /// </para>
 /// </summary>
-public sealed record AcquisitionWorkItem : ITextWorkpiece
+public sealed record AcquisitionWorkItem : ITextWorkpiece, IWorkflowOutputSummary
 {
     /// <summary>The resource being acquired. A run has exactly one.</summary>
     public required int ResourceId { get; init; }
@@ -67,6 +68,10 @@ public sealed record AcquisitionWorkItem : ITextWorkpiece
     /// <summary>What unpacking produced.</summary>
     public string? ExtractedDirectory { get; init; }
 
+    public string? ExtractionPlanJson { get; init; }
+    public bool AlreadyProcessed { get; init; }
+    public string? ProcessingStateDirectory { get; init; }
+
     /// <summary>The prepared directory is the content root; keep its internal folders during placement.</summary>
     public bool PreserveDirectoryStructure { get; init; }
 
@@ -88,6 +93,12 @@ public sealed record AcquisitionWorkItem : ITextWorkpiece
     public string WorkingText => WorkingName;
 
     public object WithWorkingText(string workingText) => this with { WorkingName = workingText };
+
+    public object ToWorkflowOutputSummary() => new
+    {
+        ResourceId, Title, FilesCount = Files.Count, WorkingDirectory,
+        ExtractedDirectory, TargetDirectory, AlreadyProcessed
+    };
 
     /// <summary>The link a step is meant to act on, if one has been chosen.</summary>
     public AcquisitionLink? SelectedLink =>

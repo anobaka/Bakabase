@@ -27,7 +27,9 @@ public static class PostParserWorkflow
     public const string InputType = "item.postParser.input";
     public const string ContentType = "item.postParser.content";
     public const string ResultType = "item.postParser.result";
-    public const string BuiltinName = "Parse post download information";
+    public const string BuiltinName = "Parse post download information (v2)";
+    public const string UnlockContent = "postParser.unlockContent";
+    public const string CheckLinks = "postParser.checkLinks";
 
     public static IServiceCollection AddPostParserWorkflows<TDbContext>(this IServiceCollection services)
         where TDbContext : DbContext
@@ -38,6 +40,8 @@ public static class PostParserWorkflow
         services.AddSingleton<IWorkflowTrigger, PostParserManualTrigger>();
         services.AddSingleton<IWorkflowActivity, ReadPostContentActivity>();
         services.AddSingleton<IWorkflowActivity, ExtractPostDownloadInfoActivity>();
+        services.AddSingleton<IWorkflowActivity, UnlockPostContentActivity>();
+        services.AddSingleton<IWorkflowActivity, CheckPostLinksActivity>();
         services.AddSingleton<IWorkflowItemTypeDescriptor>(new PostParserItemTypeDescriptor(InputType, "Post: link or text", typeof(PostParserInput)));
         services.AddSingleton<IWorkflowItemTypeDescriptor>(new PostParserItemTypeDescriptor(ContentType, "Post: readable content", typeof(PostParserContentItem)));
         services.AddSingleton<IWorkflowItemTypeDescriptor>(new PostParserItemTypeDescriptor(ResultType, "Post: download information", typeof(PostParserResultItem)));
@@ -56,7 +60,11 @@ public sealed record PostParserInput
     public int Revision { get; init; }
 }
 
-public sealed record PostParserContentItem(PostParserInput Input, PostContent Content);
+public sealed record PostParserContentItem(PostParserInput Input, PostContent Content)
+{
+    public PostAvailabilityAssessment? Availability { get; init; }
+    public List<string> Warnings { get; init; } = [];
+}
 public sealed record PostParserResultItem(PostParserInput Input, PostDownloadInfo Result);
 public sealed record PostParserItemTypeDescriptor(string ItemType, string DisplayName, Type ClrType) : IWorkflowItemTypeDescriptor;
 public sealed class PostParserTaskExecutionGate { public SemaphoreSlim Semaphore { get; } = new(1, 1); }
@@ -65,6 +73,8 @@ public interface IPostParserWorkflowTaskBridge
 {
     Task EnsureCurrentAsync(PostParserInput input, int runId, CancellationToken ct);
     Task SaveResultAsync(PostParserInput input, int runId, PostDownloadInfo result, CancellationToken ct);
+    Task SaveSnapshotAsync(PostParserInput input, int runId, PostContent content,
+        PostAvailabilityAssessment? availability, string state, string? message, CancellationToken ct) => Task.CompletedTask;
 }
 
 public sealed class PostParserManualTrigger : IWorkflowTrigger
@@ -108,7 +118,7 @@ public sealed class ReadPostContentActivity : IWorkflowActivity
 {
     public string Kind => PostParserWorkflow.ReadContent;
     public string DisplayName => "Read post content";
-    public string Description => "Read a link or pasted text. Purchases are disabled unless this is a saved post-parser task using its existing SoulPlus purchase limit.";
+    public string Description => "Read and save the first page or pasted text, including replies and restricted items, before analysis or purchases.";
     public string DescriptionKey => "workflow.activity.postParserReadContent.description";
     public string Group => "postParser";
     public WorkflowActivityCategory Category => WorkflowActivityCategory.Transform;
@@ -146,72 +156,7 @@ public sealed class ReadPostContentActivity : IWorkflowActivity
             ? new PostContent {Title = input.Title ?? "", MainHtml = text, SourceHint = input.SourceHint}
             : await service.ReadAsync(input.Link!, input.SourceHint, ct);
         await bridge.EnsureCurrentAsync(input, runId, ct);
-        var locked = content.Locks.Where(l => !l.IsBought).ToList();
-        if (locked.Count > 0)
-        {
-            // This policy is a compatibility adapter for existing saved tasks, not an ambient
-            // permission granted to arbitrary workflows or URLs recognized as SoulPlus.
-            var mayUseLegacyLimit = input.TaskId != null && input.SourceHint == nameof(PostParserSource.SoulPlus)
-                && ctx.GetConfig<Config>()?.UseConfiguredSoulPlusPurchaseLimit == true;
-            if (!mayUseLegacyLimit)
-                throw new InvalidOperationException("The post contains locked content. Unlock it on the source site, then retry this workflow.");
-            var limit = ctx.Services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold;
-            if (locked.Any(l => l.Price is not { } price || price > limit || string.IsNullOrEmpty(l.Url)))
-                throw new InvalidOperationException($"The locked content exceeds the configured purchase limit ({limit}) or its price is unknown.");
-            var purchaser = ctx.Services.GetServices<ISharedContentPurchaser>().FirstOrDefault(p => p.Source == PostParserSource.SoulPlus)
-                ?? throw new InvalidOperationException("No purchaser is available for this post.");
-            foreach (var part in locked)
-            {
-                await bridge.EnsureCurrentAsync(input, runId, ct);
-                await purchaser.BuyAsync(part.Url!, ct);
-            }
-            content = await service.ReadAsync(input.Link!, input.SourceHint, ct);
-            if (content.Locks.Any(l => !l.IsBought))
-                throw new InvalidOperationException("The post still contains locked content after the purchase. Check it on the source site before retrying.");
-        }
-        await bridge.EnsureCurrentAsync(input, runId, ct);
+        await bridge.SaveSnapshotAsync(input, runId, content, null, "snapshotSaved", null, ct);
         return WorkflowItemOutcome.ReplaceWith(new PostParserContentItem(input, content));
-    }
-}
-
-public sealed class ExtractPostDownloadInfoActivity : IWorkflowActivity
-{
-    public string Kind => PostParserWorkflow.ExtractDownloadInfo;
-    public string DisplayName => "Extract download information";
-    public string Description => "Extract title, links, access codes and archive passwords using the configured AI model. Outputs structured information without downloading files.";
-    public string DescriptionKey => "workflow.activity.postParserExtractDownloadInfo.description";
-    public string Group => "postParser";
-    public WorkflowActivityCategory Category => WorkflowActivityCategory.Transform;
-    public IReadOnlyList<string> AcceptedInputItemTypes => [PostParserWorkflow.ContentType];
-    public WorkflowItemTypeBehavior OutputBehavior => WorkflowItemTypeBehavior.Fixed;
-    public string FixedOutputItemType => PostParserWorkflow.ResultType;
-
-    public async Task<IReadOnlyList<WorkflowValidationIssue>> ValidateConfigAsync(WorkflowValidationContext context, CancellationToken ct)
-    {
-        var features = context.Services.GetService<IAiFeatureService>();
-        var providers = context.Services.GetService<IAiProviderService>();
-        var config = features == null ? null : await features.GetConfigAsync(AiFeature.PostParser, ct);
-        if (features != null && (config == null || config.UseDefault))
-            config = await features.GetConfigAsync(AiFeature.Default, ct);
-        if (config?.ProviderConfigId == null || string.IsNullOrWhiteSpace(config.ModelId) || providers == null)
-            return [new() {Code = "postParser.aiMissing", Message = "Configure an AI provider and model for post parsing or the default AI feature.",
-                MessageKey = "workflow.validation.acquisition.aiMissing"}];
-        var provider = await providers.GetAsync(config.ProviderConfigId.Value, ct);
-        if (provider == null || !provider.IsEnabled || !provider.LlmEnabled)
-            return [new() {Code = "postParser.aiDisabled", Message = "The configured post-parsing AI provider is missing or disabled.",
-                MessageKey = "workflow.validation.acquisition.aiDisabled"}];
-        return [];
-    }
-
-    public async Task<WorkflowItemOutcome> ProcessItemAsync(WorkflowExecutionContext ctx, object item, CancellationToken ct)
-    {
-        var content = item as PostParserContentItem ?? throw new InvalidOperationException("This node needs readable post content.");
-        var bridge = ctx.Services.GetRequiredService<IPostParserWorkflowTaskBridge>();
-        var runId = checked((int)ctx.RunId);
-        await bridge.EnsureCurrentAsync(content.Input, runId, ct);
-        var result = await ctx.Services.GetRequiredService<IPostDownloadInfoExtractor>().ExtractAsync(content.Content, ct);
-        if (string.IsNullOrWhiteSpace(result.Title)) result = result with {Title = content.Content.Title};
-        await bridge.SaveResultAsync(content.Input, runId, result, ct);
-        return WorkflowItemOutcome.ReplaceWith(new PostParserResultItem(content.Input, result));
     }
 }

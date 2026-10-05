@@ -38,6 +38,24 @@ const draftOf = (kind: string, configJson?: string): ActivityDraft => {
 };
 
 export const EDITOR_TEMPLATES: Record<string, EditorSeed> = {
+  localProcessing: {
+    nameKey: "workflow.template.localProcessing.name",
+    descriptionKey: "workflow.preset.localProcessing.description",
+    triggerKind: "fs.processingPlan",
+    activities: [
+      { kind: "acquisition.unpack", configJson: '{"deleteArchive":false,"maxDepth":3}' },
+    ],
+  },
+  manualPostDownload: {
+    nameKey: "workflow.template.manualPostDownload.name",
+    descriptionKey: "workflow.preset.manualPostDownload.description",
+    triggerKind: "acquisition.requested",
+    activities: [
+      { kind: "acquisition.selectLink" },
+      { kind: "acquisition.waitForInbox" },
+      { kind: "acquisition.unpack", configJson: '{"deleteArchive":false,"maxDepth":3}' },
+    ],
+  },
   acquisition: {
     nameKey: "workflow.template.acquisition.name",
     triggerKind: "acquisition.requested",

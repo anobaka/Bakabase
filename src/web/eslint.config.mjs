@@ -159,4 +159,11 @@ export default defineConfig([globalIgnores([
             fixMixedExportsWithInlineTypeSpecifier: true, // 自动拆分类型导出
         }],
     },
+}, {
+    files: ["vite.qa-post-parser.config.ts"],
+    languageOptions: {
+        parserOptions: {
+            project: './tsconfig.node.json',
+        },
+    },
 }]);

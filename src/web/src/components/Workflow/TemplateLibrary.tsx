@@ -25,7 +25,7 @@ const TemplateLibrary = ({ workflows, onChoose, onDestroyed }: Props) => {
   const [visible, setVisible] = useState(true);
   const { data: triggers } = useWorkflowTriggerDescriptors();
   const entries = [
-    ...["fileCleaning", "externalDownload"].map((id) => ({
+    ...["fileCleaning", "externalDownload", "manualPostDownload", "localProcessing"].map((id) => ({
       id,
       title: t(`workflow.template.${id}.name`),
       guide: id,
@@ -33,7 +33,11 @@ const TemplateLibrary = ({ workflows, onChoose, onDestroyed }: Props) => {
       path: `/workflows/editor?template=${id}`,
     })),
     ...workflows
-      .filter((wf) => wf.isBuiltin && workflowPresetGuide(wf) !== "externalDownload")
+      .filter(
+        (wf) =>
+          wf.isBuiltin &&
+          !["externalDownload", "localProcessing"].includes(workflowPresetGuide(wf) ?? ""),
+      )
       .map((wf) => ({
         id: String(wf.id),
         title: workflowLabel(wf, t),

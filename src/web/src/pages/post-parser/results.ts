@@ -1,16 +1,45 @@
-import type { PostParserTask } from "@/core/models/PostParserTask";
+import type { PostAvailability, PostParserTask } from "@/core/models/PostParserTask";
+
+import { getDownloadUrl } from "./downloadLinks";
 
 import { PostParseTarget, PostParseTargetLabel, PostParserSource } from "@/sdk/constants";
 import { copyTextToClipboard } from "@/core/clipboard";
 
 export interface DownloadResource {
+  [key: string]: unknown;
   link?: string;
   code?: string | null;
   password?: string | null;
   driveKind?: number;
+  extraction?: ExtractionPlan | null;
+  linkHealth?: {
+    status: "available" | "unavailable" | "unknown";
+    reason?: string | null;
+    checkedAt?: string;
+  } | null;
+}
+
+export interface ExtractionPlan {
+  requirement: "required" | "notRequired" | "unknown";
+  steps: {
+    id: string;
+    op: "renameExtension" | "renameFile" | "moveFile" | "extractArchive";
+    input: string;
+    selector?: string | null;
+    extension?: string | null;
+    targetName?: string | null;
+    targetDirectory?: string | null;
+    password?: string | null;
+  }[];
+  evidence: string[];
 }
 
 export interface DownloadInfoData {
+  [key: string]: unknown;
+  schemaVersion?: number;
+  isComplete?: boolean;
+  warnings?: string[];
+  availability?: PostAvailability | null;
   title?: string;
   resources?: DownloadResource[] | null;
 }
@@ -52,6 +81,7 @@ export function getDownloadInfo(task: PostParserTask): DownloadInfoData | undefi
   if (!data) return undefined;
 
   return {
+    ...data,
     title: typeof data.title === "string" ? data.title : undefined,
     // Keep each original position: acquisition imports use the persisted result's indices.
     resources: Array.isArray(data.resources)
@@ -59,6 +89,7 @@ export function getDownloadInfo(task: PostParserTask): DownloadInfoData | undefi
           const resource = asRecord(value);
 
           return {
+            ...resource,
             link: typeof resource?.link === "string" ? resource.link : undefined,
             code:
               typeof resource?.code === "string" || resource?.code === null
@@ -69,6 +100,14 @@ export function getDownloadInfo(task: PostParserTask): DownloadInfoData | undefi
                 ? resource.password
                 : undefined,
             driveKind: typeof resource?.driveKind === "number" ? resource.driveKind : undefined,
+            extraction:
+              resource?.extraction === null
+                ? null
+                : (asRecord(resource?.extraction) as unknown as ExtractionPlan | undefined),
+            linkHealth:
+              resource?.linkHealth === null
+                ? null
+                : (asRecord(resource?.linkHealth) as DownloadResource["linkHealth"]),
           };
         })
       : [],
@@ -86,6 +125,7 @@ export function buildExportRows(tasks: PostParserTask[], targetLabel: (key: stri
       Title: task.title ?? "",
       CreatedAt: task.createdAt ?? "",
       CompletedAt: task.completedAt ?? "",
+      State: task.parsingState ?? "",
       Target: "",
       "Resource Link": "",
       "Access Code": "",
@@ -117,9 +157,18 @@ export function buildExportRows(tasks: PostParserTask[], targetLabel: (key: stri
           rows.push({
             ...row,
             Title: typeof data.title === "string" ? data.title : base.Title,
-            "Resource Link": typeof link?.link === "string" ? link.link : "",
+            "Resource Link": getDownloadUrl(
+              typeof link?.link === "string" ? link.link : "",
+              typeof link?.code === "string" ? link.code : null,
+            ),
             "Access Code": typeof link?.code === "string" ? link.code : "",
             Password: typeof link?.password === "string" ? link.password : "",
+            Complete:
+              data?.isComplete === false ? "false" : data?.isComplete === true ? "true" : "",
+            Warnings: JSON.stringify(data?.warnings ?? []),
+            Availability: JSON.stringify(data?.availability ?? null),
+            "Extraction Plan": JSON.stringify(link?.extraction ?? null),
+            "Link Health": JSON.stringify(link?.linkHealth ?? null),
           });
         }
       } else {
@@ -139,3 +188,46 @@ export function buildExportRows(tasks: PostParserTask[], targetLabel: (key: stri
 }
 
 export const copyParserText = copyTextToClipboard;
+
+/** Keep the complete versioned contract, including fields introduced by newer servers. */
+export const buildInstructionsJson = (tasks: PostParserTask[]) =>
+  JSON.stringify(
+    {
+      schemaVersion: 2,
+      tasks: tasks.map((task) => ({
+        id: task.id,
+        sourceUrl: task.link,
+        title: task.title,
+        parsingState: task.parsingState,
+        error: task.error,
+        downloadInfo: (() => {
+          const data = getDownloadInfo(task);
+
+          return data
+            ? {
+                ...data,
+                resources: data.resources?.map((resource) => ({
+                  ...resource,
+                  link: getDownloadUrl(resource.link, resource.code),
+                })),
+              }
+            : undefined;
+        })(),
+      })),
+    },
+    null,
+    2,
+  );
+
+export function downloadInstructions(tasks: PostParserTask[]) {
+  const url = URL.createObjectURL(
+    new Blob([buildInstructionsJson(tasks)], { type: "application/json" }),
+  );
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  anchor.download =
+    tasks.length === 1 ? `post-${tasks[0].id}-instructions.json` : "post-instructions.json";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}

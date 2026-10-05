@@ -17,4 +17,5 @@ public record AcquisitionLeadAddInputModel
     [MaxLength(2048)] public string? Password { get; set; }
     [MaxLength(2048)] public string? SourceReference { get; set; }
     public bool IsResolved { get; set; }
+    public string? ExtractionPlanJson { get; set; }
 }

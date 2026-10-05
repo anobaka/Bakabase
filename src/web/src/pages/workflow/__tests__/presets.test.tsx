@@ -368,7 +368,7 @@ describe("workflow preset entry points", () => {
 });
 
 describe("workflow template library", () => {
-  it.each(["externalDownload", "fileCleaning"])(
+  it.each(["externalDownload", "fileCleaning", "manualPostDownload", "localProcessing"])(
     "opens %s for editing without creating or executing a definition",
     async (template) => {
       await show();
@@ -404,6 +404,8 @@ describe("workflow template library", () => {
     expect(titles).toEqual([
       "workflow.template.fileCleaning.name",
       "workflow.template.externalDownload.name",
+      "workflow.template.manualPostDownload.name",
+      "workflow.template.localProcessing.name",
       "acquisition.recipe.directDownload",
       "workflow.recipe.downloadTorrentContents.name",
       "workflow.recipe.postParser.name",

@@ -2,7 +2,12 @@ import type { PostParserTask } from "@/core/models/PostParserTask";
 
 import { describe, expect, it } from "vitest";
 
-import { buildExportRows, getDownloadInfo, getTargetResult } from "../results";
+import {
+  buildExportRows,
+  buildInstructionsJson,
+  getDownloadInfo,
+  getTargetResult,
+} from "../results";
 
 import { PostParseTarget, PostParserSource } from "@/sdk/constants";
 
@@ -22,6 +27,77 @@ const task: PostParserTask = {
 };
 
 describe("post parsing result compatibility", () => {
+  it("preserves ordered multi-layer instructions, completeness and link evidence through JSON and spreadsheet exports", () => {
+    const extraction = {
+      requirement: "required",
+      evidence: ["Rename to .zip then use password one; repeat with .7z and two"],
+      steps: [
+        { id: "rename-1", op: "renameExtension", input: "download", extension: ".zip" },
+        { id: "extract-1", op: "extractArchive", input: "rename-1", password: "one" },
+        {
+          id: "rename-2",
+          op: "renameExtension",
+          input: "extract-1",
+          extension: ".7z",
+          selector: "*.dat",
+        },
+        { id: "extract-2", op: "extractArchive", input: "rename-2", password: "two" },
+      ],
+    };
+    const info = {
+      ...result,
+      schemaVersion: 2,
+      isComplete: false,
+      warnings: ["Still locked"],
+      futureField: { retained: true },
+      resources: [
+        {
+          ...result.resources[0],
+          extraction,
+          linkHealth: { status: "unknown", reason: "Access code is locked" },
+        },
+      ],
+    };
+    const record = { ...task, results: { DownloadInfo: info } };
+
+    expect(getDownloadInfo(record)).toMatchObject(info);
+    expect(JSON.parse(buildInstructionsJson([record])).tasks[0].downloadInfo).toEqual(info);
+    const row = buildExportRows([record], (key) => key)[0];
+
+    expect(JSON.parse(String(row["Extraction Plan"]))).toEqual(extraction);
+    expect(row.Complete).toBe("false");
+    expect(JSON.parse(String(row["Link Health"])).status).toBe("unknown");
+  });
+  it("exports usable Baidu URLs without overwriting embedded codes or losing mixed processing instructions", () => {
+    const extraction = {
+      requirement: "required",
+      evidence: [],
+      steps: [
+        { id: "rename", op: "renameFile", input: "download", targetName: "archive.zip" },
+        { id: "move", op: "moveFile", input: "rename", targetDirectory: "ready" },
+        { id: "extract", op: "extractArchive", input: "move", password: "pass" },
+      ],
+    };
+    const record = {
+      ...task,
+      results: {
+        DownloadInfo: {
+          resources: [
+            { link: "https://pan.baidu.com/s/abc", code: "1234", extraction },
+            { link: "https://pan.baidu.com/s/def?pwd=old", code: "new" },
+          ],
+        },
+      },
+    };
+    const rows = buildExportRows([record], (key) => key);
+    const info = JSON.parse(buildInstructionsJson([record])).tasks[0].downloadInfo;
+
+    expect(rows[0]["Resource Link"]).toBe("https://pan.baidu.com/s/abc?pwd=1234");
+    expect(rows[1]["Resource Link"]).toBe("https://pan.baidu.com/s/def?pwd=old");
+    expect(info.resources[0].link).toBe(rows[0]["Resource Link"]);
+    expect(info.resources[0].extraction).toEqual(extraction);
+    expect(record.results.DownloadInfo.resources[0].link).toBe("https://pan.baidu.com/s/abc");
+  });
   it("renders and exports all current bare result links and their individual passwords", () => {
     const record = {
       ...task,

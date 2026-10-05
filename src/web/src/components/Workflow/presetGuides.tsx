@@ -13,6 +13,7 @@ const guideKeys = new Map([
   ["Local directory", "localDirectory"],
   ["Download torrent contents", "torrentContents"],
   ["Parse post download information", "postParser"],
+  ["Process local files using extraction instructions", "localProcessing"],
 ]);
 
 /** Presentation metadata only; nodes and triggers decide execution and readiness. */

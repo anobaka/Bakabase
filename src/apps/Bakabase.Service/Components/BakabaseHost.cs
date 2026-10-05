@@ -177,6 +177,9 @@ namespace Bakabase.Service.Components
                         BakabaseDbContext>>()
                     .SeedAsync();
                 await acquisitionScope.ServiceProvider
+                    .GetRequiredService<Components.FileProcessing.FileProcessingWorkflowSeeder>()
+                    .SeedAsync();
+                await acquisitionScope.ServiceProvider
                     .GetRequiredService<Components.Downloader.DownloadResultWorkflowService>()
                     .SeedAsync();
                 await acquisitionScope.ServiceProvider

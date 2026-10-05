@@ -7,7 +7,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import BApi from "@/sdk/BApi";
-import { Button, Chip, Snippet, Spinner, Switch } from "@/components/bakaui";
+import { Button, Checkbox, Chip, Input, Snippet, Spinner, Switch } from "@/components/bakaui";
 import { AcquisitionWaitReason, WorkflowActivityCategory } from "@/sdk/constants";
 
 type InboxCandidate =
@@ -54,6 +54,16 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
 }) => {
   const { t } = useTranslation();
   const [candidates, setCandidates] = React.useState<InboxCandidate[] | null>(null);
+  const [files, setFiles] = React.useState<string[]>([]);
+  const [directory, setDirectory] = React.useState("");
+  const [alreadyProcessed, setAlreadyProcessed] = React.useState(false);
+  const submit = (selection: { files: string[]; directory?: string }) =>
+    onSubmit(
+      JSON.stringify({
+        reason: AcquisitionWaitReason.WaitingForFile,
+        payloadJson: JSON.stringify({ ...selection, alreadyProcessed }),
+      }),
+    );
 
   React.useEffect(() => {
     void BApi.acquisition
@@ -109,6 +119,16 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
         <div className="flex flex-col gap-1">
           {candidates.map((c) => (
             <div key={c.path} className="flex items-center gap-2">
+              <Checkbox
+                aria-label={t("workflow.processing.selectFile", { name: c.fileName })}
+                isDisabled={submitting || !c.isStable || !!directory.trim()}
+                isSelected={files.includes(c.path!)}
+                onValueChange={(checked) =>
+                  setFiles((current) =>
+                    checked ? [...current, c.path!] : current.filter((path) => path !== c.path),
+                  )
+                }
+              />
               <span className="flex-1 truncate text-xs">{c.fileName}</span>
               {!c.isStable && (
                 <Chip color="warning" size="sm" variant="flat">
@@ -120,14 +140,7 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
                 isDisabled={submitting || !c.isStable}
                 size="sm"
                 variant="flat"
-                onPress={() =>
-                  onSubmit(
-                    JSON.stringify({
-                      reason: AcquisitionWaitReason.WaitingForFile,
-                      payloadJson: JSON.stringify({ files: [c.path] }),
-                    }),
-                  )
-                }
+                onPress={() => submit({ files: [c.path!] })}
               >
                 {t<string>("workflow.acquisition.waitForInbox.claim")}
               </Button>
@@ -135,6 +148,28 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
           ))}
         </div>
       )}
+      <Input
+        description={t("workflow.processing.inboxDirectoryHint")}
+        label={t("workflow.processing.inboxDirectory")}
+        size="sm"
+        value={directory}
+        onValueChange={setDirectory}
+      />
+      <Switch isSelected={alreadyProcessed} size="sm" onValueChange={setAlreadyProcessed}>
+        {t("workflow.processing.alreadyProcessed")}
+      </Switch>
+      <Button
+        color="primary"
+        isDisabled={submitting || (!directory.trim() && files.length === 0)}
+        size="sm"
+        onPress={() =>
+          submit(directory.trim() ? { files: [], directory: directory.trim() } : { files })
+        }
+      >
+        {t("workflow.processing.claimSelection", {
+          count: directory.trim() ? t("workflow.processing.wholeDirectory") : files.length,
+        })}
+      </Button>
     </div>
   );
 };

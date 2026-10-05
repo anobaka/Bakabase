@@ -13,6 +13,12 @@ public record PostParserTask
     public string Link { get; set; } = null!;
     public string? Title { get; set; }
     public string? Content { get; set; }
+    public Bakabase.Modules.PostParser.Models.Domain.PostContent? ContentSnapshot { get; set; }
+    public Bakabase.Modules.PostParser.Models.Domain.PostAvailabilityAssessment? Availability { get; set; }
+    public string? ParsingState { get; set; }
+    public string? ParsingMessage { get; set; }
+    public int AutoBuyThreshold { get; set; }
+    public int MinimumRemainingCoins { get; set; }
     public string? Text { get; set; }
     [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.IsoDateTimeConverter))]
     public DateTime? CreatedAt { get; set; }
