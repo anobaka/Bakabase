@@ -3,6 +3,7 @@ import type { PostParserTask } from "@/core/models/PostParserTask";
 import type * as ReactVirtualized from "react-virtualized";
 
 import { HeroUIProvider } from "@heroui/react";
+import userEvent from "@testing-library/user-event";
 import { act } from "react-dom/test-utils";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,6 +24,7 @@ import {
 } from "@/sdk/constants";
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
 import { useBTasksStore } from "@/stores/bTasks";
+import { useSoulPlusOptionsStore } from "@/stores/options";
 
 const api = vi.hoisted(() => ({
   add: vi.fn(),
@@ -75,9 +77,19 @@ vi.mock("react-router-dom", () => ({ useNavigate: () => api.navigate }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal: api.portal }),
 }));
-vi.mock("@/stores/options", () => ({
+vi.mock("@/stores/options", async () => ({
   useThirdPartyOptionsStore: (select: (state: unknown) => unknown) =>
     select({ data: { automaticallyParsingPosts: false } }),
+  useSoulPlusOptionsStore: (await import("zustand")).create<{
+    data: {
+      autoBuyThreshold: number;
+      minimumRemainingCoins: number;
+      maxConcurrency: number;
+      requestInterval: number;
+    };
+  }>(() => ({
+    data: { autoBuyThreshold: 0, minimumRemainingCoins: 0, maxConcurrency: 1, requestInterval: 0 },
+  })),
 }));
 vi.mock("../components/ConfigurationModal", () => ({ default: () => null }));
 // Keep workflow help's platform settings separate from the parsing and import interactions.
@@ -322,7 +334,7 @@ describe("post content purchase and partial results", () => {
     fireEvent.click(screen.getByRole("button", { name: base.link! }));
     expect(api.openUrl).toHaveBeenCalledWith({ url: base.link });
     expect(api.request).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "postParser.action.refreshAfterUnlock" }));
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.reParse" }));
     await waitFor(() => expect(api.reparse).toHaveBeenCalledWith(base.id));
     expect(api.start).not.toHaveBeenCalled();
     expect(api.request).not.toHaveBeenCalled();
@@ -346,6 +358,177 @@ describe("post content purchase and partial results", () => {
     ).toEqual(["source", "analysis", "download", "processing", "task"]);
     expect(byRole("button", "postParser.action.purchase")).toHaveLength(0);
   });
+
+  const unlockable: PostParserTask = {
+    ...base,
+    workflowRunId: 37,
+    workflowStatus: WorkflowRunStatus.Waiting,
+    parsingState: "possiblyExpired",
+    availability: { status: "expired", evidence: ["The old link was removed."] },
+    contentSnapshot: {
+      locks: [
+        { url: "https://post.test/buy/eligible", price: 4, isBought: false },
+        { url: "https://post.test/buy/expensive", price: 80, isBought: false },
+        { url: "https://post.test/buy/unknown", price: null, isBought: false },
+      ],
+    },
+    purchaseQuote: {
+      eligibleLockUrls: ["https://post.test/buy/eligible"],
+      eligibleTotal: 4,
+      excludedTotal: 80,
+      excludedCount: 2,
+      unknownPriceCount: 1,
+    },
+  };
+
+  it("unlocks only quoted eligible URLs once and remains loading through queued purchase and AI parsing", async () => {
+    let finish!: (value: { code: number }) => void;
+
+    api.request.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    usePostParserTasksStore.getState().setTasks([unlockable]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    const button = screen.getByRole("button", { name: "postParser.action.unlockForAmount" });
+
+    act(() => {
+      button.click();
+      button.click();
+    });
+    expect(api.request).toHaveBeenCalledExactlyOnceWith(14, {
+      revision: 3,
+      lockUrls: ["https://post.test/buy/eligible"],
+      maxTotalCost: 4,
+    });
+    expect(screen.getByRole("status", { name: "postParser.label.processing" })).toBeVisible();
+    expect(button).toBeDisabled();
+    await act(async () => Promise.resolve());
+    await act(async () => {
+      usePostParserTasksStore
+        .getState()
+        .setTasks([{ ...unlockable, workflowStatus: WorkflowRunStatus.Pending }]);
+      finish({ code: 0 });
+    });
+    expect(screen.getByRole("status", { name: "postParser.label.processing" })).toBeVisible();
+    await act(async () =>
+      usePostParserTasksStore
+        .getState()
+        .setTasks([{ ...unlockable, workflowStatus: WorkflowRunStatus.Running }]),
+    );
+    expect(screen.getByRole("status", { name: "postParser.label.processing" })).toBeVisible();
+    await act(async () =>
+      usePostParserTasksStore.getState().setTasks([
+        {
+          ...unlockable,
+          workflowStatus: WorkflowRunStatus.Success,
+          parsingState: "complete",
+          contentSnapshot: { locks: [] },
+          results: parsed.results,
+          purchaseQuote: null,
+        },
+      ]),
+    );
+    expect(screen.queryByRole("status", { name: "postParser.label.processing" })).toBeNull();
+    expect(api.reparse).not.toHaveBeenCalled();
+    expect(api.start).not.toHaveBeenCalled();
+  });
+
+  it.each(["noExpiryReported", "restored", "unknown"] as const)(
+    "does not offer manual unlocking for %s posts",
+    async (status) => {
+      usePostParserTasksStore.getState().setTasks([
+        {
+          ...unlockable,
+          availability: { status, evidence: [] },
+          parsingState: "awaitingPurchase",
+        },
+      ]);
+      show(<PostParserPage />);
+      await act(async () => Promise.resolve());
+      expect(
+        screen.queryByRole("button", { name: "postParser.action.unlockForAmount" }),
+      ).toBeNull();
+      expect(screen.getByRole("button", { name: "postParser.action.reParse" })).toBeVisible();
+    },
+  );
+
+  it("shows excluded and unknown-price items only in the purchase tooltip", async () => {
+    usePostParserTasksStore.getState().setTasks([unlockable]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    const user = userEvent.setup();
+
+    await act(async () => user.keyboard("{Tab}"));
+    act(() => screen.getByRole("button", { name: "postParser.action.unlockForAmount" }).focus());
+    await waitFor(() => {
+      expect(screen.getByRole("tooltip")).toHaveTextContent("postParser.purchase.excluded");
+      expect(screen.getByRole("tooltip")).toHaveTextContent("postParser.purchase.unknownPrices");
+    });
+  });
+
+  it.each(["revision", "workflowRunId"] as const)(
+    "requires a current %s before offering unlock",
+    async (field) => {
+      usePostParserTasksStore.getState().setTasks([{ ...unlockable, [field]: undefined }]);
+      show(<PostParserPage />);
+      await act(async () => Promise.resolve());
+      expect(
+        screen.queryByRole("button", { name: "postParser.action.unlockForAmount" }),
+      ).toBeNull();
+      expect(api.request).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not attach a tooltip when every quoted item is eligible", async () => {
+    usePostParserTasksStore.getState().setTasks([
+      {
+        ...unlockable,
+        purchaseQuote: {
+          ...unlockable.purchaseQuote!,
+          excludedCount: 0,
+          excludedTotal: 0,
+          unknownPriceCount: 0,
+        },
+      },
+    ]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    const user = userEvent.setup();
+
+    await user.hover(screen.getByRole("button", { name: "postParser.action.unlockForAmount" }));
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 350)));
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("disables an empty quote instead of describing unknown prices as a free purchase", async () => {
+    usePostParserTasksStore.getState().setTasks([
+      {
+        ...unlockable,
+        purchaseQuote: { ...unlockable.purchaseQuote!, eligibleLockUrls: [], eligibleTotal: 0 },
+      },
+    ]);
+    show(<PostParserPage />);
+    const button = screen.getByRole("button", { name: "postParser.action.noEligibleUnlock" });
+
+    expect(button).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "postParser.action.unlockForAmount" })).toBeNull();
+    fireEvent.click(button);
+    expect(api.request).not.toHaveBeenCalled();
+  });
+
+  it("clears immediate loading and keeps purchase available after a failed request", async () => {
+    api.request.mockResolvedValue({ code: 409, message: "The purchase quote has changed." });
+    usePostParserTasksStore.getState().setTasks([unlockable]);
+    show(<PostParserPage />);
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.unlockForAmount" }));
+    await waitFor(() => expect(container).toHaveTextContent("The purchase quote has changed."));
+    expect(screen.queryByRole("status", { name: "postParser.label.processing" })).toBeNull();
+    expect(screen.getByRole("button", { name: "postParser.action.unlockForAmount" })).toBeEnabled();
+  });
 });
 
 beforeEach(() => {
@@ -368,6 +551,9 @@ beforeEach(() => {
   });
   usePostParserTasksStore.getState().setTasks([]);
   useBTasksStore.getState().setTasks([]);
+  useSoulPlusOptionsStore.setState({
+    data: { autoBuyThreshold: 0, minimumRemainingCoins: 0, maxConcurrency: 1, requestInterval: 0 },
+  });
 });
 afterEach(async () => {
   await act(async () => root.unmount());
@@ -673,6 +859,63 @@ describe("post parsing workspace", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "postParser.action.start" }));
     await waitFor(() => expect(api.start).toHaveBeenCalledOnce());
+  });
+
+  it("shows activity for the matching workflow BTask until it finishes", async () => {
+    const workflowTask = {
+      id: "workflow.run.37",
+      name: "Parse post",
+      createdAt: "2026-10-05T00:00:00Z",
+      isPersistent: false,
+      type: BTaskType.Any,
+      resourceType: BTaskResourceType.Any,
+      status: BTaskStatus.Running,
+    };
+
+    useBTasksStore.getState().setTasks([workflowTask]);
+    usePostParserTasksStore.getState().setTasks([
+      { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Waiting },
+      { ...base, id: 15, workflowRunId: 38, workflowStatus: WorkflowRunStatus.Waiting },
+    ]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    expect(container.querySelector('[data-task-id="14"] [role="status"]')).toBeVisible();
+    expect(container.querySelector('[data-task-id="15"] [role="status"]')).toBeNull();
+    await act(async () =>
+      useBTasksStore.getState().setTasks([{ ...workflowTask, status: BTaskStatus.Completed }]),
+    );
+    expect(container.querySelector('[data-task-id="14"] [role="status"]')).toBeNull();
+  });
+
+  it("refreshes purchase quotes when the configured price or balance limits change", async () => {
+    usePostParserTasksStore.getState().setTasks([base]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    const initialRequests = api.getAll.mock.calls.length;
+
+    await act(async () =>
+      useSoulPlusOptionsStore.setState({
+        data: {
+          autoBuyThreshold: 10,
+          minimumRemainingCoins: 0,
+          maxConcurrency: 1,
+          requestInterval: 0,
+        },
+      }),
+    );
+    expect(api.getAll).toHaveBeenCalledTimes(initialRequests + 1);
+    await act(async () =>
+      useSoulPlusOptionsStore.setState({
+        data: {
+          autoBuyThreshold: 10,
+          minimumRemainingCoins: 50,
+          maxConcurrency: 1,
+          requestInterval: 0,
+        },
+      }),
+    );
+    expect(api.getAll).toHaveBeenCalledTimes(initialRequests + 2);
+    expect(api.request).not.toHaveBeenCalled();
   });
 
   it("keeps the search before start in the toolbar and moves automatic parsing out of it", async () => {

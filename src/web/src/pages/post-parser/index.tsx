@@ -18,6 +18,7 @@ import {
   AiOutlineQuestionCircle,
   AiOutlineReload,
   AiOutlineSetting,
+  AiOutlineUnlock,
 } from "react-icons/ai";
 import * as XLSX from "xlsx";
 import dayjs from "dayjs";
@@ -40,7 +41,7 @@ import {
 } from "./results";
 import { buildTaskSearchText } from "./search";
 
-import { Alert, Button, Chip, Modal, toast } from "@/components/bakaui";
+import { Alert, Button, Chip, Modal, Spinner, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import TampermonkeyInstallButton from "@/components/ThirdPartyConfig/base/TampermonkeyInstallButton";
@@ -55,7 +56,7 @@ import {
   ThirdPartyId,
   WorkflowRunStatus,
 } from "@/sdk/constants";
-import { useThirdPartyOptionsStore } from "@/stores/options";
+import { useSoulPlusOptionsStore, useThirdPartyOptionsStore } from "@/stores/options";
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
 import { useBTasksStore } from "@/stores/bTasks";
 
@@ -70,6 +71,13 @@ const isRunning = (task: PostParserTask) =>
   !!task.workflowRunId &&
   (task.workflowStatus == null || activeStatuses.includes(task.workflowStatus));
 const hasResults = (task: PostParserTask) => Object.keys(task.results ?? {}).length > 0;
+const processingTaskStatuses = new Set([
+  BTaskStatus.NotStarted,
+  BTaskStatus.Running,
+  BTaskStatus.Pausing,
+  BTaskStatus.Resuming,
+  BTaskStatus.Cancelling,
+]);
 
 const ActionGroup = ({ stage, children }: { stage: string; children: ReactNode }) => {
   const { t } = useTranslation();
@@ -89,6 +97,10 @@ const PostParserPage = () => {
   const { createPortal } = useBakabaseContext();
   const automaticallyParsing = useThirdPartyOptionsStore(
     (state) => state.data.automaticallyParsingPosts,
+  );
+  const autoBuyThreshold = useSoulPlusOptionsStore((state) => state.data.autoBuyThreshold);
+  const minimumRemainingCoins = useSoulPlusOptionsStore(
+    (state) => state.data.minimumRemainingCoins,
   );
   const storedTasks = usePostParserTasksStore((state) => state.tasks);
   const tasks = useMemo(() => storedTasks.filter((task) => !task.isDeleted), [storedTasks]);
@@ -116,14 +128,26 @@ const PostParserPage = () => {
       BApi.postParser.searchPostParserWorkflowRuns({ taskId: runsTaskId, pageIndex, pageSize }),
     [runsTaskId],
   );
-  const dispatching = useBTasksStore((state) =>
-    state.tasks.some(
-      (task) =>
-        task.id === "ParseAllPosts" &&
-        ![BTaskStatus.Completed, BTaskStatus.Cancelled, BTaskStatus.Error].includes(task.status),
-    ),
+  const bTasks = useBTasksStore((state) => state.tasks);
+  const activeRunTasks = useMemo(
+    () =>
+      new Set(
+        bTasks.filter((task) => processingTaskStatuses.has(task.status)).map((task) => task.id),
+      ),
+    [bTasks],
   );
-  const running = tasks.some(isRunning);
+  const dispatching = bTasks.some(
+    (task) =>
+      task.id === "ParseAllPosts" &&
+      ![BTaskStatus.Completed, BTaskStatus.Cancelled, BTaskStatus.Error].includes(task.status),
+  );
+  const isProcessing = (task: PostParserTask) =>
+    isRunning(task) ||
+    (!!task.workflowRunId && activeRunTasks.has(`workflow.run.${task.workflowRunId}`)) ||
+    ["fetch", "retry", "reparse", "purchase"].some(
+      (actionName) => busy === `${actionName}-${task.id}`,
+    );
+  const running = tasks.some(isProcessing);
   const hasPending = tasks.some((task) => !task.workflowRunId && !task.error && !hasResults(task));
 
   const refresh = useCallback(async () => {
@@ -157,11 +181,12 @@ const PostParserPage = () => {
       active = false;
       if (timer != null) window.clearInterval(timer);
     };
-  }, [running, setTasks]);
+  }, [running, setTasks, autoBuyThreshold, minimumRemainingCoins]);
 
   const action = async (
     key: string,
     invoke: () => Promise<{ code?: number; message?: string }>,
+    rethrow = false,
   ) => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -174,6 +199,7 @@ const PostParserPage = () => {
       await refresh();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : t<string>("postParser.result.failed"));
+      if (rethrow) throw failure;
     } finally {
       busyRef.current = false;
       setBusy(undefined);
@@ -224,18 +250,17 @@ const PostParserPage = () => {
                   actions: ["cancel", "ok"],
                   okProps: { children: t("postParser.action.retry") },
                 },
-                onOk: async () => {
-                  const response =
-                    task.workflowRunId &&
-                    task.workflowStatus != null &&
-                    retryStatuses.includes(task.workflowStatus)
-                      ? await BApi.postParser.retryPostParserTaskWorkflow(task.id)
-                      : await BApi.postParser.reParsePostParserTask(task.id);
-
-                  if (response.code)
-                    throw new Error(response.message || t("postParser.result.failed"));
-                  await refresh();
-                },
+                onOk: () =>
+                  action(
+                    `retry-${task.id}`,
+                    () =>
+                      task.workflowRunId &&
+                      task.workflowStatus != null &&
+                      retryStatuses.includes(task.workflowStatus)
+                        ? BApi.postParser.retryPostParserTaskWorkflow(task.id)
+                        : BApi.postParser.reParsePostParserTask(task.id),
+                    true,
+                  ),
               })
             }
           >
@@ -292,6 +317,7 @@ const PostParserPage = () => {
 
   const renderTask = (task: PostParserTask) => {
     const data = getDownloadInfo(task);
+    const processing = isProcessing(task);
     const hasLinks = !!data?.resources?.some((resource) => !!resource.link?.trim());
     const locks = task.contentSnapshot?.locks?.filter((lock) => !lock.isBought) ?? [];
     const needsUnlock =
@@ -300,6 +326,43 @@ const PostParserPage = () => {
       task.parsingState === "possiblyExpired";
     const canImport = hasLinks && !needsUnlock && data?.isComplete !== false && !task.error;
     const hasContent = !!(task.text || task.content || task.contentSnapshot);
+    const quote = task.purchaseQuote;
+    const revision = task.revision;
+    const availability = task.availability ?? data?.availability;
+    const canOfferUnlock =
+      locks.length > 0 &&
+      availability?.status === "expired" &&
+      !!quote &&
+      !!task.workflowRunId &&
+      revision != null &&
+      Number.isSafeInteger(revision) &&
+      revision >= 0;
+    const unlockButton = canOfferUnlock ? (
+      <Button
+        color="warning"
+        isDisabled={!!busy || processing || !quote.eligibleLockUrls.length}
+        isLoading={busy === `purchase-${task.id}`}
+        size="sm"
+        startContent={<AiOutlineUnlock aria-hidden />}
+        variant="light"
+        onPress={() =>
+          action(`purchase-${task.id}`, () =>
+            BApi.postParser.purchasePostParserTaskContent(task.id, {
+              revision,
+              lockUrls: quote.eligibleLockUrls,
+              maxTotalCost: quote.eligibleTotal,
+            }),
+          )
+        }
+      >
+        {t(
+          quote.eligibleLockUrls.length
+            ? "postParser.action.unlockForAmount"
+            : "postParser.action.noEligibleUnlock",
+          { amount: quote.eligibleTotal },
+        )}
+      </Button>
+    ) : null;
     const state = task.error
       ? "error"
       : task.parsingState && task.parsingState !== "complete"
@@ -331,7 +394,18 @@ const PostParserPage = () => {
                 {task.title || t<string>("postParser.label.untitled")}
               </span>
               <div className="flex shrink-0 items-center gap-1">
-                {state ? (
+                {processing ? (
+                  <Chip color="primary" size="sm" variant="flat">
+                    <span
+                      aria-label={t("postParser.label.processing")}
+                      className="inline-flex items-center gap-1"
+                      role="status"
+                    >
+                      <Spinner aria-hidden classNames={{ wrapper: "h-3 w-3" }} size="sm" />
+                      {t("postParser.label.processing")}
+                    </span>
+                  </Chip>
+                ) : state ? (
                   <Chip
                     color={
                       state === "complete" ? "success" : state === "error" ? "danger" : "warning"
@@ -446,7 +520,9 @@ const PostParserPage = () => {
         </div>
         <div className="min-w-0" role="cell">
           <div className="flex flex-col gap-1 [&_button]:h-7 [&_button]:px-1.5 [&_button]:text-xs">
-            {(hasContent || (!task.workflowRunId && !hasResults(task) && !task.error)) && (
+            {(hasContent ||
+              canOfferUnlock ||
+              (!task.workflowRunId && !hasResults(task) && !task.error)) && (
               <ActionGroup stage="source">
                 {hasContent && (
                   <Tooltip content={t("postParser.action.viewContent")}>
@@ -462,9 +538,47 @@ const PostParserPage = () => {
                     </Button>
                   </Tooltip>
                 )}
+                {unlockButton &&
+                  (quote!.excludedCount > 0 ? (
+                    <Tooltip
+                      content={
+                        <div className="max-w-xs space-y-1">
+                          <p>
+                            {t("postParser.purchase.excluded", {
+                              count: quote!.excludedCount,
+                              amount: quote!.excludedTotal,
+                            })}
+                          </p>
+                          {quote!.unknownPriceCount > 0 && (
+                            <p>
+                              {t("postParser.purchase.unknownPrices", {
+                                count: quote!.unknownPriceCount,
+                              })}
+                            </p>
+                          )}
+                        </div>
+                      }
+                    >
+                      {quote!.eligibleLockUrls.length ? (
+                        unlockButton
+                      ) : (
+                        <span
+                          aria-disabled="true"
+                          className="inline-flex"
+                          role="button"
+                          tabIndex={0}
+                        >
+                          {unlockButton}
+                        </span>
+                      )}
+                    </Tooltip>
+                  ) : (
+                    unlockButton
+                  ))}
                 {!task.workflowRunId && !hasResults(task) && !task.error && (
                   <Button
-                    isDisabled={!!busy}
+                    isDisabled={!!busy || processing}
+                    isLoading={busy === `fetch-${task.id}`}
                     size="sm"
                     startContent={<AiOutlinePlayCircle aria-hidden />}
                     variant="light"
@@ -480,9 +594,9 @@ const PostParserPage = () => {
               </ActionGroup>
             )}
             {(hasResults(task) ||
-              (!isRunning(task) && (task.error || task.workflowRunId || task.contentSnapshot))) && (
+              (!processing && (task.error || task.workflowRunId || task.contentSnapshot))) && (
               <ActionGroup stage="analysis">
-                {!isRunning(task) && (
+                {!processing && (
                   <Button
                     isDisabled={!!busy}
                     isLoading={busy === `retry-${task.id}` || busy === `reparse-${task.id}`}
@@ -501,7 +615,7 @@ const PostParserPage = () => {
                   >
                     {t(
                       needsUnlock
-                        ? "postParser.action.refreshAfterUnlock"
+                        ? "postParser.action.reParse"
                         : retryable
                           ? task.workflowStatus === WorkflowRunStatus.Waiting
                             ? "postParser.action.continueParsing"

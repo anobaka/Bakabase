@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
+using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 using Bakabase.Modules.AI.Models.Domain;
 using Bakabase.Modules.AI.Services;
@@ -22,6 +23,8 @@ namespace Bakabase.InsideWorld.Business.Components.PostParser.Workflow;
 public sealed record PostParserPurchaseSignal
 {
     public List<string> LockUrls { get; init; } = [];
+    public bool EnforceConfiguredLimits { get; init; }
+    public decimal MaxTotalCost { get; init; }
 }
 
 public sealed class UnlockPostContentActivity : IResumableWorkflowActivity
@@ -53,8 +56,8 @@ public sealed class UnlockPostContentActivity : IResumableWorkflowActivity
         var runId = checked((int)ctx.RunId);
         await bridge.EnsureCurrentAsync(item.Input, runId, ct);
         var reader = ctx.Services.GetRequiredService<IPostContentService>();
-        var quote = item.Content.Locks.Where(l => !l.IsBought && l.Url != null)
-            .GroupBy(l => l.Url!).ToDictionary(g => g.Key, g => g.First().Price);
+        var quote = PostParserPurchaseQuote.Offers(item.Content).Where(l => l.Url != null)
+            .ToDictionary(l => l.Url!, l => l.Price);
         var content = refresh && item.Input.Link is {Length: > 0} reference
             ? await reader.ReadAsync(reference, item.Input.SourceHint, ct) : item.Content;
         item = item with {Content = content};
@@ -63,6 +66,9 @@ public sealed class UnlockPostContentActivity : IResumableWorkflowActivity
 
         var options = ctx.Services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value;
         var manual = signal?.LockUrls.Count > 0;
+        var enforceLimits = signal?.EnforceConfiguredLimits == true || item.Input.TaskId != null;
+        if (manual && enforceLimits && item.Availability?.Status != "expired")
+            throw new InvalidOperationException("One-click unlocking is only available for a post assessed as possibly expired. Parse it again to use automatic purchasing.");
         var mayBuy = !string.IsNullOrWhiteSpace(item.Input.Link) &&
             (item.Input.SourceHint == nameof(PostParserSource.SoulPlus) || content.SourceHint == nameof(PostParserSource.SoulPlus)) &&
             (manual || ctx.GetConfig<Config>()?.UseConfiguredSoulPlusPurchaseLimit == true);
@@ -85,7 +91,8 @@ public sealed class UnlockPostContentActivity : IResumableWorkflowActivity
             var approved = manual ? signal!.LockUrls.Distinct().ToDictionary(url => url, url => quote[url]) : null;
             var purchase = await ctx.Services.GetRequiredService<SharedContentPurchasePolicy>().PurchaseAsync(
                 item.Input.Link!, content.SourceHint ?? item.Input.SourceHint, options.AutoBuyThreshold,
-                options.MinimumRemainingCoins, approved, ct);
+                options.MinimumRemainingCoins, approved, ct, enforceThreshold: enforceLimits,
+                maxTotalCost: manual && enforceLimits ? signal!.MaxTotalCost : null);
             item = item with {Content = purchase.Content, Warnings = purchase.Warnings};
             await bridge.SaveSnapshotAsync(item.Input, runId, item.Content, item.Availability, "snapshotSaved", null, ct);
         }

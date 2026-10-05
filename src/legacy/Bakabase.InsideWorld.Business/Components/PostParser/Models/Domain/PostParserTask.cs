@@ -19,6 +19,8 @@ public record PostParserTask
     public string? ParsingMessage { get; set; }
     public int AutoBuyThreshold { get; set; }
     public int MinimumRemainingCoins { get; set; }
+    public PostParserPurchaseQuote? PurchaseQuote => ContentSnapshot == null ? null :
+        PostParserPurchaseQuote.Create(ContentSnapshot, AutoBuyThreshold, MinimumRemainingCoins);
     public string? Text { get; set; }
     [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.IsoDateTimeConverter))]
     public DateTime? CreatedAt { get; set; }

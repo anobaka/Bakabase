@@ -20,8 +20,22 @@ a complete eight-step plan with three extraction layers, rename and move operati
 four independent resources, all four link-health display states, retryable fetch failure and
 missing AI configuration. The toolbar can isolate states or reset all examples.
 
+The suspected-expiry examples also exercise the opt-in unlock action:
+
+- Post #3 has two locked regions sharing one purchase URL. Both unlock for a total of 3 coins,
+  with no excluded-item tooltip because every quoted item meets the limits.
+- Post #9 has a 3-coin eligible item and an 8-coin excluded item. The button quotes 3 coins;
+  hovering shows the excluded 8 coins. Buying keeps the post waiting after partial AI extraction,
+  because the second item is still locked.
+- Unlocking shows a queued state, a purchasing state, then AI extraction over three seconds.
+  Repeated clicks do not charge again. The price cap and minimum account balance are checked
+  before spending, and duplicate purchase URLs count once. All balances are offline fixtures.
+- Re-parsing a restored or unreported-expiry post automatically buys eligible items. A suspected
+  expired post waits for the explicit unlock action, or for purchase at the source followed by
+  re-parsing. Change the configuration's purchase limits to inspect the recalculated quotes.
+
 - Clicking a source-post link simulates unlocking its content outside the app. Refreshing/retrying
-  that task then shows a short running state before the full result appears.
+  that task with “重新解析” then shows a short running state before the full result appears.
 - A failed task can be retried. New links or pasted text can be added and parsed.
 - Row actions start only that post; repeated requests while it is queued/running are ignored.
   The toolbar starts only posts that have no run and no error, so repeated batch clicks cannot

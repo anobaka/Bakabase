@@ -26,6 +26,7 @@ public record PostParserPurchaseInput
 {
     public int Revision { get; init; }
     [Required, MinLength(1), MaxLength(100)] public List<string> LockUrls { get; init; } = [];
+    public decimal MaxTotalCost { get; init; }
 }
 
 [ApiController]
@@ -40,7 +41,7 @@ public class PostParserAcquisitionController(PostParserAcquisitionService servic
     {
         try
         {
-            await workflow.PurchaseAndResumeAsync(id, input.Revision, input.LockUrls, ct);
+            await workflow.PurchaseAndResumeAsync(id, input.Revision, input.LockUrls, input.MaxTotalCost, ct);
             return BaseResponseBuilder.Ok;
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
