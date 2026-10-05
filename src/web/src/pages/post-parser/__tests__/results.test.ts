@@ -27,6 +27,48 @@ const task: PostParserTask = {
 };
 
 describe("post parsing result compatibility", () => {
+  it.each(["DownloadInfo", String(PostParseTarget.DownloadInfo)])(
+    "deduplicates %s exports while keeping persisted selection indices and complementary instructions",
+    (key) => {
+      const extraction = {
+        requirement: "required",
+        steps: [{ id: "unpack", op: "extractArchive", input: "download", password: "archive" }],
+        evidence: ["Author instructions"],
+      };
+      const record = {
+        ...task,
+        results: {
+          [key]: {
+            futureField: "keep",
+            resources: [
+              { link: "https://pan.baidu.com/s/shared", code: "1234" },
+              { link: "https://example.com/other", password: "other" },
+              { link: "https://pan.baidu.com/s/shared?pwd=1234", password: "archive", extraction },
+            ],
+          },
+        },
+      };
+
+      expect(getDownloadInfo(record)?.resources).toHaveLength(3);
+      const info = JSON.parse(buildInstructionsJson([record])).tasks[0].downloadInfo;
+
+      expect(info.futureField).toBe("keep");
+      expect(info.resources).toHaveLength(2);
+      expect(info.resources[0]).toMatchObject({
+        link: "https://pan.baidu.com/s/shared?pwd=1234",
+        code: "1234",
+        password: "archive",
+        extraction,
+      });
+      const rows = buildExportRows([record], (target) => target);
+
+      expect(rows).toHaveLength(2);
+      expect(rows[0]["Password"]).toBe("archive");
+      expect(JSON.parse(String(rows[0]["Extraction Plan"]))).toEqual(extraction);
+      expect(rows[1]["Resource Link"]).toBe("https://example.com/other");
+      expect(getDownloadInfo(record)?.resources?.[2].password).toBe("archive");
+    },
+  );
   it("preserves ordered multi-layer instructions, completeness and link evidence through JSON and spreadsheet exports", () => {
     const extraction = {
       requirement: "required",

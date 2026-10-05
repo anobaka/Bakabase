@@ -75,7 +75,7 @@ public class PostDownloadInfoExtractor(ILlmService llmService, ILogger<PostDownl
         return new PostDownloadInfo
         {
             Title = Blank(result?.Title),
-            Resources = resources,
+            Resources = PostDownloadResourceDeduplicator.Deduplicate(resources),
             IsComplete = complete,
             Warnings = complete ? [] : ["Locked content remains; download codes or archive instructions may be missing."]
         };

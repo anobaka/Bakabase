@@ -15,6 +15,7 @@ import {
 } from "react-icons/ai";
 
 import { copyParserText } from "../results";
+import { groupDownloadResources } from "../resourceDeduplication";
 import { getDownloadUrl, getLinkHealthStatus } from "../downloadLinks";
 
 import { AvailabilityDetails, EvidencePopover } from "./PostDetails";
@@ -236,6 +237,7 @@ const DownloadInfoResultRenderer: FC<Props> = ({
     }
   };
   const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+  const resources = groupDownloadResources(Array.isArray(data.resources) ? data.resources : []);
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
@@ -253,80 +255,79 @@ const DownloadInfoResultRenderer: FC<Props> = ({
       )}
       {showAvailability && <AvailabilityDetails value={data.availability} />}
       {showTitle && data.title && <p className="text-sm font-medium">{data.title}</p>}
-      {(!Array.isArray(data.resources) || !data.resources.length) && (
+      {!resources.length && (
         <p className="text-sm text-default-400">{t("postParser.result.noResources")}</p>
       )}
-      {Array.isArray(data.resources) &&
-        data.resources.map((resource, index) => {
-          const url = getDownloadUrl(resource.link, resource.code);
-          const passwordInPlan =
-            resource.password &&
-            Array.isArray(resource.extraction?.steps) &&
-            resource.extraction.steps.some(
-              (step) => step.op === "extractArchive" && step.password === resource.password,
-            );
-
-          return (
-            <div key={index} className="flex min-w-0 flex-col gap-1.5 text-sm">
-              <div className="flex min-w-0 flex-wrap items-center gap-1">
-                {url && (
-                  <div className="inline-flex min-w-0 max-w-full items-center gap-1">
-                    <Tooltip content={<span className="max-w-sm break-all">{url}</span>}>
-                      <Button
-                        aria-label={url}
-                        className="h-auto min-w-0 flex-1 justify-start px-0 py-1"
-                        color="primary"
-                        size="sm"
-                        startContent={<AiOutlineLink aria-hidden className="shrink-0 text-base" />}
-                        variant="light"
-                        onPress={() => BApi.gui.openUrlInDefaultBrowser({ url })}
-                      >
-                        <span className="min-w-0 truncate text-left">{url}</span>
-                      </Button>
-                    </Tooltip>
-                    <LinkHealthIndicator health={resource.linkHealth} />
-                    <Button
-                      isIconOnly
-                      aria-label={t("postParser.action.copyLink")}
-                      className="h-6 min-w-6 w-6 shrink-0"
-                      size="sm"
-                      variant="light"
-                      onPress={() => copy(url)}
-                    >
-                      <AiOutlineCopy aria-hidden className="text-sm" />
-                    </Button>
-                  </div>
-                )}
-                {resource.code && (
-                  <Button
-                    aria-label={t("postParser.action.copyCode")}
-                    className="h-auto min-h-6 min-w-0 whitespace-normal px-2 py-1 text-xs"
-                    size="sm"
-                    startContent={<AiOutlineCopy aria-hidden />}
-                    variant="flat"
-                    onPress={() => copy(resource.code!)}
-                  >
-                    {t("postParser.label.accessCode")}: {resource.code}
-                  </Button>
-                )}
-                {resource.password && !passwordInPlan && (
-                  <Button
-                    aria-label={t("postParser.action.copyPassword")}
-                    className="h-auto min-h-6 min-w-0 whitespace-normal px-2 py-1 text-xs"
-                    color="warning"
-                    size="sm"
-                    startContent={<AiOutlineCopy aria-hidden />}
-                    variant="flat"
-                    onPress={() => copy(resource.password!)}
-                  >
-                    {t("postParser.label.decompressionPassword")}: {resource.password}
-                  </Button>
-                )}
-              </div>
-              {resource.extraction && <ProcessingPlan copy={copy} plan={resource.extraction} />}
-            </div>
+      {resources.map(({ resource }, index) => {
+        const url = getDownloadUrl(resource.link, resource.code);
+        const passwordInPlan =
+          resource.password &&
+          Array.isArray(resource.extraction?.steps) &&
+          resource.extraction.steps.some(
+            (step) => step.op === "extractArchive" && step.password === resource.password,
           );
-        })}
+
+        return (
+          <div key={index} className="flex min-w-0 flex-col gap-1.5 text-sm">
+            <div className="flex min-w-0 flex-wrap items-center gap-1">
+              {url && (
+                <div className="inline-flex min-w-0 max-w-full items-center gap-1">
+                  <Tooltip content={<span className="max-w-sm break-all">{url}</span>}>
+                    <Button
+                      aria-label={url}
+                      className="h-auto min-w-0 flex-1 justify-start px-0 py-1"
+                      color="primary"
+                      size="sm"
+                      startContent={<AiOutlineLink aria-hidden className="shrink-0 text-base" />}
+                      variant="light"
+                      onPress={() => BApi.gui.openUrlInDefaultBrowser({ url })}
+                    >
+                      <span className="min-w-0 truncate text-left">{url}</span>
+                    </Button>
+                  </Tooltip>
+                  <LinkHealthIndicator health={resource.linkHealth} />
+                  <Button
+                    isIconOnly
+                    aria-label={t("postParser.action.copyLink")}
+                    className="h-6 min-w-6 w-6 shrink-0"
+                    size="sm"
+                    variant="light"
+                    onPress={() => copy(url)}
+                  >
+                    <AiOutlineCopy aria-hidden className="text-sm" />
+                  </Button>
+                </div>
+              )}
+              {resource.code && (
+                <Button
+                  aria-label={t("postParser.action.copyCode")}
+                  className="h-auto min-h-6 min-w-0 whitespace-normal px-2 py-1 text-xs"
+                  size="sm"
+                  startContent={<AiOutlineCopy aria-hidden />}
+                  variant="flat"
+                  onPress={() => copy(resource.code!)}
+                >
+                  {t("postParser.label.accessCode")}: {resource.code}
+                </Button>
+              )}
+              {resource.password && !passwordInPlan && (
+                <Button
+                  aria-label={t("postParser.action.copyPassword")}
+                  className="h-auto min-h-6 min-w-0 whitespace-normal px-2 py-1 text-xs"
+                  color="warning"
+                  size="sm"
+                  startContent={<AiOutlineCopy aria-hidden />}
+                  variant="flat"
+                  onPress={() => copy(resource.password!)}
+                >
+                  {t("postParser.label.decompressionPassword")}: {resource.password}
+                </Button>
+              )}
+            </div>
+            {resource.extraction && <ProcessingPlan copy={copy} plan={resource.extraction} />}
+          </div>
+        );
+      })}
     </div>
   );
 };

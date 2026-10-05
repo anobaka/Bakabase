@@ -34,9 +34,20 @@ const renderTask = (record: PostParserTask) => (
   </div>
 );
 
-const show = async (records: PostParserTask[], search = "") =>
+const show = async (
+  records: PostParserTask[],
+  search = "",
+  locateRequest?: { taskId: number; sequence: number },
+) =>
   act(async () =>
-    root.render(<TaskList renderTask={renderTask} search={search} tasks={records} />),
+    root.render(
+      <TaskList
+        locateRequest={locateRequest}
+        renderTask={renderTask}
+        search={search}
+        tasks={records}
+      />,
+    ),
   );
 
 const scroll = async (top: number) => {
@@ -66,11 +77,54 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
 describe("post parser virtual list", () => {
+  it("clears the location highlight after three seconds despite incoming task updates", async () => {
+    vi.useFakeTimers();
+    const records = [task(1), task(2)];
+    const request = { taskId: 2, sequence: 1 };
+
+    await show(records, "", request);
+    expect(container.querySelector('[data-task-id="2"]')).toHaveAttribute("data-located", "true");
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    await show(
+      records.map((record) => ({ ...record })),
+      "",
+      request,
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(container.querySelector('[data-task-id="2"]')).not.toHaveAttribute("data-located");
+  });
+
+  it("locates unmounted rows by ID, repeats on demand and does not scroll again on polling", async () => {
+    const records = Array.from({ length: 200 }, (_, index) => task(index + 1));
+    const request = { taskId: 170, sequence: 1 };
+
+    await show(records);
+    expect(container.querySelector('[data-task-id="170"]')).toBeNull();
+    await show(records, "", request);
+    expect(container.querySelector('[data-task-id="170"]')).toHaveAttribute("data-located", "true");
+    await scroll(0);
+    expect(container.querySelector('[data-task-id="1"]')).toBeVisible();
+    await show(
+      records.map((record) => ({ ...record })),
+      "",
+      request,
+    );
+    expect(container.querySelector('[data-task-id="1"]')).toBeVisible();
+    expect(container.querySelector('[data-task-id="170"]')).toBeNull();
+    await show(records, "", { ...request, sequence: 2 });
+    expect(container.querySelector('[data-task-id="170"]')).toHaveAttribute("data-located", "true");
+  });
+
   it("renders only nearby records and reaches the last record below its fixed header", async () => {
     const records = Array.from({ length: 200 }, (_, index) => task(index + 1));
 

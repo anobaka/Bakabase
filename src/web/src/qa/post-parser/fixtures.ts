@@ -233,13 +233,18 @@ export const createFixtures = (): PreviewStoredPostParserTask[] => {
           resources: [
             {
               link: "https://pan.baidu.com/s/qa-city-morning",
+              // The same share appears again with its password and full instructions below.
               code: "am26",
-              password: "city-morning",
               driveKind: 2,
               linkHealth: {
                 status: "unknown",
                 reason: "accessCodeOrInteractiveVerificationRequired",
               },
+            },
+            {
+              link: "https://pan.baidu.com/s/qa-city-morning?pwd=am26",
+              password: "city-morning",
+              driveKind: 2,
               extraction: {
                 requirement: "required",
                 evidence: ["第一份是清晨环境声，直接用 city-morning 解压。"],

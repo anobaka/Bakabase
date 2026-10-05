@@ -22,7 +22,7 @@ missing AI configuration. The toolbar can isolate states or reset all examples.
 
 Post #10 is a historical pending input whose stored data omits the parsing targets. Reading it
 restores the default download-info target, so both its “获取并解析” action and the toolbar's
-“开始解析” action create an execution and finish with download/file-processing instructions.
+“开始全部解析任务” action create an execution and finish with download/file-processing instructions.
 Repeated requests reuse the active execution. Historical records that already have their requested
 results remain complete and are excluded from batch starts even when they have no workflow ID.
 
@@ -68,7 +68,7 @@ minimum useful list height.
 
 
 Choose **并发队列 · 14 个帖子** to load an isolated set of 14 pending inputs. None is queued
-until explicitly started. “开始解析” submits all 14 exactly once: up to 10 tasks enter the
+until explicitly started. “开始全部解析任务” submits all 14 exactly once: up to 10 tasks enter the
 workflow, the remaining four show a clock and “排队中”. The simulated site has one HTTP slot;
 AI assessment and extraction share one AI slot. Other admitted posts continue fetching or
 purchasing while one post is extracting instructions. The labels follow the real page's BTask
@@ -79,5 +79,19 @@ Saving configuration never starts untouched inputs.
 
 **模拟重启** discards the in-memory queue and live BTasks, marking previously requested tasks as
 interrupted/“待继续”. Inputs that were never started remain “待解析”; neither restarts automatically.
-Use a row retry or “开始解析” to continue. “重置示例” restores the selected scenario and clears all
+Use a row retry or “开始全部解析任务” to continue. “重置示例” restores the selected scenario and clears all
 runtime queues/timers. Switching back to the normal scenarios restores the original ten examples.
+
+The task toolbar includes a global status overview that does not change when searching. Running
+work takes precedence over saved results; hover the running count for a breakdown by stage.
+The locate icon selects the first actively running task in list order, clears a search that hides
+it, scrolls the virtual list to its stable task ID, and highlights it for three seconds. Queued
+and paused tasks do not enable the icon. Click again to locate again; incoming updates never
+take over scrolling. In the concurrency scenario, scroll away or search for a queued post while
+the queue runs, then use the icon to return to the first running task.
+
+Post #5 stores five resource entries for four distinct downloads. Its first Baidu share appears
+twice: one entry supplies the access code and link check, and the other includes `?pwd=am26`,
+the archive password and processing instructions. The result, resource selectors and exports
+should show it once with all of that information retained; the other three resources remain
+separate. The 14-post concurrency scenario is unchanged.

@@ -1,6 +1,7 @@
 import type { PostAvailability, PostParserTask } from "@/core/models/PostParserTask";
 
 import { getDownloadUrl } from "./downloadLinks";
+import { groupDownloadResources } from "./resourceDeduplication";
 
 import { PostParseTarget, PostParseTargetLabel, PostParserSource } from "@/sdk/constants";
 import { copyTextToClipboard } from "@/core/clipboard";
@@ -150,13 +151,20 @@ export function buildExportRows(tasks: PostParserTask[], targetLabel: (key: stri
         ParsedAt: result?.parsedAt ?? "",
       };
 
-      if (Array.isArray(data?.resources) && data.resources.length > 0) {
-        for (const resource of data.resources) {
+      const resources =
+        key === "DownloadInfo" || key === String(PostParseTarget.DownloadInfo)
+          ? groupDownloadResources(
+              getDownloadInfo({ ...task, results: { [key]: value } })?.resources ?? [],
+            ).map((group) => group.resource)
+          : data?.resources;
+
+      if (Array.isArray(resources) && resources.length > 0) {
+        for (const resource of resources) {
           const link = asRecord(resource);
 
           rows.push({
             ...row,
-            Title: typeof data.title === "string" ? data.title : base.Title,
+            Title: typeof data?.title === "string" ? data.title : base.Title,
             "Resource Link": getDownloadUrl(
               typeof link?.link === "string" ? link.link : "",
               typeof link?.code === "string" ? link.code : null,
@@ -206,7 +214,7 @@ export const buildInstructionsJson = (tasks: PostParserTask[]) =>
           return data
             ? {
                 ...data,
-                resources: data.resources?.map((resource) => ({
+                resources: groupDownloadResources(data.resources ?? []).map(({ resource }) => ({
                   ...resource,
                   link: getDownloadUrl(resource.link, resource.code),
                 })),

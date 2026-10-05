@@ -55,6 +55,28 @@ public class PostDownloadInfoExtractorTests
     }
 
     [TestMethod]
+    public async Task RepeatedAiResourcesCombineComplementaryCredentialsBeforePersistence()
+    {
+        var extractor = new PostDownloadInfoExtractor(new FakeLlm
+        {
+            ResponseText = """
+                {"resources":[
+                    {"link":"https://pan.baidu.com/s/share","code":"abcd"},
+                    {"link":"https://pan.baidu.com/s/share?pwd=abcd","password":"archive",
+                     "extraction":{"requirement":"required","steps":[{"id":"open","op":"extractArchive","input":"download","password":"archive"}],"evidence":["password: archive"]}},
+                    {"link":"https://pan.baidu.com/s/share","code":"abcd","password":"archive"}
+                ]}
+                """
+        }, NullLogger<PostDownloadInfoExtractor>.Instance);
+
+        var resource = (await extractor.ExtractAsync(new PostContent {MainHtml = "Repeated links"})).Resources.Single();
+        Assert.AreEqual("https://pan.baidu.com/s/share", resource.Link);
+        Assert.AreEqual("abcd", resource.Code);
+        Assert.AreEqual("archive", resource.Password);
+        Assert.AreEqual("archive", resource.Extraction!.Steps.Single().Password);
+    }
+
+    [TestMethod]
     [DataRow("{}")]
     [DataRow("{\"title\":\" \",\"resources\":null}")]
     [DataRow("{\"resources\":[]}")]

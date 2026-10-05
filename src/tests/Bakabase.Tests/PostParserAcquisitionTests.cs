@@ -138,6 +138,42 @@ public sealed class PostParserAcquisitionTests
     }
 
     [TestMethod]
+    public async Task OriginalIndicesCombineComplementaryDuplicateResultsBeforeImporting()
+    {
+        var plan = new PostExtractionPlan {Requirement = "required", Steps = [
+            new() {Id = "open", Op = "extractArchive", Password = "archive"}], Evidence = ["archive instructions"]};
+        var post = await ParsedPost([
+            Link("https://example.com/unselected.zip", "unused", "unused"),
+            Link("https://pan.baidu.com/s/shared", "abcd"),
+            Link("https://example.com/also-unselected.zip"),
+            Link("https://pan.baidu.com/s/shared?pwd=abcd", password: "archive") with {Extraction = plan}
+        ]);
+        var imported = await Import(post, 1, 3);
+        Assert.AreEqual(1, imported.LeadCount);
+        var lead = (await Leads.GetByResourceId(imported.ResourceId)).Single();
+        Assert.AreEqual("https://pan.baidu.com/s/shared", lead.Value);
+        Assert.AreEqual("abcd", lead.AccessCode);
+        Assert.AreEqual("archive", lead.Password);
+        Assert.AreEqual(JsonSerializer.Serialize(plan, Json), lead.ExtractionPlanJson);
+    }
+
+    [TestMethod]
+    public async Task ConflictingDuplicatePipelinesStillRequireAnExplicitChoiceBeforeImporting()
+    {
+        var first = Link("https://example.com/file.zip") with {Extraction = new()
+        {
+            Requirement = "required", Steps = [new() {Id = "open", Op = "extractArchive", Password = "first"}]
+        }};
+        var post = await ParsedPost([first, first with {Extraction = first.Extraction with
+        {
+            Steps = [new() {Id = "open", Op = "extractArchive", Password = "second"}]
+        }}]);
+        var before = await Counts();
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => Import(post, 0, 1));
+        Assert.AreEqual(before, await Counts());
+    }
+
+    [TestMethod]
     public async Task StaleRevisionIsRejectedBeforeAnyResourceOrLeadIsWritten()
     {
         var post = await ParsedPost([Link("https://example.com/archive.zip")]);
@@ -164,6 +200,25 @@ public sealed class PostParserAcquisitionTests
         var post = await ParsedPost([Link("https://example.com/archive.zip"), Link("javascript:alert(1)")]);
         var before = await Counts();
         await Assert.ThrowsExactlyAsync<ArgumentException>(() => Import(post));
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => Import(post, 0, 1));
+        Assert.AreEqual(before, await Counts());
+    }
+
+    [TestMethod]
+    public async Task LegacyNullLinksStillProduceAValidationErrorBeforeImporting()
+    {
+        var post = await ParsedPost([Link(null!)]);
+        var before = await Counts();
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => Import(post, 0));
+        Assert.AreEqual(before, await Counts());
+    }
+
+    [TestMethod]
+    public async Task MergingCannotHideAnOversizedBlankCredentialFromInputValidation()
+    {
+        var post = await ParsedPost([Link("https://example.com/file.zip"),
+            Link("https://example.com/file.zip", new string(' ', 513))]);
+        var before = await Counts();
         await Assert.ThrowsExactlyAsync<ArgumentException>(() => Import(post, 0, 1));
         Assert.AreEqual(before, await Counts());
     }
