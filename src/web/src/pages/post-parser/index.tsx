@@ -61,15 +61,15 @@ import { usePostParserTasksStore } from "@/stores/postParserTasks";
 import { useBTasksStore } from "@/stores/bTasks";
 
 const activeStatuses = [WorkflowRunStatus.Pending, WorkflowRunStatus.Running];
-const retryStatuses = [
+const failedStatuses = [
   WorkflowRunStatus.Failed,
   WorkflowRunStatus.Cancelled,
   WorkflowRunStatus.Interrupted,
-  WorkflowRunStatus.Waiting,
 ];
+const retryStatuses = [...failedStatuses, WorkflowRunStatus.Waiting];
 const isRunning = (task: PostParserTask) =>
   !!task.workflowRunId &&
-  (task.workflowStatus == null || activeStatuses.includes(task.workflowStatus));
+  (task.workflowStatus == null ? !task.error : activeStatuses.includes(task.workflowStatus));
 const hasResults = (task: PostParserTask) => Object.keys(task.results ?? {}).length > 0;
 const processingTaskStatuses = new Set([
   BTaskStatus.NotStarted,
@@ -148,7 +148,24 @@ const PostParserPage = () => {
       (actionName) => busy === `${actionName}-${task.id}`,
     );
   const running = tasks.some(isProcessing);
-  const hasPending = tasks.some((task) => !task.workflowRunId && !task.error && !hasResults(task));
+  const hasStartableTasks = tasks.some((task) => {
+    if (isProcessing(task)) return false;
+    if (task.workflowRunId)
+      return task.workflowStatus == null
+        ? !!task.error
+        : failedStatuses.includes(task.workflowStatus);
+
+    return (
+      !!task.error ||
+      (task.parsingState != null && task.parsingState !== "complete") ||
+      !task.results ||
+      task.targets.some(
+        (target) =>
+          !Object.prototype.hasOwnProperty.call(task.results, target) &&
+          !Object.prototype.hasOwnProperty.call(task.results, PostParseTargetLabel[target]),
+      )
+    );
+  });
 
   const refresh = useCallback(async () => {
     const response = await BApi.postParser.getAllPostParserTasks();
@@ -742,7 +759,7 @@ const PostParserPage = () => {
           <Button
             className="shrink-0"
             color="primary"
-            isDisabled={!hasPending || !!busy || dispatching}
+            isDisabled={!hasStartableTasks || !!busy || dispatching}
             isLoading={busy === "start" || dispatching}
             size="sm"
             startContent={<AiOutlinePlayCircle aria-hidden className="text-base" />}

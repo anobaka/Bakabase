@@ -114,7 +114,7 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
         await StopRuns(stoppedRuns);
     }
 
-    private static void Reset(PostParserTaskDbModel task, List<PostParseTarget> targets, string? title, List<int> stoppedRuns)
+    internal static void Reset(PostParserTaskDbModel task, List<PostParseTarget> targets, string? title, List<int> stoppedRuns)
     {
         if (task.WorkflowRunId is { } runId) stoppedRuns.Add(runId);
         task.Revision++;

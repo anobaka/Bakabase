@@ -14,6 +14,7 @@ using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.PostParser.Services;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.PostParser.Models.Domain;
 using PostContent = Bakabase.Modules.PostParser.Models.Domain.PostContent;
@@ -83,26 +84,97 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             if (tasks.IsShuttingDown) return;
             await RefreshTasksUnderGateAsync(ct);
             var candidates = await ParserTasks.AsNoTracking().Where(t => !t.IsDeleted &&
-                    (t.WorkflowRunId == null && t.Error == null ||
-                     Runs.Any(r => r.Id == t.WorkflowRunId && r.Status == WorkflowRunStatus.Pending)))
+                    (t.WorkflowRunId == null || !Runs.Any(r => r.Id == t.WorkflowRunId) ||
+                     Runs.Any(r => r.Id == t.WorkflowRunId && (r.Status == WorkflowRunStatus.Pending ||
+                         r.Status == WorkflowRunStatus.Failed || r.Status == WorkflowRunStatus.Interrupted ||
+                         r.Status == WorkflowRunStatus.Cancelled))))
                 .OrderBy(t => t.Id).ToListAsync(ct);
-            ids = candidates.Where(t => t.WorkflowRunId != null || IsPending(t.ToDomainModel()))
+            ids = candidates.Where(t => t.WorkflowRunId != null || t.Error != null || IsPending(t.ToDomainModel()))
                 .Select(t => t.Id).ToList();
         }
         finally { gate.Semaphore.Release(); }
 
         if (onProgress != null) await onProgress(0, ids.Count);
+        var failures = new List<Exception>();
         for (var i = 0; i < ids.Count; i++)
         {
             // Waiting here cannot block single-post actions behind a paused bulk dispatcher.
             if (checkpoint != null) await checkpoint();
             ct.ThrowIfCancellationRequested();
             await gate.Semaphore.WaitAsync(ct);
-            try { await DispatchUnderGateAsync([ids[i]], ct); }
+            try
+            {
+                try { await StartOrRetryUnderGateAsync(ids[i], ct); }
+                catch (Exception e) when (!ct.IsCancellationRequested)
+                {
+                    // A failed transaction or retry may leave tracked inserts/changes behind.
+                    // Do not let a later post's SaveChanges replay those failed mutations.
+                    db.ChangeTracker.Clear();
+                    await RecordDispatchFailureUnderGateAsync(ids[i], e.Message, ct);
+                    failures.Add(new InvalidOperationException($"Post parser task #{ids[i]} could not be queued: {e.Message}", e));
+                }
+            }
             finally { gate.Semaphore.Release(); }
             if (onProgress != null) await onProgress(i + 1, ids.Count);
         }
+        if (failures.Count > 0) throw new AggregateException("Some post parser tasks could not be queued.", failures);
     }
+
+    private async Task StartOrRetryUnderGateAsync(int id, CancellationToken ct)
+    {
+        if (tasks.IsShuttingDown) return;
+        var task = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted, ct);
+        if (task == null) return;
+        var run = task.WorkflowRunId is { } runId ? await Runs.AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, ct) : null;
+        // The snapshot may have changed while the dispatcher paused or a row action ran.
+        if (run?.Status is WorkflowRunStatus.Success or WorkflowRunStatus.Waiting or WorkflowRunStatus.Running) return;
+        if (run?.Status is WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted or WorkflowRunStatus.Cancelled)
+        {
+            if (HasUnfinishedRunTask(run.Id)) return;
+            await RetryUnderGateAsync(task, run.Status, ct);
+            return;
+        }
+        if (run == null && (task.Error != null || task.WorkflowRunId != null))
+        {
+            if (task.WorkflowRunId is { } missingRunId && HasUnfinishedRunTask(missingRunId)) return;
+            var tracked = await ParserTasks.SingleAsync(t => t.Id == id, ct);
+            PostParserTaskService<TDbContext>.Reset(tracked, task.ToDomainModel().Targets, null, []);
+            await db.SaveChangesAsync(ct);
+            cache.ClearCache();
+        }
+        await DispatchUnderGateAsync([id], ct);
+    }
+
+    private async Task RecordDispatchFailureUnderGateAsync(int id, string message, CancellationToken ct)
+    {
+        var task = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted, ct);
+        if (task == null) return;
+        WorkflowRunStatus? status = null;
+        if (task.WorkflowRunId is { } runId)
+        {
+            // Enqueuing may have succeeded before publishing its UI update failed.
+            if (HasUnfinishedRunTask(runId)) return;
+            var run = await Runs.AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, ct);
+            status = run?.Status;
+            if (status is WorkflowRunStatus.Running or WorkflowRunStatus.Success or WorkflowRunStatus.Waiting) return;
+            if (run != null)
+            {
+                await Runs.Where(r => r.Id == runId).ExecuteUpdateAsync(s =>
+                    s.SetProperty(r => r.Status, WorkflowRunStatus.Failed).SetProperty(r => r.ErrorMessage, message)
+                        .SetProperty(r => r.CompletedAt, DateTime.Now), ct);
+                status = WorkflowRunStatus.Failed;
+            }
+        }
+        await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s =>
+            s.SetProperty(t => t.Error, message).SetProperty(t => t.CompletedAt, (DateTime?)null), ct);
+        task.Error = message;
+        task.CompletedAt = null;
+        cache.ClearCache();
+        await PublishAsync(task, status);
+    }
+
+    private bool HasUnfinishedRunTask(int runId) =>
+        tasks.Tasks.Any(t => t.Id == $"workflow.run.{runId}" && !t.Task.Status.IsFinished());
 
     /// <summary>The caller holds the parser gate across its input/reset and this dispatch.</summary>
     internal async Task DispatchUnderGateAsync(IReadOnlyCollection<int>? taskIds, CancellationToken ct = default)
@@ -239,20 +311,26 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             if (task.WorkflowRunId is not { } runId)
                 throw new InvalidOperationException("This task has no workflow run. Start parsing it first.");
             var status = await Runs.Where(r => r.Id == runId).Select(r => r.Status).SingleAsync(ct);
-            // A repeated click must neither enqueue another execution nor replace the current one.
-            if (status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running) return;
-            if (tasks.Tasks.Any(t => t.Id == $"workflow.run.{runId}" && !t.Task.Status.IsFinished()))
-                throw new InvalidOperationException("The previous parsing task is still finishing. Retry in a moment.");
-            if (status == WorkflowRunStatus.Waiting) await resumer.ResumeAsync(runId, "{}", ct);
-            else await resumer.RequeueAsync(runId, ct);
-            await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, (string?)null)
-                .SetProperty(t => t.CompletedAt, (DateTime?)null), ct);
-            cache.ClearCache();
-            task.Error = null;
-            task.CompletedAt = null;
-            await PublishAsync(task, WorkflowRunStatus.Pending);
+            await RetryUnderGateAsync(task, status, ct);
         }
         finally { gate.Semaphore.Release(); }
+    }
+
+    private async Task RetryUnderGateAsync(PostParserTaskDbModel task, WorkflowRunStatus status, CancellationToken ct)
+    {
+        var runId = task.WorkflowRunId!.Value;
+        // A repeated click must neither enqueue another execution nor replace the current one.
+        if (status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running) return;
+        if (HasUnfinishedRunTask(runId))
+            throw new InvalidOperationException("The previous parsing task is still finishing. Retry in a moment.");
+        if (status == WorkflowRunStatus.Waiting) await resumer.ResumeAsync(runId, "{}", ct);
+        else await resumer.RequeueAsync(runId, ct);
+        await ParserTasks.Where(t => t.Id == task.Id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, (string?)null)
+            .SetProperty(t => t.CompletedAt, (DateTime?)null), ct);
+        cache.ClearCache();
+        task.Error = null;
+        task.CompletedAt = null;
+        await PublishAsync(task, WorkflowRunStatus.Pending);
     }
 
     public async Task EnsureCurrentAsync(PostParserInput input, int runId, CancellationToken ct)

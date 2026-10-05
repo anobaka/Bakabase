@@ -777,6 +777,93 @@ describe("post parsing workspace", () => {
     ).toBeEnabled();
   });
 
+  it.each([WorkflowRunStatus.Failed, WorkflowRunStatus.Interrupted, WorkflowRunStatus.Cancelled])(
+    "allows bulk start when only a %s execution remains",
+    async (workflowStatus) => {
+      usePostParserTasksStore.getState().setTasks([{ ...base, workflowRunId: 37, workflowStatus }]);
+      show(<PostParserPage />);
+      const button = screen.getByRole("button", { name: "postParser.action.start" });
+
+      expect(button).toBeEnabled();
+      fireEvent.click(button);
+      await waitFor(() => expect(api.start).toHaveBeenCalledOnce());
+      expect(api.retry).not.toHaveBeenCalled();
+      expect(api.reparse).not.toHaveBeenCalled();
+    },
+  );
+
+  it("allows bulk start for an older failed input without a workflow run", async () => {
+    usePostParserTasksStore.getState().setTasks([{ ...base, error: "Old fetch error" }]);
+    show(<PostParserPage />);
+    const button = screen.getByRole("button", { name: "postParser.action.start" });
+
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    await waitFor(() => expect(api.start).toHaveBeenCalledOnce());
+  });
+
+  it("lets an orphaned failed input start in bulk or reparse individually", async () => {
+    usePostParserTasksStore
+      .getState()
+      .setTasks([
+        { ...base, workflowRunId: 37, error: "The parsing workflow run no longer exists." },
+      ]);
+    show(<PostParserPage />);
+
+    expect(screen.queryByRole("status", { name: "postParser.label.processing" })).toBeNull();
+    expect(screen.getByRole("button", { name: "postParser.action.start" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.reParse" }));
+    await waitFor(() => expect(api.reparse).toHaveBeenCalledWith(14));
+    expect(api.retry).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "postParser.action.start" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.start" }));
+    await waitFor(() => expect(api.start).toHaveBeenCalledOnce());
+  });
+
+  it.each([
+    { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Success },
+    { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Waiting },
+    { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Waiting, error: "Needs input" },
+    { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Running },
+    { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Pending },
+    { ...base, workflowRunId: 37 },
+    { ...base, error: "Deleted fetch error", isDeleted: true },
+    parsed,
+    { ...base, results: { DownloadInfo: data } },
+    { ...base, results: { DownloadInfo: null } },
+  ])("excludes a settled, waiting, active or deleted input from bulk start: %j", async (task) => {
+    usePostParserTasksStore.getState().setTasks([task]);
+    show(<PostParserPage />);
+
+    expect(screen.getByRole("button", { name: "postParser.action.start" })).toBeDisabled();
+    expect(api.start).not.toHaveBeenCalled();
+  });
+
+  it("waits for the failed workflow's BTask to finish before allowing a bulk retry", async () => {
+    const workflowTask = {
+      id: "workflow.run.37",
+      name: "Parse post",
+      createdAt: "2026-10-05T00:00:00Z",
+      isPersistent: false,
+      type: BTaskType.Any,
+      resourceType: BTaskResourceType.Any,
+      status: BTaskStatus.Running,
+    };
+
+    useBTasksStore.getState().setTasks([workflowTask]);
+    usePostParserTasksStore
+      .getState()
+      .setTasks([{ ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Failed }]);
+    show(<PostParserPage />);
+    expect(screen.getByRole("button", { name: "postParser.action.start" })).toBeDisabled();
+    await act(async () =>
+      useBTasksStore.getState().setTasks([{ ...workflowTask, status: BTaskStatus.Error }]),
+    );
+    expect(screen.getByRole("button", { name: "postParser.action.start" })).toBeEnabled();
+  });
+
   it("retries only the failed execution and scopes history to that post", async () => {
     usePostParserTasksStore.getState().setTasks([
       {

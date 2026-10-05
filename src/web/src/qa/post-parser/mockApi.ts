@@ -5,7 +5,7 @@ import type { PreviewStoredPostParserTask } from "./fixtures";
 
 import { completeResult, createFixtures } from "./fixtures";
 
-import { PostParseTarget, UiTheme, WorkflowRunStatus } from "@/sdk/constants";
+import { PostParseTarget, PostParseTargetLabel, UiTheme, WorkflowRunStatus } from "@/sdk/constants";
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
 
 export type PreviewScenario = "all" | "waiting" | "complete" | "failure" | "empty";
@@ -105,7 +105,9 @@ const asRun = (task: PostParserTask): PreviewRun => ({
   outputPreview: null,
 });
 const seedRuns = () => {
-  const current = records.filter((task) => task.workflowRunId).map(asRun);
+  const current = records
+    .filter((task) => task.workflowRunId && task.workflowStatus != null)
+    .map(asRun);
   const completed = current.find((run) => run.postParserTaskId === 4)!;
 
   return [
@@ -168,7 +170,23 @@ const isPending = (task: PostParserTask) =>
   task.workflowRunId == null &&
   ((task.parsingState != null && task.parsingState !== "complete") ||
     task.results == null ||
-    task.targets.some((target) => !Object.prototype.hasOwnProperty.call(task.results, target)));
+    task.targets.some(
+      (target) =>
+        !Object.prototype.hasOwnProperty.call(task.results, target) &&
+        !Object.prototype.hasOwnProperty.call(task.results, PostParseTargetLabel[target]),
+    ));
+const isBatchEligible = (task: PostParserTask) =>
+  !task.isDeleted &&
+  !isActive(task) &&
+  (task.workflowRunId == null
+    ? !!task.error || isPending(task)
+    : task.workflowStatus == null
+      ? !!task.error
+      : [
+          WorkflowRunStatus.Failed,
+          WorkflowRunStatus.Interrupted,
+          WorkflowRunStatus.Cancelled,
+        ].includes(task.workflowStatus));
 const visible = () =>
   records
     .filter(
@@ -459,7 +477,8 @@ const mockApi = {
       reParsePostParserTask: (id: number) => retry(id, true),
       purchasePostParserTaskContent: purchase,
       startAllPostParserTasks: async () => {
-        for (const task of records.filter(isPending)) await retry(task.id);
+        for (const task of records.filter(isBatchEligible))
+          await retry(task.id, task.workflowRunId != null && task.workflowStatus == null);
 
         return { code: 0 };
       },
