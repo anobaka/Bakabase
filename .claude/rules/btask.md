@@ -265,6 +265,17 @@ public override HashSet<string>? ConflictKeys => ["IndexRebuild"];
 // A and B cannot run at the same time due to "IndexRebuild"
 ```
 
+For bounded parallel work, use `.WithConcurrencyLimit("group", () => currentLimit)`
+instead of giving every task the same exclusive conflict key. The manager checks
+the shared group's capacity under its scheduling lock for both manual and automatic
+starts. The delegate reads live settings; lowering a limit does not cancel active
+work. Paused tasks and cancellation cleanup retain their slots until execution
+ends. Keep any independent HTTP or AI limits in the corresponding capability.
+
+Workflow sources can register `IWorkflowRunSchedulingPolicy` to apply the same
+group and restart behavior to initial runs, retries, resumes and event dispatch.
+Without a source policy, workflow runs remain exclusive per definition.
+
 ## Task Dependencies
 
 Tasks can declare dependencies on other tasks using `DependsOn`. A task will not start until all its dependencies have completed successfully.

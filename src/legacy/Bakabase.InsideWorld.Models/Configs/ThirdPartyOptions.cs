@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,5 +21,11 @@ namespace Bakabase.InsideWorld.Models.Configs
         }
 
         public bool AutomaticallyParsingPosts { get; set; }
+
+        [Range(1, int.MaxValue)]
+        public int PostParserMaxConcurrency { get; set; } = 10;
+
+        [Range(1, int.MaxValue)]
+        public int PostParserAiMaxConcurrency { get; set; } = 1;
     }
 }

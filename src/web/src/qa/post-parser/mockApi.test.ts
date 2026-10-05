@@ -1,10 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import mockApi, { resetPreview, setPreviewScenario } from "./mockApi";
+import mockApi, {
+  resetPreview,
+  setPreviewScenario,
+  loadConcurrencyPreview,
+  restartPreview,
+} from "./mockApi";
 import * as fixtures from "./fixtures";
 
-import { PostParseTarget, PostParserSource, WorkflowRunStatus } from "@/sdk/constants";
+import { BTaskStatus, PostParseTarget, PostParserSource, WorkflowRunStatus } from "@/sdk/constants";
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
+import { useBTasksStore } from "@/stores/bTasks";
 
 vi.mock("@/stores/options", () => ({
   useThirdPartyOptionsStore: { getState: () => ({ update: vi.fn() }) },
@@ -19,7 +25,11 @@ const history = (taskId?: number, pageIndex = 1, pageSize = 20) =>
 beforeEach(async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-05T04:00:00Z"));
-  await mockApi.options.patchThirdPartyOptions({ automaticallyParsingPosts: false });
+  await mockApi.options.patchThirdPartyOptions({
+    automaticallyParsingPosts: false,
+    postParserMaxConcurrency: 10,
+    postParserAiMaxConcurrency: 1,
+  });
   await mockApi.options.patchSoulPlusOptions({ autoBuyThreshold: 5, minimumRemainingCoins: 50 });
   setPreviewScenario("all");
   resetPreview();
@@ -45,7 +55,7 @@ describe("post-parser preview action boundaries", () => {
     expect(task(4).workflowStatus).toBe(WorkflowRunStatus.Running);
     expect(tasks().filter((item) => item.id !== 4)).toEqual(unrelated);
     expect((await history(4)).totalCount).toBe(initialHistory.totalCount! + 1);
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(10000);
     expect(task(4).workflowStatus).toBe(WorkflowRunStatus.Success);
     expect(task(1).workflowRunId).toBeUndefined();
   });
@@ -75,7 +85,7 @@ describe("post-parser preview action boundaries", () => {
     expect(task(7).workflowStatus).toBe(WorkflowRunStatus.Running);
     expect(task(7).workflowRunId).toBe(failedRunId);
     expect(task(7).error).toBeUndefined();
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(10000);
     await mockApi.postParser.startAllPostParserTasks();
     for (const item of pending) {
       expect(task(item.id).workflowStatus).toBe(WorkflowRunStatus.Success);
@@ -124,7 +134,7 @@ describe("post-parser preview action boundaries", () => {
     expect(task(15).workflowRunId).not.toBe(1015);
     expect((await history(15)).totalCount).toBe(1);
     expect(tasks().filter((item) => !selectedIds.includes(item.id))).toEqual(untouched);
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(10000);
     const completedRunIds = selectedIds.map((id) => task(id).workflowRunId);
 
     for (const id of selectedIds) {
@@ -154,7 +164,7 @@ describe("post-parser preview action boundaries", () => {
       ]);
       expect(task(10).workflowStatus).toBe(WorkflowRunStatus.Running);
       expect((await history(10)).totalCount).toBe(1);
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(10000);
       expect(task(10).workflowStatus).toBe(WorkflowRunStatus.Success);
       expect(task(10).results?.[PostParseTarget.DownloadInfo]).toMatchObject({
         isComplete: true,
@@ -197,7 +207,7 @@ describe("post-parser preview action boundaries", () => {
       expect((await history(10)).totalCount).toBe(1);
       expect(task(11)).toEqual(before);
       expect((await history(11)).totalCount).toBe(0);
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(10000);
       expect(task(10).workflowStatus).toBe(WorkflowRunStatus.Success);
       expect(task(10).results?.[PostParseTarget.DownloadInfo]).toMatchObject({ isComplete: true });
       await mockApi.postParser.startAllPostParserTasks();
@@ -232,7 +242,7 @@ describe("post-parser preview action boundaries", () => {
 
     expect(added.workflowStatus).toBe(WorkflowRunStatus.Running);
     expect(task(1).workflowRunId).toBeUndefined();
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(10000);
     expect(task(1).workflowRunId).toBeUndefined();
 
     // Explicitly submitting that older pending link makes it part of this input batch.
@@ -258,7 +268,7 @@ describe("post-parser preview action boundaries", () => {
     expect((await history(1)).data).toEqual([]);
 
     await mockApi.postParser.reParsePostParserTask(4);
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(10000);
     expect((await history(4)).totalCount).toBe(3);
     await mockApi.postParser.deletePostParserTask(4);
     expect(task(4)).toBeUndefined();
@@ -296,7 +306,7 @@ describe("post-parser preview action boundaries", () => {
       mockApi.postParser.purchasePostParserTaskContent(3, request),
       mockApi.postParser.reParsePostParserTask(3),
     ]);
-    expect(task(3).workflowStatus).toBe(WorkflowRunStatus.Pending);
+    expect(task(3).workflowStatus).toBe(WorkflowRunStatus.Running);
     expect(task(3).contentSnapshot?.balance).toBe(120);
     await vi.advanceTimersByTimeAsync(300);
     expect(task(3).workflowStatus).toBe(WorkflowRunStatus.Running);
@@ -362,12 +372,86 @@ describe("post-parser preview action boundaries", () => {
       mockApi.postParser.reParsePostParserTask(2),
       mockApi.postParser.reParsePostParserTask(3),
     ]);
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(10000);
     expect(task(2).contentSnapshot?.balance).toBe(112);
     expect(task(2).contentSnapshot?.locks.map((lock) => lock.isBought)).toEqual([true, false]);
     expect(task(2).workflowStatus).toBe(WorkflowRunStatus.Waiting);
     expect(task(3).contentSnapshot?.balance).toBe(120);
     expect(task(3).contentSnapshot?.locks.every((lock) => !lock.isBought)).toBe(true);
     expect(task(3).workflowStatus).toBe(WorkflowRunStatus.Waiting);
+  });
+});
+
+describe("post-parser preview bounded scheduling", () => {
+  const live = () => useBTasksStore.getState().tasks;
+  const stage = (value: string) =>
+    live().filter(
+      (task) =>
+        task.status === BTaskStatus.Running && (task.data as { stage?: string })?.stage === value,
+    );
+
+  it("only queues explicitly started posts, caps active jobs, overlaps site work with AI, and deduplicates bulk starts", async () => {
+    loadConcurrencyPreview();
+    expect(live()).toHaveLength(0);
+    await Promise.all([
+      mockApi.postParser.startAllPostParserTasks(),
+      mockApi.postParser.startAllPostParserTasks(),
+    ]);
+    expect(live().filter((task) => task.status === BTaskStatus.Running)).toHaveLength(10);
+    expect(live().filter((task) => task.status === BTaskStatus.NotStarted).length).toBeGreaterThan(
+      0,
+    );
+    const count = live().length;
+    let overlap = false;
+    let purchaseOverlap = false;
+
+    for (let tick = 0; tick < 700; tick++) {
+      await vi.advanceTimersByTimeAsync(100);
+      expect(
+        live().filter((task) => task.status === BTaskStatus.Running).length,
+      ).toBeLessThanOrEqual(10);
+      expect(stage("extracting").length + stage("checkingAvailability").length).toBeLessThanOrEqual(
+        1,
+      );
+      if (stage("extracting").length && stage("fetching").length) overlap = true;
+      if (stage("extracting").length && stage("purchasing").length) purchaseOverlap = true;
+    }
+    expect(overlap).toBe(true);
+    expect(purchaseOverlap).toBe(true);
+    expect(live()).toHaveLength(count);
+    expect(live().every((task) => task.status === BTaskStatus.Completed)).toBe(true);
+    expect(tasks().every((task) => task.workflowStatus === WorkflowRunStatus.Success)).toBe(true);
+  });
+  it("clears queue on restart and preserves unrequested posts as pending until a manual restart", async () => {
+    loadConcurrencyPreview();
+    await mockApi.postParser.reParsePostParserTask(100);
+    await mockApi.postParser.reParsePostParserTask(101);
+    restartPreview();
+    expect(live()).toHaveLength(0);
+    expect(task(100).workflowStatus).toBe(WorkflowRunStatus.Interrupted);
+    expect(task(101).workflowStatus).toBe(WorkflowRunStatus.Interrupted);
+    expect(task(102).workflowRunId).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(task(100).workflowStatus).toBe(WorkflowRunStatus.Interrupted);
+    expect(task(102).workflowRunId).toBeUndefined();
+    await mockApi.postParser.retryPostParserTaskWorkflow(100);
+    expect(live()).toHaveLength(1);
+    expect(task(102).workflowRunId).toBeUndefined();
+  });
+  it("config changes resize admission without starting untouched posts", async () => {
+    loadConcurrencyPreview();
+    await mockApi.options.patchThirdPartyOptions({
+      postParserMaxConcurrency: 2,
+      postParserAiMaxConcurrency: 1,
+    });
+    expect(live()).toHaveLength(0);
+    await mockApi.postParser.startAllPostParserTasks();
+    expect(live().filter((task) => task.status === BTaskStatus.Running)).toHaveLength(2);
+    await mockApi.options.patchThirdPartyOptions({ postParserMaxConcurrency: 3 });
+    expect(live().filter((task) => task.status === BTaskStatus.Running)).toHaveLength(3);
+    resetPreview();
+    expect(live()).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(live()).toHaveLength(0);
   });
 });

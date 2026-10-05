@@ -192,5 +192,22 @@
   "postParser.action.unlockForAmount": "花费 {{amount}} 金币一键解锁",
   "postParser.action.noEligibleUnlock": "暂无符合条件的解锁项",
   "postParser.purchase.excluded": "另有 {{count}} 项不满足购买条件，已知总价为 {{amount}} 金币（受单项金额上限和最低保留金币限制）。",
-  "postParser.purchase.unknownPrices": "其中 {{count}} 项价格未知，未计入总价，也不会购买。"
+  "postParser.purchase.unknownPrices": "其中 {{count}} 项价格未知，未计入总价，也不会购买。",
+  "postParser.stage.queued": "排队中",
+  "postParser.stage.fetching": "获取信息中",
+  "postParser.stage.waitingForAi": "等待 AI 解析",
+  "postParser.stage.checkingAvailability": "检查失效反馈中",
+  "postParser.stage.purchasing": "购买解锁中",
+  "postParser.stage.extracting": "解析下载指令中",
+  "postParser.stage.checkingLinks": "检查下载链接中",
+  "postParser.stage.interrupted": "待继续",
+  "postParser.config.maxConcurrency": "解析任务总体并发数",
+  "postParser.config.maxConcurrencyHint": "同时处理的帖子数，默认 10；其余已启动任务等待空位。",
+  "postParser.config.aiMaxConcurrency": "AI 解析并发数",
+  "postParser.config.aiMaxConcurrencyHint": "失效反馈判断和下载指令提取共用此限制，默认 1。等待 AI 时，其他帖子可继续获取或购买。",
+  "postParser.config.siteConcurrencyHint": "站点请求遵守 SoulPlus 页中的全局并发设置。保存配置不会启动待解析任务。",
+  "postParser.config.soulPlusConcurrencyHint": "SoulPlus / NorthPlus 共用此全局请求并发限制，帖子获取和购买也遵守此设置。",
+  "postParser.config.saveConcurrency": "保存并发设置",
+  "postParser.stage.paused": "已暂停",
+  "postParser.state.interrupted": "待继续"
 }

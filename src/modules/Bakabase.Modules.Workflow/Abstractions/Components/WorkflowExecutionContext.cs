@@ -50,6 +50,9 @@ public sealed class WorkflowExecutionContext
     /// </summary>
     public Func<int, string?, Task> ReportProgress { get; init; } = (_, _) => Task.CompletedTask;
 
+    /// <summary>Transient, machine-readable activity phase; never persisted as a completed result.</summary>
+    public Func<string, Task> ReportStage { get; init; } = _ => Task.CompletedTask;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

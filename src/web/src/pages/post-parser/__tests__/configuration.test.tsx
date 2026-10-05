@@ -34,7 +34,13 @@ vi.mock("@/components/ThirdPartyConfig/platforms/SoulPlusConfig", () => ({
 }));
 
 const show = (automaticallyParsingPosts = false) => {
-  useThirdPartyOptionsStore.setState({ data: { automaticallyParsingPosts } });
+  useThirdPartyOptionsStore.setState({
+    data: {
+      automaticallyParsingPosts,
+      postParserMaxConcurrency: 10,
+      postParserAiMaxConcurrency: 1,
+    },
+  });
   render(
     <HeroUIProvider disableAnimation>
       <ConfigurationModal onDestroyed={vi.fn()} />
@@ -160,4 +166,43 @@ describe("post parser automatic parsing configuration", () => {
     expect(api.patchOptions).toHaveBeenLastCalledWith({ automaticallyParsingPosts: false });
     expect(api.startAll).not.toHaveBeenCalled();
   });
+});
+
+describe("post parser concurrency configuration", () => {
+  it("defaults to 10 total tasks and one AI request, and saving does not start posts", async () => {
+    const { user } = show();
+    const total = screen.getByRole("spinbutton", { name: "postParser.config.maxConcurrency" });
+    const ai = screen.getByRole("spinbutton", { name: "postParser.config.aiMaxConcurrency" });
+
+    expect(total).toHaveValue(10);
+    expect(ai).toHaveValue(1);
+    fireEvent.change(total, { target: { value: "6" } });
+    fireEvent.change(ai, { target: { value: "2" } });
+    await user.click(screen.getByRole("button", { name: "postParser.config.saveConcurrency" }));
+    await waitFor(() =>
+      expect(api.patchOptions).toHaveBeenCalledWith({
+        postParserMaxConcurrency: 6,
+        postParserAiMaxConcurrency: 2,
+      }),
+    );
+    expect(useThirdPartyOptionsStore.getState().data).toMatchObject({
+      postParserMaxConcurrency: 6,
+      postParserAiMaxConcurrency: 2,
+    });
+    expect(api.startAll).not.toHaveBeenCalled();
+  });
+  it.each(["0", "-1", "1.5", "", "2147483648"])(
+    "rejects invalid concurrency %s without changing saved settings",
+    (value) => {
+      show();
+      fireEvent.change(
+        screen.getByRole("spinbutton", { name: "postParser.config.maxConcurrency" }),
+        { target: { value } },
+      );
+      expect(
+        screen.getByRole("button", { name: "postParser.config.saveConcurrency" }),
+      ).toBeDisabled();
+      expect(api.patchOptions).not.toHaveBeenCalled();
+    },
+  );
 });

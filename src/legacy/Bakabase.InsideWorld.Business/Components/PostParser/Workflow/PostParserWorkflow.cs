@@ -35,6 +35,7 @@ public static class PostParserWorkflow
         where TDbContext : DbContext
     {
         services.AddSingleton<PostParserTaskExecutionGate>();
+        services.AddSingleton<IWorkflowRunSchedulingPolicy, PostParserWorkflowSchedulingPolicy>();
         services.AddScoped<PostParserWorkflowService<TDbContext>>();
         services.AddScoped<IPostParserWorkflowTaskBridge>(sp => sp.GetRequiredService<PostParserWorkflowService<TDbContext>>());
         services.AddSingleton<IWorkflowTrigger, PostParserManualTrigger>();
@@ -151,6 +152,7 @@ public sealed class ReadPostContentActivity : IWorkflowActivity
         var bridge = ctx.Services.GetRequiredService<IPostParserWorkflowTaskBridge>();
         var runId = checked((int)ctx.RunId);
         await bridge.EnsureCurrentAsync(input, runId, ct);
+        await ctx.ReportStage("fetching");
         var service = ctx.Services.GetRequiredService<IPostContentService>();
         var content = input.Text is {Length: > 0} text
             ? new PostContent {Title = input.Title ?? "", MainHtml = text, SourceHint = input.SourceHint}

@@ -2124,6 +2124,18 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputT
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputThirdPartyOptionsPatchInput {
   simpleSearchEngines?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput[];
   automaticallyParsingPosts?: boolean;
+  /**
+   * @format int32
+   * @min 1
+   * @max 2147483647
+   */
+  postParserMaxConcurrency?: number;
+  /**
+   * @format int32
+   * @min 1
+   * @max 2147483647
+   */
+  postParserAiMaxConcurrency?: number;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput {
@@ -2706,6 +2718,18 @@ export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxy
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptions {
   simpleSearchEngines?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[];
   automaticallyParsingPosts: boolean;
+  /**
+   * @format int32
+   * @min 1
+   * @max 2147483647
+   */
+  postParserMaxConcurrency: number;
+  /**
+   * @format int32
+   * @min 1
+   * @max 2147483647
+   */
+  postParserAiMaxConcurrency: number;
 }
 
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions {

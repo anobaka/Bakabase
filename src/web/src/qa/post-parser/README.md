@@ -33,7 +33,7 @@ The suspected-expiry examples also exercise the opt-in unlock action:
 - Post #9 has a 3-coin eligible item and an 8-coin excluded item. The button quotes 3 coins;
   hovering shows the excluded 8 coins. Buying keeps the post waiting after partial AI extraction,
   because the second item is still locked.
-- Unlocking shows a queued state, a purchasing state, then AI extraction over three seconds.
+- Unlocking is admitted to the shared task queue, then shows purchasing and AI extraction stages.
   Repeated clicks do not charge again. The price cap and minimum account balance are checked
   before spending, and duplicate purchase URLs count once. All balances are offline fixtures.
 - Re-parsing a restored or unreported-expiry post automatically buys eligible items. A suspected
@@ -65,3 +65,19 @@ using the real API implementation without the development-only aliases.
 The preview and page form a full-height flex column. The toolbar remains above the list, and the
 list uses the remaining height; on a short viewport the outer content can scroll to retain the
 minimum useful list height.
+
+
+Choose **并发队列 · 14 个帖子** to load an isolated set of 14 pending inputs. None is queued
+until explicitly started. “开始解析” submits all 14 exactly once: up to 10 tasks enter the
+workflow, the remaining four show a clock and “排队中”. The simulated site has one HTTP slot;
+AI assessment and extraction share one AI slot. Other admitted posts continue fetching or
+purchasing while one post is extracting instructions. The labels follow the real page's BTask
+feed, including “获取信息中”, “等待 AI 解析”, “检查失效反馈中”, “购买解锁中”,
+“解析下载指令中” and “检查下载链接中”. Defaults can be changed in the actual configuration dialog.
+Reducing a limit lets admitted work finish before admitting more; increasing it releases capacity.
+Saving configuration never starts untouched inputs.
+
+**模拟重启** discards the in-memory queue and live BTasks, marking previously requested tasks as
+interrupted/“待继续”. Inputs that were never started remain “待解析”; neither restarts automatically.
+Use a row retry or “开始解析” to continue. “重置示例” restores the selected scenario and clears all
+runtime queues/timers. Switching back to the normal scenarios restores the original ten examples.

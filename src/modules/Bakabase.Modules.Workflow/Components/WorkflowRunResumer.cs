@@ -17,6 +17,7 @@ public class WorkflowRunResumer<TDbContext>(
     IWorkflowValidationService validation,
     IWorkflowTriggerRegistry triggers,
     BTaskManager taskManager,
+    WorkflowRunSchedulingPolicyResolver scheduling,
     ILogger<WorkflowRunResumer<TDbContext>> logger) : IWorkflowRunResumer
     where TDbContext : DbContext
 {
@@ -105,15 +106,19 @@ public class WorkflowRunResumer<TDbContext>(
         if (!check.IsValid) throw new WorkflowValidationException(check);
     }
 
-    /// <summary>Keep the original task id/conflict key when returning to the queue.</summary>
-    private Task Enqueue(int runId, int defId) =>
-        taskManager.Enqueue(BTaskBuilder.Create($"workflow.run.{runId}")
+    /// <summary>Keep the original task identity and source scheduling policy when returning to the queue.</summary>
+    private async Task Enqueue(int runId, int defId)
+    {
+        if (taskManager.IsShuttingDown) return;
+        var triggerKind = await db.Set<WorkflowDefinitionDbModel>().Where(d => d.Id == defId)
+            .Select(d => d.TriggerKind).SingleAsync();
+        await taskManager.Enqueue(scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
             .Named($"Workflow #{defId} run #{runId}")
-            .ConflictsWith($"workflow.definition.{defId}")
             .ReplaceIfExists()
             .Run(async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 await scope.ServiceProvider.GetRequiredService<WorkflowRunner<TDbContext>>().ExecuteAsync(runId, args);
-            }));
+            }), defId, triggerKind));
+    }
 }

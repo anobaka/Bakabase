@@ -16,9 +16,11 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus;
 public class SoulPlusClient(
     IHttpClientFactory httpClientFactory,
     ILoggerFactory loggerFactory,
-    IBOptions<ISoulPlusOptions> options)
+    IBOptions<ISoulPlusOptions> options,
+    SoulPlusRequestGate? requestGate = null)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
+    private readonly SoulPlusRequestGate _requestGate = requestGate ?? new(options);
     public async Task<SoulPlusPost> GetPostAsync(string link, CancellationToken ct)
     {
         var firstPage = SoulPlusPostParser.FirstPageUrl(link);
@@ -28,7 +30,7 @@ public class SoulPlusClient(
     public string PurchaseAccountKey => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
         System.Text.Encoding.UTF8.GetBytes(options.Value.Cookie ?? "")));
 
-    protected Task<string> GetHtml(string url, CancellationToken ct)
+    protected async Task<string> GetHtml(string url, CancellationToken ct)
     {
         if (!SoulPlusPostParser.IsSupportedUrl(url))
             throw new InvalidOperationException("This URL is not a supported SoulPlus site.");
@@ -44,21 +46,31 @@ public class SoulPlusClient(
         var preset = options.Value.TlsPreset ?? TlsPresetHelper.DefaultPreset;
         var userAgent = options.Value.UserAgent ?? IThirdPartyHttpClientOptions.DefaultUserAgent;
 
-        using var session = new Session(preset: preset);
         var headers = new Dictionary<string, string>
         {
             { "User-Agent", userAgent },
             { "Cookie", options.Value.Cookie }
         };
 
-        var response = session.Get(url, headers: headers);
+        var response = await _requestGate.ExecuteAsync(() => SendAsync(url, headers, preset), ct);
         if (response.StatusCode != 200)
         {
             throw new Exception(
                 $"Request to {url} failed with status code: {response.StatusCode}");
         }
 
-        return Task.FromResult(response.Text);
+        return response.Text;
+    }
+
+    protected virtual async Task<(int StatusCode, string Text)> SendAsync(string url,
+        Dictionary<string, string> headers, string preset)
+    {
+        using var session = new Session(preset: preset, timeout: 30, retry: 0);
+        // HttpCloak 1.6.1 cancels its public Task before its native callback has drained.
+        // Wait for real completion (bounded by the session timeout) before releasing the site slot;
+        // queued requests remain immediately cancellable and no purchase is retried.
+        var response = await session.GetAsync(url, headers: headers, cancellationToken: CancellationToken.None);
+        return (response.StatusCode, response.Text);
     }
 
     public async Task BuyLockedContent(string url, CancellationToken ct)

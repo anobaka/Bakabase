@@ -25,6 +25,7 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
     private readonly BTaskManager _taskManager;
     private readonly WorkflowRunner<TDbContext> _runner;
     private readonly ILogger<WorkflowEventBus<TDbContext>> _logger;
+    private readonly WorkflowRunSchedulingPolicyResolver _scheduling;
 
     public WorkflowEventBus(
         TDbContext db,
@@ -32,7 +33,8 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
         BTaskManager taskManager,
         WorkflowRunner<TDbContext> runner,
         ILogger<WorkflowEventBus<TDbContext>> logger,
-        IWorkflowValidationService validation)
+        IWorkflowValidationService validation,
+        WorkflowRunSchedulingPolicyResolver scheduling)
     {
         _db = db;
         _validation = validation;
@@ -40,6 +42,7 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
         _taskManager = taskManager;
         _runner = runner;
         _logger = logger;
+        _scheduling = scheduling;
     }
 
     public async Task PublishAsync<T>(string triggerKind, T payload, CancellationToken ct = default)
@@ -141,10 +144,9 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
         {
             var runId = run.Id;
             var defId = run.WorkflowDefinitionId;
-            await _taskManager.Enqueue(BTaskBuilder.Create($"workflow.run.{runId}")
+            await _taskManager.Enqueue(_scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
                 .Named($"Workflow #{defId} run #{runId}")
-                .ConflictsWith($"workflow.definition.{defId}")
-                .Run(args => _runner.ExecuteAsync(runId, args)));
+                .Run(args => _runner.ExecuteAsync(runId, args)), defId, triggerKind));
         }
     }
 

@@ -55,11 +55,16 @@ public sealed class UnlockPostContentActivity : IResumableWorkflowActivity
         var bridge = ctx.Services.GetRequiredService<IPostParserWorkflowTaskBridge>();
         var runId = checked((int)ctx.RunId);
         await bridge.EnsureCurrentAsync(item.Input, runId, ct);
+        using var executionScope = PostParserExecutionScope.Begin((stage, _) => ctx.ReportStage(stage));
         var reader = ctx.Services.GetRequiredService<IPostContentService>();
         var quote = PostParserPurchaseQuote.Offers(item.Content).Where(l => l.Url != null)
             .ToDictionary(l => l.Url!, l => l.Price);
-        var content = refresh && item.Input.Link is {Length: > 0} reference
-            ? await reader.ReadAsync(reference, item.Input.SourceHint, ct) : item.Content;
+        var content = item.Content;
+        if (refresh && item.Input.Link is {Length: > 0} reference)
+        {
+            await ctx.ReportStage("fetching");
+            content = await reader.ReadAsync(reference, item.Input.SourceHint, ct);
+        }
         item = item with {Content = content};
         await bridge.SaveSnapshotAsync(item.Input, runId, content, item.Availability, "snapshotSaved", null, ct);
         if (!content.Locks.Any(l => !l.IsBought)) return WorkflowItemOutcome.ReplaceWith(item);
@@ -89,6 +94,7 @@ public sealed class UnlockPostContentActivity : IResumableWorkflowActivity
         {
             await bridge.EnsureCurrentAsync(item.Input, runId, ct);
             var approved = manual ? signal!.LockUrls.Distinct().ToDictionary(url => url, url => quote[url]) : null;
+            await ctx.ReportStage("purchasing");
             var purchase = await ctx.Services.GetRequiredService<SharedContentPurchasePolicy>().PurchaseAsync(
                 item.Input.Link!, content.SourceHint ?? item.Input.SourceHint, options.AutoBuyThreshold,
                 options.MinimumRemainingCoins, approved, ct, enforceThreshold: enforceLimits,
@@ -152,6 +158,7 @@ public sealed class ExtractPostDownloadInfoActivity : IResumableWorkflowActivity
         var bridge = ctx.Services.GetRequiredService<IPostParserWorkflowTaskBridge>();
         var runId = checked((int)ctx.RunId);
         await bridge.EnsureCurrentAsync(content.Input, runId, ct);
+        using var executionScope = PostParserExecutionScope.Begin((stage, _) => ctx.ReportStage(stage));
         var problem = await PostParserAi.ConfigurationProblemAsync(ctx, ct);
         if (problem != null) return await UnlockPostContentActivity.WaitAsync(ctx, content, "awaitingAi", problem, ct);
         var result = await ctx.Services.GetRequiredService<IPostDownloadInfoExtractor>().ExtractAsync(content.Content, ct);
@@ -185,6 +192,7 @@ public sealed class CheckPostLinksActivity : IWorkflowActivity
         await bridge.EnsureCurrentAsync(parsed.Input, checked((int)ctx.RunId), ct);
         var checker = ctx.Services.GetRequiredService<IPostLinkHealthChecker>();
         var resources = new List<PostDownloadResource>();
+        await ctx.ReportStage("checkingLinks");
         foreach (var resource in parsed.Result.Resources)
         {
             var health = await checker.CheckAsync(resource.Link, resource.Code, ct);

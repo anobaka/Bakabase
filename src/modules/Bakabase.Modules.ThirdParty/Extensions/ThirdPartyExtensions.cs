@@ -103,6 +103,7 @@ public static class ThirdPartyExtensions
             InternalOptions.HttpClientNames
                 .SoulPlus);
         services.AddSingleton<IBOptions<ISoulPlusOptions>>(x => x.GetRequiredService<IBOptions<TSoulPlusOptions>>());
+        services.TryAddSingleton<SoulPlusRequestGate>();
         services.TryAddSingleton<SoulPlusClient>();
 
         services.AddBakabaseHttpClient<TmdbHttpMessageHandler<TTmdbOptions>>(

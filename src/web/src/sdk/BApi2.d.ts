@@ -10974,6 +10974,10 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.ThirdPartyOptionsPatchInput": {
             simpleSearchEngines?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.ThirdPartyOptionsPatchInput+SimpleSearchEngineOptionsPatchInput"][];
             automaticallyParsingPosts?: boolean;
+            /** Format: int32 */
+            postParserMaxConcurrency?: number;
+            /** Format: int32 */
+            postParserAiMaxConcurrency?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.ThirdPartyOptionsPatchInput+SimpleSearchEngineOptionsPatchInput": {
             name?: string;
@@ -11459,6 +11463,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions": {
             simpleSearchEngines?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions+SimpleSearchEngineOptions"][];
             automaticallyParsingPosts: boolean;
+            /** Format: int32 */
+            postParserMaxConcurrency: number;
+            /** Format: int32 */
+            postParserAiMaxConcurrency: number;
         };
         "Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions+SimpleSearchEngineOptions": {
             name: string;
