@@ -63,16 +63,16 @@ const TaskList = ({ tasks, search, renderTask }: Props) => {
   };
 
   return (
-    <div className="min-w-0 overflow-x-auto rounded-xl border border-default-200">
+    <div className="flex min-h-72 min-w-0 flex-1 flex-col overflow-x-auto rounded-xl border border-default-200">
       <div
         aria-label={t<string>("postParser.page.title")}
         aria-rowcount={tasks.length + 1}
-        className="min-w-[960px]"
+        className="flex min-h-0 min-w-[960px] flex-1 flex-col"
         role="table"
       >
         <div
           aria-rowindex={1}
-          className={`${columns} bg-default-100/70 py-2.5 text-xs font-medium text-default-500`}
+          className={`${columns} shrink-0 bg-default-100/70 py-2.5 text-xs font-medium text-default-500`}
           role="row"
         >
           <span role="columnheader">{t<string>("postParser.table.id")}</span>
@@ -80,7 +80,7 @@ const TaskList = ({ tasks, search, renderTask }: Props) => {
           <span role="columnheader">{t<string>("postParser.table.results")}</span>
           <span role="columnheader">{t<string>("postParser.table.operations")}</span>
         </div>
-        <div className="h-[min(60vh,720px)] min-h-72">
+        <div className="min-h-0 flex-1">
           <AutoSizer onResize={({ width: nextWidth }) => setWidth(nextWidth)}>
             {({ width: listWidth, height }) => (
               <List

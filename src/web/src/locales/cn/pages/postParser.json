@@ -181,5 +181,11 @@
   "postParser.processing.copied.renameExtension": "已复制后缀：{{value}}",
   "postParser.processing.copied.renameFile": "已复制文件名：{{value}}",
   "postParser.processing.copied.moveFile": "已复制移动目标：{{value}}",
-  "postParser.processing.noPasswordToCopy": "此步骤没有可复制的密码"
+  "postParser.processing.noPasswordToCopy": "此步骤没有可复制的密码",
+  "postParser.config.general": "常规设置",
+  "postParser.config.automaticHint": "开启后，仅自动解析之后添加的帖子；已有待解析任务可通过页面上的“开始解析”统一排队。",
+  "postParser.action.queueing": "正在排队",
+  "postParser.action.viewAllRuns": "全部执行记录",
+  "postParser.history.all": "全部帖子解析记录",
+  "postParser.history.task": "帖子 #{{id}} · {{title}}"
 }

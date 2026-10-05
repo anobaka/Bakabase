@@ -68,13 +68,22 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
         try
         {
             var existing = await ParserTasks.ToListAsync();
+            var activeRuns = (await db.Set<WorkflowRunDbModel>().AsNoTracking()
+                .Where(r => r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running)
+                .Select(r => r.Id).ToListAsync()).ToHashSet();
             var changed = new List<PostParserTaskDbModel>();
+            var requested = new List<PostParserTaskDbModel>();
             foreach (var (source, link) in inputs)
             {
                 var task = existing.FirstOrDefault(t => t.Source == source && t.Link == link && t.Text == null);
-                if (task is {IsDeleted: false, Error: null} && PostParserWorkflowService<TDbContext>.IsPending(task.ToDomainModel()) &&
-                    task.ToDomainModel().Targets.Order().SequenceEqual(targets.Order()))
+                if (task is {IsDeleted: false} &&
+                    (task.WorkflowRunId is { } activeRun && activeRuns.Contains(activeRun) ||
+                     task.Error == null && PostParserWorkflowService<TDbContext>.IsPending(task.ToDomainModel()) &&
+                     task.ToDomainModel().Targets.Order().SequenceEqual(targets.Order())))
+                {
+                    requested.Add(task);
                     continue;
+                }
                 if (task == null)
                 {
                     task = new PostParserTaskDbModel {Source = source, Link = link, CreatedAt = DateTime.UtcNow};
@@ -83,6 +92,7 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
                 }
                 Reset(task, targets, title, stoppedRuns);
                 changed.Add(task);
+                requested.Add(task);
             }
             if (!string.IsNullOrWhiteSpace(text))
             {
@@ -91,15 +101,17 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
                 Reset(task, targets, title, stoppedRuns);
                 ParserTasks.Add(task);
                 changed.Add(task);
+                requested.Add(task);
             }
             await CancelRunsUnderGate(stoppedRuns);
             await db.SaveChangesAsync();
             cache.ClearCache();
             foreach (var task in changed) await Publish(task);
+            if (options.Value.AutomaticallyParsingPosts)
+                await workflow.DispatchUnderGateAsync(requested.Select(t => t.Id).ToList());
         }
         finally { gate.Semaphore.Release(); }
         await StopRuns(stoppedRuns);
-        if (options.Value.AutomaticallyParsingPosts) await workflow.DispatchAsync();
     }
 
     private static void Reset(PostParserTaskDbModel task, List<PostParseTarget> targets, string? title, List<int> stoppedRuns)
@@ -156,17 +168,34 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
         await gate.Semaphore.WaitAsync();
         try
         {
-            var task = await ParserTasks.SingleOrDefaultAsync(t => t.Id == id);
+            if (tasks.IsShuttingDown) return;
+            var task = await ParserTasks.SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted);
             if (task == null) return;
-            Reset(task, task.ToDomainModel().Targets, null, stoppedRuns);
-            await CancelRunsUnderGate(stoppedRuns);
-            await db.SaveChangesAsync();
-            cache.ClearCache();
-            await Publish(task);
+            var status = task.WorkflowRunId is { } runId
+                ? await db.Set<WorkflowRunDbModel>().Where(r => r.Id == runId)
+                    .Select(r => (WorkflowRunStatus?)r.Status).SingleOrDefaultAsync()
+                : null;
+            if (status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running)
+            {
+                await workflow.DispatchUnderGateAsync([id]);
+                return;
+            }
+            // Starting a new pending input does not create a new revision. A finished/waiting
+            // attempt is explicitly replaced, and reserving its new run under this same gate
+            // makes concurrent reparse requests observe that reservation instead of resetting it.
+            if (task.WorkflowRunId != null || task.Error != null ||
+                !PostParserWorkflowService<TDbContext>.IsPending(task.ToDomainModel()))
+            {
+                Reset(task, task.ToDomainModel().Targets, null, stoppedRuns);
+                await CancelRunsUnderGate(stoppedRuns);
+                await db.SaveChangesAsync();
+                cache.ClearCache();
+                await Publish(task);
+            }
+            await workflow.DispatchUnderGateAsync([id]);
         }
         finally { gate.Semaphore.Release(); }
         await StopRuns(stoppedRuns);
-        if (options.Value.AutomaticallyParsingPosts) await workflow.DispatchAsync();
     }
 
     public Task Retry(int id) => workflow.RetryAsync(id);
@@ -191,8 +220,13 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
     public async Task ParseAll(Func<int, Task>? onProgress, Func<string, Task>? onProcessChange, PauseToken pt, CancellationToken ct)
     {
         await pt.WaitWhilePausedAsync(ct);
-        await workflow.DispatchAsync(ct);
-        if (onProgress != null) await onProgress(100);
+        await workflow.DispatchAsync(ct,
+            async (completed, total) =>
+            {
+                if (onProgress != null) await onProgress(total == 0 ? 100 : completed * 100 / total);
+                if (onProcessChange != null) await onProcessChange($"{completed}/{total}");
+            },
+            () => pt.WaitWhilePausedAsync(ct));
     }
 
     public async Task<Dictionary<string, PostParserTaskStatus>> GetStatusesByLinks(PostParserSource source, List<string> links)

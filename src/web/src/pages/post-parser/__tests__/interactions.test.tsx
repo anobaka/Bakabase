@@ -13,8 +13,16 @@ import AddToAcquisitionModal from "../components/AddToAcquisitionModal";
 import DownloadInfoResultRenderer from "../components/DownloadInfoResultRenderer";
 import LocalProcessingModal from "../components/LocalProcessingModal";
 
-import { PostParseTarget, PostParserSource, WorkflowRunStatus } from "@/sdk/constants";
+import {
+  BTaskStatus,
+  BTaskType,
+  BTaskResourceType,
+  PostParseTarget,
+  PostParserSource,
+  WorkflowRunStatus,
+} from "@/sdk/constants";
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
+import { useBTasksStore } from "@/stores/bTasks";
 
 const api = vi.hoisted(() => ({
   add: vi.fn(),
@@ -79,8 +87,10 @@ vi.mock("@/components/ThirdPartyConfig/base/TampermonkeyInstallButton", () => ({
 }));
 vi.mock("@/components/ThirdPartyIcon", () => ({ default: () => <span>SoulPlus</span> }));
 vi.mock("@/components/Workflow/WorkflowRunsDrawer", () => ({
-  default: ({ workflowDefinitionId }: { workflowDefinitionId: number }) => (
-    <div data-testid="runs">{workflowDefinitionId}</div>
+  default: ({ runSourceKey, workflowName }: { runSourceKey: string; workflowName: string }) => (
+    <div data-testid="runs">
+      {runSourceKey} {workflowName}
+    </div>
   ),
 }));
 vi.mock("@/components/bakaui", async () => ({
@@ -293,7 +303,8 @@ describe("post content purchase and partial results", () => {
     await act(async () => Promise.resolve());
     expect(screen.getByText("postParser.state.partial")).toBeVisible();
     expect(byRole("button", "postParser.action.purchase")).toHaveLength(0);
-    expect(byRole("button", "postParser.action.openPostToUnlock")).toHaveLength(1);
+    expect(byRole("button", "postParser.action.openPostToUnlock")).toHaveLength(0);
+    expect(byRole("button", "postParser.action.openPost")).toHaveLength(0);
     expect(byRole("button", "postParser.action.addToAcquisition")).toHaveLength(0);
   });
 
@@ -308,18 +319,24 @@ describe("post content purchase and partial results", () => {
       },
     ]);
     show(<PostParserPage />);
-    fireEvent.click(screen.getByRole("button", { name: "postParser.action.openPostToUnlock" }));
+    fireEvent.click(screen.getByRole("button", { name: base.link! }));
     expect(api.openUrl).toHaveBeenCalledWith({ url: base.link });
     expect(api.request).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "postParser.action.refreshAfterUnlock" }));
     await waitFor(() => expect(api.reparse).toHaveBeenCalledWith(base.id));
-    expect(api.start).toHaveBeenCalledOnce();
+    expect(api.start).not.toHaveBeenCalled();
     expect(api.request).not.toHaveBeenCalled();
     expect(api.retry).not.toHaveBeenCalled();
   });
 
   it("orders available actions by source, analysis, download, files and task", async () => {
-    usePostParserTasksStore.getState().setTasks([{ ...parsed, workflowDefinitionId: 9 }]);
+    usePostParserTasksStore.getState().setTasks([
+      {
+        ...parsed,
+        workflowDefinitionId: 9,
+        contentSnapshot: { mainHtml: "Saved post", locks: [] },
+      },
+    ]);
     show(<PostParserPage />);
     await act(async () => Promise.resolve());
     expect(
@@ -350,6 +367,7 @@ beforeEach(() => {
     value: { writeText: api.copy.mockResolvedValue(undefined) },
   });
   usePostParserTasksStore.getState().setTasks([]);
+  useBTasksStore.getState().setTasks([]);
 });
 afterEach(async () => {
   await act(async () => root.unmount());
@@ -573,7 +591,7 @@ describe("post parsing workspace", () => {
     ).toBeEnabled();
   });
 
-  it("retries failed execution without reparsing all content and shows shared execution history", async () => {
+  it("retries only the failed execution and scopes history to that post", async () => {
     usePostParserTasksStore.getState().setTasks([
       {
         ...base,
@@ -589,7 +607,7 @@ describe("post parsing workspace", () => {
     expect(api.reparse).not.toHaveBeenCalled();
     expect(api.start).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "postParser.action.viewRuns" }));
-    expect(screen.getByTestId("runs")).toHaveTextContent("9");
+    expect(screen.getByTestId("runs")).toHaveTextContent("postParser:task:14");
   });
 
   it("keeps reparse for historical records without a workflow", async () => {
@@ -597,8 +615,90 @@ describe("post parsing workspace", () => {
     show(<PostParserPage />);
     fireEvent.click(screen.getByRole("button", { name: "postParser.action.reParse" }));
     await waitFor(() => expect(api.reparse).toHaveBeenCalledWith(14));
-    expect(api.start).toHaveBeenCalledOnce();
+    expect(api.start).not.toHaveBeenCalled();
     expect(api.retry).not.toHaveBeenCalled();
+  });
+
+  it("fetches one pending post without starting another pending post", async () => {
+    usePostParserTasksStore.getState().setTasks([base, { ...base, id: 15, title: "Another post" }]);
+    show(<PostParserPage />);
+    fireEvent.click(byRole("button", "postParser.action.fetchPost")[0]);
+    await waitFor(() => expect(api.reparse).toHaveBeenCalledOnce());
+    expect(api.reparse).toHaveBeenCalledWith(14);
+    expect(api.start).not.toHaveBeenCalled();
+  });
+
+  it("guards repeated presses before React commits busy state", async () => {
+    let finish!: (value: { code: number }) => void;
+
+    api.start.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    usePostParserTasksStore.getState().setTasks([base]);
+    show(<PostParserPage />);
+    const button = screen.getByRole("button", { name: "postParser.action.start" });
+
+    act(() => {
+      button.click();
+      button.click();
+    });
+    expect(api.start).toHaveBeenCalledOnce();
+    expect(button).toBeDisabled();
+    await act(async () => {
+      finish({ code: 0 });
+    });
+    expect(button).toBeEnabled();
+  });
+
+  it("keeps batch dispatch disabled until the BTask finishes and allows the next batch", async () => {
+    const dispatcher = {
+      id: "ParseAllPosts",
+      name: "Queue posts",
+      createdAt: "2026-10-05T00:00:00Z",
+      isPersistent: true,
+      type: BTaskType.Any,
+      resourceType: BTaskResourceType.Any,
+      status: BTaskStatus.NotStarted,
+    };
+
+    useBTasksStore.getState().setTasks([dispatcher]);
+    usePostParserTasksStore.getState().setTasks([base]);
+    show(<PostParserPage />);
+    expect(screen.getByRole("button", { name: "postParser.action.queueing" })).toBeDisabled();
+    await act(async () =>
+      useBTasksStore.getState().setTasks([{ ...dispatcher, status: BTaskStatus.Completed }]),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.start" }));
+    await waitFor(() => expect(api.start).toHaveBeenCalledOnce());
+  });
+
+  it("keeps the search before start in the toolbar and moves automatic parsing out of it", async () => {
+    usePostParserTasksStore.getState().setTasks([base]);
+    show(<PostParserPage />);
+    const input = screen.getByLabelText("postParser.search.label");
+    const start = screen.getByRole("button", { name: "postParser.action.start" });
+
+    expect(start.parentElement).toContainElement(input);
+    expect(input.compareDocumentPosition(start) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      screen.queryByRole("checkbox", { name: "postParser.label.automaticallyParsing" }),
+    ).toBeNull();
+  });
+
+  it("opens all post history even when the current list is empty", async () => {
+    show(<PostParserPage />);
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.viewAllRuns" }));
+    expect(screen.getByTestId("runs")).toHaveTextContent("postParser:all");
+  });
+
+  it("retains per-post history access while a new revision has no linked run", async () => {
+    usePostParserTasksStore.getState().setTasks([base]);
+    show(<PostParserPage />);
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.viewRuns" }));
+    expect(screen.getByTestId("runs")).toHaveTextContent("postParser:task:14");
   });
 
   it("polls active runs to their terminal state and stops after completion", async () => {

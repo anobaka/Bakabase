@@ -8,6 +8,7 @@ using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.PostParser;
 using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
@@ -30,6 +31,9 @@ using Bootstrap.Components.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Models.Db;
 using ParserTask = Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask;
 
 namespace Bakabase.Tests;
@@ -81,6 +85,232 @@ public sealed class PostParserWorkflowTests
     {
         await using var scope = _services.CreateAsyncScope();
         await scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>().DispatchAsync();
+    }
+
+    private async Task Reparse(int id)
+    {
+        await using var scope = _services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<IPostParserTaskService>().ReParse(id);
+    }
+
+    private async Task Retry(int id)
+    {
+        await using var scope = _services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<IPostParserTaskService>().Retry(id);
+    }
+
+    private async Task WaitForBTask(string taskId)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var manager = _services.GetRequiredService<BTaskManager>();
+        while (manager.Tasks.Single(t => t.Id == taskId).Task.Status is not
+               (BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.Cancelled))
+            await Task.Delay(20, timeout.Token);
+        Assert.AreEqual(BTaskStatus.Completed, manager.Tasks.Single(t => t.Id == taskId).Task.Status);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task ReparseOnlyQueuesTheSelectedPostAndCoalescesConcurrentRequests(bool automaticallyParse)
+    {
+        var selected = await Add();
+        var other = await Add("https://example.test/post/other");
+        var before = await TaskState(selected);
+        _services.GetRequiredService<IBOptions<ThirdPartyOptions>>().Value.AutomaticallyParsingPosts = automaticallyParse;
+
+        await Task.WhenAll(Reparse(selected), Reparse(selected), Reparse(selected));
+
+        var queued = await TaskState(selected);
+        Assert.IsNotNull(queued.WorkflowRunId);
+        Assert.AreEqual(before.Revision, queued.Revision);
+        Assert.IsNull((await TaskState(other)).WorkflowRunId);
+        var manager = _services.GetRequiredService<BTaskManager>();
+        Assert.AreEqual(1, manager.Tasks.Count(t => t.Id == $"workflow.run.{queued.WorkflowRunId}"));
+        Assert.IsTrue(manager.Tasks.Single(t => t.Id == $"workflow.run.{queued.WorkflowRunId}").Task.IsPersistent);
+
+        await Execute(queued.WorkflowRunId.Value);
+        await Task.WhenAll(Reparse(selected), Reparse(selected), Reparse(selected));
+        var fresh = await TaskState(selected);
+        Assert.AreNotEqual(queued.WorkflowRunId, fresh.WorkflowRunId);
+        Assert.AreEqual(queued.Revision + 1, fresh.Revision);
+        Assert.IsNull((await TaskState(other)).WorkflowRunId);
+    }
+
+    [TestMethod]
+    public async Task AutomaticAdditionQueuesOnlyItsInputsAndInitializationDoesNotScanTheBacklog()
+    {
+        var backlog = await Add("https://example.test/post/backlog");
+        var selected = await Add("https://example.test/post/selected");
+        _services.GetRequiredService<IBOptions<ThirdPartyOptions>>().Value.AutomaticallyParsingPosts = true;
+        await _services.GetRequiredService<PostParserTaskTrigger>().Initialize();
+        Assert.IsFalse(_services.GetRequiredService<BTaskManager>().Tasks.Any(t => t.Id == PostParserTaskTrigger.TaskId));
+        Assert.IsNull((await TaskState(backlog)).WorkflowRunId);
+
+        var added = await Add("https://example.test/post/new");
+        Assert.IsNotNull((await TaskState(added)).WorkflowRunId);
+        Assert.IsNull((await TaskState(backlog)).WorkflowRunId);
+        Assert.IsNull((await TaskState(selected)).WorkflowRunId);
+        await Add("https://example.test/post/selected");
+        Assert.IsNotNull((await TaskState(selected)).WorkflowRunId);
+        Assert.IsNull((await TaskState(backlog)).WorkflowRunId);
+        Assert.AreEqual(0, _reader.Reads, "automatic addition should enqueue background work, not fetch in the request");
+    }
+
+    [TestMethod]
+    public async Task StartAllUsesOneBackgroundDispatcherAndCanRestartAfterCompletion()
+    {
+        var first = await Add();
+        var second = await Add("https://example.test/post/second");
+        _services.GetRequiredService<IBOptions<TaskOptions>>().Value.Tasks =
+            [new BTaskDbModel {Id = PostParserTaskTrigger.TaskId, Interval = TimeSpan.FromMinutes(1)}];
+        var trigger = _services.GetRequiredService<PostParserTaskTrigger>();
+        var manager = _services.GetRequiredService<BTaskManager>();
+        var gate = _services.GetRequiredService<PostParserTaskExecutionGate>();
+        await gate.Semaphore.WaitAsync();
+        try
+        {
+            await Task.WhenAll(trigger.Start(), trigger.Start(), trigger.Start());
+            var dispatch = manager.Tasks.Single(t => t.Id == PostParserTaskTrigger.TaskId);
+            Assert.AreEqual(BTaskStatus.Running, dispatch.Task.Status);
+            Assert.IsTrue(dispatch.Task.IsPersistent);
+            Assert.IsNull(dispatch.Task.Interval);
+            Assert.AreEqual(0, _reader.Reads);
+        }
+        finally { gate.Semaphore.Release(); }
+        await WaitForBTask(PostParserTaskTrigger.TaskId);
+        var firstRun = (await TaskState(first)).WorkflowRunId;
+        Assert.IsNotNull(firstRun);
+        Assert.IsNotNull((await TaskState(second)).WorkflowRunId);
+
+        var third = await Add("https://example.test/post/third");
+        await trigger.Start();
+        await WaitForBTask(PostParserTaskTrigger.TaskId);
+        Assert.IsNotNull((await TaskState(third)).WorkflowRunId);
+        Assert.AreEqual(firstRun, (await TaskState(first)).WorkflowRunId);
+        await using var scope = _services.CreateAsyncScope();
+        Assert.AreEqual(3, await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task RepeatedRetryKeepsOneRunAndExecutesAfterTheRequestScopeIsDisposed()
+    {
+        _extractor.FailuresRemaining = 1;
+        var id = await Add();
+        var backlog = await Add("https://example.test/post/backlog");
+        await Reparse(id);
+        var runId = (await TaskState(id)).WorkflowRunId!.Value;
+        await Execute(runId);
+        Assert.AreEqual(WorkflowRunStatus.Failed, (await TaskState(id)).WorkflowStatus);
+
+        await Task.WhenAll(Retry(id), Retry(id), Retry(id));
+        var manager = _services.GetRequiredService<BTaskManager>();
+        Assert.AreEqual(1, manager.Tasks.Count(t => t.Id == $"workflow.run.{runId}"));
+        Assert.AreEqual(runId, (await TaskState(id)).WorkflowRunId);
+        Assert.IsNull((await TaskState(backlog)).WorkflowRunId);
+        await manager.Start($"workflow.run.{runId}");
+        await WaitForBTask($"workflow.run.{runId}");
+
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual(1, _reader.Reads);
+        Assert.AreEqual(2, _extractor.Extractions);
+        Assert.IsNull((await TaskState(backlog)).WorkflowRunId);
+    }
+
+    [TestMethod]
+    public async Task RepeatedAdditionKeepsAnActiveRunEvenAfterAnIntermediateResultWasPublished()
+    {
+        var id = await Add();
+        await Reparse(id);
+        var before = await TaskState(id);
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            await db.PostParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s =>
+                s.SetProperty(t => t.ParsingState, "complete")
+                    .SetProperty(t => t.Results, "{\"DownloadInfo\":{\"resources\":[]}}"));
+            await db.WorkflowRuns.Where(r => r.Id == before.WorkflowRunId).ExecuteUpdateAsync(s =>
+                s.SetProperty(r => r.Status, WorkflowRunStatus.Running));
+        }
+        _services.GetRequiredService<IBOptions<ThirdPartyOptions>>().Value.AutomaticallyParsingPosts = true;
+        await Add();
+        var after = await TaskState(id);
+        Assert.AreEqual(before.Revision, after.Revision);
+        Assert.AreEqual(before.WorkflowRunId, after.WorkflowRunId);
+        Assert.AreEqual(WorkflowRunStatus.Running, after.WorkflowStatus);
+    }
+
+    [TestMethod]
+    public async Task StartAllSkipsFinishedFailedAndWaitingPosts()
+    {
+        var completeId = await Add("https://example.test/post/complete");
+        await Reparse(completeId);
+        var completedRun = (await TaskState(completeId)).WorkflowRunId!.Value;
+        await Execute(completedRun);
+        _extractor.FailuresRemaining = 1;
+        var failedId = await Add("https://example.test/post/failed");
+        await Reparse(failedId);
+        var failedRun = (await TaskState(failedId)).WorkflowRunId!.Value;
+        await Execute(failedRun);
+        await using (var scope = _services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<IAiFeatureService>()
+                .SaveConfigAsync(new() {Feature = AiFeature.PostParser, UseDefault = false});
+        var waitingId = await Add("https://example.test/post/waiting");
+        await Reparse(waitingId);
+        var waitingRun = (await TaskState(waitingId)).WorkflowRunId!.Value;
+        await Execute(waitingRun);
+        var pendingId = await Add("https://example.test/post/pending");
+
+        await _services.GetRequiredService<PostParserTaskTrigger>().Start();
+        await WaitForBTask(PostParserTaskTrigger.TaskId);
+
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(completeId)).WorkflowStatus);
+        Assert.AreEqual(completedRun, (await TaskState(completeId)).WorkflowRunId);
+        Assert.AreEqual(WorkflowRunStatus.Failed, (await TaskState(failedId)).WorkflowStatus);
+        Assert.AreEqual(failedRun, (await TaskState(failedId)).WorkflowRunId);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, (await TaskState(waitingId)).WorkflowStatus);
+        Assert.AreEqual(waitingRun, (await TaskState(waitingId)).WorkflowRunId);
+        Assert.IsNotNull((await TaskState(pendingId)).WorkflowRunId);
+    }
+
+    [TestMethod]
+    public async Task BulkDispatchReportsProgressAndPausesOutsideTheSinglePostGate()
+    {
+        var first = await Add("https://example.test/post/first");
+        var second = await Add("https://example.test/post/second");
+        var third = await Add("https://example.test/post/third");
+        var pause = new PauseTokenSource();
+        var paused = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        pause.OnPause += _ => { paused.TrySetResult(); return Task.CompletedTask; };
+        using var cancellation = new CancellationTokenSource();
+        var progress = new List<int>();
+        var process = new List<string>();
+        var parsing = Task.Run(async () =>
+        {
+            await using var scope = _services.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<IPostParserTaskService>().ParseAll(
+                percentage =>
+                {
+                    progress.Add(percentage);
+                    if (percentage == 33) pause.Pause();
+                    return Task.CompletedTask;
+                },
+                message => { process.Add(message); return Task.CompletedTask; },
+                pause.Token, cancellation.Token);
+        });
+
+        await paused.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        try
+        {
+            await Reparse(third).WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally { cancellation.Cancel(); }
+        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => parsing);
+        CollectionAssert.AreEqual(new[] {0, 33}, progress);
+        CollectionAssert.AreEqual(new[] {"0/3", "1/3"}, process);
+        Assert.IsNotNull((await TaskState(first)).WorkflowRunId);
+        Assert.IsNull((await TaskState(second)).WorkflowRunId);
+        Assert.IsNotNull((await TaskState(third)).WorkflowRunId);
     }
 
     private async Task<ParserTask> TaskState(int id)
@@ -169,7 +399,7 @@ public sealed class PostParserWorkflowTests
     }
 
     [TestMethod]
-    public async Task ReparseDuringExtractionRejectsOldCompletion()
+    public async Task ReparseDuringExtractionKeepsTheActiveRunAndItsCompletion()
     {
         _extractor.Hold = true;
         var id = await Add();
@@ -177,20 +407,16 @@ public sealed class PostParserWorkflowTests
         var old = await TaskState(id);
         var executing = Execute(old.WorkflowRunId!.Value);
         await _extractor.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        await using (var scope = _services.CreateAsyncScope())
-            await scope.ServiceProvider.GetRequiredService<IPostParserTaskService>().ReParse(id);
-        await Dispatch();
+        await Task.WhenAll(Reparse(id), Reparse(id), Retry(id));
         var fresh = await TaskState(id);
         Assert.AreEqual(old.CreatedAt, fresh.CreatedAt);
         Assert.IsNull(fresh.CompletedAt);
         _extractor.Hold = false;
         _extractor.Release.TrySetResult();
         await executing;
-        Assert.IsNull((await TaskState(id)).Results);
-        Assert.IsNull((await TaskState(id)).CompletedAt);
-        Assert.AreNotEqual(old.WorkflowRunId, fresh.WorkflowRunId);
-        Assert.IsTrue(fresh.Revision > old.Revision);
-        await Execute(fresh.WorkflowRunId!.Value);
+        Assert.AreEqual(old.WorkflowRunId, fresh.WorkflowRunId);
+        Assert.AreEqual(old.Revision, fresh.Revision);
+        Assert.IsNotNull((await TaskState(id)).Results);
         Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
         Assert.AreEqual((await RunState(fresh.WorkflowRunId.Value)).CompletedAt!.Value.ToUniversalTime(), (await TaskState(id)).CompletedAt);
     }
@@ -209,8 +435,7 @@ public sealed class PostParserWorkflowTests
         var pending = await TaskState(id);
         Assert.AreEqual(completed.CreatedAt, pending.CreatedAt);
         Assert.IsNull(pending.CompletedAt);
-        Assert.IsNull(pending.WorkflowRunId);
-        await Dispatch();
+        Assert.IsNotNull(pending.WorkflowRunId);
         var newRunId = (await TaskState(id)).WorkflowRunId!.Value;
         Assert.AreNotEqual(runId, newRunId);
         await Execute(newRunId);
@@ -225,6 +450,7 @@ public sealed class PostParserWorkflowTests
         var id = await Add();
         await Dispatch();
         var old = await TaskState(id);
+        await Execute(old.WorkflowRunId!.Value);
         await using (var scope = _services.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<IPostParserTaskService>().ReParse(id);
         await Dispatch();

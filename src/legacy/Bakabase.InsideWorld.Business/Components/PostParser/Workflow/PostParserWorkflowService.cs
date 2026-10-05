@@ -73,71 +73,104 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         return definition.Id;
     }
 
-    public async Task DispatchAsync(CancellationToken ct = default)
+    public async Task DispatchAsync(CancellationToken ct = default,
+        Func<int, int, Task>? onProgress = null, Func<Task>? checkpoint = null)
     {
+        List<int> ids;
         await gate.Semaphore.WaitAsync(ct);
         try
         {
+            if (tasks.IsShuttingDown) return;
             await RefreshTasksUnderGateAsync(ct);
-            var pending = (await ParserTasks.AsNoTracking().Where(t => !t.IsDeleted && t.Error == null && t.WorkflowRunId == null)
-                .ToListAsync(ct)).Where(t => IsPending(t.ToDomainModel())).ToList();
-            int? definitionId = null;
-            foreach (var snapshot in pending)
-            {
-                ct.ThrowIfCancellationRequested();
-                definitionId ??= await SeedAsync(ct);
-                var task = await ParserTasks.SingleAsync(t => t.Id == snapshot.Id, ct);
-                if (!await db.Set<WorkflowDefinitionDbModel>().AsNoTracking().AnyAsync(d => d.Id == definitionId && d.Enabled, ct))
-                {
-                    task.Error = "The built-in parsing workflow is disabled. Enable it before parsing this task again.";
-                    await db.SaveChangesAsync(ct);
-                    cache.ClearCache();
-                    await PublishAsync(task, null);
-                    continue;
-                }
-                // Validation runs in the engine and is recorded as a failed run, so missing
-                // credentials do not silently disappear from this page or block another task.
-                var payload = new PostParserInput
-                {
-                    TaskId = task.Id, Revision = task.Revision, Link = string.IsNullOrWhiteSpace(task.Text) ? task.Link : null,
-                    Text = task.Text, Title = task.Title,
-                    SourceHint = task.Source == PostParserSource.SoulPlus ? nameof(PostParserSource.SoulPlus) : null
-                };
-                await using var transaction = await db.Database.BeginTransactionAsync(ct);
-                var run = new WorkflowRunDbModel
-                {
-                    WorkflowDefinitionId = definitionId.Value, Status = WorkflowRunStatus.Pending,
-                    StartedAt = DateTime.Now, PayloadJson = JsonSerializer.Serialize(payload, WorkflowJson.Options),
-                    PayloadSummary = task.Title ?? (task.Text is {Length: > 0} text ? text[..Math.Min(120, text.Length)] : task.Link),
-                    // Reading has no purchasing side effects. A committed cursor also avoids
-                    // an unresumable first step after a restart.
-                    CurrentStepIndex = 0
-                };
-                Runs.Add(run);
-                await db.SaveChangesAsync(ct);
-                task.WorkflowRunId = run.Id;
-                task.WorkflowDefinitionId = definitionId;
-                await db.SaveChangesAsync(ct);
-                await transaction.CommitAsync(ct);
-                cache.ClearCache();
-                await PublishAsync(task, run.Status);
-            }
-
-            // This also handles a crash or enqueue failure after the transaction committed.
-            var queued = await Runs.AsNoTracking().Where(r => r.Status == WorkflowRunStatus.Pending &&
-                ParserTasks.Any(t => t.WorkflowRunId == r.Id && !t.IsDeleted)).ToListAsync(ct);
-            foreach (var run in queued) await EnqueueAsync(run);
+            var candidates = await ParserTasks.AsNoTracking().Where(t => !t.IsDeleted &&
+                    (t.WorkflowRunId == null && t.Error == null ||
+                     Runs.Any(r => r.Id == t.WorkflowRunId && r.Status == WorkflowRunStatus.Pending)))
+                .OrderBy(t => t.Id).ToListAsync(ct);
+            ids = candidates.Where(t => t.WorkflowRunId != null || IsPending(t.ToDomainModel()))
+                .Select(t => t.Id).ToList();
         }
         finally { gate.Semaphore.Release(); }
+
+        if (onProgress != null) await onProgress(0, ids.Count);
+        for (var i = 0; i < ids.Count; i++)
+        {
+            // Waiting here cannot block single-post actions behind a paused bulk dispatcher.
+            if (checkpoint != null) await checkpoint();
+            ct.ThrowIfCancellationRequested();
+            await gate.Semaphore.WaitAsync(ct);
+            try { await DispatchUnderGateAsync([ids[i]], ct); }
+            finally { gate.Semaphore.Release(); }
+            if (onProgress != null) await onProgress(i + 1, ids.Count);
+        }
+    }
+
+    /// <summary>The caller holds the parser gate across its input/reset and this dispatch.</summary>
+    internal async Task DispatchUnderGateAsync(IReadOnlyCollection<int>? taskIds, CancellationToken ct = default)
+    {
+        if (tasks.IsShuttingDown || taskIds is {Count: 0}) return;
+        await RefreshTasksUnderGateAsync(ct, taskIds);
+        var candidates = ParserTasks.AsNoTracking().Where(t => !t.IsDeleted && t.Error == null && t.WorkflowRunId == null);
+        if (taskIds != null) candidates = candidates.Where(t => taskIds.Contains(t.Id));
+        var pending = (await candidates
+                .ToListAsync(ct)).Where(t => IsPending(t.ToDomainModel())).ToList();
+        int? definitionId = null;
+        foreach (var snapshot in pending)
+        {
+            ct.ThrowIfCancellationRequested();
+            definitionId ??= await SeedAsync(ct);
+            var task = await ParserTasks.SingleAsync(t => t.Id == snapshot.Id, ct);
+            if (!await db.Set<WorkflowDefinitionDbModel>().AsNoTracking().AnyAsync(d => d.Id == definitionId && d.Enabled, ct))
+            {
+                task.Error = "The built-in parsing workflow is disabled. Enable it before parsing this task again.";
+                await db.SaveChangesAsync(ct);
+                cache.ClearCache();
+                await PublishAsync(task, null);
+                continue;
+            }
+            // Validation runs in the engine and is recorded as a failed run, so missing
+            // credentials do not silently disappear from this page or block another task.
+            var payload = new PostParserInput
+            {
+                TaskId = task.Id, Revision = task.Revision, Link = string.IsNullOrWhiteSpace(task.Text) ? task.Link : null,
+                Text = task.Text, Title = task.Title,
+                SourceHint = task.Source == PostParserSource.SoulPlus ? nameof(PostParserSource.SoulPlus) : null
+            };
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            var run = new WorkflowRunDbModel
+            {
+                WorkflowDefinitionId = definitionId.Value, Status = WorkflowRunStatus.Pending,
+                StartedAt = DateTime.Now, PayloadJson = JsonSerializer.Serialize(payload, WorkflowJson.Options),
+                PayloadSummary = task.Title ?? (task.Text is {Length: > 0} text ? text[..Math.Min(120, text.Length)] : task.Link),
+                // Reading has no purchasing side effects. A committed cursor also avoids
+                // an unresumable first step after a restart.
+                CurrentStepIndex = 0
+            };
+            Runs.Add(run);
+            await db.SaveChangesAsync(ct);
+            task.WorkflowRunId = run.Id;
+            task.WorkflowDefinitionId = definitionId;
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            cache.ClearCache();
+            await PublishAsync(task, run.Status);
+        }
+
+        // This also handles a crash or enqueue failure after the transaction committed.
+        var selectedTasks = ParserTasks.Where(t => !t.IsDeleted);
+        if (taskIds != null) selectedTasks = selectedTasks.Where(t => taskIds.Contains(t.Id));
+        var queued = await Runs.AsNoTracking().Where(r => r.Status == WorkflowRunStatus.Pending &&
+            selectedTasks.Any(t => t.WorkflowRunId == r.Id)).ToListAsync(ct);
+        foreach (var run in queued) await EnqueueAsync(run);
     }
 
     private Task EnqueueAsync(WorkflowRunDbModel run)
     {
+        if (tasks.IsShuttingDown) return Task.CompletedTask;
         var runId = run.Id;
         var definitionId = run.WorkflowDefinitionId;
         return tasks.Enqueue(BTaskBuilder.Create($"workflow.run.{runId}")
             .Named($"Workflow #{definitionId} run #{runId}")
-            .IgnoreIfExists().ConflictsWith($"workflow.definition.{definitionId}")
+            .Persistent().IgnoreIfExists().ConflictsWith($"workflow.definition.{definitionId}")
             .Run(async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
@@ -156,9 +189,11 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         finally { gate.Semaphore.Release(); }
     }
 
-    private async Task RefreshTasksUnderGateAsync(CancellationToken ct)
+    private async Task RefreshTasksUnderGateAsync(CancellationToken ct, IReadOnlyCollection<int>? taskIds = null)
     {
-        var linked = await ParserTasks.AsNoTracking().Where(t => t.WorkflowRunId != null && !t.IsDeleted).ToListAsync(ct);
+        var query = ParserTasks.AsNoTracking().Where(t => t.WorkflowRunId != null && !t.IsDeleted);
+        if (taskIds != null) query = query.Where(t => taskIds.Contains(t.Id));
+        var linked = await query.ToListAsync(ct);
         var ids = linked.Select(t => t.WorkflowRunId!.Value).ToList();
         var runs = await Runs.AsNoTracking().Where(r => ids.Contains(r.Id)).ToDictionaryAsync(r => r.Id, ct);
         foreach (var snapshot in linked)
@@ -198,13 +233,16 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         await gate.Semaphore.WaitAsync(ct);
         try
         {
+            if (tasks.IsShuttingDown) return;
             var task = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted, ct)
                 ?? throw new InvalidOperationException("The parsing task no longer exists.");
             if (task.WorkflowRunId is not { } runId)
                 throw new InvalidOperationException("This task has no workflow run. Start parsing it first.");
+            var status = await Runs.Where(r => r.Id == runId).Select(r => r.Status).SingleAsync(ct);
+            // A repeated click must neither enqueue another execution nor replace the current one.
+            if (status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running) return;
             if (tasks.Tasks.Any(t => t.Id == $"workflow.run.{runId}" && !t.Task.Status.IsFinished()))
                 throw new InvalidOperationException("The previous parsing task is still finishing. Retry in a moment.");
-            var status = await Runs.Where(r => r.Id == runId).Select(r => r.Status).SingleAsync(ct);
             if (status == WorkflowRunStatus.Waiting) await resumer.ResumeAsync(runId, "{}", ct);
             else await resumer.RequeueAsync(runId, ct);
             await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, (string?)null)

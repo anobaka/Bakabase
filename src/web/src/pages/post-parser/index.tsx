@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import type { PostParserTask } from "@/core/models/PostParserTask";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AiOutlineCloudDownload,
@@ -12,7 +12,6 @@ import {
   AiOutlineDownload,
   AiOutlineFileText,
   AiOutlineHistory,
-  AiOutlineLink,
   AiOutlineFolderOpen,
   AiOutlinePlayCircle,
   AiOutlinePlus,
@@ -41,7 +40,7 @@ import {
 } from "./results";
 import { buildTaskSearchText } from "./search";
 
-import { Alert, Button, Checkbox, Chip, Modal, toast } from "@/components/bakaui";
+import { Alert, Button, Chip, Modal, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import TampermonkeyInstallButton from "@/components/ThirdPartyConfig/base/TampermonkeyInstallButton";
@@ -49,6 +48,7 @@ import WorkflowRunsDrawer from "@/components/Workflow/WorkflowRunsDrawer";
 import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
 import BApi from "@/sdk/BApi";
 import {
+  BTaskStatus,
   PostParserSource,
   PostParseTarget,
   PostParseTargetLabel,
@@ -57,6 +57,7 @@ import {
 } from "@/sdk/constants";
 import { useThirdPartyOptionsStore } from "@/stores/options";
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
+import { useBTasksStore } from "@/stores/bTasks";
 
 const activeStatuses = [WorkflowRunStatus.Pending, WorkflowRunStatus.Running];
 const retryStatuses = [
@@ -105,9 +106,23 @@ const PostParserPage = () => {
         : tasks,
     [search, searchIndex, tasks],
   );
+  const busyRef = useRef(false);
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<string>();
-  const [runs, setRuns] = useState<PostParserTask>();
+  const [runs, setRuns] = useState<PostParserTask | "all">();
+  const runsTaskId = runs === "all" ? undefined : runs?.id;
+  const loadRuns = useCallback(
+    ({ pageIndex, pageSize }: { pageIndex: number; pageSize: number }) =>
+      BApi.postParser.searchPostParserWorkflowRuns({ taskId: runsTaskId, pageIndex, pageSize }),
+    [runsTaskId],
+  );
+  const dispatching = useBTasksStore((state) =>
+    state.tasks.some(
+      (task) =>
+        task.id === "ParseAllPosts" &&
+        ![BTaskStatus.Completed, BTaskStatus.Cancelled, BTaskStatus.Error].includes(task.status),
+    ),
+  );
   const running = tasks.some(isRunning);
   const hasPending = tasks.some((task) => !task.workflowRunId && !task.error && !hasResults(task));
 
@@ -148,7 +163,8 @@ const PostParserPage = () => {
     key: string,
     invoke: () => Promise<{ code?: number; message?: string }>,
   ) => {
-    if (busy) return;
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(key);
     setError(undefined);
     try {
@@ -159,6 +175,7 @@ const PostParserPage = () => {
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : t<string>("postParser.result.failed"));
     } finally {
+      busyRef.current = false;
       setBusy(undefined);
     }
   };
@@ -217,12 +234,6 @@ const PostParserPage = () => {
 
                   if (response.code)
                     throw new Error(response.message || t("postParser.result.failed"));
-                  if (
-                    !task.workflowRunId ||
-                    task.workflowStatus == null ||
-                    !retryStatuses.includes(task.workflowStatus)
-                  )
-                    await BApi.postParser.startAllPostParserTasks();
                   await refresh();
                 },
               })
@@ -435,23 +446,8 @@ const PostParserPage = () => {
         </div>
         <div className="min-w-0" role="cell">
           <div className="flex flex-col gap-1 [&_button]:h-7 [&_button]:px-1.5 [&_button]:text-xs">
-            {(task.link || hasContent || (!task.workflowRunId && !hasResults(task))) && (
+            {(hasContent || (!task.workflowRunId && !hasResults(task) && !task.error)) && (
               <ActionGroup stage="source">
-                {task.link && (
-                  <Button
-                    color={needsUnlock ? "warning" : "default"}
-                    size="sm"
-                    startContent={<AiOutlineLink aria-hidden />}
-                    variant="light"
-                    onPress={() => BApi.gui.openUrlInDefaultBrowser({ url: task.link })}
-                  >
-                    {t(
-                      needsUnlock
-                        ? "postParser.action.openPostToUnlock"
-                        : "postParser.action.openPost",
-                    )}
-                  </Button>
-                )}
                 {hasContent && (
                   <Tooltip content={t("postParser.action.viewContent")}>
                     <Button
@@ -473,11 +469,9 @@ const PostParserPage = () => {
                     startContent={<AiOutlinePlayCircle aria-hidden />}
                     variant="light"
                     onPress={() =>
-                      action(`fetch-${task.id}`, async () => {
-                        const response = await BApi.postParser.reParsePostParserTask(task.id);
-
-                        return response.code ? response : BApi.postParser.startAllPostParserTasks();
-                      })
+                      action(`fetch-${task.id}`, () =>
+                        BApi.postParser.reParsePostParserTask(task.id),
+                      )
                     }
                   >
                     {t("postParser.action.fetchPost")}
@@ -500,13 +494,9 @@ const PostParserPage = () => {
                         ? action(`retry-${task.id}`, () =>
                             BApi.postParser.retryPostParserTaskWorkflow(task.id),
                           )
-                        : action(`reparse-${task.id}`, async () => {
-                            const response = await BApi.postParser.reParsePostParserTask(task.id);
-
-                            return response.code
-                              ? response
-                              : BApi.postParser.startAllPostParserTasks();
-                          })
+                        : action(`reparse-${task.id}`, () =>
+                            BApi.postParser.reParsePostParserTask(task.id),
+                          )
                     }
                   >
                     {t(
@@ -562,16 +552,14 @@ const PostParserPage = () => {
               </ActionGroup>
             )}
             <ActionGroup stage="task">
-              {task.workflowDefinitionId && (
-                <Button
-                  size="sm"
-                  startContent={<AiOutlineHistory aria-hidden />}
-                  variant="light"
-                  onPress={() => setRuns(task)}
-                >
-                  {t("postParser.action.viewRuns")}
-                </Button>
-              )}
+              <Button
+                size="sm"
+                startContent={<AiOutlineHistory aria-hidden />}
+                variant="light"
+                onPress={() => setRuns(task)}
+              >
+                {t("postParser.action.viewRuns")}
+              </Button>
               <Tooltip content={t("postParser.action.delete")}>
                 <Button
                   isIconOnly
@@ -596,8 +584,8 @@ const PostParserPage = () => {
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="flex h-full min-h-[28rem] min-w-0 flex-col gap-3">
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-lg font-semibold">
             <AiOutlineFileText aria-hidden className="text-primary" />
@@ -629,37 +617,26 @@ const PostParserPage = () => {
           </Button>
         </div>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-default-50 p-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-xl bg-default-50 p-3">
+        <div className="flex min-w-0 flex-[1_1_34rem] flex-wrap items-center gap-3">
+          <TaskSearch
+            shown={shownTasks.length}
+            total={tasks.length}
+            value={keyword}
+            onChange={setKeyword}
+          />
           <Button
+            className="shrink-0"
             color="primary"
-            isDisabled={!hasPending || !!busy}
-            isLoading={busy === "start"}
+            isDisabled={!hasPending || !!busy || dispatching}
+            isLoading={busy === "start" || dispatching}
             size="sm"
             startContent={<AiOutlinePlayCircle aria-hidden className="text-base" />}
             variant="flat"
             onPress={() => action("start", () => BApi.postParser.startAllPostParserTasks())}
           >
-            {t<string>("postParser.action.start")}
+            {t<string>(dispatching ? "postParser.action.queueing" : "postParser.action.start")}
           </Button>
-          <Checkbox
-            isDisabled={!!busy}
-            isSelected={!!automaticallyParsing}
-            size="sm"
-            onValueChange={(value) =>
-              action("automatic", async () => {
-                const response = await BApi.options.patchThirdPartyOptions({
-                  automaticallyParsingPosts: value,
-                });
-
-                if (response.code || !value) return response;
-
-                return BApi.postParser.startAllPostParserTasks();
-              })
-            }
-          >
-            {t<string>("postParser.label.automaticallyParsing")}
-          </Checkbox>
         </div>
         <div className="flex flex-wrap items-center gap-1">
           <Button
@@ -687,6 +664,14 @@ const PostParserPage = () => {
             }}
           >
             {t<string>("postParser.action.export")}
+          </Button>
+          <Button
+            size="sm"
+            startContent={<AiOutlineHistory aria-hidden />}
+            variant="light"
+            onPress={() => setRuns("all")}
+          >
+            {t<string>("postParser.action.viewAllRuns")}
           </Button>
           <Button
             color="danger"
@@ -738,20 +723,14 @@ const PostParserPage = () => {
         </div>
       </div>
       {error && (
-        <p className="text-sm text-danger" role="alert">
+        <p className="shrink-0 text-sm text-danger" role="alert">
           {error}
         </p>
       )}
-      <TaskSearch
-        shown={shownTasks.length}
-        total={tasks.length}
-        value={keyword}
-        onChange={setKeyword}
-      />
       {shownTasks.length > 0 ? (
         <TaskList renderTask={renderTask} search={search} tasks={shownTasks} />
       ) : (
-        <div className="rounded-xl border border-dashed border-default-200 px-4 py-12 text-center">
+        <div className="flex min-h-72 flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-default-200 px-4 py-12 text-center">
           <p className="text-sm text-default-500" role="status">
             {t<string>(tasks.length ? "postParser.search.empty" : "postParser.page.empty")}
           </p>
@@ -762,12 +741,20 @@ const PostParserPage = () => {
           )}
         </div>
       )}
-      {runs?.workflowDefinitionId && (
+      {runs && (
         <WorkflowRunsDrawer
           isOpen
+          loadRuns={loadRuns}
+          runSourceKey={runs === "all" ? "postParser:all" : `postParser:task:${runs.id}`}
           triggerKind="postParser.manual"
-          workflowDefinitionId={runs.workflowDefinitionId}
-          workflowName={t<string>("postParser.label.execution", { id: runs.workflowRunId })}
+          workflowName={
+            runs === "all"
+              ? t<string>("postParser.history.all")
+              : t<string>("postParser.history.task", {
+                  id: runs.id,
+                  title: runs.title || t<string>("postParser.label.untitled"),
+                })
+          }
           onClose={() => {
             setRuns(undefined);
             void refresh().catch(() => undefined);
