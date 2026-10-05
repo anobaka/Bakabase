@@ -9,9 +9,10 @@ import { useNavigate } from "react-router-dom";
 import { AiOutlineCloudDownload, AiOutlineCheckCircle } from "react-icons/ai";
 
 import { getDownloadInfo } from "../results";
-import { groupDownloadResources } from "../resourceDeduplication";
+import { getDownloadContentGroups } from "../resourceGroups";
 
 import DownloadInfoResultRenderer from "./DownloadInfoResultRenderer";
+import DownloadGroupHeader from "./DownloadGroupHeader";
 
 import { Button, Checkbox, Input, Modal } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -24,17 +25,36 @@ const AddToAcquisitionModal = ({ task, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const data = getDownloadInfo(task);
-  const resources = groupDownloadResources(data?.resources ?? [])
-    .map(({ resource, sourceIndices }) => ({ resource, sourceIndices, index: sourceIndices[0] }))
-    .filter(({ resource }) => !!resource.link?.trim());
+  const sections = getDownloadContentGroups(data ?? {})
+    .map((section) => ({
+      ...section,
+      resources: section.resources
+        .map(({ resource, sourceIndices }) => ({
+          resource,
+          sourceIndices,
+          index: sourceIndices[0],
+        }))
+        .filter(({ resource }) => !!resource.link?.trim()),
+    }))
+    .filter((section) => section.resources.length > 0);
+  const resources = sections.flatMap((section) => section.resources);
+  const initialSection =
+    sections.find((section) => section.group?.kind === "main") ??
+    sections.find((section) => !section.group || section.group.kind === "unknown");
+  const displayNumbers = new Map(resources.map(({ index }, position) => [index, position + 1]));
   const [visible, setVisible] = useState(true);
-  const [title, setTitle] = useState(data?.title || task.title || "");
+  const [title, setTitle] = useState(
+    initialSection?.group?.title || data?.title || task.title || "",
+  );
   const [selected, setSelected] = useState<number[]>(
-    resources.length > 0 ? [resources[0].index] : [],
+    initialSection ? [initialSection.resources[0].index] : [],
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const [resourceId, setResourceId] = useState<number>();
+  const selectedGroupCount = sections.filter((section) =>
+    section.resources.some(({ index }) => selected.includes(index)),
+  ).length;
 
   const save = async () => {
     if (saving || selected.length === 0) return;
@@ -128,32 +148,53 @@ const AddToAcquisitionModal = ({ task, onDestroyed }: Props) => {
             className="flex flex-col gap-2"
             role="group"
           >
-            {resources.map(({ resource, index }, displayIndex) => (
+            {sections.map((section) => (
               <div
-                key={index}
-                className="flex min-w-0 items-start gap-2 rounded-lg bg-default-50 p-3"
+                key={section.key}
+                aria-label={section.group?.title ?? t<string>("postParser.groups.ungrouped")}
+                className="space-y-2"
+                role="group"
               >
-                <Checkbox
-                  aria-label={t<string>("postParser.acquisition.selectLink", {
-                    number: displayIndex + 1,
-                  })}
-                  className="mt-1"
-                  isDisabled={saving}
-                  isSelected={selected.includes(index)}
-                  onValueChange={(checked) =>
-                    setSelected((previous) =>
-                      checked
-                        ? [...previous, index].sort((a, b) => a - b)
-                        : previous.filter((value) => value !== index),
-                    )
-                  }
+                <DownloadGroupHeader
+                  group={section.group}
+                  resourceCount={section.resources.length}
                 />
-                <div className="min-w-0 flex-1">
-                  <DownloadInfoResultRenderer data={{ resources: [resource] }} />
-                </div>
+                {section.resources.map(({ resource, index }) => (
+                  <div
+                    key={index}
+                    className="flex min-w-0 items-start gap-2 rounded-lg bg-default-50 p-3"
+                  >
+                    <Checkbox
+                      aria-label={t<string>("postParser.acquisition.selectLink", {
+                        number: displayNumbers.get(index),
+                      })}
+                      className="mt-1"
+                      isDisabled={saving}
+                      isSelected={selected.includes(index)}
+                      onValueChange={(checked) =>
+                        setSelected((previous) =>
+                          checked
+                            ? [...new Set([...previous, index])].sort((a, b) => a - b)
+                            : previous.filter((value) => value !== index),
+                        )
+                      }
+                    />
+                    <div className="min-w-0 flex-1">
+                      <DownloadInfoResultRenderer
+                        data={{ resources: [resource] }}
+                        showGroups={false}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
+          {selectedGroupCount > 1 && (
+            <p className="text-sm text-warning-600" role="status">
+              {t<string>("postParser.acquisition.crossGroupHint")}
+            </p>
+          )}
           <p className="text-xs leading-relaxed text-default-500">
             {t<string>("postParser.acquisition.noDownload")}
           </p>

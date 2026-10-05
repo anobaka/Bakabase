@@ -80,6 +80,13 @@ public class PostParserCapabilityAdapterTests
         Assert.AreEqual("https://pan.baidu.com/s/example", resource.GetProperty("link").GetString());
         Assert.AreEqual("abcd", resource.GetProperty("code").GetString());
         Assert.AreEqual("archive-password", resource.GetProperty("password").GetString());
+        Assert.AreEqual("full", resource.GetProperty("groupId").GetString());
+        var group = data.RootElement.GetProperty("groups")[0];
+        Assert.AreEqual("full", group.GetProperty("id").GetString());
+        Assert.AreEqual("本体", group.GetProperty("title").GetString());
+        Assert.AreEqual("main", group.GetProperty("kind").GetString());
+        Assert.AreEqual("本体分流", group.GetProperty("evidence")[0].GetString());
+        Assert.AreEqual(3, data.RootElement.GetProperty("schemaVersion").GetInt32());
         Assert.AreEqual((int) AcquisitionDriveKind.Baidu, resource.GetProperty("driveKind").GetInt32());
     }
 
@@ -110,11 +117,12 @@ public class PostParserCapabilityAdapterTests
             Task.FromResult(new PostDownloadInfo
             {
                 Title = "Parsed",
+                Groups = [new() {Id = "full", Title = "本体", Kind = "main", Summary = "完整内容", Evidence = ["本体分流"]}],
                 Resources =
                 [
                     new PostDownloadResource
                     {
-                        Link = "https://pan.baidu.com/s/example", Code = "abcd", Password = "archive-password"
+                        Link = "https://pan.baidu.com/s/example", GroupId = "full", Code = "abcd", Password = "archive-password"
                     }
                 ]
             });

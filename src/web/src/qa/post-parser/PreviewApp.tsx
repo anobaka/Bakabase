@@ -9,6 +9,7 @@ import {
   resetPreview,
   restartPreview,
   loadConcurrencyPreview,
+  loadGroupsPreview,
   setPreviewScenario,
   type PreviewScenario,
 } from "./mockApi";
@@ -65,12 +66,14 @@ function Preview() {
 
               setScenario(value);
               if (value === "concurrency") loadConcurrencyPreview();
+              else if (value === "groups") loadGroupsPreview();
               else setPreviewScenario(value);
             }}
           >
             <option value="all">全部状态</option>
             <option value="waiting">等待处理</option>
             <option value="complete">已完成 / 多资源</option>
+            <option value="groups">内容分组 / 多网盘分流</option>
             <option value="failure">失败与重试</option>
             <option value="empty">空列表</option>
             <option value="concurrency">并发队列 · 14 个帖子</option>
@@ -84,7 +87,13 @@ function Preview() {
         </button>
         <button
           className="rounded-md border border-default-200 bg-background px-2.5 py-1 text-foreground hover:bg-default-100"
-          onClick={() => (scenario === "concurrency" ? loadConcurrencyPreview() : resetPreview())}
+          onClick={() =>
+            scenario === "concurrency"
+              ? loadConcurrencyPreview()
+              : scenario === "groups"
+                ? loadGroupsPreview()
+                : resetPreview()
+          }
         >
           重置示例
         </button>

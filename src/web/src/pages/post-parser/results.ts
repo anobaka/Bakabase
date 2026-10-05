@@ -2,6 +2,7 @@ import type { PostAvailability, PostParserTask } from "@/core/models/PostParserT
 
 import { getDownloadUrl } from "./downloadLinks";
 import { groupDownloadResources } from "./resourceDeduplication";
+import { normalizeDownloadContentGroups, resolveDownloadGroupId } from "./resourceGroups";
 
 import { PostParseTarget, PostParseTargetLabel, PostParserSource } from "@/sdk/constants";
 import { copyTextToClipboard } from "@/core/clipboard";
@@ -11,6 +12,7 @@ export interface DownloadResource {
   link?: string;
   code?: string | null;
   password?: string | null;
+  groupId?: string | null;
   driveKind?: number;
   extraction?: ExtractionPlan | null;
   linkHealth?: {
@@ -18,6 +20,15 @@ export interface DownloadResource {
     reason?: string | null;
     checkedAt?: string;
   } | null;
+}
+
+export interface DownloadContentGroup {
+  [key: string]: unknown;
+  id: string;
+  title: string;
+  kind: "main" | "preview" | "supplement" | "related" | "tool" | "unknown";
+  summary?: string | null;
+  evidence: string[];
 }
 
 export interface ExtractionPlan {
@@ -43,6 +54,7 @@ export interface DownloadInfoData {
   availability?: PostAvailability | null;
   title?: string;
   resources?: DownloadResource[] | null;
+  groups?: DownloadContentGroup[] | null;
 }
 
 export interface ParsedResult {
@@ -81,37 +93,45 @@ export function getDownloadInfo(task: PostParserTask): DownloadInfoData | undefi
 
   if (!data) return undefined;
 
+  // Keep each original position: acquisition imports use the persisted result's indices.
+  const resources: DownloadResource[] = Array.isArray(data.resources)
+    ? data.resources.map((value) => {
+        const resource = asRecord(value);
+
+        return {
+          ...resource,
+          link: typeof resource?.link === "string" ? resource.link : undefined,
+          groupId: typeof resource?.groupId === "string" ? resource.groupId : undefined,
+          code:
+            typeof resource?.code === "string" || resource?.code === null
+              ? resource.code
+              : undefined,
+          password:
+            typeof resource?.password === "string" || resource?.password === null
+              ? resource.password
+              : undefined,
+          driveKind: typeof resource?.driveKind === "number" ? resource.driveKind : undefined,
+          extraction:
+            resource?.extraction === null
+              ? null
+              : (asRecord(resource?.extraction) as unknown as ExtractionPlan | undefined),
+          linkHealth:
+            resource?.linkHealth === null
+              ? null
+              : (asRecord(resource?.linkHealth) as DownloadResource["linkHealth"]),
+        };
+      })
+    : [];
+  const groups = normalizeDownloadContentGroups(data.groups, resources);
+
   return {
     ...data,
     title: typeof data.title === "string" ? data.title : undefined,
-    // Keep each original position: acquisition imports use the persisted result's indices.
-    resources: Array.isArray(data.resources)
-      ? data.resources.map((value) => {
-          const resource = asRecord(value);
-
-          return {
-            ...resource,
-            link: typeof resource?.link === "string" ? resource.link : undefined,
-            code:
-              typeof resource?.code === "string" || resource?.code === null
-                ? resource.code
-                : undefined,
-            password:
-              typeof resource?.password === "string" || resource?.password === null
-                ? resource.password
-                : undefined,
-            driveKind: typeof resource?.driveKind === "number" ? resource.driveKind : undefined,
-            extraction:
-              resource?.extraction === null
-                ? null
-                : (asRecord(resource?.extraction) as unknown as ExtractionPlan | undefined),
-            linkHealth:
-              resource?.linkHealth === null
-                ? null
-                : (asRecord(resource?.linkHealth) as DownloadResource["linkHealth"]),
-          };
-        })
-      : [],
+    groups: Array.isArray(data.groups) ? groups : undefined,
+    resources: resources.map((resource) => ({
+      ...resource,
+      groupId: resolveDownloadGroupId(resource.groupId, groups),
+    })),
   };
 }
 
@@ -151,16 +171,18 @@ export function buildExportRows(tasks: PostParserTask[], targetLabel: (key: stri
         ParsedAt: result?.parsedAt ?? "",
       };
 
-      const resources =
+      const downloadInfo =
         key === "DownloadInfo" || key === String(PostParseTarget.DownloadInfo)
-          ? groupDownloadResources(
-              getDownloadInfo({ ...task, results: { [key]: value } })?.resources ?? [],
-            ).map((group) => group.resource)
-          : data?.resources;
+          ? getDownloadInfo({ ...task, results: { [key]: value } })
+          : undefined;
+      const resources = downloadInfo
+        ? groupDownloadResources(downloadInfo.resources ?? []).map((group) => group.resource)
+        : data?.resources;
 
       if (Array.isArray(resources) && resources.length > 0) {
         for (const resource of resources) {
           const link = asRecord(resource);
+          const group = downloadInfo?.groups?.find((item) => item.id === link?.groupId);
 
           rows.push({
             ...row,
@@ -171,6 +193,11 @@ export function buildExportRows(tasks: PostParserTask[], targetLabel: (key: stri
             ),
             "Access Code": typeof link?.code === "string" ? link.code : "",
             Password: typeof link?.password === "string" ? link.password : "",
+            "Content Group ID": group?.id ?? "",
+            "Content Group": group?.title ?? "",
+            "Content Role": group?.kind ?? "",
+            "Group Summary": group?.summary ?? "",
+            "Group Evidence": JSON.stringify(group?.evidence ?? []),
             Complete:
               data?.isComplete === false ? "false" : data?.isComplete === true ? "true" : "",
             Warnings: JSON.stringify(data?.warnings ?? []),
@@ -201,7 +228,7 @@ export const copyParserText = copyTextToClipboard;
 export const buildInstructionsJson = (tasks: PostParserTask[]) =>
   JSON.stringify(
     {
-      schemaVersion: 2,
+      schemaVersion: 3,
       tasks: tasks.map((task) => ({
         id: task.id,
         sourceUrl: task.link,

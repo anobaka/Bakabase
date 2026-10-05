@@ -18,6 +18,12 @@ export function buildTaskSearchText(task: PostParserTask): string {
       []),
     task.error,
     downloads?.title,
+    ...(downloads?.groups?.flatMap((group) => [
+      group.title,
+      group.kind,
+      group.summary,
+      ...group.evidence,
+    ]) ?? []),
     ...(downloads?.resources?.flatMap((resource) => [
       resource.link,
       resource.code,

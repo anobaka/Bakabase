@@ -56,6 +56,22 @@ public sealed class PostDownloadResourceDeduplicatorTests
     }
 
     [TestMethod]
+    public void ContentGroupConflictsStaySeparateWhileMissingGroupMembershipCanBeCompleted()
+    {
+        var ungrouped = Link("https://example.test/file", "code");
+        var main = ungrouped with {GroupId = "main", Password = "archive"};
+        var preview = ungrouped with {GroupId = "preview"};
+        var result = Deduplicate(ungrouped, main, preview);
+
+        Assert.HasCount(2, result);
+        Assert.AreEqual("main", result[0].GroupId);
+        Assert.AreEqual("archive", result[0].Password);
+        Assert.AreEqual("preview", result[1].GroupId);
+        Assert.IsNull(ungrouped.GroupId);
+        Assert.AreEqual("main", Deduplicate(main, ungrouped).Single().GroupId);
+    }
+
+    [TestMethod]
     public void ConflictingPipelinesAndRequirementsRemainSeparate()
     {
         var first = Link("https://example.com/file") with {Extraction = Plan("one")};

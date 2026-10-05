@@ -373,11 +373,11 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             domain.Results ??= new();
             domain.Results[PostParseTarget.DownloadInfo] = JsonSerializer.SerializeToNode(new
             {
-                result.SchemaVersion, result.IsComplete, result.Warnings, result.Availability,
+                result.SchemaVersion, result.IsComplete, result.Warnings, result.Availability, result.Groups,
                 title = domain.Title,
                 resources = result.Resources.Select(r => new
                 {
-                    r.Link, r.Code, r.Password, r.Extraction, r.LinkHealth, DriveKind = AcquisitionDriveKinds.Infer(r.Link)
+                    r.Link, r.GroupId, r.Code, r.Password, r.Extraction, r.LinkHealth, DriveKind = AcquisitionDriveKinds.Infer(r.Link)
                 }).ToList()
             }, WorkflowJson.Options);
             domain.ParsingState = result.IsComplete ? "complete" : "partial";

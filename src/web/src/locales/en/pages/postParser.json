@@ -221,5 +221,20 @@
   "postParser.summary.attention": "Needs attention",
   "postParser.summary.success": "Completed",
   "postParser.summary.failed": "Failed",
-  "postParser.summary.paused": "Paused"
+  "postParser.summary.paused": "Paused",
+  "postParser.groups.ungrouped": "Ungrouped",
+  "postParser.groups.kind.main": "Main content",
+  "postParser.groups.kind.preview": "Preview",
+  "postParser.groups.kind.supplement": "Supplement",
+  "postParser.groups.kind.related": "Related resources",
+  "postParser.groups.kind.tool": "Tool",
+  "postParser.groups.kind.unknown": "Unknown purpose",
+  "postParser.groups.inferred": "AI grouping",
+  "postParser.groups.inferredHint": "AI inferred these groups from the retrieved post. Links in one group may be alternative sources of the same content; choose a suitable source and check the original context.",
+  "postParser.groups.singleSource": "1 source",
+  "postParser.groups.sourceCount": "{{count}} sources",
+  "postParser.groups.evidence": "Show grouping evidence for {{title}}",
+  "postParser.groups.legacyHint": "Not grouped yet. Reparse to identify link purposes and alternative sources.",
+  "postParser.acquisition.crossGroupHint": "Links from different content groups are selected. Check that they belong to the same resource before adding them.",
+  "postParser.groups.localProcessingHint": "For each content group, process only the source you downloaded; file-processing steps may differ between sources."
 }

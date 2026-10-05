@@ -7,8 +7,8 @@ The user-facing feature remains **帖子解析** (Post parser).
 
 - `IPostContentService` reads a supported URL into title, body, comments and lock metadata.
   The legacy adapter selects site-specific readers before the generic HTML reader.
-- `IPostDownloadInfoExtractor` extracts links, access codes, archive passwords and ordered
-  post-download file-processing plans using the configured Post parser AI feature.
+- `IPostDownloadInfoExtractor` extracts links, content groups, access codes, archive passwords
+  and ordered post-download file-processing plans using the configured Post parser AI feature.
 - `IPostAvailabilityAnalyzer` evaluates expiry and restoration reports in the captured text.
   Its assessment is separate from a provider's observed link availability.
 - `IPostLinkHealthChecker` checks supported share metadata conservatively. Unknown providers,
@@ -47,7 +47,29 @@ Standalone manual runs do not inherit permission to purchase locked content.
 
 ## Versioned instructions
 
-New results use `schemaVersion: 2`. Each download resource can carry `extraction` with
+New results use `schemaVersion: 3`. The `resources` array remains flat and each resource may
+reference a content group with `groupId`. The accompanying `groups` array contains `id`,
+`title`, `kind`, an optional one-sentence `summary`, and short original-text `evidence`.
+Kinds are `main`, `preview`, `supplement`, `related`, `tool`, and `unknown`.
+
+The existing extraction call assesses content identity and purpose together. Only links
+that refer to the same actual content may share a group, including mirrors across different
+providers. Preview files, full releases, different versions, tools, related resources and
+supplements stay separate. Required archive volumes are separate downloads, not interchangeable
+mirrors. Uncertain identity stays in independent groups or ungrouped; grouping by provider or
+assuming every link is the main content would hide meaningful differences. Grouping is an AI
+assessment, not verification of remote files, and preserves every distinct URL and its own
+credentials and processing plan.
+
+Grouping metadata is bounded to 128 referenced groups, 80-character IDs, 160-character titles,
+500-character summaries and eight 300-character evidence snippets per group. Empty or oversized
+IDs, duplicate IDs, missing titles and dangling references fall back to ungrouped links.
+Unknown purposes become `unknown`. Older results and responses without groups remain usable.
+Exact-link deduplication may complete missing membership, but conflicting nonempty group IDs
+are kept separate. Persisted resource indices continue to identify the flat array, including
+when the interface presents resources in groups.
+
+Each download resource can carry `extraction` with
 `requirement: required | notRequired | unknown` and ordered `steps`. The existing field and
 DTO names remain for compatibility; the plan describes all post-download file processing,
 not only archive extraction. `required` means some processing is needed, even for a plan
