@@ -9,6 +9,7 @@ public static class PostParserServiceCollectionExtensions
     /// <summary>Registers extraction; the host supplies an IPostContentService backed by its platform readers.</summary>
     public static IServiceCollection AddPostParserCapabilities(this IServiceCollection services)
     {
+        services.TryAddSingleton<PostParserAiConcurrency>();
         services.TryAddScoped<IPostDownloadInfoExtractor, PostDownloadInfoExtractor>();
         services.TryAddScoped<IPostAvailabilityAnalyzer, PostAvailabilityAnalyzer>();
         services.TryAddScoped<IPostLinkHealthChecker, PostLinkHealthChecker>();

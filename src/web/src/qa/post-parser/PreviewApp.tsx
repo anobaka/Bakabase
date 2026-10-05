@@ -7,6 +7,8 @@ import "@/styles/globals.css";
 import {
   getPreviewOptions,
   resetPreview,
+  restartPreview,
+  loadConcurrencyPreview,
   setPreviewScenario,
   type PreviewScenario,
 } from "./mockApi";
@@ -62,7 +64,8 @@ function Preview() {
               const value = event.target.value as PreviewScenario;
 
               setScenario(value);
-              setPreviewScenario(value);
+              if (value === "concurrency") loadConcurrencyPreview();
+              else setPreviewScenario(value);
             }}
           >
             <option value="all">全部状态</option>
@@ -70,11 +73,18 @@ function Preview() {
             <option value="complete">已完成 / 多资源</option>
             <option value="failure">失败与重试</option>
             <option value="empty">空列表</option>
+            <option value="concurrency">并发队列 · 14 个帖子</option>
           </select>
         </label>
         <button
           className="rounded-md border border-default-200 bg-background px-2.5 py-1 text-foreground hover:bg-default-100"
-          onClick={resetPreview}
+          onClick={restartPreview}
+        >
+          模拟重启
+        </button>
+        <button
+          className="rounded-md border border-default-200 bg-background px-2.5 py-1 text-foreground hover:bg-default-100"
+          onClick={() => (scenario === "concurrency" ? loadConcurrencyPreview() : resetPreview())}
         >
           重置示例
         </button>

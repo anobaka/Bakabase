@@ -37,6 +37,7 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
   const [tmpOther, setTmpOther] = useState({
     autoBuyThreshold: options?.autoBuyThreshold ?? 0,
     minimumRemainingCoins: options?.minimumRemainingCoins ?? 0,
+    maxConcurrency: options?.maxConcurrency ?? 1,
   });
   const [tlsPresets, setTlsPresets] = useState<BakabaseModulesThirdPartyHelpersTlsPresetInfo[]>([]);
 
@@ -44,8 +45,9 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
     setTmpOther({
       autoBuyThreshold: options?.autoBuyThreshold ?? 0,
       minimumRemainingCoins: options?.minimumRemainingCoins ?? 0,
+      maxConcurrency: options?.maxConcurrency ?? 1,
     });
-  }, [options?.autoBuyThreshold, options?.minimumRemainingCoins]);
+  }, [options?.autoBuyThreshold, options?.minimumRemainingCoins, options?.maxConcurrency]);
 
   useEffect(() => {
     BApi.tool.getTlsPresets().then((rsp) => {
@@ -140,6 +142,17 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
           <div className="space-y-4">
             <ProxyField thirdPartyId={ThirdPartyId.SoulPlus} />
             <Input
+              description={t<string>("postParser.config.soulPlusConcurrencyHint")}
+              label={t<string>("thirdPartyConfig.label.maxConcurrency")}
+              max={2147483647}
+              min={1}
+              size="sm"
+              step={1}
+              type="number"
+              value={String(tmpOther.maxConcurrency)}
+              onValueChange={(value) => setTmpOther({ ...tmpOther, maxConcurrency: Number(value) })}
+            />
+            <Input
               description={t<string>("postParser.config.autoBuyHint")}
               label={t<string>("thirdPartyConfig.label.autoBuyThreshold")}
               min={0}
@@ -161,7 +174,16 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
                 setTmpOther({ ...tmpOther, minimumRemainingCoins: Math.max(0, Number(v) || 0) })
               }
             />
-            <Button color="primary" size="sm" onPress={saveAutoBuy}>
+            <Button
+              color="primary"
+              isDisabled={
+                !Number.isSafeInteger(tmpOther.maxConcurrency) ||
+                tmpOther.maxConcurrency < 1 ||
+                tmpOther.maxConcurrency > 2147483647
+              }
+              size="sm"
+              onPress={saveAutoBuy}
+            >
               {t<string>("thirdPartyConfig.action.save")}
             </Button>
           </div>

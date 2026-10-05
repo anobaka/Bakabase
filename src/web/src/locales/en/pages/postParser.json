@@ -192,5 +192,22 @@
   "postParser.action.unlockForAmount": "Unlock for {{amount}} coins",
   "postParser.action.noEligibleUnlock": "No eligible items to unlock",
   "postParser.purchase.excluded": "{{count}} other items do not meet the purchase conditions; their known total is {{amount}} coins (subject to the per-item limit and minimum coin balance).",
-  "postParser.purchase.unknownPrices": "{{count}} of these items have an unknown price and are excluded from both the total and the purchase."
+  "postParser.purchase.unknownPrices": "{{count}} of these items have an unknown price and are excluded from both the total and the purchase.",
+  "postParser.stage.queued": "Queued",
+  "postParser.stage.fetching": "Fetching content",
+  "postParser.stage.waitingForAi": "Waiting for AI",
+  "postParser.stage.checkingAvailability": "Checking expiry reports",
+  "postParser.stage.purchasing": "Unlocking content",
+  "postParser.stage.extracting": "Extracting instructions",
+  "postParser.stage.checkingLinks": "Checking download links",
+  "postParser.stage.interrupted": "Ready to resume",
+  "postParser.config.maxConcurrency": "Concurrent post tasks",
+  "postParser.config.maxConcurrencyHint": "Posts processed at the same time. Defaults to 10; other started posts wait for a slot.",
+  "postParser.config.aiMaxConcurrency": "Concurrent AI requests",
+  "postParser.config.aiMaxConcurrencyHint": "Shared by expiry assessment and instruction extraction. Defaults to 1. Other posts can fetch or unlock content while waiting for AI.",
+  "postParser.config.siteConcurrencyHint": "Site requests use the global concurrency setting in the SoulPlus tab. Saving settings does not start pending posts.",
+  "postParser.config.soulPlusConcurrencyHint": "SoulPlus and NorthPlus share this global request limit, including post fetching and purchases.",
+  "postParser.config.saveConcurrency": "Save concurrency settings",
+  "postParser.stage.paused": "Paused",
+  "postParser.state.interrupted": "Ready to resume"
 }

@@ -7,9 +7,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.PostParser.Services;
 
-public class PostDownloadInfoExtractor(ILlmService llmService, ILogger<PostDownloadInfoExtractor> logger)
+public class PostDownloadInfoExtractor(ILlmService llmService, ILogger<PostDownloadInfoExtractor> logger,
+    PostParserAiConcurrency? concurrency = null)
     : IPostDownloadInfoExtractor
 {
+    private readonly PostParserAiConcurrency _concurrency = concurrency ?? new();
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private const string SystemPrompt = """
@@ -42,8 +44,9 @@ public class PostDownloadInfoExtractor(ILlmService llmService, ILogger<PostDownl
         ArgumentNullException.ThrowIfNull(content);
         ct.ThrowIfCancellationRequested();
         var prompt = PostAnalysisText.Render(content);
-        var response = await llmService.CompleteForFeatureAsync(AiFeature.PostParser,
-            [new ChatMessage(ChatRole.System, SystemPrompt), new ChatMessage(ChatRole.User, prompt)], ct: ct);
+        var response = await _concurrency.ExecuteAsync("extracting", () =>
+            llmService.CompleteForFeatureAsync(AiFeature.PostParser,
+                [new ChatMessage(ChatRole.System, SystemPrompt), new ChatMessage(ChatRole.User, prompt)], ct: ct), ct);
 
         Response? result;
         try

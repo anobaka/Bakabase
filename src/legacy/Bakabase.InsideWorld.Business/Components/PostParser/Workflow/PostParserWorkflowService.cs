@@ -40,6 +40,7 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
     FullMemoryCacheResourceService<TDbContext, PostParserTaskDbModel, int> cache,
     PostParserTaskExecutionGate gate, IWorkflowDefinitionService definitions,
     BTaskManager tasks, IWorkflowRunResumer resumer,
+    WorkflowRunSchedulingPolicyResolver scheduling,
     IHubContext<WebGuiHub, IWebGuiClient> uiHub, IBOptions<SoulPlusOptions> purchaseOptions) : IPostParserWorkflowTaskBridge
     where TDbContext : DbContext
 {
@@ -240,9 +241,9 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         if (tasks.IsShuttingDown) return Task.CompletedTask;
         var runId = run.Id;
         var definitionId = run.WorkflowDefinitionId;
-        return tasks.Enqueue(BTaskBuilder.Create($"workflow.run.{runId}")
+        return tasks.Enqueue(scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
             .Named($"Workflow #{definitionId} run #{runId}")
-            .Persistent().IgnoreIfExists().ConflictsWith($"workflow.definition.{definitionId}")
+            .Persistent().IgnoreIfExists()
             .Run(async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
@@ -251,7 +252,7 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
                 {
                     await scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<TDbContext>>().RefreshTasksAsync();
                 }
-            }));
+            }), definitionId, PostParserWorkflow.Trigger));
     }
 
     public async Task RefreshTasksAsync(CancellationToken ct = default)
@@ -261,7 +262,7 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         finally { gate.Semaphore.Release(); }
     }
 
-    private async Task RefreshTasksUnderGateAsync(CancellationToken ct, IReadOnlyCollection<int>? taskIds = null)
+    internal async Task RefreshTasksUnderGateAsync(CancellationToken ct, IReadOnlyCollection<int>? taskIds = null)
     {
         var query = ParserTasks.AsNoTracking().Where(t => t.WorkflowRunId != null && !t.IsDeleted);
         if (taskIds != null) query = query.Where(t => taskIds.Contains(t.Id));
@@ -271,6 +272,22 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         foreach (var snapshot in linked)
         {
             runs.TryGetValue(snapshot.WorkflowRunId!.Value, out var run);
+            // Stopping a queued BTask never enters the runner, so its persisted run has not
+            // had a chance to observe cancellation. Reconcile only a terminal, detached task;
+            // a missing handler may simply be between committing and enqueueing the run.
+            if (run?.Status == WorkflowRunStatus.Pending && tasks.Tasks.FirstOrDefault(t =>
+                    t.Id == $"workflow.run.{run.Id}" && !t.HasAttachedExecution &&
+                    t.Task.Status is BTaskStatus.Cancelled or BTaskStatus.Error) is { } stopped)
+            {
+                var terminalStatus = stopped.Task.Status == BTaskStatus.Cancelled
+                    ? WorkflowRunStatus.Cancelled : WorkflowRunStatus.Failed;
+                var message = stopped.Task.Error ?? (terminalStatus == WorkflowRunStatus.Cancelled
+                    ? "The queued parsing task was cancelled." : "The queued parsing task failed before execution.");
+                await Runs.Where(r => r.Id == run.Id && r.Status == WorkflowRunStatus.Pending)
+                    .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, terminalStatus)
+                        .SetProperty(r => r.CompletedAt, DateTime.Now).SetProperty(r => r.ErrorMessage, message), ct);
+                run = await Runs.AsNoTracking().SingleOrDefaultAsync(r => r.Id == run.Id, ct);
+            }
             var error = run?.Status switch
             {
                 WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted => run.ErrorMessage ?? "The parsing workflow failed.",
@@ -306,6 +323,7 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         try
         {
             if (tasks.IsShuttingDown) return;
+            await RefreshTasksUnderGateAsync(ct, [id]);
             var task = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted, ct)
                 ?? throw new InvalidOperationException("The parsing task no longer exists.");
             if (task.WorkflowRunId is not { } runId)

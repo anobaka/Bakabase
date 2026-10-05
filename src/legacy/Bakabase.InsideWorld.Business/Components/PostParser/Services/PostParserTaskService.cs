@@ -169,6 +169,7 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
         try
         {
             if (tasks.IsShuttingDown) return;
+            await workflow.RefreshTasksUnderGateAsync(CancellationToken.None, [id]);
             var task = await ParserTasks.SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted);
             if (task == null) return;
             var status = task.WorkflowRunId is { } runId

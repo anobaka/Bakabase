@@ -980,11 +980,24 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PatchThirdPartyOptions")]
         public async Task<BaseResponse> PatchThirdPartyOptions([FromBody] ThirdPartyOptionsPatchInput model)
         {
+            if (model.PostParserMaxConcurrency is < 1 || model.PostParserAiMaxConcurrency is < 1)
+                return BaseResponseBuilder.BuildBadRequest("Post parsing concurrency limits must be at least 1.");
+
             await _bakabaseOptionsManager.Get<ThirdPartyOptions>().SaveAsync(options =>
             {
                 if (model.AutomaticallyParsingPosts.HasValue)
                 {
                     options.AutomaticallyParsingPosts = model.AutomaticallyParsingPosts.Value;
+                }
+
+                if (model.PostParserMaxConcurrency.HasValue)
+                {
+                    options.PostParserMaxConcurrency = model.PostParserMaxConcurrency.Value;
+                }
+
+                if (model.PostParserAiMaxConcurrency.HasValue)
+                {
+                    options.PostParserAiMaxConcurrency = model.PostParserAiMaxConcurrency.Value;
                 }
 
                 if (model.SimpleSearchEngines != null)
@@ -1006,6 +1019,9 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PutThirdPartyOptions")]
         public async Task<BaseResponse> PutThirdPartyOptions([FromBody] ThirdPartyOptions model)
         {
+            if (model.PostParserMaxConcurrency < 1 || model.PostParserAiMaxConcurrency < 1)
+                return BaseResponseBuilder.BuildBadRequest("Post parsing concurrency limits must be at least 1.");
+
             await _bakabaseOptionsManager.Get<ThirdPartyOptions>().SaveAsync(model);
             return BaseResponseBuilder.Ok;
         }

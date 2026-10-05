@@ -37,6 +37,8 @@ public record BTaskHandlerBuilder
     public Func<Task>? StopAction { get; init; }
 
     public HashSet<string>? ConflictKeys { get; init; }
+    public string? ConcurrencyGroup { get; init; }
+    public Func<int>? GetConcurrencyLimit { get; init; }
     public HashSet<string>? DependsOn { get; init; }
     public BTaskLevel Level { get; init; } = BTaskLevel.Default;
     public TimeSpan? Interval { get; init; }
@@ -86,6 +88,15 @@ public static class BTaskBuilder
 /// </summary>
 public static class BTaskHandlerBuilderFluentExtensions
 {
+    /// <summary>Share a dynamically sized scheduling pool without starting waiting task bodies.</summary>
+    public static BTaskHandlerBuilder WithConcurrencyLimit(this BTaskHandlerBuilder b,
+        string group, Func<int> getLimit) => b with
+        {
+            ConcurrencyGroup = string.IsNullOrWhiteSpace(group)
+                ? throw new ArgumentException("A concurrency group is required.", nameof(group)) : group,
+            GetConcurrencyLimit = getLimit ?? throw new ArgumentNullException(nameof(getLimit))
+        };
+
     public static BTaskHandlerBuilder Named(this BTaskHandlerBuilder b, Func<string> getName) =>
         b with { GetName = getName };
 

@@ -14,6 +14,9 @@ public record BTask
     public string? MessageOnInterruption => _getMessageOnInterruption?.Invoke();
     public DateTime CreatedAt { get; } = DateTime.Now;
     public HashSet<string>? ConflictKeys { get; }
+    public string? ConcurrencyGroup { get; }
+    [Newtonsoft.Json.JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
+    public Func<int>? GetConcurrencyLimit { get; }
     public HashSet<string>? DependsOn { get; }
     public BTaskLevel Level { get; }
     public string? Error { get; set; }
@@ -60,7 +63,8 @@ public record BTask
         BTaskResourceType resourceType = BTaskResourceType.Any,
         object[]? resourceKeys = null,
         BTaskRetryPolicy? retryPolicy = null,
-        BTaskDependencyFailurePolicy dependencyFailurePolicy = BTaskDependencyFailurePolicy.Wait)
+        BTaskDependencyFailurePolicy dependencyFailurePolicy = BTaskDependencyFailurePolicy.Wait,
+        string? concurrencyGroup = null, Func<int>? getConcurrencyLimit = null)
     {
         Id = id;
         _getName = getName;
@@ -68,6 +72,8 @@ public record BTask
         _getMessageOnInterruption = getMessageOnInterruption;
 
         ConflictKeys = conflictKeys;
+        ConcurrencyGroup = concurrencyGroup;
+        GetConcurrencyLimit = getConcurrencyLimit;
         DependsOn = dependsOn;
         Level = level;
         IsPersistent = isPersistent;

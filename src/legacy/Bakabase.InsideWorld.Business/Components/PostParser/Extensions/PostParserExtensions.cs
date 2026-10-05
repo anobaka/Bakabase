@@ -11,9 +11,11 @@ using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.PostParser.Services;
 using Bakabase.InsideWorld.Business.Components.PostParser.Workflow;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Modules.PostParser.Extensions;
 using Bakabase.Modules.PostParser.Services;
 using Bootstrap.Components.Orm;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -61,6 +63,8 @@ public static class PostParserExtensions
 
         services.AddScoped<SharedContentReaderResolver>();
         services.AddScoped<SharedContentPurchasePolicy>();
+        services.AddSingleton(sp => new PostParserAiConcurrency(() =>
+            sp.GetRequiredService<IBOptions<ThirdPartyOptions>>().Value.PostParserAiMaxConcurrency));
         services.AddPostParserCapabilities();
         services.AddScoped<IPostContentService, LegacyPostContentService>();
         services.AddPostParserWorkflows<TDbContext>();

@@ -98,7 +98,8 @@ public class BTaskManager : IAsyncDisposable
                 {
                     var currentTask = _taskMap[handler.Id];
                     // Cancelling is still active — wait for it to finalize before allowing replace.
-                    if (currentTask.Task.Status.IsFinished())
+                    if (currentTask.Task.Status.IsFinished() &&
+                        (currentTask.Task.ConcurrencyGroup == null || !currentTask.HasAttachedExecution))
                     {
                         await Clean(taskBuilder.Id);
                         await Enqueue(taskBuilder);
@@ -205,7 +206,8 @@ public class BTaskManager : IAsyncDisposable
                 case BTaskStatus.Cancelled:
                 {
                     var (blockers, _) = GetDependencyStatus(d);
-                    if (!_getConflictTasks(d).Any() && blockers.Length == 0 && !BlockedByMoveReservation(d))
+                    if (!_getConflictTasks(d).Any() && blockers.Length == 0 && !BlockedByMoveReservation(d) &&
+                        !BlockedByConcurrencyLimit(d))
                     {
                         await d.Start();
                     }
@@ -251,6 +253,15 @@ public class BTaskManager : IAsyncDisposable
                 x.Task.Status.IsActive())
             .ToArray();
     }
+
+    private BTaskHandler[] GetActiveGroupTasks(BTaskHandler task) => task.Task.ConcurrencyGroup == null
+        ? []
+        : _taskMap.Values.Where(other => other != task && (other.Task.Status.IsActive() || other.HasAttachedExecution) &&
+            other.Task.ConcurrencyGroup == task.Task.ConcurrencyGroup).ToArray();
+
+    private bool BlockedByConcurrencyLimit(BTaskHandler task) =>
+        task.Task.ConcurrencyGroup != null && task.Task.GetConcurrencyLimit != null &&
+        GetActiveGroupTasks(task).Length >= Math.Max(1, task.Task.GetConcurrencyLimit());
 
     /// <summary>
     /// Returns dependency status for a task.
@@ -345,7 +356,8 @@ public class BTaskManager : IAsyncDisposable
                                 continue;
                             }
 
-                            if (!_getConflictTasks(at).Any() && blockers.Length == 0 && !BlockedByMoveReservation(at))
+                            if (!_getConflictTasks(at).Any() && blockers.Length == 0 && !BlockedByMoveReservation(at) &&
+                                !BlockedByConcurrencyLimit(at))
                             {
                                 await at.TryStartAutomatically();
                             }
@@ -397,17 +409,30 @@ public class BTaskManager : IAsyncDisposable
 
     public async Task Clean(string id)
     {
-        _taskMap.TryRemove(id, out _);
+        await _schedulingGate.WaitAsync();
+        try
+        {
+            // Group members retain their scheduling slot until execution returns. Other jobs
+            // keep the existing stop-and-remove lifecycle used by dynamic task registration.
+            if (_taskMap.TryGetValue(id, out var handler) && handler.Task.ConcurrencyGroup != null &&
+                (handler.Task.Status.IsActive() || handler.HasAttachedExecution))
+                throw new InvalidOperationException("A task cannot be removed while its execution is still active.");
+            _taskMap.TryRemove(id, out _);
+        }
+        finally { _schedulingGate.Release(); }
         await OnAllTasksChange();
     }
 
     public async Task CleanInactive()
     {
-        var tasks = _taskMap.Values.ToList();
-        foreach (var t in tasks.Where(x => !x.Task.IsPersistent && x.Task.Status.IsFinished()))
+        await _schedulingGate.WaitAsync();
+        try
         {
-            _taskMap.TryRemove(t.Id, out _);
+            foreach (var t in _taskMap.Values.Where(x => !x.Task.IsPersistent && x.Task.Status.IsFinished() &&
+                         (x.Task.ConcurrencyGroup == null || !x.HasAttachedExecution)))
+                _taskMap.TryRemove(t.Id, out _);
         }
+        finally { _schedulingGate.Release(); }
 
         await _eventHandler.OnAllTasksChange(GetTasksViewModel());
     }
@@ -444,6 +469,11 @@ public class BTaskManager : IAsyncDisposable
                 reasonForUnableToStart =
                     _localizer.BTask_FailedToRunTaskDueToDependency(handler.Task.Name,
                         dependencyBlockers.Select(d => d.Task.Name).ToArray());
+            }
+            else if (BlockedByConcurrencyLimit(handler))
+            {
+                reasonForUnableToStart = _localizer.BTask_FailedToRunTaskDueToConflict(handler.Task.Name,
+                    GetActiveGroupTasks(handler).Select(t => t.Task.Name).ToArray());
             }
         }
 

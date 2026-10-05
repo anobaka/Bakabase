@@ -27,6 +27,8 @@ public class BTaskHandler
     private readonly Func<Task>? _stopAction;
     private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
     private Task? _execution;
+    /// <summary>A terminal status can be published before the task's final cleanup returns.</summary>
+    public bool HasAttachedExecution => _execution is {IsCompleted: false};
 
     /// <summary>
     /// How often the heartbeat fires a change notification while the task body

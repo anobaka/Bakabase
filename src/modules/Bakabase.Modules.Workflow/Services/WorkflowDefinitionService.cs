@@ -22,19 +22,22 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
     private readonly IWorkflowValidationService _validation;
     private readonly BTaskManager _taskManager;
     private readonly WorkflowRunner<TDbContext> _runner;
+    private readonly WorkflowRunSchedulingPolicyResolver _scheduling;
 
     public WorkflowDefinitionService(
         TDbContext db,
         IWorkflowTriggerRegistry triggers,
         BTaskManager taskManager,
         WorkflowRunner<TDbContext> runner,
-        IWorkflowValidationService validation)
+        IWorkflowValidationService validation,
+        WorkflowRunSchedulingPolicyResolver scheduling)
     {
         _db = db;
         _triggers = triggers;
         _validation = validation;
         _taskManager = taskManager;
         _runner = runner;
+        _scheduling = scheduling;
     }
 
     private DbSet<WorkflowDefinitionDbModel> Defs => _db.Set<WorkflowDefinitionDbModel>();
@@ -249,10 +252,9 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         await _db.SaveChangesAsync(ct);
 
         var runId = run.Id;
-        await _taskManager.Enqueue(BTaskBuilder.Create($"workflow.run.{runId}")
+        await _taskManager.Enqueue(_scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
             .Named($"Workflow #{definition.Id} run #{runId}")
-            .ConflictsWith($"workflow.definition.{definition.Id}")
-            .Run(args => _runner.ExecuteAsync(runId, args)));
+            .Run(args => _runner.ExecuteAsync(runId, args)), definition.Id, definition.TriggerKind));
 
         return run.ToDomainModel();
     }

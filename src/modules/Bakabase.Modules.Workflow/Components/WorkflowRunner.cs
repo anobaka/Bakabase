@@ -166,6 +166,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             {
                 await btaskArgs.YieldAsync();
                 var activityRow = activityRows[stepIndex];
+                await btaskArgs.UpdateTask(t => t.Data = new WorkflowTaskProgress(run.Id, activityRow.Kind, "running"));
 
                 if (!_activities.TryGet(activityRow.Kind, out var impl))
                     throw new InvalidOperationException($"Unknown activity kind: {activityRow.Kind}");
@@ -223,6 +224,8 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                         Variables = workItem.Variables,
                         Services = scope.ServiceProvider,
                         Logger = _logger,
+                        ReportStage = stage => btaskArgs.UpdateTask(t =>
+                            t.Data = new WorkflowTaskProgress(run.Id, activityRow.Kind, stage)),
                         // Scaled into this step's share of the run, so an activity reporting
                         // 0-100 for its own work never contradicts the per-step accounting below.
                         ReportProgress = (percentage, process) => btaskArgs.UpdateTask(t =>

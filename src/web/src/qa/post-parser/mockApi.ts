@@ -1,14 +1,23 @@
 import type { Api } from "@/sdk/Api";
 import type { PostParserTask } from "@/core/models/PostParserTask";
-import type { PostParserSource } from "@/sdk/constants";
 import type { PreviewStoredPostParserTask } from "./fixtures";
 
 import { completeResult, createFixtures } from "./fixtures";
 
-import { PostParseTarget, PostParseTargetLabel, UiTheme, WorkflowRunStatus } from "@/sdk/constants";
+import {
+  PostParserSource,
+  BTaskStatus,
+  BTaskType,
+  BTaskResourceType,
+  PostParseTarget,
+  PostParseTargetLabel,
+  UiTheme,
+  WorkflowRunStatus,
+} from "@/sdk/constants";
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
+import { useBTasksStore } from "@/stores/bTasks";
 
-export type PreviewScenario = "all" | "waiting" | "complete" | "failure" | "empty";
+export type PreviewScenario = "all" | "waiting" | "complete" | "failure" | "empty" | "concurrency";
 interface PreviewRun {
   id: number;
   postParserTaskId: number;
@@ -38,8 +47,18 @@ let runId = 2000;
 const externallyUnlocked = new Set<number>();
 const options = {
   app: { language: "zh-CN", uiTheme: UiTheme.Light, enableAnonymousDataTracking: false },
-  thirdParty: { automaticallyParsingPosts: false },
-  soulPlus: { autoBuyThreshold: 5, minimumRemainingCoins: 50, accounts: [] },
+  thirdParty: {
+    automaticallyParsingPosts: false,
+    postParserMaxConcurrency: 10,
+    postParserAiMaxConcurrency: 1,
+  },
+  soulPlus: {
+    autoBuyThreshold: 5,
+    minimumRemainingCoins: 50,
+    maxConcurrency: 1,
+    requestInterval: 0,
+    accounts: [],
+  },
 };
 const clone = <T>(value: T): T => structuredClone(value);
 const ok = <T>(data?: T) => Promise.resolve({ code: 0, data: clone(data) });
@@ -193,6 +212,7 @@ const visible = () =>
       (task) =>
         !task.isDeleted &&
         (scenario === "all" ||
+          (scenario === "concurrency" && task.id >= 100) ||
           (scenario === "waiting" && task.workflowStatus === WorkflowRunStatus.Waiting) ||
           (scenario === "complete" && task.workflowStatus === WorkflowRunStatus.Success) ||
           (scenario === "failure" && !!task.error)),
@@ -209,8 +229,189 @@ const update = (id: number, transform: (task: PostParserTask) => PostParserTask)
   publish();
 };
 
-export const resetPreview = () => {
+type Stage =
+  | "fetching"
+  | "waitingForAi"
+  | "checkingAvailability"
+  | "purchasing"
+  | "extracting"
+  | "checkingLinks";
+interface PreviewStep {
+  stage: Stage;
+  duration: number;
+  pool?: "ai" | "site";
+  action?: () => void;
+}
+interface PreviewJob {
+  id: number;
+  runId: number;
+  epoch: number;
+  steps: PreviewStep[];
+}
+let queue: PreviewJob[] = [];
+const activeJobs = new Map<number, PreviewJob>();
+let aiActive = 0;
+let siteActive = 0;
+let blockedSteps: (() => boolean)[] = [];
+const alive = (job: PreviewJob) =>
+  job.epoch === generation &&
+  records.some((task) => task.id === job.id && task.workflowRunId === job.runId);
+const publishStage = (job: PreviewJob, stage?: Stage, queued = false) => {
+  useBTasksStore.getState().updateTask({
+    id: `workflow.run.${job.runId}`,
+    name: `解析帖子 #${job.id}`,
+    createdAt: new Date().toISOString(),
+    isPersistent: false,
+    type: BTaskType.Any,
+    resourceType: BTaskResourceType.Any,
+    status: queued ? BTaskStatus.NotStarted : BTaskStatus.Running,
+    data: { workflowRunId: job.runId, activityKind: "postParser.preview", stage },
+  });
+};
+const drainSteps = () => {
+  const pending = blockedSteps;
+
+  blockedSteps = [];
+  for (const resume of pending) if (!resume()) blockedSteps.push(resume);
+};
+const completeJob = (job: PreviewJob) => {
+  if (!alive(job)) return;
+  finish(job.id);
+  activeJobs.delete(job.id);
+  const task = useBTasksStore
+    .getState()
+    .tasks.find((item) => item.id === `workflow.run.${job.runId}`);
+
+  if (task)
+    useBTasksStore
+      .getState()
+      .updateTask({ ...task, status: BTaskStatus.Completed, data: undefined });
+  pumpQueue();
+};
+const advanceJob = (job: PreviewJob) => {
+  if (!alive(job)) {
+    activeJobs.delete(job.id);
+    pumpQueue();
+
+    return;
+  }
+  const step = job.steps.shift();
+
+  if (!step) {
+    completeJob(job);
+
+    return;
+  }
+  publishStage(job, step.pool === "ai" ? "waitingForAi" : step.stage);
+  const begin = () => {
+    if (!alive(job)) return true;
+    if (step.pool === "ai" && aiActive >= options.thirdParty.postParserAiMaxConcurrency)
+      return false;
+    if (step.pool === "site" && siteActive >= options.soulPlus.maxConcurrency) return false;
+    if (step.pool === "ai") aiActive++;
+    if (step.pool === "site") siteActive++;
+    publishStage(job, step.stage);
+    update(job.id, (task) => ({
+      ...task,
+      parsingMessage:
+        step.stage === "purchasing"
+          ? "正在购买并解锁内容…"
+          : step.pool === "ai"
+            ? "正在通过 AI 分析帖子内容…"
+            : undefined,
+    }));
+    window.setTimeout(() => {
+      if (job.epoch !== generation) return;
+      if (step.pool === "ai") aiActive--;
+      if (step.pool === "site") siteActive--;
+      if (alive(job)) step.action?.();
+      drainSteps();
+      advanceJob(job);
+    }, step.duration);
+
+    return true;
+  };
+
+  if (!begin()) blockedSteps.push(begin);
+};
+const pumpQueue = () => {
+  while (activeJobs.size < options.thirdParty.postParserMaxConcurrency && queue.length) {
+    const job = queue.shift()!;
+
+    if (!alive(job)) continue;
+    activeJobs.set(job.id, job);
+    update(job.id, (task) => ({ ...task, workflowStatus: WorkflowRunStatus.Running }));
+    advanceJob(job);
+  }
+};
+const enqueue = (job: PreviewJob) => {
+  queue.push(job);
+  publishStage(job, undefined, true);
+  pumpQueue();
+};
+const clearScheduler = () => {
   generation++;
+  queue = [];
+  activeJobs.clear();
+  blockedSteps = [];
+  aiActive = 0;
+  siteActive = 0;
+  useBTasksStore.getState().setTasks([]);
+};
+
+export const restartPreview = () => {
+  clearScheduler();
+  records = records.map((task) =>
+    isActive(task)
+      ? { ...task, workflowStatus: WorkflowRunStatus.Interrupted, parsingMessage: undefined }
+      : task,
+  );
+  records.forEach(syncRun);
+  publish();
+  announce("已模拟重启：实时队列已清空，之前启动的帖子等待手动继续，未启动的仍为待解析。");
+};
+export const loadConcurrencyPreview = () => {
+  resetPreview();
+  scenario = "concurrency";
+  records = [
+    ...Array.from(
+      { length: 14 },
+      (_, index): PostParserTask => ({
+        id: 100 + index,
+        source: PostParserSource.SoulPlus,
+        link: `https://www.north-plus.net/read.php?tid=900${100 + index}`,
+        title: `并发示例 ${index + 1} · ${index % 3 === 0 ? "含符合限额的付费内容" : "公开下载说明"}`,
+        targets: [PostParseTarget.DownloadInfo],
+        revision: 1,
+        autoBuyThreshold: options.soulPlus.autoBuyThreshold,
+        minimumRemainingCoins: options.soulPlus.minimumRemainingCoins,
+        ...(index % 3 === 0
+          ? {
+              availability: { status: "noExpiryReported", evidence: [] },
+              contentSnapshot: {
+                balance: 120,
+                locks: [
+                  {
+                    url: `https://www.north-plus.net/purchase.php?tid=900${100 + index}`,
+                    price: 3,
+                    isBought: false,
+                  },
+                ],
+              },
+            }
+          : {}),
+      }),
+    ),
+  ];
+  runs = [];
+  publish();
+  announce(
+    "14 个帖子尚未启动。点击开始解析观察总体并发 10、AI 并发 1，以及队列与各阶段的交错执行。",
+  );
+};
+
+export const resetPreview = () => {
+  clearScheduler();
   externallyUnlocked.clear();
   records = createFixtures()
     .map(readTask)
@@ -225,6 +426,7 @@ export const resetPreview = () => {
   announce("示例已重置，全部操作仅影响当前预览。");
 };
 export const setPreviewScenario = (value: PreviewScenario) => {
+  if (scenario === "concurrency" && value !== "concurrency") resetPreview();
   scenario = value;
   publish();
 };
@@ -320,45 +522,47 @@ const retry = (id: number, reparse = false) => {
     workflowRunId: currentRunId,
     workflowDefinitionId: 1,
     workflowStatus: WorkflowRunStatus.Running,
-    parsingState: "snapshotSaved",
-    parsingMessage: "正在读取内容并提取下载说明…",
+    parsingMessage: undefined,
   }));
-  window.setTimeout(() => {
-    if (
-      generation === epoch &&
-      records.find((item) => item.id === id)?.workflowRunId === currentRunId
-    ) {
-      if (externallyUnlocked.has(id)) {
-        update(id, (current) => ({
-          ...current,
-          contentSnapshot: current.contentSnapshot && {
-            ...current.contentSnapshot,
-            locks: current.contentSnapshot.locks.map((lock) => ({ ...lock, isBought: true })),
-          },
-        }));
-      } else if (task.availability?.status !== "expired") {
-        unlockEligible(id);
-      }
-      if (
-        records
-          .find((item) => item.id === id)
-          ?.contentSnapshot?.locks.some((lock) => !lock.isBought)
-      ) {
-        update(id, (current) => ({
-          ...current,
-          workflowStatus: WorkflowRunStatus.Waiting,
-          parsingState:
-            task.parsingState === "possiblyExpired" ? "possiblyExpired" : "awaitingPurchase",
-          parsingMessage: "示例原帖仍有未解锁内容，可在原帖购买后重新解析。",
-        }));
-        announce("已模拟重新检查，原帖内容尚未解锁。");
+  const steps: PreviewStep[] = [
+    {
+      stage: "fetching",
+      duration: scenario === "concurrency" ? 700 : 200,
+      pool: "site",
+      action: () => {
+        if (externallyUnlocked.has(id))
+          update(id, (current) => ({
+            ...current,
+            contentSnapshot: current.contentSnapshot && {
+              ...current.contentSnapshot,
+              locks: current.contentSnapshot.locks.map((lock) => ({ ...lock, isBought: true })),
+            },
+          }));
+      },
+    },
+  ];
 
-        return;
-      }
-      finish(id);
-      announce("模拟解析完成，结果已更新。");
-    }
-  }, 1000);
+  if (task.contentSnapshot?.locks.some((lock) => !lock.isBought)) {
+    steps.push({
+      stage: "checkingAvailability",
+      duration: scenario === "concurrency" ? 1400 : 250,
+      pool: "ai",
+    });
+    if (task.availability?.status !== "expired")
+      steps.push({
+        stage: "purchasing",
+        duration: scenario === "concurrency" ? 700 : 200,
+        pool: "site",
+        action: () => unlockEligible(id),
+      });
+  }
+  steps.push({
+    stage: "extracting",
+    duration: scenario === "concurrency" ? 2200 : 500,
+    pool: "ai",
+  });
+  steps.push({ stage: "checkingLinks", duration: 100 });
+  enqueue({ id, runId: currentRunId, epoch, steps });
 
   return ok();
 };
@@ -407,8 +611,6 @@ const purchase = (
     return Promise.resolve({ code: 409, message: "当前价格超出确认的总价，请重新查看购买报价。" });
   const epoch = generation;
   const currentRunId = task.workflowRunId || ++runId;
-  const current = () =>
-    generation === epoch && records.find((item) => item.id === id)?.workflowRunId === currentRunId;
 
   update(id, (item) => ({
     ...item,
@@ -418,38 +620,25 @@ const purchase = (
     error: undefined,
     parsingMessage: "解锁已排队，等待发送购买请求…",
   }));
-  window.setTimeout(() => {
-    if (!current()) return;
-    update(id, (item) => ({
-      ...item,
-      workflowStatus: WorkflowRunStatus.Running,
-      parsingMessage: "正在购买并解锁内容…",
-    }));
-  }, 300);
-  window.setTimeout(() => {
-    if (!current()) return;
-    const latest = records.find((item) => item.id === id)!;
+  enqueue({
+    id,
+    runId: currentRunId,
+    epoch,
+    steps: [
+      {
+        stage: "purchasing",
+        duration: 1500,
+        pool: "site",
+        action: () => {
+          const latest = records.find((item) => item.id === id)!;
 
-    if (selectedCost(latest) > input.maxTotalCost) {
-      update(id, (item) => ({
-        ...item,
-        workflowStatus: WorkflowRunStatus.Waiting,
-        parsingMessage: "当前价格超出确认的总价，没有发送购买请求。",
-      }));
-
-      return;
-    }
-    unlockEligible(id, input.lockUrls);
-    update(id, (item) => ({
-      ...item,
-      parsingMessage: "已解锁符合条件的内容，正在通过 AI 重新提取下载与处理说明…",
-    }));
-  }, 1500);
-  window.setTimeout(() => {
-    if (!current() || !isActive(records.find((item) => item.id === id)!)) return;
-    finish(id);
-    announce("示例解锁与 AI 解析完成；实际账号没有扣款。");
-  }, 3000);
+          if (selectedCost(latest) <= input.maxTotalCost) unlockEligible(id, input.lockUrls);
+        },
+      },
+      { stage: "extracting", duration: 1400, pool: "ai" },
+      { stage: "checkingLinks", duration: 100 },
+    ],
+  });
 
   return ok();
 };
@@ -479,6 +668,8 @@ const mockApi = {
       startAllPostParserTasks: async () => {
         for (const task of records.filter(isBatchEligible))
           await retry(task.id, task.workflowRunId != null && task.workflowStatus == null);
+
+        announce("已将可开始的帖子加入队列。观察各阶段交错执行，或点击“模拟重启”查看待继续状态。");
 
         return { code: 0 };
       },
@@ -560,12 +751,20 @@ const mockApi = {
         return { code: 0 };
       },
       deletePostParserTask: (id: number) => {
+        const removed = records.find((task) => task.id === id);
+
         records = records.filter((task) => task.id !== id);
+        if (removed?.workflowRunId)
+          useBTasksStore.getState().removeTask(`workflow.run.${removed.workflowRunId}`);
+        activeJobs.delete(id);
+        queue = queue.filter((job) => job.id !== id);
+        pumpQueue();
         publish();
 
         return ok();
       },
       deleteAllPostParserTasks: () => {
+        clearScheduler();
         records = [];
         publish();
 
@@ -589,7 +788,16 @@ const mockApi = {
       getThirdPartyOptions: () => ok(options.thirdParty),
       getSoulPlusOptions: () => ok(options.soulPlus),
       patchThirdPartyOptions: async (patch: Partial<typeof options.thirdParty>) => {
+        if (
+          [patch.postParserMaxConcurrency, patch.postParserAiMaxConcurrency].some(
+            (value) =>
+              value != null && (!Number.isInteger(value) || value < 1 || value > 2147483647),
+          )
+        )
+          return { code: 400, message: "并发数必须为正整数。" };
         Object.assign(options.thirdParty, patch);
+        drainSteps();
+        pumpQueue();
         (await import("@/stores/options")).useThirdPartyOptionsStore.getState().update(patch);
 
         return { code: 0 };

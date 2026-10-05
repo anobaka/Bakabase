@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
@@ -145,5 +146,167 @@ public sealed class BTaskManagerTests
 
         await _btm.Stop("btm-free-a");
         await _btm.Stop("btm-free-b");
+    }
+
+    [TestMethod]
+    public async Task ConcurrencyGroup_ConcurrentStartsDoNotExceedLimitAndOtherGroupsRemainIndependent()
+    {
+        var ids = Enumerable.Range(0, 12).Select(i => $"bounded-{i}").ToArray();
+        foreach (var id in ids)
+            await _btm.Enqueue(BTaskBuilder.Create(id).WithConcurrencyLimit("parser", () => 2)
+                .Run(args => Task.Delay(Timeout.Infinite, args.CancellationToken)));
+        try
+        {
+            await Task.WhenAll(ids.Select(id => _btm.Start(id)));
+            Assert.AreEqual(2, _btm.Tasks.Count(t => t.Task.Status.IsActive()));
+            Assert.AreEqual(10, _btm.Tasks.Count(t => t.Task.Status == BTaskStatus.NotStarted));
+            var queued = _btm.Tasks.First(t => t.Task.Status == BTaskStatus.NotStarted);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(_btm.GetTaskViewModel(queued.Id)!.ReasonForUnableToStart));
+
+            await _btm.Enqueue(BTaskBuilder.Create("independent").WithConcurrencyLimit("other", () => 1)
+                .Run(args => Task.Delay(Timeout.Infinite, args.CancellationToken)));
+            await _btm.Start("independent");
+            Assert.AreEqual(BTaskStatus.Running, _btm.GetTaskViewModel("independent")!.Status);
+
+            var stopped = _btm.Tasks.First(t => ids.Contains(t.Id) && t.Task.Status.IsActive());
+            await _btm.Stop(stopped.Id);
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            while (stopped.HasAttachedExecution) await Task.Delay(10, timeout.Token);
+            await _btm.Start(queued.Id);
+            Assert.AreEqual(BTaskStatus.Running, queued.Task.Status);
+        }
+        finally { await _btm.PrepareForShutdown(); }
+    }
+
+    [TestMethod]
+    public async Task ConcurrencyGroup_DynamicLimitsApplyToDaemonWithoutRestartingActiveTasks()
+    {
+        var limit = 1;
+        foreach (var id in new[] {"dynamic-a", "dynamic-b", "dynamic-c"})
+            await _btm.Enqueue(BTaskBuilder.Create(id).WithConcurrencyLimit("dynamic", () => Volatile.Read(ref limit))
+                .Run(args => Task.Delay(Timeout.Infinite, args.CancellationToken)));
+        try
+        {
+            await _btm.Start("dynamic-a");
+            await _btm.Initialize();
+            Assert.AreEqual(BTaskStatus.NotStarted, _btm.GetTaskViewModel("dynamic-b")!.Status);
+            Volatile.Write(ref limit, 2);
+            await WaitForRunning("dynamic-b", TimeSpan.FromSeconds(5));
+            Assert.AreEqual(BTaskStatus.NotStarted, _btm.GetTaskViewModel("dynamic-c")!.Status);
+
+            Volatile.Write(ref limit, 1);
+            await _btm.Stop("dynamic-a");
+            await _btm.Start("dynamic-c");
+            Assert.AreEqual(BTaskStatus.Running, _btm.GetTaskViewModel("dynamic-b")!.Status);
+            Assert.AreEqual(BTaskStatus.NotStarted, _btm.GetTaskViewModel("dynamic-c")!.Status);
+            await _btm.Stop("dynamic-b");
+            await WaitForRunning("dynamic-c", TimeSpan.FromSeconds(5));
+        }
+        finally { await _btm.PrepareForShutdown(); }
+    }
+
+    [TestMethod]
+    public async Task ConcurrencyGroup_PausingAndCancellingRetainTheSlotUntilTheBodyExits()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await _btm.Enqueue(BTaskBuilder.Create("retained").WithConcurrencyLimit("retained", () => 1)
+            .Run(async args =>
+            {
+                entered.TrySetResult();
+                await release.Task;
+                args.CancellationToken.ThrowIfCancellationRequested();
+            }));
+        await _btm.Enqueue(BTaskBuilder.Create("waiting").WithConcurrencyLimit("retained", () => 1)
+            .Run(_ => Task.CompletedTask));
+        try
+        {
+            await _btm.Start("retained");
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var handler = _btm.Tasks.Single(t => t.Id == "retained");
+            await handler.Pause();
+            await _btm.Start("waiting");
+            Assert.AreEqual(BTaskStatus.NotStarted, _btm.GetTaskViewModel("waiting")!.Status);
+            await handler.Resume();
+            await _btm.Stop("retained");
+            Assert.AreEqual(BTaskStatus.Cancelling, handler.Task.Status);
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _btm.Clean("retained"));
+            await _btm.Start("waiting");
+            Assert.AreEqual(BTaskStatus.NotStarted, _btm.GetTaskViewModel("waiting")!.Status);
+            release.TrySetResult();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            while (handler.HasAttachedExecution) await Task.Delay(10, timeout.Token);
+            await _btm.Start("waiting");
+            Assert.AreNotEqual(BTaskStatus.NotStarted, _btm.GetTaskViewModel("waiting")!.Status);
+        }
+        finally
+        {
+            release.TrySetResult();
+            await _btm.PrepareForShutdown();
+        }
+    }
+
+    [TestMethod]
+    public async Task CleanAndReplaceCannotRemoveATerminalTaskBeforeItsExecutionActuallyReturns()
+    {
+        var completing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await _btm.Enqueue(BTaskBuilder.Create("finishing").WithConcurrencyLimit("finishing", () => 1)
+            .Run(_ => Task.CompletedTask)
+            .WhenStatusChanges(async (_, task) =>
+            {
+                if (task.Status != BTaskStatus.Completed) return;
+                completing.TrySetResult();
+                await release.Task;
+            }));
+        try
+        {
+            await _btm.Start("finishing");
+            await completing.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var handler = _btm.Tasks.Single(t => t.Id == "finishing");
+            Assert.IsTrue(handler.HasAttachedExecution);
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _btm.Clean("finishing"));
+            await _btm.CleanInactive();
+            Assert.IsNotNull(_btm.GetTaskViewModel("finishing"));
+            await Assert.ThrowsExceptionAsync<Exception>(() => _btm.Enqueue(
+                BTaskBuilder.Create("finishing").ReplaceIfExists().Run(_ => Task.CompletedTask)));
+
+            release.TrySetResult();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            while (handler.HasAttachedExecution) await Task.Delay(10, timeout.Token);
+            await _btm.CleanInactive();
+            Assert.IsNull(_btm.GetTaskViewModel("finishing"));
+        }
+        finally { release.TrySetResult(); }
+    }
+
+    [TestMethod]
+    public async Task NonGroupedTasksKeepTheExistingStopAndCleanLifecycle()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await _btm.Enqueue(BTaskBuilder.Create("ordinary-clean").Run(async args =>
+        {
+            entered.TrySetResult();
+            await release.Task;
+            args.CancellationToken.ThrowIfCancellationRequested();
+        }));
+        var handler = _btm.Tasks.Single(t => t.Id == "ordinary-clean");
+        try
+        {
+            await _btm.Start(handler.Id);
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await _btm.Stop(handler.Id);
+            Assert.IsTrue(handler.HasAttachedExecution);
+            Assert.AreEqual(BTaskStatus.Cancelling, handler.Task.Status);
+            await _btm.Clean(handler.Id);
+            Assert.IsNull(_btm.GetTaskViewModel(handler.Id));
+        }
+        finally
+        {
+            release.TrySetResult();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            while (handler.HasAttachedExecution) await Task.Delay(10, timeout.Token);
+        }
     }
 }

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AiOutlineCloudDownload,
+  AiOutlineClockCircle,
   AiOutlineCopy,
   AiOutlineDelete,
   AiOutlineDownload,
@@ -60,21 +61,18 @@ import { useSoulPlusOptionsStore, useThirdPartyOptionsStore } from "@/stores/opt
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
 import { useBTasksStore } from "@/stores/bTasks";
 
-const activeStatuses = [WorkflowRunStatus.Pending, WorkflowRunStatus.Running];
 const failedStatuses = [
   WorkflowRunStatus.Failed,
   WorkflowRunStatus.Cancelled,
   WorkflowRunStatus.Interrupted,
 ];
 const retryStatuses = [...failedStatuses, WorkflowRunStatus.Waiting];
-const isRunning = (task: PostParserTask) =>
-  !!task.workflowRunId &&
-  (task.workflowStatus == null ? !task.error : activeStatuses.includes(task.workflowStatus));
 const hasResults = (task: PostParserTask) => Object.keys(task.results ?? {}).length > 0;
 const processingTaskStatuses = new Set([
   BTaskStatus.NotStarted,
   BTaskStatus.Running,
   BTaskStatus.Pausing,
+  BTaskStatus.Paused,
   BTaskStatus.Resuming,
   BTaskStatus.Cancelling,
 ]);
@@ -131,8 +129,10 @@ const PostParserPage = () => {
   const bTasks = useBTasksStore((state) => state.tasks);
   const activeRunTasks = useMemo(
     () =>
-      new Set(
-        bTasks.filter((task) => processingTaskStatuses.has(task.status)).map((task) => task.id),
+      new Map(
+        bTasks
+          .filter((task) => processingTaskStatuses.has(task.status))
+          .map((task) => [task.id, task]),
       ),
     [bTasks],
   );
@@ -142,7 +142,6 @@ const PostParserPage = () => {
       ![BTaskStatus.Completed, BTaskStatus.Cancelled, BTaskStatus.Error].includes(task.status),
   );
   const isProcessing = (task: PostParserTask) =>
-    isRunning(task) ||
     (!!task.workflowRunId && activeRunTasks.has(`workflow.run.${task.workflowRunId}`)) ||
     ["fetch", "retry", "reparse", "purchase"].some(
       (actionName) => busy === `${actionName}-${task.id}`,
@@ -153,7 +152,8 @@ const PostParserPage = () => {
     if (task.workflowRunId)
       return task.workflowStatus == null
         ? !!task.error
-        : failedStatuses.includes(task.workflowStatus);
+        : task.workflowStatus === WorkflowRunStatus.Pending ||
+            failedStatuses.includes(task.workflowStatus);
 
     return (
       !!task.error ||
@@ -335,6 +335,30 @@ const PostParserPage = () => {
   const renderTask = (task: PostParserTask) => {
     const data = getDownloadInfo(task);
     const processing = isProcessing(task);
+    const liveTask = task.workflowRunId
+      ? activeRunTasks.get(`workflow.run.${task.workflowRunId}`)
+      : undefined;
+    const queued = liveTask?.status === BTaskStatus.NotStarted;
+    const paused = liveTask?.status === BTaskStatus.Paused;
+    const stage =
+      liveTask?.data && typeof liveTask.data === "object" && "stage" in liveTask.data
+        ? liveTask.data.stage
+        : undefined;
+    const knownStages = [
+      "fetching",
+      "waitingForAi",
+      "checkingAvailability",
+      "purchasing",
+      "extracting",
+      "checkingLinks",
+    ];
+    const processingLabel = paused
+      ? "postParser.stage.paused"
+      : queued
+        ? "postParser.stage.queued"
+        : typeof stage === "string" && knownStages.includes(stage)
+          ? `postParser.stage.${stage}`
+          : "postParser.label.processing";
     const hasLinks = !!data?.resources?.some((resource) => !!resource.link?.trim());
     const locks = task.contentSnapshot?.locks?.filter((lock) => !lock.isBought) ?? [];
     const needsUnlock =
@@ -380,17 +404,18 @@ const PostParserPage = () => {
         )}
       </Button>
     ) : null;
-    const state = task.error
-      ? "error"
-      : task.parsingState && task.parsingState !== "complete"
-        ? task.parsingState
-        : locks.length || data?.isComplete === false
-          ? "partial"
-          : task.workflowStatus === WorkflowRunStatus.Waiting
-            ? "awaitingAction"
-            : isRunning(task)
-              ? null
-              : task.parsingState;
+    const state =
+      task.workflowStatus === WorkflowRunStatus.Interrupted
+        ? "interrupted"
+        : task.error
+          ? "error"
+          : task.parsingState && task.parsingState !== "complete"
+            ? task.parsingState
+            : locks.length || data?.isComplete === false
+              ? "partial"
+              : task.workflowStatus === WorkflowRunStatus.Waiting
+                ? "awaitingAction"
+                : task.parsingState;
     const retryable =
       task.workflowRunId &&
       task.workflowStatus != null &&
@@ -414,12 +439,16 @@ const PostParserPage = () => {
                 {processing ? (
                   <Chip color="primary" size="sm" variant="flat">
                     <span
-                      aria-label={t("postParser.label.processing")}
+                      aria-label={t(processingLabel)}
                       className="inline-flex items-center gap-1"
                       role="status"
                     >
-                      <Spinner aria-hidden classNames={{ wrapper: "h-3 w-3" }} size="sm" />
-                      {t("postParser.label.processing")}
+                      {queued || paused ? (
+                        <AiOutlineClockCircle aria-hidden />
+                      ) : (
+                        <Spinner aria-hidden classNames={{ wrapper: "h-3 w-3" }} size="sm" />
+                      )}
+                      {t(processingLabel)}
                     </span>
                   </Chip>
                 ) : state ? (
@@ -435,16 +464,20 @@ const PostParserPage = () => {
                 ) : task.workflowStatus != null ? (
                   <Chip
                     color={
-                      isRunning(task)
-                        ? "primary"
-                        : task.workflowStatus === WorkflowRunStatus.Success
-                          ? "success"
-                          : "default"
+                      task.workflowStatus === WorkflowRunStatus.Success ? "success" : "default"
                     }
                     size="sm"
                     variant="flat"
                   >
-                    {t<string>(`workflow.runs.status.${WorkflowRunStatus[task.workflowStatus]}`)}
+                    {t<string>(
+                      [
+                        WorkflowRunStatus.Pending,
+                        WorkflowRunStatus.Running,
+                        WorkflowRunStatus.Interrupted,
+                      ].includes(task.workflowStatus)
+                        ? "postParser.stage.interrupted"
+                        : `workflow.runs.status.${WorkflowRunStatus[task.workflowStatus]}`,
+                    )}
                   </Chip>
                 ) : (
                   <Chip size="sm" variant="flat">

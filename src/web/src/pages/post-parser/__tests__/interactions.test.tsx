@@ -151,6 +151,16 @@ const base: PostParserTask = {
   targets: [PostParseTarget.DownloadInfo],
   revision: 3,
 };
+const liveRun = (runId: number, status: BTaskStatus, stage?: string) => ({
+  id: `workflow.run.${runId}`,
+  name: "Post parser",
+  createdAt: "2026-10-05T00:00:00Z",
+  isPersistent: false,
+  type: BTaskType.Any,
+  resourceType: BTaskResourceType.Any,
+  status,
+  data: { workflowRunId: runId, activityKind: "postParser.test", stage },
+});
 const data = {
   title: "A parsed resource",
   resources: [
@@ -411,15 +421,23 @@ describe("post content purchase and partial results", () => {
       usePostParserTasksStore
         .getState()
         .setTasks([{ ...unlockable, workflowStatus: WorkflowRunStatus.Pending }]);
+      useBTasksStore
+        .getState()
+        .setTasks([liveRun(unlockable.workflowRunId!, BTaskStatus.NotStarted)]);
       finish({ code: 0 });
     });
-    expect(screen.getByRole("status", { name: "postParser.label.processing" })).toBeVisible();
+    expect(screen.getByRole("status", { name: "postParser.stage.queued" })).toBeVisible();
     await act(async () =>
       usePostParserTasksStore
         .getState()
         .setTasks([{ ...unlockable, workflowStatus: WorkflowRunStatus.Running }]),
     );
-    expect(screen.getByRole("status", { name: "postParser.label.processing" })).toBeVisible();
+    await act(async () =>
+      useBTasksStore
+        .getState()
+        .setTasks([liveRun(unlockable.workflowRunId!, BTaskStatus.Running, "extracting")]),
+    );
+    expect(screen.getByRole("status", { name: "postParser.stage.extracting" })).toBeVisible();
     await act(async () =>
       usePostParserTasksStore.getState().setTasks([
         {
@@ -432,7 +450,12 @@ describe("post content purchase and partial results", () => {
         },
       ]),
     );
-    expect(screen.queryByRole("status", { name: "postParser.label.processing" })).toBeNull();
+    await act(async () =>
+      useBTasksStore
+        .getState()
+        .setTasks([liveRun(unlockable.workflowRunId!, BTaskStatus.Completed)]),
+    );
+    expect(screen.queryByRole("status", { name: "postParser.stage.extracting" })).toBeNull();
     expect(api.reparse).not.toHaveBeenCalled();
     expect(api.start).not.toHaveBeenCalled();
   });
@@ -827,7 +850,6 @@ describe("post parsing workspace", () => {
     { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Waiting },
     { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Waiting, error: "Needs input" },
     { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Running },
-    { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Pending },
     { ...base, workflowRunId: 37 },
     { ...base, error: "Deleted fetch error", isDeleted: true },
     parsed,
@@ -1040,14 +1062,19 @@ describe("post parsing workspace", () => {
       workflowStatus: WorkflowRunStatus.Running,
     };
 
+    useBTasksStore.getState().setTasks([liveRun(37, BTaskStatus.Running, "extracting")]);
     usePostParserTasksStore.getState().setTasks([running]);
     show(<PostParserPage />);
     await act(async () => Promise.resolve());
     const initialCalls = api.getAll.mock.calls.length;
 
-    api.getAll.mockResolvedValue({
-      code: 0,
-      data: [{ ...running, results: parsed.results, workflowStatus: WorkflowRunStatus.Success }],
+    api.getAll.mockImplementation(async () => {
+      useBTasksStore.getState().setTasks([liveRun(37, BTaskStatus.Completed)]);
+
+      return {
+        code: 0,
+        data: [{ ...running, results: parsed.results, workflowStatus: WorkflowRunStatus.Success }],
+      };
     });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2000);
@@ -1061,4 +1088,77 @@ describe("post parsing workspace", () => {
     });
     expect(api.getAll).toHaveBeenCalledTimes(completedCalls);
   });
+});
+
+describe("post parser live execution stages", () => {
+  it("recovers a committed pending run without a live task and prevents duplicate starts once queued", async () => {
+    usePostParserTasksStore
+      .getState()
+      .setTasks([{ ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Pending }]);
+    api.start.mockImplementation(async () => {
+      useBTasksStore.getState().setTasks([liveRun(37, BTaskStatus.NotStarted)]);
+
+      return { code: 0 };
+    });
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    const start = screen.getByRole("button", { name: "postParser.action.start" });
+
+    expect(start).toBeEnabled();
+    act(() => {
+      start.click();
+      start.click();
+    });
+    await waitFor(() => expect(api.start).toHaveBeenCalledExactlyOnceWith());
+    expect(screen.getByRole("status", { name: "postParser.stage.queued" })).toBeVisible();
+    expect(start).toBeDisabled();
+  });
+
+  it.each([
+    "fetching",
+    "waitingForAi",
+    "checkingAvailability",
+    "purchasing",
+    "extracting",
+    "checkingLinks",
+  ])("displays the live %s stage and prevents duplicate starts", async (stage) => {
+    usePostParserTasksStore
+      .getState()
+      .setTasks([{ ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Running }]);
+    useBTasksStore.getState().setTasks([liveRun(37, BTaskStatus.Running, stage)]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    expect(screen.getByRole("status", { name: `postParser.stage.${stage}` })).toBeVisible();
+    expect(screen.getByRole("button", { name: "postParser.action.start" })).toBeDisabled();
+  });
+  it.each([BTaskStatus.NotStarted, BTaskStatus.Paused])(
+    "uses a waiting indicator for live status %s",
+    async (status) => {
+      usePostParserTasksStore
+        .getState()
+        .setTasks([{ ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Running }]);
+      useBTasksStore.getState().setTasks([liveRun(37, status, "extracting")]);
+      show(<PostParserPage />);
+      await act(async () => Promise.resolve());
+      expect(
+        screen.getByRole("status", {
+          name:
+            status === BTaskStatus.Paused ? "postParser.stage.paused" : "postParser.stage.queued",
+        }),
+      ).toBeVisible();
+      expect(screen.queryByRole("status", { name: "postParser.stage.extracting" })).toBeNull();
+      expect(screen.getByRole("button", { name: "postParser.action.start" })).toBeDisabled();
+    },
+  );
+  it.each([WorkflowRunStatus.Pending, WorkflowRunStatus.Running, WorkflowRunStatus.Interrupted])(
+    "does not resurrect a persisted %s run as queued after restart",
+    async (workflowStatus) => {
+      usePostParserTasksStore.getState().setTasks([{ ...base, workflowRunId: 37, workflowStatus }]);
+      show(<PostParserPage />);
+      await act(async () => Promise.resolve());
+      expect(screen.queryByRole("status", { name: "postParser.stage.queued" })).toBeNull();
+      expect(screen.queryByRole("status", { name: "postParser.label.processing" })).toBeNull();
+      expect(api.start).not.toHaveBeenCalled();
+    },
+  );
 });
