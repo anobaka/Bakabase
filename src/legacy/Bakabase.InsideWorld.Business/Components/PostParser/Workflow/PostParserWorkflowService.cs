@@ -262,7 +262,7 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         finally { gate.Semaphore.Release(); }
     }
 
-    private async Task RefreshTasksUnderGateAsync(CancellationToken ct, IReadOnlyCollection<int>? taskIds = null)
+    internal async Task RefreshTasksUnderGateAsync(CancellationToken ct, IReadOnlyCollection<int>? taskIds = null)
     {
         var query = ParserTasks.AsNoTracking().Where(t => t.WorkflowRunId != null && !t.IsDeleted);
         if (taskIds != null) query = query.Where(t => taskIds.Contains(t.Id));

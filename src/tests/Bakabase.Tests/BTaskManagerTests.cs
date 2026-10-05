@@ -279,4 +279,34 @@ public sealed class BTaskManagerTests
         }
         finally { release.TrySetResult(); }
     }
+
+    [TestMethod]
+    public async Task NonGroupedTasksKeepTheExistingStopAndCleanLifecycle()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await _btm.Enqueue(BTaskBuilder.Create("ordinary-clean").Run(async args =>
+        {
+            entered.TrySetResult();
+            await release.Task;
+            args.CancellationToken.ThrowIfCancellationRequested();
+        }));
+        var handler = _btm.Tasks.Single(t => t.Id == "ordinary-clean");
+        try
+        {
+            await _btm.Start(handler.Id);
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await _btm.Stop(handler.Id);
+            Assert.IsTrue(handler.HasAttachedExecution);
+            Assert.AreEqual(BTaskStatus.Cancelling, handler.Task.Status);
+            await _btm.Clean(handler.Id);
+            Assert.IsNull(_btm.GetTaskViewModel(handler.Id));
+        }
+        finally
+        {
+            release.TrySetResult();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            while (handler.HasAttachedExecution) await Task.Delay(10, timeout.Token);
+        }
+    }
 }

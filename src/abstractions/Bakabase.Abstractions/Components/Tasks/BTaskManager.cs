@@ -98,7 +98,8 @@ public class BTaskManager : IAsyncDisposable
                 {
                     var currentTask = _taskMap[handler.Id];
                     // Cancelling is still active — wait for it to finalize before allowing replace.
-                    if (currentTask.Task.Status.IsFinished() && !currentTask.HasAttachedExecution)
+                    if (currentTask.Task.Status.IsFinished() &&
+                        (currentTask.Task.ConcurrencyGroup == null || !currentTask.HasAttachedExecution))
                     {
                         await Clean(taskBuilder.Id);
                         await Enqueue(taskBuilder);
@@ -411,7 +412,9 @@ public class BTaskManager : IAsyncDisposable
         await _schedulingGate.WaitAsync();
         try
         {
-            if (_taskMap.TryGetValue(id, out var handler) &&
+            // Group members retain their scheduling slot until execution returns. Other jobs
+            // keep the existing stop-and-remove lifecycle used by dynamic task registration.
+            if (_taskMap.TryGetValue(id, out var handler) && handler.Task.ConcurrencyGroup != null &&
                 (handler.Task.Status.IsActive() || handler.HasAttachedExecution))
                 throw new InvalidOperationException("A task cannot be removed while its execution is still active.");
             _taskMap.TryRemove(id, out _);
@@ -426,7 +429,7 @@ public class BTaskManager : IAsyncDisposable
         try
         {
             foreach (var t in _taskMap.Values.Where(x => !x.Task.IsPersistent && x.Task.Status.IsFinished() &&
-                         !x.HasAttachedExecution))
+                         (x.Task.ConcurrencyGroup == null || !x.HasAttachedExecution)))
                 _taskMap.TryRemove(t.Id, out _);
         }
         finally { _schedulingGate.Release(); }

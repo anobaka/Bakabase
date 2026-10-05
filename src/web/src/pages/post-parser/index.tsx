@@ -152,7 +152,8 @@ const PostParserPage = () => {
     if (task.workflowRunId)
       return task.workflowStatus == null
         ? !!task.error
-        : failedStatuses.includes(task.workflowStatus);
+        : task.workflowStatus === WorkflowRunStatus.Pending ||
+            failedStatuses.includes(task.workflowStatus);
 
     return (
       !!task.error ||

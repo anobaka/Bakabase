@@ -885,6 +885,29 @@ public sealed class PostParserWorkflowTests
     }
 
     [TestMethod]
+    public async Task ReparseImmediatelyAfterStoppingAQueuedTaskDoesNotDependOnRefreshingTheList()
+    {
+        var id = await Add();
+        await Reparse(id);
+        var previous = await TaskState(id);
+        var manager = _services.GetRequiredService<BTaskManager>();
+        await manager.Stop($"workflow.run.{previous.WorkflowRunId}");
+        Assert.AreEqual(WorkflowRunStatus.Pending, (await RunState(previous.WorkflowRunId!.Value)).Status);
+
+        // Deliberately do not call GetAll between stopping the BTask and starting the row again.
+        await Reparse(id);
+        var current = await TaskState(id);
+        Assert.AreNotEqual(previous.WorkflowRunId, current.WorkflowRunId);
+        Assert.AreEqual(previous.Revision + 1, current.Revision);
+        Assert.AreEqual(WorkflowRunStatus.Cancelled, (await RunState(previous.WorkflowRunId.Value)).Status);
+        Assert.AreEqual(WorkflowRunStatus.Pending, current.WorkflowStatus);
+        Assert.AreEqual(BTaskStatus.NotStarted, manager.GetTaskViewModel($"workflow.run.{current.WorkflowRunId}")!.Status);
+        await Execute(current.WorkflowRunId!.Value);
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual(1, _reader.Reads);
+    }
+
+    [TestMethod]
     public async Task OverallLimitKeepsExcessPostsQueuedWhileReadingOverlapsAnotherPostsExtraction()
     {
         _services.GetRequiredService<IBOptions<ThirdPartyOptions>>().Value.PostParserMaxConcurrency = 2;

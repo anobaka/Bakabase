@@ -850,7 +850,6 @@ describe("post parsing workspace", () => {
     { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Waiting },
     { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Waiting, error: "Needs input" },
     { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Running },
-    { ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Pending },
     { ...base, workflowRunId: 37 },
     { ...base, error: "Deleted fetch error", isDeleted: true },
     parsed,
@@ -1092,6 +1091,29 @@ describe("post parsing workspace", () => {
 });
 
 describe("post parser live execution stages", () => {
+  it("recovers a committed pending run without a live task and prevents duplicate starts once queued", async () => {
+    usePostParserTasksStore
+      .getState()
+      .setTasks([{ ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Pending }]);
+    api.start.mockImplementation(async () => {
+      useBTasksStore.getState().setTasks([liveRun(37, BTaskStatus.NotStarted)]);
+
+      return { code: 0 };
+    });
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    const start = screen.getByRole("button", { name: "postParser.action.start" });
+
+    expect(start).toBeEnabled();
+    act(() => {
+      start.click();
+      start.click();
+    });
+    await waitFor(() => expect(api.start).toHaveBeenCalledExactlyOnceWith());
+    expect(screen.getByRole("status", { name: "postParser.stage.queued" })).toBeVisible();
+    expect(start).toBeDisabled();
+  });
+
   it.each([
     "fetching",
     "waitingForAi",
