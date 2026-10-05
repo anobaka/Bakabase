@@ -520,7 +520,7 @@ describe("real move panel interactions", () => {
     api.resolve.mockResolvedValue({});
     api.options.mockResolvedValue({ ...options, revision: 2, autoOverwrite: true });
     render(<MoveTaskCard batch={batch} />);
-    fireEvent.click(screen.getByRole("button", { name: "This conflict only" }));
+    fireEvent.click(screen.getByRole("button", { name: "This conflict only Available in" }));
     fireEvent.click(await screen.findByRole("option", { name: "All panel tasks" }));
     fireEvent.click(screen.getByRole("button", { name: "Overwrite and continue" }));
     await waitFor(() => expect(api.resolve).toHaveBeenCalledWith(7, "overwrite", "panel", 4));
