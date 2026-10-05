@@ -65,6 +65,21 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("download result presentation", () => {
+  it("renders compatible duplicate links once with merged credentials and processing instructions", async () => {
+    show({
+      resources: [
+        { link: "https://pan.baidu.com/s/shared", code: "abcd" },
+        { link: "https://pan.baidu.com/s/shared?pwd=abcd", extraction: plan },
+      ],
+    });
+
+    expect(screen.getAllByRole("button", { name: "Copy download link" })).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: "https://pan.baidu.com/s/shared?pwd=abcd" }),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Copy processing instructions" }));
+    await waitFor(() => expect(actions.copy).toHaveBeenCalledWith(JSON.stringify(plan, null, 2)));
+  });
   it("opens and copies the same Baidu URL with its separate access code", async () => {
     show({ resources: [{ link: "https://pan.baidu.com/s/share#files", code: "ab12" }] });
     const url = "https://pan.baidu.com/s/share?pwd=ab12#files";

@@ -3,6 +3,7 @@ import type { PostParserTask } from "@/core/models/PostParserTask";
 import type * as ReactVirtualized from "react-virtualized";
 
 import { HeroUIProvider } from "@heroui/react";
+import { StrictMode } from "react";
 import userEvent from "@testing-library/user-event";
 import { act } from "react-dom/test-utils";
 import { createRoot, type Root } from "react-dom/client";
@@ -1159,6 +1160,134 @@ describe("post parser live execution stages", () => {
       expect(screen.queryByRole("status", { name: "postParser.stage.queued" })).toBeNull();
       expect(screen.queryByRole("status", { name: "postParser.label.processing" })).toBeNull();
       expect(api.start).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("post parser overview and navigation", () => {
+  it("preserves global counts when StrictMode renders the summary repeatedly", async () => {
+    usePostParserTasksStore.getState().setTasks([
+      { ...base, id: 1 },
+      {
+        ...base,
+        id: 2,
+        workflowRunId: 38,
+        workflowStatus: WorkflowRunStatus.Failed,
+        error: "Fetch failed",
+      },
+      { ...base, id: 3, workflowRunId: 39, workflowStatus: WorkflowRunStatus.Running },
+    ]);
+    useBTasksStore.getState().setTasks([liveRun(39, BTaskStatus.Running, "extracting")]);
+    show(
+      <StrictMode>
+        <PostParserPage />
+      </StrictMode>,
+    );
+    await act(async () => Promise.resolve());
+    const overview = screen.getByRole("group", { name: "postParser.summary.label" });
+
+    expect(overview.querySelector('[data-status-group="ready"]')).toHaveTextContent(
+      "postParser.summary.ready1",
+    );
+    expect(overview.querySelector('[data-status-group="failed"]')).toHaveTextContent(
+      "postParser.summary.failed1",
+    );
+    expect(overview.querySelector('[data-status-group="running"]')).toHaveTextContent(
+      "postParser.summary.running1",
+    );
+  });
+
+  it("keeps global counts while searching and locates the first running task beyond the viewport", async () => {
+    const records = Array.from(
+      { length: 120 },
+      (_, index): PostParserTask => ({
+        ...base,
+        id: index + 1,
+        title: `Record ${index + 1}`,
+        workflowRunId: index + 1001,
+        workflowStatus: WorkflowRunStatus.Pending,
+      }),
+    );
+
+    usePostParserTasksStore.getState().setTasks(records);
+    useBTasksStore
+      .getState()
+      .setTasks([
+        liveRun(1010, BTaskStatus.NotStarted),
+        liveRun(1080, BTaskStatus.Running, "waitingForAi"),
+        liveRun(1110, BTaskStatus.Running, "extracting"),
+      ]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    const overview = screen.getByRole("group", { name: "postParser.summary.label" });
+
+    expect(overview.querySelector('[data-status-group="running"]')).toHaveTextContent(
+      "postParser.summary.running2",
+    );
+    expect(overview.querySelector('[data-status-group="queued"]')).toHaveTextContent(
+      "postParser.summary.queued1",
+    );
+    expect(overview.querySelector('[data-status-group="ready"]')).toHaveTextContent(
+      "postParser.summary.ready117",
+    );
+    expect(container.querySelector('[data-task-id="80"]')).toBeNull();
+    const search = screen.getByLabelText("postParser.search.label");
+
+    fireEvent.change(search, { target: { value: "Record 110" } });
+    expect(container.querySelector('[data-task-id="110"]')).toBeVisible();
+    expect(overview.querySelector('[data-status-group="running"]')).toHaveTextContent(
+      "postParser.summary.running2",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.locateRunning" }));
+    expect(search).toHaveValue("");
+    expect(container.querySelector('[data-task-id="80"]')).toHaveAttribute("data-located", "true");
+    expect(container.querySelector('[data-task-id="110"]')).toBeNull();
+
+    // An empty search result unmounts the virtual list. Remounting must not replay the old jump.
+    fireEvent.change(search, { target: { value: "No matching title" } });
+    expect(container.querySelector('[role="table"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "postParser.search.clear" }));
+    expect(container.querySelector('[data-task-id="1"]')).toBeVisible();
+    expect(container.querySelector('[data-task-id="80"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.locateRunning" }));
+    expect(container.querySelector('[data-task-id="80"]')).toHaveAttribute("data-located", "true");
+  });
+
+  it("does not count an old execution after the task moves to a new workflow run", async () => {
+    usePostParserTasksStore.getState().setTasks([
+      {
+        ...base,
+        workflowRunId: 38,
+        workflowStatus: WorkflowRunStatus.Waiting,
+        parsingState: "awaitingAi",
+      },
+    ]);
+    useBTasksStore.getState().setTasks([liveRun(37, BTaskStatus.Running, "extracting")]);
+    show(<PostParserPage />);
+    await act(async () => Promise.resolve());
+    const overview = screen.getByRole("group", { name: "postParser.summary.label" });
+
+    expect(overview.querySelector('[data-status-group="running"]')).toHaveTextContent(
+      "postParser.summary.running0",
+    );
+    expect(overview.querySelector('[data-status-group="attention"]')).toHaveTextContent(
+      "postParser.summary.attention1",
+    );
+    expect(screen.getByRole("button", { name: "postParser.action.locateRunning" })).toBeDisabled();
+  });
+
+  it.each([BTaskStatus.NotStarted, BTaskStatus.Paused, undefined])(
+    "disables navigation without admitted work (status %s)",
+    async (status) => {
+      usePostParserTasksStore
+        .getState()
+        .setTasks([{ ...base, workflowRunId: 37, workflowStatus: WorkflowRunStatus.Pending }]);
+      if (status != null) useBTasksStore.getState().setTasks([liveRun(37, status, "extracting")]);
+      show(<PostParserPage />);
+      await act(async () => Promise.resolve());
+      expect(
+        screen.getByRole("button", { name: "postParser.action.locateRunning" }),
+      ).toBeDisabled();
     },
   );
 });

@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { SelectItem } from "@heroui/react";
 
 import { getDownloadInfo } from "../results";
+import { groupDownloadResources } from "../resourceDeduplication";
 
 import { Button, Checkbox, Input, Modal, Select, Switch } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -26,7 +27,7 @@ export default function LocalProcessingModal({
 }: DestroyableProps & { task: PostParserTask }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const resources = getDownloadInfo(task)?.resources ?? [];
+  const resources = groupDownloadResources(getDownloadInfo(task)?.resources ?? []);
   const [bindings, setBindings] = useState<Binding[]>(() =>
     resources.map(() => ({ selected: false, directory: "", alreadyProcessed: false })),
   );
@@ -60,11 +61,11 @@ export default function LocalProcessingModal({
   const payload = (index: number) => ({
     directory: bindings[index].directory.trim(),
     extractionPlanJson: JSON.stringify(
-      resources[index].extraction ?? { requirement: "unknown", steps: [] },
+      resources[index].resource.extraction ?? { requirement: "unknown", steps: [] },
     ),
     alreadyProcessed: bindings[index].alreadyProcessed,
-    bindingId: `post:${task.id}:${task.revision ?? 0}:${index}`,
-    title: `${task.title || "Post"} · ${index + 1}`,
+    bindingId: `post:${task.id}:${task.revision ?? 0}:${resources[index].sourceIndices[0]}`,
+    title: `${task.title || "Post"} · ${resources[index].sourceIndices[0] + 1}`,
   });
   const selected = bindings
     .map((row, index) => ({ row, index }))
@@ -152,14 +153,19 @@ export default function LocalProcessingModal({
             {t("workflow.processing.configure")}
           </Button>
         )}
-        {resources.map((resource, index) => (
-          <section key={index} className="space-y-2 rounded-lg border border-default-200 p-3">
+        {resources.map(({ resource, sourceIndices }, index) => (
+          <section
+            key={sourceIndices[0]}
+            className="space-y-2 rounded-lg border border-default-200 p-3"
+          >
             <Checkbox
               isDisabled={busy || bindings[index].runId != null}
               isSelected={bindings[index].selected}
               onValueChange={(checked) => update(index, { selected: checked })}
             >
-              <span className="break-all text-xs">{resource.link || `${index + 1}`}</span>
+              <span className="break-all text-xs">
+                {resource.link || `${sourceIndices[0] + 1}`}
+              </span>
             </Checkbox>
             <Input
               isDisabled={busy || bindings[index].runId != null}

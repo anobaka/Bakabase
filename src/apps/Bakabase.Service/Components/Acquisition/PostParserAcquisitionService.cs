@@ -15,6 +15,7 @@ using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Extensions;
 using Bakabase.Modules.Acquisition.Models.Input;
 using Bakabase.Modules.PostParser.Models.Domain;
+using Bakabase.Modules.PostParser.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.Acquisition;
@@ -46,8 +47,10 @@ public class PostParserAcquisitionService(BakabaseDbContext db, IPlaceholderReso
             var parsed = ReadResources(task.Results);
             if (resourceIndices.Count is 0 or > 500 || resourceIndices.Any(i => i < 0 || i >= parsed.Count))
                 throw new ArgumentException("Select valid download links from the current result.");
-            var selected = resourceIndices.Distinct().Select(i => parsed[i]).ToList();
-            foreach (var link in selected)
+            var originals = resourceIndices.Distinct().Select(i => parsed[i]).ToList();
+            var selected = PostDownloadResourceDeduplicator.Deduplicate(originals);
+            // Merging must not hide invalid originals; embedded access codes also need validation after merging.
+            foreach (var link in originals.Concat(selected))
             {
                 if (string.IsNullOrWhiteSpace(link.Link) || link.Link.Length > 2048 ||
                     !Uri.TryCreate(link.Link, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http" or "magnet") ||

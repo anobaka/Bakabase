@@ -15,12 +15,16 @@ interface Props {
   tasks: PostParserTask[];
   search: string;
   renderTask: (task: PostParserTask) => ReactNode;
+  locateRequest?: { taskId: number; sequence: number };
+  onLocated?: (sequence: number) => void;
 }
 
-const TaskList = ({ tasks, search, renderTask }: Props) => {
+const TaskList = ({ tasks, search, renderTask, locateRequest, onLocated }: Props) => {
   const { t, i18n } = useTranslation();
   const list = useRef<List>(null);
   const [width, setWidth] = useState(0);
+  const [highlight, setHighlight] = useState<{ taskId: number; sequence: number }>();
+  const lastLocation = useRef<number>();
   const cache = useMemo(
     () =>
       new CellMeasurerCache({
@@ -41,6 +45,25 @@ const TaskList = ({ tasks, search, renderTask }: Props) => {
     list.current?.scrollToPosition(0);
   }, [search]);
 
+  useEffect(() => {
+    if (!locateRequest || lastLocation.current === locateRequest.sequence) return;
+    const index = tasks.findIndex((task) => task.id === locateRequest.taskId);
+
+    if (index < 0 || !list.current) return;
+    // Consume only explicit requests; polling and stage changes must not take over scrolling.
+    lastLocation.current = locateRequest.sequence;
+    list.current.scrollToRow(index);
+    setHighlight(locateRequest);
+    onLocated?.(locateRequest.sequence);
+  }, [locateRequest, tasks, onLocated]);
+
+  useEffect(() => {
+    if (!highlight) return;
+    const timer = window.setTimeout(() => setHighlight(undefined), 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [highlight]);
+
   const rowRenderer = ({ index, key, parent, style }: ListRowProps) => {
     const task = tasks[index];
 
@@ -50,7 +73,8 @@ const TaskList = ({ tasks, search, renderTask }: Props) => {
           <div
             ref={registerChild}
             aria-rowindex={index + 2}
-            className={`${columns} min-h-32 border-b border-default-100 py-3`}
+            className={`${columns} min-h-32 border-b border-default-100 py-3 ${highlight?.taskId === task.id ? "bg-primary/10 ring-1 ring-inset ring-primary/40" : ""}`}
+            data-located={highlight?.taskId === task.id || undefined}
             data-task-id={task.id}
             role="row"
             style={style}
@@ -94,6 +118,7 @@ const TaskList = ({ tasks, search, renderTask }: Props) => {
                 rowCount={tasks.length}
                 rowHeight={cache.rowHeight}
                 rowRenderer={rowRenderer}
+                scrollToAlignment="center"
                 style={{ overflowX: "hidden" }}
                 width={listWidth || 960}
               />

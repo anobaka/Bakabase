@@ -6,6 +6,7 @@ import type { PostParserTask } from "@/core/models/PostParserTask";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  AiOutlineAim,
   AiOutlineCloudDownload,
   AiOutlineClockCircle,
   AiOutlineCopy,
@@ -29,6 +30,7 @@ import AddToAcquisitionModal from "./components/AddToAcquisitionModal";
 import ConfigurationModal from "./components/ConfigurationModal";
 import DownloadInfoResultRenderer from "./components/DownloadInfoResultRenderer";
 import TaskList from "./components/TaskList";
+import TaskStatusSummary from "./components/TaskStatusSummary";
 import Tooltip from "./components/PostParserTooltip";
 import TaskSearch from "./components/TaskSearch";
 import PostDetails, { AvailabilityDetails, EvidencePopover } from "./components/PostDetails";
@@ -41,6 +43,7 @@ import {
   getTargetResult,
 } from "./results";
 import { buildTaskSearchText } from "./search";
+import { getTaskDisplayStatus } from "./taskStatus";
 
 import { Alert, Button, Chip, Modal, Spinner, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -104,6 +107,11 @@ const PostParserPage = () => {
   const tasks = useMemo(() => storedTasks.filter((task) => !task.isDeleted), [storedTasks]);
   const setTasks = usePostParserTasksStore((state) => state.setTasks);
   const [keyword, setKeyword] = useState("");
+  const [locateRequest, setLocateRequest] = useState<{ taskId: number; sequence: number }>();
+  const nextLocationSequence = useRef(0);
+  const consumeLocation = useCallback((sequence: number) => {
+    setLocateRequest((current) => (current?.sequence === sequence ? undefined : current));
+  }, []);
   const search = keyword.trim().toLocaleLowerCase();
   const searchIndex = useMemo(
     () => tasks.map((task) => ({ task, text: buildTaskSearchText(task) })),
@@ -141,11 +149,34 @@ const PostParserPage = () => {
       task.id === "ParseAllPosts" &&
       ![BTaskStatus.Completed, BTaskStatus.Cancelled, BTaskStatus.Error].includes(task.status),
   );
-  const isProcessing = (task: PostParserTask) =>
-    (!!task.workflowRunId && activeRunTasks.has(`workflow.run.${task.workflowRunId}`)) ||
-    ["fetch", "retry", "reparse", "purchase"].some(
-      (actionName) => busy === `${actionName}-${task.id}`,
-    );
+  const taskStatuses = useMemo(
+    () =>
+      new Map(
+        tasks.map((task) => [
+          task.id,
+          getTaskDisplayStatus(
+            task,
+            task.workflowRunId
+              ? activeRunTasks.get(`workflow.run.${task.workflowRunId}`)
+              : undefined,
+            ["fetch", "retry", "reparse", "purchase"].some(
+              (actionName) => busy === `${actionName}-${task.id}`,
+            ),
+          ),
+        ]),
+      ),
+    [tasks, activeRunTasks, busy],
+  );
+  const isProcessing = (task: PostParserTask) => taskStatuses.get(task.id)!.processing;
+  const firstRunningTask = tasks.find((task) => taskStatuses.get(task.id)?.canLocate);
+  const locateRunningTask = () => {
+    if (!firstRunningTask) return;
+    setKeyword("");
+    setLocateRequest({
+      taskId: firstRunningTask.id,
+      sequence: ++nextLocationSequence.current,
+    });
+  };
   const running = tasks.some(isProcessing);
   const hasStartableTasks = tasks.some((task) => {
     if (isProcessing(task)) return false;
@@ -334,31 +365,11 @@ const PostParserPage = () => {
 
   const renderTask = (task: PostParserTask) => {
     const data = getDownloadInfo(task);
-    const processing = isProcessing(task);
-    const liveTask = task.workflowRunId
-      ? activeRunTasks.get(`workflow.run.${task.workflowRunId}`)
-      : undefined;
-    const queued = liveTask?.status === BTaskStatus.NotStarted;
-    const paused = liveTask?.status === BTaskStatus.Paused;
-    const stage =
-      liveTask?.data && typeof liveTask.data === "object" && "stage" in liveTask.data
-        ? liveTask.data.stage
-        : undefined;
-    const knownStages = [
-      "fetching",
-      "waitingForAi",
-      "checkingAvailability",
-      "purchasing",
-      "extracting",
-      "checkingLinks",
-    ];
-    const processingLabel = paused
-      ? "postParser.stage.paused"
-      : queued
-        ? "postParser.stage.queued"
-        : typeof stage === "string" && knownStages.includes(stage)
-          ? `postParser.stage.${stage}`
-          : "postParser.label.processing";
+    const status = taskStatuses.get(task.id)!;
+    const processing = status.processing;
+    const queued = status.group === "queued";
+    const paused = status.group === "paused";
+    const processingLabel = status.label;
     const hasLinks = !!data?.resources?.some((resource) => !!resource.link?.trim());
     const locks = task.contentSnapshot?.locks?.filter((lock) => !lock.isBought) ?? [];
     const needsUnlock =
@@ -404,18 +415,6 @@ const PostParserPage = () => {
         )}
       </Button>
     ) : null;
-    const state =
-      task.workflowStatus === WorkflowRunStatus.Interrupted
-        ? "interrupted"
-        : task.error
-          ? "error"
-          : task.parsingState && task.parsingState !== "complete"
-            ? task.parsingState
-            : locks.length || data?.isComplete === false
-              ? "partial"
-              : task.workflowStatus === WorkflowRunStatus.Waiting
-                ? "awaitingAction"
-                : task.parsingState;
     const retryable =
       task.workflowRunId &&
       task.workflowStatus != null &&
@@ -451,43 +450,21 @@ const PostParserPage = () => {
                       {t(processingLabel)}
                     </span>
                   </Chip>
-                ) : state ? (
-                  <Chip
-                    color={
-                      state === "complete" ? "success" : state === "error" ? "danger" : "warning"
-                    }
-                    size="sm"
-                    variant="flat"
-                  >
-                    {t<string>(`postParser.state.${state}`)}
-                  </Chip>
-                ) : task.workflowStatus != null ? (
-                  <Chip
-                    color={
-                      task.workflowStatus === WorkflowRunStatus.Success ? "success" : "default"
-                    }
-                    size="sm"
-                    variant="flat"
-                  >
-                    {t<string>(
-                      [
-                        WorkflowRunStatus.Pending,
-                        WorkflowRunStatus.Running,
-                        WorkflowRunStatus.Interrupted,
-                      ].includes(task.workflowStatus)
-                        ? "postParser.stage.interrupted"
-                        : `workflow.runs.status.${WorkflowRunStatus[task.workflowStatus]}`,
-                    )}
-                  </Chip>
                 ) : (
-                  <Chip size="sm" variant="flat">
-                    {t<string>(
-                      task.error
-                        ? "postParser.label.error"
-                        : hasResults(task)
-                          ? "postParser.label.parsed"
-                          : "postParser.label.pending",
-                    )}
+                  <Chip
+                    color={
+                      status.group === "success"
+                        ? "success"
+                        : status.group === "failed"
+                          ? "danger"
+                          : status.group === "attention"
+                            ? "warning"
+                            : "default"
+                    }
+                    size="sm"
+                    variant="flat"
+                  >
+                    {t<string>(status.label)}
                   </Chip>
                 )}
                 {task.workflowRunId && (
@@ -801,6 +778,26 @@ const PostParserPage = () => {
           >
             {t<string>(dispatching ? "postParser.action.queueing" : "postParser.action.start")}
           </Button>
+          <Tooltip
+            content={t(
+              firstRunningTask
+                ? "postParser.action.locateRunningHint"
+                : "postParser.action.noRunningTask",
+            )}
+          >
+            <span className="inline-flex" tabIndex={firstRunningTask ? undefined : 0}>
+              <Button
+                isIconOnly
+                aria-label={t("postParser.action.locateRunning")}
+                isDisabled={!firstRunningTask}
+                size="sm"
+                variant="light"
+                onPress={locateRunningTask}
+              >
+                <AiOutlineAim aria-hidden className="text-base" />
+              </Button>
+            </span>
+          </Tooltip>
         </div>
         <div className="flex flex-wrap items-center gap-1">
           <Button
@@ -885,6 +882,7 @@ const PostParserPage = () => {
             {t<string>("postParser.action.instructions")}
           </Button>
         </div>
+        <TaskStatusSummary statuses={[...taskStatuses.values()]} />
       </div>
       {error && (
         <p className="shrink-0 text-sm text-danger" role="alert">
@@ -892,7 +890,13 @@ const PostParserPage = () => {
         </p>
       )}
       {shownTasks.length > 0 ? (
-        <TaskList renderTask={renderTask} search={search} tasks={shownTasks} />
+        <TaskList
+          locateRequest={locateRequest}
+          renderTask={renderTask}
+          search={search}
+          tasks={shownTasks}
+          onLocated={consumeLocation}
+        />
       ) : (
         <div className="flex min-h-72 flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-default-200 px-4 py-12 text-center">
           <p className="text-sm text-default-500" role="status">

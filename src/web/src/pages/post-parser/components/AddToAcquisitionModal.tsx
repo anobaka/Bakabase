@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { AiOutlineCloudDownload, AiOutlineCheckCircle } from "react-icons/ai";
 
 import { getDownloadInfo } from "../results";
+import { groupDownloadResources } from "../resourceDeduplication";
 
 import DownloadInfoResultRenderer from "./DownloadInfoResultRenderer";
 
@@ -23,8 +24,8 @@ const AddToAcquisitionModal = ({ task, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const data = getDownloadInfo(task);
-  const resources = (data?.resources ?? [])
-    .map((resource, index) => ({ resource, index }))
+  const resources = groupDownloadResources(data?.resources ?? [])
+    .map(({ resource, sourceIndices }) => ({ resource, sourceIndices, index: sourceIndices[0] }))
     .filter(({ resource }) => !!resource.link?.trim());
   const [visible, setVisible] = useState(true);
   const [title, setTitle] = useState(data?.title || task.title || "");
@@ -42,7 +43,13 @@ const AddToAcquisitionModal = ({ task, onDestroyed }: Props) => {
     try {
       const response = await BApi.postParser.importPostParserTaskToAcquisition(task.id, {
         title: title.trim() || undefined,
-        resourceIndices: selected,
+        resourceIndices: [
+          ...new Set(
+            resources
+              .filter(({ index }) => selected.includes(index))
+              .flatMap(({ sourceIndices }) => sourceIndices),
+          ),
+        ].sort((a, b) => a - b),
         revision: task.revision ?? 0,
       });
 
@@ -121,13 +128,15 @@ const AddToAcquisitionModal = ({ task, onDestroyed }: Props) => {
             className="flex flex-col gap-2"
             role="group"
           >
-            {resources.map(({ resource, index }) => (
+            {resources.map(({ resource, index }, displayIndex) => (
               <div
                 key={index}
                 className="flex min-w-0 items-start gap-2 rounded-lg bg-default-50 p-3"
               >
                 <Checkbox
-                  aria-label={t<string>("postParser.acquisition.selectLink", { number: index + 1 })}
+                  aria-label={t<string>("postParser.acquisition.selectLink", {
+                    number: displayIndex + 1,
+                  })}
                   className="mt-1"
                   isDisabled={saving}
                   isSelected={selected.includes(index)}
