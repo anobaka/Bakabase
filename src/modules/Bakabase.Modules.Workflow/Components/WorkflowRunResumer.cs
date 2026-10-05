@@ -6,6 +6,7 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Workflow.Components;
@@ -16,7 +17,6 @@ public class WorkflowRunResumer<TDbContext>(
     IWorkflowValidationService validation,
     IWorkflowTriggerRegistry triggers,
     BTaskManager taskManager,
-    WorkflowRunner<TDbContext> runner,
     ILogger<WorkflowRunResumer<TDbContext>> logger) : IWorkflowRunResumer
     where TDbContext : DbContext
 {
@@ -111,5 +111,9 @@ public class WorkflowRunResumer<TDbContext>(
             .Named($"Workflow #{defId} run #{runId}")
             .ConflictsWith($"workflow.definition.{defId}")
             .ReplaceIfExists()
-            .Run(args => runner.ExecuteAsync(runId, args)));
+            .Run(async args =>
+            {
+                await using var scope = args.RootServiceProvider.CreateAsyncScope();
+                await scope.ServiceProvider.GetRequiredService<WorkflowRunner<TDbContext>>().ExecuteAsync(runId, args);
+            }));
 }

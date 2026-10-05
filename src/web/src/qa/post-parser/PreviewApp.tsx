@@ -44,7 +44,7 @@ function Preview() {
   }, []);
 
   return (
-    <div className="flex h-full min-w-0 flex-col">
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
       <aside
         aria-label="预览控制"
         className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-default-200 bg-default-50 px-5 py-2 text-xs text-default-500"
@@ -79,7 +79,7 @@ function Preview() {
           重置示例
         </button>
       </aside>
-      <main className="min-h-0 min-w-0 flex-1 overflow-auto p-5 sm:p-6">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto p-5 sm:p-6">
         <PostParserPage />
       </main>
     </div>

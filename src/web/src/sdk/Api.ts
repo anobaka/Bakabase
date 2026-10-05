@@ -28354,6 +28354,73 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags PostParserWorkflowRuns
+     * @name SearchPostParserWorkflowRuns
+     * @request GET:/post-parser/workflow-runs
+     */
+    searchPostParserWorkflowRuns: (
+      query?: {
+        /**
+         * @format int32
+         * @min 1
+         * @max 2147483647
+         */
+        taskId?: number;
+        /** @format int32 */
+        pageIndex?: number;
+        /** @format int32 */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
+        any
+      >({
+        path: `/post-parser/workflow-runs`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchPostParserWorkflowRuns
+     * @name searchPostParserWorkflowRunsUrl
+     */
+    searchPostParserWorkflowRunsUrl: (query?: {
+        /**
+         * @format int32
+         * @min 1
+         * @max 2147483647
+         */
+        taskId?: number;
+        /** @format int32 */
+        pageIndex?: number;
+        /** @format int32 */
+        pageSize?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/workflow-runs`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
   };
   property = {
     /**

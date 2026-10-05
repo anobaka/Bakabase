@@ -2,7 +2,7 @@
 
 import type { components } from "@/sdk/BApi2";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from "@heroui/react";
 
@@ -18,14 +18,31 @@ import { WorkflowRunStatus, WorkflowRunStatusLabel } from "@/sdk/constants";
 type RunVm =
   components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel"];
 
-interface Props {
-  workflowDefinitionId: number;
+export interface WorkflowRunPageInput {
+  pageIndex: number;
+  pageSize: number;
+}
+
+export type WorkflowRunLoader = (input: WorkflowRunPageInput) => Promise<{
+  data?: RunVm[] | null;
+  totalCount?: number | null;
+}>;
+
+interface SharedProps {
   workflowName: string;
+  /** A stable scope identity; changing it clears the previous scope's rows and pagination. */
+  runSourceKey?: string;
   /** Lets fs-domain runs surface their rename plan; other domains have none to show. */
   triggerKind?: string;
   isOpen: boolean;
   onClose: () => void;
 }
+
+type Props = SharedProps &
+  (
+    | { workflowDefinitionId: number; loadRuns?: WorkflowRunLoader }
+    | { workflowDefinitionId?: never; loadRuns: WorkflowRunLoader }
+  );
 
 const PAGE_SIZE = 20;
 
@@ -62,18 +79,22 @@ function formatDuration(start: string, end?: string | null): string | null {
   try {
     const s = new Date(start).getTime();
     const e = end ? new Date(end).getTime() : NaN;
+
     if (isNaN(e)) return null;
     const ms = e - s;
+
     if (ms < 1000) return `${ms}ms`;
     if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+
     return `${Math.floor(ms / 60_000)}m ${Math.floor((ms % 60_000) / 1000)}s`;
   } catch {
     return null;
   }
 }
 
-const WorkflowRunsDrawer: React.FC<Props> = ({
+const ScopedWorkflowRunsDrawer: React.FC<Props> = ({
   workflowDefinitionId,
+  loadRuns,
   workflowName,
   triggerKind,
   isOpen,
@@ -85,26 +106,37 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const requestId = useRef(0);
 
   const load = useCallback(async () => {
+    const request = ++requestId.current;
+
     setLoading(true);
     try {
-      const rsp = await BApi.workflow.searchWorkflowRuns(workflowDefinitionId, {
-        workflowDefinitionId,
-        pageIndex: page,
-        pageSize: PAGE_SIZE,
-      });
+      const pagination = { pageIndex: page, pageSize: PAGE_SIZE };
+      const rsp = loadRuns
+        ? await loadRuns(pagination)
+        : await BApi.workflow.searchWorkflowRuns(workflowDefinitionId!, {
+            workflowDefinitionId,
+            ...pagination,
+          });
+
+      if (request !== requestId.current) return;
       setRuns((rsp.data ?? []) as RunVm[]);
       setTotalCount(rsp.totalCount ?? 0);
     } finally {
-      setLoading(false);
+      if (request === requestId.current) setLoading(false);
     }
-  }, [workflowDefinitionId, page]);
+  }, [workflowDefinitionId, loadRuns, page]);
 
   // Refetch on open or when paginating; closing the drawer just leaves stale state in
   // place so reopening doesn't flicker.
   useEffect(() => {
     if (isOpen) void load();
+
+    return () => {
+      requestId.current++;
+    };
   }, [isOpen, load]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -130,6 +162,7 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
               {runs.map((r) => {
                 const status = r.status as WorkflowRunStatus;
                 const duration = formatDuration(r.startedAt, r.completedAt);
+
                 return (
                   <div
                     key={r.id}
@@ -154,7 +187,7 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
                           onPress={() =>
                             createPortal(ResumeRunModal, {
                               runId: r.id,
-                              workflowDefinitionId,
+                              workflowDefinitionId: r.workflowDefinitionId,
                               currentStepIndex: r.currentStepIndex,
                               waitReason: r.waitReason,
                               waitPromptJson: r.waitPromptJson,
@@ -236,6 +269,7 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
                         {r.stepStats.map((s) => {
                           const name = activityDisplayName(t, s.kind);
                           const dropped = s.inputCount - s.outputCount;
+
                           return (
                             <div
                               key={s.stepIndex}
@@ -278,6 +312,10 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
     </Drawer>
   );
 };
+
+const WorkflowRunsDrawer: React.FC<Props> = (props) => (
+  <ScopedWorkflowRunsDrawer key={props.runSourceKey ?? props.workflowDefinitionId} {...props} />
+);
 
 export default WorkflowRunsDrawer;
 

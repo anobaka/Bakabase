@@ -181,5 +181,11 @@
   "postParser.processing.copied.renameExtension": "Copied extension: {{value}}",
   "postParser.processing.copied.renameFile": "Copied file name: {{value}}",
   "postParser.processing.copied.moveFile": "Copied destination: {{value}}",
-  "postParser.processing.noPasswordToCopy": "This step has no password to copy"
+  "postParser.processing.noPasswordToCopy": "This step has no password to copy",
+  "postParser.config.general": "General",
+  "postParser.config.automaticHint": "Automatically parse posts added from now on. Use Start parsing on the page to queue existing pending tasks.",
+  "postParser.action.queueing": "Queueing tasks",
+  "postParser.action.viewAllRuns": "All execution history",
+  "postParser.history.all": "All post parsing runs",
+  "postParser.history.task": "Post #{{id}} · {{title}}"
 }

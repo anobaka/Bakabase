@@ -6960,6 +6960,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/post-parser/workflow-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchPostParserWorkflowRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/property/pool/{pool}/id/{id}/value-resource-counts": {
         parameters: {
             query?: never;
@@ -32295,6 +32311,32 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
+                };
+            };
+        };
+    };
+    SearchPostParserWorkflowRuns: {
+        parameters: {
+            query?: {
+                taskId?: number;
+                pageIndex?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
                 };
             };
         };
