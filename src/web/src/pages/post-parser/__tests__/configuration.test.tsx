@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { HeroUIProvider } from "@heroui/react";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -123,13 +123,29 @@ describe("post parser automatic parsing configuration", () => {
         finishSave = resolve;
       }),
     );
-    const { user, checkbox } = show();
+    const { checkbox } = show();
+    const click = () => {
+      // Keep a complete mouse gesture in one event-loop turn so React Aria's
+      // delayed click fallback cannot interleave with jsdom's synthetic events.
+      fireEvent.pointerDown(checkbox, { pointerId: 1, pointerType: "mouse", button: 0 });
+      fireEvent.mouseDown(checkbox, { button: 0 });
+      fireEvent.pointerUp(checkbox, { pointerId: 1, pointerType: "mouse", button: 0 });
+      fireEvent.mouseUp(checkbox, { button: 0 });
+      checkbox.click();
+    };
 
-    await user.dblClick(checkbox);
+    act(() => {
+      click();
+      click();
+      fireEvent.doubleClick(checkbox);
+    });
     expect(checkbox).toBeDisabled();
     expect(checkbox).not.toBeChecked();
-    await user.click(checkbox);
-    await user.keyboard(" ");
+    act(() => {
+      click();
+      fireEvent.keyDown(checkbox, { key: " ", code: "Space" });
+      fireEvent.keyUp(checkbox, { key: " ", code: "Space" });
+    });
     expect(api.patchOptions).toHaveBeenCalledExactlyOnceWith({ automaticallyParsingPosts: true });
     expect(useThirdPartyOptionsStore.getState().data.automaticallyParsingPosts).toBe(false);
 
@@ -138,9 +154,9 @@ describe("post parser automatic parsing configuration", () => {
     expect(checkbox).not.toBeDisabled();
     expect(api.startAll).not.toHaveBeenCalled();
 
-    await user.click(checkbox);
-    await waitFor(() => expect(checkbox).not.toBeChecked());
+    await act(async () => click());
     expect(api.patchOptions).toHaveBeenCalledTimes(2);
+    expect(checkbox).not.toBeChecked();
     expect(api.patchOptions).toHaveBeenLastCalledWith({ automaticallyParsingPosts: false });
     expect(api.startAll).not.toHaveBeenCalled();
   });
