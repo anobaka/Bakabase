@@ -20,6 +20,12 @@ a complete eight-step plan with three extraction layers, rename and move operati
 four independent resources, all four link-health display states, retryable fetch failure and
 missing AI configuration. The toolbar can isolate states or reset all examples.
 
+Post #10 is a historical pending input whose stored data omits the parsing targets. Reading it
+restores the default download-info target, so both its “获取并解析” action and the toolbar's
+“开始解析” action create an execution and finish with download/file-processing instructions.
+Repeated requests reuse the active execution. Historical records that already have their requested
+results remain complete and are excluded from batch starts even when they have no workflow ID.
+
 The suspected-expiry examples also exercise the opt-in unlock action:
 
 - Post #3 has two locked regions sharing one purchase URL. Both unlock for a total of 3 coins,
@@ -38,8 +44,11 @@ The suspected-expiry examples also exercise the opt-in unlock action:
   that task with “重新解析” then shows a short running state before the full result appears.
 - A failed task can be retried. New links or pasted text can be added and parsed.
 - Row actions start only that post; repeated requests while it is queued/running are ignored.
-  The toolbar starts only posts that have no run and no error, so repeated batch clicks cannot
-  create duplicate runs. Opening the configuration and enabling automatic parsing affects only
+  The toolbar starts pending inputs and retries failed, interrupted or cancelled executions; it also
+  starts legacy errors without an execution and recovers missing executions. In the initial examples,
+  posts #1, #7 and #10 run. Completed posts, running posts and posts awaiting purchase or AI setup
+  remain unchanged. Repeated batch and row clicks cannot create duplicate runs. Opening the
+  configuration and enabling automatic parsing affects only
   subsequent additions (including a pending link explicitly submitted again), not older pending posts.
 - Row history filters by the post's ID and includes its earlier revisions. The toolbar history shows
   all post-parser runs, including a failed earlier run for the autumn-scene example under an older

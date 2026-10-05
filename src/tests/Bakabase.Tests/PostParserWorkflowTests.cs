@@ -99,14 +99,14 @@ public sealed class PostParserWorkflowTests
         await scope.ServiceProvider.GetRequiredService<IPostParserTaskService>().Retry(id);
     }
 
-    private async Task WaitForBTask(string taskId)
+    private async Task WaitForBTask(string taskId, BTaskStatus expected = BTaskStatus.Completed)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var manager = _services.GetRequiredService<BTaskManager>();
         while (manager.Tasks.Single(t => t.Id == taskId).Task.Status is not
                (BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.Cancelled))
             await Task.Delay(20, timeout.Token);
-        Assert.AreEqual(BTaskStatus.Completed, manager.Tasks.Single(t => t.Id == taskId).Task.Status);
+        Assert.AreEqual(expected, manager.Tasks.Single(t => t.Id == taskId).Task.Status);
     }
 
     [TestMethod]
@@ -193,6 +193,94 @@ public sealed class PostParserWorkflowTests
     }
 
     [TestMethod]
+    [DataRow(null)]
+    [DataRow("[]")]
+    [DataRow("null")]
+    [DataRow("malformed")]
+    public async Task LegacyPostWithoutTargetsCanBeParsedWithoutCreatingDuplicateRuns(string? targets)
+    {
+        int id;
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            var task = new PostParserTaskDbModel {Link = "https://example.test/legacy", Targets = targets};
+            db.PostParserTasks.Add(task);
+            await db.SaveChangesAsync();
+            id = task.Id;
+        }
+        var untouched = await Add("https://example.test/untouched");
+
+        await Task.WhenAll(Reparse(id), Reparse(id), Reparse(id));
+
+        var queued = await TaskState(id);
+        Assert.IsNotNull(queued.WorkflowRunId);
+        CollectionAssert.AreEqual(new[] {PostParseTarget.DownloadInfo}, queued.Targets);
+        Assert.AreEqual(0, queued.Revision);
+        Assert.IsNull((await TaskState(untouched)).WorkflowRunId);
+        var manager = _services.GetRequiredService<BTaskManager>();
+        Assert.AreEqual(1, manager.Tasks.Count(t => t.Id == $"workflow.run.{queued.WorkflowRunId}"));
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            Assert.AreEqual(1, await db.WorkflowRuns.CountAsync());
+            Assert.AreEqual(targets, await db.PostParserTasks.Where(t => t.Id == id).Select(t => t.Targets).SingleAsync(),
+                "Loading and starting legacy inputs must not require a database backfill.");
+        }
+
+        await manager.Start($"workflow.run.{queued.WorkflowRunId}");
+        await WaitForBTask($"workflow.run.{queued.WorkflowRunId}");
+
+        var completed = await TaskState(id);
+        Assert.AreEqual(WorkflowRunStatus.Success, completed.WorkflowStatus);
+        Assert.IsNotNull(completed.CompletedAt);
+        Assert.IsNotNull(completed.Results![PostParseTarget.DownloadInfo]);
+        Assert.AreEqual(1, _reader.Reads);
+    }
+
+    [TestMethod]
+    public async Task StartAllIncludesLegacyInputsWithoutTargetsAndSkipsTheirCompletedResults()
+    {
+        List<int> ids;
+        int completedId;
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            var pending = new string?[] {null, "[]", "null", "malformed"}.Select((targets, index) =>
+                new PostParserTaskDbModel {Link = $"https://example.test/legacy/{index}", Targets = targets}).ToList();
+            var completed = new PostParserTaskDbModel
+            {
+                Link = "https://example.test/legacy/completed",
+                Results = "{\"DownloadInfo\":{\"resources\":[]}}"
+            };
+            db.PostParserTasks.AddRange(pending);
+            db.PostParserTasks.Add(completed);
+            await db.SaveChangesAsync();
+            ids = pending.Select(t => t.Id).ToList();
+            completedId = completed.Id;
+        }
+        var trigger = _services.GetRequiredService<PostParserTaskTrigger>();
+        await Task.WhenAll(trigger.Start(), trigger.Start(), trigger.Start());
+        await WaitForBTask(PostParserTaskTrigger.TaskId);
+        await trigger.Start();
+        await WaitForBTask(PostParserTaskTrigger.TaskId);
+
+        var manager = _services.GetRequiredService<BTaskManager>();
+        foreach (var id in ids)
+        {
+            var task = await TaskState(id);
+            Assert.IsNotNull(task.WorkflowRunId);
+            Assert.AreEqual(1, manager.Tasks.Count(t => t.Id == $"workflow.run.{task.WorkflowRunId}"));
+            await manager.Start($"workflow.run.{task.WorkflowRunId}");
+            await WaitForBTask($"workflow.run.{task.WorkflowRunId}");
+            Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        }
+        Assert.IsNull((await TaskState(completedId)).WorkflowRunId);
+        Assert.AreEqual(ids.Count, _reader.Reads);
+        await using var verification = _services.CreateAsyncScope();
+        Assert.AreEqual(ids.Count, await verification.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.CountAsync());
+    }
+
+    [TestMethod]
     public async Task RepeatedRetryKeepsOneRunAndExecutesAfterTheRequestScopeIsDisposed()
     {
         _extractor.FailuresRemaining = 1;
@@ -241,7 +329,7 @@ public sealed class PostParserWorkflowTests
     }
 
     [TestMethod]
-    public async Task StartAllSkipsFinishedFailedAndWaitingPosts()
+    public async Task StartAllRetriesFailedPostsAndSkipsFinishedAndWaitingPosts()
     {
         var completeId = await Add("https://example.test/post/complete");
         await Reparse(completeId);
@@ -266,11 +354,184 @@ public sealed class PostParserWorkflowTests
 
         Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(completeId)).WorkflowStatus);
         Assert.AreEqual(completedRun, (await TaskState(completeId)).WorkflowRunId);
-        Assert.AreEqual(WorkflowRunStatus.Failed, (await TaskState(failedId)).WorkflowStatus);
+        Assert.AreEqual(WorkflowRunStatus.Pending, (await TaskState(failedId)).WorkflowStatus);
         Assert.AreEqual(failedRun, (await TaskState(failedId)).WorkflowRunId);
+        Assert.IsNull((await TaskState(failedId)).Error);
         Assert.AreEqual(WorkflowRunStatus.Waiting, (await TaskState(waitingId)).WorkflowStatus);
         Assert.AreEqual(waitingRun, (await TaskState(waitingId)).WorkflowRunId);
         Assert.IsNotNull((await TaskState(pendingId)).WorkflowRunId);
+    }
+
+    [TestMethod]
+    [DataRow(WorkflowRunStatus.Failed)]
+    [DataRow(WorkflowRunStatus.Interrupted)]
+    [DataRow(WorkflowRunStatus.Cancelled)]
+    public async Task BulkAndRowRetryShareOneStoppedRunAndResumeItsSavedContent(WorkflowRunStatus stoppedStatus)
+    {
+        _extractor.FailuresRemaining = 1;
+        var id = await Add();
+        await Reparse(id);
+        var before = await TaskState(id);
+        var runId = before.WorkflowRunId!.Value;
+        var manager = _services.GetRequiredService<BTaskManager>();
+        await manager.Start($"workflow.run.{runId}");
+        await WaitForBTask($"workflow.run.{runId}");
+        Assert.AreEqual(WorkflowRunStatus.Failed, (await TaskState(id)).WorkflowStatus);
+        await using (var scope = _services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.Where(r => r.Id == runId)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, stoppedStatus));
+
+        var trigger = _services.GetRequiredService<PostParserTaskTrigger>();
+        await Task.WhenAll(trigger.Start(), trigger.Start(), Retry(id), Retry(id));
+        await WaitForBTask(PostParserTaskTrigger.TaskId);
+        await trigger.Start();
+        await WaitForBTask(PostParserTaskTrigger.TaskId);
+
+        var queued = await TaskState(id);
+        Assert.AreEqual(runId, queued.WorkflowRunId);
+        Assert.AreEqual(before.Revision, queued.Revision);
+        Assert.AreEqual(WorkflowRunStatus.Pending, queued.WorkflowStatus);
+        Assert.AreEqual(1, manager.Tasks.Count(t => t.Id == $"workflow.run.{runId}"));
+        await manager.Start($"workflow.run.{runId}");
+        await WaitForBTask($"workflow.run.{runId}");
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual(1, _reader.Reads, "Retry must resume saved content instead of fetching the post again.");
+        Assert.AreEqual(2, _extractor.Extractions);
+        await using var verification = _services.CreateAsyncScope();
+        Assert.AreEqual(1, await verification.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.CountAsync());
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task StartAllRestartsLegacyErrorsAndMissingRuns(bool missingRun)
+    {
+        int id;
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            var task = new PostParserTaskDbModel
+            {
+                Link = "https://example.test/legacy-error", Error = "Old failure", Revision = 2,
+                WorkflowRunId = missingRun ? 123456 : null,
+                Results = "{\"DownloadInfo\":{\"resources\":[]}}", ParsingState = "partial"
+            };
+            db.PostParserTasks.Add(task);
+            await db.SaveChangesAsync();
+            id = task.Id;
+        }
+        var trigger = _services.GetRequiredService<PostParserTaskTrigger>();
+        await Task.WhenAll(trigger.Start(), trigger.Start());
+        await WaitForBTask(PostParserTaskTrigger.TaskId);
+        var queued = await TaskState(id);
+        Assert.IsNotNull(queued.WorkflowRunId);
+        Assert.AreNotEqual(123456, queued.WorkflowRunId);
+        Assert.AreEqual(3, queued.Revision);
+        Assert.IsNull(queued.Error);
+        Assert.IsNull(queued.Results);
+        var manager = _services.GetRequiredService<BTaskManager>();
+        await manager.Start($"workflow.run.{queued.WorkflowRunId}");
+        await WaitForBTask($"workflow.run.{queued.WorkflowRunId}");
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual(1, _reader.Reads);
+    }
+
+    [TestMethod]
+    public async Task ARejectedBulkRetryKeepsItsReasonAndDoesNotPreventOtherPostsFromStarting()
+    {
+        _extractor.FailuresRemaining = 1;
+        var failedId = await Add("https://example.test/failed");
+        await Reparse(failedId);
+        var failedRun = (await TaskState(failedId)).WorkflowRunId!.Value;
+        await Execute(failedRun);
+        await using (var scope = _services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.Where(r => r.Id == failedRun)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.PayloadJson, "malformed"));
+        var pendingId = await Add("https://example.test/pending");
+
+        await _services.GetRequiredService<PostParserTaskTrigger>().Start();
+        await WaitForBTask(PostParserTaskTrigger.TaskId, BTaskStatus.Error);
+
+        var failed = await TaskState(failedId);
+        Assert.AreEqual(failedRun, failed.WorkflowRunId);
+        Assert.AreEqual(WorkflowRunStatus.Failed, failed.WorkflowStatus);
+        StringAssert.Contains(failed.Error, "Run payload is invalid");
+        Assert.AreEqual(failed.Error, (await RunState(failedRun)).ErrorMessage);
+        var pending = await TaskState(pendingId);
+        Assert.IsNotNull(pending.WorkflowRunId);
+        var manager = _services.GetRequiredService<BTaskManager>();
+        await manager.Start($"workflow.run.{pending.WorkflowRunId}");
+        await WaitForBTask($"workflow.run.{pending.WorkflowRunId}");
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(pendingId)).WorkflowStatus);
+    }
+
+    [TestMethod]
+    public async Task BulkRetryDoesNotReplaceAStoppedRunWhileItsBackgroundTaskIsStillUnwinding()
+    {
+        var id = await Add();
+        await Reparse(id);
+        var runId = (await TaskState(id)).WorkflowRunId!.Value;
+        var manager = _services.GetRequiredService<BTaskManager>();
+        await manager.Clean($"workflow.run.{runId}");
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await manager.Enqueue(BTaskBuilder.Create($"workflow.run.{runId}").Persistent().Run(async _ =>
+        {
+            await using var scope = _services.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.Where(r => r.Id == runId)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Failed)
+                    .SetProperty(r => r.ErrorMessage, "Finishing failure"));
+            entered.TrySetResult();
+            await release.Task;
+        }));
+        await manager.Start($"workflow.run.{runId}");
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var pendingId = await Add("https://example.test/pending");
+        try
+        {
+            await _services.GetRequiredService<PostParserTaskTrigger>().Start();
+            await WaitForBTask(PostParserTaskTrigger.TaskId);
+            Assert.AreEqual(WorkflowRunStatus.Failed, (await TaskState(id)).WorkflowStatus);
+            Assert.AreEqual(BTaskStatus.Running, manager.Tasks.Single(t => t.Id == $"workflow.run.{runId}").Task.Status);
+            Assert.IsNotNull((await TaskState(pendingId)).WorkflowRunId);
+        }
+        finally { release.TrySetResult(); }
+        await WaitForBTask($"workflow.run.{runId}");
+    }
+
+    [TestMethod]
+    public async Task FailedBulkDispatchTransactionDoesNotLeakTrackedChangesIntoTheNextPost()
+    {
+        var failedId = await Add("https://example.test/failed-transaction");
+        var nextId = await Add("https://example.test/next");
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            var injected = false;
+            db.SavingChanges += (_, _) =>
+            {
+                if (injected || !db.ChangeTracker.Entries<PostParserTaskDbModel>()
+                        .Any(e => e.Entity.Id == failedId && e.Entity.WorkflowRunId != null)) return;
+                injected = true;
+                throw new InvalidOperationException("Fixture failed while linking the new workflow run.");
+            };
+            await Assert.ThrowsExceptionAsync<AggregateException>(() => scope.ServiceProvider
+                .GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>().DispatchAsync());
+            Assert.IsTrue(injected);
+        }
+
+        var failed = await TaskState(failedId);
+        Assert.IsNull(failed.WorkflowRunId, "The rolled-back run must not be linked by a later post's SaveChanges.");
+        StringAssert.Contains(failed.Error, "Fixture failed while linking");
+        var next = await TaskState(nextId);
+        Assert.IsNotNull(next.WorkflowRunId);
+        await using (var scope = _services.CreateAsyncScope())
+            Assert.AreEqual(1, await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.CountAsync());
+        var manager = _services.GetRequiredService<BTaskManager>();
+        await manager.Start($"workflow.run.{next.WorkflowRunId}");
+        await WaitForBTask($"workflow.run.{next.WorkflowRunId}");
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(nextId)).WorkflowStatus);
+        Assert.AreEqual(1, _reader.Reads);
     }
 
     [TestMethod]

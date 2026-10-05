@@ -1,10 +1,11 @@
 import type { Api } from "@/sdk/Api";
 import type { PostParserTask } from "@/core/models/PostParserTask";
 import type { PostParserSource } from "@/sdk/constants";
+import type { PreviewStoredPostParserTask } from "./fixtures";
 
 import { completeResult, createFixtures } from "./fixtures";
 
-import { PostParseTarget, UiTheme, WorkflowRunStatus } from "@/sdk/constants";
+import { PostParseTarget, PostParseTargetLabel, UiTheme, WorkflowRunStatus } from "@/sdk/constants";
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
 
 export type PreviewScenario = "all" | "waiting" | "complete" | "failure" | "empty";
@@ -25,7 +26,12 @@ interface PreviewRun {
   logs: never[];
   outputPreview: null;
 }
-let records = createFixtures();
+// Old persisted inputs may not have saved a target. The server restores the default on read.
+const readTask = (task: PreviewStoredPostParserTask): PostParserTask => ({
+  ...task,
+  targets: task.targets?.length ? task.targets : [PostParseTarget.DownloadInfo],
+});
+let records = createFixtures().map(readTask);
 let scenario: PreviewScenario = "all";
 let generation = 0;
 let runId = 2000;
@@ -99,7 +105,9 @@ const asRun = (task: PostParserTask): PreviewRun => ({
   outputPreview: null,
 });
 const seedRuns = () => {
-  const current = records.filter((task) => task.workflowRunId).map(asRun);
+  const current = records
+    .filter((task) => task.workflowRunId && task.workflowStatus != null)
+    .map(asRun);
   const completed = current.find((run) => run.postParserTaskId === 4)!;
 
   return [
@@ -157,7 +165,28 @@ const isActive = (task: PostParserTask) =>
   (task.workflowStatus === WorkflowRunStatus.Pending ||
     task.workflowStatus === WorkflowRunStatus.Running);
 const isPending = (task: PostParserTask) =>
-  !task.isDeleted && !task.error && task.workflowRunId == null;
+  !task.isDeleted &&
+  !task.error &&
+  task.workflowRunId == null &&
+  ((task.parsingState != null && task.parsingState !== "complete") ||
+    task.results == null ||
+    task.targets.some(
+      (target) =>
+        !Object.prototype.hasOwnProperty.call(task.results, target) &&
+        !Object.prototype.hasOwnProperty.call(task.results, PostParseTargetLabel[target]),
+    ));
+const isBatchEligible = (task: PostParserTask) =>
+  !task.isDeleted &&
+  !isActive(task) &&
+  (task.workflowRunId == null
+    ? !!task.error || isPending(task)
+    : task.workflowStatus == null
+      ? !!task.error
+      : [
+          WorkflowRunStatus.Failed,
+          WorkflowRunStatus.Interrupted,
+          WorkflowRunStatus.Cancelled,
+        ].includes(task.workflowStatus));
 const visible = () =>
   records
     .filter(
@@ -183,11 +212,13 @@ const update = (id: number, transform: (task: PostParserTask) => PostParserTask)
 export const resetPreview = () => {
   generation++;
   externallyUnlocked.clear();
-  records = createFixtures().map((task) => ({
-    ...task,
-    autoBuyThreshold: options.soulPlus.autoBuyThreshold,
-    minimumRemainingCoins: options.soulPlus.minimumRemainingCoins,
-  }));
+  records = createFixtures()
+    .map(readTask)
+    .map((task) => ({
+      ...task,
+      autoBuyThreshold: options.soulPlus.autoBuyThreshold,
+      minimumRemainingCoins: options.soulPlus.minimumRemainingCoins,
+    }));
   runs = seedRuns();
   runId = 2000;
   publish();
@@ -446,7 +477,8 @@ const mockApi = {
       reParsePostParserTask: (id: number) => retry(id, true),
       purchasePostParserTaskContent: purchase,
       startAllPostParserTasks: async () => {
-        for (const task of records.filter(isPending)) await retry(task.id);
+        for (const task of records.filter(isBatchEligible))
+          await retry(task.id, task.workflowRunId != null && task.workflowStatus == null);
 
         return { code: 0 };
       },
