@@ -130,7 +130,7 @@
   "postParser.action.openPost": "打开原帖",
   "postParser.action.openPostToUnlock": "去原帖查看并购买",
   "postParser.action.fetchPost": "获取并解析",
-  "postParser.action.refreshAfterUnlock": "购买后刷新解析",
+  "postParser.action.refreshAfterUnlock": "重新解析",
   "postParser.action.continueParsing": "继续解析",
   "postParser.action.refreshPost": "刷新并重新解析",
   "postParser.operations.source": "原帖",
@@ -187,5 +187,10 @@
   "postParser.action.queueing": "正在排队",
   "postParser.action.viewAllRuns": "全部执行记录",
   "postParser.history.all": "全部帖子解析记录",
-  "postParser.history.task": "帖子 #{{id}} · {{title}}"
+  "postParser.history.task": "帖子 #{{id}} · {{title}}",
+  "postParser.label.processing": "处理中",
+  "postParser.action.unlockForAmount": "花费 {{amount}} 金币一键解锁",
+  "postParser.action.noEligibleUnlock": "暂无符合条件的解锁项",
+  "postParser.purchase.excluded": "另有 {{count}} 项不满足购买条件，已知总价为 {{amount}} 金币（受单项金额上限和最低保留金币限制）。",
+  "postParser.purchase.unknownPrices": "其中 {{count}} 项价格未知，未计入总价，也不会购买。"
 }

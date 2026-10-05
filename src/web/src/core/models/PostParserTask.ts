@@ -44,6 +44,13 @@ export interface PostParserTask {
   parsingMessage?: string | null;
   minimumRemainingCoins?: number;
   autoBuyThreshold?: number;
+  purchaseQuote?: {
+    eligibleLockUrls: string[];
+    eligibleTotal: number;
+    excludedTotal: number;
+    excludedCount: number;
+    unknownPriceCount: number;
+  } | null;
   createdAt?: string | null;
   completedAt?: string | null;
   targets: PostParseTarget[];

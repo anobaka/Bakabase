@@ -77,10 +77,52 @@ public class SharedContentPurchasePolicyTests
         Assert.IsTrue(result.Content.Locks.Single(l => l.Url == "new").IsBought == false);
     }
 
+    [TestMethod]
+    public async Task OneClickApprovalKeepsTheConfiguredThresholdAndApprovedTotal()
+    {
+        var account = new Account {Balance = 100};
+        account.Parts.AddRange([new("first", 5, false), new("second", 5, false), new("dear", 10, false)]);
+        var result = await account.Policy().PurchaseAsync("thread", "SoulPlus", 5, 0,
+            new Dictionary<string, decimal?> {["first"] = 5, ["second"] = 5, ["dear"] = 10},
+            enforceThreshold: true, maxTotalCost: 5);
+
+        CollectionAssert.AreEqual(new[] {"first"}, result.PurchasedUrls);
+        Assert.AreEqual(95m, account.Balance);
+        Assert.IsTrue(result.Warnings.Any(w => w.Contains("total cost")));
+        Assert.IsTrue(result.Warnings.Any(w => w.Contains("automatic purchase limit")));
+    }
+
+    [TestMethod]
+    public async Task SharedEndpointIsBoughtOnceAndConflictingPricesNeverAuthorizeSpending()
+    {
+        var account = new Account {Balance = 100};
+        account.Parts.AddRange([new("shared", 5, false), new("shared", 5, false),
+            new("conflict", 3, false), new("conflict", 4, false)]);
+        var result = await account.Policy().PurchaseAsync("thread", "SoulPlus", 10, 0);
+
+        CollectionAssert.AreEqual(new[] {"shared"}, result.PurchasedUrls);
+        Assert.AreEqual(95m, account.Balance);
+        Assert.AreEqual(2, result.Content.Locks.Count(l => !l.IsBought));
+        Assert.IsTrue(result.Warnings.Any(w => w.Contains("price is unknown")));
+    }
+
+    [TestMethod]
+    public async Task RefreshAfterPurchaseSkipsOtherItemsUnlockedByTheSite()
+    {
+        var account = new Account {Balance = 100, UnlockAll = true};
+        account.Parts.AddRange([new("first", 5, false), new("also-unlocked", 5, false)]);
+        var result = await account.Policy().PurchaseAsync("thread", "SoulPlus", 5, 0);
+
+        CollectionAssert.AreEqual(new[] {"first"}, result.PurchasedUrls);
+        Assert.AreEqual(95m, account.Balance);
+        Assert.IsTrue(result.Content.Locks.All(l => l.IsBought));
+    }
+
     private sealed class Account : IPostContentService, ISharedContentPurchaser
     {
         public decimal? Balance;
         public bool FilterByReference;
+        public bool UnlockAll;
         public List<PostContentLock> Parts { get; } = [];
         public string AccountKey { get; } = Guid.NewGuid().ToString();
         public PostParserSource Source => PostParserSource.SoulPlus;
@@ -97,7 +139,8 @@ public class SharedContentPurchasePolicyTests
             var index = Parts.FindIndex(l => l.Url == lockUrl);
             var part = Parts[index];
             if (Balance != null) Balance -= part.Price;
-            Parts[index] = part with {IsBought = true};
+            for (var i = 0; i < Parts.Count; i++)
+                if (UnlockAll || Parts[i].Url == lockUrl) Parts[i] = Parts[i] with {IsBought = true};
         }
     }
 }

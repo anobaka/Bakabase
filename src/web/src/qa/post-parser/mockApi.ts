@@ -37,6 +37,50 @@ const options = {
 };
 const clone = <T>(value: T): T => structuredClone(value);
 const ok = <T>(data?: T) => Promise.resolve({ code: 0, data: clone(data) });
+const purchaseQuote = (task: PostParserTask) => {
+  if (!task.contentSnapshot) return null;
+  const quote = {
+    eligibleLockUrls: [] as string[],
+    eligibleTotal: 0,
+    excludedTotal: 0,
+    excludedCount: 0,
+    unknownPriceCount: 0,
+  };
+  const groups = new Map<string, typeof task.contentSnapshot.locks>();
+
+  for (const [index, lock] of task.contentSnapshot.locks.entries()) {
+    if (lock.isBought) continue;
+    const key = lock.url || `missing-url:${index}`;
+
+    groups.set(key, [...(groups.get(key) || []), lock]);
+  }
+  let balance = task.contentSnapshot.balance;
+
+  for (const group of groups.values()) {
+    const { price, url } = group[0];
+    const unknown =
+      price == null ||
+      !Number.isFinite(price) ||
+      price < 0 ||
+      group.some((lock) => lock.price !== price);
+    const minimum = task.minimumRemainingCoins || 0;
+    const canAfford =
+      balance == null ? price === 0 && minimum === 0 : balance - (price || 0) >= minimum;
+
+    if (unknown || !url || price! > (task.autoBuyThreshold || 0) || !canAfford) {
+      quote.excludedCount++;
+      if (unknown) quote.unknownPriceCount++;
+      else quote.excludedTotal += price!;
+      continue;
+    }
+    quote.eligibleLockUrls.push(url);
+    quote.eligibleTotal += price!;
+    if (balance != null) balance -= price!;
+  }
+
+  return quote;
+};
+const withQuote = (task: PostParserTask) => ({ ...task, purchaseQuote: purchaseQuote(task) });
 const asRun = (task: PostParserTask): PreviewRun => ({
   id: task.workflowRunId!,
   postParserTaskId: task.id,
@@ -115,14 +159,16 @@ const isActive = (task: PostParserTask) =>
 const isPending = (task: PostParserTask) =>
   !task.isDeleted && !task.error && task.workflowRunId == null;
 const visible = () =>
-  records.filter(
-    (task) =>
-      !task.isDeleted &&
-      (scenario === "all" ||
-        (scenario === "waiting" && task.workflowStatus === WorkflowRunStatus.Waiting) ||
-        (scenario === "complete" && task.workflowStatus === WorkflowRunStatus.Success) ||
-        (scenario === "failure" && !!task.error)),
-  );
+  records
+    .filter(
+      (task) =>
+        !task.isDeleted &&
+        (scenario === "all" ||
+          (scenario === "waiting" && task.workflowStatus === WorkflowRunStatus.Waiting) ||
+          (scenario === "complete" && task.workflowStatus === WorkflowRunStatus.Success) ||
+          (scenario === "failure" && !!task.error)),
+    )
+    .map(withQuote);
 const publish = () => usePostParserTasksStore.getState().setTasks(clone(visible()));
 const announce = (message: string) =>
   window.dispatchEvent(new CustomEvent("post-parser-preview-action", { detail: message }));
@@ -137,7 +183,11 @@ const update = (id: number, transform: (task: PostParserTask) => PostParserTask)
 export const resetPreview = () => {
   generation++;
   externallyUnlocked.clear();
-  records = createFixtures();
+  records = createFixtures().map((task) => ({
+    ...task,
+    autoBuyThreshold: options.soulPlus.autoBuyThreshold,
+    minimumRemainingCoins: options.soulPlus.minimumRemainingCoins,
+  }));
   runs = seedRuns();
   runId = 2000;
   publish();
@@ -149,28 +199,72 @@ export const setPreviewScenario = (value: PreviewScenario) => {
 };
 export const getPreviewOptions = () => clone(options);
 const finish = (id: number) =>
-  update(id, (task) => ({
-    ...task,
-    error: undefined,
-    workflowStatus: WorkflowRunStatus.Success,
-    parsingState: "complete",
-    parsingMessage: undefined,
-    completedAt: new Date().toISOString(),
-    contentSnapshot: task.contentSnapshot
-      ? {
-          ...task.contentSnapshot,
-          capturedAt: new Date().toISOString(),
-          locks: task.contentSnapshot.locks.map((lock) => ({ ...lock, isBought: true })),
-        }
-      : {
-          title: task.title,
-          mainHtml: "<p>已获取完整帖子，下载与解压说明已提取。</p>",
-          capturedAt: new Date().toISOString(),
-          scope: task.text ? "pastedText" : "firstPage",
-          locks: [],
+  update(id, (task) => {
+    const locked = task.contentSnapshot?.locks.some((lock) => !lock.isBought);
+
+    return {
+      ...task,
+      error: undefined,
+      workflowStatus: locked ? WorkflowRunStatus.Waiting : WorkflowRunStatus.Success,
+      parsingState: locked
+        ? task.availability?.status === "expired"
+          ? "possiblyExpired"
+          : "awaitingPurchase"
+        : "complete",
+      parsingMessage: locked ? "仍有超出购买限制的内容，已保留可读取部分的解析结果。" : undefined,
+      completedAt: locked ? undefined : new Date().toISOString(),
+      contentSnapshot: task.contentSnapshot
+        ? {
+            ...task.contentSnapshot,
+            capturedAt: new Date().toISOString(),
+          }
+        : {
+            title: task.title,
+            mainHtml: "<p>已获取完整帖子，下载与解压说明已提取。</p>",
+            capturedAt: new Date().toISOString(),
+            scope: task.text ? "pastedText" : "firstPage",
+            locks: [],
+          },
+      results: {
+        [PostParseTarget.DownloadInfo]: {
+          ...completeResult(task.title || "新帖子"),
+          isComplete: !locked,
+          warnings: locked ? ["尚有未解锁内容，部分密码或处理步骤可能缺失。"] : [],
         },
-    results: { [PostParseTarget.DownloadInfo]: completeResult(task.title || "新帖子") },
-  }));
+      },
+    };
+  });
+const unlockEligible = (id: number, selectedUrls?: string[]) => {
+  update(id, (task) => {
+    const quote = purchaseQuote(task);
+    const urls = new Set(
+      quote?.eligibleLockUrls.filter((url) => !selectedUrls || selectedUrls.includes(url)),
+    );
+    const charged = new Set<string>();
+    let cost = 0;
+    const snapshot = task.contentSnapshot;
+
+    if (!snapshot) return task;
+    const locks = snapshot.locks.map((lock) => {
+      if (lock.isBought || !lock.url || !urls.has(lock.url)) return lock;
+      if (!charged.has(lock.url)) {
+        charged.add(lock.url);
+        cost += lock.price || 0;
+      }
+
+      return { ...lock, isBought: true };
+    });
+
+    return {
+      ...task,
+      contentSnapshot: {
+        ...snapshot,
+        balance: snapshot.balance == null ? snapshot.balance : snapshot.balance - cost,
+        locks,
+      },
+    };
+  });
+};
 const retry = (id: number, reparse = false) => {
   const task = records.find((item) => item.id === id);
 
@@ -179,8 +273,6 @@ const retry = (id: number, reparse = false) => {
   if (!reparse && task.workflowStatus === WorkflowRunStatus.Success) return ok();
   const epoch = generation;
   const currentRunId = reparse ? ++runId : task.workflowRunId || ++runId;
-  const locked =
-    task.contentSnapshot?.locks.some((lock) => !lock.isBought) && !externallyUnlocked.has(id);
 
   if (reparse && task.workflowRunId) {
     runs = runs.map((run) =>
@@ -205,13 +297,28 @@ const retry = (id: number, reparse = false) => {
       generation === epoch &&
       records.find((item) => item.id === id)?.workflowRunId === currentRunId
     ) {
-      if (locked) {
+      if (externallyUnlocked.has(id)) {
+        update(id, (current) => ({
+          ...current,
+          contentSnapshot: current.contentSnapshot && {
+            ...current.contentSnapshot,
+            locks: current.contentSnapshot.locks.map((lock) => ({ ...lock, isBought: true })),
+          },
+        }));
+      } else if (task.availability?.status !== "expired") {
+        unlockEligible(id);
+      }
+      if (
+        records
+          .find((item) => item.id === id)
+          ?.contentSnapshot?.locks.some((lock) => !lock.isBought)
+      ) {
         update(id, (current) => ({
           ...current,
           workflowStatus: WorkflowRunStatus.Waiting,
           parsingState:
             task.parsingState === "possiblyExpired" ? "possiblyExpired" : "awaitingPurchase",
-          parsingMessage: "示例原帖仍有未解锁内容。点击原帖可模拟站外解锁，再刷新解析。",
+          parsingMessage: "示例原帖仍有未解锁内容，可在原帖购买后重新解析。",
         }));
         announce("已模拟重新检查，原帖内容尚未解锁。");
 
@@ -221,6 +328,97 @@ const retry = (id: number, reparse = false) => {
       announce("模拟解析完成，结果已更新。");
     }
   }, 1000);
+
+  return ok();
+};
+const purchase = (
+  id: number,
+  input: { revision: number; lockUrls: string[]; maxTotalCost: number },
+) => {
+  const task = records.find((item) => item.id === id);
+
+  if (!task || task.isDeleted) return Promise.resolve({ code: 404, message: "示例帖子不存在。" });
+  if (isActive(task)) return ok();
+  if (task.revision !== input.revision)
+    return Promise.resolve({ code: 409, message: "帖子版本已变化，请重新查看购买报价。" });
+  const quote = purchaseQuote(task);
+  const alreadyBought =
+    input.lockUrls.length > 0 &&
+    input.lockUrls.every((url) => {
+      const locks = task.contentSnapshot?.locks.filter((lock) => lock.url === url);
+
+      return locks?.length && locks.every((lock) => lock.isBought);
+    });
+
+  if (alreadyBought) return ok();
+  if (
+    !quote?.eligibleLockUrls.length &&
+    !task.contentSnapshot?.locks.some((lock) => !lock.isBought)
+  )
+    return ok();
+  if (
+    task.availability?.status !== "expired" ||
+    !input.lockUrls.length ||
+    input.lockUrls.some((url) => !quote?.eligibleLockUrls.includes(url))
+  )
+    return Promise.resolve({ code: 400, message: "购买项不符合当前购买金额或余额限制。" });
+  const selectedCost = (item: PostParserTask) => {
+    const prices = new Map(
+      item.contentSnapshot?.locks
+        .filter((lock) => !lock.isBought && lock.url && input.lockUrls.includes(lock.url))
+        .map((lock) => [lock.url!, lock.price || 0]),
+    );
+
+    return [...prices.values()].reduce((sum, price) => sum + price, 0);
+  };
+
+  if (!Number.isFinite(input.maxTotalCost) || input.maxTotalCost < selectedCost(task))
+    return Promise.resolve({ code: 409, message: "当前价格超出确认的总价，请重新查看购买报价。" });
+  const epoch = generation;
+  const currentRunId = task.workflowRunId || ++runId;
+  const current = () =>
+    generation === epoch && records.find((item) => item.id === id)?.workflowRunId === currentRunId;
+
+  update(id, (item) => ({
+    ...item,
+    workflowRunId: currentRunId,
+    workflowDefinitionId: item.workflowDefinitionId || 1,
+    workflowStatus: WorkflowRunStatus.Pending,
+    error: undefined,
+    parsingMessage: "解锁已排队，等待发送购买请求…",
+  }));
+  window.setTimeout(() => {
+    if (!current()) return;
+    update(id, (item) => ({
+      ...item,
+      workflowStatus: WorkflowRunStatus.Running,
+      parsingMessage: "正在购买并解锁内容…",
+    }));
+  }, 300);
+  window.setTimeout(() => {
+    if (!current()) return;
+    const latest = records.find((item) => item.id === id)!;
+
+    if (selectedCost(latest) > input.maxTotalCost) {
+      update(id, (item) => ({
+        ...item,
+        workflowStatus: WorkflowRunStatus.Waiting,
+        parsingMessage: "当前价格超出确认的总价，没有发送购买请求。",
+      }));
+
+      return;
+    }
+    unlockEligible(id, input.lockUrls);
+    update(id, (item) => ({
+      ...item,
+      parsingMessage: "已解锁符合条件的内容，正在通过 AI 重新提取下载与处理说明…",
+    }));
+  }, 1500);
+  window.setTimeout(() => {
+    if (!current() || !isActive(records.find((item) => item.id === id)!)) return;
+    finish(id);
+    announce("示例解锁与 AI 解析完成；实际账号没有扣款。");
+  }, 3000);
 
   return ok();
 };
@@ -246,6 +444,7 @@ const mockApi = {
       searchPostParserWorkflowRuns: searchRuns,
       retryPostParserTaskWorkflow: (id: number) => retry(id),
       reParsePostParserTask: (id: number) => retry(id, true),
+      purchasePostParserTaskContent: purchase,
       startAllPostParserTasks: async () => {
         for (const task of records.filter(isPending)) await retry(task.id);
 
@@ -399,7 +598,7 @@ const mockApi = {
 
         if (task?.contentSnapshot?.locks.some((lock) => !lock.isBought)) {
           externallyUnlocked.add(task.id);
-          announce("已模拟在原帖解锁内容。现在点击“刷新解析”或“重试”查看完整结果。");
+          announce("已模拟在原帖解锁内容。现在点击“重新解析”或“重试”查看完整结果。");
         } else announce("已模拟打开链接，没有访问外部站点。");
 
         return ok();

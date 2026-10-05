@@ -2582,6 +2582,18 @@ export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstants
 export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserTaskStatus =
   0 | 1 | 2 | 3 | 4;
 
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserPurchaseQuote {
+  eligibleLockUrls: string[];
+  /** @format double */
+  eligibleTotal: number;
+  /** @format double */
+  excludedTotal: number;
+  /** @format int32 */
+  excludedCount: number;
+  /** @format int32 */
+  unknownPriceCount: number;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
   /** @format int32 */
   id: number;
@@ -2598,6 +2610,7 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
   autoBuyThreshold: number;
   /** @format int32 */
   minimumRemainingCoins: number;
+  purchaseQuote?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserPurchaseQuote;
   text?: string;
   /** @format date-time */
   createdAt?: string;
@@ -6856,6 +6869,8 @@ export interface BakabaseServiceControllersPostParserPurchaseInput {
    * @minItems 1
    */
   lockUrls: string[];
+  /** @format double */
+  maxTotalCost: number;
 }
 
 export interface BakabaseServiceControllersResourceHealthScoreRowViewModel {

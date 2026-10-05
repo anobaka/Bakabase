@@ -19,6 +19,7 @@ beforeEach(async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-05T04:00:00Z"));
   await mockApi.options.patchThirdPartyOptions({ automaticallyParsingPosts: false });
+  await mockApi.options.patchSoulPlusOptions({ autoBuyThreshold: 5, minimumRemainingCoins: 50 });
   setPreviewScenario("all");
   resetPreview();
 });
@@ -117,5 +118,110 @@ describe("post-parser preview action boundaries", () => {
     expect(task(4)).toBeUndefined();
     expect((await history(4)).totalCount).toBe(3);
     expect((await history()).totalCount).toBe(all.totalCount! + 1);
+  });
+
+  it("quotes a shared unlock once and distinguishes an excluded item from an all-eligible quote", () => {
+    expect(task(3).contentSnapshot?.locks).toHaveLength(2);
+    expect(task(3).purchaseQuote).toEqual({
+      eligibleLockUrls: [task(3).contentSnapshot!.locks[0].url],
+      eligibleTotal: 3,
+      excludedTotal: 0,
+      excludedCount: 0,
+      unknownPriceCount: 0,
+    });
+    expect(task(9).purchaseQuote).toMatchObject({
+      eligibleTotal: 3,
+      excludedTotal: 8,
+      excludedCount: 1,
+      unknownPriceCount: 0,
+    });
+  });
+
+  it("shows queued, purchasing and AI states while unlocking only the chosen post once", async () => {
+    const unrelated = tasks().filter((item) => item.id !== 3);
+    const request = {
+      revision: task(3).revision!,
+      lockUrls: task(3).purchaseQuote!.eligibleLockUrls,
+      maxTotalCost: 3,
+    };
+
+    await Promise.all([
+      mockApi.postParser.purchasePostParserTaskContent(3, request),
+      mockApi.postParser.purchasePostParserTaskContent(3, request),
+      mockApi.postParser.reParsePostParserTask(3),
+    ]);
+    expect(task(3).workflowStatus).toBe(WorkflowRunStatus.Pending);
+    expect(task(3).contentSnapshot?.balance).toBe(120);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(task(3).workflowStatus).toBe(WorkflowRunStatus.Running);
+    expect(task(3).parsingMessage).toContain("正在购买");
+    await vi.advanceTimersByTimeAsync(1200);
+    expect(task(3).workflowStatus).toBe(WorkflowRunStatus.Running);
+    expect(task(3).parsingMessage).toContain("AI");
+    expect(task(3).contentSnapshot?.balance).toBe(117);
+    expect(task(3).contentSnapshot?.locks.every((lock) => lock.isBought)).toBe(true);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(task(3).workflowStatus).toBe(WorkflowRunStatus.Success);
+    expect(task(3).results?.[PostParseTarget.DownloadInfo]).toMatchObject({ isComplete: true });
+    await mockApi.postParser.purchasePostParserTaskContent(3, request);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(task(3).contentSnapshot?.balance).toBe(117);
+    expect(tasks().filter((item) => item.id !== 3)).toEqual(unrelated);
+    expect((await history(3)).totalCount).toBe(1);
+  });
+
+  it("keeps a partially unlocked post waiting after extracting the newly readable content", async () => {
+    await mockApi.postParser.purchasePostParserTaskContent(9, {
+      revision: task(9).revision!,
+      lockUrls: task(9).purchaseQuote!.eligibleLockUrls,
+      maxTotalCost: 3,
+    });
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(task(9).workflowStatus).toBe(WorkflowRunStatus.Waiting);
+    expect(task(9).contentSnapshot?.balance).toBe(117);
+    expect(task(9).contentSnapshot?.locks.map((lock) => lock.isBought)).toEqual([true, false]);
+    expect(task(9).purchaseQuote).toMatchObject({
+      eligibleTotal: 0,
+      eligibleLockUrls: [],
+      excludedTotal: 8,
+      excludedCount: 1,
+    });
+    expect(task(9).results?.[PostParseTarget.DownloadInfo]).toMatchObject({ isComplete: false });
+    expect(task(9).completedAt).toBeUndefined();
+  });
+
+  it("applies the reserve to quotes and honors the confirmed total before spending", async () => {
+    const request = {
+      revision: task(3).revision!,
+      lockUrls: task(3).purchaseQuote!.eligibleLockUrls,
+      maxTotalCost: 2,
+    };
+
+    expect((await mockApi.postParser.purchasePostParserTaskContent(3, request)).code).toBe(409);
+    expect(task(3).workflowStatus).toBe(WorkflowRunStatus.Waiting);
+    expect(task(3).contentSnapshot?.balance).toBe(120);
+    await mockApi.options.patchSoulPlusOptions({ minimumRemainingCoins: 118 });
+    expect(task(3).purchaseQuote).toMatchObject({ eligibleTotal: 0, excludedTotal: 3 });
+    expect(
+      (await mockApi.postParser.purchasePostParserTaskContent(3, { ...request, maxTotalCost: 3 }))
+        .code,
+    ).toBe(400);
+    await mockApi.options.patchSoulPlusOptions({ minimumRemainingCoins: 117 });
+    expect(task(3).purchaseQuote).toMatchObject({ eligibleTotal: 3, excludedTotal: 0 });
+  });
+
+  it("automatically buys eligible restored content on reparse and never buys suspected expired content", async () => {
+    await mockApi.options.patchSoulPlusOptions({ autoBuyThreshold: 8 });
+    await Promise.all([
+      mockApi.postParser.reParsePostParserTask(2),
+      mockApi.postParser.reParsePostParserTask(3),
+    ]);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(task(2).contentSnapshot?.balance).toBe(112);
+    expect(task(2).contentSnapshot?.locks.map((lock) => lock.isBought)).toEqual([true, false]);
+    expect(task(2).workflowStatus).toBe(WorkflowRunStatus.Waiting);
+    expect(task(3).contentSnapshot?.balance).toBe(120);
+    expect(task(3).contentSnapshot?.locks.every((lock) => !lock.isBought)).toBe(true);
+    expect(task(3).workflowStatus).toBe(WorkflowRunStatus.Waiting);
   });
 });

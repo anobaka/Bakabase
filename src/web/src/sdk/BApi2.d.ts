@@ -11350,6 +11350,17 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus": 0 | 1 | 2 | 3 | 4;
+        "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserPurchaseQuote": {
+            eligibleLockUrls: string[];
+            /** Format: double */
+            eligibleTotal: number;
+            /** Format: double */
+            excludedTotal: number;
+            /** Format: int32 */
+            excludedCount: number;
+            /** Format: int32 */
+            unknownPriceCount: number;
+        };
         "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask": {
             /** Format: int32 */
             id: number;
@@ -11365,6 +11376,7 @@ export interface components {
             autoBuyThreshold: number;
             /** Format: int32 */
             minimumRemainingCoins: number;
+            purchaseQuote?: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserPurchaseQuote"];
             text?: string;
             /** Format: date-time */
             createdAt?: string;
@@ -14783,6 +14795,8 @@ export interface components {
             /** Format: int32 */
             revision: number;
             lockUrls: string[];
+            /** Format: double */
+            maxTotalCost: number;
         };
         "Bakabase.Service.Controllers.ResourceHealthScoreRowViewModel": {
             /** Format: int32 */

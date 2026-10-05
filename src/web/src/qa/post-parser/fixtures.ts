@@ -137,13 +137,26 @@ export const createFixtures = (): PostParserTask[] => {
   const multiple = task(5, "城市环境音效合集 · 四份独立资源");
   const paid = task(2, "山间小屋插画集 · 等待购买完整说明");
   const expired = task(3, "旧版游戏地图素材 · 链接可能已经失效");
+  const limited = task(9, "旧版建筑素材集 · 部分内容超出购买限制");
   const partial = task(6, "角色动作参考集 · 已取得部分内容");
   const failed = task(7, "摄影光照参考图集 · 获取中断");
   const ai = task(8, "开源字体与排版参考 · 等待 AI 配置");
   const paidSnapshot = snapshot(paid.title!, paid.id, true);
   const partialSnapshot = snapshot(partial.title!, partial.id, true);
+  const expiredSnapshot = snapshot(expired.title!, expired.id, true);
+  const limitedSnapshot = snapshot(limited.title!, limited.id, true);
 
   partialSnapshot.locks[0].isBought = true;
+  // A repeated source purchase URL unlocks both displayed regions for one charge.
+  expiredSnapshot.locks = expiredSnapshot.locks.map((lock) => ({
+    ...lock,
+    price: 3,
+    url: expiredSnapshot.locks[0].url,
+  }));
+  expiredSnapshot.comments = expiredSnapshot.comments?.slice(0, 1);
+  limitedSnapshot.locks[0].price = 3;
+  limitedSnapshot.locks[1].price = 8;
+  limitedSnapshot.comments = limitedSnapshot.comments?.slice(0, 1);
 
   return [
     task(1, "周末自然纹理合集 · 待获取"),
@@ -173,10 +186,7 @@ export const createFixtures = (): PostParserTask[] => {
         evidence: ["这个链接似乎失效了，麻烦楼主确认一下。"],
         reason: "第一页回复报告了失效，未发现后续补档证据。",
       },
-      contentSnapshot: {
-        ...snapshot(expired.title!, expired.id, true),
-        comments: [snapshot(expired.title!, expired.id).comments![0]],
-      },
+      contentSnapshot: expiredSnapshot,
       results: {
         [PostParseTarget.DownloadInfo]: {
           ...completeResult(expired.title!),
@@ -335,6 +345,20 @@ export const createFixtures = (): PostParserTask[] => {
       parsingState: "awaitingAi",
       parsingMessage: "第一页内容已保存。配置帖子解析使用的 AI 模型后，可点击重试继续。",
       contentSnapshot: snapshot(ai.title!, ai.id),
+    },
+    {
+      ...limited,
+      workflowRunId: 1009,
+      workflowDefinitionId: 1,
+      workflowStatus: WorkflowRunStatus.Waiting,
+      parsingState: "possiblyExpired",
+      parsingMessage: "尚未发现补档；主楼 3 金币可解锁，回复中的 8 金币内容超出购买上限。",
+      availability: {
+        status: "expired",
+        evidence: ["这个链接似乎失效了，麻烦楼主确认一下。"],
+        reason: "旧链接收到失效反馈，当前没有明确的补档说明。",
+      },
+      contentSnapshot: limitedSnapshot,
     },
   ];
 };

@@ -318,19 +318,24 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         finally { gate.Semaphore.Release(); }
     }
 
-    public async Task PurchaseAndResumeAsync(int id, int revision, IReadOnlyList<string> lockUrls, CancellationToken ct)
+    public async Task PurchaseAndResumeAsync(int id, int revision, IReadOnlyList<string> lockUrls,
+        decimal maxTotalCost, CancellationToken ct)
     {
         if (lockUrls.Count is 0 or > 100) throw new ArgumentException("Select between 1 and 100 restricted items.");
+        if (maxTotalCost < 0) throw new ArgumentOutOfRangeException(nameof(maxTotalCost), "The approved total cannot be negative.");
         await gate.Semaphore.WaitAsync(ct);
         try
         {
+            if (tasks.IsShuttingDown) throw new InvalidOperationException("The application is shutting down. Try again after restarting.");
             var task = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted, ct)
                 ?? throw new InvalidOperationException("The parsing task no longer exists.");
             if (task.Revision != revision) throw new InvalidOperationException("The post changed. Refresh before purchasing.");
             if (task.WorkflowRunId is not { } runId) throw new InvalidOperationException("Read the post before purchasing.");
+            var run = await Runs.SingleAsync(r => r.Id == runId, ct);
+            // A double click or another client may have already accepted this request.
+            if (run.Status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running) return;
             if (tasks.Tasks.Any(t => t.Id == $"workflow.run.{runId}" && !t.Task.Status.IsFinished()))
                 throw new InvalidOperationException("The previous operation is still finishing. Retry in a moment.");
-            var run = await Runs.SingleAsync(r => r.Id == runId, ct);
             if (run.Status is not (WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted))
                 throw new InvalidOperationException("This parsing task is not waiting for a purchase.");
             var node = await db.Set<WorkflowActivityDbModel>().AsNoTracking().SingleOrDefaultAsync(a =>
@@ -339,9 +344,18 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
                 throw new InvalidOperationException("Refresh or retry this post before purchasing its content.");
             var domain = task.ToDomainModel();
             var content = domain.ContentSnapshot ?? throw new InvalidOperationException("No saved purchase quote exists. Read the post first.");
-            var quotes = content.Locks.Where(l => !l.IsBought && l.Url != null && l.Price != null).Select(l => l.Url!).ToHashSet();
-            if (lockUrls.Any(url => !quotes.Contains(url)))
-                throw new InvalidOperationException("A selected item has no current quoted price. Refresh the post first.");
+            if (domain.Availability?.Status != "expired")
+                throw new InvalidOperationException("One-click unlocking is only available for a post assessed as possibly expired. Parse it again to use automatic purchasing.");
+            var quote = PostParserPurchaseQuote.Create(content, purchaseOptions.Value.AutoBuyThreshold,
+                purchaseOptions.Value.MinimumRemainingCoins);
+            var eligible = quote.EligibleLockUrls.ToHashSet(StringComparer.Ordinal);
+            if (lockUrls.Any(url => !eligible.Contains(url)))
+                throw new InvalidOperationException("A selected item is no longer eligible under the quoted price, purchase limit or minimum balance. Refresh the post before purchasing.");
+            var selected = lockUrls.ToHashSet(StringComparer.Ordinal);
+            var currentTotal = PostParserPurchaseQuote.Offers(content).Where(l => l.Url != null && selected.Contains(l.Url))
+                .Sum(l => l.Price!.Value);
+            if (currentTotal > maxTotalCost)
+                throw new InvalidOperationException("The quoted total has increased since approval. Refresh the post before purchasing.");
             var input = JsonSerializer.Deserialize<PostParserInput>(run.PayloadJson!, WorkflowJson.Options)
                 ?? throw new InvalidOperationException("The parsing input is missing.");
             run.CurrentItemJson = WorkflowItemSnapshot.Capture(new PostParserContentItem(input, content) {Availability = domain.Availability});
@@ -349,9 +363,14 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             run.ErrorMessage = null;
             run.CompletedAt = null;
             await db.SaveChangesAsync(ct);
-            await resumer.ResumeAsync(runId, JsonSerializer.Serialize(new PostParserPurchaseSignal {LockUrls = lockUrls.Distinct().ToList()}, WorkflowJson.Options), ct);
-            await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, (string?)null), ct);
+            await resumer.ResumeAsync(runId, JsonSerializer.Serialize(new PostParserPurchaseSignal
+                {LockUrls = lockUrls.Distinct().ToList(), EnforceConfiguredLimits = true, MaxTotalCost = maxTotalCost}, WorkflowJson.Options), ct);
+            await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, (string?)null)
+                .SetProperty(t => t.CompletedAt, (DateTime?)null), ct);
             cache.ClearCache();
+            task.Error = null;
+            task.CompletedAt = null;
+            await PublishAsync(task, WorkflowRunStatus.Pending);
         }
         finally { gate.Semaphore.Release(); }
     }

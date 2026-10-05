@@ -130,7 +130,7 @@
   "postParser.action.openPost": "Open original post",
   "postParser.action.openPostToUnlock": "Review and buy on source",
   "postParser.action.fetchPost": "Fetch and parse",
-  "postParser.action.refreshAfterUnlock": "Refresh after unlocking",
+  "postParser.action.refreshAfterUnlock": "Reparse",
   "postParser.action.continueParsing": "Continue parsing",
   "postParser.action.refreshPost": "Refresh and reparse",
   "postParser.operations.source": "Source",
@@ -187,5 +187,10 @@
   "postParser.action.queueing": "Queueing tasks",
   "postParser.action.viewAllRuns": "All execution history",
   "postParser.history.all": "All post parsing runs",
-  "postParser.history.task": "Post #{{id}} · {{title}}"
+  "postParser.history.task": "Post #{{id}} · {{title}}",
+  "postParser.label.processing": "Processing",
+  "postParser.action.unlockForAmount": "Unlock for {{amount}} coins",
+  "postParser.action.noEligibleUnlock": "No eligible items to unlock",
+  "postParser.purchase.excluded": "{{count}} other items do not meet the purchase conditions; their known total is {{amount}} coins (subject to the per-item limit and minimum coin balance).",
+  "postParser.purchase.unknownPrices": "{{count}} of these items have an unknown price and are excluded from both the total and the purchase."
 }

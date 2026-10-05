@@ -750,7 +750,7 @@ public sealed class PostParserWorkflowTests
         Assert.AreEqual(0, _purchaser.Purchases);
         await using (var scope = _services.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>()
-                .PurchaseAndResumeAsync(id, pending.Revision, ["https://example.test/lock"], CancellationToken.None);
+                .PurchaseAndResumeAsync(id, pending.Revision, ["https://example.test/lock"], 5, CancellationToken.None);
         await Execute(task.WorkflowRunId.Value);
         Assert.AreEqual(1, _purchaser.Purchases);
         Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
@@ -758,33 +758,122 @@ public sealed class PostParserWorkflowTests
     }
 
     [TestMethod]
-    public async Task ManualPurchaseRespectsTheReserveAndSavedQuote()
+    public async Task OneClickPurchaseRevalidatesLimitsQuoteAndDisplayedTotal()
     {
+        _analyzer.Status = "expired";
         var options = _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value;
-        options.AutoBuyThreshold = 0;
+        options.AutoBuyThreshold = 10;
         options.MinimumRemainingCoins = 96;
         _reader.Locks = [new("https://example.test/lock", 5, false)];
         var id = await Add(source: PostParserSource.SoulPlus);
         await Dispatch();
         var task = await TaskState(id);
         await Execute(task.WorkflowRunId!.Value);
-        async Task Buy()
-        {
-            await using var scope = _services.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>()
-                .PurchaseAndResumeAsync(id, task.Revision, ["https://example.test/lock"], CancellationToken.None);
-            await Execute(task.WorkflowRunId.Value);
-        }
-        await Buy();
+        Task Buy(decimal maximum = 5) => Purchase(id, task.Revision, maximum);
+
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => Buy());
         Assert.AreEqual(0, _purchaser.Purchases);
         Assert.AreEqual(WorkflowRunStatus.Waiting, (await TaskState(id)).WorkflowStatus);
         options.MinimumRemainingCoins = 0;
+        options.AutoBuyThreshold = 4;
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => Buy());
+        options.AutoBuyThreshold = 10;
         _reader.Locks = [new("https://example.test/lock", 7, false)];
         await Buy();
-        Assert.AreEqual(0, _purchaser.Purchases, "The five-coin quote must not authorize seven coins.");
-        await Buy();
-        Assert.AreEqual(1, _purchaser.Purchases, "A new explicit approval can accept the refreshed price.");
+        await Execute(task.WorkflowRunId.Value);
+        Assert.AreEqual(0, _purchaser.Purchases, "The saved five-coin quote must not authorize a seven-coin price at execution.");
+        Assert.AreEqual(7m, (await TaskState(id)).PurchaseQuote!.EligibleTotal);
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => Buy());
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => Buy(0));
+        Assert.AreEqual(WorkflowRunStatus.Waiting, (await TaskState(id)).WorkflowStatus);
+        await Buy(7);
+        await Execute(task.WorkflowRunId.Value);
+        Assert.AreEqual(1, _purchaser.Purchases);
         Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task OneClickPurchaseRechecksLimitsAfterItWasQueued(bool lowerThreshold)
+    {
+        _analyzer.Status = "expired";
+        var options = _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value;
+        options.AutoBuyThreshold = 5;
+        _reader.Locks = [new("https://example.test/lock", 5, false)];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch();
+        var task = await TaskState(id);
+        await Execute(task.WorkflowRunId!.Value);
+        await Purchase(id, task.Revision, 5);
+        if (lowerThreshold) options.AutoBuyThreshold = 4;
+        else _reader.Balance = 4;
+        await Execute(task.WorkflowRunId.Value);
+        Assert.AreEqual(0, _purchaser.Purchases);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, (await TaskState(id)).WorkflowStatus);
+    }
+
+    [TestMethod]
+    public async Task HealthyPostCannotUseTheRiskOverrideButtonToBypassAutomaticLimits()
+    {
+        _reader.Locks = [new("https://example.test/lock", 5, false)];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch();
+        var task = await TaskState(id);
+        await Execute(task.WorkflowRunId!.Value);
+        _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 5;
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => Purchase(id, task.Revision, 5));
+        Assert.AreEqual(0, _purchaser.Purchases);
+        await Retry(id);
+        await Execute(task.WorkflowRunId.Value);
+        Assert.AreEqual(1, _purchaser.Purchases, "Normal posts use the automatic path after their limits change.");
+    }
+
+    [TestMethod]
+    public async Task ConcurrentUnlockClicksQueueOnceAndStayRunningThroughPurchaseAndAi()
+    {
+        _analyzer.Status = "expired";
+        _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 5;
+        _reader.Locks = [new("https://example.test/lock", 5, false), new("https://example.test/lock", 5, false)];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch();
+        var task = await TaskState(id);
+        await Execute(task.WorkflowRunId!.Value);
+        Assert.AreEqual(5m, (await TaskState(id)).PurchaseQuote!.EligibleTotal);
+        await Task.WhenAll(Purchase(id, task.Revision, 5), Purchase(id, task.Revision, 5), Purchase(id, task.Revision, 5));
+        Assert.AreEqual(WorkflowRunStatus.Pending, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual(1, _services.GetRequiredService<BTaskManager>().Tasks.Count(t => t.Id == $"workflow.run.{task.WorkflowRunId}"));
+
+        _purchaser.Hold = true;
+        _extractor.Hold = true;
+        _extractor.Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var execution = Execute(task.WorkflowRunId.Value);
+        try
+        {
+            await _purchaser.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.AreEqual(WorkflowRunStatus.Running, (await TaskState(id)).WorkflowStatus);
+            await Purchase(id, task.Revision, 5);
+            Assert.AreEqual(1, _purchaser.Purchases);
+            _purchaser.Release.TrySetResult();
+            await _extractor.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.AreEqual(WorkflowRunStatus.Running, (await TaskState(id)).WorkflowStatus);
+            Assert.AreEqual(95m, _reader.Balance);
+        }
+        finally
+        {
+            _purchaser.Release.TrySetResult();
+            _extractor.Release.TrySetResult();
+            await execution;
+        }
+        Assert.AreEqual(1, _purchaser.Purchases);
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+    }
+
+    private async Task Purchase(int id, int revision, decimal maximum)
+    {
+        await using var scope = _services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>()
+            .PurchaseAndResumeAsync(id, revision, ["https://example.test/lock"], maximum, CancellationToken.None);
     }
 
     private sealed class FakeAvailabilityAnalyzer : IPostAvailabilityAnalyzer
@@ -840,12 +929,16 @@ public sealed class PostParserWorkflowTests
     {
         public PostParserSource Source => PostParserSource.SoulPlus;
         public int Purchases;
-        public Task BuyAsync(string lockUrl, CancellationToken ct)
+        public bool Hold;
+        public TaskCompletionSource Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public async Task BuyAsync(string lockUrl, CancellationToken ct)
         {
             Purchases++;
-            reader.Balance -= reader.Locks.Single(l => l.Url == lockUrl).Price;
+            Entered.TrySetResult();
+            if (Hold) await Release.Task.WaitAsync(ct);
+            reader.Balance -= reader.Locks.First(l => l.Url == lockUrl).Price;
             reader.Locks = reader.Locks.Select(l => l.Url == lockUrl ? l with {IsBought = true} : l).ToList();
-            return Task.CompletedTask;
         }
     }
 }
