@@ -10,6 +10,7 @@ using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Models.Domain;
+using Bakabase.Modules.PostParser.Models.Domain;
 using Bakabase.Service.Components.Acquisition.Steps;
 using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -127,6 +128,37 @@ public sealed class AcquisitionUnpackTests
         Assert.AreEqual(0, result.ExitCode, "7z could not build the fixture archive");
 
         return archivePath;
+    }
+
+    [TestMethod]
+    public async Task ResumeCannotClaimManualOutputsWithoutExplicitFileDelivery()
+    {
+        var archive = Path.Combine(_working, "download.7z");
+        var manualOutput = Path.Combine(_working, "manually-extracted.txt");
+        await File.WriteAllTextAsync(archive, "original download");
+        await File.WriteAllTextAsync(manualOutput, "manual output");
+        var item = Item() with
+        {
+            Files = [archive],
+            ExtractionPlanJson = JsonSerializer.Serialize(new PostExtractionPlan(), Json)
+        };
+        var step = new UnpackStep();
+        var initial = await step.ExecuteAsync(Context(), item, CancellationToken.None);
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Suspend>(initial);
+        var waiting = (AcquisitionStepOutcome.Suspend)initial;
+
+        // Older clients must not be able to bypass delivery of the actual processed files.
+        var resumed = await step.ResumeAsync(Context(), waiting.Item,
+            new AcquisitionResumeSignal(AcquisitionWaitReason.ExtractionPlanUnknown,
+                "{\"alreadyProcessed\":true}"), CancellationToken.None);
+
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Suspend>(resumed, DescribeOutcome(resumed));
+        var stillWaiting = (AcquisitionStepOutcome.Suspend)resumed;
+        Assert.AreEqual(AcquisitionWaitReason.ExtractionPlanUnknown, stillWaiting.Reason);
+        Assert.IsFalse(stillWaiting.Item.AlreadyProcessed);
+        CollectionAssert.AreEqual(new[] {archive}, stillWaiting.Item.Files.ToArray());
+        Assert.AreEqual("original download", await File.ReadAllTextAsync(archive));
+        Assert.AreEqual("manual output", await File.ReadAllTextAsync(manualOutput));
     }
 
     [TestMethod]
@@ -275,6 +307,56 @@ public sealed class AcquisitionUnpackTests
 
         Assert.AreEqual(0, prompt.Tried.Count,
             "with nothing in the content and nothing in the name, there was nothing to try");
+    }
+
+    [TestMethod]
+    public async Task StructuredThreeLayerPlanRenamesAndDecryptsEachLayerWithItsOwnPassword()
+    {
+        Require7z();
+        var source = Path.Combine(_root, "three-layer-source");
+        Directory.CreateDirectory(source);
+        var payload = Path.Combine(source, "payload.txt");
+        await File.WriteAllTextAsync(payload, "all three passwords were required");
+
+        async Task<string> Wrap(string input, string stem, string password)
+        {
+            var archive = Path.Combine(source, stem + ".7z");
+            var created = await Cli.Wrap(_sevenZip!).WithArguments(
+                    ["a", "-t7z", archive, input, "-p" + password, "-mhe=on"])
+                .WithValidation(CommandResultValidation.None).ExecuteAsync();
+            Assert.AreEqual(0, created.ExitCode, "7z must create the encrypted fixture layer");
+            var disguised = Path.Combine(source, stem + ".png");
+            File.Move(archive, disguised);
+            return disguised;
+        }
+        var third = await Wrap(payload, "third", "password-three");
+        var second = await Wrap(third, "second", "password-two");
+        var first = await Wrap(second, "first", "password-one");
+        var download = Path.Combine(_working, "first.png");
+        File.Copy(first, download);
+        var originalBytes = await File.ReadAllBytesAsync(download);
+        var plan = new PostExtractionPlan
+        {
+            Requirement = "required",
+            Steps = [
+                new() {Id = "rename1", Op = "renameExtension", Selector = "first.png", Extension = ".7z"},
+                new() {Id = "open1", Op = "extractArchive", Input = "rename1", Password = "password-one"},
+                new() {Id = "rename2", Op = "renameExtension", Input = "open1", Selector = "second.png", Extension = ".7z"},
+                new() {Id = "open2", Op = "extractArchive", Input = "rename2", Password = "password-two"},
+                new() {Id = "rename3", Op = "renameExtension", Input = "open2", Selector = "third.png", Extension = ".7z"},
+                new() {Id = "open3", Op = "extractArchive", Input = "rename3", Password = "password-three"}
+            ]
+        };
+        var item = Item() with {WorkingDirectory = _working, Files = [download],
+            ExtractionPlanJson = JsonSerializer.Serialize(plan, Json)};
+        var result = await new UnpackStep().ExecuteAsync(Context(), item, CancellationToken.None);
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(result, DescribeOutcome(result));
+        var processed = ((AcquisitionStepOutcome.Continue)result).Item;
+        Assert.AreEqual("payload.txt", Path.GetFileName(processed.Files.Single()));
+        Assert.AreEqual("all three passwords were required", await File.ReadAllTextAsync(processed.Files.Single()));
+        Assert.IsNotNull(processed.ExtractedDirectory);
+        CollectionAssert.AreEqual(originalBytes, await File.ReadAllBytesAsync(download), "the downloaded disguised archive is preserved");
+        Assert.IsFalse(File.Exists(Path.Combine(_working, "first.7z")), "renames belong to the processing snapshot");
     }
 
     private static string DescribeOutcome(AcquisitionStepOutcome outcome) => outcome switch

@@ -11,6 +11,7 @@ import { AcquisitionRequestedTriggerUI } from "./AcquisitionRequested";
 import { AcquisitionStatusChangedTriggerUI } from "./AcquisitionStatusChanged";
 import { CollectionMembersAddedTriggerUI } from "./CollectionMembersAdded";
 import { PostParserManualTriggerUI } from "./PostParserManual";
+import { FsProcessingPlanTriggerUI } from "./FsProcessingPlan";
 
 export const workflowTriggerSources = {
   acquisition: { path: "/acquisitions", labelKey: "workflowTriggers.source.acquisition" },
@@ -41,6 +42,7 @@ const withGuide = <T>(
  * fall back to a read-only "raw JSON" display in the editor.
  */
 export const workflowTriggerRegistry: Record<string, WorkflowTriggerUI<any>> = {
+  [FsProcessingPlanTriggerUI.kind]: withGuide(FsProcessingPlanTriggerUI, "fs"),
   [PostParserManualTriggerUI.kind]: withGuide(PostParserManualTriggerUI, "postParser"),
   [SubscriptionUpdatedTriggerUI.kind]: withGuide(SubscriptionUpdatedTriggerUI, "subscription"),
   [DownloaderCompletedTriggerUI.kind]: withGuide(DownloaderCompletedTriggerUI, "downloader"),

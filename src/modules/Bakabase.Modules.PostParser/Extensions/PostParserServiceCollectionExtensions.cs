@@ -10,6 +10,10 @@ public static class PostParserServiceCollectionExtensions
     public static IServiceCollection AddPostParserCapabilities(this IServiceCollection services)
     {
         services.TryAddScoped<IPostDownloadInfoExtractor, PostDownloadInfoExtractor>();
+        services.TryAddScoped<IPostAvailabilityAnalyzer, PostAvailabilityAnalyzer>();
+        services.TryAddScoped<IPostLinkHealthChecker, PostLinkHealthChecker>();
+        services.AddHttpClient(PostLinkHealthChecker.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(PostLinkHealthChecker.CreateHandler);
         return services;
     }
 }

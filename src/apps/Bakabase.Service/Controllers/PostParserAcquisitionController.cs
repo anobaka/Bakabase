@@ -4,6 +4,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.PostParser.Services;
+using Bakabase.InsideWorld.Business.Components.PostParser.Workflow;
+using Bakabase.InsideWorld.Business;
 using Bakabase.Service.Components.Acquisition;
 using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -20,10 +22,31 @@ public record PostParserAcquisitionInput
     public int Revision { get; init; }
 }
 
+public record PostParserPurchaseInput
+{
+    public int Revision { get; init; }
+    [Required, MinLength(1), MaxLength(100)] public List<string> LockUrls { get; init; } = [];
+}
+
 [ApiController]
 [Route("~/post-parser/task/{id:int}/acquisition")]
 public class PostParserAcquisitionController(PostParserAcquisitionService service) : ControllerBase
 {
+    [HttpPost("~/post-parser/task/{id:int}/purchase")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "PurchasePostParserTaskContent")]
+    public async Task<BaseResponse> Purchase(int id, [FromBody] PostParserPurchaseInput input,
+        [FromServices] PostParserWorkflowService<BakabaseDbContext> workflow, CancellationToken ct)
+    {
+        try
+        {
+            await workflow.PurchaseAndResumeAsync(id, input.Revision, input.LockUrls, ct);
+            return BaseResponseBuilder.Ok;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        { return BaseResponseBuilder.BuildBadRequest(ex.Message); }
+    }
+
     [HttpPost("~/post-parser/task/{id:int}/retry")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "RetryPostParserTaskWorkflow")]

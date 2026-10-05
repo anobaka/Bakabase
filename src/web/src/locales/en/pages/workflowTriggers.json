@@ -69,5 +69,9 @@
   "workflow.trigger.resourceMaterialized.description": "When the materialization service successfully links a resource to existing local content, enabled workflows matching its resource sources receive that resource. This is not an event for every resource creation or filesystem change, and unlinking content does not publish it.",
   "workflow.trigger.fsManualScan.description": "Run manually to scan configured existing directories and produce file or directory items. No event or timer starts this trigger; root directories and scan options must be configured first.",
   "workflow.trigger.fsScheduledScan.description": "Scan configured existing directories on the configured interval, or run manually. An interval below one minute disables automatic scheduling. A queued, running or waiting execution prevents another scheduled run.",
-  "workflow.trigger.fsWatch.description": "Watch direct children of configured existing directories. Created, modified or renamed entries trigger after they remain quiet for the configured time. Existing entries are not scanned initially and subdirectories are not watched recursively; manual input replays supplied paths."
+  "workflow.trigger.fsWatch.description": "Watch direct children of configured existing directories. Created, modified or renamed entries trigger after they remain quiet for the configured time. Existing entries are not scanned initially and subdirectories are not watched recursively; manual input replays supplied paths.",
+  "workflowTriggers.guide.fs.processingPlan.input": "A manual run supplies a directory, file group, and file processing plan; it does not watch directories.",
+  "workflowTriggers.guide.fs.processingPlan.configure": "Bind downloaded directories from post results or manually run the local processing preset. Run different resources separately.",
+  "workflow.trigger.fsProcessingPlan.description": "Manually process a downloaded directory using an ordered file processing plan. This does not download or watch files. Bind each different resource to its own directory and plan.",
+  "workflow.trigger.fsProcessingPlan.displayName": "Process files in a local directory"
 }

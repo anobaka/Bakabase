@@ -1421,7 +1421,13 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AvailabilityJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentSnapshotJson")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("CreatedAt")
@@ -1435,6 +1441,12 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.Property<string>("Link")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParsingMessage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParsingState")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Results")
@@ -1956,6 +1968,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExtractionPlanJson")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsResolved")

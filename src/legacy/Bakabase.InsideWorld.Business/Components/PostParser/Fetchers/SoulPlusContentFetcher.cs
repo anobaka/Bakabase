@@ -18,9 +18,7 @@ public class SoulPlusContentFetcher(SoulPlusClient spClient) : ISharedContentRea
     /// <summary>It knows the site's markup; anything general should lose to it.</summary>
     public int Priority => 100;
 
-    public bool CanRead(string reference) =>
-        Uri.TryCreate(reference, UriKind.Absolute, out var uri) &&
-        uri.Host.Contains("soulplus", StringComparison.OrdinalIgnoreCase);
+    public bool CanRead(string reference) => SoulPlusPostParser.IsSupportedUrl(reference);
 
     public async Task<PostContent> ReadAsync(string reference, CancellationToken ct)
     {
@@ -39,8 +37,16 @@ public class SoulPlusContentFetcher(SoulPlusClient spClient) : ISharedContentRea
             Title = post.Title,
             MainHtml = mainContent,
             CommentHtmlList = commentContents,
+            Comments = post.Comments.Select(c => new Bakabase.Modules.PostParser.Models.Domain.PostComment
+            {
+                Id = c.Id, Floor = c.Floor, Author = c.Author, PostedAt = c.PostedAt, Html = c.Html
+            }).ToList(),
+            SourceUrl = post.SourceUrl ?? reference,
+            CapturedAt = DateTimeOffset.UtcNow,
+            Scope = "firstPage",
+            Balance = post.Balance,
             Locks = post.LockedContents?
-                .Select(l => new SharedContentLock(l.Url, l.Price, l.IsBought))
+                .Select(l => new SharedContentLock(l.Url, l.Price, l.IsBought) {Id = l.Id, Floor = l.Floor})
                 .ToList() ?? []
         };
     }
@@ -54,6 +60,7 @@ public class SoulPlusContentFetcher(SoulPlusClient spClient) : ISharedContentRea
 public interface ISharedContentPurchaser
 {
     PostParserSource Source { get; }
+    string AccountKey => Source.ToString();
 
     Task BuyAsync(string lockUrl, CancellationToken ct);
 }
@@ -61,6 +68,7 @@ public interface ISharedContentPurchaser
 public class SoulPlusPurchaser(SoulPlusClient spClient) : ISharedContentPurchaser
 {
     public PostParserSource Source => PostParserSource.SoulPlus;
+    public string AccountKey => $"SoulPlus:{spClient.PurchaseAccountKey}";
 
     public Task BuyAsync(string lockUrl, CancellationToken ct) => spClient.BuyLockedContent(lockUrl, ct);
 }

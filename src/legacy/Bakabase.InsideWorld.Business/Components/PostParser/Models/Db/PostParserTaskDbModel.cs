@@ -10,6 +10,10 @@ public record PostParserTaskDbModel
     public string Link { get; set; } = null!;
     public string? Title { get; set; }
     public string? Text { get; set; }
+    public string? ContentSnapshotJson { get; set; }
+    public string? AvailabilityJson { get; set; }
+    public string? ParsingState { get; set; }
+    public string? ParsingMessage { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public int Revision { get; set; }

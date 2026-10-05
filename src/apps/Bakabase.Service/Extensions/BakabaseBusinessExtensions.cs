@@ -244,6 +244,9 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<Components.Acquisition.SharedListImportService>();
             services.AddScoped<Components.Acquisition.PostParserAcquisitionService>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
+            services.AddSingleton<Components.FileProcessing.FileProcessingPlanExecutor>();
+            services.AddSingleton<IWorkflowTrigger, Components.FileProcessing.FileProcessingPlanTrigger>();
+            services.AddScoped<Components.FileProcessing.FileProcessingWorkflowSeeder>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PickLocalDirectoryStep>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PlaceStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.MaterializeStep>();

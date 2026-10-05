@@ -31,6 +31,7 @@ public sealed class WorkflowTriggerMetadataTests
             ["subscription.updated"] = (WorkflowActivationMode.SystemEvent, "subscription"),
             ["collection.membersAdded"] = (WorkflowActivationMode.SystemEvent, "collection"),
             ["resource.materialized"] = (WorkflowActivationMode.SystemEvent, "resource"),
+            ["fs.processingPlan"] = (WorkflowActivationMode.Manual, "fs"),
             ["fs.manualScan"] = (WorkflowActivationMode.Manual, "fs"),
             ["fs.scheduledScan"] = (WorkflowActivationMode.Schedule, "fs"),
             ["fs.watch"] = (WorkflowActivationMode.Watch, "fs"),

@@ -153,7 +153,7 @@ public class AcquisitionCandidateService(
                             ResourceId = resourceId, LeadKind = route.Kind, LeadValue = route.Value,
                             InitialLinks = source == null ? [] :
                                 [new AcquisitionLink(source.Value, source.AccessCode, source.Password,
-                                    AcquisitionDriveKinds.Infer(source.Value))]
+                                    AcquisitionDriveKinds.Infer(source.Value), source.ExtractionPlanJson)]
                         }, ct);
                 }
             }

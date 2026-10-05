@@ -9,6 +9,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.Modules.PostParser.Models.Domain;
 using Bakabase.Modules.PostParser.Services;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
@@ -75,7 +76,9 @@ public class ResolveSharedContentStep : IAcquisitionStep
     }
 
     /// <summary>What the interface shows while the run waits for a purchase to be approved.</summary>
-    public record PurchasePrompt(IReadOnlyList<LockedPart> Locked, decimal Limit, string Where);
+    public record PurchasePrompt(IReadOnlyList<LockedPart> Locked, decimal Limit, string Where,
+        decimal MinimumRemainingCoins = 0, decimal? Balance = null,
+        PostAvailabilityAssessment? Availability = null, string? Message = null);
 
     public record LockedPart(string Url, decimal? Price);
 
@@ -116,85 +119,119 @@ public class ResolveSharedContentStep : IAcquisitionStep
             return new AcquisitionStepOutcome.Fail($"Could not read the shared content: {ex.Message}", ex);
         }
 
-        var locked = content.Locks.Where(l => !l.IsBought && !string.IsNullOrEmpty(l.Url)).ToList();
-
-        if (locked.Count > 0)
+        item = SaveSnapshot(item, content);
+        var (limit, reserve) = PurchaseLimits(ctx, content);
+        if (content.Locks.Any(l => !l.IsBought))
         {
-            var limit = ctx.GetConfig<Config>()?.NeverBuy == true
-                ? 0m
-                : ctx.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.AutoPurchaseLimit;
-            var affordable = locked.Where(l => l.Price is { } price && price <= limit && limit > 0).ToList();
-            var tooDear = locked.Except(affordable).ToList();
-
-            if (tooDear.Count > 0)
+            PostAvailabilityAssessment assessment;
+            try
             {
-                // Spending money is the one thing in this pipeline that must never happen quietly.
-                return new AcquisitionStepOutcome.Suspend(
-                    AcquisitionWaitReason.PaidContent,
-                    JsonSerializer.Serialize(new PurchasePrompt(
-                        tooDear.Select(l => new LockedPart(l.Url!, l.Price)).ToList(),
-                        limit, HostOf(reference)), Json),
-                    item);
+                assessment = await ctx.ServiceProvider.GetRequiredService<IPostAvailabilityAnalyzer>().AnalyzeAsync(content, ct);
             }
-
-            content = await BuyAndReread(ctx, reader, reference, affordable, content, ct);
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { assessment = new() {Reason = $"Could not assess expiry reports: {ex.Message}"}; }
+            item = WithVariable(item, "postParser.availability", JsonSerializer.Serialize(assessment, Json));
+            var warnings = new List<string>();
+            if (ctx.GetConfig<Config>()?.NeverBuy != true && assessment.Status is "noExpiryReported" or "restored")
+            {
+                try
+                {
+                    var result = await ctx.ServiceProvider.GetRequiredService<SharedContentPurchasePolicy>()
+                        .PurchaseAsync(reference, content.SourceHint, limit, reserve, ct: ct);
+                    content = result.Content;
+                    warnings.AddRange(result.Warnings);
+                    item = SaveSnapshot(item, content);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex) { warnings.Add($"The purchase could not be verified. Refresh before retrying: {ex.Message}"); }
+            }
+            if (content.Locks.Any(l => !l.IsBought))
+                return await SuspendAsync(ctx, item, content, limit, reserve, assessment,
+                    string.Join("\n", warnings.Prepend(assessment.Reason).Where(w => !string.IsNullOrWhiteSpace(w))), ct);
         }
-
         return await ExtractAsync(ctx, item, reader, reference, content, ct);
     }
 
     public async Task<AcquisitionStepOutcome> ResumeAsync(AcquisitionStepContext ctx,
         AcquisitionWorkItem item, AcquisitionResumeSignal signal, CancellationToken ct)
     {
-        PurchaseSignal? answer = null;
-
-        if (!string.IsNullOrWhiteSpace(signal.PayloadJson))
-        {
-            try { answer = JsonSerializer.Deserialize<PurchaseSignal>(signal.PayloadJson, Json); }
-            catch (JsonException ex)
-            {
-                return new AcquisitionStepOutcome.Fail($"The answer was not readable: {ex.Message}");
-            }
-        }
-
+        PurchaseSignal? answer;
+        try { answer = JsonSerializer.Deserialize<PurchaseSignal>(signal.PayloadJson ?? "{}", Json); }
+        catch (JsonException ex) { return new AcquisitionStepOutcome.Fail($"The answer was not readable: {ex.Message}"); }
         var reference = item.LeadValue;
         var reader = ctx.ServiceProvider.GetRequiredService<IPostContentService>();
-
         if (!reader.CanRead(reference))
-        {
             return new AcquisitionStepOutcome.Fail($"Nothing here knows how to read \"{Shorten(reference)}\".");
-        }
-
-        var content = await reader.ReadAsync(reference, ct: ct);
-
-        if (answer?.Approved == true)
+        Dictionary<string, decimal?>? approved = null;
+        if (item.Variables.TryGetValue("postParser.purchaseQuote", out var quote))
         {
-            content = await BuyAndReread(ctx, reader, reference, content.Locks.Where(l => !l.IsBought && !string.IsNullOrEmpty(l.Url)).ToList(), content, ct);
+            try { approved = JsonSerializer.Deserialize<Dictionary<string, decimal?>>(quote, Json); }
+            catch (JsonException) { /* A lost quote requires a fresh explicit review. */ }
         }
-        // Declining is not a failure: the free part of a post often has everything needed, and if
-        // it does not, the link step will say so in its own words.
-
+        var content = await reader.ReadAsync(reference, ct: ct);
+        var (limit, reserve) = PurchaseLimits(ctx, content);
+        item = SaveSnapshot(item, content);
+        var warnings = new List<string>();
+        if (answer?.Approved == true && approved is {Count: > 0})
+        {
+            try
+            {
+                var result = await ctx.ServiceProvider.GetRequiredService<SharedContentPurchasePolicy>()
+                    .PurchaseAsync(reference, content.SourceHint, limit, reserve, approved, ct);
+                content = result.Content;
+                warnings.AddRange(result.Warnings);
+                item = SaveSnapshot(item, content);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { warnings.Add($"The purchase could not be verified. Refresh before retrying: {ex.Message}"); }
+        }
+        else if (answer?.Approved == true)
+            warnings.Add("The saved purchase quote is missing. Review the current prices before approving again.");
+        else
+            warnings.Add("Restricted content remains unpurchased. Unlock it on the source site or approve a purchase before continuing.");
+        if (content.Locks.Any(l => !l.IsBought))
+            return await SuspendAsync(ctx, item, content, limit, reserve, null, string.Join("\n", warnings), ct);
         return await ExtractAsync(ctx, item, reader, reference, content, ct);
     }
 
-    private static async Task<PostContent> BuyAndReread(AcquisitionStepContext ctx, IPostContentService reader,
-        string reference, IReadOnlyList<PostContentLock> toBuy, PostContent content, CancellationToken ct)
+    private static (decimal Limit, decimal Reserve) PurchaseLimits(AcquisitionStepContext ctx, PostContent content)
     {
-        if (toBuy.Count == 0 || !Enum.TryParse<PostParserSource>(content.SourceHint, out var source)) return content;
-
-        var purchaser = ctx.ServiceProvider.GetServices<ISharedContentPurchaser>()
-            .FirstOrDefault(p => p.Source == source);
-
-        if (purchaser == null) return content;
-
-        foreach (var l in toBuy)
+        if (content.SourceHint == nameof(PostParserSource.SoulPlus))
         {
-            await purchaser.BuyAsync(l.Url!, ct);
-            ctx.Logger.LogInformation("[Acquisition] Bought a locked part of {Reference} for {Price}",
-                reference, l.Price);
+            var options = ctx.ServiceProvider.GetRequiredService<IBOptions<SoulPlusOptions>>().Value;
+            return (options.AutoBuyThreshold, options.MinimumRemainingCoins);
         }
+        return (ctx.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.AutoPurchaseLimit, 0);
+    }
 
-        return await reader.ReadAsync(reference, content.SourceHint, ct);
+    private static AcquisitionWorkItem WithVariable(AcquisitionWorkItem item, string key, string value) => item with
+    {
+        Variables = new Dictionary<string, string>(item.Variables) {[key] = value}
+    };
+
+    private static AcquisitionWorkItem SaveSnapshot(AcquisitionWorkItem item, PostContent content) =>
+        WithVariable(item, "postParser.contentSnapshot", JsonSerializer.Serialize(content, Json));
+
+    private static async Task<AcquisitionStepOutcome> SuspendAsync(AcquisitionStepContext ctx,
+        AcquisitionWorkItem item, PostContent content, decimal limit, decimal reserve,
+        PostAvailabilityAssessment? assessment, string? message, CancellationToken ct)
+    {
+        var locked = content.Locks.Where(l => !l.IsBought).ToList();
+        var quote = locked.Where(l => !string.IsNullOrEmpty(l.Url)).GroupBy(l => l.Url!)
+            .ToDictionary(g => g.Key, g => g.First().Price);
+        item = WithVariable(item, "postParser.purchaseQuote", JsonSerializer.Serialize(quote, Json));
+        // A preview may miss a hidden code or inner-layer password; never expose it as executable links yet.
+        try
+        {
+            var partial = await ctx.ServiceProvider.GetRequiredService<IPostDownloadInfoExtractor>().ExtractAsync(content, ct);
+            partial = partial with {IsComplete = false, Availability = assessment};
+            item = WithVariable(item, "postParser.partialResult", JsonSerializer.Serialize(partial, Json));
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { message = $"{message}\nCould not extract the partial content: {ex.Message}".Trim(); }
+        return new AcquisitionStepOutcome.Suspend(AcquisitionWaitReason.PaidContent,
+            JsonSerializer.Serialize(new PurchasePrompt(locked.Select(l => new LockedPart(l.Url ?? "", l.Price)).ToList(),
+                limit, HostOf(item.LeadValue), reserve, content.Balance, assessment, message), Json), item);
     }
 
     /// <summary>
@@ -226,7 +263,7 @@ public class ResolveSharedContentStep : IAcquisitionStep
         var links = resources
             .Where(r => !string.IsNullOrWhiteSpace(r.Link))
             .Select(r => new AcquisitionLink(r.Link!.Trim(), Blank(r.Code), Blank(r.Password),
-                AcquisitionDriveKinds.Infer(r.Link)))
+                AcquisitionDriveKinds.Infer(r.Link), r.Extraction == null ? null : JsonSerializer.Serialize(r.Extraction, Json)))
             .ToList();
 
         var title = result.Title ?? content.Title;

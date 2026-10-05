@@ -258,6 +258,53 @@ public sealed class AcquisitionInboxAndDownloadTests
         Assert.AreEqual(1, Directory.GetFiles(_working).Length);
     }
 
+    [TestMethod]
+    public async Task DirectoryDeliveryPreservesChildrenAndCanMarkThemAlreadyProcessed()
+    {
+        var directory = Path.Combine(_inbox, "resource");
+        Directory.CreateDirectory(Path.Combine(directory, "chapter"));
+        await File.WriteAllTextAsync(Path.Combine(directory, "chapter", "page.txt"), "payload");
+        var signal = new AcquisitionResumeSignal(AcquisitionWaitReason.WaitingForFile,
+            JsonSerializer.Serialize(new WaitForInboxStep.ClaimSignal(Directory: directory, AlreadyProcessed: true), Json));
+        var step = new WaitForInboxStep();
+        var first = (AcquisitionStepOutcome.Continue) await step.ResumeAsync(Context(), Item(), signal, CancellationToken.None);
+        Assert.IsTrue(first.Item.AlreadyProcessed);
+        Assert.IsTrue(first.Item.PreserveDirectoryStructure);
+        Assert.AreEqual(Path.Combine(_working, "chapter", "page.txt"), first.Item.Files.Single());
+        var resumed = (AcquisitionStepOutcome.Continue) await step.ResumeAsync(Context(), Item(), signal, CancellationToken.None);
+        CollectionAssert.AreEqual(first.Item.Files.ToArray(), resumed.Item.Files.ToArray());
+    }
+
+    [TestMethod]
+    public async Task SameSizedDifferentFileIsNotDeletedDuringDeliveryRetry()
+    {
+        var file = DropInInbox("same.zip");
+        var original = await File.ReadAllTextAsync(file);
+        var signal = new AcquisitionResumeSignal(AcquisitionWaitReason.WaitingForFile,
+            JsonSerializer.Serialize(new WaitForInboxStep.ClaimSignal([file]), Json));
+        var step = new WaitForInboxStep();
+        var first = (AcquisitionStepOutcome.Continue) await step.ResumeAsync(Context(), Item(), signal, CancellationToken.None);
+        await File.WriteAllTextAsync(file, new string('z', original.Length));
+        var retried = await step.ResumeAsync(Context(), first.Item, signal, CancellationToken.None);
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Fail>(retried);
+        Assert.IsTrue(File.Exists(file));
+        Assert.AreEqual(original, await File.ReadAllTextAsync(first.Item.Files.Single()));
+    }
+
+    [TestMethod]
+    public async Task ClaimingOneArchivePartDeliversItsWholeVolumeGroup()
+    {
+        var first = DropInInbox("work.part1.rar");
+        var second = DropInInbox("work.part2.rar");
+        var signal = new AcquisitionResumeSignal(AcquisitionWaitReason.WaitingForFile,
+            JsonSerializer.Serialize(new WaitForInboxStep.ClaimSignal([first]), Json));
+        var result = (AcquisitionStepOutcome.Continue) await new WaitForInboxStep()
+            .ResumeAsync(Context(), Item(), signal, CancellationToken.None);
+        Assert.AreEqual(2, result.Item.Files.Count);
+        Assert.IsFalse(File.Exists(first));
+        Assert.IsFalse(File.Exists(second));
+    }
+
     // ------- the watcher -------
 
     private AcquisitionInboxWatcher Watcher() =>

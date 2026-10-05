@@ -9,7 +9,7 @@ export const workflowIntegrationSurfaces = {
     components: ["pages/downloader/index.tsx"],
   },
   postParser: {
-    triggerKinds: ["postParser.manual"],
+    triggerKinds: ["postParser.manual", "fs.processingPlan"],
     components: ["pages/post-parser/index.tsx"],
   },
   subscription: {

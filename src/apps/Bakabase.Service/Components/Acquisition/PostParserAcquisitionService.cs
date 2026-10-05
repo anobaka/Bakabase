@@ -40,7 +40,8 @@ public class PostParserAcquisitionService(BakabaseDbContext db, IPlaceholderReso
                 ?? throw new ArgumentException("The parsed post no longer exists.");
             if (task.Revision != revision)
                 throw new InvalidOperationException("The post was parsed again. Refresh its results before importing.");
-            if (task.Error != null || string.IsNullOrWhiteSpace(task.Results))
+            if (task.Error != null || string.IsNullOrWhiteSpace(task.Results) ||
+                task.ParsingState is not null and not "complete")
                 throw new ArgumentException("Parse this post successfully before importing its results.");
             var parsed = ReadResources(task.Results);
             if (resourceIndices.Count is 0 or > 500 || resourceIndices.Any(i => i < 0 || i >= parsed.Count))
@@ -60,8 +61,8 @@ public class PostParserAcquisitionService(BakabaseDbContext db, IPlaceholderReso
             var imports = new List<(PostDownloadResource Link, AcquisitionLeadKind Kind, AcquisitionLead? Existing)>();
             foreach (var group in selected.GroupBy(r => r.Link.NormalizeLeadValue()))
             {
-                if (group.Select(r => (r.Code, r.Password)).Distinct().Count() > 1)
-                    throw new ArgumentException("The same link has different codes or passwords. Select one version.");
+                if (group.Select(r => (r.Code, r.Password, Plan: r.Extraction == null ? null : JsonSerializer.Serialize(r.Extraction, Json))).Distinct().Count() > 1)
+                    throw new ArgumentException("The same link has different codes, passwords or extraction instructions. Select one version.");
                 var link = group.First();
                 var kind = Classify(link.Link);
                 AcquisitionLead? existing = null;
@@ -72,8 +73,10 @@ public class PostParserAcquisitionService(BakabaseDbContext db, IPlaceholderReso
                 }
                 if (existing != null &&
                     ((existing.AccessCode != null && link.Code != null && existing.AccessCode != link.Code) ||
-                     (existing.Password != null && link.Password != null && existing.Password != link.Password)))
-                    throw new InvalidOperationException("A selected link already has a different access code or password. Resolve the conflicting information before importing.");
+                     (existing.Password != null && link.Password != null && existing.Password != link.Password) ||
+                     !AcquisitionLeadExtensions.CanAcceptExtractionPlan(existing.ExtractionPlanJson,
+                         link.Extraction == null ? null : JsonSerializer.Serialize(link.Extraction, Json))))
+                    throw new InvalidOperationException("A selected link already has different credentials or extraction instructions. Resolve the conflicting information before importing.");
                 imports.Add((link, existing?.Kind ?? kind, existing));
             }
             var matches = imports.Where(i => i.Existing != null).Select(i => i.Existing!.ResourceId).Distinct().ToList();
@@ -95,6 +98,7 @@ public class PostParserAcquisitionService(BakabaseDbContext db, IPlaceholderReso
                 {
                     Kind = kind, Value = link.Link, Origin = AcquisitionLeadOrigin.PostParser,
                     AccessCode = link.Code, Password = link.Password,
+                    ExtractionPlanJson = link.Extraction == null ? null : JsonSerializer.Serialize(link.Extraction, Json),
                     IsResolved = true,
                     SourceReference = string.IsNullOrWhiteSpace(task.Text) && task.Link.Length <= 2048 ? task.Link : null
                 });

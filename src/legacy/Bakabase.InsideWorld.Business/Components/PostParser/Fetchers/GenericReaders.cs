@@ -52,6 +52,9 @@ public class GenericHtmlReader(IHttpClientFactory httpClientFactory, ILogger<Gen
         {
             Title = string.IsNullOrWhiteSpace(title) ? reference : title,
             MainHtml = WebUtility.HtmlDecode(body),
+            SourceUrl = reference,
+            CapturedAt = DateTimeOffset.UtcNow,
+            Scope = "page",
         };
     }
 }
@@ -89,6 +92,8 @@ public class PlainTextReader : ISharedContentReader
         {
             Title = firstLine.Length > 120 ? firstLine[..120] : firstLine,
             MainHtml = text,
+            CapturedAt = DateTimeOffset.UtcNow,
+            Scope = "pastedText",
         });
     }
 }

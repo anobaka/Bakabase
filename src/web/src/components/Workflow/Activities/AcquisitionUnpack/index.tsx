@@ -5,7 +5,7 @@ import type { WorkflowActivityUI } from "../types";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button, Chip, Input, NumberInput, Switch } from "@/components/bakaui";
+import { Button, Chip, Input, NumberInput, Switch, Textarea } from "@/components/bakaui";
 import { AcquisitionWaitReason, WorkflowActivityCategory } from "@/sdk/constants";
 
 interface Config {
@@ -17,6 +17,9 @@ interface Config {
 interface Prompt {
   archiveName: string;
   tried: string[];
+  reason?: string;
+  message?: string;
+  extractionPlanJson?: string;
 }
 
 const DEFAULTS: Config = { deleteArchive: true, maxDepth: 2, tryRecentPasswords: null };
@@ -56,6 +59,7 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
 }) => {
   const { t } = useTranslation();
   const [password, setPassword] = React.useState("");
+  const [plan, setPlan] = React.useState("");
 
   let prompt: Prompt | null = null;
 
@@ -64,9 +68,23 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
   } catch {
     prompt = null;
   }
+  const needsPlan = prompt?.reason === "ExtractionPlanUnknown";
+  let validPlan = false;
+
+  try {
+    const parsed = JSON.parse(plan || prompt?.extractionPlanJson || "");
+
+    validPlan =
+      ["required", "notRequired"].includes(parsed.requirement) &&
+      Array.isArray(parsed.steps) &&
+      (parsed.requirement === "notRequired" || parsed.steps.length > 0);
+  } catch {
+    /* Incomplete input is not executable. */
+  }
 
   return (
     <div className="flex flex-col gap-3">
+      {prompt?.message && <p className="text-sm text-warning-600">{prompt.message}</p>}
       {prompt?.archiveName && (
         <div className="text-sm">
           {t<string>("workflow.acquisition.unpack.needPassword", { name: prompt.archiveName })}
@@ -87,22 +105,37 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
       )}
 
       <div className="flex items-end gap-2">
-        <Input
-          className="flex-1"
-          label={t<string>("workflow.acquisition.unpack.password")}
-          size="sm"
-          value={password}
-          onValueChange={setPassword}
-        />
+        {needsPlan ? (
+          <Textarea
+            className="flex-1"
+            label={t("workflow.processing.plan")}
+            minRows={6}
+            value={plan || prompt?.extractionPlanJson || ""}
+            onValueChange={setPlan}
+          />
+        ) : (
+          <Input
+            className="flex-1"
+            label={t<string>("workflow.acquisition.unpack.password")}
+            size="sm"
+            value={password}
+            onValueChange={setPassword}
+          />
+        )}
         <Button
           color="primary"
-          isDisabled={submitting || password.length === 0}
+          isDisabled={submitting || (needsPlan ? !validPlan : password.length === 0)}
           size="sm"
           onPress={() =>
             onSubmit(
               JSON.stringify({
-                reason: AcquisitionWaitReason.PasswordUnknown,
-                payloadJson: JSON.stringify({ password }),
+                reason: needsPlan
+                  ? AcquisitionWaitReason.ExtractionPlanUnknown
+                  : AcquisitionWaitReason.PasswordUnknown,
+                payloadJson: JSON.stringify({
+                  password,
+                  extractionPlanJson: plan || prompt?.extractionPlanJson,
+                }),
               }),
             )
           }

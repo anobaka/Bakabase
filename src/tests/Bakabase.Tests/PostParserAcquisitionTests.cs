@@ -342,6 +342,50 @@ public sealed class PostParserAcquisitionTests
         Assert.AreEqual(drive, item.Links.Single().DriveKind);
     }
 
+    [TestMethod]
+    public async Task ImportUpgradesAnUnknownPlanAndCarriesItIntoTheAcquisitionSnapshot()
+    {
+        var resource = await Placeholders.CreateByTitle("Resource with incomplete instructions");
+        const string url = "https://example.com/resource.zip";
+        await Leads.Add(resource.ResourceId, new AcquisitionLeadAddInputModel
+        {
+            Kind = AcquisitionLeadKind.DirectUrl, Value = url,
+            ExtractionPlanJson = JsonSerializer.Serialize(new PostExtractionPlan(), Json)
+        });
+        var plan = new PostExtractionPlan {Requirement = "required", Steps = [
+            new() {Id = "open", Op = "extractArchive", Password = "now visible"}]};
+        var post = await ParsedPost([new PostDownloadResource {Link = url, Extraction = plan}]);
+        var imported = await Import(post, 0);
+        Assert.AreEqual(resource.ResourceId, imported.ResourceId);
+        var lead = (await Leads.GetByResourceId(resource.ResourceId)).Single();
+        Assert.AreEqual("required", JsonSerializer.Deserialize<PostExtractionPlan>(lead.ExtractionPlanJson!, Json)!.Requirement);
+        var payload = await StartWithCachedLead(lead, AcquisitionStepKinds.SelectLink);
+        Assert.AreEqual(lead.ExtractionPlanJson, payload.InitialLinks.Single().ExtractionPlanJson);
+    }
+
+    [TestMethod]
+    public async Task ConflictingCompleteExtractionPlanCannotPartiallyImportOtherLinks()
+    {
+        var resource = await Placeholders.CreateByTitle("Already known instructions");
+        const string url = "https://example.com/known.zip";
+        var existing = new PostExtractionPlan {Requirement = "required", Steps = [
+            new() {Id = "open", Op = "extractArchive", Password = "original"}]};
+        await Leads.Add(resource.ResourceId, new AcquisitionLeadAddInputModel
+        {
+            Kind = AcquisitionLeadKind.DirectUrl, Value = url, ExtractionPlanJson = JsonSerializer.Serialize(existing, Json)
+        });
+        var conflicting = existing with {Steps = [new() {Id = "open", Op = "extractArchive", Password = "different"}]};
+        var post = await ParsedPost([Link("https://example.com/new-resource.zip"),
+            new PostDownloadResource {Link = url, Extraction = conflicting}]);
+        var before = await Counts();
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => Import(post, 0, 1));
+        Assert.AreEqual(before, await Counts());
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => Leads.Add(resource.ResourceId,
+            new AcquisitionLeadAddInputModel {Kind = AcquisitionLeadKind.DirectUrl, Value = url,
+                ExtractionPlanJson = JsonSerializer.Serialize(conflicting, Json)}));
+        Assert.AreEqual(JsonSerializer.Serialize(existing, Json), (await Leads.GetByResourceId(resource.ResourceId)).Single().ExtractionPlanJson);
+    }
+
     private async Task<AcquisitionRequestedPayload> StartWithCachedLead(AcquisitionLead lead, string step)
     {
         await _sp.GetRequiredService<IAiFeatureService>().DeleteConfigAsync(AiFeature.PostParser);

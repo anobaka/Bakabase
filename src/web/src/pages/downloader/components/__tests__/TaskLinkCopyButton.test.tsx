@@ -88,7 +88,11 @@ describe("download task link copying", () => {
     await show();
     await act(async () => {
       button().focus();
-      for (const type of ["keydown", "keyup"]) {
+    });
+    for (const type of ["keydown", "keyup"]) {
+      // Let React Aria attach its keyup listener after the keydown state commits,
+      // matching separate browser input events rather than batching them together.
+      await act(async () => {
         button().dispatchEvent(
           new KeyboardEvent(type, {
             key,
@@ -97,8 +101,8 @@ describe("download task link copying", () => {
             cancelable: true,
           }),
         );
-      }
-    });
+      });
+    }
 
     expect(writeText).toHaveBeenCalledExactlyOnceWith(source);
     expect(parentEvents.click).not.toHaveBeenCalled();

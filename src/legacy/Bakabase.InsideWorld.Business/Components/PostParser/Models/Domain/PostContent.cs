@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System;
+using Bakabase.Modules.PostParser.Models.Domain;
 
 namespace Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 
@@ -8,13 +10,22 @@ namespace Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 /// <param name="Url">Where buying it happens. Null when the site did not say.</param>
 /// <param name="Price">What it costs, in whatever the site counts in. Null when it did not say.</param>
 /// <param name="IsBought">Whether the user has already paid for it.</param>
-public record SharedContentLock(string? Url, decimal? Price, bool IsBought);
+public record SharedContentLock(string? Url, decimal? Price, bool IsBought)
+{
+    public string? Id { get; init; }
+    public string? Floor { get; init; }
+}
 
 public record PostContent
 {
     public string Title { get; set; } = null!;
     public string MainHtml { get; set; } = null!;
     public List<string> CommentHtmlList { get; set; } = [];
+    public List<PostComment> Comments { get; set; } = [];
+    public string? SourceUrl { get; set; }
+    public DateTimeOffset? CapturedAt { get; set; }
+    public string Scope { get; set; } = "firstPage";
+    public decimal? Balance { get; set; }
 
     /// <summary>
     /// Parts of the content still behind a payment. Reading no longer buys them: spending money is

@@ -235,7 +235,7 @@ const Modal = (props: ModalProps) => {
 
   return (
     <NextUiModal
-      ref={r => {
+      ref={(r: HTMLDivElement | null) => {
         // console.log(domRef.current, r);
         if (domRef.current && !r && !isOpen) {
           // closed

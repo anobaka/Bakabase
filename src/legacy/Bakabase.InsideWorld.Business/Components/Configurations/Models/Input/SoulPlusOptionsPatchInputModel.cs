@@ -8,4 +8,5 @@ public class SoulPlusOptionsPatchInputModel
     public List<ThirdPartyAccount>? Accounts { get; set; }
     public string? Cookie { get; set; }
     public int? AutoBuyThreshold { get; set; }
+    public int? MinimumRemainingCoins { get; set; }
 }

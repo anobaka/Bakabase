@@ -4330,7 +4330,8 @@ export enum AcquisitionWaitReason {
   PasswordUnknown = 6,
   TargetExists = 7,
   PickDirectory = 8,
-  PlatformFetch = 9
+  PlatformFetch = 9,
+  ExtractionPlanUnknown = 10
 }
 
 export const acquisitionWaitReasons = [
@@ -4342,7 +4343,8 @@ export const acquisitionWaitReasons = [
   { label: 'PasswordUnknown', value: AcquisitionWaitReason.PasswordUnknown },
   { label: 'TargetExists', value: AcquisitionWaitReason.TargetExists },
   { label: 'PickDirectory', value: AcquisitionWaitReason.PickDirectory },
-  { label: 'PlatformFetch', value: AcquisitionWaitReason.PlatformFetch }
+  { label: 'PlatformFetch', value: AcquisitionWaitReason.PlatformFetch },
+  { label: 'ExtractionPlanUnknown', value: AcquisitionWaitReason.ExtractionPlanUnknown }
 ] as const;
 
 export const AcquisitionWaitReasonLabel: Record<AcquisitionWaitReason, string> = {
@@ -4354,7 +4356,8 @@ export const AcquisitionWaitReasonLabel: Record<AcquisitionWaitReason, string> =
   [AcquisitionWaitReason.PasswordUnknown]: 'PasswordUnknown',
   [AcquisitionWaitReason.TargetExists]: 'TargetExists',
   [AcquisitionWaitReason.PickDirectory]: 'PickDirectory',
-  [AcquisitionWaitReason.PlatformFetch]: 'PlatformFetch'
+  [AcquisitionWaitReason.PlatformFetch]: 'PlatformFetch',
+  [AcquisitionWaitReason.ExtractionPlanUnknown]: 'ExtractionPlanUnknown'
 };
 
 export enum WorkflowActivationMode {

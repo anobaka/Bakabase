@@ -10,6 +10,8 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.Modules.PostParser.Services;
 using Bakabase.Modules.AI.Models.Domain;
 using Bakabase.Modules.AI.Services;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
@@ -40,6 +42,15 @@ public sealed class SharedContentResolutionTests
     private readonly FakeLlm _llm = new();
     private readonly FakeSoulPlusReader _reader = new();
     private readonly FakePurchaser _purchaser = new();
+    private readonly FakeAvailability _availability = new();
+
+    private sealed class FakeAvailability : IPostAvailabilityAnalyzer
+    {
+        public string Status = "noExpiryReported";
+        public Task<Bakabase.Modules.PostParser.Models.Domain.PostAvailabilityAssessment> AnalyzeAsync(
+            Bakabase.Modules.PostParser.Models.Domain.PostContent content, CancellationToken ct = default) =>
+            Task.FromResult(new Bakabase.Modules.PostParser.Models.Domain.PostAvailabilityAssessment {Status = Status});
+    }
 
     /// <summary>Answers with whatever the test set, so the step's own behavior is what is measured.</summary>
     private sealed class FakeLlm : ILlmService
@@ -74,6 +85,7 @@ public sealed class SharedContentResolutionTests
         public string Fixture = "thread-with-two-drives.html";
         public List<SharedContentLock> Locks = [];
         public int Reads;
+        public decimal? Balance = 100;
 
         public PostParserSource? Source => PostParserSource.SoulPlus;
         public int Priority => 100;
@@ -90,6 +102,7 @@ public sealed class SharedContentResolutionTests
                 MainHtml = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Acquisition",
                     Fixture)),
                 Locks = Locks.ToList(),
+                Balance = Balance,
             });
         }
     }
@@ -97,12 +110,14 @@ public sealed class SharedContentResolutionTests
     private sealed class FakePurchaser : ISharedContentPurchaser
     {
         public readonly List<string> Bought = [];
+        public Action<string>? OnBuy;
 
         public PostParserSource Source => PostParserSource.SoulPlus;
 
         public Task BuyAsync(string lockUrl, CancellationToken ct)
         {
             Bought.Add(lockUrl);
+            OnBuy?.Invoke(lockUrl);
 
             return Task.CompletedTask;
         }
@@ -120,7 +135,15 @@ public sealed class SharedContentResolutionTests
             services.AddSingleton<ISharedContentReader, PlainTextReader>();
             services.RemoveAll<ISharedContentPurchaser>();
             services.AddSingleton<ISharedContentPurchaser>(_purchaser);
+            services.RemoveAll<IPostAvailabilityAnalyzer>();
+            services.AddSingleton<IPostAvailabilityAnalyzer>(_availability);
         });
+        _purchaser.OnBuy = url =>
+        {
+            var part = _reader.Locks.Single(l => l.Url == url);
+            _reader.Balance -= part.Price;
+            _reader.Locks.Remove(part);
+        };
 
         _llm.ResponseText = """
             {
@@ -194,7 +217,7 @@ public sealed class SharedContentResolutionTests
     [TestMethod]
     public async Task PaidContentAboveTheLimitSuspends_AndApprovingItBuysAndContinues()
     {
-        _sp.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.AutoPurchaseLimit = 5m;
+        _sp.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 5;
         _reader.Locks = [new SharedContentLock("https://soulplus.example/buy/1", 20m, false)];
 
         var resourceId = await CreateMissingResource();
@@ -212,7 +235,7 @@ public sealed class SharedContentResolutionTests
         Assert.AreEqual(20m, prompt.Locked.Single().Price, "the user is shown what it costs");
         Assert.AreEqual(5m, prompt.Limit);
 
-        var resumed = await Step.ResumeAsync(Context(), item,
+        var resumed = await Step.ResumeAsync(Context(), suspended.Item,
             new AcquisitionResumeSignal(AcquisitionWaitReason.PaidContent,
                 JsonSerializer.Serialize(new ResolveSharedContentStep.PurchaseSignal(true), Json)),
             CancellationToken.None);
@@ -224,7 +247,7 @@ public sealed class SharedContentResolutionTests
     [TestMethod]
     public async Task PaidContentWithinTheLimitIsBoughtWithoutAsking()
     {
-        _sp.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.AutoPurchaseLimit = 30m;
+        _sp.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 30;
         _reader.Locks = [new SharedContentLock("https://soulplus.example/buy/1", 20m, false)];
 
         var outcome = await Step.ExecuteAsync(Context(),
@@ -232,7 +255,7 @@ public sealed class SharedContentResolutionTests
 
         Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(outcome);
         Assert.AreEqual(1, _purchaser.Bought.Count);
-        Assert.AreEqual(2, _reader.Reads, "the post is read again so the unlocked part is included");
+        Assert.IsTrue(_reader.Reads >= 4, "the current price and balance are refreshed under the account lock before purchase");
     }
 
     /// <summary>
@@ -242,7 +265,7 @@ public sealed class SharedContentResolutionTests
     [TestMethod]
     public async Task ALockWithNoStatedPriceIsNeverBoughtUnattended()
     {
-        _sp.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.AutoPurchaseLimit = 1000m;
+        _sp.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 1000;
         _reader.Locks = [new SharedContentLock("https://soulplus.example/buy/1", null, false)];
 
         var outcome = await Step.ExecuteAsync(Context(),
@@ -255,12 +278,61 @@ public sealed class SharedContentResolutionTests
     [TestMethod]
     public async Task NeverBuy_OverridesTheGlobalLimit()
     {
-        _sp.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.AutoPurchaseLimit = 1000m;
+        _sp.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 1000;
         _reader.Locks = [new SharedContentLock("https://soulplus.example/buy/1", 1m, false)];
 
         var outcome = await Step.ExecuteAsync(Context("""{"neverBuy":true}"""),
             Item(await CreateMissingResource(), "https://soulplus.example/thread/1"), CancellationToken.None);
 
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Suspend>(outcome);
+        Assert.AreEqual(0, _purchaser.Bought.Count);
+    }
+
+    [TestMethod]
+    public async Task MixedPricesBuyEligibleItemsButKeepTheRunWaitingForTheRest()
+    {
+        _sp.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 5;
+        _reader.Locks = [new("https://soulplus.example/buy/cheap", 5, false), new("https://soulplus.example/buy/dear", 20, false)];
+        var outcome = (AcquisitionStepOutcome.Suspend)await Step.ExecuteAsync(Context(),
+            Item(await CreateMissingResource(), "https://soulplus.example/thread/1"), CancellationToken.None);
+        CollectionAssert.AreEqual(new[] {"https://soulplus.example/buy/cheap"}, _purchaser.Bought);
+        Assert.AreEqual(0, outcome.Item.Links.Count);
+        Assert.IsTrue(outcome.Item.Variables.ContainsKey("postParser.contentSnapshot"));
+        StringAssert.Contains(outcome.Item.Variables["postParser.partialResult"], "\"isComplete\":false");
+    }
+
+    [TestMethod]
+    public async Task ExpiryAssessmentStopsAutomaticPurchaseAndManualApprovalCanOverrideIt()
+    {
+        _sp.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 100;
+        _availability.Status = "expired";
+        _reader.Locks = [new("https://soulplus.example/buy/1", 5, false)];
+        var suspended = (AcquisitionStepOutcome.Suspend)await Step.ExecuteAsync(Context(),
+            Item(await CreateMissingResource(), "https://soulplus.example/thread/1"), CancellationToken.None);
+        Assert.AreEqual(0, _purchaser.Bought.Count);
+        var resumed = await Step.ResumeAsync(Context(), suspended.Item,
+            new(AcquisitionWaitReason.PaidContent, "{\"approved\":true}"), CancellationToken.None);
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(resumed);
+        Assert.AreEqual(1, _purchaser.Bought.Count);
+    }
+
+    [TestMethod]
+    public async Task DecliningPurchaseNeverContinuesWithIncompleteCredentials()
+    {
+        _reader.Locks = [new("https://soulplus.example/buy/1", 5, false)];
+        var item = Item(await CreateMissingResource(), "https://soulplus.example/thread/1");
+        var outcome = await Step.ResumeAsync(Context(), item,
+            new(AcquisitionWaitReason.PaidContent, "{\"approved\":false}"), CancellationToken.None);
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Suspend>(outcome);
+        Assert.AreEqual(0, _purchaser.Bought.Count);
+    }
+
+    [TestMethod]
+    public async Task ApprovalWithoutAPersistedQuoteCannotPurchase()
+    {
+        _reader.Locks = [new("https://soulplus.example/buy/1", 5, false)];
+        var outcome = await Step.ResumeAsync(Context(), Item(await CreateMissingResource(), "https://soulplus.example/thread/1"),
+            new(AcquisitionWaitReason.PaidContent, "{\"approved\":true}"), CancellationToken.None);
         Assert.IsInstanceOfType<AcquisitionStepOutcome.Suspend>(outcome);
         Assert.AreEqual(0, _purchaser.Bought.Count);
     }

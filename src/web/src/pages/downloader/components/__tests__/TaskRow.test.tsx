@@ -55,8 +55,14 @@ async function click(target: HTMLElement, init: MouseEventInit = {}) {
 async function key(target: HTMLElement, value: string) {
   await act(async () => {
     target.focus();
-    for (const type of ["keydown", "keyup"]) {
-      target.dispatchEvent(
+  });
+  for (const type of ["keydown", "keyup"]) {
+    // Commit each input event so React Aria can register its keyup listener.
+    await act(async () => {
+      // Menu triggers can move focus on keydown; keyup follows the new focus.
+      const focused = document.activeElement instanceof HTMLElement ? document.activeElement : target;
+
+      focused.dispatchEvent(
         new KeyboardEvent(type, {
           key: value,
           code: value === " " ? "Space" : value,
@@ -64,8 +70,8 @@ async function key(target: HTMLElement, value: string) {
           cancelable: true,
         }),
       );
-    }
-  });
+    });
+  }
 }
 
 async function show(

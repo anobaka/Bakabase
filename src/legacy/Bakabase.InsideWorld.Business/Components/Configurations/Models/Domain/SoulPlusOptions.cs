@@ -53,5 +53,6 @@ public class SoulPlusOptions : ISoulPlusOptions
     }
     public string? Referer { set; get; }
     public Dictionary<string, string>? Headers { set; get; }
-    public int AutoBuyThreshold { get; set; } = 10;
+    public int AutoBuyThreshold { get; set; }
+    public int MinimumRemainingCoins { get; set; }
 }

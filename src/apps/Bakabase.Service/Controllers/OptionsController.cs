@@ -1183,6 +1183,8 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PatchSoulPlusOptions")]
         public async Task<BaseResponse> PatchSoulPlusOptions([FromBody] SoulPlusOptionsPatchInputModel model)
         {
+            if (model.AutoBuyThreshold < 0 || model.MinimumRemainingCoins < 0)
+                return BaseResponseBuilder.BuildBadRequest("Purchase limits and minimum remaining coins must not be negative.");
             await _bakabaseOptionsManager.Get<SoulPlusOptions>().SaveAsync(options =>
             {
                 if (model.Accounts != null)
@@ -1198,6 +1200,8 @@ namespace Bakabase.Service.Controllers
                 {
                     options.AutoBuyThreshold = model.AutoBuyThreshold.Value;
                 }
+                if (model.MinimumRemainingCoins.HasValue)
+                    options.MinimumRemainingCoins = model.MinimumRemainingCoins.Value;
             });
             return BaseResponseBuilder.Ok;
         }
@@ -1206,6 +1210,8 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PutSoulPlusOptions")]
         public async Task<BaseResponse> PutSoulPlusOptions([FromBody] SoulPlusOptions model)
         {
+            if (model.AutoBuyThreshold < 0 || model.MinimumRemainingCoins < 0)
+                return BaseResponseBuilder.BuildBadRequest("Purchase limits and minimum remaining coins must not be negative.");
             await _bakabaseOptionsManager.Get<SoulPlusOptions>().SaveAsync(model);
             return BaseResponseBuilder.Ok;
         }

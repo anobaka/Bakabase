@@ -1,12 +1,14 @@
 "use client";
 
 import type { WorkflowActivityUI } from "../types";
+import type { PostAvailability } from "@/core/models/PostParserTask";
 
 import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button, Chip, Switch } from "@/components/bakaui";
 import { AcquisitionWaitReason, WorkflowActivityCategory } from "@/sdk/constants";
+import { AvailabilityDetails } from "@/pages/post-parser/components/PostDetails";
 
 interface Config {
   neverBuy: boolean;
@@ -21,6 +23,10 @@ interface Prompt {
   locked: LockedPart[];
   limit: number;
   where: string;
+  minimumRemainingCoins?: number;
+  balance?: number | null;
+  availability?: PostAvailability | null;
+  message?: string | null;
 }
 
 /**
@@ -70,6 +76,11 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
   } catch {
     prompt = null;
   }
+  const quoted =
+    !!prompt?.locked?.length && prompt.locked.every((part) => part.price != null && !!part.url);
+  const total = (prompt?.locked ?? []).reduce((sum, part) => sum + (part.price ?? 0), 0);
+  const reserve = prompt?.minimumRemainingCoins ?? 0;
+  const insufficient = prompt?.balance != null && prompt.balance - total < reserve;
 
   return (
     <div className="flex flex-col gap-3">
@@ -78,6 +89,10 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
           where: prompt?.where ?? "",
         })}
       </div>
+      <AvailabilityDetails value={prompt?.availability} />
+      {prompt?.message && (
+        <p className="whitespace-pre-wrap text-xs text-default-500">{prompt.message}</p>
+      )}
 
       <div className="flex flex-col gap-1">
         {(prompt?.locked ?? []).map((l) => (
@@ -99,11 +114,21 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
           })}
         </div>
       )}
+      <p className="text-xs text-default-500">
+        {t("postParser.purchase.balance", {
+          balance: prompt?.balance ?? t("postParser.label.unknown"),
+          reserve,
+          total: quoted ? total : t("postParser.label.unknown"),
+        })}
+      </p>
+      {insufficient && (
+        <p className="text-xs text-warning-600">{t("postParser.purchase.insufficient")}</p>
+      )}
 
       <div className="flex gap-2">
         <Button
           color="primary"
-          isDisabled={submitting}
+          isDisabled={submitting || !quoted || insufficient}
           size="sm"
           onPress={() => onSubmit(signalOf(true))}
         >

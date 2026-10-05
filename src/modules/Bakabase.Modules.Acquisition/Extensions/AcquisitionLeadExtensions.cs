@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
@@ -39,6 +41,26 @@ public static class AcquisitionLeadExtensions
         return trimmed;
     }
 
+    /// <summary>Enrich an unknown plan, but do not silently replace an executable saved plan.</summary>
+    public static bool CanAcceptExtractionPlan(string? existingJson, string? incomingJson)
+    {
+        if (existingJson == null || incomingJson == null || existingJson == incomingJson) return true;
+        try
+        {
+            var existing = JsonNode.Parse(existingJson);
+            var incoming = JsonNode.Parse(incomingJson);
+            if (existing is not JsonObject || incoming is not JsonObject) return false;
+            var oldRequirement = (existing["requirement"] ?? existing["Requirement"])?.GetValue<string>();
+            var newRequirement = (incoming["requirement"] ?? incoming["Requirement"])?.GetValue<string>();
+            var oldSteps = existing["steps"] ?? existing["Steps"];
+            var oldIncomplete = oldRequirement == "unknown" || (oldRequirement == "required" && oldSteps is JsonArray {Count: 0});
+            if (oldIncomplete && newRequirement is "required" or "notRequired") return true;
+            return oldRequirement == newRequirement && JsonNode.DeepEquals(
+                existing["steps"] ?? existing["Steps"], incoming["steps"] ?? incoming["Steps"]);
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException) { return false; }
+    }
+
     public static AcquisitionLead ToDomainModel(this AcquisitionLeadDbModel dbModel) => new()
     {
         Id = dbModel.Id,
@@ -51,6 +73,7 @@ public static class AcquisitionLeadExtensions
         Password = dbModel.Password,
         SourceReference = dbModel.SourceReference,
         IsResolved = dbModel.IsResolved,
+        ExtractionPlanJson = dbModel.ExtractionPlanJson,
         LastUsedAt = dbModel.LastUsedAt,
         LastResult = dbModel.LastResult,
         CreatedAt = dbModel.CreatedAt
