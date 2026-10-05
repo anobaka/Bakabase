@@ -59,7 +59,7 @@ public sealed class PostParserAcquisitionTests
     }
 
     private async Task<PostParserTaskDbModel> ParsedPost(IReadOnlyList<PostDownloadResource> links,
-        string? text = null)
+        string? text = null, IReadOnlyList<PostDownloadGroup>? groups = null)
     {
         var post = new PostParserTaskDbModel
         {
@@ -70,7 +70,7 @@ public sealed class PostParserAcquisitionTests
             Revision = 7,
             Results = JsonSerializer.Serialize(new Dictionary<string, object>
             {
-                [nameof(PostParseTarget.DownloadInfo)] = new {resources = links}
+                [nameof(PostParseTarget.DownloadInfo)] = new {resources = links, groups}
             }, Json)
         };
         Db.Set<PostParserTaskDbModel>().Add(post);
@@ -155,6 +155,56 @@ public sealed class PostParserAcquisitionTests
         Assert.AreEqual("abcd", lead.AccessCode);
         Assert.AreEqual("archive", lead.Password);
         Assert.AreEqual(JsonSerializer.Serialize(plan, Json), lead.ExtractionPlanJson);
+    }
+
+    [TestMethod]
+    [DataRow(" full ", "full", true)]
+    [DataRow("missing-one", "missing-two", false)]
+    public async Task GroupMembershipIsNormalizedBeforeMergingSelectedOriginalIndices(
+        string firstGroupId, string secondGroupId, bool defineGroup)
+    {
+        var post = await ParsedPost([
+            Link("https://example.test/unselected"),
+            Link("https://example.test/shared", "code") with {GroupId = firstGroupId},
+            Link("https://example.test/shared", password: "archive") with {GroupId = secondGroupId},
+            Link("https://example.test/selected-later", "later-code")
+        ], groups: defineGroup ? [new() {Id = " full ", Title = "本体", Kind = " MAIN "}] : null);
+        var imported = await Import(post, 1, 2, 3);
+
+        Assert.AreEqual(2, imported.LeadCount);
+        var leads = (await Leads.GetByResourceId(imported.ResourceId)).ToDictionary(l => l.Value);
+        Assert.AreEqual("code", leads["https://example.test/shared"].AccessCode);
+        Assert.AreEqual("archive", leads["https://example.test/shared"].Password);
+        Assert.AreEqual("later-code", leads["https://example.test/selected-later"].AccessCode);
+        Assert.IsFalse(leads.ContainsKey("https://example.test/unselected"));
+    }
+
+    [TestMethod]
+    public async Task AmbiguousGroupDefinitionsDoNotPreventImportingCompatibleLegacyLinks()
+    {
+        var post = await ParsedPost([
+            Link("https://example.test/shared", "code") with {GroupId = "duplicate"},
+            Link("https://example.test/shared", password: "archive") with {GroupId = "missing"}
+        ], groups: [new() {Id = "duplicate", Title = "本体", Kind = "main"},
+            new() {Id = " duplicate ", Title = "预览", Kind = "preview"}]);
+        var imported = await Import(post, 0, 1);
+
+        Assert.AreEqual(1, imported.LeadCount);
+        var lead = (await Leads.GetByResourceId(imported.ResourceId)).Single();
+        Assert.AreEqual("code", lead.AccessCode);
+        Assert.AreEqual("archive", lead.Password);
+    }
+
+    [TestMethod]
+    public async Task ExplicitSelectionCanOverrideAiContentGroupsForDifferentLocations()
+    {
+        var post = await ParsedPost([
+            Link("https://example.test/first") with {GroupId = "full"},
+            Link("https://example.test/second") with {GroupId = "preview"}
+        ], groups: [new() {Id = "full", Title = "本体", Kind = "main"},
+            new() {Id = "preview", Title = "预览", Kind = "preview"}]);
+        var imported = await Import(post, 0, 1);
+        Assert.AreEqual(2, imported.LeadCount, "AI grouping is advisory; a user's explicit selection remains authoritative.");
     }
 
     [TestMethod]

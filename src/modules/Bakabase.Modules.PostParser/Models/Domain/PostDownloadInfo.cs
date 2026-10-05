@@ -5,18 +5,30 @@ namespace Bakabase.Modules.PostParser.Models.Domain;
 /// <summary>Information extracted from a post. An empty list means no download links were found.</summary>
 public record PostDownloadInfo
 {
-    public int SchemaVersion { get; init; } = 2;
+    public int SchemaVersion { get; init; } = 3;
     public bool IsComplete { get; init; } = true;
     public List<string> Warnings { get; init; } = [];
     public PostAvailabilityAssessment? Availability { get; init; }
     public string? Title { get; init; }
+    public List<PostDownloadGroup> Groups { get; init; } = [];
     public List<PostDownloadResource> Resources { get; init; } = [];
+}
+
+/// <summary>AI-assessed content identity and purpose. Members are alternatives for the same content, not required parts.</summary>
+public record PostDownloadGroup
+{
+    public string Id { get; init; } = "";
+    public string Title { get; init; } = "";
+    public string Kind { get; init; } = "unknown";
+    public string? Summary { get; init; }
+    public List<string> Evidence { get; init; } = [];
 }
 
 /// <summary>A download location and its credentials, without any download or library policy.</summary>
 public record PostDownloadResource
 {
     public string Link { get; init; } = "";
+    public string? GroupId { get; init; }
     public string? Code { get; init; }
     public string? Password { get; init; }
     public PostExtractionPlan? Extraction { get; init; }

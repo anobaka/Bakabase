@@ -82,6 +82,34 @@ const task: PostParserTask = {
     },
   },
 };
+const previewUrl = "https://preview.example/screenshots";
+const mirrorUrl = "https://mega.example/full-version";
+const mirrorExtraction = {
+  requirement: "required",
+  steps: [
+    { id: "rename", op: "renameExtension", input: "$download", extension: ".zip" },
+    { id: "extract", op: "extractArchive", input: "rename", password: "mirror-password" },
+  ],
+  evidence: ["Rename the MEGA file to .zip and extract it using mirror-password."],
+};
+const groupedTask: PostParserTask = {
+  ...task,
+  results: {
+    DownloadInfo: {
+      title: "The entire post",
+      groups: [
+        { id: "preview", title: "Preview images", kind: "preview", evidence: [] },
+        { id: "main", title: "The full resource", kind: "main", evidence: [] },
+      ],
+      resources: [
+        { link: previewUrl, groupId: "preview" },
+        { link: firstUrl, code: "code123", groupId: "main" },
+        { link: firstUrl, extraction, groupId: "main" },
+        { link: mirrorUrl, extraction: mirrorExtraction, groupId: "main" },
+      ],
+    },
+  },
+};
 const show = (content: ReactNode) =>
   render(<HeroUIProvider disableAnimation>{content}</HeroUIProvider>);
 
@@ -168,5 +196,175 @@ describe("deduplicated post resource actions", () => {
     expect(JSON.parse(firstPayload.extractionPlanJson)).toEqual(extraction);
     expect(otherPayload).toMatchObject({ directory: "/downloads/other", bindingId: "post:14:3:4" });
     expect(start).toBeDisabled();
+  });
+});
+
+describe("content-grouped post resource actions", () => {
+  it("resolves trimmed group references inside legacy wrappers without compacting submitted indices", async () => {
+    const legacyGroupedTask = {
+      ...task,
+      results: {
+        DownloadInfo: {
+          data: {
+            groups: [{ id: " full ", title: " Full resource ", kind: "main", evidence: [] }],
+            resources: [
+              { link: previewUrl, groupId: "missing-group" },
+              { link: firstUrl, groupId: "full", code: "code123" },
+              { link: firstUrl, groupId: " full ", extraction },
+              { link: otherUrl },
+            ],
+          },
+        },
+      },
+    };
+
+    show(<AddToAcquisitionModal task={legacyGroupedTask} />);
+    const main = screen.getByRole("group", { name: "Full resource" });
+    const unknown = screen.getByRole("group", { name: "postParser.groups.ungrouped" });
+
+    expect(within(main).getAllByRole("checkbox")).toHaveLength(1);
+    expect(within(main).getByRole("checkbox")).toBeChecked();
+    expect(within(unknown).getAllByRole("checkbox")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.addToAcquisition" }));
+    await waitFor(() =>
+      expect(api.import).toHaveBeenCalledExactlyOnceWith(14, {
+        title: "Full resource",
+        resourceIndices: [1, 2],
+        revision: 3,
+      }),
+    );
+  });
+
+  it("defaults to one main source, suggests its group title, and imports the original duplicate indices", async () => {
+    show(<AddToAcquisitionModal task={groupedTask} />);
+    const main = screen.getByRole("group", { name: "The full resource" });
+    const preview = screen.getByRole("group", { name: "Preview images" });
+    const mainChoices = within(main).getAllByRole("checkbox");
+
+    expect(mainChoices).toHaveLength(2);
+    expect(mainChoices[0]).toBeChecked();
+    expect(mainChoices[1]).not.toBeChecked();
+    expect(within(preview).getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByLabelText("postParser.acquisition.title")).toHaveValue("The full resource");
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.addToAcquisition" }));
+    await waitFor(() =>
+      expect(api.import).toHaveBeenCalledExactlyOnceWith(14, {
+        title: "The full resource",
+        resourceIndices: [1, 2],
+        revision: 3,
+      }),
+    );
+  });
+
+  it("allows cross-group selection with a confirmation hint and keeps an edited resource name", async () => {
+    show(<AddToAcquisitionModal task={groupedTask} />);
+    const preview = screen.getByRole("group", { name: "Preview images" });
+
+    fireEvent.change(screen.getByLabelText("postParser.acquisition.title"), {
+      target: { value: "My resource" },
+    });
+    fireEvent.click(within(preview).getByRole("checkbox"));
+    expect(screen.getByText("postParser.acquisition.crossGroupHint")).toBeVisible();
+    expect(screen.getByLabelText("postParser.acquisition.title")).toHaveValue("My resource");
+    const save = screen.getByRole("button", { name: "postParser.action.addToAcquisition" });
+
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(api.import).toHaveBeenCalledExactlyOnceWith(14, {
+        title: "My resource",
+        resourceIndices: [0, 1, 2],
+        revision: 3,
+      }),
+    );
+  });
+
+  it("does not default-select preview or tool links when no main or unknown source exists", () => {
+    const previewOnlyTask = {
+      ...task,
+      results: {
+        DownloadInfo: {
+          groups: [
+            { id: "preview", title: "Preview", kind: "preview", evidence: [] },
+            { id: "tools", title: "Tools", kind: "tool", evidence: [] },
+          ],
+          resources: [
+            { link: previewUrl, groupId: "preview" },
+            { link: otherUrl, groupId: "tools" },
+          ],
+        },
+      },
+    };
+
+    show(<AddToAcquisitionModal task={previewOnlyTask} />);
+    for (const choice of screen.getAllByRole("checkbox")) expect(choice).not.toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "postParser.action.addToAcquisition" }),
+    ).toBeDisabled();
+  });
+
+  it("selects an unclassified source instead of a preview when no main content exists", async () => {
+    const unknownTask = {
+      ...task,
+      results: {
+        DownloadInfo: {
+          groups: [{ id: "preview", title: "Preview", kind: "preview", evidence: [] }],
+          resources: [{ link: previewUrl, groupId: "preview" }, { link: otherUrl }],
+        },
+      },
+    };
+
+    show(<AddToAcquisitionModal task={unknownTask} />);
+    expect(
+      within(screen.getByRole("group", { name: "Preview" })).getByRole("checkbox"),
+    ).not.toBeChecked();
+    expect(
+      within(screen.getByRole("group", { name: "postParser.groups.ungrouped" })).getByRole(
+        "checkbox",
+      ),
+    ).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "postParser.action.addToAcquisition" }));
+    await waitFor(() => expect(api.import.mock.calls[0]?.[1].resourceIndices).toEqual([1]));
+  });
+
+  it("keeps mirror processing plans and original bindings independent without automatically selecting them", async () => {
+    show(<LocalProcessingModal task={groupedTask} />);
+    await waitFor(() => expect(api.workflows).toHaveBeenCalled());
+    const main = screen.getByRole("group", { name: "The full resource" });
+    const choices = within(main).getAllByRole("checkbox");
+
+    expect(choices).toHaveLength(2);
+    for (const choice of choices) expect(choice).not.toBeChecked();
+    expect(screen.getByText("postParser.groups.localProcessingHint")).toBeVisible();
+    for (const [url, directory] of [
+      [firstUrl, "/downloads/first"],
+      [mirrorUrl, "/downloads/mirror"],
+    ]) {
+      const choice = within(main).getByRole("checkbox", { name: url });
+      const source = choice.closest("section")!;
+
+      fireEvent.click(choice);
+      fireEvent.change(within(source).getByLabelText("workflow.processing.directory"), {
+        target: { value: directory },
+      });
+    }
+    const start = screen.getByRole("button", { name: "workflow.processing.startSelected" });
+
+    await waitFor(() => expect(start).toBeEnabled());
+    fireEvent.click(start);
+    await waitFor(() => expect(api.runWorkflow).toHaveBeenCalledTimes(2));
+    const firstPayload = JSON.parse(api.runWorkflow.mock.calls[0][1].argsJson);
+    const mirrorPayload = JSON.parse(api.runWorkflow.mock.calls[1][1].argsJson);
+
+    expect(firstPayload).toMatchObject({ directory: "/downloads/first", bindingId: "post:14:3:1" });
+    expect(JSON.parse(firstPayload.extractionPlanJson)).toEqual(extraction);
+    expect(mirrorPayload).toMatchObject({
+      directory: "/downloads/mirror",
+      bindingId: "post:14:3:3",
+    });
+    expect(JSON.parse(mirrorPayload.extractionPlanJson)).toEqual(mirrorExtraction);
+    expect(
+      within(screen.getByRole("group", { name: "Preview images" })).getByRole("checkbox"),
+    ).not.toBeChecked();
   });
 });

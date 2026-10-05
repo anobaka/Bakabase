@@ -2,7 +2,7 @@ import type { Api } from "@/sdk/Api";
 import type { PostParserTask } from "@/core/models/PostParserTask";
 import type { PreviewStoredPostParserTask } from "./fixtures";
 
-import { completeResult, createFixtures } from "./fixtures";
+import { completeResult, createFixtures, createGroupedFixture, groupedResult } from "./fixtures";
 
 import {
   PostParserSource,
@@ -17,7 +17,14 @@ import {
 import { usePostParserTasksStore } from "@/stores/postParserTasks";
 import { useBTasksStore } from "@/stores/bTasks";
 
-export type PreviewScenario = "all" | "waiting" | "complete" | "failure" | "empty" | "concurrency";
+export type PreviewScenario =
+  | "all"
+  | "waiting"
+  | "complete"
+  | "failure"
+  | "empty"
+  | "concurrency"
+  | "groups";
 interface PreviewRun {
   id: number;
   postParserTaskId: number;
@@ -212,6 +219,7 @@ const visible = () =>
       (task) =>
         !task.isDeleted &&
         (scenario === "all" ||
+          scenario === "groups" ||
           (scenario === "concurrency" && task.id >= 100) ||
           (scenario === "waiting" && task.workflowStatus === WorkflowRunStatus.Waiting) ||
           (scenario === "complete" && task.workflowStatus === WorkflowRunStatus.Success) ||
@@ -410,6 +418,17 @@ export const loadConcurrencyPreview = () => {
   );
 };
 
+export const loadGroupsPreview = () => {
+  resetPreview();
+  scenario = "groups";
+  records = [createGroupedFixture()];
+  runs = records.map(asRun);
+  publish();
+  announce(
+    "查看本体的三个网盘分流，以及预览、补充内容、相关资源、工具和用途未知的链接。各来源保留独立的密码与处理步骤。",
+  );
+};
+
 export const resetPreview = () => {
   clearScheduler();
   externallyUnlocked.clear();
@@ -426,7 +445,7 @@ export const resetPreview = () => {
   announce("示例已重置，全部操作仅影响当前预览。");
 };
 export const setPreviewScenario = (value: PreviewScenario) => {
-  if (scenario === "concurrency" && value !== "concurrency") resetPreview();
+  if ((scenario === "concurrency" || scenario === "groups") && value !== scenario) resetPreview();
   scenario = value;
   publish();
 };
@@ -460,7 +479,9 @@ const finish = (id: number) =>
           },
       results: {
         [PostParseTarget.DownloadInfo]: {
-          ...completeResult(task.title || "新帖子"),
+          ...(scenario === "groups" && task.id === 11
+            ? groupedResult(task.title || "新帖子")
+            : completeResult(task.title || "新帖子")),
           isComplete: !locked,
           warnings: locked ? ["尚有未解锁内容，部分密码或处理步骤可能缺失。"] : [],
         },

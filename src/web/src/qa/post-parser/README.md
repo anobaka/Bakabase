@@ -66,7 +66,6 @@ The preview and page form a full-height flex column. The toolbar remains above t
 list uses the remaining height; on a short viewport the outer content can scroll to retain the
 minimum useful list height.
 
-
 Choose **并发队列 · 14 个帖子** to load an isolated set of 14 pending inputs. None is queued
 until explicitly started. “开始全部解析任务” submits all 14 exactly once: up to 10 tasks enter the
 workflow, the remaining four show a clock and “排队中”. The simulated site has one HTTP slot;
@@ -95,3 +94,16 @@ twice: one entry supplies the access code and link check, and the other includes
 the archive password and processing instructions. The result, resource selectors and exports
 should show it once with all of that information retained; the other three resources remain
 separate. The 14-post concurrency scenario is unchanged.
+
+Choose **内容分组 / 多网盘分流** for a separate completed post. The complete editable autumn
+project appears first with Baidu, MEGA and Hotfile alternatives. Each source retains its own
+access code, archive password and processing plan. Further groups distinguish preview images,
+optional night textures, an earlier related project, a utility and an unidentified link. Group
+headers show the purpose, source count, AI-inference reminder and on-demand source evidence;
+the summary explains which sources are alternatives. Re-parsing preserves this offline example.
+
+Open **加入获取资源** to select sources within one content group; selecting across groups shows a
+reminder to confirm that they belong to one resource. **处理已下载文件** keeps source-specific plans
+under the same headings so only the downloaded source needs a local directory. Legacy post #5
+still demonstrates exact-link deduplication without AI grouping and offers a reparse hint.
+Switching back restores the original ten examples; the concurrent scenario still has 14 posts.

@@ -7,7 +7,9 @@ import { useNavigate } from "react-router-dom";
 import { SelectItem } from "@heroui/react";
 
 import { getDownloadInfo } from "../results";
-import { groupDownloadResources } from "../resourceDeduplication";
+import { getDownloadContentGroups } from "../resourceGroups";
+
+import DownloadGroupHeader from "./DownloadGroupHeader";
 
 import { Button, Checkbox, Input, Modal, Select, Switch } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -27,7 +29,11 @@ export default function LocalProcessingModal({
 }: DestroyableProps & { task: PostParserTask }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const resources = groupDownloadResources(getDownloadInfo(task)?.resources ?? []);
+  const sections = getDownloadContentGroups(getDownloadInfo(task) ?? {});
+  const resources = sections.flatMap((section) => section.resources);
+  const bindingIndices = new Map(
+    resources.map(({ sourceIndices }, index) => [sourceIndices[0], index]),
+  );
   const [bindings, setBindings] = useState<Binding[]>(() =>
     resources.map(() => ({ selected: false, directory: "", alreadyProcessed: false })),
   );
@@ -128,6 +134,7 @@ export default function LocalProcessingModal({
     >
       <div className="space-y-4">
         <p className="text-sm">{t("workflow.processing.bindingHint")}</p>
+        <p className="text-xs text-default-500">{t("postParser.groups.localProcessingHint")}</p>
         {error && (
           <p className="text-sm text-danger" role="alert">
             {error}
@@ -153,51 +160,65 @@ export default function LocalProcessingModal({
             {t("workflow.processing.configure")}
           </Button>
         )}
-        {resources.map(({ resource, sourceIndices }, index) => (
-          <section
-            key={sourceIndices[0]}
-            className="space-y-2 rounded-lg border border-default-200 p-3"
+        {sections.map((section) => (
+          <div
+            key={section.key}
+            aria-label={section.group?.title ?? t("postParser.groups.ungrouped")}
+            className="space-y-2"
+            role="group"
           >
-            <Checkbox
-              isDisabled={busy || bindings[index].runId != null}
-              isSelected={bindings[index].selected}
-              onValueChange={(checked) => update(index, { selected: checked })}
-            >
-              <span className="break-all text-xs">
-                {resource.link || `${sourceIndices[0] + 1}`}
-              </span>
-            </Checkbox>
-            <Input
-              isDisabled={busy || bindings[index].runId != null}
-              label={t("workflow.processing.directory")}
-              size="sm"
-              value={bindings[index].directory}
-              onValueChange={(directory) => update(index, { directory })}
-            />
-            <Switch
-              isDisabled={busy || bindings[index].runId != null}
-              isSelected={bindings[index].alreadyProcessed}
-              size="sm"
-              onValueChange={(alreadyProcessed) => update(index, { alreadyProcessed })}
-            >
-              {t("workflow.processing.alreadyProcessed")}
-            </Switch>
-            {!bindings[index].alreadyProcessed && (
-              <p className="text-xs text-default-500">
-                {t(`postParser.extraction.${resource.extraction?.requirement ?? "unknown"}`)}
-              </p>
-            )}
-            {bindings[index].runId != null && (
-              <p className="text-xs text-success" role="status">
-                {t("postParser.label.run", { id: bindings[index].runId })}
-              </p>
-            )}
-            {bindings[index].error && (
-              <p className="text-xs text-danger" role="alert">
-                {bindings[index].error}
-              </p>
-            )}
-          </section>
+            <DownloadGroupHeader group={section.group} resourceCount={section.resources.length} />
+            {section.resources.map(({ resource, sourceIndices }) => {
+              const index = bindingIndices.get(sourceIndices[0])!;
+
+              return (
+                <section
+                  key={sourceIndices[0]}
+                  className="space-y-2 rounded-lg border border-default-200 p-3"
+                >
+                  <Checkbox
+                    isDisabled={busy || bindings[index].runId != null}
+                    isSelected={bindings[index].selected}
+                    onValueChange={(checked) => update(index, { selected: checked })}
+                  >
+                    <span className="break-all text-xs">
+                      {resource.link || `${sourceIndices[0] + 1}`}
+                    </span>
+                  </Checkbox>
+                  <Input
+                    isDisabled={busy || bindings[index].runId != null}
+                    label={t("workflow.processing.directory")}
+                    size="sm"
+                    value={bindings[index].directory}
+                    onValueChange={(directory) => update(index, { directory })}
+                  />
+                  <Switch
+                    isDisabled={busy || bindings[index].runId != null}
+                    isSelected={bindings[index].alreadyProcessed}
+                    size="sm"
+                    onValueChange={(alreadyProcessed) => update(index, { alreadyProcessed })}
+                  >
+                    {t("workflow.processing.alreadyProcessed")}
+                  </Switch>
+                  {!bindings[index].alreadyProcessed && (
+                    <p className="text-xs text-default-500">
+                      {t(`postParser.extraction.${resource.extraction?.requirement ?? "unknown"}`)}
+                    </p>
+                  )}
+                  {bindings[index].runId != null && (
+                    <p className="text-xs text-success" role="status">
+                      {t("postParser.label.run", { id: bindings[index].runId })}
+                    </p>
+                  )}
+                  {bindings[index].error && (
+                    <p className="text-xs text-danger" role="alert">
+                      {bindings[index].error}
+                    </p>
+                  )}
+                </section>
+              );
+            })}
+          </div>
         ))}
       </div>
     </Modal>

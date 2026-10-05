@@ -43,6 +43,7 @@ public static class PostDownloadResourceDeduplicator
     {
         merged = null;
         if (Conflicts(firstIdentity.Code, nextIdentity.Code) || Conflicts(first.Password, next.Password) ||
+            Conflicts(first.GroupId, next.GroupId) ||
             !TryMergePlans(first.Extraction, next.Extraction, out var plan) ||
             (first.LinkHealth != null && next.LinkHealth != null &&
              (first.LinkHealth.Status != next.LinkHealth.Status || first.LinkHealth.Reason != next.LinkHealth.Reason)))
@@ -51,6 +52,7 @@ public static class PostDownloadResourceDeduplicator
             ? next.LinkHealth : first.LinkHealth;
         merged = first with
         {
+            GroupId = Present(first.GroupId) ?? Present(next.GroupId),
             Code = Present(first.Code) ?? Present(next.Code) ?? firstIdentity.Code ?? nextIdentity.Code,
             Password = Present(first.Password) ?? Present(next.Password),
             Extraction = plan,

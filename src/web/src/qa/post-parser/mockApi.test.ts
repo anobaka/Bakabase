@@ -4,6 +4,7 @@ import mockApi, {
   resetPreview,
   setPreviewScenario,
   loadConcurrencyPreview,
+  loadGroupsPreview,
   restartPreview,
 } from "./mockApi";
 import * as fixtures from "./fixtures";
@@ -42,6 +43,27 @@ afterEach(() => {
 });
 
 describe("post-parser preview action boundaries", () => {
+  it("shows an isolated content-group example and preserves groups after reparsing", async () => {
+    loadGroupsPreview();
+    expect(tasks()).toHaveLength(1);
+    const before = task(11).results?.[PostParseTarget.DownloadInfo];
+
+    expect(before).toEqual(fixtures.groupedResult(task(11).title!));
+    await mockApi.postParser.reParsePostParserTask(11);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(task(11).results?.[PostParseTarget.DownloadInfo]).toEqual(before);
+    setPreviewScenario("all");
+    expect(tasks()).toHaveLength(10);
+    expect(task(5).results?.[PostParseTarget.DownloadInfo]).toMatchObject({
+      resources: expect.arrayContaining([
+        expect.objectContaining({ link: "https://pan.baidu.com/s/qa-city-morning" }),
+        expect.objectContaining({ link: "https://pan.baidu.com/s/qa-city-morning?pwd=am26" }),
+      ]),
+    });
+    loadConcurrencyPreview();
+    expect(tasks()).toHaveLength(14);
+  });
+
   it("reparses only the chosen post and coalesces duplicate requests while it runs", async () => {
     const unrelated = tasks().filter((item) => item.id !== 4);
     const initialHistory = await history(4);

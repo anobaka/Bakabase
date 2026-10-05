@@ -20,12 +20,13 @@ public class DownloadInfoHandler(IPostDownloadInfoExtractor extractor) : IPostPa
         var resources = result.Resources.Select(r => new
         {
             Link = r.Link,
+            r.GroupId,
             Code = r.Code,
             Password = r.Password,
             r.Extraction,
             r.LinkHealth,
             DriveKind = AcquisitionDriveKinds.Infer(r.Link)
         }).ToList();
-        return new PostParseHandlerResult(new {result.SchemaVersion, result.IsComplete, result.Warnings, result.Availability, resources}, result.Title);
+        return new PostParseHandlerResult(new {result.SchemaVersion, result.IsComplete, result.Warnings, result.Availability, result.Groups, resources}, result.Title);
     }
 }

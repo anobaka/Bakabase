@@ -1,4 +1,5 @@
 import type { PostContentSnapshot, PostParserTask } from "@/core/models/PostParserTask";
+import type { DownloadInfoData } from "@/pages/post-parser/results";
 
 import { PostParserSource, PostParseTarget, WorkflowRunStatus } from "@/sdk/constants";
 
@@ -377,4 +378,152 @@ export const createFixtures = (): PreviewStoredPostParserTask[] => {
       revision: 0,
     },
   ];
+};
+
+export const groupedResult = (title: string): DownloadInfoData => ({
+  schemaVersion: 3,
+  title,
+  isComplete: true,
+  warnings: [],
+  groups: [
+    {
+      id: "preview",
+      title: "场景效果预览",
+      kind: "preview",
+      summary: "仅含低清样图，不包含可编辑工程。",
+      evidence: ["预览区是低清样图，完整工程请使用下面的三条分流。"],
+    },
+    {
+      id: "main",
+      title: "秋日场景完整工程 v2",
+      kind: "main",
+      summary: "三个网盘提供同一版完整工程，任选一个来源。",
+      evidence: ["百度、MEGA 和 Hotfile 都是 v2 完整工程，任选其一；各分流的压缩密码见链接旁。"],
+    },
+    {
+      id: "supplement",
+      title: "额外夜景材质包",
+      kind: "supplement",
+      summary: "可选的独立补充包，未包含在完整工程中。",
+      evidence: ["夜景材质是额外补充包，需要时单独下载。"],
+    },
+    {
+      id: "related",
+      title: "往期冬日场景合集",
+      kind: "related",
+      summary: "作者推荐的其他资源，与本次秋日场景不同。",
+      evidence: ["喜欢此类素材可以看看我之前发布的冬日场景合集。"],
+    },
+    {
+      id: "tool",
+      title: "7-Zip 解压工具",
+      kind: "tool",
+      summary: "用于处理压缩包的工具，不是场景资源。",
+      evidence: ["没有解压软件的话，可从 7-Zip 官网获取。"],
+    },
+    {
+      id: "unknown",
+      title: "回复中的未说明链接",
+      kind: "unknown",
+      summary: "回复未说明文件内容，无法确认是否与本帖相关。",
+      evidence: ["回复：再放一个链接，大家自行看看。"],
+    },
+  ],
+  resources: [
+    {
+      groupId: "preview",
+      link: "https://pan.baidu.com/s/qa-autumn-preview",
+      code: "view",
+      extraction: { requirement: "notRequired", steps: [], evidence: [] },
+      linkHealth: { status: "available" },
+    },
+    {
+      groupId: "main",
+      link: "https://pan.baidu.com/s/qa-autumn-project",
+      code: "proj",
+      password: "autumn-baidu",
+      extraction: {
+        requirement: "required",
+        steps: [
+          { id: "extract", op: "extractArchive", input: "download", password: "autumn-baidu" },
+        ],
+        evidence: ["百度分流使用 autumn-baidu 解压。"],
+      },
+      linkHealth: { status: "available" },
+    },
+    {
+      groupId: "main",
+      link: "https://mega.nz/file/qaAutumn26#sample-project-key",
+      password: "autumn-mega",
+      extraction: {
+        requirement: "required",
+        steps: [
+          { id: "extract", op: "extractArchive", input: "download", password: "autumn-mega" },
+        ],
+        evidence: ["MEGA 分流使用 autumn-mega 解压。"],
+      },
+      linkHealth: { status: "available" },
+    },
+    {
+      groupId: "main",
+      link: "https://hotfile.com/dl/qa-autumn-project",
+      extraction: {
+        requirement: "required",
+        steps: [
+          { id: "rename", op: "renameExtension", input: "download", extension: ".zip" },
+          { id: "extract", op: "extractArchive", input: "rename", password: "autumn-hotfile" },
+        ],
+        evidence: ["Hotfile 分流先改后缀为 .zip，再用 autumn-hotfile 解压。"],
+      },
+      linkHealth: { status: "unknown", reason: "unsupportedProvider" },
+    },
+    {
+      groupId: "supplement",
+      link: "https://1drv.ms/f/qa-autumn-night-textures",
+      extraction: { requirement: "notRequired", steps: [], evidence: [] },
+      linkHealth: { status: "unknown", reason: "pageDidNotConfirmAvailability" },
+    },
+    {
+      groupId: "related",
+      link: "https://pan.baidu.com/s/qa-winter-scenes",
+      code: "snow",
+      extraction: { requirement: "unknown", steps: [], evidence: [] },
+      linkHealth: { status: "unknown" },
+    },
+    {
+      groupId: "tool",
+      link: "https://www.7-zip.org/",
+      extraction: { requirement: "notRequired", steps: [], evidence: [] },
+      linkHealth: { status: "unknown", reason: "unsupportedProvider" },
+    },
+    {
+      groupId: "unknown",
+      link: "https://example.test/qa-unidentified-file",
+      extraction: { requirement: "unknown", steps: [], evidence: [] },
+      linkHealth: { status: "unknown", reason: "unsupportedProvider" },
+    },
+  ],
+});
+
+export const createGroupedFixture = (): PostParserTask => {
+  const grouped = task(11, "秋日场景工程 · 多网盘分流与内容用途");
+  const result = groupedResult(grouped.title!);
+
+  return {
+    ...grouped,
+    workflowRunId: 1011,
+    workflowDefinitionId: 1,
+    workflowStatus: WorkflowRunStatus.Success,
+    parsingState: "complete",
+    completedAt: "2026-10-06T02:20:00Z",
+    contentSnapshot: {
+      ...snapshot(grouped.title!, grouped.id),
+      mainHtml: result
+        .groups!.flatMap((group) => group.evidence)
+        .map((text) => `<p>${text}</p>`)
+        .join(""),
+      comments: [],
+    },
+    results: { [PostParseTarget.DownloadInfo]: result },
+  };
 };

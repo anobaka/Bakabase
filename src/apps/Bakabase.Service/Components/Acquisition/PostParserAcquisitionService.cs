@@ -132,10 +132,12 @@ public class PostParserAcquisitionService(BakabaseDbContext db, IPlaceholderReso
                     throw new ArgumentException(invalidFormat);
                 data = nested;
             }
-            var resources = data.Deserialize<PostDownloadInfo>(Json)?.Resources ?? [];
+            var info = data.Deserialize<PostDownloadInfo>(Json) ?? new PostDownloadInfo();
+            var resources = info.Resources ?? [];
             if (resources.Any(resource => resource == null))
                 throw new ArgumentException(invalidFormat);
-            return resources;
+            // Normalize group membership before merging selected entries, but preserve original array indices.
+            return PostDownloadGroupNormalizer.Normalize(info with {Resources = resources}).Resources;
         }
         catch (JsonException ex)
         {

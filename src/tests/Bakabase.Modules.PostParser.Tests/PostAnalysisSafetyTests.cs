@@ -28,7 +28,7 @@ public class PostAnalysisSafetyTests
         var result = await new PostDownloadInfoExtractor(llm, NullLogger<PostDownloadInfoExtractor>.Instance)
             .ExtractAsync(new PostContent {MainHtml = "Instructions", Locks = [new("https://example.test/buy", 1, false)]});
         Assert.IsFalse(result.IsComplete);
-        Assert.AreEqual(2, result.SchemaVersion);
+        Assert.AreEqual(3, result.SchemaVersion);
         var steps = result.Resources.Single().Extraction!.Steps;
         Assert.AreEqual(6, steps.Count);
         CollectionAssert.AreEqual(new[] {"one", "two", "three"}, steps.Where(s => s.Op == "extractArchive").Select(s => s.Password).ToArray());

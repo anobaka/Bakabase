@@ -635,6 +635,39 @@ public sealed class PostParserWorkflowTests
     }
 
     [TestMethod]
+    public async Task ContentGroupsSurviveTaskPersistenceLinkChecksAndWorkflowOutput()
+    {
+        _extractor.Result = new()
+        {
+            Title = "Grouped post",
+            Groups = [new() {Id = "full", Title = "完整本体", Kind = "main", Summary = "二选一的分流", Evidence = ["百度与MEGA内容相同"]},
+                new() {Id = "preview", Title = "试玩", Kind = "preview"}],
+            Resources = [new() {Link = "https://pan.baidu.com/s/full", GroupId = "full", Code = "code"},
+                new() {Link = "https://mega.nz/file/full#key", GroupId = "full", Password = "archive"},
+                new() {Link = "https://example.test/preview", GroupId = "preview"}]
+        };
+        var id = await Add();
+        await Dispatch();
+        var runId = (await TaskState(id)).WorkflowRunId!.Value;
+        await Execute(runId);
+
+        var done = await TaskState(id);
+        Assert.AreEqual(WorkflowRunStatus.Success, done.WorkflowStatus);
+        var saved = done.Results![PostParseTarget.DownloadInfo]!;
+        Assert.AreEqual(3, saved["schemaVersion"]!.GetValue<int>());
+        Assert.AreEqual("full", saved["resources"]![0]!["groupId"]!.GetValue<string>());
+        Assert.AreEqual("full", saved["resources"]![1]!["groupId"]!.GetValue<string>());
+        Assert.AreEqual("preview", saved["resources"]![2]!["groupId"]!.GetValue<string>());
+        Assert.IsNotNull(saved["resources"]![0]!["linkHealth"]);
+        Assert.AreEqual("二选一的分流", saved["groups"]![0]!["summary"]!.GetValue<string>());
+        Assert.AreEqual("百度与MEGA内容相同", saved["groups"]![0]!["evidence"]![0]!.GetValue<string>());
+        using var output = JsonDocument.Parse((await RunState(runId)).OutputItemsJson!);
+        var result = output.RootElement[0].GetProperty("result");
+        Assert.AreEqual("完整本体", result.GetProperty("groups")[0].GetProperty("title").GetString());
+        Assert.AreEqual("preview", result.GetProperty("resources")[2].GetProperty("groupId").GetString());
+    }
+
+    [TestMethod]
     public async Task FailedExtractionRetriesSameRunFromSavedContent()
     {
         _extractor.FailuresRemaining = 1;
@@ -1296,6 +1329,7 @@ public sealed class PostParserWorkflowTests
 
     private sealed class FakeExtractor : IPostDownloadInfoExtractor
     {
+        public PostDownloadInfo? Result;
         public int Extractions;
         public int FailuresRemaining;
         public bool Hold;
@@ -1307,7 +1341,7 @@ public sealed class PostParserWorkflowTests
             Entered.TrySetResult();
             if (Hold) await Release.Task.WaitAsync(ct);
             if (FailuresRemaining-- > 0) throw new InvalidOperationException("fixture extraction failure");
-            return new() {Title = "Extracted title", Resources = [new() {Link = "https://example.test/file.zip", Code = "code", Password = "secret"}]};
+            return Result ?? new() {Title = "Extracted title", Resources = [new() {Link = "https://example.test/file.zip", Code = "code", Password = "secret"}]};
         }
     }
 

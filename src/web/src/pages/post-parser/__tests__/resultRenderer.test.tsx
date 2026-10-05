@@ -1,7 +1,7 @@
 import type { DownloadInfoData, ExtractionPlan } from "../results";
 
 import { HeroUIProvider } from "@heroui/react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -65,6 +65,96 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("download result presentation", () => {
+  it("prioritizes main content groups while retaining each mirror's credentials and plan", async () => {
+    const data: DownloadInfoData = {
+      groups: [
+        { id: "preview", title: "Preview images", kind: "preview", evidence: [] },
+        {
+          id: "main",
+          title: "Complete project",
+          kind: "main",
+          summary: "Choose either mirror for the complete project.",
+          evidence: ["The Baidu and MEGA links contain the same project, packaged separately."],
+        },
+        { id: "tool", title: "Archive utility", kind: "tool", evidence: [] },
+        { id: "unknown", title: "Unidentified link", kind: "unknown", evidence: [] },
+      ],
+      resources: [
+        { groupId: "preview", link: "https://example.test/previews" },
+        {
+          groupId: "main",
+          link: "https://pan.baidu.com/s/project",
+          code: "ba01",
+          extraction: plan,
+        },
+        {
+          groupId: "main",
+          link: "https://mega.nz/file/project#key",
+          code: "mega-code",
+          password: "mirror-password",
+        },
+        { groupId: "tool", link: "https://example.test/utility" },
+        { groupId: "unknown", link: "https://example.test/unknown" },
+      ],
+    };
+
+    show(data);
+    expect(
+      screen.getAllByRole("region").map((region) => region.getAttribute("aria-label")),
+    ).toEqual(["Complete project", "Preview images", "Archive utility", "Unidentified link"]);
+    const main = within(screen.getByRole("region", { name: "Complete project" }));
+
+    expect(main.getByText("2 sources")).toBeVisible();
+    expect(main.getByText("Choose either mirror for the complete project.")).toBeVisible();
+    expect(main.getAllByRole("button", { name: "Copy download link" })).toHaveLength(2);
+    fireEvent.click(main.getAllByRole("button", { name: "Copy access code" })[1]);
+    await waitFor(() => expect(actions.copy).toHaveBeenCalledWith("mega-code"));
+    fireEvent.click(main.getByRole("button", { name: "Copy archive password" }));
+    await waitFor(() => expect(actions.copy).toHaveBeenCalledWith("mirror-password"));
+    fireEvent.click(main.getByRole("button", { name: "Copy processing instructions" }));
+    await waitFor(() => expect(actions.copy).toHaveBeenCalledWith(JSON.stringify(plan, null, 2)));
+    expect(screen.getByText("Unknown purpose")).toBeVisible();
+    expect(screen.queryByText(data.groups![1].evidence[0])).not.toBeInTheDocument();
+    fireEvent.click(
+      main.getByRole("button", { name: "Show grouping evidence for Complete project" }),
+    );
+    expect(await screen.findByText(data.groups![1].evidence[0])).toBeVisible();
+  });
+
+  it("keeps legacy resources ungrouped and lets embedded renderers suppress group labels", () => {
+    const legacy: DownloadInfoData = {
+      resources: [{ link: "https://example.test/one" }, { link: "https://example.test/two" }],
+    };
+    const { unmount } = show(legacy);
+    const hint = "Not grouped yet. Reparse to identify link purposes and alternative sources.";
+
+    expect(screen.getByText(hint)).toBeVisible();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Copy download link" })).toHaveLength(2);
+    unmount();
+    show(legacy, { showGroups: false });
+    expect(screen.queryByText(hint)).not.toBeInTheDocument();
+    expect(screen.queryByText("AI grouping")).not.toBeInTheDocument();
+  });
+
+  it("shows unresolved resources alongside known groups without assigning them a purpose", () => {
+    show({
+      groups: [{ id: "main", title: "Complete project", kind: "main", evidence: [] }],
+      resources: [
+        { groupId: "main", link: "https://example.test/main" },
+        { link: "https://example.test/unassigned" },
+      ],
+    });
+
+    const ungrouped = within(screen.getByRole("region", { name: "Ungrouped" }));
+
+    expect(
+      ungrouped.getByRole("button", { name: "https://example.test/unassigned" }),
+    ).toBeVisible();
+    expect(ungrouped.queryByText("Main content")).not.toBeInTheDocument();
+    expect(ungrouped.queryByText("AI grouping")).not.toBeInTheDocument();
+  });
+
   it("renders compatible duplicate links once with merged credentials and processing instructions", async () => {
     show({
       resources: [

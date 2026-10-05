@@ -221,5 +221,20 @@
   "postParser.summary.attention": "待处理",
   "postParser.summary.success": "已完成",
   "postParser.summary.failed": "失败",
-  "postParser.summary.paused": "已暂停"
+  "postParser.summary.paused": "已暂停",
+  "postParser.groups.ungrouped": "未分组",
+  "postParser.groups.kind.main": "本体",
+  "postParser.groups.kind.preview": "预览",
+  "postParser.groups.kind.supplement": "补充内容",
+  "postParser.groups.kind.related": "相关资源",
+  "postParser.groups.kind.tool": "工具",
+  "postParser.groups.kind.unknown": "用途未知",
+  "postParser.groups.inferred": "AI 分组",
+  "postParser.groups.inferredHint": "分组由 AI 根据已获取的帖子内容推断，同组链接可能是相同内容的不同来源；请选择合适的来源，并结合原文确认。",
+  "postParser.groups.singleSource": "1 个来源",
+  "postParser.groups.sourceCount": "{{count}} 个来源",
+  "postParser.groups.evidence": "查看“{{title}}”的分组依据",
+  "postParser.groups.legacyHint": "尚未分组，重新解析可识别用途和分流。",
+  "postParser.acquisition.crossGroupHint": "已选择不同内容组的链接，请确认它们属于同一个要获取的资源。",
+  "postParser.groups.localProcessingHint": "同一内容组通常只需处理实际下载的来源；不同来源的文件处理步骤可能不同。"
 }
