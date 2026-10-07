@@ -55,7 +55,7 @@
   "collectionMemo.settings.inheritHint": "空白的时间段起点会随全局开始时间变化；已填写的起点会保留，早于全局开始时间的部分不显示在时间条中。",
   "collectionMemo.settings.future": "全局开始时间不能在未来。",
   "collectionMemo.settings.inheritedOrder": "全局开始时间不能晚于任何继承此起点的时间段的结束时间。请先调整相关时间段。",
-  "collectionMemo.range.inherited": "使用全局开始时间",
+  "collectionMemo.range.inherited": "全局开始时间",
   "collectionMemo.range.inheritPlaceholder": "留空以使用全局开始时间",
   "collectionMemo.range.inheritHint": "开始时间留空时使用全局开始时间，并随时间条设置变化。填写具体时间可固定此时间段的起点。",
   "collectionMemo.validation.inheritedOrder": "结束时间不能早于全局开始时间。请修改结束时间，或填写更早的开始时间。",

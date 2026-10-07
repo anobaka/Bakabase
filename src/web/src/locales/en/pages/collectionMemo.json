@@ -55,7 +55,7 @@
   "collectionMemo.settings.inheritHint": "Blank range starts follow changes to the global start. Explicit starts are kept; portions earlier than the global start are outside the visible timeline.",
   "collectionMemo.settings.future": "The global start cannot be in the future.",
   "collectionMemo.settings.inheritedOrder": "The global start cannot be later than the end of any range that inherits it. Adjust those ranges first.",
-  "collectionMemo.range.inherited": "Uses global start",
+  "collectionMemo.range.inherited": "Global start time",
   "collectionMemo.range.inheritPlaceholder": "Leave blank to use the global start",
   "collectionMemo.range.inheritHint": "A blank start uses the global start and follows changes to timeline settings. Enter a date to keep this range’s start fixed.",
   "collectionMemo.validation.inheritedOrder": "The end cannot be before the global start. Change the end or enter an earlier start.",

@@ -69,6 +69,7 @@ import enBakaChat from "@/locales/en/components/bakaChat.json";
 import enNotificationCenter from "@/locales/en/components/notificationCenter.json";
 import enHelpCenter from "@/locales/en/components/helpCenter.json";
 import enHelpCollection from "@/locales/en/components/helpCollection.json";
+import enHelpCollectionMemo from "@/locales/en/components/helpCollectionMemo.json";
 import enHelpSubscription from "@/locales/en/components/helpSubscription.json";
 import enHelpAcquisition from "@/locales/en/components/helpAcquisition.json";
 import enHelpMultiDevice from "@/locales/en/components/helpMultiDevice.json";
@@ -143,6 +144,7 @@ import cnBakaChat from "@/locales/cn/components/bakaChat.json";
 import cnNotificationCenter from "@/locales/cn/components/notificationCenter.json";
 import cnHelpCenter from "@/locales/cn/components/helpCenter.json";
 import cnHelpCollection from "@/locales/cn/components/helpCollection.json";
+import cnHelpCollectionMemo from "@/locales/cn/components/helpCollectionMemo.json";
 import cnHelpSubscription from "@/locales/cn/components/helpSubscription.json";
 import cnHelpAcquisition from "@/locales/cn/components/helpAcquisition.json";
 import cnHelpMultiDevice from "@/locales/cn/components/helpMultiDevice.json";
@@ -216,6 +218,7 @@ const enResources = {
   ...enNotificationCenter,
   ...enHelpCenter,
   ...enHelpCollection,
+  ...enHelpCollectionMemo,
   ...enHelpSubscription,
   ...enHelpAcquisition,
   ...enHelpMultiDevice,
@@ -290,6 +293,7 @@ const cnResources = {
   ...cnNotificationCenter,
   ...cnHelpCenter,
   ...cnHelpCollection,
+  ...cnHelpCollectionMemo,
   ...cnHelpSubscription,
   ...cnHelpAcquisition,
   ...cnHelpMultiDevice,

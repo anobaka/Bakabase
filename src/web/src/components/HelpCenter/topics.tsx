@@ -12,6 +12,7 @@ import {
   AiOutlineRocket,
   AiOutlineSync,
   AiOutlineTags,
+  AiOutlineSchedule,
 } from "react-icons/ai";
 
 import BulkModificationTopic from "./topics/bulkModification";
@@ -21,6 +22,7 @@ import { acquisitionConcepts } from "./topics/acquisition/concepts";
 import CollectionTopic from "./topics/collection";
 import CollectionConceptDetail from "./topics/collection/ConceptDetail";
 import { collectionConcepts } from "./topics/collection/concepts";
+import CollectionMemoTopic from "./topics/collectionMemo";
 import GettingStartedTopic from "./topics/gettingStarted";
 import MultiDeviceTopic from "./topics/multiDevice";
 import MultiDeviceConceptDetail from "./topics/multiDevice/ConceptDetail";
@@ -103,6 +105,12 @@ export const helpTopics: HelpTopicDefinition[] = [
     conceptGroupLabelKey: "helpCenter.collection.section.concepts",
     concepts: collectionConcepts,
     ConceptContent: CollectionConceptDetail,
+  },
+  {
+    id: "collectionMemo",
+    titleKey: "helpCenter.topic.collectionMemo",
+    icon: <AiOutlineSchedule className="text-lg" />,
+    Content: CollectionMemoTopic,
   },
   {
     id: "subscription",
