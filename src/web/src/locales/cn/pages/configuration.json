@@ -45,7 +45,7 @@
   "configuration.appInfo.backupPath": "备份路径",
   "configuration.appInfo.coreVersion": "当前版本",
   "configuration.appInfo.latestVersion": "应用更新",
-  "configuration.appInfo.upToDate": "已是最新",
+  "configuration.appInfo.upToDate": "暂无更新",
   "configuration.appInfo.updateCheckUnavailable": "无法检查更新",
   "configuration.appInfo.updateCheckUnavailable.tip": "当前运行的不是通过安装包安装的版本（例如开发构建，或直接解压出来的副本），没有可供更新的安装信息，因此不会去检查新版本。请使用安装版以启用自动更新。",
   "configuration.appInfo.channelBehind": "{{channel}} 通道最新为 {{latest}}，低于已安装的 {{installed}}",
@@ -56,12 +56,12 @@
   "configuration.appInfo.viewAllChangelogs": "历史版本",
   "configuration.appInfo.clickToAutoUpdate": "下载更新",
   "configuration.appInfo.autoUpdateFails": "下载安装包",
-  "configuration.appInfo.restartToUpdate": "重启完成更新",
+  "configuration.appInfo.restartToUpdate": "重启更新",
   "configuration.appInfo.failedToUpdateApp": "更新应用失败",
   "configuration.appInfo.clickToRetry": "重试",
   "configuration.appInfo.downloading": "下载中",
-  "configuration.appInfo.updateAvailable": "新版本可用",
-  "configuration.appInfo.readyToRestart": "更新已就绪，等待重启",
+  "configuration.appInfo.updateAvailable": "可更新至",
+  "configuration.appInfo.readyToRestart": "更新就绪",
   "configuration.appInfo.checkForUpdates": "检查更新",
   "configuration.appInfo.checking": "正在检查更新",
   "configuration.appInfo.preReleaseChannel": "接收测试版更新",
@@ -319,5 +319,6 @@
   "configuration.dependency.installedOnTheServer": "这些组件安装在服务端，也由服务端使用。在这里安装即安装到服务端。",
   "configuration.dependency.localeEmulatorRunsOnThisMachine": "由本机使用",
   "configuration.appInfo.identityRecovery.link": "设备与分享 → 高级 → 复制或恢复数据后",
-  "configuration.appInfo.identityRecovery.onHost": "请在保存此资源库的设备上操作：设备与分享 → 高级 → 复制或恢复数据后。"
+  "configuration.appInfo.identityRecovery.onHost": "请在保存此资源库的设备上操作：设备与分享 → 高级 → 复制或恢复数据后。",
+  "configuration.appInfo.upgradeToVersion": "升级至 {{version}}"
 }

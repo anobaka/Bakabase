@@ -658,7 +658,7 @@ const Timeline = ({
         </time>
       </div>
       {onResizeCoverage && (
-        <p className="text-xs text-default-500" id={hintId}>
+        <p className="sr-only" id={hintId}>
           {t<string>("collectionMemo.timeline.resizeHint")}
         </p>
       )}

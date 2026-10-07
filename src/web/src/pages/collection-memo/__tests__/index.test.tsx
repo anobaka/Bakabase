@@ -9,6 +9,8 @@ import CollectionMemoPage from "..";
 import RangeEditor from "../components/RangeEditor";
 import SettingsEditor from "../components/SettingsEditor";
 
+import CollectionMemoTopic from "@/components/HelpCenter/topics/collectionMemo";
+
 const { api, createPortal, openUrl } = vi.hoisted(() => ({
   api: {
     getCollectionMemoTargets: vi.fn(),
@@ -32,6 +34,13 @@ vi.mock("@/sdk/BApi", () => ({
 }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal }),
+}));
+vi.mock("@/components/HelpCenter/HelpCenterModal", () => ({
+  default: ({ topic }: { topic?: string }) => (
+    <div aria-label="helpCenter.title" data-topic={topic} role="dialog">
+      {topic === "collectionMemo" && <CollectionMemoTopic />}
+    </div>
+  ),
 }));
 
 vi.mock("@/components/bakaui", () => ({
@@ -220,6 +229,28 @@ afterEach(() => {
 });
 
 describe("collection memo page", () => {
+  it("opens collection memo help beside the title and omits the global settings summary", async () => {
+    page();
+    await screen.findByText("exhentai");
+    expect(screen.queryByText("collectionMemo.settings.start")).not.toBeInTheDocument();
+    expect(screen.queryByText("collectionMemo.timeline.now")).not.toBeInTheDocument();
+    expect(screen.queryByText("collectionMemo.settings.reverse")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("collectionMemo.browsingIntegration.pending"),
+    ).not.toBeInTheDocument();
+    click("helpCenter.button.tooltip");
+    const help = screen.getByRole("dialog", { name: "helpCenter.title" });
+
+    expect(help).toHaveAttribute("data-topic", "collectionMemo");
+    expect(within(help).getByText("helpCenter.collectionMemo.timeline.drag")).toBeInTheDocument();
+    expect(
+      within(help).getByText("helpCenter.collectionMemo.timeline.keyboard"),
+    ).toBeInTheDocument();
+    expect(
+      within(help).getByText("helpCenter.collectionMemo.settings.start.desc"),
+    ).toBeInTheDocument();
+  });
+
   it("opens a linked range through ExternalLink and displays its note as plain text", async () => {
     const annotated = {
       ...target.ranges[0],
@@ -312,7 +343,7 @@ describe("collection memo page", () => {
     },
   );
 
-  it("shows the shared current time once above all target timelines", async () => {
+  it("uses the same current-time limit for every target without a header summary", async () => {
     api.getCollectionMemoTargets.mockResolvedValue({
       code: 0,
       data: [target, { ...target, id: 8, name: "soulplus" }],
@@ -320,12 +351,12 @@ describe("collection memo page", () => {
     page();
 
     await screen.findByText("soulplus");
-    const currentTime = screen.getByText("collectionMemo.timeline.now");
+    expect(screen.queryByText("collectionMemo.timeline.now")).not.toBeInTheDocument();
+    const endHandles = screen.getAllByRole("slider", { name: "collectionMemo.timeline.resizeEnd" });
 
-    expect(currentTime).toHaveAttribute("dateTime", "2026-10-01T08:00:00.000Z");
-    for (const article of screen.getAllByRole("article")) {
-      expect(article).not.toContainElement(currentTime);
-      expect(within(article).queryByText("collectionMemo.timeline.now")).not.toBeInTheDocument();
+    expect(endHandles).toHaveLength(2);
+    for (const handle of endHandles) {
+      expect(handle).toHaveAttribute("aria-valuemax", String(Date.now()));
     }
   });
 
@@ -462,7 +493,8 @@ describe("collection memo page", () => {
     expect(screen.getByRole("heading", { name: "Fresh", level: 2 })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "exhentai", level: 2 })).not.toBeInTheDocument();
     expect(document.querySelector("time")?.dateTime).toBe(freshOrigin);
-    expect(screen.getByText("collectionMemo.settings.forward")).toBeInTheDocument();
+    click("collectionMemo.settings.title");
+    expect(screen.getByRole("radio", { name: "collectionMemo.settings.forward" })).toBeChecked();
   });
 
   it("requires confirmation before deleting a target and its ranges", async () => {
@@ -835,7 +867,8 @@ describe("collection memo global settings", () => {
     await act(async () => finishSettings({ code: 0, data: { startAt: earliest, reverse: true } }));
     expect(await screen.findByRole("heading", { name: "exhentai" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "collectionMemo.settings.title" })).toBeEnabled();
-    expect(screen.getByText("collectionMemo.settings.reverse")).toBeInTheDocument();
+    click("collectionMemo.settings.title");
+    expect(screen.getByRole("radio", { name: "collectionMemo.settings.reverse" })).toBeChecked();
   });
 
   it.each([
@@ -864,7 +897,8 @@ describe("collection memo global settings", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("collectionMemo.error.load");
     expect(screen.getByRole("heading", { name: "exhentai" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "New" })).not.toBeInTheDocument();
-    expect(screen.getByText("collectionMemo.settings.reverse")).toBeInTheDocument();
+    click("collectionMemo.settings.title");
+    expect(screen.getByRole("radio", { name: "collectionMemo.settings.reverse" })).toBeChecked();
   });
 
   it("saves the shared origin and direction, then loads the persisted values again", async () => {
@@ -891,7 +925,6 @@ describe("collection memo global settings", () => {
       ),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(screen.getByText("collectionMemo.settings.forward")).toBeInTheDocument();
     expect(screen.getByRole("article").querySelector("time")?.dateTime).toBe(nextStart);
     click("collectionMemo.settings.title");
     expect(screen.getByRole("radio", { name: "collectionMemo.settings.forward" })).toBeChecked();
@@ -899,7 +932,7 @@ describe("collection memo global settings", () => {
     expect(api.getCollectionMemoSettings).toHaveBeenCalledTimes(2);
   });
 
-  it("keeps rejected settings edits open without replacing the persisted summary", async () => {
+  it("keeps rejected settings edits open without replacing the persisted timeline", async () => {
     api.updateCollectionMemoSettings.mockResolvedValue({ code: 400 });
     page();
     await screen.findByText("exhentai");
@@ -987,6 +1020,20 @@ describe("collection memo global settings", () => {
 });
 
 describe("collection memo inherited starts", () => {
+  it("keeps an inherited point's end date and point marker beside the global-start label", async () => {
+    api.getCollectionMemoTargets.mockResolvedValue({
+      code: 0,
+      data: [{ ...target, ranges: [{ id: 11, startAt: null, endAt: earliest }] }],
+    });
+    page();
+    await screen.findByText("exhentai");
+    const range = screen.getByRole("listitem");
+
+    expect(within(range).getByText("collectionMemo.range.inherited")).toBeInTheDocument();
+    expect(within(range).getByText("collectionMemo.range.point")).toBeInTheDocument();
+    expect([...range.querySelectorAll("time")].map((time) => time.dateTime)).toEqual([earliest]);
+  });
+
   it("creates a blank-start range and persists its inheritance as null", async () => {
     page();
     await screen.findByText("exhentai");
@@ -1005,7 +1052,7 @@ describe("collection memo inherited starts", () => {
   });
 
   it.each([null, undefined])(
-    "displays inherited dates and retains a blank start when editing (%s)",
+    "labels an inherited start without displaying its date and retains it when editing (%s)",
     async (startAt) => {
       api.getCollectionMemoTargets.mockResolvedValue({
         code: 0,
@@ -1016,7 +1063,9 @@ describe("collection memo inherited starts", () => {
       expect(
         within(screen.getByRole("listitem")).getByText("collectionMemo.range.inherited"),
       ).toBeInTheDocument();
-      expect(screen.getByRole("listitem").querySelector("time")?.dateTime).toBe(earliest);
+      expect(
+        [...screen.getByRole("listitem").querySelectorAll("time")].map((time) => time.dateTime),
+      ).toEqual([end]);
       click("collectionMemo.action.editRange");
       expect(screen.getByLabelText("collectionMemo.range.start")).toHaveValue("");
       click("Save");

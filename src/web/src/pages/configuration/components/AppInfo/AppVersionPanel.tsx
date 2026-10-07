@@ -1,5 +1,8 @@
 import type { BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo } from "@/sdk/Api";
+import type { ReactNode } from "react";
+import type { ComponentProps } from "react";
 
+import { forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,6 +12,7 @@ import {
   InfoCircleOutlined,
   PoweroffOutlined,
   SyncOutlined,
+  UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
 
@@ -19,20 +23,42 @@ import { UpdaterStatus } from "@/sdk/constants";
 
 type VersionInfo = BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo;
 
-export const CurrentVersionValue = ({
+// Forward the popover's trigger props and ref to the same button that owns its
+// tooltip, so both mouse and keyboard users can identify and open the menu.
+const InstallerButton = forwardRef<HTMLButtonElement, ComponentProps<typeof Button>>(
+  (props, ref) => {
+    const { t } = useTranslation();
+    const label = t<string>("configuration.appInfo.autoUpdateFails");
+
+    return (
+      <Tooltip content={label}>
+        <Button ref={ref} isIconOnly aria-label={label} size="sm" variant="light" {...props}>
+          <DownloadOutlined aria-hidden className="text-base" />
+        </Button>
+      </Tooltip>
+    );
+  },
+);
+
+InstallerButton.displayName = "InstallerButton";
+
+const CurrentVersionValue = ({
   version,
   newVersion,
+  children,
 }: {
   version?: string;
   newVersion?: VersionInfo;
+  children?: ReactNode;
 }) => {
   const { t } = useTranslation();
   const { runningVersion, installedVersion } = newVersion ?? {};
   const mismatch = runningVersion && installedVersion && runningVersion !== installedVersion;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+    <div className="flex flex-wrap items-center gap-1">
       <span className="font-mono text-sm font-medium break-all">{version}</span>
+      {children}
       {version && <ChangelogButton isIconOnly version={version} />}
       {mismatch && (
         <Tooltip
@@ -55,6 +81,7 @@ export const CurrentVersionValue = ({
 };
 
 interface Props {
+  version?: string;
   newVersion?: VersionInfo;
   status?: UpdaterStatus;
   percentage?: number;
@@ -72,6 +99,7 @@ interface Props {
 }
 
 const AppVersionPanel = ({
+  version,
   newVersion,
   status,
   percentage,
@@ -107,6 +135,7 @@ const AppVersionPanel = ({
     !checking && !checkFailed && effectiveStatus === UpdaterStatus.Idle && newVersion?.version;
   const updateFailed = !checking && !checkFailed && effectiveStatus === UpdaterStatus.Failed;
   const updateFrom = newVersion?.installedVersion ?? newVersion?.runningVersion;
+  const installers = newVersion?.installers ?? [];
   const errorDetail =
     updateFailed && updateError
       ? updateError
@@ -202,70 +231,106 @@ const AppVersionPanel = ({
     }
   };
 
+  const checkLabel = t<string>(
+    checking
+      ? "configuration.appInfo.checking"
+      : checkFailed
+        ? "configuration.appInfo.clickToRetry"
+        : "configuration.appInfo.checkForUpdates",
+  );
+  const updateLabel = t<string>("configuration.appInfo.upgradeToVersion", {
+    version: newVersion?.version,
+  });
+
   return (
-    <div className="flex min-w-0 flex-col gap-3 py-1">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div
-          aria-live="polite"
-          className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm"
-        >
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <CurrentVersionValue newVersion={newVersion} version={version}>
+          {available && (
+            <Tooltip content={updateLabel}>
+              <Button
+                isIconOnly
+                aria-label={updateLabel}
+                color="primary"
+                size="sm"
+                variant="flat"
+                onPress={onDownload}
+              >
+                <UploadOutlined aria-hidden className="text-base" />
+              </Button>
+            </Tooltip>
+          )}
+        </CurrentVersionValue>
+        <div aria-live="polite" className="flex min-w-0 flex-wrap items-center gap-1.5">
+          {renderStatus()}
           {newVersion?.version && (
             <span className="font-mono font-medium break-all">{newVersion.version}</span>
           )}
-          {renderStatus()}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {available && (
-            <Button
-              color="primary"
-              size="sm"
-              startContent={<DownloadOutlined />}
-              variant="solid"
-              onPress={onDownload}
-            >
-              {t("configuration.appInfo.clickToAutoUpdate")}
-            </Button>
-          )}
-          {effectiveStatus === UpdaterStatus.PendingRestart && (
-            <Button
-              color="primary"
-              isDisabled={restarting}
-              isLoading={restarting}
-              size="sm"
-              startContent={!restarting && <PoweroffOutlined />}
-              variant="solid"
-              onPress={onRestart}
-            >
-              {t("configuration.appInfo.restartToUpdate")}
-            </Button>
-          )}
-          {updateFailed && (
-            <Button color="primary" size="sm" variant="solid" onPress={onDownload}>
-              {t("configuration.appInfo.clickToRetry")}
-            </Button>
-          )}
-          {newVersion?.version && (
-            <ChangelogButton from={updateFrom} version={newVersion.version} />
-          )}
+        {effectiveStatus === UpdaterStatus.PendingRestart && (
           <Button
+            color="primary"
+            isDisabled={restarting}
+            isLoading={restarting}
+            size="sm"
+            startContent={!restarting && <PoweroffOutlined />}
+            variant="solid"
+            onPress={onRestart}
+          >
+            {t("configuration.appInfo.restartToUpdate")}
+          </Button>
+        )}
+        {updateFailed && (
+          <Button
+            color="primary"
+            size="sm"
+            startContent={<SyncOutlined />}
+            variant="flat"
+            onPress={onDownload}
+          >
+            {t("configuration.appInfo.clickToRetry")}
+          </Button>
+        )}
+        {newVersion?.version && (
+          <ChangelogButton isIconOnly from={updateFrom} version={newVersion.version} />
+        )}
+        <Tooltip content={checkLabel}>
+          <Button
+            isIconOnly
             aria-label={t<string>("configuration.appInfo.checkForUpdates")}
             color={checkFailed ? "primary" : "default"}
             isDisabled={checking}
             isLoading={checking}
             size="sm"
-            startContent={!checking && <SyncOutlined />}
-            variant={checkFailed ? "solid" : "bordered"}
+            variant={checkFailed ? "flat" : "light"}
             onPress={onCheck}
           >
-            {t(
-              checking
-                ? "configuration.appInfo.checking"
-                : checkFailed
-                  ? "configuration.appInfo.clickToRetry"
-                  : "configuration.appInfo.checkForUpdates",
-            )}
+            {!checking && <SyncOutlined aria-hidden className="text-base" />}
           </Button>
-        </div>
+        </Tooltip>
+        <Tooltip content={t<string>("configuration.appInfo.viewAllChangelogs")}>
+          <Button
+            isIconOnly
+            aria-label={t<string>("configuration.appInfo.viewAllChangelogs")}
+            color="default"
+            size="sm"
+            variant="light"
+            onPress={() => navigate("/changelog")}
+          >
+            <HistoryOutlined aria-hidden className="text-base" />
+          </Button>
+        </Tooltip>
+        {installers.length > 0 && (
+          <Popover trigger={<InstallerButton />}>
+            <div className="flex max-w-xs flex-col gap-2 p-2">
+              {installers.map((installer) => (
+                <ExternalLink key={installer.url} href={installer.url}>
+                  {installer.name}
+                </ExternalLink>
+              ))}
+            </div>
+          </Popover>
+        )}
       </div>
       {effectiveStatus === UpdaterStatus.Running && (
         <Progress
@@ -285,51 +350,24 @@ const AppVersionPanel = ({
       {restartUnconfirmed && effectiveStatus === UpdaterStatus.PendingRestart && (
         <p className="text-xs text-warning-600">{t("appUpdate.serverRestartUnconfirmed")}</p>
       )}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-default-200/60 pt-2">
-        <Button
-          color="default"
+      <Tooltip
+        className="max-w-[300px]"
+        color="secondary"
+        content={t("configuration.others.enablePreRelease.tip")}
+        placement="top"
+      >
+        <Switch
+          aria-label={t<string>("configuration.appInfo.preReleaseChannel")}
+          className="self-start"
+          isSelected={enablePreReleaseChannel}
           size="sm"
-          startContent={<HistoryOutlined />}
-          variant="light"
-          onPress={() => navigate("/changelog")}
+          onValueChange={onChannelChange}
         >
-          {t("configuration.appInfo.viewAllChangelogs")}
-        </Button>
-        {newVersion?.installers?.length > 0 && (
-          <Popover
-            trigger={
-              <Button color="default" size="sm" startContent={<DownloadOutlined />} variant="light">
-                {t("configuration.appInfo.autoUpdateFails")}
-              </Button>
-            }
-          >
-            <div className="flex max-w-xs flex-col gap-2 p-2">
-              {newVersion.installers.map((installer) => (
-                <ExternalLink key={installer.url} href={installer.url}>
-                  {installer.name}
-                </ExternalLink>
-              ))}
-            </div>
-          </Popover>
-        )}
-        <Tooltip
-          className="max-w-[300px]"
-          color="secondary"
-          content={t("configuration.others.enablePreRelease.tip")}
-          placement="top"
-        >
-          <Switch
-            aria-label={t<string>("configuration.appInfo.preReleaseChannel")}
-            isSelected={enablePreReleaseChannel}
-            size="sm"
-            onValueChange={onChannelChange}
-          >
-            <span className="text-xs text-foreground-500">
-              {t("configuration.appInfo.preReleaseChannel")}
-            </span>
-          </Switch>
-        </Tooltip>
-      </div>
+          <span className="text-xs text-foreground-500">
+            {t("configuration.appInfo.preReleaseChannel")}
+          </span>
+        </Switch>
+      </Tooltip>
     </div>
   );
 };

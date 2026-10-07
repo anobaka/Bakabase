@@ -13,6 +13,7 @@ export type HelpTopicId =
   | "resourceProfile"
   | "unmaterializedResource"
   | "collection"
+  | "collectionMemo"
   | "subscription"
   | "acquisition"
   | "bulkModification"

@@ -9,6 +9,7 @@ import AppInfo from "..";
 
 import { UpdaterStatus } from "@/sdk/constants";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
+import { normalizeQuery } from "@/pages/configuration/components/SettingsSection";
 
 type VersionInfo = BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo;
 type CheckResponse = { code: number; data?: VersionInfo; message?: string };
@@ -82,6 +83,7 @@ vi.mock("@/components/bakaui", () => ({
     isDisabled,
     isLoading,
     variant,
+    isIconOnly,
     "aria-label": label,
   }: {
     children: ReactNode;
@@ -89,10 +91,12 @@ vi.mock("@/components/bakaui", () => ({
     isDisabled?: boolean;
     isLoading?: boolean;
     variant?: string;
+    isIconOnly?: boolean;
     "aria-label"?: string;
   }) => (
     <button
       aria-label={label}
+      data-icon-only={isIconOnly}
       data-loading={isLoading}
       data-variant={variant}
       disabled={isDisabled}
@@ -173,7 +177,11 @@ const deferred = <T,>() => {
 const Location = () => <output aria-label="route">{useLocation().pathname}</output>;
 const fixture = (query = "版本") => (
   <MemoryRouter>
-    <AppInfo appInfo={{ coreVersion: "2.4.0" }} applyPatches={mocks.applyPatches} query={query} />
+    <AppInfo
+      appInfo={{ coreVersion: "2.4.0" }}
+      applyPatches={mocks.applyPatches}
+      query={normalizeQuery(query)}
+    />
     <Location />
   </MemoryRouter>
 );
@@ -196,7 +204,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("configuration app versions", () => {
-  it("shows current and target versions with one explicit update action and secondary tools", async () => {
+  it("combines current and target versions with accessible icon actions and secondary tools", async () => {
     mocks.check.mockResolvedValue({
       code: 0,
       data: versionInfo({
@@ -209,12 +217,18 @@ describe("configuration app versions", () => {
 
     expect(await screen.findByText(key("updateAvailable"))).toBeVisible();
     expect(screen.getByText(key("coreVersion"))).toBeVisible();
-    expect(screen.getByText(key("latestVersion"))).toBeVisible();
+    expect(screen.queryByText(key("latestVersion"))).not.toBeInTheDocument();
     expect(screen.getByText("2.4.0")).toBeVisible();
     expect(screen.getByText("2.4.1")).toBeVisible();
-    const download = screen.getByRole("button", { name: key("clickToAutoUpdate") });
+    const download = screen.getByRole("button", { name: key("upgradeToVersion") });
 
-    expect(download).toHaveAttribute("data-variant", "solid");
+    expect(download).toHaveAttribute("data-icon-only", "true");
+    expect(download).not.toHaveTextContent(key("clickToAutoUpdate"));
+    expect(checkButton()).toHaveAttribute("data-icon-only", "true");
+    expect(screen.getByRole("button", { name: key("viewAllChangelogs") })).toHaveAttribute(
+      "data-icon-only",
+      "true",
+    );
     expect(screen.getByRole("button", { name: key("autoUpdateFails") })).toBeVisible();
     expect(screen.getByRole("link", { name: "Installer" })).toHaveAttribute(
       "href",
@@ -264,7 +278,8 @@ describe("configuration app versions", () => {
       await waitFor(() => expect(checkButton()).not.toBeDisabled());
       expect(screen.getByText(key("failedToGetLatestVersion"))).toBeVisible();
       expect(screen.queryByText(key("upToDate"))).not.toBeInTheDocument();
-      expect(checkButton()).toHaveTextContent(key("clickToRetry"));
+      expect(checkButton()).not.toBeDisabled();
+      expect(checkButton().parentElement).toHaveAttribute("title", key("clickToRetry"));
       fireEvent.click(checkButton());
       expect(await screen.findByText(key("updateAvailable"))).toBeVisible();
       expect(mocks.check).toHaveBeenCalledTimes(2);
@@ -288,7 +303,8 @@ describe("configuration app versions", () => {
     expect(await screen.findByText(key("failedToGetLatestVersion"))).toBeVisible();
     expect(screen.queryByText(key("failedToUpdateApp"))).not.toBeInTheDocument();
     expect(screen.queryByText(key("upToDate"))).not.toBeInTheDocument();
-    expect(checkButton()).toHaveTextContent(key("clickToRetry"));
+    expect(checkButton()).not.toBeDisabled();
+    expect(checkButton().parentElement).toHaveAttribute("title", key("clickToRetry"));
     fireEvent.click(checkButton());
     await waitFor(() => expect(mocks.check).toHaveBeenCalledTimes(2));
     expect(mocks.download).not.toHaveBeenCalled();
@@ -431,13 +447,14 @@ describe("configuration app versions", () => {
     expect(checkButton()).not.toBeDisabled();
   });
 
-  it.each(["latest", "最新", "beta", "测试", "upgrade"])(
+  it.each(["latest", "最新", "beta", "测试", "upgrade", "应用更新", "App updates"])(
     "finds the update tools using %s",
     async (query) => {
       render(fixture(query));
       expect(await screen.findByText(key("updateAvailable"))).toBeVisible();
-      expect(screen.getByText(key("latestVersion"))).toBeVisible();
-      expect(screen.queryByText(key("coreVersion"))).not.toBeInTheDocument();
+      expect(screen.queryByText(key("latestVersion"))).not.toBeInTheDocument();
+      expect(screen.getByText(key("coreVersion"))).toBeVisible();
+      expect(screen.getByText("2.4.0")).toBeVisible();
     },
   );
 

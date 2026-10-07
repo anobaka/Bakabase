@@ -869,6 +869,15 @@ describe("timeline boundary gestures", () => {
 });
 
 describe("timeline global start and direction", () => {
+  it("keeps resize guidance available to sliders without a visible guidance row", () => {
+    showTimeline();
+    const hint = screen.getByText("collectionMemo.timeline.resizeHint");
+
+    expect(hint).toHaveClass("sr-only");
+    expect(startHandles()[0]).toHaveAttribute("aria-describedby", hint.id);
+    expect(endHandles()[0]).toHaveAttribute("aria-describedby", hint.id);
+  });
+
   it("defaults to newest on the left and mirrors intervals, boundary faces, and captions", () => {
     const { props, rerender } = showTimeline();
 

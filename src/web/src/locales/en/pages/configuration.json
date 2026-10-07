@@ -45,7 +45,7 @@
   "configuration.appInfo.backupPath": "Backup Path",
   "configuration.appInfo.coreVersion": "Current version",
   "configuration.appInfo.latestVersion": "App updates",
-  "configuration.appInfo.upToDate": "Up-to-date",
+  "configuration.appInfo.upToDate": "Up to date",
   "configuration.appInfo.updateCheckUnavailable": "Update check unavailable",
   "configuration.appInfo.updateCheckUnavailable.tip": "This copy was not put here by the installer (a development build, or an unpacked copy), so there is no installation for an update to replace and no check is made. Use the installer build to get auto-updates.",
   "configuration.appInfo.channelBehind": "{{channel}} channel offers {{latest}}, older than the installed {{installed}}",
@@ -56,12 +56,12 @@
   "configuration.appInfo.viewAllChangelogs": "All versions",
   "configuration.appInfo.clickToAutoUpdate": "Download update",
   "configuration.appInfo.autoUpdateFails": "Download installer",
-  "configuration.appInfo.restartToUpdate": "Restart to finish updating",
+  "configuration.appInfo.restartToUpdate": "Restart to update",
   "configuration.appInfo.failedToUpdateApp": "Failed to update app",
   "configuration.appInfo.clickToRetry": "Retry",
   "configuration.appInfo.downloading": "Downloading",
-  "configuration.appInfo.updateAvailable": "Update available",
-  "configuration.appInfo.readyToRestart": "Update ready, restart required",
+  "configuration.appInfo.updateAvailable": "Update available:",
+  "configuration.appInfo.readyToRestart": "Ready to update",
   "configuration.appInfo.checkForUpdates": "Check for updates",
   "configuration.appInfo.checking": "Checking for updates",
   "configuration.appInfo.preReleaseChannel": "Receive beta updates",
@@ -319,5 +319,6 @@
   "configuration.dependency.installedOnTheServer": "These are installed on the server and used by it. Installing one from here installs it there.",
   "configuration.dependency.localeEmulatorRunsOnThisMachine": "used on this machine",
   "configuration.appInfo.identityRecovery.link": "Devices and sharing → Advanced → After copying or restoring data",
-  "configuration.appInfo.identityRecovery.onHost": "Do this on the device that stores this library: Devices and sharing → Advanced → After copying or restoring data."
+  "configuration.appInfo.identityRecovery.onHost": "Do this on the device that stores this library: Devices and sharing → Advanced → After copying or restoring data.",
+  "configuration.appInfo.upgradeToVersion": "Upgrade to {{version}}"
 }

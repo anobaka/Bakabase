@@ -32,6 +32,7 @@ import {
 
 import BApi from "@/sdk/BApi";
 import ExternalLink from "@/components/ExternalLink";
+import HelpCenterButton from "@/components/HelpCenter/HelpCenterButton";
 import { Button, Card, CardBody, Input, Modal, Spinner } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -275,28 +276,13 @@ const CollectionMemoPage = () => {
     );
 
   return (
-    <div className="flex flex-col gap-4 p-2">
+    <div className="flex flex-col gap-3 p-2">
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">{t<string>("collectionMemo.title")}</h1>
+        <div className="flex items-center gap-1">
+          <h1 className="text-xl font-semibold">{t<string>("collectionMemo.title")}</h1>
+          <HelpCenterButton topic="collectionMemo" />
+        </div>
         <p className="text-sm text-default-500">{t<string>("collectionMemo.description")}</p>
-        {settings && (
-          <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-default-500">
-            <span>
-              {t<string>("collectionMemo.settings.start")}：{" "}
-              <time dateTime={settings.startAt}>{formatDate(settings.startAt)}</time>
-            </span>
-            <time dateTime={new Date(domain.end).toISOString()}>
-              {t<string>("collectionMemo.timeline.now", { date: formatDate(domain.end) })}
-            </time>
-            <span>
-              {t<string>(
-                settings.reverse
-                  ? "collectionMemo.settings.reverse"
-                  : "collectionMemo.settings.forward",
-              )}
-            </span>
-          </p>
-        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button
@@ -362,10 +348,11 @@ const CollectionMemoPage = () => {
       ) : (
         shown.map((target) => (
           <Card key={target.id} shadow="sm">
-            <CardBody className="flex flex-col gap-3 p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="min-w-0 flex-1 break-words text-base font-medium">{target.name}</h2>
+            <CardBody className="flex flex-col gap-2 px-3 py-2">
+              <div className="flex flex-wrap items-center gap-1">
+                <h2 className="min-w-0 flex-1 break-words text-sm font-medium">{target.name}</h2>
                 <Button
+                  className="h-7 min-h-7"
                   isDisabled={!settings || loading || timelineSavingCount > 0}
                   size="sm"
                   startContent={<AiOutlinePlus />}
@@ -377,6 +364,7 @@ const CollectionMemoPage = () => {
                 <Button
                   isIconOnly
                   aria-label={t<string>("collectionMemo.action.editTarget")}
+                  className="h-7 min-h-7 w-7 min-w-7"
                   size="sm"
                   variant="light"
                   onPress={() => editTarget(target)}
@@ -386,6 +374,7 @@ const CollectionMemoPage = () => {
                 <Button
                   isIconOnly
                   aria-label={t<string>("collectionMemo.action.deleteTarget")}
+                  className="h-7 min-h-7 w-7 min-w-7"
                   color="danger"
                   size="sm"
                   variant="light"
@@ -427,18 +416,28 @@ const CollectionMemoPage = () => {
                     .map((range) => {
                       const startAt = resolveCollectionMemoRangeStart(range, settings?.startAt);
                       const url = getCollectionMemoRangeUrl(range.url);
+                      const isPoint =
+                        startAt && getTimestampTicks(startAt) === getTimestampTicks(range.endAt);
                       const dates = (
                         <>
-                          {startAt && <time dateTime={startAt}>{formatDate(startAt)}</time>}
-                          {startAt &&
-                          getTimestampTicks(startAt) === getTimestampTicks(range.endAt) ? (
+                          {range.startAt === null ? (
+                            <span>{t<string>("collectionMemo.range.inherited")}</span>
+                          ) : (
+                            startAt && <time dateTime={startAt}>{formatDate(startAt)}</time>
+                          )}
+                          {range.startAt !== null && isPoint ? (
                             <span className="ml-2 text-xs text-default-500">
                               {t<string>("collectionMemo.range.point")}
                             </span>
                           ) : (
                             <>
-                              <span className="px-2">~</span>
+                              <span className="px-1">~</span>
                               <time dateTime={range.endAt}>{formatDate(range.endAt)}</time>
+                              {isPoint && (
+                                <span className="ml-2 text-default-500">
+                                  {t<string>("collectionMemo.range.point")}
+                                </span>
+                              )}
                             </>
                           )}
                         </>
@@ -447,17 +446,12 @@ const CollectionMemoPage = () => {
                       return (
                         <li
                           key={range.id}
-                          className="flex flex-wrap items-center gap-2 py-2 text-sm"
+                          className="flex flex-wrap items-center gap-1 py-0.5 text-xs"
                         >
                           <div className="min-w-0 flex-1">
-                            {range.startAt === null && (
-                              <span className="mr-2 text-xs text-default-500">
-                                {t<string>("collectionMemo.range.inherited")}
-                              </span>
-                            )}
                             {url ? (
                               <ExternalLink
-                                className="inline-flex max-w-full flex-wrap text-sm"
+                                className="inline-flex max-w-full flex-wrap text-xs"
                                 href={url}
                               >
                                 {dates}
@@ -466,7 +460,7 @@ const CollectionMemoPage = () => {
                               dates
                             )}
                             {range.note && (
-                              <p className="mt-1 whitespace-pre-wrap break-words text-xs text-default-500">
+                              <p className="mt-0.5 whitespace-pre-wrap break-words text-xs text-default-500">
                                 {range.note}
                               </p>
                             )}
@@ -474,6 +468,7 @@ const CollectionMemoPage = () => {
                           <Button
                             isIconOnly
                             aria-label={t<string>("collectionMemo.action.editRange")}
+                            className="h-7 min-h-7 w-7 min-w-7"
                             isDisabled={!settings || loading || timelineSavingCount > 0}
                             size="sm"
                             variant="light"
@@ -484,6 +479,7 @@ const CollectionMemoPage = () => {
                           <Button
                             isIconOnly
                             aria-label={t<string>("collectionMemo.action.deleteRange")}
+                            className="h-7 min-h-7 w-7 min-w-7"
                             color="danger"
                             size="sm"
                             variant="light"
@@ -500,9 +496,6 @@ const CollectionMemoPage = () => {
           </Card>
         ))
       )}
-      <p className="text-xs text-default-500">
-        {t<string>("collectionMemo.browsingIntegration.pending")}
-      </p>
     </div>
   );
 };
