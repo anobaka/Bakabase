@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { FolderOpenOutlined, WarningOutlined } from "@ant-design/icons";
 
 import IdentityRecoveryLink from "./IdentityRecoveryLink";
-import AppVersionPanel, { CurrentVersionValue } from "./AppVersionPanel";
+import AppVersionPanel from "./AppVersionPanel";
 
 import { Divider, Snippet } from "@/components/bakaui";
 import { DataPathSource } from "@/sdk/constants";
@@ -235,20 +235,22 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
       {
         id: "coreVersion",
         label: "configuration.appInfo.coreVersion",
-        keywords: ["version", "build", "core", "current", "版本", "核心", "当前"],
-        value: <CurrentVersionValue newVersion={newVersion} version={appInfo.coreVersion} />,
-      },
-      {
-        id: "latestVersion",
-        label: "configuration.appInfo.latestVersion",
         keywords: [
+          "version",
+          "build",
+          "core",
+          "current",
+          "核心",
+          "当前",
           "update",
+          "app updates",
           "upgrade",
           "release",
           "latest",
           "beta",
           "channel",
           "更新",
+          "应用更新",
           "版本",
           "最新",
           "测试",
@@ -266,6 +268,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
             restarting={isRemoteClient ? remoteRestart.restarting : restarting}
             status={appUpdaterState.status}
             updateError={appUpdaterState.error}
+            version={appInfo.coreVersion}
             onChannelChange={(checked) => {
               applyPatches(
                 BApi.options.patchAppOptions,
