@@ -24,6 +24,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   refresh-cdn:
     runs-on: ubuntu-latest
@@ -37,6 +40,13 @@ jobs:
             echo "::error::Invalid release version: $VERSION"
             exit 1
           fi
+
+      - name: Checkout CDN refresh helper
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          sparse-checkout: .github/scripts
+          persist-credentials: false
 
       - name: Install Alibaba Cloud CLI
         run: |
@@ -56,43 +66,11 @@ jobs:
             --access-key-secret "$CDN_ACCESS_KEY_SECRET" \
             --region cn-hangzhou
 
-      - name: Refresh CDN cache
-        id: cdn-refresh
-        run: |
-          OBJECT_PATH="https://cdn-public.anobaka.com/app/bakabase/releases/
-          https://cdn-public.anobaka.com/app/bakabase/archives/${VERSION}/
-          https://cdn-public.anobaka.com/app/bakabase/scripts/"
-          RESULT=$(./aliyun cdn RefreshObjectCaches \
-            --ObjectPath "$OBJECT_PATH" \
-            --ObjectType Directory)
-          echo "$RESULT"
-          TASK_ID=$(echo "$RESULT" | jq -r '.RefreshTaskId')
-          if [ -z "$TASK_ID" ] || [ "$TASK_ID" = "null" ]; then
-            echo "::error::Alibaba Cloud did not return a refresh task id"
-            exit 1
-          fi
-          echo "task_id=$TASK_ID" >> "$GITHUB_OUTPUT"
-
-      - name: Verify CDN refresh completed
-        run: |
-          TASK_ID="${{ steps.cdn-refresh.outputs.task_id }}"
-          echo "Waiting for CDN refresh task: $TASK_ID"
-          for i in $(seq 1 12); do
-            RESULT=$(./aliyun cdn DescribeRefreshTasks --TaskId "$TASK_ID")
-            STATUS=$(echo "$RESULT" | jq -r '.Tasks.CDNTask[0].Status // empty')
-            echo "Attempt $i: Status=$STATUS"
-            if [ "$STATUS" = "Complete" ]; then
-              echo "CDN refresh completed successfully"
-              exit 0
-            elif [ "$STATUS" = "Failed" ]; then
-              echo "CDN refresh failed"
-              echo "$RESULT" | jq .
-              exit 1
-            fi
-            sleep 10
-          done
-          echo "CDN refresh timed out after 2 minutes (task may still be processing)"
-          exit 1
+      - name: Refresh affected CDN objects and verify every task
+        # Never expire all releases/: historical update packages and changelogs
+        # are immutable across versions and would otherwise fetch from OSS again.
+        # Alibaba documents 5–6 minutes for refresh propagation; allow 6 minutes.
+        run: python3 .github/scripts/refresh_cdn.py --version "$VERSION"
 
       - name: Verify CDN serves expected version
         shell: bash
