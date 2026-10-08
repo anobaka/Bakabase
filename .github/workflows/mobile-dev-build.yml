@@ -64,9 +64,10 @@ jobs:
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+          # Regional uploads avoid the per-GB cross-border acceleration fee.
+          OSS_ENDPOINT: https://oss-cn-shanghai.aliyuncs.com
         run: |
-          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
+          ./ossutil64 config -e "$OSS_ENDPOINT" -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET"
 
           # File names already carry the -dev-{sha} suffix, so every upload is
           # a fresh CDN object — no cache invalidation needed.

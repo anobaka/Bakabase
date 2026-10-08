@@ -20,6 +20,11 @@ jobs:
           - artifact: win-x64
           - artifact: osx-x64
           - artifact: osx-arm64
+    env:
+      PLATFORM: ${{ matrix.artifact }}
+      RELEASES_BASE: oss://anobaka-public/app/bakabase/releases/${{ matrix.artifact }}
+      ARCHIVE_BASE: oss://anobaka-public/app/bakabase/archives/${{ inputs.version }}/${{ matrix.artifact }}
+      NAME_BASE: Bakabase-${{ inputs.version }}-${{ matrix.artifact }}
     steps:
       - name: Install ossutil
         run: |
@@ -30,9 +35,10 @@ jobs:
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+          # Regional uploads avoid the per-GB cross-border acceleration fee.
+          OSS_ENDPOINT: https://oss-cn-shanghai.aliyuncs.com
         run: |
-          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
+          ./ossutil64 config -e "$OSS_ENDPOINT" -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET"
 
       - name: Download Velopack artifact
         uses: actions/download-artifact@v4
@@ -40,9 +46,17 @@ jobs:
           name: vpk-${{ matrix.artifact }}
           path: ./vpk-output
 
-      - name: Upload Velopack releases to OSS
+      - name: Upload Velopack update files to OSS
         run: |
-          ./ossutil64 cp -rf ./vpk-output/ oss://anobaka-public/app/bakabase/releases/${{ matrix.artifact }}/
+          # Installers and the Windows portable are uploaded once by the next
+          # step, then copied into this feed from their versioned archive.
+          EXCLUDES=()
+          if [[ "$PLATFORM" == win-* ]]; then
+            EXCLUDES+=(--exclude '*Setup*.exe' --exclude '*-Portable.zip')
+          else
+            EXCLUDES+=(--exclude '*.pkg')
+          fi
+          ./ossutil64 cp -rf ./vpk-output/ "$RELEASES_BASE/" "${EXCLUDES[@]}"
 
       # Archived under the same name the GitHub Release asset carries, so a given
       # download has exactly one name wherever a user meets it — release page, CDN
@@ -50,25 +64,36 @@ jobs:
       # (Bakabase-beta-Setup.exe) says nothing about version or platform and differs
       # per channel, which is what made the CDN and GitHub halves drift apart.
       #
-      # This is the archives/ mirror, not releases/ — the updater reads releases/,
-      # and nothing here touches it.
-      - name: Archive installer and portable for this version
+      # The updater's releases/ feed keeps the original vpk-produced names;
+      # archives/ carries the versioned names linked from the release notes.
+      - name: Archive installers and mirror them to the release feed
         run: |
-          ARCHIVE_BASE="oss://anobaka-public/app/bakabase/archives/${{ inputs.version }}/${{ matrix.artifact }}"
-          NAME_BASE="Bakabase-${{ inputs.version }}-${{ matrix.artifact }}"
+          # Archive first: another branch can publish to the same mutable feed
+          # concurrently, but this version's archive must contain our build.
+          publish_installer() {
+            local source="$1" archive_name="$2" archive_url
+            archive_url="${ARCHIVE_BASE}/${archive_name}"
+            ./ossutil64 cp -f "$source" "$archive_url"
+            if ! ./ossutil64 cp -f "$archive_url" "$RELEASES_BASE/$(basename "$source")"; then
+              # Existing write-only RAM grants may not allow server-side copy.
+              # The regional upload fallback still avoids acceleration fees.
+              echo "::warning::OSS server-side copy failed; uploading $(basename "$source") to the release feed"
+              ./ossutil64 cp -f "$source" "$RELEASES_BASE/$(basename "$source")"
+            fi
+          }
 
           for f in ./vpk-output/*Setup*.exe; do
             [ -f "$f" ] || continue
-            ./ossutil64 cp "$f" "${ARCHIVE_BASE}/${NAME_BASE}-Setup.exe"
+            publish_installer "$f" "${NAME_BASE}-Setup.exe"
           done
           for f in ./vpk-output/*.pkg; do
             [ -f "$f" ] || continue
-            ./ossutil64 cp "$f" "${ARCHIVE_BASE}/${NAME_BASE}-Setup.pkg"
+            publish_installer "$f" "${NAME_BASE}-Setup.pkg"
           done
-          if [[ "${{ matrix.artifact }}" == win-* ]]; then
+          if [[ "$PLATFORM" == win-* ]]; then
             for f in ./vpk-output/*-Portable.zip; do
               [ -f "$f" ] || continue
-              ./ossutil64 cp "$f" "${ARCHIVE_BASE}/${NAME_BASE}-Portable.zip"
+              publish_installer "$f" "${NAME_BASE}-Portable.zip"
             done
           fi
 
@@ -90,9 +115,9 @@ jobs:
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+          OSS_ENDPOINT: https://oss-cn-shanghai.aliyuncs.com
         run: |
-          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
+          ./ossutil64 config -e "$OSS_ENDPOINT" -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET"
           ./ossutil64 cp -f bakabase.user.js oss://anobaka-public/app/bakabase/scripts/bakabase.user.js
 
   deploy-docker:
