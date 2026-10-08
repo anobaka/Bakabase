@@ -2008,15 +2008,17 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 var existingByResourceId = existingValues.ToDictionary(v => v.ResourceId);
 
-                var toAdd = new List<CustomPropertyValue>();
-                var toUpdate = new List<CustomPropertyValue>();
+                // dbValue is already serialized. Domain value range methods serialize again,
+                // which turns non-string values (including choice/tag ID lists) into null.
+                var toAdd = new List<CustomPropertyValueDbModel>();
+                var toUpdate = new List<CustomPropertyValueDbModel>();
 
                 foreach (var resourceId in resourceIds)
                 {
                     if (existingByResourceId.TryGetValue(resourceId, out var existing))
                     {
                         // Update existing
-                        toUpdate.Add(new CustomPropertyValue
+                        toUpdate.Add(new CustomPropertyValueDbModel
                         {
                             Id = existing.Id,
                             ResourceId = resourceId,
@@ -2028,7 +2030,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     else
                     {
                         // Add new
-                        toAdd.Add(new CustomPropertyValue
+                        toAdd.Add(new CustomPropertyValueDbModel
                         {
                             ResourceId = resourceId,
                             PropertyId = model.PropertyId,
@@ -2040,7 +2042,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 if (toAdd.Count > 0)
                 {
-                    var addResult = await _customPropertyValueService.AddRange(toAdd);
+                    var addResult = await _customPropertyValueService.AddDbModelRange(toAdd);
                     if (addResult.Code != 0)
                     {
                         return addResult;
@@ -2049,7 +2051,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 if (toUpdate.Count > 0)
                 {
-                    var updateResult = await _customPropertyValueService.UpdateRange(toUpdate);
+                    var updateResult = await _customPropertyValueService.UpdateDbModelRange(toUpdate);
                     if (updateResult.Code != 0)
                     {
                         return updateResult;
