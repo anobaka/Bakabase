@@ -11,6 +11,16 @@ namespace Bakabase.Service.Models.Input
         public RemoteAccessMode? Mode { get; set; }
     }
 
+    public record RemoteAccessAdvertisedAddressInputModel
+    {
+        public string? Address { get; set; }
+    }
+
+    public record RemoteAccessAddressCandidateInputModel
+    {
+        public string Address { get; set; } = "";
+    }
+
     public record RemoteAccessLiveTranscodeInputModel
     {
         public bool Allow { get; set; }

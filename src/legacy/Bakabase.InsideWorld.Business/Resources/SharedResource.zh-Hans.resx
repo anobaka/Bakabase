@@ -1173,4 +1173,7 @@
   <data name="BTask_Error_AigcComfyWorkflowMissing" xml:space="preserve">
     <value>请在生成器或服务商默认配置中设置 ComfyUI 工作流 JSON</value>
   </data>
+  <data name="RemoteAccess_AdvertisedAddressInvalid" xml:space="preserve">
+    <value>请输入可供其他设备访问的 HTTP(S) 地址，仅包含主机和可选端口，不包含路径、账号、查询或片段。本机回环、链路本地、代理虚拟 IP 和 Docker 内部地址不能使用。</value>
+  </data>
 </root>

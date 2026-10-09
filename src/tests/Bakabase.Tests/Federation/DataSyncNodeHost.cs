@@ -192,6 +192,11 @@ internal sealed class DataSyncNodeHost : IAsyncDisposable
 /// <summary>Remote access whose mode a test sets and whose reachable address is the host's own listener.</summary>
 internal sealed class AddressedRemoteAccess : IRemoteAccessService
 {
+    private string? _advertisedAddress;
+    public string? GetAdvertisedAddress() => _advertisedAddress;
+    public Task SetAdvertisedAddressAsync(string? address) { _advertisedAddress = address; return Task.CompletedTask; }
+    public void ObserveAddress(string address) { }
+
     public RemoteAccessMode Mode { get; set; } = RemoteAccessMode.Enabled;
     public string[] Addresses { get; set; } = [];
     public RemoteAccessMode GetEffectiveMode() => Mode;

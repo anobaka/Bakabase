@@ -118,11 +118,10 @@ public enum RemoteAccessAddressKind
 /// <param name="InterfaceName">The network interface it belongs to, to help pick.</param>
 /// <param name="Kind">What kind of network it is on.</param>
 /// <param name="Recommended">
-/// The one to suggest: every port of the first LAN address whose interface has a default
-/// gateway (else of the first LAN address).
+/// The first suitable complete origin in priority order; false for other candidates.
 /// </param>
 public record RemoteAccessAddress(string Url, string InterfaceName,
-    RemoteAccessAddressKind Kind = RemoteAccessAddressKind.Unknown, bool Recommended = false);
+    RemoteAccessAddressKind Kind = RemoteAccessAddressKind.Unknown, bool Recommended = false, string? Source = null);
 
 /// <summary>
 /// What this install tells other devices about itself — the payload behind the

@@ -62,6 +62,8 @@ namespace Bakabase.Service.Models.View
 
     public record RemoteAccessAddressViewModel
     {
+        /// <summary>configured, browser, deployment, or interface; absent on older servers.</summary>
+        public string? Source { get; set; }
         public string Url { get; set; } = null!;
 
         public string InterfaceName { get; set; } = null!;
@@ -78,6 +80,7 @@ namespace Bakabase.Service.Models.View
 
     public record RemoteAccessSettingsViewModel
     {
+        public string? AdvertisedAddress { get; set; }
         public RemoteAccessMode Mode { get; set; }
 
         /// <summary>

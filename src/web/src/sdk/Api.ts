@@ -7109,6 +7109,14 @@ export interface BakabaseServiceModelsInputProxyTestInputModel {
   customSites?: string[];
 }
 
+export interface BakabaseServiceModelsInputRemoteAccessAddressCandidateInputModel {
+  address: string;
+}
+
+export interface BakabaseServiceModelsInputRemoteAccessAdvertisedAddressInputModel {
+  address?: string;
+}
+
 export interface BakabaseServiceModelsInputRemoteAccessDeviceNameInputModel {
   name?: string;
 }
@@ -7797,6 +7805,7 @@ export interface BakabaseServiceModelsViewProxyTestResultViewModel {
 }
 
 export interface BakabaseServiceModelsViewRemoteAccessAddressViewModel {
+  source?: string;
   url: string;
   interfaceName: string;
   /** [0: Unknown, 1: Lan, 2: Vpn, 3: Virtual, 4: LinkLocal] */
@@ -7900,6 +7909,7 @@ export interface BakabaseServiceModelsViewRemoteAccessServerInfoViewModel {
 }
 
 export interface BakabaseServiceModelsViewRemoteAccessSettingsViewModel {
+  advertisedAddress?: string;
   /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
   mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
   addresses: BakabaseServiceModelsViewRemoteAccessAddressViewModel[];
@@ -29106,6 +29116,68 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setRemoteAccessModeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/mode`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name SetRemoteAccessAdvertisedAddress
+     * @request PUT:/remote-access/advertised-address
+     */
+    setRemoteAccessAdvertisedAddress: (
+      data: BakabaseServiceModelsInputRemoteAccessAdvertisedAddressInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/remote-access/advertised-address`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setRemoteAccessAdvertisedAddress
+     * @name setRemoteAccessAdvertisedAddressUrl
+     */
+    setRemoteAccessAdvertisedAddressUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/advertised-address`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name ObserveRemoteAccessAddress
+     * @request POST:/remote-access/address-candidates
+     */
+    observeRemoteAccessAddress: (
+      data: BakabaseServiceModelsInputRemoteAccessAddressCandidateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/remote-access/address-candidates`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for observeRemoteAccessAddress
+     * @name observeRemoteAccessAddressUrl
+     */
+    observeRemoteAccessAddressUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/address-candidates`;
 
       return baseUrl + path;
     },

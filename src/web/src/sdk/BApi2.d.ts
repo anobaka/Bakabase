@@ -7414,6 +7414,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/remote-access/advertised-address": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetRemoteAccessAdvertisedAddress"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/remote-access/address-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ObserveRemoteAccessAddress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/remote-access/live-transcode": {
         parameters: {
             query?: never;
@@ -15270,6 +15302,12 @@ export interface components {
             presetSiteIds?: string[];
             customSites?: string[];
         };
+        "Bakabase.Service.Models.Input.RemoteAccessAddressCandidateInputModel": {
+            address: string;
+        };
+        "Bakabase.Service.Models.Input.RemoteAccessAdvertisedAddressInputModel": {
+            address?: string;
+        };
         "Bakabase.Service.Models.Input.RemoteAccessDeviceNameInputModel": {
             name?: string;
         };
@@ -15846,6 +15884,7 @@ export interface components {
             error?: string;
         };
         "Bakabase.Service.Models.View.RemoteAccessAddressViewModel": {
+            source?: string;
             url: string;
             interfaceName: string;
             kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteAccessAddressKind"];
@@ -15928,6 +15967,7 @@ export interface components {
             platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
         };
         "Bakabase.Service.Models.View.RemoteAccessSettingsViewModel": {
+            advertisedAddress?: string;
             mode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
             addresses: components["schemas"]["Bakabase.Service.Models.View.RemoteAccessAddressViewModel"][];
             allowLiveTranscode: boolean;
@@ -32984,6 +33024,64 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessModeInputModel"];
                 "text/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessModeInputModel"];
                 "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessModeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetRemoteAccessAdvertisedAddress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAdvertisedAddressInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAdvertisedAddressInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAdvertisedAddressInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAdvertisedAddressInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ObserveRemoteAccessAddress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAddressCandidateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAddressCandidateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAddressCandidateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAddressCandidateInputModel"];
             };
         };
         responses: {

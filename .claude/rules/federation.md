@@ -70,17 +70,23 @@ neither library sharing list.
   link, the nav or the focus keeper brings into view: the page keeps its height (plus a gap)
   in `--devices-scroll-offset`, which every such place and heading uses as its scroll margin
   (`scrollOffsetClass`). A notice (not an error) is left behind by the next navigation.
-- **Addresses.** Every host stays in the API (`ownHostsOf`/`sameMachine` need them all); the
-  UI shows one row per host on the main port and folds virtual and link-local adapters away,
-  labelled (`devices/addresses.ts`). The server says each address's `kind` and which one is
-  `recommended` (`RemoteAccessAddressClassifier`: the first LAN address whose interface has a
-  default gateway, which a VM host-only or overlay adapter lacks) and lists them in the
-  order they are offered in — recommended first, then LAN, VPN, unknown, virtual, link-local
-  (`RemoteAccessAddressClassifier.Order`) — which is also the order a device reading this one
-  back tries them in and keeps the first few of; the page guesses from the
-  address and interface name only for a server too old to say. Until remote access's settings
-  are read the list says it is loading, or why it could not read them — "no address found"
-  is only for a list that came back empty.
+- **Addresses.** Remote access supplies one candidate list for the devices page, invitations,
+  reciprocal pairing and data sync: the optional saved external address, browser-observed API
+  endpoints, Compose host endpoints, then native network interfaces. The browser reports its
+  effective API endpoint only with management access; a desktop relay uses its upstream server
+  address, never the relay's loopback origin. Observations are bounded, expire in memory and
+  never overwrite the saved external address. Container interfaces are not host endpoints.
+  Compose derives the published port from the same resolved configuration used to start the
+  service; remote Docker contexts do not borrow the CLI machine's LAN address.
+  Keep distinct schemes and ports on the same host in both UI and reciprocal offers: only
+  the connecting device can tell which is reachable. Each peer validates the expected identity
+  before exchanging a code and keeps its own successful address. A candidate is not a global
+  reachability verdict. The API reports `source`, `kind` and `recommended`; older servers retain
+  client-side classification, and virtual/link-local adapters stay folded away. Native interface
+  ordering still prefers a LAN gateway (`RemoteAccessAddressClassifier`); reciprocal offers
+  keep explicit/browser/deployment sources first and prefer matching subnets within each source.
+  Until settings arrive the list says loading or why it failed; "no address found" is only
+  for an empty successful response.
 - **Words.** 配对/配对码 only for management, 分享码 only for library sharing, 浏览 for what
   sharing allows, 允许 (never 批准) for letting a device in, 添加 (never 连接) for putting a
   device in a list, 多设备资源库 for the merged library. Never shown: 节点, 代际, 设备身份, 旧接口,

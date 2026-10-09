@@ -15,6 +15,7 @@ import BApi from "@/sdk/BApi";
 import { millisecondsUntil } from "@/core/serverTime";
 import { useDataSyncMap } from "@/features/data-sync/map/useDataSyncMap";
 import { useDataSyncStore } from "@/features/data-sync/stores/dataSync";
+import { useRemoteAccessStore } from "@/stores/remoteAccess";
 
 /*
  * Everything the device map draws and the devices page shows, read once for the whole page
@@ -129,6 +130,7 @@ function useManagedServers() {
 
 /** Who may manage this device, and who is asking to. */
 function useManagementAccess() {
+  const addressRevision = useRemoteAccessStore((state) => state.addressCandidatesRevision);
   const [settings, setSettings] = useState<RemoteAccessSettings>();
   const [error, setError] = useState<Error>();
   const generation = useRef(0);
@@ -159,7 +161,7 @@ function useManagementAccess() {
     return () => {
       generation.current += 1;
     };
-  }, [load]);
+  }, [load, addressRevision]);
 
   const live = (settings?.pendingRequests?.length ?? 0) > 0 || !!settings?.pairingCode;
 

@@ -25,6 +25,7 @@ public sealed class FederationSharingWizardTests
         {
             Mode = RemoteAccessMode.Unrestricted,
             AllowLiveTranscode = true,
+            AdvertisedAddress = "https://bakabase.example.com",
             ServerId = firstRun ? null : "legacy-server-id"
         });
         var store = new FederationStateStore(directory, directory);
@@ -41,6 +42,7 @@ public sealed class FederationSharingWizardTests
         Assert.AreEqual(firstRun ? "new-legacy-server-id" : "legacy-server-id", options.Value.ServerId);
         Assert.AreNotEqual(node.NodeId, options.Value.ServerId);
         Assert.IsTrue(options.Value.AllowLiveTranscode);
+        Assert.AreEqual("https://bakabase.example.com", options.Value.AdvertisedAddress);
         Assert.IsTrue(options.Value.RequirePairing);
         Assert.AreEqual(RemoteAccessMode.Enabled, options.Value.Mode);
         Assert.AreEqual(1, options.SaveCount);
@@ -83,6 +85,11 @@ public sealed class FederationSharingWizardTests
 
     private sealed class LegacyIdentity(string serverId) : IRemoteAccessService
     {
+    private string? _advertisedAddress;
+    public string? GetAdvertisedAddress() => _advertisedAddress;
+    public Task SetAdvertisedAddressAsync(string? address) { _advertisedAddress = address; return Task.CompletedTask; }
+    public void ObserveAddress(string address) { }
+
         public int Calls { get; private set; }
         public Task<string> GetOrCreateServerIdAsync() { Calls++; return Task.FromResult(serverId); }
         public Task<string> RegenerateServerIdAsync() => throw new NotSupportedException();

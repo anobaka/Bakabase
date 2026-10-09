@@ -89,7 +89,7 @@
   "federation.devices.addresses.vpn": "VPN（如 Tailscale）",
   "federation.devices.addresses.virtual": "虚拟网卡，其他设备通常无法通过它访问",
   "federation.devices.addresses.linkLocal": "未获得网络地址，其他设备无法通过它访问",
-  "federation.devices.addresses.tip": "在另一台设备上输入推荐的地址；那台设备不在同一网络时，选它能访问的那个。",
+  "federation.devices.addresses.tip": "请选择双方都能访问的网络地址。其它设备会在连接时验证可达性和设备身份；这里列出的地址不代表所有设备都能访问。",
   "federation.devices.addresses.remoteOff": "远程访问已关闭，其他设备目前无法访问{{target}}。",
   "federation.devices.addresses.none": "找不到{{target}}的局域网地址，其他设备暂时无法访问它。请检查网络后刷新。",
   "federation.devices.openManagementAccess": "前往“谁可以管理本机”",
@@ -524,5 +524,17 @@
   "federation.map.panel.self.managementSettings": "谁可以管理本机",
   "federation.map.panel.ghost.sharing": "它在此网络上开启了资源库分享：可以请求浏览。",
   "federation.map.panel.ghost.management": "它响应了管理发现：可以请求管理它。",
-  "federation.map.panel.ghost.nothing": "此窗口无法添加它。请在电脑上桌面端的“设备与分享”页面操作。"
+  "federation.map.panel.ghost.nothing": "此窗口无法添加它。请在电脑上桌面端的“设备与分享”页面操作。",
+  "federation.devices.advertisedAddress.label": "对外访问地址（可选）",
+  "federation.devices.advertisedAddress.automatic": "自动",
+  "federation.devices.advertisedAddress.tip": "留空时使用自动收集的地址。如需优先使用域名或映射端口，请填写完整的 http:// 或 https:// 地址，不含路径。其它设备会自行验证连接和设备身份。",
+  "federation.devices.advertisedAddress.invalid": "请输入其它设备可访问的 HTTP(S) 地址，不含路径、查询参数、片段或账号密码。仅本机可用的地址不能对外分享。",
+  "federation.devices.advertisedAddress.failed": "地址保存失败，请重试。",
+  "federation.devices.advertisedAddress.saving": "正在保存…",
+  "federation.devices.advertisedAddress.saved": "已保存地址偏好。",
+  "federation.devices.advertisedAddress.reset": "恢复自动",
+  "federation.devices.addresses.source.configured": "手动设置",
+  "federation.devices.addresses.source.browser": "浏览器访问",
+  "federation.devices.addresses.source.deployment": "部署配置",
+  "federation.devices.addresses.source.interface": "网络接口"
 }

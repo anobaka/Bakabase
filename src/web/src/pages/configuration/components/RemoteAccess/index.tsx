@@ -10,11 +10,12 @@ import type {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { AiOutlineCopy } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
+import AddressList from "@/features/federation/components/AddressList";
+import AdvertisedAddress from "@/features/federation/components/AdvertisedAddress";
 import { RemoteAccessMode } from "@/sdk/constants";
-import { Button, Chip, Input, Modal, Select, Snippet, Switch } from "@/components/bakaui";
+import { Button, Input, Modal, Select, Snippet, Switch } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import { millisecondsUntil, minutesUntil } from "@/core/serverTime";
@@ -48,27 +49,26 @@ const RemoteAccess: React.FC<RemoteAccessProps> = ({ query }) => {
   const [now, setNow] = useState(() => Date.now());
   const reloadClientContext = useRemoteAccessStore((state) => state.load);
   const isPureClient = useIsPureClient();
-  const loading = useRef(false);
+  const generation = useRef(0);
+  const addressRevision = useRemoteAccessStore((state) => state.addressCandidatesRevision);
 
   const load = useCallback(async () => {
-    if (loading.current) {
-      return;
-    }
-    loading.current = true;
+    const run = ++generation.current;
+
     try {
       const rsp = await BApi.remoteAccess.getRemoteAccessSettings();
 
-      if (!rsp.code && rsp.data) {
+      if (run === generation.current && !rsp.code && rsp.data) {
         setSettings(rsp.data);
       }
-    } finally {
-      loading.current = false;
+    } catch {
+      // Keep the last settings if a background refresh fails.
     }
   }, []);
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, addressRevision]);
 
   const mode = settings?.mode ?? RemoteAccessMode.Disabled;
   const pendingRequests = settings?.pendingRequests ?? [];
@@ -107,15 +107,6 @@ const RemoteAccess: React.FC<RemoteAccessProps> = ({ query }) => {
       // The banner and the play button read this, so refresh it rather than
       // waiting for a reload.
       await reloadClientContext();
-    }
-  };
-
-  const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success(t("configuration.remoteAccess.address.copied"));
-    } catch {
-      toast.error(t("configuration.remoteAccess.address.copyFailed"));
     }
   };
 
@@ -228,26 +219,16 @@ const RemoteAccess: React.FC<RemoteAccessProps> = ({ query }) => {
       label: t("configuration.remoteAccess.address.label"),
       tip: t("configuration.remoteAccess.address.tip"),
       keywords: ["ip", "address", "url", "地址"],
-      render: () =>
-        settings?.addresses?.length ? (
-          <div className="flex flex-col gap-1 items-start">
-            {settings.addresses.map((a) => (
-              <div key={a.url} className="flex items-center gap-2">
-                <span className="text-sm font-mono">{a.url}</span>
-                <Chip size="sm" variant="flat">
-                  {a.interfaceName}
-                </Chip>
-                <Button isIconOnly size="sm" variant="light" onPress={() => copy(a.url!)}>
-                  <AiOutlineCopy />
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <span className="text-sm text-foreground-400">
-            {t("configuration.remoteAccess.address.none")}
-          </span>
-        ),
+      render: () => (
+        <div className="w-full max-w-2xl space-y-4">
+          <AddressList
+            addresses={settings?.addresses}
+            context="manage"
+            target={settings ? t("federation.management.self") : ""}
+          />
+          {settings && <AdvertisedAddress value={settings.advertisedAddress} onSaved={load} />}
+        </div>
+      ),
     });
 
     items.push({

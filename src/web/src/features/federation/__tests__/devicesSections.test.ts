@@ -112,7 +112,7 @@ describe("which of this device's addresses to type", () => {
     expect(classifyAddress(host, interfaceName)).toBe(kind);
   });
 
-  it("keeps one row per host on the main port, recommends the first LAN one, and orders the rest", () => {
+  it("keeps every distinct port, recommends the first LAN address, and orders the rest", () => {
     const rows = deviceAddresses([
       { url: "http://198.18.0.1:34567", interfaceName: "utun4" },
       { url: "http://198.18.0.1:5000", interfaceName: "utun4" },
@@ -125,10 +125,44 @@ describe("which of this device's addresses to type", () => {
 
     expect(rows.map((row) => [row.url, row.kind, row.recommended])).toEqual([
       ["http://192.168.1.5:34567", "lan", true],
+      ["http://192.168.1.5:5000", "lan", false],
       ["http://10.0.0.2:34567", "lan", false],
       ["http://100.101.1.2:34567", "vpn", false],
       ["http://198.18.0.1:34567", "virtual", false],
+      ["http://198.18.0.1:5000", "virtual", false],
       ["http://169.254.3.4:34567", "linkLocal", false],
+    ]);
+  });
+
+  it("deduplicates complete normalized URLs without discarding mapped ports or HTTPS", () => {
+    const rows = deviceAddresses([
+      {
+        url: "https://NAS.EXAMPLE:443/",
+        interfaceName: "",
+        source: "configured",
+        recommended: true,
+      },
+      { url: "https://nas.example", interfaceName: "", source: "browser", recommended: false },
+      { url: "http://nas.example:34567", interfaceName: "", source: "browser", recommended: false },
+      {
+        url: "https://nas.example:8443",
+        interfaceName: "",
+        source: "deployment",
+        recommended: false,
+      },
+      {
+        url: "http://nas.example:5000",
+        interfaceName: "eth0",
+        source: "interface",
+        recommended: false,
+      },
+    ]);
+
+    expect(rows.map(({ url, source, recommended }) => [url, source, recommended])).toEqual([
+      ["https://nas.example", "configured", true],
+      ["http://nas.example:34567", "browser", false],
+      ["https://nas.example:8443", "deployment", false],
+      ["http://nas.example:5000", "interface", false],
     ]);
   });
 
@@ -164,6 +198,7 @@ describe("which of this device's addresses to type", () => {
 
     expect(rows.map((row) => [row.url, row.kind, row.recommended])).toEqual([
       ["http://192.168.1.5:34567", "lan", true],
+      ["http://192.168.1.5:5000", "lan", false],
       ["http://10.37.129.2:34567", "unknown", false],
       ["http://10.0.0.9:34567", "virtual", false],
     ]);

@@ -37,6 +37,7 @@ public sealed class DataSyncScopeServiceTests
         using var node = new Node(mode);
         node.Options.Value.Mode = mode;
         node.Options.Value.AllowLiveTranscode = true;
+        node.Options.Value.AdvertisedAddress = "https://bakabase.example.com";
 
         await node.Grants.SetSharingEnabledAsync(true, ask, default);
 
@@ -46,6 +47,7 @@ public sealed class DataSyncScopeServiceTests
         Assert.AreEqual(opened ? RemoteAccessMode.Enabled : mode, options.Mode);
         Assert.AreEqual(opened, options.RequirePairing);
         Assert.IsTrue(options.AllowLiveTranscode);
+        Assert.AreEqual("https://bakabase.example.com", options.AdvertisedAddress);
         Assert.AreEqual("legacy-server-id", options.ServerId, "The install's own identity is kept.");
         Assert.IsFalse(await node.Store.IsSharingEnabledAsync(), "Library sharing is its own switch.");
     }

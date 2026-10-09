@@ -41,7 +41,7 @@ done
 case "${1:-}" in
   up|create|run)
     command -v python3 >/dev/null || {
-      echo 'Starting containers through this helper requires Python 3 (standard library only) to read Compose mount paths. Install Python 3, or use docker compose directly; direct starts display container paths.' >&2
+      echo 'Starting containers through this helper requires Python 3 (standard library only) to read Compose deployment information. Install Python 3, or use docker compose directly; direct starts display container paths and do not derive host LAN addresses.' >&2
       exit 1
     }
     exec python3 "$script_dir/compose-metadata.py" "${#compose[@]}" "${compose[@]}" "$@" ;;

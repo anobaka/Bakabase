@@ -48,18 +48,19 @@ public sealed class FederationPairingFlow(NodePairingClient pairing, FederationP
 
     /// <summary>
     /// The local addresses a device on <paramref name="target"/>'s network can use to reach this one,
-    /// same-subnet first, one port per interface.
+    /// Explicit and browser-provided endpoints stay first; interface addresses prefer the target's subnet.
+    /// Keep each distinct endpoint: a published port or HTTPS proxy may reach where another port cannot.
     /// </summary>
     public IReadOnlyList<string> GetShareBackAddresses(string target)
     {
         var host = Uri.TryCreate(FederationAddress(target), UriKind.Absolute, out var uri) ? uri.Host : "";
         IPAddress.TryParse(host, out var targetIp);
         return remoteAccess.GetReachableAddresses()
+            .Where(a => Uri.TryCreate(a.Url, UriKind.Absolute, out _))
+            .OrderBy(a => a.Source switch { "configured" => 0, "browser" => 1, "deployment" => 2, _ => 3 })
+            .ThenByDescending(a => targetIp == null ? 0 : SharedPrefixBits(targetIp, new Uri(a.Url).Host))
             .Select(a => a.Url)
-            .Where(url => Uri.TryCreate(url, UriKind.Absolute, out _))
-            .GroupBy(url => new Uri(url).Host)
-            .Select(g => g.First())
-            .OrderByDescending(url => targetIp == null ? 0 : SharedPrefixBits(targetIp, new Uri(url).Host))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(8)
             .ToArray();
     }
@@ -67,21 +68,29 @@ public sealed class FederationPairingFlow(NodePairingClient pairing, FederationP
     /// <summary>Connects back to a device this node just granted, if it offered read access in return.</summary>
     public void ReadBack(string nodeId) => _ = Task.Run(async () =>
     {
+        using var budget = new CancellationTokenSource(ReadBackBudget);
+        var ct = budget.Token;
         try
         {
-            var offer = await peers.TakeReciprocalOfferAsync(nodeId);
+            var offer = await peers.TakeReciprocalOfferAsync(nodeId, ct);
             if (offer == null) return;
             foreach (var address in offer.Addresses)
             {
                 try
                 {
-                    var outcome = await pairing.ConnectAsync(address, offer.Code, expectedNodeId: nodeId);
-                    if (outcome.Outcome == "granted") await OnOutboundGrantedAsync(CancellationToken.None);
+                    var outcome = await pairing.ConnectAsync(address, offer.Code, ct, expectedNodeId: nodeId);
+                    if (outcome.Outcome == "granted") await OnOutboundGrantedAsync(ct);
                     return;
                 }
                 catch (FederationAccessException e)
                 {
                     logger.LogInformation("Reading back {NodeId} at {Address} failed: {Code}", nodeId, address, e.ErrorCode);
+                }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                {
+                    // The browser may reach this entry while the peer cannot. A per-request
+                    // deadline must leave the remaining candidates a chance to connect.
+                    logger.LogInformation("Reading back {NodeId} at {Address} timed out", nodeId, address);
                 }
             }
         }

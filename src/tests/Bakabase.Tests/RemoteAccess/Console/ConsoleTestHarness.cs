@@ -286,6 +286,11 @@ internal sealed class ConsoleHarness : IAsyncDisposable
 
     private sealed class FakeRemoteAccess : IRemoteAccessService
     {
+    private string? _advertisedAddress;
+    public string? GetAdvertisedAddress() => _advertisedAddress;
+    public Task SetAdvertisedAddressAsync(string? address) { _advertisedAddress = address; return Task.CompletedTask; }
+    public void ObserveAddress(string address) { }
+
         public RemoteAccessMode GetEffectiveMode() => RemoteAccessMode.Enabled;
         public Task SetModeAsync(RemoteAccessMode? mode) => throw new NotSupportedException("never changed by the console");
         public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses() => [];

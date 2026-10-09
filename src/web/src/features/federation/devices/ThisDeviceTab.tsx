@@ -15,6 +15,7 @@ import {
   primaryClass,
 } from "../components/common";
 import AddressList from "../components/AddressList";
+import AdvertisedAddress from "../components/AdvertisedAddress";
 import { revealClass } from "../hooks/useSectionReveal";
 import { federationPeerApi } from "../peerApi";
 import { devicesRoute } from "../switching";
@@ -173,6 +174,15 @@ export default function ThisDeviceTab() {
             ) : (
               <p className="text-sm">{t("federation.loading")}</p>
             )}
+          </div>
+        )}
+        {access && (
+          <div className="mt-4 border-t border-default-200 pt-4">
+            <AdvertisedAddress
+              disabled={busy}
+              value={access.advertisedAddress}
+              onSaved={() => data.loadAccess()}
+            />
           </div>
         )}
       </section>

@@ -217,11 +217,22 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     // replaced rather than silently executed on the wrong machine.
     useRemoteAccessStore.getState().load();
 
+    // A long-lived page keeps its address candidate fresh, and a returning window
+    // can recover from a failed startup observation without polling the network.
+    const refreshRemoteContext = () => {
+      if (!document.hidden) void useRemoteAccessStore.getState().load();
+    };
+    const remoteContextTimer = setInterval(refreshRemoteContext, 60 * 60_000);
+
+    window.addEventListener("focus", refreshRemoteContext);
+
     console.log("bakabase context provider initialized");
     // Analytics SDKs init in the appOptions effect below — they need the toggle value
     // and (via initAnalytics) the device id / project ids returned by /app/analytics-info.
 
     return () => {
+      clearInterval(remoteContextTimer);
+      window.removeEventListener("focus", refreshRemoteContext);
       console.log("bakabase context provider is unmounting");
     };
   }, []);

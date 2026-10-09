@@ -255,6 +255,7 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
             // A cloned federation node intentionally has a different NodeId; never replace the legacy server identity.
             ServerId = legacyServerId,
             AllowLiveTranscode = allowLiveTranscode,
+            AdvertisedAddress = configured.AdvertisedAddress,
             RequirePairing = true,
             Mode = RemoteAccessMode.Enabled
         });
@@ -268,10 +269,9 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
                 "Remote access is off on this device, so no other device can reach it. Turn it on with pairing required.");
     }
 
-    /// <summary>One address per host, as the library shows next to its code.</summary>
+    /// <summary>The same complete endpoints the library shows next to its code.</summary>
     private IReadOnlyList<string> ReachableAddresses() => remoteAccess.GetReachableAddresses().Select(a => a.Url)
-        .GroupBy(url => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : url)
-        .Select(g => g.First()).ToArray();
+        .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
     /// <summary>
     /// Whether an incoming request came from somewhere other than where this device knows the node it names. Only two

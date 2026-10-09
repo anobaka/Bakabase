@@ -272,6 +272,10 @@ sealed class BenchmarkNodeIdentityProvider(INodeIdentityProvider production, str
 /// </remarks>
 sealed class FixtureRemoteAccess(IRemoteAccessService production, string? name, int port) : IRemoteAccessService
 {
+    public string? GetAdvertisedAddress() => production.GetAdvertisedAddress();
+    public Task SetAdvertisedAddressAsync(string? address) => production.SetAdvertisedAddressAsync(address);
+    public void ObserveAddress(string address) => production.ObserveAddress(address);
+
     public RemoteAccessMode GetEffectiveMode() => production.GetEffectiveMode();
     public Task SetModeAsync(RemoteAccessMode? mode) => production.SetModeAsync(mode);
 

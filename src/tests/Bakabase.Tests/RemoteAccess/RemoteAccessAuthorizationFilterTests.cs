@@ -99,6 +99,29 @@ public class RemoteAccessAuthorizationFilterTests
     }
 
     [DataTestMethod]
+    [DataRow(RemoteAccessMode.Enabled, false, false)]
+    [DataRow(RemoteAccessMode.Enabled, true, true)]
+    [DataRow(RemoteAccessMode.Unrestricted, false, true)]
+    public void AdvertisedAddressChangesRequireTheSameOperatorAsSettings(RemoteAccessMode mode, bool paired, bool allowed)
+    {
+        foreach (var action in new[] {nameof(RemoteAccessController.SetAdvertisedAddress), nameof(RemoteAccessController.ObserveAddress)})
+        {
+            var context = Build(action, new RemoteAccessContext
+            {
+                IsLoopback = false, Mode = mode,
+                Device = paired ? new RemoteDevice {Id = "paired"} : null
+            }, typeof(RemoteAccessController));
+            new RemoteAccessAuthorizationFilter().OnAuthorization(context);
+            if (allowed) Assert.IsNull(context.Result, action);
+            else
+            {
+                Assert.IsInstanceOfType<ObjectResult>(context.Result);
+                Assert.AreEqual(403, ((ObjectResult) context.Result!).StatusCode, action);
+            }
+        }
+    }
+
+    [DataTestMethod]
     [DataRow(RemoteAccessMode.Enabled, false, false, false)]
     [DataRow(RemoteAccessMode.Enabled, false, true, true)]
     [DataRow(RemoteAccessMode.Unrestricted, false, false, true)]

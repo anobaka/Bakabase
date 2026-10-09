@@ -11,6 +11,7 @@ using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Modules.Notification.Abstractions.Models.Input;
 using Bakabase.Modules.Notification.Abstractions.Services;
 using Bakabase.Modules.RemoteAccess.Components.Pairing;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Components.Federation;
 using Bakabase.Service.Models.Input;
@@ -138,10 +139,11 @@ namespace Bakabase.Service.Controllers
             return new SingletonResponse<RemoteAccessSettingsViewModel>(new RemoteAccessSettingsViewModel
             {
                 Mode = remoteAccessService.GetEffectiveMode(),
+                AdvertisedAddress = remoteAccessService.GetAdvertisedAddress(),
                 Addresses = remoteAccessService.GetReachableAddresses()
                     .Select(a => new RemoteAccessAddressViewModel
                     {
-                        Url = a.Url, InterfaceName = a.InterfaceName, Kind = a.Kind, Recommended = a.Recommended
+                        Url = a.Url, InterfaceName = a.InterfaceName, Kind = a.Kind, Recommended = a.Recommended, Source = a.Source
                     })
                     .ToList(),
                 AllowLiveTranscode = remoteAccessService.GetAllowLiveTranscode(),
@@ -168,6 +170,31 @@ namespace Bakabase.Service.Controllers
             await remoteAccessService.SetModeAsync(model.Mode);
             return BaseResponseBuilder.Ok;
         }
+
+        [HttpPut("advertised-address")]
+        [SwaggerOperation(OperationId = "SetRemoteAccessAdvertisedAddress")]
+        public async Task<ActionResult<BaseResponse>> SetAdvertisedAddress(
+            [FromBody] RemoteAccessAdvertisedAddressInputModel model, [FromServices] IBakabaseLocalizer localizer)
+        {
+            if (model.Address != null && !AdvertisedRemoteAddress.TryNormalize(model.Address, out _))
+                return InvalidAdvertisedAddress(localizer);
+            await remoteAccessService.SetAdvertisedAddressAsync(model.Address);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("address-candidates")]
+        [SwaggerOperation(OperationId = "ObserveRemoteAccessAddress")]
+        public ActionResult<BaseResponse> ObserveAddress(
+            [FromBody] RemoteAccessAddressCandidateInputModel model, [FromServices] IBakabaseLocalizer localizer)
+        {
+            if (!AdvertisedRemoteAddress.TryNormalize(model.Address, out _)) return InvalidAdvertisedAddress(localizer);
+            remoteAccessService.ObserveAddress(model.Address);
+            return BaseResponseBuilder.Ok;
+        }
+
+        private BadRequestObjectResult InvalidAdvertisedAddress(IBakabaseLocalizer localizer) =>
+            BadRequest(BaseResponseBuilder.Build(ResponseCode.InvalidPayloadOrOperation,
+                localizer["RemoteAccess_AdvertisedAddressInvalid"]));
 
         [HttpPut("live-transcode")]
         [SwaggerOperation(OperationId = "SetRemoteAccessLiveTranscode")]

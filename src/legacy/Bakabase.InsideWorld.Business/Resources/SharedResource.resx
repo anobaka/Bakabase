@@ -1173,4 +1173,7 @@ Downloads: https://www.ffmpeg.org/</value>
   <data name="BTask_Error_AigcComfyWorkflowMissing" xml:space="preserve">
     <value>Set ComfyUI workflow JSON on the generator or in the provider defaults.</value>
   </data>
+  <data name="RemoteAccess_AdvertisedAddressInvalid" xml:space="preserve">
+    <value>Enter a shareable HTTP(S) address with only a host and optional port. Localhost, link-local, proxy fake-IP and Docker-internal addresses cannot be used.</value>
+  </data>
 </root>

@@ -24,6 +24,33 @@ namespace Bakabase.Tests.Federation;
 public sealed class DataSyncPairingOverHttpTests
 {
     [TestMethod]
+    public async Task ReadBackTriesDistinctPortsChecksIdentityAndRemembersTheAddressThatWorked()
+    {
+        await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
+        await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
+        await using var other = await DataSyncNodeHost.StartAsync("node-other", "Other");
+        await desk.Grants.SetSharingEnabledAsync(true, true, default);
+        await nas.Grants.SetSharingEnabledAsync(true, true, default);
+        await other.Grants.SetSharingEnabledAsync(true, true, default);
+
+        // A browser-reachable candidate may lead to another install from this peer's network.
+        // All three addresses share a host; the good port must not be collapsed into the first.
+        desk.Remote.Addresses = [
+            $"http://127.0.0.1:{LoopbackPortAllocator.Allocate(49000)}", other.Address, desk.Address];
+        await desk.Grants.RequestAccessAsync(
+            new DataSyncAccessRequestInput(null, nas.Address, null, DataSyncRequestIntent.TwoWay), default);
+        var request = (await nas.Grants.GetRequestsAsync(default)).Single();
+
+        var approval = await nas.Grants.ApproveAsync(request.RequestId, readBack: true, default);
+
+        Assert.IsTrue(approval.ReadBackGranted);
+        var peer = (await nas.Grants.GetPeersAsync(false, default)).Single();
+        Assert.AreEqual(("node-desk", desk.Address, true), (peer.NodeId, peer.Address, peer.WeMayRead));
+        Assert.AreEqual(0, (await other.Grants.GetGrantsAsync(default)).Count,
+            "The invitation must not be sent to an address answering as another server.");
+    }
+
+    [TestMethod]
     public async Task ATwoWayRequestIsApprovedAndTheRequesterReadBack()
     {
         await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");

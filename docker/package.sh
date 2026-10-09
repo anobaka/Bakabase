@@ -27,9 +27,15 @@ Review .env and any media/import mounts before starting:
   ./image.sh logs -f server
 
 The start helper requires Python 3 (standard library only) to derive host-path
-display information from the final Compose mounts. It does not access docker.sock
-from the container. Direct `docker compose up -d` also works and displays container
-paths; non-start helper commands do not require Python.
+display information and published HTTP ports from the final Compose configuration.
+With a local Unix-socket Docker context on macOS/Linux, it also reads active host
+LAN IPv4 addresses for sharing. It does not access docker.sock from the container.
+Remote Docker contexts, loopback-only ports, and unknown host networking produce
+no automatic LAN address. Linux host detection requires the `ip` command.
+Direct `docker compose up -d` also works: paths remain container paths and the UI
+can suggest the browser's current server address without host metadata.
+Non-start helper commands do not require Python. Address metadata does not enable
+LAN access or forward discovery broadcasts; network/firewall settings still apply.
 
 The project is bakabase and its service is server (container bakabase-server-1). Keep the same .env,
 AppData mount, and optional local override when replacing a source-built server.

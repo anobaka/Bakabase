@@ -3,6 +3,8 @@ import { create } from "zustand";
 import { ClientMode, RemoteAccessMode } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { clientApi } from "@/core/clientApi";
+import envConfig from "@/config/env";
+import { createAddressObserver } from "@/core/remoteAccessAddress";
 
 /**
  * Which program is answering as PureClient. Only one is known: `console`, the desktop app
@@ -42,6 +44,7 @@ interface IRemoteAccessState {
    */
   isLocal: boolean;
   mode: RemoteAccessMode;
+  paired: boolean;
   /**
    * Which flavour is answering. The desktop app's relay for a managed server answers
    * this endpoint itself, which is the only way `PureClient` ever appears.
@@ -57,6 +60,8 @@ interface IRemoteAccessState {
   /** Explicit access to the shown server's federation UI; absent on older servers and relays. */
   federationAvailable?: boolean;
   serverName?: string;
+  /** Bumped after a candidate was accepted, so an already visible address list can refresh. */
+  addressCandidatesRevision: number;
   /**
    * Only ever set under PureClient, once `/client/status` has answered and said it is the
    * console. Undefined until then, and for anything else answering there — callers that
@@ -96,6 +101,22 @@ const unanswered = (state: IRemoteAccessState): Pick<IRemoteAccessState, "contex
   context: state.context === "known" ? "known" : "unknown",
 });
 
+const observeAddress = createAddressObserver(async (address) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const response = await BApi.remoteAccess.observeRemoteAccessAddress(
+      { address },
+      { showErrorToast: false, signal: controller.signal },
+    );
+
+    return !response.code;
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
 export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
   initialized: false,
   context: "asking",
@@ -103,12 +124,14 @@ export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
   // common case, and it must not flicker through a "remote" rendering on start.
   isLocal: true,
   mode: RemoteAccessMode.Disabled,
+  paired: false,
   clientMode: ClientMode.AllInOne,
   serverReachable: true,
   cookieCaptureAvailable: true,
+  addressCandidatesRevision: 0,
   load: async () => {
     try {
-      const rsp = await BApi.remoteAccess.getRemoteAccessContext();
+      const rsp = await BApi.remoteAccess.getRemoteAccessContext({ showErrorToast: false });
       const data = rsp.data;
 
       if (data) {
@@ -125,6 +148,7 @@ export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
           context: "known",
           isLocal,
           mode: data.mode ?? RemoteAccessMode.Disabled,
+          paired: data.paired ?? false,
           clientMode,
           serverReachable: data.serverReachable ?? true,
           cookieCaptureAvailable: data.cookieCaptureAvailable ?? isLocal,
@@ -143,6 +167,28 @@ export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
             // next load asks again. Until then nothing host-specific is shown.
           }
         }
+
+        // The relay adds serverAddress outside the Service-generated context contract.
+        const serverAddress =
+          "serverAddress" in data && typeof data.serverAddress === "string"
+            ? data.serverAddress
+            : undefined;
+
+        if (
+          await observeAddress(
+            {
+              isLocal,
+              clientMode,
+              mode: data.mode ?? RemoteAccessMode.Disabled,
+              paired: data.paired,
+              serverReachable: data.serverReachable,
+              serverAddress,
+            },
+            envConfig.apiEndpoint,
+            window.location.origin,
+          )
+        )
+          set((state) => ({ addressCandidatesRevision: state.addressCandidatesRevision + 1 }));
       } else {
         // Answered with an error code instead of a context. Everything else goes on as
         // before; only what waits on `context` learns that no answer is coming.
