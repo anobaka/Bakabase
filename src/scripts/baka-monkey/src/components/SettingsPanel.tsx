@@ -5,7 +5,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@heroui/popover';
 import { Select, SelectItem } from '@heroui/select';
 import { IoSettingsSharp, IoWarning } from 'react-icons/io5';
 import { getApiBaseUrl, setApiBaseUrl, getStoredValue, setStoredValue, httpRequest } from '../api';
-import { pingNow } from '../heartbeat';
+import { pingNow, type ConnectionState } from '../heartbeat';
 import { getOverlayRoot } from '../overlay';
 import { isCoverOverlayEnabled, setCoverOverlayEnabled } from '../settings';
 import type { CoverOverlayConfig } from '../types';
@@ -17,7 +17,7 @@ import {
   setTimeZonePreference,
 } from '../timezone';
 import { showToast } from './Toast';
-import { t, getLocale, setLocale, onLocaleChange, type Locale } from '../i18n';
+import { t, getLocale, setLocale, onLocaleChange, describeRequestError, type Locale } from '../i18n';
 
 const localeOptions: { key: Locale; label: string }[] = [
   { key: 'zh', label: '中文' },
@@ -37,16 +37,18 @@ const MARKERS_VISIBLE_KEY = 'markers_visible_v2';
 export function SettingsPanel({
   siteKey,
   coverOverlay,
-  connected,
+  connection,
 }: {
   siteKey?: string;
   /** Present when the current site can turn its covers into one big action button. */
   coverOverlay?: CoverOverlayConfig;
-  connected: boolean;
+  connection: ConnectionState;
 }) {
+  const { connected, error: connectionError } = connection;
   const [markersVisible, setMarkersVisible] = useState(() => getStoredValue(MARKERS_VISIBLE_KEY, true));
   const [coverOverlayOn, setCoverOverlayOn] = useState(() => (siteKey ? isCoverOverlayEnabled(siteKey) : false));
   const [apiUrl, setApiUrl] = useState(() => getApiBaseUrl());
+  const [apiUrlError, setApiUrlError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [locale, setLocaleState] = useState(getLocale);
   const [timeZone, setTimeZoneState] = useState(getTimeZonePreference);
@@ -97,7 +99,13 @@ export function SettingsPanel({
   };
 
   const handleSaveApiUrl = () => {
-    setApiBaseUrl(apiUrl);
+    try {
+      setApiUrl(setApiBaseUrl(apiUrl));
+      setApiUrlError(null);
+    } catch (error) {
+      setApiUrlError(describeRequestError(error));
+      return;
+    }
     showToast(t('apiUrlSaved'));
     pingNow();
   };
@@ -114,8 +122,8 @@ export function SettingsPanel({
         showToast(t('autoBuyThresholdSaved'));
         setAutoBuyLoading(false);
       },
-      onError: () => {
-        alert(t('requestFailed'));
+      onError: (error) => {
+        alert(`${t('requestFailed')}\n${describeRequestError(error)}`);
         setAutoBuyLoading(false);
       },
     });
@@ -174,6 +182,8 @@ export function SettingsPanel({
                   {t('disconnected')}
                 </div>
                 <div style={{ color: '#666' }}>{t('disconnectedTip')}</div>
+                {connectionError && <div style={{ marginTop: 4 }}>{describeRequestError(connectionError)}</div>}
+                <div style={{ color: '#666', marginTop: 4 }}>{t('connection.backgroundRequest.description')}</div>
               </div>
             )}
             <Button
@@ -208,7 +218,9 @@ export function SettingsPanel({
               label={t('apiUrlLabel')}
               description={t('apiUrlDescription')}
               value={apiUrl}
-              onValueChange={setApiUrl}
+              onValueChange={(value) => { setApiUrl(value); setApiUrlError(null); }}
+              isInvalid={apiUrlError !== null}
+              errorMessage={apiUrlError}
               onKeyDown={(e) => e.key === 'Enter' && handleSaveApiUrl()}
               endContent={
                 <Button size="sm" color="primary" variant="light" onPress={handleSaveApiUrl}>
@@ -219,7 +231,7 @@ export function SettingsPanel({
             <Select
               size="sm"
               label={t('language')}
-              portalContainer={getOverlayRoot()}
+              popoverProps={{ portalContainer: getOverlayRoot() }}
               selectedKeys={[locale]}
               onSelectionChange={(keys) => {
                 const selected = [...keys][0] as Locale;
@@ -234,7 +246,7 @@ export function SettingsPanel({
               size="sm"
               label={t('timezone')}
               description={t('timezoneDescription')}
-              portalContainer={getOverlayRoot()}
+              popoverProps={{ portalContainer: getOverlayRoot() }}
               selectedKeys={[timeZone]}
               onSelectionChange={(keys) => {
                 const selected = [...keys][0] as string;

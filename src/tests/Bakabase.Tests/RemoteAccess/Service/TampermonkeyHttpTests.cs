@@ -2,6 +2,8 @@ using System.Net;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Tampermonkey;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Infrastructures.Components.Configurations.App;
+using Bakabase.TestKit.Implementations;
 using Bakabase.Service.Controllers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -35,7 +37,8 @@ public class TampermonkeyHttpTests
         ServiceGateHost.StartAsync([typeof(TampermonkeyController)], services =>
         {
             services.AddSingleton<IServerSelfDescription>(new ServerSelfDescription(() => kind));
-            services.AddSingleton(sp => new TampermonkeyService(null!, sp.GetRequiredService<AppContext>(), source));
+            services.AddSingleton(sp => new TampermonkeyService(null!, sp.GetRequiredService<AppContext>(), source,
+                new TestBOptionsManager<AppOptions>(new AppOptions {Language = "zh-CN"})));
         });
 
     [TestMethod]
@@ -73,7 +76,10 @@ public class TampermonkeyHttpTests
         using var response = await host.SendAsync(request);
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         Assert.AreEqual("application/javascript", response.Content.Headers.ContentType!.MediaType);
-        StringAssert.Contains(await response.Content.ReadAsStringAsync(), "\"http://192.168.3.23:45678\"");
+        var script = await response.Content.ReadAsStringAsync();
+        StringAssert.Contains(script, "\"http://192.168.3.23:45678\"");
+        StringAssert.Contains(script, "// @connect      192.168.3.23\n");
+        StringAssert.Contains(script, "GM_setValue('locale', \"zh\");");
         Assert.IsTrue(response.Headers.CacheControl!.NoStore);
         Assert.AreEqual(1, source.Requests);
     }

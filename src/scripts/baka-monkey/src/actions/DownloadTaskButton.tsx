@@ -7,7 +7,7 @@ import { getApiBaseUrl, httpRequest } from '../api';
 import { showToast } from '../components/Toast';
 import { getOverlayRoot } from '../overlay';
 import { CoverActionOverlay } from './CoverActionOverlay';
-import { t, onLocaleChange } from '../i18n';
+import { t, onLocaleChange, describeRequestError } from '../i18n';
 
 /** `DownloadTaskDbModelStatus.Complete` — the task finished, nothing is queued anymore. */
 const STATUS_COMPLETE = 300;
@@ -27,7 +27,7 @@ function deleteTasks(thirdPartyId: number, taskIds: number[]): Promise<void> {
         if (result.code) reject(new Error(result.message));
         else resolve();
       },
-      onError: () => reject(new Error('Network error')),
+      onError: reject,
     });
   });
 }
@@ -72,8 +72,9 @@ export function DownloadTaskButton({
       await adapter.createTask(url);
       showToast(t('addedToDownloadQueue'));
       onChanged?.();
-    } catch {
-      alert(t('downloadFailed'));
+    } catch (error) {
+      console.error('[Bakabase] Download task failed', error);
+      alert(`${t('downloadFailed')}\n${describeRequestError(error)}`);
     } finally {
       setLoading(false);
     }
@@ -85,8 +86,8 @@ export function DownloadTaskButton({
       await deleteTasks(adapter.thirdPartyId, taskIds);
       showToast(t('removedFromDownloadList'));
       onChanged?.();
-    } catch {
-      alert(t('requestFailed'));
+    } catch (error) {
+      alert(`${t('requestFailed')}\n${describeRequestError(error)}`);
     } finally {
       setLoading(false);
     }

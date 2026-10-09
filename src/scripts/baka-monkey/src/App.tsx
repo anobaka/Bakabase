@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CoverOverlayConfig, SiteConfig, ContentStatus, DownloadTaskState } from './types';
-import { getApiBaseUrl, httpRequest } from './api';
+import { getApiAddressGeneration, getApiBaseUrl, httpRequest } from './api';
 import { SettingsPanel } from './components/SettingsPanel';
 import { ParseTaskButton } from './actions/ParseTaskButton';
 import { DownloadTaskButton } from './actions/DownloadTaskButton';
 import { ContentTrackerBadge } from './actions/ContentTrackerBadge';
-import { startHeartbeat, isConnected, onConnectionChange } from './heartbeat';
+import { startHeartbeat, isConnected, getConnectionState, onConnectionChange } from './heartbeat';
 import { isCoverOverlayEnabled, onSettingsChange } from './settings';
 import { t } from './i18n';
 
@@ -75,9 +75,11 @@ function isElementInViewport(element: HTMLElement): boolean {
 
 export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
   const [markers, setMarkers] = useState<MarkerEntry[]>([]);
-  const [connected, setConnected] = useState(isConnected);
+  const [connection, setConnection] = useState(getConnectionState);
+  const { connected } = connection;
   const [coverOverlayEnabled, setCoverOverlayEnabled] = useState(false);
   const statusMapRef = useRef(new Map<string, ContentStatus>());
+  const statusBaseUrlRef = useRef(getApiBaseUrl());
   // downloadKey (== adapter.extractUrl) -> backend state, or null when the backend
   // knows nothing about it (queried, never downloaded, not queued).
   const downloadStatesRef = useRef(new Map<string, DownloadTaskState | null>());
@@ -96,7 +98,7 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
   // Start heartbeat and track connection state
   useEffect(() => {
     startHeartbeat();
-    return onConnectionChange(setConnected);
+    return onConnectionChange(setConnection);
   }, []);
 
   const scanAndRender = useCallback(() => {
@@ -152,13 +154,17 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
 
   const queryDownloadStates = useCallback((keys: string[]) => {
     if (!siteConfig?.downloadTask || keys.length === 0) return;
+    if (!isConnected() && !__DEV__) return;
 
     const { thirdPartyId } = siteConfig.downloadTask;
+    const baseUrl = getApiBaseUrl();
+    const generation = getApiAddressGeneration();
     httpRequest({
       method: 'POST',
-      url: `${getApiBaseUrl()}/download-task/keys/query`,
+      url: `${baseUrl}/download-task/keys/query`,
       data: { thirdPartyId, keys },
       onSuccess: (result: any) => {
+        if (baseUrl !== getApiBaseUrl() || generation !== getApiAddressGeneration()) return;
         // Mark every queried key as resolved so it is not re-queried on the next scroll.
         for (const k of keys) {
           if (!downloadStatesRef.current.has(k)) downloadStatesRef.current.set(k, null);
@@ -180,14 +186,18 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
 
   const queryStatus = useCallback((contentIds: string[]) => {
     if (!siteConfig || contentIds.length === 0) return;
+    if (!isConnected() && !__DEV__) return;
 
     const filter = siteConfig.extractFilter(window.location.href);
+    const baseUrl = getApiBaseUrl();
+    const generation = getApiAddressGeneration();
 
     httpRequest({
       method: 'POST',
-      url: `${getApiBaseUrl()}/third-party-content-tracker/query`,
+      url: `${baseUrl}/third-party-content-tracker/query`,
       data: { domainKey: siteConfig.key, filter, contentIds },
       onSuccess: (result: any) => {
+        if (baseUrl !== getApiBaseUrl() || generation !== getApiAddressGeneration()) return;
         if (!result.data) return;
         for (const item of result.data) {
           statusMapRef.current.set(item.contentId, {
@@ -218,6 +228,26 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
     return keys;
   }, [siteConfig]);
 
+  useEffect(() => {
+    if (statusBaseUrlRef.current === connection.baseUrl) return;
+    statusBaseUrlRef.current = connection.baseUrl;
+    statusMapRef.current.clear();
+    downloadStatesRef.current.clear();
+    visitedBeforeRef.current.clear();
+    scanAndRender();
+  }, [connection.baseUrl, scanAndRender]);
+
+  // The initial scan can happen before the health probe succeeds. Retry unresolved
+  // items on recovery, including a saved address change, without a page reload.
+  useEffect(() => {
+    if (!connected || !siteConfig) return;
+    const elements = siteConfig.findContents(document);
+    const ids = elements.map((el) => siteConfig.extractContentInfo(el).id)
+      .filter((id): id is string => !!id && !statusMapRef.current.has(id));
+    queryStatus([...new Set(ids)]);
+    queryDownloadStates(collectNewDownloadKeys(elements));
+  }, [connected, connection.baseUrl, siteConfig, queryStatus, queryDownloadStates, collectNewDownloadKeys]);
+
   // The download list changed for this item (added or removed). Re-ask the backend
   // instead of guessing: the answer carries the new task ids, which the next click
   // needs to be able to undo the change.
@@ -232,6 +262,7 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
 
   const markVisibleAsViewed = useCallback(() => {
     if (!siteConfig) return;
+    if (!isConnected() && !__DEV__) return;
 
     const elements = siteConfig.findContents(document);
     const visibleUnviewed: Array<{ contentId: string; updatedAt: Date | null }> = [];
@@ -250,9 +281,11 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
     if (visibleUnviewed.length === 0) return;
 
     const filter = siteConfig.extractFilter(window.location.href);
+    const baseUrl = getApiBaseUrl();
+    const generation = getApiAddressGeneration();
     httpRequest({
       method: 'POST',
-      url: `${getApiBaseUrl()}/third-party-content-tracker/mark-viewed`,
+      url: `${baseUrl}/third-party-content-tracker/mark-viewed`,
       data: {
         domainKey: siteConfig.key,
         filter,
@@ -262,6 +295,7 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
         })),
       },
       onSuccess: () => {
+        if (baseUrl !== getApiBaseUrl() || generation !== getApiAddressGeneration()) return;
         for (const item of visibleUnviewed) {
           const existing = statusMapRef.current.get(item.contentId);
           if (existing) {
@@ -373,7 +407,7 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
       <SettingsPanel
         siteKey={siteConfig?.key}
         coverOverlay={siteConfig?.coverOverlay}
-        connected={connected}
+        connection={connection}
       />
       {(connected || __DEV__) && siteConfig && markers.flatMap((m) => {
         // The overlay *is* the primary action for this item, so drop the chip that

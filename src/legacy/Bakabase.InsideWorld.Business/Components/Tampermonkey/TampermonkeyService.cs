@@ -4,12 +4,16 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.Infrastructures.Components.Gui;
+using Bootstrap.Components.Configuration.Abstractions;
 using AppContext = Bakabase.Infrastructures.Components.App.AppContext;
 
 namespace Bakabase.InsideWorld.Business.Components.Tampermonkey;
 
-public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext, IHttpClientFactory httpClientFactory)
+public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext, IHttpClientFactory httpClientFactory,
+    IBOptionsManager<AppOptions> appOptions)
 {
     private const string InstallScriptUrlTemplate = "https://www.tampermonkey.net/script_installation.php#url={jsUrl}";
     public const string ScriptCdnUrl = "https://cdn-public.anobaka.com/app/bakabase/scripts/bakabase.user.js";
@@ -52,17 +56,32 @@ public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext, 
 
         // Production bundlers erase an empty default constant. Insert outside the
         // compiled bundle instead, after the metadata so extension installation and
-        // CDN updates keep working. Never overwrite a user's existing server choice.
+        // CDN updates keep working. Never overwrite a user's existing preferences.
         const string metadataEnd = "// ==/UserScript==";
         if (!template.StartsWith("// ==UserScript==", StringComparison.Ordinal)) return null;
         var end = template.IndexOf(metadataEnd, StringComparison.Ordinal);
         if (end < 0) return null;
+        // A wildcard @connect still asks for permission when a new host is first used.
+        // Declare the installed server explicitly as the intended LAN destination.
+        var endpoint = new Uri(origin!);
+        var connectHost = endpoint.HostNameType == UriHostNameType.IPv6 ? endpoint.Host : endpoint.IdnHost;
+        var connectLine = $"// @connect      {connectHost}\n";
+        if (!Regex.IsMatch(template[..end], @"(?m)^//\s*@connect\s+" + Regex.Escape(connectHost) + @"\s*$"))
+        {
+            template = template.Insert(end, connectLine);
+            end += connectLine.Length;
+        }
+
+        var locale = AppService.NormalizeLanguageCode(appOptions.Value.Language) == "zh-CN" ? "zh" : "en";
         var bootstrap = $$"""
 
             // Bakabase connection bootstrap
             (() => {
               if (!GM_getValue('api_base_url', '')) {
                 GM_setValue('api_base_url', {{JsonSerializer.Serialize(origin)}});
+              }
+              if (!GM_getValue('locale', '')) {
+                GM_setValue('locale', {{JsonSerializer.Serialize(locale)}});
               }
             })();
 
