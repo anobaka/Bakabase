@@ -4,7 +4,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ResourceUsage from "../index";
-import { formatUsageBytes } from "../formatUsage";
+import { formatUsageBytes, formatUsageUpdatedAt } from "../formatUsage";
 
 const state = vi.hoisted(() => ({ initialized: true, data: { showResourceUsage: true } }));
 const getUsage = vi.hoisted(() => vi.fn());
@@ -34,6 +34,15 @@ afterEach(() => {
 });
 
 describe("resource usage", () => {
+  it("interprets the server's UTC measurement timestamp in the viewer's timezone", () => {
+    expect(formatUsageUpdatedAt("2026-10-09 05:09:22.364")).toBe(
+      new Date("2026-10-09T05:09:22.364Z").toLocaleTimeString(),
+    );
+    expect(formatUsageUpdatedAt("2026-10-09T13:09:22.364+08:00")).toBe(
+      new Date("2026-10-09T05:09:22.364Z").toLocaleTimeString(),
+    );
+    expect(formatUsageUpdatedAt("unknown")).toBe("—");
+  });
   it("formats zero, small, large and unavailable sizes without misleading units", () => {
     expect(formatUsageBytes(0)).toBe("0 B");
     expect(formatUsageBytes(1024)).toBe("1 KiB");

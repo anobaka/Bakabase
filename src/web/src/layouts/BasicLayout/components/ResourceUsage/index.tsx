@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuActivity, LuCpu, LuHardDrive, LuMemoryStick } from "react-icons/lu";
 
-import { formatUsageBytes } from "./formatUsage";
+import { formatUsageBytes, formatUsageUpdatedAt } from "./formatUsage";
 
 import { Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -90,7 +90,7 @@ export default function ResourceUsage({ collapsed }: { collapsed?: boolean }) {
       label: t("resourceUsage.data"),
       Icon: LuHardDrive,
       value: unavailable ? "—" : formatUsageBytes(usage?.dataDirectoryBytes),
-      hint: `${directoryStatus}${usage?.dataDirectoryUpdatedAt ? ` · ${new Date(usage.dataDirectoryUpdatedAt).toLocaleTimeString()}` : ""}`,
+      hint: `${directoryStatus}${usage?.dataDirectoryUpdatedAt ? ` · ${formatUsageUpdatedAt(usage.dataDirectoryUpdatedAt)}` : ""}`,
     },
   ];
   const title = unavailable ? t("resourceUsage.unavailable") : t("resourceUsage.title");
