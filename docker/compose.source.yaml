@@ -1,0 +1,8 @@
+services:
+  bakabase:
+    build:
+      context: ${BAKABASE_SOURCE_DIR:-..}
+      dockerfile: docker/Dockerfile.source
+      args:
+        BAKABASE_VERSION: ${BAKABASE_VERSION:?Use docker/source.sh to resolve the source version}
+    pull_policy: never

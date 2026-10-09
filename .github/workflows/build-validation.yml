@@ -6,10 +6,12 @@ on:
   pull_request:
     paths:
       - '.github/workflows/_build.yml'
+      - '.github/workflows/_deploy.yml'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/build-validation.yml'
       - '.github/scripts/wait_for_artifact.py'
       - '.github/scripts/test_wait_for_artifact.py'
+      - 'docker/**'
   workflow_dispatch:
 
 concurrency:
@@ -45,6 +47,10 @@ jobs:
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Verify workflow helpers
         run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+      - name: Verify shared Compose deployment contract
+        run: |
+          bash -n docker/compose.sh docker/image.sh docker/source.sh docker/package.sh docker/build.sh
+          python3 docker/test-compose.py -v
 
   build:
     needs: prepare

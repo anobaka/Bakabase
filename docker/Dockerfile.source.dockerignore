@@ -1,0 +1,23 @@
+# Keep local data, credentials and build products out of the build context.
+**/.git
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/.yarn/cache
+**/.yarn/install-state.gz
+**/TestResults
+**/.env
+**/.env.*
+docker/compose.local.yaml
+**/appdata
+**/AppData
+**/logs
+**/*.db
+**/*.db-wal
+**/*.db-shm
+.idea
+.vscode
+.claude
+docs
+scripts

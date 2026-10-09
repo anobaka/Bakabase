@@ -1,0 +1,27 @@
+name: bakabase-server
+services:
+  bakabase:
+    image: ${BAKABASE_IMAGE:-bakabase:local}
+    restart: unless-stopped
+    stop_grace_period: 60s
+    ports:
+      - "${BAKABASE_BIND_ADDRESS:-127.0.0.1}:${BAKABASE_PORT:-34567}:34567"
+    environment:
+      API_LISTENING_PORTS: "34567"
+      BAKABASE_DATA_DIR: /data
+      BAKABASE_NODE_NAME: ${BAKABASE_NODE_NAME:-Bakabase Server}
+    volumes:
+      - type: bind
+        source: ${BAKABASE_DATA_DIR:-${HOME}/BakabaseServer/appdata}
+        target: /data
+        bind:
+          create_host_path: false
+      # Existing desktop data can be exposed for the import screen:
+      # - type: bind
+      #   source: /absolute/path/to/desktop-appdata
+      #   target: /import
+      #   read_only: true
+      #   bind:
+      #     create_host_path: false
+      # Media paths are separate from appdata. Preserve their original absolute
+      # paths when importing on the same Mac, e.g. /Volumes/Media:/Volumes/Media:ro.

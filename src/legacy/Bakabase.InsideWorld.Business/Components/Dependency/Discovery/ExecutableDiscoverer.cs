@@ -1,13 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
+using System.ComponentModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Infrastructures.Components.App;
-using Bakabase.Infrastructures.Components.App.Models.Constants;
 using Bootstrap.Extensions;
 using CliWrap;
 using Microsoft.Extensions.Logging;
@@ -31,117 +29,72 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Discovery
 
         public async Task<(string Location, string? Version)?> Discover(string defaultDirectory, CancellationToken ct)
         {
-            string location;
-            if (!DiscoverByDirectory(defaultDirectory, RequiredRelativeFileNamesWithoutExtensions))
+            var directories = new[] { defaultDirectory }.Concat(
+                (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator));
+            var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            foreach (var directory in directories.Where(d => !string.IsNullOrWhiteSpace(d)).Distinct(comparer))
             {
-                var bin = AppService.OsPlatform switch
-                {
-                    OsPlatform.Windows => "where",
-                    OsPlatform.Osx => "which",
-                    OsPlatform.Linux => "which",
-                    OsPlatform.FreeBsd => "which",
-                    _ => throw new NotSupportedException($"{AppService.OsPlatform} is not supported")
-                };
+                var location = OperatingSystem.IsWindows() ? directory.Trim('"') : directory;
+                ct.ThrowIfCancellationRequested();
+                var discovered = await TryDiscoverAt(location, ct);
+                if (discovered != null) return discovered;
+            }
+            return null;
+        }
 
-                var osb = new StringBuilder();
-                var esb = new StringBuilder();
-                var cmd = Cli.Wrap(bin)
-                    .WithArguments(RelativeFileNameWithoutExtensionForAcquiringVersion)
-                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(osb))
-                    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(esb))
+        private async Task<(string Location, string? Version)?> TryDiscoverAt(string location, CancellationToken ct)
+        {
+            try
+            {
+                if (!DiscoverByDirectory(location, RequiredRelativeFileNamesWithoutExtensions)) return null;
+                var executable = Path.Combine(location, PlatformFileName(RelativeFileNameWithoutExtensionForAcquiringVersion));
+                var output = new StringBuilder();
+                var error = new StringBuilder();
+                var command = Cli.Wrap(executable);
+                if (ArgumentsForAcquiringVersion.IsNotEmpty()) command = command.WithArguments(ArgumentsForAcquiringVersion);
+                command = command.WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
+                    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(error))
                     .WithValidation(CommandResultValidation.None);
-
-                var r = await cmd.ExecuteAsync(ct);
-                if (r.ExitCode == 0)
+                var result = await command.ExecuteAsync(ct);
+                if (result.ExitCode != 0)
                 {
-                    var output = osb.ToString();
-                    var first = output.Split(Environment.NewLine)[0];
-                    var dir = Path.GetDirectoryName(first)!;
-                    if (!DiscoverByDirectory(dir, RequiredRelativeFileNamesWithoutExtensions))
-                    {
-                        Logger.LogWarning(
-                            $"{RelativeFileNameWithoutExtensionForAcquiringVersion} is found but some required files are missing. Required files: {string.Join(',', RequiredRelativeFileNamesWithoutExtensions)}");
-                        return null;
-                    }
-
-                    location = dir;
+                    Logger.LogWarning("Skipping unusable component {Executable}: version command exited {ExitCode}", executable, result.ExitCode);
+                    return null;
                 }
-                else
+                try
                 {
-                    if (r.ExitCode != 1)
-                    {
-                        Logger.LogError(
-                            $"Failed to find location by executable: {RelativeFileNameWithoutExtensionForAcquiringVersion}, exit code: {r.ExitCode}, output: {osb}, error: {esb}");
-                    }
+                    return (location, ParseVersion(output.ToString()));
+                }
+                catch (Exception exception)
+                {
+                    Logger.LogWarning(exception, "Skipping component with an unrecognized version at {Executable}", executable);
                     return null;
                 }
             }
-            else
+            catch (Exception exception) when (exception is Win32Exception or IOException or UnauthorizedAccessException)
             {
-                location = defaultDirectory;
-            }
-
-            {
-                var executableSuffix = AppService.OsPlatform == OsPlatform.Windows ? ".exe" : null;
-                var executable = Path.Combine(location,
-                    $"{RelativeFileNameWithoutExtensionForAcquiringVersion}{executableSuffix}");
-                var osb = new StringBuilder();
-                var esb = new StringBuilder();
-                var cmd = Cli.Wrap(executable);
-                if (ArgumentsForAcquiringVersion.IsNotEmpty())
-                {
-                    cmd = cmd.WithArguments(ArgumentsForAcquiringVersion);
-                }
-
-                cmd = cmd
-                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(osb))
-                    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(esb))
-                    .WithValidation(CommandResultValidation.None);
-
-                var r = await cmd.ExecuteAsync(ct);
-                if (r.ExitCode == 0)
-                {
-                    var output = osb.ToString();
-
-                    try
-                    {
-                        var version = ParseVersion(output);
-                        return (location, version);
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.LogError(e,
-                            $"Failed to find version from output:{e.Message}{Environment.NewLine}{output}{Environment.NewLine}of command: {cmd}");
-                        throw;
-                    }
-                }
-
-                Logger.LogError(
-                    $"Failed to get version by executable: {RelativeFileNameWithoutExtensionForAcquiringVersion}, exit code: {r.ExitCode}, output: {osb}, error: {esb}");
+                // Imported components may target another OS/architecture or lack execute
+                // permissions. Keep that copy intact and try the current machine's PATH.
+                Logger.LogWarning(exception, "Skipping unavailable component directory {Directory}", location);
                 return null;
             }
         }
 
+        private static string PlatformFileName(string name) => OperatingSystem.IsWindows() ? name + ".exe" : name;
+
         protected static bool DiscoverByDirectory(string directory, HashSet<string> relativePathsWithoutExt)
         {
-            var dir = new DirectoryInfo(directory);
-            if (dir.Exists)
+            if (!Directory.Exists(directory)) return false;
+            foreach (var relativePath in relativePathsWithoutExt)
             {
-                var files = Directory.GetFiles(directory, "*", SearchOption.AllDirectories);
-                var relativeFilesWithoutExt = files.Select(f =>
-                {
-                    f = f.Replace(dir.FullName, null).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar); ;
-                    var ext = Path.GetExtension(f);
-                    return !string.IsNullOrEmpty(ext) ? f.Remove(f.Length - ext.Length) : f;
-                }).ToHashSet();
-                var intersection = relativePathsWithoutExt.Intersect(relativeFilesWithoutExt);
-                if (intersection.Count() == relativePathsWithoutExt.Count)
-                {
-                    return true;
-                }
+                // Do not strip arbitrary extensions: ffmpeg.exe is not ffmpeg on Unix.
+                var file = Path.Combine(directory, PlatformFileName(relativePath));
+                if (!File.Exists(file)) return false;
+                if (!OperatingSystem.IsWindows() && (File.GetUnixFileMode(file) &
+                    (UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute)) == 0)
+                    return false;
             }
-
-            return false;
+            return true;
         }
     }
 }

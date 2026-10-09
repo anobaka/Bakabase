@@ -6,31 +6,48 @@ Docker 版适合在 NAS 或服务器上持续运行媒体库。它包含服务�
 
 官方镜像和已发布标签见 [Docker Hub](https://hub.docker.com/r/anobaka/bakabase/tags)。镜像使用明确的版本标签，**没有 `latest` 标签**。
 
-下方的 `<VERSION>` 必须先替换为 Docker Hub 中已经发布的版本标签。例如 `2.3.0` 为正式版，`2.4.0-beta.489` 为测试版；这些只是版本示例，安装时请按需选择。多设备互联需要包含该功能的版本，旧的 `2.3.0` 正式版不具备本文的完整流程。目前发布的镜像为 `linux/amd64`，适用于 x64 NAS 和服务器；ARM 设备需要自行配置 amd64 模拟运行。
+下方的 `<VERSION>` 必须先替换为 Docker Hub 中已经发布的版本标签。例如 `2.3.0` 为正式版，`2.4.0-beta.489` 为测试版；这些只是版本示例，安装时请按需选择。多设备互联和数据导入需要包含这些功能的版本，旧的 `2.3.0` 正式版不具备本文的完整流程。
 
-## 使用 Docker Compose
+本仓库的发布流程会分别构建、验证 `linux/amd64` 和 `linux/arm64`，再发布到同一个版本标签。**工作树里的改动不代表 Docker Hub 的旧标签已有 ARM 镜像**；选择版本时先检查：
 
-将以下内容保存为 `compose.yaml`：
+```sh
+docker buildx imagetools inspect "anobaka/bakabase:<VERSION>"
+```
+
+包含 `linux/arm64` 的标签可在 Apple Silicon 的 Docker 环境中直接运行，无需 x64 模拟。Docker 在 macOS 上运行的是 Linux 容器，因此这里用 `linux/arm64`，不是 `osx-arm64`。若旧标签只有 `linux/amd64`，可以显式指定该平台进行模拟，或按下文从源码构建 ARM 镜像。
+
+## 使用 Docker Compose 挂载本机目录
+
+创建独立的服务端数据目录；不要直接把仍在运行的一体版目录交给第二个实例：
+
+```sh
+mkdir -p "$HOME/BakabaseServer/appdata"
+```
+
+将以下内容保存为 `compose.yaml`，替换镜像版本：
 
 ```yaml
+name: bakabase-server
 services:
   bakabase:
     image: "anobaka/bakabase:<VERSION>"
-    platform: linux/amd64
-    container_name: bakabase
     restart: unless-stopped
+    stop_grace_period: 60s
     ports:
-      - "34567:34567"
+      - "127.0.0.1:34567:34567"
     environment:
       API_LISTENING_PORTS: "34567"
       BAKABASE_DATA_DIR: /data
       BAKABASE_NODE_NAME: 我的媒体库
     volumes:
-      - bakabase-data:/data
-
-volumes:
-  bakabase-data:
+      - type: bind
+        source: ${HOME}/BakabaseServer/appdata
+        target: /data
+        bind:
+          create_host_path: false
 ```
+
+无需固定 `platform`：Docker 会从标签中选择与当前主机匹配的架构。`create_host_path: false` 可在路径写错或外置磁盘未挂载时直接报错，避免误启动一个空媒体库。
 
 在该文件所在目录启动：
 
@@ -39,39 +56,158 @@ docker compose up -d
 docker compose logs -f bakabase
 ```
 
-等待日志显示服务已启动后，在部署机器上打开 `http://localhost:34567`，或从局域网其他设备打开 `http://服务器IP:34567`，并按网页提示完成首次初始化。
+全新数据目录会先进入首次设置，确认前不会创建应用数据库。日志中的 `Server setup:` 会给出带 `#setupToken=...` 的链接；用该完整链接进入设置。若 Docker 映射了其他宿主机端口，或运行在 NAS 上，只替换链接的地址和端口，保留 `#` 后面的令牌。Docker 不会自动向访客签发首次设置权限。
 
-Docker 版默认使用“无限制”远程访问：能访问该端口的设备可以管理这个媒体库。上述端口映射用于可信局域网；需要按设备授权时，在“配置 → 远程访问”中选择开启远程访问并要求配对。不要把默认无限制模式的端口直接转发到公网。
+设置页面第一步选择“不导入”或“从已有数据导入”；导入来源应只读挂载。第二步显示数据保存目录，Docker 的目标由 `/data` 挂载决定，页面不会另选一个容器内临时目录。导入时接着预检来源中的路径，以目录树建立可选的前缀映射并预览修改数量；目标填写容器实际可见的挂载路径。选择和映射自动保存为本机 JSON 草稿，重开向导可恢复、清空，完成后删除。最终确认后自动开始初始化或导入，并显示进度；待显示服务已就绪后，打开 `http://localhost:34567`。首次设置不需要另外重启容器。
+
+已有 Docker 服务也不能在页面中迁移 AppData 路径。若要换宿主机目录，先停止容器，将整个 AppData 复制到新目录，再修改 Compose 的挂载来源并启动；容器内继续使用 `/data`。保留旧目录，确认新目录中的数据库和媒体引用正常后再处理旧副本。
+
+默认仅本机可访问。需要从局域网访问时，把端口映射改为 `"34567:34567"`。Docker 版默认使用“无限制”远程访问：能访问该端口的设备可以管理这个媒体库。需要按设备授权时，在“配置 → 远程访问”中要求配对，然后再开放局域网访问；不要把默认无限制模式的端口直接转发到公网。
 
 ### 等效的 docker run 命令
 
 ```sh
 docker run -d \
   --name bakabase \
-  --platform linux/amd64 \
   --restart unless-stopped \
-  -p 34567:34567 \
+  -p 127.0.0.1:34567:34567 \
   -e API_LISTENING_PORTS=34567 \
   -e BAKABASE_DATA_DIR=/data \
-  --mount type=volume,source=bakabase-data,target=/data \
+  --mount "type=bind,source=$HOME/BakabaseServer/appdata,target=/data" \
   "anobaka/bakabase:<VERSION>"
 ```
 
 ## 挂载媒体目录和保留数据
 
-`/data` 保存数据库、配置、日志和设备授权；媒体文件需要单独挂载。在 Compose 的 `volumes` 下增加实际存在的宿主机媒体目录，例如：
+`/data` 保存数据库、配置、封面、日志和设备授权；媒体文件需要单独挂载。例如在 Compose 的 `volumes` 下增加：
 
 ```yaml
-    volumes:
-      - bakabase-data:/data
-      - /srv/media:/media:ro
+      - type: bind
+        source: /Volumes/Media
+        target: /Volumes/Media
+        read_only: true
+        bind:
+          create_host_path: false
 ```
 
-然后执行 `docker compose up -d` 应用变更。在 Bakabase 中添加媒体库时使用容器内路径 `/media`。示例为只读挂载；若需要由 Bakabase 下载、移动或删除文件，将 `:ro` 去掉，并确保宿主机目录允许容器写入。
+然后执行 `docker compose up -d` 应用变更。在 Bakabase 中使用容器内路径 `/Volumes/Media`。若原一体版也使用该路径，同路径挂载能保留数据库中的媒体文件引用；挂载为 `/media` 则需要另外调整媒体库中的实际路径。示例为只读挂载；需要下载、移动或删除文件时，删除 `read_only: true` 并确保宿主机目录允许写入。
 
-容器只看到已挂载的目录。播放器、打开文件夹等桌面操作由使用者所在的电脑处理；从一体版管理服务端时，可按需配置容器路径到本机路径的映射，见[服务器切换](server-switching.md)。
+容器只看到已挂载的目录。播放器、打开文件夹等桌面操作由使用者所在的电脑处理；从一体版管理服务端时，可按需配置容器路径到本机路径的映射，见[服务器切换](server-switching.md)。这类客户端路径映射不会自动改写服务端数据库中的媒体路径。
 
-可将数据卷改成宿主机目录，例如 `/srv/bakabase-data:/data`，便于自行备份。重建容器时保持同一个数据卷或目录；`docker compose down` 保留命名卷，`docker compose down -v` 会删除命名卷及其中的数据。设置了 `BAKABASE_DATA_DIR` 后，数据目录由部署配置决定，应用内的数据路径迁移不可用。
+重建容器时保留同一个本机数据目录和挂载目标。也可继续使用命名卷 `bakabase-data:/data`；`docker compose down` 保留命名卷，`docker compose down -v` 会删除命名卷及其中的数据。设置了 `BAKABASE_DATA_DIR` 后，运行数据目录由部署配置决定；导入会复制数据到该目录，不会改成从来源目录运行。
+
+## 导入已有 AppData
+
+使用包含导入功能的新版本启动服务端后，可在“配置 → 系统信息 → 导入已有数据”中导入一体版或其他服务端实例的数据。
+
+1. 在来源实例中确认**实际数据目录**并完全停止该实例；保留一份完整备份。macOS 默认目录为 `~/Library/Application Support/Bakabase`，但使用过迁移或自定义路径的实例可能不同。
+2. 给服务端使用独立的可写 `/data`，将旧目录额外挂载为只读导入来源，例如：
+
+```yaml
+      - type: bind
+        source: ${HOME}/Library/Application Support/Bakabase
+        target: /import
+        read_only: true
+        bind:
+          create_host_path: false
+```
+
+3. 执行 `docker compose up -d`，在导入界面中选择或填写 **`/import`**。浏览器选择的是服务端可访问的路径；容器不能直接读取一个尚未挂载的 macOS 路径。
+4. 如果旧版把 AppData 的绝对路径写进封面或配置，填写来源实例当时的原始 AppData 路径，例如 `/Users/用户名/Library/Application Support/Bakabase`，以便改写这些引用；它不同于容器中的 `/import`。在共享设置页面中校验并确认。首次设置直接开始；已有服务确认后，由 Setup 自动停止业务子进程，等待其释放数据库与目录锁，再启动维护工作进程。完成后自动启动业务服务，无需重启整个容器。导入复制到 `/data`，旧目录保留。目标现有数据会备份到 `/data/backups/appdata-imports/<id>`；目标原有备份保留，来源的 `backups` 不重复复制。升级所需的数据迁移在服务启动时执行。
+5. 挂载原媒体目录并检查资源、封面、配置和路径。Windows 或 macOS 的可执行组件不能在 Linux 容器中运行；本镜像包含发行版原生 `ffmpeg`、`ffprobe` 和 `7zz`。组件发现会跳过旧平台或无法执行的副本，改用容器中的工具；其他依赖仍应在服务端重新发现或安装。
+
+如果来源明确设置了远程访问“禁用”，Docker 导入会拒绝它，避免导入后浏览器无法进入。先在 macOS 原生服务中导入一份副本，将副本配置为允许远程访问并要求配对，再停机、从该副本导入 Docker；程序不会自动放宽旧配置中的权限。
+
+导入完成后可以移除 `/import` 挂载。不要让一体版与服务端同时使用同一个可写 AppData，也不要在来源应用还在写 SQLite 时复制数据库。备份应保留整个目录，而不是只取一个 `.db` 文件。
+
+进度页在扫描、分块复制、校验、备份、安装和数据库启动期间显示阶段、当前文件、文件数、已复制字节、速度和耗时。复制百分比到 100% 后仍需等待校验和服务启动。连接状态与工作进展分别显示；重启或断线时保留最后确认状态并自动重连，持续失联会显示无法确认服务状态，不会据此判断成功或失败。容器内的轻量 Setup 父进程持续提供状态，复制由独立工作进程执行；工作进程异常退出时，父进程仍报告失败并保留进度页。整个容器或父进程退出期间没有实时状态；重启后复制阶段会从头复制，备份和安装按日志恢复。失败时显示所处阶段和恢复建议，技术错误可展开查看。日志中的 `Server maintenance:` 链接也能重新打开进度页；该令牌只允许读取这一轮进度，不能修改设置或绕过导入后的配对要求。
+
+## 从当前源码构建镜像
+
+这条路径在 Docker 内编译前后端，本机不必安装 .NET 或 Node.js。在仓库根目录执行：
+
+```sh
+git submodule update --init --recursive
+cp docker/.env.example docker/.env
+mkdir -p "$HOME/BakabaseServer/appdata"
+./docker/source.sh
+```
+
+`docker/.env` 可修改镜像名、本机 AppData、监听地址、端口和节点名。默认镜像名为 `bakabase:local`；Apple Silicon 默认构建 Linux ARM64，不必启用 amd64 模拟。需要导入或挂载媒体时，复制 `docker/compose.local.example.yaml` 为 `docker/compose.local.yaml` 并调整路径。两个文件均属于本机配置，不进入 Git；源码和镜像模式都会加载相同配置。
+
+容器固定使用官方 .NET SDK `10.0.401-noble` 和 ASP.NET Runtime `10.0.11-noble`。项目仍以 `net9.0` 编译，容器通过 `DOTNET_ROLL_FORWARD=Major` 使用新运行时；本机原生部署的 SDK 配置不变。本机 Apple M5 / OrbStack 上实测 .NET 9 容器偶发 `SIGILL`；选择 .NET 10 是为了包含官方的 [ARM64 SME/SVE 信号处理修复](https://github.com/dotnet/runtime/pull/127518)，本机退出的具体崩溃栈尚未确认。发布流程为容器生成框架依赖产物，避免内嵌旧运行时；`docker/Dockerfile` 会拒绝携带 `libcoreclr.so` 的旧自包含产物。
+
+也可独立构建并验证：
+
+```sh
+./docker/source.sh build
+python3 docker/smoke-test.py --image bakabase:local --architecture arm64 --runtime-version 10.0.11
+```
+
+验证只使用新建临时目录，检查首次设置、固定挂载路径约束、网页、SQLite、替换容器后的数据保留，以及从只读 `/import` 导入、备份和自动恢复业务服务的实际流程。来源使用较旧的应用版本，确保启动时实际完成升级前自动备份，且备份不包含运行期锁和维护控制文件。测试也会检查工作进程被终止后父进程继续提供失败状态，以及导入后要求配对时，进度仍可读取而普通 API 不会被监控令牌放行。Intel 主机自动构建 `linux/amd64`，验证参数改成 `amd64`。
+
+`source.sh` 先用容器中的 NBGV 读取当前提交的完整版本（支持 Git worktree），再传给构建，避免源码镜像丢失提交高度、错误显示为较旧版本。可用 `./docker/source.sh logs -f bakabase` 查看日志。
+
+修改源码后重新执行 `./docker/source.sh` 即可升级；构建失败时，现有容器仍保留。新镜像替换旧容器，宿主机 AppData 不变，启动时走相同的数据迁移流程。源码构建与官方镜像之间切换时，保持 `/data` 和媒体挂载一致，避免运行比数据库版本更旧的代码。若要回退，使用升级前备份；只回退镜像不保证数据库兼容。
+
+### 源码与打包镜像互相升级
+
+两种方式都使用项目 **`bakabase-server`**、服务 **`bakabase`**，默认容器名为 **`bakabase-server-bakabase-1`**。源码模式只在基础配置上增加构建步骤，镜像模式直接使用已有镜像。二者读取同一 `.env`、本机挂载配置和 AppData；不要另外指定项目名称，也不需要先 `down`。
+
+源码升级：
+
+```sh
+./docker/source.sh up -d --build --force-recreate
+```
+
+切到已加载的打包镜像：保持 `BAKABASE_IMAGE` 同名，或在 `docker/.env` 改为目标镜像标签，再执行：
+
+```sh
+docker load -i /path/to/bakabase-image.tar
+./docker/image.sh up -d --no-build --force-recreate
+```
+
+返回源码时，再执行源码升级命令即可。若使用远端发布镜像，先在 `.env` 设置明确的已发布标签，再拉取并替换：
+
+```sh
+./docker/image.sh pull
+./docker/image.sh up -d --no-build --force-recreate
+```
+
+同一标签也可能指向更新的镜像，`--force-recreate` 明确替换现有容器。升级始终保留 `/data` 的宿主机路径；回退程序不能降级数据库，应使用与旧版本匹配的完整数据备份。
+
+构建好的本地镜像还可打包为不依赖源码仓库的部署目录：
+
+```sh
+./docker/source.sh build
+./docker/package.sh "$HOME/BakabaseServer/packages/my-release" bakabase:local
+```
+
+输出包括 `bakabase-image.tar`、基础 `compose.yaml`、`.env.example`、可选挂载示例及镜像架构信息。按其中的 `README.txt` 加载镜像并启动；已有部署应保留原 `.env` 和挂载，不要用示例覆盖。目录中的基础 Compose 与仓库版本使用同一项目名和服务名，所以可替换由源码方式启动的实例。`package.sh` 拒绝覆盖已经存在的输出目录。
+
+### 本机 ARM64 与 NAS Root 挂载
+
+本机示例只挂载两个 NAS 的 Root 内容。先在 macOS 将 Root 分别挂到 `/Volumes/nas-bakabase` 和 `/Volumes/nas-anobaka`，再复制本机 override：
+
+```sh
+cp docker/compose.local.example.yaml docker/compose.local.yaml
+./docker/image.sh config
+```
+
+示例固定 `linux/arm64`，将这两个 Root 挂到容器内相同绝对路径，初始均为只读，不挂载 NAS 的 Public 或 Container。`BAKABASE_MEDIA_ROOT_1`、`BAKABASE_MEDIA_ROOT_2` 可调整宿主机路径；容器路径仍应与媒体库记录一致。`BAKABASE_IMPORT_DIR` 指向离线导入副本，默认 `${HOME}/Downloads/Bakabase`，只读映射为 `/import`。准备好的导入副本可通过修改该变量切换，无需修改基础 Compose。数据目录默认 `${HOME}/BakabaseServer/appdata`，网页默认仅本机 `127.0.0.1:34567`。
+
+`create_host_path: false` 只能阻止路径不存在时创建空目录；使用 NAS 前还应确认该路径实际挂载的是预期 Root。需要媒体写操作时，再明确调整对应挂载权限。修改任何挂载后必须重建容器，普通 `restart` 不会应用新挂载。
+
+配置契约和双向替换验收只使用临时项目、随机端口及临时数据：
+
+```sh
+python3 docker/test-compose.py -v
+python3 docker/compose-smoke-test.py --image bakabase:local
+```
+
+第二项实际导出、重新加载镜像包，再运行源码 → 镜像包 → 源码的三次 Compose 替换，核对容器名称、设备身份、数据文件及 SQLite 完整性。它不启动正式项目或读取正式 AppData。
+
+macOS 原生源码服务部署见[本机服务端部署](server-deployment.md)。
 
 ## 从一体版管理服务端
 
@@ -79,16 +215,16 @@ docker run -d \
 2. 在电脑的一体版中打开“多设备互联 → 设备与分享 → 管理”，填写 `http://服务器IP:34567`，使用服务端生成的管理配对码完成配对。首次配对可按下方说明从容器日志取得配对码；已有其他已配对设备时，也可以提交请求，再从有管理权限的设备批准。
 3. 配对完成后，使用一体版左侧顶部的设备下拉菜单进入这台服务端的界面。
 
-若要求配对且尚无任何已配对设备，无界面服务端会在启动日志中输出首台设备的配对码，可通过 `docker logs bakabase` 查看。管理配对允许完整管理；下方的媒体库分享只授予资源的只读访问，两者分别建立授权。
+若要求配对且尚无任何已配对设备，无界面服务端会在启动日志中输出首台设备的配对码，可通过 `docker compose logs bakabase` 查看。管理配对允许完整管理；下方的媒体库分享只授予资源的只读访问，两者分别建立授权。
 
 ## 向其他设备分享媒体库
 
 容器的媒体库分享管理可以在容器内执行：
 
 ```sh
-docker exec bakabase dotnet Bakabase.Service.dll federation status
-docker exec bakabase dotnet Bakabase.Service.dll federation share on
-docker exec bakabase dotnet Bakabase.Service.dll federation invite
+docker compose exec bakabase dotnet Bakabase.Service.dll federation status
+docker compose exec bakabase dotnet Bakabase.Service.dll federation share on
+docker compose exec bakabase dotnet Bakabase.Service.dll federation invite
 ```
 
 在另一台设备的“多设备互联 → 设备与分享 → 资源库分享”中填写服务端地址和输出的一次性分享码。也可以不填分享码，先提交连接请求，再使用 `federation status` 查看请求 ID，通过 `federation approve 请求ID` 批准。
@@ -110,14 +246,16 @@ docker exec bakabase dotnet Bakabase.Service.dll federation invite
 
 ## 更新
 
-备份数据目录和媒体文件后，将 `image` 改成 Docker Hub 中已经发布的新版本标签，再执行：
+**旧容器若没有配置 `BAKABASE_DATA_DIR`**，升级前先从网页配置确认它实际使用的数据路径。新镜像默认使用 `/data`，因此需要把旧数据复制到持久目录并挂载为 `/data`，或者继续显式配置旧的有效路径及挂载。不要直接替换镜像后把空媒体库误认为旧数据丢失。
+
+停止服务并备份完整数据目录后，将 `image` 改成 Docker Hub 中已经发布的新版本标签，再执行：
 
 ```sh
 docker compose pull
 docker compose up -d
 ```
 
-保留原数据卷和媒体挂载路径。Docker 版通过替换镜像更新；桌面安装器的自动更新流程适用于一体版。
+保留原数据目录或数据卷以及媒体挂载路径。Docker 版通过替换镜像更新；源码镜像通过重新构建和替换容器更新，两者都由启动迁移升级数据库。桌面安装器的自动更新流程适用于一体版。
 
 ## 端口设置
 

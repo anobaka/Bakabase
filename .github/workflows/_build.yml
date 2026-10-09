@@ -126,7 +126,14 @@ jobs:
             runtimeMode: MACOS
           - os: ubuntu-latest
             rid: linux-x64
-            artifact: docker
+            artifact: docker-amd64
+            architecture: amd64
+            csproj: Bakabase/src/apps/Bakabase.Service/Bakabase.Service.csproj
+            runtimeMode: DOCKER
+          - os: ubuntu-24.04-arm
+            rid: linux-arm64
+            artifact: docker-arm64
+            architecture: arm64
             csproj: Bakabase/src/apps/Bakabase.Service/Bakabase.Service.csproj
             runtimeMode: DOCKER
     steps:
@@ -139,6 +146,11 @@ jobs:
           submodules: recursive
       - name: Copy global.json to workspace root
         run: cp ${{ github.event.repository.name }}/global.json .
+      - name: Select the container SDK
+        if: matrix.runtimeMode == 'DOCKER'
+        run: |
+          cp Bakabase/docker/global.json Bakabase/global.json
+          cp Bakabase/docker/global.json global.json
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -159,7 +171,9 @@ jobs:
           # Exact dependency keys avoid accumulating old package versions.
           key: release-nuget-v2-${{ runner.os }}-${{ matrix.rid }}-${{ hashFiles('**/global.json', '**/*.csproj', '**/*.props', '**/*.targets', '**/packages.lock.json', '**/NuGet.Config', '**/nuget.config') }}
       - name: Build Bakabase project
-        run: dotnet publish -p:RuntimeMode=${{ matrix.runtimeMode }} ${{matrix.csproj}} --self-contained -r ${{ matrix.rid }} -o ./publish
+        # Container artifacts must use the fixed shared runtime in Dockerfile;
+        # embedding a net9.0 runtime would bypass its ARM64 compatibility fix.
+        run: dotnet publish -p:RuntimeMode=${{ matrix.runtimeMode }} ${{matrix.csproj}} --self-contained ${{ matrix.runtimeMode != 'DOCKER' }} -r ${{ matrix.rid }} -o ./publish
       - name: Wait for frontend artifact
         id: frontend-artifact
         env:
@@ -181,6 +195,12 @@ jobs:
           ROLE=unified
           if [[ "${{ matrix.runtimeMode }}" == "DOCKER" ]]; then ROLE=server; fi
           python Bakabase/src/scripts/check-release-contract.py --role "$ROLE" --publish-dir ./publish --require-web
+      - name: Verify native Docker startup and persistent appdata
+        if: matrix.runtimeMode == 'DOCKER'
+        shell: bash
+        run: |
+          docker build --build-arg PUBLISH_DIR=. -f Bakabase/docker/Dockerfile -t bakabase:acceptance ./publish
+          python Bakabase/docker/smoke-test.py --image bakabase:acceptance --architecture '${{ matrix.architecture }}' --runtime-version 10.0.11
       # vpk builds the Setup.exe / Update.exe binaries that the Velopack NuGet package talks
       # to, and Velopack ships both halves under one version number — they are meant to match.
       # Unpinned, this step silently took whatever was newest, so the installer version drifted
