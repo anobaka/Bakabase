@@ -480,4 +480,33 @@ describe("compact file processor toolbar", () => {
     expect(select).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "fileExplorer.selection.clear" })).toBeNull();
   });
+
+  it("clears deletion targets only after a successful confirmed deletion", async () => {
+    vi.stubGlobal("navigator", { platform: "Win32" });
+    const onSelected = vi.fn();
+
+    render(
+      <FileExplorer
+        appearance="compact"
+        capabilities={["select", "delete"]}
+        rootPath="/media"
+        selectable="multiple"
+        onSelected={onSelected}
+      />,
+    );
+    const fileName = await screen.findByRole("button", { name: "alpha" });
+
+    fireEvent.click(fileName);
+    fireEvent.keyDown(fileName, { key: "Delete" });
+    expect(createPortal).toHaveBeenCalledTimes(1);
+    const props = createPortal.mock.calls[0][1];
+
+    expect(props.entries.map((entry: { path: string }) => entry.path)).toEqual(["/media/alpha"]);
+    expect(onSelected).toHaveBeenLastCalledWith([
+      expect.objectContaining({ path: "/media/alpha" }),
+    ]);
+    act(() => props.onDeleted());
+    await waitFor(() => expect(onSelected).toHaveBeenLastCalledWith([]));
+    expect(screen.queryByRole("button", { name: "fileExplorer.selection.clear" })).toBeNull();
+  });
 });

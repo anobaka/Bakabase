@@ -521,4 +521,6 @@ export interface IEntryRef {
   setLoading: (loading: boolean) => void;
 
   playFirstFile: () => Promise<void>;
+
+  beginRename: () => void;
 }

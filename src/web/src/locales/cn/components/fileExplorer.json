@@ -29,6 +29,7 @@
   "fileExplorer.contextMenu.copied": "已复制",
   "fileExplorer.contextMenu.failedToCopy": "复制失败",
   "fileExplorer.contextMenu.batchRename": "批量重命名 {{count}} 个项目",
+  "fileExplorer.contextMenu.rename": "重命名",
   "fileExplorer.createDirectoryModal.title": "新建文件夹",
   "fileExplorer.createDirectoryModal.okButton": "创建",
   "fileExplorer.createDirectoryModal.description": "在此路径下新建文件夹",

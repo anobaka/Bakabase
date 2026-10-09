@@ -16,6 +16,7 @@ import BApi from "@/sdk/BApi";
 type Props = {
   rootPath?: string;
   entries: SimpleEntry[];
+  onDeleted?: () => void;
 } & DestroyableProps;
 
 const log = buildLogger("DeleteConfirmationModal");
@@ -108,7 +109,7 @@ const renderItem = (item: Item, layer: number) => {
     </React.Fragment>
   );
 };
-const DeleteConfirmationModal = ({ entries = [], onDestroyed, rootPath }: Props) => {
+const DeleteConfirmationModal = ({ entries = [], onDestroyed, rootPath, onDeleted }: Props) => {
   const { t } = useTranslation();
   const items = mergeItems(entries, rootPath);
 
@@ -128,7 +129,13 @@ const DeleteConfirmationModal = ({ entries = [], onDestroyed, rootPath }: Props)
       size={"xl"}
       title={t<string>("fileExplorer.deleteModal.title")}
       onDestroyed={onDestroyed}
-      onOk={async () => await BApi.file.removeFiles({ paths: entries.map((p) => p.path) })}
+      onOk={async () => {
+        const response = await BApi.file.removeFiles({ paths: entries.map((p) => p.path) });
+
+        if (!response.code) onDeleted?.();
+
+        return response;
+      }}
     >
       <div className={"flex flex-col gap-1"}>
         {items.map((item) => renderItem(item, 0))}

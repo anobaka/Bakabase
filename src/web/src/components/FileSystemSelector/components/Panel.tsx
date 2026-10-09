@@ -4,10 +4,9 @@ import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { FileExplorerRef } from "@/components/FileExplorer";
 import type { FileSystemSelectorProps } from "@/components/FileSystemSelector/models";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FolderAddOutlined } from "@ant-design/icons";
-import { useUpdate } from "react-use";
 
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
@@ -19,7 +18,6 @@ import { storageError, validateUserStoragePaths } from "@/stores/userStorage";
 const log = buildLogger("FileSystemSelector");
 const Panel = (props: FileSystemSelectorProps) => {
   const { t } = useTranslation();
-  const forceUpdate = useUpdate();
 
   const {
     startPath,
@@ -34,18 +32,14 @@ const Panel = (props: FileSystemSelectorProps) => {
 
   const [selected, setSelected] = useState<Entry>();
   const [selectedMany, setSelectedMany] = useState<Entry[]>([]);
+  const [explorerSelection, setExplorerSelection] = useState<Entry[]>([]);
   const [currentDirPath, setCurrentDirPath] = useState<string>();
   const rootRef = useRef<FileExplorerRef | null>(null);
   const validating = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    // return () => {
-    //   log('disposing', rootRef);
-    //   rootRef.current?.root?.dispose();
-    // };
-  }, []);
+  const creating = useRef(false);
+  const [creatingFolder, setCreatingFolder] = useState(false);
 
   const filter = (e: Entry, mode: "visible" | "select") => {
     log("filter", e, mode, targetType);
@@ -107,6 +101,31 @@ const Panel = (props: FileSystemSelectorProps) => {
   };
 
   const hasSelection = multiple ? selectedMany.length > 0 : !!selected;
+  const selectedDirectory =
+    explorerSelection.length === 1 &&
+    [IwFsType.Directory, IwFsType.Drive].includes(explorerSelection[0].type)
+      ? explorerSelection[0]
+      : undefined;
+  const newFolderParentPath = selectedDirectory?.path || currentDirPath;
+  const createFolder = async () => {
+    if (!newFolderParentPath || creating.current) return;
+    creating.current = true;
+    setCreatingFolder(true);
+    setError(undefined);
+    try {
+      const response = await BApi.file.createDirectory(
+        { parent: newFolderParentPath },
+        { showErrorToast: false },
+      );
+
+      if (response.code) throw storageError(response, t);
+    } catch (cause) {
+      setError(storageError(cause, t).message || t("fileSystemSelector.error.createFolder"));
+    } finally {
+      creating.current = false;
+      setCreatingFolder(false);
+    }
+  };
   const confirmSelection = async () => {
     if (!hasSelection || validating.current) return;
     validating.current = true;
@@ -133,7 +152,7 @@ const Panel = (props: FileSystemSelectorProps) => {
           rootRef.current = r;
           log("ref", r);
         }}
-        capabilities={["rename", "select", "enter-directory"]}
+        capabilities={["rename", "delete", "create-directory", "select", "enter-directory"]}
         defaultSelectedPath={defaultSelectedPath}
         filter={{
           custom: (e) => filter(e, "visible"),
@@ -144,13 +163,14 @@ const Panel = (props: FileSystemSelectorProps) => {
           log("onInitialized", rootRef.current?.root);
           if (rootRef.current?.root) {
             trySelectRootOrClearSelection();
-            if (rootRef.current.root.isDirectory) {
+            if (rootRef.current.root.isDirectoryOrDrive) {
               setCurrentDirPath(rootRef.current.root.path);
             } else setCurrentDirPath(undefined);
           }
         }}
         onSelected={(es) => {
           log(rootRef.current);
+          setExplorerSelection(es);
 
           if (multiple) {
             const valid = es.filter((e) => filter(e, "select"));
@@ -213,14 +233,13 @@ const Panel = (props: FileSystemSelectorProps) => {
       )}
       <div className="flex items-center justify-between mb-2">
         <Button
-          // size={'small'}
-          isDisabled={!currentDirPath}
-          onClick={() => {
-            BApi.file.createDirectory({ parent: currentDirPath });
-          }}
+          isDisabled={!newFolderParentPath || creatingFolder}
+          isLoading={creatingFolder}
+          title={newFolderParentPath}
+          onClick={() => void createFolder()}
         >
-          <FolderAddOutlined className={"text-base"} />
-          {t<string>("New Folder")}
+          <FolderAddOutlined aria-hidden className={"text-base"} />
+          {t<string>("fileSystemSelector.action.newFolder")}
         </Button>
         <div className="flex items-center gap-2">
           <Button
