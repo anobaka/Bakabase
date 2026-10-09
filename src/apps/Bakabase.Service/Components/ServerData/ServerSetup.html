@@ -548,7 +548,7 @@
       if (!token) {
         try { token = (await api('/setup/local-session',{})).setupToken; } catch {}
       }
-      if (!token) throw new Error(t('首次配置需要启动日志中的配置链接。Docker 请运行 docker compose logs bakabase，打开包含 setupToken 的链接；该链接只用于本次配置。','For first setup, use the setup link in the startup log. In Docker, run docker compose logs bakabase and open the link containing setupToken. It authorizes this setup only.'));
+      if (!token) throw new Error(t('首次配置需要启动日志中的配置链接。Docker 请运行 docker compose logs server，打开包含 setupToken 的链接；该链接只用于本次配置。','For first setup, use the setup link in the startup log. In Docker, run docker compose logs server and open the link containing setupToken. It authorizes this setup only.'));
       state = await api('/setup/status');
       state.firstRun = state.mode === 'first-run'; state.initialMode = state.mode;
       const allowed = state.allowedOperations || (state.firstRun ? ['initialize','import'] : [state.mode]);

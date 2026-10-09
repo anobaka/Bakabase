@@ -1,5 +1,5 @@
 services:
-  bakabase:
+  server:
     build:
       context: ${BAKABASE_SOURCE_DIR:-..}
       dockerfile: docker/Dockerfile.source

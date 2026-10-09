@@ -1,7 +1,7 @@
 # Optional Apple Silicon deployment. Mount each NAS Root on the host first.
 # No Public/Container share is exposed. Keep original absolute media paths.
 services:
-  bakabase:
+  server:
     platform: linux/arm64
     volumes:
       - type: bind

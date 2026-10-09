@@ -39,7 +39,7 @@ def main():
         env["BAKABASE_ENV_FILE"] = str(env_file)
         # Apply a UID only to the fixture so Linux CI can inspect/remove its data.
         override = root / "fixture.yaml"
-        override.write_text(f'services:\n  bakabase:\n    user: "{os.getuid()}:{os.getgid()}"\n    environment:\n      HOME: /tmp\n')
+        override.write_text(f'services:\n  server:\n    user: "{os.getuid()}:{os.getgid()}"\n    environment:\n      HOME: /tmp\n')
         env["BAKABASE_COMPOSE_OVERRIDE"] = str(override)
         base = [ROOT / "docker/image.sh"]
         device_id, name, previous_id = None, None, None
@@ -59,7 +59,7 @@ def main():
                     run(["docker", "compose", "--project-directory", package, "--env-file", env_file,
                          "-f", package / "compose.yaml", "-f", override,
                          "up", "-d", "--no-build", "--force-recreate"], env)
-                container = subprocess.check_output([*map(str, base), "ps", "-q", "bakabase"], env=env, text=True).strip()
+                container = subprocess.check_output([*map(str, base), "ps", "-q", "server"], env=env, text=True).strip()
                 inspect = json.loads(docker("inspect", container))[0]
                 if previous_id == inspect["Id"]:
                     raise RuntimeError("Compose did not replace the previous container")
@@ -80,7 +80,7 @@ def main():
                 device_id = current
                 if marker.read_text() != unique:
                     raise RuntimeError("Switching deployment modes replaced AppData")
-                run([*base, "stop", "bakabase"], env)
+                run([*base, "stop", "server"], env)
                 for database in data.glob("*.db"):
                     with sqlite3.connect(database) as connection:
                         if connection.execute("PRAGMA quick_check").fetchone() != ("ok",):

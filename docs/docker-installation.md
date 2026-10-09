@@ -27,9 +27,9 @@ mkdir -p "$HOME/BakabaseServer/appdata"
 将以下内容保存为 `compose.yaml`，替换镜像版本：
 
 ```yaml
-name: bakabase-server
+name: bakabase
 services:
-  bakabase:
+  server:
     image: "anobaka/bakabase:<VERSION>"
     restart: unless-stopped
     stop_grace_period: 60s
@@ -53,7 +53,7 @@ services:
 
 ```sh
 docker compose up -d
-docker compose logs -f bakabase
+docker compose logs -f server
 ```
 
 全新数据目录会先进入首次设置，确认前不会创建应用数据库。日志中的 `Server setup:` 会给出带 `#setupToken=...` 的链接；用该完整链接进入设置。若 Docker 映射了其他宿主机端口，或运行在 NAS 上，只替换链接的地址和端口，保留 `#` 后面的令牌。Docker 不会自动向访客签发首次设置权限。
@@ -146,13 +146,15 @@ python3 docker/smoke-test.py --image bakabase:local --architecture arm64 --runti
 
 验证只使用新建临时目录，检查首次设置、固定挂载路径约束、网页、SQLite、替换容器后的数据保留，以及从只读 `/import` 导入、备份和自动恢复业务服务的实际流程。来源使用较旧的应用版本，确保启动时实际完成升级前自动备份，且备份不包含运行期锁和维护控制文件。测试也会检查工作进程被终止后父进程继续提供失败状态，以及导入后要求配对时，进度仍可读取而普通 API 不会被监控令牌放行。Intel 主机自动构建 `linux/amd64`，验证参数改成 `amd64`。
 
-`source.sh` 先用容器中的 NBGV 读取当前提交的完整版本（支持 Git worktree），再传给构建，避免源码镜像丢失提交高度、错误显示为较旧版本。可用 `./docker/source.sh logs -f bakabase` 查看日志。
+`source.sh` 先用容器中的 NBGV 读取当前提交的完整版本（支持 Git worktree），再传给构建，避免源码镜像丢失提交高度、错误显示为较旧版本。可用 `./docker/source.sh logs -f server` 查看日志。
 
 修改源码后重新执行 `./docker/source.sh` 即可升级；构建失败时，现有容器仍保留。新镜像替换旧容器，宿主机 AppData 不变，启动时走相同的数据迁移流程。源码构建与官方镜像之间切换时，保持 `/data` 和媒体挂载一致，避免运行比数据库版本更旧的代码。若要回退，使用升级前备份；只回退镜像不保证数据库兼容。
 
 ### 源码与打包镜像互相升级
 
-两种方式都使用项目 **`bakabase-server`**、服务 **`bakabase`**，默认容器名为 **`bakabase-server-bakabase-1`**。源码模式只在基础配置上增加构建步骤，镜像模式直接使用已有镜像。二者读取同一 `.env`、本机挂载配置和 AppData；不要另外指定项目名称，也不需要先 `down`。
+两种方式都使用项目 **`bakabase`**、服务 **`server`**，默认容器名为 **`bakabase-server-1`**。源码模式只在基础配置上增加构建步骤，镜像模式直接使用已有镜像。二者读取同一 `.env`、本机挂载配置和 AppData；不要另外指定项目名称，也不需要先 `down`。
+
+若已有部署使用旧默认项目 `bakabase-server` 和服务 `bakabase`，需一次性修改项目名与所有 Compose 文件（包括本机 override）中的服务键。先停止旧容器 `bakabase-server-bakabase-1`，再使用同一镜像和挂载启动新项目；确认可访问、数据正常后再删除旧容器。项目改名不会自动接管旧容器，不能让两个实例同时写同一数据目录。使用命名卷时，还需以 `external: true` 和 `name` 指向原有卷的实际名称，避免新项目创建空卷；本文使用的本机目录挂载不受项目名影响。
 
 源码升级：
 
@@ -215,16 +217,16 @@ macOS 原生源码服务部署见[本机服务端部署](server-deployment.md)�
 2. 在电脑的一体版中打开“多设备互联 → 设备与分享 → 管理”，填写 `http://服务器IP:34567`，使用服务端生成的管理配对码完成配对。首次配对可按下方说明从容器日志取得配对码；已有其他已配对设备时，也可以提交请求，再从有管理权限的设备批准。
 3. 配对完成后，使用一体版左侧顶部的设备下拉菜单进入这台服务端的界面。
 
-若要求配对且尚无任何已配对设备，无界面服务端会在启动日志中输出首台设备的配对码，可通过 `docker compose logs bakabase` 查看。管理配对允许完整管理；下方的媒体库分享只授予资源的只读访问，两者分别建立授权。
+若要求配对且尚无任何已配对设备，无界面服务端会在启动日志中输出首台设备的配对码，可通过 `docker compose logs server` 查看。管理配对允许完整管理；下方的媒体库分享只授予资源的只读访问，两者分别建立授权。
 
 ## 向其他设备分享媒体库
 
 容器的媒体库分享管理可以在容器内执行：
 
 ```sh
-docker compose exec bakabase dotnet Bakabase.Service.dll federation status
-docker compose exec bakabase dotnet Bakabase.Service.dll federation share on
-docker compose exec bakabase dotnet Bakabase.Service.dll federation invite
+docker compose exec server dotnet Bakabase.Service.dll federation status
+docker compose exec server dotnet Bakabase.Service.dll federation share on
+docker compose exec server dotnet Bakabase.Service.dll federation invite
 ```
 
 在另一台设备的“多设备互联 → 设备与分享 → 资源库分享”中填写服务端地址和输出的一次性分享码。也可以不填分享码，先提交连接请求，再使用 `federation status` 查看请求 ID，通过 `federation approve 请求ID` 批准。

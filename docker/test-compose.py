@@ -32,10 +32,10 @@ class ComposeContract(unittest.TestCase):
 
     def test_source_and_image_share_deployment_identity(self):
         image, source = self.config("image"), self.config("source")
-        self.assertEqual(image["name"], "bakabase-server")
+        self.assertEqual(image["name"], "bakabase")
         self.assertEqual(source["name"], image["name"])
-        self.assertEqual(list(image["services"]), ["bakabase"])
-        image_service, source_service = image["services"]["bakabase"], source["services"]["bakabase"]
+        self.assertEqual(list(image["services"]), ["server"])
+        image_service, source_service = image["services"]["server"], source["services"]["server"]
         self.assertNotIn("build", image_service)
         self.assertEqual(source_service.pop("build")["context"], str(ROOT))
         source_service.pop("pull_policy")
@@ -49,9 +49,9 @@ class ComposeContract(unittest.TestCase):
                         BAKABASE_MEDIA_ROOT_2=str(self.root / "nas two"),
                         BAKABASE_IMPORT_DIR=str(self.root / "import copy"))
         image, source = self.config("image"), self.config("source")
-        service = image["services"]["bakabase"]
+        service = image["services"]["server"]
         self.assertEqual(service["platform"], "linux/arm64")
-        self.assertEqual(service["volumes"], source["services"]["bakabase"]["volumes"])
+        self.assertEqual(service["volumes"], source["services"]["server"]["volumes"])
         mounts = {entry["target"]: entry for entry in service["volumes"]}
         self.assertEqual(set(mounts), {"/data", "/import", "/Volumes/nas-bakabase", "/Volumes/nas-anobaka"})
         for target, mount in mounts.items():

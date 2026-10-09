@@ -23,9 +23,9 @@ Load once:
 
 Review .env and any media/import mounts before starting:
   docker compose up -d --no-build --force-recreate
-  docker compose logs -f bakabase
+  docker compose logs -f server
 
-The project is bakabase-server and its service is bakabase. Keep the same .env,
+The project is bakabase and its service is server (container bakabase-server-1). Keep the same .env,
 AppData mount, and optional local override when replacing a source-built server.
 For the optional Apple Silicon/NAS mounts, copy compose.local.example.yaml to
 compose.local.yaml, then use:
