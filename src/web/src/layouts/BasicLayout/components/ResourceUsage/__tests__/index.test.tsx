@@ -1,27 +1,93 @@
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ResourceUsage from "../index";
 import { formatUsageBytes, formatUsageUpdatedAt } from "../formatUsage";
 
-const state = vi.hoisted(() => ({ initialized: true, data: { showResourceUsage: true } }));
-const getUsage = vi.hoisted(() => vi.fn());
+import { useUiOptionsStore } from "@/stores/options";
 
-vi.mock("@/stores/options", () => ({
-  useUiOptionsStore: (selector: (s: typeof state) => unknown) => selector(state),
+const { getUsage, patchOptions, updateOptions, createPortal } = vi.hoisted(() => ({
+  getUsage: vi.fn(),
+  patchOptions: vi.fn(),
+  updateOptions: vi.fn(),
+  createPortal: vi.fn(),
 }));
-vi.mock("@/sdk/BApi", () => ({ default: { app: { getResourceUsage: getUsage } } }));
+
+vi.mock("@/stores/options", async () => {
+  const { create } = await import("zustand");
+
+  return {
+    useUiOptionsStore: create<{
+      initialized: boolean;
+      data: { showResourceUsage: boolean };
+      update: (payload: { showResourceUsage: boolean }) => void;
+    }>((set) => ({
+      initialized: true,
+      data: { showResourceUsage: true },
+      update: (payload) => {
+        updateOptions(payload);
+        set((state) => ({ data: { ...state.data, ...payload } }));
+      },
+    })),
+  };
+});
+vi.mock("@/sdk/BApi", () => ({
+  default: { app: { getResourceUsage: getUsage }, options: { patchUiOptions: patchOptions } },
+}));
+vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
+  useBakabaseContext: () => ({ createPortal }),
+}));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@/components/bakaui", () => ({
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
+  Button: ({
+    children,
+    isDisabled,
+    onPress,
+    "aria-label": label,
+  }: {
+    children: ReactNode;
+    isDisabled?: boolean;
+    onPress: () => void;
+    "aria-label"?: string;
+  }) => (
+    <button aria-label={label} disabled={isDisabled} onClick={onPress}>
+      {children}
+    </button>
+  ),
+  Modal: ({ title, children }: { title: string; children: ReactNode }) => (
+    <div aria-label={title} role="dialog">
+      {children}
+    </div>
+  ),
 }));
+
+const setEnabled = (showResourceUsage: boolean, initialized = true) =>
+  useUiOptionsStore.setState((state) => ({
+    initialized,
+    data: { ...state.data, showResourceUsage },
+  }));
 
 beforeEach(() => {
   vi.useFakeTimers();
-  state.initialized = true;
-  state.data.showResourceUsage = true;
+  setEnabled(true);
+  updateOptions.mockReset();
+  patchOptions.mockReset().mockResolvedValue({ code: 0 });
+  createPortal
+    .mockReset()
+    .mockImplementation(
+      (
+        Component: ComponentType<{ title: string; children: ReactNode }>,
+        props: { title: string; children: ReactNode },
+      ) => {
+        // Mirror the app provider's ownership: the notice is outside the ResourceUsage tree.
+        const portal = render(<Component {...props} />);
+
+        return { key: "notice", destroy: portal.unmount };
+      },
+    );
   Object.defineProperty(document, "hidden", { configurable: true, value: false });
   getUsage.mockReset().mockResolvedValue({
     code: 0,
@@ -53,20 +119,18 @@ describe("resource usage", () => {
   });
 
   it("does not poll before options load or when display is disabled", async () => {
-    state.initialized = false;
-    const view = render(<ResourceUsage />);
+    setEnabled(true, false);
+    render(<ResourceUsage />);
 
     await act(async () => {});
     expect(getUsage).not.toHaveBeenCalled();
-    state.initialized = true;
-    state.data.showResourceUsage = false;
-    view.rerender(<ResourceUsage />);
+    act(() => setEnabled(false));
     await act(async () => vi.advanceTimersByTimeAsync(15000));
     expect(getUsage).not.toHaveBeenCalled();
   });
 
   it("shows samples, pauses hidden pages, resumes immediately, and cancels when disabled", async () => {
-    const view = render(<ResourceUsage />);
+    render(<ResourceUsage />);
 
     await act(async () => {});
     expect(screen.getByText("12.5%")).toBeTruthy();
@@ -81,8 +145,7 @@ describe("resource usage", () => {
     expect(getUsage).toHaveBeenCalledTimes(2);
     const signal = getUsage.mock.calls.at(-1)![0].signal as AbortSignal;
 
-    state.data.showResourceUsage = false;
-    view.rerender(<ResourceUsage />);
+    act(() => setEnabled(false));
     expect(signal.aborted).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(10000));
     expect(getUsage).toHaveBeenCalledTimes(2);
@@ -121,4 +184,81 @@ describe("resource usage", () => {
     expect(getUsage).toHaveBeenCalledTimes(2);
     expect(screen.getByText("12.5%")).toBeTruthy();
   });
+
+  it.each([false, true])(
+    "persists hiding, stops polling and preserves the notice (SignalR arrives early: %s)",
+    async (signalRArrivesEarly) => {
+      let finish!: (response: { code: number }) => void;
+
+      patchOptions.mockReturnValueOnce(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      );
+      const view = render(<ResourceUsage />);
+
+      await act(async () => {});
+      const signal = getUsage.mock.calls[0][0].signal as AbortSignal;
+      const hide = screen.getByRole("button", { name: "resourceUsage.hide.label" });
+
+      fireEvent.click(hide);
+      fireEvent.click(hide);
+      expect(hide).toBeDisabled();
+      expect(patchOptions).toHaveBeenCalledExactlyOnceWith({ showResourceUsage: false });
+      expect(updateOptions).not.toHaveBeenCalled();
+      expect(createPortal).not.toHaveBeenCalled();
+      if (signalRArrivesEarly) {
+        act(() => setEnabled(false));
+        expect(screen.queryByRole("region", { name: "resourceUsage.title" })).toBeNull();
+      }
+
+      await act(async () => finish({ code: 0 }));
+      expect(updateOptions).toHaveBeenCalledExactlyOnceWith({ showResourceUsage: false });
+      expect(useUiOptionsStore.getState().data.showResourceUsage).toBe(false);
+      expect(screen.queryByRole("region", { name: "resourceUsage.title" })).toBeNull();
+      expect(signal.aborted).toBe(true);
+      expect(screen.getByRole("dialog", { name: "resourceUsage.hidden.title" })).toHaveTextContent(
+        "resourceUsage.hidden.description",
+      );
+      expect(createPortal).toHaveBeenCalledTimes(1);
+      await act(async () => vi.advanceTimersByTimeAsync(20000));
+      expect(getUsage).toHaveBeenCalledTimes(1);
+
+      view.unmount();
+      expect(
+        screen.getByRole("dialog", { name: "resourceUsage.hidden.title" }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it.each(["business", "network"])(
+    "leaves the card enabled after a %s failure and allows retry",
+    async (failure) => {
+      if (failure === "business")
+        patchOptions.mockResolvedValueOnce({ code: 500, message: "failed" });
+      else patchOptions.mockRejectedValueOnce(new Error("offline"));
+      render(<ResourceUsage />);
+      await act(async () => {});
+
+      await act(async () =>
+        fireEvent.click(screen.getByRole("button", { name: "resourceUsage.hide.label" })),
+      );
+      expect(screen.getByRole("region", { name: "resourceUsage.title" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "resourceUsage.hide.label" })).toBeEnabled();
+      expect(useUiOptionsStore.getState().data.showResourceUsage).toBe(true);
+      expect(updateOptions).not.toHaveBeenCalled();
+      expect(createPortal).not.toHaveBeenCalled();
+      await act(async () => vi.advanceTimersByTimeAsync(5000));
+      expect(getUsage).toHaveBeenCalledTimes(2);
+
+      await act(async () =>
+        fireEvent.click(screen.getByRole("button", { name: "resourceUsage.hide.label" })),
+      );
+      expect(patchOptions).toHaveBeenCalledTimes(2);
+      expect(useUiOptionsStore.getState().data.showResourceUsage).toBe(false);
+      expect(
+        screen.getByRole("dialog", { name: "resourceUsage.hidden.title" }),
+      ).toBeInTheDocument();
+    },
+  );
 });

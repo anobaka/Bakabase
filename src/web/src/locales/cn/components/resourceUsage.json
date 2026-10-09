@@ -8,5 +8,9 @@
   "resourceUsage.calculating": "正在后台计算目录大小…",
   "resourceUsage.directoryPartial": "部分文件无法读取，显示已统计的大小。",
   "resourceUsage.directoryUnavailable": "目录大小暂时无法更新；如有数值，显示上次结果。",
-  "resourceUsage.unavailable": "用量暂不可用"
+  "resourceUsage.unavailable": "用量暂不可用",
+  "resourceUsage.hide.label": "隐藏资源占用",
+  "resourceUsage.hidden.title": "已隐藏资源占用",
+  "resourceUsage.hidden.description": "如需再次显示，可前往「系统 → 配置 → 功能配置」，开启「显示资源占用」。",
+  "resourceUsage.hidden.dismiss": "知道了"
 }

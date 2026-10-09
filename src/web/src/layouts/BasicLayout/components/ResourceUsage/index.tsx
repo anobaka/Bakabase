@@ -1,20 +1,53 @@
 import type { BakabaseServiceModelsViewResourceUsageViewModel } from "@/sdk/Api";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuActivity, LuCpu, LuHardDrive, LuMemoryStick } from "react-icons/lu";
+import { LuActivity, LuCpu, LuEyeOff, LuHardDrive, LuMemoryStick } from "react-icons/lu";
 
 import { formatUsageBytes, formatUsageUpdatedAt } from "./formatUsage";
 
-import { Tooltip } from "@/components/bakaui";
+import { Button, Modal, Tooltip } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
 import { useUiOptionsStore } from "@/stores/options";
 
 export default function ResourceUsage({ collapsed }: { collapsed?: boolean }) {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const enabled = useUiOptionsStore((s) => s.initialized && s.data.showResourceUsage !== false);
+  const updateOptions = useUiOptionsStore((s) => s.update);
   const [usage, setUsage] = useState<BakabaseServiceModelsViewResourceUsageViewModel>();
   const [unavailable, setUnavailable] = useState(false);
+  const [hiding, setHiding] = useState(false);
+  const hidePending = useRef(false);
+
+  const hide = async () => {
+    if (hidePending.current) return;
+    hidePending.current = true;
+    setHiding(true);
+    try {
+      const response = await BApi.options.patchUiOptions({ showResourceUsage: false });
+
+      if (response.code) return;
+      updateOptions({ showResourceUsage: false });
+      // Keep the notice outside the card, which disappears as soon as options update.
+      createPortal(Modal, {
+        defaultVisible: true,
+        size: "sm",
+        title: t("resourceUsage.hidden.title"),
+        children: t("resourceUsage.hidden.description"),
+        footer: {
+          actions: ["ok"],
+          okProps: { children: t("resourceUsage.hidden.dismiss") },
+        },
+      });
+    } catch {
+      // The API client reports errors; leave the card visible so the user can retry.
+    } finally {
+      hidePending.current = false;
+      setHiding(false);
+    }
+  };
 
   useEffect(() => {
     if (!enabled) return;
@@ -129,7 +162,21 @@ export default function ResourceUsage({ collapsed }: { collapsed?: boolean }) {
     >
       <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium text-foreground-400">
         <LuActivity aria-hidden size={12} />
-        {title}
+        <span className="min-w-0 flex-1">{title}</span>
+        <Tooltip content={t("resourceUsage.hide.label")} placement="right">
+          <Button
+            isIconOnly
+            aria-label={t("resourceUsage.hide.label")}
+            className="-my-1 -mr-1 h-7 min-h-7 w-7 min-w-7 text-foreground-400"
+            isDisabled={hiding}
+            isLoading={hiding}
+            size="sm"
+            variant="light"
+            onPress={() => void hide()}
+          >
+            <LuEyeOff aria-hidden size={14} />
+          </Button>
+        </Tooltip>
       </div>
       <div className="space-y-1">
         {metrics.map(({ label, value, Icon, hint }) => (

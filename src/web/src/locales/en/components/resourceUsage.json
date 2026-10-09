@@ -8,5 +8,9 @@
   "resourceUsage.calculating": "Calculating directory size in the background…",
   "resourceUsage.directoryPartial": "Some files could not be read; showing the measured total.",
   "resourceUsage.directoryUnavailable": "Directory size could not be refreshed; any displayed value is from the last measurement.",
-  "resourceUsage.unavailable": "Usage unavailable"
+  "resourceUsage.unavailable": "Usage unavailable",
+  "resourceUsage.hide.label": "Hide resource usage",
+  "resourceUsage.hidden.title": "Resource usage hidden",
+  "resourceUsage.hidden.description": "To show it again, go to System → Configuration → Functional configurations and turn on “Show resource usage”.",
+  "resourceUsage.hidden.dismiss": "Got it"
 }
