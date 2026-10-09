@@ -43,7 +43,11 @@ class ComposeContract(unittest.TestCase):
         self.assertNotIn("platform", image_service)
         self.assertEqual([v["target"] for v in image_service["volumes"]], ["/data"])
         self.assertEqual(image_service["volumes"][0]["source"], str(self.root / "app data"))
-        self.assertFalse(image_service["volumes"][0]["bind"]["create_host_path"])
+        # Some Compose versions omit false fields (and the resulting empty bind object)
+        # in JSON. Keep the explicit source contract as well as checking its resolved value.
+        self.assertIn("        target: /data\n        bind:\n          create_host_path: false\n",
+                      (ROOT / "docker/compose.yaml").read_text())
+        self.assertIs(image_service["volumes"][0].get("bind", {}).get("create_host_path", False), False)
 
     def test_unedited_local_example_adds_no_machine_specific_configuration(self):
         baseline = self.config("image")
@@ -74,7 +78,7 @@ class ComposeContract(unittest.TestCase):
         for expected in entries:
             mount = mounts[expected["target"]]
             self.assertEqual(mount["source"], expected["source"])
-            self.assertFalse(mount["bind"]["create_host_path"])
+            self.assertIs(mount.get("bind", {}).get("create_host_path", False), False)
             self.assertEqual(mount.get("read_only", False), expected.get("read_only", False))
 
     def test_missing_or_empty_data_directory_fails_with_actionable_message(self):

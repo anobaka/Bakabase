@@ -1,4 +1,5 @@
 using System.Reflection;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Service.Components;
 using Bakabase.Service.Components.Acquisition;
@@ -40,6 +41,9 @@ public class AcquisitionOptionsRegistrationTests
 
         var services = new ServiceCollection();
         services.AddLogging();
+        // This focused options fixture does not execute BakabaseStartup, which owns
+        // the application's shared filesystem policy registration.
+        services.AddSingleton<IUserStoragePolicy>(new UserStoragePolicy(isContainer: false));
         registrations.Configure(services, configuration, describer);
         services.AddHostedService<AcquisitionInboxWatcher>();
 

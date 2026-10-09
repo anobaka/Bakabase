@@ -258,8 +258,10 @@ describe("compact file processor toolbar", () => {
     expect(screen.getByRole("button", { name: "fileExplorer.selection.clear" })).toBeEnabled();
     view.rerender(<FileExplorer {...props} rootPath="/empty" />);
     await screen.findByText("0 items");
+    // The root renders before the selection's passive effect notifies its host.
+    // Wait for that contract too, rather than assuming the row count implies it ran.
+    await waitFor(() => expect(onSelected).toHaveBeenLastCalledWith([]));
     expect(screen.queryByRole("button", { name: "fileExplorer.selection.clear" })).toBeNull();
-    expect(onSelected).toHaveBeenLastCalledWith([]);
     expect(select).toHaveBeenCalledWith(false);
     fireEvent.click(screen.getByRole("button", { name: "fileExplorer.selection.actions" }));
     expect(await screen.findByRole("menuitem", { name: "working-directory" })).toBeInTheDocument();

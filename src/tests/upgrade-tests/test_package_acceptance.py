@@ -2,12 +2,15 @@
 """Pure package acceptance guards; never launch an application or installer."""
 import hashlib
 import importlib.util
+import json
 import os
 from pathlib import Path
 import stat
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
+import urllib.error
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -212,6 +215,133 @@ class PackageAuditBoundary(unittest.TestCase):
                 windows_packages(root, full_changes=changes)
                 with self.assertRaisesRegex(AssertionError, message):
                     runner.audit_packages(root, "unified", "win-x64", VERSION)
+
+
+class NativeSetupAcceptance(unittest.TestCase):
+    def setup_fixture(self, root):
+        data = root / "data"
+        runner.prepare_data(data)
+        token = "A" * 64
+        (data / ".bakabase-server-setup.json").write_text(json.dumps({"token": token}))
+        log = root / "portable.log"
+        log.write_text("Server setup: http://127.0.0.1:12345/setup#setupToken=" + token + "\n")
+        return data, log, token
+
+    def test_new_fixture_is_empty_without_a_fabricated_version_or_sentinel(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data = Path(temporary) / "data"
+            runner.prepare_data(data)
+            self.assertEqual([], list(data.iterdir()))
+
+    def test_setup_endpoint_requires_local_origin_and_matching_owned_capability(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data, log, token = self.setup_fixture(Path(temporary))
+            self.assertEqual((12345, token), runner.setup_connection(log, data))
+            for url in ("http://other.example:12345", "https://127.0.0.1:12345", "http://127.0.0.1:0"):
+                log.write_text("Server setup: " + url + "/setup#setupToken=" + token)
+                with self.assertRaises(AssertionError):
+                    runner.setup_connection(log, data)
+            log.write_text("Server setup: http://127.0.0.1:12345/setup#setupToken=" + "B" * 64)
+            with self.assertRaisesRegex(AssertionError, "owned data fixture"):
+                runner.setup_connection(log, data)
+
+    def test_real_setup_sequence_authenticates_confirms_monitors_and_revokes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data, log, token = self.setup_fixture(Path(temporary))
+            monitor = "B" * 64
+            submitted, phases, calls = False, iter(("starting", "completed")), []
+
+            def request(port, path, payload=None, headers=None):
+                nonlocal submitted
+                self.assertEqual(12345, port)
+                calls.append((path, payload, headers))
+                if path == runner.MONITOR_PATH:
+                    self.assertEqual({runner.MONITOR_HEADER: monitor}, headers)
+                    return json.dumps({"id": "operation", "phase": next(phases)}).encode()
+                if headers != {runner.SETUP_HEADER: token} or submitted:
+                    raise urllib.error.HTTPError("http://127.0.0.1/" + path, 401, "Unauthorized", {}, None)
+                if path == "/setup/status":
+                    return json.dumps({"mode": "first-run", "currentPath": str(data), "isDocker": False,
+                                       "canChooseTargetPath": False, "canBrowse": True, "submitted": False}).encode()
+                self.assertEqual({"operation": "initialize"}, payload)
+                if path == "/setup/validate":
+                    return b'{"valid":true}'
+                self.assertEqual("/setup/apply", path)
+                submitted = True
+                return json.dumps({"requiresRestart": False, "monitorToken": monitor,
+                                   "progress": {"id": "operation"}}).encode()
+
+            with patch.object(runner, "api", side_effect=request), patch.object(runner.time, "sleep"):
+                report = runner.initialize_empty(data, log)
+            self.assertTrue(report["passed"])
+            self.assertEqual(["starting", "completed"], report["phases"])
+            self.assertNotIn(token, json.dumps(report))
+            self.assertNotIn(monitor, json.dumps(report))
+            self.assertEqual(1, sum(path == "/setup/validate" for path, _, _ in calls))
+            self.assertFalse((data / "app.json").exists())
+
+    def test_setup_rejects_configuration_created_before_confirmation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data, log, _ = self.setup_fixture(Path(temporary))
+            (data / "app.json").write_text('{}')
+            status = {"mode": "first-run", "currentPath": str(data), "isDocker": False,
+                      "canChooseTargetPath": False, "canBrowse": True, "submitted": False}
+            with patch.object(runner, "api", return_value=json.dumps(status).encode()) as request:
+                with self.assertRaisesRegex(AssertionError, "before setup confirmation"):
+                    runner.initialize_empty(data, log)
+            self.assertEqual(1, request.call_count)
+
+    def test_setup_capabilities_are_removed_from_captured_log_formats(self):
+        token = "A" * 64
+        text = f'Server setup: http://127.0.0.1:123/setup#setupToken={token}\n' \
+               f'Server maintenance: http://127.0.0.1:123/progress#token={token}\n' \
+               f'{{"monitorToken":"{token}", "token": "{token}"}}\nX-Bakabase-Setup-Token: {token}'
+        sanitized = runner.redact_setup_tokens(text)
+        self.assertNotIn(token, sanitized)
+        self.assertEqual(5, sanitized.count("[REDACTED]"))
+
+    def test_installer_fixture_copies_initialized_data_without_process_locks(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source, target = root / "source", root / "target"
+            source.mkdir()
+            with self.assertRaisesRegex(AssertionError, "genuinely initialized"):
+                runner.copy_initialized_data(source, target)
+            (source / "bakabase_insideworld.db").write_bytes(b"owned initialized fixture")
+            (source / "app.json").write_text('{"App":{"version":"2.4.0-beta.123"}}')
+            for filename in (".bakabase.lock", ".bakabase-setup-process.lock"):
+                (source / filename).write_text("owned lock")
+            runner.copy_initialized_data(source, target)
+            self.assertEqual((source / "app.json").read_bytes(), (target / "app.json").read_bytes())
+            self.assertEqual((source / "bakabase_insideworld.db").read_bytes(),
+                             (target / "bakabase_insideworld.db").read_bytes())
+            self.assertFalse((target / ".bakabase.lock").exists())
+            self.assertFalse((target / ".bakabase-setup-process.lock").exists())
+            with self.assertRaisesRegex(AssertionError, "new owned directory"):
+                runner.copy_initialized_data(source, target)
+
+    def test_existing_library_startup_uses_native_port_memory_without_creating_another_resource(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data = Path(temporary)
+            (data / "listening-ports.json").write_text('{"preferred":[12344],"lastUsed":[12345]}')
+            (data / "app.json").write_text('{"App":{"version":"2.4.0-beta.123"}}')
+            paths = []
+            def request(port, path, payload=None, headers=None):
+                self.assertEqual(12345, port)
+                paths.append(path)
+                if path == "/app/info":
+                    return json.dumps({"code": 0, "data": {"appDataPath": str(data),
+                                                          "coreVersion": "2.4.0-beta.123"}}).encode()
+                if path == "/":
+                    return b"<html><script></script></html>"
+                if path == "/app/analytics-info":
+                    return b'{"data":{"deviceId":"same-library"}}'
+                self.assertEqual("/app/terms", path)
+                return b'{}'
+            with patch.object(runner, "api", side_effect=request), patch.object(runner, "native_processes", return_value=[42]):
+                report = runner.inspect_running(data / "Bakabase", data, create_resource=False)
+            self.assertEqual("same-library", report["deviceId"])
+            self.assertNotIn("/resource/placeholder", paths)
 
 
 if __name__ == "__main__":
