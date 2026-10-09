@@ -5,14 +5,42 @@
 }
 
 .szh-menu.resource-context-menu {
+  box-sizing: border-box;
   width: 288px;
   min-width: min(264px, calc(100vw - 16px));
   max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 6px;
   border-radius: 14px;
+  background-color: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  /* Positioning measures the menu's bounding rect. Scaling the entrance makes
+     it measure a smaller height and place the final menu beyond the viewport. */
+  animation: resource-context-menu-appear 100ms ease-out;
+  transform: none;
   box-shadow:
     0 16px 48px rgb(0 0 0 / 24%),
     0 2px 8px rgb(0 0 0 / 12%);
+}
+
+.iw-theme-dark .szh-menu.resource-context-menu {
+  background-color: #202024;
+}
+
+.iw-theme-light .szh-menu.resource-context-menu {
+  background-color: #fff;
+}
+
+@keyframes resource-context-menu-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .resource-context-menu .szh-menu__item {
