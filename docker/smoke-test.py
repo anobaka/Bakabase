@@ -118,9 +118,16 @@ def initialize_empty(container, base, data, timeout):
     expect_status(401, base, "/setup/apply", body={})
     expect_status(401, base, "/setup/directories?path=/data")
     directory_headers = {SETUP_HEADER: setup_token}
-    listing = json.loads(request(base, "/setup/directories?path=/", headers=directory_headers))
-    if listing["currentPath"] != "/" or not any(entry["path"] == "/data" for entry in listing["directories"]):
-        raise RuntimeError("The setup directory browser did not list the container's data mount")
+    listing = json.loads(request(base, "/setup/directories", headers=directory_headers))
+    if (not listing.get("isRestricted") or listing["currentPath"] != "" or listing["parentPath"] is not None
+            or not any(entry["path"] == "/data" for entry in listing["roots"])
+            or listing["directories"] != listing["roots"]
+            or any(entry["path"] == "/" for entry in listing["roots"])):
+        raise RuntimeError("The setup directory browser did not expose mounted storage roots")
+    expect_status(400, base, "/setup/directories?path=/", headers=directory_headers)
+    mounted = json.loads(request(base, "/setup/directories?path=/data", headers=directory_headers))
+    if mounted["currentPath"] != "/data" or mounted["parentPath"] is not None:
+        raise RuntimeError("The setup directory browser escaped the data mount through its parent")
     candidate_name = "smoke-directory-selection"
     query = urllib.parse.urlencode({"path": "/data", "newFolderName": candidate_name})
     candidate = json.loads(request(base, "/setup/directories?" + query, headers=directory_headers))
@@ -309,7 +316,8 @@ def verify_import(image, source, timeout):
     source_hashes = hashes()
     monitor_token = None
     operation_id = None
-    with tempfile.TemporaryDirectory(prefix="bakabase-import-") as directory:
+    with tempfile.TemporaryDirectory(prefix="bakabase-import-") as directory, \
+            tempfile.TemporaryDirectory(prefix="bakabase-media-") as media:
         target = Path(directory)
         for iteration in range(2):
             container = "bakabase-import-" + uuid.uuid4().hex[:12]
@@ -318,6 +326,7 @@ def verify_import(image, source, timeout):
                        "--user", f"{os.getuid()}:{os.getgid()}", "-e", "HOME=/tmp",
                        "--mount", f"type=bind,source={directory},target=/data",
                        "--mount", f"type=bind,source={source},target=/import,readonly",
+                       "--mount", f"type=bind,source={media},target=/media,readonly",
                        "-p", "127.0.0.1::34567", image)
                 port = json.loads(docker("inspect", container))[0]["NetworkSettings"]["Ports"]["34567/tcp"][0]["HostPort"]
                 base = f"http://127.0.0.1:{port}"
@@ -339,6 +348,11 @@ def verify_import(image, source, timeout):
                         raise RuntimeError("An existing Docker instance offered an unavailable setup operation")
                     if not setup_status.get("automaticMaintenance"):
                         raise RuntimeError("The server did not expose its automatic Setup coordinator")
+                    listing = json.loads(request(base, "/setup/directories", headers={SETUP_HEADER: setup_token}))
+                    for mounted_path in ("/import", "/media"):
+                        if not any(entry["path"] == mounted_path and entry.get("readOnly") is True
+                                   for entry in listing["roots"]):
+                            raise RuntimeError("Setup did not expose a read-only persistent mount")
                     for operation in ("initialize", "relocate"):
                         invalid = {"operation": operation}
                         rejected = json.loads(request(base, "/setup/validate", invalid,

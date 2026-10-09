@@ -107,6 +107,8 @@ jobs:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/release-packages
 
     strategy:
+      # Retain the other platforms' packages and diagnostics when one RID fails.
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
