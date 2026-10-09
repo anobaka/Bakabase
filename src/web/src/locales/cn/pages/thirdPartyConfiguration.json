@@ -80,5 +80,6 @@
   "thirdPartyConfig.downloadResultWorkflow.loadFailed": "无法加载工作流，请刷新后重试。当前设置未变更。",
   "thirdPartyConfig.downloadResultWorkflow.unavailable": "已配置的工作流已停用、删除或不再适用于下载结果，请选择其他工作流。",
   "thirdPartyConfig.downloadResultWorkflow.unavailableSelection": "当前工作流 #{{id}}",
-  "thirdPartyConfig.downloadResultWorkflow.saveFailed": "保存失败，请重试。当前设置未变更。"
+  "thirdPartyConfig.downloadResultWorkflow.saveFailed": "保存失败，请重试。当前设置未变更。",
+  "thirdPartyConfig.navigation.source.label": "第三方站点"
 }
