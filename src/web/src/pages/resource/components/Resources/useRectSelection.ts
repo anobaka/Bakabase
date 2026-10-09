@@ -4,6 +4,8 @@ import type React from "react";
 
 import { useEffect, useRef } from "react";
 
+import { isPrimaryModifierPressed, usesAppleKeys } from "@/core/keyboard";
+
 /** How the rectangle combines with the selection that existed when the drag started. */
 export type RectSelectionMode = "replace" | "append" | "subtract";
 
@@ -137,7 +139,7 @@ const readMode = (e: Modifiers): RectSelectionMode => {
   if (e.altKey) {
     return "subtract";
   }
-  if (e.ctrlKey || e.metaKey || e.shiftKey) {
+  if (isPrimaryModifierPressed(e) || e.shiftKey) {
     return "append";
   }
 
@@ -424,6 +426,8 @@ export const useRectSelection = (options: Options) => {
       if (!optionsRef.current.onChange || e.button !== 0 || e.defaultPrevented || dragRef.current) {
         return;
       }
+      // macOS reserves Control+click for the native context menu, not selection.
+      if (usesAppleKeys() && e.ctrlKey) return;
       const target = e.target as HTMLElement | null;
 
       if (!target || !container.contains(target) || target.closest(DragExcludedSelector)) {

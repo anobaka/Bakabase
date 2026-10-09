@@ -11,6 +11,12 @@ import { FileSystemTreeEntryCapabilityMap } from "../models";
 import { Kbd, Button, Modal, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { buildLogger } from "@/components/utils";
+import {
+  deleteShortcutLabel,
+  primaryModifierLabel,
+  primaryShortcutLabel,
+  shiftModifierLabel,
+} from "@/core/keyboard";
 
 type Props = Pick<FileExplorerEntryProps, "capabilities"> & {
   className?: string;
@@ -36,7 +42,13 @@ const Shortcuts = ({ capabilities, className }: Props) => {
         if (shortcut) {
           result.push({
             label: t<string>(def.nameI18NKey),
-            shortcut: t<string>(def.shortcut!.nameI18nKey!),
+            shortcut:
+              shortcut.key === "Delete"
+                ? deleteShortcutLabel()
+                : t<string>(shortcut.nameI18nKey, {
+                    primary: primaryModifierLabel(),
+                    shift: shiftModifierLabel(),
+                  }),
           });
         }
       });
@@ -47,10 +59,10 @@ const Shortcuts = ({ capabilities, className }: Props) => {
       { label: t<string>("fileExplorer.shortcut.selectPrevious"), shortcut: "↑" },
       { label: t<string>("fileExplorer.shortcut.selectNext"), shortcut: "↓" },
       { label: t<string>("fileExplorer.shortcut.enterDirectory"), shortcut: "Enter" },
-      { label: t<string>("fileExplorer.shortcut.selectAll"), shortcut: "Ctrl+A" },
-      { label: t<string>("fileExplorer.shortcut.copy"), shortcut: "Ctrl+C" },
-      { label: t<string>("fileExplorer.shortcut.cut"), shortcut: "Ctrl+X" },
-      { label: t<string>("fileExplorer.shortcut.pasteMove"), shortcut: "Ctrl+V" },
+      { label: t<string>("fileExplorer.shortcut.selectAll"), shortcut: primaryShortcutLabel("A") },
+      { label: t<string>("fileExplorer.shortcut.copy"), shortcut: primaryShortcutLabel("C") },
+      { label: t<string>("fileExplorer.shortcut.cut"), shortcut: primaryShortcutLabel("X") },
+      { label: t<string>("fileExplorer.shortcut.pasteMove"), shortcut: primaryShortcutLabel("V") },
     );
 
     return result;

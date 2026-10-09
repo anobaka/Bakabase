@@ -112,6 +112,8 @@ export function useCanvasView(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
+  // Keep ctrlKey on every OS: browsers encode trackpad pinch as Ctrl+wheel, including
+  // macOS. This is a native gesture signal, not a platform primary-key shortcut.
   // Wheel: ctrl/⌘ (and trackpad pinch) zooms to the cursor; plain wheel pans. Native
   // listener with passive:false — the canvas owns the wheel entirely.
   useEffect(() => {

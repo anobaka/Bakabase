@@ -53,6 +53,11 @@ import { DownloadTaskActionOnConflict, DownloadTaskStatus, ResponseCode } from "
 import Configurations from "@/pages/downloader/components/Configurations";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import {
+  isPrimaryModifierPressed,
+  matchesPrimaryShortcut,
+  shouldIgnoreGlobalShortcut,
+} from "@/core/keyboard";
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
 import RequestStatistics from "@/pages/downloader/components/RequestStatistics";
 import { toAbsoluteBackendUrl } from "@/config/env.ts";
@@ -439,7 +444,7 @@ const DownloaderPage = () => {
     const nextMode = e
       ? e.shiftKey
         ? SelectionMode.Shift
-        : e.ctrlKey || e.metaKey
+        : isPrimaryModifierPressed(e)
           ? SelectionMode.Ctrl
           : SelectionMode.Default
       : SelectionMode.Default;
@@ -693,7 +698,7 @@ const DownloaderPage = () => {
   // task list, so it doesn't hijack the shortcut elsewhere on the page.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A")) {
+      if (!shouldIgnoreGlobalShortcut(e) && matchesPrimaryShortcut(e, "a")) {
         const container = taskListRef.current;
 
         if (container && container.contains(document.activeElement)) {

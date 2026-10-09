@@ -124,6 +124,7 @@
   "comparison.scoring.threshold": "当总分 ≥ 阈值时，判定两个资源为相似/重复",
   "comparison.scoring.example": "例：规则A(权重2)得分0.8，规则B(权重1)得分0.6，则总分 = (0.8×2 + 0.6×1) / (2+1) × 100% = 73.3%",
   "comparison.networkGraph.title": "资源关系图",
+  "comparison.networkGraph.controlsHint": "滚动缩放 · {{modifier}}+拖动平移",
   "comparison.networkGraph.hint": "仅显示相似度超过方案阈值的关系。将鼠标悬停在连线上可查看详细对比信息。",
   "comparison.networkGraph.truncatedWarning": "显示 {{shown}}/{{total}} 条关系（出于性能考虑进行了限制）",
   "comparison.networkGraph.nodeCount": "{{count}} 个资源",

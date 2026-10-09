@@ -10,6 +10,7 @@ import { Modal, Spinner, Chip, Button, Tooltip, Divider } from "@/components/bak
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
+import { isPrimaryModifierPressed, primaryModifierLabel } from "@/core/keyboard";
 
 // Types for the pairs response
 interface RuleScoreDetail {
@@ -446,7 +447,7 @@ const ComparisonNetworkGraph = ({
   );
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (e.button === 1 || (e.button === 0 && (e.ctrlKey || e.metaKey))) {
+    if (e.button === 1 || (e.button === 0 && isPrimaryModifierPressed(e))) {
       e.preventDefault();
       setIsDragging(true);
       setDragStart({ x: e.clientX, y: e.clientY });
@@ -498,7 +499,7 @@ const ComparisonNetworkGraph = ({
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       if (isDragging) return;
-      if (e.ctrlKey || e.metaKey) return;
+      if (isPrimaryModifierPressed(e)) return;
 
       const { x, y } = screenToWorld(e.clientX, e.clientY);
       const edge = findEdgeAtPosition(x, y);
@@ -704,7 +705,7 @@ const ComparisonNetworkGraph = ({
 
           {/* Help text */}
           <div className="absolute bottom-2 left-2 z-10 text-xs text-default-400 bg-background/80 backdrop-blur-sm rounded px-2 py-1 border border-default-200">
-            Scroll to zoom | Ctrl+Drag to pan
+            {t("comparison.networkGraph.controlsHint", { modifier: primaryModifierLabel() })}
           </div>
 
           <canvas

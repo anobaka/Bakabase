@@ -193,10 +193,35 @@ describe("useRectSelection", () => {
     h.unmount();
   });
 
+  it.each([
+    ["MacIntel", "metaKey"],
+    ["Win32", "ctrlKey"],
+    ["Linux x86_64", "ctrlKey"],
+  ])("uses %s primary modifier for rectangle addition", (platform, modifier) => {
+    vi.stubGlobal("navigator", { platform });
+    const h = setup();
+
+    beginDrag(h, h.scroller, { [modifier]: true });
+    expect(h.onChange).toHaveBeenLastCalledWith([0], "append");
+    h.unmount();
+  });
+
+  it("leaves macOS Control+click to the context menu", () => {
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    const h = setup();
+
+    beginDrag(h, h.scroller, { ctrlKey: true });
+    expect(h.onStart).not.toHaveBeenCalled();
+    expect(h.onChange).not.toHaveBeenCalled();
+    h.unmount();
+  });
+
   it("leaves an unmodified selected-card press and native drag to resource moving", () => {
     const h = setup((event) => !shouldStartResourceMove(true, true, event));
+
     beginDrag(h);
     const drag = new Event("dragstart", { bubbles: true, cancelable: true });
+
     h.scroller.dispatchEvent(drag);
 
     expect(h.onStart).not.toHaveBeenCalled();
@@ -207,8 +232,10 @@ describe("useRectSelection", () => {
 
   it("preserves rectangle addition on selected cards while a move panel is enabled", () => {
     const h = setup((event) => !shouldStartResourceMove(true, true, event));
+
     beginDrag(h, h.scroller, { ctrlKey: true });
     const drag = new Event("dragstart", { bubbles: true, cancelable: true });
+
     h.scroller.dispatchEvent(drag);
 
     expect(h.onChange).toHaveBeenLastCalledWith([0], "append");

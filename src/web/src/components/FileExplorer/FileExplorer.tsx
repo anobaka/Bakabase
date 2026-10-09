@@ -48,6 +48,7 @@ import { Button, Chip, Input, Tooltip, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import FolderSelector from "@/components/FolderSelector";
 import { useIsRemoteClient } from "@/stores/remoteAccess";
+import { hasKeyboardModifier, matchesPrimaryShortcut } from "@/core/keyboard";
 
 export type FileExplorerProps = {
   /** Opt-in page layout; shared folder pickers retain their existing presentation. */
@@ -323,13 +324,8 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     }, [showHiddenFiles]);
 
     useUpdateEffect(() => {
-      rootRef.current?.patchFilter(filter);
-    }, [filter]);
-
-    useUpdateEffect(() => {
       setInputValue(root?.path);
       rootRef.current = root;
-      rootRef.current?.patchFilter(filter);
       log("root changed", root);
     }, [root]);
 
@@ -364,7 +360,18 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     // Memoize filter object to prevent unnecessary re-renders
     // Must be before early return to maintain hooks order
-    const filterObj = useMemo(() => ({ keyword: debouncedFilterValue }), [debouncedFilterValue]);
+    const filterObj = useMemo(
+      () => ({ ...filter, keyword: debouncedFilterValue ?? filter?.keyword }),
+      [filter, debouncedFilterValue],
+    );
+
+    useEffect(() => {
+      if (!root) return;
+      root.patchFilter(filterObj);
+      // The model is mutable: applying a filter in the child only refreshes its rows.
+      // Refresh this owner too so the toolbar reads the same filtered children.
+      forceUpdate();
+    }, [root, filterObj]);
 
     // Memoize switchSelective to prevent unnecessary re-renders
     // Must be before early return to maintain hooks order
@@ -519,18 +526,25 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                   entries: selectedEntriesRef.current,
                   rootPath: rootRef.current?.path,
                 });
+
+                return true;
               }
+
+              return false;
             }}
             onKeyDown={(key, evt) => {
               log("event listener", "key down", key, evt);
-              const c = _.keys(FileSystemTreeEntryCapabilityMap).find(
-                (k) => FileSystemTreeEntryCapabilityMap[k as Capability].shortcut?.key == key,
-              ) as Capability | undefined;
+              key = key.length === 1 ? key.toLowerCase() : key;
+              const c = !hasKeyboardModifier(evt)
+                ? (_.keys(FileSystemTreeEntryCapabilityMap).find(
+                    (k) => FileSystemTreeEntryCapabilityMap[k as Capability].shortcut?.key == key,
+                  ) as Capability | undefined)
+                : undefined;
 
               if (c) {
-                evt.stopPropagation();
-                evt.preventDefault();
                 if (capabilities?.includes(c)) {
+                  evt.stopPropagation();
+                  evt.preventDefault();
                   switch (c) {
                     case "wrap":
                       if (selectedEntriesRef.current.length > 0) {
@@ -586,7 +600,8 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
               } else {
                 switch (key) {
                   case "a": {
-                    if (evt.ctrlKey) {
+                    if (matchesPrimaryShortcut(evt, "a") && selectable !== "disabled") {
+                      evt.preventDefault();
                       let parent: Entry | undefined;
 
                       for (const se of selectedEntriesRef.current) {
@@ -621,6 +636,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                   }
                   case "ArrowUp":
                   case "ArrowDown": {
+                    if (hasKeyboardModifier(evt)) break;
                     evt.preventDefault();
                     const lastSelected =
                       selectedEntriesRef.current[selectedEntriesRef.current.length - 1];
@@ -655,6 +671,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                     break;
                   }
                   case "Enter": {
+                    if (hasKeyboardModifier(evt)) break;
                     if (selectedEntriesRef.current.length === 1) {
                       const entry = selectedEntriesRef.current[0];
 
@@ -665,8 +682,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                     break;
                   }
                   case "c": {
-                    // Support both Ctrl (Windows/Linux) and Command (Mac)
-                    if ((evt.ctrlKey || evt.metaKey) && selectedEntriesRef.current.length > 0) {
+                    if (matchesPrimaryShortcut(evt, "c") && selectedEntriesRef.current.length > 0) {
                       evt.preventDefault();
                       const paths = selectedEntriesRef.current.map((e) => e.path);
 
@@ -676,8 +692,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                     break;
                   }
                   case "x": {
-                    // Support both Ctrl (Windows/Linux) and Command (Mac)
-                    if ((evt.ctrlKey || evt.metaKey) && selectedEntriesRef.current.length > 0) {
+                    if (matchesPrimaryShortcut(evt, "x") && selectedEntriesRef.current.length > 0) {
                       evt.preventDefault();
                       const paths = selectedEntriesRef.current.map((e) => e.path);
 
@@ -687,8 +702,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                     break;
                   }
                   case "v": {
-                    // Support both Ctrl (Windows/Linux) and Command (Mac)
-                    if ((evt.ctrlKey || evt.metaKey) && clipboardStore.paths.length > 0) {
+                    if (matchesPrimaryShortcut(evt, "v") && clipboardStore.paths.length > 0) {
                       evt.preventDefault();
                       const { paths, mode } = clipboardStore;
 

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { RiKeyboardLine } from "react-icons/ri";
 
 import { Button, Kbd, Modal, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { altModifierLabel, primaryModifierLabel, shiftModifierLabel } from "@/core/keyboard";
 
 interface Shortcut {
   labelKey: string;
@@ -20,7 +21,7 @@ const shortcuts: Shortcut[] = [
   },
   {
     labelKey: "resource.shortcut.selectRange",
-    keys: (_, click) => `Shift + ${click}`,
+    keys: (_, click) => `${shiftModifierLabel()} + ${click}`,
   },
   {
     labelKey: "resource.shortcut.rectSelect",
@@ -32,7 +33,7 @@ const shortcuts: Shortcut[] = [
   },
   {
     labelKey: "resource.shortcut.rectSelectSubtract",
-    keys: (_, __, drag) => `Alt + ${drag}`,
+    keys: (_, __, drag) => `${altModifierLabel()} + ${drag}`,
   },
   {
     labelKey: "resource.shortcut.moreActions",
@@ -48,12 +49,7 @@ const ShortcutsButton = ({ className }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const modifierKey = useMemo(() => {
-    const isMac =
-      typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-
-    return isMac ? "⌘" : "Ctrl";
-  }, []);
+  const modifierKey = primaryModifierLabel();
 
   const openModal = () => {
     const click = t<string>("resource.shortcut.key.click");
