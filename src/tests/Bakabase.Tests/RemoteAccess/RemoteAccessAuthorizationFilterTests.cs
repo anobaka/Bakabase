@@ -275,6 +275,59 @@ public class RemoteAccessAuthorizationFilterTests
         Assert.IsNull(context.Result);
     }
 
+    [DataTestMethod]
+    [DataRow(ServerKind.Desktop, RemoteAccessMode.Enabled, false, false, false)]
+    [DataRow(ServerKind.Desktop, RemoteAccessMode.Enabled, false, true, true)]
+    [DataRow(ServerKind.Desktop, RemoteAccessMode.Unrestricted, false, false, true)]
+    [DataRow(ServerKind.Desktop, RemoteAccessMode.Disabled, true, false, true)]
+    [DataRow(ServerKind.Headless, RemoteAccessMode.Enabled, false, false, false)]
+    [DataRow(ServerKind.Headless, RemoteAccessMode.Enabled, false, true, true)]
+    [DataRow(ServerKind.Headless, RemoteAccessMode.Unrestricted, false, false, true)]
+    [DataRow(ServerKind.Headless, RemoteAccessMode.Disabled, true, false, true)]
+    public void RealUserscriptEndpointsKeepTheOrdinaryAuthorizationBoundary(ServerKind kind,
+        RemoteAccessMode mode, bool loopback, bool paired, bool allowed)
+    {
+        var remote = new RemoteAccessContext
+        {
+            IsLoopback = loopback, Mode = mode,
+            Device = paired ? new RemoteDevice {Id = "paired-userscript-device"} : null
+        };
+        foreach (var action in new[] {nameof(TampermonkeyController.Install), nameof(TampermonkeyController.GetScript)})
+        {
+            var context = Build(action, remote, typeof(TampermonkeyController));
+            new RemoteAccessAuthorizationFilter(new ServerSelfDescription(() => kind)).OnAuthorization(context);
+            Assert.AreEqual(allowed, context.Result == null, action);
+            if (!allowed)
+            {
+                Assert.AreEqual(403, ((ObjectResult) context.Result!).StatusCode, action);
+                Assert.AreEqual(nameof(RemoteAccessDenialReason.HostOnly), DenialReason(context), action);
+            }
+        }
+        // The same caller still cannot open the server's desktop. The opt-in belongs
+        // only to an action that actually implements the browser alternative.
+        var native = Build(nameof(ToolController.Open), remote, typeof(ToolController));
+        new RemoteAccessAuthorizationFilter(new ServerSelfDescription(() => kind)).OnAuthorization(native);
+        Assert.AreEqual(kind == ServerKind.Desktop && loopback, native.Result == null);
+        if (kind == ServerKind.Headless || !loopback)
+            Assert.AreEqual(nameof(RemoteAccessDenialReason.RunsOnUserMachine), DenialReason(native));
+    }
+
+    [TestMethod]
+    public void BrowserFallbackIsExplicitAndDoesNotTrustAMissingContext()
+    {
+        var install = typeof(TampermonkeyController).GetMethod(nameof(TampermonkeyController.Install))!
+            .GetCustomAttribute<RunsOnUserMachineAttribute>();
+        Assert.IsNotNull(install);
+        Assert.IsTrue(install.HasBrowserFallback);
+        Assert.IsFalse(new RunsOnUserMachineAttribute().HasBrowserFallback);
+        foreach (var action in new[] {nameof(TampermonkeyController.Install), nameof(TampermonkeyController.GetScript)})
+        {
+            var context = Build(action, null, typeof(TampermonkeyController));
+            new RemoteAccessAuthorizationFilter(new ServerSelfDescription(() => ServerKind.Headless)).OnAuthorization(context);
+            Assert.AreEqual(nameof(RemoteAccessDenialReason.HostOnly), DenialReason(context), action);
+        }
+    }
+
     [TestMethod]
     public void A_missing_context_fails_closed()
     {

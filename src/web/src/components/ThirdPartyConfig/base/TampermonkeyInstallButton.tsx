@@ -7,6 +7,9 @@ import { GrInstallOption } from "react-icons/gr";
 
 import { Alert, Button } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
+import { ClientMode } from "@/sdk/constants";
+import { useRemoteAccessStore } from "@/stores/remoteAccess";
+import { openExternalUrl } from "@/utils/openExternalUrl";
 
 export interface TampermonkeyInstallButtonProps {
   /** Optional description items rendered inside the alert. */
@@ -15,6 +18,21 @@ export interface TampermonkeyInstallButtonProps {
 
 const TampermonkeyInstallButton: FC<TampermonkeyInstallButtonProps> = ({ descriptions }) => {
   const { t } = useTranslation();
+  const clientMode = useRemoteAccessStore((state) => state.clientMode);
+
+  const install = () => {
+    if (clientMode === ClientMode.RemoteBrowser) {
+      const url = new URL(BApi.tampermonkey.getTampermonkeyScriptUrl(), window.location.origin);
+
+      // Preserve the browser-visible API origin across reverse proxies and separate web/API hosts.
+      url.searchParams.set("apiEndpoint", url.origin);
+      openExternalUrl(url.href);
+
+      return;
+    }
+
+    return BApi.tampermonkey.installTampermonkeyScript();
+  };
 
   return (
     <Alert
@@ -30,11 +48,7 @@ const TampermonkeyInstallButton: FC<TampermonkeyInstallButtonProps> = ({ descrip
               ))}
             </div>
           )}
-          <Button
-            color="primary"
-            size="sm"
-            onPress={() => BApi.tampermonkey.installTampermonkeyScript()}
-          >
+          <Button color="primary" size="sm" onPress={install}>
             <GrInstallOption className="text-base" />
             {t<string>("thirdPartyIntegration.action.oneClickInstall")}
           </Button>

@@ -1,5 +1,8 @@
+using System;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Gui;
 using AppContext = Bakabase.Infrastructures.Components.App.AppContext;
@@ -24,13 +27,18 @@ public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext, 
     }
 
     /// <summary>
-    /// Fetches the script from CDN and replaces the default API URL with the
-    /// current endpoint. The script's @updateURL/@downloadURL still point to CDN,
+    /// Fetches the script from CDN and seeds its stored API URL before it runs.
+    /// The script's @updateURL/@downloadURL still point to CDN,
     /// so Tampermonkey auto-updates will work. The injected endpoint is auto-persisted
     /// via GM_setValue on first use, surviving future CDN updates.
     /// </summary>
-    public async Task<string?> GetScript()
+    public async Task<string?> GetScript(string apiEndpoint)
     {
+        if (!TryNormalizeOrigin(apiEndpoint, out var origin))
+        {
+            throw new ArgumentException("An HTTP(S) origin is required.", nameof(apiEndpoint));
+        }
+
         using var client = httpClientFactory.CreateClient();
         string template;
         try
@@ -42,7 +50,39 @@ public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext, 
             return null;
         }
 
-        var serverAddress = $"{appContext.ApiEndpoint}";
-        return template.Replace("const DEFAULT_API_URL = '';", $"const DEFAULT_API_URL = '{serverAddress}';");
+        // Production bundlers erase an empty default constant. Insert outside the
+        // compiled bundle instead, after the metadata so extension installation and
+        // CDN updates keep working. Never overwrite a user's existing server choice.
+        const string metadataEnd = "// ==/UserScript==";
+        if (!template.StartsWith("// ==UserScript==", StringComparison.Ordinal)) return null;
+        var end = template.IndexOf(metadataEnd, StringComparison.Ordinal);
+        if (end < 0) return null;
+        var bootstrap = $$"""
+
+            // Bakabase connection bootstrap
+            (() => {
+              if (!GM_getValue('api_base_url', '')) {
+                GM_setValue('api_base_url', {{JsonSerializer.Serialize(origin)}});
+              }
+            })();
+
+            """;
+        return template.Insert(end + metadataEnd.Length, bootstrap);
+    }
+
+    public static bool TryNormalizeOrigin(string? value, out string? origin)
+    {
+        origin = null;
+        if (string.IsNullOrEmpty(value) || value.Length > 2048 ||
+            !Regex.IsMatch(value, @"\Ahttps?://[^/?#\\\s]+/?\z", RegexOptions.IgnoreCase) ||
+            !Uri.TryCreate(value, UriKind.Absolute, out var uri) || !uri.IsWellFormedOriginalString() ||
+            !string.IsNullOrEmpty(uri.UserInfo) || uri.Port <= 0 ||
+            uri.HostNameType == UriHostNameType.Unknown || uri.Host is "0.0.0.0" or "[::]")
+        {
+            return false;
+        }
+
+        origin = uri.GetLeftPart(UriPartial.Authority);
+        return true;
     }
 }

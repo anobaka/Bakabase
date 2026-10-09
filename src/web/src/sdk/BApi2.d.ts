@@ -35893,7 +35893,9 @@ export interface operations {
     };
     GetTampermonkeyScript: {
         parameters: {
-            query?: never;
+            query?: {
+                apiEndpoint?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

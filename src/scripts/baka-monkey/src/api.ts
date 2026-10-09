@@ -5,18 +5,10 @@ import {
   GM_xmlhttpRequest,
 } from 'vite-plugin-monkey/dist/client';
 
-const DEFAULT_API_URL = '';
-
 export function getApiBaseUrl(): string {
-  const stored = GM_getValue<string>('api_base_url', '');
-  if (stored) return stored;
-  // API install path injects a non-empty DEFAULT_API_URL; persist it so
-  // it survives auto-updates from CDN (where the default is empty).
-  if (DEFAULT_API_URL) {
-    GM_setValue('api_base_url', DEFAULT_API_URL);
-    return DEFAULT_API_URL;
-  }
-  return '';
+  // The server's install endpoint seeds this value before the compiled bundle runs.
+  // GM storage preserves both that initial address and user edits across CDN updates.
+  return GM_getValue<string>('api_base_url', '');
 }
 
 export function setApiBaseUrl(url: string): void {

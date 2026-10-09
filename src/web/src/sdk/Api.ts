@@ -30420,10 +30420,16 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetTampermonkeyScript
      * @request GET:/Tampermonkey/script/bakabase.user.js
      */
-    getTampermonkeyScript: (params: RequestParams = {}) =>
+    getTampermonkeyScript: (
+      query?: {
+        apiEndpoint?: string;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/Tampermonkey/script/bakabase.user.js`,
         method: "GET",
+        query: query,
         ...params,
       }),
 
@@ -30431,9 +30437,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @description Build URL for getTampermonkeyScript
      * @name getTampermonkeyScriptUrl
      */
-    getTampermonkeyScriptUrl: () => {
+    getTampermonkeyScriptUrl: (query?: {
+        apiEndpoint?: string;
+      }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/Tampermonkey/script/bakabase.user.js`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
 
       return baseUrl + path;
     },

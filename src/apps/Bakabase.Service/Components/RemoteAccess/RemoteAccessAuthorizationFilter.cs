@@ -37,7 +37,7 @@ namespace Bakabase.Service.Components.RemoteAccess
             // A container or source-only Service has no user's desktop even when the
             // caller is loopback. Refuse before the host bypass so direct API calls
             // cannot attempt to launch a file manager or player inside the server.
-            if (self?.Kind == ServerKind.Headless && userMachine != null)
+            if (self?.Kind == ServerKind.Headless && userMachine is {HasBrowserFallback: false})
             {
                 Deny(context, HttpStatusCode.Forbidden, ResponseCode.Unauthorized,
                     RemoteAccessDenialReason.RunsOnUserMachine,
@@ -59,7 +59,7 @@ namespace Bakabase.Service.Components.RemoteAccess
             // check: that is the container default, and until now a remote browser could
             // call "play this" there, start a player on a screen nobody is watching, and
             // be told it worked.
-            if (userMachine != null)
+            if (userMachine is {HasBrowserFallback: false})
             {
                 Deny(context, HttpStatusCode.Forbidden, ResponseCode.Unauthorized,
                     RemoteAccessDenialReason.RunsOnUserMachine,
