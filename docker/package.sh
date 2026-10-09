@@ -20,9 +20,14 @@ Bakabase server image package
 Load once:
   docker load -i bakabase-image.tar
   cp .env.example .env
-  mkdir -p "$HOME/BakabaseServer/appdata"
 
-Review .env and any media/import mounts before starting:
+Edit .env before starting: set BAKABASE_DATA_DIR to the absolute host directory
+you chose for application data, and create that directory if it does not exist.
+An existing deployment must keep its current directory. There is no default host
+data path. Only /data is mounted by the base configuration; downloads, media and
+import sources are optional mounts you can add in compose.local.yaml.
+
+After reviewing .env and any optional mounts, start:
   ./image.sh up -d --no-build --force-recreate
   ./image.sh logs -f server
 
@@ -39,8 +44,9 @@ LAN access or forward discovery broadcasts; network/firewall settings still appl
 
 The project is bakabase and its service is server (container bakabase-server-1). Keep the same .env,
 AppData mount, and optional local override when replacing a source-built server.
-For the optional Apple Silicon/NAS mounts, copy compose.local.example.yaml to
-compose.local.yaml; image.sh reads it automatically.
+For optional mounts, copy compose.local.example.yaml to compose.local.yaml,
+then enable and customize the examples you need; image.sh reads it automatically.
+The copied sample adds no mounts until edited, and does not force an architecture.
 
 An image upgrade preserves AppData. Downgrading the image does not downgrade its
 database; restore a matching backup when returning to an older data version.

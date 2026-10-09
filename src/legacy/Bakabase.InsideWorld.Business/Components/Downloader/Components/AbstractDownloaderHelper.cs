@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -150,8 +149,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         /// <returns>Array of download tasks</returns>
         public virtual async Task<DownloadTask[]> BuildTasks(DownloadTaskAddInputModel model)
         {
-            if (string.IsNullOrWhiteSpace(model.DownloadPath))
-                model.DownloadPath = ContainerDownloadDefault(storagePolicy, model.DownloadPath);
             storagePolicy.EnsurePathAllowed(model.DownloadPath);
             return await BuildValidatedTasks(model);
         }
@@ -285,7 +282,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 Cookie = options.Cookie,
                 MaxConcurrency = options.MaxConcurrency,
                 RequestInterval = options.RequestInterval,
-                DefaultPath = ContainerDownloadDefault(storagePolicy, options.DefaultPath),
+                DefaultPath = options.DefaultPath,
                 NamingConvention = options.NamingConvention,
                 SkipExisting = options.SkipExisting,
                 MaxRetries = options.MaxRetries,
@@ -293,12 +290,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             };
             return Task.FromResult(downloaderOptions);
         }
-
-        internal static string? ContainerDownloadDefault(IUserStoragePolicy policy, string? configured) =>
-            string.IsNullOrWhiteSpace(configured) && policy.IsRestricted &&
-            Directory.Exists("/downloads") && policy.IsPathAllowed("/downloads")
-                ? "/downloads"
-                : configured;
 
         public async Task PutOptionsAsync(DownloaderOptions options)
         {

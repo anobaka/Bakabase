@@ -16,8 +16,7 @@ class ComposeContract(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.env_file = self.root / ".env"
         self.env_file.write_text("BAKABASE_IMAGE=bakabase:contract\nBAKABASE_PORT=34567\n"
-                                 f'BAKABASE_DATA_DIR="{self.root}/app data"\n'
-                                 f'BAKABASE_DOWNLOADS_DIR="{self.root}/downloads"\n')
+                                 f'BAKABASE_DATA_DIR="{self.root}/app data"\n')
         self.env = {key: value for key, value in os.environ.items()
                     if not key.startswith(("BAKABASE_", "COMPOSE_"))}
         self.env.update(BAKABASE_ENV_FILE=str(self.env_file), BAKABASE_COMPOSE_OVERRIDE="",
@@ -41,27 +40,59 @@ class ComposeContract(unittest.TestCase):
         self.assertEqual(source_service.pop("build")["context"], str(ROOT))
         source_service.pop("pull_policy")
         self.assertEqual(source_service, image_service)
+        self.assertNotIn("platform", image_service)
+        self.assertEqual([v["target"] for v in image_service["volumes"]], ["/data"])
         self.assertEqual(image_service["volumes"][0]["source"], str(self.root / "app data"))
         self.assertFalse(image_service["volumes"][0]["bind"]["create_host_path"])
-        downloads = next(v for v in image_service["volumes"] if v["target"] == "/downloads")
-        self.assertEqual(downloads["source"], str(self.root / "downloads"))
-        self.assertFalse(downloads.get("read_only", False))
-        self.assertFalse(downloads["bind"]["create_host_path"])
 
-    def test_local_mounts_apply_identically_to_both_modes(self):
-        self.env.update(BAKABASE_COMPOSE_OVERRIDE=str(ROOT / "docker/compose.local.example.yaml"),
-                        BAKABASE_MEDIA_ROOT_1=str(self.root / "nas one"),
-                        BAKABASE_MEDIA_ROOT_2=str(self.root / "nas two"),
-                        BAKABASE_IMPORT_DIR=str(self.root / "import copy"))
+    def test_unedited_local_example_adds_no_machine_specific_configuration(self):
+        baseline = self.config("image")
+        self.env["BAKABASE_COMPOSE_OVERRIDE"] = str(ROOT / "docker/compose.local.example.yaml")
+        self.assertEqual(self.config("image"), baseline)
+        source = self.config("source")["services"]["server"]
+        self.assertEqual(source["volumes"], baseline["services"]["server"]["volumes"])
+        self.assertNotIn("platform", source)
+
+    def test_explicit_local_mounts_apply_unchanged_to_both_modes(self):
+        entries = [
+            {"type": "bind", "source": str(self.root / "chosen data"), "target": "/data",
+             "bind": {"create_host_path": False}},
+            {"type": "bind", "source": str(self.root / "chosen downloads"), "target": "/downloads",
+             "bind": {"create_host_path": False}},
+            {"type": "bind", "source": str(self.root / "chosen media"), "target": "/media",
+             "read_only": True, "bind": {"create_host_path": False}},
+            {"type": "bind", "source": str(self.root / "chosen import"), "target": "/import",
+             "read_only": True, "bind": {"create_host_path": False}}]
+        override = self.root / "explicit.json"
+        override.write_text(json.dumps({"services": {"server": {"volumes": entries}}}))
+        self.env["BAKABASE_COMPOSE_OVERRIDE"] = str(override)
         image, source = self.config("image"), self.config("source")
         service = image["services"]["server"]
-        self.assertEqual(service["platform"], "linux/arm64")
         self.assertEqual(service["volumes"], source["services"]["server"]["volumes"])
         mounts = {entry["target"]: entry for entry in service["volumes"]}
-        self.assertEqual(set(mounts), {"/data", "/downloads", "/import", "/Volumes/nas-bakabase", "/Volumes/nas-anobaka"})
-        for target, mount in mounts.items():
+        self.assertEqual(set(mounts), {entry["target"] for entry in entries})
+        for expected in entries:
+            mount = mounts[expected["target"]]
+            self.assertEqual(mount["source"], expected["source"])
             self.assertFalse(mount["bind"]["create_host_path"])
-            self.assertEqual(mount.get("read_only", False), target not in ("/data", "/downloads"))
+            self.assertEqual(mount.get("read_only", False), expected.get("read_only", False))
+
+    def test_missing_or_empty_data_directory_fails_with_actionable_message(self):
+        for value in ("", "BAKABASE_DATA_DIR=\n"):
+            self.env_file.write_text("BAKABASE_IMAGE=bakabase:contract\n" + value)
+            for mode in ("image", "source"):
+                with self.subTest(value=value, mode=mode):
+                    result = subprocess.run([str(ROOT / "docker/compose.sh"), mode, "config"],
+                                            env=self.env, text=True, capture_output=True)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("Set BAKABASE_DATA_DIR to an existing absolute host data directory", result.stderr)
+
+    def test_environment_example_requires_a_user_selected_data_directory(self):
+        self.env_file.write_text((ROOT / "docker/.env.example").read_text())
+        result = subprocess.run([str(ROOT / "docker/compose.sh"), "image", "config"],
+                                env=self.env, text=True, capture_output=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Set BAKABASE_DATA_DIR", result.stderr)
 
     def test_explicit_missing_config_fails_before_start(self):
         for key in ("BAKABASE_ENV_FILE", "BAKABASE_COMPOSE_OVERRIDE"):

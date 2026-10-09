@@ -18,10 +18,10 @@ docker buildx imagetools inspect "anobaka/bakabase:<VERSION>"
 
 ## 使用 Docker Compose 挂载本机目录
 
-创建独立的服务端数据目录；不要直接把仍在运行的一体版目录交给第二个实例：
+先自行选择并创建一个独立的服务端数据目录，在 Compose 同目录的 `.env` 中填写它的**绝对宿主机路径**。以下路径只是占位示例，必须替换；不要直接把仍在运行的一体版目录交给第二个实例：
 
-```sh
-mkdir -p "$HOME/BakabaseServer/appdata" "$HOME/BakabaseServer/downloads"
+```dotenv
+BAKABASE_DATA_DIR="/absolute/path/to/bakabase-data"
 ```
 
 将以下内容保存为 `compose.yaml`，替换镜像版本：
@@ -41,16 +41,13 @@ services:
       BAKABASE_NODE_NAME: 我的媒体库
     volumes:
       - type: bind
-        source: ${HOME}/BakabaseServer/appdata
+        source: ${BAKABASE_DATA_DIR:?Set BAKABASE_DATA_DIR to an existing absolute host data directory in .env}
         target: /data
         bind:
           create_host_path: false
-      - type: bind
-        source: ${HOME}/BakabaseServer/downloads
-        target: /downloads
-        bind:
-          create_host_path: false
 ```
+
+基础配置只挂载 `/data`，没有默认宿主机目录，也不要求下载目录。未填写或留空 `BAKABASE_DATA_DIR` 时，Compose 会提示先配置路径。媒体、下载和导入来源按需额外挂载。
 
 无需固定 `platform`：Docker 会从标签中选择与当前主机匹配的架构。`create_host_path: false` 可在路径写错或外置磁盘未挂载时直接报错，避免误启动一个空媒体库。
 
@@ -71,6 +68,8 @@ docker compose logs -f server
 
 ### 等效的 docker run 命令
 
+先在当前终端将 `BAKABASE_DATA_DIR` 设为自己选择且已存在的绝对宿主机目录；`docker run` 不会读取 Compose 的 `.env`。命令同样只挂载数据目录：
+
 ```sh
 docker run -d \
   --name bakabase \
@@ -78,25 +77,24 @@ docker run -d \
   -p 127.0.0.1:34567:34567 \
   -e API_LISTENING_PORTS=34567 \
   -e BAKABASE_DATA_DIR=/data \
-  --mount "type=bind,source=$HOME/BakabaseServer/appdata,target=/data" \
-  --mount "type=bind,source=$HOME/BakabaseServer/downloads,target=/downloads" \
+  --mount "type=bind,source=${BAKABASE_DATA_DIR:?Set your existing absolute host data directory first},target=/data" \
   "anobaka/bakabase:<VERSION>"
 ```
 
 ## 挂载媒体目录和保留数据
 
-`/data` 保存数据库、配置、封面、日志和设备授权；媒体文件需要单独挂载。例如在 Compose 的 `volumes` 下增加：
+`/data` 保存数据库、配置、封面、日志和设备授权；媒体文件需要单独挂载。例如在 Compose 的 `volumes` 下增加，并将占位来源替换为自己的路径：
 
 ```yaml
       - type: bind
-        source: /Volumes/Media
-        target: /Volumes/Media
+        source: /absolute/path/to/media
+        target: /media
         read_only: true
         bind:
           create_host_path: false
 ```
 
-然后执行 `docker compose up -d` 应用变更。在 Bakabase 中使用容器内路径 `/Volumes/Media`。若原一体版也使用该路径，同路径挂载能保留数据库中的媒体文件引用；挂载为 `/media` 则需要另外调整媒体库中的实际路径。示例为只读挂载；需要下载、移动或删除文件时，删除 `read_only: true` 并确保宿主机目录允许写入。
+然后执行 `docker compose up -d` 应用变更，在 Bakabase 中使用容器内路径 `/media`。也可以将 `target` 设为原实例使用的绝对路径，以保留数据库中的媒体文件引用；路径改变时可在导入预检中建立映射。示例为只读挂载，目录仍可选择；实际写入受挂载和宿主机权限约束。需要下载目录时，可另加自己选择的可写目录挂载，例如映射到 `/downloads`，再在下载器中选择该路径。这个目录和名称均非必需，也没有统一默认值。
 
 容器只看到已挂载的目录。浏览器中的资源菜单提供“查看文件夹位置”，可以查看并复制服务端目录路径；浏览器不能直接打开当前电脑的文件管理器。从一体版管理服务端时，播放和打开文件夹由使用者所在的电脑处理，可按需配置容器路径到本机路径的映射，见[服务器切换](server-switching.md)。这类客户端路径映射不会自动改写服务端数据库中的媒体路径。
 
@@ -111,7 +109,7 @@ docker run -d \
 
 ```yaml
       - type: bind
-        source: ${HOME}/Library/Application Support/Bakabase
+        source: /absolute/path/to/import-copy
         target: /import
         read_only: true
         bind:
@@ -135,11 +133,15 @@ docker run -d \
 ```sh
 git submodule update --init --recursive
 cp docker/.env.example docker/.env
-mkdir -p "$HOME/BakabaseServer/appdata" "$HOME/BakabaseServer/downloads"
+```
+
+编辑 `docker/.env`，把留空的 `BAKABASE_DATA_DIR` 填为自己选择的绝对宿主机目录，并先创建该目录。已有部署保留原数据路径和本机配置，不要覆盖为示例。配置完成后启动：
+
+```sh
 ./docker/source.sh
 ```
 
-`docker/.env` 可修改镜像名、本机 AppData、下载目录、监听地址、端口和节点名。`BAKABASE_DOWNLOADS_DIR` 默认是 `${HOME}/BakabaseServer/downloads`，统一挂载到 `/downloads`，与 `/data` 内的数据库、配置和缓存分开。升级已有部署时也需先创建这个宿主机目录，或把变量改为已有目录。默认镜像名为 `bakabase:local`；Apple Silicon 默认构建 Linux ARM64，不必启用 amd64 模拟。需要导入或挂载媒体时，复制 `docker/compose.local.example.yaml` 为 `docker/compose.local.yaml` 并调整路径。两个文件均属于本机配置，不进入 Git；源码和镜像模式都会加载相同配置。
+`docker/.env` 可修改镜像名、宿主机数据目录、监听地址、端口和节点名。共享配置只要求数据目录，不预设下载目录、NAS 或导入来源。默认镜像名为 `bakabase:local`；Apple Silicon 默认构建 Linux ARM64，不必启用 amd64 模拟。需要额外挂载时，复制 `docker/compose.local.example.yaml` 为 `docker/compose.local.yaml`，按注释启用所需条目并填写自己的路径。原样复制是有效的空 override，不会新增挂载或固定架构。`.env` 和 `compose.local.yaml` 均属于本机配置，不进入 Git；源码和镜像模式会加载相同配置。
 
 Docker 模式的文件选择、文件处理和下载路径只使用已挂载的持久目录；不显示容器内部目录，应用数据目录由 Setup 和对应系统功能管理。手动输入路径和执行历史任务也会检查这一边界，不自动改写旧路径。目录标注只读仍可选择，实际写入由挂载权限和文件系统决定。Setup 使用相同的存储位置列表，并允许选择应用数据挂载作为导入来源或目标。直接运行的原生 server 和一体版保持操作系统目录行为，不要求挂载。
 
@@ -198,21 +200,26 @@ docker load -i /path/to/bakabase-image.tar
 
 ```sh
 ./docker/source.sh build
-./docker/package.sh "$HOME/BakabaseServer/packages/my-release" bakabase:local
+./docker/package.sh /absolute/path/to/new-package-directory bakabase:local
 ```
 
 输出包括 `bakabase-image.tar`、基础 `compose.yaml`、`.env.example`、可选挂载示例及镜像架构信息。按其中的 `README.txt` 加载镜像并启动；已有部署应保留原 `.env` 和挂载，不要用示例覆盖。目录中的基础 Compose 与仓库版本使用同一项目名和服务名，所以可替换由源码方式启动的实例。`package.sh` 拒绝覆盖已经存在的输出目录。
 
-### 本机 ARM64 与 NAS Root 挂载
+### 可选下载、NAS 和导入挂载
 
-本机示例只挂载两个 NAS 的 Root 内容。先在 macOS 将 Root 分别挂到 `/Volumes/nas-bakabase` 和 `/Volumes/nas-anobaka`，再复制本机 override：
+这些目录由部署者自行选择。NAS 应先在宿主机挂载到稳定路径，再复制本机 override：
 
 ```sh
 cp docker/compose.local.example.yaml docker/compose.local.yaml
+```
+
+将 `server: {}` 改为 `server:`，取消所需 `volumes` 条目的注释，填写实际 `source` 和希望程序使用的容器 `target`。示例包括媒体、下载和只读导入副本，均可省略。保存后检查最终配置：
+
+```sh
 ./docker/image.sh config
 ```
 
-示例固定 `linux/arm64`，将这两个 Root 挂到容器内相同绝对路径，初始均为只读，不挂载 NAS 的 Public 或 Container。`BAKABASE_MEDIA_ROOT_1`、`BAKABASE_MEDIA_ROOT_2` 可调整宿主机路径；容器路径仍应与媒体库记录一致。`BAKABASE_IMPORT_DIR` 指向离线导入副本，默认 `${HOME}/Downloads/Bakabase`，只读映射为 `/import`。准备好的导入副本可通过修改该变量切换，无需修改基础 Compose。数据目录默认 `${HOME}/BakabaseServer/appdata`，网页默认仅本机 `127.0.0.1:34567`。
+容器目标可以沿用媒体库记录中的绝对路径，也可以在导入时调整引用。需要导入时，将已停止来源实例的完整副本只读映射到例如 `/import` 的位置；准备好新副本后可修改本机 override 的来源。示例不假设 NAS 名称、宿主机操作系统或用户主目录，也不固定平台。网页默认仅本机 `127.0.0.1:34567`。
 
 `create_host_path: false` 只能阻止路径不存在时创建空目录；使用 NAS 前还应确认该路径实际挂载的是预期 Root。需要媒体写操作时，再明确调整对应挂载权限。修改任何挂载后必须重建容器，普通 `restart` 不会应用新挂载。
 

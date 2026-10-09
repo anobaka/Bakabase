@@ -1,24 +1,25 @@
-# Optional Apple Silicon deployment. Mount each NAS Root on the host first.
-# No Public/Container share is exposed. Keep original absolute media paths.
+# Optional local settings, shared by source and image deployments.
+# This file is a valid empty override when copied unchanged.
+# To add mounts, change `server: {}` to `server:` and uncomment the desired
+# entries below. Replace each source with an existing absolute host directory.
+# Docker selects the host architecture automatically; no platform is forced.
 services:
-  server:
-    platform: linux/arm64
-    volumes:
-      - type: bind
-        source: ${BAKABASE_MEDIA_ROOT_1:-/Volumes/nas-bakabase}
-        target: /Volumes/nas-bakabase
-        read_only: true
-        bind:
-          create_host_path: false
-      - type: bind
-        source: ${BAKABASE_MEDIA_ROOT_2:-/Volumes/nas-anobaka}
-        target: /Volumes/nas-anobaka
-        read_only: true
-        bind:
-          create_host_path: false
-      - type: bind
-        source: ${BAKABASE_IMPORT_DIR:-${HOME}/Downloads/Bakabase}
-        target: /import
-        read_only: true
-        bind:
-          create_host_path: false
+  server: {}
+    # volumes:
+    #   - type: bind
+    #     source: /absolute/path/to/media
+    #     target: /media
+    #     read_only: true
+    #     bind:
+    #       create_host_path: false
+    #   - type: bind
+    #     source: /absolute/path/to/downloads
+    #     target: /downloads
+    #     bind:
+    #       create_host_path: false
+    #   - type: bind
+    #     source: /absolute/path/to/import-copy
+    #     target: /import
+    #     read_only: true
+    #     bind:
+    #       create_host_path: false

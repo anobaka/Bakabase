@@ -17,22 +17,9 @@ services:
       BAKABASE_DEPLOYMENT_ENDPOINTS: ${BAKABASE_DEPLOYMENT_ENDPOINTS:-}
     volumes:
       - type: bind
-        source: ${BAKABASE_DATA_DIR:-${HOME}/BakabaseServer/appdata}
+        source: ${BAKABASE_DATA_DIR:?Set BAKABASE_DATA_DIR to an existing absolute host data directory in .env}
         target: /data
         bind:
           create_host_path: false
-      # User files stay separate from the application's database and caches.
-      - type: bind
-        source: ${BAKABASE_DOWNLOADS_DIR:-${HOME}/BakabaseServer/downloads}
-        target: /downloads
-        bind:
-          create_host_path: false
-      # Existing desktop data can be exposed for the import screen:
-      # - type: bind
-      #   source: /absolute/path/to/desktop-appdata
-      #   target: /import
-      #   read_only: true
-      #   bind:
-      #     create_host_path: false
-      # Media paths are separate from appdata. Preserve their original absolute
-      # paths when importing on the same Mac, e.g. /Volumes/Media:/Volumes/Media:ro.
+      # Add optional media, download or import mounts in compose.local.yaml.
+      # See compose.local.example.yaml; only the chosen data directory is required.

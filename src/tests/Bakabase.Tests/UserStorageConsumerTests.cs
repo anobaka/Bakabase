@@ -76,7 +76,7 @@ public sealed class UserStorageConsumerTests
         public IReadOnlyList<UserStorageRoot> GetRoots(UserStoragePurpose purpose = UserStoragePurpose.UserFiles) =>
             [new(root, "mounted", "bind", true)];
         public bool IsPathAllowed(string path, UserStoragePurpose purpose = UserStoragePurpose.UserFiles) =>
-            !DenyAll && (Path.GetFullPath(path) == root ||
+            !DenyAll && !string.IsNullOrWhiteSpace(path) && (Path.GetFullPath(path) == root ||
                         Path.GetFullPath(path).StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal));
         public void EnsureTreeMutationAllowed(string path) => EnsurePathAllowed(path);
         public void EnsurePathAllowed(string path, UserStoragePurpose purpose = UserStoragePurpose.UserFiles)
@@ -128,6 +128,23 @@ public sealed class UserStorageConsumerTests
             DownloadPath = _mounted, Type = 1, Keys = ["tag"], ThirdPartyId = ThirdPartyId.Pixiv
         });
         Assert.AreEqual(_mounted, allowed.Single().DownloadPath);
+    }
+
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("")]
+    [DataRow(" ")]
+    public async Task UnsetDownloadDirectoryIsNotInferredFromAvailableStorage(string? configured)
+    {
+        _services.GetRequiredService<IBOptionsManager<PixivOptions>>().Value.DefaultPath = configured;
+        var helper = Helper();
+        Assert.AreEqual(configured, (await helper.GetOptionsAsync()).DefaultPath);
+        var input = new DownloadTaskAddInputModel
+        {
+            DownloadPath = configured!, Type = 1, Keys = ["tag"], ThirdPartyId = ThirdPartyId.Pixiv
+        };
+        await Assert.ThrowsExactlyAsync<IOException>(() => helper.BuildTasks(input));
+        Assert.AreEqual(configured, input.DownloadPath);
     }
 
     [TestMethod]

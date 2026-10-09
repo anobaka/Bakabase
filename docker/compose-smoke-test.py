@@ -32,11 +32,10 @@ def main():
     env.update(COMPOSE_PROJECT_NAME=project, BAKABASE_COMPOSE_OVERRIDE="")
     with tempfile.TemporaryDirectory(prefix="bakabase-compose-upgrade-") as temporary:
         root = Path(temporary)
-        data, downloads, package = root / "appdata", root / "downloads", root / "package"
+        data, package = root / "appdata", root / "package"
         data.mkdir()
-        downloads.mkdir()
         env_file = root / ".env"
-        env_file.write_text(f'BAKABASE_DATA_DIR="{data}"\nBAKABASE_DOWNLOADS_DIR="{downloads}"\nBAKABASE_PORT=0\nBAKABASE_BIND_ADDRESS=127.0.0.1\n')
+        env_file.write_text(f'BAKABASE_DATA_DIR="{data}"\nBAKABASE_PORT=0\nBAKABASE_BIND_ADDRESS=127.0.0.1\n')
         env["BAKABASE_ENV_FILE"] = str(env_file)
         # Apply a UID only to the fixture so Linux CI can inspect/remove its data.
         override = root / "fixture.yaml"
