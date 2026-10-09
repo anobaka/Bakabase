@@ -114,7 +114,7 @@ export interface RouteMenuItem {
    * from the context call, which has not happened yet at import time.
    */
   pureClientOnly?: boolean;
-  /** The local coordinator belongs to the unified application, never to a forwarded UI. */
+  /** Requires this server's federation capability; desktop relay windows use their local device instead. */
   localNodeOnly?: boolean;
 }
 
@@ -314,13 +314,11 @@ export const routesMenuConfig: RouteMenuItem[] = [
     ],
   },
   {
-    // The multi-device mode (「多设备互联」, "Multi-device"): every page of it belongs to this device's own
-    // window, so the group is filtered out wherever that window is not (`localNodeOnly`). The
-    // routes stay where they were, so links and bookmarks keep working.
+    // Data sync is available on managed servers too. Library pages use the server's
+    // explicit capability; only desktop installations can manage other servers.
     name: "federation.mode",
     icon: AiOutlineCluster,
     menu: true,
-    localNodeOnly: true,
     children: [
       {
         name: "federation.title",
@@ -345,6 +343,14 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: AiOutlineApartment,
         layout: "basic",
         localNodeOnly: true,
+      },
+      {
+        name: "menu.dataSync",
+        path: "/data-sync",
+        component: DataSyncPage,
+        icon: AiOutlineSync,
+        layout: "basic",
+        menu: true,
       },
       {
         name: "menu.otherDevices",
@@ -522,16 +528,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/configuration",
         component: Configuration,
         icon: AiOutlineAppstore,
-        layout: "basic",
-        menu: true,
-      },
-      {
-        // Not `localNodeOnly`: data sync works in a relay window and in an Unrestricted
-        // browser too, which is why it is not in the multi-device group.
-        name: "menu.dataSync",
-        path: "/data-sync",
-        component: DataSyncPage,
-        icon: AiOutlineSync,
         layout: "basic",
         menu: true,
       },

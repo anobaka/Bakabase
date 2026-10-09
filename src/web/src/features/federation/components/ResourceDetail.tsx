@@ -16,6 +16,7 @@ import { resourceKey, sameResource } from "../types";
 import { buttonClass, ErrorNotice, panelClass, SourceBadge } from "./common";
 
 import { PropertyValueScopeLabel } from "@/sdk/constants";
+import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
 
 export function displayValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
@@ -42,6 +43,7 @@ export default function ResourceDetail({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const nativeActionsAvailable = useUserSideActionsRunHere();
   const [detail, setDetail] = useState<FederatedResourceDetail>();
   const [error, setError] = useState<Error>();
   const [revision, setRevision] = useState(0);
@@ -240,31 +242,33 @@ export default function ResourceDetail({
               {t("federation.manageLocal")}
             </Link>
           )}
-          <div className="space-y-2">
-            <button
-              className={buttonClass}
-              disabled={!detail.directoryAccess?.canOpen || openingDirectory}
-              type="button"
-              onClick={() => void openDirectory()}
-            >
-              {t(openingDirectory ? "federation.directory.opening" : "federation.directory.open")}
-            </button>
-            <p className="text-xs text-default-500">{t("federation.directory.tip")}</p>
-            {!detail.directoryAccess?.canOpen && (
-              <p className="text-xs text-default-500">
-                {t(
-                  `federation.error.${detail.directoryAccess?.reason || "OpenDirectoryUnavailable"}`,
-                  { defaultValue: t("federation.error.OpenDirectoryUnavailable") },
-                )}
-              </p>
-            )}
-            {directoryOpened && (
-              <p className="text-sm text-success" role="status">
-                {t("federation.directory.opened")}
-              </p>
-            )}
-            <ErrorNotice error={directoryError} />
-          </div>
+          {nativeActionsAvailable && (
+            <div className="space-y-2">
+              <button
+                className={buttonClass}
+                disabled={!detail.directoryAccess?.canOpen || openingDirectory}
+                type="button"
+                onClick={() => void openDirectory()}
+              >
+                {t(openingDirectory ? "federation.directory.opening" : "federation.directory.open")}
+              </button>
+              <p className="text-xs text-default-500">{t("federation.directory.tip")}</p>
+              {!detail.directoryAccess?.canOpen && (
+                <p className="text-xs text-default-500">
+                  {t(
+                    `federation.error.${detail.directoryAccess?.reason || "OpenDirectoryUnavailable"}`,
+                    { defaultValue: t("federation.error.OpenDirectoryUnavailable") },
+                  )}
+                </p>
+              )}
+              {directoryOpened && (
+                <p className="text-sm text-success" role="status">
+                  {t("federation.directory.opened")}
+                </p>
+              )}
+              <ErrorNotice error={directoryError} />
+            </div>
+          )}
           {detail.properties.length > 0 && (
             <dl className="divide-y divide-default-200">
               {detail.properties.map((property, index) => (
@@ -350,7 +354,7 @@ export default function ResourceDetail({
                     >
                       {t("federation.preview")}
                     </button>
-                    {asset.kind !== "image" && (
+                    {nativeActionsAvailable && asset.kind !== "image" && (
                       <button
                         className={buttonClass}
                         disabled={playing}

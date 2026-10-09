@@ -54,6 +54,8 @@ interface IRemoteAccessState {
   serverReachable: boolean;
   /** Whether a sign-in capture window can open for this caller. */
   cookieCaptureAvailable: boolean;
+  /** Explicit access to the shown server's federation UI; absent on older servers and relays. */
+  federationAvailable?: boolean;
   serverName?: string;
   /**
    * Only ever set under PureClient, once `/client/status` has answered and said it is the
@@ -126,6 +128,7 @@ export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
           clientMode,
           serverReachable: data.serverReachable ?? true,
           cookieCaptureAvailable: data.cookieCaptureAvailable ?? isLocal,
+          federationAvailable: data.federationAvailable,
           serverName: data.serverName ?? undefined,
           ...(clientMode === ClientMode.PureClient
             ? {}

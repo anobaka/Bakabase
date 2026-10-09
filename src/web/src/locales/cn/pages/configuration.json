@@ -413,5 +413,7 @@
   "configuration.dataRelocation.automaticFailure": "设置程序已停止此次操作，不会自动重试。请打开独立进度页查看失败原因，处理错误后重新启动 Bakabase 或容器，按保存记录恢复。请保留现有数据目录。",
   "configuration.dataRelocation.automaticMonitorHelp": "独立设置页面在主应用关闭期间仍可查看状态。断连不代表完成，请以页面确认的结果为准。",
   "configuration.dataRelocation.phase.stopping": "正在保存并关闭应用",
-  "configuration.dataRelocation.stoppingLongRunning": "应用仍在保存或等待后台任务结束。独立设置页面会继续等待文件释放，暂时没有新进度不代表失败。"
+  "configuration.dataRelocation.stoppingLongRunning": "应用仍在保存或等待后台任务结束。独立设置页面会继续等待文件释放，暂时没有新进度不代表失败。",
+  "configuration.functional.showResourceUsage": "显示资源占用",
+  "configuration.functional.showResourceUsage.tip": "在侧栏显示当前 Bakabase 的 CPU、内存及数据目录大小。关闭后停止请求用量数据。"
 }

@@ -12,7 +12,7 @@ import { ClientMode, RemoteAccessMode } from "@/sdk/constants";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
 
 /*
- * Data sync is one page under System. Unlike the multi-device group it is not this device's
+ * Data sync is one page under Multi-device. It is not limited to this device's
  * own: the page works in the desktop app's window showing a server it manages, and in a
  * browser on an Unrestricted server, so the entry is shown in each of them.
  */
@@ -26,7 +26,7 @@ vi.mock("@/sdk/BApi", () => {
 
   return { default: anything() };
 });
-// The real menu from the real route config; only the System group is rendered.
+// The real menu from the real route config; only the Multi-device group is rendered.
 vi.mock(
   "@/layouts/BasicLayout/components/PageNav/components/AntdMenu/menuConfig",
   async (importOriginal) => {
@@ -34,7 +34,7 @@ vi.mock(
 
     return {
       ...real,
-      asideMenuConfig: real.asideMenuConfig.filter((item) => item.name === "menu.system"),
+      asideMenuConfig: real.asideMenuConfig.filter((item) => item.name === "federation.mode"),
     };
   },
 );
@@ -57,12 +57,12 @@ const flatten = (items: RouteMenuItem[]): RouteMenuItem[] =>
   items.flatMap((item) => [item, ...flatten(item.children ?? [])]);
 
 describe("the data sync menu entry", () => {
-  it("is a page under System, right after Configuration, for every window", () => {
-    const system = routesMenuConfig.find((route) => route.name === "menu.system");
+  it("is a page under Multi-device, after its map, for every window", () => {
+    const system = routesMenuConfig.find((route) => route.name === "federation.mode");
     const names = system?.children?.map((route) => route.name) ?? [];
     const entry = system?.children?.find((route) => route.name === "menu.dataSync");
 
-    expect(names.indexOf("menu.dataSync")).toBe(names.indexOf("menu.configuration") + 1);
+    expect(names.indexOf("menu.dataSync")).toBe(names.indexOf("federation.map.title") + 1);
     expect(entry).toMatchObject({ path: DATA_SYNC_ROUTE, layout: "basic", menu: true });
     expect(entry?.component).toBeDefined();
     expect(entry?.localNodeOnly).toBeFalsy();
@@ -101,7 +101,7 @@ describe("the data sync menu entry", () => {
         <AntdMenu collapsed={false} />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getAllByText("menu.system")[0]);
+    fireEvent.click(screen.getAllByText("federation.mode")[0]);
 
     // The menu renders an item more than once (it measures for overflow); presence is enough.
     expect(await screen.findAllByText("menu.dataSync")).not.toHaveLength(0);

@@ -27,7 +27,9 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
   const { pathname } = useLocation();
   const isPureClient = useIsPureClient();
   const isLocalNode =
-    useRemoteAccessStore((state) => state.initialized && state.isLocal) && !isPureClient;
+    useRemoteAccessStore(
+      (state) => state.initialized && (state.federationAvailable ?? state.isLocal),
+    ) && !isPureClient;
   // console.log(pathname);
 
   const onClick: MenuProps["onClick"] = (e) => {

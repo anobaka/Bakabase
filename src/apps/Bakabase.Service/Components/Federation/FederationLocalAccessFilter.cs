@@ -31,7 +31,8 @@ public sealed class FederationLocalAccessFilter : IAsyncAuthorizationFilter, IOr
                     (attribute.Kind != FederationEndpointKind.Export ||
                      FederationHttpContext.GetNodePrincipal(context.HttpContext) is { } principal &&
                      FederationScopes.Admits(attribute.Scope, principal.Scope)) &&
-                    (attribute.Kind != FederationEndpointKind.Local || FederationAccessMiddleware.IsLocalCaller(context.HttpContext));
+                    (attribute.Kind != FederationEndpointKind.Local || FederationAccessMiddleware.IsLocalCaller(context.HttpContext) ||
+                     FederationAdministrationMiddleware.CanAdminister(context.HttpContext));
         if (!valid)
             context.Result = new ContentResult
             {

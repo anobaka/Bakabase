@@ -55,6 +55,9 @@ namespace Bakabase.Service.Models.View
         /// device, nor for a container.
         /// </summary>
         public bool CookieCaptureAvailable { get; set; }
+
+        /// <summary>Whether this caller can use this server's multi-device library and sharing interface.</summary>
+        public bool FederationAvailable { get; set; }
     }
 
     public record RemoteAccessAddressViewModel

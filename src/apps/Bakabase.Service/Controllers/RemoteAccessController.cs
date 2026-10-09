@@ -12,6 +12,7 @@ using Bakabase.Modules.Notification.Abstractions.Models.Input;
 using Bakabase.Modules.Notification.Abstractions.Services;
 using Bakabase.Modules.RemoteAccess.Components.Pairing;
 using Bakabase.Service.Components.RemoteAccess;
+using Bakabase.Service.Components.Federation;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -92,7 +93,9 @@ namespace Bakabase.Service.Controllers
                     ServerName = descriptor.Name,
                     // Needs a desktop, and needs it to be this person's. A container has
                     // no screen, and a browser on another device is not sitting here.
-                    CookieCaptureAvailable = hasLocalDesktop
+                    CookieCaptureAvailable = hasLocalDesktop,
+                    FederationAvailable = FederationAccessMiddleware.IsLocalCaller(HttpContext) ||
+                                          FederationAdministrationMiddleware.CanAdminister(HttpContext)
                 });
         }
 

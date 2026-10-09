@@ -88,9 +88,8 @@ neither library sharing list.
   unavailable page and refusals, notifications, the CLI) name its current places:
   设备与分享 → 管理 → 谁可以管理本机, → 资源库分享, → 高级 → 复制或恢复数据后 → 设为新设备.
   A text that sends the reader to **another** device, or that another device shows, names
-  both places, since a NAS or Docker server has no devices page: a computer's page, and a
-  NAS or Docker's 配置 → 远程访问 (management: codes, requests, remote access) or
-  `BAKABASE_FEDERATION_SHARING` / the `federation` CLI (library sharing). A management
+  the Devices page and its tab. A NAS or Docker administrator can now use the same page;
+  配置 → 远程访问 and the `federation` CLI remain alternative management surfaces. A management
   request's notification names only 配置 → 远程访问 besides its link. A requester's name is
   its own claim wherever it is shown (一台自称 {{name}} 的设备…), and a decided incoming
   request says what this device did (`federation.requests.incoming*`), never the
@@ -259,10 +258,16 @@ request, and acts through the same endpoints and confirmations.
   protocol, and never let an admin device key travel on `/federation/v1`.
 
 - **Two interfaces, never mixed.** `/federation/local/*` is for this device's own UI: real
-  loopback socket + loopback `Host` + matching `Origin` (`FederationAccessMiddleware.IsLocalCaller`).
+  loopback socket + loopback `Host` + matching `Origin` (`FederationAccessMiddleware.IsLocalCaller`)
+  on desktop hosts. **Headless administration** additionally admits the server's own browser
+  origin after the ordinary remote-access gate accepts a paired administrator or Unrestricted
+  mode (`FederationAdministrationMiddleware`). Disabled mode, pairing requirements, foreign
+  Origin/fetch metadata and node credentials remain enforced. A headless server never
+  composes desktop relays or launches a native player/file manager; its library previews
+  stream to the browser. The context API reports `federationAvailable` for menu/page access.
   `/federation/v1/*` is node-to-node: `export/*` always needs a `Bakabase-Node` signature, even
   from loopback or in `Unrestricted` mode.
-  **The one recorded exception:** data sync's ordinary API, `/data-sync/*`, may create or widen
+  **Data sync's separate permission:** its ordinary API, `/data-sync/*`, may create or widen
   `datasync.read` access — turn definitions sharing on, approve a definitions request, create a
   definitions code, send a request or mint a reciprocal code — for a **paired** caller
   (`RemoteAccessContext.Device != null`: the desktop app's switching window or another paired
@@ -273,7 +278,7 @@ request, and acts through the same endpoints and confirmations.
   any LAN caller can do (it may approve pairing requests there), so the rule refuses only
   callers that have not paired; on an Enabled server an unpaired caller cannot pair itself
   (see `data-sync.md`, "Who may create or widen access"). Library grants stay on
-  `/federation/local/*` and the CLI; `/data-sync` has no path to them
+  the authorized `/federation/local/*` interface and the CLI; `/data-sync` has no path to them
   (`DataSyncGrantBoundaryTests`).
 - **A node credential is never a legacy principal.** It must not reach options, resource
   writes, `/hub/ui`, file APIs or legacy pairing. Never map it to `IsPaired`.
@@ -394,8 +399,10 @@ after any DTO/endpoint change.
 node; `--federation-invite-on-start` prints a one-time code. The running instance is managed with
 `docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|off|invite|approve|reject|revoke|new-identity>`,
 which only calls its loopback API. `new-identity` is the devices page's "Make this a new device"
-(Advanced → After copying or restoring data), for a copied data directory: a headless server's own UI is only ever reached from
-another device, and never reaches `/federation/local/*`. Data sync's counterparts —
+(Advanced → After copying or restoring data), for a copied data directory. The headless
+server's browser UI also offers Multi-device → Devices and sharing and the read-only merged
+library/map to administrators. Data sync is a child of Multi-device in every window, including
+a desktop relay; relay windows still direct library/map access back to their local device. Data sync's counterparts —
 `BAKABASE_DATASYNC_SHARING=true` (definitions sharing on at every start) and
 `federation datasync <command>` — are in `data-sync.md` ("Headless").
 

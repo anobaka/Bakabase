@@ -8614,6 +8614,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/app/resource-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/source/{source}/metadata-mapping": {
         parameters: {
             query?: never;
@@ -11262,6 +11278,7 @@ export interface components {
             resource?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
             startupPage?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed?: boolean;
+            showResourceUsage?: boolean;
             hideResourceCovers?: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
             latestUsedProperties?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
@@ -11738,6 +11755,7 @@ export interface components {
             resource: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
             startupPage: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed: boolean;
+            showResourceUsage: boolean;
             hideResourceCovers: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
             latestUsedProperties: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
@@ -15819,6 +15837,7 @@ export interface components {
             serverId?: string;
             serverName?: string;
             cookieCaptureAvailable: boolean;
+            federationAvailable: boolean;
         };
         "Bakabase.Service.Models.View.RemoteAccessDeviceViewModel": {
             id: string;
@@ -16012,6 +16031,19 @@ export interface components {
             /** Format: int32 */
             pageSize: number;
             tags?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"][];
+        };
+        "Bakabase.Service.Models.View.ResourceUsageViewModel": {
+            /** Format: double */
+            cpuPercent?: number;
+            /** Format: int64 */
+            memoryBytes: number;
+            /** Format: int64 */
+            dataDirectoryBytes?: number;
+            /** Format: date-time */
+            dataDirectoryUpdatedAt?: string;
+            dataDirectoryScanning: boolean;
+            dataDirectoryPartial: boolean;
+            dataDirectoryUnavailable: boolean;
         };
         "Bakabase.Service.Models.View.SavedSearchViewModel": {
             id: string;
@@ -17673,6 +17705,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceUsageViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceUsageViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]": {
             /** Format: int32 */
@@ -35216,6 +35254,28 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetResourceUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceUsageViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceUsageViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceUsageViewModel]"];
                 };
             };
         };

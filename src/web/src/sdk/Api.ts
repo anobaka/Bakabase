@@ -2160,6 +2160,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputU
   /** [0: Default, 1: Resource] */
   startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed?: boolean;
+  showResourceUsage?: boolean;
   hideResourceCovers?: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
   latestUsedProperties?: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
@@ -2742,6 +2743,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptions {
   /** [0: Default, 1: Resource] */
   startupPage: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed: boolean;
+  showResourceUsage: boolean;
   hideResourceCovers: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
   latestUsedProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
@@ -7804,6 +7806,7 @@ export interface BakabaseServiceModelsViewRemoteAccessClientContextViewModel {
   serverId?: string;
   serverName?: string;
   cookieCaptureAvailable: boolean;
+  federationAvailable: boolean;
 }
 
 export interface BakabaseServiceModelsViewRemoteAccessDeviceViewModel {
@@ -8034,6 +8037,20 @@ export interface BakabaseServiceModelsViewResourceSearchViewModel {
   /** @format int32 */
   pageSize: number;
   tags?: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
+}
+
+export interface BakabaseServiceModelsViewResourceUsageViewModel {
+  /** @format double */
+  cpuPercent?: number;
+  /** @format int64 */
+  memoryBytes: number;
+  /** @format int64 */
+  dataDirectoryBytes?: number;
+  /** @format date-time */
+  dataDirectoryUpdatedAt?: string;
+  dataDirectoryScanning: boolean;
+  dataDirectoryPartial: boolean;
+  dataDirectoryUnavailable: boolean;
 }
 
 export interface BakabaseServiceModelsViewSavedSearchViewModel {
@@ -9961,6 +9978,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewResourceSearchViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceUsageViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceUsageViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewSavedSearchViewModel {
@@ -15577,6 +15601,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     dataPathRelocationSetupSessionCreateUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/relocation/setup-session`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceUsage
+     * @name GetResourceUsage
+     * @request GET:/app/resource-usage
+     */
+    getResourceUsage: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceUsageViewModel,
+        any
+      >({
+        path: `/app/resource-usage`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceUsage
+     * @name getResourceUsageUrl
+     */
+    getResourceUsageUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/resource-usage`;
 
       return baseUrl + path;
     },

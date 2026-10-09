@@ -12,8 +12,8 @@ import { useRemoteAccessStore } from "@/stores/remoteAccess";
 
 /*
  * The multi-device mode (「多设备互联」, "Multi-device") is one menu group: the merged library, the devices
- * page, the device map and downloads. Its menu belongs to this device's own window;
- * the public download page can still be opened directly in a browser or a managed server.
+ * page, the device map, data sync and downloads. Library pages require the server's
+ * capability; data sync and downloads remain available in browsers and managed windows.
  */
 
 // Every page is imported with the route config, and some reach into BApi as they load.
@@ -59,11 +59,12 @@ describe("the multi-device menu group", () => {
   it("ends with downloads after the library, the devices page and the device map", () => {
     const group = routesMenuConfig.find((route) => route.name === "federation.mode");
 
-    expect(group?.localNodeOnly).toBe(true);
+    expect(group?.localNodeOnly).toBeFalsy();
     expect(group?.children?.map((route) => [route.name, route.path, route.localNodeOnly])).toEqual([
       ["federation.title", "/federation", true],
       ["federation.devices.title", "/federation/devices", true],
       ["federation.map.title", "/federation/map", true],
+      ["menu.dataSync", "/data-sync", undefined],
       ["menu.otherDevices", "/other-devices", undefined],
     ]);
     // Moved into the group, not duplicated: every route is registered once, at its old path.
@@ -101,7 +102,24 @@ describe("the multi-device menu group", () => {
     expect(screen.getAllByText("menu.otherDevices")).not.toHaveLength(0);
   });
 
-  it("is absent where the window shows a server this device manages, and from a browser", () => {
+  it("shows the server's multi-device pages when its API grants browser administration", () => {
+    useRemoteAccessStore.setState({
+      initialized: true,
+      isLocal: false,
+      clientMode: ClientMode.RemoteBrowser,
+      federationAvailable: true,
+    });
+    render(
+      <MemoryRouter>
+        <AntdMenu collapsed={false} />
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByText("federation.devices.title")).not.toHaveLength(0);
+    expect(screen.getAllByText("federation.map.title")).not.toHaveLength(0);
+    expect(screen.getAllByText("menu.dataSync")).not.toHaveLength(0);
+  });
+
+  it("keeps data sync but hides local library pages in a relay or desktop LAN browser", () => {
     for (const state of [
       { isLocal: false, clientMode: ClientMode.PureClient },
       { isLocal: false, clientMode: ClientMode.RemoteBrowser },
@@ -112,7 +130,9 @@ describe("the multi-device menu group", () => {
           <AntdMenu collapsed={false} />
         </MemoryRouter>,
       );
-      expect(screen.queryAllByText("federation.mode")).toHaveLength(0);
+      expect(screen.queryAllByText("federation.mode")).not.toHaveLength(0);
+      expect(screen.queryAllByText("menu.dataSync")).not.toHaveLength(0);
+      expect(screen.queryAllByText("federation.devices.title")).toHaveLength(0);
       cleanup();
     }
   });

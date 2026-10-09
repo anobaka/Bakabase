@@ -8,9 +8,12 @@ import ResourceDetail from "../components/ResourceDetail";
 import { federationResourceApi } from "../resourceApi";
 import { FederationError } from "../transport";
 
+import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
+
 vi.mock("@/stores/remoteAccess", () => ({
   useRemoteAccessStore: vi.fn(),
   useIsPureClient: () => false,
+  useUserSideActionsRunHere: vi.fn(() => true),
 }));
 vi.mock("../resourceApi", () => ({
   federationResourceApi: { detail: vi.fn(), playback: vi.fn(), openDirectory: vi.fn() },
@@ -49,10 +52,27 @@ const view = (ref = remote) => (
   </MemoryRouter>
 );
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(useUserSideActionsRunHere).mockReturnValue(true);
+});
 afterEach(cleanup);
 
 describe("read-only remote detail", () => {
+  it("offers browser previews without native players or file managers on a headless server", async () => {
+    vi.mocked(useUserSideActionsRunHere).mockReturnValue(false);
+    vi.mocked(federationResourceApi.detail).mockResolvedValue({
+      resources: [{ ...detail(), directoryAccess: { canOpen: true } }],
+    });
+    render(view());
+    await screen.findByText("Remote title");
+    expect(screen.getByText("federation.preview")).toBeInTheDocument();
+    expect(screen.queryByText("federation.playHere")).not.toBeInTheDocument();
+    expect(screen.queryByText("federation.directory.open")).not.toBeInTheDocument();
+    expect(federationResourceApi.playback).not.toHaveBeenCalled();
+    expect(federationResourceApi.openDirectory).not.toHaveBeenCalled();
+  });
+
   it("renders self-contained metadata and never starts media or offers local management for a colliding ID", async () => {
     vi.mocked(federationResourceApi.detail).mockResolvedValue({ resources: [detail()] });
     render(view());

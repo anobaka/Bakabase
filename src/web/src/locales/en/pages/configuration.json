@@ -413,5 +413,7 @@
   "configuration.dataRelocation.automaticFailure": "Setup has stopped this operation and will not retry automatically. Open the separate progress page, fix the reported cause, then restart Bakabase or its container to recover from the saved record. Preserve the data directories.",
   "configuration.dataRelocation.automaticMonitorHelp": "The independent setup page remains available while the main app is closed. A disconnect does not mean completion; wait for a confirmed result.",
   "configuration.dataRelocation.phase.stopping": "Saving and closing the app",
-  "configuration.dataRelocation.stoppingLongRunning": "The app is still saving or waiting for background tasks. Setup continues waiting for its files to be released; no new progress does not mean failure."
+  "configuration.dataRelocation.stoppingLongRunning": "The app is still saving or waiting for background tasks. Setup continues waiting for its files to be released; no new progress does not mean failure.",
+  "configuration.functional.showResourceUsage": "Show resource usage",
+  "configuration.functional.showResourceUsage.tip": "Show CPU, memory and data directory size for the current Bakabase in the sidebar. Turning this off stops usage polling."
 }

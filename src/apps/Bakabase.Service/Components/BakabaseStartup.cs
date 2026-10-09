@@ -108,6 +108,9 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<BangumiCookieValidator>();
 
             services.AddSingleton<BakabaseOptionsManagerPool>();
+            services.AddSingleton(sp => new ResourceUsageService(
+                sp.GetRequiredService<AppService>().AppDataDirectory,
+                sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
 
             // What this install tells other devices it is. Before AddRemoteAccess, whose
             // default knows the platform but not the kind.
@@ -365,8 +368,9 @@ namespace Bakabase.Service.Components
             app.UseMiddleware<FrameAncestorsPolicy>();
             app.UseMiddleware<FederationExceptionMiddleware>();
             app.UseMiddleware<FederationAccessMiddleware>();
-            app.UseMiddleware<FederationBrowsingMiddleware>();
             app.UseMiddleware<RemoteAccessMiddleware>();
+            app.UseMiddleware<FederationAdministrationMiddleware>();
+            app.UseMiddleware<FederationBrowsingMiddleware>();
             // After the loopback bypass above: narrows what a page on another site can
             // make this computer's browser do here, showing this UI in a frame included.
             app.UseMiddleware<LoopbackCrossSiteGuard>();

@@ -53,7 +53,7 @@ manage anything; they are only ever managed.
   Remote access off (the gate's 403 `Disabled` before any identity) is carried on the check
   (`UpstreamIdentityCheck.RemoteAccessDisabled`): the page and the JSON message both say to
   turn it on at that device — on a computer under Devices and sharing → Management → Who may
-  manage this device, on a NAS or Docker (no devices page) under Configuration → Remote
+  manage this device, on a NAS or Docker also under Configuration → Remote
   access — never to check that it is running. The listing reports `ManagedServerState.WrongServer` with `answeredBy` (never the other
   server's name, mode or version as the server's own), and nothing is renamed, re-keyed or
   paired from such an answer. **The verdict never waits on the store**: an answer from the
