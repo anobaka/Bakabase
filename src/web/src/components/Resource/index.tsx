@@ -15,14 +15,7 @@ import type {
 } from "@/components/Resource/components/PlayControl";
 import type { PropertyType } from "@/sdk/constants";
 
-import React, {
-  useCallback,
-  useImperativeHandle,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useImperativeHandle, useMemo, useReducer, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ApartmentOutlined,
@@ -35,7 +28,6 @@ import {
   QuestionCircleOutlined,
   StopOutlined,
 } from "@ant-design/icons";
-import { ControlledMenu } from "@szhsin/react-menu";
 import { AiOutlineCloudDownload, AiOutlineFolderOpen, AiOutlinePlayCircle } from "react-icons/ai";
 import moment from "moment";
 
@@ -79,7 +71,7 @@ import {
 } from "@/sdk/constants";
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
 import PlayControl from "@/components/Resource/components/PlayControl";
-import ContextMenuItems from "@/components/Resource/components/ContextMenuItems";
+import ResourceContextMenu from "@/components/Resource/components/ContextMenu";
 import ResourceSourceIcon from "@/components/Resource/components/ResourceSourceIcon";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 import { autoBackgroundColor } from "@/components/utils"; // adjust the path as needed
@@ -450,17 +442,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   // Use useReducer for stable forceUpdate reference
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
-
-  const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
-  // Once the user right-clicks this card we keep the menu's subtree mounted
-  // (close animations on ControlledMenu need the children to stay around).
-  // Cards never right-clicked skip rendering the ~380-line ContextMenuItems
-  // tree entirely — and most cards are never right-clicked.
-  const [contextMenuEverOpened, setContextMenuEverOpened] = useState(false);
-  const [contextMenuAnchorPoint, setContextMenuAnchorPoint] = useState({
-    x: 0,
-    y: 0,
-  });
 
   useImperativeHandle(ref, (): IResourceHandler => {
     return {
@@ -1046,52 +1027,26 @@ const Resource = React.forwardRef((props: Props, ref) => {
           </div>
         </div>
       )}
-      <div
-        onContextMenu={(e) => {
-          if (typeof document.hasFocus === "function" && !document.hasFocus()) return;
-
-          e.preventDefault();
-          setContextMenuAnchorPoint({
-            x: e.clientX,
-            y: e.clientY,
-          });
-          setContextMenuIsOpen(true);
-          setContextMenuEverOpened(true);
-        }}
+      <ResourceContextMenu
+        contextResource={resource}
+        disabled={moveLocked}
+        moveResourceIds={
+          resolvedSelectedResourceIds.includes(resource.id)
+            ? resolvedSelectedResourceIds
+            : [resource.id]
+        }
+        selectedResourceIds={selectedResourceIds}
+        selectedResources={selectedResources}
+        sourceTabId={sourceTabId}
+        sourceTabName={sourceTabName}
+        onResourcesDeleted={onResourcesDeleted}
+        onSelectedResourcesChanged={onSelectedResourcesChanged}
       >
-        <ControlledMenu
-          key={resource.id}
-          anchorPoint={contextMenuAnchorPoint}
-          direction="right"
-          state={contextMenuIsOpen ? "open" : "closed"}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onClose={() => setContextMenuIsOpen(false)}
-        >
-          {contextMenuEverOpened && (
-            <ContextMenuItems
-              contextResource={resource}
-              selectedResourceIds={selectedResourceIds}
-              selectedResources={selectedResources}
-              moveResourceIds={
-                resolvedSelectedResourceIds.includes(resource.id)
-                  ? resolvedSelectedResourceIds
-                  : [resource.id]
-              }
-              sourceTabId={sourceTabId}
-              sourceTabName={sourceTabName}
-              onResourcesDeleted={onResourcesDeleted}
-              onSelectedResourcesChanged={onSelectedResourcesChanged}
-            />
-          )}
-        </ControlledMenu>
         <div className="relative">
           {renderCover()}
           {!inlineDisplayName && renderDisplayNameAndTags(false)}
         </div>
-      </div>
+      </ResourceContextMenu>
     </div>
   );
 });

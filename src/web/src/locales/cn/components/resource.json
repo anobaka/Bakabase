@@ -1,4 +1,11 @@
 {
+  "resource.contextMenu.title": "资源操作",
+  "resource.contextMenu.trigger": "{{name}} 的操作菜单",
+  "resource.contextMenu.selectionCount": "{{count}} 项",
+  "resource.contextMenu.currentOnly": "仅此资源",
+  "resource.contextMenu.organizeSection": "整理与编辑",
+  "resource.contextMenu.maintenanceSection": "维护",
+  "resource.contextMenu.batchPlay.shortLabel": "通过外部工具批量打开",
   "resource.folderLocation.title": "查看文件夹位置",
   "resource.folderLocation.serverPath": "服务端文件夹路径",
   "resource.folderLocation.browserHint": "浏览器无法直接打开此电脑的文件管理器，你可以查看并复制文件夹路径。",

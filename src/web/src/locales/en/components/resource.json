@@ -1,4 +1,13 @@
 {
+  "resource.contextMenu.title": "Resource actions",
+  "resource.contextMenu.trigger": "Actions for {{name}}",
+  "resource.contextMenu.selectionCount": "{{count}} items",
+  "resource.contextMenu.selectionCount_one": "{{count}} item",
+  "resource.contextMenu.selectionCount_other": "{{count}} items",
+  "resource.contextMenu.currentOnly": "This resource",
+  "resource.contextMenu.organizeSection": "Organize and edit",
+  "resource.contextMenu.maintenanceSection": "Maintenance",
+  "resource.contextMenu.batchPlay.shortLabel": "Open together with a tool",
   "resource.folderLocation.title": "View folder location",
   "resource.folderLocation.serverPath": "Folder path on the server",
   "resource.folderLocation.browserHint": "The browser cannot open this computer's file manager directly. You can view and copy the folder path here.",
