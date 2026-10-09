@@ -100,6 +100,8 @@ const EditableText = memo((props: Props) => {
   const inputKeyDownHandler = useCallback(
     (e: React.KeyboardEvent) => {
       log("Key down", e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey, e);
+      // Editing keys belong to the input, not the selectable file row.
+      e.stopPropagation();
       switch (e.key) {
         case "Enter":
           submit();
@@ -110,10 +112,8 @@ const EditableText = memo((props: Props) => {
         case "Delete":
           break;
         default:
-          // Propagation
           return;
       }
-      // e.stopPropagation();
     },
     [submit, cancel],
   );
@@ -172,8 +172,8 @@ const EditableText = memo((props: Props) => {
         }
       }}
       className={`min-w-0 ${editing ? "flex-1" : ""}`}
-      role="textbox"
-      tabIndex={0}
+      role={editing ? undefined : "button"}
+      tabIndex={editing ? -1 : 0}
       onKeyDown={(e) => enterEditingModeKeyDownHandler(e.nativeEvent)}
     >
       {editing ? (

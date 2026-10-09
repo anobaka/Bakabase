@@ -30,6 +30,16 @@ vi.mock("@/components/utils", () => ({
   buildLogger: () => () => {},
   standardizePath: (path?: string) => path,
   getStandardParentPath: (path?: string) => (path?.includes("/") ? "/" : undefined),
+  useTraceUpdate: () => {},
+  createSelection: (input: HTMLInputElement, start: number, end: number) => {
+    input.focus();
+    input.setSelectionRange(start, end);
+  },
+  forceFocus: (element: HTMLElement) => element.focus(),
+  getFileNameWithoutExtension: (name: string) => name.split(".")[0],
+}));
+vi.mock("auto-text-size", () => ({
+  AutoTextSize: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("@/core/models/FileExplorer/Entry", () => ({ Entry: class {} }));
 vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
@@ -56,6 +66,7 @@ vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
 }));
 vi.mock("../FileExplorerEntry", async () => {
   const { useEffect, useReducer } = await import("react");
+  const { default: EditableFileName } = await import("../components/EditableFileName");
 
   return {
     default: function MockEntry({ entry, onChildrenLoaded, switchSelective, filter }: any) {
@@ -72,15 +83,25 @@ vi.mock("../FileExplorerEntry", async () => {
       return (
         <div data-filter={filter.keyword} data-testid="entries">
           {entry.filteredChildren.map((child: { path: string; name: string }) => (
-            <button
+            <div
               key={child.path}
+              aria-label={`row ${child.name}`}
+              className="entry-keydown-listener"
+              role="button"
+              tabIndex={0}
               onClick={(event) => {
                 event.stopPropagation();
                 switchSelective(child);
               }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  switchSelective(child);
+                }
+              }}
             >
-              {child.name}
-            </button>
+              <EditableFileName isDirectory name={child.name} path={child.path} />
+            </div>
           ))}
         </div>
       );
@@ -94,7 +115,6 @@ vi.mock("../components/ContextMenu", () => ({
     </button>
   ),
 }));
-vi.mock("../components/Shortcuts", () => ({ default: () => null }));
 vi.mock("../components/DeleteConfirmationModal", () => ({ default: () => null }));
 vi.mock("../components/WrapModal", () => ({ default: () => null }));
 vi.mock("../components/ExtractModal", () => ({ default: () => null }));
@@ -110,39 +130,34 @@ vi.mock("@/stores/options", () => ({
     return selector ? selector(state) : state;
   },
 }));
-vi.mock("@/components/bakaui", () => ({
-  Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
-  Chip: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  Button: ({
-    children,
-    isDisabled,
-    onClick,
-    onPress,
-    "aria-label": label,
-    "aria-haspopup": popup,
-  }: any) => (
-    <button
-      aria-haspopup={popup}
-      aria-label={label}
-      disabled={isDisabled}
-      onClick={onClick ?? onPress}
-    >
-      {children}
-    </button>
-  ),
-  Input: ({ value, onValueChange, onKeyDown, endContent, "aria-label": label }: any) => (
-    <div>
-      <input
-        aria-label={label}
-        value={value ?? ""}
-        onChange={(event) => onValueChange(event.target.value)}
-        onKeyDown={onKeyDown}
-      />
-      {endContent}
-    </div>
-  ),
-  toast: { success: vi.fn() },
-}));
+vi.mock("@/components/bakaui", async () => {
+  const { forwardRef } = await import("react");
+  const { Button } = await import("@/components/bakaui/components/Button");
+
+  return {
+    Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
+    Chip: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+    Button,
+    Kbd: ({ children }: { children: ReactNode }) => <kbd>{children}</kbd>,
+    Modal: () => null,
+    Input: forwardRef<HTMLInputElement, any>(
+      ({ value, onValueChange, onKeyDown, onBlur, endContent, "aria-label": label }, ref) => (
+        <div>
+          <input
+            ref={ref}
+            aria-label={label}
+            value={value ?? ""}
+            onBlur={onBlur}
+            onChange={(event) => onValueChange(event.target.value)}
+            onKeyDown={onKeyDown}
+          />
+          {endContent}
+        </div>
+      ),
+    ),
+    toast: { success: vi.fn() },
+  };
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -287,19 +302,23 @@ describe("compact file processor toolbar", () => {
           selectable="multiple"
         />,
       );
-      await screen.findByRole("button", { name: "alpha" });
-      fireEvent.keyDown(document.body, { key: "a", [other]: true });
+      const fileName = await screen.findByRole("button", { name: "alpha" });
+
+      fileName.focus();
+      expect(fileName).toHaveFocus();
+      fireEvent.keyDown(fileName, { key: "a", [other]: true });
       expect(select).not.toHaveBeenCalled();
-      expect(fireEvent.keyDown(document.body, { key: "a", [primary]: true })).toBe(false);
+      expect(fireEvent.keyDown(fileName, { key: "a", [primary]: true })).toBe(false);
       expect(select).toHaveBeenCalledTimes(3);
-      fireEvent.keyDown(document.body, { key: "c", [primary]: true });
+      fireEvent.keyDown(fileName, { key: "c", [primary]: true });
       expect(useFileExplorerClipboardStore.getState().mode).toBe("copy");
       expect(useFileExplorerClipboardStore.getState().paths).toHaveLength(3);
-      fireEvent.keyDown(document.body, { key: "x", [primary]: true });
+      fireEvent.keyDown(fileName, { key: "x", [primary]: true });
       expect(useFileExplorerClipboardStore.getState().mode).toBe("cut");
       fireEvent.click(screen.getByRole("button", { name: "fileExplorer.selection.clear" }));
-      fireEvent.keyDown(document.body, { key: "v", [primary]: true });
-      fireEvent.keyDown(document.body, { key: "v", [primary]: true, repeat: true });
+      fileName.focus();
+      fireEvent.keyDown(fileName, { key: "v", [primary]: true });
+      fireEvent.keyDown(fileName, { key: "v", [primary]: true, repeat: true });
       await waitFor(() => expect(moveEntries).toHaveBeenCalledTimes(1));
       expect(moveEntries).toHaveBeenCalledWith({
         destDir: "/media",
@@ -307,10 +326,68 @@ describe("compact file processor toolbar", () => {
       });
 
       fireEvent.click(screen.getByRole("button", { name: "alpha" }));
-      expect(fireEvent.keyDown(document.body, { key: "w", [primary]: true })).toBe(true);
+      expect(fireEvent.keyDown(fileName, { key: "w", [primary]: true })).toBe(true);
       expect(createPortal).not.toHaveBeenCalled();
-      fireEvent.keyDown(document.body, { key: "w" });
+      fireEvent.keyDown(fileName, { key: "w" });
       expect(createPortal).toHaveBeenCalledTimes(1);
+
+      // Keep the real HeroUI button: its keyboard handling must not swallow
+      // primary shortcuts merely because a toolbar control has focus.
+      select.mockClear();
+      const shortcuts = screen.getByRole("button", { name: "fileExplorer.label.shortcuts" });
+
+      shortcuts.focus();
+      expect(shortcuts).toHaveFocus();
+      expect(fireEvent.keyDown(shortcuts, { key: "a", [primary]: true })).toBe(false);
+      expect(select).toHaveBeenCalledTimes(3);
     },
   );
+
+  it("protects actual filename editing while preserving row keyboard selection afterwards", async () => {
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    render(
+      <FileExplorer
+        appearance="compact"
+        capabilities={["select", "wrap", "delete"]}
+        rootPath="/media"
+        selectable="multiple"
+      />,
+    );
+    const fileName = await screen.findByRole("button", { name: "alpha" });
+
+    fileName.focus();
+    fireEvent.click(fileName);
+    fireEvent.keyDown(fileName, { key: "F2" });
+    const input = screen.getByDisplayValue("alpha");
+
+    expect(input).toHaveFocus();
+    expect(input).toHaveRole("textbox");
+    select.mockClear();
+    for (const key of ["a", "c", "x", "v", "Backspace"]) {
+      expect(fireEvent.keyDown(input, { key, metaKey: true })).toBe(true);
+    }
+    for (const key of ["w", "Delete", " "]) {
+      expect(fireEvent.keyDown(input, { key })).toBe(true);
+    }
+    expect(select).not.toHaveBeenCalled();
+    expect(createPortal).not.toHaveBeenCalled();
+    expect(moveEntries).not.toHaveBeenCalled();
+    expect(useFileExplorerClipboardStore.getState().paths).toEqual([]);
+    expect(
+      screen.getByRole("button", { name: "fileExplorer.selection.clear" }),
+    ).toBeInTheDocument();
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(fileName).toHaveFocus();
+    expect(fileName).toHaveRole("button");
+    expect(select).not.toHaveBeenCalled();
+    fireEvent.keyDown(fileName, { key: "Enter" });
+    expect(screen.queryByRole("button", { name: "fileExplorer.selection.clear" })).toBeNull();
+
+    fireEvent.keyDown(fileName, { key: "F2" });
+    select.mockClear();
+    fireEvent.keyDown(screen.getByDisplayValue("alpha"), { key: "Enter" });
+    expect(fileName).toHaveFocus();
+    expect(select).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "fileExplorer.selection.clear" })).toBeNull();
+  });
 });

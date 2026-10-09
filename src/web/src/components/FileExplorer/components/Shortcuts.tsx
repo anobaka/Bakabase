@@ -91,6 +91,7 @@ const Shortcuts = ({ capabilities, className }: Props) => {
     <Tooltip content={t<string>("fileExplorer.label.shortcuts")}>
       <Button
         isIconOnly
+        aria-label={t<string>("fileExplorer.label.shortcuts")}
         className={className}
         radius={"none"}
         size={"sm"}

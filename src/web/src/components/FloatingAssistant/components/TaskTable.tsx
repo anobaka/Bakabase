@@ -564,7 +564,9 @@ export function TaskTable({ tasks, renderSchedule, presentation = "default" }: T
       {typesWithTasks.length > 1 && (
         <div className="flex flex-wrap gap-1">
           <Chip
-            className="cursor-pointer"
+            aria-pressed={typeFilter == null}
+            as="button"
+            className="cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
             color={typeFilter == null ? "primary" : "default"}
             size="sm"
             variant={typeFilter == null ? "solid" : "flat"}
@@ -575,7 +577,9 @@ export function TaskTable({ tasks, renderSchedule, presentation = "default" }: T
           {typesWithTasks.map((type) => (
             <Chip
               key={type}
-              className="cursor-pointer"
+              aria-pressed={typeFilter === type}
+              as="button"
+              className="cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
               color={typeFilter === type ? "primary" : "default"}
               size="sm"
               variant={typeFilter === type ? "solid" : "flat"}
@@ -596,7 +600,9 @@ export function TaskTable({ tasks, renderSchedule, presentation = "default" }: T
           return (
             <Chip
               key={option.key}
-              className="cursor-pointer"
+              aria-pressed={isActive}
+              as="button"
+              className="cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
               color={isActive ? (option.color ?? "default") : "default"}
               size="sm"
               variant={isActive ? "solid" : "flat"}
