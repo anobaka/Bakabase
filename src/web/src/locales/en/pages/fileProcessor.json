@@ -55,5 +55,7 @@
   "fileProcessor.ai.opType.Rename": "Rename",
   "fileProcessor.ai.opType.Move": "Move",
   "fileProcessor.ai.opType.CreateDirectory": "Create Directory",
-  "FileNameModifier.Title": "File name modifier"
+  "FileNameModifier.Title": "File name modifier",
+  "fileProcessor.action.bulkDecompression.short": "Bulk extract",
+  "fileProcessor.label.showOperationsAfterPlay.short": "Actions after playback"
 }

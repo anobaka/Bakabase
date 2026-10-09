@@ -121,5 +121,15 @@
   "fileExplorer.shortcutKey.g": "G",
   "fileExplorer.shortcutKey.space": "Space",
   "fileExplorer.shortcutKey.n": "N",
-  "fileExplorer.tip.pathsAreOnTheServer": "These paths are on the server"
+  "fileExplorer.tip.pathsAreOnTheServer": "These paths are on the server",
+  "fileExplorer.navigation.back": "Back",
+  "fileExplorer.navigation.parent": "Parent directory",
+  "fileExplorer.navigation.path": "Working directory",
+  "fileExplorer.navigation.pathPlaceholder": "Enter a directory path",
+  "fileExplorer.navigation.filter": "Filter names",
+  "fileExplorer.selection.total": "{{count}} items",
+  "fileExplorer.selection.filtered": "{{visible}} / {{count}} items",
+  "fileExplorer.selection.selected": "{{count}} selected",
+  "fileExplorer.selection.actions": "Actions",
+  "fileExplorer.selection.clear": "Clear selection"
 }

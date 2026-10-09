@@ -121,5 +121,15 @@
   "fileExplorer.shortcutKey.g": "G",
   "fileExplorer.shortcutKey.space": "空格",
   "fileExplorer.shortcutKey.n": "N",
-  "fileExplorer.tip.pathsAreOnTheServer": "这些是服务端上的路径"
+  "fileExplorer.tip.pathsAreOnTheServer": "这些是服务端上的路径",
+  "fileExplorer.navigation.back": "返回",
+  "fileExplorer.navigation.parent": "上一级",
+  "fileExplorer.navigation.path": "工作目录",
+  "fileExplorer.navigation.pathPlaceholder": "输入目录路径",
+  "fileExplorer.navigation.filter": "筛选名称",
+  "fileExplorer.selection.total": "{{count}} 项",
+  "fileExplorer.selection.filtered": "{{visible}} / {{count}} 项",
+  "fileExplorer.selection.selected": "已选 {{count}} 项",
+  "fileExplorer.selection.actions": "操作",
+  "fileExplorer.selection.clear": "清除选择"
 }

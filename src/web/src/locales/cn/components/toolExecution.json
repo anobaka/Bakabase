@@ -1,0 +1,17 @@
+{
+  "toolExecution.serverFiles": "服务器上的文件",
+  "toolExecution.currentService": "当前服务的文件",
+  "toolExecution.title": "文件处理位置",
+  "toolExecution.description": "重命名、移动、删除和解压等操作，会处理当前 Bakabase 服务中的文件。Docker 版本只能访问容器内和已挂载的目录。",
+  "toolExecution.useHere": "想整理这台电脑的文件？在本机 Bakabase 中打开此工具。",
+  "toolExecution.switchLocal": "在本机使用",
+  "toolExecution.openApp": "打开本机客户端",
+  "toolExecution.switchFailed": "暂时无法切回本机，请重试，或通过托盘菜单打开本机。",
+  "toolExecution.appFallback": "没有打开？请先安装或升级这台电脑上的 Bakabase 桌面客户端，再重试。浏览器无法确认客户端是否已启动。",
+  "toolExecution.localServer": "使用本机的服务端版本",
+  "toolExecution.localServerDescription": "填写这台电脑上已启动服务的地址，将在新标签页打开同一工具。若它也运行在 Docker 中，仍只能处理已挂载的文件。",
+  "toolExecution.address": "本机服务地址",
+  "toolExecution.invalidAddress": "请输入以 http:// 或 https:// 开头的 localhost、127.0.0.1 或 [::1] 地址，可包含端口，不包含其他路径。",
+  "toolExecution.openServer": "打开本机服务",
+  "toolExecution.deviceMenu": "也可以在左侧导航顶部、Logo 下方的设备菜单中切换到本机。上方快捷按钮会同时打开当前工具。"
+}

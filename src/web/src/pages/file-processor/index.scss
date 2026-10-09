@@ -4,7 +4,8 @@
 
   color: var(--theme-text-subtle);
 
-  .next-loading, .next-loading-wrap {
+  .next-loading,
+  .next-loading-wrap {
     width: 100%;
     height: 100%;
   }
@@ -89,7 +90,8 @@
           align-items: center;
         }
 
-        .root, .recycle-bin {
+        .root,
+        .recycle-bin {
           margin-left: 10px;
         }
 
@@ -105,7 +107,8 @@
       align-items: center;
       justify-content: center;
 
-      .left, .right {
+      .left,
+      .right {
         display: flex;
         align-items: center;
       }
@@ -195,7 +198,6 @@
 }
 
 .file-processor-page-context-menu {
-
   ul {
     li {
       display: flex;
@@ -225,13 +227,202 @@
   color: #0394f5;
 }
 
-
 .contents-extraction-confirm-dialog {
   .next-message-content {
     word-break: break-all;
 
     span.bold {
       font-weight: bold;
+    }
+  }
+}
+
+// Opt-in presentation for the full file processor; embedded folder pickers keep
+// their own dimensions and styles. Virtualized rows continue to measure 35px.
+.file-processor-page {
+  color: hsl(var(--heroui-foreground));
+
+  .file-processor-explorer {
+    gap: 3px;
+  }
+
+  .file-explorer-toolbar {
+    min-height: 32px;
+    flex-shrink: 0;
+    padding: 0 3px;
+    border: 1px solid hsl(var(--heroui-default-200) / 0.65);
+    border-radius: 8px;
+    background: hsl(var(--heroui-default-100) / 0.45);
+
+    > button {
+      min-width: 28px;
+      height: 28px;
+      min-height: 28px;
+      border-radius: 6px;
+    }
+
+    [data-slot="input-wrapper"] {
+      min-height: 28px;
+      height: 28px;
+      border-radius: 5px;
+    }
+
+    .file-explorer-path input {
+      font-size: 12px;
+    }
+
+    .file-explorer-filter {
+      width: clamp(130px, 18vw, 220px);
+      flex-shrink: 0;
+      border-left: 1px solid hsl(var(--heroui-default-200) / 0.65);
+    }
+  }
+
+  .file-explorer-commandbar {
+    padding: 0 4px;
+  }
+
+  .file-explorer-extra-tools {
+    button {
+      height: 28px;
+      min-height: 28px;
+      min-width: 0;
+      padding: 0 8px;
+      font-size: 12px;
+      gap: 5px;
+    }
+
+    [data-slot="label"] {
+      font-size: 12px;
+      color: hsl(var(--heroui-foreground-500));
+    }
+  }
+
+  .file-explorer-list {
+    overflow: hidden;
+    border: 1px solid hsl(var(--heroui-default-200) / 0.65);
+    border-radius: 8px;
+  }
+
+  .tree-entry {
+    .entry-main-container {
+      height: 35px;
+      min-height: 35px;
+      max-height: 35px;
+      border-bottom-color: hsl(var(--heroui-default-200) / 0.4);
+    }
+
+    .entry-main {
+      box-sizing: border-box;
+      height: 34px;
+      margin: 0 2px;
+      padding: 0 6px 0 3px;
+      border-left-width: 2px;
+      border-radius: 5px;
+      transition:
+        background-color 120ms ease,
+        border-color 120ms ease;
+
+      &:hover:not(:has(.item:hover)):not(:has(button:hover)) {
+        background: hsl(var(--heroui-default-100) / 0.7);
+        box-shadow: none;
+      }
+
+      &.selected {
+        background: hsl(var(--heroui-primary) / 0.1) !important;
+        border-left-color: hsl(var(--heroui-primary)) !important;
+        box-shadow: none !important;
+      }
+
+      &:focus-visible {
+        outline: 1px solid hsl(var(--heroui-primary) / 0.65);
+        outline-offset: -1px;
+      }
+
+      &:active:not(:has(button:active)) {
+        transform: none;
+      }
+    }
+
+    .entry-inline-operations {
+      gap: 1px;
+
+      > * {
+        margin-left: 3px;
+      }
+    }
+
+    .entry-right-operations {
+      margin-left: 8px;
+      gap: 3px;
+
+      button {
+        height: 26px;
+        min-height: 26px;
+        min-width: 0;
+        padding: 0 7px;
+        gap: 4px;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        background: hsl(var(--heroui-default-100) / 0.55);
+        font-size: 12px;
+        color: hsl(var(--heroui-foreground-500));
+
+        &:hover {
+          color: hsl(var(--heroui-foreground));
+          background: hsl(var(--heroui-default-200) / 0.7);
+        }
+      }
+    }
+
+    .children-container {
+      animation: none;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .file-explorer-toolbar {
+      flex-wrap: wrap;
+
+      .file-explorer-path {
+        flex-basis: calc(100% - 120px);
+      }
+
+      .file-explorer-filter {
+        flex: 1;
+        border-left: 0;
+      }
+    }
+  }
+}
+
+.file-processor-context-menu .szh-menu {
+  box-sizing: border-box;
+  min-width: 250px;
+  max-width: min(360px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid hsl(var(--heroui-default-200));
+  border-radius: 10px;
+  background: hsl(var(--heroui-content1));
+  color: hsl(var(--heroui-foreground));
+  box-shadow: 0 12px 36px rgb(0 0 0 / 0.2);
+
+  .szh-menu__item {
+    min-height: 29px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    line-height: 19px;
+    white-space: normal;
+
+    &--hover {
+      background: hsl(var(--heroui-default-100));
+    }
+
+    &.file-explorer-menu-danger {
+      color: hsl(var(--heroui-danger));
     }
   }
 }

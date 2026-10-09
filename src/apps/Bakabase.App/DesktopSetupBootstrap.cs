@@ -19,31 +19,47 @@ internal sealed class DesktopSetupBootstrap : IDisposable
     private SetupWindow? _window;
     private Task<int>? _running;
     private bool _businessWasReady;
-    private IActivatableLifetime? _activation;
+    private volatile bool _businessReady;
+    private string? _pendingToolLink;
+    private readonly SemaphoreSlim _toolForwarding = new(1);
 
     public async Task<bool> RunAsync(string[] args)
     {
-        try { if (await TryActivateExistingAsync(args)) return false; }
+        var initialLink = DesktopToolLink.FromArguments(args);
+        if (initialLink != null) Interlocked.CompareExchange(ref _pendingToolLink, initialLink, null);
+        try { if (await TryActivateExistingAsync(args, activationMessage: _pendingToolLink)) return false; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             // Directory resolution failures belong to the coordinator's normal error
             // window below; the best-effort duplicate check must not bypass that UI.
         }
-        _activation = Application.Current?.TryGetFeature(typeof(IActivatableLifetime)) as IActivatableLifetime;
-        if (_activation != null) _activation.Activated += OnActivated;
         var options = new SetupCoordinatorOptions
         {
             Addresses = ["http://127.0.0.1:0"],
-            Arguments = args,
+            // A navigation is consumed by this coordinator once, never replayed after a
+            // maintenance operation or interpreted as host configuration in the child.
+            Arguments = args.Where(arg => DesktopToolLink.GetRoute(arg) == null).ToArray(),
             IsDesktop = true,
+            OnControlAcquired = () => ActivationServer.Start(SetupActivationChannel(AppDataLocator.ResolveAnchor()),
+                message => Dispatcher.UIThread.Post(() =>
+                {
+                    if (DesktopToolLink.GetRoute(message) != null) AcceptToolLink(message);
+                    else if (message == ActivationChannel.ShowMessage) Reopen();
+                })),
             OnSetupUrl = ShowSetupAsync,
+            OnBusinessUnavailable = () => _businessReady = false,
             DirectoryPicker = () => _window?.PickDirectoryAsync() ?? Task.FromResult<string?>(null),
-            OnBusinessReady = _ => Dispatcher.UIThread.Post(() =>
+            OnBusinessReady = address =>
             {
-                _businessWasReady = true;
-                _window?.ContinueStartup();
-                _window = null;
-            })
+                _businessReady = true;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _businessWasReady = true;
+                    _window?.ContinueStartup();
+                    _window = null;
+                    _ = ForwardPendingToolLinkAsync();
+                });
+            }
         };
         // The coordinator must never capture Avalonia's context: Main disposes us after
         // that dispatcher stops. Native callbacks explicitly marshal to the UI thread.
@@ -68,13 +84,28 @@ internal sealed class DesktopSetupBootstrap : IDisposable
         return false;
     }
 
-    internal static async Task<bool> TryActivateExistingAsync(string[] args, string? anchor = null)
+    internal static async Task<bool> TryActivateExistingAsync(string[] args, string? anchor = null,
+        string? activationMessage = null)
     {
         // A replacement is waiting for its predecessor, not asking that predecessor to
         // show a window. Do not consume a requested restart as a duplicate launch.
         if (RestartHandoff.TryReadPredecessorPid(args) != null) return false;
-        var data = AppDataLocator.ResolveEffectiveDataDirectory(anchor ?? AppDataLocator.ResolveAnchor());
-        var lockPath = Path.Combine(data, DataDirectoryLock.FileName);
+        anchor ??= AppDataLocator.ResolveAnchor();
+        var link = DesktopToolLink.GetRoute(activationMessage) != null ? activationMessage : DesktopToolLink.FromArguments(args);
+        var message = link ?? ActivationChannel.ShowMessage;
+        // The coordinator stays available while setup/maintenance has no business child.
+        if (await TryActivateLockOwnerAsync(Path.Combine(anchor, SetupProcessCoordinator.LockFileName),
+                SetupActivationChannel(anchor), message)) return true;
+        var data = AppDataLocator.ResolveEffectiveDataDirectory(anchor);
+        return await TryActivateLockOwnerAsync(Path.Combine(data, DataDirectoryLock.FileName),
+            ActivationChannel.GetName(DataDirectoryIdentity.Normalize(data)), message);
+    }
+
+    internal static string SetupActivationChannel(string anchor) =>
+        ActivationChannel.GetName(DataDirectoryIdentity.Normalize(anchor) + "|setup");
+
+    private static async Task<bool> TryActivateLockOwnerAsync(string lockPath, string channel, string message)
+    {
         if (!File.Exists(lockPath)) return false;
         try
         {
@@ -87,9 +118,7 @@ internal sealed class DesktopSetupBootstrap : IDisposable
         catch (DirectoryNotFoundException) { return false; }
         catch (IOException) { /* An exclusive owner may have its activation channel ready. */ }
         catch (UnauthorizedAccessException) { return false; }
-        var channel = ActivationChannel.GetName(DataDirectoryIdentity.Normalize(data));
-        return await ActivationChannel.TrySendAsync(channel, ActivationChannel.ShowMessage,
-            SingleInstanceGuard.HandOffTimeout);
+        return await ActivationChannel.TrySendAsync(channel, message, SingleInstanceGuard.HandOffTimeout);
     }
 
     private async Task ShowSetupAsync(string url)
@@ -129,9 +158,27 @@ internal sealed class DesktopSetupBootstrap : IDisposable
         return builder.Uri.AbsoluteUri;
     }
 
-    private void OnActivated(object? sender, ActivatedEventArgs e)
+    internal void OnActivated(ActivatedEventArgs e)
     {
+        if (e is ProtocolActivatedEventArgs protocol)
+        {
+            AcceptToolLink(protocol.Uri.OriginalString);
+            return;
+        }
         if (e.Kind != ActivationKind.Reopen) return;
+        Reopen();
+    }
+
+    private void AcceptToolLink(string link)
+    {
+        if (DesktopToolLink.GetRoute(link) == null) return;
+        Interlocked.Exchange(ref _pendingToolLink, link);
+        if (_businessReady) _ = ForwardPendingToolLinkAsync();
+        if (_window?.ClosedTask.IsCompleted == false) _window.BringToFront();
+    }
+
+    private void Reopen()
+    {
         if (_window?.ClosedTask.IsCompleted == false)
         {
             _window.BringToFront();
@@ -151,11 +198,30 @@ internal sealed class DesktopSetupBootstrap : IDisposable
         });
     }
 
+    private async Task ForwardPendingToolLinkAsync()
+    {
+        await _toolForwarding.WaitAsync();
+        try
+        {
+            while (!_stopping.IsCancellationRequested && _businessReady && Volatile.Read(ref _pendingToolLink) is { } link)
+            {
+                var data = AppDataLocator.ResolveEffectiveDataDirectory(AppDataLocator.ResolveAnchor());
+                var channel = ActivationChannel.GetName(DataDirectoryIdentity.Normalize(data));
+                if (!await ActivationChannel.TrySendAsync(channel, link, SingleInstanceGuard.HandOffTimeout))
+                    return; // Maintenance may have stopped the child; next readiness retries.
+                // A stop may have started while the pipe write was in flight. Keep the
+                // intent for the replacement child rather than consuming it in the old UI.
+                if (_businessReady) Interlocked.CompareExchange(ref _pendingToolLink, null, link);
+            }
+        }
+        catch (Exception error) { Console.Error.WriteLine($"Could not open a desktop tool: {error.Message}"); }
+        finally { _toolForwarding.Release(); }
+    }
+
     public void RequestStop() => _stopping.Cancel();
 
     public void Dispose()
     {
-        if (_activation != null) _activation.Activated -= OnActivated;
         _stopping.Cancel();
         // RunAsync's coordinator task itself runs on the pool, so draining it does not
         // depend on the already-stopped Avalonia synchronization context.

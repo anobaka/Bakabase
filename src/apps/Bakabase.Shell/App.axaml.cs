@@ -23,6 +23,7 @@ public partial class App : Application
     private readonly Func<System.Threading.Tasks.Task<bool>>? _beforeHostStart;
     private readonly Action<string>? _onReady;
     private readonly Action<string>? _onFatalError;
+    private readonly Action<ActivatedEventArgs>? _onActivation;
     private bool _maintenanceStopRequested;
 
     private AvaloniaGuiAdapter _guiAdapter = null!;
@@ -37,12 +38,14 @@ public partial class App : Application
     /// </summary>
     public App(Func<IGuiAdapter, ISystemService, IShellHost> hostFactory,
         Func<System.Threading.Tasks.Task<bool>>? beforeHostStart = null,
-        Action<string>? onReady = null, Action<string>? onFatalError = null)
+        Action<string>? onReady = null, Action<string>? onFatalError = null,
+        Action<ActivatedEventArgs>? onActivation = null)
     {
         _hostFactory = hostFactory;
         _beforeHostStart = beforeHostStart;
         _onReady = onReady;
         _onFatalError = onFatalError;
+        _onActivation = onActivation;
     }
 
     /// <summary>
@@ -79,6 +82,16 @@ public partial class App : Application
 
     public override async void OnFrameworkInitializationCompleted()
     {
+        // macOS can deliver the launch URI as soon as initialization returns. Subscribe
+        // before the first await, including while the independent setup UI is running.
+        if (TryGetFeature(typeof(IActivatableLifetime)) is IActivatableLifetime activatable)
+            activatable.Activated += (_, e) =>
+            {
+                if (_onActivation != null) _onActivation(e);
+                else if (e is ProtocolActivatedEventArgs protocol)
+                    SingleInstanceGuard.RequestToolNavigation(protocol.Uri.OriginalString);
+                else if (e.Kind == ActivationKind.Reopen) _guiAdapter?.Show();
+            };
         base.OnFrameworkInitializationCompleted();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -112,7 +125,13 @@ public partial class App : Application
             }
 
             _guiAdapter = GuiAdapterCreator.Create<AvaloniaGuiAdapter>(this);
-            _guiAdapter.MainWindowShown += address => _onReady?.Invoke(address);
+            var toolNavigation = new DesktopToolNavigation(url => _guiAdapter.NavigateMainWebView(url, bringToFront: true));
+            SingleInstanceGuard.SetToolNavigationHandler(toolNavigation.Request);
+            _guiAdapter.MainWindowShown += address =>
+            {
+                toolNavigation.Ready(address);
+                _onReady?.Invoke(address);
+            };
             _guiAdapter.FatalErrorShown += message => _onFatalError?.Invoke(message);
             _systemService = new CrossPlatformSystemService();
 
@@ -124,23 +143,6 @@ public partial class App : Application
 
             // Wire up tray events now that Host is available
             AppTrayIcon.Clicked += (_, _) => _guiAdapter.Show();
-
-            // macOS: clicking the Dock icon, or opening the app again from Finder or
-            // Launchpad, does not start a second process — LaunchServices sends the running
-            // one a "reopen" instead. With the window hidden (closed to the tray), that has to
-            // bring it back, or the click does nothing at all. Windows has no such event; a
-            // second launch there is a second process, which the single-instance guard turns
-            // into the same Show() through its activation channel.
-            if (TryGetFeature(typeof(IActivatableLifetime)) is IActivatableLifetime activatable)
-            {
-                activatable.Activated += (_, e) =>
-                {
-                    if (e.Kind == ActivationKind.Reopen)
-                    {
-                        _guiAdapter.Show();
-                    }
-                };
-            }
 
             // desktop.Exit below covers the graceful exits only. Anything that ends the
             // process without unwinding Avalonia — a fatal-error bail-out or Ctrl+C on a

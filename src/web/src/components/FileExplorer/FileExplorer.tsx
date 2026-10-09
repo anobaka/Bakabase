@@ -16,10 +16,12 @@ import { useDebounce, useUpdate, useUpdateEffect } from "react-use";
 import {
   ArrowLeftOutlined,
   ArrowUpOutlined,
+  CloseOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
   FolderOpenOutlined,
   FolderOutlined,
+  MoreOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
@@ -48,6 +50,10 @@ import FolderSelector from "@/components/FolderSelector";
 import { useIsRemoteClient } from "@/stores/remoteAccess";
 
 export type FileExplorerProps = {
+  /** Opt-in page layout; shared folder pickers retain their existing presentation. */
+  appearance?: "default" | "compact";
+  toolbarContent?: React.ReactNode;
+  locationNotice?: React.ReactNode;
   rootPath?: string;
   /**
    * Multi-root mode: render these paths as the top-level entries of a virtual, pathless root,
@@ -87,6 +93,9 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
   (
     {
       rootPath,
+      appearance = "default",
+      toolbarContent,
+      locationNotice,
       rootPaths,
       keyboard = true,
       onDoubleClick,
@@ -105,6 +114,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     ref,
   ) => {
     const { t } = useTranslation();
+    const compact = appearance === "compact";
     const forceUpdate = useUpdate();
     const { createPortal } = useBakabaseContext();
 
@@ -466,11 +476,15 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     const childrenCount = root.childrenCount ?? 0;
 
     return (
-      <div className={"flex flex-col gap-1 max-h-full min-h-0 grow"}>
+      <div
+        className={`flex flex-col gap-1 max-h-full min-h-0 grow ${compact ? "file-processor-explorer" : ""}`}
+      >
         <ControlledMenu
           {...menuProps}
           anchorPoint={anchorPoint}
-          className={"file-explorer-context-menu"}
+          boundingBoxPadding={compact ? "8" : undefined}
+          className={`file-explorer-context-menu ${compact ? "file-processor-context-menu" : ""}`}
+          portal={compact}
           onClose={() => {
             contextMenuEntryRef.current = undefined;
             toggleMenu(false);
@@ -734,12 +748,20 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             }}
           />
         )}
-        <div className="flex items-center bg-default-100 dark:bg-default-50">
+        <div
+          className={
+            compact
+              ? "file-explorer-toolbar flex items-center gap-0.5"
+              : "flex items-center bg-default-100 dark:bg-default-50"
+          }
+        >
           <Button
             isIconOnly
+            aria-label={t("fileExplorer.navigation.back")}
             isDisabled={historyRootPaths.length == 0}
             radius={"none"}
             size={"sm"}
+            title={t("fileExplorer.navigation.back")}
             variant={"light"}
             onClick={() => {
               const newRoot = historyRootPathsRef.current.pop();
@@ -752,9 +774,11 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           </Button>
           <Button
             isIconOnly
+            aria-label={t("fileExplorer.navigation.parent")}
             isDisabled={getStandardParentPath(root?.path) === undefined}
             radius={"none"}
             size={"sm"}
+            title={t("fileExplorer.navigation.parent")}
             variant={"light"}
             onPress={() => {
               if (root) {
@@ -770,9 +794,11 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           </Button>
           <Button
             isIconOnly
+            aria-label={t("fileExplorer.contextMenu.openInFileManager")}
             isDisabled={!root?.path}
             radius={"none"}
             size={"sm"}
+            title={t("fileExplorer.contextMenu.openInFileManager")}
             variant={"light"}
             onPress={() => {
               BApi.tool.openFileOrDirectory({ path: root?.path });
@@ -784,20 +810,23 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           <div className="w-px h-5 bg-default-300 mx-1" />
 
           <Input
-            className={"grow"}
+            aria-label={t("fileExplorer.navigation.path")}
+            className={compact ? "file-explorer-path min-w-0 flex-1" : "grow"}
             classNames={{
               inputWrapper:
                 "bg-transparent shadow-none data-[hover=true]:bg-default-200 group-data-[focus=true]:bg-default-200",
             }}
             endContent={
-              <Chip size={"sm"} variant={"light"}>
-                {selectedEntries.length} /{" "}
-                {filteredChildrenCount == childrenCount
-                  ? childrenCount
-                  : `${filteredChildrenCount} / ${childrenCount}`}
-              </Chip>
+              !compact && (
+                <Chip size={"sm"} variant={"light"}>
+                  {selectedEntries.length} /{" "}
+                  {filteredChildrenCount == childrenCount
+                    ? childrenCount
+                    : `${filteredChildrenCount} / ${childrenCount}`}
+                </Chip>
+              )
             }
-            placeholder={t<string>("You can type a path here")}
+            placeholder={t<string>("fileExplorer.navigation.pathPlaceholder")}
             radius={"none"}
             size={"sm"}
             value={inputValue}
@@ -815,16 +844,18 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             }}
           />
           <Input
-            className={"w-1/4"}
+            aria-label={t("fileExplorer.navigation.filter")}
+            className={compact ? "file-explorer-filter" : "w-1/4"}
             classNames={{
               inputWrapper:
                 "bg-transparent shadow-none data-[hover=true]:bg-default-200 group-data-[focus=true]:bg-default-200",
             }}
-            placeholder={t<string>("Filter")}
+            placeholder={t<string>("fileExplorer.navigation.filter")}
             radius={"none"}
             size={"sm"}
             startContent={<SearchOutlined className={"text-base text-default-500"} />}
             value={filterInputValue}
+            onKeyDown={compact ? (event) => event.stopPropagation() : undefined}
             onValueChange={(v) => setFilterInputValue(v)}
           />
 
@@ -833,6 +864,8 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           <Tooltip content={t<string>("fileExplorer.label.showHiddenFiles")}>
             <Button
               isIconOnly
+              aria-label={t("fileExplorer.label.showHiddenFiles")}
+              aria-pressed={showHiddenFiles}
               color={showHiddenFiles ? "primary" : "default"}
               radius={"none"}
               size={"sm"}
@@ -875,13 +908,75 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             box above finds nothing — which looks like a broken explorer rather than a
             question about which disk is being browsed.
           */}
-          {filesAreElsewhere && (
-            <span className="shrink-0 text-xs text-foreground-400 px-2">
-              {t<string>("fileExplorer.tip.pathsAreOnTheServer")}
-            </span>
-          )}
+          {locationNotice ??
+            (filesAreElsewhere && (
+              <span className="shrink-0 text-xs text-foreground-400 px-2">
+                {t<string>("fileExplorer.tip.pathsAreOnTheServer")}
+              </span>
+            ))}
         </div>
-        <div className={"grow min-h-0"}>
+        {compact && (
+          <div className="file-explorer-commandbar flex min-h-7 shrink-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="flex shrink-0 items-center gap-2 text-xs text-foreground-400">
+              <span className="tabular-nums">
+                {t(
+                  filteredChildrenCount === childrenCount
+                    ? "fileExplorer.selection.total"
+                    : "fileExplorer.selection.filtered",
+                  { count: childrenCount, visible: filteredChildrenCount },
+                )}
+              </span>
+              {selectedEntries.length > 0 && (
+                <span className="text-primary tabular-nums">
+                  {t("fileExplorer.selection.selected", { count: selectedEntries.length })}
+                </span>
+              )}
+              <Button
+                aria-expanded={menuProps.state === "open"}
+                aria-haspopup="menu"
+                aria-label={t("fileExplorer.selection.actions")}
+                className="h-7 min-h-7 min-w-0 gap-1 px-2 text-xs"
+                isDisabled={
+                  selectedEntries.length === 0 &&
+                  (!root.path || !capabilities?.includes("create-directory"))
+                }
+                size="sm"
+                startContent={<MoreOutlined aria-hidden />}
+                variant="light"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  const rect = event.currentTarget.getBoundingClientRect();
+
+                  setAnchorPoint({ x: rect.left, y: rect.bottom });
+                  toggleMenu(true);
+                }}
+              >
+                {t("fileExplorer.selection.actions")}
+              </Button>
+              {selectedEntries.length > 0 && (
+                <Button
+                  isIconOnly
+                  aria-label={t("fileExplorer.selection.clear")}
+                  className="h-6 min-h-6 w-6 min-w-6"
+                  size="sm"
+                  title={t("fileExplorer.selection.clear")}
+                  variant="light"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    selectedEntriesRef.current.forEach((entry) => entry.select(false));
+                    setSelectedEntries([]);
+                  }}
+                >
+                  <CloseOutlined aria-hidden />
+                </Button>
+              )}
+            </div>
+            <div className="file-explorer-extra-tools ml-auto flex flex-wrap items-center gap-1.5">
+              {toolbarContent}
+            </div>
+          </div>
+        )}
+        <div className={`grow min-h-0 ${compact ? "file-explorer-list" : ""}`}>
           <FileExplorerEntry
             afterPlayedFirstFile={afterPlayedFirstFile}
             capabilities={capabilities}

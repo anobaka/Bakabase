@@ -33,10 +33,18 @@ class Program
         // later UpdateManager picks it up and its diagnostics (feed URL, channel, the
         // versions a check compared) land in AppLog instead of only in Velopack's own log
         // file, which nobody opens when an update check is being questioned.
-        VelopackApp.Build()
+        var velopack = VelopackApp.Build()
             .SetAutoApplyOnStartup(false)
-            .SetLogger(new SerilogVelopackLogger())
-            .Run();
+            .SetLogger(new SerilogVelopackLogger());
+        if (OperatingSystem.IsWindows())
+            velopack.OnAfterInstallFastCallback(_ => DesktopProtocolRegistration.Register())
+                .OnAfterUpdateFastCallback(_ => DesktopProtocolRegistration.Register())
+                .OnBeforeUninstallFastCallback(_ => DesktopProtocolRegistration.Unregister());
+        velopack.Run();
+
+        // The protocol command starts with a fixed marker, so an untrusted URI can never
+        // become Velopack's first argument. Validate it before any child/setup/config parsing.
+        if (!DesktopToolLink.TryNormalizeArguments(args, out args)) return;
 
         // Everything from here on can be reported. Velopack's hook invocations never reach this
         // line (Run ends in Environment.Exit for them), so installing the handler after it costs
@@ -109,7 +117,7 @@ class Program
     private static AppBuilder BuildCoordinatorApp(DesktopSetupBootstrap bootstrap, string[] args)
         => AppBuilder.Configure(() => new ShellApp(
                 (_, _) => throw new InvalidOperationException("The setup coordinator cannot start application services."),
-                () => bootstrap.RunAsync(args)))
+                () => bootstrap.RunAsync(args), onActivation: bootstrap.OnActivated))
             .UsePlatformDetect()
             .LogToTrace();
 

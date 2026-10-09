@@ -157,6 +157,7 @@ class MacPortableContractTests(unittest.TestCase):
             "CFBundleDisplayName": "Bakabase", "CFBundlePackageType": "APPL",
             "CFBundleVersion": "2.4.0", "CFBundleShortVersionString": "2.4.0",
             "CFBundleGetInfoString": "Bakabase 2.4.0-beta.3",
+            "CFBundleURLTypes": [{"CFBundleURLName": "com.anobaka.bakabase.tools", "CFBundleURLSchemes": ["bakabase"]}],
         }
 
     def tearDown(self):
@@ -177,6 +178,11 @@ class MacPortableContractTests(unittest.TestCase):
 
     def test_valid_bundle_metadata_and_executable(self):
         self.assertTrue(self.check()["passed"])
+
+    def test_missing_desktop_protocol_registration_is_rejected(self):
+        del self.info["CFBundleURLTypes"]
+        with self.assertRaisesRegex(AssertionError, "URL scheme"):
+            self.check()
 
     def test_custom_plist_without_executable_is_rejected(self):
         del self.info["CFBundleExecutable"]
@@ -211,6 +217,7 @@ class MacPortableContractTests(unittest.TestCase):
             self.assertEqual(product["bundle"], info["CFBundleIdentifier"])
             self.assertEqual(product["assembly"], info["CFBundleExecutable"])
             self.assertEqual("2.4.0", info["CFBundleVersion"])
+            contract.check_desktop_url_scheme(info)
             self.assertTrue(info["CFBundleGetInfoString"].endswith(" 2.4.0-beta.3+abc123"))
             self.assertEqual(before, template.read_bytes())
 

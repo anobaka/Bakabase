@@ -774,7 +774,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                 name={entry.name}
                 path={entry.path}
               />
-              <div className="flex items-center [&>*]:whitespace-nowrap [&>*]:flex [&>*]:items-center [&>*]:ml-1.5">
+              <div className="entry-inline-operations flex items-center [&>*]:whitespace-nowrap [&>*]:flex [&>*]:items-center [&>*]:ml-1.5">
                 {actions.includes(IwFsEntryAction.Play) && capabilities?.includes("play") && (
                   <OperationButton
                     isIconOnly
@@ -837,7 +837,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                 )}
               </div>
             </div>
-            <div className="flex items-center justify-end ml-3 gap-1">
+            <div className="entry-right-operations flex items-center justify-end ml-3 gap-1">
               {renderBeforeRightOperations && (
                 <div
                   role="button"

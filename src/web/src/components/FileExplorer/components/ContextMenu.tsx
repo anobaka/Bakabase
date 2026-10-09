@@ -51,6 +51,7 @@ type Item = {
   icon: any;
   label: string;
   onClick: () => any;
+  danger?: boolean;
 };
 const ContextMenu = ({
   selectedEntries,
@@ -194,6 +195,7 @@ const ContextMenu = ({
     if (capabilities?.includes("delete")) {
       items.push({
         icon: <DeleteOutlined className={"text-base"} />,
+        danger: true,
         label: t<string>("fileExplorer.contextMenu.deleteItems", {
           count: selectedEntries.length,
         }),
@@ -209,6 +211,7 @@ const ContextMenu = ({
     if (capabilities?.includes("delete-all-same-name")) {
       items.push({
         icon: <DeleteColumnOutlined className={"text-base"} />,
+        danger: true,
         label: t<string>("fileExplorer.contextMenu.deleteItemsWithSameNames"),
         onClick: () => {
           createPortal(DeleteItemsWithSameNamesModal, {
@@ -351,7 +354,11 @@ const ContextMenu = ({
     <>
       {items.map((i) => {
         return (
-          <MenuItem key={i.label} onClick={i.onClick}>
+          <MenuItem
+            key={i.label}
+            className={i.danger ? "file-explorer-menu-danger" : undefined}
+            onClick={i.onClick}
+          >
             <div className={"flex items-center gap-2"}>
               {i.icon}
               {i.label}

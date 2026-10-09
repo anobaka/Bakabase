@@ -59,6 +59,7 @@ import enProperty from "@/locales/en/components/property.json";
 import enMediaPlayer from "@/locales/en/components/mediaPlayer.json";
 import enResourceComponent from "@/locales/en/components/resource.json";
 import enResourceUsage from "@/locales/en/components/resourceUsage.json";
+import enToolExecution from "@/locales/en/components/toolExecution.json";
 import enFloatingAssistant from "@/locales/en/components/floatingAssistant.json";
 import enCookieValidator from "@/locales/en/components/cookieValidator.json";
 import enFileSystemSelector from "@/locales/en/components/fileSystemSelector.json";
@@ -135,6 +136,7 @@ import cnProperty from "@/locales/cn/components/property.json";
 import cnMediaPlayer from "@/locales/cn/components/mediaPlayer.json";
 import cnResourceComponent from "@/locales/cn/components/resource.json";
 import cnResourceUsage from "@/locales/cn/components/resourceUsage.json";
+import cnToolExecution from "@/locales/cn/components/toolExecution.json";
 import cnFloatingAssistant from "@/locales/cn/components/floatingAssistant.json";
 import cnCookieValidator from "@/locales/cn/components/cookieValidator.json";
 import cnFileSystemSelector from "@/locales/cn/components/fileSystemSelector.json";
@@ -210,6 +212,7 @@ const enResources = {
   ...enMediaPlayer,
       ...enResourceComponent,
       ...enResourceUsage,
+  ...enToolExecution,
   ...enFloatingAssistant,
   ...enCookieValidator,
   ...enFileSystemSelector,
@@ -286,6 +289,7 @@ const cnResources = {
   ...cnMediaPlayer,
       ...cnResourceComponent,
       ...cnResourceUsage,
+  ...cnToolExecution,
   ...cnFloatingAssistant,
   ...cnCookieValidator,
   ...cnFileSystemSelector,

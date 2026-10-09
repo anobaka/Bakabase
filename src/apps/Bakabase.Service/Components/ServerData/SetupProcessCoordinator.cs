@@ -21,6 +21,9 @@ public sealed class SetupCoordinatorOptions
     public Func<string, Task>? OnSetupUrl { get; init; }
     public Func<Task<string?>>? DirectoryPicker { get; init; }
     public Action<string>? OnBusinessReady { get; init; }
+    public Action? OnBusinessUnavailable { get; init; }
+    /// <summary>Desktop activation lives exactly as long as this process owns the control lock.</summary>
+    public Func<IDisposable>? OnControlAcquired { get; init; }
 }
 
 /// <summary>Owns process transitions, never business services or user databases.</summary>
@@ -51,6 +54,7 @@ public static class SetupProcessCoordinator
             { await Task.Delay(100, cancellationToken); }
         }
         using var control = controlStream;
+        using var activation = options.OnControlAcquired?.Invoke();
         IsCoordinator = true;
         ImportProgressServer? privateServer = null, publicServer = null;
         ImportProgressStore? monitor = null;
@@ -184,6 +188,7 @@ public static class SetupProcessCoordinator
                 var completed = await Task.WhenAny(exited, request.Task);
                 if (completed == exited)
                 {
+                    options.OnBusinessUnavailable?.Invoke();
                     await exited;
                     var exit = child.Process.ExitCode;
                     var error = child.Error;
@@ -197,6 +202,7 @@ public static class SetupProcessCoordinator
                 var requestedId = await request.Task;
                 var pendingId = ServerAppDataRelocation.ReadPending(anchor)?.Id ?? ServerAppDataImport.ReadPending(DataPath())?.Id;
                 if (requestedId != pendingId) throw new IOException("The committed maintenance operation no longer matches its request.");
+                options.OnBusinessUnavailable?.Invoke();
                 monitor.RefreshFromDisk(DataPath());
                 monitor.Report(new AppDataImportProgressUpdate("stopping"));
                 await ShowProgress(); // The desktop parent window must survive its business child's exit.
@@ -224,6 +230,7 @@ public static class SetupProcessCoordinator
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { return 0; }
         catch (Exception error) when (monitor?.Token != null)
         {
+            options.OnBusinessUnavailable?.Invoke();
             Console.Error.WriteLine($"Setup transition failed: {error}");
             if (child != null) { await child.DisposeAsync(); child = null; }
             // Includes failure before a worker can authenticate/connect. Do not abandon the UI.

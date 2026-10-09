@@ -55,5 +55,7 @@
   "fileProcessor.ai.opType.Rename": "重命名",
   "fileProcessor.ai.opType.Move": "移动",
   "fileProcessor.ai.opType.CreateDirectory": "创建目录",
-  "FileNameModifier.Title": "文件名修改器"
+  "FileNameModifier.Title": "文件名修改器",
+  "fileProcessor.action.bulkDecompression.short": "批量解压",
+  "fileProcessor.label.showOperationsAfterPlay.short": "播放后操作"
 }
