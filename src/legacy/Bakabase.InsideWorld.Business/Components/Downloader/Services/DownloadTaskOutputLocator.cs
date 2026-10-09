@@ -37,7 +37,7 @@ public sealed class DownloadTaskOutputLocator(BakabaseDbContext db, ExHentaiDown
         var latest = results.FirstOrDefault();
         var resultIds = results.Select(x => x.Id).ToArray();
         var processing = await db.Set<DownloadResultProcessingDbModel>().AsNoTracking()
-            .Where(x => resultIds.Contains(x.DownloadResultId)).ToDictionaryAsync(x => x.DownloadResultId, ct);
+            .Where(x => Enumerable.Contains(resultIds, x.DownloadResultId)).ToDictionaryAsync(x => x.DownloadResultId, ct);
         var imagePaths = new HashSet<string>(PathComparer);
         var currentRecordedPaths = new HashSet<string>(PathComparer);
         var supersededPaths = new HashSet<string>(PathComparer);

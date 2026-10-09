@@ -78,7 +78,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             // attributed to each task, with one grouped query for the whole list.
             var ids = dtos.Select(x => x.Id).ToArray();
             var sizes = await GetRequiredService<BakabaseDbContext>().DownloadTaskFiles.AsNoTracking()
-                .Where(x => ids.Contains(x.DownloadTaskId))
+                // C# 14 prefers the span Contains overload for arrays. EF cannot
+                // interpret its array-to-ReadOnlySpan conversion while extracting parameters.
+                .Where(x => Enumerable.Contains(ids, x.DownloadTaskId))
                 .GroupBy(x => x.DownloadTaskId)
                 .Select(g => new {TaskId = g.Key, Size = g.Sum(x => x.Size)})
                 .ToDictionaryAsync(x => x.TaskId, x => x.Size);

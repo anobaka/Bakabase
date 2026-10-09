@@ -6,7 +6,9 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
+using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -94,6 +96,49 @@ public sealed class DownloadTaskServiceTests
         var id = await AddOne("the-key");
         var dto = await _service.GetDto(id);
         Assert.AreEqual("the-key", dto.Key);
+    }
+
+    [DataTestMethod]
+    [DataRow(1)]
+    [DataRow(3)]
+    public async Task GetAllDto_AggregatesRecordedFilesForNonemptySqliteTaskLists(int taskCount)
+    {
+        // A nonempty task list reaches the captured ID-array predicate. SQLite
+        // must extract that parameter without interpreting a ReadOnlySpan conversion,
+        // including single-item lists and tasks which have no files yet.
+        Assert.AreEqual("Microsoft.EntityFrameworkCore.Sqlite", _db.Database.ProviderName);
+        var rows = Enumerable.Range(0, taskCount).Select(index => new DownloadTaskDbModel
+        {
+            Id = 11 + index * 1000,
+            Key = $"gallery-{index}",
+            ThirdPartyId = ThirdPartyId.ExHentai,
+            Type = (int) ExHentaiDownloadTaskType.SingleWork,
+            DownloadPath = "/downloads/shared",
+            Status = DownloadTaskDbModelStatus.Disabled
+        }).ToArray();
+        _db.DownloadTasks.AddRange(rows);
+        _db.DownloadTaskFiles.AddRange(
+            new DownloadTaskFileDbModel {DownloadTaskId = rows[0].Id, Path = "/downloads/shared/first.jpg", Size = 12},
+            new DownloadTaskFileDbModel {DownloadTaskId = rows[0].Id, Path = "/downloads/shared/second.jpg", Size = 25});
+        if (taskCount > 1)
+        {
+            _db.DownloadTaskFiles.Add(new DownloadTaskFileDbModel
+            {
+                DownloadTaskId = rows[1].Id, Path = "/downloads/shared/first.jpg", Size = 50
+            });
+        }
+        await _db.SaveChangesAsync();
+
+        var dtos = (await _service.GetAllDto()).ToDictionary(task => task.Id);
+        Assert.AreEqual(taskCount, dtos.Count);
+        Assert.AreEqual(37L, dtos[rows[0].Id].DownloadedBytes);
+        Assert.AreEqual(37L, (await _service.GetDto(rows[0].Id)).DownloadedBytes);
+        if (taskCount > 1)
+        {
+            Assert.AreEqual(50L, dtos[rows[1].Id].DownloadedBytes);
+            Assert.IsNull(dtos[rows[2].Id].DownloadedBytes);
+            Assert.IsNull((await _service.GetDto(rows[2].Id)).DownloadedBytes);
+        }
     }
 
     #endregion

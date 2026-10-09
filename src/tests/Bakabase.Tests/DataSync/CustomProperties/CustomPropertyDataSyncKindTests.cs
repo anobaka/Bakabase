@@ -90,10 +90,10 @@ public class CustomPropertyDataSyncKindTests
         var seeded = await DataSyncFixture.SeedCustomPropertiesAsync(_sp);
         Assert.IsTrue(Enum.GetValues<PropertyType>().All(t => seeded.Any(p => p.Type == t)), "the fixture covers every type");
         var ids = seeded.Select(p => p.Id).ToArray();
-        await Properties.Sort(ids.Reverse().ToArray());
+        await Properties.Sort(Enumerable.Reverse(ids).ToArray());
 
         var entities = await Kind.ReadAsync(null, CancellationToken.None);
-        CollectionAssert.AreEqual(ids.Reverse().Select(Key).ToArray(), entities.Select(e => e.LocalKey).ToArray());
+        CollectionAssert.AreEqual(Enumerable.Reverse(ids).Select(Key).ToArray(), entities.Select(e => e.LocalKey).ToArray());
         CollectionAssert.AreEqual(Enumerable.Range(0, ids.Length).ToArray(), entities.Select(e => e.Position).ToArray());
         CollectionAssert.AreEqual(entities.Select(e => e.LocalKey).ToArray(),
             (await Kind.ReadOrderAsync(CancellationToken.None)).ToArray());

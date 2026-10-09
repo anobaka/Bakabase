@@ -61,7 +61,7 @@ public class ResourceMoveContextTests
         var service = new RecordingMoveService();
         var controller = new ResourceMoveController(service, new Identity());
         var input = LocalRequest();
-        input.ResourceRefs = input.ResourceRefs!.Reverse().ToArray();
+        input.ResourceRefs = Enumerable.Reverse(input.ResourceRefs!).ToArray();
 
         Assert.AreEqual(0, (await controller.Preview(input)).Code);
         Assert.AreEqual(0, (await controller.CreateBatch(input)).Code);
