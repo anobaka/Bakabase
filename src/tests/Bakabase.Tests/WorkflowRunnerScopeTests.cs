@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.TestKit.Implementations;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
@@ -47,6 +49,7 @@ public class WorkflowRunnerScopeTests
         var services = new ServiceCollection();
 
         services.AddLogging();
+        services.AddSingleton<IBakabaseLocalizer, TestBakabaseLocalizer>();
         services.AddDbContext<TestWorkflowDbContext>(o => o.UseSqlite(connection));
         services.AddSingleton<IWorkflowTriggerRegistry>(new WorkflowTriggerRegistry([]));
         services.AddSingleton<IWorkflowActivityRegistry>(new WorkflowActivityRegistry([]));

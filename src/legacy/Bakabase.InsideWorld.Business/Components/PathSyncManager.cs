@@ -311,7 +311,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             var result = await resourceSyncService.SyncResources(
                 source,
                 async p => await args.UpdateTask(t => t.Percentage = baseProgress + p * progressRange / 100),
-                async p => await args.UpdateTask(t => t.Process = p),
+                async p => await args.UpdateTask(t => t.SetProcess(p)),
                 args.PauseToken,
                 args.CancellationToken);
 
@@ -350,7 +350,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
 
         var result = await syncService.SyncMarks(
             async p => await args.UpdateTask(t => t.Percentage = p),
-            async p => await args.UpdateTask(t => t.Process = p),
+            async p => await args.UpdateTask(t => t.SetProcess(p)),
             args.PauseToken,
             args.CancellationToken);
 

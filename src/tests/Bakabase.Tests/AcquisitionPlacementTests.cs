@@ -430,7 +430,7 @@ public sealed class AcquisitionPlacementTests
         var sync = _sp.GetRequiredService<ResourceSyncService>();
         var scanning = sync.SyncResources(ResourceSource.PathMark, null, message =>
         {
-            if (message?.StartsWith("Discovering filesystem resources", StringComparison.Ordinal) != true)
+            if (message?.ToString().StartsWith("BTask_Process_DiscoveringPathMarks", StringComparison.Ordinal) != true)
                 return Task.CompletedTask;
             snapshotTaken.TrySetResult();
             return allowDiscovery.Task;

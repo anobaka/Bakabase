@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Microsoft.Extensions.Logging;
@@ -60,7 +61,7 @@ public record AcquisitionResumeSignal(AcquisitionWaitReason Reason, string? Payl
 public record AcquisitionStepContext(
     IServiceProvider ServiceProvider,
     ILogger Logger,
-    Func<int, string?, Task> ReportProgress,
+    Func<int, BTaskText?, Task> ReportProgress,
     string WorkingDirectory,
     string? ConfigJson = null,
     int? AcquisitionTaskId = null,

@@ -29,7 +29,7 @@ public class SearchIndexTask : AbstractPredefinedBTaskBuilder
                 await args.UpdateTask(t =>
                 {
                     t.Percentage = percentage;
-                    t.Process = process;
+                    t.SetProcess(process);
                 });
             },
             args.CancellationToken);

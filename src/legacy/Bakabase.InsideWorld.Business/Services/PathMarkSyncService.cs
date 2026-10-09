@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -108,7 +109,7 @@ public class PathMarkSyncService : ScopedService
     /// <param name="ct">Cancellation token.</param>
     public async Task<PathMarkSyncResult> SyncMarks(
         Func<int, Task>? onProgressChange,
-        Func<string?, Task>? onProcessChange,
+        Func<BTaskText?, Task>? onProcessChange,
         PauseToken pt,
         CancellationToken ct)
     {
@@ -118,7 +119,7 @@ public class PathMarkSyncService : ScopedService
         try
         {
             // ===== Initialization (0-5%) =====
-            await ReportProgress(onProgressChange, onProcessChange, 0, _localizer.SyncPathMark_Collecting());
+            await ReportProgress(onProgressChange, onProcessChange, 0, BTaskText.Localize(_localizer, "SyncPathMark_Collecting"));
 
             // Load all pending Property and MediaLibrary marks
             var allMarks = await _pathMarkService.GetAll();
@@ -148,7 +149,7 @@ public class PathMarkSyncService : ScopedService
 
             if (pendingMarks.Count == 0)
             {
-                await ReportProgress(onProgressChange, onProcessChange, 100, _localizer.SyncPathMark_Complete());
+                await ReportProgress(onProgressChange, onProcessChange, 100, BTaskText.Localize(_localizer, "SyncPathMark_Complete"));
                 return result;
             }
 
@@ -200,7 +201,7 @@ public class PathMarkSyncService : ScopedService
             }
 
             await ReportProgress(onProgressChange, onProcessChange, 5,
-                _localizer.SyncPathMark_Collected(pendingMarks.Count));
+                BTaskText.Localize(_localizer, "SyncPathMark_Collected", pendingMarks.Count));
 
             // Pre-create dynamic media libraries
             await PreCreateDynamicMediaLibraries(activeMediaLibraryMarks, ctx, ct);
@@ -209,7 +210,7 @@ public class PathMarkSyncService : ScopedService
 
             // 1a. Collect property effects
             await ReportProgress(onProgressChange, onProcessChange, 5,
-                _localizer.SyncPathMark_CollectingPropertyEffects());
+                BTaskText.Localize(_localizer, "SyncPathMark_CollectingPropertyEffects"));
             for (var i = 0; i < activePropertyMarks.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -218,7 +219,7 @@ public class PathMarkSyncService : ScopedService
                 var mark = activePropertyMarks[i];
                 var progress = 5 + (int)(15.0 * (i + 1) / Math.Max(1, activePropertyMarks.Count));
                 await ReportProgress(onProgressChange, onProcessChange, progress,
-                    _localizer.SyncPathMark_ProcessingProperty(mark.Path));
+                    BTaskText.Localize(_localizer, "SyncPathMark_ProcessingProperty", mark.Path));
 
                 try
                 {
@@ -237,7 +238,7 @@ public class PathMarkSyncService : ScopedService
 
             // 1b. Collect media library effects
             await ReportProgress(onProgressChange, onProcessChange, 20,
-                _localizer.SyncPathMark_CollectingMediaLibraryEffects());
+                BTaskText.Localize(_localizer, "SyncPathMark_CollectingMediaLibraryEffects"));
             for (var i = 0; i < activeMediaLibraryMarks.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -246,7 +247,7 @@ public class PathMarkSyncService : ScopedService
                 var mark = activeMediaLibraryMarks[i];
                 var progress = 20 + (int)(10.0 * (i + 1) / Math.Max(1, activeMediaLibraryMarks.Count));
                 await ReportProgress(onProgressChange, onProcessChange, progress,
-                    _localizer.SyncPathMark_ProcessingMediaLibrary(mark.Path));
+                    BTaskText.Localize(_localizer, "SyncPathMark_ProcessingMediaLibrary", mark.Path));
 
                 try
                 {
@@ -265,19 +266,19 @@ public class PathMarkSyncService : ScopedService
 
             // ===== Phase 2: Compute Final State (30-50%) =====
             await ReportProgress(onProgressChange, onProcessChange, 30,
-                _localizer.SyncPathMark_ComputingFinalState());
+                BTaskText.Localize(_localizer, "SyncPathMark_ComputingFinalState"));
             await ComputeFinalPropertyState(ctx);
             await ComputeFinalMediaLibraryState(ctx);
 
             // ===== Phase 3: Apply Changes (50-80%) =====
             await ReportProgress(onProgressChange, onProcessChange, 50,
-                _localizer.SyncPathMark_ApplyingPropertyChanges());
+                BTaskText.Localize(_localizer, "SyncPathMark_ApplyingPropertyChanges"));
             var propertyResult = await ApplyPropertyChanges(ctx, ct);
             result.PropertiesApplied = propertyResult.Applied;
             result.PropertiesDeleted = propertyResult.Deleted;
 
             await ReportProgress(onProgressChange, onProcessChange, 65,
-                _localizer.SyncPathMark_ApplyingMediaLibraryChanges());
+                BTaskText.Localize(_localizer, "SyncPathMark_ApplyingMediaLibraryChanges"));
             var mappingResult = await ApplyMediaLibraryChanges(ctx, ct);
             result.MediaLibraryMappingsCreated = mappingResult.Created;
             result.MediaLibraryMappingsDeleted = mappingResult.Deleted;
@@ -302,7 +303,7 @@ public class PathMarkSyncService : ScopedService
 
             // ===== Phase 4: Persist Effects (80-90%) =====
             await ReportProgress(onProgressChange, onProcessChange, 80,
-                _localizer.SyncPathMark_PersistingEffects());
+                BTaskText.Localize(_localizer, "SyncPathMark_PersistingEffects"));
             await ComputeEffectDiff(ctx);
             await PersistEffects(ctx, onProgressChange, ct);
 
@@ -311,7 +312,7 @@ public class PathMarkSyncService : ScopedService
             // DbContext. Drain those reads before writing mark statuses so SQLite does not see
             // a reader/writer race, and only report the marks as synced once search is current.
             await ReportProgress(onProgressChange, onProcessChange, 90,
-                _localizer.SyncPathMark_UpdatingSearchIndex());
+                BTaskText.Localize(_localizer, "SyncPathMark_UpdatingSearchIndex"));
             var indexBarrierSw = Stopwatch.StartNew();
             try
             {
@@ -326,10 +327,10 @@ public class PathMarkSyncService : ScopedService
 
             // ===== Cleanup (95-100%) =====
             await ReportProgress(onProgressChange, onProcessChange, 95,
-                _localizer.SyncPathMark_UpdatingMarkStatuses());
+                BTaskText.Localize(_localizer, "SyncPathMark_UpdatingMarkStatuses"));
             await BatchUpdateMarkStatuses(ctx, marksToDelete);
 
-            await ReportProgress(onProgressChange, onProcessChange, 100, _localizer.SyncPathMark_Complete());
+            await ReportProgress(onProgressChange, onProcessChange, 100, BTaskText.Localize(_localizer, "SyncPathMark_Complete"));
         }
         catch (OperationCanceledException)
         {
@@ -1250,8 +1251,8 @@ public class PathMarkSyncService : ScopedService
 
     #region Private Methods
 
-    private async Task ReportProgress(Func<int, Task>? onProgressChange, Func<string?, Task>? onProcessChange,
-        int progress, string? process)
+    private async Task ReportProgress(Func<int, Task>? onProgressChange, Func<BTaskText?, Task>? onProcessChange,
+        int progress, BTaskText? process)
     {
         if (onProgressChange != null) await onProgressChange(progress);
         if (onProcessChange != null) await onProcessChange(process);

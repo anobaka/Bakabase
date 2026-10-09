@@ -1,3 +1,5 @@
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Tasks;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -171,8 +173,10 @@ public class UnpackStep : IAcquisitionStep
             item = item with {ExtractionPlanJson = planJson, ProcessingStateDirectory = stateDirectory};
             var executor = ctx.ServiceProvider.GetService<FileProcessingPlanExecutor>() ??
                            new FileProcessingPlanExecutor(ctx.ServiceProvider.GetRequiredService<IArchiveExtractionService>());
+            var localizer = ctx.ServiceProvider.GetRequiredService<IBakabaseLocalizer>();
             var result = await executor.ExecuteAsync(plan, root, files, stateDirectory, password,
-                p => ctx.ReportProgress(p, "Processing extraction instructions").GetAwaiter().GetResult(), ct);
+                p => ctx.ReportProgress(p, BTaskText.Localize(localizer,
+                    "BTask_Process_ExtractionInstructions")).GetAwaiter().GetResult(), ct);
             if (!result.Completed)
             {
                 var reason = result.NeedsPassword ? AcquisitionWaitReason.PasswordUnknown : AcquisitionWaitReason.ExtractionPlanUnknown;
@@ -200,7 +204,9 @@ public class UnpackStep : IAcquisitionStep
         var directory = Path.GetDirectoryName(entry)!;
         var candidates = await BuildCandidatesAsync(ctx, options, config, item, entry, suppliedPassword);
 
-        await ctx.ReportProgress(0, $"Opening {Path.GetFileName(entry)}");
+        var localizer = ctx.ServiceProvider.GetRequiredService<IBakabaseLocalizer>();
+        var entryName = Path.GetFileName(entry);
+        await ctx.ReportProgress(0, BTaskText.Localize(localizer, "BTask_Process_OpeningArchive", entryName));
 
         var probe = await extraction.ProbePasswordAsync(entry, candidates, null, ct);
 
@@ -226,7 +232,8 @@ public class UnpackStep : IAcquisitionStep
                 // Lifted up a level: an archive holding one folder would otherwise nest that folder
                 // inside a folder named after the archive, which is never what anyone wanted.
                 MoveToParent: true),
-            percentage => ctx.ReportProgress(percentage, $"Unpacking {Path.GetFileName(entry)}")
+            percentage => ctx.ReportProgress(percentage,
+                    BTaskText.Localize(localizer, "BTask_Process_UnpackingArchive", entryName))
                 .GetAwaiter().GetResult(),
             ct);
 

@@ -113,7 +113,7 @@ export default function ScheduleModal({ task, onClose }: { task: BTask; onClose:
           disallowEmptySelection
           dataSource={Object.keys(intervalUnits).map((value) => ({
             value,
-            label: t(`common.unit.${value}`),
+            label: t(`backgroundTask.schedule.unit.${value}`),
           }))}
           isDisabled={saving}
           label={t("backgroundTask.schedule.unit")}

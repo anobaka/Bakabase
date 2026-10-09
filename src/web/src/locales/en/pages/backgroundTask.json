@@ -38,5 +38,9 @@
   "backgroundTask.schedule.invalidEnableAfter": "Choose a valid start time. To allow an already scheduled task to run, choose a time in the past.",
   "backgroundTask.schedule.loadFailed": "Could not read the saved schedules. Your changes have not been applied.",
   "backgroundTask.schedule.saveFailed": "Could not save the schedule. Your edits are still here; try again.",
-  "backgroundTask.schedule.saved": "Schedule saved"
+  "backgroundTask.schedule.saved": "Schedule saved",
+  "backgroundTask.schedule.unit.seconds": "seconds",
+  "backgroundTask.schedule.unit.minutes": "minutes",
+  "backgroundTask.schedule.unit.hours": "hours",
+  "backgroundTask.schedule.unit.days": "days"
 }

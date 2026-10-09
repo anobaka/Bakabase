@@ -58,7 +58,7 @@ public class SourceMetadataMappingController(
     {
         var taskId = $"ApplySourceMetadata_{source}";
         await btm.Start(taskId, () => BTaskBuilder.Create(taskId)
-            .Named($"Apply {source} Metadata")
+            .Named(() => localizer["BTask_Name_ApplySourceMetadata", source])
             .Persistent()
             .ReplaceIfExists()
             .WithServiceProvider(HttpContext.RequestServices)

@@ -4,6 +4,7 @@ import type { BTask } from "@/core/models/BTask";
 
 import { useTranslation } from "react-i18next";
 
+import { localizeBTask } from "@/core/bTaskLocalization";
 import { Spinner } from "@/components/bakaui";
 import { BTaskStatus } from "@/sdk/constants";
 import { BTaskStopButton } from "@/components/BTask";
@@ -12,8 +13,9 @@ type TaskOverlayProps = {
   task: BTask;
 };
 
-const TaskOverlay = ({ task }: TaskOverlayProps) => {
-  const { t } = useTranslation();
+const TaskOverlay = ({ task: sourceTask }: TaskOverlayProps) => {
+  const { t, i18n } = useTranslation();
+  const task = localizeBTask(sourceTask, i18n.language);
 
   if (task.error) {
     return null;
@@ -35,7 +37,9 @@ const TaskOverlay = ({ task }: TaskOverlayProps) => {
         <div className="bg-[var(--theme-body-background)] px-6 py-1 rounded-md text-xs font-medium shadow-md">
           {task.name}
           &nbsp;
-          {task.status == BTaskStatus.NotStarted ? t<string>("Waiting") : `${task.percentage}%`}
+          {task.status == BTaskStatus.NotStarted
+            ? t<string>("status.waiting")
+            : `${task.percentage}%`}
         </div>
       </div>
       <div className="stop absolute inset-0 hidden items-center justify-center hover:flex">

@@ -1,6 +1,18 @@
 import type { BTaskResourceType, BTaskStatus, BTaskType } from "@/sdk/constants";
 
+export type BTaskLocalizedTexts = {
+  name?: string;
+  description?: string | null;
+  process?: string | null;
+  message?: string | null;
+  briefError?: string | null;
+  messageOnInterruption?: string | null;
+  reasonForUnableToStart?: string | null;
+};
+
 export type BTask = {
+  localizedTexts?: Record<string, BTaskLocalizedTexts> | null;
+  message?: string;
   id: string;
   name: string;
   description?: string;

@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
@@ -191,10 +192,11 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
 
         var taskId = $"Comparison:{planId}";
         var conflictKey = $"Comparison:{planId}";
+        var localizer = ServiceProvider.GetRequiredService<IBakabaseLocalizer>();
 
         var handler = BTaskBuilder.Create(taskId)
-            .Named($"对比任务: {plan.Name}")
-            .Describe($"正在执行对比方案 [{plan.Name}]")
+            .Named(() => localizer["BTask_Name_Comparison", plan.Name])
+            .Describe(() => localizer["BTask_Description_Comparison", plan.Name])
             .ConflictsWith(conflictKey)
             .ReplaceIfExists()
             .Run(async args =>

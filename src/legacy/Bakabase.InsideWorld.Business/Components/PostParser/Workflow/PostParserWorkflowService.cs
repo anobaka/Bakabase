@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Localization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,7 +42,8 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
     PostParserTaskExecutionGate gate, IWorkflowDefinitionService definitions,
     BTaskManager tasks, IWorkflowRunResumer resumer,
     WorkflowRunSchedulingPolicyResolver scheduling,
-    IHubContext<WebGuiHub, IWebGuiClient> uiHub, IBOptions<SoulPlusOptions> purchaseOptions) : IPostParserWorkflowTaskBridge
+    IHubContext<WebGuiHub, IWebGuiClient> uiHub, IBOptions<SoulPlusOptions> purchaseOptions,
+    IBakabaseLocalizer localizer) : IPostParserWorkflowTaskBridge
     where TDbContext : DbContext
 {
     private DbSet<PostParserTaskDbModel> ParserTasks => db.Set<PostParserTaskDbModel>();
@@ -242,7 +244,7 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         var runId = run.Id;
         var definitionId = run.WorkflowDefinitionId;
         return tasks.Enqueue(scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
-            .Named($"Workflow #{definitionId} run #{runId}")
+            .Named(() => localizer["BTask_Name_WorkflowRun", definitionId, runId])
             .Persistent().IgnoreIfExists()
             .Run(async args =>
             {

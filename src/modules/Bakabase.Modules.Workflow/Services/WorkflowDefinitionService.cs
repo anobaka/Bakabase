@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Localization;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -23,6 +24,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
     private readonly BTaskManager _taskManager;
     private readonly WorkflowRunner<TDbContext> _runner;
     private readonly WorkflowRunSchedulingPolicyResolver _scheduling;
+    private readonly IBakabaseLocalizer _localizer;
 
     public WorkflowDefinitionService(
         TDbContext db,
@@ -30,7 +32,8 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         BTaskManager taskManager,
         WorkflowRunner<TDbContext> runner,
         IWorkflowValidationService validation,
-        WorkflowRunSchedulingPolicyResolver scheduling)
+        WorkflowRunSchedulingPolicyResolver scheduling,
+        IBakabaseLocalizer localizer)
     {
         _db = db;
         _triggers = triggers;
@@ -38,6 +41,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         _taskManager = taskManager;
         _runner = runner;
         _scheduling = scheduling;
+        _localizer = localizer;
     }
 
     private DbSet<WorkflowDefinitionDbModel> Defs => _db.Set<WorkflowDefinitionDbModel>();
@@ -253,7 +257,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
         var runId = run.Id;
         await _taskManager.Enqueue(_scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
-            .Named($"Workflow #{definition.Id} run #{runId}")
+            .Named(() => _localizer["BTask_Name_WorkflowRun", definition.Id, runId])
             .Run(args => _runner.ExecuteAsync(runId, args)), definition.Id, definition.TriggerKind));
 
         return run.ToDomainModel();

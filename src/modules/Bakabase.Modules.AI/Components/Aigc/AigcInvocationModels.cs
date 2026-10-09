@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Modules.AI.Models.Domain;
 
 namespace Bakabase.Modules.AI.Components.Aigc;
@@ -21,7 +22,7 @@ public record AigcInvocationRequest
     /// <summary>
     /// Optional progress callback for long-running operations (ComfyUI, polling-based providers).
     /// </summary>
-    public Func<int, string?, CancellationToken, Task>? OnProgress { get; init; }
+    public Func<int, BTaskText?, CancellationToken, Task>? OnProgress { get; init; }
 }
 
 public record AigcInvocationResult

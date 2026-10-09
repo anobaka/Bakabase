@@ -1011,4 +1011,166 @@ Downloads: https://www.ffmpeg.org/</value>
   <data name="BTask_Description_PlatformFetchWatch" xml:space="preserve">
     <value>Checks whether platform downloads and installs have finished, then continues waiting acquisition tasks.</value>
   </data>
+  <data name="CopyFiles" xml:space="preserve">
+    <value>Copy files</value>
+  </data>
+  <data name="CopyFile" xml:space="preserve">
+    <value>Copy {0} to {1}</value>
+  </data>
+  <data name="BTask_Name_ApplySourceMetadata" xml:space="preserve">
+    <value>Apply {0} metadata</value>
+  </data>
+  <data name="BTask_Name_Comparison" xml:space="preserve">
+    <value>Comparison: {0}</value>
+  </data>
+  <data name="BTask_Description_Comparison" xml:space="preserve">
+    <value>Run comparison plan [{0}]</value>
+  </data>
+  <data name="BTask_Name_WorkflowRun" xml:space="preserve">
+    <value>Workflow #{0} run #{1}</value>
+  </data>
+  <data name="BTask_Name_AigcGeneration" xml:space="preserve">
+    <value>AI generation #{0}</value>
+  </data>
+  <data name="BTask_Process_WorkflowStep" xml:space="preserve">
+    <value>Step {0}/{1}</value>
+  </data>
+  <data name="BTask_Process_WorkflowStepDetail" xml:space="preserve">
+    <value>Step {0}/{1} · {2}</value>
+  </data>
+  <data name="BTask_Process_WorkflowStepItems" xml:space="preserve">
+    <value>Step {0}/{1} · {2} items</value>
+  </data>
+  <data name="BTask_Process_ReadingSharedContent" xml:space="preserve">
+    <value>Reading the shared content</value>
+  </data>
+  <data name="BTask_Process_FindingDownloadLinks" xml:space="preserve">
+    <value>Looking for download links</value>
+  </data>
+  <data name="BTask_Process_DownloadLinksFound" xml:space="preserve">
+    <value>{0} links found</value>
+  </data>
+  <data name="BTask_Process_ExtractionInstructions" xml:space="preserve">
+    <value>Processing extraction instructions</value>
+  </data>
+  <data name="BTask_Process_OpeningArchive" xml:space="preserve">
+    <value>Opening {0}</value>
+  </data>
+  <data name="BTask_Process_UnpackingArchive" xml:space="preserve">
+    <value>Unpacking {0}</value>
+  </data>
+  <data name="BTask_Process_FilesDelivered" xml:space="preserve">
+    <value>{0} files delivered</value>
+  </data>
+  <data name="BTask_Process_AigcCallingProvider" xml:space="preserve">
+    <value>Calling provider</value>
+  </data>
+  <data name="BTask_Process_AigcSavingFiles" xml:space="preserve">
+    <value>Saving {0} files</value>
+  </data>
+  <data name="BTask_Process_AigcRegisteringArtifacts" xml:space="preserve">
+    <value>Registering artifacts</value>
+  </data>
+  <data name="BTask_Process_AigcDone" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="BTask_Process_AigcPolling" xml:space="preserve">
+    <value>Polling ({0}, status={1})</value>
+  </data>
+  <data name="BTask_Process_AigcPollingComfyUI" xml:space="preserve">
+    <value>Polling ComfyUI ({0})</value>
+  </data>
+  <data name="BTask_Process_DiscoveringResources" xml:space="preserve">
+    <value>Discovering resources from {0}…</value>
+  </data>
+  <data name="BTask_Process_ResolverNotFound" xml:space="preserve">
+    <value>Resource resolver not found</value>
+  </data>
+  <data name="BTask_Process_ResourcesDiscovered" xml:space="preserve">
+    <value>Discovered {0} resources from {1}</value>
+  </data>
+  <data name="BTask_Process_DiscoveringPathMarks" xml:space="preserve">
+    <value>Discovering resources from {0} path marks…</value>
+  </data>
+  <data name="BTask_Process_UpdatingResources" xml:space="preserve">
+    <value>Updating resources…</value>
+  </data>
+  <data name="BTask_Process_UpdatingResourceStatuses" xml:space="preserve">
+    <value>Updating resource statuses…</value>
+  </data>
+  <data name="BTask_Process_CheckingOrphanedResources" xml:space="preserve">
+    <value>Checking orphaned resources…</value>
+  </data>
+  <data name="BTask_Process_RebuildingRelationships" xml:space="preserve">
+    <value>Rebuilding resource relationships…</value>
+  </data>
+  <data name="BTask_Process_QueuingRelatedPathMarks" xml:space="preserve">
+    <value>Queuing related path marks…</value>
+  </data>
+  <data name="BTask_Process_WorkflowCleanup" xml:space="preserve">
+    <value>{0}/{1} · deleted {2}</value>
+  </data>
+  <data name="BTask_Process_Extracting" xml:space="preserve">
+    <value>Extracting…</value>
+  </data>
+  <data name="BTask_Error_DLsiteWorkNotFound" xml:space="preserve">
+    <value>DLsite work {0} was not found</value>
+  </data>
+  <data name="BTask_Error_DLsiteDownloadPathMissing" xml:space="preserve">
+    <value>Set the default download directory in DLsite settings</value>
+  </data>
+  <data name="BTask_Error_DLsiteNoDownloadLinks" xml:space="preserve">
+    <value>No download links found for DLsite work {0}</value>
+  </data>
+  <data name="BTask_Error_DLsiteRefreshedLinksMissing" xml:space="preserve">
+    <value>Refreshed download links are incomplete for DLsite work {0}</value>
+  </data>
+  <data name="BTask_Error_DLsiteDirectoryMissing" xml:space="preserve">
+    <value>Work directory was not found: {0}</value>
+  </data>
+  <data name="BTask_Error_DLsiteDirectoryEmpty" xml:space="preserve">
+    <value>No files found in work directory: {0}</value>
+  </data>
+  <data name="BTask_Error_DLsiteAccountSync" xml:space="preserve">
+    <value>Failed to sync DLsite account {0}: {1}</value>
+  </data>
+  <data name="BTask_Error_AigcRunMissing" xml:space="preserve">
+    <value>AI generation run #{0} was not found.</value>
+  </data>
+  <data name="BTask_Error_AigcGeneratorMissing" xml:space="preserve">
+    <value>AI generator #{0} was not found.</value>
+  </data>
+  <data name="BTask_Error_AigcProviderMissing" xml:space="preserve">
+    <value>AI provider #{0} was not found.</value>
+  </data>
+  <data name="BTask_Error_AigcProviderDisabled" xml:space="preserve">
+    <value>Provider #{0} ({1}) does not have AI generation enabled.</value>
+  </data>
+  <data name="BTask_Error_AigcProviderUnsupported" xml:space="preserve">
+    <value>AI generation is not supported for provider type {0}.</value>
+  </data>
+  <data name="BTask_Error_AigcNoOutputs" xml:space="preserve">
+    <value>The provider returned no generated results.</value>
+  </data>
+  <data name="BTask_Error_AigcHttpConfigMissing" xml:space="preserve">
+    <value>The custom HTTP provider is not configured.</value>
+  </data>
+  <data name="BTask_Error_AigcHttpConfigInvalid" xml:space="preserve">
+    <value>The custom HTTP provider configuration is not valid JSON.</value>
+  </data>
+  <data name="BTask_Error_AigcHttpUrlMissing" xml:space="preserve">
+    <value>Set a request URL template for the custom HTTP provider.</value>
+  </data>
+  <data name="BTask_Error_AigcPollingUrlMissing" xml:space="preserve">
+    <value>Set a URL template for checking generation status.</value>
+  </data>
+  <data name="BTask_Error_AigcPollingIdMissing" xml:space="preserve">
+    <value>The provider response did not include the task ID required to check progress.</value>
+  </data>
+  <data name="BTask_Error_AigcComfyEndpointMissing" xml:space="preserve">
+    <value>The ComfyUI endpoint is not configured.</value>
+  </data>
+  <data name="BTask_Error_AigcComfyWorkflowMissing" xml:space="preserve">
+    <value>Set ComfyUI workflow JSON on the generator or in the provider defaults.</value>
+  </data>
 </root>

@@ -87,7 +87,7 @@ const TaskStatusIcon = ({ task, onShowError }: { task: BTask; onShowError: () =>
       return (
         <Tooltip
           color="danger"
-          content={task.briefError || task.error?.substring(0, 100) || "Error"}
+          content={task.briefError || task.error?.substring(0, 100) || t("common.label.error")}
           placement="top"
         >
           <Button isIconOnly color="danger" size="sm" variant="light" onPress={onShowError}>

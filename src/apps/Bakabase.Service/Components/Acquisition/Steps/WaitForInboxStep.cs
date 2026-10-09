@@ -1,3 +1,5 @@
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -184,7 +186,9 @@ public class WaitForInboxStep : IAcquisitionStep
                 Directory.CreateDirectory(Path.GetDirectoryName(entry.Target)!);
                 File.Move(entry.Source, entry.Target);
             }
-            await ctx.ReportProgress(100, $"{entries.Count} files delivered");
+            await ctx.ReportProgress(100, BTaskText.Localize(
+                ctx.ServiceProvider.GetRequiredService<IBakabaseLocalizer>(),
+                "BTask_Process_FilesDelivered", entries.Count));
             return new AcquisitionStepOutcome.Continue(item with
             {
                 Files = item.Files.Concat(entries.Select(e => e.Target)).Distinct(FileProcessingFiles.PathComparer).ToList(),

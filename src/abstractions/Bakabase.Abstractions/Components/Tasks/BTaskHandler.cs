@@ -125,6 +125,13 @@ public class BTaskHandler
         _logger = rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(loggerName);
     }
 
+    private static void SetTaskError(BTask task, Exception error)
+    {
+        if (error is BTaskException { BriefText: { } text })
+            task.SetLocalizedError(text, error.BuildFullInformationText());
+        else task.SetError((error as BTaskException)?.BriefMessage, error.BuildFullInformationText());
+    }
+
     public async Task UpdateTask(Action<BTask> update)
     {
         var prevProcess = Task.Process;
@@ -134,7 +141,7 @@ public class BTaskHandler
 
         if (prevProcess != Task.Process)
         {
-            ProcessEvents.Enqueue(new BTaskEvent<string?>(Task.Process));
+            ProcessEvents.Enqueue(new BTaskEvent<string?>(Task.Process) { LocalizedTexts = Task.GetProcessTranslations() });
         }
 
         if (prevPercentage != Task.Percentage)
@@ -306,7 +313,7 @@ public class BTaskHandler
                             return;
                         }
                         t.Status = BTaskStatus.WaitingForInput;
-                        t.Message = e.Message;
+                        t.SetMessage(e.MessageText ?? e.Message);
                     });
                 }
                 catch (Exception e)
@@ -325,7 +332,7 @@ public class BTaskHandler
                             var delay = Task.RetryPolicy.GetDelayForRetry(Task.RetryCount);
                             await UpdateTask(t =>
                             {
-                                t.SetError((e as BTaskException)?.BriefMessage, e.BuildFullInformationText());
+                                SetTaskError(t, e);
                                 t.RetryCount++;
                                 t.NextRetryAt = DateTime.Now + delay;
                                 t.Status = BTaskStatus.NotStarted; // Will be picked up by daemon
@@ -336,7 +343,7 @@ public class BTaskHandler
                         {
                             await UpdateTask(t =>
                             {
-                                t.SetError((e as BTaskException)?.BriefMessage, e.BuildFullInformationText());
+                                SetTaskError(t, e);
                                 t.Status = BTaskStatus.Error;
                             });
                         }

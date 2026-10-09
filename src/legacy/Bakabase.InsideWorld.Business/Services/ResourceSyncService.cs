@@ -1,3 +1,5 @@
+using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Modules.Property.Abstractions.Components;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -37,6 +39,7 @@ public class ResourceSyncService : ScopedService
     private readonly IPathMarkService _pathMarkService;
     private readonly IBOptions<ResourceOptions> _resourceOptions;
     private readonly IBakabaseLocalizer _localizer;
+    private readonly IPropertyLocalizer _propertyLocalizer;
     private readonly ILogger<ResourceSyncService> _logger;
     private readonly IEnumerable<IResourceResolver> _resourceResolvers;
     private readonly IReservedPropertyValueService _reservedPropertyValueService;
@@ -54,13 +57,15 @@ public class ResourceSyncService : ScopedService
         IEnumerable<IResourceResolver> resourceResolvers,
         IReservedPropertyValueService reservedPropertyValueService,
         ResourceStructureService structureService,
-        IResourceMaterializationService materializationService) : base(serviceProvider)
+        IResourceMaterializationService materializationService,
+        IPropertyLocalizer propertyLocalizer) : base(serviceProvider)
     {
         _resourceService = resourceService;
         _sourceLinkService = sourceLinkService;
         _pathMarkService = pathMarkService;
         _resourceOptions = resourceOptions;
         _localizer = localizer;
+        _propertyLocalizer = propertyLocalizer;
         _logger = logger;
         _resourceResolvers = resourceResolvers;
         _reservedPropertyValueService = reservedPropertyValueService;
@@ -75,7 +80,7 @@ public class ResourceSyncService : ScopedService
     public async Task<ResourceSyncResult> SyncResources(
         ResourceSource source,
         Func<int, Task>? onProgressChange,
-        Func<string?, Task>? onProcessChange,
+        Func<BTaskText?, Task>? onProcessChange,
         PauseToken pt,
         CancellationToken ct)
     {
@@ -85,13 +90,13 @@ public class ResourceSyncService : ScopedService
         _logger.LogInformation("[ResourceSync] Starting resource sync for source: {Source}", source);
 
         // ===== Step 1: Discover resources (0-50%) =====
-        await ReportProgress(onProgressChange, onProcessChange, 0, $"Discovering {source} resources...");
+        await ReportProgress(onProgressChange, onProcessChange, 0, BTaskText.Localize(_localizer, "BTask_Process_DiscoveringResources", BTaskText.Deferred(() => _propertyLocalizer.ResourceSourceName(source))));
 
         var resolver = _resourceResolvers.FirstOrDefault(r => r.Source == source);
         if (resolver == null)
         {
             _logger.LogWarning("[ResourceSync] No resolver found for source {Source}", source);
-            await ReportProgress(onProgressChange, onProcessChange, 100, "No resolver found");
+            await ReportProgress(onProgressChange, onProcessChange, 100, BTaskText.Localize(_localizer, "BTask_Process_ResolverNotFound"));
             return result;
         }
 
@@ -113,10 +118,10 @@ public class ResourceSyncService : ScopedService
         }
 
         await ReportProgress(onProgressChange, onProcessChange, 50,
-            $"Discovered {discoveredEntries.Count} resources from {source}");
+            BTaskText.Localize(_localizer, "BTask_Process_ResourcesDiscovered", discoveredEntries.Count, BTaskText.Deferred(() => _propertyLocalizer.ResourceSourceName(source))));
 
         // ===== Step 2: Create/Update resources (50-75%) =====
-        await ReportProgress(onProgressChange, onProcessChange, 50, "Creating/updating resources...");
+        await ReportProgress(onProgressChange, onProcessChange, 50, BTaskText.Localize(_localizer, "BTask_Process_UpdatingResources"));
 
         var resourcesToCreateOrUpdate = new List<Resource>();
         var newResourcePaths = new List<string>();
@@ -158,7 +163,7 @@ public class ResourceSyncService : ScopedService
                 if (i < batches.Count - 1) await Task.Delay(5);
 
                 var progress = 50 + (int)(25.0 * (i + 1) / batches.Count);
-                await ReportProgress(onProgressChange, onProcessChange, progress, "Creating/updating resources...");
+                await ReportProgress(onProgressChange, onProcessChange, progress, BTaskText.Localize(_localizer, "BTask_Process_UpdatingResources"));
             }
 
             result.ResourcesCreated = newResourceCount;
@@ -200,18 +205,18 @@ public class ResourceSyncService : ScopedService
         }
 
         // ===== Step 3: Update resource statuses for resolver sources (75-80%) =====
-        await ReportProgress(onProgressChange, onProcessChange, 75, "Updating resource statuses...");
+        await ReportProgress(onProgressChange, onProcessChange, 75, BTaskText.Localize(_localizer, "BTask_Process_UpdatingResourceStatuses"));
         await UpdateResolverResourceStatuses(source, discoveredEntries, ctx, ct);
 
         // ===== Step 4: Delete orphaned resources (80-85%) =====
-        await ReportProgress(onProgressChange, onProcessChange, 80, "Checking for orphaned resources...");
+        await ReportProgress(onProgressChange, onProcessChange, 80, BTaskText.Localize(_localizer, "BTask_Process_CheckingOrphanedResources"));
         var deleted = await DeleteOrphanedResources(source, discoveredEntries, ctx, ct);
         result.ResourcesDeleted = deleted;
 
         // ===== Step 5: Rebuild parent-child relationships if new resources (85-92%) =====
         if (result.ResourcesCreated > 0 || result.ResourcesDeleted > 0)
         {
-            await ReportProgress(onProgressChange, onProcessChange, 85, "Rebuilding parent-child relationships...");
+            await ReportProgress(onProgressChange, onProcessChange, 85, BTaskText.Localize(_localizer, "BTask_Process_RebuildingRelationships"));
             await _structureService.RebuildParentChildRelationships(ct);
             result.ParentChildRebuilt = true;
         }
@@ -219,12 +224,12 @@ public class ResourceSyncService : ScopedService
         // ===== Step 6: Mark related path marks as pending (92-98%) =====
         if (newResourcePaths.Count > 0)
         {
-            await ReportProgress(onProgressChange, onProcessChange, 92, "Marking related path marks as pending...");
+            await ReportProgress(onProgressChange, onProcessChange, 92, BTaskText.Localize(_localizer, "BTask_Process_QueuingRelatedPathMarks"));
             await _structureService.MarkPathMarksAsPendingForPaths(newResourcePaths, ct);
             result.PathMarksMarkedPending = true;
         }
 
-        await ReportProgress(onProgressChange, onProcessChange, 100, _localizer["ResourceSync_Complete"]);
+        await ReportProgress(onProgressChange, onProcessChange, 100, BTaskText.Localize(_localizer, "ResourceSync_Complete"));
 
         sw.Stop();
         _logger.LogInformation(
@@ -240,7 +245,7 @@ public class ResourceSyncService : ScopedService
         IResourceResolver resolver,
         ResourceSyncContext ctx,
         Func<int, Task>? onProgressChange,
-        Func<string?, Task>? onProcessChange,
+        Func<BTaskText?, Task>? onProcessChange,
         CancellationToken ct)
     {
         var fsResolver = resolver as FileSystemResolver;
@@ -271,7 +276,7 @@ public class ResourceSyncService : ScopedService
         }
 
         await ReportProgress(onProgressChange, onProcessChange, 10,
-            $"Discovering filesystem resources from {pendingResourceMarks.Count} marks...");
+            BTaskText.Localize(_localizer, "BTask_Process_DiscoveringPathMarks", pendingResourceMarks.Count));
 
         try
         {
@@ -317,13 +322,13 @@ public class ResourceSyncService : ScopedService
         IResourceResolver resolver,
         ResourceSyncContext ctx,
         Func<int, Task>? onProgressChange,
-        Func<string?, Task>? onProcessChange,
+        Func<BTaskText?, Task>? onProcessChange,
         CancellationToken ct)
     {
         var sourceName = resolver.Source.ToString();
 
         await ReportProgress(onProgressChange, onProcessChange, 10,
-            $"Discovering {sourceName} resources...");
+            BTaskText.Localize(_localizer, "BTask_Process_DiscoveringResources", BTaskText.Deferred(() => _propertyLocalizer.ResourceSourceName(resolver.Source))));
 
         var resolvedResources = await resolver.DiscoverResources(ct);
         _logger.LogInformation("[ResourceSync] {Source} discovered {Count} resources",
@@ -890,8 +895,8 @@ public class ResourceSyncService : ScopedService
         }
     }
 
-    private async Task ReportProgress(Func<int, Task>? onProgressChange, Func<string?, Task>? onProcessChange,
-        int progress, string? process)
+    private async Task ReportProgress(Func<int, Task>? onProgressChange, Func<BTaskText?, Task>? onProcessChange,
+        int progress, BTaskText? process)
     {
         if (onProgressChange != null) await onProgressChange(progress);
         if (onProcessChange != null) await onProcessChange(process);

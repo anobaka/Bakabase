@@ -66,12 +66,12 @@ public class FetchTorrentStep : IAcquisitionStep
                 var metadata = await ctx.ServiceProvider.GetRequiredService<IAcquisitionTorrentMetadataStore>()
                     .ReadAsync(reference, deadline.Token);
                 downloaded = await downloader.DownloadTorrentAsync(metadata, ctx.WorkingDirectory,
-                    TimeSpan.FromMinutes(config.TimeoutMinutes), ctx.ReportProgress, deadline.Token);
+                    TimeSpan.FromMinutes(config.TimeoutMinutes), (percentage, process) => ctx.ReportProgress(percentage, process), deadline.Token);
             }
             else
             {
                 downloaded = await downloader.DownloadTorrentUrlAsync(reference, ctx.WorkingDirectory,
-                    TimeSpan.FromMinutes(config.TimeoutMinutes), ctx.ReportProgress, deadline.Token);
+                    TimeSpan.FromMinutes(config.TimeoutMinutes), (percentage, process) => ctx.ReportProgress(percentage, process), deadline.Token);
             }
             return new AcquisitionStepOutcome.Continue(item with
             {

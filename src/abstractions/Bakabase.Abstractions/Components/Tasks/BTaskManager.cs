@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Bakabase.Abstractions.Components.Configuration;
@@ -448,31 +448,31 @@ public class BTaskManager : IAsyncDisposable
 
     private BTaskViewModel BuildTaskViewModel(BTaskHandler handler)
     {
-        string? reasonForUnableToStart = null;
+        Func<string?> reasonForUnableToStart = () => null;
         if (handler.Task.Status is BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.NotStarted)
         {
             var conflictTasks = _getConflictTasks(handler);
             var (dependencyBlockers, _) = GetDependencyStatus(handler);
             if (conflictTasks.Any())
             {
-                reasonForUnableToStart =
+                reasonForUnableToStart = () =>
                     _localizer.BTask_FailedToRunTaskDueToConflict(handler.Task.Name,
                         conflictTasks.Select(c => c.Task.Name).ToArray());
             }
             else if (BlockedByMoveReservation(handler))
             {
-                reasonForUnableToStart = _localizer.BTask_FailedToRunTaskDueToConflict(
+                reasonForUnableToStart = () => _localizer.BTask_FailedToRunTaskDueToConflict(
                     handler.Task.Name, [_localizer.MoveResource()]);
             }
             else if (dependencyBlockers.Any())
             {
-                reasonForUnableToStart =
+                reasonForUnableToStart = () =>
                     _localizer.BTask_FailedToRunTaskDueToDependency(handler.Task.Name,
                         dependencyBlockers.Select(d => d.Task.Name).ToArray());
             }
             else if (BlockedByConcurrencyLimit(handler))
             {
-                reasonForUnableToStart = _localizer.BTask_FailedToRunTaskDueToConflict(handler.Task.Name,
+                reasonForUnableToStart = () => _localizer.BTask_FailedToRunTaskDueToConflict(handler.Task.Name,
                     GetActiveGroupTasks(handler).Select(t => t.Task.Name).ToArray());
             }
         }

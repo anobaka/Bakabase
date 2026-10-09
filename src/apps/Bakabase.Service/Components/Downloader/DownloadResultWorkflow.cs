@@ -97,7 +97,7 @@ public sealed class FetchTorrentResultActivity : IWorkflowActivity
     {
         var result = item as DownloadResultItem ?? throw new InvalidOperationException("This node needs a download result.");
         await ctx.Services.GetRequiredService<DownloadResultWorkflowService>().DownloadContentsAsync(result.ResultId,
-            checked((int)ctx.RunId), (ctx.GetConfig<Config>() ?? new()).TimeoutMinutes, ctx.ReportProgress, ct);
+            checked((int)ctx.RunId), (ctx.GetConfig<Config>() ?? new()).TimeoutMinutes, (percentage, process) => ctx.ReportProgress(percentage, process), ct);
         return WorkflowItemOutcome.KeepItem;
     }
 }

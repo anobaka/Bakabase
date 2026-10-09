@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Compression;
@@ -30,7 +31,8 @@ public class DLsiteWorkService(
     IBOptions<AppOptions> appOptions,
     DLsiteArchiveExtractor archiveExtractor,
     LocaleEmulatorService localeEmulatorService,
-    ILogger<DLsiteWorkService> logger)
+    ILogger<DLsiteWorkService> logger,
+    IBakabaseLocalizer localizer)
     : IDLsiteWorkService
 {
     private DLsiteOptions DLsiteOptionsValue => dlsiteOptions.Value;
@@ -304,7 +306,8 @@ public class DLsiteWorkService(
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to sync DLsite account '{Name}'", account.Name);
-                throw new BTaskException($"Failed to sync DLsite account '{account.Name}': {ex.Message}", ex.Message);
+                throw new BTaskException($"Failed to sync DLsite account '{account.Name}': {ex.Message}", ex.Message)
+                { BriefText = BTaskText.Localize(localizer, "BTask_Error_DLsiteAccountSync", account.Name, ex.Message) };
             }
 
             processedAccounts++;
@@ -403,14 +406,20 @@ public class DLsiteWorkService(
         return workDir;
     }
 
+    private BTaskException TaskError(string key, params object?[] arguments)
+    {
+        var text = BTaskText.Localize(localizer, key, arguments);
+        return new BTaskException(text, text) { BriefText = text };
+    }
+
     private const int MaxLinkRefreshRetries = 3;
 
-    public async Task DownloadWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default)
+    public async Task DownloadWork(string workId, Func<int, BTaskText?, Task>? onProgress = null, CancellationToken ct = default)
     {
         var work = await GetByWorkId(workId);
         if (work == null)
         {
-            throw new Exception($"Work {workId} not found");
+            throw TaskError("BTask_Error_DLsiteWorkNotFound", workId);
         }
 
         var (cookie, accountKey) = GetCookieForWork(work);
@@ -418,7 +427,7 @@ public class DLsiteWorkService(
         var defaultPath = DLsiteOptionsValue.DefaultPath;
         if (string.IsNullOrEmpty(defaultPath))
         {
-            throw new Exception("Download path not configured. Please set the default download path in DLsite settings.");
+            throw TaskError("BTask_Error_DLsiteDownloadPathMissing");
         }
 
         var workDir = Path.Combine(defaultPath, workId);
@@ -433,7 +442,7 @@ public class DLsiteWorkService(
         var links = downloadInfo.Links;
         if (links.Count == 0)
         {
-            throw new Exception($"No download links found for work {workId}");
+            throw TaskError("BTask_Error_DLsiteNoDownloadLinks", workId);
         }
 
         // Save DRM key if found
@@ -499,7 +508,7 @@ public class DLsiteWorkService(
                     }
                     else
                     {
-                        throw new Exception($"Link refresh returned fewer links than expected for {workId}");
+                        throw TaskError("BTask_Error_DLsiteRefreshedLinksMissing", workId);
                     }
                 }
             }
@@ -511,7 +520,7 @@ public class DLsiteWorkService(
         // Extract archives
         if (onProgress != null)
         {
-            await onProgress(96, "Extracting...");
+            await onProgress(96, BTaskText.Localize(localizer, "BTask_Process_Extracting"));
         }
 
         await ExtractWork(workId, onProgress, ct);
@@ -524,24 +533,24 @@ public class DLsiteWorkService(
         logger.LogInformation("Download complete for work {WorkId} at {Path}", workId, (await GetByWorkId(workId))?.LocalPath);
     }
 
-    public async Task ExtractWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default)
+    public async Task ExtractWork(string workId, Func<int, BTaskText?, Task>? onProgress = null, CancellationToken ct = default)
     {
         var work = await GetByWorkId(workId);
         if (work == null)
         {
-            throw new Exception($"Work {workId} not found");
+            throw TaskError("BTask_Error_DLsiteWorkNotFound", workId);
         }
 
         var defaultPath = DLsiteOptionsValue.DefaultPath;
         if (string.IsNullOrEmpty(defaultPath))
         {
-            throw new Exception("Download path not configured.");
+            throw TaskError("BTask_Error_DLsiteDownloadPathMissing");
         }
 
         var workDir = Path.Combine(defaultPath, workId);
         if (!Directory.Exists(workDir))
         {
-            throw new Exception($"Work directory not found: {workDir}");
+            throw TaskError("BTask_Error_DLsiteDirectoryMissing", workDir);
         }
 
         // Find all archive files in the work directory (not in extracted subfolder)
@@ -551,7 +560,7 @@ public class DLsiteWorkService(
 
         if (downloadedFiles.Count == 0)
         {
-            throw new Exception($"No files found in work directory: {workDir}");
+            throw TaskError("BTask_Error_DLsiteDirectoryEmpty", workDir);
         }
 
         var contentDir = Path.Combine(workDir, "content");

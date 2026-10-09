@@ -10,11 +10,13 @@ namespace Bakabase.Abstractions.Models.View;
 
 public record BTaskViewModel
 {
+    public Dictionary<string, BTaskLocalizedTexts>? LocalizedTexts { get; set; }
     public string Id { get; set; } = null!;
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public int? Percentage { get; set; }
     public string? Process { get; set; }
+    public string? Message { get; set; }
     public TimeSpan? Interval { get; set; }
     public DateTime? EnableAfter { get; set; }
     public BTaskStatus Status { get; set; }
@@ -36,12 +38,16 @@ public record BTaskViewModel
     public object? Data { get; set; }
 
     public BTaskViewModel(BTaskHandler handler, string? reasonForUnableToStart)
+        : this(handler, () => reasonForUnableToStart) { }
+
+    public BTaskViewModel(BTaskHandler handler, Func<string?> reasonForUnableToStart)
     {
         Id = handler.Task.Id;
         Name = handler.Task.Name;
         Description = handler.Task.Description;
         Percentage = handler.Task.Percentage;
         Process = handler.Task.Process;
+        Message = handler.Task.Message;
         Level = handler.Task.Level;
         Status = handler.Task.Status;
         Error = handler.Task.Error;
@@ -61,6 +67,27 @@ public record BTaskViewModel
         Data = handler.Task.Data;
 
         Elapsed = handler.Sw.Elapsed == TimeSpan.Zero ? null : handler.Sw.Elapsed;
-        ReasonForUnableToStart = reasonForUnableToStart;
+        ReasonForUnableToStart = reasonForUnableToStart();
+        LocalizedTexts = BTaskTextCultures.Project(() => new BTaskLocalizedTexts
+        {
+            Name = handler.Task.Name,
+            Description = handler.Task.Description,
+            Process = handler.Task.Process,
+            Message = handler.Task.Message,
+            BriefError = handler.Task.BriefError,
+            MessageOnInterruption = handler.Task.MessageOnInterruption,
+            ReasonForUnableToStart = reasonForUnableToStart()
+        });
     }
+}
+
+public record BTaskLocalizedTexts
+{
+    public string Name { get; init; } = null!;
+    public string? Description { get; init; }
+    public string? Process { get; init; }
+    public string? Message { get; init; }
+    public string? BriefError { get; init; }
+    public string? MessageOnInterruption { get; init; }
+    public string? ReasonForUnableToStart { get; init; }
 }

@@ -1011,4 +1011,166 @@
   <data name="BTask_Description_PlatformFetchWatch" xml:space="preserve">
     <value>检查平台下载或安装是否完成，并继续等待中的获取任务。</value>
   </data>
+  <data name="CopyFiles" xml:space="preserve">
+    <value>复制文件</value>
+  </data>
+  <data name="CopyFile" xml:space="preserve">
+    <value>将 {0} 复制到 {1}</value>
+  </data>
+  <data name="BTask_Name_ApplySourceMetadata" xml:space="preserve">
+    <value>应用 {0} 元数据</value>
+  </data>
+  <data name="BTask_Name_Comparison" xml:space="preserve">
+    <value>对比任务：{0}</value>
+  </data>
+  <data name="BTask_Description_Comparison" xml:space="preserve">
+    <value>执行对比方案 [{0}]</value>
+  </data>
+  <data name="BTask_Name_WorkflowRun" xml:space="preserve">
+    <value>工作流 #{0}，运行 #{1}</value>
+  </data>
+  <data name="BTask_Name_AigcGeneration" xml:space="preserve">
+    <value>AI 生成 #{0}</value>
+  </data>
+  <data name="BTask_Process_WorkflowStep" xml:space="preserve">
+    <value>步骤 {0}/{1}</value>
+  </data>
+  <data name="BTask_Process_WorkflowStepDetail" xml:space="preserve">
+    <value>步骤 {0}/{1} · {2}</value>
+  </data>
+  <data name="BTask_Process_WorkflowStepItems" xml:space="preserve">
+    <value>步骤 {0}/{1} · {2} 项</value>
+  </data>
+  <data name="BTask_Process_ReadingSharedContent" xml:space="preserve">
+    <value>正在读取分享内容</value>
+  </data>
+  <data name="BTask_Process_FindingDownloadLinks" xml:space="preserve">
+    <value>正在查找下载链接</value>
+  </data>
+  <data name="BTask_Process_DownloadLinksFound" xml:space="preserve">
+    <value>找到 {0} 个链接</value>
+  </data>
+  <data name="BTask_Process_ExtractionInstructions" xml:space="preserve">
+    <value>正在执行解压指令</value>
+  </data>
+  <data name="BTask_Process_OpeningArchive" xml:space="preserve">
+    <value>正在打开 {0}</value>
+  </data>
+  <data name="BTask_Process_UnpackingArchive" xml:space="preserve">
+    <value>正在解压 {0}</value>
+  </data>
+  <data name="BTask_Process_FilesDelivered" xml:space="preserve">
+    <value>已接收 {0} 个文件</value>
+  </data>
+  <data name="BTask_Process_AigcCallingProvider" xml:space="preserve">
+    <value>正在请求服务商</value>
+  </data>
+  <data name="BTask_Process_AigcSavingFiles" xml:space="preserve">
+    <value>正在保存 {0} 个文件</value>
+  </data>
+  <data name="BTask_Process_AigcRegisteringArtifacts" xml:space="preserve">
+    <value>正在登记生成结果</value>
+  </data>
+  <data name="BTask_Process_AigcDone" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="BTask_Process_AigcPolling" xml:space="preserve">
+    <value>正在查询进度（第 {0} 次，状态：{1}）</value>
+  </data>
+  <data name="BTask_Process_AigcPollingComfyUI" xml:space="preserve">
+    <value>正在查询 ComfyUI 进度（第 {0} 次）</value>
+  </data>
+  <data name="BTask_Process_DiscoveringResources" xml:space="preserve">
+    <value>正在从 {0} 发现资源…</value>
+  </data>
+  <data name="BTask_Process_ResolverNotFound" xml:space="preserve">
+    <value>未找到资源解析器</value>
+  </data>
+  <data name="BTask_Process_ResourcesDiscovered" xml:space="preserve">
+    <value>已从 {1} 发现 {0} 个资源</value>
+  </data>
+  <data name="BTask_Process_DiscoveringPathMarks" xml:space="preserve">
+    <value>正在从 {0} 个路径标记发现资源…</value>
+  </data>
+  <data name="BTask_Process_UpdatingResources" xml:space="preserve">
+    <value>正在更新资源…</value>
+  </data>
+  <data name="BTask_Process_UpdatingResourceStatuses" xml:space="preserve">
+    <value>正在更新资源状态…</value>
+  </data>
+  <data name="BTask_Process_CheckingOrphanedResources" xml:space="preserve">
+    <value>正在检查失去来源的资源…</value>
+  </data>
+  <data name="BTask_Process_RebuildingRelationships" xml:space="preserve">
+    <value>正在重建资源关系…</value>
+  </data>
+  <data name="BTask_Process_QueuingRelatedPathMarks" xml:space="preserve">
+    <value>正在将相关路径标记加入队列…</value>
+  </data>
+  <data name="BTask_Process_WorkflowCleanup" xml:space="preserve">
+    <value>{0}/{1} · 已删除 {2} 条</value>
+  </data>
+  <data name="BTask_Process_Extracting" xml:space="preserve">
+    <value>正在解压…</value>
+  </data>
+  <data name="BTask_Error_DLsiteWorkNotFound" xml:space="preserve">
+    <value>未找到 DLsite 作品 {0}</value>
+  </data>
+  <data name="BTask_Error_DLsiteDownloadPathMissing" xml:space="preserve">
+    <value>请在 DLsite 设置中配置默认下载目录</value>
+  </data>
+  <data name="BTask_Error_DLsiteNoDownloadLinks" xml:space="preserve">
+    <value>未找到 DLsite 作品 {0} 的下载链接</value>
+  </data>
+  <data name="BTask_Error_DLsiteRefreshedLinksMissing" xml:space="preserve">
+    <value>DLsite 作品 {0} 刷新后的下载链接不完整</value>
+  </data>
+  <data name="BTask_Error_DLsiteDirectoryMissing" xml:space="preserve">
+    <value>未找到作品目录：{0}</value>
+  </data>
+  <data name="BTask_Error_DLsiteDirectoryEmpty" xml:space="preserve">
+    <value>作品目录中没有文件：{0}</value>
+  </data>
+  <data name="BTask_Error_DLsiteAccountSync" xml:space="preserve">
+    <value>同步 DLsite 账号 {0} 失败：{1}</value>
+  </data>
+  <data name="BTask_Error_AigcRunMissing" xml:space="preserve">
+    <value>找不到 AI 生成记录 #{0}</value>
+  </data>
+  <data name="BTask_Error_AigcGeneratorMissing" xml:space="preserve">
+    <value>找不到 AI 生成器 #{0}</value>
+  </data>
+  <data name="BTask_Error_AigcProviderMissing" xml:space="preserve">
+    <value>找不到 AI 服务商 #{0}</value>
+  </data>
+  <data name="BTask_Error_AigcProviderDisabled" xml:space="preserve">
+    <value>服务商 #{0}（{1}）尚未启用 AI 生成功能</value>
+  </data>
+  <data name="BTask_Error_AigcProviderUnsupported" xml:space="preserve">
+    <value>暂不支持服务商类型 {0} 的 AI 生成功能</value>
+  </data>
+  <data name="BTask_Error_AigcNoOutputs" xml:space="preserve">
+    <value>服务商没有返回生成结果</value>
+  </data>
+  <data name="BTask_Error_AigcHttpConfigMissing" xml:space="preserve">
+    <value>尚未配置自定义 HTTP 服务商</value>
+  </data>
+  <data name="BTask_Error_AigcHttpConfigInvalid" xml:space="preserve">
+    <value>自定义 HTTP 服务商的配置不是有效 JSON</value>
+  </data>
+  <data name="BTask_Error_AigcHttpUrlMissing" xml:space="preserve">
+    <value>请为自定义 HTTP 服务商设置请求 URL 模板</value>
+  </data>
+  <data name="BTask_Error_AigcPollingUrlMissing" xml:space="preserve">
+    <value>请设置查询生成状态的 URL 模板</value>
+  </data>
+  <data name="BTask_Error_AigcPollingIdMissing" xml:space="preserve">
+    <value>服务商响应未包含查询进度所需的任务 ID</value>
+  </data>
+  <data name="BTask_Error_AigcComfyEndpointMissing" xml:space="preserve">
+    <value>尚未配置 ComfyUI 地址</value>
+  </data>
+  <data name="BTask_Error_AigcComfyWorkflowMissing" xml:space="preserve">
+    <value>请在生成器或服务商默认配置中设置 ComfyUI 工作流 JSON</value>
+  </data>
 </root>

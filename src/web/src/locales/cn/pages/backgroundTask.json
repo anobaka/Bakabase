@@ -38,5 +38,9 @@
   "backgroundTask.schedule.invalidEnableAfter": "请选择有效的启用时间。若要让已有调度立即具备运行条件，可选择过去的时间。",
   "backgroundTask.schedule.loadFailed": "无法读取已保存的调度，尚未应用此次修改。",
   "backgroundTask.schedule.saveFailed": "调度保存失败，已保留你的编辑，请重试。",
-  "backgroundTask.schedule.saved": "调度已保存"
+  "backgroundTask.schedule.saved": "调度已保存",
+  "backgroundTask.schedule.unit.seconds": "秒",
+  "backgroundTask.schedule.unit.minutes": "分钟",
+  "backgroundTask.schedule.unit.hours": "小时",
+  "backgroundTask.schedule.unit.days": "天"
 }

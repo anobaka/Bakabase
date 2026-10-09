@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Modal, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
+import { useBTasksStore } from "@/stores/bTasks";
 import { cancelResourceMoveBatch } from "@/components/ResourceMovePanel/api";
 import { refreshMovePanel } from "@/stores/resourceMovePanel";
 
@@ -34,10 +35,12 @@ const BTaskStopButton = (props: Props) => {
     });
 
     if (rsp.code == 202) {
+      const task = useBTasksStore.getState().tasks.find((item) => item.id === props.id);
+
       createPortal(Modal, {
         defaultVisible: true,
-        title: t<string>("Stop Task"),
-        children: rsp.message ?? t<string>("Sure to stop the task?"),
+        title: t<string>("common.action.stop"),
+        children: task?.messageOnInterruption ?? rsp.message ?? t<string>("common.confirm.stopTask"),
         onOk: async () =>
           await BApi.backgroundTask.stopBackgroundTask(props.id, {
             confirm: true,
@@ -48,7 +51,7 @@ const BTaskStopButton = (props: Props) => {
 
   return (
     <Button {...props} onPress={props.onPress ?? stop}>
-      {props.children ?? t<string>("Stop")}
+      {props.children ?? t<string>("common.action.stop")}
     </Button>
   );
 };
